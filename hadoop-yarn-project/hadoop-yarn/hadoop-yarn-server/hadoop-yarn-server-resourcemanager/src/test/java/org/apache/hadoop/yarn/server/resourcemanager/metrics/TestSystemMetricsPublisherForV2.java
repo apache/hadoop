@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -210,7 +211,7 @@ public class TestSystemMetricsPublisherForV2 {
             + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
-    verifyEntity(appFile, 3, ApplicationMetricsConstants.CREATED_EVENT_TYPE);
+    verifyEntity(appFile, 3, ApplicationMetricsConstants.CREATED_EVENT_TYPE, 6);
   }
 
   @Test(timeout = 10000)
@@ -244,7 +245,8 @@ public class TestSystemMetricsPublisherForV2 {
             + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
-    verifyEntity(appFile, 2, AppAttemptMetricsConstants.REGISTERED_EVENT_TYPE);
+    verifyEntity(appFile, 2, AppAttemptMetricsConstants.REGISTERED_EVENT_TYPE,
+        0);
   }
 
   @Test(timeout = 10000)
@@ -276,7 +278,7 @@ public class TestSystemMetricsPublisherForV2 {
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
     verifyEntity(appFile, 2,
-        ContainerMetricsConstants.CREATED_IN_RM_EVENT_TYPE);
+        ContainerMetricsConstants.CREATED_IN_RM_EVENT_TYPE, 0);
   }
 
   private RMApp createAppAndRegister(ApplicationId appId) {
@@ -290,16 +292,18 @@ public class TestSystemMetricsPublisherForV2 {
   }
 
   private static void verifyEntity(File entityFile, long expectedEvents,
-      String eventForCreatedTime) throws IOException {
+      String eventForCreatedTime, long expectedMetrics) throws IOException {
     BufferedReader reader = null;
     String strLine;
     long count = 0;
+    long metricsCount = 0;
     try {
       reader = new BufferedReader(new FileReader(entityFile));
       while ((strLine = reader.readLine()) != null) {
         if (strLine.trim().length() > 0) {
           TimelineEntity entity = FileSystemTimelineReaderImpl.
               getTimelineRecordFromJSON(strLine.trim(), TimelineEntity.class);
+          metricsCount = entity.getMetrics().size();
           for (TimelineEvent event : entity.getEvents()) {
             if (event.getId().equals(eventForCreatedTime)) {
               assertTrue(entity.getCreatedTime() > 0);
@@ -313,7 +317,9 @@ public class TestSystemMetricsPublisherForV2 {
       reader.close();
     }
     assertEquals("Expected " + expectedEvents + " events to be published",
-        count, expectedEvents);
+        expectedEvents, count);
+    assertEquals("Expected " + expectedMetrics + " metrics is incorrect",
+        expectedMetrics, metricsCount);
   }
 
   private String getTimelineEntityDir(RMApp app) {
@@ -348,12 +354,21 @@ public class TestSystemMetricsPublisherForV2 {
     when(app.getFinalApplicationStatus()).thenReturn(
         FinalApplicationStatus.UNDEFINED);
     when(app.getRMAppMetrics()).thenReturn(
-        new RMAppMetrics(null, 0, 0, Integer.MAX_VALUE, Long.MAX_VALUE));
+        new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, Integer.MAX_VALUE,
+            Long.MAX_VALUE));
     when(app.getApplicationTags()).thenReturn(Collections.<String> emptySet());
     ApplicationSubmissionContext appSubmissionContext =
         mock(ApplicationSubmissionContext.class);
     when(appSubmissionContext.getPriority())
         .thenReturn(Priority.newInstance(0));
+
+    ContainerLaunchContext containerLaunchContext =
+        mock(ContainerLaunchContext.class);
+    when(containerLaunchContext.getCommands())
+        .thenReturn(Collections.singletonList("java -Xmx1024m"));
+    when(appSubmissionContext.getAMContainerSpec())
+        .thenReturn(containerLaunchContext);
+
     when(app.getApplicationSubmissionContext())
         .thenReturn(appSubmissionContext);
     return app;

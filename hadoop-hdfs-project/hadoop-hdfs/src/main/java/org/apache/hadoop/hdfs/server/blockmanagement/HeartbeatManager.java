@@ -25,10 +25,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
-import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.util.Daemon;
@@ -265,6 +262,39 @@ class HeartbeatManager implements DatanodeStatistics {
     }
   }
 
+  synchronized void startMaintenance(final DatanodeDescriptor node) {
+    if (!node.isAlive()) {
+      LOG.info("Dead node {} is put in maintenance state immediately.", node);
+      node.setInMaintenance();
+    } else {
+      stats.subtract(node);
+      if (node.isDecommissioned()) {
+        LOG.info("Decommissioned node " + node + " is put in maintenance state"
+            + " immediately.");
+        node.setInMaintenance();
+      } else if (blockManager.getMinReplicationToBeInMaintenance() == 0) {
+        LOG.info("MinReplicationToBeInMaintenance is set to zero. " + node +
+            " is put in maintenance state" + " immediately.");
+        node.setInMaintenance();
+      } else {
+        node.startMaintenance();
+      }
+      stats.add(node);
+    }
+  }
+
+  synchronized void stopMaintenance(final DatanodeDescriptor node) {
+    LOG.info("Stopping maintenance of {} node {}",
+        node.isAlive() ? "live" : "dead", node);
+    if (!node.isAlive()) {
+      node.stopMaintenance();
+    } else {
+      stats.subtract(node);
+      node.stopMaintenance();
+      stats.add(node);
+    }
+  }
+
   synchronized void stopDecommission(final DatanodeDescriptor node) {
     LOG.info("Stopping decommissioning of {} node {}",
         node.isAlive() ? "live" : "dead", node);
@@ -325,7 +355,7 @@ class HeartbeatManager implements DatanodeStatistics {
     boolean allAlive = false;
     while (!allAlive) {
       // locate the first dead node.
-      DatanodeID dead = null;
+      DatanodeDescriptor dead = null;
 
       // locate the first failed storage that isn't on a dead node.
       DatanodeStorageInfo failedStorage = null;
@@ -374,7 +404,7 @@ class HeartbeatManager implements DatanodeStatistics {
         // acquire the fsnamesystem lock, and then remove the dead node.
         namesystem.writeLock();
         try {
-          dm.removeDeadDatanode(dead);
+          dm.removeDeadDatanode(dead, !dead.isMaintenance());
         } finally {
           namesystem.writeUnlock();
         }

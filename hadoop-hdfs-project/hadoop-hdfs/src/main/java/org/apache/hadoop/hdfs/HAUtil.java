@@ -29,6 +29,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_BIND_HOST_KE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY;
+import static org.apache.hadoop.security.SecurityUtil.buildTokenService;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -56,7 +57,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
@@ -281,8 +281,7 @@ public class HAUtil {
         // exposed to the user via UGI.getCredentials(), otherwise these
         // cloned tokens may be inadvertently propagated to jobs
         Token<DelegationTokenIdentifier> specificToken =
-            new Token.PrivateToken<DelegationTokenIdentifier>(haToken);
-        SecurityUtil.setTokenService(specificToken, singleNNAddr);
+            haToken.privateClone(buildTokenService(singleNNAddr));
         Text alias = new Text(
             HAUtilClient.buildTokenServicePrefixForLogicalUri(
                 HdfsConstants.HDFS_URI_SCHEME)

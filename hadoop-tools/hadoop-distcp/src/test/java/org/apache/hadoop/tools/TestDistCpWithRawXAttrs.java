@@ -82,14 +82,7 @@ public class TestDistCpWithRawXAttrs {
     final String relDst = "/./.reserved/../.reserved/raw/../raw/dest/../dest";
     doTestPreserveRawXAttrs(relSrc, relDst, "-px", true, true,
         DistCpConstants.SUCCESS);
-    doTestPreserveRawXAttrs(rootedSrcName, rootedDestName, "-px",
-        false, true, DistCpConstants.SUCCESS);
-    doTestPreserveRawXAttrs(rootedSrcName, rawDestName, "-px",
-        false, true, DistCpConstants.INVALID_ARGUMENT);
-    doTestPreserveRawXAttrs(rawSrcName, rootedDestName, "-px",
-        false, true, DistCpConstants.INVALID_ARGUMENT);
-    doTestPreserveRawXAttrs(rawSrcName, rawDestName, "-px",
-        true, true, DistCpConstants.SUCCESS);
+    doTestStandardPreserveRawXAttrs("-px", true);
     final Path savedWd = fs.getWorkingDirectory();
     try {
       fs.setWorkingDirectory(new Path("/.reserved/raw"));
@@ -103,27 +96,18 @@ public class TestDistCpWithRawXAttrs {
   /* Test that XAttrs are not preserved and raw.* are when appropriate. */
   @Test
   public void testPreserveRawXAttrs2() throws Exception {
-    doTestPreserveRawXAttrs(rootedSrcName, rootedDestName, "-p",
-        false, false, DistCpConstants.SUCCESS);
-    doTestPreserveRawXAttrs(rootedSrcName, rawDestName, "-p",
-        false, false, DistCpConstants.INVALID_ARGUMENT);
-    doTestPreserveRawXAttrs(rawSrcName, rootedDestName, "-p",
-        false, false, DistCpConstants.INVALID_ARGUMENT);
-    doTestPreserveRawXAttrs(rawSrcName, rawDestName, "-p",
-        true, false, DistCpConstants.SUCCESS);
+    doTestStandardPreserveRawXAttrs("-p", false);
   }
 
   /* Test that XAttrs are not preserved and raw.* are when appropriate. */
   @Test
   public void testPreserveRawXAttrs3() throws Exception {
-    doTestPreserveRawXAttrs(rootedSrcName, rootedDestName, null,
-        false, false, DistCpConstants.SUCCESS);
-    doTestPreserveRawXAttrs(rootedSrcName, rawDestName, null,
-        false, false, DistCpConstants.INVALID_ARGUMENT);
-    doTestPreserveRawXAttrs(rawSrcName, rootedDestName, null,
-        false, false, DistCpConstants.INVALID_ARGUMENT);
-    doTestPreserveRawXAttrs(rawSrcName, rawDestName, null,
-        true, false, DistCpConstants.SUCCESS);
+    doTestStandardPreserveRawXAttrs(null, false);
+  }
+
+  @Test
+  public void testPreserveRawXAttrs4() throws Exception {
+    doTestStandardPreserveRawXAttrs("-update -delete", false);
   }
 
   private static Path[] pathnames = { new Path("dir1"),
@@ -143,6 +127,19 @@ public class TestDistCpWithRawXAttrs {
       fs.setXAttr(new Path(rawRootName + "/src", p), rawName1, rawValue1);
       fs.setXAttr(new Path(rawRootName + "/src", p), userName1, userValue1);
     }
+  }
+
+  private void doTestStandardPreserveRawXAttrs(String options,
+      boolean expectUser)
+      throws Exception {
+    doTestPreserveRawXAttrs(rootedSrcName, rootedDestName, options,
+        false, expectUser, DistCpConstants.SUCCESS);
+    doTestPreserveRawXAttrs(rootedSrcName, rawDestName, options,
+        false, expectUser, DistCpConstants.INVALID_ARGUMENT);
+    doTestPreserveRawXAttrs(rawSrcName, rootedDestName, options,
+        false, expectUser, DistCpConstants.INVALID_ARGUMENT);
+    doTestPreserveRawXAttrs(rawSrcName, rawDestName, options,
+        true, expectUser, DistCpConstants.SUCCESS);
   }
 
   private void doTestPreserveRawXAttrs(String src, String dest,

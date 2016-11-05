@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.fs.swift.util;
 
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.CollectionType;
 import org.apache.hadoop.fs.swift.exceptions.SwiftJsonMarshallingException;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.type.CollectionType;
-import org.codehaus.jackson.type.TypeReference;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -54,9 +54,7 @@ public class JSONUtil {
     try {
       jsonMapper.writeValue(json, object);
       return json.toString();
-    } catch (JsonGenerationException e) {
-      throw new SwiftJsonMarshallingException(e.toString(), e);
-    } catch (JsonMappingException e) {
+    } catch (JsonGenerationException | JsonMappingException e) {
       throw new SwiftJsonMarshallingException(e.toString(), e);
     }
   }
@@ -96,9 +94,7 @@ public class JSONUtil {
             throws IOException {
     try {
       return (T)jsonMapper.readValue(value, typeReference);
-    } catch (JsonGenerationException e) {
-      throw new SwiftJsonMarshallingException("Error generating response", e);
-    } catch (JsonMappingException e) {
+    } catch (JsonGenerationException | JsonMappingException e) {
       throw new SwiftJsonMarshallingException("Error generating response", e);
     }
   }
@@ -115,11 +111,7 @@ public class JSONUtil {
               throws IOException {
     try {
       return (T)jsonMapper.readValue(value, collectionType);
-    } catch (JsonGenerationException e) {
-      throw new SwiftJsonMarshallingException(e.toString()
-                                              + " source: " + value,
-                                              e);
-    } catch (JsonMappingException e) {
+    } catch (JsonGenerationException | JsonMappingException e) {
       throw new SwiftJsonMarshallingException(e.toString()
                                               + " source: " + value,
                                               e);

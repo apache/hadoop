@@ -131,7 +131,18 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
     LOG.info("Running testContainerLaunchAndExitFailure");
     super.testContainerLaunchAndExitFailure();
   }
-  
+
+  @Override
+  public void testLocalingResourceWhileContainerRunning()
+      throws Exception {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    super.testLocalingResourceWhileContainerRunning();
+  }
+
   @Override
   public void testLocalFilesCleanup() throws InterruptedException,
       IOException, YarnException {
@@ -256,6 +267,90 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
     }
     LOG.info("Running testForcefulShutdownSignal");
     super.testForcefulShutdownSignal();
+  }
+
+  @Override
+  public void testContainerUpgradeSuccessAutoCommit() throws IOException,
+      InterruptedException, YarnException {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testContainerUpgradeSuccessAutoCommit");
+    super.testContainerUpgradeSuccessAutoCommit();
+  }
+
+  @Override
+  public void testContainerUpgradeLocalizationFailure() throws IOException,
+      InterruptedException, YarnException {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testContainerUpgradeLocalizationFailure");
+    super.testContainerUpgradeLocalizationFailure();
+  }
+
+  @Override
+  public void testContainerUpgradeSuccessExplicitCommit() throws IOException,
+    InterruptedException, YarnException {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testContainerUpgradeSuccessExplicitCommit");
+    super.testContainerUpgradeSuccessExplicitCommit();
+  }
+
+  @Override
+  public void testContainerUpgradeSuccessExplicitRollback() throws IOException,
+      InterruptedException, YarnException {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testContainerUpgradeSuccessExplicitRollback");
+    super.testContainerUpgradeSuccessExplicitRollback();
+  }
+
+  @Override
+  public void testContainerUpgradeRollbackDueToFailure() throws IOException,
+      InterruptedException, YarnException {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testContainerUpgradeRollbackDueToFailure");
+    super.testContainerUpgradeRollbackDueToFailure();
+  }
+
+  @Override
+  public void testContainerUpgradeProcessFailure() throws IOException,
+      InterruptedException, YarnException {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testContainerUpgradeProcessFailure");
+    super.testContainerUpgradeProcessFailure();
+  }
+
+  @Override
+  public void testContainerRestart() throws IOException, InterruptedException,
+      YarnException {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testContainerRestart");
+    super.testContainerRestart();
   }
 
   private boolean shouldRunTest() {

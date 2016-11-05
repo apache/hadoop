@@ -263,7 +263,10 @@ public class HAUtil {
     return (value == null) ? defaultValue : value;
   }
 
-  /** Add non empty and non null suffix to a key */
+  /**
+   * Add non empty and non null suffix to a key.
+   * @return the suffixed key
+   */
   public static String addSuffix(String key, String suffix) {
     if (suffix == null || suffix.isEmpty()) {
       return key;

@@ -172,22 +172,39 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   }
 
   public void testMkdirsWithUmask() throws Exception {
-    if (fs.getScheme().equals("s3n")) {
-      // skip permission tests for S3FileSystem until HDFS-1333 is fixed.
-      return;
+    if (!isS3(fs)) {
+      Configuration conf = fs.getConf();
+      String oldUmask = conf.get(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY);
+      try {
+        conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, TEST_UMASK);
+        final Path dir = path("/test/newDir");
+        assertTrue(fs.mkdirs(dir, new FsPermission((short) 0777)));
+        FileStatus status = fs.getFileStatus(dir);
+        assertTrue(status.isDirectory());
+        assertEquals((short) 0715, status.getPermission().toShort());
+      } finally {
+        conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, oldUmask);
+      }
     }
-    Configuration conf = fs.getConf();
-    String oldUmask = conf.get(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY);
+  }
+
+  /**
+   * Skip permission tests for S3FileSystem until HDFS-1333 is fixed.
+   * Classes that do not implement {@link FileSystem#getScheme()} method
+   * (e.g {@link RawLocalFileSystem}) will throw an
+   * {@link UnsupportedOperationException}.
+   * @param fileSystem FileSystem object to determine if it is S3 or not
+   * @return true if S3 false in any other case
+   */
+  private boolean isS3(FileSystem fileSystem) {
     try {
-      conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, TEST_UMASK);
-      final Path dir = new Path("/test/newDir");
-      assertTrue(fs.mkdirs(dir, new FsPermission((short)0777)));
-      FileStatus status = fs.getFileStatus(dir);
-      assertTrue(status.isDirectory());
-      assertEquals((short)0715, status.getPermission().toShort());
-    } finally {
-      conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, oldUmask);
+      if (fileSystem.getScheme().equals("s3n")) {
+        return true;
+      }
+    } catch (UnsupportedOperationException e) {
+      LOG.warn("Unable to determine the schema of filesystem.");
     }
+    return false;
   }
 
   public void testGetFileStatusThrowsExceptionForNonExistentFile() 
@@ -480,7 +497,8 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   }
   
   protected Path path(String pathString) {
-    return new Path(pathString).makeQualified(fs);
+    return new Path(pathString).makeQualified(fs.getUri(),
+        fs.getWorkingDirectory());
   }
   
   protected void createFile(Path path) throws IOException {

@@ -84,8 +84,10 @@ public class Exec {
       if (errors != null) {
         errors.addAll(stdErr.getOutput());
       }
-    } catch (Exception ex) {
-      mojo.getLog().warn(command + " failed: " + ex.toString());
+    } catch (IOException ioe) {
+      mojo.getLog().warn(command + " failed: " + ioe.toString());
+    } catch (InterruptedException ie) {
+      mojo.getLog().warn(command + " failed: " + ie.toString());
     }
     return retCode;
   }

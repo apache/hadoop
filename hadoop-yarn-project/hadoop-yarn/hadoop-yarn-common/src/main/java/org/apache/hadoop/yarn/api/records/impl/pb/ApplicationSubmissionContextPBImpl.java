@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -26,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -36,6 +41,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationTimeoutMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerLaunchContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LogAggregationContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
@@ -63,6 +69,7 @@ extends ApplicationSubmissionContext {
   private ResourceRequest amResourceRequest = null;
   private LogAggregationContext logAggregationContext = null;
   private ReservationId reservationId = null;
+  private Map<ApplicationTimeoutType, Long> applicationTimeouts = null;
 
   public ApplicationSubmissionContextPBImpl() {
     builder = ApplicationSubmissionContextProto.newBuilder();
@@ -130,6 +137,9 @@ extends ApplicationSubmissionContext {
     }
     if (this.reservationId != null) {
       builder.setReservationId(convertToProtoFormat(this.reservationId));
+    }
+    if (this.applicationTimeouts != null) {
+      addApplicationTimeouts();
     }
   }
 
@@ -547,5 +557,78 @@ extends ApplicationSubmissionContext {
 
   private ReservationIdProto convertToProtoFormat(ReservationId t) {
     return ((ReservationIdPBImpl) t).getProto();
+  }
+
+  @Override
+  public Map<ApplicationTimeoutType, Long> getApplicationTimeouts() {
+    initApplicationTimeout();
+    return this.applicationTimeouts;
+  }
+
+  private void initApplicationTimeout() {
+    if (this.applicationTimeouts != null) {
+      return;
+    }
+    ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
+    List<ApplicationTimeoutMapProto> lists = p.getApplicationTimeoutsList();
+    this.applicationTimeouts =
+        new HashMap<ApplicationTimeoutType, Long>(lists.size());
+    for (ApplicationTimeoutMapProto timeoutProto : lists) {
+      this.applicationTimeouts.put(
+          ProtoUtils
+              .convertFromProtoFormat(timeoutProto.getApplicationTimeoutType()),
+          timeoutProto.getTimeout());
+    }
+  }
+
+  @Override
+  public void setApplicationTimeouts(
+      Map<ApplicationTimeoutType, Long> appTimeouts) {
+    if (appTimeouts == null) {
+      return;
+    }
+    initApplicationTimeout();
+    this.applicationTimeouts.clear();
+    this.applicationTimeouts.putAll(appTimeouts);
+  }
+
+  private void addApplicationTimeouts() {
+    maybeInitBuilder();
+    builder.clearApplicationTimeouts();
+    if (applicationTimeouts == null) {
+      return;
+    }
+    Iterable<? extends ApplicationTimeoutMapProto> values =
+        new Iterable<ApplicationTimeoutMapProto>() {
+
+          @Override
+          public Iterator<ApplicationTimeoutMapProto> iterator() {
+            return new Iterator<ApplicationTimeoutMapProto>() {
+              private Iterator<ApplicationTimeoutType> iterator =
+                  applicationTimeouts.keySet().iterator();
+
+              @Override
+              public boolean hasNext() {
+                return iterator.hasNext();
+              }
+
+              @Override
+              public ApplicationTimeoutMapProto next() {
+                ApplicationTimeoutType key = iterator.next();
+                return ApplicationTimeoutMapProto.newBuilder()
+                    .setTimeout(applicationTimeouts.get(key))
+                    .setApplicationTimeoutType(
+                        ProtoUtils.convertToProtoFormat(key))
+                    .build();
+              }
+
+              @Override
+              public void remove() {
+                throw new UnsupportedOperationException();
+              }
+            };
+          }
+        };
+    this.builder.addAllApplicationTimeouts(values);
   }
 }  

@@ -72,7 +72,7 @@ import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ScriptBasedNodeLabel
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMLeveldbStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
-import org.apache.hadoop.yarn.server.nodemanager.scheduler.OpportunisticContainerAllocator;
+import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
@@ -342,6 +342,9 @@ public class NodeManager extends CompositeService
     this.context = createNMContext(containerTokenSecretManager,
         nmTokenSecretManager, nmStore, isDistSchedulingEnabled, conf);
 
+
+    ((NMContext)context).setContainerExecutor(exec);
+
     nodeLabelsProvider = createNodeLabelsProvider(conf);
 
     if (null == nodeLabelsProvider) {
@@ -370,8 +373,8 @@ public class NodeManager extends CompositeService
     ((NMContext) context).setWebServer(webServer);
 
     ((NMContext) context).setQueueableContainerAllocator(
-        new OpportunisticContainerAllocator(nodeStatusUpdater, context,
-            webServer.getPort()));
+        new OpportunisticContainerAllocator(
+            context.getContainerTokenSecretManager()));
 
     dispatcher.register(ContainerManagerEventType.class, containerManager);
     dispatcher.register(NodeManagerEventType.class, this);
@@ -508,6 +511,7 @@ public class NodeManager extends CompositeService
     private OpportunisticContainerAllocator containerAllocator;
 
     private final QueuingContext queuingContext;
+    private ContainerExecutor executor;
 
     private NMTimelinePublisher nmTimelinePublisher;
 
@@ -701,6 +705,14 @@ public class NodeManager extends CompositeService
     public NMTimelinePublisher getNMTimelinePublisher() {
       return nmTimelinePublisher;
     }
+
+    public ContainerExecutor getContainerExecutor() {
+      return this.executor;
+    }
+
+    public void setContainerExecutor(ContainerExecutor executor) {
+      this.executor = executor;
+    }
   }
 
   /**
@@ -738,7 +750,7 @@ public class NodeManager extends CompositeService
       // Failed to start if we're a Unix based system but we don't have bash.
       // Bash is necessary to launch containers under Unix-based systems.
       if (!Shell.WINDOWS) {
-        if (!Shell.isBashSupported) {
+        if (!Shell.checkIsBashSupported()) {
           String message =
               "Failing NodeManager start since we're on a "
                   + "Unix-based system but bash doesn't seem to be available.";

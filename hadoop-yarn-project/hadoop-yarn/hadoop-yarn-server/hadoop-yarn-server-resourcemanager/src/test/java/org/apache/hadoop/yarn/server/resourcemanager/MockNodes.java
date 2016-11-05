@@ -35,7 +35,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
-import org.apache.hadoop.yarn.server.api.records.QueuedContainersStatus;
+import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
 
@@ -82,19 +82,19 @@ public class MockNodes {
 
   public static Resource newResource(int mem) {
     Resource rs = recordFactory.newRecordInstance(Resource.class);
-    rs.setMemory(mem);
+    rs.setMemorySize(mem);
     return rs;
   }
 
   public static Resource newUsedResource(Resource total) {
     Resource rs = recordFactory.newRecordInstance(Resource.class);
-    rs.setMemory((int)(Math.random() * total.getMemorySize()));
+    rs.setMemorySize((int)(Math.random() * total.getMemorySize()));
     return rs;
   }
 
   public static Resource newAvailResource(Resource total, Resource used) {
     Resource rs = recordFactory.newRecordInstance(Resource.class);
-    rs.setMemory(total.getMemorySize() - used.getMemorySize());
+    rs.setMemorySize(total.getMemorySize() - used.getMemorySize());
     return rs;
   }
 
@@ -260,7 +260,7 @@ public class MockNodes {
       return this.nodeUtilization;
     }
 
-    public QueuedContainersStatus getQueuedContainersStatus() {
+    public OpportunisticContainersStatus getOpportunisticContainersStatus() {
       return null;
     }
 
@@ -271,6 +271,11 @@ public class MockNodes {
 
     @Override
     public void setUntrackedTimeStamp(long timeStamp) {
+    }
+
+    @Override
+    public Integer getDecommissioningTimeout() {
+      return null;
     }
   };
 

@@ -22,12 +22,13 @@ package org.apache.hadoop.io.erasurecode;
  */
 public final class ErasureCodeConstants {
 
-  private ErasureCodeConstants(){
+  private ErasureCodeConstants() {
   }
 
   public static final String RS_DEFAULT_CODEC_NAME = "rs-default";
   public static final String RS_LEGACY_CODEC_NAME = "rs-legacy";
   public static final String XOR_CODEC_NAME = "xor";
+  public static final String HHXOR_CODEC_NAME = "hhxor";
 
   public static final ECSchema RS_6_3_SCHEMA = new ECSchema(
       RS_DEFAULT_CODEC_NAME, 6, 3);

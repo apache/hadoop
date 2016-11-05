@@ -59,6 +59,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.FsDatasetTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -700,6 +701,9 @@ public class TestFileTruncate {
     assertEquals(newBlock.getBlock().getGenerationStamp(),
         oldBlock.getBlock().getGenerationStamp() + 1);
 
+    Thread.sleep(2000);
+    // trigger the second time BR to delete the corrupted replica if there's one
+    cluster.triggerBlockReports();
     // Wait replicas come to 3
     DFSTestUtil.waitReplication(fs, p, REPLICATION);
     // Old replica is disregarded and replaced with the truncated one
@@ -1005,7 +1009,7 @@ public class TestFileTruncate {
     byte[] contents = AppendTestUtil.initBuffer(BLOCK_SIZE);
     writeContents(contents, BLOCK_SIZE, srcPath);
 
-    INodesInPath iip = fsn.getFSDirectory().getINodesInPath4Write(src, true);
+    INodesInPath iip = fsn.getFSDirectory().getINodesInPath(src, DirOp.WRITE);
     INodeFile file = iip.getLastINode().asFile();
     long initialGenStamp = file.getLastBlock().getGenerationStamp();
     // Test that prepareFileForTruncate sets up in-place truncate.
@@ -1036,7 +1040,7 @@ public class TestFileTruncate {
     writeContents(contents, BLOCK_SIZE, srcPath);
     fs.allowSnapshot(parent);
     fs.createSnapshot(parent, "ss0");
-    iip = fsn.getFSDirectory().getINodesInPath(src, true);
+    iip = fsn.getFSDirectory().getINodesInPath(src, DirOp.WRITE);
     file = iip.getLastINode().asFile();
     file.recordModification(iip.getLatestSnapshotId(), true);
     assertThat(file.isBlockInLatestSnapshot(

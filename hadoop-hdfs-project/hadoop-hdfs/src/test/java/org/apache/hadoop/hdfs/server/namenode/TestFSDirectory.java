@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.EnumSet;
@@ -30,10 +31,13 @@ import com.google.common.collect.ImmutableList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -385,5 +389,62 @@ public class TestFSDirectory {
                                             EnumSet.of(XAttrSetFlag.CREATE,
                                                        XAttrSetFlag.REPLACE));
     verifyXAttrsPresent(newXAttrs, 4);
+  }
+
+  @Test
+  public void testVerifyParentDir() throws Exception {
+    hdfs.mkdirs(new Path("/dir1/dir2"));
+    hdfs.createNewFile(new Path("/dir1/file"));
+    hdfs.createNewFile(new Path("/dir1/dir2/file"));
+
+    INodesInPath iip = fsdir.resolvePath(null, "/", DirOp.READ);
+    fsdir.verifyParentDir(iip);
+
+    iip = fsdir.resolvePath(null, "/dir1", DirOp.READ);
+    fsdir.verifyParentDir(iip);
+
+    iip = fsdir.resolvePath(null, "/dir1/file", DirOp.READ);
+    fsdir.verifyParentDir(iip);
+
+    iip = fsdir.resolvePath(null, "/dir-nonexist/file", DirOp.READ);
+    try {
+      fsdir.verifyParentDir(iip);
+      fail("expected FNF");
+    } catch (FileNotFoundException fnf) {
+      // expected.
+    }
+
+    iip = fsdir.resolvePath(null, "/dir1/dir2", DirOp.READ);
+    fsdir.verifyParentDir(iip);
+
+    iip = fsdir.resolvePath(null, "/dir1/dir2/file", DirOp.READ);
+    fsdir.verifyParentDir(iip);
+
+    iip = fsdir.resolvePath(null, "/dir1/dir-nonexist/file", DirOp.READ);
+    try {
+      fsdir.verifyParentDir(iip);
+      fail("expected FNF");
+    } catch (FileNotFoundException fnf) {
+      // expected.
+    }
+
+    try {
+      iip = fsdir.resolvePath(null, "/dir1/file/fail", DirOp.READ);
+      fail("expected ACE");
+    } catch (AccessControlException ace) {
+      assertTrue(ace.getMessage().contains("is not a directory"));
+    }
+    try {
+      iip = fsdir.resolvePath(null, "/dir1/file/fail", DirOp.WRITE);
+      fail("expected ACE");
+    } catch (AccessControlException ace) {
+      assertTrue(ace.getMessage().contains("is not a directory"));
+    }
+    try {
+      iip = fsdir.resolvePath(null, "/dir1/file/fail", DirOp.CREATE);
+      fail("expected PNDE");
+    } catch (ParentNotDirectoryException pnde) {
+      assertTrue(pnde.getMessage().contains("is not a directory"));
+    }
   }
 }

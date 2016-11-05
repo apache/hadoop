@@ -101,6 +101,12 @@ public interface DataNodeMXBean {
   public int getXceiverCount();
 
   /**
+   * Returns an estimate of the number of data replication/reconstruction tasks
+   * running currently.
+   */
+  public int getXmitsInProgress();
+
+  /**
    * Gets the network error counts on a per-Datanode basis.
    */
   public Map<String, Map<String, Long>> getDatanodeNetworkCounts();

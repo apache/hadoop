@@ -22,6 +22,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.retry.RetryPolicies.MultipleLinearRandomRetry;
 import org.apache.hadoop.ipc.RemoteException;
 
 import com.google.protobuf.ServiceException;
@@ -79,48 +80,85 @@ public class RetryUtils {
       //no retry
       return RetryPolicies.TRY_ONCE_THEN_FAIL;
     } else {
-      return new RetryPolicy() {
-        @Override
-        public RetryAction shouldRetry(Exception e, int retries, int failovers,
-            boolean isMethodIdempotent) throws Exception {
-          if (e instanceof ServiceException) {
-            //unwrap ServiceException
-            final Throwable cause = e.getCause();
-            if (cause != null && cause instanceof Exception) {
-              e = (Exception)cause;
-            }
-          }
+      return new WrapperRetryPolicy(
+          (MultipleLinearRandomRetry) multipleLinearRandomRetry,
+          remoteExceptionToRetry);
+    }
+  }
 
-          //see (1) and (2) in the javadoc of this method.
-          final RetryPolicy p;
-          if (e instanceof RetriableException
-              || RetryPolicies.getWrappedRetriableException(e) != null) {
-            // RetriableException or RetriableException wrapped
-            p = multipleLinearRandomRetry;
-          } else if (e instanceof RemoteException) {
-            final RemoteException re = (RemoteException)e;
-            p = remoteExceptionToRetry.equals(re.getClassName())?
-                multipleLinearRandomRetry: RetryPolicies.TRY_ONCE_THEN_FAIL;
-          } else if (e instanceof IOException || e instanceof ServiceException) {
-            p = multipleLinearRandomRetry;
-          } else { //non-IOException
-            p = RetryPolicies.TRY_ONCE_THEN_FAIL;
-          }
+  private static final class WrapperRetryPolicy implements RetryPolicy {
+    private MultipleLinearRandomRetry multipleLinearRandomRetry;
+    private String remoteExceptionToRetry;
 
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("RETRY " + retries + ") policy="
-                + p.getClass().getSimpleName() + ", exception=" + e);
-          }
-          return p.shouldRetry(e, retries, failovers, isMethodIdempotent);
+    private WrapperRetryPolicy(
+        final MultipleLinearRandomRetry multipleLinearRandomRetry,
+        final String remoteExceptionToRetry) {
+      this.multipleLinearRandomRetry = multipleLinearRandomRetry;
+      this.remoteExceptionToRetry = remoteExceptionToRetry;
+    }
+
+    @Override
+    public RetryAction shouldRetry(Exception e, int retries, int failovers,
+        boolean isMethodIdempotent) throws Exception {
+      if (e instanceof ServiceException) {
+        //unwrap ServiceException
+        final Throwable cause = e.getCause();
+        if (cause != null && cause instanceof Exception) {
+          e = (Exception)cause;
         }
+      }
 
-        @Override
-        public String toString() {
-          return "RetryPolicy[" + multipleLinearRandomRetry + ", "
-              + RetryPolicies.TRY_ONCE_THEN_FAIL.getClass().getSimpleName()
-              + "]";
-        }
-      };
+      //see (1) and (2) in the javadoc of this method.
+      final RetryPolicy p;
+      if (e instanceof RetriableException
+          || RetryPolicies.getWrappedRetriableException(e) != null) {
+        // RetriableException or RetriableException wrapped
+        p = multipleLinearRandomRetry;
+      } else if (e instanceof RemoteException) {
+        final RemoteException re = (RemoteException)e;
+        p = re.getClassName().equals(remoteExceptionToRetry)
+            ? multipleLinearRandomRetry : RetryPolicies.TRY_ONCE_THEN_FAIL;
+      } else if (e instanceof IOException || e instanceof ServiceException) {
+        p = multipleLinearRandomRetry;
+      } else { //non-IOException
+        p = RetryPolicies.TRY_ONCE_THEN_FAIL;
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("RETRY " + retries + ") policy="
+            + p.getClass().getSimpleName() + ", exception=" + e);
+      }
+      return p.shouldRetry(e, retries, failovers, isMethodIdempotent);
+    }
+
+    /**
+     * remoteExceptionToRetry is ignored as part of equals since it does not
+     * affect connection failure handling.
+     */
+    @Override
+    public boolean equals(final Object obj) {
+      if (obj == this) {
+        return true;
+      } else {
+        return (obj instanceof WrapperRetryPolicy)
+            && this.multipleLinearRandomRetry
+                .equals(((WrapperRetryPolicy) obj).multipleLinearRandomRetry);
+      }
+    }
+
+    /**
+     * Similarly, remoteExceptionToRetry is ignored as part of hashCode since it
+     * does not affect connection failure handling.
+     */
+    @Override
+    public int hashCode() {
+      return multipleLinearRandomRetry.hashCode();
+    }
+
+    @Override
+    public String toString() {
+      return "RetryPolicy[" + multipleLinearRandomRetry + ", "
+          + RetryPolicies.TRY_ONCE_THEN_FAIL.getClass().getSimpleName() + "]";
     }
   }
 

@@ -22,8 +22,8 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 
@@ -34,6 +34,9 @@ import org.apache.hadoop.io.compress.bzip2.BZip2Constants;
 import org.apache.hadoop.io.compress.bzip2.CBZip2InputStream;
 import org.apache.hadoop.io.compress.bzip2.CBZip2OutputStream;
 import org.apache.hadoop.io.compress.bzip2.Bzip2Factory;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 
 /**
  * This class provides output and input streams for bzip2 compression
@@ -120,7 +123,8 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
       Compressor compressor) throws IOException {
     return Bzip2Factory.isNativeBzip2Loaded(conf) ?
       new CompressorStream(out, compressor, 
-                           conf.getInt("io.file.buffer.size", 4*1024)) :
+                           conf.getInt(IO_FILE_BUFFER_SIZE_KEY,
+                                   IO_FILE_BUFFER_SIZE_DEFAULT)) :
       new BZip2CompressionOutputStream(out);
   }
 
@@ -174,7 +178,8 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
       Decompressor decompressor) throws IOException {
     return Bzip2Factory.isNativeBzip2Loaded(conf) ? 
       new DecompressorStream(in, decompressor,
-                             conf.getInt("io.file.buffer.size", 4*1024)) :
+                             conf.getInt(IO_FILE_BUFFER_SIZE_KEY,
+                                 IO_FILE_BUFFER_SIZE_DEFAULT)) :
       new BZip2CompressionInputStream(in);
   }
 
@@ -287,7 +292,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
         // The compressed bzip2 stream should start with the
         // identifying characters BZ. Caller of CBZip2OutputStream
         // i.e. this class must write these characters.
-        out.write(HEADER.getBytes(Charsets.UTF_8));
+        out.write(HEADER.getBytes(StandardCharsets.UTF_8));
       }
     }
 
@@ -421,7 +426,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
         byte[] headerBytes = new byte[HEADER_LEN];
         int actualRead = bufferedIn.read(headerBytes, 0, HEADER_LEN);
         if (actualRead != -1) {
-          String header = new String(headerBytes, Charsets.UTF_8);
+          String header = new String(headerBytes, StandardCharsets.UTF_8);
           if (header.compareTo(HEADER) != 0) {
             bufferedIn.reset();
           } else {

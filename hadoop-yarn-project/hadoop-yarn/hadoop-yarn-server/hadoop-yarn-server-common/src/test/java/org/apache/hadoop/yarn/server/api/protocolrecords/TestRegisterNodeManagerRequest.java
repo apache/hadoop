@@ -40,7 +40,7 @@ public class TestRegisterNodeManagerRequest {
           "version", Arrays.asList(NMContainerStatus.newInstance(
             ContainerId.newContainerId(
               ApplicationAttemptId.newInstance(
-                ApplicationId.newInstance(1234L, 1), 1), 1),
+                ApplicationId.newInstance(1234L, 1), 1), 1), 0,
             ContainerState.RUNNING, Resource.newInstance(1024, 1), "good", -1,
             Priority.newInstance(0), 1234)), Arrays.asList(
             ApplicationId.newInstance(1234L, 1),

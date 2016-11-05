@@ -254,7 +254,7 @@ public class MRApp extends MRAppMaster {
     // the job can reaches the final state when MRAppMaster shuts down.
     this.successfullyUnregistered.set(unregistered);
     this.assignedQueue = assignedQueue;
-    this.resource = Resource.newInstance(1234L, 2L);
+    this.resource = Resource.newInstance(1234L, 2);
   }
 
   @Override

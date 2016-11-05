@@ -17,11 +17,21 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.command;
 
+
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.CANCEL;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.EXECUTE;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.HELP;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.NODE;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.OUTFILE;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.PLAN;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.QUERY;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.REPORT;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -32,37 +42,46 @@ import java.util.Scanner;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerTestUtil;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ClusterConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
+import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
+import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import com.google.common.collect.Lists;
-
-import static org.apache.hadoop.hdfs.tools.DiskBalancer.CANCEL;
-import static org.apache.hadoop.hdfs.tools.DiskBalancer.HELP;
-import static org.apache.hadoop.hdfs.tools.DiskBalancer.NODE;
-import static org.apache.hadoop.hdfs.tools.DiskBalancer.PLAN;
-import static org.apache.hadoop.hdfs.tools.DiskBalancer.QUERY;
-
-import org.junit.Rule;
-import org.junit.rules.ExpectedException;
 
 /**
  * Tests various CLI commands of DiskBalancer.
  */
 public class TestDiskBalancerCommand {
+
   @Rule
   public ExpectedException thrown = ExpectedException.none();
   private MiniDFSCluster cluster;
   private URI clusterJson;
   private Configuration conf = new HdfsConfiguration();
+
+  private final static int DEFAULT_BLOCK_SIZE = 1024;
+  private final static int FILE_LEN = 200 * 1024;
+  private final static long CAPCACITY = 300 * 1024;
+  private final static long[] CAPACITIES = new long[] {CAPCACITY, CAPCACITY};
 
   @Before
   public void setUp() throws Exception {
@@ -79,9 +98,120 @@ public class TestDiskBalancerCommand {
   public void tearDown() throws Exception {
     if (cluster != null) {
       // Just make sure we can shutdown datanodes.
-      cluster.getDataNodes().get(0).shutdown();
+      for (int i = 0; i < cluster.getDataNodes().size(); i++) {
+        cluster.getDataNodes().get(i).shutdown();
+      }
       cluster.shutdown();
     }
+  }
+
+  /**
+   * Tests if it's allowed to submit and execute plan when Datanode is in status
+   * other than REGULAR.
+   */
+  @Test(timeout = 60000)
+  public void testSubmitPlanInNonRegularStatus() throws Exception {
+    final int numDatanodes = 1;
+    MiniDFSCluster miniCluster = null;
+    final Configuration hdfsConf = new HdfsConfiguration();
+
+    try {
+      /* new cluster with imbalanced capacity */
+      miniCluster = DiskBalancerTestUtil.newImbalancedCluster(
+          hdfsConf,
+          numDatanodes,
+          CAPACITIES,
+          DEFAULT_BLOCK_SIZE,
+          FILE_LEN,
+          StartupOption.ROLLBACK);
+
+      /* get full path of plan */
+      final String planFileFullName = runAndVerifyPlan(miniCluster, hdfsConf);
+
+      try {
+        /* run execute command */
+        final String cmdLine = String.format(
+            "hdfs diskbalancer -%s %s",
+            EXECUTE,
+            planFileFullName);
+        runCommand(cmdLine, hdfsConf, miniCluster);
+      } catch(RemoteException e) {
+        assertThat(e.getClassName(), containsString("DiskBalancerException"));
+        assertThat(e.toString(),
+            is(allOf(
+                containsString("Datanode is in special state"),
+                containsString("Disk balancing not permitted."))));
+      }
+    } finally {
+      if (miniCluster != null) {
+        miniCluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Tests running multiple commands under on setup. This mainly covers
+   * {@link org.apache.hadoop.hdfs.server.diskbalancer.command.Command#close}
+   */
+  @Test(timeout = 60000)
+  public void testRunMultipleCommandsUnderOneSetup() throws Exception {
+
+    final int numDatanodes = 1;
+    MiniDFSCluster miniCluster = null;
+    final Configuration hdfsConf = new HdfsConfiguration();
+
+    try {
+      /* new cluster with imbalanced capacity */
+      miniCluster = DiskBalancerTestUtil.newImbalancedCluster(
+          hdfsConf,
+          numDatanodes,
+          CAPACITIES,
+          DEFAULT_BLOCK_SIZE,
+          FILE_LEN);
+
+      /* get full path of plan */
+      final String planFileFullName = runAndVerifyPlan(miniCluster, hdfsConf);
+
+      /* run execute command */
+      final String cmdLine = String.format(
+          "hdfs diskbalancer -%s %s",
+          EXECUTE,
+          planFileFullName);
+      runCommand(cmdLine, hdfsConf, miniCluster);
+    } finally {
+      if (miniCluster != null) {
+        miniCluster.shutdown();
+      }
+    }
+  }
+
+  private String runAndVerifyPlan(
+      final MiniDFSCluster miniCluster,
+      final Configuration hdfsConf) throws Exception {
+    String cmdLine = "";
+    List<String> outputs = null;
+    final DataNode dn = miniCluster.getDataNodes().get(0);
+
+    /* run plan command */
+    cmdLine = String.format(
+        "hdfs diskbalancer -%s %s",
+        PLAN,
+        dn.getDatanodeUuid());
+    outputs = runCommand(cmdLine, hdfsConf, miniCluster);
+
+    /* get path of plan file*/
+    final String planFileName = dn.getDatanodeUuid();
+
+    /* verify plan command */
+    assertEquals(
+        "There must be two lines: the 1st is writing plan to...,"
+            + " the 2nd is actual full path of plan file.",
+        2, outputs.size());
+    assertThat(outputs.get(1), containsString(planFileName));
+
+    /* get full path of plan file*/
+    final String planFileFullName = outputs.get(1);
+    return planFileFullName;
   }
 
   /* test basic report */
@@ -133,6 +263,27 @@ public class TestDiskBalancerCommand {
         is(allOf(containsString("30/32 null[null:0]"),
             containsString("a87654a9-54c7-4693-8dd9-c9c7021dc340"),
             containsString("9 volumes with node data density 1.97"))));
+  }
+
+  /**
+   * This test simulates DiskBalancerCLI Report command run from a shell
+   * with a generic option 'fs'.
+   * @throws Exception
+   */
+  @Test(timeout = 60000)
+  public void testReportWithGenericOptionFS() throws Exception {
+    final String topReportArg = "5";
+    final String reportArgs = String.format("-%s file:%s -%s -%s %s",
+        "fs", clusterJson.getPath(),
+        REPORT, "top", topReportArg);
+    final String cmdLine = String.format("%s", reportArgs);
+    final List<String> outputs = runCommand(cmdLine);
+
+    assertThat(outputs.get(0), containsString("Processing report command"));
+    assertThat(outputs.get(1),
+        is(allOf(containsString("Reporting top"), containsString(topReportArg),
+            containsString(
+                "DataNode(s) benefiting from running DiskBalancer"))));
   }
 
   /* test more than 64 DataNode(s) as total, e.g., -report -top 128 */
@@ -262,6 +413,41 @@ public class TestDiskBalancerCommand {
   }
 
   @Test(timeout = 60000)
+  public void testReportNodeWithoutJson() throws Exception {
+    String dataNodeUuid = cluster.getDataNodes().get(0).getDatanodeUuid();
+    final String planArg = String.format("-%s -%s %s",
+        REPORT, NODE, dataNodeUuid);
+    final String cmdLine = String
+        .format(
+            "hdfs diskbalancer %s", planArg);
+    List<String> outputs = runCommand(cmdLine, cluster);
+
+    assertThat(
+        outputs.get(0),
+        containsString("Processing report command"));
+    assertThat(
+        outputs.get(1),
+        is(allOf(containsString("Reporting volume information for DataNode"),
+            containsString(dataNodeUuid))));
+    assertThat(
+        outputs.get(2),
+        is(allOf(containsString(dataNodeUuid),
+            containsString("2 volumes with node data density 0.00"))));
+    assertThat(
+        outputs.get(3),
+        is(allOf(containsString("DISK"),
+            containsString("/dfs/data/data1"),
+            containsString("0.00"),
+            containsString("1.00"))));
+    assertThat(
+        outputs.get(4),
+        is(allOf(containsString("DISK"),
+            containsString("/dfs/data/data2"),
+            containsString("0.00"),
+            containsString("1.00"))));
+  }
+
+  @Test(timeout = 60000)
   public void testReadClusterFromJson() throws Exception {
     ClusterConnector jsonConnector = ConnectorFactory.getCluster(clusterJson,
         conf);
@@ -281,6 +467,17 @@ public class TestDiskBalancerCommand {
         .format(
             "hdfs diskbalancer %s", planArg);
     runCommand(cmdLine, cluster);
+  }
+
+  /* test -plan  DataNodeID */
+  @Test(timeout = 60000)
+  public void testPlanJsonNode() throws Exception {
+    final String planArg = String.format("-%s %s", PLAN,
+        "a87654a9-54c7-4693-8dd9-c9c7021dc340");
+    final String cmdLine = String
+        .format(
+            "hdfs diskbalancer %s", planArg);
+    runCommand(cmdLine);
   }
 
   /* Test that illegal arguments are handled correctly*/
@@ -335,15 +532,63 @@ public class TestDiskBalancerCommand {
     runCommand(cmdLine);
   }
 
-  private List<String> runCommandInternal(final String cmdLine) throws
-      Exception {
-    String[] cmds = StringUtils.split(cmdLine, ' ');
-    org.apache.hadoop.hdfs.tools.DiskBalancer db =
-        new org.apache.hadoop.hdfs.tools.DiskBalancer(conf);
+  @Test
+  public void testPrintFullPathOfPlan()
+      throws Exception {
+    final Path parent = new Path(
+        PathUtils.getTestPath(getClass()),
+        GenericTestUtils.getMethodName());
 
+    MiniDFSCluster miniCluster = null;
+    try {
+      Configuration hdfsConf = new HdfsConfiguration();
+      List<String> outputs = null;
+
+      /* new cluster with imbalanced capacity */
+      miniCluster = DiskBalancerTestUtil.newImbalancedCluster(
+          hdfsConf,
+          1,
+          CAPACITIES,
+          DEFAULT_BLOCK_SIZE,
+          FILE_LEN);
+
+      /* run plan command */
+      final String cmdLine = String.format(
+          "hdfs diskbalancer -%s %s -%s %s",
+          PLAN,
+          miniCluster.getDataNodes().get(0).getDatanodeUuid(),
+          OUTFILE,
+          parent);
+      outputs = runCommand(cmdLine, hdfsConf, miniCluster);
+
+      /* get full path */
+      final String planFileFullName = new Path(
+          parent,
+          miniCluster.getDataNodes().get(0).getDatanodeUuid()).toString();
+
+      /* verify the path of plan */
+      assertEquals(
+          "There must be two lines: the 1st is writing plan to,"
+              + " the 2nd is actual full path of plan file.",
+          2, outputs.size());
+      assertThat(outputs.get(0), containsString("Writing plan to"));
+      assertThat(outputs.get(1), containsString(planFileFullName));
+    } finally {
+      if (miniCluster != null) {
+        miniCluster.shutdown();
+      }
+    }
+  }
+
+  private List<String> runCommandInternal(
+      final String cmdLine,
+      final Configuration clusterConf) throws Exception {
+    String[] cmds = StringUtils.split(cmdLine, ' ');
     ByteArrayOutputStream bufOut = new ByteArrayOutputStream();
     PrintStream out = new PrintStream(bufOut);
-    db.run(cmds, out);
+
+    Tool diskBalancerTool = new DiskBalancerCLI(clusterConf, out);
+    ToolRunner.run(clusterConf, diskBalancerTool, cmds);
 
     Scanner scanner = new Scanner(bufOut.toString());
     List<String> outputs = Lists.newArrayList();
@@ -351,6 +596,11 @@ public class TestDiskBalancerCommand {
       outputs.add(scanner.nextLine());
     }
     return outputs;
+  }
+
+  private List<String> runCommandInternal(final String cmdLine)
+      throws Exception {
+    return runCommandInternal(cmdLine, conf);
   }
 
   private List<String> runCommand(final String cmdLine) throws Exception {
@@ -362,6 +612,14 @@ public class TestDiskBalancerCommand {
                                   MiniDFSCluster miniCluster) throws Exception {
     FileSystem.setDefaultUri(conf, miniCluster.getURI());
     return runCommandInternal(cmdLine);
+  }
+
+  private List<String> runCommand(
+      final String cmdLine,
+      Configuration clusterConf,
+      MiniDFSCluster miniCluster) throws Exception {
+    FileSystem.setDefaultUri(clusterConf, miniCluster.getURI());
+    return runCommandInternal(cmdLine, clusterConf);
   }
 
   /**
@@ -386,5 +644,74 @@ public class TestDiskBalancerCommand {
     } finally {
       miniDFSCluster.shutdown();
     }
+  }
+
+  @Test(timeout = 60000)
+  public void testGetNodeList() throws Exception {
+    ClusterConnector jsonConnector =
+        ConnectorFactory.getCluster(clusterJson, conf);
+    DiskBalancerCluster diskBalancerCluster =
+        new DiskBalancerCluster(jsonConnector);
+    diskBalancerCluster.readClusterInfo();
+
+    int nodeNum = 5;
+    StringBuilder listArg = new StringBuilder();
+    for (int i = 0; i < nodeNum; i++) {
+      listArg.append(diskBalancerCluster.getNodes().get(i).getDataNodeUUID())
+          .append(",");
+    }
+
+    ReportCommand command = new ReportCommand(conf, null);
+    command.setCluster(diskBalancerCluster);
+    List<DiskBalancerDataNode> nodeList = command.getNodes(listArg.toString());
+    assertEquals(nodeNum, nodeList.size());
+  }
+
+  @Test(timeout = 60000)
+  public void testReportCommandWithMultipleNodes() throws Exception {
+    String dataNodeUuid1 = cluster.getDataNodes().get(0).getDatanodeUuid();
+    String dataNodeUuid2 = cluster.getDataNodes().get(1).getDatanodeUuid();
+    final String planArg = String.format("-%s -%s %s,%s",
+        REPORT, NODE, dataNodeUuid1, dataNodeUuid2);
+    final String cmdLine = String.format("hdfs diskbalancer %s", planArg);
+    List<String> outputs = runCommand(cmdLine, cluster);
+
+    assertThat(
+        outputs.get(0),
+        containsString("Processing report command"));
+    assertThat(
+        outputs.get(1),
+        is(allOf(containsString("Reporting volume information for DataNode"),
+            containsString(dataNodeUuid1), containsString(dataNodeUuid2))));
+    // Since the order of input nodes will be disrupted when parse
+    // the node string, we should compare UUID with both output lines.
+    assertTrue(outputs.get(2).contains(dataNodeUuid1)
+        || outputs.get(6).contains(dataNodeUuid1));
+    assertTrue(outputs.get(2).contains(dataNodeUuid2)
+        || outputs.get(6).contains(dataNodeUuid2));
+  }
+
+  @Test(timeout = 60000)
+  public void testReportCommandWithInvalidNode() throws Exception {
+    String dataNodeUuid1 = cluster.getDataNodes().get(0).getDatanodeUuid();
+    String invalidNode = "invalidNode";
+    final String planArg = String.format("-%s -%s %s,%s",
+        REPORT, NODE, dataNodeUuid1, invalidNode);
+    final String cmdLine = String.format("hdfs diskbalancer %s", planArg);
+    List<String> outputs = runCommand(cmdLine, cluster);
+
+    assertThat(
+        outputs.get(0),
+        containsString("Processing report command"));
+    assertThat(
+        outputs.get(1),
+        is(allOf(containsString("Reporting volume information for DataNode"),
+            containsString(dataNodeUuid1), containsString(invalidNode))));
+
+    String invalidNodeInfo =
+        String.format("The node(s) '%s' not found. "
+            + "Please make sure that '%s' exists in the cluster."
+            , invalidNode, invalidNode);
+    assertTrue(outputs.get(2).contains(invalidNodeInfo));
   }
 }

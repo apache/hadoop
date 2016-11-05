@@ -22,29 +22,61 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 
-/** An abstraction for various container runtime implementations. Examples
- * include Process Tree, Docker, Appc runtimes etc., These implementations
+/**
+ * An abstraction for various container runtime implementations. Examples
+ * include Process Tree, Docker, Appc runtimes etc. These implementations
  * are meant for low-level OS container support - dependencies on
- * higher-level nodemananger constructs should be avoided.
+ * higher-level node mananger constructs should be avoided.
  */
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public interface ContainerRuntime {
-  /** Prepare a container to be ready for launch */
+  /**
+   * Prepare a container to be ready for launch.
+   *
+   * @param ctx the {@link ContainerRuntimeContext}
+   * @throws ContainerExecutionException if an error occurs while preparing
+   * the container
+   */
   void prepareContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException;
 
-  /** Launch a container. */
+  /**
+   * Launch a container.
+   *
+   * @param ctx the {@link ContainerRuntimeContext}
+   * @throws ContainerExecutionException if an error occurs while launching
+   * the container
+   */
   void launchContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException;
 
-  /** Signal a container - request to terminate, status check etc., */
+  /**
+   * Signal a container. Signals may be a request to terminate, a status check,
+   * etc.
+   *
+   * @param ctx the {@link ContainerRuntimeContext}
+   * @throws ContainerExecutionException if an error occurs while signaling
+   * the container
+   */
   void signalContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException;
 
-  /** Any container cleanup that may be required. */
+  /**
+   * Perform any container cleanup that may be required.
+   *
+   * @param ctx the {@link ContainerRuntimeContext}
+   * @throws ContainerExecutionException if an error occurs while reaping
+   * the container
+   */
   void reapContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException;
+
+  /**
+   * Return the host and ip of the container
+   */
+  String[] getIpAndHost(Container container);
 }

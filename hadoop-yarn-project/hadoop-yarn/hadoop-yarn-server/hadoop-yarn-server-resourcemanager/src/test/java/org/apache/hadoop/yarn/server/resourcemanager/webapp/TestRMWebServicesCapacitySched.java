@@ -29,6 +29,7 @@ import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -62,9 +63,9 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 
 public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
-  private static MockRM rm;
-  private static CapacitySchedulerConfiguration csConf;
-  private static YarnConfiguration conf;
+  protected static MockRM rm;
+  protected static CapacitySchedulerConfiguration csConf;
+  protected static YarnConfiguration conf;
 
   private class QueueInfo {
     float capacity;
@@ -175,7 +176,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("scheduler").accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterScheduler(json);
   }
@@ -186,7 +188,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("scheduler/").accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterScheduler(json);
   }
@@ -196,7 +199,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("scheduler").get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterScheduler(json);
   }
@@ -207,7 +211,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("scheduler/").accept(MediaType.APPLICATION_XML)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     String xml = response.getEntity(String.class);
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     DocumentBuilder db = dbf.newDocumentBuilder();
@@ -482,7 +487,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
       WebResource r = resource();
       ClientResponse response = r.path("ws/v1/cluster/scheduler")
         .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       String xml = response.getEntity(String.class);
       DocumentBuilder db = DocumentBuilderFactory.newInstance()
         .newDocumentBuilder();
@@ -563,7 +569,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
       ClientResponse response = r.path("ws").path("v1").path("cluster")
           .path("scheduler/").accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
 
       JSONObject schedulerInfo = json.getJSONObject("scheduler").getJSONObject(

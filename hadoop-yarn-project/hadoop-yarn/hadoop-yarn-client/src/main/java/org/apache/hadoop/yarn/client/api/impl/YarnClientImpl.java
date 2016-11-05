@@ -165,13 +165,6 @@ public class YarnClientImpl extends YarnClient {
         YarnConfiguration.DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS);
     }
 
-    if (conf.getBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
-      YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED)) {
-      historyServiceEnabled = true;
-      historyClient = AHSClient.createAHSClient();
-      historyClient.init(conf);
-    }
-
     if (conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)) {
       timelineServiceEnabled = true;
@@ -179,6 +172,18 @@ public class YarnClientImpl extends YarnClient {
       timelineClient.init(conf);
       timelineDTRenewer = getTimelineDelegationTokenRenewer(conf);
       timelineService = TimelineUtils.buildTimelineTokenService(conf);
+    }
+
+    // The AHSClientService is enabled by default when we start the
+    // TimelineServer which means we are able to get history information
+    // for applications/applicationAttempts/containers by using ahsClient
+    // when the TimelineServer is running.
+    if (timelineServiceEnabled || conf.getBoolean(
+        YarnConfiguration.APPLICATION_HISTORY_ENABLED,
+        YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED)) {
+      historyServiceEnabled = true;
+      historyClient = AHSClient.createAHSClient();
+      historyClient.init(conf);
     }
 
     timelineServiceBestEffort = conf.getBoolean(
@@ -301,9 +306,10 @@ public class YarnClientImpl extends YarnClient {
         try {
           Thread.sleep(submitPollIntervalMillis);
         } catch (InterruptedException ie) {
-          LOG.error("Interrupted while waiting for application "
-              + applicationId
-              + " to be successfully submitted.");
+          String msg = "Interrupted while waiting for application "
+              + applicationId + " to be successfully submitted.";
+          LOG.error(msg);
+          throw new YarnException(msg, ie);
         }
       } catch (ApplicationNotFoundException ex) {
         // FailOver or RM restart happens before RMStateStore saves
@@ -400,9 +406,20 @@ public class YarnClientImpl extends YarnClient {
   @Override
   public void killApplication(ApplicationId applicationId)
       throws YarnException, IOException {
+    killApplication(applicationId, null);
+  }
+
+  @Override
+  public void killApplication(ApplicationId applicationId, String diagnostics)
+      throws YarnException, IOException {
+
     KillApplicationRequest request =
         Records.newRecord(KillApplicationRequest.class);
     request.setApplicationId(applicationId);
+
+    if (diagnostics != null) {
+      request.setDiagnostics(diagnostics);
+    }
 
     try {
       int pollCount = 0;
@@ -417,20 +434,23 @@ public class YarnClientImpl extends YarnClient {
         }
 
         long elapsedMillis = System.currentTimeMillis() - startTime;
-        if (enforceAsyncAPITimeout() &&
-            elapsedMillis >= this.asyncApiPollTimeoutMillis) {
-          throw new YarnException("Timed out while waiting for application " +
-            applicationId + " to be killed.");
+        if (enforceAsyncAPITimeout()
+            && elapsedMillis >= this.asyncApiPollTimeoutMillis) {
+          throw new YarnException("Timed out while waiting for application "
+              + applicationId + " to be killed.");
         }
 
         if (++pollCount % 10 == 0) {
-          LOG.info("Waiting for application " + applicationId + " to be killed.");
+          LOG.info(
+              "Waiting for application " + applicationId + " to be killed.");
         }
         Thread.sleep(asyncApiPollIntervalMillis);
       }
     } catch (InterruptedException e) {
-      LOG.error("Interrupted while waiting for application " + applicationId
-          + " to be killed.");
+      String msg = "Interrupted while waiting for application "
+          + applicationId + " to be killed.";
+      LOG.error(msg);
+      throw new YarnException(msg, e);
     }
   }
 
@@ -495,6 +515,17 @@ public class YarnClientImpl extends YarnClient {
       IOException {
     GetApplicationsRequest request =
         GetApplicationsRequest.newInstance(applicationTypes, applicationStates);
+    GetApplicationsResponse response = rmClient.getApplications(request);
+    return response.getApplicationList();
+  }
+
+  @Override
+  public List<ApplicationReport> getApplications(Set<String> applicationTypes,
+      EnumSet<YarnApplicationState> applicationStates,
+      Set<String> applicationTags) throws YarnException, IOException {
+    GetApplicationsRequest request =
+        GetApplicationsRequest.newInstance(applicationTypes, applicationStates);
+    request.setApplicationTags(applicationTags);
     GetApplicationsResponse response = rmClient.getApplications(request);
     return response.getApplicationList();
   }

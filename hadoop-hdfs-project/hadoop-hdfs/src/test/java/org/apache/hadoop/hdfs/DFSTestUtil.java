@@ -27,6 +27,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.io.BufferedOutputStream;
@@ -70,6 +71,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -113,7 +115,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
@@ -166,6 +167,7 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.Level;
 import org.junit.Assume;
 import org.mockito.internal.util.reflection.Whitebox;
+import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.annotations.VisibleForTesting;
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
@@ -2013,5 +2015,73 @@ public class DFSTestUtil {
         }
       }
     }, 1000, 60000);
+  }
+
+  /**
+   * Close current file system and create a new instance as given
+   * {@link UserGroupInformation}.
+   */
+  public static FileSystem login(final FileSystem fs,
+      final Configuration conf, final UserGroupInformation ugi)
+          throws IOException, InterruptedException {
+    if (fs != null) {
+      fs.close();
+    }
+    return DFSTestUtil.getFileSystemAs(ugi, conf);
+  }
+
+  /**
+   * Test if the given {@link FileStatus} user, group owner and its permission
+   * are expected, throw {@link AssertionError} if any value is not expected.
+   */
+  public static void verifyFilePermission(FileStatus stat, String owner,
+      String group, FsAction u, FsAction g, FsAction o) {
+    if(stat != null) {
+      if(!Strings.isNullOrEmpty(owner)) {
+        assertEquals(owner, stat.getOwner());
+      }
+      if(!Strings.isNullOrEmpty(group)) {
+        assertEquals(group, stat.getGroup());
+      }
+      FsPermission permission = stat.getPermission();
+      if(u != null) {
+        assertEquals(u, permission.getUserAction());
+      }
+      if (g != null) {
+        assertEquals(g, permission.getGroupAction());
+      }
+      if (o != null) {
+        assertEquals(o, permission.getOtherAction());
+      }
+    }
+  }
+
+  public static void verifyDelete(FsShell shell, FileSystem fs, Path path,
+      boolean shouldExistInTrash) throws Exception {
+    Path trashPath = Path.mergePaths(shell.getCurrentTrashDir(path), path);
+
+    verifyDelete(shell, fs, path, trashPath, shouldExistInTrash);
+  }
+
+  public static void verifyDelete(FsShell shell, FileSystem fs, Path path,
+      Path trashPath, boolean shouldExistInTrash) throws Exception {
+    assertTrue(path + " file does not exist", fs.exists(path));
+
+    // Verify that trashPath has a path component named ".Trash"
+    Path checkTrash = trashPath;
+    while (!checkTrash.isRoot() && !checkTrash.getName().equals(".Trash")) {
+      checkTrash = checkTrash.getParent();
+    }
+    assertEquals("No .Trash component found in trash path " + trashPath,
+        ".Trash", checkTrash.getName());
+
+    String[] argv = new String[]{"-rm", "-r", path.toString()};
+    int res = ToolRunner.run(shell, argv);
+    assertEquals("rm failed", 0, res);
+    if (shouldExistInTrash) {
+      assertTrue("File not in trash : " + trashPath, fs.exists(trashPath));
+    } else {
+      assertFalse("File in trash : " + trashPath, fs.exists(trashPath));
+    }
   }
 }

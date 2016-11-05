@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -29,7 +30,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Test;
@@ -71,37 +71,37 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
   @Override
   public void testCreateDanglingLink() throws IOException {
     // Dangling symlinks are not supported on Windows local file system.
-    assumeTrue(!Path.WINDOWS);
+    assumeNotWindows();
     super.testCreateDanglingLink();
   }
 
   @Override
   public void testCreateFileViaDanglingLinkParent() throws IOException {
-    assumeTrue(!Path.WINDOWS);
+    assumeNotWindows();
     super.testCreateFileViaDanglingLinkParent();
   }
 
   @Override
   public void testOpenResolvesLinks() throws IOException {
-    assumeTrue(!Path.WINDOWS);
+    assumeNotWindows();
     super.testOpenResolvesLinks();
   }
 
   @Override
   public void testRecursiveLinks() throws IOException {
-    assumeTrue(!Path.WINDOWS);
+    assumeNotWindows();
     super.testRecursiveLinks();
   }
 
   @Override
   public void testRenameDirToDanglingSymlink() throws IOException {
-    assumeTrue(!Path.WINDOWS);
+    assumeNotWindows();
     super.testRenameDirToDanglingSymlink();
   }
 
   @Override  
   public void testStatDanglingLink() throws IOException {
-    assumeTrue(!Path.WINDOWS);
+    assumeNotWindows();
     super.testStatDanglingLink();
   }
 
@@ -126,7 +126,7 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
   @Test(timeout=1000)
   /** Stat and lstat a dangling link */
   public void testDanglingLink() throws IOException {
-    assumeTrue(!Path.WINDOWS);
+    assumeNotWindows();
     Path fileAbs  = new Path(testBaseDir1()+"/file");
     Path fileQual = new Path(testURI().toString(), fileAbs);
     Path link     = new Path(testBaseDir1()+"/linkToFile");
@@ -235,7 +235,7 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
 
   @Override
   public void testSetTimesDanglingLink() throws IOException {
-    assumeTrue(!Path.WINDOWS);
+    assumeNotWindows();
     super.testSetTimesDanglingLink();
   }
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -37,6 +38,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -257,7 +259,7 @@ public class TestRMAppTransitions {
 
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);
-    
+
     if(submissionContext == null) {
       submissionContext = new ApplicationSubmissionContextPBImpl();
     }
@@ -305,7 +307,7 @@ public class TestRMAppTransitions {
   private static void assertStartTimeSet(RMApp application) {
     Assert.assertTrue("application start time is not greater than 0",
         application.getStartTime() > 0);
-    Assert.assertTrue("application start time is before currentTime", 
+    Assert.assertTrue("application start time is before currentTime",
         application.getStartTime() <= System.currentTimeMillis());
   }
 
@@ -324,7 +326,7 @@ public class TestRMAppTransitions {
     assertStartTimeSet(application);
     Assert.assertTrue("application finish time is not greater than 0",
         (application.getFinishTime() > 0));
-    Assert.assertTrue("application finish time is not >= than start time",
+    Assert.assertTrue("application finish time is not >= start time",
         (application.getFinishTime() >= application.getStartTime()));
   }
 
@@ -372,25 +374,32 @@ public class TestRMAppTransitions {
 
   protected RMApp testCreateAppNewSaving(
       ApplicationSubmissionContext submissionContext) throws IOException {
-  RMApp application = createNewTestApp(submissionContext);
+    RMApp application = createNewTestApp(submissionContext);
     // NEW => NEW_SAVING event RMAppEventType.START
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), RMAppEventType.START);
     application.handle(event);
     assertStartTimeSet(application);
     assertAppState(RMAppState.NEW_SAVING, application);
+    // verify sendATSCreateEvent() is not get called during
+    // RMAppNewlySavingTransition.
+    verify(publisher, times(0)).appCreated(eq(application), anyLong());
     return application;
   }
 
   protected RMApp testCreateAppSubmittedNoRecovery(
       ApplicationSubmissionContext submissionContext) throws IOException {
-  RMApp application = testCreateAppNewSaving(submissionContext);
-    // NEW_SAVING => SUBMITTED event RMAppEventType.APP_SAVED
+    RMApp application = testCreateAppNewSaving(submissionContext);
+    // NEW_SAVING => SUBMITTED event RMAppEventType.APP_NEW_SAVED
     RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.APP_NEW_SAVED);
+        new RMAppEvent(application.getApplicationId(),
+        RMAppEventType.APP_NEW_SAVED);
     application.handle(event);
     assertStartTimeSet(application);
     assertAppState(RMAppState.SUBMITTED, application);
+    // verify sendATSCreateEvent() is get called during
+    // AddApplicationToSchedulerTransition.
+    verify(publisher).appCreated(eq(application), anyLong());
     return application;
   }
 
@@ -405,7 +414,6 @@ public class TestRMAppTransitions {
     RMAppEvent event =
         new RMAppRecoverEvent(application.getApplicationId(), state);
 
-
     application.handle(event);
     assertStartTimeSet(application);
     assertAppState(RMAppState.SUBMITTED, application);
@@ -415,7 +423,7 @@ public class TestRMAppTransitions {
   protected RMApp testCreateAppAccepted(
       ApplicationSubmissionContext submissionContext) throws IOException {
     RMApp application = testCreateAppSubmittedNoRecovery(submissionContext);
-  // SUBMITTED => ACCEPTED event RMAppEventType.APP_ACCEPTED
+    // SUBMITTED => ACCEPTED event RMAppEventType.APP_ACCEPTED
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), 
             RMAppEventType.APP_ACCEPTED);
@@ -427,7 +435,7 @@ public class TestRMAppTransitions {
 
   protected RMApp testCreateAppRunning(
       ApplicationSubmissionContext submissionContext) throws IOException {
-  RMApp application = testCreateAppAccepted(submissionContext);
+    RMApp application = testCreateAppAccepted(submissionContext);
     // ACCEPTED => RUNNING event RMAppEventType.ATTEMPT_REGISTERED
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), 
@@ -549,11 +557,14 @@ public class TestRMAppTransitions {
   public void testAppNewKill() throws IOException {
     LOG.info("--- START: testAppNewKill ---");
 
+    UserGroupInformation fooUser = UserGroupInformation.createUserForTesting(
+        "fooTestAppNewKill", new String[] {"foo_group"});
+
     RMApp application = createNewTestApp(null);
     // NEW => KILLED event RMAppEventType.KILL
-    RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
-        "Application killed by user.");
+    RMAppEvent event = new RMAppKillByClientEvent(
+        application.getApplicationId(), "Application killed by user.", fooUser,
+        Server.getRemoteIp());
     application.handle(event);
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
@@ -604,9 +615,13 @@ public class TestRMAppTransitions {
 
     RMApp application = testCreateAppNewSaving(null);
     // NEW_SAVING => KILLED event RMAppEventType.KILL
-    RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
-        "Application killed by user.");
+    UserGroupInformation fooUser = UserGroupInformation.createUserForTesting(
+        "fooTestAppNewSavingKill", new String[] {"foo_group"});
+
+    RMAppEvent event = new RMAppKillByClientEvent(
+        application.getApplicationId(), "Application killed by user.", fooUser,
+        Server.getRemoteIp());
+
     application.handle(event);
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
@@ -653,10 +668,15 @@ public class TestRMAppTransitions {
   public void testAppSubmittedKill() throws IOException, InterruptedException {
     LOG.info("--- START: testAppSubmittedKill---");
     RMApp application = testCreateAppSubmittedNoRecovery(null);
+
+    UserGroupInformation fooUser = UserGroupInformation.createUserForTesting(
+        "fooTestAppSubmittedKill", new String[] {"foo_group"});
+
     // SUBMITTED => KILLED event RMAppEventType.KILL
-    RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
-        "Application killed by user.");
+    RMAppEvent event = new RMAppKillByClientEvent(
+        application.getApplicationId(), "Application killed by user.", fooUser,
+        Server.getRemoteIp());
+
     application.handle(event);
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
@@ -706,9 +726,13 @@ public class TestRMAppTransitions {
     LOG.info("--- START: testAppAcceptedKill ---");
     RMApp application = testCreateAppAccepted(null);
     // ACCEPTED => KILLED event RMAppEventType.KILL
-    RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
-        "Application killed by user.");
+    UserGroupInformation fooUser = UserGroupInformation.createUserForTesting(
+        "fooTestAppAcceptedKill", new String[] {"foo_group"});
+
+    RMAppEvent event = new RMAppKillByClientEvent(
+        application.getApplicationId(), "Application killed by user.", fooUser,
+        Server.getRemoteIp());
+
     application.handle(event);
     rmDispatcher.await();
 
@@ -754,9 +778,14 @@ public class TestRMAppTransitions {
 
     RMApp application = testCreateAppRunning(null);
     // RUNNING => KILLED event RMAppEventType.KILL
-    RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
-        "Application killed by user.");
+    UserGroupInformation fooUser = UserGroupInformation.createUserForTesting(
+        "fooTestAppRunningKill", new String[] {"foo_group"});
+
+    // SUBMITTED => KILLED event RMAppEventType.KILL
+    RMAppEvent event = new RMAppKillByClientEvent(
+        application.getApplicationId(), "Application killed by user.", fooUser,
+        Server.getRemoteIp());
+
     application.handle(event);
     rmDispatcher.await();
 
@@ -920,9 +949,14 @@ public class TestRMAppTransitions {
     RMApp application = testCreateAppRunning(null);
 
     // RUNNING => KILLED event RMAppEventType.KILL
-    RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
-        "Application killed by user.");
+    UserGroupInformation fooUser = UserGroupInformation.createUserForTesting(
+        "fooTestAppKilledKill", new String[] {"foo_group"});
+
+    // SUBMITTED => KILLED event RMAppEventType.KILL
+    RMAppEvent event = new RMAppKillByClientEvent(
+        application.getApplicationId(), "Application killed by user.", fooUser,
+        Server.getRemoteIp());
+
     application.handle(event);
     rmDispatcher.await();
     sendAttemptUpdateSavedEvent(application);

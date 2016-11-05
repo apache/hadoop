@@ -32,14 +32,14 @@ public interface ErasureCodingStep {
    * or parity blocks.
    * @return input blocks
    */
-  public ECBlock[] getInputBlocks();
+  ECBlock[] getInputBlocks();
 
   /**
    * Output blocks of writable buffers involved in this step, may be data
    * blocks or parity blocks.
    * @return output blocks
    */
-  public ECBlock[] getOutputBlocks();
+  ECBlock[] getOutputBlocks();
 
   /**
    * Perform encoding or decoding given the input chunks, and generated results
@@ -47,11 +47,11 @@ public interface ErasureCodingStep {
    * @param inputChunks
    * @param outputChunks
    */
-  public void performCoding(ECChunk[] inputChunks, ECChunk[] outputChunks);
+  void performCoding(ECChunk[] inputChunks, ECChunk[] outputChunks);
 
   /**
    * Notify erasure coder that all the chunks of input blocks are processed so
    * the coder can be able to update internal states, considering next step.
    */
-  public void finish();
+  void finish();
 }

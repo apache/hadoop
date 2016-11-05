@@ -121,7 +121,7 @@ class BlockReceiver implements Closeable {
   /** the block to receive */
   private final ExtendedBlock block; 
   /** the replica to write */
-  private ReplicaInPipelineInterface replicaInfo;
+  private ReplicaInPipeline replicaInfo;
   /** pipeline stage */
   private final BlockConstructionStage stage;
   private final boolean isTransfer;
@@ -470,7 +470,13 @@ class BlockReceiver implements Closeable {
     try {
       clientChecksum.verifyChunkedSums(dataBuf, checksumBuf, clientname, 0);
     } catch (ChecksumException ce) {
-      LOG.warn("Checksum error in block " + block + " from " + inAddr, ce);
+      PacketHeader header = packetReceiver.getHeader();
+      String specificOffset = "specific offsets are:"
+          + " offsetInBlock = " + header.getOffsetInBlock()
+          + " offsetInPacket = " + ce.getPos();
+      LOG.warn("Checksum error in block "
+          + block + " from " + inAddr
+          + ", " + specificOffset, ce);
       // No need to report to namenode when client is writing.
       if (srcDataNode != null && isDatanode) {
         try {
@@ -1300,6 +1306,7 @@ class BlockReceiver implements Closeable {
           long ackRecvNanoTime = 0;
           try {
             if (type != PacketResponderType.LAST_IN_PIPELINE && !mirrorError) {
+              DataNodeFaultInjector.get().failPipeline(replicaInfo, mirrorAddr);
               // read an ack from downstream datanode
               ack.readFields(downstreamIn);
               ackRecvNanoTime = System.nanoTime();

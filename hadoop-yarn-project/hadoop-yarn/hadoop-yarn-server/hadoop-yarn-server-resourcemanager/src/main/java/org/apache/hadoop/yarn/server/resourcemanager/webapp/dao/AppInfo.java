@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
@@ -37,7 +39,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
@@ -97,12 +101,17 @@ public class AppInfo {
   protected int numNonAMContainerPreempted;
   protected int numAMContainerPreempted;
 
-  protected List<ResourceRequest> resourceRequests;
+  // list of resource requests
+  @XmlElement(name = "resourceRequests")
+  private List<ResourceRequestInfo> resourceRequests =
+      new ArrayList<ResourceRequestInfo>();
 
   protected LogAggregationStatus logAggregationStatus;
   protected boolean unmanagedApplication;
   protected String appNodeLabelExpression;
   protected String amNodeLabelExpression;
+
+  protected ResourcesInfo resourceInfo;
 
   public AppInfo() {
   } // JAXB needs this
@@ -182,8 +191,16 @@ public class AppInfo {
             queueUsagePercentage = resourceReport.getQueueUsagePercentage();
             clusterUsagePercentage = resourceReport.getClusterUsagePercentage();
           }
-          resourceRequests = rm.getRMContext().getScheduler()
+
+          List<ResourceRequest> resourceRequestsRaw = rm.getRMContext()
+              .getScheduler()
               .getPendingResourceRequestsForAttempt(attempt.getAppAttemptId());
+
+          if (resourceRequestsRaw != null) {
+            for (ResourceRequest req : resourceRequestsRaw) {
+              resourceRequests.add(new ResourceRequestInfo(req));
+            }
+          }
         }
       }
 
@@ -205,6 +222,19 @@ public class AppInfo {
           app.getApplicationSubmissionContext().getNodeLabelExpression();
       amNodeLabelExpression = (unmanagedApplication) ? null
           : app.getAMResourceRequest().getNodeLabelExpression();
+
+      // Setting partition based resource usage of application
+      ResourceScheduler scheduler = rm.getRMContext().getScheduler();
+      if (scheduler instanceof CapacityScheduler) {
+        RMAppAttempt attempt = app.getCurrentAppAttempt();
+        if (null != attempt) {
+          FiCaSchedulerApp ficaAppAttempt = ((CapacityScheduler) scheduler)
+              .getApplicationAttempt(attempt.getAppAttemptId());
+          resourceInfo = null != ficaAppAttempt
+              ? new ResourcesInfo(ficaAppAttempt.getSchedulingResourceUsage())
+              : new ResourcesInfo();
+        }
+      }
     }
   }
 
@@ -352,7 +382,7 @@ public class AppInfo {
     return vcoreSeconds;
   }
 
-  public List<ResourceRequest> getResourceRequests() {
+  public List<ResourceRequestInfo> getResourceRequests() {
     return this.resourceRequests;
   }
 
@@ -374,5 +404,9 @@ public class AppInfo {
 
   public String getAmNodeLabelExpression() {
     return this.amNodeLabelExpression;
+  }
+
+  public ResourcesInfo getResourceInfo() {
+    return resourceInfo;
   }
 }

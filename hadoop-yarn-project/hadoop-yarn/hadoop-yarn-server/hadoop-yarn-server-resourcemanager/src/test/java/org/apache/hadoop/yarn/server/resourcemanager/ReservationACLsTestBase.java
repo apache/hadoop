@@ -549,8 +549,8 @@ public class ReservationACLsTestBase extends ACLsTestBase {
     csConf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
     csConf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
     csConf.setBoolean(YarnConfiguration.YARN_RESERVATION_ACL_ENABLE, true);
-    csConf.set("yarn.resourcemanager.scheduler.class", CapacityScheduler
-            .class.getName());
+    csConf.set(YarnConfiguration.RM_SCHEDULER,
+        CapacityScheduler.class.getName());
 
     return csConf;
   }
@@ -566,6 +566,8 @@ public class ReservationACLsTestBase extends ACLsTestBase {
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
     out.println("<allocations>");
+    out.println("  <defaultQueueSchedulingPolicy>drf" +
+        "</defaultQueueSchedulingPolicy>");
     out.println("  <queue name=\"queueA\">");
     out.println("    <aclSubmitReservations>" +
             "queueA_user,common_user " +
@@ -600,8 +602,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
     fsConf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
     fsConf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
     fsConf.setBoolean(YarnConfiguration.YARN_RESERVATION_ACL_ENABLE, true);
-    fsConf.set("yarn.resourcemanager.scheduler.class", FairScheduler.class
-            .getName());
+    fsConf.set(YarnConfiguration.RM_SCHEDULER, FairScheduler.class.getName());
 
     return fsConf;
   }

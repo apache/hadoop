@@ -50,10 +50,13 @@ The Offline Image Viewer provides several output processors:
     ..., s[n-1], maxSize], and the processor calculates how many files
     in the system fall into each segment [s[i-1], s[i]). Note that
     files larger than maxSize always fall into the very last segment.
-    The output file is formatted as a tab separated two column table:
-    Size and NumFiles. Where Size represents the start of the segment,
+    By default, the output file is formatted as a tab separated two column
+    table: Size and NumFiles. Where Size represents the start of the segment,
     and numFiles is the number of files form the image which size falls
-    in this segment.
+    in this segment. By specifying the option -format, the output file will be
+    formatted in a human-readable fashion rather than a number of bytes that
+    showed in Size column. In addition, the Size column will be changed to the
+    Size Range column.
 
 4. Delimited (experimental): Generate a text file with all of the elements
    common to both inodes and inodes-under-construction, separated by a
@@ -150,6 +153,7 @@ Options
 | `-addr` *address* | Specify the address(host:port) to listen. (localhost:5978 by default). This option is used with Web processor. |
 | `-maxSize` *size* | Specify the range [0, maxSize] of file sizes to be analyzed in bytes (128GB by default). This option is used with FileDistribution processor. |
 | `-step` *size* | Specify the granularity of the distribution in bytes (2MB by default). This option is used with FileDistribution processor. |
+| `-format` | Format the output result in a human-readable fashion rather than a number of bytes. (false by default). This option is used with FileDistribution processor. |
 | `-delimiter` *arg* | Delimiting string to use with Delimited processor. |
 | `-t`\|`--temp` *temporary dir* | Use temporary dir to cache intermediate result to generate Delimited outputs. If not set, Delimited processor constructs the namespace in memory before outputting text. |
 | `-h`\|`--help` | Display the tool usage and help information and exit. |
@@ -181,6 +185,9 @@ Due to the internal layout changes introduced by the ProtocolBuffer-based fsimag
 | `-i`\|`--inputFile` *input file* | Specify the input fsimage file to process. Required. |
 | `-o`\|`--outputFile` *output file* | Specify the output filename, if the specified output processor generates one. If the specified file already exists, it is silently overwritten. Required. |
 | `-p`\|`--processor` *processor* | Specify the image processor to apply against the image file. Valid options are Ls (default), XML, Delimited, Indented, and FileDistribution. |
+| `-maxSize` *size* | Specify the range [0, maxSize] of file sizes to be analyzed in bytes (128GB by default). This option is used with FileDistribution processor. |
+| `-step` *size* | Specify the granularity of the distribution in bytes (2MB by default). This option is used with FileDistribution processor. |
+| `-format` | Format the output result in a human-readable fashion rather than a number of bytes. (false by default). This option is used with FileDistribution processor. |
 | `-skipBlocks` | Do not enumerate individual blocks within files. This may save processing time and outfile file space on namespaces with very large files. The Ls processor reads the blocks to correctly determine file sizes and ignores this option. |
 | `-printToScreen` | Pipe output of processor to console as well as specified file. On extremely large namespaces, this may increase processing time by an order of magnitude. |
 | `-delimiter` *arg* | When used in conjunction with the Delimited processor, replaces the default tab delimiter with the string specified by *arg*. |

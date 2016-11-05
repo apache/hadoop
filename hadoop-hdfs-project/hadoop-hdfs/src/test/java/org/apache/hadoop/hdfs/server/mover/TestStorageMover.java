@@ -613,8 +613,10 @@ public class TestStorageMover {
   }
 
   private void waitForAllReplicas(int expectedReplicaNum, Path file,
-      DistributedFileSystem dfs) throws Exception {
-    for (int i = 0; i < 5; i++) {
+      DistributedFileSystem dfs, int retryCount) throws Exception {
+    LOG.info("Waiting for replicas count " + expectedReplicaNum
+        + ", file name: " + file);
+    for (int i = 0; i < retryCount; i++) {
       LocatedBlocks lbs = dfs.getClient().getLocatedBlocks(file.toString(), 0,
           BLOCK_SIZE);
       LocatedBlock lb = lbs.get(0);
@@ -664,7 +666,7 @@ public class TestStorageMover {
       for (int i = 0; i < 2; i++) {
         final Path p = new Path(pathPolicyMap.hot, "file" + i);
         DFSTestUtil.createFile(test.dfs, p, BLOCK_SIZE, replication, 0L);
-        waitForAllReplicas(replication, p, test.dfs);
+        waitForAllReplicas(replication, p, test.dfs, 10);
       }
 
       // set all the DISK volume to full
@@ -679,16 +681,17 @@ public class TestStorageMover {
       final Replication r = test.getReplication(file0);
       final short newReplication = (short) 5;
       test.dfs.setReplication(file0, newReplication);
-      Thread.sleep(10000);
+      waitForAllReplicas(newReplication, file0, test.dfs, 10);
       test.verifyReplication(file0, r.disk, newReplication - r.disk);
 
       // test creating a cold file and then increase replication
       final Path p = new Path(pathPolicyMap.cold, "foo");
       DFSTestUtil.createFile(test.dfs, p, BLOCK_SIZE, replication, 0L);
+      waitForAllReplicas(replication, p, test.dfs, 10);
       test.verifyReplication(p, 0, replication);
 
       test.dfs.setReplication(p, newReplication);
-      Thread.sleep(10000);
+      waitForAllReplicas(newReplication, p, test.dfs, 10);
       test.verifyReplication(p, 0, newReplication);
 
       //test move a hot file to warm
@@ -722,7 +725,7 @@ public class TestStorageMover {
       for (int i = 0; i < 2; i++) {
         final Path p = new Path(pathPolicyMap.cold, "file" + i);
         DFSTestUtil.createFile(test.dfs, p, BLOCK_SIZE, replication, 0L);
-        waitForAllReplicas(replication, p, test.dfs);
+        waitForAllReplicas(replication, p, test.dfs, 10);
       }
 
       // set all the ARCHIVE volume to full
@@ -739,7 +742,7 @@ public class TestStorageMover {
 
         final short newReplication = (short) 5;
         test.dfs.setReplication(file0, newReplication);
-        Thread.sleep(10000);
+        waitForAllReplicas(r.archive, file0, test.dfs, 10);
 
         test.verifyReplication(file0, 0, r.archive);
       }

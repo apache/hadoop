@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.fs.http.server;
 
+import com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
+import org.apache.hadoop.fs.http.client.HttpFSUtils;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AccessTimeParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AclPermissionParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.BlockSizeParam;
@@ -46,6 +48,7 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrEncodingPa
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrNameParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrSetFlagParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrValueParam;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.lib.service.FileSystemAccessException;
 import org.apache.hadoop.lib.service.Groups;
@@ -166,7 +169,7 @@ public class HttpFSServer {
    * {@link HttpFSExceptionProvider}.
    */
   @GET
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Response getRoot(@QueryParam(OperationParam.NAME) OperationParam op,
                           @Context Parameters params,
                           @Context HttpServletRequest request)
@@ -195,7 +198,8 @@ public class HttpFSServer {
    */
   @GET
   @Path("{path:.*}")
-  @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_OCTET_STREAM + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response get(@PathParam("path") String path,
                       @QueryParam(OperationParam.NAME) OperationParam op,
                       @Context Parameters params,
@@ -320,6 +324,28 @@ public class HttpFSServer {
       response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
       break;
     }
+    case LISTSTATUS_BATCH: {
+      String startAfter = params.get(
+          HttpFSParametersProvider.StartAfterParam.NAME,
+          HttpFSParametersProvider.StartAfterParam.class);
+      byte[] token = HttpFSUtils.EMPTY_BYTES;
+      if (startAfter != null) {
+        token = startAfter.getBytes(Charsets.UTF_8);
+      }
+      FSOperations.FSListStatusBatch command = new FSOperations
+          .FSListStatusBatch(path, token);
+      @SuppressWarnings("rawtypes") Map json = fsExecute(user, command);
+      AUDIT_LOG.info("[{}] token [{}]", path, token);
+      response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
+    case GETTRASHROOT: {
+      FSOperations.FSTrashRoot command = new FSOperations.FSTrashRoot(path);
+      JSONObject json = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", path);
+      response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
     default: {
       throw new IOException(
           MessageFormat.format("Invalid HTTP GET operation [{0}]", op.value()));
@@ -346,7 +372,7 @@ public class HttpFSServer {
    */
   @DELETE
   @Path("{path:.*}")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Response delete(@PathParam("path") String path,
                          @QueryParam(OperationParam.NAME) OperationParam op,
                          @Context Parameters params,
@@ -397,7 +423,7 @@ public class HttpFSServer {
   @POST
   @Path("{path:.*}")
   @Consumes({"*/*"})
-  @Produces({MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response post(InputStream is,
                        @Context UriInfo uriInfo,
                        @PathParam("path") String path,
@@ -492,7 +518,7 @@ public class HttpFSServer {
   @PUT
   @Path("{path:.*}")
   @Consumes({"*/*"})
-  @Produces({MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response put(InputStream is,
                        @Context UriInfo uriInfo,
                        @PathParam("path") String path,

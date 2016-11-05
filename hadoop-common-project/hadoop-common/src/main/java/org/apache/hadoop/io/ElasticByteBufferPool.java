@@ -85,7 +85,7 @@ public final class ElasticByteBufferPool implements ByteBufferPool {
   private final TreeMap<Key, ByteBuffer> getBufferTree(boolean direct) {
     return direct ? directBuffers : buffers;
   }
-  
+
   @Override
   public synchronized ByteBuffer getBuffer(boolean direct, int length) {
     TreeMap<Key, ByteBuffer> tree = getBufferTree(direct);
@@ -101,6 +101,7 @@ public final class ElasticByteBufferPool implements ByteBufferPool {
 
   @Override
   public synchronized void putBuffer(ByteBuffer buffer) {
+    buffer.clear();
     TreeMap<Key, ByteBuffer> tree = getBufferTree(buffer.isDirect());
     while (true) {
       Key key = new Key(buffer.capacity(), System.nanoTime());

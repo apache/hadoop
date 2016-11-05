@@ -141,7 +141,7 @@ The failure modes when a user lacks security permissions are not specified.
 
 ### Networking Assumptions
 
-This document assumes this all network operations succeed. All statements
+This document assumes that all network operations succeed. All statements
 can be assumed to be qualified as *"assuming the operation does not fail due
 to a network availability problem"*
 
@@ -303,7 +303,7 @@ does not hold on blob stores]
 1. Directory list operations are fast for directories with few entries, but may
 incur a cost that is `O(entries)`. Hadoop 2 added iterative listing to
 handle the challenge of listing directories with millions of entries without
-buffering -at the cost of consistency.
+buffering at the cost of consistency.
 
 1. A `close()` of an `OutputStream` is fast, irrespective of whether or not
 the file operation has succeeded or not.
@@ -317,8 +317,8 @@ This specification refers to *Object Stores* in places, often using the
 term *Blobstore*. Hadoop does provide FileSystem client classes for some of these
 even though they violate many of the requirements. This is why, although
 Hadoop can read and write data in an object store, the two which Hadoop ships
-with direct support for &mdash;Amazon S3 and OpenStack Swift&mdash cannot
-be used as direct replacement for HDFS.
+with direct support for &mdash; Amazon S3 and OpenStack Swift &mdash; cannot
+be used as direct replacements for HDFS.
 
 *What is an Object Store?*
 
@@ -358,10 +358,10 @@ are current with respect to the files within that directory.
 as are `delete()` operations. Object store FileSystem clients implement these
 as operations on the individual objects whose names match the directory prefix.
 As a result, the changes take place a file at a time, and are not atomic. If
-an operation fails part way through the process, the the state of the object store
+an operation fails part way through the process, then the state of the object store
 reflects the partially completed operation.  Note also that client code
 assumes that these operations are `O(1)` &mdash;in an object store they are
-more likely to be be `O(child-entries)`.
+more likely to be `O(child-entries)`.
 
 1. **Durability**. Hadoop assumes that `OutputStream` implementations write data
 to their (persistent) storage on a `flush()` operation. Object store implementations
@@ -372,6 +372,21 @@ as the write process only starts in  `close()` operation, that operation may tak
 a time proportional to the quantity of data to upload, and inversely proportional
 to the network bandwidth. It may also fail &mdash;a failure that is better
 escalated than ignored.
+
+1. **Authorization**. Hadoop uses the `FileStatus` class to
+represent core metadata of files and directories, including the owner, group and
+permissions.  Object stores might not have a viable way to persist this
+metadata, so they might need to populate `FileStatus` with stub values.  Even if
+the object store persists this metadata, it still might not be feasible for the
+object store to enforce file authorization in the same way as a traditional file
+system.  If the object store cannot persist this metadata, then the recommended
+convention is:
+    * File owner is reported as the current user.
+    * File group also is reported as the current user.
+    * Directory permissions are reported as 777.
+    * File permissions are reported as 666.
+    * File system APIs that set ownership and permissions execute successfully
+      without error, but they are no-ops.
 
 Object stores with these characteristics, can not be used as a direct replacement
 for HDFS. In terms of this specification, their implementations of the

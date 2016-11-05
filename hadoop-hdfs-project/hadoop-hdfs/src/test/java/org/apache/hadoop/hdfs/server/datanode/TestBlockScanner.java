@@ -29,6 +29,7 @@ import static org.junit.Assert.assertFalse;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -549,8 +550,8 @@ public class TestBlockScanner {
       info.shouldRun = false;
     }
     ctx.datanode.shutdown();
-    String vPath = ctx.volumes.get(0).getBasePath();
-    File cursorPath = new File(new File(new File(vPath, "current"),
+    URI vURI = ctx.volumes.get(0).getStorageLocation().getUri();
+    File cursorPath = new File(new File(new File(new File(vURI), "current"),
           ctx.bpids[0]), "scanner.cursor");
     assertTrue("Failed to find cursor save file in " +
         cursorPath.getAbsolutePath(), cursorPath.exists());

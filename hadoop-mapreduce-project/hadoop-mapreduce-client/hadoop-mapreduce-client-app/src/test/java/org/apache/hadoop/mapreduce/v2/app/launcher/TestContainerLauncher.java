@@ -30,8 +30,15 @@ import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RestartContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RollbackResponse;
 import org.junit.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -466,6 +473,37 @@ public class TestContainerLauncher {
     @Override
     public SignalContainerResponse signalToContainer(
         SignalContainerRequest request) throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public ResourceLocalizationResponse localize(
+        ResourceLocalizationRequest request) throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public ReInitializeContainerResponse reInitializeContainer(
+        ReInitializeContainerRequest request) throws YarnException,
+        IOException {
+      return null;
+    }
+
+    @Override
+    public RestartContainerResponse restartContainer(ContainerId containerId)
+        throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public RollbackResponse rollbackLastReInitialization(
+        ContainerId containerId) throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public CommitResponse commitLastReInitialization(ContainerId containerId)
+        throws YarnException, IOException {
       return null;
     }
   }

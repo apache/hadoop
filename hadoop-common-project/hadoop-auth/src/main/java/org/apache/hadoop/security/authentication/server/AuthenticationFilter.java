@@ -165,15 +165,9 @@ public class AuthenticationFilter implements Filter {
           PseudoAuthenticationHandler.TYPE + "|" + 
           KerberosAuthenticationHandler.TYPE + "|<class>");
     }
-    if (authHandlerName.toLowerCase(Locale.ENGLISH).equals(
-        PseudoAuthenticationHandler.TYPE)) {
-      authHandlerClassName = PseudoAuthenticationHandler.class.getName();
-    } else if (authHandlerName.toLowerCase(Locale.ENGLISH).equals(
-        KerberosAuthenticationHandler.TYPE)) {
-      authHandlerClassName = KerberosAuthenticationHandler.class.getName();
-    } else {
-      authHandlerClassName = authHandlerName;
-    }
+    authHandlerClassName =
+        AuthenticationHandlerUtil
+            .getAuthenticationHandlerClassName(authHandlerName);
     maxInactiveInterval = Long.parseLong(config.getProperty(
         AUTH_TOKEN_MAX_INACTIVE_INTERVAL, "-1")); // By default, disable.
     if (maxInactiveInterval > 0) {
@@ -438,6 +432,9 @@ public class AuthenticationFilter implements Filter {
       for (Cookie cookie : cookies) {
         if (cookie.getName().equals(AuthenticatedURL.AUTH_COOKIE)) {
           tokenStr = cookie.getValue();
+          if (tokenStr.isEmpty()) {
+            throw new AuthenticationException("Unauthorized access");
+          }
           try {
             tokenStr = signer.verifyAndExtract(tokenStr);
           } catch (SignerException ex) {
@@ -449,7 +446,8 @@ public class AuthenticationFilter implements Filter {
     }
     if (tokenStr != null) {
       token = AuthenticationToken.parse(tokenStr);
-      if (!token.getType().equals(authHandler.getType())) {
+      boolean match = verifyTokenType(getAuthenticationHandler(), token);
+      if (!match) {
         throw new AuthenticationException("Invalid AuthenticationToken type");
       }
       if (token.isExpired()) {
@@ -457,6 +455,38 @@ public class AuthenticationFilter implements Filter {
       }
     }
     return token;
+  }
+
+  /**
+   * This method verifies if the specified token type matches one of the the
+   * token types supported by a specified {@link AuthenticationHandler}. This
+   * method is specifically designed to work with
+   * {@link CompositeAuthenticationHandler} implementation which supports
+   * multiple authentication schemes while the {@link AuthenticationHandler}
+   * interface supports a single type via
+   * {@linkplain AuthenticationHandler#getType()} method.
+   *
+   * @param handler The authentication handler whose supported token types
+   *                should be used for verification.
+   * @param token   The token whose type needs to be verified.
+   * @return true   If the token type matches one of the supported token types
+   *         false  Otherwise
+   */
+  protected boolean verifyTokenType(AuthenticationHandler handler,
+      AuthenticationToken token) {
+    if(!(handler instanceof CompositeAuthenticationHandler)) {
+      return handler.getType().equals(token.getType());
+    }
+    boolean match = false;
+    Collection<String> tokenTypes =
+        ((CompositeAuthenticationHandler) handler).getTokenTypes();
+    for (String tokenType : tokenTypes) {
+      if (tokenType.equals(token.getType())) {
+        match = true;
+        break;
+      }
+    }
+    return match;
   }
 
   /**

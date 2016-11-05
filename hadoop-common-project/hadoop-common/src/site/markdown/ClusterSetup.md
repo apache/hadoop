@@ -35,7 +35,7 @@ Installation
 
 Installing a Hadoop cluster typically involves unpacking the software on all the machines in the cluster or installing it via a packaging system as appropriate for your operating system. It is important to divide up the hardware into functions.
 
-Typically one machine in the cluster is designated as the NameNode and another machine the as ResourceManager, exclusively. These are the masters. Other services (such as Web App Proxy Server and MapReduce Job History server) are usually run either on dedicated hardware or on shared infrastrucutre, depending upon the load.
+Typically one machine in the cluster is designated as the NameNode and another machine as the ResourceManager, exclusively. These are the masters. Other services (such as Web App Proxy Server and MapReduce Job History server) are usually run either on dedicated hardware or on shared infrastructure, depending upon the load.
 
 The rest of the machines in the cluster act as both DataNode and NodeManager. These are the workers.
 
@@ -64,17 +64,17 @@ Administrators can configure individual daemons using the configuration options 
 
 | Daemon | Environment Variable |
 |:---- |:---- |
-| NameNode | HADOOP\_NAMENODE\_OPTS |
-| DataNode | HADOOP\_DATANODE\_OPTS |
-| Secondary NameNode | HADOOP\_SECONDARYNAMENODE\_OPTS |
+| NameNode | HDFS\_NAMENODE\_OPTS |
+| DataNode | HDFS\_DATANODE\_OPTS |
+| Secondary NameNode | HDFS\_SECONDARYNAMENODE\_OPTS |
 | ResourceManager | YARN\_RESOURCEMANAGER\_OPTS |
 | NodeManager | YARN\_NODEMANAGER\_OPTS |
 | WebAppProxy | YARN\_PROXYSERVER\_OPTS |
-| Map Reduce Job History Server | HADOOP\_JOB\_HISTORYSERVER\_OPTS |
+| Map Reduce Job History Server | MAPRED\_HISTORYSERVER\_OPTS |
 
-For example, To configure Namenode to use parallelGC, the following statement should be added in hadoop-env.sh :
+For example, To configure Namenode to use parallelGC and a 4GB Java Heap, the following statement should be added in hadoop-env.sh :
 
-      export HADOOP_NAMENODE_OPTS="-XX:+UseParallelGC"
+      export HDFS_NAMENODE_OPTS="-XX:+UseParallelGC -Xmx4g"
 
 See `etc/hadoop/hadoop-env.sh` for other examples.
 
@@ -90,13 +90,6 @@ It is also traditional to configure `HADOOP_HOME` in the system-wide shell envir
 
       HADOOP_HOME=/path/to/hadoop
       export HADOOP_HOME
-
-| Daemon | Environment Variable |
-|:---- |:---- |
-| ResourceManager | YARN\_RESOURCEMANAGER\_HEAPSIZE |
-| NodeManager | YARN\_NODEMANAGER\_HEAPSIZE |
-| WebAppProxy | YARN\_PROXYSERVER\_HEAPSIZE |
-| Map Reduce Job History Server | HADOOP\_JOB\_HISTORYSERVER\_HEAPSIZE |
 
 ### Configuring the Hadoop Daemons
 

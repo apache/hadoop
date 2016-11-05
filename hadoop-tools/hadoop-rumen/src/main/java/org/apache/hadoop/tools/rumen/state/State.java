@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.tools.rumen.state;
 
-import org.codehaus.jackson.annotate.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * Represents a state. This state is managed by {@link StatePool}.

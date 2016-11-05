@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.web;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.hadoop.fs.ContentSummary;
@@ -33,6 +34,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -141,6 +143,38 @@ class JsonUtilClient {
         storagePolicy, null);
   }
 
+  static HdfsFileStatus[] toHdfsFileStatusArray(final Map<?, ?> json) {
+    Preconditions.checkNotNull(json);
+    final Map<?, ?> rootmap =
+        (Map<?, ?>)json.get(FileStatus.class.getSimpleName() + "es");
+    final List<?> array = JsonUtilClient.getList(rootmap,
+        FileStatus.class.getSimpleName());
+
+    // convert FileStatus
+    Preconditions.checkNotNull(array);
+    final HdfsFileStatus[] statuses = new HdfsFileStatus[array.size()];
+    int i = 0;
+    for (Object object : array) {
+      final Map<?, ?> m = (Map<?, ?>) object;
+      statuses[i++] = JsonUtilClient.toFileStatus(m, false);
+    }
+    return statuses;
+  }
+
+  static DirectoryListing toDirectoryListing(final Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    final Map<?, ?> listing = getMap(json, "DirectoryListing");
+    final Map<?, ?> partialListing = getMap(listing, "partialListing");
+    HdfsFileStatus[] fileStatuses = toHdfsFileStatusArray(partialListing);
+
+    int remainingEntries = getInt(listing, "remainingEntries", -1);
+    Preconditions.checkState(remainingEntries != -1,
+        "remainingEntries was not set");
+    return new DirectoryListing(fileStatuses, remainingEntries);
+  }
+
   /** Convert a Json map to an ExtendedBlock object. */
   static ExtendedBlock toExtendedBlock(final Map<?, ?> m) {
     if (m == null) {
@@ -184,6 +218,15 @@ class JsonUtilClient {
     Object list = m.get(key);
     if (list instanceof List<?>) {
       return (List<?>) list;
+    } else {
+      return null;
+    }
+  }
+
+  static Map<?, ?> getMap(Map<?, ?> m, String key) {
+    Object map = m.get(key);
+    if (map instanceof Map<?, ?>) {
+      return (Map<?, ?>) map;
     } else {
       return null;
     }

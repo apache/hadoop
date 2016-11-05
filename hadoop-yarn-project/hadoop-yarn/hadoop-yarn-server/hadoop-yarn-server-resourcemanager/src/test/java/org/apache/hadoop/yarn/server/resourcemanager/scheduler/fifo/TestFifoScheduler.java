@@ -409,11 +409,9 @@ public class TestFifoScheduler {
     nm_1.heartbeat();
 
     // ResourceRequest priorities
-    Priority priority_0 = 
-      org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.create(0); 
-    Priority priority_1 = 
-      org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.create(1);
-    
+    Priority priority_0 = Priority.newInstance(0);
+    Priority priority_1 = Priority.newInstance(1);
+
     // Submit an application
     Application application_0 = new Application("user_0", resourceManager);
     application_0.submit();
@@ -1205,9 +1203,7 @@ public class TestFifoScheduler {
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
             Resources.createResource(8 * GB, 4));
     // ResourceRequest priorities
-    Priority priority_0 =
-        org.apache.hadoop.yarn.server.resourcemanager.resource.Priority
-            .create(0);
+    Priority priority_0 = Priority.newInstance(0);
 
     // Submit an application
     Application application_0 =

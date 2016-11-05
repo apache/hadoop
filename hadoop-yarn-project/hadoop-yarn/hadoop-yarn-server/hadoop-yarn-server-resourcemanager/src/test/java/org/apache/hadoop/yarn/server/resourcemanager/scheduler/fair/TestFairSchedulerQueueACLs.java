@@ -55,7 +55,7 @@ public class TestFairSchedulerQueueACLs extends QueueACLsTestBase {
     fsConf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     fsConf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
-    fsConf.set("yarn.resourcemanager.scheduler.class", FairScheduler.class.getName());
+    fsConf.set(YarnConfiguration.RM_SCHEDULER, FairScheduler.class.getName());
 
     return fsConf;
   }

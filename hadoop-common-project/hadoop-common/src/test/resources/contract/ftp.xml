@@ -27,11 +27,6 @@
   </property>
 
   <property>
-    <name>fs.contract.is-blobstore</name>
-    <value>false</value>
-  </property>
-
-  <property>
     <name>fs.contract.is-case-sensitive</name>
     <value>true</value>
   </property>

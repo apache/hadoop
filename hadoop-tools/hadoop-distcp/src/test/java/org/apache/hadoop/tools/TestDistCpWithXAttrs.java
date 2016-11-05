@@ -226,7 +226,7 @@ public class TestDistCpWithXAttrs {
 
     @Override
     public FileStatus[] listStatus(Path f) throws IOException {
-      return null;
+      return new FileStatus[0];
     }
 
     @Override

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
@@ -55,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -75,6 +77,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.blacklist.BlacklistManager;
@@ -524,6 +528,8 @@ public class RMAppImpl implements RMApp, Recoverable {
             DEFAULT_AM_SCHEDULING_NODE_BLACKLISTING_DISABLE_THRESHOLD;
       }
     }
+
+
   }
 
   /**
@@ -871,7 +877,7 @@ public class RMAppImpl implements RMApp, Recoverable {
 
       if (oldState != getState()) {
         LOG.info(appID + " State change from " + oldState + " to "
-            + getState());
+            + getState() + " on event=" + event.getType());
       }
     } finally {
       this.writeLock.unlock();
@@ -899,8 +905,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     //TODO recover collector address.
     //this.collectorAddr = appState.getCollectorAddr();
 
-    // send the ATS create Event
-    sendATSCreateEvent(this, this.startTime);
+    // send the ATS create Event during RM recovery.
+    // NOTE: it could be duplicated with events sent before RM get restarted.
+    sendATSCreateEvent();
     RMAppAttemptImpl preAttempt = null;
     for (ApplicationAttemptId attemptId :
         new TreeSet<>(appState.attempts.keySet())) {
@@ -1054,7 +1061,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       }
 
       app.rmContext.getSystemMetricsPublisher().appUpdated(app,
-          System.currentTimeMillis());
+          app.systemClock.getTime());
 
       // TODO: Write out change to state store (YARN-1558)
       // Also take care of RM failover
@@ -1102,6 +1109,20 @@ public class RMAppImpl implements RMApp, Recoverable {
         }
       }
 
+      long applicationLifetime =
+          app.getApplicationLifetime(ApplicationTimeoutType.LIFETIME);
+      if (applicationLifetime > 0) {
+        app.rmContext.getRMAppLifetimeMonitor().registerApp(app.applicationId,
+            ApplicationTimeoutType.LIFETIME, app.submitTime,
+            applicationLifetime * 1000);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Application " + app.applicationId
+              + " is registered for timeout monitor, type="
+              + ApplicationTimeoutType.LIFETIME + " value="
+              + applicationLifetime + " seconds");
+        }
+      }
+
       // No existent attempts means the attempt associated with this app was not
       // started or started but not yet saved.
       if (app.attempts.isEmpty()) {
@@ -1131,6 +1152,8 @@ public class RMAppImpl implements RMApp, Recoverable {
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.handler.handle(new AppAddedSchedulerEvent(app.user,
           app.submissionContext, false));
+      // send the ATS create Event
+      app.sendATSCreateEvent();
     }
   }
 
@@ -1146,6 +1169,13 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
+      Map<ApplicationTimeoutType, Long> timeouts =
+          app.submissionContext.getApplicationTimeouts();
+      if (timeouts != null && timeouts.size() > 0) {
+        app.rmContext.getRMAppLifetimeMonitor()
+            .unregisterApp(app.getApplicationId(), timeouts.keySet());
+      }
+
       if (app.transitionTodo instanceof SingleArcTransition) {
         ((SingleArcTransition) app.transitionTodo).transition(app,
           app.eventCausingFinalSaving);
@@ -1154,7 +1184,6 @@ public class RMAppImpl implements RMApp, Recoverable {
           app.eventCausingFinalSaving);
       }
       return app.targetedFinalState;
-
     }
   }
 
@@ -1203,15 +1232,24 @@ public class RMAppImpl implements RMApp, Recoverable {
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
 
+      long applicationLifetime =
+          app.getApplicationLifetime(ApplicationTimeoutType.LIFETIME);
+      if (applicationLifetime > 0) {
+        app.rmContext.getRMAppLifetimeMonitor().registerApp(app.applicationId,
+            ApplicationTimeoutType.LIFETIME, app.submitTime,
+            applicationLifetime * 1000);
+        LOG.debug("Application " + app.applicationId
+            + " is registered for timeout monitor, type="
+            + ApplicationTimeoutType.LIFETIME + " value=" + applicationLifetime
+            + " seconds");
+      }
+
       // If recovery is enabled then store the application information in a
       // non-blocking call so make sure that RM has stored the information
       // needed to restart the AM after RM restart without further client
       // communication
       LOG.info("Storing application with id " + app.applicationId);
       app.rmContext.getStateStore().storeNewApplication(app);
-
-      // send the ATS create Event
-      app.sendATSCreateEvent(app, app.startTime);
     }
   }
 
@@ -1332,6 +1370,25 @@ public class RMAppImpl implements RMApp, Recoverable {
     };
   }
 
+  /**
+   * Log the audit event for kill by client.
+   *
+   * @param event
+   *          The {@link RMAppEvent} to be logged
+   */
+  static void auditLogKillEvent(RMAppEvent event) {
+    if (event instanceof RMAppKillByClientEvent) {
+      RMAppKillByClientEvent killEvent = (RMAppKillByClientEvent) event;
+      UserGroupInformation callerUGI = killEvent.getCallerUGI();
+      String userName = null;
+      if (callerUGI != null) {
+        userName = callerUGI.getShortUserName();
+      }
+      InetAddress remoteIP = killEvent.getIp();
+      RMAuditLogger.logSuccess(userName, AuditConstants.KILL_APP_REQUEST,
+          "RMAppImpl", event.getApplicationId(), remoteIP);
+    }
+  }
 
   private static class AppKilledTransition extends FinalTransition {
     public AppKilledTransition() {
@@ -1342,6 +1399,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.diagnostics.append(event.getDiagnosticMsg());
       super.transition(app, event);
+      RMAppImpl.auditLogKillEvent(event);
     };
   }
 
@@ -1355,6 +1413,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       app.handler.handle(
           new RMAppAttemptEvent(app.currentAttempt.getAppAttemptId(),
               RMAppAttemptEventType.KILL, event.getDiagnosticMsg()));
+      RMAppImpl.auditLogKillEvent(event);
     }
   }
 
@@ -1888,14 +1947,24 @@ public class RMAppImpl implements RMApp, Recoverable {
     return callerContext;
   }
 
-  private void sendATSCreateEvent(RMApp app, long startTime) {
-    rmContext.getRMApplicationHistoryWriter().applicationStarted(app);
-    rmContext.getSystemMetricsPublisher().appCreated(app, startTime);
+  private void sendATSCreateEvent() {
+    rmContext.getRMApplicationHistoryWriter().applicationStarted(this);
+    rmContext.getSystemMetricsPublisher().appCreated(this, this.startTime);
   }
 
   @Private
   @VisibleForTesting
   public int getNextAttemptId() {
     return nextAttemptId;
+  }
+
+  private long getApplicationLifetime(ApplicationTimeoutType type) {
+    Map<ApplicationTimeoutType, Long> timeouts =
+        this.submissionContext.getApplicationTimeouts();
+    long applicationLifetime = -1;
+    if (timeouts != null && timeouts.containsKey(type)) {
+      applicationLifetime = timeouts.get(type);
+    }
+    return applicationLifetime;
   }
 }

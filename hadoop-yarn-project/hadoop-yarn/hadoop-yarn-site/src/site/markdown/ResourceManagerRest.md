@@ -79,12 +79,14 @@ Both of the following URI's give you the cluster information.
 | startedOn | long | The time the cluster started (in ms since epoch) |
 | state | string | The ResourceManager state - valid values are: NOTINITED, INITED, STARTED, STOPPED |
 | haState | string | The ResourceManager HA state - valid values are: INITIALIZING, ACTIVE, STANDBY, STOPPED |
+| rmStateStoreName | string | Fully qualified name of class that implements the storage of ResourceManager state |
 | resourceManagerVersion | string | Version of the ResourceManager |
 | resourceManagerBuildVersion | string | ResourceManager build string with build version, user, and checksum |
 | resourceManagerVersionBuiltOn | string | Timestamp when ResourceManager was built (in ms since epoch) |
 | hadoopVersion | string | Version of hadoop common |
 | hadoopBuildVersion | string | Hadoop common build string with build version, user, and checksum |
 | hadoopVersionBuiltOn | string | Timestamp when hadoop common was built(in ms since epoch) |
+| haZooKeeperConnectionState | string | State of ZooKeeper connection of the high availability service |
 
 ### Response Examples
 
@@ -110,13 +112,15 @@ Response Body:
     "id":1324053971963,
     "startedOn":1324053971963,
     "state":"STARTED",
-    "resourceManagerVersion":"0.23.1-SNAPSHOT",
-    "resourceManagerBuildVersion":"0.23.1-SNAPSHOT from 1214049 by user1 source checksum 050cd664439d931c8743a6428fd6a693",
-    "resourceManagerVersionBuiltOn":"Tue Dec 13 22:12:48 CST 2011",
-    "hadoopVersion":"0.23.1-SNAPSHOT",
-    "hadoopBuildVersion":"0.23.1-SNAPSHOT from 1214049 by user1 source checksum 11458df3bb77342dca5f917198fad328",
-    "hadoopVersionBuiltOn":"Tue Dec 13 22:12:26 CST 2011"
-  }
+    "haState":"ACTIVE",
+    "rmStateStoreName":"org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore",
+    "resourceManagerVersion":"3.0.0-SNAPSHOT",
+    "resourceManagerBuildVersion":"3.0.0-SNAPSHOT from unknown by user1 source checksum 11111111111111111111111111111111",
+    "resourceManagerVersionBuiltOn":"2016-01-01T01:00Z",
+    "hadoopVersion":"3.0.0-SNAPSHOT",
+    "hadoopBuildVersion":"3.0.0-SNAPSHOT from unknown by user1 source checksum 11111111111111111111111111111111",
+    "hadoopVersionBuiltOn":"2016-01-01T01:00Z",
+    "haZooKeeperConnectionState": "ResourceManager HA is not enabled."  }
 }
 ```
 
@@ -139,15 +143,18 @@ Response Body:
 ```xml
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <clusterInfo>
-  <id>1324053971963</id>
-  <startedOn>1324053971963</startedOn>
+  <id>1476912658570</id>
+  <startedOn>1476912658570</startedOn>
   <state>STARTED</state>
-  <resourceManagerVersion>0.23.1-SNAPSHOT</resourceManagerVersion>
-  <resourceManagerBuildVersion>0.23.1-SNAPSHOT from 1214049 by user1 source checksum 050cd664439d931c8743a6428fd6a693</resourceManagerBuildVersion>
-  <resourceManagerVersionBuiltOn>Tue Dec 13 22:12:48 CST 2011</resourceManagerVersionBuiltOn>
-  <hadoopVersion>0.23.1-SNAPSHOT</hadoopVersion>
-  <hadoopBuildVersion>0.23.1-SNAPSHOT from 1214049 by user1 source checksum 11458df3bb77342dca5f917198fad328</hadoopBuildVersion>
-  <hadoopVersionBuiltOn>Tue Dec 13 22:12:48 CST 2011</hadoopVersionBuiltOn>
+  <haState>ACTIVE</haState>
+  <rmStateStoreName>org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore</rmStateStoreName>
+  <resourceManagerVersion>3.0.0-SNAPSHOT</resourceManagerVersion>
+  <resourceManagerBuildVersion>3.0.0-SNAPSHOT from unknown by user1 source checksum 11111111111111111111111111111111</resourceManagerBuildVersion>
+  <resourceManagerVersionBuiltOn>2016-01-01T01:00Z</resourceManagerVersionBuiltOn>
+  <hadoopVersion>3.0.0-SNAPSHOT</hadoopVersion>
+  <hadoopBuildVersion>3.0.0-SNAPSHOT from unknown by user1 source checksum 11111111111111111111111111111111</hadoopBuildVersion>
+  <hadoopVersionBuiltOn>2016-01-01T01:00Z</hadoopVersionBuiltOn>
+  <haZooKeeperConnectionState>ResourceManager HA is not enabled.</haZooKeeperConnectionState>
 </clusterInfo>
 ```
 
@@ -193,8 +200,10 @@ The cluster metrics resource provides some overall metrics about the cluster. Mo
 | activeNodes | int | The number of active nodes |
 | lostNodes | int | The number of lost nodes |
 | unhealthyNodes | int | The number of unhealthy nodes |
+| decommissioningNodes | int | The number of nodes being decommissioned |
 | decommissionedNodes | int | The number of nodes decommissioned |
 | rebootedNodes | int | The number of nodes rebooted |
+| shutdownNodes | int | The number of nodes shut down |
 
 ### Response Examples
 
@@ -237,9 +246,11 @@ Response Body:
     "totalNodes":1,
     "lostNodes":0,
     "unhealthyNodes":0,
+    "decommissioningNodes":0,
     "decommissionedNodes":0,
     "rebootedNodes":0,
-    "activeNodes":1
+    "activeNodes":1,
+    "shutdownNodes":0
   }
 }
 ```
@@ -283,9 +294,11 @@ Response Body:
   <totalNodes>1</totalNodes>
   <lostNodes>0</lostNodes>
   <unhealthyNodes>0</unhealthyNodes>
+  <decommissioningNodes>0</decommissioningNodes>
   <decommissionedNodes>0</decommissionedNodes>
   <rebootedNodes>0</rebootedNodes>
   <activeNodes>1</activeNodes>
+  <shutdownNodes>0</shutdownNodes>
 </clusterMetrics>
 ```
 
@@ -1371,66 +1384,78 @@ Response Body:
   {
     "app":
     [
-       {
-          "finishedTime" : 1326815598530,
-          "amContainerLogs" : "http://host.domain.com:8042/node/containerlogs/container_1326815542473_0001_01_000001",
-          "trackingUI" : "History",
-          "state" : "FINISHED",
-          "user" : "user1",
-          "id" : "application_1326815542473_0001",
-          "clusterId" : 1326815542473,
-          "finalStatus" : "SUCCEEDED",
-          "amHostHttpAddress" : "host.domain.com:8042",
-          "amRPCAddress" : "host.domain.com:4201",
-          "progress" : 100,
-          "name" : "word count",
-          "startedTime" : 1326815573334,
-          "elapsedTime" : 25196,
-          "diagnostics" : "",
-          "trackingUrl" : "http://host.domain.com:8088/proxy/application_1326815542473_0001/jobhistory/job/job_1326815542473_1_1",
-          "queue" : "default",
-          "allocatedMB" : 0,
-          "allocatedVCores" : 0,
-          "runningContainers" : 0,
-	  "applicationType" : "MAPREDUCE",
-	  "applicationTags" : "",
-          "memorySeconds" : 151730,
-          "vcoreSeconds" : 103,
-          "unmanagedApplication" : "false",
-          "applicationPriority" : 0,
-          "appNodeLabelExpression" : "",
-          "amnodeLabelExpression" : ""
-       },
-       {
-          "finishedTime" : 1326815789546,
-          "amContainerLogs" : "http://host.domain.com:8042/node/containerlogs/container_1326815542473_0002_01_000001",
-          "trackingUI" : "History",
-          "state" : "FINISHED",
-          "user" : "user1",
-          "id" : "application_1326815542473_0002",
-          "clusterId" : 1326815542473,
-          "finalStatus" : "SUCCEEDED",
-          "amHostHttpAddress" : "host.domain.com:8042",
-          "amRPCAddress" : "host.domain.com:4202",
-          "progress" : 100,
-          "name" : "Sleep job",
-          "startedTime" : 1326815641380,
-          "elapsedTime" : 148166,
-          "diagnostics" : "",
-          "trackingUrl" : "http://host.domain.com:8088/proxy/application_1326815542473_0002/jobhistory/job/job_1326815542473_2_2",
-          "queue" : "default",
-          "allocatedMB" : 0,
-          "allocatedVCores" : 0,
-          "runningContainers" : 1,
-	  "applicationType" : "YARN",
-	  "applicationTags" : "tag1",
-          "memorySeconds" : 640064,
-          "vcoreSeconds" : 442,
-          "unmanagedApplication" : "false",
-          "applicationPriority" : 0,
-          "appNodeLabelExpression" : "",
-          "amNodeLabelExpression" : ""
-       }
+      {
+        "id": "application_1476912658570_0002",
+        "user": "user2",
+        "name": "word count",
+        "queue": "default",
+        "state": "FINISHED",
+        "finalStatus": "SUCCEEDED",
+        "progress": 100,
+        "trackingUI": "History",
+        "trackingUrl": "http://host.domain.com:8088/cluster/app/application_1476912658570_0002",
+        "diagnostics": "...",
+        "clusterId": 1476912658570,
+        "applicationType": "MAPREDUCE",
+        "applicationTags": "",
+        "priority": -1,
+        "startedTime": 1476913457320,
+        "finishedTime": 1476913761898,
+        "elapsedTime": 304578,
+        "amContainerLogs": "http://host.domain.com:8042/node/containerlogs/container_1476912658570_0002_02_000001/user2",
+        "amHostHttpAddress": "host.domain.com:8042",
+        "allocatedMB": 0,
+        "allocatedVCores": 0,
+        "runningContainers": 0,
+        "memorySeconds": 206464,
+        "vcoreSeconds": 201,
+        "queueUsagePercentage": 0,
+        "clusterUsagePercentage": 0,
+        "preemptedResourceMB": 0,
+        "preemptedResourceVCores": 0,
+        "numNonAMContainerPreempted": 0,
+        "numAMContainerPreempted": 0,
+        "logAggregationStatus": "DISABLED",
+        "unmanagedApplication": false,
+        "appNodeLabelExpression": "",
+        "amNodeLabelExpression": ""
+      },
+      {
+        "id": "application_1476912658570_0001",
+        "user": "user1",
+        "name": "Sleep job",
+        "queue": "default",
+        "state": "FINISHED",
+        "finalStatus": "SUCCEEDED",
+        "progress": 100,
+        "trackingUI": "History",
+        "trackingUrl": "http://host.domain.com:8088/cluster/app/application_1476912658570_0001",
+        "diagnostics": "...",
+        "clusterId": 1476912658570,
+        "applicationType": "YARN",
+        "applicationTags": "",
+        "priority": -1,
+        "startedTime": 1476913464750,
+        "finishedTime": 1476913863175,
+        "elapsedTime": 398425,
+        "amContainerLogs": "http://host.domain.com:8042/node/containerlogs/container_1476912658570_0001_02_000001/user1",
+        "amHostHttpAddress": "host.domain.com:8042",
+        "allocatedMB": 0,
+        "allocatedVCores": 0,
+        "runningContainers": 0,
+        "memorySeconds": 205410,
+        "vcoreSeconds": 200,
+        "queueUsagePercentage": 0,
+        "clusterUsagePercentage": 0,
+        "preemptedResourceMB": 0,
+        "preemptedResourceVCores": 0,
+        "numNonAMContainerPreempted": 0,
+        "numAMContainerPreempted": 0,
+        "logAggregationStatus": "DISABLED",
+        "unmanagedApplication": false,
+        "appNodeLabelExpression": "",
+        "amNodeLabelExpression": ""
+      }
     ]
   }
 }
@@ -1455,66 +1480,78 @@ Response Body:
 ```xml
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <apps>
-  <app>
-    <id>application_1326815542473_0001</id>
-    <user>user1</user>
-    <name>word count</name>
-    <applicationType>MAPREDUCE</applicationType>
-    <applicationTags></applicationTags>
-    <queue>default</queue>
-    <state>FINISHED</state>
-    <finalStatus>SUCCEEDED</finalStatus>
-    <progress>100.0</progress>
-    <trackingUI>History</trackingUI>
-    <trackingUrl>http://host.domain.com:8088/proxy/application_1326815542473_0001/jobhistory/job/job_1326815542473_1_1</trackingUrl>
-    <diagnostics/>
-    <clusterId>1326815542473</clusterId>
-    <startedTime>1326815573334</startedTime>
-    <finishedTime>1326815598530</finishedTime>
-    <elapsedTime>25196</elapsedTime>
-    <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326815542473_0001_01_000001</amContainerLogs>
-    <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
-    <amRPCAddress>host.domain.com:4201</amRPCAddress>
-    <allocatedMB>0</allocatedMB>
-    <allocatedVCores>0</allocatedVCores>
-    <runningContainers>0</runningContainers>
-    <memorySeconds>151730</memorySeconds>
-    <vcoreSeconds>103</vcoreSeconds>
-    <unmanagedApplication>false</unmanagedApplication>
-    <applicationPriority>0</applicationPriority>
-    <appNodeLabelExpression></appNodeLabelExpression>
-    <amNodeLabelExpression></amNodeLabelExpression>
-  </app>
-  <app>
-    <id>application_1326815542473_0002</id>
-    <user>user1</user>
-    <name>Sleep job</name>
-    <applicationType>YARN</applicationType>
-    <applicationTags>tag1</applicationTags>
-    <queue>default</queue>
-    <state>FINISHED</state>
-    <finalStatus>SUCCEEDED</finalStatus>
-    <progress>100.0</progress>
-    <trackingUI>History</trackingUI>
-    <trackingUrl>http://host.domain.com:8088/proxy/application_1326815542473_0002/jobhistory/job/job_1326815542473_2_2</trackingUrl>
-    <diagnostics/>
-    <clusterId>1326815542473</clusterId>
-    <startedTime>1326815641380</startedTime>
-    <finishedTime>1326815789546</finishedTime>
-    <elapsedTime>148166</elapsedTime>
-    <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326815542473_0002_01_000001</amContainerLogs>
-    <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
-    <amRPCAddress>host.domain.com:4202</amRPCAddress>
-    <allocatedMB>0</allocatedMB>
-    <allocatedVCores>0</allocatedVCores>
-    <runningContainers>0</runningContainers>
-    <memorySeconds>640064</memorySeconds>
-    <vcoreSeconds>442</vcoreSeconds>
-    <unmanagedApplication>false</unmanagedApplication>
-    <applicationPriority>0</applicationPriority>
-    <appNodeLabelExpression></appNodeLabelExpression>
-    <amNodeLabelExpression></amNodeLabelExpression>
-  </app>
+    <app>
+        <id>application_1476912658570_0002</id>
+        <user>user2</user>
+        <name>word count</name>
+        <queue>default</queue>
+        <state>FINISHED</state>
+        <finalStatus>SUCCEEDED</finalStatus>
+        <progress>100.0</progress>
+        <trackingUI>History</trackingUI>
+        <trackingUrl>http://host.domain.com:8088/cluster/app/application_1476912658570_0002</trackingUrl>
+        <diagnostics>...</diagnostics>
+        <clusterId>1476912658570</clusterId>
+        <applicationType>YARN</applicationType>
+        <applicationTags></applicationTags>
+        <priority>-1</priority>
+        <startedTime>1476913457320</startedTime>
+        <finishedTime>1476913761898</finishedTime>
+        <elapsedTime>304578</elapsedTime>
+        <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1476912658570_0002_02_000001/user2</amContainerLogs>
+        <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
+        <allocatedMB>-1</allocatedMB>
+        <allocatedVCores>-1</allocatedVCores>
+        <runningContainers>-1</runningContainers>
+        <memorySeconds>206464</memorySeconds>
+        <vcoreSeconds>201</vcoreSeconds>
+        <queueUsagePercentage>0.0</queueUsagePercentage>
+        <clusterUsagePercentage>0.0</clusterUsagePercentage>
+        <preemptedResourceMB>0</preemptedResourceMB>
+        <preemptedResourceVCores>0</preemptedResourceVCores>
+        <numNonAMContainerPreempted>0</numNonAMContainerPreempted>
+        <numAMContainerPreempted>0</numAMContainerPreempted>
+        <logAggregationStatus>DISABLED</logAggregationStatus>
+        <unmanagedApplication>false</unmanagedApplication>
+        <appNodeLabelExpression></appNodeLabelExpression>
+        <amNodeLabelExpression></amNodeLabelExpression>
+    </app>
+    <app>
+        <id>application_1476912658570_0001</id>
+        <user>user1</user>
+        <name>Sleep job</name>
+        <queue>default</queue>
+        <state>FINISHED</state>
+        <finalStatus>SUCCEEDED</finalStatus>
+        <progress>100.0</progress>
+        <trackingUI>History</trackingUI>
+        <trackingUrl>http://host.domain.com:8088/cluster/app/application_1476912658570_0001</trackingUrl>
+        <diagnostics>...</diagnostics>
+        <clusterId>1476912658570</clusterId>
+        <applicationType>YARN</applicationType>
+        <applicationTags></applicationTags>
+        <priority>-1</priority>
+        <startedTime>1476913464750</startedTime>
+        <finishedTime>1476913863175</finishedTime>
+        <elapsedTime>398425</elapsedTime>
+        <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1476912658570_0001_02_000001/user1</amContainerLogs>
+        <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
+        <allocatedMB>-1</allocatedMB>
+        <allocatedVCores>-1</allocatedVCores>
+        <runningContainers>-1</runningContainers>
+        <memorySeconds>205410</memorySeconds>
+        <vcoreSeconds>200</vcoreSeconds>
+        <queueUsagePercentage>0.0</queueUsagePercentage>
+        <clusterUsagePercentage>0.0</clusterUsagePercentage>
+        <preemptedResourceMB>0</preemptedResourceMB>
+        <preemptedResourceVCores>0</preemptedResourceVCores>
+        <numNonAMContainerPreempted>0</numNonAMContainerPreempted>
+        <numAMContainerPreempted>0</numAMContainerPreempted>
+        <logAggregationStatus>DISABLED</logAggregationStatus>
+        <unmanagedApplication>false</unmanagedApplication>
+        <appNodeLabelExpression></appNodeLabelExpression>
+        <amNodeLabelExpression></amNodeLabelExpression>
+    </app>
 </apps>
 ```
 
@@ -1654,15 +1691,17 @@ Note that depending on security settings a user might not be able to see all the
 | id | string | The application id |
 | user | string | The user who started the application |
 | name | string | The application name |
-| Application Type | string | The application type |
 | queue | string | The queue the application was submitted to |
 | state | string | The application state according to the ResourceManager - valid values are members of the YarnApplicationState enum: NEW, NEW\_SAVING, SUBMITTED, ACCEPTED, RUNNING, FINISHED, FAILED, KILLED |
-| finalStatus | string | The final status of the application if finished - reported by the application itself - valid values are: UNDEFINED, SUCCEEDED, FAILED, KILLED |
+| finalStatus | string | The final status of the application if finished - reported by the application itself - valid values are the members of the FinalApplicationStatus enum: UNDEFINED, SUCCEEDED, FAILED, KILLED |
 | progress | float | The progress of the application as a percent |
 | trackingUI | string | Where the tracking url is currently pointing - History (for history server) or ApplicationMaster |
 | trackingUrl | string | The web URL that can be used to track the application |
 | diagnostics | string | Detailed diagnostics information |
 | clusterId | long | The cluster id |
+| applicationType | string | The application type |
+| applicationTags | string | Comma separated tags of an application |
+| priority | string | Priority of the submitted application |
 | startedTime | long | The time in which application started (in ms since epoch) |
 | finishedTime | long | The time in which the application finished (in ms since epoch) |
 | elapsedTime | long | The elapsed time since the application started (in ms) |
@@ -1674,8 +1713,14 @@ Note that depending on security settings a user might not be able to see all the
 | runningContainers | int | The number of containers currently running for the application |
 | memorySeconds | long | The amount of memory the application has allocated (megabyte-seconds) |
 | vcoreSeconds | long | The amount of CPU resources the application has allocated (virtual core-seconds) |
+| queueUsagePercentage | float | The percentage of resources of the queue that the app is using |
+| clusterUsagePercentage | float | The percentage of resources of the cluster that the app is using. |
+| preemptedResourceMB | long | Memory used by preempted container |
+| preemptedResourceVCores | long | Number of virtual cores used by preempted container |
+| numNonAMContainerPreempted | int | Number of standard containers preempted |
+| numAMContainerPreempted | int | Number of application master containers preempted |
+| logAggregationStatus | string | Status of log aggregation - valid values are the members of the LogAggregationStatus enum: DISABLED, NOT\_START, RUNNING, RUNNING\_WITH\_FAILURE, SUCCEEDED, FAILED, TIME\_OUT |
 | unmanagedApplication | boolean | Is the application unmanaged. |
-| applicationPriority | int | priority of the submitted application |
 | appNodeLabelExpression | string | Node Label expression which is used to identify the nodes on which application's containers are expected to run by default.|
 | amNodeLabelExpression | string | Node Label expression which is used to identify the node on which application's  AM container is expected to run.|
 
@@ -1685,7 +1730,7 @@ Note that depending on security settings a user might not be able to see all the
 
 HTTP Request:
 
-      GET http://<rm http address:port>/ws/v1/cluster/apps/application_1326821518301_0005
+      GET http://<rm http address:port>/ws/v1/cluster/apps/application_1476912658570_0002
 
 Response Header:
 
@@ -1698,32 +1743,42 @@ Response Body:
 
 ```json
 {
-   "app" : {
-      "finishedTime" : 1326824991300,
-      "amContainerLogs" : "http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001",
-      "trackingUI" : "History",
-      "state" : "FINISHED",
-      "user" : "user1",
-      "id" : "application_1326821518301_0005",
-      "clusterId" : 1326821518301,
-      "finalStatus" : "SUCCEEDED",
-      "amHostHttpAddress" : "host.domain.com:8042",
-      "amRPCAddress" : "host.domain.com:4201",
-      "progress" : 100,
-      "name" : "Sleep job",
-      "applicationType" : "Yarn",
-      "startedTime" : 1326824544552,
-      "elapsedTime" : 446748,
-      "diagnostics" : "",
-      "trackingUrl" : "http://host.domain.com:8088/proxy/application_1326821518301_0005/jobhistory/job/job_1326821518301_5_5",
-      "queue" : "a1",
-      "memorySeconds" : 151730,
-      "vcoreSeconds" : 103,
-      "unmanagedApplication" : "false",
-      "applicationPriority" : 0,
-      "appNodeLabelExpression" : "",
-      "amNodeLabelExpression" : ""
-   }
+  "app": {
+    "id": "application_1476912658570_0002",
+    "user": "user2",
+    "name": "word count",
+    "queue": "default",
+    "state": "FINISHED",
+    "finalStatus": "SUCCEEDED",
+    "progress": 100,
+    "trackingUI": "History",
+    "trackingUrl": "http://host.domain.com:8088/cluster/app/application_1476912658570_0002",
+    "diagnostics": "...",
+    "clusterId": 1476912658570,
+    "applicationType": "YARN",
+    "applicationTags": "",
+    "priority": -1,
+    "startedTime": 1476913457320,
+    "finishedTime": 1476913761898,
+    "elapsedTime": 304578,
+    "amContainerLogs": "http://host.domain.com:8042/node/containerlogs/container_1476912658570_0002_02_000001/dr.who",
+    "amHostHttpAddress": "host.domain.com:8042",
+    "allocatedMB": -1,
+    "allocatedVCores": -1,
+    "runningContainers": -1,
+    "memorySeconds": 206464,
+    "vcoreSeconds": 201,
+    "queueUsagePercentage": 0,
+    "clusterUsagePercentage": 0,
+    "preemptedResourceMB": 0,
+    "preemptedResourceVCores": 0,
+    "numNonAMContainerPreempted": 0,
+    "numAMContainerPreempted": 0,
+    "logAggregationStatus": "DISABLED",
+    "unmanagedApplication": false,
+    "appNodeLabelExpression": "",
+    "amNodeLabelExpression": ""
+  }
 }
 ```
 
@@ -1746,29 +1801,40 @@ Response Body:
 ```xml
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <app>
-  <id>application_1326821518301_0005</id>
-  <user>user1</user>
-  <name>Sleep job</name>
-  <queue>a1</queue>
-  <state>FINISHED</state>
-  <finalStatus>SUCCEEDED</finalStatus>
-  <progress>100.0</progress>
-  <trackingUI>History</trackingUI>
-  <trackingUrl>http://host.domain.com:8088/proxy/application_1326821518301_0005/jobhistory/job/job_1326821518301_5_5</trackingUrl>
-  <diagnostics/>
-  <clusterId>1326821518301</clusterId>
-  <startedTime>1326824544552</startedTime>
-  <finishedTime>1326824991300</finishedTime>
-  <elapsedTime>446748</elapsedTime>
-  <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001</amContainerLogs>
-  <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
-  <amRPCAddress>host.domain.com:4201</amRPCAddress>
-  <memorySeconds>151730</memorySeconds>
-  <vcoreSeconds>103</vcoreSeconds>
-  <unmanagedApplication>false</unmanagedApplication>
-  <applicationPriority>0</applicationPriority>
-  <appNodeLabelExpression></appNodeLabelExpression>
-  <amNodeLabelExpression></amNodeLabelExpression>
+    <id>application_1476912658570_0002</id>
+    <user>user2</user>
+    <name>word count</name>
+    <queue>default</queue>
+    <state>FINISHED</state>
+    <finalStatus>SUCCEEDED</finalStatus>
+    <progress>100.0</progress>
+    <trackingUI>History</trackingUI>
+    <trackingUrl>http://host.domain.com:8088/cluster/app/application_1476912658570_0002</trackingUrl>
+    <diagnostics>...</diagnostics>
+    <clusterId>1476912658570</clusterId>
+    <applicationType>YARN</applicationType>
+    <applicationTags></applicationTags>
+    <priority>-1</priority>
+    <startedTime>1476913457320</startedTime>
+    <finishedTime>1476913761898</finishedTime>
+    <elapsedTime>304578</elapsedTime>
+    <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1476912658570_0002_02_000001/dr.who</amContainerLogs>
+    <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
+    <allocatedMB>-1</allocatedMB>
+    <allocatedVCores>-1</allocatedVCores>
+    <runningContainers>-1</runningContainers>
+    <memorySeconds>206464</memorySeconds>
+    <vcoreSeconds>201</vcoreSeconds>
+    <queueUsagePercentage>0.0</queueUsagePercentage>
+    <clusterUsagePercentage>0.0</clusterUsagePercentage>
+    <preemptedResourceMB>0</preemptedResourceMB>
+    <preemptedResourceVCores>0</preemptedResourceVCores>
+    <numNonAMContainerPreempted>0</numNonAMContainerPreempted>
+    <numAMContainerPreempted>0</numAMContainerPreempted>
+    <logAggregationStatus>DISABLED</logAggregationStatus>
+    <unmanagedApplication>false</unmanagedApplication>
+    <appNodeLabelExpression></appNodeLabelExpression>
+    <amNodeLabelExpression></amNodeLabelExpression>
 </app>
 ```
 
@@ -1925,33 +1991,51 @@ Response Body:
     [
       {
         "rack":"\/default-rack",
-        "state":"NEW",
-        "id":"h2:1235",
-        "nodeHostName":"h2",
-        "nodeHTTPAddress":"h2:2",
-        "healthStatus":"Healthy",
-        "lastHealthUpdate":1324056895432,
-        "healthReport":"Healthy",
+        "state":"RUNNING",
+        "id":"host.domain.com:54158",
+        "nodeHostName":"host.domain.com",
+        "nodeHTTPAddress":"host.domain.com:8042",
+        "lastHealthUpdate": 1476995346399,
+        "version": "3.0.0-alpha2-SNAPSHOT",
+        "healthReport":"",
         "numContainers":0,
         "usedMemoryMB":0,
         "availMemoryMB":8192,
         "usedVirtualCores":0,
-        "availableVirtualCores":8
+        "availableVirtualCores":8,
+        "resourceUtilization":
+        {
+          "nodePhysicalMemoryMB":1027,
+          "nodeVirtualMemoryMB":1027,
+          "nodeCPUUsage":0.016661113128066063,
+          "aggregatedContainersPhysicalMemoryMB":0,
+          "aggregatedContainersVirtualMemoryMB":0,
+          "containersCPUUsage":0
+        }
       },
       {
         "rack":"\/default-rack",
-        "state":"NEW",
-        "id":"h1:1234",
-        "nodeHostName":"h1",
-        "nodeHTTPAddress":"h1:2",
-        "healthStatus":"Healthy",
-        "lastHealthUpdate":1324056895092,
-        "healthReport":"Healthy",
+        "state":"RUNNING",
+        "id":"host.domain.com:54158",
+        "nodeHostName":"host.domain.com",
+        "nodeHTTPAddress":"host.domain.com:8042",
+        "lastHealthUpdate":1476995346399,
+        "version":"3.0.0-alpha2-SNAPSHOT",
+        "healthReport":"",
         "numContainers":0,
         "usedMemoryMB":0,
         "availMemoryMB":8192,
         "usedVirtualCores":0,
-        "availableVirtualCores":8
+        "availableVirtualCores":8,
+        "resourceUtilization":
+        {
+          "nodePhysicalMemoryMB":1027,
+          "nodeVirtualMemoryMB":1027,
+          "nodeCPUUsage":0.016661113128066063,
+          "aggregatedContainersPhysicalMemoryMB":0,
+          "aggregatedContainersVirtualMemoryMB":0,
+          "containersCPUUsage":0
+        }
       }
     ]
   }
@@ -1980,32 +2064,48 @@ Response Body:
   <node>
     <rack>/default-rack</rack>
     <state>RUNNING</state>
-    <id>h2:1234</id>
-    <nodeHostName>h2</nodeHostName>
-    <nodeHTTPAddress>h2:2</nodeHTTPAddress>
-    <healthStatus>Healthy</healthStatus>
-    <lastHealthUpdate>1324333268447</lastHealthUpdate>
-    <healthReport>Healthy</healthReport>
+    <id>host1.domain.com:54158</id>
+    <nodeHostName>host1.domain.com</nodeHostName>
+    <nodeHTTPAddress>host1.domain.com:8042</nodeHTTPAddress>
+    <lastHealthUpdate>1476995346399</lastHealthUpdate>
+    <version>3.0.0-SNAPSHOT</version>
+    <healthReport></healthReport>
     <numContainers>0</numContainers>
     <usedMemoryMB>0</usedMemoryMB>
-    <availMemoryMB>5120</availMemoryMB>
+    <availMemoryMB>8192</availMemoryMB>
     <usedVirtualCores>0</usedVirtualCores>
     <availableVirtualCores>8</availableVirtualCores>
+    <resourceUtilization>
+        <nodePhysicalMemoryMB>1027</nodePhysicalMemoryMB>
+        <nodeVirtualMemoryMB>1027</nodeVirtualMemoryMB>
+        <nodeCPUUsage>0.006664445623755455</nodeCPUUsage>
+        <aggregatedContainersPhysicalMemoryMB>0</aggregatedContainersPhysicalMemoryMB>
+        <aggregatedContainersVirtualMemoryMB>0</aggregatedContainersVirtualMemoryMB>
+        <containersCPUUsage>0.0</containersCPUUsage>
+    </resourceUtilization>
   </node>
   <node>
     <rack>/default-rack</rack>
     <state>RUNNING</state>
-    <id>h1:1234</id>
-    <nodeHostName>h1</nodeHostName>
-    <nodeHTTPAddress>h1:2</nodeHTTPAddress>
-    <healthStatus>Healthy</healthStatus>
-    <lastHealthUpdate>1324333268447</lastHealthUpdate>
-    <healthReport>Healthy</healthReport>
+    <id>host2.domain.com:54158</id>
+    <nodeHostName>host2.domain.com</nodeHostName>
+    <nodeHTTPAddress>host2.domain.com:8042</nodeHTTPAddress>
+    <lastHealthUpdate>1476995346399</lastHealthUpdate>
+    <version>3.0.0-SNAPSHOT</version>
+    <healthReport></healthReport>
     <numContainers>0</numContainers>
     <usedMemoryMB>0</usedMemoryMB>
-    <availMemoryMB>5120</availMemoryMB>
+    <availMemoryMB>8192</availMemoryMB>
     <usedVirtualCores>0</usedVirtualCores>
     <availableVirtualCores>8</availableVirtualCores>
+    <resourceUtilization>
+        <nodePhysicalMemoryMB>1027</nodePhysicalMemoryMB>
+        <nodeVirtualMemoryMB>1027</nodeVirtualMemoryMB>
+        <nodeCPUUsage>0.006664445623755455</nodeCPUUsage>
+        <aggregatedContainersPhysicalMemoryMB>0</aggregatedContainersPhysicalMemoryMB>
+        <aggregatedContainersVirtualMemoryMB>0</aggregatedContainersVirtualMemoryMB>
+        <containersCPUUsage>0.0</containersCPUUsage>
+    </resourceUtilization>
   </node>
 </nodes>
 ```
@@ -2038,14 +2138,26 @@ Use the following URI to obtain a Node Object, from a node identified by the nod
 | id | string | The node id |
 | nodeHostName | string | The host name of the node |
 | nodeHTTPAddress | string | The nodes HTTP address |
-| healthStatus | string | The health status of the node - Healthy or Unhealthy |
-| healthReport | string | A detailed health report |
 | lastHealthUpdate | long | The last time the node reported its health (in ms since epoch) |
+| version | string | Version of hadoop running on node |
+| healthReport | string | A detailed health report |
+| numContainers | int | The total number of containers currently running on the node |
 | usedMemoryMB | long | The total amount of memory currently used on the node (in MB) |
 | availMemoryMB | long | The total amount of memory currently available on the node (in MB) |
 | usedVirtualCores | long | The total number of vCores currently used on the node |
 | availableVirtualCores | long | The total number of vCores available on the node |
-| numContainers | int | The total number of containers currently running on the node |
+| resourceUtilization | object | Resource utilization on the node |
+
+The *resourceUtilization* object contains the following elements:
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| nodePhysicalMemoryMB | int | Node physical memory utilization |
+| nodeVirtualMemoryMB | int | Node virtual memory utilization |
+| nodeCPUUsage | double | Node CPU utilization |
+| aggregatedContainersPhysicalMemoryMB | int | The aggregated physical memory utilization of the containers |
+| aggregatedContainersVirtualMemoryMB | int | The aggregated virtual memory utilization of the containers |
+| containersCPUUsage | double | The aggregated CPU utilization of the containers |
 
 ### Response Examples
 
@@ -2069,18 +2181,27 @@ Response Body:
   "node":
   {
     "rack":"\/default-rack",
-    "state":"NEW",
-    "id":"h2:1235",
-    "nodeHostName":"h2",
-    "nodeHTTPAddress":"h2:2",
-    "healthStatus":"Healthy",
-    "lastHealthUpdate":1324056895432,
-    "healthReport":"Healthy",
+    "state":"RUNNING",
+    "id":"host.domain.com:54158",
+    "nodeHostName":"host.domain.com",
+    "nodeHTTPAddress":"host.domain.com:8042",
+    "lastHealthUpdate":1476916746399,
+    "version":"3.0.0-SNAPSHOT",
+    "healthReport":"",
     "numContainers":0,
     "usedMemoryMB":0,
-    "availMemoryMB":5120,
+    "availMemoryMB":8192,
     "usedVirtualCores":0,
-    "availableVirtualCores":8
+    "availableVirtualCores":8,
+    "resourceUtilization":
+    {
+      "nodePhysicalMemoryMB": 968,
+      "nodeVirtualMemoryMB": 968,
+      "nodeCPUUsage": 0.01332889124751091,
+      "aggregatedContainersPhysicalMemoryMB": 0,
+      "aggregatedContainersVirtualMemoryMB": 0,
+      "containersCPUUsage": 0
+    }
   }
 }
 ```
@@ -2105,18 +2226,26 @@ Response Body:
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <node>
   <rack>/default-rack</rack>
-  <state>NEW</state>
-  <id>h2:1235</id>
-  <nodeHostName>h2</nodeHostName>
-  <nodeHTTPAddress>h2:2</nodeHTTPAddress>
-  <healthStatus>Healthy</healthStatus>
-  <lastHealthUpdate>1324333268447</lastHealthUpdate>
-  <healthReport>Healthy</healthReport>
+  <state>RUNNING</state>
+  <id>host.domain.com:54158</id>
+  <nodeHostName>host.domain.com</nodeHostName>
+  <nodeHTTPAddress>host.domain.com:8042</nodeHTTPAddress>
+  <lastHealthUpdate>1476916746399</lastHealthUpdate>
+  <version>3.0.0-SNAPSHOT</version>
+  <healthReport></healthReport>
   <numContainers>0</numContainers>
   <usedMemoryMB>0</usedMemoryMB>
-  <availMemoryMB>5120</availMemoryMB>
+  <availMemoryMB>8192</availMemoryMB>
   <usedVirtualCores>0</usedVirtualCores>
-  <availableVirtualCores>5120</availableVirtualCores>
+  <availableVirtualCores>8</availableVirtualCores>
+  <resourceUtilization>
+    <nodePhysicalMemoryMB>968</nodePhysicalMemoryMB>
+    <nodeVirtualMemoryMB>968</nodeVirtualMemoryMB>
+    <nodeCPUUsage>0.01332889124751091</nodeCPUUsage>
+    <aggregatedContainersPhysicalMemoryMB>0</aggregatedContainersPhysicalMemoryMB>
+    <aggregatedContainersVirtualMemoryMB>0</aggregatedContainersVirtualMemoryMB>
+    <containersCPUUsage>0.0</containersCPUUsage>
+  </resourceUtilization>
 </node>
 ```
 
@@ -3237,6 +3366,7 @@ The Cluster Reservation API can be used to list reservations. When listing reser
 | deadline | long | The UTC time representation of the latest time within which this reservation can be allocated. |
 | reservation-name | string | A mnemonic name of the reservation (not a valid identifier). |
 | reservation-requests | object | A list of "stages" or phases of this reservation, each describing resource requirements and duration |
+| priority | int | An integer representing the priority of the reservation. A lower number for priority indicates a higher priority reservation. Recurring reservations are always higher priority than non-recurring reservations. Priority for non-recurring reservations are only compared with non-recurring reservations. Likewise with recurring reservations. |
 
 ### Elements of the *reservation-requests* object
 
@@ -3500,6 +3630,7 @@ Elements of the *reservation-definition* object
 | deadline | long | The UTC time representation of the latest time within which this reservation can be allocated. |
 | reservation-name | string | A mnemonic name of the reservation (not a valid identifier). |
 | reservation-requests | object | A list of "stages" or phases of this reservation, each describing resource requirements and duration |
+| priority | int | An integer representing the priority of the reservation. A lower number for priority indicates a higher priority reservation. Recurring reservations are always higher priority than non-recurring reservations. Priority for non-recurring reservations are only compared with non-recurring reservations. Likewise with recurring reservations. |
 
 Elements of the *reservation-requests* object
 
@@ -3675,6 +3806,7 @@ Elements of the *reservation-definition* object
 | deadline | long | The UTC time representation of the latest time within which this reservation can be allocated. |
 | reservation-name | string | A mnemonic name of the reservation (not a valid identifier). |
 | reservation-requests | object | A list of "stages" or phases of this reservation, each describing resource requirements and duration |
+| priority | int | An integer representing the priority of the reservation. A lower number for priority indicates a higher priority reservation. Recurring reservations are always higher priority than non-recurring reservations. Priority for non-recurring reservations are only compared with non-recurring reservations. Likewise with recurring reservations. |
 
 Elements of the *reservation-requests* object
 

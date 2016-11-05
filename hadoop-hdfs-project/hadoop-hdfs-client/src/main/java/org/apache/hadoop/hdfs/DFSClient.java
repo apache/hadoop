@@ -90,6 +90,7 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -463,7 +464,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /** Stop renewal of lease for the file. */
-  void endFileLease(final long inodeId) throws IOException {
+  void endFileLease(final long inodeId) {
     getLeaseRenewer().closeFile(inodeId, this);
   }
 
@@ -1160,7 +1161,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     if (permission == null) {
       permission = FsPermission.getFileDefault();
     }
-    return permission.applyUMask(dfsClientConf.getUMask());
+    return FsCreateModes.applyUMask(permission, dfsClientConf.getUMask());
+  }
+
+  private FsPermission applyUMaskDir(FsPermission permission) {
+    if (permission == null) {
+      permission = FsPermission.getDirDefault();
+    }
+    return FsCreateModes.applyUMask(permission, dfsClientConf.getUMask());
   }
 
   /**
@@ -1700,6 +1708,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     } else {
       return null;
     }
+  }
+
+  @VisibleForTesting
+  public DataEncryptionKey getEncryptionKey() {
+    return encryptionKey;
   }
 
   /**
@@ -2264,7 +2277,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    *
    * @param src The path of the directory being created
    * @param permission The permission of the directory being created.
-   * If permission == null, use {@link FsPermission#getDefault()}.
+   * If permission == null, use {@link FsPermission#getDirDefault()}.
    * @param createParent create missing parent directory if true
    *
    * @return True if the operation success.
@@ -2273,7 +2286,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public boolean mkdirs(String src, FsPermission permission,
       boolean createParent) throws IOException {
-    final FsPermission masked = applyUMask(permission);
+    final FsPermission masked = applyUMaskDir(permission);
     return primitiveMkdir(src, masked, createParent);
   }
 
@@ -2294,9 +2307,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       boolean createParent) throws IOException {
     checkOpen();
     if (absPermission == null) {
-      absPermission = applyUMask(null);
+      absPermission = applyUMaskDir(null);
     }
-
     LOG.debug("{}: masked={}", src, absPermission);
     try (TraceScope ignored = tracer.newScope("mkdir")) {
       return namenode.mkdirs(src, absPermission, createParent);
@@ -2587,8 +2599,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     try (TraceScope ignored = newPathTraceScope("getEZForPath", src)) {
       return namenode.getEZForPath(src);
     } catch (RemoteException re) {
-      throw re.unwrapRemoteException(FileNotFoundException.class,
-          AccessControlException.class, UnresolvedPathException.class);
+      throw re.unwrapRemoteException(AccessControlException.class,
+          UnresolvedPathException.class);
     }
   }
 
@@ -2788,37 +2800,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   /**
    * Create thread pool for parallel reading in striped layout,
    * STRIPED_READ_THREAD_POOL, if it does not already exist.
-   * @param num Number of threads for striped reads thread pool.
+   * @param numThreads Number of threads for striped reads thread pool.
    */
-  private void initThreadsNumForStripedReads(int num) {
-    assert num > 0;
+  private void initThreadsNumForStripedReads(int numThreads) {
+    assert numThreads > 0;
     if (STRIPED_READ_THREAD_POOL != null) {
       return;
     }
     synchronized (DFSClient.class) {
       if (STRIPED_READ_THREAD_POOL == null) {
-        STRIPED_READ_THREAD_POOL = new ThreadPoolExecutor(1, num, 60,
-            TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),
-            new Daemon.DaemonFactory() {
-              private final AtomicInteger threadIndex = new AtomicInteger(0);
-
-              @Override
-              public Thread newThread(Runnable r) {
-                Thread t = super.newThread(r);
-                t.setName("stripedRead-" + threadIndex.getAndIncrement());
-                return t;
-              }
-            },
-            new ThreadPoolExecutor.CallerRunsPolicy() {
-              @Override
-              public void rejectedExecution(Runnable runnable,
-                  ThreadPoolExecutor e) {
-                LOG.info("Execution for striped reading rejected, "
-                    + "Executing in current thread");
-                // will run in the current thread
-                super.rejectedExecution(runnable, e);
-              }
-            });
+        STRIPED_READ_THREAD_POOL = DFSUtilClient.getThreadPoolExecutor(1,
+            numThreads, 60, "StripedRead-", true);
         STRIPED_READ_THREAD_POOL.allowCoreThreadTimeOut(true);
       }
     }

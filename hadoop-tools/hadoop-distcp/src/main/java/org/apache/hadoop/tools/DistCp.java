@@ -71,10 +71,29 @@ public class DistCp extends Configured implements Tool {
   private static final String PREFIX = "_distcp";
   private static final String WIP_PREFIX = "._WIP_";
   private static final String DISTCP_DEFAULT_XML = "distcp-default.xml";
+  private static final String DISTCP_SITE_XML = "distcp-site.xml";
   static final Random rand = new Random();
 
   private boolean submitted;
   private FileSystem jobFS;
+
+  private void prepareFileListing(Job job) throws Exception {
+    if (inputOptions.shouldUseSnapshotDiff()) {
+      // When "-diff" or "-rdiff" is passed, do sync() first, then
+      // create copyListing based on snapshot diff.
+      DistCpSync distCpSync = new DistCpSync(inputOptions, getConf());
+      if (distCpSync.sync()) {
+        createInputFileListingWithDiff(job, distCpSync);
+      } else {
+        throw new Exception("DistCp sync failed, input options: "
+            + inputOptions);
+      }
+    } else {
+      // When no "-diff" or "-rdiff" is passed, create copyListing
+      // in regular way.
+      createInputFileListing(job);
+    }
+  }
 
   /**
    * Public Constructor. Creates DistCp object with specified input-parameters.
@@ -86,6 +105,7 @@ public class DistCp extends Configured implements Tool {
   public DistCp(Configuration configuration, DistCpOptions inputOptions) throws Exception {
     Configuration config = new Configuration(configuration);
     config.addResource(DISTCP_DEFAULT_XML);
+    config.addResource(DISTCP_SITE_XML);
     setConf(config);
     this.inputOptions = inputOptions;
     this.metaFolder   = createMetaFolderPath();
@@ -174,21 +194,7 @@ public class DistCp extends Configured implements Tool {
         jobFS = metaFolder.getFileSystem(getConf());
         job = createJob();
       }
-      if (inputOptions.shouldUseDiff()) {
-        DistCpSync distCpSync = new DistCpSync(inputOptions, getConf());
-        if (distCpSync.sync()) {
-          createInputFileListingWithDiff(job, distCpSync);
-        } else {
-          throw new Exception("DistCp sync failed, input options: "
-              + inputOptions);
-        }
-      }
-
-      // Fallback to default DistCp if without "diff" option or sync failed.
-      if (!inputOptions.shouldUseDiff()) {
-        createInputFileListing(job);
-      }
-
+      prepareFileListing(job);
       job.submit();
       submitted = true;
     } finally {
@@ -198,7 +204,8 @@ public class DistCp extends Configured implements Tool {
     }
 
     String jobID = job.getJobID().toString();
-    job.getConfiguration().set(DistCpConstants.CONF_LABEL_DISTCP_JOB_ID, jobID);
+    job.getConfiguration().set(DistCpConstants.CONF_LABEL_DISTCP_JOB_ID,
+        jobID);
     LOG.info("DistCp job-id: " + jobID);
 
     return job;
@@ -393,10 +400,12 @@ public class DistCp extends Configured implements Tool {
    * Loads properties from distcp-default.xml into configuration
    * object
    * @return Configuration which includes properties from distcp-default.xml
+   *         and distcp-site.xml
    */
   private static Configuration getDefaultConf() {
     Configuration config = new Configuration();
     config.addResource(DISTCP_DEFAULT_XML);
+    config.addResource(DISTCP_SITE_XML);
     return config;
   }
 

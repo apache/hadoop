@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -48,8 +49,9 @@ import com.google.common.annotations.VisibleForTesting;
 public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
   private static final String enableDebugLogging =
-    "For more information, please enable DEBUG log level on "
-    + BlockPlacementPolicy.class.getName();
+      "For more information, please enable DEBUG log level on "
+          + BlockPlacementPolicy.class.getName() + " and "
+          + NetworkTopology.class.getName();
 
   private static final ThreadLocal<StringBuilder> debugLoggingBuilder
       = new ThreadLocal<StringBuilder>() {
@@ -89,9 +91,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     this.stats = stats;
     this.clusterMap = clusterMap;
     this.host2datanodeMap = host2datanodeMap;
-    this.heartbeatInterval = conf.getLong(
+    this.heartbeatInterval = conf.getTimeDuration(
         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
-        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT) * 1000;
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS) * 1000;
     this.tolerateHeartbeatMultiplier = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_TOLERATE_HEARTBEAT_MULTIPLIER_KEY,
         DFSConfigKeys.DFS_NAMENODE_TOLERATE_HEARTBEAT_MULTIPLIER_DEFAULT);
@@ -831,8 +833,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                          List<DatanodeStorageInfo> results,
                          boolean avoidStaleNodes) {
     // check if the node is (being) decommissioned
-    if (node.isDecommissionInProgress() || node.isDecommissioned()) {
-      logNodeIsNotChosen(node, "the node is (being) decommissioned ");
+    if (!node.isInService()) {
+      logNodeIsNotChosen(node, "the node isn't in service.");
       return false;
     }
 
@@ -1032,9 +1034,11 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       }
       firstOne = false;
       if (cur == null) {
-        LOG.warn("No excess replica can be found. excessTypes: {}." +
-            " moreThanOne: {}. exactlyOne: {}.", excessTypes, moreThanOne,
-            exactlyOne);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("No excess replica can be found. excessTypes: {}." +
+              " moreThanOne: {}. exactlyOne: {}.", excessTypes,
+              moreThanOne, exactlyOne);
+        }
         break;
       }
 

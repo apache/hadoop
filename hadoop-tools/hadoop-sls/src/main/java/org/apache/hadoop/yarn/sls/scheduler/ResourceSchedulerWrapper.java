@@ -51,7 +51,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -60,6 +59,7 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
@@ -206,8 +206,8 @@ final public class ResourceSchedulerWrapper
   public Allocation allocate(ApplicationAttemptId attemptId,
       List<ResourceRequest> resourceRequests, List<ContainerId> containerIds,
       List<String> strings, List<String> strings2,
-      List<ContainerResourceChangeRequest> increaseRequests,
-      List<ContainerResourceChangeRequest> decreaseRequests) {
+      List<UpdateContainerRequest> increaseRequests,
+      List<UpdateContainerRequest> decreaseRequests) {
     if (metricsON) {
       final Timer.Context context = schedulerAllocateTimer.time();
       Allocation allocation = null;
@@ -542,11 +542,11 @@ final public class ResourceSchedulerWrapper
       }
     );
     metrics.register("variable.cluster.allocated.vcores",
-      new Gauge<Long>() {
+      new Gauge<Integer>() {
         @Override
-        public Long getValue() {
+        public Integer getValue() {
           if(scheduler == null || scheduler.getRootQueueMetrics() == null) {
-            return 0L;
+            return 0;
           } else {
             return scheduler.getRootQueueMetrics().getAllocatedVirtualCores();
           }
@@ -566,11 +566,11 @@ final public class ResourceSchedulerWrapper
       }
     );
     metrics.register("variable.cluster.available.vcores",
-      new Gauge<Long>() {
+      new Gauge<Integer>() {
         @Override
-        public Long getValue() {
+        public Integer getValue() {
           if(scheduler == null || scheduler.getRootQueueMetrics() == null) {
-            return 0L;
+            return 0;
           } else {
             return scheduler.getRootQueueMetrics().getAvailableVirtualCores();
           }

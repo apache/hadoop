@@ -351,6 +351,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
       }
     }
     List<TimelineEvent> events = entity.getEvents();
+    long updatedTimeStamp = 0L;
     if (events != null) {
       for (TimelineEvent event : events) {
         if (event.getEventType().equals(
@@ -358,9 +359,16 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
           createdTime = event.getTimestamp();
         } else if (event.getEventType().equals(
             ApplicationMetricsConstants.UPDATED_EVENT_TYPE)) {
-          // TODO: YARN-5101. This type of events are parsed in
-          // time-stamp descending order which means the previous event
-          // could override the information from the later same type of event.
+          // This type of events are parsed in time-stamp descending order
+          // which means the previous event could override the information
+          // from the later same type of event. Hence compare timestamp
+          // before over writing.
+          if (event.getTimestamp() > updatedTimeStamp) {
+            updatedTimeStamp = event.getTimestamp();
+          } else {
+            continue;
+          }
+
           Map<String, Object> eventInfo = event.getEventInfo();
           if (eventInfo == null) {
             continue;
@@ -455,21 +463,21 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
           if (eventInfo == null) {
             continue;
           }
-          if (eventInfo.containsKey(AppAttemptMetricsConstants.HOST_EVENT_INFO)) {
+          if (eventInfo.containsKey(AppAttemptMetricsConstants.HOST_INFO)) {
             host =
-                eventInfo.get(AppAttemptMetricsConstants.HOST_EVENT_INFO)
+                eventInfo.get(AppAttemptMetricsConstants.HOST_INFO)
                     .toString();
           }
           if (eventInfo
-              .containsKey(AppAttemptMetricsConstants.RPC_PORT_EVENT_INFO)) {
+              .containsKey(AppAttemptMetricsConstants.RPC_PORT_INFO)) {
             rpcPort = (Integer) eventInfo.get(
-                    AppAttemptMetricsConstants.RPC_PORT_EVENT_INFO);
+                    AppAttemptMetricsConstants.RPC_PORT_INFO);
           }
           if (eventInfo
-              .containsKey(AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO)) {
+              .containsKey(AppAttemptMetricsConstants.MASTER_CONTAINER_INFO)) {
             amContainerId =
                 ContainerId.fromString(eventInfo.get(
-                    AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO)
+                    AppAttemptMetricsConstants.MASTER_CONTAINER_INFO)
                     .toString());
           }
         } else if (event.getEventType().equals(
@@ -479,39 +487,40 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
             continue;
           }
           if (eventInfo
-              .containsKey(AppAttemptMetricsConstants.TRACKING_URL_EVENT_INFO)) {
+              .containsKey(AppAttemptMetricsConstants.TRACKING_URL_INFO)) {
             trackingUrl =
                 eventInfo.get(
-                    AppAttemptMetricsConstants.TRACKING_URL_EVENT_INFO)
+                    AppAttemptMetricsConstants.TRACKING_URL_INFO)
                     .toString();
           }
           if (eventInfo
-              .containsKey(AppAttemptMetricsConstants.ORIGINAL_TRACKING_URL_EVENT_INFO)) {
+              .containsKey(
+                  AppAttemptMetricsConstants.ORIGINAL_TRACKING_URL_INFO)) {
             originalTrackingUrl =
                 eventInfo
                     .get(
-                        AppAttemptMetricsConstants.ORIGINAL_TRACKING_URL_EVENT_INFO)
+                        AppAttemptMetricsConstants.ORIGINAL_TRACKING_URL_INFO)
                     .toString();
           }
           if (eventInfo
-              .containsKey(AppAttemptMetricsConstants.DIAGNOSTICS_INFO_EVENT_INFO)) {
+              .containsKey(AppAttemptMetricsConstants.DIAGNOSTICS_INFO)) {
             diagnosticsInfo =
                 eventInfo.get(
-                    AppAttemptMetricsConstants.DIAGNOSTICS_INFO_EVENT_INFO)
+                    AppAttemptMetricsConstants.DIAGNOSTICS_INFO)
                     .toString();
           }
           if (eventInfo
-              .containsKey(AppAttemptMetricsConstants.STATE_EVENT_INFO)) {
+              .containsKey(AppAttemptMetricsConstants.STATE_INFO)) {
             state =
                 YarnApplicationAttemptState.valueOf(eventInfo.get(
-                    AppAttemptMetricsConstants.STATE_EVENT_INFO)
+                    AppAttemptMetricsConstants.STATE_INFO)
                     .toString());
           }
           if (eventInfo
-              .containsKey(AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO)) {
+              .containsKey(AppAttemptMetricsConstants.MASTER_CONTAINER_INFO)) {
             amContainerId =
                 ContainerId.fromString(eventInfo.get(
-                    AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO)
+                    AppAttemptMetricsConstants.MASTER_CONTAINER_INFO)
                     .toString());
           }
         }
@@ -539,37 +548,37 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     Map<String, Object> entityInfo = entity.getOtherInfo();
     if (entityInfo != null) {
       if (entityInfo
-          .containsKey(ContainerMetricsConstants.ALLOCATED_MEMORY_ENTITY_INFO)) {
+          .containsKey(ContainerMetricsConstants.ALLOCATED_MEMORY_INFO)) {
         allocatedMem = (Integer) entityInfo.get(
-                ContainerMetricsConstants.ALLOCATED_MEMORY_ENTITY_INFO);
+                ContainerMetricsConstants.ALLOCATED_MEMORY_INFO);
       }
       if (entityInfo
-          .containsKey(ContainerMetricsConstants.ALLOCATED_VCORE_ENTITY_INFO)) {
+          .containsKey(ContainerMetricsConstants.ALLOCATED_VCORE_INFO)) {
         allocatedVcore = (Integer) entityInfo.get(
-                ContainerMetricsConstants.ALLOCATED_VCORE_ENTITY_INFO);
+                ContainerMetricsConstants.ALLOCATED_VCORE_INFO);
       }
       if (entityInfo
-          .containsKey(ContainerMetricsConstants.ALLOCATED_HOST_ENTITY_INFO)) {
+          .containsKey(ContainerMetricsConstants.ALLOCATED_HOST_INFO)) {
         allocatedHost =
             entityInfo
-                .get(ContainerMetricsConstants.ALLOCATED_HOST_ENTITY_INFO)
+                .get(ContainerMetricsConstants.ALLOCATED_HOST_INFO)
                 .toString();
       }
       if (entityInfo
-          .containsKey(ContainerMetricsConstants.ALLOCATED_PORT_ENTITY_INFO)) {
+          .containsKey(ContainerMetricsConstants.ALLOCATED_PORT_INFO)) {
         allocatedPort = (Integer) entityInfo.get(
-                ContainerMetricsConstants.ALLOCATED_PORT_ENTITY_INFO);
+                ContainerMetricsConstants.ALLOCATED_PORT_INFO);
       }
       if (entityInfo
-          .containsKey(ContainerMetricsConstants.ALLOCATED_PRIORITY_ENTITY_INFO)) {
+          .containsKey(ContainerMetricsConstants.ALLOCATED_PRIORITY_INFO)) {
         allocatedPriority = (Integer) entityInfo.get(
-                ContainerMetricsConstants.ALLOCATED_PRIORITY_ENTITY_INFO);
+                ContainerMetricsConstants.ALLOCATED_PRIORITY_INFO);
       }
       if (entityInfo.containsKey(
-          ContainerMetricsConstants.ALLOCATED_HOST_HTTP_ADDRESS_ENTITY_INFO)) {
+          ContainerMetricsConstants.ALLOCATED_HOST_HTTP_ADDRESS_INFO)) {
         nodeHttpAddress =
             (String) entityInfo
-              .get(ContainerMetricsConstants.ALLOCATED_HOST_HTTP_ADDRESS_ENTITY_INFO);
+              .get(ContainerMetricsConstants.ALLOCATED_HOST_HTTP_ADDRESS_INFO);
       }
     }
     List<TimelineEvent> events = entity.getEvents();
@@ -586,22 +595,22 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
             continue;
           }
           if (eventInfo
-              .containsKey(ContainerMetricsConstants.DIAGNOSTICS_INFO_EVENT_INFO)) {
+              .containsKey(ContainerMetricsConstants.DIAGNOSTICS_INFO)) {
             diagnosticsInfo =
                 eventInfo.get(
-                    ContainerMetricsConstants.DIAGNOSTICS_INFO_EVENT_INFO)
+                    ContainerMetricsConstants.DIAGNOSTICS_INFO)
                     .toString();
           }
           if (eventInfo
-              .containsKey(ContainerMetricsConstants.EXIT_STATUS_EVENT_INFO)) {
+              .containsKey(ContainerMetricsConstants.EXIT_STATUS_INFO)) {
             exitStatus = (Integer) eventInfo.get(
-                    ContainerMetricsConstants.EXIT_STATUS_EVENT_INFO);
+                    ContainerMetricsConstants.EXIT_STATUS_INFO);
           }
           if (eventInfo
-              .containsKey(ContainerMetricsConstants.STATE_EVENT_INFO)) {
+              .containsKey(ContainerMetricsConstants.STATE_INFO)) {
             state =
                 ContainerState.valueOf(eventInfo.get(
-                    ContainerMetricsConstants.STATE_EVENT_INFO).toString());
+                    ContainerMetricsConstants.STATE_INFO).toString());
           }
         }
       }

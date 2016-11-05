@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -30,6 +32,7 @@ import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.Node;
 import org.apache.hadoop.test.PathUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -156,6 +159,21 @@ public class TestAvailableSpaceBlockPlacementPolicy {
     double possibility = 1.0 * moreRemainingNode / total;
     Assert.assertTrue(possibility > 0.52);
     Assert.assertTrue(possibility < 0.55);
+  }
+
+  @Test
+  public void testChooseDataNode() {
+    try {
+      Collection<Node> allNodes = new ArrayList<>(dataNodes.length);
+      Collections.addAll(allNodes, dataNodes);
+      if (placementPolicy instanceof AvailableSpaceBlockPlacementPolicy){
+        // exclude all datanodes when chooseDataNode, no NPE should be thrown
+        ((AvailableSpaceBlockPlacementPolicy)placementPolicy)
+                .chooseDataNode("~", allNodes);
+      }
+    }catch (NullPointerException npe){
+      Assert.fail("NPE should not be thrown");
+    }
   }
 
   @AfterClass

@@ -66,7 +66,7 @@ import org.apache.hadoop.util.ToolRunner;
  * <b>bin/hadoop jar hadoop-*-examples.jar teragen 10000000000 in-dir</b>
  */
 public class TeraGen extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(TeraSort.class);
+  private static final Log LOG = LogFactory.getLog(TeraGen.class);
 
   public static enum Counters {CHECKSUM}
 
@@ -246,6 +246,9 @@ public class TeraGen extends Configured implements Tool {
 
   private static void usage() throws IOException {
     System.err.println("teragen <num rows> <output dir>");
+    System.err.println("If you want to generate data and store them as " +
+        "erasure code striping file, just make sure that the parent dir " +
+        "of <output dir> has erasure code policy set");
   }
 
   /**

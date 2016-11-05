@@ -43,48 +43,54 @@ import org.apache.hadoop.ipc.RpcNoSuchMethodException;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 public class TestAclCommands {
+  @Rule
+  public TemporaryFolder testFolder = new TemporaryFolder();
+
+  private String path;
 
   private Configuration conf = null;
 
   @Before
   public void setup() throws IOException {
     conf = new Configuration();
+    path = testFolder.newFile("file").getPath();
   }
 
   @Test
   public void testGetfaclValidations() throws Exception {
     assertFalse("getfacl should fail without path",
-        0 == runCommand(new String[] { "-getfacl" }));
+        0 == runCommand(new String[] {"-getfacl"}));
     assertFalse("getfacl should fail with extra argument",
-        0 == runCommand(new String[] { "-getfacl", "/test", "extraArg" }));
+        0 == runCommand(new String[] {"-getfacl", path, "extraArg"}));
   }
 
   @Test
   public void testSetfaclValidations() throws Exception {
     assertFalse("setfacl should fail without options",
-        0 == runCommand(new String[] { "-setfacl", "/" }));
+        0 == runCommand(new String[] {"-setfacl", path}));
     assertFalse("setfacl should fail without options -b, -k, -m, -x or --set",
-        0 == runCommand(new String[] { "-setfacl", "-R", "/" }));
+        0 == runCommand(new String[] {"-setfacl", "-R", path}));
     assertFalse("setfacl should fail without path",
-        0 == runCommand(new String[] { "-setfacl" }));
+        0 == runCommand(new String[] {"-setfacl"}));
     assertFalse("setfacl should fail without aclSpec",
-        0 == runCommand(new String[] { "-setfacl", "-m", "/path" }));
+        0 == runCommand(new String[] {"-setfacl", "-m", path}));
     assertFalse("setfacl should fail with conflicting options",
-        0 == runCommand(new String[] { "-setfacl", "-m", "/path" }));
+        0 == runCommand(new String[] {"-setfacl", "-m", path}));
     assertFalse("setfacl should fail with extra arguments",
-        0 == runCommand(new String[] { "-setfacl", "/path", "extra" }));
+        0 == runCommand(new String[] {"-setfacl", path, "extra"}));
     assertFalse("setfacl should fail with extra arguments",
-        0 == runCommand(new String[] { "-setfacl", "--set",
-            "default:user::rwx", "/path", "extra" }));
+        0 == runCommand(new String[] {"-setfacl", "--set",
+            "default:user::rwx", path, "extra"}));
     assertFalse("setfacl should fail with permissions for -x",
-        0 == runCommand(new String[] { "-setfacl", "-x", "user:user1:rwx",
-            "/path" }));
+        0 == runCommand(new String[] {"-setfacl", "-x", "user:user1:rwx",
+            path}));
     assertFalse("setfacl should fail ACL spec missing",
-        0 == runCommand(new String[] { "-setfacl", "-m",
-            "", "/path" }));
+        0 == runCommand(new String[] {"-setfacl", "-m", "", path}));
   }
 
   @Test

@@ -40,9 +40,11 @@ service TestProtobufRpcProto {
   rpc exchange(ExchangeRequestProto) returns (ExchangeResponseProto);
   rpc sleep(SleepRequestProto) returns (EmptyResponseProto);
   rpc getAuthMethod(EmptyRequestProto) returns (AuthMethodResponseProto);
-  rpc getAuthUser(EmptyRequestProto) returns (AuthUserResponseProto);
+  rpc getAuthUser(EmptyRequestProto) returns (UserResponseProto);
   rpc echoPostponed(EchoRequestProto) returns (EchoResponseProto);
   rpc sendPostponed(EmptyRequestProto) returns (EmptyResponseProto);
+  rpc getCurrentUser(EmptyRequestProto) returns (UserResponseProto);
+  rpc getServerRemoteUser(EmptyRequestProto) returns (UserResponseProto);
 }
 
 service TestProtobufRpc2Proto {
@@ -64,4 +66,8 @@ service NewProtobufRpcProto {
 service NewerProtobufRpcProto {
   rpc ping(EmptyRequestProto) returns (EmptyResponseProto);
   rpc echo(EmptyRequestProto) returns (EmptyResponseProto);
+}
+
+service CustomProto {
+  rpc ping(EmptyRequestProto) returns (EmptyResponseProto);
 }

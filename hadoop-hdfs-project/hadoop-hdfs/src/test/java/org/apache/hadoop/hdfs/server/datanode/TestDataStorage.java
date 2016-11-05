@@ -142,8 +142,8 @@ public class TestDataStorage {
     for (NamespaceInfo ni : namespaceInfos) {
       storage.addStorageLocations(mockDN, ni, locations, START_OPT);
       for (StorageLocation sl : locations) {
-        checkDir(sl.getFile());
-        checkDir(sl.getFile(), ni.getBlockPoolID());
+        checkDir(new File(sl.getUri()));
+        checkDir(new File(sl.getUri()), ni.getBlockPoolID());
       }
     }
 
@@ -173,8 +173,7 @@ public class TestDataStorage {
     List<StorageLocation> locations = createStorageLocations(numLocations);
 
     StorageLocation firstStorage = locations.get(0);
-    Storage.StorageDirectory sd = new Storage.StorageDirectory(
-        firstStorage.getFile());
+    Storage.StorageDirectory sd = new Storage.StorageDirectory(firstStorage);
     // the directory is not initialized so VERSION does not exist
     // create a fake directory under current/
     File currentDir = new File(sd.getCurrentDir(),

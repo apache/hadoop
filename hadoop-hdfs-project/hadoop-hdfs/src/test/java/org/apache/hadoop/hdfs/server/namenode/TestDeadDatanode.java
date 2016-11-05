@@ -102,7 +102,8 @@ public class TestDeadDatanode {
         ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK,
         null) };
     StorageReceivedDeletedBlocks[] storageBlocks = { 
-        new StorageReceivedDeletedBlocks(reg.getDatanodeUuid(), blocks) };
+        new StorageReceivedDeletedBlocks(
+            new DatanodeStorage(reg.getDatanodeUuid()), blocks) };
 
     // Ensure blockReceived call from dead datanode is not rejected with
     // IOException, since it's async, but the node remains unregistered.
@@ -128,7 +129,7 @@ public class TestDeadDatanode {
     // that asks datanode to register again
     StorageReport[] rep = { new StorageReport(
         new DatanodeStorage(reg.getDatanodeUuid()),
-        false, 0, 0, 0, 0) };
+        false, 0, 0, 0, 0, 0) };
     DatanodeCommand[] cmd =
         dnp.sendHeartbeat(reg, rep, 0L, 0L, 0, 0, 0, null, true).getCommands();
     assertEquals(1, cmd.length);

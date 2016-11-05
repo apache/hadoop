@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -71,16 +72,14 @@ final class FSDirErasureCodingOp {
 
     String src = srcArg;
     FSPermissionChecker pc = null;
-    byte[][] pathComponents = null;
-    pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     pc = fsn.getPermissionChecker();
     FSDirectory fsd = fsn.getFSDirectory();
-    src = fsd.resolvePath(pc, src, pathComponents);
     final INodesInPath iip;
     List<XAttr> xAttrs;
     fsd.writeLock();
     try {
-      iip = fsd.getINodesInPath4Write(src, false);
+      iip = fsd.resolvePath(pc, src, DirOp.WRITE_LINK);
+      src = iip.getPath();
       xAttrs = createErasureCodingPolicyXAttr(fsn, iip, ecPolicy);
     } finally {
       fsd.writeUnlock();
@@ -143,7 +142,7 @@ final class FSDirErasureCodingOp {
     }
     final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
     xattrs.add(ecXAttr);
-    FSDirXAttrOp.unprotectedSetXAttrs(fsd, src, xattrs,
+    FSDirXAttrOp.unprotectedSetXAttrs(fsd, srcIIP, xattrs,
         EnumSet.of(XAttrSetFlag.CREATE));
     return xattrs;
   }
@@ -223,13 +222,9 @@ final class FSDirErasureCodingOp {
 
   private static INodesInPath getINodesInPath(final FSNamesystem fsn,
       final String srcArg) throws IOException {
-    String src = srcArg;
-    final byte[][] pathComponents = FSDirectory
-        .getPathComponentsForReservedPath(src);
     final FSDirectory fsd = fsn.getFSDirectory();
     final FSPermissionChecker pc = fsn.getPermissionChecker();
-    src = fsd.resolvePath(pc, src, pathComponents);
-    INodesInPath iip = fsd.getINodesInPath(src, true);
+    INodesInPath iip = fsd.resolvePath(pc, srcArg, DirOp.READ);
     if (fsn.isPermissionEnabled()) {
       fsn.getFSDirectory().checkPathAccess(pc, iip, FsAction.READ);
     }

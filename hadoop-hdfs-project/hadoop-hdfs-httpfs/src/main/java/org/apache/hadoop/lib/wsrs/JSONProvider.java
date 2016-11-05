@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.lib.wsrs;
 
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.http.JettyUtils;
 import org.json.simple.JSONStreamAware;
 
 import javax.ws.rs.Produces;
@@ -34,9 +34,10 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
 
 @Provider
-@Produces(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
 @InterfaceAudience.Private
 public class JSONProvider implements MessageBodyWriter<JSONStreamAware> {
   private static final String ENTER = System.getProperty("line.separator");
@@ -56,7 +57,8 @@ public class JSONProvider implements MessageBodyWriter<JSONStreamAware> {
   public void writeTo(JSONStreamAware jsonStreamAware, Class<?> aClass, Type type, Annotation[] annotations,
                       MediaType mediaType, MultivaluedMap<String, Object> stringObjectMultivaluedMap,
                       OutputStream outputStream) throws IOException, WebApplicationException {
-    Writer writer = new OutputStreamWriter(outputStream, Charsets.UTF_8);
+    Writer writer =
+        new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
     jsonStreamAware.writeJSONString(writer);
     writer.write(ENTER);
     writer.flush();

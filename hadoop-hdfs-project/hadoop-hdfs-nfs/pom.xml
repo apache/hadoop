@@ -20,12 +20,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-alpha1-SNAPSHOT</version>
+    <version>3.0.0-alpha2-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-hdfs-nfs</artifactId>
-  <version>3.0.0-alpha1-SNAPSHOT</version>
+  <version>3.0.0-alpha2-SNAPSHOT</version>
   <description>Apache Hadoop HDFS-NFS</description>
   <name>Apache Hadoop HDFS-NFS</name>
   <packaging>jar</packaging>
@@ -85,12 +85,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.mortbay.jetty</groupId>
-      <artifactId>jetty</artifactId>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.mortbay.jetty</groupId>
+      <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-util</artifactId>
       <scope>compile</scope>
     </dependency>
@@ -146,7 +146,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>
-      <artifactId>servlet-api</artifactId>
+      <artifactId>javax.servlet-api</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>

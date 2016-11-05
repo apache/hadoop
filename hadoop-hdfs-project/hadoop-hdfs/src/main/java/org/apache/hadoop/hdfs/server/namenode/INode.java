@@ -428,8 +428,10 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    */
   public final ContentSummary computeAndConvertContentSummary(int snapshotId,
       ContentSummaryComputationContext summary) {
-    ContentCounts counts = computeContentSummary(snapshotId, summary)
-        .getCounts();
+    computeContentSummary(snapshotId, summary);
+    summary.tallyDeletedSnapshottedINodes();
+    final ContentCounts counts = summary.getCounts();
+    final ContentCounts snapshotCounts = summary.getSnapshotCounts();
     final QuotaCounts q = getQuotaCounts();
     return new ContentSummary.Builder().
         length(counts.getLength()).
@@ -440,6 +442,10 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
         spaceQuota(q.getStorageSpace()).
         typeConsumed(counts.getTypeSpaces()).
         typeQuota(q.getTypeSpaces().asArray()).
+        snapshotLength(snapshotCounts.getLength()).
+        snapshotFileCount(snapshotCounts.getFileCount()).
+        snapshotDirectoryCount(snapshotCounts.getDirectoryCount()).
+        snapshotSpaceConsumed(snapshotCounts.getStoragespace()).
         build();
   }
 
@@ -569,9 +575,39 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
   public String getFullPathName() {
     // Get the full path name of this inode.
-    return FSDirectory.getFullPathName(this);
+    if (isRoot()) {
+      return Path.SEPARATOR;
+    }
+    // compute size of needed bytes for the path
+    int idx = 0;
+    for (INode inode = this; inode != null; inode = inode.getParent()) {
+      // add component + delimiter (if not tail component)
+      idx += inode.getLocalNameBytes().length + (inode != this ? 1 : 0);
+    }
+    byte[] path = new byte[idx];
+    for (INode inode = this; inode != null; inode = inode.getParent()) {
+      if (inode != this) {
+        path[--idx] = Path.SEPARATOR_CHAR;
+      }
+      byte[] name = inode.getLocalNameBytes();
+      idx -= name.length;
+      System.arraycopy(name, 0, path, idx, name.length);
+    }
+    return DFSUtil.bytes2String(path);
   }
-  
+
+  public byte[][] getPathComponents() {
+    int n = 0;
+    for (INode inode = this; inode != null; inode = inode.getParent()) {
+      n++;
+    }
+    byte[][] components = new byte[n][];
+    for (INode inode = this; inode != null; inode = inode.getParent()) {
+      components[--n] = inode.getLocalNameBytes();
+    }
+    return components;
+  }
+
   @Override
   public String toString() {
     return getLocalName();
@@ -727,18 +763,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    */
   @VisibleForTesting
   public static byte[][] getPathComponents(String path) {
-    return getPathComponents(getPathNames(path));
-  }
-
-  /** Convert strings to byte arrays for path components. */
-  static byte[][] getPathComponents(String[] strings) {
-    if (strings.length == 0) {
-      return new byte[][]{null};
-    }
-    byte[][] bytes = new byte[strings.length][];
-    for (int i = 0; i < strings.length; i++)
-      bytes[i] = DFSUtil.string2Bytes(strings[i]);
-    return bytes;
+    checkAbsolutePath(path);
+    return DFSUtil.getPathComponents(path);
   }
 
   /**
@@ -747,11 +773,15 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * @return array of path components.
    */
   public static String[] getPathNames(String path) {
+    checkAbsolutePath(path);
+    return StringUtils.split(path, Path.SEPARATOR_CHAR);
+  }
+
+  private static void checkAbsolutePath(final String path) {
     if (path == null || !path.startsWith(Path.SEPARATOR)) {
       throw new AssertionError("Absolute path required, but got '"
           + path + "'");
     }
-    return StringUtils.split(path, Path.SEPARATOR_CHAR);
   }
 
   @Override

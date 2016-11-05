@@ -24,7 +24,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Specifies the type of an ACL entry.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Stable
 public enum AclEntryType {
   /**
    * An ACL entry applied to a specific user.  These ACL entries can be unnamed,
@@ -55,4 +55,25 @@ public enum AclEntryType {
    * of the more specific ACL entry types.
    */
   OTHER;
+
+  @Override
+  @InterfaceStability.Unstable
+  public String toString() {
+    // This currently just delegates to the stable string representation, but it
+    // is permissible for the output of this method to change across versions.
+    return toStringStable();
+  }
+
+  /**
+   * Returns a string representation guaranteed to be stable across versions to
+   * satisfy backward compatibility requirements, such as for shell command
+   * output or serialization.
+   *
+   * @return stable, backward compatible string representation
+   */
+  public String toStringStable() {
+    // The base implementation uses the enum value names, which are public API
+    // and therefore stable.
+    return super.toString();
+  }
 }

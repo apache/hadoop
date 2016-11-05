@@ -78,7 +78,7 @@ public class ServerRMProxy<T> extends RMProxy<T> {
         YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
-    } else if (protocol == DistributedSchedulerProtocol.class) {
+    } else if (protocol == DistributedSchedulingAMProtocol.class) {
       return conf.getSocketAddr(YarnConfiguration.RM_SCHEDULER_ADDRESS,
           YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
           YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);

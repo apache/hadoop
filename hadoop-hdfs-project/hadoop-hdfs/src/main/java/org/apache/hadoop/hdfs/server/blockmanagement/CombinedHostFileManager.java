@@ -148,6 +148,24 @@ public class CombinedHostFileManager extends HostConfigManager {
       };
     }
 
+    synchronized long getMaintenanceExpireTimeInMS(
+        final InetSocketAddress address) {
+      Iterable<DatanodeAdminProperties> datanode = Iterables.filter(
+          allDNs.get(address.getAddress()),
+          new Predicate<DatanodeAdminProperties>() {
+            public boolean apply(DatanodeAdminProperties input) {
+              return input.getAdminState().equals(
+                  AdminStates.IN_MAINTENANCE) &&
+                  (input.getPort() == 0 ||
+                  input.getPort() == address.getPort());
+            }
+          });
+      // if DN isn't set to maintenance state, ignore MaintenanceExpireTimeInMS
+      // set in the config.
+      return datanode.iterator().hasNext() ?
+          datanode.iterator().next().getMaintenanceExpireTimeInMS() : 0;
+    }
+
     static class HostIterator extends UnmodifiableIterator<InetSocketAddress> {
       private final Iterator<Map.Entry<InetAddress,
           DatanodeAdminProperties>> it;
@@ -234,6 +252,11 @@ public class CombinedHostFileManager extends HostConfigManager {
   @Override
   public synchronized String getUpgradeDomain(final DatanodeID dn) {
     return hostProperties.getUpgradeDomain(dn.getResolvedAddress());
+  }
+
+  @Override
+  public long getMaintenanceExpirationTimeInMS(DatanodeID dn) {
+    return hostProperties.getMaintenanceExpireTimeInMS(dn.getResolvedAddress());
   }
 
   /**

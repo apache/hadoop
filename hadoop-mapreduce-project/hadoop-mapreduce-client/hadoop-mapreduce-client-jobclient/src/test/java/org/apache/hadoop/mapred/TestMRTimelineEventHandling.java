@@ -34,12 +34,14 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.jobhistory.EventType;
 import org.apache.hadoop.mapreduce.jobhistory.TestJobHistoryEventHandler;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -173,6 +175,13 @@ public class TestMRTimelineEventHandling {
   @Test
   public void testMRNewTimelineServiceEventHandling() throws Exception {
     LOG.info("testMRNewTimelineServiceEventHandling start.");
+
+    String testDir =
+        new File("target", getClass().getSimpleName() +
+            "-test_dir").getAbsolutePath();
+    String storageDir =
+        testDir + File.separator + "timeline_service_data";
+
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     // enable new timeline service
@@ -180,6 +189,9 @@ public class TestMRTimelineEventHandling {
     conf.setClass(YarnConfiguration.TIMELINE_SERVICE_WRITER_CLASS,
         FileSystemTimelineWriterImpl.class, TimelineWriter.class);
     conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA, true);
+    // set the file system root directory
+    conf.set(FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_DIR_ROOT,
+        storageDir);
 
     // enable aux-service based timeline collectors
     conf.set(YarnConfiguration.NM_AUX_SERVICES, TIMELINE_AUX_SERVICE_NAME);
@@ -196,8 +208,8 @@ public class TestMRTimelineEventHandling {
       cluster.start();
       LOG.info("A MiniMRYarnCluster get start.");
 
-      Path inDir = new Path("input");
-      Path outDir = new Path("output");
+      Path inDir = new Path(testDir, "input");
+      Path outDir = new Path(testDir, "output");
       LOG.info("Run 1st job which should be successful.");
       JobConf successConf = new JobConf(conf);
       successConf.set("dummy_conf1",
@@ -225,7 +237,7 @@ public class TestMRTimelineEventHandling {
       ApplicationReport appReport = apps.get(0);
       firstAppId = appReport.getApplicationId();
       UtilsForTests.waitForAppFinished(job, cluster);
-      checkNewTimelineEvent(firstAppId, appReport);
+      checkNewTimelineEvent(firstAppId, appReport, storageDir);
 
       LOG.info("Run 2nd job which should be failed.");
       job = UtilsForTests.runJobFail(new JobConf(conf), inDir, outDir);
@@ -238,41 +250,38 @@ public class TestMRTimelineEventHandling {
       appReport = apps.get(0).getApplicationId().equals(firstAppId) ?
           apps.get(0) : apps.get(1);
 
-      checkNewTimelineEvent(firstAppId, appReport);
+      checkNewTimelineEvent(firstAppId, appReport, storageDir);
 
     } finally {
       if (cluster != null) {
         cluster.stop();
       }
       // Cleanup test file
-      String testRoot =
-          FileSystemTimelineWriterImpl.
-              DEFAULT_TIMELINE_SERVICE_STORAGE_DIR_ROOT;
-      File testRootFolder = new File(testRoot);
-      if(testRootFolder.isDirectory()) {
-        FileUtils.deleteDirectory(testRootFolder);
+      File testDirFolder = new File(testDir);
+      if(testDirFolder.isDirectory()) {
+        FileUtils.deleteDirectory(testDirFolder);
       }
 
     }
   }
 
   private void checkNewTimelineEvent(ApplicationId appId,
-      ApplicationReport appReport) throws IOException {
-    String tmpRoot =
-        FileSystemTimelineWriterImpl.DEFAULT_TIMELINE_SERVICE_STORAGE_DIR_ROOT
-            + "/entities/";
+      ApplicationReport appReport, String storageDir) throws IOException {
+    String tmpRoot = storageDir + File.separator + "entities" + File.separator;
 
     File tmpRootFolder = new File(tmpRoot);
 
     Assert.assertTrue(tmpRootFolder.isDirectory());
     String basePath = tmpRoot + YarnConfiguration.DEFAULT_RM_CLUSTER_ID +
-        "/" + UserGroupInformation.getCurrentUser().getShortUserName() +
-        "/" + appReport.getName() +
-        "/" + TimelineUtils.DEFAULT_FLOW_VERSION +
-        "/" + appReport.getStartTime() +
-        "/" + appId.toString();
+        File.separator +
+        UserGroupInformation.getCurrentUser().getShortUserName() +
+        File.separator + appReport.getName() +
+        File.separator + TimelineUtils.DEFAULT_FLOW_VERSION +
+        File.separator + appReport.getStartTime() +
+        File.separator + appId.toString();
     // for this test, we expect MAPREDUCE_JOB and MAPREDUCE_TASK dirs
-    String outputDirJob = basePath + "/MAPREDUCE_JOB/";
+    String outputDirJob =
+        basePath + File.separator + "MAPREDUCE_JOB" + File.separator;
 
     File entityFolder = new File(outputDirJob);
     Assert.assertTrue("Job output directory: " + outputDirJob +
@@ -295,7 +304,8 @@ public class TestMRTimelineEventHandling {
     verifyEntity(jobEventFile, null, false, true, cfgsToCheck);
 
     // for this test, we expect MR job metrics are published in YARN_APPLICATION
-    String outputAppDir = basePath + "/YARN_APPLICATION/";
+    String outputAppDir =
+        basePath + File.separator + "YARN_APPLICATION" + File.separator;
     entityFolder = new File(outputAppDir);
     Assert.assertTrue(
         "Job output directory: " + outputAppDir +
@@ -316,7 +326,8 @@ public class TestMRTimelineEventHandling {
     verifyEntity(appEventFile, null, false, true, cfgsToCheck);
 
     // check for task event file
-    String outputDirTask = basePath + "/MAPREDUCE_TASK/";
+    String outputDirTask =
+        basePath + File.separator + "MAPREDUCE_TASK" + File.separator;
     File taskFolder = new File(outputDirTask);
     Assert.assertTrue("Task output directory: " + outputDirTask +
         " does not exist.",
@@ -336,7 +347,8 @@ public class TestMRTimelineEventHandling {
         true, false, null);
 
     // check for task attempt event file
-    String outputDirTaskAttempt = basePath + "/MAPREDUCE_TASK_ATTEMPT/";
+    String outputDirTaskAttempt =
+        basePath + File.separator + "MAPREDUCE_TASK_ATTEMPT" + File.separator;
     File taskAttemptFolder = new File(outputDirTaskAttempt);
     Assert.assertTrue("TaskAttempt output directory: " + outputDirTaskAttempt +
         " does not exist.", taskAttemptFolder.isDirectory());
@@ -450,21 +462,21 @@ public class TestMRTimelineEventHandling {
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA, false);
     MiniMRYarnCluster cluster = null;
+    FileSystem fs = null;
+    Path inDir = new Path(GenericTestUtils.getTempPath("input"));
+    Path outDir = new Path(GenericTestUtils.getTempPath("output"));
     try {
+      fs = FileSystem.get(conf);
       cluster = new MiniMRYarnCluster(
         TestMRTimelineEventHandling.class.getSimpleName(), 1);
       cluster.init(conf);
       cluster.start();
       conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
           MiniYARNCluster.getHostname() + ":"
-          + cluster.getApplicationHistoryServer().getPort());
+              + cluster.getApplicationHistoryServer().getPort());
       TimelineStore ts = cluster.getApplicationHistoryServer()
           .getTimelineStore();
 
-      String localPathRoot = System.getProperty("test.build.data",
-          "build/test/data");
-      Path inDir = new Path(localPathRoot, "input");
-      Path outDir = new Path(localPathRoot, "output");
       RunningJob job =
           UtilsForTests.runJobSucceed(new JobConf(conf), inDir, outDir);
       Assert.assertEquals(JobStatus.SUCCEEDED,
@@ -486,6 +498,7 @@ public class TestMRTimelineEventHandling {
       if (cluster != null) {
         cluster.stop();
       }
+      deletePaths(fs, inDir, outDir);
     }
 
     conf = new YarnConfiguration();
@@ -499,14 +512,9 @@ public class TestMRTimelineEventHandling {
       cluster.start();
       conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
           MiniYARNCluster.getHostname() + ":"
-          + cluster.getApplicationHistoryServer().getPort());
+              + cluster.getApplicationHistoryServer().getPort());
       TimelineStore ts = cluster.getApplicationHistoryServer()
           .getTimelineStore();
-
-      String localPathRoot = System.getProperty("test.build.data",
-          "build/test/data");
-      Path inDir = new Path(localPathRoot, "input");
-      Path outDir = new Path(localPathRoot, "output");
 
       conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA, false);
       RunningJob job =
@@ -529,6 +537,20 @@ public class TestMRTimelineEventHandling {
     } finally {
       if (cluster != null) {
         cluster.stop();
+      }
+      deletePaths(fs, inDir, outDir);
+    }
+  }
+
+  /** Delete input paths recursively. Paths should not be null. */
+  private void deletePaths(FileSystem fs, Path... paths) {
+    if (fs == null) {
+      return;
+    }
+    for (Path path : paths) {
+      try {
+        fs.delete(path, true);
+      } catch (Exception ignored) {
       }
     }
   }

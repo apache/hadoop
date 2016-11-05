@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.fs;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -143,7 +143,7 @@ public class TestFsShellCopy {
 
   @Test
   public void testCopyFileFromWindowsLocalPath() throws Exception {
-    assumeTrue(Path.WINDOWS);
+    assumeWindows();
     String windowsTestRootPath = (new File(testRootDir.toUri().getPath()
         .toString())).getAbsolutePath();
     Path testRoot = new Path(windowsTestRootPath, "testPutFile");
@@ -158,7 +158,7 @@ public class TestFsShellCopy {
 
   @Test
   public void testCopyDirFromWindowsLocalPath() throws Exception {
-    assumeTrue(Path.WINDOWS);
+    assumeWindows();
     String windowsTestRootPath = (new File(testRootDir.toUri().getPath()
         .toString())).getAbsolutePath();
     Path testRoot = new Path(windowsTestRootPath, "testPutDir");
@@ -485,7 +485,7 @@ public class TestFsShellCopy {
   
   @Test
   public void testMoveFromWindowsLocalPath() throws Exception {
-    assumeTrue(Path.WINDOWS);
+    assumeWindows();
     Path testRoot = new Path(testRootDir, "testPutFile");
     lfs.delete(testRoot, true);
     lfs.mkdirs(testRoot);
@@ -504,7 +504,7 @@ public class TestFsShellCopy {
 
   @Test
   public void testGetWindowsLocalPath() throws Exception {
-    assumeTrue(Path.WINDOWS);
+    assumeWindows();
     String winDstFile = (new File(dstPath.toUri().getPath()
         .toString())).getAbsolutePath();
     shellRun(0, "-get", srcPath.toString(), winDstFile);

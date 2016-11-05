@@ -29,6 +29,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryContext;
 import org.apache.hadoop.mapreduce.v2.hs.JobHistory;
@@ -37,6 +38,7 @@ import org.apache.hadoop.mapreduce.v2.hs.MockHistoryContext;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
+import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
@@ -55,7 +57,6 @@ import com.sun.jersey.api.client.ClientResponse.Status;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.JerseyTest;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 
 /**
@@ -64,7 +65,7 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
  *  /ws/v1/history
  *  /ws/v1/history/info
  */
-public class TestHsWebServices extends JerseyTest {
+public class TestHsWebServices extends JerseyTestBase {
 
   private static Configuration conf = new Configuration();
   private static HistoryContext appContext;
@@ -116,7 +117,8 @@ public class TestHsWebServices extends JerseyTest {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
@@ -127,7 +129,8 @@ public class TestHsWebServices extends JerseyTest {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history/")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
@@ -138,7 +141,8 @@ public class TestHsWebServices extends JerseyTest {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history/")
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
@@ -149,7 +153,8 @@ public class TestHsWebServices extends JerseyTest {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history")
         .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     String xml = response.getEntity(String.class);
     verifyHSInfoXML(xml, appContext);
   }
@@ -160,7 +165,8 @@ public class TestHsWebServices extends JerseyTest {
     ClientResponse response = r.path("ws").path("v1").path("history")
         .path("info").accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
@@ -172,7 +178,8 @@ public class TestHsWebServices extends JerseyTest {
     ClientResponse response = r.path("ws").path("v1").path("history")
         .path("info/").accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
@@ -183,7 +190,8 @@ public class TestHsWebServices extends JerseyTest {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history")
         .path("info/").get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
@@ -195,7 +203,8 @@ public class TestHsWebServices extends JerseyTest {
     ClientResponse response = r.path("ws").path("v1").path("history")
         .path("info/").accept(MediaType.APPLICATION_XML)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     String xml = response.getEntity(String.class);
     verifyHSInfoXML(xml, appContext);
   }

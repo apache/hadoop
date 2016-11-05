@@ -35,7 +35,6 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirective;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList.Type;
@@ -44,6 +43,7 @@ import org.apache.hadoop.hdfs.server.namenode.CacheManager;
 import org.apache.hadoop.hdfs.server.namenode.CachePool;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
@@ -56,7 +56,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
-;
 
 /**
  * Scans the namesystem, scheduling blocks to be cached as appropriate.
@@ -334,12 +333,11 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
       String path = directive.getPath();
       INode node;
       try {
-        node = fsDir.getINode(path);
-      } catch (UnresolvedLinkException e) {
-        // We don't cache through symlinks
-        LOG.debug("Directive {}: got UnresolvedLinkException while resolving "
-                + "path {}", directive.getId(), path
-        );
+        node = fsDir.getINode(path, DirOp.READ);
+      } catch (IOException e) {
+        // We don't cache through symlinks or invalid paths
+        LOG.debug("Directive {}: Failed to resolve path {} ({})",
+            directive.getId(), path, e.getMessage());
         continue;
       }
       if (node == null)  {
@@ -682,7 +680,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
       if (datanode == null) {
         continue;
       }
-      if (datanode.isDecommissioned() || datanode.isDecommissionInProgress()) {
+      if (!datanode.isInService()) {
         continue;
       }
       if (corrupt != null && corrupt.contains(datanode)) {

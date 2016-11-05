@@ -99,8 +99,10 @@ If the LDAP server supports POSIX group semantics (RFC-2307), Hadoop can perform
 
 ### SSL ###
 To secure the connection, the implementation supports LDAP over SSL (LDAPS). SSL is enable by setting `hadoop.security.group.mapping.ldap.ssl` to `true`.
-In addition, specify the path to the keystore file for SSL connection in `hadoop.security.group.mapping.ldap.ssl.keystore` and keystore password in `hadoop.security.group.mapping.ldap.ssl.keystore.password`.
-Alternatively, store the keystore password in a file, and point `hadoop.security.group.mapping.ldap.ssl.keystore.password.file` to that file. For security purposes, this file should be readable only by the Unix user running the daemons.
+In addition, specify the path to the keystore file for SSL connection in `hadoop.security.group.mapping.ldap.ssl.keystore` and keystore password in `hadoop.security.group.mapping.ldap.ssl.keystore.password`, at the same time, make sure `hadoop.security.credential.clear-text-fallback` is true.
+Alternatively, store the keystore password in a file, and point `hadoop.security.group.mapping.ldap.ssl.keystore.password.file` to that file.
+For security purposes, this file should be readable only by the Unix user running the daemons, and for preventing recursive dependency, this file should be a local file.
+The first approach aka using `hadoop.security.group.mapping.ldap.ssl.keystore.password` is highly discouraged because it exposes the password in the configuration file.
 
 ### Low latency group mapping resolution ###
 Typically, Hadoop resolves a user's group names by making two LDAP queries: the first query gets the user object, and the second query uses the user's Distinguished Name to find the groups.

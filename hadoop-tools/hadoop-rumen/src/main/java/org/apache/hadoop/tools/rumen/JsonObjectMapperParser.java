@@ -18,15 +18,14 @@
 package org.apache.hadoop.tools.rumen;
 
 import java.io.Closeable;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.codehaus.jackson.JsonParser;
-import org.codehaus.jackson.map.DeserializationConfig;
-import org.codehaus.jackson.map.ObjectMapper;
 
 /**
  * A simple wrapper for parsing JSON-encoded data using ObjectMapper.
@@ -50,11 +49,9 @@ class JsonObjectMapperParser<T> implements Closeable {
   public JsonObjectMapperParser(Path path, Class<? extends T> clazz,
       Configuration conf) throws IOException {
     mapper = new ObjectMapper();
-    mapper.configure(
-        DeserializationConfig.Feature.CAN_OVERRIDE_ACCESS_MODIFIERS, true);
     this.clazz = clazz;
     InputStream input = new PossiblyDecompressedInputStream(path, conf);
-    jsonParser = mapper.getJsonFactory().createJsonParser(input);
+    jsonParser = mapper.getFactory().createParser(input);
   }
 
   /**
@@ -66,10 +63,8 @@ class JsonObjectMapperParser<T> implements Closeable {
   public JsonObjectMapperParser(InputStream input, Class<? extends T> clazz)
       throws IOException {
     mapper = new ObjectMapper();
-    mapper.configure(
-        DeserializationConfig.Feature.CAN_OVERRIDE_ACCESS_MODIFIERS, true);
     this.clazz = clazz;
-    jsonParser = mapper.getJsonFactory().createJsonParser(input);
+    jsonParser = mapper.getFactory().createParser(input);
   }
 
   /**
@@ -82,7 +77,7 @@ class JsonObjectMapperParser<T> implements Closeable {
   public T getNext() throws IOException {
     try {
       return mapper.readValue(jsonParser, clazz);
-    } catch (EOFException e) {
+    } catch (JsonMappingException e) {
       return null;
     }
   }

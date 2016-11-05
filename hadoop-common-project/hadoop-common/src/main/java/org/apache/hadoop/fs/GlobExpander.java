@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-class GlobExpander {
+public class GlobExpander {
   
   static class StringWithOffset {
     String string;

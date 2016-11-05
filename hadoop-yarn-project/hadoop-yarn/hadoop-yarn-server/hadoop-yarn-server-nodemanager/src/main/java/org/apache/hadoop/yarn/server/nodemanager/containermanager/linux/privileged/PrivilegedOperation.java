@@ -50,7 +50,8 @@ public class PrivilegedOperation {
     TC_READ_STATE("--tc-read-state"),
     TC_READ_STATS("--tc-read-stats"),
     ADD_PID_TO_CGROUP(""), //no CLI switch supported yet.
-    RUN_DOCKER_CMD("--run-docker");
+    RUN_DOCKER_CMD("--run-docker"),
+    LIST_AS_USER(""); //no CLI switch supported yet.
 
     private final String option;
 
@@ -146,7 +147,8 @@ public class PrivilegedOperation {
     LAUNCH_CONTAINER(1),
     SIGNAL_CONTAINER(2),
     DELETE_AS_USER(3),
-    LAUNCH_DOCKER_CONTAINER(4);
+    LAUNCH_DOCKER_CONTAINER(4),
+    LIST_AS_USER(5);
 
     private int value;
     RunAsUserCommand(int value) {

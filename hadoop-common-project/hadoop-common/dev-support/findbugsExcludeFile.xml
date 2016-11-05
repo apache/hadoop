@@ -44,9 +44,22 @@
      --> 
      <Match>
        <Class name="org.apache.hadoop.ipc.Client$Connection" />
-       <Field name="out" />
+       <Field name="ipcStreams" />
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
      </Match>
+    <!--
+       The nativeCoder field is get/set and used by native codes.
+    -->
+    <Match>
+        <Class name="org.apache.hadoop.io.erasurecode.rawcoder.AbstractNativeRawEncoder" />
+        <Field name="nativeCoder" />
+        <Bug pattern="UUF_UNUSED_FIELD" />
+    </Match>
+    <Match>
+        <Class name="org.apache.hadoop.io.erasurecode.rawcoder.AbstractNativeRawDecoder" />
+        <Field name="nativeCoder" />
+        <Bug pattern="UUF_UNUSED_FIELD" />
+    </Match>
      <!-- 
        Further SaslException should be ignored during cleanup and
        original exception should be re-thrown.
@@ -328,13 +341,7 @@
        <Method name="removeRenewAction" />
        <Bug pattern="BC_UNCONFIRMED_CAST" />
      </Match>
-     
-     <!-- Inconsistent synchronization flagged by findbugs is not valid. -->
-     <Match>
-       <Class name="org.apache.hadoop.ipc.Client$Connection" />
-       <Field name="in" />
-       <Bug pattern="IS2_INCONSISTENT_SYNC" />
-     </Match>
+
      <!-- 
        The switch condition for INITIATE is expected to fallthru to RESPONSE
        to process initial sasl response token included in the INITIATE
@@ -398,4 +405,9 @@
     <Bug pattern="NP_NULL_PARAM_DEREF"/>
   </Match>
 
+  <Match>
+    <Class name="org.apache.hadoop.ipc.ExternalCall"/>
+    <Filed name="done"/>
+    <Bug pattern="JLM_JSR166_UTILCONCURRENT_MONITORENTER"/>
+  </Match>
 </FindBugsFilter>

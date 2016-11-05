@@ -628,12 +628,10 @@ public class INodeDirectory extends INodeWithAdditionalFields
   @Override
   public ContentSummaryComputationContext computeContentSummary(int snapshotId,
       ContentSummaryComputationContext summary) {
+    summary.nodeIncluded(this);
     final DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
     if (sf != null && snapshotId == Snapshot.CURRENT_STATE_ID) {
-      // if the getContentSummary call is against a non-snapshot path, the
-      // computation should include all the deleted files/directories
-      sf.computeContentSummary4Snapshot(summary.getBlockStoragePolicySuite(),
-          summary.getCounts());
+      sf.computeContentSummary4Snapshot(summary);
     }
     final DirectoryWithQuotaFeature q = getDirectoryWithQuotaFeature();
     if (q != null && snapshotId == Snapshot.CURRENT_STATE_ID) {

@@ -121,6 +121,7 @@ public class Dispatcher {
 
   private final long getBlocksSize;
   private final long getBlocksMinBlockSize;
+  private final long blockMoveTimeout;
 
   private final int ioFileBufferSize;
 
@@ -331,6 +332,11 @@ public class Dispatcher {
                 getXferAddr(Dispatcher.this.connectToDnViaHostname)),
                 HdfsConstants.READ_TIMEOUT);
 
+        // Set read timeout so that it doesn't hang forever against
+        // unresponsive nodes. Datanode normally sends IN_PROGRESS response
+        // twice within the client read timeout period (every 30 seconds by
+        // default). Here, we make it give up after 5 minutes of no response.
+        sock.setSoTimeout(HdfsConstants.READ_TIMEOUT * 5);
         sock.setKeepAlive(true);
 
         OutputStream unbufOut = sock.getOutputStream();
@@ -354,7 +360,7 @@ public class Dispatcher {
         target.getDDatanode().setHasSuccess();
         LOG.info("Successfully moved " + this);
       } catch (IOException e) {
-        LOG.warn("Failed to move " + this + ": " + e.getMessage());
+        LOG.warn("Failed to move " + this, e);
         target.getDDatanode().setHasFailure();
         // Proxy or target may have some issues, delay before using these nodes
         // further in order to avoid a potential storm of "threads quota
@@ -386,13 +392,26 @@ public class Dispatcher {
           source.getDatanodeInfo().getDatanodeUuid(), proxySource.datanode);
     }
 
+    /** Check whether to continue waiting for response */
+    private boolean stopWaitingForResponse(long startTime) {
+      return source.isIterationOver() ||
+          (blockMoveTimeout > 0 &&
+          (Time.monotonicNow() - startTime > blockMoveTimeout));
+    }
+
     /** Receive a reportedBlock copy response from the input stream */
     private void receiveResponse(DataInputStream in) throws IOException {
+      long startTime = Time.monotonicNow();
       BlockOpResponseProto response =
           BlockOpResponseProto.parseFrom(vintPrefixed(in));
       while (response.getStatus() == Status.IN_PROGRESS) {
         // read intermediate responses
         response = BlockOpResponseProto.parseFrom(vintPrefixed(in));
+        // Stop waiting for slow block moves. Even if it stops waiting,
+        // the actual move may continue.
+        if (stopWaitingForResponse(startTime)) {
+          throw new IOException("Block move timed out");
+        }
       }
       String logInfo = "reportedBlock move is failed";
       DataTransferProtoUtil.checkBlockOpStatus(response, logInfo);
@@ -671,6 +690,7 @@ public class Dispatcher {
 
     private final List<Task> tasks = new ArrayList<Task>(2);
     private long blocksToReceive = 0L;
+    private final long startTime = Time.monotonicNow();
     /**
      * Source blocks point to the objects in {@link Dispatcher#globalBlocks}
      * because we want to keep one copy of a block and be aware that the
@@ -680,6 +700,13 @@ public class Dispatcher {
 
     private Source(StorageType storageType, long maxSize2Move, DDatanode dn) {
       dn.super(storageType, maxSize2Move);
+    }
+
+    /**
+     * Check if the iteration is over
+     */
+    public boolean isIterationOver() {
+      return (Time.monotonicNow()-startTime > MAX_ITERATION_TIME);
     }
 
     /** Add a task */
@@ -795,7 +822,7 @@ public class Dispatcher {
             long blockSize = pendingBlock.reportedBlock.getNumBytes(this);
             incScheduledSize(-blockSize);
             task.size -= blockSize;
-            if (task.size == 0) {
+            if (task.size <= 0) {
               i.remove();
             }
             return pendingBlock;
@@ -838,11 +865,9 @@ public class Dispatcher {
      * elapsed time of the iteration has exceeded the max time limit.
      */
     private void dispatchBlocks() {
-      final long startTime = Time.monotonicNow();
       this.blocksToReceive = 2 * getScheduledSize();
-      boolean isTimeUp = false;
       int noPendingMoveIteration = 0;
-      while (!isTimeUp && getScheduledSize() > 0
+      while (getScheduledSize() > 0 && !isIterationOver()
           && (!srcBlocks.isEmpty() || blocksToReceive > 0)) {
         if (LOG.isTraceEnabled()) {
           LOG.trace(this + " blocksToReceive=" + blocksToReceive
@@ -886,14 +911,6 @@ public class Dispatcher {
           }
         }
 
-        // check if time is up or not
-        if (Time.monotonicNow() - startTime > MAX_ITERATION_TIME) {
-          LOG.info("Time up (max time=" + MAX_ITERATION_TIME/1000
-              + " seconds).  Skipping " + this);
-          isTimeUp = true;
-          continue;
-        }
-
         // Now we can not schedule any block to move and there are
         // no new blocks added to the source block list, so we wait.
         try {
@@ -902,6 +919,11 @@ public class Dispatcher {
           }
         } catch (InterruptedException ignored) {
         }
+      }
+
+      if (isIterationOver()) {
+        LOG.info("The maximum iteration time (" + MAX_ITERATION_TIME/1000
+            + " seconds) has been reached. Stopping " + this);
       }
     }
 
@@ -922,13 +944,14 @@ public class Dispatcher {
       int dispatcherThreads, int maxConcurrentMovesPerNode, Configuration conf) {
     this(nnc, includedNodes, excludedNodes, movedWinWidth,
         moverThreads, dispatcherThreads, maxConcurrentMovesPerNode,
-        0L, 0L, conf);
+        0L, 0L, 0,  conf);
   }
 
   Dispatcher(NameNodeConnector nnc, Set<String> includedNodes,
       Set<String> excludedNodes, long movedWinWidth, int moverThreads,
       int dispatcherThreads, int maxConcurrentMovesPerNode,
-      long getBlocksSize, long getBlocksMinBlockSize, Configuration conf) {
+      long getBlocksSize, long getBlocksMinBlockSize,
+      int blockMoveTimeout, Configuration conf) {
     this.nnc = nnc;
     this.excludedNodes = excludedNodes;
     this.includedNodes = includedNodes;
@@ -943,6 +966,7 @@ public class Dispatcher {
 
     this.getBlocksSize = getBlocksSize;
     this.getBlocksMinBlockSize = getBlocksMinBlockSize;
+    this.blockMoveTimeout = blockMoveTimeout;
 
     this.saslClient = new SaslDataTransferClient(conf,
         DataTransferSaslUtil.getSaslPropertiesResolver(conf),
@@ -990,20 +1014,17 @@ public class Dispatcher {
   }
 
   private boolean shouldIgnore(DatanodeInfo dn) {
-    // ignore decommissioned nodes
-    final boolean decommissioned = dn.isDecommissioned();
-    // ignore decommissioning nodes
-    final boolean decommissioning = dn.isDecommissionInProgress();
+    // ignore out-of-service nodes
+    final boolean outOfService = !dn.isInService();
     // ignore nodes in exclude list
     final boolean excluded = Util.isExcluded(excludedNodes, dn);
     // ignore nodes not in the include list (if include list is not empty)
     final boolean notIncluded = !Util.isIncluded(includedNodes, dn);
 
-    if (decommissioned || decommissioning || excluded || notIncluded) {
+    if (outOfService || excluded || notIncluded) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Excluding datanode " + dn
-            + ": decommissioned=" + decommissioned
-            + ", decommissioning=" + decommissioning
+            + ": outOfService=" + outOfService
             + ", excluded=" + excluded
             + ", notIncluded=" + notIncluded);
       }

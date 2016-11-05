@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.util;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
 import static org.junit.matchers.JUnitMatchers.containsString;
 
 import java.io.File;
@@ -53,7 +53,7 @@ public class TestWinUtils {
   @Before
   public void setUp() throws IOException {
     // Not supported on non-Windows platforms
-    assumeTrue(Shell.WINDOWS);
+    assumeWindows();
     TEST_DIR.mkdirs();
     assertTrue("Failed to create Test directory " + TEST_DIR,
         TEST_DIR.isDirectory() );

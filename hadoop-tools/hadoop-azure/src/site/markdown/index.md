@@ -24,6 +24,7 @@
     * [Atomic Folder Rename](#Atomic_Folder_Rename)
     * [Accessing wasb URLs](#Accessing_wasb_URLs)
     * [Append API Support and Configuration](#Append_API_Support_and_Configuration)
+    * [Multithread Support](#Multithread_Support)
 * [Testing the hadoop-azure Module](#Testing_the_hadoop-azure_Module)
 
 ## <a name="Introduction" />Introduction
@@ -265,6 +266,24 @@ support does not enforce single writer internally but requires applications to g
 It becomes a responsibility of the application either to ensure single-threaded handling for a particular
 file path, or rely on some external locking mechanism of its own.  Failure to do so will result in
 unexpected behavior.
+
+### <a name="Multithread_Support" />Multithread Support
+
+Rename and Delete blob operations on directories with large number of files and sub directories currently is very slow as these operations are done one blob at a time serially. These files and sub folders can be deleted or renamed parallel. Following configurations can be used to enable threads to do parallel processing
+
+To enable 10 threads for Delete operation. Set configuration value to 0 or 1 to disable threads. The default behavior is threads disabled.
+
+    <property>
+      <name>fs.azure.delete.threads</name>
+      <value>10</value>
+    </property>
+
+To enable 20 threads for Rename operation. Set configuration value to 0 or 1 to disable threads. The default behavior is threads disabled.
+
+    <property>
+      <name>fs.azure.rename.threads</name>
+      <value>20</value>
+    </property>
 
 ## <a name="Testing_the_hadoop-azure_Module" />Testing the hadoop-azure Module
 

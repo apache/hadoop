@@ -551,23 +551,27 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     entity.addEvent(tEvent);
     if (enableUpdateEvent) {
       tEvent = new TimelineEvent();
-      createAppModifiedEvent(appId, tEvent, "changed queue", 5);
+      long updatedTimeIndex = 4L;
+      createAppModifiedEvent(appId, tEvent, updatedTimeIndex++, "changed queue",
+          5);
       entity.addEvent(tEvent);
       // Change priority alone
       tEvent = new TimelineEvent();
-      createAppModifiedEvent(appId, tEvent, "changed queue", 6);
+      createAppModifiedEvent(appId, tEvent, updatedTimeIndex++, "changed queue",
+          6);
       // Now change queue
       tEvent = new TimelineEvent();
-      createAppModifiedEvent(appId, tEvent, "changed queue1", 6);
+      createAppModifiedEvent(appId, tEvent, updatedTimeIndex++,
+          "changed queue1", 6);
       entity.addEvent(tEvent);
     }
     return entity;
   }
 
   private static void createAppModifiedEvent(ApplicationId appId,
-      TimelineEvent tEvent, String queue, int priority) {
+      TimelineEvent tEvent, long updatedTimeIndex, String queue, int priority) {
     tEvent.setEventType(ApplicationMetricsConstants.UPDATED_EVENT_TYPE);
-    tEvent.setTimestamp(Integer.MAX_VALUE + 4L + appId.getId());
+    tEvent.setTimestamp(Integer.MAX_VALUE + updatedTimeIndex + appId.getId());
     Map<String, Object> eventInfo = new HashMap<String, Object>();
     eventInfo.put(ApplicationMetricsConstants.QUEUE_ENTITY_INFO, queue);
     eventInfo.put(ApplicationMetricsConstants.APPLICATION_PRIORITY_INFO,
@@ -589,13 +593,13 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     tEvent.setEventType(AppAttemptMetricsConstants.REGISTERED_EVENT_TYPE);
     tEvent.setTimestamp(Integer.MAX_VALUE + 1L);
     Map<String, Object> eventInfo = new HashMap<String, Object>();
-    eventInfo.put(AppAttemptMetricsConstants.TRACKING_URL_EVENT_INFO,
+    eventInfo.put(AppAttemptMetricsConstants.TRACKING_URL_INFO,
         "test tracking url");
-    eventInfo.put(AppAttemptMetricsConstants.ORIGINAL_TRACKING_URL_EVENT_INFO,
+    eventInfo.put(AppAttemptMetricsConstants.ORIGINAL_TRACKING_URL_INFO,
         "test original tracking url");
-    eventInfo.put(AppAttemptMetricsConstants.HOST_EVENT_INFO, "test host");
-    eventInfo.put(AppAttemptMetricsConstants.RPC_PORT_EVENT_INFO, 100);
-    eventInfo.put(AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO,
+    eventInfo.put(AppAttemptMetricsConstants.HOST_INFO, "test host");
+    eventInfo.put(AppAttemptMetricsConstants.RPC_PORT_INFO, 100);
+    eventInfo.put(AppAttemptMetricsConstants.MASTER_CONTAINER_INFO,
         ContainerId.newContainerId(appAttemptId, 1));
     tEvent.setEventInfo(eventInfo);
     entity.addEvent(tEvent);
@@ -603,15 +607,15 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     tEvent.setEventType(AppAttemptMetricsConstants.FINISHED_EVENT_TYPE);
     tEvent.setTimestamp(Integer.MAX_VALUE + 2L);
     eventInfo = new HashMap<String, Object>();
-    eventInfo.put(AppAttemptMetricsConstants.TRACKING_URL_EVENT_INFO,
+    eventInfo.put(AppAttemptMetricsConstants.TRACKING_URL_INFO,
         "test tracking url");
-    eventInfo.put(AppAttemptMetricsConstants.ORIGINAL_TRACKING_URL_EVENT_INFO,
+    eventInfo.put(AppAttemptMetricsConstants.ORIGINAL_TRACKING_URL_INFO,
         "test original tracking url");
-    eventInfo.put(AppAttemptMetricsConstants.DIAGNOSTICS_INFO_EVENT_INFO,
+    eventInfo.put(AppAttemptMetricsConstants.DIAGNOSTICS_INFO,
         "test diagnostics info");
-    eventInfo.put(AppAttemptMetricsConstants.FINAL_STATUS_EVENT_INFO,
+    eventInfo.put(AppAttemptMetricsConstants.FINAL_STATUS_INFO,
         FinalApplicationStatus.UNDEFINED.toString());
-    eventInfo.put(AppAttemptMetricsConstants.STATE_EVENT_INFO,
+    eventInfo.put(AppAttemptMetricsConstants.STATE_INFO,
         YarnApplicationAttemptState.FINISHED.toString());
     tEvent.setEventInfo(eventInfo);
     entity.addEvent(tEvent);
@@ -628,15 +632,15 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     entity.addPrimaryFilter(
         TimelineStore.SystemFilter.ENTITY_OWNER.toString(), "yarn");
     Map<String, Object> entityInfo = new HashMap<String, Object>();
-    entityInfo.put(ContainerMetricsConstants.ALLOCATED_MEMORY_ENTITY_INFO, -1);
-    entityInfo.put(ContainerMetricsConstants.ALLOCATED_VCORE_ENTITY_INFO, -1);
-    entityInfo.put(ContainerMetricsConstants.ALLOCATED_HOST_ENTITY_INFO,
+    entityInfo.put(ContainerMetricsConstants.ALLOCATED_MEMORY_INFO, -1);
+    entityInfo.put(ContainerMetricsConstants.ALLOCATED_VCORE_INFO, -1);
+    entityInfo.put(ContainerMetricsConstants.ALLOCATED_HOST_INFO,
         "test host");
-    entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_ENTITY_INFO, 100);
+    entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_INFO, 100);
     entityInfo
-        .put(ContainerMetricsConstants.ALLOCATED_PRIORITY_ENTITY_INFO, -1);
+        .put(ContainerMetricsConstants.ALLOCATED_PRIORITY_INFO, -1);
     entityInfo.put(ContainerMetricsConstants
-        .ALLOCATED_HOST_HTTP_ADDRESS_ENTITY_INFO, "http://test:1234");
+        .ALLOCATED_HOST_HTTP_ADDRESS_INFO, "http://test:1234");
     entity.setOtherInfo(entityInfo);
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setEventType(ContainerMetricsConstants.CREATED_EVENT_TYPE);
@@ -647,10 +651,10 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     tEvent.setEventType(ContainerMetricsConstants.FINISHED_EVENT_TYPE);
     tEvent.setTimestamp(Integer.MAX_VALUE + 2L);
     Map<String, Object> eventInfo = new HashMap<String, Object>();
-    eventInfo.put(ContainerMetricsConstants.DIAGNOSTICS_INFO_EVENT_INFO,
+    eventInfo.put(ContainerMetricsConstants.DIAGNOSTICS_INFO,
         "test diagnostics info");
-    eventInfo.put(ContainerMetricsConstants.EXIT_STATUS_EVENT_INFO, -1);
-    eventInfo.put(ContainerMetricsConstants.STATE_EVENT_INFO,
+    eventInfo.put(ContainerMetricsConstants.EXIT_STATUS_INFO, -1);
+    eventInfo.put(ContainerMetricsConstants.STATE_INFO,
         ContainerState.COMPLETE.toString());
     tEvent.setEventInfo(eventInfo);
     entity.addEvent(tEvent);

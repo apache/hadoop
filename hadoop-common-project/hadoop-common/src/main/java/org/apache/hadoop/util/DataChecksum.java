@@ -122,8 +122,8 @@ public class DataChecksum implements Checksum {
     int bpc = in.readInt();
     DataChecksum summer = newDataChecksum(Type.valueOf(type), bpc );
     if ( summer == null ) {
-      throw new IOException( "Could not create DataChecksum of type " +
-                             type + " with bytesPerChecksum " + bpc );
+      throw new InvalidChecksumSizeException("Could not create DataChecksum "
+          + "of type " + type + " with bytesPerChecksum " + bpc);
     }
     return summer;
   }
@@ -304,7 +304,7 @@ public class DataChecksum implements Checksum {
           bytesPerChecksum, checksums.array(), crcsOffset, fileName, basePos);
       return;
     }
-    if (NativeCrc32.isAvailable()) {
+    if (NativeCrc32.isAvailable() && data.isDirect()) {
       NativeCrc32.verifyChunkedSums(bytesPerChecksum, type.id, checksums, data,
           fileName, basePos);
     } else {

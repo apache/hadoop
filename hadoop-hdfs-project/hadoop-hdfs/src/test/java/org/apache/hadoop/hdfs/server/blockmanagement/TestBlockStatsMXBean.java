@@ -40,7 +40,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mortbay.util.ajax.JSON;
+import org.eclipse.jetty.util.ajax.JSON;
 
 /**
  * Class for testing {@link BlockStatsMXBean} implementation

@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.tools.rumen;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+
 import java.util.Set;
 import java.util.TreeSet;
-
-import org.codehaus.jackson.annotate.JsonAnySetter;
 
 /**
  * A {@link LoggedSingleRelativeRanking} represents an X-Y coordinate of a

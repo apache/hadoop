@@ -15,6 +15,11 @@
 .settings
 target
 build
+
+# External tool builders
+*/.externalToolBuilders
+*/maven-eclipse.xml
+
 hadoop-common-project/hadoop-kms/downloads/
 hadoop-hdfs-project/hadoop-hdfs/downloads
 hadoop-hdfs-project/hadoop-hdfs-httpfs/downloads
@@ -25,4 +30,7 @@ yarnregistry.pdf
 hadoop-tools/hadoop-aws/src/test/resources/auth-keys.xml
 hadoop-tools/hadoop-aws/src/test/resources/contract-test-options.xml
 hadoop-tools/hadoop-azure/src/test/resources/azure-auth-keys.xml
+hadoop-tools/hadoop-openstack/src/test/resources/auth-keys.xml
 patchprocess/
+hadoop-tools/hadoop-aliyun/src/test/resources/auth-keys.xml
+hadoop-tools/hadoop-aliyun/src/test/resources/contract-test-options.xml

@@ -107,27 +107,30 @@ class FsUsage extends FsCommand {
   /** show disk usage */
   public static class Du extends FsUsage {
     public static final String NAME = "du";
-    public static final String USAGE = "[-s] [-h] <path> ...";
+    public static final String USAGE = "[-s] [-h] [-x] <path> ...";
     public static final String DESCRIPTION =
-    "Show the amount of space, in bytes, used by the files that " +
-    "match the specified file pattern. The following flags are optional:\n" +
-    "-s: Rather than showing the size of each individual file that" +
-    " matches the pattern, shows the total (summary) size.\n" +
-    "-h: Formats the sizes of files in a human-readable fashion" +
-    " rather than a number of bytes.\n\n" +
-    "Note that, even without the -s option, this only shows size summaries " +
-    "one level deep into a directory.\n\n" +
-    "The output is in the form \n" + 
-    "\tsize\tdisk space consumed\tname(full path)\n";
+        "Show the amount of space, in bytes, used by the files that match " +
+            "the specified file pattern. The following flags are optional:\n" +
+            "-s: Rather than showing the size of each individual file that" +
+            " matches the pattern, shows the total (summary) size.\n" +
+            "-h: Formats the sizes of files in a human-readable fashion" +
+            " rather than a number of bytes.\n" +
+            "-x: Excludes snapshots from being counted.\n\n" +
+            "Note that, even without the -s option, this only shows size " +
+            "summaries one level deep into a directory.\n\n" +
+            "The output is in the form \n" +
+            "\tsize\tdisk space consumed\tname(full path)\n";
 
     protected boolean summary = false;
+    private boolean excludeSnapshots = false;
     
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "h", "s");
+      CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "h", "s", "x");
       cf.parse(args);
       humanReadable = cf.getOpt("h");
       summary = cf.getOpt("s");
+      excludeSnapshots = cf.getOpt("x");
       if (args.isEmpty()) args.add(Path.CUR_DIR);
     }
 
@@ -156,6 +159,10 @@ class FsUsage extends FsCommand {
       ContentSummary contentSummary = item.fs.getContentSummary(item.path);
       long length = contentSummary.getLength();
       long spaceConsumed = contentSummary.getSpaceConsumed();
+      if (excludeSnapshots) {
+        length -= contentSummary.getSnapshotLength();
+        spaceConsumed -= contentSummary.getSnapshotSpaceConsumed();
+      }
       usagesTable.addRow(formatSize(length), formatSize(spaceConsumed), item);
     }
   }

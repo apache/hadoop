@@ -81,13 +81,15 @@ The following is a typical storage policy table.
 | 5 | Warm | DISK: 1, ARCHIVE: *n*-1 | ARCHIVE, DISK | ARCHIVE, DISK |
 | 2 | Cold | ARCHIVE: *n* | \<none\> | \<none\> |
 
-Note that the Lazy\_Persist policy is useful only for single replica blocks. For blocks with more than one replicas, all the replicas will be written to DISK since writing only one of the replicas to RAM\_DISK does not improve the overall performance.
+Note 1: The Lazy\_Persist policy is useful only for single replica blocks. For blocks with more than one replicas, all the replicas will be written to DISK since writing only one of the replicas to RAM\_DISK does not improve the overall performance.
+
+Note 2: For the erasure coded files with striping layout, the suitable storage policies are All\_SSD, Hot, Cold. So, if user sets the policy for striped EC files other than the mentioned policies, it will not follow that policy while creating or moving block.
 
 ### Storage Policy Resolution
 
 When a file or directory is created, its storage policy is *unspecified*. The storage policy can be specified using the "[`storagepolicies -setStoragePolicy`](#Set_Storage_Policy)" command. The effective storage policy of a file or directory is resolved by the following rules.
 
-1.  If the file or directory is specificed with a storage policy, return it.
+1.  If the file or directory is specified with a storage policy, return it.
 
 2.  For an unspecified file or directory, if it is the root directory, return the *default storage policy*. Otherwise, return its parent's effective storage policy.
 

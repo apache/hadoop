@@ -36,6 +36,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
+import java.nio.ByteBuffer;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
@@ -242,7 +243,8 @@ public class TestStripedBlockUtil {
    */
   @Test
   public void testDivideByteRangeIntoStripes() {
-    byte[] assembled = new byte[BLK_GROUP_STRIPE_NUM * FULL_STRIPE_SIZE];
+    ByteBuffer assembled =
+        ByteBuffer.allocate(BLK_GROUP_STRIPE_NUM * FULL_STRIPE_SIZE);
     for (int bgSize : blockGroupSizes) {
       LocatedStripedBlock blockGroup = createDummyLocatedBlock(bgSize);
       byte[][] internalBlkBufs = createInternalBlkBuffers(bgSize);
@@ -252,7 +254,7 @@ public class TestStripedBlockUtil {
             continue;
           }
           AlignedStripe[] stripes = divideByteRangeIntoStripes(EC_POLICY,
-              CELLSIZE, blockGroup, brStart, brStart + brSize - 1, assembled, 0);
+              CELLSIZE, blockGroup, brStart, brStart + brSize - 1, assembled);
 
           for (AlignedStripe stripe : stripes) {
             for (int i = 0; i < DATA_BLK_NUM; i++) {
@@ -261,25 +263,24 @@ public class TestStripedBlockUtil {
                 continue;
               }
               int done = 0;
-              for (int j = 0; j < chunk.byteArray.getLengths().length; j++) {
-                System.arraycopy(internalBlkBufs[i],
-                    (int) stripe.getOffsetInBlock() + done, assembled,
-                    chunk.byteArray.getOffsets()[j],
-                    chunk.byteArray.getLengths()[j]);
-                done += chunk.byteArray.getLengths()[j];
+              int len;
+              for (ByteBuffer slice : chunk.getChunkBuffer().getSlices()) {
+                len = slice.remaining();
+                slice.put(internalBlkBufs[i],
+                    (int) stripe.getOffsetInBlock() + done, len);
+                done += len;
               }
             }
           }
           for (int i = 0; i < brSize; i++) {
-            if (hashIntToByte(brStart + i) != assembled[i]) {
+            if (hashIntToByte(brStart + i) != assembled.get(i)) {
               System.out.println("Oops");
             }
             assertEquals("Byte at " + (brStart + i) + " should be the same",
-                hashIntToByte(brStart + i), assembled[i]);
+                hashIntToByte(brStart + i), assembled.get(i));
           }
         }
       }
     }
   }
-
 }

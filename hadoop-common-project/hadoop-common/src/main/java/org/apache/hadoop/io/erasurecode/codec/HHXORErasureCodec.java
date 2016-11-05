@@ -18,8 +18,10 @@
 package org.apache.hadoop.io.erasurecode.codec;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.io.erasurecode.ECSchema;
-import org.apache.hadoop.io.erasurecode.coder.ErasureCoder;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.erasurecode.ErasureCodecOptions;
+import org.apache.hadoop.io.erasurecode.coder.ErasureDecoder;
+import org.apache.hadoop.io.erasurecode.coder.ErasureEncoder;
 import org.apache.hadoop.io.erasurecode.coder.HHXORErasureDecoder;
 import org.apache.hadoop.io.erasurecode.coder.HHXORErasureEncoder;
 
@@ -27,19 +29,19 @@ import org.apache.hadoop.io.erasurecode.coder.HHXORErasureEncoder;
  * A Hitchhiker-XOR erasure codec.
  */
 @InterfaceAudience.Private
-public class HHXORErasureCodec extends AbstractErasureCodec {
+public class HHXORErasureCodec extends ErasureCodec {
 
-  public HHXORErasureCodec(ECSchema schema) {
-    super(schema);
+  public HHXORErasureCodec(Configuration conf, ErasureCodecOptions options) {
+    super(conf, options);
   }
 
   @Override
-  public ErasureCoder createEncoder() {
-    return new HHXORErasureEncoder(getSchema());
+  public ErasureEncoder createEncoder() {
+    return new HHXORErasureEncoder(getCoderOptions());
   }
 
   @Override
-  public ErasureCoder createDecoder() {
-    return new HHXORErasureDecoder(getSchema());
+  public ErasureDecoder createDecoder() {
+    return new HHXORErasureDecoder(getCoderOptions());
   }
 }

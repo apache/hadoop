@@ -479,7 +479,7 @@ public class TestFileChecksum {
     }
 
     if (dnIdxToDie != -1) {
-      cluster.restartDataNode(dnIdxToDie, true);
+      cluster.restartDataNode(dnIdxToDie);
     }
 
     return fc;

@@ -134,7 +134,9 @@ class PendingReconstructionBlocks {
    * The total number of blocks that are undergoing reconstruction.
    */
   int size() {
-    return pendingReconstructions.size();
+    synchronized (pendingReconstructions) {
+      return pendingReconstructions.size();
+    }
   }
 
   /**

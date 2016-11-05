@@ -252,9 +252,9 @@ public class TestNMClient {
           racks, priority));
     }
 
-    int containersRequestedAny = rmClient.remoteRequestsTable.get(priority,
-        ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
-        .remoteRequest.getNumContainers();
+    int containersRequestedAny = rmClient.getTable(0)
+        .get(priority, ResourceRequest.ANY, ExecutionType.GUARANTEED,
+            capability).remoteRequest.getNumContainers();
 
     // RM should allocate container within 2 calls to allocate()
     int allocatedContainerCount = 0;

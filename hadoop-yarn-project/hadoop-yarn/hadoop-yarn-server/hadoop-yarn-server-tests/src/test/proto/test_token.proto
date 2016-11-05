@@ -44,5 +44,6 @@ message ContainerTokenIdentifierForTestProto {
   optional int64 creationTime = 9;
   optional LogAggregationContextProto logAggregationContext = 10;
   optional string message = 11;
+  optional int32 version = 14 [default = 0];
 }
 

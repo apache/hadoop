@@ -37,11 +37,13 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
     GET_BLOCK_LOCATIONS(false, HttpURLConnection.HTTP_OK),
     GETACLSTATUS(false, HttpURLConnection.HTTP_OK),
     GETXATTRS(false, HttpURLConnection.HTTP_OK),
+    GETTRASHROOT(false, HttpURLConnection.HTTP_OK),
     LISTXATTRS(false, HttpURLConnection.HTTP_OK),
 
     NULL(false, HttpURLConnection.HTTP_NOT_IMPLEMENTED),
 
-    CHECKACCESS(false, HttpURLConnection.HTTP_OK);
+    CHECKACCESS(false, HttpURLConnection.HTTP_OK),
+    LISTSTATUS_BATCH(false, HttpURLConnection.HTTP_OK);
 
     final boolean redirect;
     final int expectedHttpResponseCode;

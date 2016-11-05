@@ -60,19 +60,42 @@ message FinishApplicationMasterResponseProto {
   optional bool isUnregistered = 1 [default = false];
 }
 
+enum ContainerUpdateTypeProto {
+  INCREASE_RESOURCE = 0;
+  DECREASE_RESOURCE = 1;
+  UPDATE_EXECUTION_TYPE = 2;
+}
+
+message UpdateContainerRequestProto {
+  required int32 container_version = 1;
+  required ContainerIdProto container_id = 2;
+  required ContainerUpdateTypeProto update_type = 3;
+  optional ResourceProto capability = 4;
+  optional ExecutionTypeProto execution_type = 5;
+}
+
+message UpdateContainerErrorProto {
+  optional string reason = 1;
+  optional UpdateContainerRequestProto update_request = 2;
+}
+
 message AllocateRequestProto {
   repeated ResourceRequestProto ask = 1;
   repeated ContainerIdProto release = 2;
   optional ResourceBlacklistRequestProto blacklist_request = 3;
   optional int32 response_id = 4;
   optional float progress = 5;
-  repeated ContainerResourceChangeRequestProto increase_request = 6;
-  repeated ContainerResourceChangeRequestProto decrease_request = 7;
+  repeated UpdateContainerRequestProto update_requests = 6;
 }
 
 message NMTokenProto {
   optional NodeIdProto nodeId = 1; 
   optional hadoop.common.TokenProto token = 2;
+}
+
+message UpdatedContainerProto {
+  required ContainerUpdateTypeProto update_type = 1;
+  required ContainerProto container = 2;
 }
 
 message AllocateResponseProto {
@@ -85,11 +108,11 @@ message AllocateResponseProto {
   optional int32 num_cluster_nodes = 7;
   optional PreemptionMessageProto preempt = 8;
   repeated NMTokenProto nm_tokens = 9;
-  repeated ContainerProto increased_containers = 10;
-  repeated ContainerProto decreased_containers = 11;
+  repeated UpdatedContainerProto updated_containers = 10;
   optional hadoop.common.TokenProto am_rm_token = 12;
   optional PriorityProto application_priority = 13;
   optional string collector_addr = 14;
+  repeated UpdateContainerErrorProto update_errors = 15;
 }
 
 enum SchedulerResourceTypes {
@@ -133,6 +156,7 @@ message FailApplicationAttemptResponseProto {
 
 message KillApplicationRequestProto {
   optional ApplicationIdProto application_id = 1;
+  optional string diagnostics = 2;
 }
 
 message KillApplicationResponseProto {
@@ -263,6 +287,31 @@ message StopContainerRequestProto {
 message StopContainerResponseProto {
 }
 
+message ResourceLocalizationRequestProto {
+  optional ContainerIdProto container_id = 1;
+  repeated StringLocalResourceMapProto local_resources = 2;
+}
+
+message ResourceLocalizationResponseProto {
+}
+
+message ReInitializeContainerRequestProto {
+  optional ContainerIdProto container_id = 1;
+  optional ContainerLaunchContextProto container_launch_context = 2;
+  optional bool auto_commit = 3 [default = true];
+}
+
+message ReInitializeContainerResponseProto {
+}
+
+message RestartContainerResponseProto {
+}
+
+message RollbackResponseProto {
+}
+
+message CommitResponseProto {
+}
 
 //// bulk API records
 message StartContainersRequestProto {

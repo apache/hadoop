@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.security;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -28,7 +28,6 @@ import java.io.OutputStream;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.security.ShellBasedIdMapping.PassThroughMap;
 import org.apache.hadoop.security.ShellBasedIdMapping.StaticMapping;
 import org.junit.Test;
@@ -87,7 +86,7 @@ public class TestShellBasedIdMapping {
   
   @Test
   public void testStaticMapping() throws IOException {
-    assumeTrue(!Shell.WINDOWS);
+    assumeNotWindows();
     Map<Integer, Integer> uidStaticMap = new PassThroughMap<Integer>();
     Map<Integer, Integer> gidStaticMap = new PassThroughMap<Integer>();
     
@@ -129,7 +128,7 @@ public class TestShellBasedIdMapping {
   // Test staticMap refreshing
   @Test
   public void testStaticMapUpdate() throws IOException {
-    assumeTrue(!Shell.WINDOWS);
+    assumeNotWindows();
     File tempStaticMapFile = File.createTempFile("nfs-", ".map");
     tempStaticMapFile.delete();
     Configuration conf = new Configuration();
@@ -207,7 +206,7 @@ public class TestShellBasedIdMapping {
 
   @Test
   public void testDuplicates() throws IOException {
-    assumeTrue(!Shell.WINDOWS);
+    assumeNotWindows();
     String GET_ALL_USERS_CMD = "echo \"root:x:0:0:root:/root:/bin/bash\n"
         + "hdfs:x:11501:10787:Grid Distributed File System:/home/hdfs:/bin/bash\n"
         + "hdfs:x:11502:10788:Grid Distributed File System:/home/hdfs:/bin/bash\n"
@@ -247,7 +246,7 @@ public class TestShellBasedIdMapping {
 
   @Test
   public void testIdOutOfIntegerRange() throws IOException {
-    assumeTrue(!Shell.WINDOWS);
+    assumeNotWindows();
     String GET_ALL_USERS_CMD = "echo \""
         + "nfsnobody:x:4294967294:4294967294:Anonymous NFS User:/var/lib/nfs:/sbin/nologin\n"
         + "nfsnobody1:x:4294967295:4294967295:Anonymous NFS User:/var/lib/nfs1:/sbin/nologin\n"

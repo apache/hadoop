@@ -46,10 +46,6 @@ function mapred_subcommand_streaming
   done
 
   IFS=${oldifs}
-
-  hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-  HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-
 }
 
 fi

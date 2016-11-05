@@ -34,8 +34,8 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.junit.Test;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.*;
-import static org.junit.Assume.*;
 
 /** This test LocalDirAllocator works correctly;
  * Every test case uses different buffer dirs to
@@ -57,8 +57,6 @@ public class TestLocalDirAllocator {
   final static private LocalDirAllocator dirAllocator =
     new LocalDirAllocator(CONTEXT);
   static LocalFileSystem localFs;
-  final static private boolean isWindows =
-    System.getProperty("os.name").startsWith("Windows");
   final static int SMALL_FILE_SIZE = 100;
   final static private String RELATIVE = "/RELATIVE";
   final static private String ABSOLUTE = "/ABSOLUTE";
@@ -132,7 +130,7 @@ public class TestLocalDirAllocator {
    */
   @Test (timeout = 30000)
   public void test0() throws Exception {
-    if (isWindows) return;
+    assumeNotWindows();
     String dir0 = buildBufferDir(ROOT, 0);
     String dir1 = buildBufferDir(ROOT, 1);
     try {
@@ -154,7 +152,7 @@ public class TestLocalDirAllocator {
    */
   @Test (timeout = 30000)
   public void testROBufferDirAndRWBufferDir() throws Exception {
-    if (isWindows) return;
+    assumeNotWindows();
     String dir1 = buildBufferDir(ROOT, 1);
     String dir2 = buildBufferDir(ROOT, 2);
     try {
@@ -174,7 +172,7 @@ public class TestLocalDirAllocator {
    */
   @Test (timeout = 30000)
   public void testDirsNotExist() throws Exception {
-    if (isWindows) return;
+    assumeNotWindows();
     String dir2 = buildBufferDir(ROOT, 2);
     String dir3 = buildBufferDir(ROOT, 3);
     try {
@@ -200,7 +198,7 @@ public class TestLocalDirAllocator {
    */
   @Test (timeout = 30000)
   public void testRWBufferDirBecomesRO() throws Exception {
-    if (isWindows) return;
+    assumeNotWindows();
     String dir3 = buildBufferDir(ROOT, 3);
     String dir4 = buildBufferDir(ROOT, 4);
     try {
@@ -238,7 +236,7 @@ public class TestLocalDirAllocator {
   static final int TRIALS = 100;
   @Test (timeout = 30000)
   public void testCreateManyFiles() throws Exception {
-    if (isWindows) return;
+    assumeNotWindows();
     String dir5 = buildBufferDir(ROOT, 5);
     String dir6 = buildBufferDir(ROOT, 6);
     try {
@@ -348,7 +346,7 @@ public class TestLocalDirAllocator {
    */
   @Test (timeout = 30000)
   public void testNoSideEffects() throws IOException {
-    assumeTrue(!isWindows);
+    assumeNotWindows();
     String dir = buildBufferDir(ROOT, 0);
     try {
       conf.set(CONTEXT, dir);
@@ -370,7 +368,7 @@ public class TestLocalDirAllocator {
    */
   @Test (timeout = 30000)
   public void testGetLocalPathToRead() throws IOException {
-    assumeTrue(!isWindows);
+    assumeNotWindows();
     String dir = buildBufferDir(ROOT, 0);
     try {
       conf.set(CONTEXT, dir);
@@ -395,7 +393,7 @@ public class TestLocalDirAllocator {
    */
   @Test (timeout = 30000)
   public void testGetAllLocalPathsToRead() throws IOException {
-    assumeTrue(!isWindows);
+    assumeNotWindows();
     
     String dir0 = buildBufferDir(ROOT, 0);
     String dir1 = buildBufferDir(ROOT, 1);

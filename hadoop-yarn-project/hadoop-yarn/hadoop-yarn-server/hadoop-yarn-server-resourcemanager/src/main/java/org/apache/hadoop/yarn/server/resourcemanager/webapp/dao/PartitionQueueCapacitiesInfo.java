@@ -35,14 +35,14 @@ public class PartitionQueueCapacitiesInfo {
   private float absoluteCapacity;
   private float absoluteUsedCapacity;
   private float absoluteMaxCapacity  = 100;
-  private Float maxAMLimitPercentage;
+  private float maxAMLimitPercentage;
 
   public PartitionQueueCapacitiesInfo() {
   }
 
   public PartitionQueueCapacitiesInfo(String partitionName, float capacity,
       float usedCapacity, float maxCapacity, float absCapacity,
-      float absUsedCapacity, float absMaxCapacity, Float maxAMLimitPercentage) {
+      float absUsedCapacity, float absMaxCapacity, float maxAMLimitPercentage) {
     super();
     this.partitionName = partitionName;
     this.capacity = capacity;

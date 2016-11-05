@@ -42,19 +42,21 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+
 /**
- * Utilities used across test cases
+ * Utilities used across test cases.
  */
 public class ContractTestUtils extends Assert {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ContractTestUtils.class);
-
-  public static final String IO_FILE_BUFFER_SIZE = "io.file.buffer.size";
 
   // For scale testing, we can repeatedly write small chunk data to generate
   // a large file.
@@ -64,7 +66,7 @@ public class ContractTestUtils extends Assert {
   public static final int DEFAULT_IO_CHUNK_MODULUS_SIZE = 128;
 
   /**
-   * Assert that a property in the property set matches the expected value
+   * Assert that a property in the property set matches the expected value.
    * @param props property set
    * @param key property name
    * @param expected expected value. If null, the property must not be in the set
@@ -149,8 +151,8 @@ public class ContractTestUtils extends Assert {
     FSDataOutputStream out = fs.create(path,
                                        overwrite,
                                        fs.getConf()
-                                         .getInt(IO_FILE_BUFFER_SIZE,
-                                                 4096),
+                                         .getInt(IO_FILE_BUFFER_SIZE_KEY,
+                                             IO_FILE_BUFFER_SIZE_DEFAULT),
                                        (short) 1,
                                        buffersize);
     out.write(src, 0, len);
@@ -170,11 +172,10 @@ public class ContractTestUtils extends Assert {
    */
   public static byte[] readDataset(FileSystem fs, Path path, int len)
       throws IOException {
-    FSDataInputStream in = fs.open(path);
     byte[] dest = new byte[len];
     int offset =0;
     int nread = 0;
-    try {
+    try (FSDataInputStream in = fs.open(path)) {
       while (nread < len) {
         int nbytes = in.read(dest, offset + nread, len - nread);
         if (nbytes < 0) {
@@ -182,14 +183,12 @@ public class ContractTestUtils extends Assert {
         }
         nread += nbytes;
       }
-    } finally {
-      in.close();
     }
     return dest;
   }
 
   /**
-   * Read a file, verify its length and contents match the expected array
+   * Read a file, verify its length and contents match the expected array.
    * @param fs filesystem
    * @param path path to file
    * @param original original dataset
@@ -208,7 +207,7 @@ public class ContractTestUtils extends Assert {
 
   /**
    * Verify that the read at a specific offset in a stream
-   * matches that expected
+   * matches that expected.
    * @param stm stream
    * @param fileContents original file contents
    * @param seekOff seek offset
@@ -262,9 +261,9 @@ public class ContractTestUtils extends Assert {
         byte actual = received[i];
         byte expected = original[i];
         String letter = toChar(actual);
-        String line = String.format("[%04d] %2x %s\n", i, actual, letter);
+        String line = String.format("[%04d] %2x %s%n", i, actual, letter);
         if (expected != actual) {
-          line = String.format("[%04d] %2x %s -expected %2x %s\n",
+          line = String.format("[%04d] %2x %s -expected %2x %s%n",
                                i,
                                actual,
                                letter,
@@ -293,7 +292,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * Convert a buffer to a string, character by character
+   * Convert a buffer to a string, character by character.
    * @param buffer input bytes
    * @return a string conversion
    */
@@ -316,7 +315,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * Cleanup at the end of a test run
+   * Cleanup at the end of a test run.
    * @param action action triggering the operation (for use in logging)
    * @param fileSystem filesystem to work with. May be null
    * @param cleanupPath path to delete as a string
@@ -333,7 +332,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * Cleanup at the end of a test run
+   * Cleanup at the end of a test run.
    * @param action action triggering the operation (for use in logging)
    * @param fileSystem filesystem to work with. May be null
    * @param path path to delete
@@ -394,6 +393,45 @@ public class ContractTestUtils extends Assert {
     rejectRootOperation(path, false);
   }
 
+  /**
+   * List then delete the children of a path, but not the path itself.
+   * This can be used to delete the entries under a root path when that
+   * FS does not support {@code delete("/")}.
+   * @param fileSystem filesystem
+   * @param path path to delete
+   * @param recursive flag to indicate child entry deletion should be recursive
+   * @return the immediate child entries found and deleted (not including
+   * any recursive children of those entries)
+   * @throws IOException problem in the deletion process.
+   */
+  public static FileStatus[] deleteChildren(FileSystem fileSystem,
+      Path path,
+      boolean recursive) throws IOException {
+    FileStatus[] children = listChildren(fileSystem, path);
+    for (FileStatus entry : children) {
+      fileSystem.delete(entry.getPath(), recursive);
+    }
+    return children;
+  }
+
+  /**
+   * List all children of a path, but not the path itself in the case
+   * that the path refers to a file or empty directory.
+   * @param fileSystem FS
+   * @param path path
+   * @return a list of children, and never the path itself.
+   * @throws IOException problem in the list process
+   */
+  public static FileStatus[] listChildren(FileSystem fileSystem,
+      Path path) throws IOException {
+    FileStatus[] entries = fileSystem.listStatus(path);
+    if (entries.length == 1 && path.equals(entries[0].getPath())) {
+      // this is the path: ignore
+      return new FileStatus[]{};
+    } else {
+      return entries;
+    }
+  }
 
   public static void noteAction(String action) {
     if (LOG.isDebugEnabled()) {
@@ -403,7 +441,7 @@ public class ContractTestUtils extends Assert {
 
   /**
    * downgrade a failure to a message and a warning, then an
-   * exception for the Junit test runner to mark as failed
+   * exception for the Junit test runner to mark as failed.
    * @param message text message
    * @param failure what failed
    * @throws AssumptionViolatedException always
@@ -416,7 +454,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * report an overridden test as unsupported
+   * report an overridden test as unsupported.
    * @param message message to use in the text
    * @throws AssumptionViolatedException always
    */
@@ -425,7 +463,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * report a test has been skipped for some reason
+   * report a test has been skipped for some reason.
    * @param message message to use in the text
    * @throws AssumptionViolatedException always
    */
@@ -435,7 +473,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * Fail with an exception that was received
+   * Fail with an exception that was received.
    * @param text text to use in the exception
    * @param thrown a (possibly null) throwable to init the cause with
    * @throws AssertionError with the text and throwable -always
@@ -445,7 +483,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * Make an assertion about the length of a file
+   * Make an assertion about the length of a file.
    * @param fs filesystem
    * @param path path of the file
    * @param expected expected length
@@ -461,7 +499,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * Assert that a path refers to a directory
+   * Assert that a path refers to a directory.
    * @param fs filesystem
    * @param path path of the directory
    * @throws IOException on File IO problems
@@ -473,7 +511,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * Assert that a path refers to a directory
+   * Assert that a path refers to a directory.
    * @param fileStatus stats to check
    */
   public static void assertIsDirectory(FileStatus fileStatus) {
@@ -483,7 +521,7 @@ public class ContractTestUtils extends Assert {
 
   /**
    * Write the text to a file, returning the converted byte array
-   * for use in validating the round trip
+   * for use in validating the round trip.
    * @param fs filesystem
    * @param path path of file
    * @param text text to write
@@ -504,7 +542,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * Create a file
+   * Create a file.
    * @param fs filesystem
    * @param path       path to write
    * @param overwrite overwrite flag
@@ -527,7 +565,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * Touch a file
+   * Touch a file.
    * @param fs filesystem
    * @param path path
    * @throws IOException IO problems
@@ -540,7 +578,7 @@ public class ContractTestUtils extends Assert {
   /**
    * Delete a file/dir and assert that delete() returned true
    * <i>and</i> that the path no longer exists. This variant rejects
-   * all operations on root directories
+   * all operations on root directories.
    * @param fs filesystem
    * @param file path to delete
    * @param recursive flag to enable recursive delete
@@ -575,7 +613,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * Read in "length" bytes, convert to an ascii string
+   * Read in "length" bytes, convert to an ascii string.
    * @param fs filesystem
    * @param path path to read
    * @param length #of bytes to read.
@@ -593,7 +631,8 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * Take an array of filestats and convert to a string (prefixed w/ a [01] counter
+   * Take an array of filestats and convert to a string
+   * (prefixed with/ a [%02d] counter).
    * @param stats array of stats
    * @param separator separator after every entry
    * @return a stringified set
@@ -607,7 +646,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * List a directory
+   * List a directory.
    * @param fileSystem FS
    * @param path path
    * @return a directory listing or failure message
@@ -631,7 +670,8 @@ public class ContractTestUtils extends Assert {
   }
 
   public static String dumpStats(String pathname, FileStatus[] stats) {
-    return pathname + fileStatsToString(stats, "\n");
+    return pathname + ' ' + fileStatsToString(stats,
+        System.lineSeparator());
   }
 
    /**
@@ -641,8 +681,8 @@ public class ContractTestUtils extends Assert {
    * @param filename name of the file
    * @throws IOException IO problems during file operations
    */
-  public static void assertIsFile(FileSystem fileSystem, Path filename) throws
-                                                                 IOException {
+  public static void assertIsFile(FileSystem fileSystem, Path filename)
+      throws IOException {
     assertPathExists(fileSystem, "Expected file", filename);
     FileStatus status = fileSystem.getFileStatus(filename);
     assertIsFile(filename, status);
@@ -664,7 +704,7 @@ public class ContractTestUtils extends Assert {
 
   /**
    * Create a dataset for use in the tests; all data is in the range
-   * base to (base+modulo-1) inclusive
+   * base to (base+modulo-1) inclusive.
    * @param len length of data
    * @param base base of the data
    * @param modulo the modulo
@@ -680,7 +720,7 @@ public class ContractTestUtils extends Assert {
 
   /**
    * Assert that a path exists -but make no assertions as to the
-   * type of that entry
+   * type of that entry.
    *
    * @param fileSystem filesystem to examine
    * @param message message to include in the assertion failure message
@@ -699,7 +739,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * Assert that a path does not exist
+   * Assert that a path does not exist.
    *
    * @param fileSystem filesystem to examine
    * @param message message to include in the assertion failure message
@@ -719,7 +759,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * Assert that a FileSystem.listStatus on a dir finds the subdir/child entry
+   * Assert that a FileSystem.listStatus on a dir finds the subdir/child entry.
    * @param fs filesystem
    * @param dir directory to scan
    * @param subdir full path to look for
@@ -732,7 +772,7 @@ public class ContractTestUtils extends Assert {
     boolean found = false;
     StringBuilder builder = new StringBuilder();
     for (FileStatus stat : stats) {
-      builder.append(stat.toString()).append('\n');
+      builder.append(stat.toString()).append(System.lineSeparator());
       if (stat.getPath().equals(subdir)) {
         found = true;
       }
@@ -751,7 +791,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * compare content of file operations using a double byte array
+   * compare content of file operations using a double byte array.
    * @param concat concatenated files
    * @param bytes bytes
    */
@@ -794,6 +834,7 @@ public class ContractTestUtils extends Assert {
 
     long totalBytesRead = 0;
     int nextExpectedNumber = 0;
+    NanoTimer timer = new NanoTimer();
     try (InputStream inputStream = fs.open(path)) {
       while (true) {
         final int bytesRead = inputStream.read(testBuffer);
@@ -822,6 +863,8 @@ public class ContractTestUtils extends Assert {
             " bytes but only received " + totalBytesRead);
       }
     }
+    timer.end("Time to read %d bytes", expectedSize);
+    bandwidth(timer, expectedSize);
   }
 
   /**
@@ -845,9 +888,8 @@ public class ContractTestUtils extends Assert {
       testBuffer[i] = (byte) (i % modulus);
     }
 
-    final OutputStream outputStream = fs.create(path, false);
     long bytesWritten = 0;
-    try {
+    try (OutputStream outputStream = fs.create(path, false)) {
       while (bytesWritten < size) {
         final long diff = size - bytesWritten;
         if (diff < testBuffer.length) {
@@ -860,8 +902,6 @@ public class ContractTestUtils extends Assert {
       }
 
       return bytesWritten;
-    } finally {
-      outputStream.close();
     }
   }
 
@@ -888,9 +928,12 @@ public class ContractTestUtils extends Assert {
     final Path objectPath = new Path(parent, objectName);
 
     // Write test file in a specific pattern
+    NanoTimer timer = new NanoTimer();
     assertEquals(fileSize,
         generateTestFile(fs, objectPath, fileSize, testBufferSize, modulus));
     assertPathExists(fs, "not created successful", objectPath);
+    timer.end("Time to write %d bytes", fileSize);
+    bandwidth(timer, fileSize);
 
     // Now read the same file back and verify its content
     try {
@@ -928,7 +971,7 @@ public class ContractTestUtils extends Assert {
    * @return the number of megabytes/second of the recorded operation
    */
   public static double bandwidthMBs(long bytes, long durationNS) {
-    return (bytes * 1000.0) / durationNS;
+    return bytes / (1024.0 * 1024) * 1.0e9 / durationNS;
   }
 
   /**
@@ -1014,6 +1057,24 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
+   * Take a collection of paths and build a string from them: useful
+   * for assertion messages.
+   * @param paths paths to stringify
+   * @return a string representation
+   */
+  public static String pathsToString(Collection<Path> paths) {
+    StringBuilder builder = new StringBuilder(paths.size() * 100);
+    String nl = System.lineSeparator();
+    builder.append(nl);
+    for (Path path : paths) {
+      builder.append("  \"").append(path.toString())
+          .append("\"").append(nl);
+    }
+    builder.append("]");
+    return builder.toString();
+  }
+
+  /**
    * Predicate to determine if two lists are equivalent, that is, they
    * contain the same entries.
    * @param left first collection of paths
@@ -1061,6 +1122,52 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
+   * Convert a remote iterator over file status results into a list.
+   * The utility equivalents in commons collection and guava cannot be
+   * used here, as this is a different interface, one whose operators
+   * can throw IOEs.
+   * @param iterator input iterator
+   * @return the status entries as a list.
+   * @throws IOException
+   */
+  public static List<LocatedFileStatus> toList(
+      RemoteIterator<LocatedFileStatus> iterator) throws IOException {
+    ArrayList<LocatedFileStatus> list = new ArrayList<>();
+    while (iterator.hasNext()) {
+      list.add(iterator.next());
+    }
+    return list;
+  }
+
+  /**
+   * Convert a remote iterator over file status results into a list.
+   * This uses {@link RemoteIterator#next()} calls only, expecting
+   * a raised {@link NoSuchElementException} exception to indicate that
+   * the end of the listing has been reached. This iteration strategy is
+   * designed to verify that the implementation of the remote iterator
+   * generates results and terminates consistently with the {@code hasNext/next}
+   * iteration. More succinctly "verifies that the {@code next()} operator
+   * isn't relying on {@code hasNext()} to always be called during an iteration.
+   * @param iterator input iterator
+   * @return the status entries as a list.
+   * @throws IOException IO problems
+   */
+  @SuppressWarnings("InfiniteLoopStatement")
+  public static List<LocatedFileStatus> toListThroughNextCallsAlone(
+      RemoteIterator<LocatedFileStatus> iterator) throws IOException {
+    ArrayList<LocatedFileStatus> list = new ArrayList<>();
+    try {
+      while (true) {
+        list.add(iterator.next());
+      }
+    } catch (NoSuchElementException expected) {
+      // ignored
+    }
+    return list;
+  }
+
+
+  /**
    * Results of recursive directory creation/scan operations.
    */
   public static final class TreeScanResults {
@@ -1096,6 +1203,16 @@ public class ContractTestUtils extends Assert {
      */
     public TreeScanResults(FileStatus[] stats) {
       assertNotNull("Null file status array", stats);
+      for (FileStatus stat : stats) {
+        add(stat);
+      }
+    }
+
+    /**
+     * Construct results from an iterable collection of statistics.
+     * @param stats statistics source. Must not be null.
+     */
+    public <F extends FileStatus> TreeScanResults(Iterable<F> stats) {
       for (FileStatus stat : stats) {
         add(stat);
       }
@@ -1141,6 +1258,35 @@ public class ContractTestUtils extends Assert {
     }
 
     /**
+     * Equality check compares files and directory counts.
+     * As these are non-final fields, this class cannot be used in
+     * hash tables.
+     * @param o other object
+     * @return true iff the file and dir count match.
+     */
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      TreeScanResults that = (TreeScanResults) o;
+      return getFileCount() == that.getFileCount() &&
+          getDirCount() == that.getDirCount();
+    }
+
+    /**
+     * This is a spurious hash code subclass to keep findbugs quiet.
+     * @return the base {@link Object#hashCode()}
+     */
+    @Override
+    public int hashCode() {
+      return super.hashCode();
+    }
+
+    /**
      * Assert that the state of a listing has the specific number of files,
      * directories and other entries. The error text will include
      * the {@code text} param, the field in question, and the entire object's
@@ -1166,7 +1312,6 @@ public class ContractTestUtils extends Assert {
      * @param that the other entry
      */
     public void assertEquivalent(TreeScanResults that) {
-      String details = "this= " + this + "; that=" + that;
       assertFieldsEquivalent("files", that, files, that.files);
       assertFieldsEquivalent("directories", that,
           directories, that.directories);
@@ -1183,13 +1328,17 @@ public class ContractTestUtils extends Assert {
     public void assertFieldsEquivalent(String fieldname,
         TreeScanResults that,
         List<Path> ours, List<Path> theirs) {
-      assertFalse("Duplicate  " + files + " in " + this,
+      String ourList = pathsToString(ours);
+      String theirList = pathsToString(theirs);
+      assertFalse("Duplicate  " + fieldname + " in " + this
+          +": " + ourList,
           containsDuplicates(ours));
-      assertFalse("Duplicate  " + files + " in other " + that,
+      assertFalse("Duplicate  " + fieldname + " in other " + that
+              + ": " + theirList,
           containsDuplicates(theirs));
-      assertTrue(fieldname + " mismatch: between {" + this + "}" +
-              " and {" + that + "}",
-          collectionsEquivalent(files, that.files));
+      assertTrue(fieldname + " mismatch: between " + ourList
+          + " and " + theirList,
+          collectionsEquivalent(ours, theirs));
     }
 
     public List<Path> getFiles() {
@@ -1272,6 +1421,14 @@ public class ContractTestUtils extends Assert {
       return endTime - startTime;
     }
 
+    /**
+     * Intermediate duration of the operation.
+     * @return how much time has passed since the start (in nanos).
+     */
+    public long elapsedTime() {
+      return now() - startTime;
+    }
+
     public double bandwidth(long bytes) {
       return bandwidthMBs(bytes, duration());
     }
@@ -1279,10 +1436,12 @@ public class ContractTestUtils extends Assert {
     /**
      * Bandwidth as bytes per second.
      * @param bytes bytes in
-     * @return the number of bytes per second this operation timed.
+     * @return the number of bytes per second this operation.
+     *         0 if duration == 0.
      */
     public double bandwidthBytes(long bytes) {
-      return (bytes * 1.0) / duration();
+      double duration = duration();
+      return duration > 0 ? bytes / duration : 0;
     }
 
     /**

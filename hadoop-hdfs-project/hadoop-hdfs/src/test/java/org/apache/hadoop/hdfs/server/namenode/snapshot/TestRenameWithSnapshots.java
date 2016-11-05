@@ -36,8 +36,10 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -1570,7 +1572,9 @@ public class TestRenameWithSnapshots {
     FSDirectory fsdir2 = Mockito.spy(fsdir);
     Mockito.doThrow(new NSQuotaExceededException("fake exception")).when(fsdir2)
         .addLastINode((INodesInPath) Mockito.anyObject(),
-            (INode) Mockito.anyObject(), Mockito.anyBoolean());
+            (INode) Mockito.anyObject(),
+            (FsPermission) Mockito.anyObject(),
+            Mockito.anyBoolean());
     Whitebox.setInternalState(fsn, "dir", fsdir2);
     // rename /test/dir1/foo to /test/dir2/subdir2/foo. 
     // FSDirectory#verifyQuota4Rename will pass since the remaining quota is 2.
@@ -2408,5 +2412,202 @@ public class TestRenameWithSnapshots {
     assertTrue(existsInDiffReport(entries, DiffType.RENAME, "bar", "newDir"));
     assertTrue(existsInDiffReport(entries, DiffType.RENAME, "foo/file2", "newDir/file2"));
     assertTrue(existsInDiffReport(entries, DiffType.RENAME, "foo/file3", "newDir/file1"));
+  }
+
+  private void checkSpaceConsumed(String message, Path directory,
+                                  long expectedSpace) throws Exception {
+    ContentSummary summary = hdfs.getContentSummary(directory);
+    assertEquals(message, expectedSpace, summary.getSpaceConsumed());
+  }
+
+  /**
+   * Runs through various combinations of renames, deletes, appends and other
+   * operations in a snapshotted directory and ensures disk usage summaries
+   * (e.g. du -s) are computed correctly.
+   *
+   * @throws Exception
+   */
+  @Test (timeout=300000)
+  public void testDu() throws Exception {
+    File tempFile = File.createTempFile("testDu-", ".tmp");
+    tempFile.deleteOnExit();
+
+    final FileSystem localfs = FileSystem.getLocal(conf);
+    final Path localOriginal = new Path(tempFile.getPath());
+    final Path dfsRoot = new Path("/testDu");
+    final Path dfsOriginal = new Path(dfsRoot, "original");
+    final Path dfsRenamed1 = new Path(dfsRoot, "renamed1");
+    final Path dfsRenamed2 = new Path(dfsRoot, "renamed2");
+    final Path dfsAppended = new Path(dfsRoot, "appended");
+
+    /* We will test with a single block worth of data. If we don't at least use
+    a multiple of BLOCKSIZE, append operations will modify snapshotted blocks
+    and other factors will come into play here that we'll have to account for */
+    final long spaceIncrement = BLOCKSIZE * REPL;
+    final byte[] appendData = new byte[(int) BLOCKSIZE];
+    DFSTestUtil.createFile(localfs, localOriginal, BLOCKSIZE, REPL, SEED);
+
+    FSDataOutputStream out = null;
+    long expectedSpace = 0;
+
+    hdfs.mkdirs(dfsRoot);
+    checkSpaceConsumed("Du is wrong immediately",
+        dfsRoot, 0L);
+
+    hdfs.copyFromLocalFile(localOriginal, dfsOriginal);
+    expectedSpace += spaceIncrement;
+    checkSpaceConsumed("Du is wrong after creating / copying file",
+        dfsRoot, expectedSpace);
+
+    SnapshotTestHelper.createSnapshot(hdfs, dfsRoot, "s0");
+    checkSpaceConsumed("Du is wrong after snapshotting",
+        dfsRoot, expectedSpace);
+
+    hdfs.rename(dfsOriginal, dfsRenamed1);
+    checkSpaceConsumed("Du is wrong after 1 rename",
+        dfsRoot, expectedSpace);
+
+    hdfs.rename(dfsRenamed1, dfsRenamed2);
+    checkSpaceConsumed("Du is wrong after 2 renames",
+        dfsRoot, expectedSpace);
+
+    hdfs.delete(dfsRenamed2, false);
+    checkSpaceConsumed("Du is wrong after deletion",
+        dfsRoot, expectedSpace);
+
+    hdfs.copyFromLocalFile(localOriginal, dfsOriginal);
+    expectedSpace += spaceIncrement;
+    checkSpaceConsumed("Du is wrong after replacing a renamed file",
+        dfsRoot, expectedSpace);
+
+    hdfs.copyFromLocalFile(localOriginal, dfsAppended);
+    expectedSpace += spaceIncrement;
+    SnapshotTestHelper.createSnapshot(hdfs, dfsRoot, "s1");
+
+    out = hdfs.append(dfsAppended);
+    out.write(appendData);
+    out.close();
+    expectedSpace += spaceIncrement;
+    checkSpaceConsumed("Du is wrong after 1 snapshot + append",
+        dfsRoot, expectedSpace);
+
+    SnapshotTestHelper.createSnapshot(hdfs, dfsRoot, "s2");
+    out = hdfs.append(dfsAppended);
+    out.write(appendData);
+    out.close();
+    expectedSpace += spaceIncrement;
+    checkSpaceConsumed("Du is wrong after 2 snapshot + appends",
+        dfsRoot, expectedSpace);
+
+    SnapshotTestHelper.createSnapshot(hdfs, dfsRoot, "s3");
+    out = hdfs.append(dfsAppended);
+    out.write(appendData);
+    out.close();
+    expectedSpace += spaceIncrement;
+    hdfs.rename(dfsAppended, dfsRenamed1);
+    checkSpaceConsumed("Du is wrong after snapshot, append, & rename",
+        dfsRoot, expectedSpace);
+    hdfs.delete(dfsRenamed1, false);
+    // everything but the last append is snapshotted
+    expectedSpace -= spaceIncrement;
+    checkSpaceConsumed("Du is wrong after snapshot, append, delete & rename",
+        dfsRoot, expectedSpace);
+
+    hdfs.delete(dfsOriginal, false);
+    hdfs.deleteSnapshot(dfsRoot, "s0");
+    hdfs.deleteSnapshot(dfsRoot, "s1");
+    hdfs.deleteSnapshot(dfsRoot, "s2");
+    hdfs.deleteSnapshot(dfsRoot, "s3");
+    expectedSpace = 0;
+    checkSpaceConsumed("Du is wrong after deleting all files and snapshots",
+        dfsRoot, expectedSpace);
+  }
+
+  /**
+   * Runs through various combinations of renames, deletes, appends and other
+   * operations between two snapshotted directories and ensures disk usage
+   * summaries (e.g. du -s) are computed correctly.
+   *
+   * This test currently assumes some incorrect behavior when files have been
+   * moved between subdirectories of the one being queried. In the cases
+   * below, only 1 block worth of data should ever actually be used. However
+   * if there are 2 - 3 subdirectories that do contained or have contained
+   * when snapshotted the same file, that file will be counted 2-3 times,
+   * respectively, since each directory is computed independently recursively.
+   *
+   * @throws Exception
+   */
+  @Test (timeout=300000)
+  public void testDuMultipleDirs() throws Exception {
+    File tempFile = File.createTempFile("testDuMultipleDirs-", "" + ".tmp");
+    tempFile.deleteOnExit();
+
+    final FileSystem localfs = FileSystem.getLocal(conf);
+    final Path localOriginal = new Path(tempFile.getPath());
+    final Path dfsRoot = new Path("/testDuMultipleDirs");
+    final Path snapshottable1 = new Path(dfsRoot, "snapshottable1");
+    final Path snapshottable2 = new Path(dfsRoot, "snapshottable2");
+    final Path nonsnapshottable = new Path(dfsRoot, "nonsnapshottable");
+    final Path subdirectory = new Path(snapshottable1, "subdirectory");
+    final Path dfsOriginal = new Path(snapshottable1, "file");
+    final Path renamedNonsnapshottable = new Path(nonsnapshottable, "file");
+    final Path renamedSnapshottable = new Path(snapshottable2, "file");
+    final Path renamedSubdirectory = new Path(subdirectory, "file");
+
+    /* We will test with a single block worth of data. If we don't at least use
+    a multiple of BLOCKSIZE, append operations will modify snapshotted blocks
+    and other factors will come into play here that we'll have to account for */
+    final long spaceConsumed = BLOCKSIZE * REPL;
+    DFSTestUtil.createFile(localfs, localOriginal, BLOCKSIZE, REPL, SEED);
+
+    hdfs.mkdirs(snapshottable1);
+    hdfs.mkdirs(snapshottable2);
+    hdfs.mkdirs(nonsnapshottable);
+    hdfs.mkdirs(subdirectory);
+    checkSpaceConsumed("Du is wrong immediately",
+        dfsRoot, 0L);
+
+    hdfs.copyFromLocalFile(localOriginal, dfsOriginal);
+    checkSpaceConsumed("Du is wrong after creating / copying file",
+        snapshottable1, spaceConsumed);
+
+    SnapshotTestHelper.createSnapshot(hdfs, snapshottable1, "s1");
+    checkSpaceConsumed("Du is wrong in original dir after 1st snapshot",
+        snapshottable1, spaceConsumed);
+
+    hdfs.rename(dfsOriginal, renamedNonsnapshottable);
+    checkSpaceConsumed("Du is wrong in original dir after 1st rename",
+        snapshottable1, spaceConsumed);
+    checkSpaceConsumed("Du is wrong in non-snapshottable dir after 1st rename",
+        nonsnapshottable, spaceConsumed);
+    checkSpaceConsumed("Du is wrong in root dir after 1st rename",
+        dfsRoot, spaceConsumed);
+
+    hdfs.rename(renamedNonsnapshottable, renamedSnapshottable);
+    checkSpaceConsumed("Du is wrong in original dir after 2nd rename",
+        snapshottable1, spaceConsumed);
+    checkSpaceConsumed("Du is wrong in non-snapshottable dir after 2nd rename",
+        nonsnapshottable, 0);
+    checkSpaceConsumed("Du is wrong in snapshottable dir after 2nd rename",
+        snapshottable2, spaceConsumed);
+    checkSpaceConsumed("Du is wrong in root dir after 2nd rename",
+        dfsRoot, spaceConsumed);
+
+    SnapshotTestHelper.createSnapshot(hdfs, snapshottable2, "s2");
+    hdfs.rename(renamedSnapshottable, renamedSubdirectory);
+    checkSpaceConsumed("Du is wrong in original dir after 3rd rename",
+        snapshottable1, spaceConsumed);
+    checkSpaceConsumed("Du is wrong in snapshottable dir after 3rd rename",
+        snapshottable2, spaceConsumed);
+    checkSpaceConsumed("Du is wrong in original subdirectory after 3rd rename",
+        subdirectory, spaceConsumed);
+    checkSpaceConsumed("Du is wrong in root dir after 3rd rename",
+        dfsRoot, spaceConsumed);
+
+    hdfs.delete(renamedSubdirectory, false);
+    hdfs.deleteSnapshot(snapshottable1, "s1");
+    hdfs.deleteSnapshot(snapshottable2, "s2");
+    checkSpaceConsumed("Du is wrong after deleting all files and snapshots",
+        dfsRoot, 0);
   }
 }

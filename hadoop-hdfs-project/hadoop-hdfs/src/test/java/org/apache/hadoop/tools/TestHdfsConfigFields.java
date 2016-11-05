@@ -76,8 +76,6 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
     configurationPropsToSkipCompare
         .add("dfs.corruptfilesreturned.max");
     configurationPropsToSkipCompare
-        .add("dfs.datanode.hdfs-blocks-metadata.enabled");
-    configurationPropsToSkipCompare
         .add("dfs.metrics.session-id");
     configurationPropsToSkipCompare
         .add("dfs.datanode.synconclose");

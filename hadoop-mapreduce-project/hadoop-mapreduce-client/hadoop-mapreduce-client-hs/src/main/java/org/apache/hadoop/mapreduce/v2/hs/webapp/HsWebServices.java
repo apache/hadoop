@@ -34,6 +34,7 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -110,14 +111,16 @@ public class HsWebServices {
   }
 
   @GET
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public HistoryInfo get() {
     return getHistoryInfo();
   }
 
   @GET
   @Path("/info")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public HistoryInfo getHistoryInfo() {
     init();
     return new HistoryInfo();
@@ -125,7 +128,8 @@ public class HsWebServices {
 
   @GET
   @Path("/mapreduce/jobs")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public JobsInfo getJobs(@QueryParam("user") String userQuery,
       @QueryParam("limit") String count,
       @QueryParam("state") String stateQuery,
@@ -215,7 +219,8 @@ public class HsWebServices {
 
   @GET
   @Path("/mapreduce/jobs/{jobid}")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public JobInfo getJob(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid) {
 
@@ -227,7 +232,8 @@ public class HsWebServices {
 
   @GET
   @Path("/mapreduce/jobs/{jobid}/jobattempts")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public AMAttemptsInfo getJobAttempts(@PathParam("jobid") String jid) {
 
     init();
@@ -244,7 +250,8 @@ public class HsWebServices {
 
   @GET
   @Path("/mapreduce/jobs/{jobid}/counters")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public JobCounterInfo getJobCounters(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid) {
 
@@ -256,7 +263,8 @@ public class HsWebServices {
 
   @GET
   @Path("/mapreduce/jobs/{jobid}/conf")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public ConfInfo getJobConf(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid) {
 
@@ -275,7 +283,8 @@ public class HsWebServices {
 
   @GET
   @Path("/mapreduce/jobs/{jobid}/tasks")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public TasksInfo getJobTasks(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid, @QueryParam("type") String type) {
 
@@ -302,7 +311,8 @@ public class HsWebServices {
 
   @GET
   @Path("/mapreduce/jobs/{jobid}/tasks/{taskid}")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public TaskInfo getJobTask(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid, @PathParam("taskid") String tid) {
 
@@ -316,7 +326,8 @@ public class HsWebServices {
 
   @GET
   @Path("/mapreduce/jobs/{jobid}/tasks/{taskid}/counters")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public JobTaskCounterInfo getSingleTaskCounters(
       @Context HttpServletRequest hsr, @PathParam("jobid") String jid,
       @PathParam("taskid") String tid) {
@@ -337,7 +348,8 @@ public class HsWebServices {
 
   @GET
   @Path("/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public TaskAttemptsInfo getJobTaskAttempts(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid, @PathParam("taskid") String tid) {
 
@@ -360,7 +372,8 @@ public class HsWebServices {
 
   @GET
   @Path("/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public TaskAttemptInfo getJobTaskAttemptId(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid, @PathParam("taskid") String tid,
       @PathParam("attemptid") String attId) {
@@ -380,7 +393,8 @@ public class HsWebServices {
 
   @GET
   @Path("/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}/counters")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public JobTaskAttemptCounterInfo getJobTaskAttemptIdCounters(
       @Context HttpServletRequest hsr, @PathParam("jobid") String jid,
       @PathParam("taskid") String tid, @PathParam("attemptid") String attId) {

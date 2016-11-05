@@ -25,6 +25,7 @@ import static org.mockito.Mockito.verify;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -33,20 +34,24 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Supplier;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
@@ -61,6 +66,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
+import org.apache.hadoop.yarn.api.records.ContainerRetryPolicy;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -83,6 +90,7 @@ import org.apache.hadoop.yarn.server.nodemanager.CMgrSignalContainersEvent;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestAuxServices.ServiceA;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -90,7 +98,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -362,6 +369,438 @@ public class TestContainerManager extends BaseContainerManagerTest {
       DefaultContainerExecutor.containerIsAlive(pid));
   }
 
+  @Test
+  public void testContainerRestart() throws IOException, InterruptedException,
+      YarnException {
+    containerManager.start();
+    // ////// Construct the Container-id
+    ContainerId cId = createContainerId(0);
+    File oldStartFile = new File(tmpDir, "start_file_o.txt").getAbsoluteFile();
+
+    String pid = prepareInitialContainer(cId, oldStartFile);
+
+    // Test that the container can restart
+    // Also, Since there was no rollback context present before the
+    // restart, rollback should NOT be possible after the restart
+    doRestartTests(cId, oldStartFile, "Hello World!", pid, false);
+  }
+
+  private String doRestartTests(ContainerId cId, File oldStartFile,
+      String testString, String pid, boolean canRollback)
+      throws YarnException, IOException, InterruptedException {
+    int beforeRestart = metrics.getRunningContainers();
+    Container container =
+        containerManager.getContext().getContainers().get(cId);
+    Assert.assertFalse(container.isReInitializing());
+    containerManager.restartContainer(cId);
+    Assert.assertTrue(container.isReInitializing());
+
+    // Wait for original process to die and the new process to restart
+    int timeoutSecs = 0;
+    while (DefaultContainerExecutor.containerIsAlive(pid)
+        && (metrics.getRunningContainers() == beforeRestart)
+        && container.isReInitializing()
+        && timeoutSecs++ < 20) {
+      Thread.sleep(1000);
+      LOG.info("Waiting for Original process to die.." +
+          "and new process to start!!");
+    }
+
+    Assert.assertFalse("Old Process Still alive!!",
+        DefaultContainerExecutor.containerIsAlive(pid));
+
+    String newPid = null;
+    timeoutSecs = 0;
+    while (timeoutSecs++ < 20) {
+      LOG.info("Waiting for New process file to be created!!");
+      // Now verify the contents of the file
+      BufferedReader reader =
+          new BufferedReader(new FileReader(oldStartFile));
+      Assert.assertEquals(testString, reader.readLine());
+      // Get the pid of the process
+      newPid = reader.readLine().trim();
+      // No more lines
+      Assert.assertEquals(null, reader.readLine());
+      reader.close();
+      if (!newPid.equals(pid)) {
+        break;
+      }
+      Thread.sleep(1000);
+    }
+
+    // Assert both pids are different
+    Assert.assertNotEquals(pid, newPid);
+
+    // Container cannot rollback from a restart
+    Assert.assertEquals(canRollback, container.canRollback());
+
+    return newPid;
+  }
+
+  private String[] testContainerReInitSuccess(boolean autoCommit)
+      throws IOException, InterruptedException, YarnException {
+    containerManager.start();
+    // ////// Construct the Container-id
+    ContainerId cId = createContainerId(0);
+    File oldStartFile = new File(tmpDir, "start_file_o.txt").getAbsoluteFile();
+
+    String pid = prepareInitialContainer(cId, oldStartFile);
+
+    File newStartFile = new File(tmpDir, "start_file_n.txt").getAbsoluteFile();
+
+    prepareContainerUpgrade(autoCommit, false, false, cId, newStartFile);
+
+    // Assert that the First process is not alive anymore
+    Assert.assertFalse("Process is still alive!",
+        DefaultContainerExecutor.containerIsAlive(pid));
+
+    BufferedReader reader =
+        new BufferedReader(new FileReader(newStartFile));
+    Assert.assertEquals("Upgrade World!", reader.readLine());
+
+    // Get the pid of the process
+    String newPid = reader.readLine().trim();
+    Assert.assertNotEquals("Old and New Pids must be different !", pid, newPid);
+    // No more lines
+    Assert.assertEquals(null, reader.readLine());
+
+    reader.close();
+
+    // Verify old file still exists and is accessible by
+    // the new process...
+    reader = new BufferedReader(new FileReader(oldStartFile));
+    Assert.assertEquals("Hello World!", reader.readLine());
+
+    // Assert that the New process is alive
+    Assert.assertTrue("New Process is not alive!",
+        DefaultContainerExecutor.containerIsAlive(newPid));
+    return new String[]{pid, newPid};
+  }
+
+  @Test
+  public void testContainerUpgradeSuccessAutoCommit() throws IOException,
+      InterruptedException, YarnException {
+    testContainerReInitSuccess(true);
+    // Should not be able to Commit (since already auto committed)
+    try {
+      containerManager.commitLastReInitialization(createContainerId(0));
+      Assert.fail();
+    } catch (Exception e) {
+      Assert.assertTrue(e.getMessage().contains("Nothing to Commit"));
+    }
+  }
+
+  @Test
+  public void testContainerUpgradeSuccessExplicitCommit() throws IOException,
+      InterruptedException, YarnException {
+    testContainerReInitSuccess(false);
+    ContainerId cId = createContainerId(0);
+    containerManager.commitLastReInitialization(cId);
+    // Should not be able to Rollback once committed
+    try {
+      containerManager.rollbackLastReInitialization(cId);
+      Assert.fail();
+    } catch (Exception e) {
+      Assert.assertTrue(e.getMessage().contains("Nothing to rollback to"));
+    }
+  }
+
+  @Test
+  public void testContainerUpgradeSuccessExplicitRollback() throws IOException,
+      InterruptedException, YarnException {
+    String[] pids = testContainerReInitSuccess(false);
+
+    // Test that the container can be Restarted after the successful upgrrade.
+    // Also, since there is a rollback context present before the restart, it
+    // should be possible to rollback the container AFTER the restart.
+    pids[1] = doRestartTests(createContainerId(0),
+        new File(tmpDir, "start_file_n.txt").getAbsoluteFile(),
+        "Upgrade World!", pids[1], true);
+
+    // Delete the old start File..
+    File oldStartFile = new File(tmpDir, "start_file_o.txt").getAbsoluteFile();
+
+    oldStartFile.delete();
+
+    ContainerId cId = createContainerId(0);
+    // Explicit Rollback
+    containerManager.rollbackLastReInitialization(cId);
+
+    Container container =
+        containerManager.getContext().getContainers().get(cId);
+    Assert.assertTrue(container.isReInitializing());
+    // Original should be dead anyway
+    Assert.assertFalse("Original Process is still alive!",
+        DefaultContainerExecutor.containerIsAlive(pids[0]));
+
+    // Wait for new container to startup
+    int timeoutSecs = 0;
+    while (container.isReInitializing() && timeoutSecs++ < 20) {
+      Thread.sleep(1000);
+      LOG.info("Waiting for ReInitialization to complete..");
+    }
+    Assert.assertFalse(container.isReInitializing());
+
+    timeoutSecs = 0;
+    // Wait for new processStartfile to be created
+    while (!oldStartFile.exists() && timeoutSecs++ < 20) {
+      Thread.sleep(1000);
+      LOG.info("Waiting for New process start-file to be created");
+    }
+
+    // Now verify the contents of the file
+    BufferedReader reader =
+        new BufferedReader(new FileReader(oldStartFile));
+    Assert.assertEquals("Hello World!", reader.readLine());
+    // Get the pid of the process
+    String rolledBackPid = reader.readLine().trim();
+    // No more lines
+    Assert.assertEquals(null, reader.readLine());
+
+    Assert.assertNotEquals("The Rolled-back process should be a different pid",
+        pids[0], rolledBackPid);
+  }
+
+  @Test
+  public void testContainerUpgradeLocalizationFailure() throws IOException,
+      InterruptedException, YarnException {
+    if (Shell.WINDOWS) {
+      return;
+    }
+    containerManager.start();
+    // ////// Construct the Container-id
+    ContainerId cId = createContainerId(0);
+    File oldStartFile = new File(tmpDir, "start_file_o.txt").getAbsoluteFile();
+
+    String pid = prepareInitialContainer(cId, oldStartFile);
+
+    File newStartFile = new File(tmpDir, "start_file_n.txt").getAbsoluteFile();
+
+    prepareContainerUpgrade(false, true, true, cId, newStartFile);
+
+    // Assert that the First process is STILL alive
+    // since upgrade was terminated..
+    Assert.assertTrue("Process is NOT alive!",
+        DefaultContainerExecutor.containerIsAlive(pid));
+  }
+
+  @Test
+  public void testContainerUpgradeProcessFailure() throws IOException,
+      InterruptedException, YarnException {
+    if (Shell.WINDOWS) {
+      return;
+    }
+    containerManager.start();
+    // ////// Construct the Container-id
+    ContainerId cId = createContainerId(0);
+    File oldStartFile = new File(tmpDir, "start_file_o.txt").getAbsoluteFile();
+
+    String pid = prepareInitialContainer(cId, oldStartFile);
+
+    File newStartFile = new File(tmpDir, "start_file_n.txt").getAbsoluteFile();
+
+    // Since Autocommit is true, there is also no rollback context...
+    // which implies that if the new process fails, since there is no
+    // rollback, it is terminated.
+    prepareContainerUpgrade(true, true, false, cId, newStartFile);
+
+    // Assert that the First process is not alive anymore
+    Assert.assertFalse("Process is still alive!",
+        DefaultContainerExecutor.containerIsAlive(pid));
+  }
+
+  @Test
+  public void testContainerUpgradeRollbackDueToFailure() throws IOException,
+      InterruptedException, YarnException {
+    if (Shell.WINDOWS) {
+      return;
+    }
+    containerManager.start();
+    // ////// Construct the Container-id
+    ContainerId cId = createContainerId(0);
+    File oldStartFile = new File(tmpDir, "start_file_o.txt").getAbsoluteFile();
+
+    String pid = prepareInitialContainer(cId, oldStartFile);
+
+    File newStartFile = new File(tmpDir, "start_file_n.txt").getAbsoluteFile();
+
+    prepareContainerUpgrade(false, true, false, cId, newStartFile);
+
+    // Assert that the First process is not alive anymore
+    Assert.assertFalse("Original Process is still alive!",
+        DefaultContainerExecutor.containerIsAlive(pid));
+
+    int timeoutSecs = 0;
+    // Wait for oldStartFile to be created
+    while (!oldStartFile.exists() && timeoutSecs++ < 20) {
+      System.out.println("\nFiles: " +
+          Arrays.toString(oldStartFile.getParentFile().list()));
+      Thread.sleep(1000);
+      LOG.info("Waiting for New process start-file to be created");
+    }
+
+    // Now verify the contents of the file
+    BufferedReader reader =
+        new BufferedReader(new FileReader(oldStartFile));
+    Assert.assertEquals("Hello World!", reader.readLine());
+    // Get the pid of the process
+    String rolledBackPid = reader.readLine().trim();
+    // No more lines
+    Assert.assertEquals(null, reader.readLine());
+
+    Assert.assertNotEquals("The Rolled-back process should be a different pid",
+        pid, rolledBackPid);
+  }
+
+  /**
+   * Prepare a launch Context for container upgrade and request the
+   * Container Manager to re-initialize a running container using the
+   * new launch context.
+   * @param autoCommit Enable autoCommit.
+   * @param failCmd injects a start script that intentionally fails.
+   * @param failLoc injects a bad file Location that will fail localization.
+   */
+  private void prepareContainerUpgrade(boolean autoCommit, boolean failCmd,
+      boolean failLoc, ContainerId cId, File startFile)
+      throws FileNotFoundException, YarnException, InterruptedException {
+    // Re-write scriptfile and processStartFile
+    File scriptFile = Shell.appendScriptExtension(tmpDir, "scriptFile_new");
+    PrintWriter fileWriter = new PrintWriter(scriptFile);
+
+    writeScriptFile(fileWriter, "Upgrade World!", startFile, cId, failCmd);
+
+    ContainerLaunchContext containerLaunchContext =
+        prepareContainerLaunchContext(scriptFile, "dest_file_new", failLoc, 0);
+
+    containerManager.reInitializeContainer(cId, containerLaunchContext,
+        autoCommit);
+    try {
+      containerManager.reInitializeContainer(cId, containerLaunchContext,
+          autoCommit);
+    } catch (Exception e) {
+      Assert.assertTrue(e.getMessage().contains("Cannot perform RE_INIT"));
+    }
+    int timeoutSecs = 0;
+    int maxTimeToWait = failLoc ? 10 : 20;
+    // Wait for new processStartfile to be created
+    while (!startFile.exists() && timeoutSecs++ < maxTimeToWait) {
+      Thread.sleep(1000);
+      LOG.info("Waiting for New process start-file to be created");
+    }
+  }
+
+  /**
+   * Prepare and start an initial container. This container will be subsequently
+   * re-initialized for upgrade. It also waits for the container to start and
+   * returns the Pid of the running container.
+   */
+  private String prepareInitialContainer(ContainerId cId, File startFile)
+      throws IOException, YarnException, InterruptedException {
+    File scriptFileOld = Shell.appendScriptExtension(tmpDir, "scriptFile");
+    PrintWriter fileWriterOld = new PrintWriter(scriptFileOld);
+
+    writeScriptFile(fileWriterOld, "Hello World!", startFile, cId, false);
+
+    ContainerLaunchContext containerLaunchContext =
+        prepareContainerLaunchContext(scriptFileOld, "dest_file", false, 4);
+
+    StartContainerRequest scRequest =
+        StartContainerRequest.newInstance(containerLaunchContext,
+            createContainerToken(cId,
+                DUMMY_RM_IDENTIFIER, context.getNodeId(), user,
+                context.getContainerTokenSecretManager()));
+    List<StartContainerRequest> list = new ArrayList<>();
+    list.add(scRequest);
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+    containerManager.startContainers(allRequests);
+
+    int timeoutSecs = 0;
+    while (!startFile.exists() && timeoutSecs++ < 20) {
+      Thread.sleep(1000);
+      LOG.info("Waiting for process start-file to be created");
+    }
+    Assert.assertTrue("ProcessStartFile doesn't exist!",
+        startFile.exists());
+
+    // Now verify the contents of the file
+    BufferedReader reader =
+        new BufferedReader(new FileReader(startFile));
+    Assert.assertEquals("Hello World!", reader.readLine());
+    // Get the pid of the process
+    String pid = reader.readLine().trim();
+    // No more lines
+    Assert.assertEquals(null, reader.readLine());
+
+    // Assert that the process is alive
+    Assert.assertTrue("Process is not alive!",
+        DefaultContainerExecutor.containerIsAlive(pid));
+    // Once more
+    Assert.assertTrue("Process is not alive!",
+        DefaultContainerExecutor.containerIsAlive(pid));
+    return pid;
+  }
+
+  private void writeScriptFile(PrintWriter fileWriter, String startLine,
+      File processStartFile, ContainerId cId, boolean isFailure) {
+    if (Shell.WINDOWS) {
+      fileWriter.println("@echo " + startLine + "> " + processStartFile);
+      fileWriter.println("@echo " + cId + ">> " + processStartFile);
+      fileWriter.println("@ping -n 100 127.0.0.1 >nul");
+    } else {
+      fileWriter.write("\numask 0"); // So that start file is readable by test
+      if (isFailure) {
+        // Echo PID and throw some error code
+        fileWriter.write("\necho $$ >> " + processStartFile);
+        fileWriter.write("\nexit 111");
+      } else {
+        fileWriter.write("\necho " + startLine + " > " + processStartFile);
+        fileWriter.write("\necho $$ >> " + processStartFile);
+        fileWriter.write("\nexec sleep 100");
+      }
+    }
+    fileWriter.close();
+  }
+
+  private ContainerLaunchContext prepareContainerLaunchContext(File scriptFile,
+      String destFName, boolean putBadFile, int numRetries) {
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    URL resourceAlpha = null;
+    if (putBadFile) {
+      File fileToDelete = new File(tmpDir, "fileToDelete")
+          .getAbsoluteFile();
+      resourceAlpha =
+          URL.fromPath(localFS
+              .makeQualified(new Path(fileToDelete.getAbsolutePath())));
+      fileToDelete.delete();
+    } else {
+      resourceAlpha =
+          URL.fromPath(localFS
+              .makeQualified(new Path(scriptFile.getAbsolutePath())));
+    }
+    LocalResource rsrcAlpha =
+        recordFactory.newRecordInstance(LocalResource.class);
+    rsrcAlpha.setResource(resourceAlpha);
+    rsrcAlpha.setSize(-1);
+    rsrcAlpha.setVisibility(LocalResourceVisibility.APPLICATION);
+    rsrcAlpha.setType(LocalResourceType.FILE);
+    rsrcAlpha.setTimestamp(scriptFile.lastModified());
+    Map<String, LocalResource> localResources = new HashMap<>();
+    localResources.put(destFName, rsrcAlpha);
+    containerLaunchContext.setLocalResources(localResources);
+
+    ContainerRetryContext containerRetryContext = ContainerRetryContext
+        .newInstance(
+            ContainerRetryPolicy.RETRY_ON_SPECIFIC_ERROR_CODES,
+            new HashSet<>(Arrays.asList(Integer.valueOf(111))), numRetries, 0);
+    containerLaunchContext.setContainerRetryContext(containerRetryContext);
+    List<String> commands = Arrays.asList(
+        Shell.getRunScriptCommand(scriptFile));
+    containerLaunchContext.setCommands(commands);
+    return containerLaunchContext;
+  }
+
   protected void testContainerLaunchAndExit(int exitCode) throws IOException,
       InterruptedException, YarnException {
 
@@ -459,7 +898,138 @@ public class TestContainerManager extends BaseContainerManagerTest {
 	  // and verify exit code returned 
 	  testContainerLaunchAndExit(exitCode);	  
   }
-  
+
+  private Map<String, LocalResource> setupLocalResources(String fileName,
+      String symLink) throws Exception {
+    // ////// Create the resources for the container
+    File dir = new File(tmpDir, "dir");
+    dir.mkdirs();
+    File file = new File(dir, fileName);
+    PrintWriter fileWriter = new PrintWriter(file);
+    fileWriter.write("Hello World!");
+    fileWriter.close();
+
+    URL resourceURL = URL.fromPath(FileContext.getLocalFSFileContext()
+        .makeQualified(new Path(file.getAbsolutePath())));
+    LocalResource resource =
+        recordFactory.newRecordInstance(LocalResource.class);
+    resource.setResource(resourceURL);
+    resource.setSize(-1);
+    resource.setVisibility(LocalResourceVisibility.APPLICATION);
+    resource.setType(LocalResourceType.FILE);
+    resource.setTimestamp(file.lastModified());
+    Map<String, LocalResource> localResources =
+        new HashMap<String, LocalResource>();
+    localResources.put(symLink, resource);
+    return localResources;
+  }
+
+  // Start the container
+  // While the container is running, localize new resources.
+  // Verify the symlink is created properly
+  @Test
+  public void testLocalingResourceWhileContainerRunning() throws Exception {
+    // Real del service
+    delSrvc = new DeletionService(exec);
+    delSrvc.init(conf);
+
+    ((NodeManager.NMContext)context).setContainerExecutor(exec);
+    containerManager = createContainerManager(delSrvc);
+    containerManager.init(conf);
+    containerManager.start();
+    // set up local resources
+    Map<String, LocalResource> localResource =
+        setupLocalResources("file", "symLink1");
+    ContainerLaunchContext context =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    context.setLocalResources(localResource);
+
+    // a long running container - sleep
+    context.setCommands(Arrays.asList("sleep 6"));
+    ContainerId cId = createContainerId(0);
+
+    // start the container
+    StartContainerRequest scRequest = StartContainerRequest.newInstance(context,
+        createContainerToken(cId, DUMMY_RM_IDENTIFIER, this.context.getNodeId(),
+            user, this.context.getContainerTokenSecretManager()));
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(Arrays.asList(scRequest));
+    containerManager.startContainers(allRequests);
+    BaseContainerManagerTest
+        .waitForContainerState(containerManager, cId, ContainerState.RUNNING);
+
+    BaseContainerManagerTest.waitForApplicationState(containerManager,
+        cId.getApplicationAttemptId().getApplicationId(),
+        ApplicationState.RUNNING);
+    checkResourceLocalized(cId, "symLink1");
+
+    // Localize new local resources while container is running
+    Map<String, LocalResource> localResource2 =
+        setupLocalResources("file2", "symLink2");
+
+    ResourceLocalizationRequest request =
+        ResourceLocalizationRequest.newInstance(cId, localResource2);
+    containerManager.localize(request);
+
+    // Verify resource is localized and symlink is created.
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      public Boolean get() {
+        try {
+          checkResourceLocalized(cId, "symLink2");
+          return true;
+        } catch (Throwable e) {
+          return false;
+        }
+      }
+    }, 500, 20000);
+
+    BaseContainerManagerTest
+        .waitForContainerState(containerManager, cId, ContainerState.COMPLETE);
+    // Verify container cannot localize resources while at non-running state.
+    try{
+      containerManager.localize(request);
+      Assert.fail();
+    } catch (YarnException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Cannot perform LOCALIZE"));
+    }
+  }
+
+  private void checkResourceLocalized(ContainerId containerId, String symLink) {
+    String appId =
+        containerId.getApplicationAttemptId().getApplicationId().toString();
+    File userCacheDir = new File(localDir, ContainerLocalizer.USERCACHE);
+    File userDir = new File(userCacheDir, user);
+    File appCache = new File(userDir, ContainerLocalizer.APPCACHE);
+    // localDir/usercache/nobody/appcache/application_0_0000
+    File appDir = new File(appCache, appId);
+    // localDir/usercache/nobody/appcache/application_0_0000/container_0_0000_01_000000
+    File containerDir = new File(appDir, containerId.toString());
+    // localDir/usercache/nobody/appcache/application_0_0000/container_0_0000_01_000000/symLink1
+    File targetFile = new File(containerDir, symLink);
+
+    File sysDir =
+        new File(localDir, ResourceLocalizationService.NM_PRIVATE_DIR);
+    // localDir/nmPrivate/application_0_0000
+    File appSysDir = new File(sysDir, appId);
+    // localDir/nmPrivate/application_0_0000/container_0_0000_01_000000
+    File containerSysDir = new File(appSysDir, containerId.toString());
+
+    Assert.assertTrue("AppDir " + appDir.getAbsolutePath() + " doesn't exist!!",
+        appDir.exists());
+    Assert.assertTrue(
+        "AppSysDir " + appSysDir.getAbsolutePath() + " doesn't exist!!",
+        appSysDir.exists());
+    Assert.assertTrue(
+        "containerDir " + containerDir.getAbsolutePath() + " doesn't exist !",
+        containerDir.exists());
+    Assert.assertTrue("containerSysDir " + containerSysDir.getAbsolutePath()
+        + " doesn't exist !", containerDir.exists());
+    Assert.assertTrue(
+        "targetFile " + targetFile.getAbsolutePath() + " doesn't exist !!",
+        targetFile.exists());
+  }
+
   @Test
   public void testLocalFilesCleanup() throws InterruptedException,
       IOException, YarnException {

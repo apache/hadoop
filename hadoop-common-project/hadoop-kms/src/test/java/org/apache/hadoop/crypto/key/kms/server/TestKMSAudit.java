@@ -23,18 +23,24 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.server.KMS.KMSOp;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ThreadUtil;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.Whitebox;
 
 public class TestKMSAudit {
 
@@ -43,7 +49,7 @@ public class TestKMSAudit {
   private FilterOut filterOut;
   private PrintStream capturedOut;
   
-  private KMSAudit kmsAudit; 
+  private KMSAudit kmsAudit;
 
   private static class FilterOut extends FilterOutputStream {
     public FilterOut(OutputStream out) {
@@ -54,6 +60,9 @@ public class TestKMSAudit {
       this.out = out;
     }
   }
+
+  @Rule
+  public final Timeout testTimeout = new Timeout(180000);
 
   @Before
   public void setUp() throws IOException {
@@ -66,8 +75,8 @@ public class TestKMSAudit {
         ThreadUtil.getResourceAsStream("log4j-kmsaudit.properties");
     PropertyConfigurator.configure(is);
     IOUtils.closeStream(is);
-
-    this.kmsAudit = new KMSAudit(1000);
+    Configuration conf = new Configuration();
+    this.kmsAudit = new KMSAudit(conf);
   }
 
   @After
@@ -97,9 +106,9 @@ public class TestKMSAudit {
     kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
     kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
     kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
-    Thread.sleep(1500);
+    kmsAudit.evictCacheForTesting();
     kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
-    Thread.sleep(1500);
+    kmsAudit.evictCacheForTesting();
     String out = getAndResetLogOutput();
     System.out.println(out);
     Assert.assertTrue(
@@ -118,24 +127,87 @@ public class TestKMSAudit {
     UserGroupInformation luser = Mockito.mock(UserGroupInformation.class);
     Mockito.when(luser.getShortUserName()).thenReturn("luser");
     kmsAudit.unauthorized(luser, KMSOp.GENERATE_EEK, "k2");
-    Thread.sleep(1000);
+    kmsAudit.evictCacheForTesting();
     kmsAudit.ok(luser, KMSOp.GENERATE_EEK, "k3", "testmsg");
     kmsAudit.ok(luser, KMSOp.GENERATE_EEK, "k3", "testmsg");
     kmsAudit.ok(luser, KMSOp.GENERATE_EEK, "k3", "testmsg");
     kmsAudit.ok(luser, KMSOp.GENERATE_EEK, "k3", "testmsg");
     kmsAudit.ok(luser, KMSOp.GENERATE_EEK, "k3", "testmsg");
     kmsAudit.unauthorized(luser, KMSOp.GENERATE_EEK, "k3");
+    // wait a bit so the UNAUTHORIZED-triggered cache invalidation happens.
+    Thread.sleep(1000);
     kmsAudit.ok(luser, KMSOp.GENERATE_EEK, "k3", "testmsg");
-    Thread.sleep(2000);
+    kmsAudit.evictCacheForTesting();
     String out = getAndResetLogOutput();
     System.out.println(out);
-    Assert.assertTrue(
-        out.matches(
-            "UNAUTHORIZED\\[op=GENERATE_EEK, key=k2, user=luser\\] "
+
+    // The UNAUTHORIZED will trigger cache invalidation, which then triggers
+    // the aggregated OK (accessCount=5). But the order of the UNAUTHORIZED and
+    // the aggregated OK is arbitrary - no correctness concerns, but flaky here.
+    Assert.assertTrue(out.matches(
+        "UNAUTHORIZED\\[op=GENERATE_EEK, key=k2, user=luser\\] "
             + "OK\\[op=GENERATE_EEK, key=k3, user=luser, accessCount=1, interval=[^m]{1,4}ms\\] testmsg"
             + "OK\\[op=GENERATE_EEK, key=k3, user=luser, accessCount=5, interval=[^m]{1,4}ms\\] testmsg"
             + "UNAUTHORIZED\\[op=GENERATE_EEK, key=k3, user=luser\\] "
+            + "OK\\[op=GENERATE_EEK, key=k3, user=luser, accessCount=1, interval=[^m]{1,4}ms\\] testmsg")
+        || out.matches(
+        "UNAUTHORIZED\\[op=GENERATE_EEK, key=k2, user=luser\\] "
+            + "OK\\[op=GENERATE_EEK, key=k3, user=luser, accessCount=1, interval=[^m]{1,4}ms\\] testmsg"
+            + "UNAUTHORIZED\\[op=GENERATE_EEK, key=k3, user=luser\\] "
+            + "OK\\[op=GENERATE_EEK, key=k3, user=luser, accessCount=5, interval=[^m]{1,4}ms\\] testmsg"
             + "OK\\[op=GENERATE_EEK, key=k3, user=luser, accessCount=1, interval=[^m]{1,4}ms\\] testmsg"));
   }
 
+  @Test
+  public void testAuditLogFormat() throws Exception {
+    UserGroupInformation luser = Mockito.mock(UserGroupInformation.class);
+    Mockito.when(luser.getShortUserName()).thenReturn("luser");
+    kmsAudit.ok(luser, KMSOp.GENERATE_EEK, "k4", "testmsg");
+    kmsAudit.ok(luser, KMSOp.GENERATE_EEK, "testmsg");
+    kmsAudit.evictCacheForTesting();
+    kmsAudit.unauthorized(luser, KMSOp.DECRYPT_EEK, "k4");
+    kmsAudit.error(luser, "method", "url", "testmsg");
+    kmsAudit.unauthenticated("remotehost", "method", "url", "testmsg");
+    String out = getAndResetLogOutput();
+    System.out.println(out);
+    Assert.assertTrue(out.matches(
+        "OK\\[op=GENERATE_EEK, key=k4, user=luser, accessCount=1, interval=[^m]{1,4}ms\\] testmsg"
+            + "OK\\[op=GENERATE_EEK, user=luser\\] testmsg"
+            + "OK\\[op=GENERATE_EEK, key=k4, user=luser, accessCount=1, interval=[^m]{1,4}ms\\] testmsg"
+            + "UNAUTHORIZED\\[op=DECRYPT_EEK, key=k4, user=luser\\] "
+            + "ERROR\\[user=luser\\] Method:'method' Exception:'testmsg'"
+            + "UNAUTHENTICATED RemoteHost:remotehost Method:method URL:url ErrorMsg:'testmsg'"));
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testInitAuditLoggers() throws Exception {
+    // Default should be the simple logger
+    List<KMSAuditLogger> loggers = (List<KMSAuditLogger>) Whitebox
+        .getInternalState(kmsAudit, "auditLoggers");
+    Assert.assertEquals(1, loggers.size());
+    Assert.assertEquals(SimpleKMSAuditLogger.class, loggers.get(0).getClass());
+
+    // Explicitly configure the simple logger. Duplicates are ignored.
+    final Configuration conf = new Configuration();
+    conf.set(KMSConfiguration.KMS_AUDIT_LOGGER_KEY,
+        SimpleKMSAuditLogger.class.getName() + ", "
+            + SimpleKMSAuditLogger.class.getName());
+    final KMSAudit audit = new KMSAudit(conf);
+    loggers =
+        (List<KMSAuditLogger>) Whitebox.getInternalState(audit, "auditLoggers");
+    Assert.assertEquals(1, loggers.size());
+    Assert.assertEquals(SimpleKMSAuditLogger.class, loggers.get(0).getClass());
+
+    // If any loggers unable to load, init should fail.
+    conf.set(KMSConfiguration.KMS_AUDIT_LOGGER_KEY,
+        SimpleKMSAuditLogger.class.getName() + ",unknown");
+    try {
+      new KMSAudit(conf);
+      Assert.fail("loggers configured but invalid, init should fail.");
+    } catch (Exception ex) {
+      GenericTestUtils
+          .assertExceptionContains(KMSConfiguration.KMS_AUDIT_LOGGER_KEY, ex);
+    }
+  }
 }

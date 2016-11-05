@@ -240,6 +240,18 @@ public class TestBloomFilters {
   }
 
   @Test
+  public void testFiltersWithLargeVectorSize() {
+    int hashId = Hash.MURMUR_HASH;
+    Filter filter
+        = new BloomFilter(Integer.MAX_VALUE, hashFunctionNumber, hashId);
+    BloomFilterCommonTester.of(hashId, numInsertions)
+        .withFilterInstance(filter)
+        .withTestCases(ImmutableSet.of(
+                BloomFilterTestStrategy.WRITE_READ_STRATEGY
+        )).test();
+  }
+
+  @Test
   public void testNot() {
     BloomFilter bf = new BloomFilter(8, 1, Hash.JENKINS_HASH);
     bf.bits = BitSet.valueOf(new byte[] { (byte) 0x95 });

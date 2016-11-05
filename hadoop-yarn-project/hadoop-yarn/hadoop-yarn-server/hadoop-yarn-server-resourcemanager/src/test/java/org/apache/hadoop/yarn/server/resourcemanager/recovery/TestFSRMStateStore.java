@@ -113,8 +113,6 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       YarnConfiguration conf = new YarnConfiguration();
       conf.set(YarnConfiguration.FS_RM_STATE_STORE_URI,
           workingDirPathURI.toString());
-      conf.set(YarnConfiguration.FS_RM_STATE_STORE_RETRY_POLICY_SPEC,
-              "100,6000");
       conf.setInt(YarnConfiguration.FS_RM_STATE_STORE_NUM_RETRIES, 8);
       conf.setLong(YarnConfiguration.FS_RM_STATE_STORE_RETRY_INTERVAL_MS,
               900L);
@@ -325,8 +323,6 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
           YarnConfiguration conf = new YarnConfiguration();
           conf.set(YarnConfiguration.FS_RM_STATE_STORE_URI,
               workingDirPathURI.toString());
-          conf.set(YarnConfiguration.FS_RM_STATE_STORE_RETRY_POLICY_SPEC,
-              "100,6000");
           this.store = new TestFileSystemRMStore(conf) {
             Version storedVersion = null;
 

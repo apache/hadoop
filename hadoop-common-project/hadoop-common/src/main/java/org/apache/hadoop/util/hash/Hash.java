@@ -22,6 +22,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_UTIL_HASH_TYPE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_UTIL_HASH_TYPE_KEY;
+
 /**
  * This class represents a common API for hashing functions.
  */
@@ -59,7 +62,8 @@ public abstract class Hash {
    * @return one of the predefined constants
    */
   public static int getHashType(Configuration conf) {
-    String name = conf.get("hadoop.util.hash.type", "murmur");
+    String name = conf.get(HADOOP_UTIL_HASH_TYPE_KEY,
+        HADOOP_UTIL_HASH_TYPE_DEFAULT);
     return parseHashType(name);
   }
   

@@ -122,12 +122,20 @@ public class RpcCallCache {
     };
   }
   
-  /** Return the program name */
+  /**
+   * Return the program name.
+   * @return RPC program name
+   */
   public String getProgram() {
     return program;
   }
 
-  /** Mark a request as completed and add corresponding response to the cache */
+  /**
+   * Mark a request as completed and add corresponding response to the cache.
+   * @param clientId client IP address
+   * @param xid transaction id
+   * @param response RPC response
+   */
   public void callCompleted(InetAddress clientId, int xid, RpcResponse response) {
     ClientRequest req = new ClientRequest(clientId, xid);
     CacheEntry e;
@@ -140,6 +148,9 @@ public class RpcCallCache {
   /**
    * Check the cache for an entry. If it does not exist, add the request
    * as in progress.
+   * @param clientId client IP address
+   * @param xid transaction id
+   * @return cached entry
    */
   public CacheEntry checkOrAddToCache(InetAddress clientId, int xid) {
     ClientRequest req = new ClientRequest(clientId, xid);
@@ -154,14 +165,17 @@ public class RpcCallCache {
     return e;
   }
   
-  /** Return number of cached entries */
+  /**
+   * Return number of cached entries.
+   * @return cache size
+   */
   public int size() {
     return map.size();
   }
   
   /** 
-   * Iterator to the cache entries 
-   * @return iterator
+   * Iterator to the cache entries.
+   * @return iterator cache iterator
    */
   @VisibleForTesting
   public Iterator<Entry<ClientRequest, CacheEntry>> iterator() {

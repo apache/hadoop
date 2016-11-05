@@ -388,5 +388,95 @@
         </comparator>
       </comparators>
     </test>
+
+    <test>
+      <description>Test success of getFileEncryptionInfo on a EZ file</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /src</command>
+        <crypto-admin-command>-createZone -path /src -keyName myKey</crypto-admin-command>
+        <command>-fs NAMENODE -touchz /src/file</command>
+        <crypto-admin-command>-getFileEncryptionInfo -path /src/file</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /src</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>keyName: myKey, ezKeyVersionName: myKey@0</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test failure of getFileEncryptionInfo on a non-EZ file</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /src</command>
+        <command>-fs NAMENODE -touchz /src/cleartext</command>
+        <crypto-admin-command>-getFileEncryptionInfo -path /src/cleartext</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /src</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>No FileEncryptionInfo found for path</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test failure of getFileEncryptionInfo on a non-exist file</description>
+      <test-commands>
+        <crypto-admin-command>-getFileEncryptionInfo -path /src/file</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /src</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>FileNotFoundException:</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test failure of getFileEncryptionInfo on a EZ dir</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /src</command>
+        <crypto-admin-command>-createZone -path /src -keyName myKey</crypto-admin-command>
+        <crypto-admin-command>-getFileEncryptionInfo -path /src</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /src</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>No FileEncryptionInfo found for path </expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test failure of getFileEncryptionInfo on a EZ subdir</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /src</command>
+        <crypto-admin-command>-createZone -path /src -keyName myKey</crypto-admin-command>
+        <command>-fs NAMENODE -mkdir /src/dir</command>
+        <crypto-admin-command>-getFileEncryptionInfo -path /src/dir</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /src</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>No FileEncryptionInfo found for path </expected-output>
+        </comparator>
+      </comparators>
+    </test>
   </tests>
 </configuration>

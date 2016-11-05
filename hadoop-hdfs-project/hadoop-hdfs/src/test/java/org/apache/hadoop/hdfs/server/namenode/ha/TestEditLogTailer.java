@@ -17,15 +17,20 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.BindException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -50,6 +55,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import com.google.common.base.Supplier;
+import org.mockito.Mockito;
 
 @RunWith(Parameterized.class)
 public class TestEditLogTailer {
@@ -160,21 +166,34 @@ public class TestEditLogTailer {
     conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_KEY, 100);
-    
-    // Have to specify IPC ports so the NNs can talk to each other.
-    MiniDFSNNTopology topology = new MiniDFSNNTopology()
-        .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
-            .addNN(new MiniDFSNNTopology.NNConf("nn1")
-                .setIpcPort(ServerSocketUtil.getPort(0, 100)))
-            .addNN(new MiniDFSNNTopology.NNConf("nn2")
-                .setIpcPort(ServerSocketUtil.getPort(0, 100)))
-            .addNN(new MiniDFSNNTopology.NNConf("nn3")
-                .setIpcPort(ServerSocketUtil.getPort(0, 100))));
 
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-      .nnTopology(topology)
-      .numDataNodes(0)
-      .build();
+    MiniDFSCluster cluster = null;
+    for (int i = 0; i < 5; i++) {
+      try {
+        // Have to specify IPC ports so the NNs can talk to each other.
+        int[] ports = ServerSocketUtil.getPorts(3);
+        MiniDFSNNTopology topology = new MiniDFSNNTopology()
+            .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
+                .addNN(new MiniDFSNNTopology.NNConf("nn1")
+                    .setIpcPort(ports[0]))
+                .addNN(new MiniDFSNNTopology.NNConf("nn2")
+                    .setIpcPort(ports[1]))
+                .addNN(new MiniDFSNNTopology.NNConf("nn3")
+                    .setIpcPort(ports[2])));
+
+        cluster = new MiniDFSCluster.Builder(conf)
+          .nnTopology(topology)
+          .numDataNodes(0)
+          .build();
+        break;
+      } catch (BindException e) {
+        // retry if race on ports given by ServerSocketUtil#getPorts
+        continue;
+      }
+    }
+    if (cluster == null) {
+      fail("failed to start mini cluster.");
+    }
     try {
       cluster.transitionToActive(activeIndex);
       waitForLogRollInSharedDir(cluster, 3);
@@ -248,5 +267,46 @@ public class TestEditLogTailer {
         return expectedInProgressLog.exists() || expectedFinalizedLog.exists();
       }
     }, 100, 10000);
+  }
+
+  @Test(timeout=20000)
+  public void testRollEditTimeoutForActiveNN() throws IOException {
+    Configuration conf = getConf();
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_KEY, 5); // 5s
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_KEY, 100);
+
+    HAUtil.setAllowStandbyReads(conf, true);
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleHATopology())
+        .numDataNodes(0)
+        .build();
+    cluster.waitActive();
+
+    cluster.transitionToActive(0);
+
+    try {
+      EditLogTailer tailer = Mockito.spy(
+          cluster.getNamesystem(1).getEditLogTailer());
+      AtomicInteger flag = new AtomicInteger(0);
+
+      // Return a slow roll edit process.
+      when(tailer.getNameNodeProxy()).thenReturn(
+          new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+              Thread.sleep(30000);  // sleep for 30 seconds.
+              assertTrue(Thread.currentThread().isInterrupted());
+              flag.addAndGet(1);
+              return null;
+            }
+          }
+      );
+      tailer.triggerActiveLogRoll();
+      assertEquals(0, flag.get());
+    } finally {
+      cluster.shutdown();
+    }
   }
 }

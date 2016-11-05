@@ -422,7 +422,7 @@ public class Job extends JobContextImpl implements JobContext {
    * The user-specified job name.
    */
   public String getJobName() {
-    if (state == JobState.DEFINE) {
+    if (state == JobState.DEFINE || status == null) {
       return super.getJobName();
     }
     ensureState(JobState.RUNNING);

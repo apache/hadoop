@@ -24,6 +24,7 @@ import java.io.FilterOutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
 /**
  * A Checksum output stream.
@@ -60,8 +61,11 @@ public class IFileOutputStream extends FilterOutputStream {
       return;
     }
     closed = true;
-    finish();
-    out.close();
+    try {
+      finish();
+    } finally {
+      IOUtils.closeStream(out);
+    }
   }
 
   /**

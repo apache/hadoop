@@ -99,6 +99,8 @@ The allocation file must be in XML format. The format contains five types of ele
 
     * maxResources: maximum resources a queue is allowed, in the form "X mb, Y vcores". A queue will never be assigned a container that would put its aggregate usage over this limit.
 
+    * maxChildResources: maximum resources an ad hoc child queue is allowed, in the form "X mb, Y vcores". Any ad hoc queue that is a direct child of a queue with this property set will have it's maxResources property set accordingly.
+
     * maxRunningApps: limit the number of apps from the queue to run at once
 
     * maxAMShare: limit the fraction of the queue's fair share that can be used to run application masters. This property can only be used for leaf queues. For example, if set to 1.0f, then AMs in the leaf queue can take up to 100% of both the memory and CPU fair share. The value of -1.0f will disable this feature and the amShare will not be checked. The default value is 0.5f.
@@ -176,6 +178,7 @@ The allocation file must be in XML format. The format contains five types of ele
        user queues under it -->
   <queue name="secondary_group_queue" type="parent">
   <weight>3.0</weight>
+  <maxChildResources>4096 mb,4vcores</maxChildResources>
   </queue>
 
   <user name="sample_user">

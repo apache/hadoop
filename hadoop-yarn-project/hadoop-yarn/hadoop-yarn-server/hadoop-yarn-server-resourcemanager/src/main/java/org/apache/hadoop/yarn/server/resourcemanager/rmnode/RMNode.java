@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
-import org.apache.hadoop.yarn.server.api.records.QueuedContainersStatus;
+import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 
 /**
  * Node managers information on available resources 
@@ -170,9 +170,15 @@ public interface RMNode {
   
   public List<Container> pullNewlyIncreasedContainers();
 
-  QueuedContainersStatus getQueuedContainersStatus();
+  OpportunisticContainersStatus getOpportunisticContainersStatus();
 
   long getUntrackedTimeStamp();
 
   void setUntrackedTimeStamp(long timeStamp);
+  /*
+   * Optional decommissioning timeout in second
+   * (null indicates default timeout).
+   * @return the decommissioning timeout in second.
+   */
+  Integer getDecommissioningTimeout();
 }

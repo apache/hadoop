@@ -29,7 +29,7 @@ import java.util.Properties;
  */
 public interface AuthenticationHandler {
 
-  public static final String WWW_AUTHENTICATE = "WWW-Authenticate";
+  String WWW_AUTHENTICATE = HttpConstants.WWW_AUTHENTICATE_HEADER;
 
   /**
    * Returns the authentication type of the authentication handler.

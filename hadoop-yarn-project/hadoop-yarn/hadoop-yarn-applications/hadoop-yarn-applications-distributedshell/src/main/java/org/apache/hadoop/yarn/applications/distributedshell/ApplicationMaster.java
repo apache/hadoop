@@ -90,6 +90,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.URL;
+import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
@@ -912,7 +913,8 @@ public class ApplicationMaster {
     }
 
     @Override
-    public void onContainersResourceChanged(List<Container> containers) {}
+    public void onContainersUpdated(
+        List<UpdatedContainer> containers) {}
 
     @Override
     public void onShutdownRequest() {

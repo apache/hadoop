@@ -31,10 +31,14 @@ import com.google.common.annotations.VisibleForTesting;
 
 @Metrics(about="Metrics for node manager", context="yarn")
 public class NodeManagerMetrics {
+  // CHECKSTYLE:OFF:VisibilityModifier
   @Metric MutableCounterInt containersLaunched;
   @Metric MutableCounterInt containersCompleted;
   @Metric MutableCounterInt containersFailed;
   @Metric MutableCounterInt containersKilled;
+  @Metric MutableCounterInt containersRolledBackOnFailure;
+  @Metric("# of reInitializing containers")
+      MutableGaugeInt containersReIniting;
   @Metric("# of initializing containers")
       MutableGaugeInt containersIniting;
   @Metric MutableGaugeInt containersRunning;
@@ -56,6 +60,7 @@ public class NodeManagerMetrics {
       MutableGaugeInt goodLocalDirsDiskUtilizationPerc;
   @Metric("Disk utilization % on good log dirs")
       MutableGaugeInt goodLogDirsDiskUtilizationPerc;
+  // CHECKSTYLE:ON:VisibilityModifier
 
   private JvmMetrics jvmMetrics = null;
 
@@ -89,6 +94,10 @@ public class NodeManagerMetrics {
     containersCompleted.incr();
   }
 
+  public void rollbackContainerOnFailure() {
+    containersRolledBackOnFailure.incr();
+  }
+
   public void failedContainer() {
     containersFailed.incr();
   }
@@ -111,6 +120,14 @@ public class NodeManagerMetrics {
 
   public void endRunningContainer() {
     containersRunning.decr();
+  }
+
+  public void reInitingContainer() {
+    containersReIniting.incr();
+  }
+
+  public void endReInitingContainer() {
+    containersReIniting.decr();
   }
 
   public void allocateContainer(Resource res) {
@@ -211,4 +228,13 @@ public class NodeManagerMetrics {
     return goodLocalDirsDiskUtilizationPerc.value();
   }
 
+  @VisibleForTesting
+  public int getReInitializingContainer() {
+    return containersReIniting.value();
+  }
+
+  @VisibleForTesting
+  public int getContainersRolledbackOnFailure() {
+    return containersRolledBackOnFailure.value();
+  }
 }

@@ -29,15 +29,18 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import com.google.common.base.Supplier;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
@@ -179,6 +182,42 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     } finally {
       FileUtil.fullyDelete(procfsRootDir);
     }
+  }
+
+  // Test that even if VMEM_PMEM_CHECK is not enabled, container monitor will
+  // run.
+  @Test
+  public void testContainerMonitor() throws Exception {
+    conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, false);
+    conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, false);
+    containerManager.start();
+    ContainerLaunchContext context =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    context.setCommands(Arrays.asList("sleep 6"));
+    ContainerId cId = createContainerId(1705);
+
+    // start the container
+    StartContainerRequest scRequest = StartContainerRequest.newInstance(context,
+        createContainerToken(cId, DUMMY_RM_IDENTIFIER, this.context.getNodeId(),
+            user, this.context.getContainerTokenSecretManager()));
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(Arrays.asList(scRequest));
+    containerManager.startContainers(allRequests);
+    BaseContainerManagerTest
+        .waitForContainerState(containerManager, cId, ContainerState.RUNNING);
+    Thread.sleep(2000);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      public Boolean get() {
+        try {
+          return containerManager.getContainerStatuses(
+              GetContainerStatusesRequest.newInstance(Arrays.asList(cId)))
+              .getContainerStatuses().get(0).getHost() != null;
+        } catch (Exception e) {
+          return false;
+        }
+      }
+
+    }, 300, 10000);
   }
 
   @Test

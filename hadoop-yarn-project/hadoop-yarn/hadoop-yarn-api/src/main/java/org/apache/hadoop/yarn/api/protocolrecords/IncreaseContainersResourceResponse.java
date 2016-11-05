@@ -77,6 +77,7 @@ public abstract class IncreaseContainersResourceResponse {
   /**
    * Get the containerId-to-exception map in which the exception indicates
    * error from each container for failed requests.
+   * @return map of containerId-to-exception
    */
   @Public
   @Unstable

@@ -64,7 +64,9 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.ipc.ExternalCall;
 import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -266,7 +268,6 @@ public class NameNode extends ReconfigurableBase implements
     DFS_NAMENODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
     DFS_HA_FENCE_METHODS_KEY,
     DFS_HA_ZKFC_PORT_KEY,
-    DFS_HA_FENCE_METHODS_KEY
   };
   
   /**
@@ -407,7 +408,15 @@ public class NameNode extends ReconfigurableBase implements
   public NamenodeProtocols getRpcServer() {
     return rpcServer;
   }
-  
+
+  public void queueExternalCall(ExternalCall<?> extCall)
+      throws IOException, InterruptedException {
+    if (rpcServer == null) {
+      throw new RetriableException("Namenode is in startup mode");
+    }
+    rpcServer.getClientRpcServer().queueCall(extCall);
+  }
+
   public static void initMetrics(Configuration conf, NamenodeRole role) {
     metrics = NameNodeMetrics.create(conf, role);
   }
@@ -656,7 +665,7 @@ public class NameNode extends ReconfigurableBase implements
 
   NamenodeRegistration setRegistration() {
     nodeRegistration = new NamenodeRegistration(
-        NetUtils.getHostPortString(rpcServer.getRpcAddress()),
+        NetUtils.getHostPortString(getNameNodeAddress()),
         NetUtils.getHostPortString(getHttpAddress()),
         getFSImage().getStorage(), getRole());
     return nodeRegistration;
@@ -719,7 +728,7 @@ public class NameNode extends ReconfigurableBase implements
       // This is expected for MiniDFSCluster. Set it now using 
       // the RPC server's bind address.
       clientNamenodeAddress = 
-          NetUtils.getHostPortString(rpcServer.getRpcAddress());
+          NetUtils.getHostPortString(getNameNodeAddress());
       LOG.info("Clients are to use " + clientNamenodeAddress + " to access"
           + " this namenode/service.");
     }
@@ -806,7 +815,7 @@ public class NameNode extends ReconfigurableBase implements
         LOG.warn("ServicePlugin " + p + " could not be started", t);
       }
     }
-    LOG.info(getRole() + " RPC up at: " + rpcServer.getRpcAddress());
+    LOG.info(getRole() + " RPC up at: " + getNameNodeAddress());
     if (rpcServer.getServiceRpcAddress() != null) {
       LOG.info(getRole() + " service RPC up at: "
           + rpcServer.getServiceRpcAddress());
@@ -1037,7 +1046,7 @@ public class NameNode extends ReconfigurableBase implements
    * @return NameNode RPC address in "host:port" string form
    */
   public String getNameNodeAddressHostPortString() {
-    return NetUtils.getHostPortString(rpcServer.getRpcAddress());
+    return NetUtils.getHostPortString(getNameNodeAddress());
   }
 
   /**
@@ -1046,7 +1055,7 @@ public class NameNode extends ReconfigurableBase implements
    */
   public InetSocketAddress getServiceRpcAddress() {
     final InetSocketAddress serviceAddr = rpcServer.getServiceRpcAddress();
-    return serviceAddr == null ? rpcServer.getRpcAddress() : serviceAddr;
+    return serviceAddr == null ? getNameNodeAddress() : serviceAddr;
   }
 
   /**

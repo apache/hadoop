@@ -100,7 +100,8 @@
       <item name="Memory Storage Support" href="hadoop-project-dist/hadoop-hdfs/MemoryStorage.html"/>
       <item name="Synthetic Load Generator" href="hadoop-project-dist/hadoop-hdfs/SLGUserGuide.html"/>
       <item name="Erasure Coding" href="hadoop-project-dist/hadoop-hdfs/HDFSErasureCoding.html"/>
-    </menu>
+      <item name="Disk Balancer" href="hadoop-project-dist/hadoop-hdfs/HDFSDiskbalancer.html"/>
+   </menu>
 
     <menu name="MapReduce" inherit="top">
       <item name="Tutorial" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html"/>
@@ -130,11 +131,11 @@
       <item name="Writing YARN Applications" href="hadoop-yarn/hadoop-yarn-site/WritingYarnApplications.html"/>
       <item name="YARN Application Security" href="hadoop-yarn/hadoop-yarn-site/YarnApplicationSecurity.html"/>
       <item name="NodeManager" href="hadoop-yarn/hadoop-yarn-site/NodeManager.html"/>
-      <item name="DockerContainerExecutor" href="hadoop-yarn/hadoop-yarn-site/DockerContainerExecutor.html"/>
       <item name="Using CGroups" href="hadoop-yarn/hadoop-yarn-site/NodeManagerCgroups.html"/>
       <item name="Secure Containers" href="hadoop-yarn/hadoop-yarn-site/SecureContainer.html"/>
       <item name="Registry" href="hadoop-yarn/hadoop-yarn-site/registry/index.html"/>
       <item name="Reservation System" href="hadoop-yarn/hadoop-yarn-site/ReservationSystem.html"/>
+      <item name="Graceful Decommission" href="hadoop-yarn/hadoop-yarn-site/GracefulDecommission.html"/>
     </menu>
 
     <menu name="YARN REST APIs" inherit="top">
@@ -168,6 +169,7 @@
       <item name="GridMix" href="hadoop-gridmix/GridMix.html"/>
       <item name="Rumen" href="hadoop-rumen/Rumen.html"/>
       <item name="Scheduler Load Simulator" href="hadoop-sls/SchedulerLoadSimulator.html"/>
+      <item name="Hadoop Benchmarking" href="hadoop-project-dist/hadoop-common/Benchmarking.html"/>
     </menu>
 
     <menu name="Reference" inherit="top">

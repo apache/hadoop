@@ -468,8 +468,8 @@ public abstract class BlockListAsLongs implements Iterable<BlockReportReplica> {
       long[] longs = new long[2+values.size()];
       longs[0] = finalizedBlocks;
       longs[1] = numBlocks - finalizedBlocks;
-      for (int i=0; i < longs.length; i++) {
-        longs[i] = values.get(i);
+      for(int i=0; i<values.size(); i++) {
+        longs[2+i] = values.get(i);
       }
       return longs;
     }

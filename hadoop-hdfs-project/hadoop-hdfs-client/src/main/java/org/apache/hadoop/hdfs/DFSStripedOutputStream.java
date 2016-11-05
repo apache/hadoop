@@ -56,6 +56,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
+import org.apache.hadoop.io.ByteBufferPool;
+import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -75,6 +77,9 @@ import org.apache.htrace.core.TraceScope;
  */
 @InterfaceAudience.Private
 public class DFSStripedOutputStream extends DFSOutputStream {
+
+  private static final ByteBufferPool BUFFER_POOL = new ElasticByteBufferPool();
+
   static class MultipleBlockingQueue<T> {
     private final List<BlockingQueue<T>> queues;
 
@@ -208,7 +213,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
 
       buffers = new ByteBuffer[numAllBlocks];
       for (int i = 0; i < buffers.length; i++) {
-        buffers[i] = ByteBuffer.wrap(byteArrayManager.newByteArray(cellSize));
+        buffers[i] = BUFFER_POOL.getBuffer(useDirectBuffer(), cellSize);
       }
     }
 
@@ -236,7 +241,10 @@ public class DFSStripedOutputStream extends DFSOutputStream {
 
     private void release() {
       for (int i = 0; i < numAllBlocks; i++) {
-        byteArrayManager.release(buffers[i].array());
+        if (buffers[i] != null) {
+          BUFFER_POOL.putBuffer(buffers[i]);
+          buffers[i] = null;
+        }
       }
     }
 
@@ -309,6 +317,10 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     }
     currentPackets = new DFSPacket[streamers.size()];
     setCurrentStreamer(0);
+  }
+
+  private boolean useDirectBuffer() {
+    return encoder.preferDirectBuffer();
   }
 
   StripedDataStreamer getStripedDataStreamer(int i) {
@@ -786,6 +798,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
 
   @Override
   void abort() throws IOException {
+    final MultipleIOException.Builder b = new MultipleIOException.Builder();
     synchronized (this) {
       if (isClosed()) {
         return;
@@ -796,9 +809,19 @@ public class DFSStripedOutputStream extends DFSOutputStream {
                 + (dfsClient.getConf().getHdfsTimeout() / 1000)
                 + " seconds expired."));
       }
-      closeThreads(true);
+
+      try {
+        closeThreads(true);
+      } catch (IOException e) {
+        b.add(e);
+      }
     }
+
     dfsClient.endFileLease(fileId);
+    final IOException ioe = b.build();
+    if (ioe != null) {
+      throw ioe;
+    }
   }
 
   @Override
@@ -907,11 +930,20 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     if (current.isHealthy()) {
       try {
         DataChecksum sum = getDataChecksum();
-        sum.calculateChunkedSums(buffer.array(), 0, len, checksumBuf, 0);
+        if (buffer.isDirect()) {
+          ByteBuffer directCheckSumBuf =
+              BUFFER_POOL.getBuffer(true, checksumBuf.length);
+          sum.calculateChunkedSums(buffer, directCheckSumBuf);
+          directCheckSumBuf.get(checksumBuf);
+          BUFFER_POOL.putBuffer(directCheckSumBuf);
+        } else {
+          sum.calculateChunkedSums(buffer.array(), 0, len, checksumBuf, 0);
+        }
+
         for (int i = 0; i < len; i += sum.getBytesPerChecksum()) {
           int chunkLen = Math.min(sum.getBytesPerChecksum(), len - i);
           int ckOffset = i / sum.getBytesPerChecksum() * getChecksumSize();
-          super.writeChunk(buffer.array(), i, chunkLen, checksumBuf, ckOffset,
+          super.writeChunk(buffer, chunkLen, checksumBuf, ckOffset,
               getChecksumSize());
         }
       } catch(Exception e) {

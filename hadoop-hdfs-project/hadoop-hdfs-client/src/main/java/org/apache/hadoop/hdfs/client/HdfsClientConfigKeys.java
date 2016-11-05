@@ -97,9 +97,6 @@ public interface HdfsClientConfigKeys {
   int     DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT = 3;
   String  DFS_CLIENT_CONTEXT = "dfs.client.context";
   String  DFS_CLIENT_CONTEXT_DEFAULT = "default";
-  String  DFS_CLIENT_USE_LEGACY_BLOCKREADER =
-      "dfs.client.use.legacy.blockreader";
-  boolean DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT = false;
   String  DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL =
       "dfs.client.use.legacy.blockreader.local";
   boolean DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT = false;
@@ -134,15 +131,11 @@ public interface HdfsClientConfigKeys {
           "dfs.client.key.provider.cache.expiry";
   long    DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT =
               TimeUnit.DAYS.toMillis(10); // 10 days
-  String  DFS_HDFS_BLOCKS_METADATA_ENABLED =
-      "dfs.datanode.hdfs-blocks-metadata.enabled";
-  boolean DFS_HDFS_BLOCKS_METADATA_ENABLED_DEFAULT = false;
 
   String  DFS_DATANODE_KERBEROS_PRINCIPAL_KEY =
       "dfs.datanode.kerberos.principal";
   String  DFS_DATANODE_READAHEAD_BYTES_KEY = "dfs.datanode.readahead.bytes";
   long    DFS_DATANODE_READAHEAD_BYTES_DEFAULT = 4 * 1024 * 1024; // 4MB
-  String  DFS_ENCRYPTION_KEY_PROVIDER_URI = "dfs.encryption.key.provider.uri";
 
   String DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY =
       "dfs.encrypt.data.transfer.cipher.suites";

@@ -33,9 +33,9 @@ import java.util.Arrays;
  * This class is immutable.
  */
 @InterfaceAudience.LimitedPrivate({"HBase", "HDFS", "Hive", "MapReduce",
-    "Pig", "YARN"})
+    "Pig", "Spark", "YARN"})
 @InterfaceStability.Evolving
-public class CallerContext {
+public final class CallerContext {
   public static final Charset SIGNATURE_ENCODING = StandardCharsets.UTF_8;
   /** The caller context.
    *
@@ -54,7 +54,7 @@ public class CallerContext {
    */
   private final byte[] signature;
 
-  public CallerContext(Builder builder) {
+  private CallerContext(Builder builder) {
     this.context = builder.context;
     this.signature = builder.signature;
   }

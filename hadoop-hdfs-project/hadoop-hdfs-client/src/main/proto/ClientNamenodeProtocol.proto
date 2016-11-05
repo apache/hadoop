@@ -79,6 +79,7 @@ message CreateRequestProto {
   required uint32 replication = 6; // Short: Only 16 bits used
   required uint64 blockSize = 7;
   repeated CryptoProtocolVersionProto cryptoProtocolVersion = 8;
+  optional FsPermissionProto unmasked = 9;
 }
 
 message CreateResponseProto {
@@ -245,6 +246,7 @@ message Rename2RequestProto {
   required string src = 1;
   required string dst = 2;
   required bool overwriteDest = 3;
+  optional bool moveToTrash = 4;
 }
 
 message Rename2ResponseProto { // void response
@@ -263,6 +265,7 @@ message MkdirsRequestProto {
   required string src = 1;
   required FsPermissionProto masked = 2;
   required bool createParent = 3;
+  optional FsPermissionProto unmasked = 4;
 }
 message MkdirsResponseProto {
     required bool result = 1;

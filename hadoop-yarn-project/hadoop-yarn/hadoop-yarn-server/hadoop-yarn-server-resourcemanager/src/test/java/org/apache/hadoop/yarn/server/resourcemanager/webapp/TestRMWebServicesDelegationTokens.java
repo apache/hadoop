@@ -689,7 +689,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
       getDelegationTokenFromResponse(ClientResponse response)
           throws IOException, ParserConfigurationException, SAXException,
           JSONException {
-    if (response.getType().toString().equals(MediaType.APPLICATION_JSON)) {
+    if (response.getType().toString().contains(MediaType.APPLICATION_JSON)) {
       return getDelegationTokenFromJson(response.getEntity(JSONObject.class));
     }
     return getDelegationTokenFromXML(response.getEntity(String.class));
@@ -760,7 +760,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
 
   private static String generateRenewTokenBody(String mediaType, String token) {
     String body = "";
-    if (mediaType.equals(MediaType.APPLICATION_JSON)) {
+    if (mediaType.contains(MediaType.APPLICATION_JSON)) {
       body = "{\"token\": \"" + token + "\" }";
     } else {
       body =

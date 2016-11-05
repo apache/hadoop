@@ -24,12 +24,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
-import org.apache.hadoop.yarn.server.api.records.QueuedContainersStatus;
+import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.ClusterMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * The NodeQueueLoadMonitor keeps track of load metrics (such as queue length
@@ -103,16 +105,23 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
       new ConcurrentHashMap<>();
   private final LoadComparator comparator;
   private QueueLimitCalculator thresholdCalculator;
+  private ReentrantReadWriteLock sortedNodesLock = new ReentrantReadWriteLock();
+  private ReentrantReadWriteLock clusterNodesLock =
+      new ReentrantReadWriteLock();
 
   Runnable computeTask = new Runnable() {
     @Override
     public void run() {
-      synchronized (sortedNodes) {
+      ReentrantReadWriteLock.WriteLock writeLock = sortedNodesLock.writeLock();
+      writeLock.lock();
+      try {
         sortedNodes.clear();
         sortedNodes.addAll(sortNodes());
         if (thresholdCalculator != null) {
           thresholdCalculator.update();
         }
+      } finally {
+        writeLock.unlock();
       }
     }
   };
@@ -166,9 +175,16 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
   @Override
   public void removeNode(RMNode removedRMNode) {
     LOG.debug("Node delete event for: " + removedRMNode.getNode().getName());
-    synchronized (this.clusterNodes) {
-      if (this.clusterNodes.containsKey(removedRMNode.getNodeID())) {
-        this.clusterNodes.remove(removedRMNode.getNodeID());
+    ReentrantReadWriteLock.WriteLock writeLock = clusterNodesLock.writeLock();
+    writeLock.lock();
+    ClusterNode node;
+    try {
+      node = this.clusterNodes.remove(removedRMNode.getNodeID());
+    } finally {
+      writeLock.unlock();
+    }
+    if (LOG.isDebugEnabled()) {
+      if (node != null) {
         LOG.debug("Delete ClusterNode: " + removedRMNode.getNodeID());
       } else {
         LOG.debug("Node not in list!");
@@ -179,14 +195,16 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
   @Override
   public void updateNode(RMNode rmNode) {
     LOG.debug("Node update event from: " + rmNode.getNodeID());
-    QueuedContainersStatus queuedContainersStatus =
-        rmNode.getQueuedContainersStatus();
+    OpportunisticContainersStatus opportunisticContainersStatus =
+        rmNode.getOpportunisticContainersStatus();
     int estimatedQueueWaitTime =
-        queuedContainersStatus.getEstimatedQueueWaitTime();
-    int waitQueueLength = queuedContainersStatus.getWaitQueueLength();
+        opportunisticContainersStatus.getEstimatedQueueWaitTime();
+    int waitQueueLength = opportunisticContainersStatus.getWaitQueueLength();
     // Add nodes to clusterNodes. If estimatedQueueTime is -1, ignore node
     // UNLESS comparator is based on queue length.
-    synchronized (this.clusterNodes) {
+    ReentrantReadWriteLock.WriteLock writeLock = clusterNodesLock.writeLock();
+    writeLock.lock();
+    try {
       ClusterNode currentNode = this.clusterNodes.get(rmNode.getNodeID());
       if (currentNode == null) {
         if (estimatedQueueWaitTime != -1
@@ -222,6 +240,8 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
               "wait queue length [" + currentNode.queueLength + "]");
         }
       }
+    } finally {
+      writeLock.unlock();
     }
   }
 
@@ -245,15 +265,22 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
    * @return ordered list of nodes
    */
   public List<NodeId> selectLeastLoadedNodes(int k) {
-    synchronized (this.sortedNodes) {
-      return ((k < this.sortedNodes.size()) && (k >= 0)) ?
+    ReentrantReadWriteLock.ReadLock readLock = sortedNodesLock.readLock();
+    readLock.lock();
+    try {
+      List<NodeId> retVal = ((k < this.sortedNodes.size()) && (k >= 0)) ?
           new ArrayList<>(this.sortedNodes).subList(0, k) :
           new ArrayList<>(this.sortedNodes);
+      return Collections.unmodifiableList(retVal);
+    } finally {
+      readLock.unlock();
     }
   }
 
   private List<NodeId> sortNodes() {
-    synchronized (this.clusterNodes) {
+    ReentrantReadWriteLock.ReadLock readLock = clusterNodesLock.readLock();
+    readLock.lock();
+    try {
       ArrayList aList = new ArrayList<>(this.clusterNodes.values());
       List<NodeId> retList = new ArrayList<>();
       Object[] nodes = aList.toArray();
@@ -267,6 +294,8 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
         retList.add(((ClusterNode)nodes[j]).nodeId);
       }
       return retList;
+    } finally {
+      readLock.unlock();
     }
   }
 

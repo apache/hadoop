@@ -38,7 +38,6 @@ HDFS High Availability
         * [Securing access to ZooKeeper](#Securing_access_to_ZooKeeper)
         * [Verifying automatic failover](#Verifying_automatic_failover)
     * [Automatic Failover FAQ](#Automatic_Failover_FAQ)
-    * [BookKeeper as a Shared storage (EXPERIMENTAL)](#BookKeeper_as_a_Shared_storage_EXPERIMENTAL)
 
 Purpose
 -------
@@ -87,7 +86,7 @@ In order to deploy an HA cluster, you should prepare the following:
 
 * **NameNode machines** - the machines on which you run the Active and Standby NameNodes should have equivalent hardware to each other, and equivalent hardware to what would be used in a non-HA cluster.
 
-* **Shared storage** - you will need to have a shared directory which the NameNode machines have read/write access to. Typically this is a remote filer which supports NFS and is mounted on each of the NameNode machines. Currently only a single shared edits directory is supported. Thus, the availability of the system is limited by the availability of this shared edits directory, and therefore in order to remove all single points of failure there needs to be redundancy for the shared edits directory. Specifically, multiple network paths to the storage, and redundancy in the storage itself (disk, network, and power). Beacuse of this, it is recommended that the shared storage server be a high-quality dedicated NAS appliance rather than a simple Linux server.
+* **Shared storage** - you will need to have a shared directory which the NameNode machines have read/write access to. Typically this is a remote filer which supports NFS and is mounted on each of the NameNode machines. Currently only a single shared edits directory is supported. Thus, the availability of the system is limited by the availability of this shared edits directory, and therefore in order to remove all single points of failure there needs to be redundancy for the shared edits directory. Specifically, multiple network paths to the storage, and redundancy in the storage itself (disk, network, and power). Because of this, it is recommended that the shared storage server be a high-quality dedicated NAS appliance rather than a simple Linux server.
 
 Note that, in an HA cluster, the Standby NameNodes also perform checkpoints of the namespace state, and thus it is not necessary to run a Secondary NameNode, CheckpointNode, or BackupNode in an HA cluster. In fact, to do so would be an error. This also allows one who is reconfiguring a non-HA-enabled HDFS cluster to be HA-enabled to reuse the hardware which they had previously dedicated to the Secondary NameNode.
 
@@ -137,7 +136,7 @@ The order in which you set these configurations is unimportant, but the values y
 *   **dfs.namenode.rpc-address.[nameservice ID].[name node ID]** - the fully-qualified RPC address for each NameNode to listen on
 
     For both of the previously-configured NameNode IDs, set the full address and
-    IPC port of the NameNode processs. Note that this results in two separate
+    IPC port of the NameNode process. Note that this results in two separate
     configuration options. For example:
 
         <property>
@@ -571,117 +570,4 @@ Automatic Failover FAQ
     Even if automatic failover is configured, you may initiate a manual failover
     using the same `hdfs haadmin` command. It will perform a coordinated
     failover.
-
-BookKeeper as a Shared storage (EXPERIMENTAL)
----------------------------------------------
-
-One option for shared storage for the NameNode is BookKeeper. BookKeeper achieves high availability and strong durability guarantees by replicating edit log entries across multiple storage nodes. The edit log can be striped across the storage nodes for high performance. Fencing is supported in the protocol, i.e, BookKeeper will not allow two writers to write the single edit log.
-
-The meta data for BookKeeper is stored in ZooKeeper. In current HA architecture, a Zookeeper cluster is required for ZKFC. The same cluster can be for BookKeeper metadata.
-
-For more details on building a BookKeeper cluster, please refer to the [BookKeeper documentation](http://zookeeper.apache.org/bookkeeper/docs/trunk/bookkeeperConfig.html )
-
-The BookKeeperJournalManager is an implementation of the HDFS JournalManager interface, which allows custom write ahead logging implementations to be plugged into the HDFS NameNode.
-
-*   **BookKeeper Journal Manager**
-
-    To use BookKeeperJournalManager, add the following to hdfs-site.xml.
-
-            <property>
-              <name>dfs.namenode.shared.edits.dir</name>
-              <value>bookkeeper://zk1:2181;zk2:2181;zk3:2181/hdfsjournal</value>
-            </property>
-
-            <property>
-              <name>dfs.namenode.edits.journal-plugin.bookkeeper</name>
-              <value>org.apache.hadoop.contrib.bkjournal.BookKeeperJournalManager</value>
-            </property>
-
-    The URI format for bookkeeper is `bookkeeper://[zkEnsemble]/[rootZnode] [zookkeeper ensemble]`
-    is a list of semi-colon separated, zookeeper host:port
-    pairs. In the example above there are 3 servers, in the ensemble,
-    zk1, zk2 & zk3, each one listening on port 2181.
-
-    `[root znode]` is the path of the zookeeper znode, under which the edit log
-    information will be stored.
-
-    The class specified for the journal-plugin must be available in the NameNode's
-    classpath. We explain how to generate a jar file with the journal manager and
-    its dependencies, and how to put it into the classpath below.
-
-*   **More configuration options**
-
-    *   **dfs.namenode.bookkeeperjournal.output-buffer-size** -
-        Number of bytes a bookkeeper journal stream will buffer before
-        forcing a flush. Default is 1024.
-
-                   <property>
-                     <name>dfs.namenode.bookkeeperjournal.output-buffer-size</name>
-                     <value>1024</value>
-                   </property>
-
-    *   **dfs.namenode.bookkeeperjournal.ensemble-size** -
-    Number of bookkeeper servers in edit log ensembles. This
-    is the number of bookkeeper servers which need to be available
-    for the edit log to be writable. Default is 3.
-
-                   <property>
-                     <name>dfs.namenode.bookkeeperjournal.ensemble-size</name>
-                     <value>3</value>
-                   </property>
-
-    * **dfs.namenode.bookkeeperjournal.quorum-size** -
-    Number of bookkeeper servers in the write quorum. This is the
-    number of bookkeeper servers which must have acknowledged the
-    write of an entry before it is considered written. Default is 2.
-
-                   <property>
-                     <name>dfs.namenode.bookkeeperjournal.quorum-size</name>
-                     <value>2</value>
-                   </property>
-
-    * **dfs.namenode.bookkeeperjournal.digestPw** -
-    Password to use when creating edit log segments.
-
-                   <property>
-                    <name>dfs.namenode.bookkeeperjournal.digestPw</name>
-                    <value>myPassword</value>
-                   </property>
-
-    * **dfs.namenode.bookkeeperjournal.zk.session.timeout** -
-    Session timeout for Zookeeper client from BookKeeper Journal Manager.
-    Hadoop recommends that this value should be less than the ZKFC
-    session timeout value. Default value is 3000.
-
-                   <property>
-                     <name>dfs.namenode.bookkeeperjournal.zk.session.timeout</name>
-                     <value>3000</value>
-                   </property>
-
-*   **Building BookKeeper Journal Manager plugin jar**
-
-    To generate the distribution packages for BK journal, do the following.
-
-    $ mvn clean package -Pdist
-
-    This will generate a jar with the BookKeeperJournalManager,
-    hadoop-hdfs/src/contrib/bkjournal/target/hadoop-hdfs-bkjournal-*VERSION*.jar
-
-    Note that the -Pdist part of the build command is important, this would
-    copy the dependent bookkeeper-server jar under
-    hadoop-hdfs/src/contrib/bkjournal/target/lib.
-
-*   **Putting the BookKeeperJournalManager in the NameNode classpath**
-
-    To run a HDFS namenode using BookKeeper as a backend, copy the bkjournal and
-    bookkeeper-server jar, mentioned above, into the lib directory of hdfs. In the
-    standard distribution of HDFS, this is at $HADOOP\_HDFS\_HOME/share/hadoop/hdfs/lib/
-
-    cp hadoop-hdfs/src/contrib/bkjournal/target/hadoop-hdfs-bkjournal-*VERSION*.jar $HADOOP\_HDFS\_HOME/share/hadoop/hdfs/lib/
-
-*   **Current limitations**
-
-    1) Security in BookKeeper. BookKeeper does not support SASL nor SSL for
-    connections between the NameNode and BookKeeper storage nodes.
-
 

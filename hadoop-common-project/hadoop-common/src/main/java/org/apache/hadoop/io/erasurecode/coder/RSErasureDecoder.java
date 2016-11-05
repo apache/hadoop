@@ -21,7 +21,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
@@ -32,15 +31,11 @@ import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
  * It implements {@link ErasureCoder}.
  */
 @InterfaceAudience.Private
-public class RSErasureDecoder extends AbstractErasureDecoder {
+public class RSErasureDecoder extends ErasureDecoder {
   private RawErasureDecoder rsRawDecoder;
 
-  public RSErasureDecoder(int numDataUnits, int numParityUnits) {
-    super(numDataUnits, numParityUnits);
-  }
-
-  public RSErasureDecoder(ECSchema schema) {
-    super(schema);
+  public RSErasureDecoder(ErasureCoderOptions options) {
+    super(options);
   }
 
   @Override
@@ -56,11 +51,8 @@ public class RSErasureDecoder extends AbstractErasureDecoder {
 
   private RawErasureDecoder checkCreateRSRawDecoder() {
     if (rsRawDecoder == null) {
-      // TODO: we should create the raw coder according to codec.
-      ErasureCoderOptions coderOptions = new ErasureCoderOptions(
-          getNumDataUnits(), getNumParityUnits());
       rsRawDecoder = CodecUtil.createRawDecoder(getConf(),
-          ErasureCodeConstants.RS_DEFAULT_CODEC_NAME, coderOptions);
+          ErasureCodeConstants.RS_DEFAULT_CODEC_NAME, getOptions());
     }
     return rsRawDecoder;
   }

@@ -111,12 +111,14 @@ public class TestDFSOpsCountStatistics {
 
   @Test
   public void testGetLong() {
+    assertNull(statistics.getLong(null));
     assertNull(statistics.getLong(NO_SUCH_OP));
     verifyStatistics();
   }
 
   @Test
   public void testIsTracked() {
+    assertFalse(statistics.isTracked(null));
     assertFalse(statistics.isTracked(NO_SUCH_OP));
 
     final Iterator<LongStatistic> iter = statistics.getLongStatistics();

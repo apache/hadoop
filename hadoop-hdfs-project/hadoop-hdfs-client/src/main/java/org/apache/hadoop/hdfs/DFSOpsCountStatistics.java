@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -63,6 +64,7 @@ public class DFSOpsCountStatistics extends StorageStatistics {
     GET_STATUS(CommonStatisticNames.OP_GET_STATUS),
     GET_STORAGE_POLICIES("op_get_storage_policies"),
     GET_STORAGE_POLICY("op_get_storage_policy"),
+    GET_TRASH_ROOT("op_get_trash_root"),
     GET_XATTR("op_get_xattr"),
     LIST_LOCATED_STATUS(CommonStatisticNames.OP_LIST_LOCATED_STATUS),
     LIST_STATUS(CommonStatisticNames.OP_LIST_STATUS),
@@ -88,6 +90,14 @@ public class DFSOpsCountStatistics extends StorageStatistics {
     TRUNCATE(CommonStatisticNames.OP_TRUNCATE),
     UNSET_STORAGE_POLICY("op_unset_storage_policy");
 
+    private static final Map<String, OpType> SYMBOL_MAP =
+        new HashMap<>(OpType.values().length);
+    static {
+      for (OpType opType : values()) {
+        SYMBOL_MAP.put(opType.getSymbol(), opType);
+      }
+    }
+
     private final String symbol;
 
     OpType(String symbol) {
@@ -99,14 +109,7 @@ public class DFSOpsCountStatistics extends StorageStatistics {
     }
 
     public static OpType fromSymbol(String symbol) {
-      if (symbol != null) {
-        for (OpType opType : values()) {
-          if (opType.getSymbol().equals(symbol)) {
-            return opType;
-          }
-        }
-      }
-      return null;
+      return SYMBOL_MAP.get(symbol);
     }
   }
 

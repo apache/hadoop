@@ -17,16 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.Assert.assertEquals;
 import java.util.Arrays;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.junit.Test;
-
-import com.google.common.base.Charsets;
-
 
 /**
  * 
@@ -34,26 +29,83 @@ import com.google.common.base.Charsets;
 public class TestPathComponents {
 
   @Test
-  public void testBytes2ByteArray() throws Exception {
-    testString("/");
-    testString("/file");
-    testString("/directory/");
-    testString("//");
-    testString("/dir//file");
-    testString("/dir/dir1//");
+  public void testBytes2ByteArrayFQ() throws Exception {
+    testString("/", new String[]{null});
+    testString("//", new String[]{null});
+    testString("/file", new String[]{"", "file"});
+    testString("/dir/", new String[]{"", "dir"});
+    testString("//file", new String[]{"", "file"});
+    testString("/dir//file", new String[]{"", "dir", "file"});
+    testString("//dir/dir1//", new String[]{"", "dir", "dir1"});
+    testString("//dir//dir1//", new String[]{"", "dir", "dir1"});
+    testString("//dir//dir1//file", new String[]{"", "dir", "dir1", "file"});
   }
 
-  public void testString(String str) throws Exception {
-    String pathString = str;
-    byte[][] oldPathComponents = INode.getPathComponents(pathString);
-    byte[][] newPathComponents = 
-                DFSUtil.bytes2byteArray(pathString.getBytes(Charsets.UTF_8),
-                                        (byte) Path.SEPARATOR_CHAR);
-    if (oldPathComponents[0] == null) {
-      assertTrue(oldPathComponents[0] == newPathComponents[0]);
-    } else {
-      assertTrue("Path components do not match for " + pathString,
-                  Arrays.deepEquals(oldPathComponents, newPathComponents));
+  @Test
+  public void testBytes2ByteArrayRelative() throws Exception {
+    testString("file", new String[]{"file"});
+    testString("dir/", new String[]{"dir"});
+    testString("dir//", new String[]{"dir"});
+    testString("dir//file", new String[]{"dir", "file"});
+    testString("dir/dir1//", new String[]{"dir", "dir1"});
+    testString("dir//dir1//", new String[]{"dir", "dir1"});
+    testString("dir//dir1//file", new String[]{"dir", "dir1", "file"});
+  }
+
+  @Test
+  public void testByteArray2PathStringRoot() {
+    byte[][] components = DFSUtil.getPathComponents("/");
+    assertEquals("", DFSUtil.byteArray2PathString(components, 0, 0));
+    assertEquals("/", DFSUtil.byteArray2PathString(components, 0, 1));
+  }
+
+  @Test
+  public void testByteArray2PathStringFQ() {
+    byte[][] components = DFSUtil.getPathComponents("/1/2/3");
+    assertEquals("/1/2/3", DFSUtil.byteArray2PathString(components));
+
+    assertEquals("", DFSUtil.byteArray2PathString(components, 0, 0));
+    assertEquals("/", DFSUtil.byteArray2PathString(components, 0, 1));
+    assertEquals("/1", DFSUtil.byteArray2PathString(components, 0, 2));
+    assertEquals("/1/2", DFSUtil.byteArray2PathString(components, 0, 3));
+    assertEquals("/1/2/3", DFSUtil.byteArray2PathString(components, 0, 4));
+
+    assertEquals("", DFSUtil.byteArray2PathString(components, 1, 0));
+    assertEquals("1", DFSUtil.byteArray2PathString(components, 1, 1));
+    assertEquals("1/2", DFSUtil.byteArray2PathString(components, 1, 2));
+    assertEquals("1/2/3", DFSUtil.byteArray2PathString(components, 1, 3));
+  }
+
+  @Test
+  public void testByteArray2PathStringRelative() {
+    byte[][] components = DFSUtil.getPathComponents("1/2/3");
+    assertEquals("1/2/3", DFSUtil.byteArray2PathString(components));
+
+    assertEquals("", DFSUtil.byteArray2PathString(components, 0, 0));
+    assertEquals("1", DFSUtil.byteArray2PathString(components, 0, 1));
+    assertEquals("1/2", DFSUtil.byteArray2PathString(components, 0, 2));
+    assertEquals("1/2/3", DFSUtil.byteArray2PathString(components, 0, 3));
+
+    assertEquals("", DFSUtil.byteArray2PathString(components, 1, 0));
+    assertEquals("2", DFSUtil.byteArray2PathString(components, 1, 1));
+    assertEquals("2/3", DFSUtil.byteArray2PathString(components, 1, 2));
+  }
+
+  public void testString(String path, String[] expected) throws Exception {
+    byte[][] components = DFSUtil.getPathComponents(path);
+    String[] actual = new String[components.length];
+    for (int i=0; i < components.length; i++) {
+      if (components[i] != null) {
+        actual[i] = DFSUtil.bytes2String(components[i]);
+      }
     }
+    assertEquals(Arrays.asList(expected), Arrays.asList(actual));
+
+    // test the reconstituted path
+    path = path.replaceAll("/+", "/");
+    if (path.length() > 1) {
+      path = path.replaceAll("/$", "");
+    }
+    assertEquals(path, DFSUtil.byteArray2PathString(components));
   }
 }

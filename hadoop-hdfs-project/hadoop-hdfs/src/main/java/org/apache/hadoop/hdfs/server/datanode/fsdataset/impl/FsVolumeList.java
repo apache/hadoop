@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
@@ -31,6 +30,8 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
@@ -39,8 +40,10 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
+import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Time;
 
@@ -48,11 +51,14 @@ class FsVolumeList {
   private final CopyOnWriteArrayList<FsVolumeImpl> volumes =
       new CopyOnWriteArrayList<>();
   // Tracks volume failures, sorted by volume path.
-  private final Map<String, VolumeFailureInfo> volumeFailureInfos =
-      Collections.synchronizedMap(new TreeMap<String, VolumeFailureInfo>());
+  // map from volume storageID to the volume failure info
+  private final Map<StorageLocation, VolumeFailureInfo> volumeFailureInfos =
+      Collections.synchronizedMap(
+          new TreeMap<StorageLocation, VolumeFailureInfo>());
   private final ConcurrentLinkedQueue<FsVolumeImpl> volumesBeingRemoved =
       new ConcurrentLinkedQueue<>();
-  private Object checkDirsMutex = new Object();
+  private final AutoCloseableLock checkDirsLock;
+  private final Condition checkDirsLockCondition;
 
   private final VolumeChoosingPolicy<FsVolumeImpl> blockChooser;
   private final BlockScanner blockScanner;
@@ -62,6 +68,8 @@ class FsVolumeList {
       VolumeChoosingPolicy<FsVolumeImpl> blockChooser) {
     this.blockChooser = blockChooser;
     this.blockScanner = blockScanner;
+    this.checkDirsLock = new AutoCloseableLock();
+    this.checkDirsLockCondition = checkDirsLock.newCondition();
     for (VolumeFailureInfo volumeFailureInfo: initialVolumeFailureInfos) {
       volumeFailureInfos.put(volumeFailureInfo.getFailedStorageLocation(),
           volumeFailureInfo);
@@ -195,7 +203,7 @@ class FsVolumeList {
                 + " " + bpid + " on volume " + v + ": " + timeTaken + "ms");
           } catch (ClosedChannelException e) {
             FsDatasetImpl.LOG.info("The volume " + v + " is closed while " +
-                "addng replicas, ignored.");
+                "adding replicas, ignored.");
           } catch (IOException ioe) {
             FsDatasetImpl.LOG.info("Caught exception while adding replicas " +
                 "from " + v + ". Will throw later.", ioe);
@@ -224,14 +232,13 @@ class FsVolumeList {
   /**
    * Calls {@link FsVolumeImpl#checkDirs()} on each volume.
    * 
-   * Use checkDirsMutext to allow only one instance of checkDirs() call
+   * Use {@link checkDirsLock} to allow only one instance of checkDirs() call.
    *
    * @return list of all the failed volumes.
    */
-  Set<File> checkDirs() {
-    synchronized(checkDirsMutex) {
-      Set<File> failedVols = null;
-      
+  Set<StorageLocation> checkDirs() {
+    try (AutoCloseableLock lock = checkDirsLock.acquire()) {
+      Set<StorageLocation> failedLocations = null;
       // Make a copy of volumes for performing modification 
       final List<FsVolumeImpl> volumeList = getVolumes();
 
@@ -241,10 +248,10 @@ class FsVolumeList {
           fsv.checkDirs();
         } catch (DiskErrorException e) {
           FsDatasetImpl.LOG.warn("Removing failed volume " + fsv + ": ", e);
-          if (failedVols == null) {
-            failedVols = new HashSet<>(1);
+          if (failedLocations == null) {
+            failedLocations = new HashSet<>(1);
           }
-          failedVols.add(new File(fsv.getBasePath()).getAbsoluteFile());
+          failedLocations.add(fsv.getStorageLocation());
           addVolumeFailureInfo(fsv);
           removeVolume(fsv);
         } catch (ClosedChannelException e) {
@@ -255,13 +262,13 @@ class FsVolumeList {
         }
       }
       
-      if (failedVols != null && failedVols.size() > 0) {
-        FsDatasetImpl.LOG.warn("Completed checkDirs. Found " + failedVols.size()
-            + " failure volumes.");
+      if (failedLocations != null && failedLocations.size() > 0) {
+        FsDatasetImpl.LOG.warn("Completed checkDirs. Found " +
+            failedLocations.size() + " failure volumes.");
       }
 
-      waitVolumeRemoved(5000, checkDirsMutex);
-      return failedVols;
+      waitVolumeRemoved(5000, checkDirsLockCondition);
+      return failedLocations;
     }
   }
 
@@ -271,13 +278,13 @@ class FsVolumeList {
    *
    * @param sleepMillis interval to recheck.
    */
-  void waitVolumeRemoved(int sleepMillis, Object monitor) {
+  void waitVolumeRemoved(int sleepMillis, Condition condition) {
     while (!checkVolumesRemoved()) {
       if (FsDatasetImpl.LOG.isDebugEnabled()) {
         FsDatasetImpl.LOG.debug("Waiting for volume reference to be released.");
       }
       try {
-        monitor.wait(sleepMillis);
+        condition.await(sleepMillis, TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
         FsDatasetImpl.LOG.info("Thread interrupted when waiting for "
             + "volume reference to be released.");
@@ -305,11 +312,11 @@ class FsVolumeList {
     } else {
       // If the volume is not put into a volume scanner, it does not need to
       // hold the reference.
-      IOUtils.cleanup(FsDatasetImpl.LOG, ref);
+      IOUtils.cleanup(null, ref);
     }
     // If the volume is used to replace a failed volume, it needs to reset the
     // volume failure info for this volume.
-    removeVolumeFailureInfo(new File(volume.getBasePath()));
+    removeVolumeFailureInfo(volume.getStorageLocation());
     FsDatasetImpl.LOG.info("Added new volume: " +
         volume.getStorageID());
   }
@@ -345,16 +352,15 @@ class FsVolumeList {
    * @param volume the volume to be removed.
    * @param clearFailure set true to remove failure info for this volume.
    */
-  void removeVolume(File volume, boolean clearFailure) {
+  void removeVolume(StorageLocation storageLocation, boolean clearFailure) {
     for (FsVolumeImpl fsVolume : volumes) {
-      String basePath = new File(fsVolume.getBasePath()).getAbsolutePath();
-      String targetPath = volume.getAbsolutePath();
-      if (basePath.equals(targetPath)) {
+      StorageLocation baseLocation = fsVolume.getStorageLocation();
+      if (baseLocation.equals(storageLocation)) {
         removeVolume(fsVolume);
       }
     }
     if (clearFailure) {
-      removeVolumeFailureInfo(volume);
+      removeVolumeFailureInfo(storageLocation);
     }
   }
 
@@ -388,13 +394,13 @@ class FsVolumeList {
 
   private void addVolumeFailureInfo(FsVolumeImpl vol) {
     addVolumeFailureInfo(new VolumeFailureInfo(
-        new File(vol.getBasePath()).getAbsolutePath(),
+        vol.getStorageLocation(),
         Time.now(),
         vol.getCapacity()));
   }
 
-  private void removeVolumeFailureInfo(File vol) {
-    volumeFailureInfos.remove(vol.getAbsolutePath());
+  private void removeVolumeFailureInfo(StorageLocation location) {
+    volumeFailureInfos.remove(location);
   }
 
   void addBlockPool(final String bpid, final Configuration conf) throws IOException {

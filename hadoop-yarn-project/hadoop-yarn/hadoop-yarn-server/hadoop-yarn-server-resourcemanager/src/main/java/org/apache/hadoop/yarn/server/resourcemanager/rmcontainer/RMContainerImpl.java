@@ -53,12 +53,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode
     .RMNodeDecreaseContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
@@ -173,7 +173,7 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
 
   private Resource reservedResource;
   private NodeId reservedNode;
-  private Priority reservedPriority;
+  private SchedulerRequestKey reservedSchedulerKey;
   private long creationTime;
   private long finishTime;
   private ContainerStatus finishedStatus;
@@ -187,6 +187,7 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
   private volatile String queueName;
 
   private boolean isExternallyAllocated;
+  private SchedulerRequestKey allocatedSchedulerKey;
 
   public RMContainerImpl(Container container,
       ApplicationAttemptId appAttemptId, NodeId nodeId, String user,
@@ -226,6 +227,7 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
     this.containerId = container.getId();
     this.nodeId = nodeId;
     this.container = container;
+    this.allocatedSchedulerKey = SchedulerRequestKey.extractFrom(container);
     this.appAttemptId = appAttemptId;
     this.user = user;
     this.creationTime = creationTime;
@@ -296,8 +298,8 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
   }
 
   @Override
-  public Priority getReservedPriority() {
-    return reservedPriority;
+  public SchedulerRequestKey getReservedSchedulerKey() {
+    return reservedSchedulerKey;
   }
 
   @Override
@@ -323,6 +325,11 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
   @Override
   public NodeId getAllocatedNode() {
     return container.getNodeId();
+  }
+
+  @Override
+  public SchedulerRequestKey getAllocatedSchedulerKey() {
+    return allocatedSchedulerKey;
   }
 
   @Override
@@ -535,7 +542,7 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
       RMContainerReservedEvent e = (RMContainerReservedEvent)event;
       container.reservedResource = e.getReservedResource();
       container.reservedNode = e.getReservedNode();
-      container.reservedPriority = e.getReservedPriority();
+      container.reservedSchedulerKey = e.getReservedSchedulerKey();
       
       if (!EnumSet.of(RMContainerState.NEW, RMContainerState.RESERVED)
           .contains(container.getState())) {
@@ -768,7 +775,7 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
     try {
       containerReport = ContainerReport.newInstance(this.getContainerId(),
           this.getAllocatedResource(), this.getAllocatedNode(),
-          this.getAllocatedPriority(), this.getCreationTime(),
+          this.getAllocatedSchedulerKey().getPriority(), this.getCreationTime(),
           this.getFinishTime(), this.getDiagnosticsInfo(), this.getLogURL(),
           this.getContainerExitStatus(), this.getContainerState(),
           this.getNodeHttpAddress());

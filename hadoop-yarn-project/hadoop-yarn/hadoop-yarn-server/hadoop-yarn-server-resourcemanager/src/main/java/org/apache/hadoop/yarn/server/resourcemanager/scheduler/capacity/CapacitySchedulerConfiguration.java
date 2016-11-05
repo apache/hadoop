@@ -191,6 +191,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       PREFIX + "rack-locality-full-reset";
 
   @Private
+  public static final int DEFAULT_OFFSWITCH_PER_HEARTBEAT_LIMIT = 1;
+
+  @Private
+  public static final String OFFSWITCH_PER_HEARTBEAT_LIMIT =
+      PREFIX + "per-node-heartbeat.maximum-offswitch-assignments";
+
+  @Private
   public static final boolean DEFAULT_RACK_LOCALITY_FULL_RESET = true;
 
   @Private
@@ -713,6 +720,20 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return getBoolean(ENABLE_USER_METRICS, DEFAULT_ENABLE_USER_METRICS);
   }
 
+  public int getOffSwitchPerHeartbeatLimit() {
+    int limit = getInt(OFFSWITCH_PER_HEARTBEAT_LIMIT,
+        DEFAULT_OFFSWITCH_PER_HEARTBEAT_LIMIT);
+    if (limit < 1) {
+      LOG.warn(OFFSWITCH_PER_HEARTBEAT_LIMIT + "(" + limit + ") < 1. Using 1.");
+      limit = 1;
+    }
+    return limit;
+  }
+
+  public void setOffSwitchPerHeartbeatLimit(int limit) {
+    setInt(OFFSWITCH_PER_HEARTBEAT_LIMIT, limit);
+  }
+
   public int getNodeLocalityDelay() {
     return getInt(NODE_LOCALITY_DELAY, DEFAULT_NODE_LOCALITY_DELAY);
   }
@@ -1024,6 +1045,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   private static final String PREEMPTION_CONFIG_PREFIX =
       "yarn.resourcemanager.monitor.capacity.preemption.";
 
+  private static final String INTRA_QUEUE_PREEMPTION_CONFIG_PREFIX =
+      "intra-queue-preemption.";
+
   /** If true, run the policy but do not affect the cluster with preemption and
    * kill events. */
   public static final String PREEMPTION_OBSERVE_ONLY =
@@ -1077,4 +1101,32 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       PREEMPTION_CONFIG_PREFIX + "select_based_on_reserved_containers";
   public static final boolean DEFAULT_PREEMPTION_SELECT_CANDIDATES_FOR_RESERVED_CONTAINERS =
       false;
+
+  /**
+   * For intra-queue preemption, priority/user-limit/fairness based selectors
+   * can help to preempt containers.
+   */
+  public static final String INTRAQUEUE_PREEMPTION_ENABLED =
+      PREEMPTION_CONFIG_PREFIX +
+      INTRA_QUEUE_PREEMPTION_CONFIG_PREFIX + "enabled";
+  public static final boolean DEFAULT_INTRAQUEUE_PREEMPTION_ENABLED = false;
+
+  /**
+   * For intra-queue preemption, consider those queues which are above used cap
+   * limit.
+   */
+  public static final String INTRAQUEUE_PREEMPTION_MINIMUM_THRESHOLD =
+      PREEMPTION_CONFIG_PREFIX +
+      INTRA_QUEUE_PREEMPTION_CONFIG_PREFIX + "minimum-threshold";
+  public static final float DEFAULT_INTRAQUEUE_PREEMPTION_MINIMUM_THRESHOLD =
+      0.5f;
+
+  /**
+   * For intra-queue preemption, allowable maximum-preemptable limit per queue.
+   */
+  public static final String INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT =
+      PREEMPTION_CONFIG_PREFIX +
+      INTRA_QUEUE_PREEMPTION_CONFIG_PREFIX + "max-allowable-limit";
+  public static final float DEFAULT_INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT =
+      0.2f;
 }

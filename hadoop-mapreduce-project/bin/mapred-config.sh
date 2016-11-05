@@ -26,7 +26,7 @@ function hadoop_subproject_init
       export HADOOP_MAPRED_ENV_PROCESSED=true
     fi
   fi
-  
+
   # at some point in time, someone thought it would be a good idea to
   # create separate vars for every subproject.  *sigh*
   # let's perform some overrides and setup some defaults for bw compat
@@ -38,14 +38,16 @@ function hadoop_subproject_init
   hadoop_deprecate_envvar HADOOP_MAPRED_LOG_DIR HADOOP_LOG_DIR
 
   hadoop_deprecate_envvar HADOOP_MAPRED_LOGFILE HADOOP_LOGFILE
-  
+
   hadoop_deprecate_envvar HADOOP_MAPRED_NICENESS HADOOP_NICENESS
-  
+
   hadoop_deprecate_envvar HADOOP_MAPRED_STOP_TIMEOUT HADOOP_STOP_TIMEOUT
-  
+
   hadoop_deprecate_envvar HADOOP_MAPRED_PID_DIR HADOOP_PID_DIR
 
   hadoop_deprecate_envvar HADOOP_MAPRED_ROOT_LOGGER HADOOP_ROOT_LOGGER
+
+  hadoop_deprecate_envvar HADOOP_JOB_HISTORY_OPTS MAPRED_HISTORYSERVER_OPTS
 
   HADOOP_MAPRED_HOME="${HADOOP_MAPRED_HOME:-$HADOOP_HOME}"
 

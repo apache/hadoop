@@ -33,26 +33,39 @@ import org.apache.hadoop.fs.Path;
 public class S3AFileStatus extends FileStatus {
   private boolean isEmptyDirectory;
 
-  // Directories
-  public S3AFileStatus(boolean isdir, boolean isemptydir, Path path) {
-    super(0, isdir, 1, 0, 0, path);
+  /**
+   * Create a directory status.
+   * @param isemptydir is this an empty directory?
+   * @param path the path
+   * @param owner the owner
+   */
+  public S3AFileStatus(boolean isemptydir,
+      Path path,
+      String owner) {
+    super(0, true, 1, 0, 0, path);
     isEmptyDirectory = isemptydir;
+    setOwner(owner);
+    setGroup(owner);
   }
 
-  // Files
+  /**
+   * A simple file.
+   * @param length file length
+   * @param modification_time mod time
+   * @param path path
+   * @param blockSize block size
+   * @param owner owner
+   */
   public S3AFileStatus(long length, long modification_time, Path path,
-      long blockSize) {
+      long blockSize, String owner) {
     super(length, false, 1, blockSize, modification_time, path);
     isEmptyDirectory = false;
+    setOwner(owner);
+    setGroup(owner);
   }
 
   public boolean isEmptyDirectory() {
     return isEmptyDirectory;
-  }
-
-  @Override
-  public String getOwner() {
-    return System.getProperty("user.name");
   }
 
   /** Compare if this object is equal to another object.

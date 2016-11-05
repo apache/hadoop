@@ -35,21 +35,22 @@ public abstract class NMContainerStatus {
   
   // Used by tests only
   public static NMContainerStatus newInstance(ContainerId containerId,
-      ContainerState containerState, Resource allocatedResource,
+      int version, ContainerState containerState, Resource allocatedResource,
       String diagnostics, int containerExitStatus, Priority priority,
       long creationTime) {
-    return newInstance(containerId, containerState, allocatedResource,
+    return newInstance(containerId, version, containerState, allocatedResource,
         diagnostics, containerExitStatus, priority, creationTime,
         CommonNodeLabelsManager.NO_LABEL);
   }
 
   public static NMContainerStatus newInstance(ContainerId containerId,
-      ContainerState containerState, Resource allocatedResource,
+      int version, ContainerState containerState, Resource allocatedResource,
       String diagnostics, int containerExitStatus, Priority priority,
       long creationTime, String nodeLabelExpression) {
     NMContainerStatus status =
         Records.newRecord(NMContainerStatus.class);
     status.setContainerId(containerId);
+    status.setVersion(version);
     status.setContainerState(containerState);
     status.setAllocatedResource(allocatedResource);
     status.setDiagnostics(diagnostics);
@@ -125,4 +126,12 @@ public abstract class NMContainerStatus {
 
   public abstract void setNodeLabelExpression(
       String nodeLabelExpression);
+
+  public int getVersion() {
+    return 0;
+  }
+
+  public void setVersion(int version) {
+
+  }
 }

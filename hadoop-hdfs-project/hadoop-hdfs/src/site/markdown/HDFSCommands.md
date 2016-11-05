@@ -49,7 +49,8 @@ HDFS Commands Guide
     * [storagepolicies](#storagepolicies)
     * [zkfc](#zkfc)
 * [Debug Commands](#Debug_Commands)
-    * [verify](#verify)
+    * [verifyMeta](#verifyMeta)
+    * [computeMeta](#computeMeta)
     * [recoverLease](#recoverLease)
 
 Overview
@@ -239,6 +240,7 @@ Usage: `hdfs oiv [OPTIONS] -i INPUT_FILE`
 | `-addr` *address* | Specify the address(host:port) to listen. (localhost:5978 by default). This option is used with Web processor. |
 | `-maxSize` *size* | Specify the range [0, maxSize] of file sizes to be analyzed in bytes (128GB by default). This option is used with FileDistribution processor. |
 | `-step` *size* | Specify the granularity of the distribution in bytes (2MB by default). This option is used with FileDistribution processor. |
+| `-format` | Format the output result in a human-readable fashion rather than a number of bytes. (false by default). This option is used with FileDistribution processor. |
 | `-delimiter` *arg* | Delimiting string to use with Delimited processor. |
 | `-t`,`--temp` *temporary dir* | Use temporary dir to cache intermediate result to generate Delimited outputs. If not set, Delimited processor constructs the namespace in memory before outputting text. |
 | `-h`,`--help` | Display the tool usage and help information and exit. |
@@ -260,6 +262,9 @@ Usage: `hdfs oiv_legacy [OPTIONS] -i INPUT_FILE -o OUTPUT_FILE`
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
 | `-p`\|`--processor` *processor* | Specify the image processor to apply against the image file. Valid options are Ls (default), XML, Delimited, Indented, and FileDistribution. |
+| `-maxSize` *size* | Specify the range [0, maxSize] of file sizes to be analyzed in bytes (128GB by default). This option is used with FileDistribution processor. |
+| `-step` *size* | Specify the granularity of the distribution in bytes (2MB by default). This option is used with FileDistribution processor. |
+| `-format` | Format the output result in a human-readable fashion rather than a number of bytes. (false by default). This option is used with FileDistribution processor. |
 | `-skipBlocks` | Do not enumerate individual blocks within files. This may save processing time and outfile file space on namespaces with very large files. The Ls processor reads the blocks to correctly determine file sizes and ignores this option. |
 | `-printToScreen` | Pipe output of processor to console as well as specified file. On extremely large namespaces, this may increase processing time by an order of magnitude. |
 | `-delimiter` *arg* | When used in conjunction with the Delimited processor, replaces the default tab delimiter with the string specified by *arg*. |
@@ -398,7 +403,7 @@ Usage:
 |:---- |:---- |
 | `-report` `[-live]` `[-dead]` `[-decommissioning]` | Reports basic filesystem information and statistics, The dfs usage can be different from "du" usage, because it measures raw space used by replication, checksums, snapshots and etc. on all the DNs. Optional flags may be used to filter the list of displayed DataNodes. |
 | `-safemode` enter\|leave\|get\|wait\|forceExit | Safe mode maintenance command. Safe mode is a Namenode state in which it <br/>1. does not accept changes to the name space (read-only) <br/>2. does not replicate or delete blocks. <br/>Safe mode is entered automatically at Namenode startup, and leaves safe mode automatically when the configured minimum percentage of blocks satisfies the minimum replication condition. If Namenode detects any anomaly then it will linger in safe mode till that issue is resolved. If that anomaly is the consequence of a deliberate action, then administrator can use -safemode forceExit to exit safe mode. The cases where forceExit may be required are<br/> 1. Namenode metadata is not consistent. If Namenode detects that metadata has been modified out of band and can cause data loss, then Namenode will enter forceExit state. At that point user can either restart Namenode with correct metadata files or forceExit (if data loss is acceptable).<br/>2. Rollback causes metadata to be replaced and rarely it can trigger safe mode forceExit state in Namenode. In that case you may proceed by issuing -safemode forceExit.<br/> Safe mode can also be entered manually, but then it can only be turned off manually as well. |
-| `-saveNamespace` `\[-beforeShutdown\]` | Save current namespace into storage directories and reset edits log. Requires safe mode. If the "beforeShutdown" option is given, the NameNode does a checkpoint if and only if no checkpoint has been done during a time window (a configurable number of checkpoint periods). This is usually used before shutting down the NameNode to prevent potential fsimage/editlog corruption. |
+| `-saveNamespace` `[-beforeShutdown]` | Save current namespace into storage directories and reset edits log. Requires safe mode. If the "beforeShutdown" option is given, the NameNode does a checkpoint if and only if no checkpoint has been done during a time window (a configurable number of checkpoint periods). This is usually used before shutting down the NameNode to prevent potential fsimage/editlog corruption. |
 | `-rollEdits` | Rolls the edit log on the active NameNode. |
 | `-restoreFailedStorage` true\|false\|check | This option will turn on/off automatic attempt to restore failed storage replicas. If a failed storage becomes available again the system will attempt to restore edits and/or fsimage during checkpoint. 'check' option will return current setting. |
 | `-refreshNodes` | Re-read the hosts and exclude files to update the set of Datanodes that are allowed to connect to the Namenode and those that should be decommissioned or recommissioned. |
@@ -441,6 +446,8 @@ Usage:
          [-query <datanode>]
          [-cancel <planfile>]
          [-cancel <planID> -node <datanode>]
+         [-report -node [<DataNodeID|IP|Hostname>,...]]
+         [-report -node -top <topnum>]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -448,7 +455,7 @@ Usage:
 |-execute| Executes a given plan on a datanode|
 |-query| Gets the current diskbalancer status from a datanode|
 |-cancel| Cancels a running plan|
-
+|-report| Reports the volume information from datanode(s)|
 
 Runs the diskbalancer CLI. See [HDFS Diskbalancer](./HDFSDiskbalancer.html) for more information on this command.
 
@@ -457,7 +464,7 @@ Runs the diskbalancer CLI. See [HDFS Diskbalancer](./HDFSDiskbalancer.html) for 
 Usage:
 
        hdfs erasurecode [generic options]
-         [-setPolicy [-s <policyName>] <path>]
+         [-setPolicy [-p <policyName>] <path>]
          [-getPolicy <path>]
          [-listPolicies]
          [-usage [cmd ...]]
@@ -600,11 +607,11 @@ This comamnd starts a Zookeeper Failover Controller process for use with [HDFS H
 Debug Commands
 --------------
 
-Useful commands to help administrators debug HDFS issues, like validating block files and calling recoverLease.
+Useful commands to help administrators debug HDFS issues. These commands are for advanced users only.
 
-### `verify`
+### `verifyMeta`
 
-Usage: `hdfs debug verify [-meta <metadata-file>] [-block <block-file>]`
+Usage: `hdfs debug verifyMeta -meta <metadata-file> [-block <block-file>]`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -613,9 +620,22 @@ Usage: `hdfs debug verify [-meta <metadata-file>] [-block <block-file>]`
 
 Verify HDFS metadata and block files. If a block file is specified, we will verify that the checksums in the metadata file match the block file.
 
+### `computeMeta`
+
+Usage: `hdfs debug computeMeta -block <block-file> -out <output-metadata-file>`
+
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+| `-block` *block-file* | Absolute path for the block file on the local file system of the data node. |
+| `-out` *output-metadata-file* | Absolute path for the output metadata file to store the checksum computation result from the block file. |
+
+Compute HDFS metadata from block files. If a block file is specified, we will compute the checksums from the block file, and save it to the specified output metadata file.
+
+**NOTE**: Use at your own risk! If the block file is corrupt and you overwrite it's meta file, it will show up as 'good' in HDFS, but you can't read the data. Only use as a last measure, and when you are 100% certain the block file is good.
+
 ### `recoverLease`
 
-Usage: `hdfs debug recoverLease [-path <path>] [-retries <num-retries>]`
+Usage: `hdfs debug recoverLease -path <path> [-retries <num-retries>]`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |

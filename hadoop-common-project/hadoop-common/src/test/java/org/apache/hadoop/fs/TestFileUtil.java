@@ -17,18 +17,25 @@
  */
 package org.apache.hadoop.fs;
 
-import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.*;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.URI;
-import java.io.PrintWriter;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,15 +50,15 @@ import java.util.zip.ZipOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.tools.tar.TarEntry;
 import org.apache.tools.tar.TarOutputStream;
-
-
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
 
 public class TestFileUtil {
   private static final Log LOG = LogFactory.getLog(TestFileUtil.class);
@@ -423,10 +430,8 @@ public class TestFileUtil {
 
   @Test (timeout = 30000)
   public void testFailFullyDelete() throws IOException {
-    if(Shell.WINDOWS) {
-      // windows Dir.setWritable(false) does not work for directories
-      return;
-    }
+    // Windows Dir.setWritable(false) does not work for directories
+    assumeNotWindows();
     LOG.info("Running test to verify failure of fullyDelete()");
     setupDirsAndNonWritablePermissions();
     boolean ret = FileUtil.fullyDelete(new MyFile(del));
@@ -504,10 +509,8 @@ public class TestFileUtil {
 
   @Test (timeout = 30000)
   public void testFailFullyDeleteContents() throws IOException {
-    if(Shell.WINDOWS) {
-      // windows Dir.setWritable(false) does not work for directories
-      return;
-    }
+    // Windows Dir.setWritable(false) does not work for directories
+    assumeNotWindows();
     LOG.info("Running test to verify failure of fullyDeleteContents()");
     setupDirsAndNonWritablePermissions();
     boolean ret = FileUtil.fullyDeleteContents(new MyFile(del));
@@ -1056,6 +1059,40 @@ public class TestFileUtil {
           LOG.warn("exception closing jarFile: " + classPathJar, e);
         }
       }
+    }
+  }
+
+  @Test
+  public void testGetJarsInDirectory() throws Exception {
+    List<Path> jars = FileUtil.getJarsInDirectory("/foo/bar/bogus/");
+    assertTrue("no jars should be returned for a bogus path",
+        jars.isEmpty());
+
+    // setup test directory for files
+    assertFalse(tmp.exists());
+    assertTrue(tmp.mkdirs());
+
+    // create jar files to be returned
+    File jar1 = new File(tmp, "wildcard1.jar");
+    File jar2 = new File(tmp, "wildcard2.JAR");
+    List<File> matches = Arrays.asList(jar1, jar2);
+    for (File match: matches) {
+      assertTrue("failure creating file: " + match, match.createNewFile());
+    }
+
+    // create non-jar files, which we expect to not be included in the result
+    assertTrue(new File(tmp, "text.txt").createNewFile());
+    assertTrue(new File(tmp, "executable.exe").createNewFile());
+    assertTrue(new File(tmp, "README").createNewFile());
+
+    // pass in the directory
+    String directory = tmp.getCanonicalPath();
+    jars = FileUtil.getJarsInDirectory(directory);
+    assertEquals("there should be 2 jars", 2, jars.size());
+    for (Path jar: jars) {
+      URL url = jar.toUri().toURL();
+      assertTrue("the jar should match either of the jars",
+          url.equals(jar1.toURI().toURL()) || url.equals(jar2.toURI().toURL()));
     }
   }
 

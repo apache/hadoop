@@ -67,14 +67,18 @@ public class ApplicationCLI extends YarnCLI {
   private static final String APPLICATION_ATTEMPTS_PATTERN =
     "%30s\t%20s\t%35s\t%35s"
       + System.getProperty("line.separator");
-  private static final String CONTAINER_PATTERN = 
-    "%30s\t%20s\t%20s\t%20s\t%20s\t%20s\t%35s"
-      + System.getProperty("line.separator");
 
   private static final String APP_TYPE_CMD = "appTypes";
   private static final String APP_STATE_CMD = "appStates";
+  private static final String APP_TAG_CMD = "appTags";
   private static final String ALLSTATES_OPTION = "ALL";
   private static final String QUEUE_CMD = "queue";
+
+  @VisibleForTesting
+  protected static final String CONTAINER_PATTERN =
+    "%30s\t%20s\t%20s\t%20s\t%20s\t%20s\t%35s"
+      + System.getProperty("line.separator");
+
   public static final String APPLICATION = "application";
   public static final String APPLICATION_ATTEMPT = "applicationattempt";
   public static final String CONTAINER = "container";
@@ -102,8 +106,9 @@ public class ApplicationCLI extends YarnCLI {
           "Prints the status of the application.");
       opts.addOption(LIST_CMD, false, "List applications. "
           + "Supports optional use of -appTypes to filter applications "
-          + "based on application type, "
-          + "and -appStates to filter applications based on application state.");
+          + "based on application type, -appStates to filter applications "
+          + "based on application state and -appTags to filter applications "
+          + "based on application tag.");
       opts.addOption(MOVE_TO_QUEUE_CMD, true, "Moves the application to a "
           + "different queue.");
       opts.addOption(QUEUE_CMD, true, "Works with the movetoqueue command to"
@@ -123,6 +128,13 @@ public class ApplicationCLI extends YarnCLI {
       appStateOpt.setArgs(Option.UNLIMITED_VALUES);
       appStateOpt.setArgName("States");
       opts.addOption(appStateOpt);
+      Option appTagOpt = new Option(APP_TAG_CMD, true, "Works with -list to "
+          + "filter applications based on input comma-separated list of "
+          + "application tags.");
+      appTagOpt.setValueSeparator(',');
+      appTagOpt.setArgs(Option.UNLIMITED_VALUES);
+      appTagOpt.setArgName("Tags");
+      opts.addOption(appTagOpt);
       opts.addOption(APP_ID, true, "Specify Application Id to be operated");
       opts.addOption(UPDATE_PRIORITY, true,
           "update priority of an application. ApplicationId can be"
@@ -229,7 +241,19 @@ public class ApplicationCLI extends YarnCLI {
             }
           }
         }
-        listApplications(appTypes, appStates);
+
+        Set<String> appTags = new HashSet<String>();
+        if (cliParser.hasOption(APP_TAG_CMD)) {
+          String[] tags = cliParser.getOptionValues(APP_TAG_CMD);
+          if (tags != null) {
+            for (String tag : tags) {
+              if (!tag.trim().isEmpty()) {
+                appTags.add(tag.trim());
+              }
+            }
+          }
+        }
+        listApplications(appTypes, appStates, appTags);
       } else if (args[0].equalsIgnoreCase(APPLICATION_ATTEMPT)) {
         if (args.length != 3) {
           printUsage(title, opts);
@@ -434,17 +458,18 @@ public class ApplicationCLI extends YarnCLI {
   }
 
   /**
-   * Lists the applications matching the given application Types And application
-   * States present in the Resource Manager
+   * Lists the applications matching the given application Types, application
+   * States and application Tags present in the Resource Manager.
    * 
    * @param appTypes
    * @param appStates
+   * @param appTags
    * @throws YarnException
    * @throws IOException
    */
   private void listApplications(Set<String> appTypes,
-      EnumSet<YarnApplicationState> appStates) throws YarnException,
-      IOException {
+      EnumSet<YarnApplicationState> appStates, Set<String> appTags)
+      throws YarnException, IOException {
     PrintWriter writer = new PrintWriter(
         new OutputStreamWriter(sysout, Charset.forName("UTF-8")));
     if (allAppStates) {
@@ -460,11 +485,11 @@ public class ApplicationCLI extends YarnCLI {
     }
 
     List<ApplicationReport> appsReport = client.getApplications(appTypes,
-        appStates);
+        appStates, appTags);
 
     writer.println("Total number of applications (application-types: "
-        + appTypes + " and states: " + appStates + ")" + ":"
-        + appsReport.size());
+        + appTypes + ", states: " + appStates + " and tags: " + appTags + ")"
+        + ":" + appsReport.size());
     writer.printf(APPLICATIONS_PATTERN, "Application-Id", "Application-Name",
         "Application-Type", "User", "Queue", "State", "Final-State",
         "Progress", "Tracking-URL");

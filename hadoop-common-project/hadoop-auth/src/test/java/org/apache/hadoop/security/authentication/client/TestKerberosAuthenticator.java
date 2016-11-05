@@ -13,15 +13,22 @@
  */
 package org.apache.hadoop.security.authentication.client;
 
+import static org.apache.hadoop.security.authentication.server.MultiSchemeAuthenticationHandler.SCHEMES_PROPERTY;
+import static org.apache.hadoop.security.authentication.server.MultiSchemeAuthenticationHandler.AUTH_HANDLER_PROPERTY;
+import static org.apache.hadoop.security.authentication.server.AuthenticationFilter.AUTH_TYPE;
+import static org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler.PRINCIPAL;
+import static org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler.KEYTAB;
+import static org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler.NAME_RULES;
+
 import org.apache.hadoop.minikdc.KerberosSecurityTestcase;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.apache.hadoop.security.authentication.server.MultiSchemeAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 import org.junit.runner.RunWith;
 import org.junit.Test;
 
@@ -68,6 +75,19 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
     props.setProperty(KerberosAuthenticationHandler.KEYTAB, KerberosTestUtils.getKeytabFile());
     props.setProperty(KerberosAuthenticationHandler.NAME_RULES,
                       "RULE:[1:$1@$0](.*@" + KerberosTestUtils.getRealm()+")s/@.*//\n");
+    return props;
+  }
+
+  private Properties getMultiAuthHandlerConfiguration() {
+    Properties props = new Properties();
+    props.setProperty(AUTH_TYPE, MultiSchemeAuthenticationHandler.TYPE);
+    props.setProperty(SCHEMES_PROPERTY, "negotiate");
+    props.setProperty(String.format(AUTH_HANDLER_PROPERTY, "negotiate"),
+        "kerberos");
+    props.setProperty(PRINCIPAL, KerberosTestUtils.getServerPrincipal());
+    props.setProperty(KEYTAB, KerberosTestUtils.getKeytabFile());
+    props.setProperty(NAME_RULES,
+        "RULE:[1:$1@$0](.*@" + KerberosTestUtils.getRealm() + ")s/@.*//\n");
     return props;
   }
 
@@ -162,4 +182,53 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
       }
     });
   }
+
+  @Test(timeout = 60000)
+  public void testNotAuthenticatedWithMultiAuthHandler() throws Exception {
+    AuthenticatorTestCase auth = new AuthenticatorTestCase(useTomcat);
+    AuthenticatorTestCase
+        .setAuthenticationHandlerConfig(getMultiAuthHandlerConfiguration());
+    auth.start();
+    try {
+      URL url = new URL(auth.getBaseURL());
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.connect();
+      Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
+          conn.getResponseCode());
+      Assert.assertTrue(conn
+          .getHeaderField(KerberosAuthenticator.WWW_AUTHENTICATE) != null);
+    } finally {
+      auth.stop();
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testAuthenticationWithMultiAuthHandler() throws Exception {
+    final AuthenticatorTestCase auth = new AuthenticatorTestCase(useTomcat);
+    AuthenticatorTestCase
+        .setAuthenticationHandlerConfig(getMultiAuthHandlerConfiguration());
+    KerberosTestUtils.doAsClient(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        auth._testAuthentication(new KerberosAuthenticator(), false);
+        return null;
+      }
+    });
+  }
+
+  @Test(timeout = 60000)
+  public void testAuthenticationHttpClientPostWithMultiAuthHandler()
+      throws Exception {
+    final AuthenticatorTestCase auth = new AuthenticatorTestCase(useTomcat);
+    AuthenticatorTestCase
+        .setAuthenticationHandlerConfig(getMultiAuthHandlerConfiguration());
+    KerberosTestUtils.doAsClient(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        auth._testAuthenticationHttpClient(new KerberosAuthenticator(), true);
+        return null;
+      }
+    });
+  }
+
 }

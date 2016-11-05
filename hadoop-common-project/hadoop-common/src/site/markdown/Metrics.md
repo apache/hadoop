@@ -315,6 +315,7 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `TotalReadTime` | Total number of milliseconds spent on read operation |
 | `RemoteBytesRead` | Number of bytes read by remote clients |
 | `RemoteBytesWritten` | Number of bytes written by remote clients |
+| `BPServiceActorInfo` | The information about a block pool service actor |
 
 yarn context
 ============

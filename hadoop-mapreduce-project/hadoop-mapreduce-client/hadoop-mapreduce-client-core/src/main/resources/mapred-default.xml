@@ -24,6 +24,11 @@
 <configuration>
 
 <property>
+  <name>mapreduce.job.hdfs-servers</name>
+  <value>${fs.defaultFS}</value>
+</property>
+
+<property>
   <name>mapreduce.job.committer.setup.cleanup.needed</name>
   <value>true</value>
   <description> true, if job needs job-setup and job-cleanup.
@@ -208,6 +213,12 @@
   task waits for map output data to be available for reading after obtaining
   connection.
   </description>
+</property>
+
+<property>
+  <name>mapreduce.shuffle.listen.queue.size</name>
+  <value>128</value>
+  <description>The length of the shuffle server listen queue.</description>
 </property>
 
 <property>
@@ -1499,12 +1510,12 @@
 
 <property>
   <name>yarn.app.mapreduce.client.job.max-retries</name>
-  <value>0</value>
+  <value>3</value>
   <description>The number of retries the client will make for getJob and
-  dependent calls.  The default is 0 as this is generally only needed for
-  non-HDFS DFS where additional, high level retries are required to avoid
-  spurious failures during the getJob call.  30 is a good value for
-  WASB</description>
+    dependent calls.
+    This is needed for non-HDFS DFS where additional, high level
+    retries are required to avoid spurious failures during the getJob call.
+    30 is a good value for WASB</description>
 </property>
 
 <property>
@@ -1617,6 +1628,14 @@
   <name>mapreduce.jobhistory.webapp.address</name>
   <value>0.0.0.0:19888</value>
   <description>MapReduce JobHistory Server Web UI host:port</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.webapp.https.address</name>
+  <value>0.0.0.0:19890</value>
+  <description>
+    The https address the MapReduce JobHistory Server WebApp is on.
+  </description>
 </property>
 
 <property>
@@ -1916,6 +1935,36 @@
 </property>
 
 <property>
+  <name>mapreduce.job.cache.limit.max-resources</name>
+  <value>0</value>
+  <description>The maximum number of resources a map reduce job is allowed to
+    submit for localization via files, libjars, archives, and jobjar command
+    line arguments and through the distributed cache. If set to 0 the limit is
+    ignored.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.cache.limit.max-resources-mb</name>
+  <value>0</value>
+  <description>The maximum size (in MB) a map reduce job is allowed to submit
+    for localization via files, libjars, archives, and jobjar command line
+    arguments and through the distributed cache. If set to 0 the limit is
+    ignored.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.cache.limit.max-single-resource-mb</name>
+  <value>0</value>
+  <description>The maximum size (in MB) of a single resource a map reduce job
+    is allow to submit for localization via files, libjars, archives, and
+    jobjar command line arguments and through the distributed cache. If set to
+    0 the limit is ignored.
+  </description>
+</property>
+
+<property>
   <description>
     Value of the xframe-options
   </description>
@@ -1923,4 +1972,21 @@
   <value>SAMEORIGIN</value>
 </property>
 
+<property>
+  <description>
+    The maximum number of tasks that a job can have so that the Job History
+    Server will fully parse its associated job history file and load it into
+    memory. A value of -1 (default) will allow all jobs to be loaded.
+  </description>
+  <name>mapreduce.jobhistory.loadedjob.tasks.max</name>
+  <value>-1</value>
+</property>
+
+<property>
+  <description>
+    The list of job configuration properties whose value will be redacted.
+  </description>
+  <name>mapreduce.job.redacted-properties</name>
+  <value></value>
+</property>
 </configuration>

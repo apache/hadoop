@@ -76,7 +76,8 @@ public class NodeCLI extends YarnCLI {
         "based on node state, all -all to list all nodes, " +
         "-showDetails to display more details about each node.");
     Option nodeStateOpt = new Option(NODE_STATE_CMD, true,
-        "Works with -list to filter nodes based on input comma-separated list of node states.");
+        "Works with -list to filter nodes based on input comma-separated " +
+        "list of node states. " + getAllValidNodeStates());
     nodeStateOpt.setValueSeparator(',');
     nodeStateOpt.setArgs(Option.UNLIMITED_VALUES);
     nodeStateOpt.setArgName("States");
@@ -88,6 +89,14 @@ public class NodeCLI extends YarnCLI {
         "Works with -list to show more details about each node.");
     opts.addOption(showDetailsOpt);
     opts.getOption(STATUS_CMD).setArgName("NodeId");
+
+    if (args != null && args.length > 0) {
+      for (int i = args.length - 1; i >= 0; i--) {
+        if (args[i].equalsIgnoreCase("-" + NODE_ALL)) {
+          args[i] = "-" + NODE_ALL;
+        }
+      }
+    }
 
     int exitCode = -1;
     CommandLine cliParser = null;
@@ -116,8 +125,15 @@ public class NodeCLI extends YarnCLI {
         if (types != null) {
           for (String type : types) {
             if (!type.trim().isEmpty()) {
-              nodeStates.add(NodeState.valueOf(
-                  org.apache.hadoop.util.StringUtils.toUpperCase(type.trim())));
+              try {
+                nodeStates.add(NodeState.valueOf(
+                    org.apache.hadoop.util.StringUtils.toUpperCase(
+                            type.trim())));
+              } catch (IllegalArgumentException ex) {
+                sysout.println("The node state " + type + " is invalid.");
+                sysout.println(getAllValidNodeStates());
+                return exitCode;
+              }
             }
           }
         }
@@ -319,5 +335,15 @@ public class NodeCLI extends YarnCLI {
     }
     nodeReportStr.close();
     sysout.println(baos.toString("UTF-8"));
+  }
+
+  private String getAllValidNodeStates() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("The valid node state can be one of the following: ");
+    for (NodeState state : NodeState.values()) {
+      sb.append(state).append(",");
+    }
+    String output = sb.toString();
+    return output.substring(0, output.length() - 1) + ".";
   }
 }

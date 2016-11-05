@@ -23,32 +23,57 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocolPB;
+import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RestartContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RollbackResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.CommitResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.IncreaseContainersResourceRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.IncreaseContainersResourceResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetContainerStatusesRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetContainerStatusesResponsePBImpl;
+
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReInitializeContainerRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReInitializeContainerResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ResourceLocalizationRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ResourceLocalizationResponsePBImpl;
+
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RestartContainerResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RollbackResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.SignalContainerRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.SignalContainerResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainersRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainersResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StopContainersRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StopContainersResponsePBImpl;
+
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.IncreaseContainersResourceRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.IncreaseContainersResourceResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusesRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusesResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.ReInitializeContainerRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.ReInitializeContainerResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.ResourceLocalizationRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.ResourceLocalizationResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.RestartContainerResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.RollbackResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SignalContainerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SignalContainerResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainersRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainersResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StopContainersRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StopContainersResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.CommitResponseProto;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -130,6 +155,83 @@ public class ContainerManagementProtocolPBServiceImpl implements ContainerManage
     try {
       final SignalContainerResponse response = real.signalToContainer(request);
       return ((SignalContainerResponsePBImpl)response).getProto();
+    } catch (YarnException e) {
+      throw new ServiceException(e);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public ResourceLocalizationResponseProto localize(RpcController controller,
+      ResourceLocalizationRequestProto proto) throws ServiceException {
+    ResourceLocalizationRequestPBImpl request =
+        new ResourceLocalizationRequestPBImpl(proto);
+    try {
+      ResourceLocalizationResponse response = real.localize(request);
+      return ((ResourceLocalizationResponsePBImpl) response).getProto();
+    } catch (YarnException e) {
+      throw new ServiceException(e);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public ReInitializeContainerResponseProto reInitializeContainer(
+      RpcController controller, ReInitializeContainerRequestProto proto)
+      throws ServiceException {
+    ReInitializeContainerRequestPBImpl request =
+        new ReInitializeContainerRequestPBImpl(proto);
+    try {
+      ReInitializeContainerResponse response =
+          real.reInitializeContainer(request);
+      return ((ReInitializeContainerResponsePBImpl) response).getProto();
+    } catch (YarnException e) {
+      throw new ServiceException(e);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public RestartContainerResponseProto restartContainer(
+      RpcController controller, ContainerIdProto containerId)
+      throws ServiceException {
+    ContainerId request = ProtoUtils.convertFromProtoFormat(containerId);
+    try {
+      RestartContainerResponse response = real.restartContainer(request);
+      return ((RestartContainerResponsePBImpl) response).getProto();
+    } catch (YarnException e) {
+      throw new ServiceException(e);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public RollbackResponseProto rollbackLastReInitialization(
+      RpcController controller, ContainerIdProto containerId) throws
+      ServiceException {
+    ContainerId request = ProtoUtils.convertFromProtoFormat(containerId);
+    try {
+      RollbackResponse response = real.rollbackLastReInitialization(request);
+      return ((RollbackResponsePBImpl) response).getProto();
+    } catch (YarnException e) {
+      throw new ServiceException(e);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public CommitResponseProto commitLastReInitialization(
+      RpcController controller, ContainerIdProto containerId) throws
+      ServiceException {
+    ContainerId request = ProtoUtils.convertFromProtoFormat(containerId);
+    try {
+      CommitResponse response = real.commitLastReInitialization(request);
+      return ((CommitResponsePBImpl) response).getProto();
     } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {

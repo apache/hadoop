@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -33,27 +34,39 @@ public class TestQueueManager {
   private FairSchedulerConfiguration conf;
   private QueueManager queueManager;
   private Set<FSQueue> notEmptyQueues;
+  private FairScheduler scheduler;
   
   @Before
   public void setUp() throws Exception {
     conf = new FairSchedulerConfiguration();
-    FairScheduler scheduler = mock(FairScheduler.class);
+    scheduler = mock(FairScheduler.class);
+
     AllocationConfiguration allocConf = new AllocationConfiguration(conf);
+
+    // Set up some queues to test default child max resource inheritance
+    allocConf.configuredQueues.get(FSQueueType.PARENT).add("root.test");
+    allocConf.configuredQueues.get(FSQueueType.LEAF).add("root.test.childA");
+    allocConf.configuredQueues.get(FSQueueType.PARENT).add("root.test.childB");
+
     when(scheduler.getAllocationConfiguration()).thenReturn(allocConf);
     when(scheduler.getConf()).thenReturn(conf);
+
     SystemClock clock = SystemClock.getInstance();
+
     when(scheduler.getClock()).thenReturn(clock);
-    notEmptyQueues = new HashSet<FSQueue>();
+    notEmptyQueues = new HashSet<>();
     queueManager = new QueueManager(scheduler) {
       @Override
       public boolean isEmpty(FSQueue queue) {
         return !notEmptyQueues.contains(queue);
       }
     };
+
     FSQueueMetrics.forQueue("root", null, true, conf);
+
     queueManager.initialize(conf);
   }
-  
+
   @Test
   public void testReloadTurnsLeafQueueIntoParent() throws Exception {
     updateConfiguredLeafQueues(queueManager, "queue1");
@@ -131,6 +144,9 @@ public class TestQueueManager {
     assertFalse(queueManager.isQueueNameValid(" a"));
     assertFalse(queueManager.isQueueNameValid("a "));
     assertFalse(queueManager.isQueueNameValid(" a "));
+    assertFalse(queueManager.isQueueNameValid("\u00a0"));
+    assertFalse(queueManager.isQueueNameValid("a\u00a0"));
+    assertFalse(queueManager.isQueueNameValid("\u00a0a\u00a0"));
     assertTrue(queueManager.isQueueNameValid("a b"));
     assertTrue(queueManager.isQueueNameValid("a"));
   }
@@ -139,5 +155,151 @@ public class TestQueueManager {
     AllocationConfiguration allocConf = new AllocationConfiguration(conf);
     allocConf.configuredQueues.get(FSQueueType.LEAF).addAll(Sets.newHashSet(confLeafQueues));
     queueMgr.updateAllocationConfiguration(allocConf);
+  }
+
+  /**
+   * Test simple leaf queue creation.
+   */
+  @Test
+  public void testCreateLeafQueue() {
+    AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
+
+    queueManager.updateAllocationConfiguration(allocConf);
+
+    FSQueue q1 = queueManager.createQueue("root.queue1", FSQueueType.LEAF);
+
+    assertNotNull("Leaf queue root.queue1 was not created",
+        queueManager.getLeafQueue("root.queue1", false));
+    assertEquals("createQueue() returned wrong queue",
+        "root.queue1", q1.getName());
+  }
+
+  /**
+   * Test creation of a leaf queue and its parent.
+   */
+  @Test
+  public void testCreateLeafQueueAndParent() {
+    AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
+
+    queueManager.updateAllocationConfiguration(allocConf);
+
+    FSQueue q2 = queueManager.createQueue("root.queue1.queue2",
+        FSQueueType.LEAF);
+
+    assertNotNull("Parent queue root.queue1 was not created",
+        queueManager.getParentQueue("root.queue1", false));
+    assertNotNull("Leaf queue root.queue1.queue2 was not created",
+        queueManager.getLeafQueue("root.queue1.queue2", false));
+    assertEquals("createQueue() returned wrong queue",
+        "root.queue1.queue2", q2.getName());
+  }
+
+  /**
+   * Test creation of leaf and parent child queues when the parent queue has
+   * child defaults set. In this test we rely on the root.test,
+   * root.test.childA and root.test.childB queues that are created in the
+   * {@link #setUp()} method.
+   */
+  @Test
+  public void testCreateQueueWithChildDefaults() {
+    AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
+
+    queueManager.updateAllocationConfiguration(allocConf);
+    queueManager.getQueue("root.test").setMaxChildQueueResource(
+        Resources.createResource(8192, 256));
+
+    FSQueue q1 = queueManager.createQueue("root.test.childC", FSQueueType.LEAF);
+    assertNotNull("Leaf queue root.test.childC was not created",
+        queueManager.getLeafQueue("root.test.childC", false));
+    assertEquals("createQueue() returned wrong queue",
+        "root.test.childC", q1.getName());
+    assertEquals("Max resources for root.queue1 were not inherited from "
+        + "parent's max child resources", Resources.createResource(8192, 256),
+        q1.getMaxShare());
+
+    FSQueue q2 = queueManager.createQueue("root.test.childD",
+        FSQueueType.PARENT);
+
+    assertNotNull("Leaf queue root.test.childD was not created",
+        queueManager.getParentQueue("root.test.childD", false));
+    assertEquals("createQueue() returned wrong queue",
+        "root.test.childD", q2.getName());
+    assertEquals("Max resources for root.test.childD were not inherited "
+        + "from parent's max child resources",
+        Resources.createResource(8192, 256),
+        q2.getMaxShare());
+
+    // Check that the childA and childB queues weren't impacted
+    // by the child defaults
+    assertNotNull("Leaf queue root.test.childA was not created during setup",
+        queueManager.getLeafQueue("root.test.childA", false));
+    assertEquals("Max resources for root.test.childA were inherited from "
+        + "parent's max child resources", Resources.unbounded(),
+        queueManager.getLeafQueue("root.test.childA", false).getMaxShare());
+    assertNotNull("Leaf queue root.test.childB was not created during setup",
+        queueManager.getParentQueue("root.test.childB", false));
+    assertEquals("Max resources for root.test.childB were inherited from "
+        + "parent's max child resources", Resources.unbounded(),
+        queueManager.getParentQueue("root.test.childB", false).getMaxShare());
+  }
+
+  /**
+   * Test creation of a leaf queue with no resource limits.
+   */
+  @Test
+  public void testCreateLeafQueueWithDefaults() {
+    AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
+    FSQueue q1 = queueManager.createQueue("root.queue1", FSQueueType.LEAF);
+
+    assertNotNull("Leaf queue root.queue1 was not created",
+        queueManager.getLeafQueue("root.queue1", false));
+    assertEquals("createQueue() returned wrong queue",
+        "root.queue1", q1.getName());
+
+    // Min default is 0,0
+    assertEquals("Min resources were not set to default",
+        Resources.createResource(0, 0),
+        q1.getMinShare());
+
+    // Max default is unbounded
+    assertEquals("Max resources were not set to default", Resources.unbounded(),
+        q1.getMaxShare());
+  }
+
+  /**
+   * Test creation of a simple parent queue.
+   */
+  @Test
+  public void testCreateParentQueue() {
+    AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
+
+    queueManager.updateAllocationConfiguration(allocConf);
+
+    FSQueue q1 = queueManager.createQueue("root.queue1", FSQueueType.PARENT);
+
+    assertNotNull("Parent queue root.queue1 was not created",
+        queueManager.getParentQueue("root.queue1", false));
+    assertEquals("createQueue() returned wrong queue",
+        "root.queue1", q1.getName());
+  }
+
+  /**
+   * Test creation of a parent queue and its parent.
+   */
+  @Test
+  public void testCreateParentQueueAndParent() {
+    AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
+
+    queueManager.updateAllocationConfiguration(allocConf);
+
+    FSQueue q2 = queueManager.createQueue("root.queue1.queue2",
+        FSQueueType.PARENT);
+
+    assertNotNull("Parent queue root.queue1 was not created",
+        queueManager.getParentQueue("root.queue1", false));
+    assertNotNull("Leaf queue root.queue1.queue2 was not created",
+        queueManager.getParentQueue("root.queue1.queue2", false));
+    assertEquals("createQueue() returned wrong queue",
+        "root.queue1.queue2", q2.getName());
   }
 }

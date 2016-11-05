@@ -85,8 +85,8 @@ public class TestSaveNamespace {
   private static final Log LOG = LogFactory.getLog(TestSaveNamespace.class);
 
   private static class FaultySaveImage implements Answer<Void> {
-    int count = 0;
-    boolean throwRTE = true;
+    private int count = 0;
+    private boolean throwRTE = true;
 
     // generate either a RuntimeException or IOException
     public FaultySaveImage(boolean throwRTE) {
@@ -140,7 +140,7 @@ public class TestSaveNamespace {
     SAVE_ALL_FSIMAGES,
     WRITE_STORAGE_ALL,
     WRITE_STORAGE_ONE
-  };
+  }
 
   private void saveNamespaceWithInjectedFault(Fault fault) throws Exception {
     Configuration conf = getConf();
@@ -164,38 +164,40 @@ public class TestSaveNamespace {
     case SAVE_SECOND_FSIMAGE_RTE:
       // The spy throws a RuntimeException when writing to the second directory
       doAnswer(new FaultySaveImage(true)).
-        when(spyImage).saveFSImage(
-            (SaveNamespaceContext)anyObject(),
-            (StorageDirectory)anyObject(), (NameNodeFile) anyObject());
+          when(spyImage).saveFSImage(
+          anyObject(),
+          anyObject(), anyObject());
       shouldFail = false;
       break;
     case SAVE_SECOND_FSIMAGE_IOE:
       // The spy throws an IOException when writing to the second directory
       doAnswer(new FaultySaveImage(false)).
-        when(spyImage).saveFSImage(
-            (SaveNamespaceContext)anyObject(),
-            (StorageDirectory)anyObject(), (NameNodeFile) anyObject());
+          when(spyImage).saveFSImage(
+          anyObject(),
+          anyObject(), anyObject());
       shouldFail = false;
       break;
     case SAVE_ALL_FSIMAGES:
       // The spy throws IOException in all directories
       doThrow(new RuntimeException("Injected")).
-      when(spyImage).saveFSImage(
-          (SaveNamespaceContext)anyObject(),
-          (StorageDirectory)anyObject(), (NameNodeFile) anyObject());
+          when(spyImage).saveFSImage(
+          anyObject(),
+          anyObject(), anyObject());
       shouldFail = true;
       break;
     case WRITE_STORAGE_ALL:
       // The spy throws an exception before writing any VERSION files
       doAnswer(new FaultyWriteProperties(Fault.WRITE_STORAGE_ALL))
-          .when(spyStorage).writeProperties((StorageDirectory)anyObject());
+          .when(spyStorage).writeProperties(anyObject());
       shouldFail = true;
       break;
     case WRITE_STORAGE_ONE:
       // The spy throws on exception on one particular storage directory
       doAnswer(new FaultyWriteProperties(Fault.WRITE_STORAGE_ONE))
-        .when(spyStorage).writeProperties((StorageDirectory)anyObject());
+        .when(spyStorage).writeProperties(anyObject());
       shouldFail = false;
+      break;
+    default: fail("Unknown fail type");
       break;
     }
 
@@ -210,7 +212,7 @@ public class TestSaveNamespace {
           fail("Did not fail!");
         }
       } catch (Exception e) {
-        if (! shouldFail) {
+        if (!shouldFail) {
           throw e;
         } else {
           LOG.info("Test caught expected exception", e);
@@ -392,21 +394,20 @@ public class TestSaveNamespace {
     // Replace the FSImage with a spy
     final FSImage originalImage = fsn.getFSImage();
     NNStorage storage = originalImage.getStorage();
-    storage.close(); // unlock any directories that FSNamesystem's initialization may have locked
+    // unlock any directories that
+    // FSNamesystem's initialization may have locked
+    storage.close();
 
     NNStorage spyStorage = spy(storage);
     originalImage.storage = spyStorage;
     FSImage spyImage = spy(originalImage);
     Whitebox.setInternalState(fsn, "fsImage", spyImage);
 
-    spyImage.storage.setStorageDirectories(
-        FSNamesystem.getNamespaceDirs(conf), 
+    spyImage.storage.setStorageDirectories(FSNamesystem.getNamespaceDirs(conf),
         FSNamesystem.getNamespaceEditsDirs(conf));
 
     doThrow(new IOException("Injected fault: saveFSImage")).
-        when(spyImage).saveFSImage(
-            (SaveNamespaceContext)anyObject(),
-            (StorageDirectory)anyObject(), (NameNodeFile) anyObject());
+        when(spyImage).saveFSImage(anyObject(), anyObject(), anyObject());
 
     try {
       doAnEdit(fsn, 1);
@@ -530,7 +531,9 @@ public class TestSaveNamespace {
     // Replace the FSImage with a spy
     final FSImage image = fsn.getFSImage();
     NNStorage storage = image.getStorage();
-    storage.close(); // unlock any directories that FSNamesystem's initialization may have locked
+    // unlock any directories that
+    // FSNamesystem's initialization may have locked
+    storage.close();
     storage.setStorageDirectories(
         FSNamesystem.getNamespaceDirs(conf), 
         FSNamesystem.getNamespaceEditsDirs(conf));
@@ -539,7 +542,8 @@ public class TestSaveNamespace {
     final FSNamesystem finalFsn = spyFsn;
     DelayAnswer delayer = new GenericTestUtils.DelayAnswer(LOG);
     BlockIdManager bid = spy(spyFsn.getBlockManager().getBlockIdManager());
-    Whitebox.setInternalState(finalFsn.getBlockManager(), "blockIdManager", bid);
+    Whitebox.setInternalState(finalFsn.getBlockManager(),
+        "blockIdManager", bid);
     doAnswer(delayer).when(bid).getGenerationStamp();
 
     ExecutorService pool = Executors.newFixedThreadPool(2);
@@ -572,8 +576,8 @@ public class TestSaveNamespace {
         // give the cancel call time to run
         Thread.sleep(500);
         
-        // allow saveNamespace to proceed - it should check the cancel flag after
-        // this point and throw an exception
+        // allow saveNamespace to proceed - it should check the cancel flag
+        // after this point and throw an exception
         delayer.proceed();
 
         cancelFuture.get();
@@ -622,9 +626,7 @@ public class TestSaveNamespace {
       fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
     } finally {
       IOUtils.cleanup(LOG, out, fs);
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      cluster.shutdown();
     }
   }
   
@@ -641,9 +643,49 @@ public class TestSaveNamespace {
       cluster.getNameNodeRpc().saveNamespace(0, 0);
       fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
     } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      cluster.shutdown();
+    }
+  }
+
+
+  @Test
+  public void testSkipSnapshotSection() throws Exception {
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new Configuration())
+        .numDataNodes(1).build();
+    cluster.waitActive();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    OutputStream out = null;
+    try {
+      String path = "/skipSnapshot";
+      out = fs.create(new Path(path));
+      out.close();
+
+      // add a bogus filediff
+      FSDirectory dir = cluster.getNamesystem().getFSDirectory();
+      INodeFile file = dir.getINode(path).asFile();
+      file.addSnapshotFeature(null).getDiffs()
+          .saveSelf2Snapshot(-1, file, null, false);
+
+      // make sure it has a diff
+      assertTrue("Snapshot fileDiff is missing.",
+          file.getFileWithSnapshotFeature().getDiffs() != null);
+
+      // saveNamespace
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      cluster.getNameNodeRpc().saveNamespace(0, 0);
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+      // restart namenode
+      cluster.restartNameNode(true);
+      dir = cluster.getNamesystem().getFSDirectory();
+      file = dir.getINode(path).asFile();
+
+      // there should be no snapshot feature for the inode, when there is
+      // no snapshot.
+      assertTrue("There should be no snapshot feature for this INode.",
+          file.getFileWithSnapshotFeature() == null);
+    } finally {
+      cluster.shutdown();
     }
   }
 
@@ -697,11 +739,8 @@ public class TestSaveNamespace {
 
   private void doAnEdit(FSNamesystem fsn, int id) throws IOException {
     // Make an edit
-    fsn.mkdirs(
-      "/test" + id,
-      new PermissionStatus("test", "Test",
-          new FsPermission((short)0777)),
-          true);
+    fsn.mkdirs("/test" + id, new PermissionStatus("test", "Test",
+        new FsPermission((short)0777)), true);
   }
 
   private void checkEditExists(FSNamesystem fsn, int id) throws IOException {
@@ -719,8 +758,9 @@ public class TestSaveNamespace {
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameDirs);
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameDirs);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, "0.0.0.0:0");
-    conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false); 
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+        "0.0.0.0:0");
+    conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
     return conf;
   }
 }

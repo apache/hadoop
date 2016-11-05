@@ -89,6 +89,13 @@ public class TestContainersMonitorResourceChange {
     public void deleteAsUser(DeletionAsUserContext ctx)
         throws IOException, InterruptedException {
     }
+
+    @Override
+    public void symLink(String target, String symlink)
+        throws IOException {
+
+    }
+
     @Override
     public String getProcessId(ContainerId containerId) {
       return String.valueOf(containerId.getContainerId());

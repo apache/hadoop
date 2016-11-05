@@ -82,7 +82,6 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -230,6 +229,8 @@ public class ContainerLaunch implements Callable<Integer> {
       pidFilePath = dirsHandler.getLocalPathForWrite(pidFileSubpath);
       List<String> localDirs = dirsHandler.getLocalDirs();
       List<String> logDirs = dirsHandler.getLogDirs();
+      List<String> filecacheDirs = getNMFilecacheDirs(localDirs);
+      List<String> userLocalDirs = getUserLocalDirs(localDirs);
       List<String> containerLocalDirs = getContainerLocalDirs(localDirs);
       List<String> containerLogDirs = getContainerLogDirs(logDirs);
 
@@ -242,6 +243,7 @@ public class ContainerLaunch implements Callable<Integer> {
       try {
         // /////////// Write out the container-script in the nmPrivate space.
         List<Path> appDirs = new ArrayList<Path>(localDirs.size());
+
         for (String localDir : localDirs) {
           Path usersdir = new Path(localDir, ContainerLocalizer.USERCACHE);
           Path userdir = new Path(usersdir, user);
@@ -258,13 +260,14 @@ public class ContainerLaunch implements Callable<Integer> {
             new Path(containerWorkDir, 
                 FINAL_CONTAINER_TOKENS_FILE).toUri().getPath());
         // Sanitize the container's environment
-        sanitizeEnv(environment, containerWorkDir, appDirs, containerLogDirs,
+        sanitizeEnv(environment, containerWorkDir, appDirs, userLocalDirs,
+            containerLogDirs,
           localResources, nmPrivateClasspathJarDir);
 
         // Write out the environment
         exec.writeLaunchEnv(containerScriptOutStream, environment,
           localResources, launchContext.getCommands(),
-            new Path(containerLogDirs.get(0)));
+            new Path(containerLogDirs.get(0)), user);
 
         // /////////// End of writing out container-script
 
@@ -288,6 +291,8 @@ public class ContainerLaunch implements Callable<Integer> {
           .setContainerWorkDir(containerWorkDir)
           .setLocalDirs(localDirs)
           .setLogDirs(logDirs)
+          .setFilecacheDirs(filecacheDirs)
+          .setUserLocalDirs(userLocalDirs)
           .setContainerLocalDirs(containerLocalDirs)
           .setContainerLogDirs(containerLogDirs)
           .build());
@@ -352,6 +357,35 @@ public class ContainerLaunch implements Callable<Integer> {
 
     return containerLocalDirs;
   }
+
+  protected List<String> getUserLocalDirs(List<String> localDirs) {
+    List<String> userLocalDirs = new ArrayList<>(localDirs.size());
+    String user = container.getUser();
+
+    for (String localDir : localDirs) {
+      String userLocalDir = localDir + Path.SEPARATOR +
+          ContainerLocalizer.USERCACHE + Path.SEPARATOR + user
+          + Path.SEPARATOR;
+
+      userLocalDirs.add(userLocalDir);
+    }
+
+    return userLocalDirs;
+  }
+
+  protected List<String> getNMFilecacheDirs(List<String> localDirs) {
+    List<String> filecacheDirs = new ArrayList<>(localDirs.size());
+
+    for (String localDir : localDirs) {
+      String filecacheDir = localDir + Path.SEPARATOR +
+          ContainerLocalizer.FILECACHE;
+
+      filecacheDirs.add(filecacheDir);
+    }
+
+    return filecacheDirs;
+  }
+
 
   protected Map<Path, List<String>> getLocalizedResources()
       throws YarnException {
@@ -537,8 +571,9 @@ public class ContainerLaunch implements Callable<Integer> {
           + " No cleanup needed to be done");
       return;
     }
-
-    LOG.debug("Marking container " + containerIdStr + " as inactive");
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Marking container " + containerIdStr + " as inactive");
+    }
     // this should ensure that if the container process has not launched 
     // by this time, it will never be launched
     exec.deactivateContainer(containerId);
@@ -562,10 +597,10 @@ public class ContainerLaunch implements Callable<Integer> {
       // kill process
       if (processId != null) {
         String user = container.getUser();
-        LOG.debug("Sending signal to pid " + processId
-            + " as user " + user
-            + " for container " + containerIdStr);
-
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Sending signal to pid " + processId + " as user " + user
+              + " for container " + containerIdStr);
+        }
         final Signal signal = sleepDelayBeforeSigKill > 0
           ? Signal.TERM
           : Signal.KILL;
@@ -577,12 +612,11 @@ public class ContainerLaunch implements Callable<Integer> {
                 .setPid(processId)
                 .setSignal(signal)
                 .build());
-
-        LOG.debug("Sent signal " + signal + " to pid " + processId
-          + " as user " + user
-          + " for container " + containerIdStr
-          + ", result=" + (result? "success" : "failed"));
-
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Sent signal " + signal + " to pid " + processId
+              + " as user " + user + " for container " + containerIdStr
+              + ", result=" + (result ? "success" : "failed"));
+        }
         if (sleepDelayBeforeSigKill > 0) {
           new DelayedProcessKiller(container, user,
               processId, sleepDelayBeforeSigKill, Signal.KILL, exec).start();
@@ -710,8 +744,10 @@ public class ContainerLaunch implements Callable<Integer> {
     String containerIdStr = 
         container.getContainerId().toString();
     String processId = null;
-    LOG.debug("Accessing pid for container " + containerIdStr
-        + " from pid file " + pidFilePath);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Accessing pid for container " + containerIdStr
+          + " from pid file " + pidFilePath);
+    }
     int sleepCounter = 0;
     final int sleepInterval = 100;
 
@@ -720,8 +756,10 @@ public class ContainerLaunch implements Callable<Integer> {
     while (true) {
       processId = ProcessIdFileReader.getProcessId(pidFilePath);
       if (processId != null) {
-        LOG.debug("Got pid " + processId + " for container "
-            + containerIdStr);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+              "Got pid " + processId + " for container " + containerIdStr);
+        }
         break;
       }
       else if ((sleepCounter*sleepInterval) > maxKillWaitTime) {
@@ -800,7 +838,7 @@ public class ContainerLaunch implements Callable<Integer> {
         throws IOException;
 
     /**
-     * Method to dump debug information to the a target file. This method will
+     * Method to dump debug information to a target file. This method will
      * be called by ContainerExecutor when setting up the container launch
      * script.
      * @param output the file to which debug information is to be written
@@ -990,7 +1028,8 @@ public class ContainerLaunch implements Callable<Integer> {
   }
   
   public void sanitizeEnv(Map<String, String> environment, Path pwd,
-      List<Path> appDirs, List<String> containerLogDirs,
+      List<Path> appDirs, List<String> userLocalDirs, List<String>
+      containerLogDirs,
       Map<Path, List<String>> resources,
       Path nmPrivateClasspathJarDir) throws IOException {
     /**
@@ -1011,6 +1050,9 @@ public class ContainerLaunch implements Callable<Integer> {
 
     environment.put(Environment.LOCAL_DIRS.name(),
         StringUtils.join(",", appDirs));
+
+    environment.put(Environment.LOCAL_USER_DIRS.name(), StringUtils.join(",",
+        userLocalDirs));
 
     environment.put(Environment.LOG_DIRS.name(),
       StringUtils.join(",", containerLogDirs));
@@ -1163,16 +1205,16 @@ public class ContainerLaunch implements Callable<Integer> {
 
   private void recordContainerLogDir(ContainerId containerId,
       String logDir) throws IOException{
+    container.setLogDir(logDir);
     if (container.isRetryContextSet()) {
-      container.setLogDir(logDir);
       context.getNMStateStore().storeContainerLogDir(containerId, logDir);
     }
   }
 
   private void recordContainerWorkDir(ContainerId containerId,
       String workDir) throws IOException{
+    container.setWorkDir(workDir);
     if (container.isRetryContextSet()) {
-      container.setWorkDir(workDir);
       context.getNMStateStore().storeContainerWorkDir(containerId, workDir);
     }
   }

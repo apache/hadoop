@@ -27,9 +27,9 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.tools.rumen.datatypes.*;
-import org.codehaus.jackson.annotate.JsonAnySetter;
 
 /**
  * A {@link LoggedDiscreteCDF} is a representation of an hadoop job, with the

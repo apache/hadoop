@@ -182,6 +182,9 @@
   <tr><th>Block Deletion Start Time</th><td>{BlockDeletionStartTime|date_tostring}</td></tr>
 {/fs}
 
+{#fsn}
+  <tr><th>Last Checkpoint Time</th><td>{@if cond="{LastCheckpointTime} === 0"}Never{:else}{LastCheckpointTime|date_tostring}{/if}</td></tr>
+{/fsn}
 </table>
 
 <div class="page-header"><h1>NameNode Journal Status</h1></div>

@@ -57,11 +57,6 @@ public interface MRJobConfig {
   // negative values disable the limit
   public static final long DEFAULT_TASK_LOCAL_WRITE_LIMIT_BYTES = -1;
 
-  public static final String TASK_PROGRESS_REPORT_INTERVAL =
-      "mapreduce.task.progress-report.interval";
-  /** The number of milliseconds between progress reports. */
-  public static final int DEFAULT_TASK_PROGRESS_REPORT_INTERVAL = 3000;
-
   public static final String JAR = "mapreduce.job.jar";
 
   public static final String ID = "mapreduce.job.id";
@@ -258,6 +253,10 @@ public interface MRJobConfig {
   public static final String TASK_REDUCE_PROFILE_PARAMS = "mapreduce.task.profile.reduce.params";
   
   public static final String TASK_TIMEOUT = "mapreduce.task.timeout";
+  long DEFAULT_TASK_TIMEOUT_MILLIS = 5 * 60 * 1000L;
+
+  String TASK_PROGRESS_REPORT_INTERVAL =
+      "mapreduce.task.progress-report.interval";
 
   public static final String TASK_TIMEOUT_CHECK_INTERVAL_MS = "mapreduce.task.timeout.check-interval-ms";
 
@@ -506,7 +505,7 @@ public interface MRJobConfig {
    */
   public static final String MR_CLIENT_JOB_MAX_RETRIES =
       MR_PREFIX + "client.job.max-retries";
-  public static final int DEFAULT_MR_CLIENT_JOB_MAX_RETRIES = 0;
+  public static final int DEFAULT_MR_CLIENT_JOB_MAX_RETRIES = 3;
 
   /**
    * How long to wait between jobclient retries on failure
@@ -967,6 +966,34 @@ public interface MRJobConfig {
           128;
 
   /**
+   * The maximum number of resources a map reduce job is allowed to submit for
+   * localization via files, libjars, archives, and jobjar command line
+   * arguments and through the distributed cache. If set to 0 the limit is
+   * ignored.
+   */
+  String MAX_RESOURCES = "mapreduce.job.cache.limit.max-resources";
+  int MAX_RESOURCES_DEFAULT = 0;
+
+  /**
+   * The maximum size (in MB) a map reduce job is allowed to submit for
+   * localization via files, libjars, archives, and jobjar command line
+   * arguments and through the distributed cache. If set to 0 the limit is
+   * ignored.
+   */
+  String MAX_RESOURCES_MB = "mapreduce.job.cache.limit.max-resources-mb";
+  long MAX_RESOURCES_MB_DEFAULT = 0;
+
+  /**
+   * The maximum size (in MB) of a single resource a map reduce job is allow to
+   * submit for localization via files, libjars, archives, and jobjar command
+   * line arguments and through the distributed cache. If set to 0 the limit is
+   * ignored.
+   */
+  String MAX_SINGLE_RESOURCE_MB =
+      "mapreduce.job.cache.limit.max-single-resource-mb";
+  long MAX_SINGLE_RESOURCE_MB_DEFAULT = 0;
+
+  /**
    * Number of OPPORTUNISTIC Containers per 100 containers that will be
    * requested by the MRAppMaster. The Default value is 0, which implies all
    * maps will be guaranteed. A value of 100 means all maps will be requested
@@ -977,4 +1004,9 @@ public interface MRJobConfig {
   public static final String MR_NUM_OPPORTUNISTIC_MAPS_PER_100 =
       "mapreduce.job.num-opportunistic-maps-per-100";
   public static final int DEFAULT_MR_NUM_OPPORTUNISTIC_MAPS_PER_100 = 0;
+
+  /**
+   * A comma-separated list of properties whose value will be redacted.
+   */
+  String MR_JOB_REDACTED_PROPERTIES = "mapreduce.job.redacted-properties";
 }

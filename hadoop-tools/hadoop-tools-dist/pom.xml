@@ -20,12 +20,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>3.0.0-alpha1-SNAPSHOT</version>
+    <version>3.0.0-alpha2-SNAPSHOT</version>
     <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-tools-dist</artifactId>
-  <version>3.0.0-alpha1-SNAPSHOT</version>
+  <version>3.0.0-alpha2-SNAPSHOT</version>
   <description>Apache Hadoop Tools Dist</description>
   <name>Apache Hadoop Tools Dist</name>
   <packaging>jar</packaging>
@@ -97,6 +97,12 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-azure</artifactId>
+      <scope>compile</scope>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-aliyun</artifactId>
       <scope>compile</scope>
       <version>${project.version}</version>
     </dependency>

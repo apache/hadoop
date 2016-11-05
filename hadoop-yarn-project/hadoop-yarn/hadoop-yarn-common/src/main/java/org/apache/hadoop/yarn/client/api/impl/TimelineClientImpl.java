@@ -98,6 +98,7 @@ import com.sun.jersey.core.util.MultivaluedMapImpl;
 public class TimelineClientImpl extends TimelineClient {
 
   private static final Log LOG = LogFactory.getLog(TimelineClientImpl.class);
+  private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final String RESOURCE_URI_STR_V1 = "/ws/v1/timeline/";
   private static final String RESOURCE_URI_STR_V2 = "/ws/v2/timeline/";
   private static final Joiner JOINER = Joiner.on("");
@@ -125,6 +126,7 @@ public class TimelineClientImpl extends TimelineClient {
   private Configuration configuration;
   private float timelineServiceVersion;
   private TimelineWriter timelineWriter;
+  private SSLFactory sslFactory;
 
   private volatile String timelineServiceAddress;
 
@@ -264,7 +266,8 @@ public class TimelineClientImpl extends TimelineClient {
         public boolean shouldRetryOn(Exception e) {
           // Only retry on connection exceptions
           return (e instanceof ClientHandlerException)
-              && (e.getCause() instanceof ConnectException);
+              && (e.getCause() instanceof ConnectException ||
+                  e.getCause() instanceof SocketTimeoutException);
         }
       };
       try {
@@ -298,7 +301,7 @@ public class TimelineClientImpl extends TimelineClient {
     }
     ClientConfig cc = new DefaultClientConfig();
     cc.getClasses().add(YarnJacksonJaxbJsonProvider.class);
-    connConfigurator = newConnConfigurator(conf);
+    connConfigurator = initConnConfigurator(conf);
     if (UserGroupInformation.isSecurityEnabled()) {
       authenticator = new KerberosDelegationTokenAuthenticator();
     } else {
@@ -372,6 +375,9 @@ public class TimelineClientImpl extends TimelineClient {
     }
     if (timelineServiceV2) {
       entityDispatcher.stop();
+    }
+    if (this.sslFactory != null) {
+      this.sslFactory.destroy();
     }
     super.serviceStop();
   }
@@ -672,9 +678,9 @@ public class TimelineClientImpl extends TimelineClient {
 
   }
 
-  private static ConnectionConfigurator newConnConfigurator(Configuration conf) {
+  private ConnectionConfigurator initConnConfigurator(Configuration conf) {
     try {
-      return newSslConnConfigurator(DEFAULT_SOCKET_TIMEOUT, conf);
+      return initSslConnConfigurator(DEFAULT_SOCKET_TIMEOUT, conf);
     } catch (Exception e) {
       LOG.debug("Cannot load customized ssl related configuration. " +
           "Fallback to system-generic settings.", e);
@@ -692,16 +698,15 @@ public class TimelineClientImpl extends TimelineClient {
     }
   };
 
-  private static ConnectionConfigurator newSslConnConfigurator(final int timeout,
+  private ConnectionConfigurator initSslConnConfigurator(final int timeout,
       Configuration conf) throws IOException, GeneralSecurityException {
-    final SSLFactory factory;
     final SSLSocketFactory sf;
     final HostnameVerifier hv;
 
-    factory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
-    factory.init();
-    sf = factory.createSSLSocketFactory();
-    hv = factory.getHostnameVerifier();
+    sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
+    sslFactory.init();
+    sf = sslFactory.createSSLSocketFactory();
+    hv = sslFactory.getHostnameVerifier();
 
     return new ConnectionConfigurator() {
       @Override
@@ -761,15 +766,14 @@ public class TimelineClientImpl extends TimelineClient {
       LOG.error("File [" + jsonFile.getAbsolutePath() + "] doesn't exist");
       return;
     }
-    ObjectMapper mapper = new ObjectMapper();
-    YarnJacksonJaxbJsonProvider.configObjectMapper(mapper);
+    YarnJacksonJaxbJsonProvider.configObjectMapper(MAPPER);
     TimelineEntities entities = null;
     TimelineDomains domains = null;
     try {
       if (type.equals(ENTITY_DATA_TYPE)) {
-        entities = mapper.readValue(jsonFile, TimelineEntities.class);
+        entities = MAPPER.readValue(jsonFile, TimelineEntities.class);
       } else if (type.equals(DOMAIN_DATA_TYPE)){
-        domains = mapper.readValue(jsonFile, TimelineDomains.class);
+        domains = MAPPER.readValue(jsonFile, TimelineDomains.class);
       }
     } catch (Exception e) {
       LOG.error("Error when reading  " + e.getMessage());

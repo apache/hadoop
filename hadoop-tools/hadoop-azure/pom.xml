@@ -19,7 +19,7 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-alpha1-SNAPSHOT</version>
+    <version>3.0.0-alpha2-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-azure</artifactId>
@@ -164,11 +164,16 @@
       <artifactId>azure-storage</artifactId>
       <scope>compile</scope>
     </dependency>
-    
 
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-util-ajax</artifactId>
       <scope>compile</scope>
     </dependency>
     
@@ -217,6 +222,10 @@
       <artifactId>mockito-all</artifactId>
       <scope>test</scope>
     </dependency>
-    
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+
   </dependencies>
 </project>

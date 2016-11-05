@@ -19,12 +19,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-alpha1-SNAPSHOT</version>
+    <version>3.0.0-alpha2-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-sls</artifactId>
-  <version>3.0.0-alpha1-SNAPSHOT</version>
+  <version>3.0.0-alpha2-SNAPSHOT</version>
   <description>Apache Hadoop Scheduler Load Simulator</description>
   <name>Apache Hadoop Scheduler Load Simulator</name>
   <packaging>jar</packaging>
@@ -55,20 +55,24 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.mortbay.jetty</groupId>
-      <artifactId>jetty</artifactId>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
       <scope>provided</scope>
       <exclusions>
         <exclusion>
-          <groupId>org.mortbay.jetty</groupId>
-          <artifactId>servlet-api</artifactId>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>javax.servlet-api</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>org.mortbay.jetty</groupId>
+      <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-util</artifactId>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
     </dependency>
   </dependencies>
 

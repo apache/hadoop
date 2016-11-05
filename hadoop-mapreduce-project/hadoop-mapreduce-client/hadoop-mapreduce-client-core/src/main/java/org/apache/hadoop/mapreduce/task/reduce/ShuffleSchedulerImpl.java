@@ -35,6 +35,7 @@ import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -105,7 +106,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
   private final DecimalFormat mbpsFormat = new DecimalFormat("0.00");
 
   private final boolean reportReadErrorImmediately;
-  private long maxDelay = MRJobConfig.DEFAULT_MAX_SHUFFLE_FETCH_RETRY_DELAY;
+  private long maxPenalty = MRJobConfig.DEFAULT_MAX_SHUFFLE_FETCH_RETRY_DELAY;
   private int maxHostFailures;
 
   public ShuffleSchedulerImpl(JobConf job, TaskStatus status,
@@ -136,7 +137,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     this.reportReadErrorImmediately = job.getBoolean(
         MRJobConfig.SHUFFLE_NOTIFY_READERROR, true);
 
-    this.maxDelay = job.getLong(MRJobConfig.MAX_SHUFFLE_FETCH_RETRY_DELAY,
+    this.maxPenalty = job.getLong(MRJobConfig.MAX_SHUFFLE_FETCH_RETRY_DELAY,
         MRJobConfig.DEFAULT_MAX_SHUFFLE_FETCH_RETRY_DELAY);
     this.maxHostFailures = job.getInt(
         MRJobConfig.MAX_SHUFFLE_FETCH_HOST_FAILURES,
@@ -252,9 +253,26 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     }
   }
 
+  @VisibleForTesting
+  synchronized int hostFailureCount(String hostname) {
+    int failures = 0;
+    if (hostFailures.containsKey(hostname)) {
+      failures = hostFailures.get(hostname).get();
+    }
+    return failures;
+  }
+
+  @VisibleForTesting
+  synchronized int fetchFailureCount(TaskAttemptID mapId) {
+    int failures = 0;
+    if (failureCounts.containsKey(mapId)) {
+      failures = failureCounts.get(mapId).get();
+    }
+    return failures;
+  }
+
   public synchronized void copyFailed(TaskAttemptID mapId, MapHost host,
       boolean readError, boolean connectExcpt) {
-    host.penalize();
     int failures = 1;
     if (failureCounts.containsKey(mapId)) {
       IntWritable x = failureCounts.get(mapId);
@@ -290,15 +308,22 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
 
     long delay = (long) (INITIAL_PENALTY *
         Math.pow(PENALTY_GROWTH_RATE, failures));
-    if (delay > maxDelay) {
-      delay = maxDelay;
-    }
-
-    penalties.add(new Penalty(host, delay));
+    penalize(host, Math.min(delay, maxPenalty));
 
     failedShuffleCounter.increment(1);
   }
-  
+
+  /**
+   * Ask the shuffle scheduler to penalize a given host for a given amount
+   * of time before it reassigns a new fetcher to fetch from the host.
+   * @param host The host to penalize.
+   * @param delay The time to wait for before retrying
+   */
+  void penalize(MapHost host, long delay) {
+    host.penalize();
+    penalties.add(new Penalty(host, delay));
+  }
+
   public void reportLocalError(IOException ioe) {
     try {
       LOG.error("Shuffle failed : local error on this node: "

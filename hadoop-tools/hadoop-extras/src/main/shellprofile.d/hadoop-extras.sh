@@ -32,8 +32,6 @@ function hadoop_subcommand_distch
   # shellcheck disable=SC2034
   HADOOP_CLASSNAME=org.apache.hadoop.tools.DistCh
   hadoop_add_to_classpath_tools hadoop-extras
-  hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-  HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
 }
 
 fi

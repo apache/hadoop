@@ -94,6 +94,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
@@ -644,7 +645,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     rm1.clearQueueMetrics(app1_2);
     rm1.clearQueueMetrics(app2);
 
-    csConf.set("yarn.scheduler.capacity.root.Default.QueueB.state", "STOPPED");
+    csConf.set(PREFIX + "root.Default.QueueB.state", "STOPPED");
 
     // Re-start RM
     rm2 = new MockRM(csConf, memStore);
@@ -1345,7 +1346,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
 
     // submit app with keepContainersAcrossApplicationAttempts true
     Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(200);
+    resource.setMemorySize(200);
     RMApp app0 = rm1.submitApp(resource, "", UserGroupInformation
         .getCurrentUser().getShortUserName(), null, false, null,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS, null, null, true, true,

@@ -26,8 +26,8 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -40,6 +40,9 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     implements S3ATestConstants {
 
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(AbstractS3ATestBase.class);
+
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3AContract(conf);
@@ -48,15 +51,18 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   @Override
   public void teardown() throws Exception {
     super.teardown();
+    describe("closing file system");
     IOUtils.closeStream(getFileSystem());
   }
-
-  @Rule
-  public TestName methodName = new TestName();
 
   @Before
   public void nameThread() {
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
+  }
+
+  @Override
+  protected int getTestTimeoutMillis() {
+    return S3A_TEST_TIMEOUT;
   }
 
   protected Configuration getConfiguration() {
@@ -70,6 +76,17 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   @Override
   public S3AFileSystem getFileSystem() {
     return (S3AFileSystem) super.getFileSystem();
+  }
+
+  /**
+   * Describe a test in the logs.
+   * @param text text to print
+   * @param args arguments to format in the printing
+   */
+  protected void describe(String text, Object... args) {
+    LOG.info("\n\n{}: {}\n",
+        methodName.getMethodName(),
+        String.format(text, args));
   }
 
   /**

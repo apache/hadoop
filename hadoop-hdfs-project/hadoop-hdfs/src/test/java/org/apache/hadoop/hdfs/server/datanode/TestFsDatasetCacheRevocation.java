@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
@@ -96,7 +97,8 @@ public class TestFsDatasetCacheRevocation {
    */
   @Test(timeout=120000)
   public void testPinning() throws Exception {
-    assumeTrue(NativeCodeLoader.isNativeCodeLoaded() && !Path.WINDOWS);
+    assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    assumeNotWindows();
     Configuration conf = getDefaultConf();
     // Set a really long revocation timeout, so that we won't reach it during
     // this test.
@@ -146,7 +148,8 @@ public class TestFsDatasetCacheRevocation {
    */
   @Test(timeout=120000)
   public void testRevocation() throws Exception {
-    assumeTrue(NativeCodeLoader.isNativeCodeLoaded() && !Path.WINDOWS);
+    assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    assumeNotWindows();
     BlockReaderTestUtil.enableHdfsCachingTracing();
     BlockReaderTestUtil.enableShortCircuitShmTracing();
     Configuration conf = getDefaultConf();

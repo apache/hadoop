@@ -161,10 +161,6 @@ function hadoopcmd_case
       fi
     ;;
   esac
-
-  # Always respect HADOOP_OPTS and HADOOP_CLIENT_OPTS
-  hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-  HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
 }
 
 # This script runs the hadoop core commands.
@@ -194,6 +190,8 @@ fi
 HADOOP_SUBCMD=$1
 shift
 
+hadoop_verify_user "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+
 HADOOP_SUBCMD_ARGS=("$@")
 
 if declare -f hadoop_subcommand_"${HADOOP_SUBCMD}" >/dev/null 2>&1; then
@@ -203,15 +201,20 @@ else
   hadoopcmd_case "${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
 fi
 
-hadoop_verify_user "${HADOOP_SUBCMD}"
+hadoop_add_client_opts
 
 if [[ ${HADOOP_WORKER_MODE} = true ]]; then
   hadoop_common_worker_mode_execute "${HADOOP_COMMON_HOME}/bin/hadoop" "${HADOOP_USER_PARAMS[@]}"
   exit $?
 fi
 
+hadoop_subcommand_opts "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+
 if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
   HADOOP_SECURE_USER="${HADOOP_SUBCMD_SECUREUSER}"
+
+  hadoop_subcommand_secure_opts "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+
   hadoop_verify_secure_prereq
   hadoop_setup_secure_service
   priv_outfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
@@ -227,7 +230,7 @@ fi
 if [[ "${HADOOP_DAEMON_MODE}" != "default" ]]; then
   # shellcheck disable=SC2034
   HADOOP_ROOT_LOGGER="${HADOOP_DAEMON_ROOT_LOGGER}"
-  if [[ -n "${HADOOP_SUBCMD_SECURESERVICE}" ]]; then
+  if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
     # shellcheck disable=SC2034
     HADOOP_LOGFILE="hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.log"
   else

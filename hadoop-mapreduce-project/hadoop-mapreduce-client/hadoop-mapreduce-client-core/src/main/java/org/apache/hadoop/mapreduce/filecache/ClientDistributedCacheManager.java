@@ -54,10 +54,23 @@ public class ClientDistributedCacheManager {
   public static void determineTimestampsAndCacheVisibilities(Configuration job)
   throws IOException {
     Map<URI, FileStatus> statCache = new HashMap<URI, FileStatus>();
+    determineTimestampsAndCacheVisibilities(job, statCache);
+  }
+
+  /**
+   * See ClientDistributedCacheManager#determineTimestampsAndCacheVisibilities(
+   * Configuration).
+   *
+   * @param job Configuration of a job
+   * @param statCache A map containing cached file status objects
+   * @throws IOException if there is a problem with the underlying filesystem
+   */
+  public static void determineTimestampsAndCacheVisibilities(Configuration job,
+      Map<URI, FileStatus> statCache) throws IOException {
     determineTimestamps(job, statCache);
     determineCacheVisibilities(job, statCache);
   }
-  
+
   /**
    * Determines timestamps of files to be cached, and stores those
    * in the configuration.  This is intended to be used internally by JobClient

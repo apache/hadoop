@@ -41,10 +41,10 @@
 <property>
   <name>hadoop.http.filter.initializers</name>
   <value>org.apache.hadoop.http.lib.StaticUserWebFilter</value>
-  <description>A comma separated list of class names. Each class in the list 
-  must extend org.apache.hadoop.http.FilterInitializer. The corresponding 
-  Filter will be initialized. Then, the Filter will be applied to all user 
-  facing jsp and servlet web pages.  The ordering of the list defines the 
+  <description>A comma separated list of class names. Each class in the list
+  must extend org.apache.hadoop.http.FilterInitializer. The corresponding
+  Filter will be initialized. Then, the Filter will be applied to all user
+  facing jsp and servlet web pages.  The ordering of the list defines the
   ordering of the filters.</description>
 </property>
 
@@ -76,14 +76,14 @@
   <name>hadoop.security.group.mapping</name>
   <value>org.apache.hadoop.security.JniBasedUnixGroupsMappingWithFallback</value>
   <description>
-    Class for user to group mapping (get groups for a given user) for ACL. 
+    Class for user to group mapping (get groups for a given user) for ACL.
     The default implementation,
-    org.apache.hadoop.security.JniBasedUnixGroupsMappingWithFallback, 
-    will determine if the Java Native Interface (JNI) is available. If JNI is 
-    available the implementation will use the API within hadoop to resolve a 
-    list of groups for a user. If JNI is not available then the shell 
-    implementation, ShellBasedUnixGroupsMapping, is used.  This implementation 
-    shells out to the Linux/Unix environment with the 
+    org.apache.hadoop.security.JniBasedUnixGroupsMappingWithFallback,
+    will determine if the Java Native Interface (JNI) is available. If JNI is
+    available the implementation will use the API within hadoop to resolve a
+    list of groups for a user. If JNI is not available then the shell
+    implementation, ShellBasedUnixGroupsMapping, is used.  This implementation
+    shells out to the Linux/Unix environment with the
     <code>bash -c groups</code> command to resolve a list of groups for a user.
   </description>
 </property>
@@ -93,7 +93,7 @@
   <description>
     The name of the Network Interface from which the service should determine
     its host name for Kerberos login. e.g. eth2. In a multi-homed environment,
-    the setting can be used to affect the _HOST subsitution in the service
+    the setting can be used to affect the _HOST substitution in the service
     Kerberos principal. If this configuration value is not set, the service
     will use its default hostname as returned by
     InetAddress.getLocalHost().getCanonicalHostName().
@@ -241,10 +241,52 @@
   <name>hadoop.security.group.mapping.ldap.ssl.keystore.password.file</name>
   <value></value>
   <description>
-    The path to a file containing the password of the LDAP SSL keystore.
+    The path to a file containing the password of the LDAP SSL keystore. If
+    the password is not configured in credential providers and the property
+    hadoop.security.group.mapping.ldap.ssl.keystore.password is not set,
+    LDAPGroupsMapping reads password from the file.
 
     IMPORTANT: This file should be readable only by the Unix user running
-    the daemons.
+    the daemons and should be a local file.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.ssl.keystore.password</name>
+  <value></value>
+  <description>
+    The password of the LDAP SSL keystore. this property name is used as an
+    alias to get the password from credential providers. If the password can
+    not be found and hadoop.security.credential.clear-text-fallback is true
+    LDAPGroupsMapping uses the value of this property for password.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.credential.clear-text-fallback</name>
+  <value>true</value>
+  <description>
+    true or false to indicate whether or not to fall back to storing credential
+    password as clear text. The default value is true. This property only works
+    when the password can't not be found from credential providers.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.credential.provider.path</name>
+  <value></value>
+  <description>
+    A comma-separated list of URLs that indicates the type and
+    location of a list of providers that should be consulted.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.credstore.java-keystore-provider.password-file</name>
+  <value></value>
+  <description>
+    The path to a file containing the custom password for all keystores
+    that may be configured in the provider path.
   </description>
 </property>
 
@@ -261,10 +303,24 @@
   <name>hadoop.security.group.mapping.ldap.bind.password.file</name>
   <value></value>
   <description>
-    The path to a file containing the password of the bind user.
+    The path to a file containing the password of the bind user. If
+    the password is not configured in credential providers and the property
+    hadoop.security.group.mapping.ldap.bind.password is not set,
+    LDAPGroupsMapping reads password from the file.
 
     IMPORTANT: This file should be readable only by the Unix user running
-    the daemons.
+    the daemons and should be a local file.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.bind.password</name>
+  <value></value>
+  <description>
+    The password of the bind user. this property name is used as an
+    alias to get the password from credential providers. If the password can
+    not be found and hadoop.security.credential.clear-text-fallback is true
+    LDAPGroupsMapping uses the value of this property for password.
   </description>
 </property>
 
@@ -344,7 +400,7 @@
     The number of levels to go up the group hierarchy when determining
     which groups a user is part of. 0 Will represent checking just the
     group that the user belongs to.  Each additional level will raise the
-    time it takes to exectue a query by at most
+    time it takes to execute a query by at most
     hadoop.security.group.mapping.ldap.directory.search.timeout.
     The default will usually be appropriate for all LDAP systems.
   </description>
@@ -425,10 +481,10 @@
 <property>
   <name>hadoop.rpc.protection</name>
   <value>authentication</value>
-  <description>A comma-separated list of protection values for secured sasl 
+  <description>A comma-separated list of protection values for secured sasl
       connections. Possible values are authentication, integrity and privacy.
-      authentication means authentication only and no integrity or privacy; 
-      integrity implies authentication and integrity are enabled; and privacy 
+      authentication means authentication only and no integrity or privacy;
+      integrity implies authentication and integrity are enabled; and privacy
       implies all of authentication, integrity and privacy are enabled.
       hadoop.security.saslproperties.resolver.class can be used to override
       the hadoop.rpc.protection for a connection at the server side.
@@ -438,11 +494,21 @@
 <property>
   <name>hadoop.security.saslproperties.resolver.class</name>
   <value></value>
-  <description>SaslPropertiesResolver used to resolve the QOP used for a 
-      connection. If not specified, the full set of values specified in 
-      hadoop.rpc.protection is used while determining the QOP used for the 
-      connection. If a class is specified, then the QOP values returned by 
+  <description>SaslPropertiesResolver used to resolve the QOP used for a
+      connection. If not specified, the full set of values specified in
+      hadoop.rpc.protection is used while determining the QOP used for the
+      connection. If a class is specified, then the QOP values returned by
       the class will be used while determining the QOP used for the connection.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.sensitive-config-keys</name>
+  <value>secret$,password$,ssl.keystore.pass$,fs.s3.*[Ss]ecret.?[Kk]ey,fs.azure.account.key.*,dfs.webhdfs.oauth2.[a-z]+.token,hadoop.security.sensitive-config-keys</value>
+  <description>A comma-separated list of regular expressions to match against
+      configuration keys that should be redacted where appropriate, for
+      example, when logging modified properties during a reconfiguration,
+      private credentials should not be logged.
   </description>
 </property>
 
@@ -500,7 +566,7 @@
   page size (4096 on Intel x86), and it determines how much data is
   buffered during read and write operations.</description>
 </property>
-  
+
 <property>
   <name>io.bytes.per.checksum</name>
   <value>512</value>
@@ -533,7 +599,7 @@
   either by by name or the full pathname.  In the former case, the
   library is located by the dynamic linker, usually searching the
   directories specified in the environment variable LD_LIBRARY_PATH.
-  
+
   The value of "system-native" indicates that the default system
   library should be used.  To indicate that the algorithm should
   operate entirely in Java, specify "java-builtin".</description>
@@ -581,7 +647,27 @@
   <name>io.erasurecode.codec.rs-default.rawcoder</name>
   <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory</value>
   <description>
-    Raw coder implementation for the rs-default codec.
+    Raw coder implementation for the rs-default codec. The default value is a
+    pure Java implementation. There is also a native implementation. Its value
+    is org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory.
+  </description>
+</property>
+
+<property>
+  <name>io.erasurecode.codec.rs-legacy.rawcoder</name>
+  <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactoryLegacy</value>
+  <description>
+    Raw coder implementation for the rs-legacy codec.
+  </description>
+</property>
+
+<property>
+  <name>io.erasurecode.codec.xor.rawcoder</name>
+  <value>org.apache.hadoop.io.erasurecode.rawcoder.XORRawErasureCoderFactory</value>
+  <description>
+    Raw coder implementation for the xor codec. The default value is a pure Java
+    implementation. There is also a native implementation. Its value is
+    org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawErasureCoderFactory.
   </description>
 </property>
 
@@ -623,8 +709,8 @@
   <description>Number of minutes between trash checkpoints.
   Should be smaller or equal to fs.trash.interval. If zero,
   the value is set to the value of fs.trash.interval.
-  Every time the checkpointer runs it creates a new checkpoint 
-  out of current and removes checkpoints created more than 
+  Every time the checkpointer runs it creates a new checkpoint
+  out of current and removes checkpoints created more than
   fs.trash.interval minutes ago.
   </description>
 </property>
@@ -649,7 +735,7 @@
   <name>fs.AbstractFileSystem.har.impl</name>
   <value>org.apache.hadoop.fs.HarFs</value>
   <description>The AbstractFileSystem for har: uris.</description>
-</property> 
+</property>
 
 <property>
   <name>fs.AbstractFileSystem.hdfs.impl</name>
@@ -720,7 +806,7 @@
 <property>
   <name>fs.s3n.maxRetries</name>
   <value>4</value>
-  <description>The maximum number of retries for reading or writing files to S3, 
+  <description>The maximum number of retries for reading or writing files to S3,
   before we signal failure to the application.
   </description>
 </property>
@@ -730,12 +816,6 @@
   <value>10</value>
   <description>The number of seconds to sleep between each S3 retry.
   </description>
-</property>
-
-<property>
-  <name>fs.swift.impl</name>
-  <value>org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem</value>
-  <description>The implementation class of the OpenStack Swift Filesystem</description>
 </property>
 
 <property>
@@ -811,22 +891,49 @@
 <property>
   <name>fs.s3a.aws.credentials.provider</name>
   <description>
-    Class name of a credentials provider that implements
-    com.amazonaws.auth.AWSCredentialsProvider.  Omit if using access/secret keys
-    or another authentication mechanism.  The specified class must provide an
-    accessible constructor accepting java.net.URI and
-    org.apache.hadoop.conf.Configuration, or an accessible default constructor.
+    Comma-separated class names of credential provider classes which implement
+    com.amazonaws.auth.AWSCredentialsProvider.
+
+    These are loaded and queried in sequence for a valid set of credentials.
+    Each listed class must implement one of the following means of
+    construction, which are attempted in order:
+    1. a public constructor accepting java.net.URI and
+        org.apache.hadoop.conf.Configuration,
+    2. a public static method named getInstance that accepts no
+       arguments and returns an instance of
+       com.amazonaws.auth.AWSCredentialsProvider, or
+    3. a public default constructor.
+
     Specifying org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider allows
     anonymous access to a publicly accessible S3 bucket without any credentials.
     Please note that allowing anonymous access to an S3 bucket compromises
-    security and therefore is unsuitable for most use cases.  It can be useful
+    security and therefore is unsuitable for most use cases. It can be useful
     for accessing public data sets without requiring AWS credentials.
+
+    If unspecified, then the default list of credential provider classes,
+    queried in sequence, is:
+    1. org.apache.hadoop.fs.s3a.BasicAWSCredentialsProvider: supports static
+        configuration of AWS access key ID and secret access key.  See also
+        fs.s3a.access.key and fs.s3a.secret.key.
+    2. com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
+        configuration of AWS access key ID and secret access key in
+        environment variables named AWS_ACCESS_KEY_ID and
+        AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
+    3. org.apache.hadoop.fs.s3a.SharedInstanceProfileCredentialsProvider:
+        a shared instance of
+        com.amazonaws.auth.InstanceProfileCredentialsProvider from the AWS
+        SDK, which supports use of instance profile credentials if running
+        in an EC2 VM.  Using this shared instance potentially reduces load
+        on the EC2 instance metadata service for multi-threaded
+        applications.
   </description>
 </property>
 
 <property>
   <name>fs.s3a.session.token</name>
-  <description>The session token used with temporary credentials. Used only with provider org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider.</description>
+  <description>Session token, when using org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider
+    as one of the providers.
+  </description>
 </property>
 
 <property>
@@ -908,17 +1015,29 @@
 </property>
 
 <property>
+  <name>fs.s3a.socket.send.buffer</name>
+  <value>8192</value>
+  <description>Socket send buffer hint to amazon connector. Represented in bytes.</description>
+</property>
+
+<property>
+  <name>fs.s3a.socket.recv.buffer</name>
+  <value>8192</value>
+  <description>Socket receive buffer hint to amazon connector. Represented in bytes.</description>
+</property>
+
+<property>
   <name>fs.s3a.paging.maximum</name>
   <value>5000</value>
-  <description>How many keys to request from S3 when doing 
+  <description>How many keys to request from S3 when doing
      directory listings at a time.</description>
 </property>
 
 <property>
   <name>fs.s3a.threads.max</name>
   <value>10</value>
-  <description> Maximum number of concurrent active (part)uploads,
-    which each use a thread from the threadpool.</description>
+  <description>The total number of threads available in the filesystem for data
+    uploads *or any other queued filesystem operation*.</description>
 </property>
 
 <property>
@@ -931,14 +1050,15 @@
 <property>
   <name>fs.s3a.max.total.tasks</name>
   <value>5</value>
-  <description>Number of (part)uploads allowed to the queue before
-    blocking additional uploads.</description>
+  <description>The number of operations which can be queued for execution</description>
 </property>
 
 <property>
   <name>fs.s3a.multipart.size</name>
-  <value>104857600</value>
-  <description>How big (in bytes) to split upload or copy operations up into.</description>
+  <value>100M</value>
+  <description>How big (in bytes) to split upload or copy operations up into.
+    A suffix from the set {K,M,G,T,P} may be used to scale the numeric value.
+  </description>
 </property>
 
 <property>
@@ -946,7 +1066,8 @@
   <value>2147483647</value>
   <description>How big (in bytes) to split upload or copy operations up into.
     This also controls the partition size in renamed files, as rename() involves
-    copying the source file(s)
+    copying the source file(s).
+    A suffix from the set {K,M,G,T,P} may be used to scale the numeric value.
   </description>
 </property>
 
@@ -961,22 +1082,30 @@
 
 <property>
   <name>fs.s3a.acl.default</name>
-  <description>Set a canned ACL for newly created and copied objects. Value may be private, 
-     public-read, public-read-write, authenticated-read, log-delivery-write, 
-     bucket-owner-read, or bucket-owner-full-control.</description>
+  <description>Set a canned ACL for newly created and copied objects. Value may be Private,
+      PublicRead, PublicReadWrite, AuthenticatedRead, LogDeliveryWrite, BucketOwnerRead,
+      or BucketOwnerFullControl.</description>
 </property>
 
 <property>
   <name>fs.s3a.multipart.purge</name>
   <value>false</value>
   <description>True if you want to purge existing multipart uploads that may not have been
-     completed/aborted correctly</description>
+    completed/aborted correctly. The corresponding purge age is defined in
+    fs.s3a.multipart.purge.age.
+    If set, when the filesystem is instantiated then all outstanding uploads
+    older than the purge age will be terminated -across the entire bucket.
+    This will impact multipart uploads by other applications and users. so should
+    be used sparingly, with an age value chosen to stop failed uploads, without
+    breaking ongoing operations.
+  </description>
 </property>
 
 <property>
   <name>fs.s3a.multipart.purge.age</name>
   <value>86400</value>
-  <description>Minimum age in seconds of multipart uploads to purge</description>
+  <description>Minimum age in seconds of multipart uploads to purge.
+  </description>
 </property>
 
 <property>
@@ -994,40 +1123,76 @@
 
 <property>
   <name>fs.s3a.block.size</name>
-  <value>33554432</value>
+  <value>32M</value>
   <description>Block size to use when reading files using s3a: file system.
+    A suffix from the set {K,M,G,T,P} may be used to scale the numeric value.
   </description>
 </property>
 
 <property>
   <name>fs.s3a.buffer.dir</name>
   <value>${hadoop.tmp.dir}/s3a</value>
-  <description>Comma separated list of directories that will be used to buffer file 
+  <description>Comma separated list of directories that will be used to buffer file
     uploads to.</description>
 </property>
 
 <property>
   <name>fs.s3a.fast.upload</name>
   <value>false</value>
-  <description>Upload directly from memory instead of buffering to
-    disk first. Memory usage and parallelism can be controlled as up to
-    fs.s3a.multipart.size memory is consumed for each (part)upload actively
-    uploading (fs.s3a.threads.max) or queueing (fs.s3a.max.total.tasks)</description>
+  <description>
+    Use the incremental block-based fast upload mechanism with
+    the buffering mechanism set in fs.s3a.fast.upload.buffer.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.fast.upload.buffer</name>
+  <value>disk</value>
+  <description>
+    The buffering mechanism to use when using S3A fast upload
+    (fs.s3a.fast.upload=true). Values: disk, array, bytebuffer.
+    This configuration option has no effect if fs.s3a.fast.upload is false.
+
+    "disk" will use the directories listed in fs.s3a.buffer.dir as
+    the location(s) to save data prior to being uploaded.
+
+    "array" uses arrays in the JVM heap
+
+    "bytebuffer" uses off-heap memory within the JVM.
+
+    Both "array" and "bytebuffer" will consume memory in a single stream up to the number
+    of blocks set by:
+
+        fs.s3a.multipart.size * fs.s3a.fast.upload.active.blocks.
+
+    If using either of these mechanisms, keep this value low
+
+    The total number of threads performing work across all threads is set by
+    fs.s3a.threads.max, with fs.s3a.max.total.tasks values setting the number of queued
+    work items.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.fast.upload.active.blocks</name>
+  <value>4</value>
+  <description>
+    Maximum Number of blocks a single output stream can have
+    active (uploading, or queued to the central FileSystem
+    instance's pool of queued operations.
+
+    This stops a single stream overloading the shared thread pool.
+  </description>
 </property>
 
 <property>
   <name>fs.s3a.readahead.range</name>
-  <value>65536</value>
+  <value>64K</value>
   <description>Bytes to read ahead during a seek() before closing and
   re-opening the S3 HTTP connection. This option will be overridden if
-  any call to setReadahead() is made to an open stream.</description>
-</property>
-
-<property>
-  <name>fs.s3a.fast.buffer.size</name>
-  <value>1048576</value>
-  <description>Size of initial memory buffer in bytes allocated for an
-    upload. No effect if fs.s3a.fast.upload is false.</description>
+  any call to setReadahead() is made to an open stream.
+  A suffix from the set {K,M,G,T,P} may be used to scale the numeric value.
+  </description>
 </property>
 
 <property>
@@ -1060,7 +1225,7 @@
 <property>
   <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>
-  <description>The minimum block size for compression in block compressed 
+  <description>The minimum block size for compression in block compressed
           SequenceFiles.
   </description>
 </property>
@@ -1076,7 +1241,7 @@
 <property>
   <name>io.seqfile.sorter.recordlimit</name>
   <value>1000000</value>
-  <description>The limit on number of records to be kept in memory in a spill 
+  <description>The limit on number of records to be kept in memory in a spill
           in SequenceFiles.Sorter
   </description>
 </property>
@@ -1154,7 +1319,7 @@
 <property>
   <name>ipc.client.connect.timeout</name>
   <value>20000</value>
-  <description>Indicates the number of milliseconds a client will wait for the 
+  <description>Indicates the number of milliseconds a client will wait for the
                socket to establish a server connection.
   </description>
 </property>
@@ -1230,10 +1395,19 @@
   <name>ipc.maximum.data.length</name>
   <value>67108864</value>
   <description>This indicates the maximum IPC message length (bytes) that can be
-    accepted by the server. Messages larger than this value are rejected by
-    server immediately. This setting should rarely need to be changed. It merits
-    investigating whether the cause of long RPC messages can be fixed instead,
-    e.g. by splitting into smaller messages.
+    accepted by the server. Messages larger than this value are rejected by the
+    immediately to avoid possible OOMs. This setting should rarely need to be
+    changed.
+  </description>
+</property>
+
+<property>
+  <name>ipc.maximum.response.length</name>
+  <value>134217728</value>
+  <description>This indicates the maximum IPC message length (bytes) that can be
+    accepted by the client. Messages larger than this value are rejected
+    immediately to avoid possible OOMs. This setting should rarely need to be
+    changed.  Set to 0 to disable.
   </description>
 </property>
 
@@ -1242,10 +1416,10 @@
 <property>
   <name>hadoop.security.impersonation.provider.class</name>
   <value></value>
-  <description>A class which implements ImpersonationProvider interface, used to 
-       authorize whether one user can impersonate a specific user. 
-       If not specified, the DefaultImpersonationProvider will be used. 
-       If a class is specified, then that class will be used to determine 
+  <description>A class which implements ImpersonationProvider interface, used to
+       authorize whether one user can impersonate a specific user.
+       If not specified, the DefaultImpersonationProvider will be used.
+       If a class is specified, then that class will be used to determine
        the impersonation capability.
   </description>
 </property>
@@ -1307,7 +1481,7 @@
 <property>
   <name>net.topology.script.number.args</name>
   <value>100</value>
-  <description> The max number of args that the script configured with 
+  <description> The max number of args that the script configured with
     net.topology.script.file.name should be run with. Each arg is an
     IP address.
   </description>
@@ -1321,7 +1495,7 @@
     org.apache.hadoop.net.TableMapping. The file format is a two column text
     file, with columns separated by whitespace. The first column is a DNS or
     IP address and the second column specifies the rack where the address maps.
-    If no entry corresponding to a host in the cluster is found, then 
+    If no entry corresponding to a host in the cluster is found, then
     /default-rack is assumed.
   </description>
 </property>
@@ -1837,14 +2011,14 @@
   <name>nfs.exports.allowed.hosts</name>
   <value>* rw</value>
   <description>
-    By default, the export can be mounted by any client. The value string 
-    contains machine name and access privilege, separated by whitespace 
-    characters. The machine name format can be a single host, a Java regular 
-    expression, or an IPv4 address. The access privilege uses rw or ro to 
-    specify read/write or read-only access of the machines to exports. If the 
+    By default, the export can be mounted by any client. The value string
+    contains machine name and access privilege, separated by whitespace
+    characters. The machine name format can be a single host, a Java regular
+    expression, or an IPv4 address. The access privilege uses rw or ro to
+    specify read/write or read-only access of the machines to exports. If the
     access privilege is not provided, the default is read-only. Entries are separated by ";".
     For example: "192.168.0.0/22 rw ; host.*\.example\.com ; host1.test.org ro;".
-    Only the NFS gateway needs to restart after this property is updated. 
+    Only the NFS gateway needs to restart after this property is updated.
   </description>
 </property>
 
@@ -1853,7 +2027,7 @@
   <value>dr.who=;</value>
   <description>
     Static mapping of user to groups. This will override the groups if
-    available in the system for the specified user. In otherwords, groups
+    available in the system for the specified user. In other words, groups
     look-up will not happen for these users, instead groups mapped in this
     configuration will be used.
     Mapping should be in this format.
@@ -1898,7 +2072,7 @@
   <name>hadoop.security.crypto.codec.classes.aes.ctr.nopadding</name>
   <value>org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec, org.apache.hadoop.crypto.JceAesCtrCryptoCodec</value>
   <description>
-    Comma-separated list of crypto codec implementations for AES/CTR/NoPadding. 
+    Comma-separated list of crypto codec implementations for AES/CTR/NoPadding.
     The first implementation will be used if available, others are fallbacks.
   </description>
 </property>
@@ -1915,7 +2089,7 @@
   <name>hadoop.security.crypto.jce.provider</name>
   <value></value>
   <description>
-    The JCE provider name used in CryptoCodec. 
+    The JCE provider name used in CryptoCodec.
   </description>
 </property>
 
@@ -1923,7 +2097,7 @@
   <name>hadoop.security.crypto.buffer.size</name>
   <value>8192</value>
   <description>
-    The buffer size used by CryptoInputStream and CryptoOutputStream. 
+    The buffer size used by CryptoInputStream and CryptoOutputStream.
   </description>
 </property>
 
@@ -1931,7 +2105,7 @@
   <name>hadoop.security.java.secure.random.algorithm</name>
   <value>SHA1PRNG</value>
   <description>
-    The java secure random algorithm. 
+    The java secure random algorithm.
   </description>
 </property>
 
@@ -1939,7 +2113,7 @@
   <name>hadoop.security.secure.random.impl</name>
   <value></value>
   <description>
-    Implementation of secure random. 
+    Implementation of secure random.
   </description>
 </property>
 
@@ -1948,6 +2122,14 @@
   <value>/dev/urandom</value>
   <description>
     OS security random device file path.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.key.provider.path</name>
+  <description>
+    The KeyProvider to use when managing zone keys, and interacting with
+    encryption keys when reading and writing to an encryption zone.
   </description>
 </property>
 
@@ -2002,7 +2184,7 @@
   <value>0</value>
   <description>The maximum number of concurrent connections a server is allowed
     to accept. If this limit is exceeded, incoming connections will first fill
-    the listen queue and then may go to an OS-specific listen overflow queue. 
+    the listen queue and then may go to an OS-specific listen overflow queue.
     The client may fail or timeout, but the server can avoid running out of file
     descriptors using this feature. 0 means no limit.
   </description>
@@ -2255,6 +2437,34 @@
   <property>
     <name>fs.AbstractFileSystem.adl.impl</name>
     <value>org.apache.hadoop.fs.adl.Adl</value>
+  </property>
+
+  <property>
+    <name>hadoop.caller.context.enabled</name>
+    <value>false</value>
+    <description>When the feature is enabled, additional fields are written into
+      name-node audit log records for auditing coarse granularity operations.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.caller.context.max.size</name>
+    <value>128</value>
+    <description>The maximum bytes a caller context string can have. If the
+      passed caller context is longer than this maximum bytes, client will
+      truncate it before sending to server. Note that the server may have a
+      different maximum size, and will truncate the caller context to the
+      maximum size it allows.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.caller.context.signature.max.size</name>
+    <value>40</value>
+    <description>
+      The caller's signature (optional) is for offline validation. If the
+      signature exceeds the maximum allowed bytes in server, the caller context
+      will be abandoned, in which case the caller context will not be recorded
+      in audit logs.
+    </description>
   </property>
 
 </configuration>

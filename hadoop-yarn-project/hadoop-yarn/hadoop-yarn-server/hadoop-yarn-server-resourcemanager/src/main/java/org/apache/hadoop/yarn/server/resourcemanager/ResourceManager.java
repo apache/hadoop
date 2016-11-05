@@ -96,6 +96,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessM
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.monitor.RMAppLifetimeMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
@@ -116,7 +117,6 @@ import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebApps.Builder;
@@ -321,7 +321,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   public CuratorFramework createAndStartCurator(Configuration conf)
-      throws Exception {
+      throws IOException {
     String zkHostPort = conf.get(YarnConfiguration.RM_ZK_ADDRESS);
     if (zkHostPort == null) {
       throw new YarnRuntimeException(
@@ -557,6 +557,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
       addService(amFinishingMonitor);
       rmContext.setAMFinishingMonitor(amFinishingMonitor);
       
+      RMAppLifetimeMonitor rmAppLifetimeMonitor = createRMAppLifetimeMonitor();
+      addService(rmAppLifetimeMonitor);
+      rmContext.setRMAppLifetimeMonitor(rmAppLifetimeMonitor);
+
       RMNodeLabelsManager nlm = createNodeLabelManager();
       nlm.setRMContext(rmContext);
       addService(nlm);
@@ -1177,24 +1181,33 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected ApplicationMasterService createApplicationMasterService() {
-    if (this.rmContext.getYarnConfiguration().getBoolean(
-        YarnConfiguration.DIST_SCHEDULING_ENABLED,
-        YarnConfiguration.DIST_SCHEDULING_ENABLED_DEFAULT)) {
-      DistributedSchedulingService distributedSchedulingService = new
-          DistributedSchedulingService(this.rmContext, scheduler);
-      EventDispatcher distSchedulerEventDispatcher =
-          new EventDispatcher(distributedSchedulingService,
-              DistributedSchedulingService.class.getName());
-      // Add an event dispoatcher for the DistributedSchedulingService
-      // to handle node updates/additions and removals.
-      // Since the SchedulerEvent is currently a super set of theses,
-      // we register interest for it..
-      addService(distSchedulerEventDispatcher);
+    Configuration config = this.rmContext.getYarnConfiguration();
+    if (YarnConfiguration.isOpportunisticContainerAllocationEnabled(config)
+        || YarnConfiguration.isDistSchedulingEnabled(config)) {
+      if (YarnConfiguration.isDistSchedulingEnabled(config) &&
+          !YarnConfiguration
+              .isOpportunisticContainerAllocationEnabled(config)) {
+        throw new YarnRuntimeException(
+            "Invalid parameters: opportunistic container allocation has to " +
+                "be enabled when distributed scheduling is enabled.");
+      }
+      OpportunisticContainerAllocatorAMService
+          oppContainerAllocatingAMService =
+          new OpportunisticContainerAllocatorAMService(this.rmContext,
+              scheduler);
+      EventDispatcher oppContainerAllocEventDispatcher =
+          new EventDispatcher(oppContainerAllocatingAMService,
+              OpportunisticContainerAllocatorAMService.class.getName());
+      // Add an event dispatcher for the
+      // OpportunisticContainerAllocatorAMService to handle node
+      // additions, updates and removals. Since the SchedulerEvent is currently
+      // a super set of theses, we register interest for it.
+      addService(oppContainerAllocEventDispatcher);
       rmDispatcher.register(SchedulerEventType.class,
-          distSchedulerEventDispatcher);
+          oppContainerAllocEventDispatcher);
       this.rmContext.setContainerQueueLimitCalculator(
-          distributedSchedulingService.getNodeManagerQueueLimitCalculator());
-      return distributedSchedulingService;
+          oppContainerAllocatingAMService.getNodeManagerQueueLimitCalculator());
+      return oppContainerAllocatingAMService;
     }
     return new ApplicationMasterService(this.rmContext, scheduler);
   }
@@ -1395,5 +1408,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
     out.println("Usage: yarn resourcemanager [-format-state-store]");
     out.println("                            "
         + "[-remove-application-from-state-store <appId>]" + "\n");
+  }
+
+  protected RMAppLifetimeMonitor createRMAppLifetimeMonitor() {
+    return new RMAppLifetimeMonitor(this.rmContext);
   }
 }

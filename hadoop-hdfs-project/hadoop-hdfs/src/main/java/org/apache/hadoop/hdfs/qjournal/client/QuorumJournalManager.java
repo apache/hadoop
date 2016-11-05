@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -387,8 +388,12 @@ public class QuorumJournalManager implements JournalManager {
     
     List<InetSocketAddress> addrs = Lists.newArrayList();
     for (String addr : parts) {
-      addrs.add(NetUtils.createSocketAddr(
-          addr, DFSConfigKeys.DFS_JOURNALNODE_RPC_PORT_DEFAULT));
+      InetSocketAddress isa = NetUtils.createSocketAddr(
+          addr, DFSConfigKeys.DFS_JOURNALNODE_RPC_PORT_DEFAULT);
+      if (isa.isUnresolved()) {
+        throw new UnknownHostException(addr);
+      }
+      addrs.add(isa);
     }
     return addrs;
   }
@@ -402,8 +407,11 @@ public class QuorumJournalManager implements JournalManager {
         layoutVersion);
     loggers.waitForWriteQuorum(q, startSegmentTimeoutMs,
         "startLogSegment(" + txId + ")");
-    return new QuorumOutputStream(loggers, txId,
-        outputBufferCapacity, writeTxnsTimeoutMs);
+    boolean updateCommittedTxId = conf.getBoolean(
+        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY,
+        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_DEFAULT);
+    return new QuorumOutputStream(loggers, txId, outputBufferCapacity,
+        writeTxnsTimeoutMs, updateCommittedTxId);
   }
 
   @Override
@@ -462,9 +470,15 @@ public class QuorumJournalManager implements JournalManager {
     loggers.close();
   }
 
-  @Override
   public void selectInputStreams(Collection<EditLogInputStream> streams,
       long fromTxnId, boolean inProgressOk) throws IOException {
+    selectInputStreams(streams, fromTxnId, inProgressOk, false);
+  }
+
+  @Override
+  public void selectInputStreams(Collection<EditLogInputStream> streams,
+      long fromTxnId, boolean inProgressOk,
+      boolean onlyDurableTxns) throws IOException {
 
     QuorumCall<AsyncLogger, RemoteEditLogManifest> q =
         loggers.getEditLogManifest(fromTxnId, inProgressOk);
@@ -481,13 +495,22 @@ public class QuorumJournalManager implements JournalManager {
     for (Map.Entry<AsyncLogger, RemoteEditLogManifest> e : resps.entrySet()) {
       AsyncLogger logger = e.getKey();
       RemoteEditLogManifest manifest = e.getValue();
-      
+      long committedTxnId = manifest.getCommittedTxnId();
+
       for (RemoteEditLog remoteLog : manifest.getLogs()) {
         URL url = logger.buildURLToFetchLogs(remoteLog.getStartTxId());
 
+        long endTxId = remoteLog.getEndTxId();
+
+        // If it's bounded by durable Txns, endTxId could not be larger
+        // than committedTxnId. This ensures the consistency.
+        if (onlyDurableTxns && inProgressOk) {
+          endTxId = Math.min(endTxId, committedTxnId);
+        }
+
         EditLogInputStream elis = EditLogFileInputStream.fromUrl(
             connectionFactory, url, remoteLog.getStartTxId(),
-            remoteLog.getEndTxId(), remoteLog.isInProgress());
+            endTxId, remoteLog.isInProgress());
         allStreams.add(elis);
       }
     }

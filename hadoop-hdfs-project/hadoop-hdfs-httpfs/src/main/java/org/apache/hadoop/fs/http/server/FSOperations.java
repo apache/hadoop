@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.GlobFilter;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
@@ -31,13 +32,13 @@ import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.util.StringUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -47,6 +48,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.HTTPFS_BUFFER_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.HTTP_BUFFER_SIZE_DEFAULT;
+
 /**
  * FileSystem operation executors used by {@link HttpFSServer}.
  */
@@ -54,148 +58,80 @@ import java.util.Map.Entry;
 public class FSOperations {
 
   /**
-   * This class is used to group a FileStatus and an AclStatus together.
-   * It's needed for the GETFILESTATUS and LISTSTATUS calls, which take
-   * most info from the FileStatus and a wee bit from the AclStatus.
+   * @param fileStatus a FileStatus object
+   * @return JSON map suitable for wire transport
    */
-  private static class StatusPair {
-    private FileStatus fileStatus;
-    private AclStatus aclStatus;
-
-    /**
-     * Simple constructor
-     * @param fileStatus Existing FileStatus object
-     * @param aclStatus Existing AclStatus object
-     */
-    public StatusPair(FileStatus fileStatus, AclStatus aclStatus) {
-      this.fileStatus = fileStatus;
-      this.aclStatus = aclStatus;
-    }
-
-    /**
-     * Create one StatusPair by performing the underlying calls to
-     * fs.getFileStatus and fs.getAclStatus
-     * @param fs The FileSystem where 'path' lives
-     * @param path The file/directory to query
-     * @throws IOException
-     */
-    public StatusPair(FileSystem fs, Path path) throws IOException {
-      fileStatus = fs.getFileStatus(path);
-      aclStatus = null;
-      try {
-        aclStatus = fs.getAclStatus(path);
-      } catch (AclException e) {
-        /*
-         * The cause is almost certainly an "ACLS aren't enabled"
-         * exception, so leave aclStatus at null and carry on.
-         */
-      } catch (UnsupportedOperationException e) {
-        /* Ditto above - this is the case for a local file system */
-      }
-    }
-
-    /**
-     * Return a Map suitable for conversion into JSON format
-     * @return The JSONish Map
-     */
-    public Map<String,Object> toJson() {
-      Map<String,Object> json = new LinkedHashMap<String,Object>();
-      json.put(HttpFSFileSystem.FILE_STATUS_JSON, toJsonInner(true));
-      return json;
-    }
-
-    /**
-     * Return in inner part of the JSON for the status - used by both the
-     * GETFILESTATUS and LISTSTATUS calls.
-     * @param emptyPathSuffix Whether or not to include PATH_SUFFIX_JSON
-     * @return The JSONish Map
-     */
-    public Map<String,Object> toJsonInner(boolean emptyPathSuffix) {
-      Map<String,Object> json = new LinkedHashMap<String,Object>();
-      json.put(HttpFSFileSystem.PATH_SUFFIX_JSON,
-              (emptyPathSuffix) ? "" : fileStatus.getPath().getName());
-      json.put(HttpFSFileSystem.TYPE_JSON,
-              HttpFSFileSystem.FILE_TYPE.getType(fileStatus).toString());
-      json.put(HttpFSFileSystem.LENGTH_JSON, fileStatus.getLen());
-      json.put(HttpFSFileSystem.OWNER_JSON, fileStatus.getOwner());
-      json.put(HttpFSFileSystem.GROUP_JSON, fileStatus.getGroup());
-      json.put(HttpFSFileSystem.PERMISSION_JSON,
-              HttpFSFileSystem.permissionToString(fileStatus.getPermission()));
-      json.put(HttpFSFileSystem.ACCESS_TIME_JSON, fileStatus.getAccessTime());
-      json.put(HttpFSFileSystem.MODIFICATION_TIME_JSON,
-              fileStatus.getModificationTime());
-      json.put(HttpFSFileSystem.BLOCK_SIZE_JSON, fileStatus.getBlockSize());
-      json.put(HttpFSFileSystem.REPLICATION_JSON, fileStatus.getReplication());
-      if ( (aclStatus != null) && !(aclStatus.getEntries().isEmpty()) ) {
-        json.put(HttpFSFileSystem.ACL_BIT_JSON,true);
-      }
-      return json;
-    }
+  private static Map<String, Object> toJson(FileStatus fileStatus) {
+    Map<String, Object> json = new LinkedHashMap<>();
+    json.put(HttpFSFileSystem.FILE_STATUS_JSON, toJsonInner(fileStatus, true));
+    return json;
   }
 
   /**
-   * Simple class used to contain and operate upon a list of StatusPair
-   * objects.  Used by LISTSTATUS.
+   * @param fileStatuses list of FileStatus objects
+   * @return JSON map suitable for wire transport
    */
-  private static class StatusPairs {
-    private StatusPair[] statusPairs;
-
-    /**
-     * Construct a list of StatusPair objects
-     * @param fs The FileSystem where 'path' lives
-     * @param path The directory to query
-     * @param filter A possible filter for entries in the directory
-     * @throws IOException
-     */
-    public StatusPairs(FileSystem fs, Path path, PathFilter filter)
-            throws IOException {
-      /* Grab all the file statuses at once in an array */
-      FileStatus[] fileStatuses = fs.listStatus(path, filter);
-
-      /* We'll have an array of StatusPairs of the same length */
-      AclStatus aclStatus = null;
-      statusPairs = new StatusPair[fileStatuses.length];
-
-      /*
-       * For each FileStatus, attempt to acquire an AclStatus.  If the
-       * getAclStatus throws an exception, we assume that ACLs are turned
-       * off entirely and abandon the attempt.
-       */
-      boolean useAcls = true;   // Assume ACLs work until proven otherwise
-      for (int i = 0; i < fileStatuses.length; i++) {
-        if (useAcls) {
-          try {
-            aclStatus = fs.getAclStatus(fileStatuses[i].getPath());
-          } catch (AclException e) {
-            /* Almost certainly due to an "ACLs not enabled" exception */
-            aclStatus = null;
-            useAcls = false;
-          } catch (UnsupportedOperationException e) {
-            /* Ditto above - this is the case for a local file system */
-            aclStatus = null;
-            useAcls = false;
-          }
-        }
-        statusPairs[i] = new StatusPair(fileStatuses[i], aclStatus);
-      }
+  @SuppressWarnings({"unchecked"})
+  private static Map<String, Object> toJson(FileStatus[] fileStatuses) {
+    Map<String, Object> json = new LinkedHashMap<>();
+    Map<String, Object> inner = new LinkedHashMap<>();
+    JSONArray statuses = new JSONArray();
+    for (FileStatus f : fileStatuses) {
+      statuses.add(toJsonInner(f, false));
     }
+    inner.put(HttpFSFileSystem.FILE_STATUS_JSON, statuses);
+    json.put(HttpFSFileSystem.FILE_STATUSES_JSON, inner);
+    return json;
+  }
 
-    /**
-     * Return a Map suitable for conversion into JSON.
-     * @return A JSONish Map
-     */
-    @SuppressWarnings({"unchecked"})
-    public Map<String,Object> toJson() {
-      Map<String,Object> json = new LinkedHashMap<String,Object>();
-      Map<String,Object> inner = new LinkedHashMap<String,Object>();
-      JSONArray statuses = new JSONArray();
-      for (StatusPair s : statusPairs) {
-        statuses.add(s.toJsonInner(false));
-      }
-      inner.put(HttpFSFileSystem.FILE_STATUS_JSON, statuses);
-      json.put(HttpFSFileSystem.FILE_STATUSES_JSON, inner);
-      return json;
+  /**
+   * Not meant to be called directly except by the other toJson functions.
+   */
+  private static Map<String, Object> toJsonInner(FileStatus fileStatus,
+      boolean emptyPathSuffix) {
+    Map<String, Object> json = new LinkedHashMap<String, Object>();
+    json.put(HttpFSFileSystem.PATH_SUFFIX_JSON,
+        (emptyPathSuffix) ? "" : fileStatus.getPath().getName());
+    json.put(HttpFSFileSystem.TYPE_JSON,
+        HttpFSFileSystem.FILE_TYPE.getType(fileStatus).toString());
+    json.put(HttpFSFileSystem.LENGTH_JSON, fileStatus.getLen());
+    json.put(HttpFSFileSystem.OWNER_JSON, fileStatus.getOwner());
+    json.put(HttpFSFileSystem.GROUP_JSON, fileStatus.getGroup());
+    json.put(HttpFSFileSystem.PERMISSION_JSON,
+        HttpFSFileSystem.permissionToString(fileStatus.getPermission()));
+    json.put(HttpFSFileSystem.ACCESS_TIME_JSON, fileStatus.getAccessTime());
+    json.put(HttpFSFileSystem.MODIFICATION_TIME_JSON,
+        fileStatus.getModificationTime());
+    json.put(HttpFSFileSystem.BLOCK_SIZE_JSON, fileStatus.getBlockSize());
+    json.put(HttpFSFileSystem.REPLICATION_JSON, fileStatus.getReplication());
+    if (fileStatus.getPermission().getAclBit()) {
+      json.put(HttpFSFileSystem.ACL_BIT_JSON, true);
     }
+    if (fileStatus.getPermission().getEncryptedBit()) {
+      json.put(HttpFSFileSystem.ENC_BIT_JSON, true);
+    }
+    return json;
+  }
+
+  /**
+   * Serializes a DirectoryEntries object into the JSON for a
+   * WebHDFS {@link org.apache.hadoop.hdfs.protocol.DirectoryListing}.
+   * <p>
+   * These two classes are slightly different, due to the impedance
+   * mismatches between the WebHDFS and FileSystem APIs.
+   * @param entries
+   * @return json
+   */
+  private static Map<String, Object> toJson(FileSystem.DirectoryEntries
+      entries) {
+    Map<String, Object> json = new LinkedHashMap<>();
+    Map<String, Object> inner = new LinkedHashMap<>();
+    Map<String, Object> fileStatuses = toJson(entries.getEntries());
+    inner.put(HttpFSFileSystem.PARTIAL_LISTING_JSON, fileStatuses);
+    inner.put(HttpFSFileSystem.REMAINING_ENTRIES_JSON, entries.hasMore() ? 1
+        : 0);
+    json.put(HttpFSFileSystem.DIRECTORY_LISTING_JSON, inner);
+    return json;
   }
 
   /** Converts an <code>AclStatus</code> object into a JSON object.
@@ -529,7 +465,8 @@ public class FSOperations {
         blockSize = fs.getDefaultBlockSize(path);
       }
       FsPermission fsPermission = new FsPermission(permission);
-      int bufferSize = fs.getConf().getInt("httpfs.buffer.size", 4096);
+      int bufferSize = fs.getConf().getInt(HTTPFS_BUFFER_SIZE_KEY,
+          HTTP_BUFFER_SIZE_DEFAULT);
       OutputStream os = fs.create(path, fsPermission, override, bufferSize, replication, blockSize, null);
       IOUtils.copyBytes(is, os, bufferSize, true);
       os.close();
@@ -637,8 +574,8 @@ public class FSOperations {
      */
     @Override
     public Map execute(FileSystem fs) throws IOException {
-      StatusPair sp = new StatusPair(fs, path);
-      return sp.toJson();
+      FileStatus status = fs.getFileStatus(path);
+      return toJson(status);
     }
 
   }
@@ -703,8 +640,8 @@ public class FSOperations {
      */
     @Override
     public Map execute(FileSystem fs) throws IOException {
-      StatusPairs sp = new StatusPairs(fs, path, filter);
-      return sp.toJson();
+      FileStatus[] fileStatuses = fs.listStatus(path, filter);
+      return toJson(fileStatuses);
     }
 
     @Override
@@ -712,6 +649,45 @@ public class FSOperations {
       return true;
     }
 
+  }
+
+  /**
+   * Executor that performs a batched directory listing.
+   */
+  @InterfaceAudience.Private
+  public static class FSListStatusBatch implements FileSystemAccess
+      .FileSystemExecutor<Map> {
+    private final Path path;
+    private final byte[] token;
+
+    public FSListStatusBatch(String path, byte[] token) throws IOException {
+      this.path = new Path(path);
+      this.token = token.clone();
+    }
+
+    /**
+     * Simple wrapper filesystem that exposes the protected batched
+     * listStatus API so we can use it.
+     */
+    private static class WrappedFileSystem extends FilterFileSystem {
+      public WrappedFileSystem(FileSystem f) {
+        super(f);
+      }
+
+      @Override
+      public DirectoryEntries listStatusBatch(Path f, byte[] token) throws
+          FileNotFoundException, IOException {
+        return super.listStatusBatch(f, token);
+      }
+    }
+
+    @Override
+    public Map execute(FileSystem fs) throws IOException {
+      WrappedFileSystem wrappedFS = new WrappedFileSystem(fs);
+      FileSystem.DirectoryEntries entries =
+          wrappedFS.listStatusBatch(path, token);
+      return toJson(entries);
+    }
   }
 
   /**
@@ -780,7 +756,8 @@ public class FSOperations {
      */
     @Override
     public InputStream execute(FileSystem fs) throws IOException {
-      int bufferSize = HttpFSServerWebApp.get().getConfig().getInt("httpfs.buffer.size", 4096);
+      int bufferSize = HttpFSServerWebApp.get().getConfig().getInt(
+          HTTPFS_BUFFER_SIZE_KEY, HTTP_BUFFER_SIZE_DEFAULT);
       return fs.open(path, bufferSize);
     }
 
@@ -1075,6 +1052,29 @@ public class FSOperations {
     public Void execute(FileSystem fs) throws IOException {
       fs.removeDefaultAcl(path);
       return null;
+    }
+
+  }
+
+  /**
+   * Executor that performs getting trash root FileSystemAccess
+   * files system operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSTrashRoot
+      implements FileSystemAccess.FileSystemExecutor<JSONObject> {
+    private Path path;
+    public FSTrashRoot(String path) {
+      this.path = new Path(path);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public JSONObject execute(FileSystem fs) throws IOException {
+      Path trashRoot = fs.getTrashRoot(this.path);
+      JSONObject json = new JSONObject();
+      json.put(HttpFSFileSystem.TRASH_DIR_JSON, trashRoot.toUri().getPath());
+      return json;
     }
 
   }

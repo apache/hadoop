@@ -58,7 +58,6 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -78,7 +77,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -115,6 +113,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.net.DomainPeerServer;
@@ -206,13 +205,14 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.InvalidChecksumSizeException;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.htrace.core.Tracer;
-import org.mortbay.util.ajax.JSON;
+import org.eclipse.jetty.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -347,7 +347,7 @@ public class DataNode extends ReconfigurableBase
   BlockPoolTokenSecretManager blockPoolTokenSecretManager;
   private boolean hasAnyBlockPoolRegistered = false;
   
-  private final BlockScanner blockScanner;
+  private  BlockScanner blockScanner;
   private DirectoryScanner directoryScanner = null;
   
   /** Activated plug-ins. */
@@ -361,7 +361,6 @@ public class DataNode extends ReconfigurableBase
   private SecureResources secureResources = null;
   // dataDirs must be accessed while holding the DataNode lock.
   private List<StorageLocation> dataDirs;
-  private Configuration conf;
   private final String confVersion;
   private final long maxNumberOfBlocksToLog;
   private final boolean pipelineSupportECN;
@@ -417,7 +416,7 @@ public class DataNode extends ReconfigurableBase
     this.confVersion = null;
     this.usersWithLocalPathAccess = null;
     this.connectToDnViaHostname = false;
-    this.blockScanner = new BlockScanner(this, conf);
+    this.blockScanner = new BlockScanner(this, this.getConf());
     this.pipelineSupportECN = false;
     this.checkDiskErrorInterval =
         ThreadLocalRandom.current().nextInt(5000, (int) (5000 * 1.25));
@@ -436,7 +435,7 @@ public class DataNode extends ReconfigurableBase
     this.tracer = createTracer(conf);
     this.tracerConfigurationManager =
         new TracerConfigurationManager(DATANODE_HTRACE_PREFIX, conf);
-    this.blockScanner = new BlockScanner(this, conf);
+    this.blockScanner = new BlockScanner(this);
     this.lastDiskErrorCheck = 0;
     this.maxNumberOfBlocksToLog = conf.getLong(DFS_MAX_NUM_BLOCKS_TO_LOG_KEY,
         DFS_MAX_NUM_BLOCKS_TO_LOG_DEFAULT);
@@ -485,7 +484,7 @@ public class DataNode extends ReconfigurableBase
     try {
       hostName = getHostName(conf);
       LOG.info("Configured hostname is " + hostName);
-      startDataNode(conf, dataDirs, resources);
+      startDataNode(dataDirs, resources);
     } catch (IOException ie) {
       shutdown();
       throw ie;
@@ -525,7 +524,7 @@ public class DataNode extends ReconfigurableBase
         try {
           LOG.info("Reconfiguring " + property + " to " + newVal);
           this.refreshVolumes(newVal);
-          return conf.get(DFS_DATANODE_DATA_DIR_KEY);
+          return getConf().get(DFS_DATANODE_DATA_DIR_KEY);
         } catch (IOException e) {
           rootException = e;
         } finally {
@@ -634,7 +633,7 @@ public class DataNode extends ReconfigurableBase
    * @param newVolumes a comma separated string that specifies the data volumes.
    * @return changed volumes.
    * @throws IOException if none of the directories are specified in the
-   * configuration.
+   * configuration, or the storage type of a directory is changed.
    */
   @VisibleForTesting
   ChangedVolumes parseChangedVolumes(String newVolumes) throws IOException {
@@ -644,6 +643,12 @@ public class DataNode extends ReconfigurableBase
 
     if (locations.isEmpty()) {
       throw new IOException("No directory is specified.");
+    }
+
+    // Use the existing StorageLocation to detect storage type changes.
+    Map<String, StorageLocation> existingLocations = new HashMap<>();
+    for (StorageLocation loc : getStorageLocations(getConf())) {
+      existingLocations.put(loc.getNormalizedUri().toString(), loc);
     }
 
     ChangedVolumes results = new ChangedVolumes();
@@ -656,9 +661,14 @@ public class DataNode extends ReconfigurableBase
       for (Iterator<StorageLocation> sl = results.newLocations.iterator();
            sl.hasNext(); ) {
         StorageLocation location = sl.next();
-        if (location.getFile().getCanonicalPath().equals(
-            dir.getRoot().getCanonicalPath())) {
+        if (location.matchesStorageDirectory(dir)) {
           sl.remove();
+          StorageLocation old = existingLocations.get(
+              location.getNormalizedUri().toString());
+          if (old != null &&
+              old.getStorageType() != location.getStorageType()) {
+            throw new IOException("Changing storage type is not allowed.");
+          }
           results.unchangedLocations.add(location);
           found = true;
           break;
@@ -778,11 +788,7 @@ public class DataNode extends ReconfigurableBase
     if (locations.isEmpty()) {
       return;
     }
-    Set<File> volumesToRemove = new HashSet<>();
-    for (StorageLocation loc : locations) {
-      volumesToRemove.add(loc.getFile().getAbsoluteFile());
-    }
-    removeVolumes(volumesToRemove, true);
+    removeVolumes(locations, true);
   }
 
   /**
@@ -801,26 +807,22 @@ public class DataNode extends ReconfigurableBase
    * @throws IOException
    */
   private synchronized void removeVolumes(
-      final Set<File> absoluteVolumePaths, boolean clearFailure)
+      final Collection<StorageLocation> storageLocations, boolean clearFailure)
       throws IOException {
-    for (File vol : absoluteVolumePaths) {
-      Preconditions.checkArgument(vol.isAbsolute());
-    }
-
-    if (absoluteVolumePaths.isEmpty()) {
+    if (storageLocations.isEmpty()) {
       return;
     }
 
     LOG.info(String.format("Deactivating volumes (clear failure=%b): %s",
-        clearFailure, Joiner.on(",").join(absoluteVolumePaths)));
+        clearFailure, Joiner.on(",").join(storageLocations)));
 
     IOException ioe = null;
     // Remove volumes and block infos from FsDataset.
-    data.removeVolumes(absoluteVolumePaths, clearFailure);
+    data.removeVolumes(storageLocations, clearFailure);
 
     // Remove volumes from DataStorage.
     try {
-      storage.removeVolumes(absoluteVolumePaths);
+      storage.removeVolumes(storageLocations);
     } catch (IOException e) {
       ioe = e;
     }
@@ -828,11 +830,11 @@ public class DataNode extends ReconfigurableBase
     // Set configuration and dataDirs to reflect volume changes.
     for (Iterator<StorageLocation> it = dataDirs.iterator(); it.hasNext(); ) {
       StorageLocation loc = it.next();
-      if (absoluteVolumePaths.contains(loc.getFile().getAbsoluteFile())) {
+      if (storageLocations.contains(loc)) {
         it.remove();
       }
     }
-    conf.set(DFS_DATANODE_DATA_DIR_KEY, Joiner.on(",").join(dataDirs));
+    getConf().set(DFS_DATANODE_DATA_DIR_KEY, Joiner.on(",").join(dataDirs));
 
     if (ioe != null) {
       throw ioe;
@@ -890,14 +892,14 @@ public class DataNode extends ReconfigurableBase
    * for information related to the different configuration options and
    * Http Policy is decided.
    */
-  private void startInfoServer(Configuration conf)
+  private void startInfoServer()
     throws IOException {
     // SecureDataNodeStarter will bind the privileged port to the channel if
     // the DN is started by JSVC, pass it along.
     ServerSocketChannel httpServerChannel = secureResources != null ?
         secureResources.getHttpServerChannel() : null;
 
-    this.httpServer = new DatanodeHttpServer(conf, this, httpServerChannel);
+    httpServer = new DatanodeHttpServer(getConf(), this, httpServerChannel);
     httpServer.start();
     if (httpServer.getHttpAddress() != null) {
       infoPort = httpServer.getHttpAddress().getPort();
@@ -919,24 +921,24 @@ public class DataNode extends ReconfigurableBase
     }
   }
 
-  private void initIpcServer(Configuration conf) throws IOException {
+  private void initIpcServer() throws IOException {
     InetSocketAddress ipcAddr = NetUtils.createSocketAddr(
-        conf.getTrimmed(DFS_DATANODE_IPC_ADDRESS_KEY));
+        getConf().getTrimmed(DFS_DATANODE_IPC_ADDRESS_KEY));
     
     // Add all the RPC protocols that the Datanode implements    
-    RPC.setProtocolEngine(conf, ClientDatanodeProtocolPB.class,
+    RPC.setProtocolEngine(getConf(), ClientDatanodeProtocolPB.class,
         ProtobufRpcEngine.class);
     ClientDatanodeProtocolServerSideTranslatorPB clientDatanodeProtocolXlator = 
           new ClientDatanodeProtocolServerSideTranslatorPB(this);
     BlockingService service = ClientDatanodeProtocolService
         .newReflectiveBlockingService(clientDatanodeProtocolXlator);
-    ipcServer = new RPC.Builder(conf)
+    ipcServer = new RPC.Builder(getConf())
         .setProtocol(ClientDatanodeProtocolPB.class)
         .setInstance(service)
         .setBindAddress(ipcAddr.getHostName())
         .setPort(ipcAddr.getPort())
         .setNumHandlers(
-            conf.getInt(DFS_DATANODE_HANDLER_COUNT_KEY,
+            getConf().getInt(DFS_DATANODE_HANDLER_COUNT_KEY,
                 DFS_DATANODE_HANDLER_COUNT_DEFAULT)).setVerbose(false)
         .setSecretManager(blockPoolTokenSecretManager).build();
 
@@ -944,29 +946,32 @@ public class DataNode extends ReconfigurableBase
         = new ReconfigurationProtocolServerSideTranslatorPB(this);
     service = ReconfigurationProtocolService
         .newReflectiveBlockingService(reconfigurationProtocolXlator);
-    DFSUtil.addPBProtocol(conf, ReconfigurationProtocolPB.class, service,
+    DFSUtil.addPBProtocol(getConf(), ReconfigurationProtocolPB.class, service,
         ipcServer);
 
     InterDatanodeProtocolServerSideTranslatorPB interDatanodeProtocolXlator = 
         new InterDatanodeProtocolServerSideTranslatorPB(this);
     service = InterDatanodeProtocolService
         .newReflectiveBlockingService(interDatanodeProtocolXlator);
-    DFSUtil.addPBProtocol(conf, InterDatanodeProtocolPB.class, service,
+    DFSUtil.addPBProtocol(getConf(), InterDatanodeProtocolPB.class, service,
         ipcServer);
 
     TraceAdminProtocolServerSideTranslatorPB traceAdminXlator =
         new TraceAdminProtocolServerSideTranslatorPB(this);
     BlockingService traceAdminService = TraceAdminService
         .newReflectiveBlockingService(traceAdminXlator);
-    DFSUtil.addPBProtocol(conf, TraceAdminProtocolPB.class, traceAdminService,
+    DFSUtil.addPBProtocol(
+        getConf(),
+        TraceAdminProtocolPB.class,
+        traceAdminService,
         ipcServer);
 
     LOG.info("Opened IPC server at " + ipcServer.getListenerAddress());
 
     // set service-level authorization security policy
-    if (conf.getBoolean(
+    if (getConf().getBoolean(
         CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false)) {
-      ipcServer.refreshServiceAcl(conf, new HDFSPolicyProvider());
+      ipcServer.refreshServiceAcl(getConf(), new HDFSPolicyProvider());
     }
   }
 
@@ -984,7 +989,7 @@ public class DataNode extends ReconfigurableBase
 
     // Is this by the DN user itself?
     assert dnUserName != null;
-    if (callerUgi.getShortUserName().equals(dnUserName)) {
+    if (callerUgi.getUserName().equals(dnUserName)) {
       return;
     }
 
@@ -1010,8 +1015,8 @@ public class DataNode extends ReconfigurableBase
       return;
     }
     String reason = null;
-    if (conf.getInt(DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 
-                    DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT) < 0) {
+    if (conf.getTimeDuration(DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY,
+        DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT, TimeUnit.SECONDS) < 0) {
       reason = "verification is turned off by configuration";
     } else if ("SimulatedFSDataset".equals(data.getClass().getSimpleName())) {
       reason = "verifcation is not supported by SimulatedFSDataset";
@@ -1057,17 +1062,17 @@ public class DataNode extends ReconfigurableBase
     }
   }
 
-  private void initDataXceiver(Configuration conf) throws IOException {
+  private void initDataXceiver() throws IOException {
     // find free port or use privileged port provided
     TcpPeerServer tcpPeerServer;
     if (secureResources != null) {
       tcpPeerServer = new TcpPeerServer(secureResources);
     } else {
-      int backlogLength = conf.getInt(
+      int backlogLength = getConf().getInt(
           CommonConfigurationKeysPublic.IPC_SERVER_LISTEN_QUEUE_SIZE_KEY,
           CommonConfigurationKeysPublic.IPC_SERVER_LISTEN_QUEUE_SIZE_DEFAULT);
       tcpPeerServer = new TcpPeerServer(dnConf.socketWriteTimeout,
-          DataNode.getStreamingAddr(conf), backlogLength);
+          DataNode.getStreamingAddr(getConf()), backlogLength);
     }
     if (dnConf.getTransferSocketRecvBufferSize() > 0) {
       tcpPeerServer.setReceiveBufferSize(
@@ -1076,24 +1081,27 @@ public class DataNode extends ReconfigurableBase
     streamingAddr = tcpPeerServer.getStreamingAddr();
     LOG.info("Opened streaming server at " + streamingAddr);
     this.threadGroup = new ThreadGroup("dataXceiverServer");
-    xserver = new DataXceiverServer(tcpPeerServer, conf, this);
+    xserver = new DataXceiverServer(tcpPeerServer, getConf(), this);
     this.dataXceiverServer = new Daemon(threadGroup, xserver);
     this.threadGroup.setDaemon(true); // auto destroy when empty
 
-    if (conf.getBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY,
-              HdfsClientConfigKeys.Read.ShortCircuit.DEFAULT) ||
-        conf.getBoolean(HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC,
-              HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT)) {
+    if (getConf().getBoolean(
+        HdfsClientConfigKeys.Read.ShortCircuit.KEY,
+        HdfsClientConfigKeys.Read.ShortCircuit.DEFAULT) ||
+        getConf().getBoolean(
+            HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC,
+            HdfsClientConfigKeys
+              .DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT)) {
       DomainPeerServer domainPeerServer =
-                getDomainPeerServer(conf, streamingAddr.getPort());
+                getDomainPeerServer(getConf(), streamingAddr.getPort());
       if (domainPeerServer != null) {
         this.localDataXceiverServer = new Daemon(threadGroup,
-            new DataXceiverServer(domainPeerServer, conf, this));
+            new DataXceiverServer(domainPeerServer, getConf(), this));
         LOG.info("Listening on UNIX domain socket: " +
             domainPeerServer.getBindPath());
       }
     }
-    this.shortCircuitRegistry = new ShortCircuitRegistry(conf);
+    this.shortCircuitRegistry = new ShortCircuitRegistry(getConf());
   }
 
   private static DomainPeerServer getDomainPeerServer(Configuration conf,
@@ -1274,26 +1282,23 @@ public class DataNode extends ReconfigurableBase
   /**
    * This method starts the data node with the specified conf.
    * 
-   * @param conf - the configuration
-   *  if conf's CONFIG_PROPERTY_SIMULATED property is set
-   *  then a simulated storage based data node is created.
+   * If conf's CONFIG_PROPERTY_SIMULATED property is set
+   * then a simulated storage based data node is created.
    * 
    * @param dataDirs - only for a non-simulated storage data node
    * @throws IOException
    */
-  void startDataNode(Configuration conf, 
-                     List<StorageLocation> dataDirs,
+  void startDataNode(List<StorageLocation> dataDirectories,
                      SecureResources resources
                      ) throws IOException {
 
     // settings global for all BPs in the Data Node
     this.secureResources = resources;
     synchronized (this) {
-      this.dataDirs = dataDirs;
+      this.dataDirs = dataDirectories;
     }
-    this.conf = conf;
-    this.dnConf = new DNConf(conf);
-    checkSecureConfig(dnConf, conf, resources);
+    this.dnConf = new DNConf(this);
+    checkSecureConfig(dnConf, getConf(), resources);
 
     if (dnConf.maxLockedMemory > 0) {
       if (!NativeIO.POSIX.getCacheManipulator().verifyCanMlock()) {
@@ -1333,37 +1338,37 @@ public class DataNode extends ReconfigurableBase
     
     // global DN settings
     registerMXBean();
-    initDataXceiver(conf);
-    startInfoServer(conf);
+    initDataXceiver();
+    startInfoServer();
     pauseMonitor = new JvmPauseMonitor();
-    pauseMonitor.init(conf);
+    pauseMonitor.init(getConf());
     pauseMonitor.start();
   
     // BlockPoolTokenSecretManager is required to create ipc server.
     this.blockPoolTokenSecretManager = new BlockPoolTokenSecretManager();
 
     // Login is done by now. Set the DN user name.
-    dnUserName = UserGroupInformation.getCurrentUser().getShortUserName();
+    dnUserName = UserGroupInformation.getCurrentUser().getUserName();
     LOG.info("dnUserName = " + dnUserName);
     LOG.info("supergroup = " + supergroup);
-    initIpcServer(conf);
+    initIpcServer();
 
-    metrics = DataNodeMetrics.create(conf, getDisplayName());
+    metrics = DataNodeMetrics.create(getConf(), getDisplayName());
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
 
-    ecWorker = new ErasureCodingWorker(conf, this);
+    ecWorker = new ErasureCodingWorker(getConf(), this);
     blockRecoveryWorker = new BlockRecoveryWorker(this);
 
     blockPoolManager = new BlockPoolManager(this);
-    blockPoolManager.refreshNamenodes(conf);
+    blockPoolManager.refreshNamenodes(getConf());
 
     // Create the ReadaheadPool from the DataNode context so we can
     // exit without having to explicitly shutdown its thread pool.
     readaheadPool = ReadaheadPool.getInstance();
-    saslClient = new SaslDataTransferClient(dnConf.conf, 
+    saslClient = new SaslDataTransferClient(dnConf.getConf(),
         dnConf.saslPropsResolver, dnConf.trustedChannelResolver);
     saslServer = new SaslDataTransferServer(dnConf, blockPoolTokenSecretManager);
-    startMetricsLogger(conf);
+    startMetricsLogger();
   }
 
   /**
@@ -1578,10 +1583,10 @@ public class DataNode extends ReconfigurableBase
     // failures.
     checkDiskError();
 
-    data.addBlockPool(nsInfo.getBlockPoolID(), conf);
+    data.addBlockPool(nsInfo.getBlockPoolID(), getConf());
     blockScanner.enableBlockPoolId(bpos.getBlockPoolId());
-    initDirectoryScanner(conf);
-    initDiskBalancer(data, conf);
+    initDirectoryScanner(getConf());
+    initDiskBalancer(data, getConf());
   }
 
   List<BPOfferService> getAllBpOs() {
@@ -1602,10 +1607,10 @@ public class DataNode extends ReconfigurableBase
    */
   private void initStorage(final NamespaceInfo nsInfo) throws IOException {
     final FsDatasetSpi.Factory<? extends FsDatasetSpi<?>> factory
-        = FsDatasetSpi.Factory.getFactory(conf);
+        = FsDatasetSpi.Factory.getFactory(getConf());
     
     if (!factory.isSimulated()) {
-      final StartupOption startOpt = getStartupOption(conf);
+      final StartupOption startOpt = getStartupOption(getConf());
       if (startOpt == null) {
         throw new IOException("Startup option not set.");
       }
@@ -1625,7 +1630,7 @@ public class DataNode extends ReconfigurableBase
 
     synchronized(this)  {
       if (data == null) {
-        data = factory.newInstance(this, storage, conf);
+        data = factory.newInstance(this, storage, getConf());
       }
     }
   }
@@ -1706,7 +1711,7 @@ public class DataNode extends ReconfigurableBase
    */
   DatanodeProtocolClientSideTranslatorPB connectToNN(
       InetSocketAddress nnAddr) throws IOException {
-    return new DatanodeProtocolClientSideTranslatorPB(nnAddr, conf);
+    return new DatanodeProtocolClientSideTranslatorPB(nnAddr, getConf());
   }
 
   /**
@@ -1719,7 +1724,7 @@ public class DataNode extends ReconfigurableBase
   DatanodeLifelineProtocolClientSideTranslatorPB connectToLifelineNN(
       InetSocketAddress lifelineNnAddr) throws IOException {
     return new DatanodeLifelineProtocolClientSideTranslatorPB(lifelineNnAddr,
-        conf);
+        getConf());
   }
 
   public static InterDatanodeProtocol createInterDataNodeProtocolProxy(
@@ -2095,8 +2100,9 @@ public class DataNode extends ReconfigurableBase
       }
     }
   }
-  
-  int getXmitsInProgress() {
+
+  @Override //DataNodeMXBean
+  public int getXmitsInProgress() {
     return xmitsInProgress.get();
   }
   
@@ -2127,7 +2133,8 @@ public class DataNode extends ReconfigurableBase
     LOG.warn(msg);
   }
 
-  private void transferBlock(ExtendedBlock block, DatanodeInfo[] xferTargets,
+  @VisibleForTesting
+  void transferBlock(ExtendedBlock block, DatanodeInfo[] xferTargets,
       StorageType[] xferTargetStorageTypes) throws IOException {
     BPOfferService bpos = getBPOSForBlock(block);
     DatanodeRegistration bpReg = getDNRegistrationForBP(block.getBlockPoolId());
@@ -2373,7 +2380,7 @@ public class DataNode extends ReconfigurableBase
         unbufIn = saslStreams.in;
         
         out = new DataOutputStream(new BufferedOutputStream(unbufOut,
-            DFSUtilClient.getSmallBufferSize(conf)));
+            DFSUtilClient.getSmallBufferSize(getConf())));
         in = new DataInputStream(unbufIn);
         blockSender = new BlockSender(b, 0, b.getNumBytes(), 
             false, false, true, DataNode.this, null, cachingStrategy);
@@ -2388,7 +2395,8 @@ public class DataNode extends ReconfigurableBase
         blockSender.sendBlock(out, unbufOut, null);
 
         // no response necessary
-        LOG.info(getClass().getSimpleName() + ": Transmitted " + b
+        LOG.info(getClass().getSimpleName() + ", at "
+            + DataNode.this.getDisplayName() + ": Transmitted " + b
             + " (numBytes=" + b.getNumBytes() + ") to " + curTarget);
 
         // read ack
@@ -2412,6 +2420,13 @@ public class DataNode extends ReconfigurableBase
           metrics.incrBlocksReplicated();
         }
       } catch (IOException ie) {
+        if (ie instanceof InvalidChecksumSizeException) {
+          // Add the block to the front of the scanning queue if metadata file
+          // is corrupt. We already add the block to front of scanner if the
+          // peer disconnects.
+          LOG.info("Adding block: " + b + " for scanning");
+          blockScanner.markSuspectBlock(data.getVolume(b).getStorageID(), b);
+        }
         LOG.warn(bpReg + ":Failed to transfer " + b + " to " +
             targets[0] + " got ", ie);
         // check if there are any disk problem
@@ -2485,7 +2500,7 @@ public class DataNode extends ReconfigurableBase
     }
     ipcServer.setTracer(tracer);
     ipcServer.start();
-    startPlugins(conf);
+    startPlugins(getConf());
   }
 
   /**
@@ -2660,7 +2675,7 @@ public class DataNode extends ReconfigurableBase
         locations.add(location);
       } catch (IOException ioe) {
         LOG.warn("Invalid " + DFS_DATANODE_DATA_DIR_KEY + " "
-            + location.getFile() + " : ", ioe);
+            + location + " : ", ioe);
         invalidDirs.append("\"").append(uri.getPath()).append("\" ");
       }
     }
@@ -2752,6 +2767,11 @@ public class DataNode extends ReconfigurableBase
   @VisibleForTesting
   DirectoryScanner getDirectoryScanner() {
     return directoryScanner;
+  }
+
+  @VisibleForTesting
+  public BlockPoolTokenSecretManager getBlockPoolTokenSecretManager() {
+    return blockPoolTokenSecretManager;
   }
 
   public static void secureMain(String args[], SecureResources resources) {
@@ -2865,7 +2885,7 @@ public class DataNode extends ReconfigurableBase
     final BlockConstructionStage stage;
 
     //get replica information
-    synchronized(data) {
+    try(AutoCloseableLock lock = data.acquireDatasetLock()) {
       Block storedBlock = data.getStoredBlock(b.getBlockPoolId(),
           b.getBlockId());
       if (null == storedBlock) {
@@ -3028,8 +3048,8 @@ public class DataNode extends ReconfigurableBase
   @Override // ClientDatanodeProtocol
   public void refreshNamenodes() throws IOException {
     checkSuperuserPrivilege();
-    conf = new Configuration();
-    refreshNamenodes(conf);
+    setConf(new Configuration());
+    refreshNamenodes(getConf());
   }
   
   @Override // ClientDatanodeProtocol
@@ -3212,18 +3232,18 @@ public class DataNode extends ReconfigurableBase
    * Check the disk error
    */
   private void checkDiskError() {
-    Set<File> unhealthyDataDirs = data.checkDataDir();
-    if (unhealthyDataDirs != null && !unhealthyDataDirs.isEmpty()) {
+    Set<StorageLocation> unhealthyLocations = data.checkDataDir();
+    if (unhealthyLocations != null && !unhealthyLocations.isEmpty()) {
       try {
         // Remove all unhealthy volumes from DataNode.
-        removeVolumes(unhealthyDataDirs, false);
+        removeVolumes(unhealthyLocations, false);
       } catch (IOException e) {
         LOG.warn("Error occurred when removing unhealthy storage dirs: "
             + e.getMessage(), e);
       }
       StringBuilder sb = new StringBuilder("DataNode failed volumes:");
-      for (File dataDir : unhealthyDataDirs) {
-        sb.append(dataDir.getAbsolutePath() + ";");
+      for (StorageLocation location : unhealthyLocations) {
+        sb.append(location + ";");
       }
       handleDiskError(sb.toString());
     }
@@ -3304,8 +3324,8 @@ public class DataNode extends ReconfigurableBase
                            Token<BlockTokenIdentifier> blockToken)
       throws IOException {
 
-    return DFSUtilClient.connectToDN(datanodeID, timeout, conf, saslClient,
-        NetUtils.getDefaultSocketFactory(getConf()), false,
+    return DFSUtilClient.connectToDN(datanodeID, timeout, getConf(),
+        saslClient, NetUtils.getDefaultSocketFactory(getConf()), false,
         getDataEncryptionKeyFactoryForBlock(block), blockToken);
   }
 
@@ -3318,7 +3338,7 @@ public class DataNode extends ReconfigurableBase
     final int numOobTypes = oobEnd - oobStart + 1;
     oobTimeouts = new long[numOobTypes];
 
-    final String[] ele = conf.get(DFS_DATANODE_OOB_TIMEOUT_KEY,
+    final String[] ele = getConf().get(DFS_DATANODE_OOB_TIMEOUT_KEY,
         DFS_DATANODE_OOB_TIMEOUT_DEFAULT).split(",");
     for (int i = 0; i < numOobTypes; i++) {
       oobTimeouts[i] = (i < ele.length) ? Long.parseLong(ele[i]) : 0;
@@ -3344,10 +3364,9 @@ public class DataNode extends ReconfigurableBase
    * Start a timer to periodically write DataNode metrics to the log file. This
    * behavior can be disabled by configuration.
    *
-   * @param metricConf
    */
-  protected void startMetricsLogger(Configuration metricConf) {
-    long metricsLoggerPeriodSec = metricConf.getInt(
+  protected void startMetricsLogger() {
+    long metricsLoggerPeriodSec = getConf().getInt(
         DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY,
         DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT);
 
@@ -3386,16 +3405,24 @@ public class DataNode extends ReconfigurableBase
    * @param planID  - Hash value of the plan.
    * @param planVersion - Plan version, reserved for future use. We have only
    *                    version 1 now.
-   * @param plan - Actual plan
+   * @param planFile - Plan file name
+   * @param planData - Actual plan data in json format
    * @throws IOException
    */
   @Override
-  public void submitDiskBalancerPlan(String planID,
-      long planVersion, String plan, boolean skipDateCheck) throws IOException {
-
+  public void submitDiskBalancerPlan(String planID, long planVersion,
+      String planFile, String planData, boolean skipDateCheck)
+      throws IOException {
     checkSuperuserPrivilege();
+    if (getStartupOption(getConf()) != StartupOption.REGULAR) {
+      throw new DiskBalancerException(
+          "Datanode is in special state, e.g. Upgrade/Rollback etc."
+              + " Disk balancing not permitted.",
+          DiskBalancerException.Result.DATANODE_STATUS_NOT_REGULAR);
+    }
     // TODO : Support force option
-    this.diskBalancer.submitPlan(planID, planVersion, plan, skipDateCheck);
+    this.diskBalancer.submitPlan(planID, planVersion, planFile, planData,
+            skipDateCheck);
   }
 
   /**
@@ -3443,5 +3470,10 @@ public class DataNode extends ReconfigurableBase
       throw new DiskBalancerException("Unknown key",
           DiskBalancerException.Result.UNKNOWN_KEY);
     }
+  }
+
+  @VisibleForTesting
+  void setBlockScanner(BlockScanner blockScanner) {
+    this.blockScanner = blockScanner;
   }
 }

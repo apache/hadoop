@@ -57,11 +57,11 @@ void dumpCodingMatrix(unsigned char* buf, int n1, int n2) {
 
 void dumpEncoder(IsalEncoder* pCoder) {
   int numDataUnits = pCoder->coder.numDataUnits;
-  int numParityUnits = pCoder->coder.numDataUnits;
+  int numParityUnits = pCoder->coder.numParityUnits;
   int numAllUnits = pCoder->coder.numAllUnits;
 
-  printf("Encoding (numAlnumParityUnitslUnits = %d, numDataUnits = %d)\n",
-                                    numParityUnits, numDataUnits);
+  printf("Encoding (numAllUnits = %d, numParityUnits = %d, numDataUnits = %d)\n",
+                                    numAllUnits, numParityUnits, numDataUnits);
 
   printf("\n\nEncodeMatrix:\n");
   dumpCodingMatrix((unsigned char*) pCoder->encodeMatrix,
@@ -91,7 +91,7 @@ void dumpDecoder(IsalDecoder* pCoder) {
 
   printf("InvertMatrix:\n");
   dumpCodingMatrix((unsigned char*) pCoder->invertMatrix,
-                                   numDataUnits, numDataUnits);
+                                   numDataUnits, numAllUnits);
 
   printf("DecodeMatrix:\n");
   dumpCodingMatrix((unsigned char*) pCoder->decodeMatrix,

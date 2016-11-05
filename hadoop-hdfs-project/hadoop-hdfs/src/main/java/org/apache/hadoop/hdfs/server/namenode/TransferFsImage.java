@@ -64,7 +64,7 @@ import org.apache.http.client.utils.URIBuilder;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
-import org.mortbay.jetty.EofException;
+import org.eclipse.jetty.io.EofException;
 
 /**
  * This class provides fetching a specified file from the NameNode.

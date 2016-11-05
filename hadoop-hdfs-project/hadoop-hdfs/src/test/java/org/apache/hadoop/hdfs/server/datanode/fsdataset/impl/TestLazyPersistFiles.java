@@ -29,6 +29,7 @@ import java.util.EnumSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.fs.StorageType.RAM_DISK;
@@ -89,7 +90,7 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
    */
   @Test
   public void testCorruptFilesAreDiscarded()
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, TimeoutException {
     getClusterBuilder().setRamDiskReplicaCapacity(2).build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
@@ -123,7 +124,7 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
 
   @Test
   public void testDisableLazyPersistFileScrubber()
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, TimeoutException {
     getClusterBuilder().setRamDiskReplicaCapacity(2).disableScrubber().build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
@@ -151,8 +152,8 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
   * If NN restarted then lazyPersist files should not deleted
   */
   @Test
-  public void testFileShouldNotDiscardedIfNNRestarted() throws IOException,
-      InterruptedException {
+  public void testFileShouldNotDiscardedIfNNRestarted()
+      throws IOException, InterruptedException, TimeoutException {
     getClusterBuilder().setRamDiskReplicaCapacity(2).build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path1 = new Path("/" + METHOD_NAME + ".01.dat");

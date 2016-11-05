@@ -402,9 +402,9 @@ public class TestQueueMetrics {
   }
 
   public static void checkResources(MetricsSource source, long allocatedMB,
-      long allocatedCores, int allocCtnrs, long aggreAllocCtnrs,
-      long aggreReleasedCtnrs, long availableMB, long availableCores, long pendingMB,
-      long pendingCores, int pendingCtnrs, long reservedMB, long reservedCores,
+      int allocatedCores, int allocCtnrs, long aggreAllocCtnrs,
+      long aggreReleasedCtnrs, long availableMB, int availableCores, long pendingMB,
+      int pendingCores, int pendingCtnrs, long reservedMB, int reservedCores,
       int reservedCtnrs) {
     MetricsRecordBuilder rb = getMetrics(source);
     assertGauge("AllocatedMB", allocatedMB, rb);

@@ -212,6 +212,14 @@ Maven build goals:
     and it ignores the -Disal.prefix option. If -Disal.lib isn't given, the
     bundling and building will fail.
 
+ Special plugins: OWASP's dependency-check:
+
+   OWASP's dependency-check plugin will scan the third party dependencies
+   of this project for known CVEs (security vulnerabilities against them).
+   It will produce a report in target/dependency-check-report.html. To
+   invoke, run 'mvn dependency-check:aggregate'. Note that this plugin
+   requires maven 3.1.1 or greater.
+
 ----------------------------------------------------------------------------------
 Building components separately
 
@@ -381,3 +389,14 @@ http://www.zlib.net/
 Building distributions:
 
  * Build distribution with native code    : mvn package [-Pdist][-Pdocs][-Psrc][-Dtar]
+
+----------------------------------------------------------------------------------
+Running compatibility checks with checkcompatibility.py
+
+Invoke `./dev-support/bin/checkcompatibility.py` to run Java API Compliance Checker
+to compare the public Java APIs of two git objects. This can be used by release
+managers to compare the compatibility of a previous and current release.
+
+As an example, this invocation will check the compatibility of interfaces annotated as Public or LimitedPrivate:
+
+./dev-support/bin/checkcompatibility.py --annotation org.apache.hadoop.classification.InterfaceAudience.Public --annotation org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate --include "hadoop.*" branch-2.7.2 trunk

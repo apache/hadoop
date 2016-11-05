@@ -19,7 +19,7 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-alpha1-SNAPSHOT</version>
+    <version>3.0.0-alpha2-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
@@ -135,7 +135,7 @@
       <artifactId>hadoop-client</artifactId>
       <exclusions>
         <exclusion>
-          <artifactId>servlet-api</artifactId>
+          <artifactId>javax.servlet-api</artifactId>
           <groupId>javax.servlet</groupId>
         </exclusion>
       </exclusions>
@@ -180,6 +180,10 @@
       <artifactId>mockwebserver</artifactId>
       <version>2.4.0</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
     </dependency>
   </dependencies>
 </project>

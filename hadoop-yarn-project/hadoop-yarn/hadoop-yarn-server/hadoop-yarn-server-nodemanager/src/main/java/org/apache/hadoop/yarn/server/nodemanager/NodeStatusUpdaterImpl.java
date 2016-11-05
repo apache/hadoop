@@ -75,7 +75,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResp
 import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
 
 import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
-import org.apache.hadoop.yarn.server.api.records.QueuedContainersStatus;
+import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
@@ -465,16 +465,21 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           createKeepAliveApplicationList(), nodeHealthStatus,
           containersUtilization, nodeUtilization, increasedContainers);
 
-    nodeStatus.setQueuedContainersStatus(getQueuedContainerStatus());
+    nodeStatus.setOpportunisticContainersStatus(
+        getOpportunisticContainersStatus());
     return nodeStatus;
   }
 
-  private QueuedContainersStatus getQueuedContainerStatus() {
-    QueuedContainersStatus status = QueuedContainersStatus.newInstance();
-    status.setWaitQueueLength(
-        this.context.getQueuingContext().getQueuedContainers().size());
+  /**
+   * Get the status of the OPPORTUNISTIC containers.
+   * @return the status of the OPPORTUNISTIC containers.
+   */
+  private OpportunisticContainersStatus getOpportunisticContainersStatus() {
+    OpportunisticContainersStatus status =
+        this.context.getContainerManager().getOpportunisticContainersStatus();
     return status;
   }
+
   /**
    * Get the aggregated utilization of the containers in this node.
    * @return Resource utilization of all the containers.

@@ -16,26 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.yarn.api;
-import java.io.IOException;
-import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.nio.ByteBuffer;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Random;
-import java.util.Set;
-
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang.math.LongRange;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenResponseProto;
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
@@ -43,6 +25,11 @@ import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRespons
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenResponseProto;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
+import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RestartContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RollbackResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
@@ -100,6 +87,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReservationSubmissionR
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReservationSubmissionResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReservationUpdateRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ReservationUpdateResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ResourceLocalizationRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ResourceLocalizationResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainerRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainersRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainersResponsePBImpl;
@@ -119,7 +108,6 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
-import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
 import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
@@ -153,6 +141,9 @@ import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
+import org.apache.hadoop.yarn.api.records.UpdateContainerError;
+import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
+import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptReportPBImpl;
@@ -164,9 +155,9 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerLaunchContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerReportPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.ContainerResourceChangeRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerRetryContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ExecutionTypeRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.LocalResourcePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NMTokenPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
@@ -187,6 +178,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.SerializedExceptionPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.StrictPreemptionContractPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.URLPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.UpdateContainerRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.YarnClusterMetricsPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptReportProto;
@@ -198,9 +190,9 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerLaunchContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerReportProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ContainerResourceChangeRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerRetryContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ExecutionTypeRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeLabelProto;
@@ -244,6 +236,7 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.Repla
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ReplaceLabelsOnNodeResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.UpdateNodeResourceRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.UpdateNodeResourceResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.FinishApplicationMasterRequestProto;
@@ -332,127 +325,12 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import java.io.IOException;
 
-public class TestPBImplRecords {
-  static final Log LOG = LogFactory.getLog(TestPBImplRecords.class);
-
-  private static HashMap<Type, Object> typeValueCache = new HashMap<Type, Object>();
-  private static Random rand = new Random();
-  private static byte [] bytes = new byte[] {'1', '2', '3', '4'};
-
-  @SuppressWarnings({"rawtypes", "unchecked"})
-  private static Object genTypeValue(Type type) {
-    Object ret = typeValueCache.get(type);
-    if (ret != null) {
-      return ret;
-    }
-    // only use positive primitive values
-    if (type.equals(boolean.class)) {
-      return rand.nextBoolean();
-    } else if (type.equals(byte.class)) {
-      return bytes[rand.nextInt(4)];
-    } else if (type.equals(int.class) || type.equals(Integer.class)) {
-      return rand.nextInt(1000000);
-    } else if (type.equals(long.class)) {
-      return Long.valueOf(rand.nextInt(1000000));
-    } else if (type.equals(float.class)) {
-      return rand.nextFloat();
-    } else if (type.equals(double.class)) {
-      return rand.nextDouble();
-    } else if (type.equals(String.class)) {
-      return String.format("%c%c%c",
-          'a' + rand.nextInt(26),
-          'a' + rand.nextInt(26),
-          'a' + rand.nextInt(26));
-    } else if (type instanceof Class) {
-      Class clazz = (Class)type;
-      if (clazz.isArray()) {
-        Class compClass = clazz.getComponentType();
-        if (compClass != null) {
-          ret = Array.newInstance(compClass, 2);
-          Array.set(ret, 0, genTypeValue(compClass));
-          Array.set(ret, 1, genTypeValue(compClass));
-        }
-      } else if (clazz.isEnum()) {
-        Object [] values = clazz.getEnumConstants();
-        ret = values[rand.nextInt(values.length)];
-      } else if (clazz.equals(ByteBuffer.class)) {
-        // return new ByteBuffer every time
-        // to prevent potential side effects
-        ByteBuffer buff = ByteBuffer.allocate(4);
-        rand.nextBytes(buff.array());
-        return buff;
-      }
-    } else if (type instanceof ParameterizedType) {
-      ParameterizedType pt = (ParameterizedType)type;
-      Type rawType = pt.getRawType();
-      Type [] params = pt.getActualTypeArguments();
-      // only support EnumSet<T>, List<T>, Set<T>, Map<K,V>
-      if (rawType.equals(EnumSet.class)) {
-        if (params[0] instanceof Class) {
-          Class c = (Class)(params[0]);
-          return EnumSet.allOf(c);
-        }
-      } if (rawType.equals(List.class)) {
-        ret = Lists.newArrayList(genTypeValue(params[0]));
-      } else if (rawType.equals(Set.class)) {
-        ret = Sets.newHashSet(genTypeValue(params[0]));
-      } else if (rawType.equals(Map.class)) {
-        Map<Object, Object> map = Maps.newHashMap();
-        map.put(genTypeValue(params[0]), genTypeValue(params[1]));
-        ret = map;
-      }
-    }
-    if (ret == null) {
-      throw new IllegalArgumentException("type " + type + " is not supported");
-    }
-    typeValueCache.put(type, ret);
-    return ret;
-  }
-
-  /**
-   * this method generate record instance by calling newIntance
-   * using reflection, add register the generated value to typeValueCache
-   */
-  @SuppressWarnings("rawtypes")
-  private static Object generateByNewInstance(Class clazz) throws Exception {
-    Object ret = typeValueCache.get(clazz);
-    if (ret != null) {
-      return ret;
-    }
-    Method newInstance = null;
-    Type [] paramTypes = new Type[0];
-    // get newInstance method with most parameters
-    for (Method m : clazz.getMethods()) {
-      int mod = m.getModifiers();
-      if (m.getDeclaringClass().equals(clazz) &&
-          Modifier.isPublic(mod) &&
-          Modifier.isStatic(mod) &&
-          m.getName().equals("newInstance")) {
-        Type [] pts = m.getGenericParameterTypes();
-        if (newInstance == null
-            || (pts.length > paramTypes.length)) {
-          newInstance = m;
-          paramTypes = pts;
-        }
-      }
-    }
-    if (newInstance == null) {
-      throw new IllegalArgumentException("type " + clazz.getName() +
-          " does not have newInstance method");
-    }
-    Object [] args = new Object[paramTypes.length];
-    for (int i=0;i<args.length;i++) {
-      args[i] = genTypeValue(paramTypes[i]);
-    }
-    ret = newInstance.invoke(null, args);
-    typeValueCache.put(clazz, ret);
-    return ret;
-  }
+/**
+ * Test class for YARN API protocol records.
+ */
+public class TestPBImplRecords extends BasePBImplRecordsTest {
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -484,7 +362,8 @@ public class TestPBImplRecords {
     generateByNewInstance(ContainerLaunchContext.class);
     generateByNewInstance(ApplicationSubmissionContext.class);
     generateByNewInstance(ContainerReport.class);
-    generateByNewInstance(ContainerResourceChangeRequest.class);
+    generateByNewInstance(UpdateContainerRequest.class);
+    generateByNewInstance(UpdateContainerError.class);
     generateByNewInstance(IncreaseContainersResourceRequest.class);
     generateByNewInstance(IncreaseContainersResourceResponse.class);
     generateByNewInstance(ContainerStatus.class);
@@ -496,6 +375,7 @@ public class TestPBImplRecords {
     generateByNewInstance(PreemptionMessage.class);
     generateByNewInstance(StartContainerRequest.class);
     generateByNewInstance(NodeLabel.class);
+    generateByNewInstance(UpdatedContainer.class);
     // genByNewInstance does not apply to QueueInfo, cause
     // it is recursive(has sub queues)
     typeValueCache.put(QueueInfo.class, QueueInfo.newInstance("root", 1.0f,
@@ -512,118 +392,11 @@ public class TestPBImplRecords {
     generateByNewInstance(ResourceAllocationRequest.class);
     generateByNewInstance(ReservationAllocationState.class);
     generateByNewInstance(ResourceUtilization.class);
-  }
-
-  private class GetSetPair {
-    public String propertyName;
-    public Method getMethod;
-    public Method setMethod;
-    public Type type;
-    public Object testValue;
-
-    @Override
-    public String toString() {
-      return String.format("{ name=%s, class=%s, value=%s }", propertyName,
-          type, testValue);
-    }
-  }
-
-  private <R> Map<String, GetSetPair> getGetSetPairs(Class<R> recordClass)
-      throws Exception {
-    Map<String, GetSetPair> ret = new HashMap<String, GetSetPair>();
-    Method [] methods = recordClass.getDeclaredMethods();
-    // get all get methods
-    for (int i = 0; i < methods.length; i++) {
-      Method m = methods[i];
-      int mod = m.getModifiers();
-      if (m.getDeclaringClass().equals(recordClass) &&
-          Modifier.isPublic(mod) &&
-          (!Modifier.isStatic(mod))) {
-        String name = m.getName();
-        if (name.equals("getProto")) {
-          continue;
-        }
-        if ((name.length() > 3) && name.startsWith("get") &&
-            (m.getParameterTypes().length == 0)) {
-          String propertyName = name.substring(3);
-          Type valueType = m.getGenericReturnType();
-          GetSetPair p = ret.get(propertyName);
-          if (p == null) {
-            p = new GetSetPair();
-            p.propertyName = propertyName;
-            p.type = valueType;
-            p.getMethod = m;
-            ret.put(propertyName, p);
-          } else {
-            Assert.fail("Multiple get method with same name: " + recordClass
-                + p.propertyName);
-          }
-        }
-      }
-    }
-    // match get methods with set methods
-    for (int i = 0; i < methods.length; i++) {
-      Method m = methods[i];
-      int mod = m.getModifiers();
-      if (m.getDeclaringClass().equals(recordClass) &&
-          Modifier.isPublic(mod) &&
-          (!Modifier.isStatic(mod))) {
-        String name = m.getName();
-        if (name.startsWith("set") && (m.getParameterTypes().length == 1)) {
-          String propertyName = name.substring(3);
-          Type valueType = m.getGenericParameterTypes()[0];
-          GetSetPair p = ret.get(propertyName);
-          if (p != null && p.type.equals(valueType)) {
-            p.setMethod = m;
-          }
-        }
-      }
-    }
-    // exclude incomplete get/set pair, and generate test value
-    Iterator<Entry<String, GetSetPair>> itr = ret.entrySet().iterator();
-    while (itr.hasNext()) {
-      Entry<String, GetSetPair> cur = itr.next();
-      GetSetPair gsp = cur.getValue();
-      if ((gsp.getMethod == null) ||
-          (gsp.setMethod == null)) {
-        LOG.info(String.format("Exclude protential property: %s\n", gsp.propertyName));
-        itr.remove();
-      } else {
-        LOG.info(String.format("New property: %s type: %s", gsp.toString(), gsp.type));
-        gsp.testValue = genTypeValue(gsp.type);
-        LOG.info(String.format(" testValue: %s\n", gsp.testValue));
-      }
-    }
-    return ret;
-  }
-
-  private <R, P> void validatePBImplRecord(Class<R> recordClass,
-      Class<P> protoClass)
-      throws Exception {
-    LOG.info(String.format("Validate %s %s\n", recordClass.getName(),
-        protoClass.getName()));
-    Constructor<R> emptyConstructor = recordClass.getConstructor();
-    Constructor<R> pbConstructor = recordClass.getConstructor(protoClass);
-    Method getProto = recordClass.getDeclaredMethod("getProto");
-    Map<String, GetSetPair> getSetPairs = getGetSetPairs(recordClass);
-    R origRecord = emptyConstructor.newInstance();
-    for (GetSetPair gsp : getSetPairs.values()) {
-      gsp.setMethod.invoke(origRecord, gsp.testValue);
-    }
-    Object ret = getProto.invoke(origRecord);
-    Assert.assertNotNull(recordClass.getName() + "#getProto returns null", ret);
-    if (!(protoClass.isAssignableFrom(ret.getClass()))) {
-      Assert.fail("Illegal getProto method return type: " + ret.getClass());
-    }
-    R deserRecord = pbConstructor.newInstance(ret);
-    Assert.assertEquals("whole " + recordClass + " records should be equal",
-        origRecord, deserRecord);
-    for (GetSetPair gsp : getSetPairs.values()) {
-      Object origValue = gsp.getMethod.invoke(origRecord);
-      Object deserValue = gsp.getMethod.invoke(deserRecord);
-      Assert.assertEquals("property " + recordClass.getName() + "#"
-          + gsp.propertyName + " should be equal", origValue, deserValue);
-    }
+    generateByNewInstance(ReInitializeContainerRequest.class);
+    generateByNewInstance(ReInitializeContainerResponse.class);
+    generateByNewInstance(RestartContainerResponse.class);
+    generateByNewInstance(RollbackResponse.class);
+    generateByNewInstance(CommitResponse.class);
   }
 
   @Test
@@ -983,6 +756,18 @@ public class TestPBImplRecords {
   }
 
   @Test
+  public void testResourceLocalizationRequest() throws Exception {
+    validatePBImplRecord(ResourceLocalizationRequestPBImpl.class,
+        YarnServiceProtos.ResourceLocalizationRequestProto.class);
+  }
+
+  @Test
+  public void testResourceLocalizationResponse() throws Exception {
+    validatePBImplRecord(ResourceLocalizationResponsePBImpl.class,
+        YarnServiceProtos.ResourceLocalizationResponseProto.class);
+  }
+
+  @Test
   public void testContainerPBImpl() throws Exception {
     validatePBImplRecord(ContainerPBImpl.class, ContainerProto.class);
   }
@@ -993,9 +778,9 @@ public class TestPBImplRecords {
   }
 
   @Test
-  public void testContainerResourceChangeRequestPBImpl() throws Exception {
-    validatePBImplRecord(ContainerResourceChangeRequestPBImpl.class,
-        ContainerResourceChangeRequestProto.class);
+  public void testUpdateContainerRequestPBImpl() throws Exception {
+    validatePBImplRecord(UpdateContainerRequestPBImpl.class,
+        YarnServiceProtos.UpdateContainerRequestProto.class);
   }
 
   @Test
@@ -1350,5 +1135,11 @@ public class TestPBImplRecords {
   public void testCheckForDecommissioningNodesResponsePBImpl() throws Exception {
     validatePBImplRecord(CheckForDecommissioningNodesResponsePBImpl.class,
         CheckForDecommissioningNodesResponseProto.class);
+  }
+
+  @Test
+  public void testExecutionTypeRequestPBImpl() throws Exception {
+    validatePBImplRecord(ExecutionTypeRequestPBImpl.class,
+        ExecutionTypeRequestProto.class);
   }
 }

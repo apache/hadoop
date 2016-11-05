@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -26,9 +27,10 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
@@ -43,6 +45,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
@@ -82,7 +85,7 @@ public class TestDataNodeVolumeFailureReporting {
   public void setUp() throws Exception {
     // These tests use DataNodeTestUtils#injectDataDirFailure() to simulate
     // volume failures which is currently not supported on Windows.
-    assumeTrue(!Path.WINDOWS);
+    assumeNotWindows();
     // Allow a single volume failure (there are two volumes)
     initCluster(1, 2, 1);
   }
@@ -466,7 +469,8 @@ public class TestDataNodeVolumeFailureReporting {
     DataNodeTestUtils.triggerHeartbeat(dn);
     FsDatasetSpi<?> fsd = dn.getFSDataset();
     assertEquals(expectedFailedVolumes.length, fsd.getNumFailedVolumes());
-    assertArrayEquals(expectedFailedVolumes, fsd.getFailedStorageLocations());
+    assertArrayEquals(expectedFailedVolumes,
+        convertToAbsolutePaths(fsd.getFailedStorageLocations()));
     // there shouldn't be any more volume failures due to I/O failure
     checkFailuresAtDataNode(dn, 0, false, expectedFailedVolumes);
 
@@ -478,6 +482,25 @@ public class TestDataNodeVolumeFailureReporting {
         (1*dnCapacity), WAIT_FOR_HEARTBEATS);
     checkAggregateFailuresAtNameNode(false, 1);
     checkFailuresAtNameNode(dm, dns.get(0), false, dn1Vol1.getAbsolutePath());
+  }
+
+  @Test
+  public void testAutoFormatEmptyBlockPoolDirectory() throws Exception {
+    // remove the version file
+    DataNode dn = cluster.getDataNodes().get(0);
+    String bpid = cluster.getNamesystem().getBlockPoolId();
+    BlockPoolSliceStorage bps = dn.getStorage().getBPStorage(bpid);
+    Storage.StorageDirectory dir = bps.getStorageDir(0);
+    File current = dir.getCurrentDir();
+
+    File currentVersion = new File(current, "VERSION");
+    currentVersion.delete();
+    // restart the data node
+    assertTrue(cluster.restartDataNodes(true));
+    // the DN should tolerate one volume failure.
+    cluster.waitActive();
+    assertFalse("DataNode should not reformat if VERSION is missing",
+        currentVersion.exists());
   }
 
   /**
@@ -519,8 +542,19 @@ public class TestDataNodeVolumeFailureReporting {
     assertCounter("VolumeFailures", expectedVolumeFailuresCounter,
         getMetrics(dn.getMetrics().name()));
     FsDatasetSpi<?> fsd = dn.getFSDataset();
+    StringBuilder strBuilder = new StringBuilder();
+    strBuilder.append("expectedFailedVolumes is ");
+    for (String expected: expectedFailedVolumes) {
+      strBuilder.append(expected + ",");
+    }
+    strBuilder.append(" fsd.getFailedStorageLocations() is ");
+    for (String expected: fsd.getFailedStorageLocations()) {
+      strBuilder.append(expected + ",");
+    }
+    LOG.info(strBuilder.toString());
     assertEquals(expectedFailedVolumes.length, fsd.getNumFailedVolumes());
-    assertArrayEquals(expectedFailedVolumes, fsd.getFailedStorageLocations());
+    assertArrayEquals(expectedFailedVolumes,
+        convertToAbsolutePaths(fsd.getFailedStorageLocations()));
     if (expectedFailedVolumes.length > 0) {
       assertTrue(fsd.getLastVolumeFailureDate() > 0);
       long expectedCapacityLost = getExpectedCapacityLost(expectCapacityKnown,
@@ -552,8 +586,9 @@ public class TestDataNodeVolumeFailureReporting {
     assertEquals(expectedFailedVolumes.length, dd.getVolumeFailures());
     VolumeFailureSummary volumeFailureSummary = dd.getVolumeFailureSummary();
     if (expectedFailedVolumes.length > 0) {
-      assertArrayEquals(expectedFailedVolumes, volumeFailureSummary
-          .getFailedStorageLocations());
+      assertArrayEquals(expectedFailedVolumes,
+          convertToAbsolutePaths(volumeFailureSummary
+              .getFailedStorageLocations()));
       assertTrue(volumeFailureSummary.getLastVolumeFailureDate() > 0);
       long expectedCapacityLost = getExpectedCapacityLost(expectCapacityKnown,
           expectedFailedVolumes.length);
@@ -562,6 +597,30 @@ public class TestDataNodeVolumeFailureReporting {
     } else {
       assertNull(volumeFailureSummary);
     }
+  }
+
+  /**
+   * Converts the provided paths to absolute file paths.
+   * @param locations the array of paths
+   * @return array of absolute paths
+   */
+  private String[] convertToAbsolutePaths(String[] locations) {
+    if (locations == null || locations.length == 0) {
+      return new String[0];
+    }
+
+    String[] absolutePaths = new String[locations.length];
+    for (int count = 0; count < locations.length; count++) {
+      try {
+        absolutePaths[count] = new File(new URI(locations[count]))
+            .getAbsolutePath();
+      } catch (URISyntaxException e) {
+        //if the provided location is not an URI,
+        //we use it as the absolute path
+        absolutePaths[count] = locations[count];
+      }
+    }
+    return absolutePaths;
   }
 
   /**

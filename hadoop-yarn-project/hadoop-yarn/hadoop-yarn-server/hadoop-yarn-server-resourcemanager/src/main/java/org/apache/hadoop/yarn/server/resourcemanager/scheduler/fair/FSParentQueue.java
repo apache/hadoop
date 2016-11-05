@@ -152,22 +152,20 @@ public class FSParentQueue extends FSQueue {
   public void updateDemand() {
     // Compute demand by iterating through apps in the queue
     // Limit demand to maxResources
-    Resource maxRes = scheduler.getAllocationConfiguration()
-        .getMaxResources(getName());
     writeLock.lock();
     try {
       demand = Resources.createResource(0);
       for (FSQueue childQueue : childQueues) {
         childQueue.updateDemand();
         Resource toAdd = childQueue.getDemand();
+        demand = Resources.add(demand, toAdd);
+        demand = Resources.componentwiseMin(demand, maxShare);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Counting resource from " + childQueue.getName() + " " +
-              toAdd + "; Total resource consumption for " + getName() +
+              toAdd + "; Total resource demand for " + getName() +
               " now " + demand);
         }
-        demand = Resources.add(demand, toAdd);
-        demand = Resources.componentwiseMin(demand, maxRes);
-        if (Resources.equals(demand, maxRes)) {
+        if (Resources.equals(demand, maxShare)) {
           break;
         }
       }
@@ -176,7 +174,7 @@ public class FSParentQueue extends FSQueue {
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("The updated demand for " + getName() + " is " + demand +
-          "; the max is " + maxRes);
+          "; the max is " + maxShare);
     }    
   }
   

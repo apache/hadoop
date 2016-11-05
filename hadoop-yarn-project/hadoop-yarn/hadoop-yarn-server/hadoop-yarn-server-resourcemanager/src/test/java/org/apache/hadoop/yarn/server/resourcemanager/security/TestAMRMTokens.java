@@ -113,6 +113,8 @@ public class TestAMRMTokens {
             DEFAULT_RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS);
     conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
         YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS);
+    conf.set(YarnConfiguration.RM_SCHEDULER_ADDRESS,
+        "0.0.0.0:0");
 
     MyContainerManager containerManager = new MyContainerManager();
     final MockRMWithAMS rm =
@@ -230,6 +232,8 @@ public class TestAMRMTokens {
       YarnConfiguration.RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS,
       rolling_interval_sec);
     conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, am_expire_ms);
+    conf.set(YarnConfiguration.RM_SCHEDULER_ADDRESS,
+        "0.0.0.0:0");
     MyContainerManager containerManager = new MyContainerManager();
     final MockRMWithAMS rm =
         new MockRMWithAMS(conf, containerManager);

@@ -172,6 +172,7 @@ public class NfsExports {
   
   /**
    * Return the configured group list
+   * @return host group list
    */
   public String[] getHostGroupList() {
     int listSize = mMatches.size();

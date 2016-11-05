@@ -57,9 +57,9 @@ public class CryptoUtils {
   /**
    * This method creates and initializes an IV (Initialization Vector)
    * 
-   * @param conf
-   * @return byte[]
-   * @throws IOException
+   * @param conf configuration
+   * @return byte[] initialization vector
+   * @throws IOException exception in case of error
    */
   public static byte[] createIV(Configuration conf) throws IOException {
     CryptoCodec cryptoCodec = CryptoCodec.getInstance(conf);
@@ -94,13 +94,33 @@ public class CryptoUtils {
    * "mapreduce.job.encrypted-intermediate-data.buffer.kb" Job configuration
    * variable.
    * 
-   * @param conf
-   * @param out
-   * @return FSDataOutputStream
-   * @throws IOException
+   * @param conf configuration
+   * @param out given output stream
+   * @return FSDataOutputStream encrypted output stream if encryption is
+   *         enabled; otherwise the given output stream itself
+   * @throws IOException exception in case of error
    */
   public static FSDataOutputStream wrapIfNecessary(Configuration conf,
       FSDataOutputStream out) throws IOException {
+    return wrapIfNecessary(conf, out, true);
+  }
+
+  /**
+   * Wraps a given FSDataOutputStream with a CryptoOutputStream. The size of the
+   * data buffer required for the stream is specified by the
+   * "mapreduce.job.encrypted-intermediate-data.buffer.kb" Job configuration
+   * variable.
+   *
+   * @param conf configuration
+   * @param out given output stream
+   * @param closeOutputStream flag to indicate whether closing the wrapped
+   *        stream will close the given output stream
+   * @return FSDataOutputStream encrypted output stream if encryption is
+   *         enabled; otherwise the given output stream itself
+   * @throws IOException exception in case of error
+   */
+  public static FSDataOutputStream wrapIfNecessary(Configuration conf,
+      FSDataOutputStream out, boolean closeOutputStream) throws IOException {
     if (isEncryptedSpillEnabled(conf)) {
       out.write(ByteBuffer.allocate(8).putLong(out.getPos()).array());
       byte[] iv = createIV(conf);
@@ -110,7 +130,7 @@ public class CryptoUtils {
             + Base64.encodeBase64URLSafeString(iv) + "]");
       }
       return new CryptoFSDataOutputStream(out, CryptoCodec.getInstance(conf),
-          getBufferSize(conf), getEncryptionKey(), iv);
+          getBufferSize(conf), getEncryptionKey(), iv, closeOutputStream);
     } else {
       return out;
     }
@@ -128,11 +148,12 @@ public class CryptoUtils {
    * LimitInputStream will ensure that the CryptoStream does not read past the
    * provided length from the given Input Stream.
    * 
-   * @param conf
-   * @param in
-   * @param length
-   * @return InputStream
-   * @throws IOException
+   * @param conf configuration
+   * @param in given input stream
+   * @param length maximum number of bytes to read from the input stream
+   * @return InputStream encrypted input stream if encryption is
+   *         enabled; otherwise the given input stream itself
+   * @throws IOException exception in case of error
    */
   public static InputStream wrapIfNecessary(Configuration conf, InputStream in,
       long length) throws IOException {
@@ -166,10 +187,11 @@ public class CryptoUtils {
    * "mapreduce.job.encrypted-intermediate-data.buffer.kb" Job configuration
    * variable.
    * 
-   * @param conf
-   * @param in
-   * @return FSDataInputStream
-   * @throws IOException
+   * @param conf configuration
+   * @param in given input stream
+   * @return FSDataInputStream encrypted input stream if encryption is
+   *         enabled; otherwise the given input stream itself
+   * @throws IOException exception in case of error
    */
   public static FSDataInputStream wrapIfNecessary(Configuration conf,
       FSDataInputStream in) throws IOException {

@@ -97,7 +97,7 @@ class Router {
       // Note: this does not distinguish methods with the same signature
       // but different return types.
       // TODO: We may want to deal with methods that take parameters in the future
-      Method method = cls.getMethod(action, null);
+      Method method = cls.getMethod(action);
       Dest dest = routes.get(path);
       if (dest == null) {
         method.setAccessible(true); // avoid any runtime checks

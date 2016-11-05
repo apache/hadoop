@@ -48,6 +48,8 @@ public abstract class Credentials extends RpcAuthInfo {
   
   /**
    * Write AuthFlavor and the credentials to the XDR
+   * @param cred credentials
+   * @param xdr XDR message
    */
   public static void writeFlavorAndCredentials(Credentials cred, XDR xdr) {
     if (cred instanceof CredentialsNone) {

@@ -188,11 +188,6 @@ public class AMLauncher implements Runnable {
     // Construct the actual Container
     ContainerLaunchContext container =
         applicationMasterContext.getAMContainerSpec();
-    LOG.info("Command to launch container "
-        + containerID
-        + " : "
-        + StringUtils.arrayToString(container.getCommands().toArray(
-            new String[0])));
 
     // Populate the current queue name in the environment variable.
     setupQueueNameEnv(container, applicationMasterContext);

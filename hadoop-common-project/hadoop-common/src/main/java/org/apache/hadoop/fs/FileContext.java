@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.fs.permission.FsPermission;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_DEFAULT;
@@ -215,20 +216,18 @@ public class FileContext {
    * The FileContext is defined by.
    *  1) defaultFS (slash)
    *  2) wd
-   *  3) umask
+   *  3) umask (Obtained by FsPermission.getUMask(conf))
    */   
   private final AbstractFileSystem defaultFS; //default FS for this FileContext.
   private Path workingDir;          // Fully qualified
-  private FsPermission umask;
   private final Configuration conf;
   private final UserGroupInformation ugi;
   final boolean resolveSymlinks;
   private final Tracer tracer;
 
   private FileContext(final AbstractFileSystem defFs,
-    final FsPermission theUmask, final Configuration aConf) {
+                      final Configuration aConf) {
     defaultFS = defFs;
-    umask = FsPermission.getUMask(aConf);
     conf = aConf;
     tracer = FsTracer.get(aConf);
     try {
@@ -305,7 +304,7 @@ public class FileContext {
    * 
    * @throws UnsupportedFileSystemException If the file system for
    *           <code>absOrFqPath</code> is not supported.
-   * @throws IOExcepton If the file system for <code>absOrFqPath</code> could
+   * @throws IOException If the file system for <code>absOrFqPath</code> could
    *         not be instantiated.
    */
   protected AbstractFileSystem getFSofPath(final Path absOrFqPath)
@@ -354,7 +353,7 @@ public class FileContext {
    */
   public static FileContext getFileContext(final AbstractFileSystem defFS,
                     final Configuration aConf) {
-    return new FileContext(defFS, FsPermission.getUMask(aConf), aConf);
+    return new FileContext(defFS, aConf);
   }
   
   /**
@@ -564,7 +563,7 @@ public class FileContext {
    * @return the umask of this FileContext
    */
   public FsPermission getUMask() {
-    return umask;
+    return FsPermission.getUMask(conf);
   }
   
   /**
@@ -572,7 +571,7 @@ public class FileContext {
    * @param newUmask  the new umask
    */
   public void setUMask(final FsPermission newUmask) {
-    umask = newUmask;
+    FsPermission.setUMask(conf, newUmask);
   }
   
   
@@ -673,7 +672,7 @@ public class FileContext {
     CreateOpts.Perms permOpt = CreateOpts.getOpt(CreateOpts.Perms.class, opts);
     FsPermission permission = (permOpt != null) ? permOpt.getValue() :
                                       FILE_DEFAULT_PERM;
-    permission = permission.applyUMask(umask);
+    permission = FsCreateModes.applyUMask(permission, getUMask());
 
     final CreateOpts[] updatedOpts = 
                       CreateOpts.setOpt(CreateOpts.perms(permission), opts);
@@ -719,8 +718,9 @@ public class FileContext {
       ParentNotDirectoryException, UnsupportedFileSystemException, 
       IOException {
     final Path absDir = fixRelativePart(dir);
-    final FsPermission absFerms = (permission == null ? 
-          FsPermission.getDirDefault() : permission).applyUMask(umask);
+    final FsPermission absFerms = FsCreateModes.applyUMask(
+        permission == null ?
+            FsPermission.getDirDefault() : permission, getUMask());
     new FSLinkResolver<Void>() {
       @Override
       public Void next(final AbstractFileSystem fs, final Path p) 
@@ -2715,7 +2715,7 @@ public class FileContext {
   /**
    * Query the effective storage policy ID for the given file or directory.
    *
-   * @param src file or directory path.
+   * @param path file or directory path.
    * @return storage policy for give file.
    * @throws IOException
    */

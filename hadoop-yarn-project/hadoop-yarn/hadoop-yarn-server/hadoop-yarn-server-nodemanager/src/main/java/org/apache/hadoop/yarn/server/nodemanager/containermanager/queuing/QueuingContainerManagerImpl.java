@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
+import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
@@ -80,10 +81,14 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
   private ConcurrentMap<ContainerId, AllocatedContainerInfo>
         allocatedOpportunisticContainers;
 
+  private long allocatedMemoryOpportunistic;
+  private int allocatedVCoresOpportunistic;
+
   private Queue<AllocatedContainerInfo> queuedGuaranteedContainers;
   private Queue<AllocatedContainerInfo> queuedOpportunisticContainers;
 
   private Set<ContainerId> opportunisticContainersToKill;
+  private final OpportunisticContainersStatus opportunisticContainersStatus;
   private final ContainerQueuingLimit queuingLimit;
 
   public QueuingContainerManagerImpl(Context context, ContainerExecutor exec,
@@ -93,10 +98,14 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
         dirsHandler);
     this.allocatedGuaranteedContainers = new ConcurrentHashMap<>();
     this.allocatedOpportunisticContainers = new ConcurrentHashMap<>();
+    this.allocatedMemoryOpportunistic = 0;
+    this.allocatedVCoresOpportunistic = 0;
     this.queuedGuaranteedContainers = new ConcurrentLinkedQueue<>();
     this.queuedOpportunisticContainers = new ConcurrentLinkedQueue<>();
     this.opportunisticContainersToKill = Collections.synchronizedSet(
         new HashSet<ContainerId>());
+    this.opportunisticContainersStatus =
+        OpportunisticContainersStatus.newInstance();
     this.queuingLimit = ContainerQueuingLimit.newInstance();
   }
 
@@ -128,7 +137,8 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
       startAllocatedContainer(allocatedContInfo);
     } else {
       ContainerId cIdToStart = containerTokenIdentifier.getContainerID();
-      this.context.getNMStateStore().storeContainer(cIdToStart, request);
+      this.context.getNMStateStore().storeContainer(cIdToStart,
+          containerTokenIdentifier.getVersion(), request);
       this.context.getNMStateStore().storeContainerQueued(cIdToStart);
       LOG.info("No available resources for container {} to start its execution "
           + "immediately.", cIdToStart);
@@ -195,6 +205,8 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
     } else {
       allocatedOpportunisticContainers.put(pti.getContainerId(),
           allocatedContainerInfo);
+      allocatedMemoryOpportunistic += pti.getPmemLimit();
+      allocatedVCoresOpportunistic += pti.getCpuVcores();
     }
 
     getContainersMonitor().increaseContainersAllocation(pti);
@@ -266,6 +278,11 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
     if (contToRemove != null) {
       getContainersMonitor().decreaseContainersAllocation(contToRemove
           .getPti());
+
+      if (contToRemove.getExecutionType() == ExecutionType.OPPORTUNISTIC) {
+        allocatedMemoryOpportunistic -= contToRemove.getPti().getPmemLimit();
+        allocatedVCoresOpportunistic -= contToRemove.getPti().getCpuVcores();
+      }
     }
   }
 
@@ -553,6 +570,22 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
       }
       this.applicationEventDispatcher.handle(event);
     }
+  }
+
+  @Override
+  public OpportunisticContainersStatus getOpportunisticContainersStatus() {
+    opportunisticContainersStatus
+        .setRunningOpportContainers(allocatedOpportunisticContainers.size());
+    opportunisticContainersStatus
+        .setOpportMemoryUsed(allocatedMemoryOpportunistic);
+    opportunisticContainersStatus
+        .setOpportCoresUsed(allocatedVCoresOpportunistic);
+    opportunisticContainersStatus
+        .setQueuedOpportContainers(queuedOpportunisticContainers.size());
+    opportunisticContainersStatus.setWaitQueueLength(
+        queuedGuaranteedContainers.size() +
+            queuedOpportunisticContainers.size());
+    return opportunisticContainersStatus;
   }
 
   @Override

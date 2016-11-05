@@ -875,7 +875,7 @@ public class TestNodeManagerResync {
         ApplicationAttemptId.newInstance(applicationId, 1);
     ContainerId containerId = ContainerId.newContainerId(applicationAttemptId, id);
     NMContainerStatus containerReport =
-        NMContainerStatus.newInstance(containerId, containerState,
+        NMContainerStatus.newInstance(containerId, 0, containerState,
           Resource.newInstance(1024, 1), "recover container", 0,
           Priority.newInstance(10), 0);
     return containerReport;

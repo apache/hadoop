@@ -90,6 +90,10 @@ class StripedBlockReader {
     return buffer;
   }
 
+  void freeReadBuffer() {
+    buffer = null;
+  }
+
   void resetBlockReader(long offsetInBlock) {
     this.blockReader = createBlockReader(offsetInBlock);
   }
@@ -118,7 +122,7 @@ class StripedBlockReader {
           "", newConnectedPeer(block, dnAddr, blockToken, source), source,
           null, stripedReader.getCachingStrategy(), datanode.getTracer(), -1);
     } catch (IOException e) {
-      LOG.debug("Exception while creating remote block reader, datanode {}",
+      LOG.info("Exception while creating remote block reader, datanode {}",
           source, e);
       return null;
     }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
+import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -78,7 +79,6 @@ import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.BaseNMTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.iq80.leveldb.DB;
 import org.junit.After;
 import org.junit.Assert;
@@ -226,47 +226,21 @@ public class TestNMLeveldbStateStoreService {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 4);
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, 5);
-    LocalResource lrsrc = LocalResource.newInstance(
-        URL.newInstance("hdfs", "somehost", 12345, "/some/path/to/rsrc"),
-        LocalResourceType.FILE, LocalResourceVisibility.APPLICATION, 123L,
-        1234567890L);
-    Map<String, LocalResource> localResources =
-        new HashMap<String, LocalResource>();
-    localResources.put("rsrc", lrsrc);
-    Map<String, String> env = new HashMap<String, String>();
-    env.put("somevar", "someval");
-    List<String> containerCmds = new ArrayList<String>();
-    containerCmds.add("somecmd");
-    containerCmds.add("somearg");
-    Map<String, ByteBuffer> serviceData = new HashMap<String, ByteBuffer>();
-    serviceData.put("someservice",
-        ByteBuffer.wrap(new byte[] { 0x1, 0x2, 0x3 }));
-    ByteBuffer containerTokens =
-        ByteBuffer.wrap(new byte[] { 0x7, 0x8, 0x9, 0xa });
-    Map<ApplicationAccessType, String> acls =
-        new HashMap<ApplicationAccessType, String>();
-    acls.put(ApplicationAccessType.VIEW_APP, "viewuser");
-    acls.put(ApplicationAccessType.MODIFY_APP, "moduser");
-    ContainerLaunchContext clc = ContainerLaunchContext.newInstance(
-        localResources, env, containerCmds, serviceData, containerTokens,
-        acls);
-    Resource containerRsrc = Resource.newInstance(1357, 3);
-    ContainerTokenIdentifier containerTokenId =
-        new ContainerTokenIdentifier(containerId, "host", "user",
-            containerRsrc, 9876543210L, 42, 2468, Priority.newInstance(7),
-            13579);
-    Token containerToken = Token.newInstance(containerTokenId.getBytes(),
-        ContainerTokenIdentifier.KIND.toString(), "password".getBytes(),
-        "tokenservice");
-    StartContainerRequest containerReq =
-        StartContainerRequest.newInstance(clc, containerToken);
+    StartContainerRequest containerReq = createContainerRequest(containerId);
 
     // store a container and verify recovered
-    stateStore.storeContainer(containerId, containerReq);
+    stateStore.storeContainer(containerId, 0, containerReq);
+
+    // verify the container version key is not stored for new containers
+    DB db = stateStore.getDB();
+    assertNull("version key present for new container", db.get(bytes(
+        stateStore.getContainerVersionKey(containerId.toString()))));
+
     restartStateStore();
     recoveredContainers = stateStore.loadContainersState();
     assertEquals(1, recoveredContainers.size());
     RecoveredContainerState rcs = recoveredContainers.get(0);
+    assertEquals(0, rcs.getVersion());
     assertEquals(RecoveredContainerStatus.REQUESTED, rcs.getStatus());
     assertEquals(ContainerExitStatus.INVALID, rcs.getExitCode());
     assertEquals(false, rcs.getKilled());
@@ -308,11 +282,13 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(diags.toString(), rcs.getDiagnostics());
 
     // increase the container size, and verify recovered
-    stateStore.storeContainerResourceChanged(containerId, Resource.newInstance(2468, 4));
+    stateStore.storeContainerResourceChanged(containerId, 2,
+        Resource.newInstance(2468, 4));
     restartStateStore();
     recoveredContainers = stateStore.loadContainersState();
     assertEquals(1, recoveredContainers.size());
     rcs = recoveredContainers.get(0);
+    assertEquals(2, rcs.getVersion());
     assertEquals(RecoveredContainerStatus.LAUNCHED, rcs.getStatus());
     assertEquals(ContainerExitStatus.INVALID, rcs.getExitCode());
     assertEquals(false, rcs.getKilled());
@@ -363,6 +339,43 @@ public class TestNMLeveldbStateStoreService {
     restartStateStore();
     recoveredContainers = stateStore.loadContainersState();
     assertTrue(recoveredContainers.isEmpty());
+  }
+
+  private StartContainerRequest createContainerRequest(
+      ContainerId containerId) {
+    LocalResource lrsrc = LocalResource.newInstance(
+        URL.newInstance("hdfs", "somehost", 12345, "/some/path/to/rsrc"),
+        LocalResourceType.FILE, LocalResourceVisibility.APPLICATION, 123L,
+        1234567890L);
+    Map<String, LocalResource> localResources =
+        new HashMap<String, LocalResource>();
+    localResources.put("rsrc", lrsrc);
+    Map<String, String> env = new HashMap<String, String>();
+    env.put("somevar", "someval");
+    List<String> containerCmds = new ArrayList<String>();
+    containerCmds.add("somecmd");
+    containerCmds.add("somearg");
+    Map<String, ByteBuffer> serviceData = new HashMap<String, ByteBuffer>();
+    serviceData.put("someservice",
+        ByteBuffer.wrap(new byte[] { 0x1, 0x2, 0x3 }));
+    ByteBuffer containerTokens =
+        ByteBuffer.wrap(new byte[] { 0x7, 0x8, 0x9, 0xa });
+    Map<ApplicationAccessType, String> acls =
+        new HashMap<ApplicationAccessType, String>();
+    acls.put(ApplicationAccessType.VIEW_APP, "viewuser");
+    acls.put(ApplicationAccessType.MODIFY_APP, "moduser");
+    ContainerLaunchContext clc = ContainerLaunchContext.newInstance(
+        localResources, env, containerCmds, serviceData, containerTokens,
+        acls);
+    Resource containerRsrc = Resource.newInstance(1357, 3);
+    ContainerTokenIdentifier containerTokenId =
+        new ContainerTokenIdentifier(containerId, "host", "user",
+            containerRsrc, 9876543210L, 42, 2468, Priority.newInstance(7),
+            13579);
+    Token containerToken = Token.newInstance(containerTokenId.getBytes(),
+        ContainerTokenIdentifier.KIND.toString(), "password".getBytes(),
+        "tokenservice");
+    return StartContainerRequest.newInstance(clc, containerToken);
   }
 
   @Test

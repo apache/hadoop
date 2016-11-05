@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.fs.http.client;
 
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.json.simple.parser.JSONParser;
@@ -29,6 +28,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +42,8 @@ public class HttpFSUtils {
   public static final String SERVICE_NAME = "/webhdfs";
 
   public static final String SERVICE_VERSION = "/v1";
+
+  public static final byte[] EMPTY_BYTES = {};
 
   private static final String SERVICE_PATH = SERVICE_NAME + SERVICE_VERSION;
 
@@ -128,7 +130,8 @@ public class HttpFSUtils {
   static Object jsonParse(HttpURLConnection conn) throws IOException {
     try {
       JSONParser parser = new JSONParser();
-      return parser.parse(new InputStreamReader(conn.getInputStream(), Charsets.UTF_8));
+      return parser.parse(
+          new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
     } catch (ParseException ex) {
       throw new IOException("JSON parser error, " + ex.getMessage(), ex);
     }

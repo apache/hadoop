@@ -369,7 +369,19 @@ public class TestTimelineReaderWebServicesHBaseStorage {
           "org.apache.hadoop.yarn.server.timelineservice.storage." +
               "HBaseTimelineReaderImpl");
       config.setInt("hfile.format.version", 3);
-      server = new TimelineReaderServer();
+      server = new TimelineReaderServer() {
+        @Override
+        protected void setupOptions(Configuration conf) {
+          // The parent code tries to use HttpServer2 from this version of
+          // Hadoop, but the tests are loading in HttpServer2 from
+          // ${hbase-compatible-hadoop.version}.  This version uses Jetty 9
+          // while ${hbase-compatible-hadoop.version} uses Jetty 6, and there
+          // are many differences, including classnames and packages.
+          // We do nothing here, so that we don't cause a NoSuchMethodError.
+          // Once ${hbase-compatible-hadoop.version} is changed to Hadoop 3,
+          // we should be able to remove this @Override.
+        }
+      };
       server.init(config);
       server.start();
       serverPort = server.getWebServerPort();
@@ -478,7 +490,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
           "1002345678919");
       ClientResponse resp = getResponse(client, uri);
       FlowRunEntity entity = resp.getEntity(FlowRunEntity.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; charset=utf-8",
+          resp.getType().toString());
       assertNotNull(entity);
       assertEquals("user1@flow_name/1002345678919", entity.getId());
       assertEquals(3, entity.getMetrics().size());
@@ -523,7 +536,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       ClientResponse resp = getResponse(client, uri);
       Set<FlowRunEntity> entities =
           resp.getEntity(new GenericType<Set<FlowRunEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; charset=utf-8",
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(2, entities.size());
       for (FlowRunEntity entity : entities) {
@@ -541,7 +555,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
           "clusters/cluster1/users/user1/flows/flow_name/runs?limit=1");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<FlowRunEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; charset=utf-8",
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(1, entities.size());
       for (FlowRunEntity entity : entities) {
@@ -557,7 +572,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
           "createdtimestart=1425016501030");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<FlowRunEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; charset=utf-8",
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(1, entities.size());
       for (FlowRunEntity entity : entities) {
@@ -573,7 +589,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
           "createdtimestart=1425016500999&createdtimeend=1425016501035");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<FlowRunEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; charset=utf-8",
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(2, entities.size());
       for (FlowRunEntity entity : entities) {
@@ -592,7 +609,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
           "createdtimeend=1425016501030");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<FlowRunEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; charset=utf-8",
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(1, entities.size());
       for (FlowRunEntity entity : entities) {
@@ -608,7 +626,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
           "fields=metrics");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<FlowRunEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; charset=utf-8",
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(2, entities.size());
       for (FlowRunEntity entity : entities) {
@@ -644,7 +663,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       ClientResponse resp = getResponse(client, uri);
       Set<FlowRunEntity> entities =
           resp.getEntity(new GenericType<Set<FlowRunEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; charset=utf-8",
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(2, entities.size());
       int metricCnt = 0;
@@ -662,7 +682,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
           "metricstoretrieve=!(MAP_,HDFS_)");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<FlowRunEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; charset=utf-8",
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(2, entities.size());
       metricCnt = 0;
@@ -2101,7 +2122,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       ClientResponse resp = getResponse(client, uri);
       Set<FlowActivityEntity> entities =
           resp.getEntity(new GenericType<Set<FlowActivityEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; charset=utf-8",
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(0, entities.size());
     } finally {
@@ -2131,7 +2153,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       ClientResponse resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; charset=utf-8",
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(0, entities.size());
     } finally {
@@ -2148,7 +2171,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       ClientResponse resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; charset=utf-8",
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(0, entities.size());
     } finally {

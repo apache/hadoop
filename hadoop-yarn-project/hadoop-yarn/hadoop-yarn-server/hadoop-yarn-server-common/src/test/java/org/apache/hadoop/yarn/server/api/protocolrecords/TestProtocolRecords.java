@@ -35,9 +35,11 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NMContainerStatusPBImpl;
 
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb
@@ -46,7 +48,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodeHeartbeatRe
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeManagerRequestPBImpl;
 
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
-import org.apache.hadoop.yarn.server.api.records.QueuedContainersStatus;
+import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
@@ -61,7 +63,7 @@ public class TestProtocolRecords {
     Resource resource = Resource.newInstance(1000, 200);
 
     NMContainerStatus report =
-        NMContainerStatus.newInstance(containerId,
+        NMContainerStatus.newInstance(containerId, 0,
           ContainerState.COMPLETE, resource, "diagnostics",
           ContainerExitStatus.ABORTED, Priority.newInstance(10), 1234);
     NMContainerStatus reportProto =
@@ -85,7 +87,7 @@ public class TestProtocolRecords {
     ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
 
     NMContainerStatus containerReport =
-        NMContainerStatus.newInstance(containerId,
+        NMContainerStatus.newInstance(containerId, 0,
           ContainerState.RUNNING, Resource.newInstance(1024, 1), "diagnostics",
           0, Priority.newInstance(10), 1234);
     List<NMContainerStatus> reports = Arrays.asList(containerReport);
@@ -144,11 +146,11 @@ public class TestProtocolRecords {
         Records.newRecord(NodeHeartbeatRequest.class);
     NodeStatus nodeStatus =
         Records.newRecord(NodeStatus.class);
-    QueuedContainersStatus queuedContainersStatus = Records.newRecord
-        (QueuedContainersStatus.class);
-    queuedContainersStatus.setEstimatedQueueWaitTime(123);
-    queuedContainersStatus.setWaitQueueLength(321);
-    nodeStatus.setQueuedContainersStatus(queuedContainersStatus);
+    OpportunisticContainersStatus opportunisticContainersStatus =
+        Records.newRecord(OpportunisticContainersStatus.class);
+    opportunisticContainersStatus.setEstimatedQueueWaitTime(123);
+    opportunisticContainersStatus.setWaitQueueLength(321);
+    nodeStatus.setOpportunisticContainersStatus(opportunisticContainersStatus);
     record.setNodeStatus(nodeStatus);
 
     NodeHeartbeatRequestPBImpl pb = new
@@ -157,8 +159,24 @@ public class TestProtocolRecords {
 
     Assert.assertEquals(123,
         pb.getNodeStatus()
-            .getQueuedContainersStatus().getEstimatedQueueWaitTime());
+            .getOpportunisticContainersStatus().getEstimatedQueueWaitTime());
     Assert.assertEquals(321,
-        pb.getNodeStatus().getQueuedContainersStatus().getWaitQueueLength());
+        pb.getNodeStatus().getOpportunisticContainersStatus()
+            .getWaitQueueLength());
+  }
+
+  @Test
+  public void testContainerStatus() {
+    ContainerStatus status = Records.newRecord(ContainerStatus.class);
+    List<String> ips = Arrays.asList("127.0.0.1", "139.5.25.2");
+    status.setIPs(ips);
+    status.setHost("locahost123");
+    ContainerStatusPBImpl pb =
+        new ContainerStatusPBImpl(((ContainerStatusPBImpl) status).getProto());
+    Assert.assertEquals(ips, pb.getIPs());
+    Assert.assertEquals("locahost123", pb.getHost());
+
+    status.setIPs(null);
+    Assert.assertNull(status.getIPs());
   }
 }

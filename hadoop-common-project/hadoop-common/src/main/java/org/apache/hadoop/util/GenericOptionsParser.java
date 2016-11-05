@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.util;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -41,6 +42,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -167,8 +169,8 @@ public class GenericOptionsParser {
    */
   public GenericOptionsParser(Configuration conf,
       Options options, String[] args) throws IOException {
-    parseGeneralOptions(options, conf, args);
     this.conf = conf;
+    parseGeneralOptions(options, args);
   }
 
   /**
@@ -259,12 +261,11 @@ public class GenericOptionsParser {
   }
 
   /**
-   * Modify configuration according user-specified generic options
-   * @param conf Configuration to be modified
+   * Modify configuration according user-specified generic options.
+   *
    * @param line User-specified generic options
    */
-  private void processGeneralOptions(Configuration conf,
-      CommandLine line) throws IOException {
+  private void processGeneralOptions(CommandLine line) throws IOException {
     if (line.hasOption("fs")) {
       FileSystem.setDefaultUri(conf, line.getOptionValue("fs"));
     }
@@ -296,8 +297,9 @@ public class GenericOptionsParser {
     }
 
     if (line.hasOption("libjars")) {
-      conf.set("tmpjars", 
-               validateFiles(line.getOptionValue("libjars"), conf),
+      // for libjars, we allow expansion of wildcards
+      conf.set("tmpjars",
+               validateFiles(line.getOptionValue("libjars"), true),
                "from -libjars command line option");
       //setting libjars in client classpath
       URL[] libjars = getLibJars(conf);
@@ -310,12 +312,12 @@ public class GenericOptionsParser {
     }
     if (line.hasOption("files")) {
       conf.set("tmpfiles", 
-               validateFiles(line.getOptionValue("files"), conf),
+               validateFiles(line.getOptionValue("files")),
                "from -files command line option");
     }
     if (line.hasOption("archives")) {
       conf.set("tmparchives", 
-                validateFiles(line.getOptionValue("archives"), conf),
+                validateFiles(line.getOptionValue("archives")),
                 "from -archives command line option");
     }
     conf.setBoolean("mapreduce.client.genericoptionsparser.used", true);
@@ -348,7 +350,7 @@ public class GenericOptionsParser {
    */
   public static URL[] getLibJars(Configuration conf) throws IOException {
     String jars = conf.get("tmpjars");
-    if(jars==null) {
+    if (jars == null || jars.trim().isEmpty()) {
       return null;
     }
     String[] files = jars.split(",");
@@ -359,7 +361,7 @@ public class GenericOptionsParser {
         cp.add(FileSystem.getLocal(conf).pathToFile(tmp).toURI().toURL());
       } else {
         LOG.warn("The libjars file " + tmp + " is not on the local " +
-          "filesystem. Ignoring.");
+            "filesystem. It will not be added to the local classpath.");
       }
     }
     return cp.toArray(new URL[0]);
@@ -371,28 +373,62 @@ public class GenericOptionsParser {
    * if the files specified do not have a scheme.
    * it returns the paths uri converted defaulting to file:///.
    * So an input of  /home/user/file1,/home/user/file2 would return
-   * file:///home/user/file1,file:///home/user/file2
-   * @param files
-   * @return
+   * file:///home/user/file1,file:///home/user/file2.
+   *
+   * This method does not recognize wildcards.
+   *
+   * @param files the input files argument
+   * @return a comma-separated list of validated and qualified paths, or null
+   * if the input files argument is null
    */
-  private String validateFiles(String files, Configuration conf) 
-      throws IOException  {
-    if (files == null) 
+  private String validateFiles(String files) throws IOException {
+    return validateFiles(files, false);
+  }
+
+  /**
+   * takes input as a comma separated list of files
+   * and verifies if they exist. It defaults for file:///
+   * if the files specified do not have a scheme.
+   * it returns the paths uri converted defaulting to file:///.
+   * So an input of  /home/user/file1,/home/user/file2 would return
+   * file:///home/user/file1,file:///home/user/file2.
+   *
+   * @param files the input files argument
+   * @param expandWildcard whether a wildcard entry is allowed and expanded. If
+   * true, any directory followed by a wildcard is a valid entry and is replaced
+   * with the list of jars in that directory. It is used to support the wildcard
+   * notation in a classpath.
+   * @return a comma-separated list of validated and qualified paths, or null
+   * if the input files argument is null
+   */
+  private String validateFiles(String files, boolean expandWildcard)
+      throws IOException {
+    if (files == null) {
       return null;
+    }
     String[] fileArr = files.split(",");
     if (fileArr.length == 0) {
       throw new IllegalArgumentException("File name can't be empty string");
     }
-    String[] finalArr = new String[fileArr.length];
+    List<String> finalPaths = new ArrayList<>(fileArr.length);
     for (int i =0; i < fileArr.length; i++) {
       String tmp = fileArr[i];
       if (tmp.isEmpty()) {
         throw new IllegalArgumentException("File name can't be empty string");
       }
-      String finalPath;
       URI pathURI;
+      final String wildcard = "*";
+      boolean isWildcard = tmp.endsWith(wildcard) && expandWildcard;
       try {
-        pathURI = new URI(tmp);
+        if (isWildcard) {
+          // strip the wildcard
+          tmp = tmp.substring(0, tmp.length() - 1);
+        }
+        // handle the case where a wildcard alone ("*") or the wildcard on the
+        // current directory ("./*") is specified
+        pathURI = matchesCurrentDirectory(tmp) ?
+            new File(Path.CUR_DIR).toURI() :
+            new URI(tmp);
       } catch (URISyntaxException e) {
         throw new IllegalArgumentException(e);
       }
@@ -404,10 +440,13 @@ public class GenericOptionsParser {
         if (!localFs.exists(path)) {
           throw new FileNotFoundException("File " + tmp + " does not exist.");
         }
-        finalPath = path.makeQualified(localFs.getUri(),
-            localFs.getWorkingDirectory()).toString();
-      }
-      else {
+        if (isWildcard) {
+          expandWildcard(finalPaths, path, localFs);
+        } else {
+          finalPaths.add(path.makeQualified(localFs.getUri(),
+              localFs.getWorkingDirectory()).toString());
+        }
+      } else {
         // check if the file exists in this file system
         // we need to recreate this filesystem object to copy
         // these files to the file system ResourceManager is running
@@ -416,12 +455,41 @@ public class GenericOptionsParser {
         if (!fs.exists(path)) {
           throw new FileNotFoundException("File " + tmp + " does not exist.");
         }
-        finalPath = path.makeQualified(fs.getUri(),
-            fs.getWorkingDirectory()).toString();
+        if (isWildcard) {
+          expandWildcard(finalPaths, path, fs);
+        } else {
+          finalPaths.add(path.makeQualified(fs.getUri(),
+              fs.getWorkingDirectory()).toString());
+        }
       }
-      finalArr[i] = finalPath;
     }
-    return StringUtils.arrayToString(finalArr);
+    if (finalPaths.isEmpty()) {
+      throw new IllegalArgumentException("Path " + files + " cannot be empty.");
+    }
+    return StringUtils.join(",", finalPaths);
+  }
+
+  private boolean matchesCurrentDirectory(String path) {
+    return path.isEmpty() || path.equals(Path.CUR_DIR) ||
+        path.equals(Path.CUR_DIR + File.separator);
+  }
+
+  private void expandWildcard(List<String> finalPaths, Path path, FileSystem fs)
+      throws IOException {
+    if (!fs.isDirectory(path)) {
+      throw new FileNotFoundException(path + " is not a directory.");
+    }
+    // get all the jars in the directory
+    List<Path> jars = FileUtil.getJarsInDirectory(path.toString(),
+        fs.equals(FileSystem.getLocal(conf)));
+    if (jars.isEmpty()) {
+      LOG.warn(path + " does not have jars in it. It will be ignored.");
+    } else {
+      for (Path jar: jars) {
+        finalPaths.add(jar.makeQualified(fs.getUri(),
+            fs.getWorkingDirectory()).toString());
+      }
+    }
   }
 
   /**
@@ -473,18 +541,18 @@ public class GenericOptionsParser {
 
   /**
    * Parse the user-specified options, get the generic options, and modify
-   * configuration accordingly
+   * configuration accordingly.
+   *
    * @param opts Options to use for parsing args.
-   * @param conf Configuration to be modified
    * @param args User-specified arguments
    */
-  private void parseGeneralOptions(Options opts, Configuration conf, 
-      String[] args) throws IOException {
+  private void parseGeneralOptions(Options opts, String[] args)
+      throws IOException {
     opts = buildGeneralOptions(opts);
     CommandLineParser parser = new GnuParser();
     try {
       commandLine = parser.parse(opts, preProcessForWindows(args), true);
-      processGeneralOptions(conf, commandLine);
+      processGeneralOptions(commandLine);
     } catch(ParseException e) {
       LOG.warn("options parsing failed: "+e.getMessage());
 

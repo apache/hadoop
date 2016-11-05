@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -31,10 +32,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -48,6 +51,7 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -56,7 +60,6 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.viewfs.InodeTree.INode;
 import org.apache.hadoop.fs.viewfs.InodeTree.INodeLink;
 import org.apache.hadoop.security.AccessControlException;
@@ -85,17 +88,30 @@ public class ViewFileSystem extends FileSystem {
       final Path p) {
     return readOnlyMountTable(operation, p.toString());
   }
-  
+
   static public class MountPoint {
-    private Path src;       // the src of the mount
-    private URI[] targets; //  target of the mount; Multiple targets imply mergeMount
+    /**
+     *  The source of the mount.
+     */
+    private Path src;
+
+    /**
+     * One or more targets of the mount.
+     * Multiple targets imply MergeMount.
+     */
+    private URI[] targets;
+
     MountPoint(Path srcPath, URI[] targetURIs) {
       src = srcPath;
       targets = targetURIs;
     }
+
+    @VisibleForTesting
     Path getSrc() {
       return src;
     }
+
+    @VisibleForTesting
     URI[] getTargets() {
       return targets;
     }
@@ -140,19 +156,18 @@ public class ViewFileSystem extends FileSystem {
 
   /**
    * Return the protocol scheme for the FileSystem.
-   * <p/>
    *
    * @return <code>viewfs</code>
    */
   @Override
   public String getScheme() {
-    return "viewfs";
+    return FsConstants.VIEWFS_SCHEME;
   }
 
   /**
    * Called after a new FileSystem instance is constructed.
    * @param theUri a uri whose authority section names the host, port, etc. for
-   *          this FileSystem
+   *        this FileSystem
    * @param conf the configuration
    */
   @Override
@@ -195,8 +210,7 @@ public class ViewFileSystem extends FileSystem {
     }
 
   }
-  
-  
+
   /**
    * Convenience Constructor for apps to call directly
    * @param theUri which must be that of ViewFileSystem
@@ -204,7 +218,7 @@ public class ViewFileSystem extends FileSystem {
    * @throws IOException
    */
   ViewFileSystem(final URI theUri, final Configuration conf)
-    throws IOException {
+      throws IOException {
     this();
     initialize(theUri, conf);
   }
@@ -218,20 +232,13 @@ public class ViewFileSystem extends FileSystem {
     this(FsConstants.VIEWFS_URI, conf);
   }
   
-  public Path getTrashCanLocation(final Path f) throws FileNotFoundException {
-    final InodeTree.ResolveResult<FileSystem> res = 
-      fsState.resolve(getUriPath(f), true);
-    return res.isInternalDir() ? null : res.targetFileSystem.getHomeDirectory();
-  }
-  
   @Override
   public URI getUri() {
     return myUri;
   }
   
   @Override
-  public Path resolvePath(final Path f)
-      throws IOException {
+  public Path resolvePath(final Path f) throws IOException {
     final InodeTree.ResolveResult<FileSystem> res;
       res = fsState.resolve(getUriPath(f), true);
     if (res.isInternalDir()) {
@@ -275,8 +282,8 @@ public class ViewFileSystem extends FileSystem {
   
   @Override
   public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
-      EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
-      Progressable progress) throws IOException {
+      EnumSet<CreateFlag> flags, int bufferSize, short replication,
+      long blockSize, Progressable progress) throws IOException {
     InodeTree.ResolveResult<FileSystem> res;
     try {
       res = fsState.resolve(getUriPath(f), false);
@@ -284,8 +291,8 @@ public class ViewFileSystem extends FileSystem {
         throw readOnlyMountTable("create", f);
     }
     assert(res.remainingPath != null);
-    return res.targetFileSystem.createNonRecursive(res.remainingPath, permission,
-        flags, bufferSize, replication, blockSize, progress);
+    return res.targetFileSystem.createNonRecursive(res.remainingPath,
+        permission, flags, bufferSize, replication, blockSize, progress);
   }
   
   @Override
@@ -306,10 +313,9 @@ public class ViewFileSystem extends FileSystem {
   
   @Override
   public boolean delete(final Path f, final boolean recursive)
-      throws AccessControlException, FileNotFoundException,
-      IOException {
+      throws AccessControlException, FileNotFoundException, IOException {
     InodeTree.ResolveResult<FileSystem> res = 
-      fsState.resolve(getUriPath(f), true);
+        fsState.resolve(getUriPath(f), true);
     // If internal dir or target is a mount link (ie remainingPath is Slash)
     if (res.isInternalDir() || res.remainingPath == InodeTree.SlashPath) {
       throw readOnlyMountTable("delete", f);
@@ -320,9 +326,8 @@ public class ViewFileSystem extends FileSystem {
   @Override
   @SuppressWarnings("deprecation")
   public boolean delete(final Path f)
-      throws AccessControlException, FileNotFoundException,
-      IOException {
-      return delete(f, true);
+      throws AccessControlException, FileNotFoundException, IOException {
+    return delete(f, true);
   }
   
   @Override
@@ -342,7 +347,6 @@ public class ViewFileSystem extends FileSystem {
       fsState.resolve(getUriPath(f), true);
     return res.targetFileSystem.getFileChecksum(res.remainingPath);
   }
-
 
   private static FileStatus fixFileStatus(FileStatus orig,
       Path qualified) throws IOException {
@@ -370,7 +374,6 @@ public class ViewFileSystem extends FileSystem {
         ? new ViewFsLocatedFileStatus((LocatedFileStatus)orig, qualified)
         : new ViewFsFileStatus(orig, qualified);
   }
-
 
   @Override
   public FileStatus getFileStatus(final Path f) throws AccessControlException,
@@ -411,10 +414,10 @@ public class ViewFileSystem extends FileSystem {
   @Override
   public RemoteIterator<LocatedFileStatus>listLocatedStatus(final Path f,
       final PathFilter filter) throws FileNotFoundException, IOException {
-    final InodeTree.ResolveResult<FileSystem> res = fsState
-        .resolve(getUriPath(f), true);
-    final RemoteIterator<LocatedFileStatus> statusIter = res.targetFileSystem
-        .listLocatedStatus(res.remainingPath);
+    final InodeTree.ResolveResult<FileSystem> res =
+        fsState.resolve(getUriPath(f), true);
+    final RemoteIterator<LocatedFileStatus> statusIter =
+        res.targetFileSystem.listLocatedStatus(res.remainingPath);
 
     if (res.isInternalDir()) {
       return statusIter;
@@ -453,8 +456,7 @@ public class ViewFileSystem extends FileSystem {
 
   @Override
   public FSDataInputStream open(final Path f, final int bufferSize)
-      throws AccessControlException, FileNotFoundException,
-      IOException {
+      throws AccessControlException, FileNotFoundException, IOException {
     InodeTree.ResolveResult<FileSystem> res = 
         fsState.resolve(getUriPath(f), true);
     return res.targetFileSystem.open(res.remainingPath, bufferSize);
@@ -505,14 +507,13 @@ public class ViewFileSystem extends FileSystem {
       throws IOException {
     InodeTree.ResolveResult<FileSystem> res =
         fsState.resolve(getUriPath(f), true);
-    return res.targetFileSystem.truncate(f, newLength);
+    return res.targetFileSystem.truncate(res.remainingPath, newLength);
   }
   
   @Override
   public void setOwner(final Path f, final String username,
       final String groupname) throws AccessControlException,
-      FileNotFoundException,
-      IOException {
+      FileNotFoundException, IOException {
     InodeTree.ResolveResult<FileSystem> res = 
       fsState.resolve(getUriPath(f), true);
     res.targetFileSystem.setOwner(res.remainingPath, username, groupname); 
@@ -520,8 +521,7 @@ public class ViewFileSystem extends FileSystem {
 
   @Override
   public void setPermission(final Path f, final FsPermission permission)
-      throws AccessControlException, FileNotFoundException,
-      IOException {
+      throws AccessControlException, FileNotFoundException, IOException {
     InodeTree.ResolveResult<FileSystem> res = 
       fsState.resolve(getUriPath(f), true);
     res.targetFileSystem.setPermission(res.remainingPath, permission); 
@@ -529,8 +529,7 @@ public class ViewFileSystem extends FileSystem {
 
   @Override
   public boolean setReplication(final Path f, final short replication)
-      throws AccessControlException, FileNotFoundException,
-      IOException {
+      throws AccessControlException, FileNotFoundException, IOException {
     InodeTree.ResolveResult<FileSystem> res = 
       fsState.resolve(getUriPath(f), true);
     return res.targetFileSystem.setReplication(res.remainingPath, replication);
@@ -538,8 +537,7 @@ public class ViewFileSystem extends FileSystem {
 
   @Override
   public void setTimes(final Path f, final long mtime, final long atime)
-      throws AccessControlException, FileNotFoundException,
-      IOException {
+      throws AccessControlException, FileNotFoundException, IOException {
     InodeTree.ResolveResult<FileSystem> res = 
       fsState.resolve(getUriPath(f), true);
     res.targetFileSystem.setTimes(res.remainingPath, mtime, atime); 
@@ -760,8 +758,45 @@ public class ViewFileSystem extends FileSystem {
     res.targetFileSystem.deleteSnapshot(res.remainingPath, snapshotName);
   }
 
-  /*
-   * An instance of this class represents an internal dir of the viewFs 
+  @Override
+  public void setStoragePolicy(Path src, String policyName) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res = fsState.resolve(getUriPath(src),
+        true);
+    res.targetFileSystem.setStoragePolicy(res.remainingPath, policyName);
+  }
+
+  @Override
+  public void unsetStoragePolicy(Path src) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res = fsState.resolve(getUriPath(src),
+        true);
+    res.targetFileSystem.unsetStoragePolicy(res.remainingPath);
+  }
+
+  @Override
+  public BlockStoragePolicySpi getStoragePolicy(Path src) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res = fsState.resolve(getUriPath(src),
+        true);
+    return res.targetFileSystem.getStoragePolicy(res.remainingPath);
+  }
+
+  @Override
+  public Collection<? extends BlockStoragePolicySpi> getAllStoragePolicies()
+      throws IOException {
+    Collection<BlockStoragePolicySpi> allPolicies = new HashSet<>();
+    for (FileSystem fs : getChildFileSystems()) {
+      try {
+        Collection<? extends BlockStoragePolicySpi> policies =
+            fs.getAllStoragePolicies();
+        allPolicies.addAll(policies);
+      } catch (UnsupportedOperationException e) {
+        // ignored
+      }
+    }
+    return allPolicies;
+  }
+
+  /**
+   * An instance of this class represents an internal dir of the viewFs
    * that is internal dir of the mount table.
    * It is a read only mount tables and create, mkdir or delete operations
    * are not allowed.
@@ -793,8 +828,8 @@ public class ViewFileSystem extends FileSystem {
 
     static private void checkPathIsSlash(final Path f) throws IOException {
       if (f != InodeTree.SlashPath) {
-        throw new IOException (
-        "Internal implementation error: expected file name to be /" );
+        throw new IOException(
+            "Internal implementation error: expected file name to be /");
       }
     }
     
@@ -805,14 +840,14 @@ public class ViewFileSystem extends FileSystem {
 
     @Override
     public Path getWorkingDirectory() {
-      throw new RuntimeException (
-      "Internal impl error: getWorkingDir should not have been called" );
+      throw new RuntimeException(
+          "Internal impl error: getWorkingDir should not have been called");
     }
 
     @Override
     public void setWorkingDirectory(final Path new_dir) {
-      throw new RuntimeException (
-      "Internal impl error: getWorkingDir should not have been called" ); 
+      throw new RuntimeException(
+          "Internal impl error: getWorkingDir should not have been called");
     }
 
     @Override
@@ -845,7 +880,7 @@ public class ViewFileSystem extends FileSystem {
 
     @Override
     public BlockLocation[] getFileBlockLocations(final FileStatus fs,
-        final long start, final long len) throws 
+        final long start, final long len) throws
         FileNotFoundException, IOException {
       checkPathIsSlash(fs.getPath());
       throw new FileNotFoundException("Path points to dir not a file");
@@ -862,7 +897,7 @@ public class ViewFileSystem extends FileSystem {
     public FileStatus getFileStatus(Path f) throws IOException {
       checkPathIsSlash(f);
       return new FileStatus(0, true, 0, 0, creationTime, creationTime,
-          PERMISSION_555, ugi.getUserName(), ugi.getGroupNames()[0],
+          PERMISSION_555, ugi.getUserName(), ugi.getPrimaryGroupName(),
 
           new Path(theInternalDir.fullPath).makeQualified(
               myUri, ROOT_PATH));
@@ -883,7 +918,7 @@ public class ViewFileSystem extends FileSystem {
 
           result[i++] = new FileStatus(0, false, 0, 0,
             creationTime, creationTime, PERMISSION_555,
-            ugi.getUserName(), ugi.getGroupNames()[0],
+            ugi.getUserName(), ugi.getPrimaryGroupName(),
             link.getTargetLink(),
             new Path(inode.fullPath).makeQualified(
                 myUri, null));
@@ -1015,14 +1050,14 @@ public class ViewFileSystem extends FileSystem {
     public AclStatus getAclStatus(Path path) throws IOException {
       checkPathIsSlash(path);
       return new AclStatus.Builder().owner(ugi.getUserName())
-          .group(ugi.getGroupNames()[0])
+          .group(ugi.getPrimaryGroupName())
           .addEntries(AclUtil.getMinimalAcl(PERMISSION_555))
           .stickyBit(false).build();
     }
 
     @Override
     public void setXAttr(Path path, String name, byte[] value,
-                         EnumSet<XAttrSetFlag> flag) throws IOException {
+        EnumSet<XAttrSetFlag> flag) throws IOException {
       checkPathIsSlash(path);
       throw readOnlyMountTable("setXAttr", path);
     }
@@ -1078,6 +1113,40 @@ public class ViewFileSystem extends FileSystem {
     @Override
     public QuotaUsage getQuotaUsage(Path f) throws IOException {
       throw new NotInMountpointException(f, "getQuotaUsage");
+    }
+
+    @Override
+    public void setStoragePolicy(Path src, String policyName)
+        throws IOException {
+      checkPathIsSlash(src);
+      throw readOnlyMountTable("setStoragePolicy", src);
+    }
+
+    @Override
+    public void unsetStoragePolicy(Path src) throws IOException {
+      checkPathIsSlash(src);
+      throw readOnlyMountTable("unsetStoragePolicy", src);
+    }
+
+    @Override
+    public BlockStoragePolicySpi getStoragePolicy(Path src) throws IOException {
+      throw new NotInMountpointException(src, "getStoragePolicy");
+    }
+
+    @Override
+    public Collection<? extends BlockStoragePolicySpi> getAllStoragePolicies()
+        throws IOException {
+      Collection<BlockStoragePolicySpi> allPolicies = new HashSet<>();
+      for (FileSystem fs : getChildFileSystems()) {
+        try {
+          Collection<? extends BlockStoragePolicySpi> policies =
+              fs.getAllStoragePolicies();
+          allPolicies.addAll(policies);
+        } catch (UnsupportedOperationException e) {
+          // ignored
+        }
+      }
+      return allPolicies;
     }
   }
 }

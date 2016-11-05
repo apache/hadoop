@@ -161,6 +161,9 @@ class SwiftNativeInputStream extends FSInputStream {
   public synchronized int read(byte[] b, int off, int len) throws IOException {
     SwiftUtils.debug(LOG, "read(buffer, %d, %d)", off, len);
     SwiftUtils.validateReadArgs(b, off, len);
+    if (len == 0) {
+      return 0;
+    }
     int result = -1;
     try {
       verifyOpen();

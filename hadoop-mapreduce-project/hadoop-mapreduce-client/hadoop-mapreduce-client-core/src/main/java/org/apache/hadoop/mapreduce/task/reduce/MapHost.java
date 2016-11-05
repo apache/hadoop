@@ -75,10 +75,6 @@ public class MapHost {
     state = State.BUSY;
   }
   
-  public synchronized void markPenalized() {
-    state = State.PENALIZED;
-  }
-  
   public synchronized int getNumKnownMapOutputs() {
     return maps.size();
   }

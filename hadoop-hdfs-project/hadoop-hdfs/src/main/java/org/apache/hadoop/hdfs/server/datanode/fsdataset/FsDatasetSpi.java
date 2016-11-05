@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,7 @@ import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -43,9 +45,8 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
-import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
-import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipelineInterface;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipeline;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaHandler;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
@@ -206,7 +207,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @param clearFailure set true to clear the failure information about the
    *                     volumes.
    */
-  void removeVolumes(Set<File> volumes, boolean clearFailure);
+  void removeVolumes(Collection<StorageLocation> volumes, boolean clearFailure);
 
   /** @return a storage with the given storage ID */
   DatanodeStorage getStorage(final String storageUuid);
@@ -228,11 +229,17 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    */
   VolumeFailureSummary getVolumeFailureSummary();
 
-  /** @return a list of finalized blocks for the given block pool. */
-  List<FinalizedReplica> getFinalizedBlocks(String bpid);
-
-  /** @return a list of finalized blocks for the given block pool. */
-  List<FinalizedReplica> getFinalizedBlocksOnPersistentStorage(String bpid);
+  /**
+   * Gets a list of references to the finalized blocks for the given block pool.
+   * <p>
+   * Callers of this function should call
+   * {@link FsDatasetSpi#acquireDatasetLock} to avoid blocks' status being
+   * changed during list iteration.
+   * </p>
+   * @return a list of references to the finalized blocks for the given block
+   *         pool.
+   */
+  List<ReplicaInfo> getFinalizedBlocks(String bpid);
 
   /**
    * Check whether the in-memory block record matches the block on the disk,
@@ -336,7 +343,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @param temporary the temporary replica being converted
    * @return the result RBW
    */
-  ReplicaInPipelineInterface convertTemporaryToRbw(
+  ReplicaInPipeline convertTemporaryToRbw(
       ExtendedBlock temporary) throws IOException;
 
   /**
@@ -482,7 +489,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
      * Check if all the data directories are healthy
      * @return A set of unhealthy data directories.
      */
-  Set<File> checkDataDir();
+  Set<StorageLocation> checkDataDir();
 
   /**
    * Shutdown the FSDataset
@@ -639,4 +646,9 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    */
   ReplicaInfo moveBlockAcrossVolumes(final ExtendedBlock block,
       FsVolumeSpi destination) throws IOException;
+
+  /**
+   * Acquire the lock of the data set.
+   */
+  AutoCloseableLock acquireDatasetLock();
 }

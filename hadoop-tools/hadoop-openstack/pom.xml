@@ -19,11 +19,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-alpha1-SNAPSHOT</version>
+    <version>3.0.0-alpha2-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-openstack</artifactId>
-  <version>3.0.0-alpha1-SNAPSHOT</version>
+  <version>3.0.0-alpha2-SNAPSHOT</version>
   <name>Apache Hadoop OpenStack support</name>
   <description>
     This module contains code to support integration with OpenStack.
@@ -124,18 +124,9 @@
     </dependency>
 
     <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-mapper-asl</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-core-asl</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>commons-httpclient</groupId>
       <artifactId>commons-httpclient</artifactId>
+      <version>3.1</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -148,6 +139,14 @@
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
     </dependency>
   </dependencies>
 </project>

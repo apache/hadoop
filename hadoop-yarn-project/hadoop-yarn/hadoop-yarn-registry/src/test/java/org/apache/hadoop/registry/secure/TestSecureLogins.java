@@ -15,39 +15,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.registry.secure;
 
-
-
-import com.sun.security.auth.module.Krb5LoginModule;
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.security.HadoopKerberosName;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.util.KerberosName;
-import org.apache.hadoop.security.authentication.util.KerberosUtil;
-import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.registry.client.impl.zk.RegistrySecurity;
-import org.apache.hadoop.registry.client.impl.zk.ZookeeperConfigOptions;
-import org.apache.zookeeper.Environment;
-import org.apache.zookeeper.data.ACL;
-import org.junit.Assume;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.security.auth.Subject;
-import javax.security.auth.kerberos.KerberosPrincipal;
-import javax.security.auth.login.LoginContext;
-import javax.security.auth.login.LoginException;
 import java.io.File;
-import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import javax.security.auth.Subject;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.kerberos.KerberosPrincipal;
+import javax.security.auth.login.LoginContext;
+import javax.security.auth.login.LoginException;
+
+import org.apache.zookeeper.Environment;
+import org.apache.zookeeper.data.ACL;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.security.HadoopKerberosName;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.util.KerberosName;
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
+import org.apache.hadoop.registry.client.impl.zk.RegistrySecurity;
+import org.apache.hadoop.registry.client.impl.zk.ZookeeperConfigOptions;
+import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
+
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Verify that logins work
@@ -79,7 +78,6 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
     assertEquals(jaasFile.getAbsolutePath(), confFilename);
   }
 
-
   @Test
   public void testClientLogin() throws Throwable {
     LoginContext client = login(ALICE_LOCALHOST,
@@ -108,7 +106,6 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
     client.logout();
   }
 
-
   @Test
   public void testServerLogin() throws Throwable {
     LoginContext loginContext = createLoginContextZookeeperLocalhost();
@@ -127,34 +124,55 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
         KerberosConfiguration.createServerConfig(ZOOKEEPER_LOCALHOST, keytab_zk));
   }
 
-
   @Test
   public void testKerberosAuth() throws Throwable {
     File krb5conf = getKdc().getKrb5conf();
     String krbConfig = FileUtils.readFileToString(krb5conf);
     LOG.info("krb5.conf at {}:\n{}", krb5conf, krbConfig);
     Subject subject = new Subject();
-
-    final Krb5LoginModule krb5LoginModule = new Krb5LoginModule();
+    Class<?> kerb5LoginClass =
+        Class.forName(KerberosUtil.getKrb5LoginModuleName());
+    Constructor<?> kerb5LoginConstr = kerb5LoginClass.getConstructor();
+    Object kerb5LoginObject = kerb5LoginConstr.newInstance();
     final Map<String, String> options = new HashMap<String, String>();
-    options.put("keyTab", keytab_alice.getAbsolutePath());
-    options.put("principal", ALICE_LOCALHOST);
     options.put("debug", "true");
-    options.put("doNotPrompt", "true");
-    options.put("isInitiator", "true");
-    options.put("refreshKrb5Config", "true");
-    options.put("renewTGT", "true");
-    options.put("storeKey", "true");
-    options.put("useKeyTab", "true");
-    options.put("useTicketCache", "true");
-
-    krb5LoginModule.initialize(subject, null,
-        new HashMap<String, String>(),
-        options);
-
-    boolean loginOk = krb5LoginModule.login();
+    if (IBM_JAVA) {
+      options.put("useKeytab",
+          keytab_alice.getAbsolutePath().startsWith("file://")
+            ? keytab_alice.getAbsolutePath()
+            : "file://" +  keytab_alice.getAbsolutePath());
+      options.put("principal", ALICE_LOCALHOST);
+      options.put("refreshKrb5Config", "true");
+      options.put("credsType", "both");
+      String ticketCache = System.getenv("KRB5CCNAME");
+      if (ticketCache != null) {
+        // IBM JAVA only respect system property and not env variable
+        // The first value searched when "useDefaultCcache" is used.
+        System.setProperty("KRB5CCNAME", ticketCache);
+        options.put("useDefaultCcache", "true");
+        options.put("renewTGT", "true");
+      }
+    } else {
+      options.put("keyTab", keytab_alice.getAbsolutePath());
+      options.put("principal", ALICE_LOCALHOST);
+      options.put("doNotPrompt", "true");
+      options.put("isInitiator", "true");
+      options.put("refreshKrb5Config", "true");
+      options.put("renewTGT", "true");
+      options.put("storeKey", "true");
+      options.put("useKeyTab", "true");
+      options.put("useTicketCache", "true");
+    }
+    Method methodInitialize =
+        kerb5LoginObject.getClass().getMethod("initialize", Subject.class,
+          CallbackHandler.class, Map.class, Map.class);
+    methodInitialize.invoke(kerb5LoginObject, subject, null,
+        new HashMap<String, String>(), options);
+    Method methodLogin = kerb5LoginObject.getClass().getMethod("login");
+    boolean loginOk = (Boolean) methodLogin.invoke(kerb5LoginObject);
     assertTrue("Failed to login", loginOk);
-    boolean commitOk = krb5LoginModule.commit();
+    Method methodCommit = kerb5LoginObject.getClass().getMethod("commit");
+    boolean commitOk = (Boolean) methodCommit.invoke(kerb5LoginObject);
     assertTrue("Failed to Commit", commitOk);
   }
 
@@ -184,7 +202,6 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
     // standard rules don't pick this up
     // new HadoopKerberosName(ZOOKEEPER_LOCALHOST_REALM).getShortName();
   }
-
 
   @Test
   public void testUGILogin() throws Throwable {

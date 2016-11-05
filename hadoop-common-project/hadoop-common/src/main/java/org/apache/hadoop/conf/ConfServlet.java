@@ -24,10 +24,13 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.HttpHeaders;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.http.HttpServer2;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * A servlet to print out the running configuration data.
@@ -37,9 +40,8 @@ import org.apache.hadoop.http.HttpServer2;
 public class ConfServlet extends HttpServlet {
   private static final long serialVersionUID = 1L;
 
-  private static final String FORMAT_JSON = "json";
-  private static final String FORMAT_XML = "xml";
-  private static final String FORMAT_PARAM = "format";
+  protected static final String FORMAT_JSON = "json";
+  protected static final String FORMAT_XML = "xml";
 
   /**
    * Return the Configuration of the daemon hosting this servlet.
@@ -61,38 +63,50 @@ public class ConfServlet extends HttpServlet {
       return;
     }
 
-    String format = request.getParameter(FORMAT_PARAM);
-    if (null == format) {
-      format = FORMAT_XML;
-    }
-
+    String format = parseAccecptHeader(request);
     if (FORMAT_XML.equals(format)) {
       response.setContentType("text/xml; charset=utf-8");
     } else if (FORMAT_JSON.equals(format)) {
       response.setContentType("application/json; charset=utf-8");
     }
 
+    String name = request.getParameter("name");
     Writer out = response.getWriter();
     try {
-      writeResponse(getConfFromContext(), out, format);
+      writeResponse(getConfFromContext(), out, format, name);
     } catch (BadFormatException bfe) {
       response.sendError(HttpServletResponse.SC_BAD_REQUEST, bfe.getMessage());
+    } catch (IllegalArgumentException iae) {
+      response.sendError(HttpServletResponse.SC_NOT_FOUND, iae.getMessage());
     }
     out.close();
+  }
+
+  @VisibleForTesting
+  static String parseAccecptHeader(HttpServletRequest request) {
+    String format = request.getHeader(HttpHeaders.ACCEPT);
+    return format != null && format.contains(FORMAT_JSON) ?
+        FORMAT_JSON : FORMAT_XML;
   }
 
   /**
    * Guts of the servlet - extracted for easy testing.
    */
-  static void writeResponse(Configuration conf, Writer out, String format)
-    throws IOException, BadFormatException {
+  static void writeResponse(Configuration conf,
+      Writer out, String format, String propertyName)
+          throws IOException, IllegalArgumentException, BadFormatException {
     if (FORMAT_JSON.equals(format)) {
-      Configuration.dumpConfiguration(conf, out);
+      Configuration.dumpConfiguration(conf, propertyName, out);
     } else if (FORMAT_XML.equals(format)) {
-      conf.writeXml(out);
+      conf.writeXml(propertyName, out);
     } else {
       throw new BadFormatException("Bad format: " + format);
     }
+  }
+
+  static void writeResponse(Configuration conf, Writer out, String format)
+      throws IOException, BadFormatException {
+    writeResponse(conf, out, format, null);
   }
 
   public static class BadFormatException extends Exception {

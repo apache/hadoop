@@ -45,6 +45,8 @@ import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.junit.After;
 import org.junit.Test;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils.toSchedulerKey;
+
 public class TestSchedulerApplicationAttempt {
 
   private static final NodeId nodeId = NodeId.newInstance("somehost", 5);
@@ -88,7 +90,8 @@ public class TestSchedulerApplicationAttempt {
     RMContainer container1 = createRMContainer(appAttId, 1, requestedResource);
     app.liveContainers.put(container1.getContainerId(), container1);
     SchedulerNode node = createNode();
-    app.appSchedulingInfo.allocate(NodeType.OFF_SWITCH, node, requestedPriority,
+    app.appSchedulingInfo.allocate(NodeType.OFF_SWITCH, node,
+        toSchedulerKey(requestedPriority),
         request, container1.getContainer());
     
     // Reserved container
@@ -98,7 +101,7 @@ public class TestSchedulerApplicationAttempt {
         node.getNodeID(), prio1);
     Map<NodeId, RMContainer> reservations = new HashMap<NodeId, RMContainer>();
     reservations.put(node.getNodeID(), container2);
-    app.reservedContainers.put(prio1, reservations);
+    app.reservedContainers.put(toSchedulerKey(prio1), reservations);
     oldMetrics.reserveResource(user, reservedResource);
     
     checkQueueMetrics(oldMetrics, 1, 1, 1536, 2, 2048, 3, 3072, 4);
@@ -137,7 +140,8 @@ public class TestSchedulerApplicationAttempt {
       int id, Resource resource, NodeId nodeId, Priority reservedPriority) {
     RMContainer container = createRMContainer(appAttId, id, resource);
     when(container.getReservedResource()).thenReturn(resource);
-    when(container.getReservedPriority()).thenReturn(reservedPriority);
+    when(container.getReservedSchedulerKey())
+        .thenReturn(toSchedulerKey(reservedPriority));
     when(container.getReservedNode()).thenReturn(nodeId);
     return container;
   }
@@ -260,16 +264,19 @@ public class TestSchedulerApplicationAttempt {
     SchedulerApplicationAttempt app = new SchedulerApplicationAttempt(
         attemptId, "user", queue, queue.getActiveUsersManager(), rmContext);
     Priority priority = Priority.newInstance(1);
-    assertEquals(0, app.getSchedulingOpportunities(priority));
-    app.addSchedulingOpportunity(priority);
-    assertEquals(1, app.getSchedulingOpportunities(priority));
+    SchedulerRequestKey schedulerKey = toSchedulerKey(priority);
+    assertEquals(0, app.getSchedulingOpportunities(schedulerKey));
+    app.addSchedulingOpportunity(schedulerKey);
+    assertEquals(1, app.getSchedulingOpportunities(schedulerKey));
     // verify the count is capped at MAX_VALUE and does not overflow
-    app.setSchedulingOpportunities(priority, Integer.MAX_VALUE - 1);
+    app.setSchedulingOpportunities(schedulerKey, Integer.MAX_VALUE - 1);
     assertEquals(Integer.MAX_VALUE - 1,
-        app.getSchedulingOpportunities(priority));
-    app.addSchedulingOpportunity(priority);
-    assertEquals(Integer.MAX_VALUE, app.getSchedulingOpportunities(priority));
-    app.addSchedulingOpportunity(priority);
-    assertEquals(Integer.MAX_VALUE, app.getSchedulingOpportunities(priority));
+        app.getSchedulingOpportunities(schedulerKey));
+    app.addSchedulingOpportunity(schedulerKey);
+    assertEquals(Integer.MAX_VALUE,
+        app.getSchedulingOpportunities(schedulerKey));
+    app.addSchedulingOpportunity(schedulerKey);
+    assertEquals(Integer.MAX_VALUE,
+        app.getSchedulingOpportunities(schedulerKey));
   }
 }

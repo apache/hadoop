@@ -38,6 +38,9 @@ import org.apache.hadoop.util.Options;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_MAP_INDEX_SKIP_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_MAP_INDEX_SKIP_KEY;
+
 /** A file-based map from keys to values.
  * 
  * <p>A map is a directory containing two files, the <code>data</code> file,
@@ -395,7 +398,8 @@ public class MapFile {
         Options.getOption(ComparatorOption.class, opts);
       WritableComparator comparator =
         comparatorOption == null ? null : comparatorOption.getValue();
-      INDEX_SKIP = conf.getInt("io.map.index.skip", 0);
+      INDEX_SKIP = conf.getInt(
+          IO_MAP_INDEX_SKIP_KEY, IO_MAP_INDEX_SKIP_DEFAULT);
       open(dir, comparator, conf, opts);
     }
  
@@ -990,8 +994,8 @@ public class MapFile {
             reader.getKeyClass().asSubclass(WritableComparable.class),
             reader.getValueClass());
 
-      WritableComparable key = ReflectionUtils.newInstance(reader.getKeyClass()
-        .asSubclass(WritableComparable.class), conf);
+      WritableComparable<?> key = ReflectionUtils.newInstance(
+          reader.getKeyClass().asSubclass(WritableComparable.class), conf);
       Writable value = ReflectionUtils.newInstance(reader.getValueClass()
         .asSubclass(Writable.class), conf);
 

@@ -21,9 +21,6 @@ package org.apache.hadoop.fs;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.http.lib.StaticUserWebFilter;
-import org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory;
-import org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactoryLegacy;
-import org.apache.hadoop.io.erasurecode.rawcoder.XORRawErasureCoderFactory;
 
 /** 
  * This class contains constants for configuration keys used
@@ -78,11 +75,19 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /** Default value for IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE */
   public static final int IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_DEFAULT =
       100;
-      
+
+  /** Max request size a server will accept. */
   public static final String IPC_MAXIMUM_DATA_LENGTH =
       "ipc.maximum.data.length";
-  
+  /** Default value for IPC_MAXIMUM_DATA_LENGTH. */
   public static final int IPC_MAXIMUM_DATA_LENGTH_DEFAULT = 64 * 1024 * 1024;
+
+  /** Max response size a client will accept. */
+  public static final String IPC_MAXIMUM_RESPONSE_LENGTH =
+      "ipc.maximum.response.length";
+  /** Default value for IPC_MAXIMUM_RESPONSE_LENGTH. */
+  public static final int IPC_MAXIMUM_RESPONSE_LENGTH_DEFAULT =
+      128 * 1024 * 1024;
 
   /** How many calls per handler are allowed in the queue. */
   public static final String  IPC_SERVER_HANDLER_QUEUE_SIZE_KEY =
@@ -152,30 +157,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final boolean IO_COMPRESSION_CODEC_LZ4_USELZ4HC_DEFAULT =
       false;
 
-  /**
-   * Erasure Coding configuration family
-   */
 
-  /** Supported erasure codec classes */
-  public static final String IO_ERASURECODE_CODECS_KEY = "io.erasurecode.codecs";
-
-  /** Raw coder factory for the RS default codec. */
-  public static final String IO_ERASURECODE_CODEC_RS_DEFAULT_RAWCODER_KEY =
-      "io.erasurecode.codec.rs-default.rawcoder";
-  public static final String IO_ERASURECODE_CODEC_RS_DEFAULT_RAWCODER_DEFAULT =
-      RSRawErasureCoderFactory.class.getCanonicalName();
-
-  /** Raw coder factory for the RS legacy codec. */
-  public static final String IO_ERASURECODE_CODEC_RS_LEGACY_RAWCODER_KEY =
-      "io.erasurecode.codec.rs-legacy.rawcoder";
-  public static final String IO_ERASURECODE_CODEC_RS_LEGACY_RAWCODER_DEFAULT =
-      RSRawErasureCoderFactoryLegacy.class.getCanonicalName();
-
-  /** Raw coder factory for the XOR codec. */
-  public static final String IO_ERASURECODE_CODEC_XOR_RAWCODER_KEY =
-      "io.erasurecode.codec.xor.rawcoder";
-  public static final String IO_ERASURECODE_CODEC_XOR_RAWCODER_DEFAULT =
-      XORRawErasureCoderFactory.class.getCanonicalName();
 
   /**
    * Service Authorization
@@ -231,12 +213,20 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final boolean HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT =
       true;
 
-  /** See <a href="{@docRoot}/../core-default.html">core-default.xml .</a> */
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
   public static final String HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_ENABLED_KEY =
       "hadoop.security.dns.log-slow-lookups.enabled";
   public static final boolean
       HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_ENABLED_DEFAULT = false;
-  /** See <a href="{@docRoot}/../core-default.html">core-default.xml .</a> */
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
   public static final String
       HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_THRESHOLD_MS_KEY =
       "hadoop.security.dns.log-slow-lookups.threshold.ms";

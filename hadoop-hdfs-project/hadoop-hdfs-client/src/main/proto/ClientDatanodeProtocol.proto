@@ -154,10 +154,11 @@ message GetBalancerBandwidthResponseProto {
  * balancer plan to a data node.
  */
 message SubmitDiskBalancerPlanRequestProto {
-  required string planID = 1; // A hash of the plan like SHA512
-  required string plan = 2; // Json String that describes the plan
-  optional uint64 planVersion = 3; // Plan version number
-  optional bool ignoreDateCheck = 4; // Ignore date checks on this plan.
+  required string planID = 1;         // A hash of the plan like SHA-1
+  required string plan = 2;           // Plan file data in Json format
+  optional uint64 planVersion = 3;    // Plan version number
+  optional bool ignoreDateCheck = 4;  // Ignore date checks on this plan.
+  required string planFile = 5;       // Plan file path
 }
 
 /**
@@ -196,6 +197,7 @@ message QueryPlanStatusResponseProto {
   optional uint32 result = 1;
   optional string planID = 2;
   optional string currentStatus = 3;
+  optional string planFile = 4;
 }
 
 /**

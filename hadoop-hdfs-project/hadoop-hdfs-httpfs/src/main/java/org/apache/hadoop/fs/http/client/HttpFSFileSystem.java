@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.http.client;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+
+import com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
@@ -38,6 +40,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.lib.wsrs.EnumSetParam;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -110,6 +113,7 @@ public class HttpFSFileSystem extends FileSystem
   public static final String XATTR_SET_FLAG_PARAM = "flag";
   public static final String XATTR_ENCODING_PARAM = "encoding";
   public static final String NEW_LENGTH_PARAM = "newlength";
+  public static final String START_AFTER_PARAM = "startAfter";
 
   public static final Short DEFAULT_PERMISSION = 0755;
   public static final String ACLSPEC_DEFAULT = "";
@@ -123,6 +127,8 @@ public class HttpFSFileSystem extends FileSystem
   public static final String MKDIRS_JSON = "boolean";
 
   public static final String HOME_DIR_JSON = "Path";
+
+  public static final String TRASH_DIR_JSON = "Path";
 
   public static final String SET_REPLICATION_JSON = "boolean";
 
@@ -181,6 +187,12 @@ public class HttpFSFileSystem extends FileSystem
   public static final String ACL_ENTRIES_JSON = "entries";
   public static final String ACL_BIT_JSON = "aclBit";
 
+  public static final String ENC_BIT_JSON = "encBit";
+
+  public static final String DIRECTORY_LISTING_JSON = "DirectoryListing";
+  public static final String PARTIAL_LISTING_JSON = "partialListing";
+  public static final String REMAINING_ENTRIES_JSON = "remainingEntries";
+
   public static final int HTTP_TEMPORARY_REDIRECT = 307;
 
   private static final String HTTP_GET = "GET";
@@ -193,14 +205,14 @@ public class HttpFSFileSystem extends FileSystem
     OPEN(HTTP_GET), GETFILESTATUS(HTTP_GET), LISTSTATUS(HTTP_GET),
     GETHOMEDIRECTORY(HTTP_GET), GETCONTENTSUMMARY(HTTP_GET),
     GETFILECHECKSUM(HTTP_GET),  GETFILEBLOCKLOCATIONS(HTTP_GET),
-    INSTRUMENTATION(HTTP_GET), GETACLSTATUS(HTTP_GET),
+    INSTRUMENTATION(HTTP_GET), GETACLSTATUS(HTTP_GET), GETTRASHROOT(HTTP_GET),
     APPEND(HTTP_POST), CONCAT(HTTP_POST), TRUNCATE(HTTP_POST),
     CREATE(HTTP_PUT), MKDIRS(HTTP_PUT), RENAME(HTTP_PUT), SETOWNER(HTTP_PUT),
     SETPERMISSION(HTTP_PUT), SETREPLICATION(HTTP_PUT), SETTIMES(HTTP_PUT),
     MODIFYACLENTRIES(HTTP_PUT), REMOVEACLENTRIES(HTTP_PUT),
     REMOVEDEFAULTACL(HTTP_PUT), REMOVEACL(HTTP_PUT), SETACL(HTTP_PUT),
     DELETE(HTTP_DELETE), SETXATTR(HTTP_PUT), GETXATTRS(HTTP_GET),
-    REMOVEXATTR(HTTP_PUT), LISTXATTRS(HTTP_GET);
+    REMOVEXATTR(HTTP_PUT), LISTXATTRS(HTTP_GET), LISTSTATUS_BATCH(HTTP_GET);
 
     private String httpMethod;
 
@@ -663,6 +675,17 @@ public class HttpFSFileSystem extends FileSystem
     return (Boolean) json.get(DELETE_JSON);
   }
 
+  private FileStatus[] toFileStatuses(JSONObject json, Path f) {
+    json = (JSONObject) json.get(FILE_STATUSES_JSON);
+    JSONArray jsonArray = (JSONArray) json.get(FILE_STATUS_JSON);
+    FileStatus[] array = new FileStatus[jsonArray.size()];
+    f = makeQualified(f);
+    for (int i = 0; i < jsonArray.size(); i++) {
+      array[i] = createFileStatus(f, (JSONObject) jsonArray.get(i));
+    }
+    return array;
+  }
+
   /**
    * List the statuses of the files/directories in the given path if the path is
    * a directory.
@@ -681,14 +704,36 @@ public class HttpFSFileSystem extends FileSystem
                                            params, f, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
-    json = (JSONObject) json.get(FILE_STATUSES_JSON);
-    JSONArray jsonArray = (JSONArray) json.get(FILE_STATUS_JSON);
-    FileStatus[] array = new FileStatus[jsonArray.size()];
-    f = makeQualified(f);
-    for (int i = 0; i < jsonArray.size(); i++) {
-      array[i] = createFileStatus(f, (JSONObject) jsonArray.get(i));
+    return toFileStatuses(json, f);
+  }
+
+  @Override
+  public DirectoryEntries listStatusBatch(Path f, byte[] token) throws
+      FileNotFoundException, IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.LISTSTATUS_BATCH.toString());
+    if (token != null) {
+      params.put(START_AFTER_PARAM, new String(token, Charsets.UTF_8));
     }
-    return array;
+    HttpURLConnection conn = getConnection(
+        Operation.LISTSTATUS_BATCH.getMethod(),
+        params, f, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    // Parse the FileStatus array
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    JSONObject listing = (JSONObject) json.get(DIRECTORY_LISTING_JSON);
+    FileStatus[] statuses = toFileStatuses(
+        (JSONObject) listing.get(PARTIAL_LISTING_JSON), f);
+    // New token is the last FileStatus entry
+    byte[] newToken = null;
+    if (statuses.length > 0) {
+      newToken = statuses[statuses.length - 1].getPath().getName().toString()
+          .getBytes(Charsets.UTF_8);
+    }
+    // Parse the remainingEntries boolean into hasMore
+    final long remainingEntries = (Long) listing.get(REMAINING_ENTRIES_JSON);
+    final boolean hasMore = remainingEntries > 0 ? true : false;
+    return new DirectoryEntries(statuses, newToken, hasMore);
   }
 
   /**
@@ -772,6 +817,33 @@ public class HttpFSFileSystem extends FileSystem
       return new Path((String) json.get(HOME_DIR_JSON));
     } catch (IOException ex) {
       throw new RuntimeException(ex);
+    }
+  }
+
+  /**
+   * Get the root directory of Trash for a path in HDFS.
+   * 1. File in encryption zone returns /ez1/.Trash/username.
+   * 2. File not in encryption zone, or encountered exception when checking
+   *    the encryption zone of the path, returns /users/username/.Trash.
+   * Caller appends either Current or checkpoint timestamp
+   * for trash destination.
+   * The default implementation returns "/user/username/.Trash".
+   * @param fullPath the trash root of the path to be determined.
+   * @return trash root
+   */
+  @Override
+  public Path getTrashRoot(Path fullPath) {
+    Map<String, String> params = new HashMap<>();
+    params.put(OP_PARAM, Operation.GETTRASHROOT.toString());
+    try {
+      HttpURLConnection conn = getConnection(
+              Operation.GETTRASHROOT.getMethod(), params, fullPath, true);
+      HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+      JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+      return new Path((String) json.get(TRASH_DIR_JSON));
+    } catch (IOException ex) {
+      LOG.warn("Cannot find trash root of " + fullPath, ex);
+      return super.getTrashRoot(fullPath);
     }
   }
 
@@ -955,6 +1027,21 @@ public class HttpFSFileSystem extends FileSystem
     return createAclStatus(json);
   }
 
+  /** Convert a string to a FsPermission object. */
+  static FsPermission toFsPermission(JSONObject json) {
+    final String s = (String) json.get(PERMISSION_JSON);
+    final Boolean aclBit = (Boolean) json.get(ACL_BIT_JSON);
+    final Boolean encBit = (Boolean) json.get(ENC_BIT_JSON);
+    FsPermission perm = new FsPermission(Short.parseShort(s, 8));
+    final boolean aBit = (aclBit != null) ? aclBit : false;
+    final boolean eBit = (encBit != null) ? encBit : false;
+    if (aBit || eBit) {
+      return new FsPermissionExtension(perm, aBit, eBit);
+    } else {
+      return perm;
+    }
+  }
+
   private FileStatus createFileStatus(Path parent, JSONObject json) {
     String pathSuffix = (String) json.get(PATH_SUFFIX_JSON);
     Path path = (pathSuffix.equals("")) ? parent : new Path(parent, pathSuffix);
@@ -962,8 +1049,7 @@ public class HttpFSFileSystem extends FileSystem
     long len = (Long) json.get(LENGTH_JSON);
     String owner = (String) json.get(OWNER_JSON);
     String group = (String) json.get(GROUP_JSON);
-    FsPermission permission =
-      new FsPermission(Short.parseShort((String) json.get(PERMISSION_JSON), 8));
+    final FsPermission permission = toFsPermission(json);
     long aTime = (Long) json.get(ACCESS_TIME_JSON);
     long mTime = (Long) json.get(MODIFICATION_TIME_JSON);
     long blockSize = (Long) json.get(BLOCK_SIZE_JSON);

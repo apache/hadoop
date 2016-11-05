@@ -32,62 +32,85 @@ import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 
-public interface NodeHeartbeatResponse {
-  int getResponseId();
-  NodeAction getNodeAction();
+/**
+ * Node Manager's heartbeat response.
+ */
+public abstract class NodeHeartbeatResponse {
+  public abstract int getResponseId();
 
-  List<ContainerId> getContainersToCleanup();
-  List<ContainerId> getContainersToBeRemovedFromNM();
+  public abstract NodeAction getNodeAction();
 
-  List<ApplicationId> getApplicationsToCleanup();
+  public abstract List<ContainerId> getContainersToCleanup();
+
+  public abstract List<ContainerId> getContainersToBeRemovedFromNM();
+
+  public abstract List<ApplicationId> getApplicationsToCleanup();
 
   // This tells NM the collectors' address info of related apps
-  Map<ApplicationId, String> getAppCollectorsMap();
-  void setAppCollectorsMap(Map<ApplicationId, String> appCollectorsMap);
+  public abstract Map<ApplicationId, String> getAppCollectorsMap();
 
-  void setResponseId(int responseId);
-  void setNodeAction(NodeAction action);
+  public abstract void setAppCollectorsMap(
+      Map<ApplicationId, String> appCollectorsMap);
 
-  MasterKey getContainerTokenMasterKey();
-  void setContainerTokenMasterKey(MasterKey secretKey);
-  
-  MasterKey getNMTokenMasterKey();
-  void setNMTokenMasterKey(MasterKey secretKey);
+  public abstract void setResponseId(int responseId);
 
-  void addAllContainersToCleanup(List<ContainerId> containers);
+  public abstract void setNodeAction(NodeAction action);
+
+  public abstract MasterKey getContainerTokenMasterKey();
+
+  public abstract void setContainerTokenMasterKey(MasterKey secretKey);
+
+  public abstract MasterKey getNMTokenMasterKey();
+
+  public abstract void setNMTokenMasterKey(MasterKey secretKey);
+
+  public abstract void addAllContainersToCleanup(List<ContainerId> containers);
 
   // This tells NM to remove finished containers from its context. Currently, NM
   // will remove finished containers from its context only after AM has actually
   // received the finished containers in a previous allocate response
-  void addContainersToBeRemovedFromNM(List<ContainerId> containers);
-  
-  void addAllApplicationsToCleanup(List<ApplicationId> applications);
+  public abstract void addContainersToBeRemovedFromNM(
+      List<ContainerId> containers);
 
-  List<SignalContainerRequest> getContainersToSignalList();
-  void addAllContainersToSignal(List<SignalContainerRequest> containers);
-  long getNextHeartBeatInterval();
-  void setNextHeartBeatInterval(long nextHeartBeatInterval);
-  
-  String getDiagnosticsMessage();
+  public abstract void addAllApplicationsToCleanup(
+      List<ApplicationId> applications);
 
-  void setDiagnosticsMessage(String diagnosticsMessage);
+  public abstract List<SignalContainerRequest> getContainersToSignalList();
+
+  public abstract void addAllContainersToSignal(
+      List<SignalContainerRequest> containers);
+
+  public abstract long getNextHeartBeatInterval();
+
+  public abstract void setNextHeartBeatInterval(long nextHeartBeatInterval);
+
+  public abstract String getDiagnosticsMessage();
+
+  public abstract void setDiagnosticsMessage(String diagnosticsMessage);
 
   // Credentials (i.e. hdfs tokens) needed by NodeManagers for application
   // localizations and logAggreations.
-  Map<ApplicationId, ByteBuffer> getSystemCredentialsForApps();
+  public abstract Map<ApplicationId, ByteBuffer> getSystemCredentialsForApps();
 
-  void setSystemCredentialsForApps(
+  public abstract void setSystemCredentialsForApps(
       Map<ApplicationId, ByteBuffer> systemCredentials);
   
-  boolean getAreNodeLabelsAcceptedByRM();
-  void setAreNodeLabelsAcceptedByRM(boolean areNodeLabelsAcceptedByRM);
+  public abstract boolean getAreNodeLabelsAcceptedByRM();
 
-  Resource getResource();
-  void setResource(Resource resource);
+  public abstract void setAreNodeLabelsAcceptedByRM(
+      boolean areNodeLabelsAcceptedByRM);
 
-  List<Container> getContainersToDecrease();
-  void addAllContainersToDecrease(Collection<Container> containersToDecrease);
+  public abstract Resource getResource();
 
-  ContainerQueuingLimit getContainerQueuingLimit();
-  void setContainerQueuingLimit(ContainerQueuingLimit containerQueuingLimit);
+  public abstract void setResource(Resource resource);
+
+  public abstract List<Container> getContainersToDecrease();
+
+  public abstract void addAllContainersToDecrease(
+      Collection<Container> containersToDecrease);
+
+  public abstract ContainerQueuingLimit getContainerQueuingLimit();
+
+  public abstract void setContainerQueuingLimit(
+      ContainerQueuingLimit containerQueuingLimit);
 }

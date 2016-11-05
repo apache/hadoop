@@ -35,6 +35,7 @@ class DatanodeStats {
   private final StorageTypeStatsMap statsMap = new StorageTypeStatsMap();
   private long capacityTotal = 0L;
   private long capacityUsed = 0L;
+  private long capacityUsedNonDfs = 0L;
   private long capacityRemaining = 0L;
   private long blockPoolUsed = 0L;
   private int xceiverCount = 0;
@@ -47,8 +48,9 @@ class DatanodeStats {
 
   synchronized void add(final DatanodeDescriptor node) {
     xceiverCount += node.getXceiverCount();
-    if (!(node.isDecommissionInProgress() || node.isDecommissioned())) {
+    if (node.isInService()) {
       capacityUsed += node.getDfsUsed();
+      capacityUsedNonDfs += node.getNonDfsUsed();
       blockPoolUsed += node.getBlockPoolUsed();
       nodesInService++;
       nodesInServiceXceiverCount += node.getXceiverCount();
@@ -56,7 +58,8 @@ class DatanodeStats {
       capacityRemaining += node.getRemaining();
       cacheCapacity += node.getCacheCapacity();
       cacheUsed += node.getCacheUsed();
-    } else if (!node.isDecommissioned()) {
+    } else if (node.isDecommissionInProgress() ||
+        node.isEnteringMaintenance()) {
       cacheCapacity += node.getCacheCapacity();
       cacheUsed += node.getCacheUsed();
     }
@@ -74,8 +77,9 @@ class DatanodeStats {
 
   synchronized void subtract(final DatanodeDescriptor node) {
     xceiverCount -= node.getXceiverCount();
-    if (!(node.isDecommissionInProgress() || node.isDecommissioned())) {
+    if (node.isInService()) {
       capacityUsed -= node.getDfsUsed();
+      capacityUsedNonDfs -= node.getNonDfsUsed();
       blockPoolUsed -= node.getBlockPoolUsed();
       nodesInService--;
       nodesInServiceXceiverCount -= node.getXceiverCount();
@@ -83,7 +87,8 @@ class DatanodeStats {
       capacityRemaining -= node.getRemaining();
       cacheCapacity -= node.getCacheCapacity();
       cacheUsed -= node.getCacheUsed();
-    } else if (!node.isDecommissioned()) {
+    } else if (node.isDecommissionInProgress() ||
+        node.isEnteringMaintenance()) {
       cacheCapacity -= node.getCacheCapacity();
       cacheUsed -= node.getCacheUsed();
     }
@@ -157,8 +162,7 @@ class DatanodeStats {
   }
 
   synchronized long getCapacityUsedNonDFS() {
-    final long nonDFSUsed = capacityTotal - capacityRemaining - capacityUsed;
-    return nonDFSUsed < 0L? 0L : nonDFSUsed;
+    return capacityUsedNonDfs;
   }
 
   synchronized float getCapacityUsedPercent() {

@@ -49,7 +49,7 @@ public abstract class GetDelegationTokenResponse {
   /**
    * The Delegation tokens have a identifier which maps to
    * {@link AbstractDelegationTokenIdentifier}.
-   *
+   * @return the delegation tokens
    */
   @Public
   @Stable

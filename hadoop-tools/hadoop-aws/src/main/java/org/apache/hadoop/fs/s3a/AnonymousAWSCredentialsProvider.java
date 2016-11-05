@@ -38,6 +38,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Stable
 public class AnonymousAWSCredentialsProvider implements AWSCredentialsProvider {
+
+  public static final String NAME
+      = "org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider";
+
   public AWSCredentials getCredentials() {
     return new AnonymousAWSCredentials();
   }

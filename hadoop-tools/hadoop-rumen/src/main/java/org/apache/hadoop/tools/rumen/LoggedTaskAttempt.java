@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import org.apache.hadoop.util.StringUtils;
-import org.codehaus.jackson.annotate.JsonAnySetter;
 
 // HACK ALERT!!!  This "should" have have two subclasses, which might be called
 //                LoggedMapTaskAttempt and LoggedReduceTaskAttempt, but 

@@ -40,6 +40,8 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Time;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /** Provides a <i>trash</i> feature.  Files are moved to a user's trash
  * directory, a subdirectory of their home directory named ".Trash".  Files are
  * initially moved to a <i>current</i> sub-directory of the trash directory.
@@ -75,7 +77,11 @@ public class TrashPolicyDefault extends TrashPolicy {
     initialize(conf, fs);
   }
 
+  /**
+   * @deprecated Use {@link #initialize(Configuration, FileSystem)} instead.
+   */
   @Override
+  @Deprecated
   public void initialize(Configuration conf, FileSystem fs, Path home) {
     this.fs = fs;
     this.deletionInterval = (long)(conf.getFloat(
@@ -106,6 +112,7 @@ public class TrashPolicyDefault extends TrashPolicy {
     return deletionInterval != 0;
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public boolean moveToTrash(Path path) throws IOException {
     if (!isEnabled())
@@ -156,10 +163,11 @@ public class TrashPolicyDefault extends TrashPolicy {
           trashPath = new Path(orig + Time.now());
         }
         
-        if (fs.rename(path, trashPath)) {           // move to current trash
-          LOG.info("Moved: '" + path + "' to trash at: " + trashPath);
-          return true;
-        }
+        // move to current trash
+        fs.rename(path, trashPath,
+            Rename.TO_TRASH);
+        LOG.info("Moved: '" + path + "' to trash at: " + trashPath);
+        return true;
       } catch (IOException e) {
         cause = e;
       }
@@ -209,7 +217,7 @@ public class TrashPolicyDefault extends TrashPolicy {
     return new Emptier(getConf(), emptierInterval);
   }
 
-  private class Emptier implements Runnable {
+  protected class Emptier implements Runnable {
 
     private Configuration conf;
     private long emptierInterval;
@@ -217,7 +225,7 @@ public class TrashPolicyDefault extends TrashPolicy {
     Emptier(Configuration conf, long emptierInterval) throws IOException {
       this.conf = conf;
       this.emptierInterval = emptierInterval;
-      if (emptierInterval > deletionInterval || emptierInterval == 0) {
+      if (emptierInterval > deletionInterval || emptierInterval <= 0) {
         LOG.info("The configured checkpoint interval is " +
                  (emptierInterval / MSECS_PER_MINUTE) + " minutes." +
                  " Using an interval of " +
@@ -280,6 +288,11 @@ public class TrashPolicyDefault extends TrashPolicy {
     }
     private long floor(long time, long interval) {
       return (time / interval) * interval;
+    }
+
+    @VisibleForTesting
+    protected long getEmptierInterval() {
+      return this.emptierInterval/MSECS_PER_MINUTE;
     }
   }
 

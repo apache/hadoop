@@ -79,76 +79,98 @@ public class PlanQueue extends ParentQueue {
   }
 
   @Override
-  public synchronized void reinitialize(CSQueue newlyParsedQueue,
+  public void reinitialize(CSQueue newlyParsedQueue,
       Resource clusterResource) throws IOException {
-    // Sanity check
-    if (!(newlyParsedQueue instanceof PlanQueue)
-        || !newlyParsedQueue.getQueuePath().equals(getQueuePath())) {
-      throw new IOException("Trying to reinitialize " + getQueuePath()
-          + " from " + newlyParsedQueue.getQueuePath());
-    }
+    try {
+      writeLock.lock();
+      // Sanity check
+      if (!(newlyParsedQueue instanceof PlanQueue) || !newlyParsedQueue
+          .getQueuePath().equals(getQueuePath())) {
+        throw new IOException(
+            "Trying to reinitialize " + getQueuePath() + " from "
+                + newlyParsedQueue.getQueuePath());
+      }
 
-    PlanQueue newlyParsedParentQueue = (PlanQueue) newlyParsedQueue;
+      PlanQueue newlyParsedParentQueue = (PlanQueue) newlyParsedQueue;
 
-    if (newlyParsedParentQueue.getChildQueues().size() > 0) {
-      throw new IOException(
-          "Reservable Queue should not have sub-queues in the"
-              + "configuration");
-    }
+      if (newlyParsedParentQueue.getChildQueues().size() > 0) {
+        throw new IOException(
+            "Reservable Queue should not have sub-queues in the"
+                + "configuration");
+      }
 
-    // Set new configs
-    setupQueueConfigs(clusterResource);
+      // Set new configs
+      setupQueueConfigs(clusterResource);
 
-    updateQuotas(newlyParsedParentQueue.userLimit,
-        newlyParsedParentQueue.userLimitFactor,
-        newlyParsedParentQueue.maxAppsForReservation,
-        newlyParsedParentQueue.maxAppsPerUserForReservation);
+      updateQuotas(newlyParsedParentQueue.userLimit,
+          newlyParsedParentQueue.userLimitFactor,
+          newlyParsedParentQueue.maxAppsForReservation,
+          newlyParsedParentQueue.maxAppsPerUserForReservation);
 
-    // run reinitialize on each existing queue, to trigger absolute cap
-    // recomputations
-    for (CSQueue res : this.getChildQueues()) {
-      res.reinitialize(res, clusterResource);
-    }
-    showReservationsAsQueues = newlyParsedParentQueue.showReservationsAsQueues;
-  }
-
-  synchronized void addChildQueue(CSQueue newQueue)
-      throws SchedulerDynamicEditException {
-    if (newQueue.getCapacity() > 0) {
-      throw new SchedulerDynamicEditException("Queue " + newQueue
-          + " being added has non zero capacity.");
-    }
-    boolean added = this.childQueues.add(newQueue);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("updateChildQueues (action: add queue): " + added + " "
-          + getChildQueuesToPrint());
+      // run reinitialize on each existing queue, to trigger absolute cap
+      // recomputations
+      for (CSQueue res : this.getChildQueues()) {
+        res.reinitialize(res, clusterResource);
+      }
+      showReservationsAsQueues =
+          newlyParsedParentQueue.showReservationsAsQueues;
+    } finally {
+      writeLock.unlock();
     }
   }
 
-  synchronized void removeChildQueue(CSQueue remQueue)
+  void addChildQueue(CSQueue newQueue)
       throws SchedulerDynamicEditException {
-    if (remQueue.getCapacity() > 0) {
-      throw new SchedulerDynamicEditException("Queue " + remQueue
-          + " being removed has non zero capacity.");
+    try {
+      writeLock.lock();
+      if (newQueue.getCapacity() > 0) {
+        throw new SchedulerDynamicEditException(
+            "Queue " + newQueue + " being added has non zero capacity.");
+      }
+      boolean added = this.childQueues.add(newQueue);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("updateChildQueues (action: add queue): " + added + " "
+            + getChildQueuesToPrint());
+      }
+    } finally {
+      writeLock.unlock();
     }
-    Iterator<CSQueue> qiter = childQueues.iterator();
-    while (qiter.hasNext()) {
-      CSQueue cs = qiter.next();
-      if (cs.equals(remQueue)) {
-        qiter.remove();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Removed child queue: {}", cs.getQueueName());
+  }
+
+  void removeChildQueue(CSQueue remQueue)
+      throws SchedulerDynamicEditException {
+    try {
+      writeLock.lock();
+      if (remQueue.getCapacity() > 0) {
+        throw new SchedulerDynamicEditException(
+            "Queue " + remQueue + " being removed has non zero capacity.");
+      }
+      Iterator<CSQueue> qiter = childQueues.iterator();
+      while (qiter.hasNext()) {
+        CSQueue cs = qiter.next();
+        if (cs.equals(remQueue)) {
+          qiter.remove();
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Removed child queue: {}", cs.getQueueName());
+          }
         }
       }
+    } finally {
+      writeLock.unlock();
     }
   }
 
-  protected synchronized float sumOfChildCapacities() {
-    float ret = 0;
-    for (CSQueue l : childQueues) {
-      ret += l.getCapacity();
+  protected float sumOfChildCapacities() {
+    try {
+      writeLock.lock();
+      float ret = 0;
+      for (CSQueue l : childQueues) {
+        ret += l.getCapacity();
+      }
+      return ret;
+    } finally {
+      writeLock.unlock();
     }
-    return ret;
   }
 
   private void updateQuotas(int userLimit, float userLimitFactor,

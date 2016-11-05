@@ -23,24 +23,35 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.collect.Sets;
 
 public class TestHdfsAdmin {
   
   private static final Path TEST_PATH = new Path("/test");
+  private static final short REPL = 1;
+  private static final int SIZE = 128;
   private final Configuration conf = new Configuration();
   private MiniDFSCluster cluster;
-  
+
   @Before
   public void setUpCluster() throws IOException {
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    cluster.waitActive();
   }
   
   @After
@@ -93,5 +104,72 @@ public class TestHdfsAdmin {
   @Test(expected = IllegalArgumentException.class)
   public void testHdfsAdminWithBadUri() throws IOException, URISyntaxException {
     new HdfsAdmin(new URI("file:///bad-scheme"), conf);
+  }
+
+  /**
+   * Test that we can set, get, unset storage policies via {@link HdfsAdmin}.
+   */
+  @Test
+  public void testHdfsAdminStoragePolicies() throws Exception {
+    HdfsAdmin hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+    FileSystem fs = FileSystem.get(conf);
+    final Path foo = new Path("/foo");
+    final Path bar = new Path(foo, "bar");
+    final Path wow = new Path(bar, "wow");
+    DFSTestUtil.createFile(fs, wow, SIZE, REPL, 0);
+
+    final BlockStoragePolicySuite suite = BlockStoragePolicySuite
+        .createDefaultSuite();
+    final BlockStoragePolicy warm = suite.getPolicy("WARM");
+    final BlockStoragePolicy cold = suite.getPolicy("COLD");
+    final BlockStoragePolicy hot = suite.getPolicy("HOT");
+
+    /*
+     * test: set storage policy
+     */
+    hdfsAdmin.setStoragePolicy(foo, warm.getName());
+    hdfsAdmin.setStoragePolicy(bar, cold.getName());
+    hdfsAdmin.setStoragePolicy(wow, hot.getName());
+
+    /*
+     * test: get storage policy after set
+     */
+    assertEquals(hdfsAdmin.getStoragePolicy(foo), warm);
+    assertEquals(hdfsAdmin.getStoragePolicy(bar), cold);
+    assertEquals(hdfsAdmin.getStoragePolicy(wow), hot);
+
+    /*
+     * test: unset storage policy
+     */
+    hdfsAdmin.unsetStoragePolicy(foo);
+    hdfsAdmin.unsetStoragePolicy(bar);
+    hdfsAdmin.unsetStoragePolicy(wow);
+
+    /*
+     * test: get storage policy after unset. HOT by default.
+     */
+    assertEquals(hdfsAdmin.getStoragePolicy(foo), hot);
+    assertEquals(hdfsAdmin.getStoragePolicy(bar), hot);
+    assertEquals(hdfsAdmin.getStoragePolicy(wow), hot);
+
+    /*
+     * test: get all storage policies
+     */
+    // Get policies via HdfsAdmin
+    Set<String> policyNamesSet1 = new HashSet<>();
+    for (BlockStoragePolicySpi policy : hdfsAdmin.getAllStoragePolicies()) {
+      policyNamesSet1.add(policy.getName());
+    }
+
+    // Get policies via BlockStoragePolicySuite
+    Set<String> policyNamesSet2 = new HashSet<>();
+    for (BlockStoragePolicy policy : suite.getAllPolicies()) {
+      policyNamesSet2.add(policy.getName());
+    }
+    // Ensure that we got the same set of policies in both cases.
+    Assert.assertTrue(
+        Sets.difference(policyNamesSet1, policyNamesSet2).isEmpty());
+    Assert.assertTrue(
+        Sets.difference(policyNamesSet2, policyNamesSet1).isEmpty());
   }
 }

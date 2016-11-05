@@ -125,10 +125,11 @@ public abstract class NodeStatus {
 
   @Private
   @Unstable
-  public abstract QueuedContainersStatus getQueuedContainersStatus();
+  public abstract OpportunisticContainersStatus
+      getOpportunisticContainersStatus();
 
   @Private
   @Unstable
-  public abstract void setQueuedContainersStatus(
-      QueuedContainersStatus queuedContainersStatus);
+  public abstract void setOpportunisticContainersStatus(
+      OpportunisticContainersStatus opportunisticContainersStatus);
 }

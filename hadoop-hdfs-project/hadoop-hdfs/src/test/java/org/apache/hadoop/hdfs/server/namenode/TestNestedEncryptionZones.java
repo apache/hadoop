@@ -19,7 +19,10 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -28,6 +31,8 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Before;
@@ -52,16 +57,19 @@ public class TestNestedEncryptionZones {
 
   private final Path rootDir = new Path("/");
   private final Path rawDir = new Path("/.reserved/raw/");
-  private final Path topEZDir = new Path(rootDir, "topEZ");
-  private final Path nestedEZDir = new Path(topEZDir, "nestedEZ");
 
-  private final Path topEZBaseFile = new Path(rootDir, "topEZBaseFile");
-  private Path topEZFile = new Path(topEZDir, "file");
-  private Path topEZRawFile = new Path(rawDir, "topEZ/file");
+  private Path nestedEZBaseFile = new Path(rootDir, "nestedEZBaseFile");
+  private Path topEZBaseFile = new Path(rootDir, "topEZBaseFile");
 
-  private final Path nestedEZBaseFile = new Path(rootDir, "nestedEZBaseFile");
-  private Path nestedEZFile = new Path(nestedEZDir, "file");
-  private Path nestedEZRawFile = new Path(rawDir, "topEZ/nestedEZ/file");
+  private Path topEZDir;
+  private Path nestedEZDir;
+
+  private Path topEZFile;
+  private Path nestedEZFile;
+
+  private Path topEZRawFile;
+  private Path nestedEZRawFile;
+
 
   // File length
   private final int len = 8196;
@@ -85,11 +93,14 @@ public class TestNestedEncryptionZones {
     // Set up java key store
     String testRoot = fsHelper.getTestRootDir();
     testRootDir = new File(testRoot).getAbsoluteFile();
-    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, getKeyProviderURI());
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        getKeyProviderURI());
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     // Lower the batch size for testing
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES,
         2);
+    // enable trash for testing
+    conf.setLong(DFSConfigKeys.FS_TRASH_INTERVAL_KEY, 1);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     Logger.getLogger(EncryptionZoneManager.class).setLevel(Level.TRACE);
     fs = cluster.getFileSystem();
@@ -98,24 +109,17 @@ public class TestNestedEncryptionZones {
     // Create test keys and EZs
     DFSTestUtil.createKey(TOP_EZ_KEY, cluster, conf);
     DFSTestUtil.createKey(NESTED_EZ_KEY, cluster, conf);
-    fs.mkdir(topEZDir, FsPermission.getDirDefault());
-    fs.createEncryptionZone(topEZDir, TOP_EZ_KEY);
-    fs.mkdir(nestedEZDir, FsPermission.getDirDefault());
-    fs.createEncryptionZone(nestedEZDir, NESTED_EZ_KEY);
-
-    DFSTestUtil.createFile(fs, topEZBaseFile, len, (short) 1, 0xFEED);
-    DFSTestUtil.createFile(fs, topEZFile, len, (short) 1, 0xFEED);
-    DFSTestUtil.createFile(fs, nestedEZBaseFile, len, (short) 1, 0xFEED);
-    DFSTestUtil.createFile(fs, nestedEZFile, len, (short) 1, 0xFEED);
   }
 
   @Test(timeout = 60000)
   public void testNestedEncryptionZones() throws Exception {
+    initTopEZDirAndNestedEZDir(new Path(rootDir, "topEZ"));
     verifyEncryption();
 
     // Restart NameNode to test if nested EZs can be loaded from edit logs
     cluster.restartNameNodes();
     cluster.waitActive();
+    fs = cluster.getFileSystem();
     verifyEncryption();
 
     // Checkpoint and restart NameNode, to test if nested EZs can be loaded
@@ -125,21 +129,88 @@ public class TestNestedEncryptionZones {
     fs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
     cluster.restartNameNodes();
     cluster.waitActive();
+    fs = cluster.getFileSystem();
     verifyEncryption();
 
+    renameChildrenOfEZ();
+
+    // Verify that a non-nested EZ cannot be moved into another EZ
+    Path topEZ2Dir = new Path(rootDir, "topEZ2");
+    fs.mkdir(topEZ2Dir, FsPermission.getDirDefault());
+    fs.createEncryptionZone(topEZ2Dir, TOP_EZ_KEY);
+    try {
+      fs.rename(topEZ2Dir, new Path(topEZDir, "topEZ2"));
+      fail("Shouldn't be able to move a non-nested EZ into another " +
+          "existing EZ.");
+    } catch (Exception e){
+      assertTrue(e.getMessage().contains(
+          "can't be moved into an encryption zone"));
+    }
+
+    // Should be able to rename the root dir of an EZ.
+    fs.rename(topEZDir, new Path(rootDir, "newTopEZ"));
+
+    // Should be able to rename the nested EZ dir within the same top EZ.
+    fs.rename(new Path(rootDir, "newTopEZ/nestedEZ"),
+        new Path(rootDir, "newTopEZ/newNestedEZ"));
+  }
+
+  @Test(timeout = 60000)
+  public void testNestedEZWithRoot() throws Exception {
+    initTopEZDirAndNestedEZDir(rootDir);
+    verifyEncryption();
+
+    // test rename file
+    renameChildrenOfEZ();
+
+    final String currentUser =
+        UserGroupInformation.getCurrentUser().getShortUserName();
+    final Path suffixTrashPath = new Path(
+        FileSystem.TRASH_PREFIX, currentUser);
+
+    final Path rootTrash = fs.getTrashRoot(rootDir);
+    final Path topEZTrash = fs.getTrashRoot(topEZFile);
+    final Path nestedEZTrash = fs.getTrashRoot(nestedEZFile);
+
+    final Path expectedTopEZTrash = fs.makeQualified(
+        new Path(topEZDir, suffixTrashPath));
+    final Path expectedNestedEZTrash = fs.makeQualified(
+        new Path(nestedEZDir, suffixTrashPath));
+
+    assertEquals("Top ez trash should be " + expectedTopEZTrash,
+        expectedTopEZTrash, topEZTrash);
+    assertEquals("Root trash should be equal with TopEZFile trash",
+        topEZTrash, rootTrash);
+    assertEquals("Nested ez Trash should be " + expectedNestedEZTrash,
+        expectedNestedEZTrash, nestedEZTrash);
+
+    // delete rename file and test trash
+    FsShell shell = new FsShell(fs.getConf());
+    final Path topTrashFile = new Path(
+        shell.getCurrentTrashDir(topEZFile) + "/" + topEZFile);
+    final Path nestedTrashFile = new Path(
+        shell.getCurrentTrashDir(nestedEZFile) + "/" + nestedEZFile);
+
+    ToolRunner.run(shell, new String[]{"-rm", topEZFile.toString()});
+    ToolRunner.run(shell, new String[]{"-rm", nestedEZFile.toString()});
+
+    assertTrue("File not in trash : " + topTrashFile, fs.exists(topTrashFile));
+    assertTrue(
+        "File not in trash : " + nestedTrashFile, fs.exists(nestedTrashFile));
+  }
+
+  private void renameChildrenOfEZ() throws Exception{
     Path renamedTopEZFile = new Path(topEZDir, "renamedFile");
     Path renamedNestedEZFile = new Path(nestedEZDir, "renamedFile");
-    try {
-      fs.rename(topEZFile, renamedTopEZFile);
-      fs.rename(nestedEZFile, renamedNestedEZFile);
-    } catch (Exception e) {
-      fail("Should be able to rename files within the same EZ.");
-    }
+
+    //Should be able to rename files within the same EZ.
+    fs.rename(topEZFile, renamedTopEZFile);
+    fs.rename(nestedEZFile, renamedNestedEZFile);
 
     topEZFile = renamedTopEZFile;
     nestedEZFile = renamedNestedEZFile;
-    topEZRawFile = new Path(rawDir, "topEZ/renamedFile");
-    nestedEZRawFile = new Path(rawDir, "topEZ/nestedEZ/renamedFile");
+    topEZRawFile = new Path(rawDir + topEZFile.toUri().getPath());
+    nestedEZRawFile = new Path(rawDir + nestedEZFile.toUri().getPath());
     verifyEncryption();
 
     // Verify that files in top EZ cannot be moved into the nested EZ, and
@@ -166,36 +237,40 @@ public class TestNestedEncryptionZones {
       fs.rename(nestedEZFile, new Path(rootDir, "movedNestedEZFile"));
       fail("Shouldn't be able to move the nested EZ out of the top EZ.");
     } catch (Exception e) {
-      assertTrue(e.getMessage().contains(
-          "can't be moved from an encryption zone"));
+      String exceptionMsg = e.getMessage();
+      assertTrue(exceptionMsg.contains(
+          "can't be moved from") && exceptionMsg.contains("encryption zone"));
     }
+  }
 
-    // Verify that a non-nested EZ cannot be moved into another EZ
-    Path topEZ2Dir = new Path(rootDir, "topEZ2");
-    fs.mkdir(topEZ2Dir, FsPermission.getDirDefault());
-    fs.createEncryptionZone(topEZ2Dir, TOP_EZ_KEY);
-    try {
-      fs.rename(topEZ2Dir, new Path(topEZDir, "topEZ2"));
-      fail("Shouldn't be able to move a non-nested EZ into another " +
-          "existing EZ.");
-    } catch (Exception e){
-      assertTrue(e.getMessage().contains(
-          "can't be moved into an encryption zone"));
-    }
+  private void initTopEZDirAndNestedEZDir(Path topPath) throws Exception {
 
-    try {
-      fs.rename(topEZDir, new Path(rootDir, "newTopEZDir"));
-    } catch (Exception e) {
-      fail("Should be able to rename the root dir of an EZ.");
-    }
+    // init fs root directory
+    fs.delete(rootDir, true);
 
-    try {
-      fs.rename(new Path(rootDir, "newTopEZDir/nestedEZDir"),
-          new Path(rootDir, "newTopEZDir/newNestedEZDir"));
-    } catch (Exception e) {
-      fail("Should be able to rename the nested EZ dir within " +
-          "the same top EZ.");
-    }
+
+    // init top and nested path or file
+    topEZDir = topPath;
+    nestedEZDir = new Path(topEZDir, "nestedEZ");
+
+    topEZFile = new Path(topEZDir, "file");
+    nestedEZFile = new Path(nestedEZDir, "file");
+
+    topEZRawFile = new Path(rawDir + topEZFile.toUri().getPath());
+    nestedEZRawFile = new Path(rawDir + nestedEZFile.toUri().getPath());
+
+    // create ez zone
+    fs.mkdir(topEZDir, FsPermission.getDirDefault());
+    fs.createEncryptionZone(topEZDir, TOP_EZ_KEY);
+    fs.mkdir(nestedEZDir, FsPermission.getDirDefault());
+    fs.createEncryptionZone(nestedEZDir, NESTED_EZ_KEY);
+
+    // create files
+    DFSTestUtil.createFile(fs, topEZBaseFile, len, (short) 1, 0xFEED);
+    DFSTestUtil.createFile(fs, topEZFile, len, (short) 1, 0xFEED);
+    DFSTestUtil.createFile(fs, nestedEZBaseFile, len, (short) 1, 0xFEED);
+    DFSTestUtil.createFile(fs, nestedEZFile, len, (short) 1, 0xFEED);
+
   }
 
   private void verifyEncryption() throws Exception {

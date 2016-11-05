@@ -35,7 +35,7 @@ import org.apache.hadoop.yarn.util.Records;
  * <ul>
  *   <li>{@link Priority} of the request.</li>
  *   <li>
- *     The <em>name</em> of the machine or rack on which the allocation is
+ *     The <em>name</em> of the host or rack on which the allocation is
  *     desired. A special value of <em>*</em> signifies that
  *     <em>any</em> host/rack is acceptable to the application.
  *   </li>
@@ -112,9 +112,17 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
       // Compare priority, host and capability
       int ret = r1.getPriority().compareTo(r2.getPriority());
       if (ret == 0) {
+        ret = Long.compare(
+            r1.getAllocationRequestId(), r2.getAllocationRequestId());
+      }
+      if (ret == 0) {
         String h1 = r1.getResourceName();
         String h2 = r2.getResourceName();
         ret = h1.compareTo(h2);
+      }
+      if (ret == 0) {
+        ret = r1.getExecutionTypeRequest()
+            .compareTo(r2.getExecutionTypeRequest());
       }
       if (ret == 0) {
         ret = r1.getCapability().compareTo(r2.getCapability());
@@ -377,6 +385,7 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
     result = prime * result + ((hostName == null) ? 0 : hostName.hashCode());
     result = prime * result + getNumContainers();
     result = prime * result + ((priority == null) ? 0 : priority.hashCode());
+    result = prime * result + Long.valueOf(getAllocationRequestId()).hashCode();
     return result;
   }
 
@@ -414,9 +423,15 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
       if (other.getExecutionTypeRequest() != null) {
         return false;
       }
-    } else if (!execTypeRequest.equals(other.getExecutionTypeRequest())) {
+    } else if (!execTypeRequest.getExecutionType()
+        .equals(other.getExecutionTypeRequest().getExecutionType())) {
       return false;
     }
+
+    if (getAllocationRequestId() != other.getAllocationRequestId()) {
+      return false;
+    }
+
     if (getNodeLabelExpression() == null) {
       if (other.getNodeLabelExpression() != null) {
         return false;
@@ -441,12 +456,25 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
       int hostNameComparison =
           this.getResourceName().compareTo(other.getResourceName());
       if (hostNameComparison == 0) {
-        int capabilityComparison =
-            this.getCapability().compareTo(other.getCapability());
-        if (capabilityComparison == 0) {
-          return this.getNumContainers() - other.getNumContainers();
+        int execTypeReqComparison = this.getExecutionTypeRequest()
+            .compareTo(other.getExecutionTypeRequest());
+        if (execTypeReqComparison == 0) {
+          int capabilityComparison =
+              this.getCapability().compareTo(other.getCapability());
+          if (capabilityComparison == 0) {
+            int numContainerComparison =
+                this.getNumContainers() - other.getNumContainers();
+            if (numContainerComparison == 0) {
+              return Long.compare(getAllocationRequestId(),
+                  other.getAllocationRequestId());
+            } else {
+              return numContainerComparison;
+            }
+          } else {
+            return capabilityComparison;
+          }
         } else {
-          return capabilityComparison;
+          return execTypeReqComparison;
         }
       } else {
         return hostNameComparison;

@@ -61,7 +61,7 @@ public class TestAMRMClientContainerRequest {
     verifyResourceRequest(client, request, ResourceRequest.ANY, true);
     ContainerRequest request2 =
         new ContainerRequest(capability, new String[] {"host1", "host2"},
-            new String[] {"/rack2"}, Priority.newInstance(1), true, null,
+            new String[] {"/rack2"}, Priority.newInstance(1), 0, true, null,
             ExecutionTypeRequest.newInstance(
                 ExecutionType.OPPORTUNISTIC, true));
     client.addContainerRequest(request2);
@@ -274,8 +274,9 @@ public class TestAMRMClientContainerRequest {
       AMRMClientImpl<ContainerRequest> client, ContainerRequest request,
       String location, boolean expectedRelaxLocality,
       ExecutionType executionType) {
-    ResourceRequest ask = client.remoteRequestsTable.get(request.getPriority(),
-        location, executionType, request.getCapability()).remoteRequest;
+    ResourceRequest ask = client.getTable(0)
+        .get(request.getPriority(), location, executionType,
+            request.getCapability()).remoteRequest;
     assertEquals(location, ask.getResourceName());
     assertEquals(1, ask.getNumContainers());
     assertEquals(expectedRelaxLocality, ask.getRelaxLocality());

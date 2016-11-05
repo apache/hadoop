@@ -28,8 +28,14 @@ public class CryptoFSDataOutputStream extends FSDataOutputStream {
   
   public CryptoFSDataOutputStream(FSDataOutputStream out, CryptoCodec codec,
       int bufferSize, byte[] key, byte[] iv) throws IOException {
+    this(out, codec, bufferSize, key, iv, true);
+  }
+
+  public CryptoFSDataOutputStream(FSDataOutputStream out, CryptoCodec codec,
+      int bufferSize, byte[] key, byte[] iv, boolean closeOutputStream)
+      throws IOException {
     super(new CryptoOutputStream(out, codec, bufferSize, key, iv, 
-        out.getPos()), null, out.getPos()); 
+        out.getPos(), closeOutputStream), null, out.getPos());
     this.fsOut = out;
   }
   

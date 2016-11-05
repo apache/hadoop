@@ -25,8 +25,10 @@ import org.apache.hadoop.fs.Path;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.internal.AssumptionViolatedException;
+import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +40,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.cleanup;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 
 /**
- * This is the base class for all the contract tests
+ * This is the base class for all the contract tests.
  */
 public abstract class AbstractFSContractTestBase extends Assert
   implements ContractOptions {
@@ -47,39 +49,48 @@ public abstract class AbstractFSContractTestBase extends Assert
     LoggerFactory.getLogger(AbstractFSContractTestBase.class);
 
   /**
-   * Length of files to work with: {@value}
+   * Length of files to work with: {@value}.
    */
   public static final int TEST_FILE_LEN = 1024;
 
   /**
-   * standard test timeout: {@value}
+   * standard test timeout: {@value}.
    */
   public static final int DEFAULT_TEST_TIMEOUT = 180 * 1000;
 
   /**
-   * The FS contract used for these tests
+   * The FS contract used for these tests.
    */
   private AbstractFSContract contract;
 
   /**
-   * The test filesystem extracted from it
+   * The test filesystem extracted from it.
    */
   private FileSystem fileSystem;
 
   /**
-   * The path for tests
+   * The path for tests.
    */
   private Path testPath;
 
+  @Rule
+  public TestName methodName = new TestName();
+
+
+  @BeforeClass
+  public static void nameTestThread() {
+    Thread.currentThread().setName("JUnit");
+  }
+
   /**
-   * This must be implemented by all instantiated test cases
+   * This must be implemented by all instantiated test cases.
    * -provide the FS contract
    * @return the FS contract
    */
   protected abstract AbstractFSContract createContract(Configuration conf);
 
   /**
-   * Get the contract
+   * Get the contract.
    * @return the contract, which will be non-null once the setup operation has
    * succeeded
    */
@@ -88,7 +99,7 @@ public abstract class AbstractFSContractTestBase extends Assert
   }
 
   /**
-   * Get the filesystem created in startup
+   * Get the filesystem created in startup.
    * @return the filesystem to use for tests
    */
   public FileSystem getFileSystem() {
@@ -96,7 +107,7 @@ public abstract class AbstractFSContractTestBase extends Assert
   }
 
   /**
-   * Get the log of the base class
+   * Get the log of the base class.
    * @return a logger
    */
   public static Logger getLog() {
@@ -104,7 +115,7 @@ public abstract class AbstractFSContractTestBase extends Assert
   }
 
   /**
-   * Skip a test if a feature is unsupported in this FS
+   * Skip a test if a feature is unsupported in this FS.
    * @param feature feature to look for
    * @throws IOException IO problem
    */
@@ -141,13 +152,13 @@ public abstract class AbstractFSContractTestBase extends Assert
   }
 
   /**
-   * Set the timeout for every test
+   * Set the timeout for every test.
    */
   @Rule
   public Timeout testTimeout = new Timeout(getTestTimeoutMillis());
 
   /**
-   * Option for tests to override the default timeout value
+   * Option for tests to override the default timeout value.
    * @return the current test timeout
    */
   protected int getTestTimeoutMillis() {
@@ -156,11 +167,12 @@ public abstract class AbstractFSContractTestBase extends Assert
 
 
   /**
-   * Setup: create the contract then init it
+   * Setup: create the contract then init it.
    * @throws Exception on any failure
    */
   @Before
   public void setup() throws Exception {
+    LOG.debug("== Setup ==");
     contract = createContract(createConfiguration());
     contract.init();
     //skip tests if they aren't enabled
@@ -179,19 +191,22 @@ public abstract class AbstractFSContractTestBase extends Assert
     //create the test path
     testPath = getContract().getTestPath();
     mkdirs(testPath);
+    LOG.debug("== Setup complete ==");
   }
 
   /**
-   * Teardown
+   * Teardown.
    * @throws Exception on any failure
    */
   @After
   public void teardown() throws Exception {
+    LOG.debug("== Teardown ==");
     deleteTestDirInTeardown();
+    LOG.debug("== Teardown complete ==");
   }
 
   /**
-   * Delete the test dir in the per-test teardown
+   * Delete the test dir in the per-test teardown.
    * @throws IOException
    */
   protected void deleteTestDirInTeardown() throws IOException {
@@ -200,7 +215,7 @@ public abstract class AbstractFSContractTestBase extends Assert
 
   /**
    * Create a path under the test path provided by
-   * the FS contract
+   * the FS contract.
    * @param filepath path string in
    * @return a path qualified by the test filesystem
    * @throws IOException IO problems
@@ -212,7 +227,7 @@ public abstract class AbstractFSContractTestBase extends Assert
 
   /**
    * Take a simple path like "/something" and turn it into
-   * a qualified path against the test FS
+   * a qualified path against the test FS.
    * @param filepath path string in
    * @return a path qualified by the test filesystem
    * @throws IOException IO problems
@@ -222,7 +237,7 @@ public abstract class AbstractFSContractTestBase extends Assert
   }
 
   /**
-   * List a path in the test FS
+   * List a path in the test FS.
    * @param path path to list
    * @return the contents of the path/dir
    * @throws IOException IO problems
@@ -262,7 +277,7 @@ public abstract class AbstractFSContractTestBase extends Assert
   }
 
   /**
-   * Handle expected exceptions through logging and/or other actions
+   * Handle expected exceptions through logging and/or other actions.
    * @param e exception raised.
    */
   protected void handleExpectedException(Exception e) {
@@ -270,7 +285,7 @@ public abstract class AbstractFSContractTestBase extends Assert
   }
 
   /**
-   * assert that a path exists
+   * assert that a path exists.
    * @param message message to use in an assertion
    * @param path path to probe
    * @throws IOException IO problems
@@ -280,7 +295,7 @@ public abstract class AbstractFSContractTestBase extends Assert
   }
 
   /**
-   * assert that a path does not
+   * Assert that a path does not exist.
    * @param message message to use in an assertion
    * @param path path to probe
    * @throws IOException IO problems
@@ -324,7 +339,7 @@ public abstract class AbstractFSContractTestBase extends Assert
   }
 
   /**
-   * Assert that a delete succeeded
+   * Assert that a delete succeeded.
    * @param path path to delete
    * @param recursive recursive flag
    * @throws IOException IO problems
@@ -336,7 +351,7 @@ public abstract class AbstractFSContractTestBase extends Assert
 
   /**
    * Assert that the result value == -1; which implies
-   * that a read was successful
+   * that a read was successful.
    * @param text text to include in a message (usually the operation)
    * @param result read result to validate
    */
@@ -344,7 +359,7 @@ public abstract class AbstractFSContractTestBase extends Assert
     assertEquals(text + " wrong read result " + result, -1, result);
   }
 
-  boolean rename(Path src, Path dst) throws IOException {
+  protected boolean rename(Path src, Path dst) throws IOException {
     return getFileSystem().rename(src, dst);
   }
 

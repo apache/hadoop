@@ -29,8 +29,8 @@ import java.util.TreeSet;
 import java.util.ArrayList;
 import java.util.Comparator;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import org.apache.hadoop.tools.rumen.datatypes.NodeName;
-import org.codehaus.jackson.annotate.JsonAnySetter;
 
 /**
  * A {@link LoggedNetworkTopology} represents a tree that in turn represents a

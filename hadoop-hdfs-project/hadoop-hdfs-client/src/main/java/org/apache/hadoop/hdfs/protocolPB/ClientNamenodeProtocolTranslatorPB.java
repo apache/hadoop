@@ -294,6 +294,10 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setCreateParent(createParent)
         .setReplication(replication)
         .setBlockSize(blockSize);
+    FsPermission unmasked = masked.getUnmasked();
+    if (unmasked != null) {
+      builder.setUnmasked(PBHelperClient.convert(unmasked));
+    }
     builder.addAllCryptoProtocolVersion(
         PBHelperClient.convert(supportedVersions));
     CreateRequestProto req = builder.build();
@@ -523,16 +527,21 @@ public class ClientNamenodeProtocolTranslatorPB implements
   public void rename2(String src, String dst, Rename... options)
       throws IOException {
     boolean overwrite = false;
+    boolean toTrash = false;
     if (options != null) {
       for (Rename option : options) {
         if (option == Rename.OVERWRITE) {
           overwrite = true;
+        } else if (option == Rename.TO_TRASH) {
+          toTrash = true;
         }
       }
     }
     Rename2RequestProto req = Rename2RequestProto.newBuilder().
         setSrc(src).
-        setDst(dst).setOverwriteDest(overwrite).
+        setDst(dst).
+        setOverwriteDest(overwrite).
+        setMoveToTrash(toTrash).
         build();
     try {
       if (Client.isAsynchronousMode()) {
@@ -574,11 +583,15 @@ public class ClientNamenodeProtocolTranslatorPB implements
   @Override
   public boolean mkdirs(String src, FsPermission masked, boolean createParent)
       throws IOException {
-    MkdirsRequestProto req = MkdirsRequestProto.newBuilder()
+    MkdirsRequestProto.Builder builder = MkdirsRequestProto.newBuilder()
         .setSrc(src)
         .setMasked(PBHelperClient.convert(masked))
-        .setCreateParent(createParent).build();
-
+        .setCreateParent(createParent);
+    FsPermission unmasked = masked.getUnmasked();
+    if (unmasked != null) {
+      builder.setUnmasked(PBHelperClient.convert(unmasked));
+    }
+    MkdirsRequestProto req = builder.build();
     try {
       return rpcProxy.mkdirs(null, req).getResult();
     } catch (ServiceException e) {

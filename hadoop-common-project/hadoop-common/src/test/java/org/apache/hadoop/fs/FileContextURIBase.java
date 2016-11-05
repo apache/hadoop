@@ -77,7 +77,9 @@ public abstract class FileContextURIBase {
   public void tearDown() throws Exception {
     // Clean up after test completion
     // No need to clean fc1 as fc1 and fc2 points same location
-    fc2.delete(BASE, true);
+    if (fc2 != null) {
+      fc2.delete(BASE, true);
+    }
   }
 
   @Test

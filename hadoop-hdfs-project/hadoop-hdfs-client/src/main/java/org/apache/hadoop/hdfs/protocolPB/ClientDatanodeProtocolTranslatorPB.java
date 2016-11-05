@@ -342,19 +342,22 @@ public class ClientDatanodeProtocolTranslatorPB implements
    *               local copies of these plans.
    * @param planVersion - The data format of the plans - for future , not
    *                    used now.
-   * @param plan - Actual plan.
+   * @param planFile - Plan file name
+   * @param planData - Actual plan data in json format
    * @param skipDateCheck - Skips the date check.
    * @throws IOException
    */
   @Override
   public void submitDiskBalancerPlan(String planID, long planVersion,
-      String plan, boolean skipDateCheck) throws IOException {
+        String planFile, String planData, boolean skipDateCheck)
+      throws IOException {
     try {
       SubmitDiskBalancerPlanRequestProto request =
           SubmitDiskBalancerPlanRequestProto.newBuilder()
               .setPlanID(planID)
               .setPlanVersion(planVersion)
-              .setPlan(plan)
+              .setPlanFile(planFile)
+              .setPlan(planData)
               .setIgnoreDateCheck(skipDateCheck)
               .build();
       rpcProxy.submitDiskBalancerPlan(NULL_CONTROLLER, request);
@@ -366,7 +369,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
   /**
    * Cancels an executing disk balancer plan.
    *
-   * @param planID - A SHA512 hash of the plan string.
+   * @param planID - A SHA-1 hash of the plan string.
    * @throws IOException on error
    */
   @Override
@@ -399,6 +402,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
 
       return new DiskBalancerWorkStatus(result,
           response.hasPlanID() ? response.getPlanID() : null,
+          response.hasPlanFile() ? response.getPlanFile() : null,
           response.hasCurrentStatus() ? response.getCurrentStatus() : null);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);

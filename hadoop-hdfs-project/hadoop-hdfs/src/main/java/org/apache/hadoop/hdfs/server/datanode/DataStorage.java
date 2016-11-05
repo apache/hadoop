@@ -46,15 +46,10 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.HardLink;
-import org.apache.hadoop.fs.LocalFileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -66,8 +61,6 @@ import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.util.DiskChecker;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Lists;
@@ -204,9 +197,9 @@ public class DataStorage extends Storage {
    * @return trash directory if rolling upgrade is in progress, null
    *         otherwise.
    */
-  public String getTrashDirectoryForBlockFile(String bpid, File blockFile) {
+  public String getTrashDirectoryForReplica(String bpid, ReplicaInfo info) {
     if (trashEnabledBpids.contains(bpid)) {
-      return getBPStorage(bpid).getTrashDirectory(blockFile);
+      return getBPStorage(bpid).getTrashDirectory(info);
     }
     return null;
   }
@@ -263,9 +256,9 @@ public class DataStorage extends Storage {
   }
 
   private StorageDirectory loadStorageDirectory(DataNode datanode,
-      NamespaceInfo nsInfo, File dataDir, StartupOption startOpt,
+      NamespaceInfo nsInfo, StorageLocation location, StartupOption startOpt,
       List<Callable<StorageDirectory>> callables) throws IOException {
-    StorageDirectory sd = new StorageDirectory(dataDir, null, false);
+    StorageDirectory sd = new StorageDirectory(null, false, location);
     try {
       StorageState curState = sd.analyzeStorage(startOpt, this, true);
       // sd is locked but not opened
@@ -273,11 +266,12 @@ public class DataStorage extends Storage {
       case NORMAL:
         break;
       case NON_EXISTENT:
-        LOG.info("Storage directory " + dataDir + " does not exist");
-        throw new IOException("Storage directory " + dataDir
+        LOG.info("Storage directory with location " + location
+            + " does not exist");
+        throw new IOException("Storage directory with location " + location
             + " does not exist");
       case NOT_FORMATTED: // format
-        LOG.info("Storage directory " + dataDir
+        LOG.info("Storage directory with location " + location
             + " is not formatted for namespace " + nsInfo.getNamespaceID()
             + ". Formatting...");
         format(sd, nsInfo, datanode.getDatanodeUuid());
@@ -310,7 +304,7 @@ public class DataStorage extends Storage {
    * builder later.
    *
    * @param datanode DataNode object.
-   * @param volume the root path of a storage directory.
+   * @param location the StorageLocation for the storage directory.
    * @param nsInfos an array of namespace infos.
    * @return a VolumeBuilder that holds the metadata of this storage directory
    * and can be added to DataStorage later.
@@ -318,27 +312,25 @@ public class DataStorage extends Storage {
    *
    * Note that if there is IOException, the state of DataStorage is not modified.
    */
-  public VolumeBuilder prepareVolume(DataNode datanode, File volume,
-      List<NamespaceInfo> nsInfos) throws IOException {
-    if (containsStorageDir(volume)) {
+  public VolumeBuilder prepareVolume(DataNode datanode,
+      StorageLocation location, List<NamespaceInfo> nsInfos)
+          throws IOException {
+    if (containsStorageDir(location)) {
       final String errorMessage = "Storage directory is in use";
       LOG.warn(errorMessage + ".");
       throw new IOException(errorMessage);
     }
 
     StorageDirectory sd = loadStorageDirectory(
-        datanode, nsInfos.get(0), volume, StartupOption.HOTSWAP, null);
+        datanode, nsInfos.get(0), location, StartupOption.HOTSWAP, null);
     VolumeBuilder builder =
         new VolumeBuilder(this, sd);
     for (NamespaceInfo nsInfo : nsInfos) {
-      List<File> bpDataDirs = Lists.newArrayList();
-      bpDataDirs.add(BlockPoolSliceStorage.getBpRoot(
-          nsInfo.getBlockPoolID(), new File(volume, STORAGE_DIR_CURRENT)));
-      makeBlockPoolDataDir(bpDataDirs, null);
+      location.makeBlockPoolDir(nsInfo.getBlockPoolID(), null);
 
       final BlockPoolSliceStorage bpStorage = getBlockPoolSliceStorage(nsInfo);
       final List<StorageDirectory> dirs = bpStorage.loadBpStorageDirectories(
-          nsInfo, bpDataDirs, StartupOption.HOTSWAP, null, datanode.getConf());
+          nsInfo, location, StartupOption.HOTSWAP, null, datanode.getConf());
       builder.addBpStorageDirectories(nsInfo.getBlockPoolID(), dirs);
     }
     return builder;
@@ -400,14 +392,13 @@ public class DataStorage extends Storage {
     final List<StorageLocation> success = Lists.newArrayList();
     final List<UpgradeTask> tasks = Lists.newArrayList();
     for (StorageLocation dataDir : dataDirs) {
-      File root = dataDir.getFile();
-      if (!containsStorageDir(root)) {
+      if (!containsStorageDir(dataDir)) {
         try {
           // It first ensures the datanode level format is completed.
           final List<Callable<StorageDirectory>> callables
               = Lists.newArrayList();
           final StorageDirectory sd = loadStorageDirectory(
-              datanode, nsInfo, root, startOpt, callables);
+              datanode, nsInfo, dataDir, startOpt, callables);
           if (callables.isEmpty()) {
             addStorageDir(sd);
             success.add(dataDir);
@@ -450,15 +441,11 @@ public class DataStorage extends Storage {
     final List<StorageDirectory> success = Lists.newArrayList();
     final List<UpgradeTask> tasks = Lists.newArrayList();
     for (StorageLocation dataDir : dataDirs) {
-      final File curDir = new File(dataDir.getFile(), STORAGE_DIR_CURRENT);
-      List<File> bpDataDirs = new ArrayList<File>();
-      bpDataDirs.add(BlockPoolSliceStorage.getBpRoot(bpid, curDir));
+      dataDir.makeBlockPoolDir(bpid, null);
       try {
-        makeBlockPoolDataDir(bpDataDirs, null);
-
         final List<Callable<StorageDirectory>> callables = Lists.newArrayList();
         final List<StorageDirectory> dirs = bpStorage.recoverTransitionRead(
-            nsInfo, bpDataDirs, startOpt, callables, datanode.getConf());
+            nsInfo, dataDir, startOpt, callables, datanode.getConf());
         if (callables.isEmpty()) {
           for(StorageDirectory sd : dirs) {
             success.add(sd);
@@ -498,9 +485,10 @@ public class DataStorage extends Storage {
    * @param dirsToRemove a set of storage directories to be removed.
    * @throws IOException if I/O error when unlocking storage directory.
    */
-  synchronized void removeVolumes(final Set<File> dirsToRemove)
+  synchronized void removeVolumes(
+      final Collection<StorageLocation> storageLocations)
       throws IOException {
-    if (dirsToRemove.isEmpty()) {
+    if (storageLocations.isEmpty()) {
       return;
     }
 
@@ -508,7 +496,8 @@ public class DataStorage extends Storage {
     for (Iterator<StorageDirectory> it = this.storageDirs.iterator();
          it.hasNext(); ) {
       StorageDirectory sd = it.next();
-      if (dirsToRemove.contains(sd.getRoot())) {
+      StorageLocation sdLocation = sd.getStorageLocation();
+      if (storageLocations.contains(sdLocation)) {
         // Remove the block pool level storage first.
         for (Map.Entry<String, BlockPoolSliceStorage> entry :
             this.bpStorageMap.entrySet()) {
@@ -555,34 +544,6 @@ public class DataStorage extends Storage {
       Collection<StorageLocation> dataDirs, StartupOption startOpt) throws IOException {
     if (addStorageLocations(datanode, nsInfo, dataDirs, startOpt).isEmpty()) {
       throw new IOException("All specified directories are failed to load.");
-    }
-  }
-
-  /**
-   * Create physical directory for block pools on the data node
-   * 
-   * @param dataDirs
-   *          List of data directories
-   * @param conf
-   *          Configuration instance to use.
-   * @throws IOException on errors
-   */
-  static void makeBlockPoolDataDir(Collection<File> dataDirs,
-      Configuration conf) throws IOException {
-    if (conf == null)
-      conf = new HdfsConfiguration();
-
-    LocalFileSystem localFS = FileSystem.getLocal(conf);
-    FsPermission permission = new FsPermission(conf.get(
-        DFSConfigKeys.DFS_DATANODE_DATA_DIR_PERMISSION_KEY,
-        DFSConfigKeys.DFS_DATANODE_DATA_DIR_PERMISSION_DEFAULT));
-    for (File data : dataDirs) {
-      try {
-        DiskChecker.checkDir(localFS, new Path(data.toURI()), permission);
-      } catch ( IOException e ) {
-        LOG.warn("Invalid directory in: " + data.getCanonicalPath() + ": "
-            + e.getMessage());
-      }
     }
   }
 

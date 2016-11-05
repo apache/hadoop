@@ -17,18 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-
-import com.google.common.annotations.VisibleForTesting;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -86,7 +80,7 @@ public abstract class INodeAttributeProvider {
    */
   public abstract void stop();
 
-  @VisibleForTesting
+  @Deprecated
   String[] getPathElements(String path) {
     path = path.trim();
     if (path.charAt(0) != Path.SEPARATOR_CHAR) {
@@ -114,12 +108,22 @@ public abstract class INodeAttributeProvider {
     return pathElements;
   }
 
+  @Deprecated
   public INodeAttributes getAttributes(String fullPath, INodeAttributes inode) {
     return getAttributes(getPathElements(fullPath), inode);
   }
 
   public abstract INodeAttributes getAttributes(String[] pathElements,
       INodeAttributes inode);
+
+  public INodeAttributes getAttributes(byte[][] components,
+      INodeAttributes inode) {
+    String[] elements = new String[components.length];
+    for (int i = 0; i < elements.length; i++) {
+      elements[i] = DFSUtil.bytes2String(components[i]);
+    }
+    return getAttributes(elements, inode);
+  }
 
   /**
    * Can be over-ridden by implementations to provide a custom Access Control

@@ -108,7 +108,7 @@ The mount points of a mount table are specified in the standard Hadoop configura
 
 ```xml
 <property>
-  <name>fs.default.name</name>
+  <name>fs.defaultFS</name>
   <value>viewfs://clusterX</value>
 </property>
 ```
@@ -143,7 +143,7 @@ Hence on Cluster X, where the `core-site.xml` is set to make the default fs to u
 
 ### Pathname Usage Best Practices
 
-When one is within a cluster, it is recommended to use the pathname of type (1) above instead of a fully qualified URI like (2). Futher, applications should not use the knowledge of the mount points and use a path like `hdfs://namenodeContainingUserDirs:port/joe/foo/bar` to refer to a file in a particular namenode. One should use `/user/joe/foo/bar` instead.
+When one is within a cluster, it is recommended to use the pathname of type (1) above instead of a fully qualified URI like (2). Further, applications should not use the knowledge of the mount points and use a path like `hdfs://namenodeContainingUserDirs:port/joe/foo/bar` to refer to a file in a particular namenode. One should use `/user/joe/foo/bar` instead.
 
 ### Renaming Pathnames Across Namespaces
 

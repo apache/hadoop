@@ -41,12 +41,19 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RestartContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RollbackResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
@@ -55,6 +62,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -166,6 +174,37 @@ public class TestAMAuthorization {
     @Override
     public SignalContainerResponse signalToContainer(
         SignalContainerRequest request) throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public ResourceLocalizationResponse localize(
+        ResourceLocalizationRequest request) throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public ReInitializeContainerResponse reInitializeContainer(
+        ReInitializeContainerRequest request) throws YarnException,
+        IOException {
+      return null;
+    }
+
+    @Override
+    public RestartContainerResponse restartContainer(ContainerId containerId)
+        throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public RollbackResponse rollbackLastReInitialization(
+        ContainerId containerId) throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public CommitResponse commitLastReInitialization(ContainerId containerId)
+        throws YarnException, IOException {
       return null;
     }
   }

@@ -103,7 +103,7 @@ public class FsPermission implements Writable {
    * @throws IllegalArgumentException if <code>mode</code> is invalid
    */
   public FsPermission(String mode) {
-    this(new UmaskParser(mode).getUMask());
+    this(new RawParser(mode).getPermission());
   }
 
   /** Return user {@link FsAction}. */
@@ -138,6 +138,20 @@ public class FsPermission implements Writable {
   }
 
   /**
+   * Get masked permission if exists.
+   */
+  public FsPermission getMasked() {
+    return null;
+  }
+
+  /**
+   * Get unmasked permission if exists.
+   */
+  public FsPermission getUnmasked() {
+    return null;
+  }
+
+  /**
    * Create and initialize a {@link FsPermission} from {@link DataInput}.
    */
   public static FsPermission read(DataInput in) throws IOException {
@@ -167,6 +181,18 @@ public class FsPermission implements Writable {
    */
   public short toExtendedShort() {
     return toShort();
+  }
+
+  /**
+   * Returns the FsPermission in an octal format.
+   *
+   * @return short Unlike {@link #toShort()} which provides a binary
+   * representation, this method returns the standard octal style permission.
+   */
+  public short toOctal() {
+    int n = this.toShort();
+    int octal = (n>>>9&1)*1000 + (n>>>6&7)*100 + (n>>>3&7)*10 + (n&7);
+    return (short)octal;
   }
 
   @Override

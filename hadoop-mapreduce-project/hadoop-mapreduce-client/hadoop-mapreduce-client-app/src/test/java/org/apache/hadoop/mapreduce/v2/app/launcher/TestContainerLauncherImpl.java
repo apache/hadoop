@@ -46,10 +46,17 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher.EventType;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RestartContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RollbackResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
@@ -471,6 +478,37 @@ public class TestContainerLauncherImpl {
     @Override
     public SignalContainerResponse signalToContainer(
         SignalContainerRequest request) throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public ResourceLocalizationResponse localize(
+        ResourceLocalizationRequest request) throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public ReInitializeContainerResponse reInitializeContainer(
+        ReInitializeContainerRequest request) throws YarnException,
+        IOException {
+      return null;
+    }
+
+    @Override
+    public RestartContainerResponse restartContainer(ContainerId containerId)
+        throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public RollbackResponse rollbackLastReInitialization(
+        ContainerId containerId) throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public CommitResponse commitLastReInitialization(ContainerId containerId)
+        throws YarnException, IOException {
       return null;
     }
   }

@@ -21,11 +21,13 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ExecutionTypeProto;
@@ -33,7 +35,11 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProtoOrBuilder;
 
-import com.google.protobuf.TextFormat;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 @Private
 @Unstable
@@ -43,8 +49,11 @@ public class ContainerStatusPBImpl extends ContainerStatus {
   boolean viaProto = false;
   
   private ContainerId containerId = null;
-  
-  
+  private static final String HOST = "HOST";
+  private static final String IPS = "IPS";
+  private Map<String, String> containerAttributes = new HashMap<>();
+
+
   public ContainerStatusPBImpl() {
     builder = ContainerStatusProto.newBuilder();
   }
@@ -86,6 +95,8 @@ public class ContainerStatusPBImpl extends ContainerStatus {
     sb.append("Capability: ").append(getCapability()).append(", ");
     sb.append("Diagnostics: ").append(getDiagnostics()).append(", ");
     sb.append("ExitStatus: ").append(getExitStatus()).append(", ");
+    sb.append("IP: ").append(getIPs()).append(", ");
+    sb.append("Host: ").append(getHost());
     sb.append("]");
     return sb.toString();
   }
@@ -93,6 +104,9 @@ public class ContainerStatusPBImpl extends ContainerStatus {
   private void mergeLocalToBuilder() {
     if (containerId != null) {
       builder.setContainerId(convertToProtoFormat(this.containerId));
+    }
+    if (containerAttributes != null && !containerAttributes.isEmpty()) {
+      addContainerAttributesToProto();
     }
   }
 
@@ -109,6 +123,57 @@ public class ContainerStatusPBImpl extends ContainerStatus {
       builder = ContainerStatusProto.newBuilder(proto);
     }
     viaProto = false;
+  }
+
+  private void addContainerAttributesToProto() {
+    maybeInitBuilder();
+    builder.clearContainerAttributes();
+    if (containerAttributes == null) {
+      return;
+    }
+    Iterable<YarnProtos.StringStringMapProto> iterable =
+        new Iterable<YarnProtos.StringStringMapProto>() {
+
+          @Override
+          public Iterator<YarnProtos.StringStringMapProto> iterator() {
+            return new Iterator<YarnProtos.StringStringMapProto>() {
+
+              private Iterator<String> keyIter =
+                  containerAttributes.keySet().iterator();
+
+              @Override public void remove() {
+                throw new UnsupportedOperationException();
+              }
+
+              @Override public YarnProtos.StringStringMapProto next() {
+                String key = keyIter.next();
+                String value = containerAttributes.get(key);
+
+                if (value == null) {
+                  value = "";
+                }
+
+                return YarnProtos.StringStringMapProto.newBuilder().setKey(key)
+                    .setValue((value)).build();
+              }
+
+              @Override public boolean hasNext() {
+                return keyIter.hasNext();
+              }
+            };
+          }
+        };
+    builder.addAllContainerAttributes(iterable);
+  }
+
+  private void initContainerAttributes() {
+    ContainerStatusProtoOrBuilder p = viaProto ? proto : builder;
+    List<YarnProtos.StringStringMapProto> list = p.getContainerAttributesList();
+    for (YarnProtos.StringStringMapProto c : list) {
+      if (!containerAttributes.containsKey(c.getKey())) {
+        this.containerAttributes.put(c.getKey(), c.getValue());
+      }
+    }
   }
 
   @Override
@@ -209,6 +274,44 @@ public class ContainerStatusPBImpl extends ContainerStatus {
       return;
     }
     builder.setCapability(convertToProtoFormat(capability));
+  }
+
+  @Override
+  public synchronized List<String> getIPs() {
+    if (!containerAttributes.containsKey(IPS)) {
+      initContainerAttributes();
+    }
+    String ips = containerAttributes.get((IPS));
+    return ips == null ? null :  Arrays.asList(ips.split(","));
+  }
+
+  @Override
+  public synchronized void setIPs(List<String> ips) {
+    maybeInitBuilder();
+    if (ips == null) {
+      containerAttributes.remove(IPS);
+      addContainerAttributesToProto();
+      return;
+    }
+    containerAttributes.put(IPS, StringUtils.join(",", ips));
+  }
+
+  @Override
+  public synchronized String getHost() {
+    if (containerAttributes.get(HOST) == null) {
+      initContainerAttributes();
+    }
+    return containerAttributes.get(HOST);
+  }
+
+  @Override
+  public synchronized void setHost(String host) {
+    maybeInitBuilder();
+    if (host == null) {
+      containerAttributes.remove(HOST);
+      return;
+    }
+    containerAttributes.put(HOST, host);
   }
 
   private ContainerStateProto convertToProtoFormat(ContainerState e) {

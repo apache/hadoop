@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
 import static org.apache.hadoop.fs.permission.AclEntryScope.*;
 import static org.apache.hadoop.fs.permission.AclEntryType.*;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -861,8 +863,8 @@ public abstract class FSAclBaseTest {
     fs.setPermission(path,
       new FsPermissionExtension(FsPermission.
           createImmutable((short)0755), true, true));
-    INode inode = cluster.getNamesystem().getFSDirectory().getINode(
-        path.toUri().getPath(), false);
+    INode inode = cluster.getNamesystem().getFSDirectory()
+        .getINode(path.toUri().getPath(), DirOp.READ_LINK);
     assertNotNull(inode);
     FsPermission perm = inode.getFsPermission();
     assertNotNull(perm);
@@ -886,6 +888,46 @@ public abstract class FSAclBaseTest {
       aclEntry(ACCESS, GROUP, READ_EXECUTE) }, returned);
     assertPermission(filePath, (short)010640);
     assertAclFeature(filePath, true);
+  }
+
+  @Test
+  public void testUMaskDefaultAclNewFile() throws Exception {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+        aclEntry(DEFAULT, GROUP, READ_WRITE),
+        aclEntry(DEFAULT, USER, "foo", ALL));
+    fs.setAcl(path, aclSpec);
+
+    String oldUMask = fs.getConf().get(FS_PERMISSIONS_UMASK_KEY);
+    fs.getConf().set(FS_PERMISSIONS_UMASK_KEY, "027");
+
+    FSDirectory fsDirectory = cluster.getNamesystem().getFSDirectory();
+    boolean oldEnabled = fsDirectory.isPosixAclInheritanceEnabled();
+
+    try {
+      fsDirectory.setPosixAclInheritanceEnabled(false);
+      Path filePath = new Path(path, "file1");
+      fs.create(filePath).close();
+      AclStatus s = fs.getAclStatus(filePath);
+      AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+      assertArrayEquals(new AclEntry[]{
+          aclEntry(ACCESS, USER, "foo", ALL),
+          aclEntry(ACCESS, GROUP, READ_WRITE)}, returned);
+      assertPermission(filePath, (short) 010640);
+
+      fsDirectory.setPosixAclInheritanceEnabled(true);
+      Path file2Path = new Path(path, "file2");
+      fs.create(file2Path).close();
+      AclStatus s2 = fs.getAclStatus(file2Path);
+      AclEntry[] returned2 = s2.getEntries().toArray(new AclEntry[0]);
+      assertArrayEquals(new AclEntry[]{
+          aclEntry(ACCESS, USER, "foo", ALL),
+          aclEntry(ACCESS, GROUP, READ_WRITE)}, returned2);
+      assertPermission(file2Path, (short) 010660);
+    } finally {
+      fsDirectory.setPosixAclInheritanceEnabled(oldEnabled);
+      fs.getConf().set(FS_PERMISSIONS_UMASK_KEY, oldUMask);
+    }
   }
 
   @Test
@@ -940,6 +982,56 @@ public abstract class FSAclBaseTest {
       aclEntry(DEFAULT, OTHER, NONE) }, returned);
     assertPermission(dirPath, (short)010750);
     assertAclFeature(dirPath, true);
+  }
+
+  @Test
+  public void testUMaskDefaultAclNewDir() throws Exception {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+        aclEntry(DEFAULT, GROUP, ALL),
+        aclEntry(DEFAULT, USER, "foo", ALL));
+    fs.setAcl(path, aclSpec);
+
+    String oldUMask = fs.getConf().get(FS_PERMISSIONS_UMASK_KEY);
+    fs.getConf().set(FS_PERMISSIONS_UMASK_KEY, "027");
+
+    FSDirectory fsDirectory = cluster.getNamesystem().getFSDirectory();
+    boolean oldEnabled = fsDirectory.isPosixAclInheritanceEnabled();
+
+    try {
+      fsDirectory.setPosixAclInheritanceEnabled(false);
+      Path dirPath = new Path(path, "dir1");
+      fs.mkdirs(dirPath);
+      AclStatus s = fs.getAclStatus(dirPath);
+      AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+      assertArrayEquals(new AclEntry[]{
+          aclEntry(ACCESS, USER, "foo", ALL),
+          aclEntry(ACCESS, GROUP, ALL),
+          aclEntry(DEFAULT, USER, ALL),
+          aclEntry(DEFAULT, USER, "foo", ALL),
+          aclEntry(DEFAULT, GROUP, ALL),
+          aclEntry(DEFAULT, MASK, ALL),
+          aclEntry(DEFAULT, OTHER, NONE)}, returned);
+      assertPermission(dirPath, (short) 010750);
+
+      fsDirectory.setPosixAclInheritanceEnabled(true);
+      Path dir2Path = new Path(path, "dir2");
+      fs.mkdirs(dir2Path);
+      AclStatus s2 = fs.getAclStatus(dir2Path);
+      AclEntry[] returned2 = s2.getEntries().toArray(new AclEntry[0]);
+      assertArrayEquals(new AclEntry[]{
+          aclEntry(ACCESS, USER, "foo", ALL),
+          aclEntry(ACCESS, GROUP, ALL),
+          aclEntry(DEFAULT, USER, ALL),
+          aclEntry(DEFAULT, USER, "foo", ALL),
+          aclEntry(DEFAULT, GROUP, ALL),
+          aclEntry(DEFAULT, MASK, ALL),
+          aclEntry(DEFAULT, OTHER, NONE)}, returned2);
+      assertPermission(dir2Path, (short) 010770);
+    } finally {
+      fsDirectory.setPosixAclInheritanceEnabled(oldEnabled);
+      fs.getConf().set(FS_PERMISSIONS_UMASK_KEY, oldUMask);
+    }
   }
 
   @Test
@@ -1673,7 +1765,7 @@ public abstract class FSAclBaseTest {
   public static AclFeature getAclFeature(Path pathToCheck,
       MiniDFSCluster cluster) throws IOException {
     INode inode = cluster.getNamesystem().getFSDirectory()
-        .getINode(pathToCheck.toUri().getPath(), false);
+        .getINode(pathToCheck.toUri().getPath(), DirOp.READ_LINK);
     assertNotNull(inode);
     AclFeature aclFeature = inode.getAclFeature();
     return aclFeature;

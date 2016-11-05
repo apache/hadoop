@@ -70,6 +70,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -236,7 +237,7 @@ public class TestOfflineImageViewer {
     File truncatedFile = new File(tempDir, "truncatedFsImage");
     PrintStream output = new PrintStream(NullOutputStream.NULL_OUTPUT_STREAM);
     copyPartOfFile(originalFsimage, truncatedFile);
-    new FileDistributionCalculator(new Configuration(), 0, 0, output)
+    new FileDistributionCalculator(new Configuration(), 0, 0, false, output)
         .visit(new RandomAccessFile(truncatedFile, "r"));
   }
 
@@ -258,7 +259,7 @@ public class TestOfflineImageViewer {
   public void testFileDistributionCalculator() throws IOException {
     ByteArrayOutputStream output = new ByteArrayOutputStream();
     PrintStream o = new PrintStream(output);
-    new FileDistributionCalculator(new Configuration(), 0, 0, o)
+    new FileDistributionCalculator(new Configuration(), 0, 0, false, o)
         .visit(new RandomAccessFile(originalFsimage, "r"));
     o.close();
 
@@ -550,6 +551,93 @@ public class TestOfflineImageViewer {
           "version mismatch.");
     } catch (Throwable t) {
       GenericTestUtils.assertExceptionContains("Layout version mismatch.", t);
+    }
+  }
+
+  @Test
+  public void testFileDistributionCalculatorForException() throws Exception {
+    File fsimageFile = null;
+    Configuration conf = new Configuration();
+    HashMap<String, FileStatus> files = Maps.newHashMap();
+
+    // Create a initial fsimage file
+    try (MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build()) {
+      cluster.waitActive();
+      DistributedFileSystem hdfs = cluster.getFileSystem();
+
+      // Create a reasonable namespace
+      Path dir = new Path("/dir");
+      hdfs.mkdirs(dir);
+      files.put(dir.toString(), pathToFileEntry(hdfs, dir.toString()));
+      // Create files with byte size that can't be divided by step size,
+      // the byte size for here are 3, 9, 15, 21.
+      for (int i = 0; i < FILES_PER_DIR; i++) {
+        Path file = new Path(dir, "file" + i);
+        DFSTestUtil.createFile(hdfs, file, 6 * i + 3, (short) 1, 0);
+
+        files.put(file.toString(),
+            pathToFileEntry(hdfs, file.toString()));
+      }
+
+      // Write results to the fsimage file
+      hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
+      hdfs.saveNamespace();
+      // Determine location of fsimage file
+      fsimageFile =
+          FSImageTestUtil.findLatestImageFile(FSImageTestUtil
+              .getFSImage(cluster.getNameNode()).getStorage().getStorageDir(0));
+      if (fsimageFile == null) {
+        throw new RuntimeException("Didn't generate or can't find fsimage");
+      }
+    }
+
+    // Run the test with params -maxSize 23 and -step 4, it will not throw
+    // ArrayIndexOutOfBoundsException with index 6 when deals with
+    // 21 byte size file.
+    int status =
+        OfflineImageViewerPB.run(new String[] {"-i",
+            fsimageFile.getAbsolutePath(), "-o", "-", "-p",
+            "FileDistribution", "-maxSize", "23", "-step", "4"});
+    assertEquals(0, status);
+  }
+
+  @Test
+  public void testOfflineImageViewerMaxSizeAndStepOptions() throws Exception {
+    final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    final PrintStream out = new PrintStream(bytes);
+    final PrintStream oldOut = System.out;
+    try {
+      System.setOut(out);
+      // Add the -h option to make the test only for option parsing,
+      // and don't need to do the following operations.
+      OfflineImageViewer.main(new String[] {"-i", "-", "-o", "-", "-p",
+          "FileDistribution", "-maxSize", "512", "-step", "8", "-h"});
+      Assert.assertFalse(bytes.toString().contains(
+          "Error parsing command-line options: "));
+    } finally {
+      System.setOut(oldOut);
+      IOUtils.closeStream(out);
+    }
+  }
+
+  @Test
+  public void testOfflineImageViewerWithFormatOption() throws Exception {
+    final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    final PrintStream out = new PrintStream(bytes);
+    final PrintStream oldOut = System.out;
+    try {
+      System.setOut(out);
+      int status =
+          OfflineImageViewerPB.run(new String[] {"-i",
+              originalFsimage.getAbsolutePath(), "-o", "-", "-p",
+              "FileDistribution", "-maxSize", "512", "-step", "8",
+              "-format"});
+      assertEquals(0, status);
+      Assert.assertTrue(bytes.toString().contains("(0 B, 8 B]"));
+    } finally {
+      System.setOut(oldOut);
+      IOUtils.closeStream(out);
     }
   }
 }

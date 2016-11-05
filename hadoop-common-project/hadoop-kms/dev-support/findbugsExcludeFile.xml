@@ -38,4 +38,11 @@
     <Class name="org.apache.hadoop.crypto.key.kms.server.KMSWebApp"/>
     <Bug pattern="DM_EXIT"/>
   </Match>
+  <!--
+    KMS wants to log the exception before it's thrown to tomcat and disappear.
+  -->
+  <Match>
+    <Class name="org.apache.hadoop.crypto.key.kms.server.KMS"/>
+    <Bug pattern="REC_CATCH_EXCEPTION"/>
+  </Match>
 </FindBugsFilter>

@@ -56,11 +56,13 @@ public abstract class GetClusterNodesRequest {
   
   /**
    * The state to filter the cluster nodes with.
+   * @return the set of {@link NodeState}
    */
   public abstract EnumSet<NodeState> getNodeStates();
   
   /**
    * The state to filter the cluster nodes with.
+   * @param states the set of {@link NodeState}
    */
   public abstract void setNodeStates(EnumSet<NodeState> states);
 }

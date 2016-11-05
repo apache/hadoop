@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
@@ -323,26 +324,37 @@ public class TestPBHelper {
     RemoteEditLog l1 = PBHelper.convert(lProto);
     compare(l, l1);
   }
-  
-  @Test
-  public void testConvertRemoteEditLogManifest() {
-    List<RemoteEditLog> logs = new ArrayList<RemoteEditLog>();
-    logs.add(new RemoteEditLog(1, 10));
-    logs.add(new RemoteEditLog(11, 20));
-    RemoteEditLogManifest m = new RemoteEditLogManifest(logs);
+
+  private void convertAndCheckRemoteEditLogManifest(RemoteEditLogManifest m,
+                                                    List<RemoteEditLog> logs,
+                                                    long committedTxnId) {
     RemoteEditLogManifestProto mProto = PBHelper.convert(m);
     RemoteEditLogManifest m1 = PBHelper.convert(mProto);
-    
+
     List<RemoteEditLog> logs1 = m1.getLogs();
     assertEquals(logs.size(), logs1.size());
     for (int i = 0; i < logs.size(); i++) {
       compare(logs.get(i), logs1.get(i));
     }
+    assertEquals(committedTxnId, m.getCommittedTxnId());
   }
+
+  @Test
+  public void testConvertRemoteEditLogManifest() {
+    List<RemoteEditLog> logs = new ArrayList<RemoteEditLog>();
+    logs.add(new RemoteEditLog(1, 10));
+    logs.add(new RemoteEditLog(11, 20));
+
+    convertAndCheckRemoteEditLogManifest(new RemoteEditLogManifest(logs, 20),
+        logs, 20);
+    convertAndCheckRemoteEditLogManifest(new RemoteEditLogManifest(logs),
+        logs, HdfsServerConstants.INVALID_TXID);
+  }
+
   public ExtendedBlock getExtendedBlock() {
     return getExtendedBlock(1);
   }
-  
+
   public ExtendedBlock getExtendedBlock(long blkid) {
     return new ExtendedBlock("bpid", blkid, 100, 2);
   }
@@ -720,6 +732,28 @@ public class TestPBHelper {
     assertBlockECRecoveryInfoEquals(blkECRecoveryInfo1, iterator.next());
   }
 
+  @Test
+  public void testDataNodeInfoPBHelper() {
+    DatanodeID id = DFSTestUtil.getLocalDatanodeID();
+    DatanodeInfo dnInfos0 = new DatanodeInfo(id);
+    dnInfos0.setCapacity(3500L);
+    dnInfos0.setDfsUsed(1000L);
+    dnInfos0.setNonDfsUsed(2000L);
+    dnInfos0.setRemaining(500L);
+    HdfsProtos.DatanodeInfoProto dnproto = PBHelperClient.convert(dnInfos0);
+    DatanodeInfo dnInfos1 = PBHelperClient.convert(dnproto);
+    compare(dnInfos0, dnInfos1);
+    assertEquals(dnInfos0.getNonDfsUsed(), dnInfos1.getNonDfsUsed());
+
+    //Testing without nonDfs field
+    HdfsProtos.DatanodeInfoProto.Builder b =
+        HdfsProtos.DatanodeInfoProto.newBuilder();
+    b.setId(PBHelperClient.convert(id)).setCapacity(3500L).setDfsUsed(1000L)
+        .setRemaining(500L);
+    DatanodeInfo dnInfos3 = PBHelperClient.convert(b.build());
+    assertEquals(dnInfos0.getNonDfsUsed(), dnInfos3.getNonDfsUsed());
+  }
+
   private void assertBlockECRecoveryInfoEquals(
       BlockECReconstructionInfo blkECRecoveryInfo1,
       BlockECReconstructionInfo blkECRecoveryInfo2) {
@@ -768,4 +802,6 @@ public class TestPBHelper {
       compare(dnInfos1[i], dnInfos2[i]);
     }
   }
+
+
 }

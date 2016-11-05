@@ -82,9 +82,9 @@ import static org.mockito.Mockito.when;
 /**
  * Validates End2End Distributed Scheduling flow which includes the AM
  * specifying OPPORTUNISTIC containers in its resource requests,
- * the AMRMProxyService on the NM, the LocalScheduler RequestInterceptor on
- * the NM and the DistributedSchedulingProtocol used by the framework to talk
- * to the DistributedSchedulingService running on the RM.
+ * the AMRMProxyService on the NM, the DistributedScheduler RequestInterceptor
+ * on the NM and the DistributedSchedulingProtocol used by the framework to talk
+ * to the OpportunisticContainerAllocatorAMService running on the RM.
  */
 public class TestDistributedScheduling extends BaseAMRMProxyE2ETest {
 
@@ -105,6 +105,8 @@ public class TestDistributedScheduling extends BaseAMRMProxyE2ETest {
 
     conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.AMRM_PROXY_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.
+        OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED, true);
     conf.setBoolean(YarnConfiguration.DIST_SCHEDULING_ENABLED, true);
     conf.setBoolean(YarnConfiguration.NM_CONTAINER_QUEUING_ENABLED, true);
     cluster.init(conf);
@@ -364,12 +366,12 @@ public class TestDistributedScheduling extends BaseAMRMProxyE2ETest {
           new AMRMClient.ContainerRequest(capability, nodes, racks, priority));
       amClient.addContainerRequest(
           new AMRMClient.ContainerRequest(capability, null, null, priority2,
-              true, null,
+              0, true, null,
               ExecutionTypeRequest.newInstance(
                   ExecutionType.OPPORTUNISTIC, true)));
       amClient.addContainerRequest(
           new AMRMClient.ContainerRequest(capability, null, null, priority2,
-              true, null,
+              0, true, null,
               ExecutionTypeRequest.newInstance(
                   ExecutionType.OPPORTUNISTIC, true)));
 
@@ -379,21 +381,23 @@ public class TestDistributedScheduling extends BaseAMRMProxyE2ETest {
           new AMRMClient.ContainerRequest(capability, nodes, racks, priority));
       amClient.removeContainerRequest(
           new AMRMClient.ContainerRequest(capability, null, null, priority2,
-              true, null,
+              0, true, null,
               ExecutionTypeRequest.newInstance(
                   ExecutionType.OPPORTUNISTIC, true)));
 
-      int containersRequestedNode = amClient.remoteRequestsTable.get(priority,
+      RemoteRequestsTable<ContainerRequest> remoteRequestsTable =
+          amClient.getTable(0);
+      int containersRequestedNode = remoteRequestsTable.get(priority,
           node, ExecutionType.GUARANTEED, capability).remoteRequest
           .getNumContainers();
-      int containersRequestedRack = amClient.remoteRequestsTable.get(priority,
+      int containersRequestedRack = remoteRequestsTable.get(priority,
           rack, ExecutionType.GUARANTEED, capability).remoteRequest
           .getNumContainers();
-      int containersRequestedAny = amClient.remoteRequestsTable.get(priority,
+      int containersRequestedAny = remoteRequestsTable.get(priority,
           ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
           .remoteRequest.getNumContainers();
       int oppContainersRequestedAny =
-          amClient.remoteRequestsTable.get(priority2, ResourceRequest.ANY,
+          remoteRequestsTable.get(priority2, ResourceRequest.ANY,
               ExecutionType.OPPORTUNISTIC, capability).remoteRequest
               .getNumContainers();
 
@@ -455,7 +459,7 @@ public class TestDistributedScheduling extends BaseAMRMProxyE2ETest {
           new AMRMClient.ContainerRequest(capability, nodes, racks, priority));
       amClient.removeContainerRequest(
           new AMRMClient.ContainerRequest(capability, nodes, racks, priority2,
-              true, null,
+              0, true, null,
               ExecutionTypeRequest.newInstance(
                   ExecutionType.OPPORTUNISTIC, true)));
       assertEquals(4, amClient.ask.size());
@@ -467,7 +471,7 @@ public class TestDistributedScheduling extends BaseAMRMProxyE2ETest {
           nodes, racks, priority));
       amClient.addContainerRequest(
           new AMRMClient.ContainerRequest(capability, nodes, racks, priority2,
-              true, null,
+              0, true, null,
               ExecutionTypeRequest.newInstance(
                   ExecutionType.OPPORTUNISTIC, true)));
 
@@ -488,7 +492,7 @@ public class TestDistributedScheduling extends BaseAMRMProxyE2ETest {
                         priority));
                 amc.removeContainerRequest(
                     new AMRMClient.ContainerRequest(capability, null, null,
-                        priority2, true, null,
+                        priority2, 0, true, null,
                         ExecutionTypeRequest.newInstance(
                             ExecutionType.OPPORTUNISTIC, true)));
                 throw new Exception();
@@ -569,7 +573,7 @@ public class TestDistributedScheduling extends BaseAMRMProxyE2ETest {
       ExecutionTypeRequest execTypeRequest =
           ExecutionTypeRequest.newInstance(ExecutionType.OPPORTUNISTIC, true);
       ContainerRequest containerRequest = new AMRMClient.ContainerRequest(
-          capability, nodes, racks, priority, true, null, execTypeRequest);
+          capability, nodes, racks, priority, 0, true, null, execTypeRequest);
       amClient.addContainerRequest(containerRequest);
 
       // Wait until the container is allocated

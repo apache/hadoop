@@ -22,6 +22,7 @@ import java.util.List;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 
 /**
  * An enumeration of logs available on a remote NameNode.
@@ -29,12 +30,19 @@ import com.google.common.base.Preconditions;
 public class RemoteEditLogManifest {
 
   private List<RemoteEditLog> logs;
-  
+
+  private long committedTxnId = HdfsServerConstants.INVALID_TXID;
+
   public RemoteEditLogManifest() {
   }
-  
+
   public RemoteEditLogManifest(List<RemoteEditLog> logs) {
+    this(logs, HdfsServerConstants.INVALID_TXID);
+  }
+
+  public RemoteEditLogManifest(List<RemoteEditLog> logs, long committedTxnId) {
     this.logs = logs;
+    this.committedTxnId = committedTxnId;
     checkState();
   }
   
@@ -46,7 +54,7 @@ public class RemoteEditLogManifest {
    */
   private void checkState()  {
     Preconditions.checkNotNull(logs);
-    
+
     RemoteEditLog prev = null;
     for (RemoteEditLog log : logs) {
       if (prev != null) {
@@ -56,7 +64,6 @@ public class RemoteEditLogManifest {
               + this);
         }
       }
-      
       prev = log;
     }
   }
@@ -65,10 +72,13 @@ public class RemoteEditLogManifest {
     return Collections.unmodifiableList(logs);
   }
 
+  public long getCommittedTxnId() {
+    return committedTxnId;
+  }
 
-  
   @Override
   public String toString() {
-    return "[" + Joiner.on(", ").join(logs) + "]";
+    return "[" + Joiner.on(", ").join(logs) + "]" + " CommittedTxId: "
+        + committedTxnId;
   }
 }

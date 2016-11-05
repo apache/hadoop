@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.web;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -50,6 +51,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -299,11 +301,50 @@ public class TestWebHDFS {
                   WebHdfsConstants.WEBHDFS_SCHEME);
               Path d = new Path("/my-dir");
             Assert.assertTrue(fs.mkdirs(d));
-            for (int i=0; i < listLimit*3; i++) {
-              Path p = new Path(d, "file-"+i);
+            // Iterator should have no items when dir is empty
+            RemoteIterator<FileStatus> it = fs.listStatusIterator(d);
+            assertFalse(it.hasNext());
+            Path p = new Path(d, "file-"+0);
+            Assert.assertTrue(fs.createNewFile(p));
+            // Iterator should have an item when dir is not empty
+            it = fs.listStatusIterator(d);
+            assertTrue(it.hasNext());
+            it.next();
+            assertFalse(it.hasNext());
+            for (int i=1; i < listLimit*3; i++) {
+              p = new Path(d, "file-"+i);
               Assert.assertTrue(fs.createNewFile(p));
             }
-            Assert.assertEquals(listLimit*3, fs.listStatus(d).length);
+            // Check the FileStatus[] listing
+            FileStatus[] statuses = fs.listStatus(d);
+            Assert.assertEquals(listLimit*3, statuses.length);
+            // Check the iterator-based listing
+            GenericTestUtils.setLogLevel(WebHdfsFileSystem.LOG, Level.TRACE);
+            GenericTestUtils.setLogLevel(NamenodeWebHdfsMethods.LOG, Level
+                .TRACE);
+            it = fs.listStatusIterator(d);
+            int count = 0;
+            while (it.hasNext()) {
+              FileStatus stat = it.next();
+              assertEquals("FileStatuses not equal", statuses[count], stat);
+              count++;
+            }
+            assertEquals("Different # of statuses!", statuses.length, count);
+            // Do some more basic iterator tests
+            it = fs.listStatusIterator(d);
+            // Try advancing the iterator without calling hasNext()
+            for (int i = 0; i < statuses.length; i++) {
+              FileStatus stat = it.next();
+              assertEquals("FileStatuses not equal", statuses[i], stat);
+            }
+            assertFalse("No more items expected", it.hasNext());
+            // Try doing next when out of items
+            try {
+              it.next();
+              fail("Iterator should error if out of elements.");
+            } catch (IllegalStateException e) {
+              // pass
+            }
             return null;
           }
         });
@@ -488,9 +529,9 @@ public class TestWebHDFS {
 
       // delete the two snapshots
       webHdfs.deleteSnapshot(foo, "s1");
-      Assert.assertFalse(webHdfs.exists(s1path));
+      assertFalse(webHdfs.exists(s1path));
       webHdfs.deleteSnapshot(foo, spath.getName());
-      Assert.assertFalse(webHdfs.exists(spath));
+      assertFalse(webHdfs.exists(spath));
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -546,12 +587,12 @@ public class TestWebHDFS {
 
       // rename s1 to s2
       webHdfs.renameSnapshot(foo, "s1", "s2");
-      Assert.assertFalse(webHdfs.exists(s1path));
+      assertFalse(webHdfs.exists(s1path));
       final Path s2path = SnapshotTestHelper.getSnapshotRoot(foo, "s2");
       Assert.assertTrue(webHdfs.exists(s2path));
 
       webHdfs.deleteSnapshot(foo, "s2");
-      Assert.assertFalse(webHdfs.exists(s2path));
+      assertFalse(webHdfs.exists(s2path));
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -1025,6 +1066,28 @@ public class TestWebHDFS {
         "?op=APPEND" + Param.toSortedString("&", new NoRedirectParam(true)));
       LOG.info("Sending append request " + url);
       checkResponseContainsLocation(url, "POST");
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testGetTrashRoot() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final String currentUser =
+        UserGroupInformation.getCurrentUser().getShortUserName();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      final WebHdfsFileSystem webFS = WebHdfsTestUtil.getWebHdfsFileSystem(
+          conf, WebHdfsConstants.WEBHDFS_SCHEME);
+
+      Path trashPath = webFS.getTrashRoot(new Path("/"));
+      Path expectedPath = new Path(FileSystem.USER_HOME_PREFIX,
+          new Path(currentUser, FileSystem.TRASH_PREFIX));
+      assertEquals(expectedPath.toUri().getPath(), trashPath.toUri().getPath());
     } finally {
       if (cluster != null) {
         cluster.shutdown();

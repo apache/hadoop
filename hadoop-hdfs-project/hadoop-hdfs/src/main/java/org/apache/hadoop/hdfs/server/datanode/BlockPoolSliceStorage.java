@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -146,22 +146,27 @@ public class BlockPoolSliceStorage extends Storage {
    * @throws IOException
    */
   private StorageDirectory loadStorageDirectory(NamespaceInfo nsInfo,
-      File dataDir, StartupOption startOpt,
+      StorageLocation location, StartupOption startOpt,
       List<Callable<StorageDirectory>> callables, Configuration conf)
           throws IOException {
-    StorageDirectory sd = new StorageDirectory(dataDir, null, true);
+    StorageDirectory sd = new StorageDirectory(
+        nsInfo.getBlockPoolID(), null, true, location);
     try {
-      StorageState curState = sd.analyzeStorage(startOpt, this);
+      StorageState curState = sd.analyzeStorage(startOpt, this, true);
       // sd is locked but not opened
       switch (curState) {
       case NORMAL:
         break;
       case NON_EXISTENT:
-        LOG.info("Block pool storage directory " + dataDir + " does not exist");
-        throw new IOException("Storage directory " + dataDir
-            + " does not exist");
+        LOG.info("Block pool storage directory for location " + location +
+            " and block pool id " + nsInfo.getBlockPoolID() +
+            " does not exist");
+        throw new IOException("Storage directory for location " + location +
+            " and block pool id " + nsInfo.getBlockPoolID() +
+            " does not exist");
       case NOT_FORMATTED: // format
-        LOG.info("Block pool storage directory " + dataDir
+        LOG.info("Block pool storage directory for location " + location +
+            " and block pool id " + nsInfo.getBlockPoolID()
             + " is not formatted for " + nsInfo.getBlockPoolID()
             + ". Formatting ...");
         format(sd, nsInfo);
@@ -207,21 +212,19 @@ public class BlockPoolSliceStorage extends Storage {
    * @throws IOException on error
    */
   List<StorageDirectory> loadBpStorageDirectories(NamespaceInfo nsInfo,
-      Collection<File> dataDirs, StartupOption startOpt,
+      StorageLocation location, StartupOption startOpt,
       List<Callable<StorageDirectory>> callables, Configuration conf)
           throws IOException {
     List<StorageDirectory> succeedDirs = Lists.newArrayList();
     try {
-      for (File dataDir : dataDirs) {
-        if (containsStorageDir(dataDir)) {
-          throw new IOException(
-              "BlockPoolSliceStorage.recoverTransitionRead: " +
-                  "attempt to load an used block storage: " + dataDir);
-        }
-        final StorageDirectory sd = loadStorageDirectory(
-            nsInfo, dataDir, startOpt, callables, conf);
-        succeedDirs.add(sd);
+      if (containsStorageDir(location, nsInfo.getBlockPoolID())) {
+        throw new IOException(
+            "BlockPoolSliceStorage.recoverTransitionRead: " +
+                "attempt to load an used block storage: " + location);
       }
+      final StorageDirectory sd = loadStorageDirectory(
+          nsInfo, location, startOpt, callables, conf);
+      succeedDirs.add(sd);
     } catch (IOException e) {
       LOG.warn("Failed to analyze storage directories for block pool "
           + nsInfo.getBlockPoolID(), e);
@@ -243,12 +246,12 @@ public class BlockPoolSliceStorage extends Storage {
    * @throws IOException on error
    */
   List<StorageDirectory> recoverTransitionRead(NamespaceInfo nsInfo,
-      Collection<File> dataDirs, StartupOption startOpt,
+      StorageLocation location, StartupOption startOpt,
       List<Callable<StorageDirectory>> callables, Configuration conf)
           throws IOException {
     LOG.info("Analyzing storage directories for bpid " + nsInfo.getBlockPoolID());
     final List<StorageDirectory> loaded = loadBpStorageDirectories(
-        nsInfo, dataDirs, startOpt, callables, conf);
+        nsInfo, location, startOpt, callables, conf);
     for (StorageDirectory sd : loaded) {
       addStorageDir(sd);
     }
@@ -741,7 +744,20 @@ public class BlockPoolSliceStorage extends Storage {
    *
    * @return the trash directory for a given block file that is being deleted.
    */
-  public String getTrashDirectory(File blockFile) {
+  public String getTrashDirectory(ReplicaInfo info) {
+
+    URI blockURI = info.getBlockURI();
+    try{
+      File blockFile = new File(blockURI);
+      return getTrashDirectory(blockFile);
+    } catch (IllegalArgumentException e) {
+      LOG.warn("Failed to get block file for replica " + info, e);
+    }
+
+    return null;
+  }
+
+  private String getTrashDirectory(File blockFile) {
     if (isTrashAllowed(blockFile)) {
       Matcher matcher = BLOCK_POOL_CURRENT_PATH_PATTERN.matcher(blockFile.getParent());
       String trashDirectory = matcher.replaceFirst("$1$2" + TRASH_ROOT_DIR + "$4");

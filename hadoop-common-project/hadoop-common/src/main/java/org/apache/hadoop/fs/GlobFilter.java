@@ -72,7 +72,7 @@ public class GlobFilter implements PathFilter {
     }
   }
 
-  boolean hasPattern() {
+  public boolean hasPattern() {
     return pattern.hasWildcard();
   }
 

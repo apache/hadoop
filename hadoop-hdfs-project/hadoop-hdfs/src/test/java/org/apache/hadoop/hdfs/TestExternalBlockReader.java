@@ -23,7 +23,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSInputStream.ReadStatistics;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -40,7 +39,8 @@ import java.util.LinkedList;
 import java.util.UUID;
 
 public class TestExternalBlockReader {
-  private static final Log LOG = LogFactory.getLog(TestExternalBlockReader.class);
+  private static final Log LOG =
+          LogFactory.getLog(TestExternalBlockReader.class);
 
   private static long SEED = 1234;
 

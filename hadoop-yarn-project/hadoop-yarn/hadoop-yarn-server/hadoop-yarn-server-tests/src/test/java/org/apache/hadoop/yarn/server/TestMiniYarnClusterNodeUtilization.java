@@ -198,8 +198,6 @@ public class TestMiniYarnClusterNodeUtilization {
   /**
    * Verify both the RMNode and SchedulerNode have been updated with the test
    * fixture utilization data.
-   * @param containersUtilization Utilization of the container.
-   * @param nodeUtilization Utilization of the node.
    */
   private void verifySimulatedUtilization() throws InterruptedException {
     ResourceManager rm = cluster.getResourceManager(0);

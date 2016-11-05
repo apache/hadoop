@@ -30,14 +30,14 @@ public interface RawErasureCoderFactory {
 
   /**
    * Create raw erasure encoder.
-   * @param conf the configuration used to create the encoder
+   * @param coderOptions the options used to create the encoder
    * @return raw erasure encoder
    */
   RawErasureEncoder createEncoder(ErasureCoderOptions coderOptions);
 
   /**
    * Create raw erasure decoder.
-   * @param conf the configuration used to create the encoder
+   * @param coderOptions the options used to create the encoder
    * @return raw erasure decoder
    */
   RawErasureDecoder createDecoder(ErasureCoderOptions coderOptions);

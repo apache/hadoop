@@ -28,6 +28,7 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 package hadoop.yarn;
 
+import "yarn_protos.proto";
 import "yarn_service_protos.proto";
 
 service ContainerManagementProtocolService {
@@ -36,4 +37,10 @@ service ContainerManagementProtocolService {
   rpc getContainerStatuses(GetContainerStatusesRequestProto) returns (GetContainerStatusesResponseProto);
   rpc increaseContainersResource(IncreaseContainersResourceRequestProto) returns (IncreaseContainersResourceResponseProto);
   rpc signalToContainer(SignalContainerRequestProto) returns (SignalContainerResponseProto);
+  rpc localize(ResourceLocalizationRequestProto) returns (ResourceLocalizationResponseProto);
+
+  rpc reInitializeContainer(ReInitializeContainerRequestProto) returns (ReInitializeContainerResponseProto);
+  rpc restartContainer(ContainerIdProto) returns (RestartContainerResponseProto);
+  rpc rollbackLastReInitialization(ContainerIdProto) returns (RollbackResponseProto);
+  rpc commitLastReInitialization(ContainerIdProto) returns (CommitResponseProto);
 }

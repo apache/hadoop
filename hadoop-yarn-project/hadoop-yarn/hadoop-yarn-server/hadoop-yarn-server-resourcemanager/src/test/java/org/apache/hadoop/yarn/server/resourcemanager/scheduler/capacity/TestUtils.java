@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
@@ -160,10 +161,17 @@ public class TestUtils {
   public static ResourceRequest createResourceRequest(
       String resourceName, int memory, int numContainers, boolean relaxLocality,
       Priority priority, RecordFactory recordFactory, String labelExpression) {
-    ResourceRequest request = 
+    return createResourceRequest(resourceName, memory, 1, numContainers,
+        relaxLocality, priority, recordFactory, labelExpression);
+  }
+
+  public static ResourceRequest createResourceRequest(String resourceName,
+      int memory, int vcores, int numContainers, boolean relaxLocality,
+      Priority priority, RecordFactory recordFactory, String labelExpression) {
+    ResourceRequest request =
         recordFactory.newRecordInstance(ResourceRequest.class);
-    Resource capability = Resources.createResource(memory, 1);
-    
+    Resource capability = Resources.createResource(memory, vcores);
+
     request.setNumContainers(numContainers);
     request.setResourceName(resourceName);
     request.setCapability(capability);
@@ -191,13 +199,18 @@ public class TestUtils {
     return ApplicationAttemptId.newInstance(applicationId, attemptId);
   }
   
-  public static FiCaSchedulerNode getMockNode(
-      String host, String rack, int port, int capability) {
+  public static FiCaSchedulerNode getMockNode(String host, String rack,
+      int port, int memory) {
+    return getMockNode(host, rack, port, memory, 1);
+  }
+
+  public static FiCaSchedulerNode getMockNode(String host, String rack,
+      int port, int memory, int vcores) {
     NodeId nodeId = NodeId.newInstance(host, port);
     RMNode rmNode = mock(RMNode.class);
     when(rmNode.getNodeID()).thenReturn(nodeId);
     when(rmNode.getTotalCapability()).thenReturn(
-        Resources.createResource(capability, 1));
+        Resources.createResource(memory, vcores));
     when(rmNode.getNodeAddress()).thenReturn(host+":"+port);
     when(rmNode.getHostName()).thenReturn(host);
     when(rmNode.getRackName()).thenReturn(rack);
@@ -399,5 +412,22 @@ public class TestUtils {
     conf.setUserLimitFactor(C, 100);
 
     return conf;
+  }
+
+  public static SchedulerRequestKey toSchedulerKey(Priority pri) {
+    return SchedulerRequestKey.create(
+        ResourceRequest.newInstance(pri, null, null, 0));
+  }
+
+  public static SchedulerRequestKey toSchedulerKey(int pri) {
+    return SchedulerRequestKey.create(ResourceRequest.newInstance(
+        Priority.newInstance(pri), null, null, 0));
+  }
+
+  public static SchedulerRequestKey toSchedulerKey(Priority pri,
+      long allocationRequestId) {
+    ResourceRequest req = ResourceRequest.newInstance(pri, null, null, 0);
+    req.setAllocationRequestId(allocationRequestId);
+    return SchedulerRequestKey.create(req);
   }
 }

@@ -21,7 +21,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
@@ -32,28 +31,21 @@ import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
  * It implements {@link ErasureCoder}.
  */
 @InterfaceAudience.Private
-public class XORErasureEncoder extends AbstractErasureEncoder {
+public class XORErasureEncoder extends ErasureEncoder {
 
-  public XORErasureEncoder(int numDataUnits, int numParityUnits) {
-    super(numDataUnits, numParityUnits);
-  }
-
-  public XORErasureEncoder(ECSchema schema) {
-    super(schema);
+  public XORErasureEncoder(ErasureCoderOptions options) {
+    super(options);
   }
 
   @Override
   protected ErasureCodingStep prepareEncodingStep(
       final ECBlockGroup blockGroup) {
-    ErasureCoderOptions coderOptions = new ErasureCoderOptions(
-        getNumDataUnits(), getNumParityUnits());
     RawErasureEncoder rawEncoder = CodecUtil.createRawEncoder(getConf(),
-        ErasureCodeConstants.XOR_CODEC_NAME, coderOptions);
+        ErasureCodeConstants.XOR_CODEC_NAME, getOptions());
 
     ECBlock[] inputBlocks = getInputBlocks(blockGroup);
 
     return new ErasureEncodingStep(inputBlocks,
         getOutputBlocks(blockGroup), rawEncoder);
   }
-
 }

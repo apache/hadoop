@@ -19,23 +19,23 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import com.google.common.base.Supplier;
+import java.util.ArrayList;
+import java.util.Collection;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -46,7 +46,6 @@ import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -55,13 +54,11 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
@@ -159,6 +156,8 @@ public class TestNameNodePrunesMissingStorages {
   public void testRemovingStorageDoesNotProduceZombies() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
+        1000);
     final int NUM_STORAGES_PER_DN = 2;
     final MiniDFSCluster cluster = new MiniDFSCluster
         .Builder(conf).numDataNodes(3)
@@ -216,13 +215,13 @@ public class TestNameNodePrunesMissingStorages {
         datanodeToRemoveStorageFromIdx++;
       }
       // Find the volume within the datanode which holds that first storage.
-      String volumeDirectoryToRemove = null;
+      StorageLocation volumeLocationToRemove = null;
       try (FsVolumeReferences volumes =
           datanodeToRemoveStorageFrom.getFSDataset().getFsVolumeReferences()) {
         assertEquals(NUM_STORAGES_PER_DN, volumes.size());
         for (FsVolumeSpi volume : volumes) {
           if (volume.getStorageID().equals(storageIdToRemove)) {
-            volumeDirectoryToRemove = volume.getBasePath();
+            volumeLocationToRemove = volume.getStorageLocation();
           }
         }
       };
@@ -230,10 +229,11 @@ public class TestNameNodePrunesMissingStorages {
       // Replace the volume directory with a regular file, which will
       // cause a volume failure.  (If we merely removed the directory,
       // it would be re-initialized with a new storage ID.)
-      assertNotNull(volumeDirectoryToRemove);
+      assertNotNull(volumeLocationToRemove);
       datanodeToRemoveStorageFrom.shutdown();
-      FileUtil.fullyDelete(new File(volumeDirectoryToRemove));
-      FileOutputStream fos = new FileOutputStream(volumeDirectoryToRemove);
+      FileUtil.fullyDelete(new File(volumeLocationToRemove.getUri()));
+      FileOutputStream fos = new FileOutputStream(
+          new File(volumeLocationToRemove.getUri()));
       try {
         fos.write(1);
       } finally {
@@ -260,7 +260,7 @@ public class TestNameNodePrunesMissingStorages {
           assertEquals(NUM_STORAGES_PER_DN - 1, infos.length);
           return true;
         }
-      }, 10, 30000);
+      }, 1000, 30000);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -326,7 +326,9 @@ public class TestNameNodePrunesMissingStorages {
           dn.getFSDataset().getFsVolumeReferences();
       final String newStorageId = DatanodeStorage.generateUuid();
       try {
-        File currentDir = new File(volumeRefs.get(0).getBasePath(), "current");
+        File currentDir = new File(
+            new File(volumeRefs.get(0).getStorageLocation().getUri()),
+            "current");
         File versionFile = new File(currentDir, "VERSION");
         rewriteVersionFile(versionFile, newStorageId);
       } finally {
@@ -367,5 +369,61 @@ public class TestNameNodePrunesMissingStorages {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  @Test(timeout=300000)
+  public void testNameNodePrunesUnreportedStorages() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    // Create a cluster with one datanode with two storages
+    MiniDFSCluster cluster = new MiniDFSCluster
+        .Builder(conf).numDataNodes(1)
+        .storagesPerDatanode(2)
+        .build();
+    // Create two files to ensure each storage has a block
+    DFSTestUtil.createFile(cluster.getFileSystem(), new Path("file1"),
+        102400, 102400, 102400, (short)1,
+        0x1BAD5EE);
+    DFSTestUtil.createFile(cluster.getFileSystem(), new Path("file2"),
+        102400, 102400, 102400, (short)1,
+        0x1BAD5EED);
+    // Get the datanode storages and data directories
+    DataNode dn = cluster.getDataNodes().get(0);
+    BlockManager bm = cluster.getNameNode().getNamesystem().getBlockManager();
+    DatanodeDescriptor dnDescriptor = bm.getDatanodeManager().
+        getDatanode(cluster.getDataNodes().get(0).getDatanodeUuid());
+    DatanodeStorageInfo[] dnStoragesInfosBeforeRestart =
+        dnDescriptor.getStorageInfos();
+    Collection<String> oldDirs =  new ArrayList<String>(dn.getConf().
+        getTrimmedStringCollection(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY));
+    // Keep the first data directory and remove the second.
+    String newDirs = oldDirs.iterator().next();
+    conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, newDirs);
+    // Restart the datanode with the new conf
+    cluster.stopDataNode(0);
+    cluster.startDataNodes(conf, 1, false, null, null);
+    dn = cluster.getDataNodes().get(0);
+    cluster.waitActive();
+    // Assert that the dnDescriptor has both the storages after restart
+    assertArrayEquals(dnStoragesInfosBeforeRestart,
+        dnDescriptor.getStorageInfos());
+    // Assert that the removed storage is marked as FAILED
+    // when DN heartbeats to the NN
+    int numFailedStoragesWithBlocks = 0;
+    DatanodeStorageInfo failedStorageInfo = null;
+    for (DatanodeStorageInfo dnStorageInfo: dnDescriptor.getStorageInfos()) {
+      if (dnStorageInfo.areBlocksOnFailedStorage()) {
+        numFailedStoragesWithBlocks++;
+        failedStorageInfo = dnStorageInfo;
+      }
+    }
+    assertEquals(1, numFailedStoragesWithBlocks);
+    // Heartbeat manager removes the blocks associated with this failed storage
+    bm.getDatanodeManager().getHeartbeatManager().heartbeatCheck();
+    assertTrue(!failedStorageInfo.areBlocksOnFailedStorage());
+    // pruneStorageMap removes the unreported storage
+    cluster.triggerHeartbeats();
+    // Assert that the unreported storage is pruned
+    assertEquals(DataNode.getStorageLocations(dn.getConf()).size(),
+        dnDescriptor.getStorageInfos().length);
   }
 }

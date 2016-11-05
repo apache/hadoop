@@ -92,7 +92,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Cont
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.fusesource.leveldbjni.internal.NativeDB;
 import org.iq80.leveldb.DB;
@@ -128,7 +127,7 @@ import org.jboss.netty.handler.codec.http.QueryStringDecoder;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.jboss.netty.util.CharsetUtil;
-import org.mortbay.jetty.HttpHeaders;
+import org.eclipse.jetty.http.HttpHeader;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
@@ -166,6 +165,12 @@ public class ShuffleHandler extends AuxiliaryService {
   private static final String DATA_FILE_NAME = "file.out";
   private static final String INDEX_FILE_NAME = "file.out.index";
 
+  public static final HttpResponseStatus TOO_MANY_REQ_STATUS =
+      new HttpResponseStatus(429, "TOO MANY REQUESTS");
+  // This should kept in sync with Fetcher.FETCH_RETRY_DELAY_DEFAULT
+  public static final long FETCH_RETRY_DELAY = 1000L;
+  public static final String RETRY_AFTER_HEADER = "Retry-After";
+
   private int port;
   private ChannelFactory selector;
   private final ChannelGroup accepted = new DefaultChannelGroup();
@@ -194,6 +199,10 @@ public class ShuffleHandler extends AuxiliaryService {
 
   public static final String SHUFFLE_PORT_CONFIG_KEY = "mapreduce.shuffle.port";
   public static final int DEFAULT_SHUFFLE_PORT = 13562;
+
+  public static final String SHUFFLE_LISTEN_QUEUE_SIZE =
+      "mapreduce.shuffle.listen.queue.size";
+  public static final int DEFAULT_SHUFFLE_LISTEN_QUEUE_SIZE = 128;
 
   public static final String SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED =
       "mapreduce.shuffle.connection-keep-alive.enable";
@@ -504,6 +513,8 @@ public class ShuffleHandler extends AuxiliaryService {
     } catch (Exception ex) {
       throw new RuntimeException(ex);
     }
+    bootstrap.setOption("backlog", conf.getInt(SHUFFLE_LISTEN_QUEUE_SIZE,
+        DEFAULT_SHUFFLE_LISTEN_QUEUE_SIZE));
     bootstrap.setOption("child.keepAlive", true);
     bootstrap.setPipelineFactory(pipelineFact);
     port = conf.getInt(SHUFFLE_PORT_CONFIG_KEY, DEFAULT_SHUFFLE_PORT);
@@ -666,7 +677,7 @@ public class ShuffleHandler extends AuxiliaryService {
       return;
     }
     if (loadedVersion.isCompatibleTo(getCurrentVersion())) {
-      LOG.info("Storing state DB schedma version info " + getCurrentVersion());
+      LOG.info("Storing state DB schema version info " + getCurrentVersion());
       storeVersion();
     } else {
       throw new IOException(
@@ -789,7 +800,6 @@ public class ShuffleHandler extends AuxiliaryService {
   }
 
   class Shuffle extends SimpleChannelUpstreamHandler {
-
     private static final int MAX_WEIGHT = 10 * 1024 * 1024;
     private static final int EXPIRE_AFTER_ACCESS_MINUTES = 5;
     private static final int ALLOWED_CONCURRENCY = 16;
@@ -869,7 +879,14 @@ public class ShuffleHandler extends AuxiliaryService {
         LOG.info(String.format("Current number of shuffle connections (%d) is " + 
             "greater than or equal to the max allowed shuffle connections (%d)", 
             accepted.size(), maxShuffleConnections));
-        evt.getChannel().close();
+
+        Map<String, String> headers = new HashMap<String, String>(1);
+        // notify fetchers to backoff for a while before closing the connection
+        // if the shuffle connection limit is hit. Fetchers are expected to
+        // handle this notification gracefully, that is, not treating this as a
+        // fetch failure.
+        headers.put(RETRY_AFTER_HEADER, String.valueOf(FETCH_RETRY_DELAY));
+        sendError(ctx, "", TOO_MANY_REQ_STATUS, headers);
         return;
       }
       accepted.add(evt.getChannel());
@@ -887,9 +904,12 @@ public class ShuffleHandler extends AuxiliaryService {
       }
       // Check whether the shuffle version is compatible
       if (!ShuffleHeader.DEFAULT_HTTP_HEADER_NAME.equals(
-          request.getHeader(ShuffleHeader.HTTP_HEADER_NAME))
+          request.headers() != null ?
+              request.headers().get(ShuffleHeader.HTTP_HEADER_NAME) : null)
           || !ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION.equals(
-              request.getHeader(ShuffleHeader.HTTP_HEADER_VERSION))) {
+              request.headers() != null ?
+                  request.headers()
+                      .get(ShuffleHeader.HTTP_HEADER_VERSION) : null)) {
         sendError(ctx, "Incompatible shuffle request version", BAD_REQUEST);
       }
       final Map<String,List<String>> q =
@@ -1117,13 +1137,15 @@ public class ShuffleHandler extends AuxiliaryService {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Setting connection close header...");
         }
-        response.setHeader(HttpHeaders.CONNECTION, CONNECTION_CLOSE);
+        response.headers().set(HttpHeader.CONNECTION.asString(),
+            CONNECTION_CLOSE);
       } else {
-        response.setHeader(HttpHeaders.CONTENT_LENGTH,
+        response.headers().set(HttpHeader.CONTENT_LENGTH.asString(),
           String.valueOf(contentLength));
-        response.setHeader(HttpHeaders.CONNECTION, HttpHeaders.KEEP_ALIVE);
-        response.setHeader(HttpHeaders.KEEP_ALIVE, "timeout="
-            + connectionKeepAliveTimeOut);
+        response.headers().set(HttpHeader.CONNECTION.asString(),
+            HttpHeader.KEEP_ALIVE.asString());
+        response.headers().set(HttpHeader.KEEP_ALIVE.asString(),
+            "timeout=" + connectionKeepAliveTimeOut);
         LOG.info("Content Length in shuffle : " + contentLength);
       }
     }
@@ -1150,7 +1172,7 @@ public class ShuffleHandler extends AuxiliaryService {
       String enc_str = SecureShuffleUtils.buildMsgFrom(requestUri);
       // hash from the fetcher
       String urlHashStr =
-        request.getHeader(SecureShuffleUtils.HTTP_HEADER_URL_HASH);
+          request.headers().get(SecureShuffleUtils.HTTP_HEADER_URL_HASH);
       if (urlHashStr == null) {
         LOG.info("Missing header hash for " + appid);
         throw new IOException("fetcher cannot be authenticated");
@@ -1166,11 +1188,12 @@ public class ShuffleHandler extends AuxiliaryService {
       String reply =
         SecureShuffleUtils.generateHash(urlHashStr.getBytes(Charsets.UTF_8), 
             tokenSecret);
-      response.setHeader(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH, reply);
+      response.headers().set(
+          SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH, reply);
       // Put shuffle version into http header
-      response.setHeader(ShuffleHeader.HTTP_HEADER_NAME,
+      response.headers().set(ShuffleHeader.HTTP_HEADER_NAME,
           ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
-      response.setHeader(ShuffleHeader.HTTP_HEADER_VERSION,
+      response.headers().set(ShuffleHeader.HTTP_HEADER_VERSION,
           ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
       if (LOG.isDebugEnabled()) {
         int len = reply.length();
@@ -1235,15 +1258,23 @@ public class ShuffleHandler extends AuxiliaryService {
 
     protected void sendError(ChannelHandlerContext ctx, String message,
         HttpResponseStatus status) {
+      sendError(ctx, message, status, Collections.<String, String>emptyMap());
+    }
+
+    protected void sendError(ChannelHandlerContext ctx, String msg,
+        HttpResponseStatus status, Map<String, String> headers) {
       HttpResponse response = new DefaultHttpResponse(HTTP_1_1, status);
-      response.setHeader(CONTENT_TYPE, "text/plain; charset=UTF-8");
+      response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
       // Put shuffle version into http header
-      response.setHeader(ShuffleHeader.HTTP_HEADER_NAME,
+      response.headers().set(ShuffleHeader.HTTP_HEADER_NAME,
           ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
-      response.setHeader(ShuffleHeader.HTTP_HEADER_VERSION,
+      response.headers().set(ShuffleHeader.HTTP_HEADER_VERSION,
           ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
+      for (Map.Entry<String, String> header : headers.entrySet()) {
+        response.headers().set(header.getKey(), header.getValue());
+      }
       response.setContent(
-        ChannelBuffers.copiedBuffer(message, CharsetUtil.UTF_8));
+          ChannelBuffers.copiedBuffer(msg, CharsetUtil.UTF_8));
 
       // Close the connection as soon as the error message is sent.
       ctx.getChannel().write(response).addListener(ChannelFutureListener.CLOSE);

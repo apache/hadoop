@@ -23,7 +23,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeNotNull;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -50,8 +49,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.apache.hadoop.fs.azure.AzureException;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem.FolderRenamePending;
@@ -68,33 +65,12 @@ import com.microsoft.azure.storage.blob.CloudBlob;
  * For hand-testing: remove "abstract" keyword and copy in an implementation of createTestAccount
  * from one of the subclasses
  */
-public abstract class NativeAzureFileSystemBaseTest {
+public abstract class NativeAzureFileSystemBaseTest
+    extends AbstractWasbTestBase {
 
-  protected FileSystem fs;
-  private AzureBlobStorageTestAccount testAccount;
   private final long modifiedTimeErrorMargin = 5 * 1000; // Give it +/-5 seconds
 
-  protected abstract AzureBlobStorageTestAccount createTestAccount() throws Exception;
-
   public static final Log LOG = LogFactory.getLog(NativeAzureFileSystemBaseTest.class);
-
-  @Before
-  public void setUp() throws Exception {
-    testAccount = createTestAccount();
-    if (testAccount != null) {
-      fs = testAccount.getFileSystem();
-    }
-    assumeNotNull(testAccount);
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    if (testAccount != null) {
-      testAccount.cleanup();
-      testAccount = null;
-      fs = null;
-    }
-  }
 
   @Test
   public void testCheckingNonExistentOneLetterFile() throws Exception {

@@ -24,13 +24,25 @@ Apache Hadoop has many environment variables that control various aspects of the
 
 ### `HADOOP_CLIENT_OPTS`
 
-This environment variable is used for almost all end-user operations.  It can be used to set any Java options as well as any Apache Hadoop options via a system property definition. For example:
+This environment variable is used for all end-user, non-daemon operations.  It can be used to set any Java options as well as any Apache Hadoop options via a system property definition. For example:
 
 ```bash
 HADOOP_CLIENT_OPTS="-Xmx1g -Dhadoop.socks.server=localhost:4000" hadoop fs -ls /tmp
 ```
 
 will increase the memory and send this command via a SOCKS proxy server.
+
+### `(command)_(subcommand)_OPTS`
+
+It is also possible to set options on a per subcommand basis.  This allows for one to create special options for particular cases.  The first part of the pattern is the command being used, but all uppercase.  The second part of the command is the subcommand being used.  Then finally followed by the string `_OPT`.
+
+For example, to configure `mapred distcp` to use a 2GB heap, one would use:
+
+```bash
+MAPRED_DISTCP_OPTS="-Xmx2g"
+```
+
+These options will appear *after* `HADOOP_CLIENT_OPTS` during execution and will generally take precedence.
 
 ### `HADOOP_CLASSPATH`
 
@@ -56,6 +68,8 @@ For example:
 #
 
 HADOOP_CLIENT_OPTS="-Xmx1g"
+MAPRED_DISTCP_OPTS="-Xmx2g"
+HADOOP_DISTCP_OPTS="-Xmx2g"
 ```
 
 The `.hadoop-env` file can also be used to extend functionality and teach Apache Hadoop new tricks.  For example, to run hadoop commands accessing the server referenced in the environment variable `${HADOOP_SERVER}`, the following in the `.hadoop-env` will do just that:
@@ -71,11 +85,23 @@ One word of warning:  not all of Unix Shell API routines are available or work c
 
 ## Administrator Environment
 
-There are many environment variables that impact how the system operates.  By far, the most important are the series of `_OPTS` variables that control how daemons work.  These variables should contain all of the relevant settings for those daemons.
+In addition to the various XML files, there are two key capabilities for administrators to configure Apache Hadoop when using the Unix Shell:
 
-More, detailed information is contained in `hadoop-env.sh` and the other env.sh files.
+  * Many environment variables that impact how the system operates.  This guide will only highlight some key ones.  There is generally more information in the various `*-env.sh` files.
 
-Advanced administrators may wish to supplement or do some platform-specific fixes to the existing scripts.  In some systems, this means copying the errant script or creating a custom build with these changes.  Apache Hadoop provides the capabilities to do function overrides so that the existing code base may be changed in place without all of that work.  Replacing functions is covered later under the Shell API documentation.
+  * Supplement or do some platform-specific changes to the existing scripts.  Apache Hadoop provides the capabilities to do function overrides so that the existing code base may be changed in place without all of that work.  Replacing functions is covered later under the Shell API documentation.
+
+### `(command)_(subcommand)_OPTS`
+
+By far, the most important are the series of `_OPTS` variables that control how daemons work.  These variables should contain all of the relevant settings for those daemons.
+
+Similar to the user commands above, all daemons will honor the `(command)_(subcommand)_OPTS` pattern.  It is generally recommended that these be set in `hadoop-env.sh` to guarantee that the system will know which settings it should use on restart.  Unlike user-facing subcommands, daemons will *NOT* honor `HADOOP_CLIENT_OPTS`.
+
+In addition, daemons that run in an extra security mode also support `(command)_(subcommand)_SECURE_EXTRA_OPTS`.  These options are *supplemental* to the generic `*_OPTS` and will appear after, therefore generally taking precedence.
+
+### `(command)_(subcommand)_USER`
+
+Apache Hadoop provides a way to do a user check per-subcommand.  While this method is easily circumvented and should not be considered a security-feature, it does provide a mechanism by which to prevent accidents.  For example, setting `HDFS_NAMENODE_USER=hdfs` will make the `hdfs namenode` and `hdfs --daemon start namenode` commands verify that the user running the commands are the hdfs user by checking the `USER` environment variable.  This also works for non-daemons.  Setting `HADOOP_DISTCP_USER=jane` will verify that `USER` is set to `jane` before being allowed to execute the `hadoop distcp` command.
 
 ## Developer and Advanced Administrator Environment
 
