@@ -42,6 +42,7 @@ WebHDFS REST API
         * [Get Content Summary of a Directory](#Get_Content_Summary_of_a_Directory)
         * [Get File Checksum](#Get_File_Checksum)
         * [Get Home Directory](#Get_Home_Directory)
+        * [Get Trash Root](#Get_Trash_Root)
         * [Set Permission](#Set_Permission)
         * [Set Owner](#Set_Owner)
         * [Set Replication Factor](#Set_Replication_Factor)
@@ -149,6 +150,7 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`GETFILECHECKSUM`](#Get_File_Checksum) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileChecksum)
     * [`GETHOMEDIRECTORY`](#Get_Home_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getHomeDirectory)
     * [`GETDELEGATIONTOKEN`](#Get_Delegation_Token) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getDelegationToken)
+    * [`GETTRASHROOT`](#Get_Trash_Root) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getTrashRoot)
     * [`GETXATTRS`](#Get_an_XAttr) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getXAttr)
     * [`GETXATTRS`](#Get_multiple_XAttrs) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getXAttrs)
     * [`GETXATTRS`](#Get_all_XAttrs) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getXAttrs)
@@ -578,7 +580,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileSt
                 "group"           : "supergroup",
                 "length"          : 0,
                 "modificationTime": 1320895981256,
-                "owner"           : "szetszwo",
+                "owner"           : "username",
                 "pathSuffix"      : "bar",
                 "permission"      : "711",
                 "replication"     : 0,
@@ -815,9 +817,35 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileCh
         Content-Type: application/json
         Transfer-Encoding: chunked
 
-        {"Path": "/user/szetszwo"}
+        {"Path": "/user/username"}
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getHomeDirectory
+
+### Get Trash Root
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETTRASHROOT"
+
+    The client receives a response with a [`Path` JSON object](#Path_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {"Path": "/user/username/.Trash"}
+
+    if the path is an encrypted zone path and user has permission of the path, the client receives a response like this:
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {"Path": "/PATH/.Trash/username"}
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getTrashRoot
+
+For more details about trash root in an encrypted zone, please refer to [Transparent Encryption Guide](./TransparentEncryption.html#Rename_and_Trash_considerations).
 
 ### Set Permission
 
@@ -1137,7 +1165,7 @@ Snapshot Operations
         Content-Type: application/json
         Transfer-Encoding: chunked
 
-        {"Path": "/user/szetszwo/.snapshot/s1"}
+        {"Path": "/user/username/.snapshot/s1"}
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).createSnapshot
 

@@ -304,21 +304,21 @@ public class ContainersMonitorImpl extends AbstractService implements
     /**
      * @return Virtual memory limit for the process tree in bytes
      */
-    synchronized long getVmemLimit() {
+    public synchronized long getVmemLimit() {
       return this.vmemLimit;
     }
 
     /**
      * @return Physical memory limit for the process tree in bytes
      */
-    synchronized long getPmemLimit() {
+    public synchronized long getPmemLimit() {
       return this.pmemLimit;
     }
 
     /**
      * @return Number of cpu vcores assigned
      */
-    synchronized int getCpuVcores() {
+    public synchronized int getCpuVcores() {
       return this.cpuVcores;
     }
 

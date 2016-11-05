@@ -240,6 +240,8 @@ public class RMContainerAllocator extends RMContainerRequestor
     this.scheduledRequests.setNumOpportunisticMapsPer100(
         conf.getInt(MRJobConfig.MR_NUM_OPPORTUNISTIC_MAPS_PER_100,
             MRJobConfig.DEFAULT_MR_NUM_OPPORTUNISTIC_MAPS_PER_100));
+    LOG.info(this.scheduledRequests.getNumOpportunisticMapsPer100() +
+        "% of the mappers will be scheduled using OPPORTUNISTIC containers");
   }
 
   @Override
@@ -1058,6 +1060,10 @@ public class RMContainerAllocator extends RMContainerRequestor
 
     void setNumOpportunisticMapsPer100(int numMaps) {
       this.numOpportunisticMapsPer100 = numMaps;
+    }
+
+    int getNumOpportunisticMapsPer100() {
+      return this.numOpportunisticMapsPer100;
     }
 
     @VisibleForTesting

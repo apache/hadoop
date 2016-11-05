@@ -1057,6 +1057,29 @@ public class FSOperations {
   }
 
   /**
+   * Executor that performs getting trash root FileSystemAccess
+   * files system operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSTrashRoot
+      implements FileSystemAccess.FileSystemExecutor<JSONObject> {
+    private Path path;
+    public FSTrashRoot(String path) {
+      this.path = new Path(path);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public JSONObject execute(FileSystem fs) throws IOException {
+      Path trashRoot = fs.getTrashRoot(this.path);
+      JSONObject json = new JSONObject();
+      json.put(HttpFSFileSystem.TRASH_DIR_JSON, trashRoot.toUri().getPath());
+      return json;
+    }
+
+  }
+
+  /**
    * Executor that gets the ACL information for a given file.
    */
   @InterfaceAudience.Private

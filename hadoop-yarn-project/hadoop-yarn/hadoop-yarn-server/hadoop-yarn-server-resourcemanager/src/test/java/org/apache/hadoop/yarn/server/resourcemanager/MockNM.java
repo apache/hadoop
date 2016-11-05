@@ -256,4 +256,8 @@ public class MockNM {
   public int getvCores() {
     return vCores;
   }
+
+  public String getVersion() {
+    return version;
+  }
 }

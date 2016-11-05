@@ -19,7 +19,7 @@ package org.apache.hadoop.crypto.key.kms.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
+import org.apache.hadoop.crypto.key.kms.KMSDelegationToken;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationFilter;
@@ -72,7 +72,7 @@ public class KMSAuthenticationFilter
           KerberosDelegationTokenAuthenticationHandler.class.getName());
     }
     props.setProperty(DelegationTokenAuthenticationHandler.TOKEN_KIND,
-        KMSClientProvider.TOKEN_KIND_STR);
+        KMSDelegationToken.TOKEN_KIND_STR);
     return props;
   }
 

@@ -515,7 +515,7 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
 
   public void verifyNodeContainerInfo(JSONObject info, Container cont)
       throws JSONException, Exception {
-    assertEquals("incorrect number of elements", 10, info.length());
+    assertEquals("incorrect number of elements", 11, info.length());
 
     verifyNodeContainerInfoGeneric(cont, info.getString("id"),
         info.getString("state"), info.getString("user"),

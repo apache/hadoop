@@ -128,6 +128,8 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String HOME_DIR_JSON = "Path";
 
+  public static final String TRASH_DIR_JSON = "Path";
+
   public static final String SET_REPLICATION_JSON = "boolean";
 
   public static final String UPLOAD_CONTENT_TYPE= "application/octet-stream";
@@ -203,7 +205,7 @@ public class HttpFSFileSystem extends FileSystem
     OPEN(HTTP_GET), GETFILESTATUS(HTTP_GET), LISTSTATUS(HTTP_GET),
     GETHOMEDIRECTORY(HTTP_GET), GETCONTENTSUMMARY(HTTP_GET),
     GETFILECHECKSUM(HTTP_GET),  GETFILEBLOCKLOCATIONS(HTTP_GET),
-    INSTRUMENTATION(HTTP_GET), GETACLSTATUS(HTTP_GET),
+    INSTRUMENTATION(HTTP_GET), GETACLSTATUS(HTTP_GET), GETTRASHROOT(HTTP_GET),
     APPEND(HTTP_POST), CONCAT(HTTP_POST), TRUNCATE(HTTP_POST),
     CREATE(HTTP_PUT), MKDIRS(HTTP_PUT), RENAME(HTTP_PUT), SETOWNER(HTTP_PUT),
     SETPERMISSION(HTTP_PUT), SETREPLICATION(HTTP_PUT), SETTIMES(HTTP_PUT),
@@ -815,6 +817,33 @@ public class HttpFSFileSystem extends FileSystem
       return new Path((String) json.get(HOME_DIR_JSON));
     } catch (IOException ex) {
       throw new RuntimeException(ex);
+    }
+  }
+
+  /**
+   * Get the root directory of Trash for a path in HDFS.
+   * 1. File in encryption zone returns /ez1/.Trash/username.
+   * 2. File not in encryption zone, or encountered exception when checking
+   *    the encryption zone of the path, returns /users/username/.Trash.
+   * Caller appends either Current or checkpoint timestamp
+   * for trash destination.
+   * The default implementation returns "/user/username/.Trash".
+   * @param fullPath the trash root of the path to be determined.
+   * @return trash root
+   */
+  @Override
+  public Path getTrashRoot(Path fullPath) {
+    Map<String, String> params = new HashMap<>();
+    params.put(OP_PARAM, Operation.GETTRASHROOT.toString());
+    try {
+      HttpURLConnection conn = getConnection(
+              Operation.GETTRASHROOT.getMethod(), params, fullPath, true);
+      HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+      JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+      return new Path((String) json.get(TRASH_DIR_JSON));
+    } catch (IOException ex) {
+      LOG.warn("Cannot find trash root of " + fullPath, ex);
+      return super.getTrashRoot(fullPath);
     }
   }
 

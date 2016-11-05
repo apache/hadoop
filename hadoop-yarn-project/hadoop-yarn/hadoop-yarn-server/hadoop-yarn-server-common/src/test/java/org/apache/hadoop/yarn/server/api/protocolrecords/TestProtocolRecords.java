@@ -48,7 +48,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodeHeartbeatRe
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeManagerRequestPBImpl;
 
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
-import org.apache.hadoop.yarn.server.api.records.QueuedContainersStatus;
+import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
@@ -146,11 +146,11 @@ public class TestProtocolRecords {
         Records.newRecord(NodeHeartbeatRequest.class);
     NodeStatus nodeStatus =
         Records.newRecord(NodeStatus.class);
-    QueuedContainersStatus queuedContainersStatus = Records.newRecord
-        (QueuedContainersStatus.class);
-    queuedContainersStatus.setEstimatedQueueWaitTime(123);
-    queuedContainersStatus.setWaitQueueLength(321);
-    nodeStatus.setQueuedContainersStatus(queuedContainersStatus);
+    OpportunisticContainersStatus opportunisticContainersStatus =
+        Records.newRecord(OpportunisticContainersStatus.class);
+    opportunisticContainersStatus.setEstimatedQueueWaitTime(123);
+    opportunisticContainersStatus.setWaitQueueLength(321);
+    nodeStatus.setOpportunisticContainersStatus(opportunisticContainersStatus);
     record.setNodeStatus(nodeStatus);
 
     NodeHeartbeatRequestPBImpl pb = new
@@ -159,9 +159,10 @@ public class TestProtocolRecords {
 
     Assert.assertEquals(123,
         pb.getNodeStatus()
-            .getQueuedContainersStatus().getEstimatedQueueWaitTime());
+            .getOpportunisticContainersStatus().getEstimatedQueueWaitTime());
     Assert.assertEquals(321,
-        pb.getNodeStatus().getQueuedContainersStatus().getWaitQueueLength());
+        pb.getNodeStatus().getOpportunisticContainersStatus()
+            .getWaitQueueLength());
   }
 
   @Test
