@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
@@ -102,6 +103,11 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
             app.getCallerContext().getSignature());
       }
     }
+
+    ContainerLaunchContext amContainerSpec =
+        app.getApplicationSubmissionContext().getAMContainerSpec();
+    entityInfo.put(ApplicationMetricsConstants.AM_CONTAINER_LAUNCH_COMMAND,
+        amContainerSpec.getCommands());
 
     entity.setOtherInfo(entityInfo);
     TimelineEvent tEvent = new TimelineEvent();
