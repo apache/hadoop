@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -39,6 +40,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
@@ -60,6 +62,8 @@ public class MockNM {
   private String version;
   private Map<ContainerId, ContainerStatus> containerStats =
       new HashMap<ContainerId, ContainerStatus>();
+  private Map<ApplicationId, AppCollectorData> registeringCollectors
+      = new ConcurrentHashMap<>();
 
   public MockNM(String nodeIdStr, int memory, ResourceTrackerService resourceTracker) {
     // scale vcores based on the requested memory
@@ -115,6 +119,15 @@ public class MockNM {
     List<Container> increasedConts = Collections.singletonList(container);
     nodeHeartbeat(Collections.singletonList(containerStatus), increasedConts,
         true, ++responseId);
+  }
+
+  public void addRegisteringCollector(ApplicationId appId,
+      AppCollectorData data) {
+    this.registeringCollectors.put(appId, data);
+  }
+
+  public Map<ApplicationId, AppCollectorData> getRegisteringCollectors() {
+    return this.registeringCollectors;
   }
 
   public RegisterNodeManagerResponse registerNode() throws Exception {
@@ -229,6 +242,9 @@ public class MockNM {
     req.setNodeStatus(status);
     req.setLastKnownContainerTokenMasterKey(this.currentContainerTokenMasterKey);
     req.setLastKnownNMTokenMasterKey(this.currentNMTokenMasterKey);
+
+    req.setRegisteringCollectors(this.registeringCollectors);
+
     NodeHeartbeatResponse heartbeatResponse =
         resourceTracker.nodeHeartbeat(req);
     
