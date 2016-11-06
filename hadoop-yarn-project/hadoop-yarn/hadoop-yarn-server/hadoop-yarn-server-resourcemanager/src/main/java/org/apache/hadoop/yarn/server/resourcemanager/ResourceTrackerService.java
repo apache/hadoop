@@ -656,17 +656,21 @@ public class ResourceTrackerService extends AbstractService implements
             LOG.warn("Cannot update collector info because application ID: " +
                 appId + " is not found in RMContext!");
           } else {
-            AppCollectorData previousCollectorData = rmApp.getCollectorData();
-            if (AppCollectorData.happensBefore(previousCollectorData,
-                collectorData)) {
-              // Sending collector update event.
-              // Note: RM has to store the newly received collector data
-              // synchronously. Otherwise, the RM may send out stale collector
-              // data before this update is done, and the RM then crashes, the
-              // newly updated collector data will get lost.
-              LOG.info("Update collector information for application " + appId
-                  + " with new address: " + collectorData.getCollectorAddr());
-              ((RMAppImpl) rmApp).setCollectorData(collectorData);
+            synchronized (rmApp) {
+              AppCollectorData previousCollectorData = rmApp.getCollectorData();
+              if (AppCollectorData.happensBefore(previousCollectorData,
+                  collectorData)) {
+                // Sending collector update event.
+                // Note: RM has to store the newly received collector data
+                // synchronously. Otherwise, the RM may send out stale collector
+                // data before this update is done, and the RM then crashes, the
+                // newly updated collector data will get lost.
+                LOG.info("Update collector information for application " + appId
+                    + " with new address: " + collectorData.getCollectorAddr()
+                    + " timestamp: " + collectorData.getRMIdentifier()
+                    + ", " + collectorData.getVersion());
+                ((RMAppImpl) rmApp).setCollectorData(collectorData);
+              }
             }
           }
         }
