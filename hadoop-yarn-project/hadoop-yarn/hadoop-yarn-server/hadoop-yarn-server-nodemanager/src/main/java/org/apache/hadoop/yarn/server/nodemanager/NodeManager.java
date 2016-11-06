@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManag
 import org.apache.hadoop.yarn.server.nodemanager.collectormanager.NMCollectorService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ConfigurationNodeLabelsProvider;
@@ -499,8 +500,14 @@ public class NodeManager extends CompositeService
           if (!rmWorkPreservingRestartEnabled) {
             LOG.info("Cleaning up running containers on resync");
             containerManager.cleanupContainersOnNMResync();
+            // Clear all known collectors for resync.
+            if (context.getKnownCollectors() != null) {
+              context.getKnownCollectors().clear();
+            }
           } else {
             LOG.info("Preserving containers on resync");
+            // Re-register known timeline collectors.
+            reregisterCollectors();
           }
           ((NodeStatusUpdaterImpl) nodeStatusUpdater)
             .rebootNodeStatusUpdaterAndRegisterWithRM();
@@ -510,6 +517,38 @@ public class NodeManager extends CompositeService
         }
       }
     }.start();
+  }
+
+  /**
+   * Reregisters all collectors known by this node to the RM. This method is
+   * called when the RM needs to resync with the node.
+   */
+  protected void reregisterCollectors() {
+    Map<ApplicationId, AppCollectorData> knownCollectors
+        = context.getKnownCollectors();
+    if (knownCollectors == null) {
+      return;
+    }
+    Map<ApplicationId, AppCollectorData> registeringCollectors
+        = context.getRegisteringCollectors();
+    for (Map.Entry<ApplicationId, AppCollectorData> entry
+        : knownCollectors.entrySet()) {
+      Application app = context.getApplications().get(entry.getKey());
+      if ((app != null)
+          && !ApplicationState.FINISHED.equals(app.getApplicationState())) {
+        registeringCollectors.putIfAbsent(entry.getKey(), entry.getValue());
+        AppCollectorData data = entry.getValue();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(entry.getKey() + " : " + data.getCollectorAddr() + "@<"
+              + data.getRMIdentifier() + ", " + data.getVersion() + ">");
+        }
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Remove collector data for done app " + entry.getKey());
+        }
+      }
+    }
+    knownCollectors.clear();
   }
 
   public static class NMContext implements Context {
