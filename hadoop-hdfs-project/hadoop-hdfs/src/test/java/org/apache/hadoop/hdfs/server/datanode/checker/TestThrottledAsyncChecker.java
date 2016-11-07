@@ -113,7 +113,7 @@ public class TestThrottledAsyncChecker {
     Futures.addCallback(lf, callback);
 
     // Request immediate cancellation.
-    checker.join(0, TimeUnit.MILLISECONDS);
+    checker.shutdownAndWait(0, TimeUnit.MILLISECONDS);
     try {
       assertFalse(lf.get());
       fail("Failed to get expected InterruptedException");

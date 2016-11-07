@@ -164,10 +164,10 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
   }
 
   /**
-   * See {@link AsyncChecker#join}.
+   * {@inheritDoc}.
    */
   @Override
-  public void join(long timeout, TimeUnit timeUnit)
+  public void shutdownAndWait(long timeout, TimeUnit timeUnit)
       throws InterruptedException {
     // Try orderly shutdown.
     executorService.shutdown();

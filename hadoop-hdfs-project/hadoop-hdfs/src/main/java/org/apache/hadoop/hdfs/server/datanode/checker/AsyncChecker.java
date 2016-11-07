@@ -58,5 +58,6 @@ public interface AsyncChecker<K, V> {
    *
    * @throws InterruptedException
    */
-  void join(long timeout, TimeUnit timeUnit) throws InterruptedException;
+  void shutdownAndWait(long timeout, TimeUnit timeUnit)
+      throws InterruptedException;
 }
