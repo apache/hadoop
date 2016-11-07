@@ -1,0 +1,85 @@
+{{!
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+}}
+
+<div class="footer-pusher">
+
+  <nav class="navbar navbar-default">
+    <div class="container-fluid">
+      <!-- Brand and toggle get grouped for better mobile display -->
+      <div class="navbar-header">
+        <a class="navbar-brand" href="#">
+         <img class="hadoop-brand-image" alt="Apache Hadoop" src="assets/images/hadoop_logo.png"  />
+        </a>
+        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+      </div>
+
+      <!-- Collect the nav links, forms, and other content for toggling -->
+      <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+        <ul class="nav navbar-nav">
+          {{#link-to 'cluster-overview' tagName="li"}}
+            {{#link-to 'cluster-overview' class="navigation-link"}}Cluster Overview
+              <span class="sr-only">(current)</span>
+            {{/link-to}}
+          {{/link-to}}
+          {{#link-to 'yarn-queues' 'root' tagName="li"}}
+            {{#link-to 'yarn-queues' 'root' class="navigation-link"}}Queues
+              <span class="sr-only">(current)</span>
+            {{/link-to}}
+          {{/link-to}}
+          {{#link-to 'yarn-apps.apps' tagName="li"}}
+            {{#link-to 'yarn-apps.apps' class="navigation-link"}}Applications
+              <span class="sr-only">(current)</span>
+            {{/link-to}}
+          {{/link-to}}
+          {{#link-to 'yarn-nodes.table' tagName="li"}}
+            {{#link-to 'yarn-nodes.table' class="navigation-link"}}Nodes
+              <span class="sr-only">(current)</span>
+            {{/link-to}}
+          {{/link-to}}
+        </ul>
+      </div><!-- /.navbar-collapse -->
+    </div><!-- /.container-fluid -->
+  </nav>
+
+  <div class="container-fluid">
+    {{outlet}}
+  </div>
+
+  <br/>
+  <br/>
+  <br/>
+
+</div>
+
+<div class="footer">
+  <div class="container-fluid content">
+    <a href={{env.app.hrefs.license}} target="_blank">
+      Licensed under the Apache License, Version 2.0.
+    </a>
+    <div class="ui-info">
+      {{#if env.app.timezone}}
+        <span>Timezone <b>{{env.app.timezone}}</b></span>
+      {{/if}}
+    </div>
+  </div>
+</div>

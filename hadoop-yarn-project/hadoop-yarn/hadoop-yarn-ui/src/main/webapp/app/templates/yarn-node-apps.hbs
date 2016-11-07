@@ -1,0 +1,53 @@
+{{!--
+  Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements.  See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership.  The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+--}}
+
+{{breadcrumb-bar breadcrumbs=breadcrumbs}}
+
+<div class="col-md-12 container-fluid">
+  <div class="row">
+    {{node-menu-panel path="yarn-node-apps" nodeAddr=model.nodeInfo.addr nodeId=model.nodeInfo.id}}
+    {{#if model.apps}}
+    <div class="col-md-10 container-fluid">
+      <table id="node-apps-table" class="display table table-striped table-bordered" cellspacing="0" width="100%">
+        <thead>
+          <tr>
+            <th>Application ID</th>
+            <th>State</th>
+            <th>User</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#if model.apps}}
+            {{#each model.apps as |app|}}
+                <tr>
+                  <td><a href="#/yarn-node-app/{{model.nodeInfo.id}}/{{model.nodeInfo.addr}}/{{app.appId}}">{{app.appId}}</a></td>
+                  <td><span class={{app.appStateStyle}}>{{app.state}}</span></td>
+                  <td>{{app.user}}</td>
+                </tr>
+            {{/each}}
+          {{/if}}
+        </tbody>
+      </table>
+      {{simple-table table-id="node-apps-table" bFilter=true colsOrder="0,desc" colTypes="natural" colTargets="0"}}
+    </div>
+    {{else}}
+      <h4 align = "center">No apps found on this node</h4>
+    {{/if}}
+  </div>
+</div>
+{{outlet}}

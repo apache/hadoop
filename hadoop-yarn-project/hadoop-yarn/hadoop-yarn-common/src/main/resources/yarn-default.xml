@@ -180,6 +180,20 @@
   </property>
 
   <property>
+    <description>To enable RM web ui2 application.</description>
+    <name>yarn.webapp.ui2.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Explicitly provide WAR file path for ui2 if needed.
+    </description>
+    <name>yarn.webapp.ui2.war-file-path</name>
+    <value></value>
+  </property>
+
+  <property>
     <name>yarn.resourcemanager.resource-tracker.address</name>
     <value>${yarn.resourcemanager.hostname}:8031</value>
   </property>

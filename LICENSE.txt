@@ -2314,3 +2314,103 @@ jamon-runtime 2.3.1
      Developer permits you to utilize portions of the Covered Code under
      Your choice of the MPL or the alternative licenses, if any, specified
      by the Initial Developer in the file described in Exhibit A.
+
+The binary distribution of this product bundles these dependencies under the
+following license:
+bootstrap v3.3.6
+broccoli-asset-rev v2.4.2
+broccoli-funnel v1.0.1
+datatables v1.10.8
+em-helpers v0.5.13
+em-table v0.1.6
+ember v2.2.0
+ember-array-contains-helper v1.0.2
+ember-bootstrap v0.5.1
+ember-cli v1.13.13
+ember-cli-app-version v1.0.0
+ember-cli-babel v5.1.6
+ember-cli-content-security-policy v0.4.0
+ember-cli-dependency-checker v1.2.0
+ember-cli-htmlbars v1.0.2
+ember-cli-htmlbars-inline-precompile v0.3.1
+ember-cli-ic-ajax v0.2.1
+ember-cli-inject-live-reload v1.4.0
+ember-cli-jquery-ui v0.0.20
+ember-cli-qunit v1.2.1
+ember-cli-release v0.2.8
+ember-cli-shims v0.0.6
+ember-cli-sri v1.2.1
+ember-cli-test-loader v0.2.1
+ember-cli-uglify v1.2.0
+ember-d3 v0.1.0
+ember-data v2.1.0
+ember-disable-proxy-controllers v1.0.1
+ember-export-application-global v1.0.5
+ember-load-initializers v0.1.7
+ember-qunit v0.4.16
+ember-qunit-notifications v0.1.0
+ember-resolver v2.0.3
+ember-spin-spinner v0.2.3
+ember-truth-helpers v1.2.0
+jquery v2.1.4
+jquery-ui v1.11.4
+loader.js v3.3.0
+momentjs v2.10.6
+qunit v1.19.0
+select2 v4.0.0
+snippet-ss v1.11.0
+spin.js v2.3.2
+-------------------------------------------------------------------------------
+The MIT License (MIT)
+
+All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and assocated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+The binary distribution of this product bundles these dependencies under the
+following license:
+D3 v3.5.6
+--------------------------------------------------------------------------------
+(3-clause BSD license)
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list
+   of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this
+   list of conditions and the following disclaimer in the documentation and/or
+   other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors may
+   be used to endorse or promote products derived from this software without
+   specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.

@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.mapred;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.core.JsonGenerator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -28,9 +31,6 @@ import org.apache.hadoop.mapreduce.QueueState;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.JsonGenerator;
 
 import java.io.BufferedInputStream;
 import java.io.InputStream;
@@ -532,7 +532,7 @@ public class QueueManager {
     }
     
     JsonFactory dumpFactory = new JsonFactory();
-    JsonGenerator dumpGenerator = dumpFactory.createJsonGenerator(out);
+    JsonGenerator dumpGenerator = dumpFactory.createGenerator(out);
     QueueConfigurationParser parser;
     boolean aclsEnabled = false;
     if (conf != null) {

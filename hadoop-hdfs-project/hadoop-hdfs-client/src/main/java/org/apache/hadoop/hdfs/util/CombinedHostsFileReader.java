@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hdfs.util;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.IOException;
@@ -28,9 +31,6 @@ import java.util.HashSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectReader;
 import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
 
 /**
@@ -66,7 +66,7 @@ public final class CombinedHostsFileReader {
     try (Reader input =
          new InputStreamReader(new FileInputStream(hostsFile), "UTF-8")) {
       Iterator<DatanodeAdminProperties> iterator =
-          READER.readValues(JSON_FACTORY.createJsonParser(input));
+          READER.readValues(JSON_FACTORY.createParser(input));
       while (iterator.hasNext()) {
         DatanodeAdminProperties properties = iterator.next();
         allDNs.add(properties);
