@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
+import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
@@ -80,7 +81,10 @@ public class ContainerScheduler extends AbstractService implements
   private final ContainerQueuingLimit queuingLimit =
       ContainerQueuingLimit.newInstance();
 
-  //
+  private final OpportunisticContainersStatus opportunisticContainersStatus;
+
+  // Resource Utilization Manager that decides how utilization of the cluster
+  // increase / decreases based on container start / finish
   private ResourceUtilizationManager utilizationManager;
 
   /**
@@ -99,6 +103,8 @@ public class ContainerScheduler extends AbstractService implements
     this.context = context;
     this.maxOppQueueLength = (qLength <= 0) ? 0 : qLength;
     this.utilizationManager = new ResourceUtilizationManager(this);
+    this.opportunisticContainersStatus =
+        OpportunisticContainersStatus.newInstance();
   }
 
   /**
@@ -139,10 +145,30 @@ public class ContainerScheduler extends AbstractService implements
     return this.queuedOpportunisticContainers.size();
   }
 
+  public OpportunisticContainersStatus getOpportunisticContainersStatus() {
+    this.opportunisticContainersStatus.setQueuedOpportContainers(
+        getNumQueuedOpportunisticContainers());
+    this.opportunisticContainersStatus.setWaitQueueLength(
+        getNumQueuedContainers());
+    return this.opportunisticContainersStatus;
+  }
+
   private void onContainerCompleted(Container container) {
     // decrement only if it was a running container
     if (runningContainers.containsKey(container.getContainerId())) {
       this.utilizationManager.subtractContainerResource(container);
+      if (container.getContainerTokenIdentifier().getExecutionType() ==
+          ExecutionType.OPPORTUNISTIC) {
+        this.opportunisticContainersStatus.setOpportMemoryUsed(
+            this.opportunisticContainersStatus.getOpportMemoryUsed()
+                - container.getResource().getMemorySize());
+        this.opportunisticContainersStatus.setOpportCoresUsed(
+            this.opportunisticContainersStatus.getOpportCoresUsed()
+                - container.getResource().getVirtualCores());
+        this.opportunisticContainersStatus.setRunningOpportContainers(
+            this.opportunisticContainersStatus.getRunningOpportContainers()
+                - 1);
+      }
     }
     runningContainers.remove(container.getContainerId());
     oppContainersMarkedForKill.remove(container.getContainerId());
@@ -238,6 +264,18 @@ public class ContainerScheduler extends AbstractService implements
     LOG.info("Starting container [" + container.getContainerId()+ "]");
     runningContainers.put(container.getContainerId(), container);
     this.utilizationManager.addContainerResources(container);
+    if (container.getContainerTokenIdentifier().getExecutionType() ==
+        ExecutionType.OPPORTUNISTIC) {
+      this.opportunisticContainersStatus.setOpportMemoryUsed(
+          this.opportunisticContainersStatus.getOpportMemoryUsed()
+              + container.getResource().getMemorySize());
+      this.opportunisticContainersStatus.setOpportCoresUsed(
+          this.opportunisticContainersStatus.getOpportCoresUsed()
+              + container.getResource().getVirtualCores());
+      this.opportunisticContainersStatus.setRunningOpportContainers(
+          this.opportunisticContainersStatus.getRunningOpportContainers()
+              + 1);
+    }
     container.sendLaunchEvent();
   }
 

@@ -97,9 +97,6 @@ public class ContainersMonitorImpl extends AbstractService implements
   }
 
   private ResourceUtilization containersUtilization;
-  // Tracks the aggregated allocation of the currently allocated containers
-  // when queuing of containers at the NMs is enabled.
-  private final ResourceUtilization containersAllocation;
 
   private volatile boolean stopped = false;
 

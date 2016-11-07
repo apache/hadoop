@@ -110,8 +110,6 @@ public class NodeManager extends CompositeService
   private boolean rmWorkPreservingRestartEnabled;
   private boolean shouldExitOnShutdownEvent = false;
 
-  private ContainerScheduler containerScheduler;
-
   public NodeManager() {
     super(NodeManager.class.getName());
   }

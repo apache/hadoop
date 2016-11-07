@@ -1532,7 +1532,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
   @Override
   public OpportunisticContainersStatus getOpportunisticContainersStatus() {
-    return OpportunisticContainersStatus.newInstance();
+    return this.containerScheduler.getOpportunisticContainersStatus();
   }
 
   @Override
