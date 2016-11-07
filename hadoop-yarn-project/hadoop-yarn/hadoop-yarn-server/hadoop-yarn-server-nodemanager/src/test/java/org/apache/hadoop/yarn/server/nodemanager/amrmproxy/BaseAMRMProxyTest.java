@@ -661,11 +661,14 @@ public abstract class BaseAMRMProxyTest {
       return null;
     }
 
-    public Map<ApplicationId, AppCollectorData> getRegisteringCollectors() {
+    @Override
+    public ConcurrentMap<ApplicationId, AppCollectorData>
+        getRegisteringCollectors() {
       return null;
     }
 
-    @Override public Map<ApplicationId, AppCollectorData> getKnownCollectors() {
+    @Override
+    public ConcurrentMap<ApplicationId, AppCollectorData> getKnownCollectors() {
       return null;
     }
 
