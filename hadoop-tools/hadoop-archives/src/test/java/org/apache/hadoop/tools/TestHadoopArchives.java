@@ -444,7 +444,7 @@ public class TestHadoopArchives {
       int read; 
       while (true) {
         read = fsdis.read(buffer, readIntoBuffer, buffer.length - readIntoBuffer);
-        if (read < 0) {
+        if (read <= 0) {
           // end of stream:
           if (readIntoBuffer > 0) {
             baos.write(buffer, 0, readIntoBuffer);
