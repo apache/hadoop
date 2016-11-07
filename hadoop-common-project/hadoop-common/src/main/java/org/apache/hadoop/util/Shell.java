@@ -237,7 +237,7 @@ public abstract class Shell {
   /** Return a command to get permission information. */
   public static String[] getGetPermissionCommand() {
     return (WINDOWS) ? new String[] { getWinUtilsPath(), "ls", "-F" }
-                     : new String[] { "/bin/ls", "-ld" };
+                     : new String[] { "ls", "-ld" };
   }
 
   /** Return a command to set permission. */
