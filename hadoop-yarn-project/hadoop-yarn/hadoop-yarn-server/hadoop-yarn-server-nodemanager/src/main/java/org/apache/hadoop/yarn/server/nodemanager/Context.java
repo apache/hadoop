@@ -70,14 +70,14 @@ public interface Context {
    * @return registering collectors, or null if the timeline service v.2 is not
    * enabled
    */
-  Map<ApplicationId, AppCollectorData> getRegisteringCollectors();
+  ConcurrentMap<ApplicationId, AppCollectorData> getRegisteringCollectors();
 
   /**
    * Get the list of collectors registered with the RM and known by this node.
    * @return known collectors, or null if the timeline service v.2 is not
    * enabled.
    */
-  Map<ApplicationId, AppCollectorData> getKnownCollectors();
+  ConcurrentMap<ApplicationId, AppCollectorData> getKnownCollectors();
 
   ConcurrentMap<ContainerId, Container> getContainers();
 

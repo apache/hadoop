@@ -496,7 +496,7 @@ public class NodeManager extends CompositeService
     if (knownCollectors == null) {
       return;
     }
-    Map<ApplicationId, AppCollectorData> registeringCollectors
+    ConcurrentMap<ApplicationId, AppCollectorData> registeringCollectors
         = context.getRegisteringCollectors();
     for (Map.Entry<ApplicationId, AppCollectorData> entry
         : knownCollectors.entrySet()) {
@@ -533,9 +533,10 @@ public class NodeManager extends CompositeService
     protected final ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentSkipListMap<ContainerId, Container>();
 
-    private Map<ApplicationId, AppCollectorData> registeringCollectors;
+    private ConcurrentMap<ApplicationId, AppCollectorData>
+        registeringCollectors;
 
-    private Map<ApplicationId, AppCollectorData> knownCollectors;
+    private ConcurrentMap<ApplicationId, AppCollectorData> knownCollectors;
 
     protected final ConcurrentMap<ContainerId,
         org.apache.hadoop.yarn.api.records.Container> increasedContainers =
@@ -725,12 +726,13 @@ public class NodeManager extends CompositeService
     }
 
     @Override
-    public Map<ApplicationId, AppCollectorData> getRegisteringCollectors() {
+    public ConcurrentMap<ApplicationId, AppCollectorData>
+        getRegisteringCollectors() {
       return this.registeringCollectors;
     }
 
     @Override
-    public Map<ApplicationId, AppCollectorData> getKnownCollectors() {
+    public ConcurrentMap<ApplicationId, AppCollectorData> getKnownCollectors() {
       return this.knownCollectors;
     }
 
