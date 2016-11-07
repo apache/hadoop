@@ -262,7 +262,17 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_WEBAPP_HTTPS_PORT = 8090;
   public static final String DEFAULT_RM_WEBAPP_HTTPS_ADDRESS = "0.0.0.0:"
       + DEFAULT_RM_WEBAPP_HTTPS_PORT;
-  
+
+  /**
+   * Enable YARN WebApp V2.
+   */
+  public static final String YARN_WEBAPP_UI2_ENABLE = "yarn."
+      + "webapp.ui2.enable";
+  public static final boolean DEFAULT_YARN_WEBAPP_UI2_ENABLE = false;
+
+  public static final String YARN_WEBAPP_UI2_WARFILE_PATH = "yarn."
+      + "webapp.ui2.war-file-path";
+
   public static final String RM_RESOURCE_TRACKER_ADDRESS =
     RM_PREFIX + "resource-tracker.address";
   public static final int DEFAULT_RM_RESOURCE_TRACKER_PORT = 8031;

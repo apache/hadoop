@@ -43,6 +43,7 @@ import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
 import org.apache.hadoop.security.http.XFrameOptionsFilter;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -369,8 +370,15 @@ public class WebApps {
     }
 
     public WebApp start(WebApp webapp) {
+      return start(webapp, null);
+    }
+
+    public WebApp start(WebApp webapp, WebAppContext ui2Context) {
       WebApp webApp = build(webapp);
       HttpServer2 httpServer = webApp.httpServer();
+      if (ui2Context != null) {
+        httpServer.addHandlerAtFront(ui2Context);
+      }
       try {
         httpServer.start();
         LOG.info("Web app " + name + " started at "
