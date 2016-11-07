@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -61,7 +62,7 @@ public class FairOrderingPolicy<S extends SchedulableEntity> extends AbstractCom
       comparators
       );
     this.comparator = fairComparator;
-    this.schedulableEntities = new TreeSet<S>(comparator);
+    this.schedulableEntities = new ConcurrentSkipListSet<S>(comparator);
   }
 
   private double getMagnitude(SchedulableEntity r) {
