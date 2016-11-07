@@ -1248,6 +1248,10 @@ int hdfsGetBlockLocations(hdfsFS fs, const char *path, struct hdfsBlockLocations
         buf = new char[ppDNInfo.getIPAddr().size() + 1];
         strncpy(buf, ppDNInfo.getIPAddr().c_str(), ppDNInfo.getIPAddr().size() + 1);
         dn_info->ip_address = buf;
+
+        buf = new char[ppDNInfo.getNetworkLocation().size() + 1];
+        strncpy(buf, ppDNInfo.getNetworkLocation().c_str(), ppDNInfo.getNetworkLocation().size() + 1);
+        dn_info->network_location = buf;
       }
     }
 
@@ -1270,6 +1274,7 @@ int hdfsFreeBlockLocations(struct hdfsBlockLocations * blockLocations) {
       auto location = &block->locations[j];
       delete[] location->hostname;
       delete[] location->ip_address;
+      delete[] location->network_location;
     }
   }
   delete[] blockLocations->blocks;

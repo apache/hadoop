@@ -132,6 +132,7 @@ int hdfsBuilderConfGetLong(struct hdfsBuilder *bld, const char *key, int64_t *va
 struct hdfsDNInfo {
   const char *    ip_address;
   const char *    hostname;
+  const char *    network_location;
   int             xfer_port;
   int             info_port;
   int             IPC_port;

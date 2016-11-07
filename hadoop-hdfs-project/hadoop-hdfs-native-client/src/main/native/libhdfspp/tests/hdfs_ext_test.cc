@@ -56,6 +56,7 @@ TEST_F(HdfsExtTest, TestGetBlockLocations) {
   EXPECT_EQ(1, blocks->blocks->num_locations);
   EXPECT_NE(nullptr, blocks->blocks->locations->hostname);
   EXPECT_NE(nullptr, blocks->blocks->locations->ip_address);
+  EXPECT_NE(nullptr, blocks->blocks->locations->network_location);
   EXPECT_NE(0, blocks->blocks->locations->xfer_port);
 
   result = hdfsFreeBlockLocations(blocks);
