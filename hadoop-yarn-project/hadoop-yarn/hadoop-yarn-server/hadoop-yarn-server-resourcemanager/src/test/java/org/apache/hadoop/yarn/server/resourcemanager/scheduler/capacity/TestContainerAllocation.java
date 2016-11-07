@@ -81,7 +81,7 @@ public class TestContainerAllocation {
     mgr.init(conf);
   }
 
-  @Test(timeout = 3000000)
+  @Test(timeout = 60000)
   public void testExcessReservationThanNodeManagerCapacity() throws Exception {
     @SuppressWarnings("resource")
     MockRM rm = new MockRM(conf);
@@ -595,6 +595,49 @@ public class TestContainerAllocation {
         .getReserved().getMemorySize());
     Assert.assertEquals(0 * GB, leafQueue.getQueueResourceUsage().getReserved()
         .getMemorySize());
+
+    rm1.close();
+  }
+
+  @Test(timeout = 60000)
+  public void testAssignMultipleOffswitchContainers() throws Exception {
+    MockRM rm1 = new MockRM();
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 80 * GB);
+
+    // launch an app to queue, AM container should be launched in nm1
+    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "default");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    am1.allocate("*", 1 * GB, 5, new ArrayList<ContainerId>());
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+
+    // Do node heartbeats once
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+
+    FiCaSchedulerApp schedulerApp1 =
+        cs.getApplicationAttempt(am1.getApplicationAttemptId());
+
+    // App1 will get one container allocated (plus AM container
+    Assert.assertEquals(2, schedulerApp1.getLiveContainers().size());
+
+    // Set assign multiple off-switch containers to 3
+    CapacitySchedulerConfiguration newCSConf = new CapacitySchedulerConfiguration();
+    newCSConf.setInt(
+        CapacitySchedulerConfiguration.OFFSWITCH_PER_HEARTBEAT_LIMIT, 3);
+
+    cs.reinitialize(newCSConf, rm1.getRMContext());
+
+    // Do node heartbeats once
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+
+    // App1 will get 3 new container allocated (plus 2 previously allocated
+    // container)
+    Assert.assertEquals(5, schedulerApp1.getLiveContainers().size());
 
     rm1.close();
   }

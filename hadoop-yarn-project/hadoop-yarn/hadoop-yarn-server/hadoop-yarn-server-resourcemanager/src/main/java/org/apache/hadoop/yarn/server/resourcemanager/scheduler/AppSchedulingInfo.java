@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.commons.collections.IteratorUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -49,6 +51,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSet;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.ResourceRequestUpdateResult;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SchedulingPlacementSet;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -691,6 +696,25 @@ public class AppSchedulingInfo {
     }
   }
 
+  public List<ResourceRequest> allocate(NodeType type,
+      SchedulerNode node, SchedulerRequestKey schedulerKey,
+      Container containerAllocated) {
+    try {
+      writeLock.lock();
+      ResourceRequest request;
+      if (type == NodeType.NODE_LOCAL) {
+        request = resourceRequestMap.get(schedulerKey).get(node.getNodeName());
+      } else if (type == NodeType.RACK_LOCAL) {
+        request = resourceRequestMap.get(schedulerKey).get(node.getRackName());
+      } else{
+        request = resourceRequestMap.get(schedulerKey).get(ResourceRequest.ANY);
+      }
+      return allocate(type, node, schedulerKey, request, containerAllocated);
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
   /**
    * Resources have been allocated to this application by the resource
    * scheduler. Track them.
@@ -701,40 +725,26 @@ public class AppSchedulingInfo {
    * @param containerAllocated Container Allocated
    * @return List of ResourceRequests
    */
-  public List<ResourceRequest> allocate(NodeType type, SchedulerNode node,
-      SchedulerRequestKey schedulerKey, ResourceRequest request,
-      Container containerAllocated) {
-    List<ResourceRequest> resourceRequests = new ArrayList<>();
+  public List<ResourceRequest> allocate(NodeType type,
+      SchedulerNode node, SchedulerRequestKey schedulerKey,
+      ResourceRequest request, Container containerAllocated) {
     try {
-      this.writeLock.lock();
+      writeLock.lock();
+      List<ResourceRequest> resourceRequests = new ArrayList<>();
       if (type == NodeType.NODE_LOCAL) {
         allocateNodeLocal(node, schedulerKey, request, resourceRequests);
       } else if (type == NodeType.RACK_LOCAL) {
         allocateRackLocal(node, schedulerKey, request, resourceRequests);
-      } else {
+      } else{
         allocateOffSwitch(request, resourceRequests, schedulerKey);
       }
-      QueueMetrics metrics = queue.getMetrics();
-      if (pending) {
-        // once an allocation is done we assume the application is
-        // running from scheduler's POV.
-        pending = false;
-        metrics.runAppAttempt(applicationId, user);
-      }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("allocate: applicationId=" + applicationId
-            + " container=" + containerAllocated.getId()
-            + " host=" + containerAllocated.getNodeId().toString()
-            + " user=" + user
-            + " resource=" + request.getCapability()
-            + " type=" + type);
+      if (null != containerAllocated) {
+        updateMetricsForAllocatedContainer(request, type, containerAllocated);
       }
-      metrics.allocateResources(user, 1, request.getCapability(), true);
-      metrics.incrNodeTypeAggregations(user, type);
       return resourceRequests;
     } finally {
-      this.writeLock.unlock();
+      writeLock.unlock();
     }
   }
 
@@ -941,5 +951,117 @@ public class AppSchedulingInfo {
             request.getResourceName(), request.getCapability(), 1,
             request.getRelaxLocality(), request.getNodeLabelExpression());
     return newRequest;
+  }
+
+  /*
+   * In async environment, pending resource request could be updated during
+   * scheduling, this method checks pending request before allocating
+   */
+  public boolean checkAllocation(NodeType type, SchedulerNode node,
+      SchedulerRequestKey schedulerKey) {
+    try {
+      readLock.lock();
+      ResourceRequest r = resourceRequestMap.get(schedulerKey).get(
+          ResourceRequest.ANY);
+      if (r == null || r.getNumContainers() <= 0) {
+        return false;
+      }
+      if (type == NodeType.RACK_LOCAL || type == NodeType.NODE_LOCAL) {
+        r = resourceRequestMap.get(schedulerKey).get(node.getRackName());
+        if (r == null || r.getNumContainers() <= 0) {
+          return false;
+        }
+        if (type == NodeType.NODE_LOCAL) {
+          r = resourceRequestMap.get(schedulerKey).get(node.getNodeName());
+          if (r == null || r.getNumContainers() <= 0) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  public void updateMetricsForAllocatedContainer(
+      ResourceRequest request, NodeType type, Container containerAllocated) {
+    try {
+      writeLock.lock();
+      QueueMetrics metrics = queue.getMetrics();
+      if (pending) {
+        // once an allocation is done we assume the application is
+        // running from scheduler's POV.
+        pending = false;
+        metrics.runAppAttempt(applicationId, user);
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("allocate: applicationId=" + applicationId + " container="
+            + containerAllocated.getId() + " host=" + containerAllocated
+            .getNodeId().toString() + " user=" + user + " resource=" + request
+            .getCapability() + " type=" + type);
+      }
+      metrics.allocateResources(user, 1, request.getCapability(), true);
+      metrics.incrNodeTypeAggregations(user, type);
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  // Get placement-set by specified schedulerKey
+  // Now simply return all node of the input clusterPlacementSet
+  // TODO, need update this when we support global scheduling
+  public <N extends SchedulerNode> SchedulingPlacementSet<N> getSchedulingPlacementSet(
+      SchedulerRequestKey schedulerkey) {
+    return new SchedulingPlacementSet<N>() {
+      @Override
+      @SuppressWarnings("unchecked")
+      public Iterator<N> getPreferredNodeIterator(
+          PlacementSet<N> clusterPlacementSet) {
+        return IteratorUtils.singletonIterator(
+            clusterPlacementSet.getAllNodes().values().iterator().next());
+      }
+
+      @Override
+      public ResourceRequestUpdateResult updateResourceRequests(
+          List<ResourceRequest> requests,
+          boolean recoverPreemptedRequestForAContainer) {
+        return null;
+      }
+
+      @Override
+      public Map<String, ResourceRequest> getResourceRequests() {
+        return null;
+      }
+
+      @Override
+      public ResourceRequest getResourceRequest(String resourceName,
+          SchedulerRequestKey requestKey) {
+        return null;
+      }
+
+      @Override
+      public List<ResourceRequest> allocate(NodeType type, SchedulerNode node,
+          ResourceRequest request) {
+        return null;
+      }
+
+      @Override
+      public Map<NodeId, N> getAllNodes() {
+        return null;
+      }
+
+      @Override
+      public long getVersion() {
+        return 0;
+      }
+
+      @Override
+      public String getPartition() {
+        return null;
+      }
+    };
   }
 }

@@ -25,12 +25,14 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 
 /**
  * Utility for logging scheduler activities
  */
+// FIXME: make sure PlacementSet works with this class
 public class ActivitiesLogger {
   private static final Log LOG = LogFactory.getLog(ActivitiesLogger.class);
 
@@ -112,7 +114,7 @@ public class ActivitiesLogger {
      */
     public static void recordAppActivityWithAllocation(
         ActivitiesManager activitiesManager, SchedulerNode node,
-        SchedulerApplicationAttempt application, Container updatedContainer,
+        SchedulerApplicationAttempt application, RMContainer updatedContainer,
         ActivityState activityState) {
       if (activitiesManager == null) {
         return;
@@ -122,9 +124,9 @@ public class ActivitiesLogger {
         // Add application-container activity into specific node allocation.
         activitiesManager.addSchedulingActivityForNode(node.getNodeID(),
             application.getApplicationId().toString(),
-            updatedContainer.getId().toString(),
-            updatedContainer.getPriority().toString(), activityState,
-            ActivityDiagnosticConstant.EMPTY, type);
+            updatedContainer.getContainer().toString(),
+            updatedContainer.getContainer().getPriority().toString(),
+            activityState, ActivityDiagnosticConstant.EMPTY, type);
         type = "app";
         // Add queue-application activity into specific node allocation.
         activitiesManager.addSchedulingActivityForNode(node.getNodeID(),
@@ -138,9 +140,10 @@ public class ActivitiesLogger {
           application.getApplicationId())) {
         String type = "container";
         activitiesManager.addSchedulingActivityForApp(
-            application.getApplicationId(), updatedContainer.getId().toString(),
-            updatedContainer.getPriority().toString(), activityState,
-            ActivityDiagnosticConstant.EMPTY, type);
+            application.getApplicationId(),
+            updatedContainer.getContainerId(),
+            updatedContainer.getContainer().getPriority().toString(),
+            activityState, ActivityDiagnosticConstant.EMPTY, type);
       }
     }
 

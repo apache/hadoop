@@ -1091,7 +1091,7 @@ public class TestClientRMService {
         rmContext.getScheduler().getSchedulerAppInfo(attemptId)
             .getLiveContainers()).thenReturn(rmContainers);
     ContainerStatus cs = mock(ContainerStatus.class);
-    when(containerimpl.getFinishedStatus()).thenReturn(cs);
+    when(containerimpl.completed()).thenReturn(false);
     when(containerimpl.getDiagnosticsInfo()).thenReturn("N/A");
     when(containerimpl.getContainerExitStatus()).thenReturn(0);
     when(containerimpl.getContainerState()).thenReturn(ContainerState.COMPLETE);

@@ -209,6 +209,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       SCHEDULE_ASYNCHRONOUSLY_PREFIX + ".enable";
 
   @Private
+  public static final String SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD =
+      SCHEDULE_ASYNCHRONOUSLY_PREFIX + ".maximum-threads";
+
+  @Private
   public static final boolean DEFAULT_SCHEDULE_ASYNCHRONOUSLY_ENABLE = false;
 
   @Private

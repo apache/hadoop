@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
@@ -167,6 +168,28 @@ public class MockRM extends ResourceManager {
     }
   }
 
+  private void waitForState(ApplicationId appId, EnumSet<RMAppState> finalStates)
+      throws InterruptedException {
+    RMApp app = getRMContext().getRMApps().get(appId);
+    Assert.assertNotNull("app shouldn't be null", app);
+    final int timeoutMsecs = 80 * SECOND;
+    int timeWaiting = 0;
+    while (!finalStates.contains(app.getState())) {
+      if (timeWaiting >= timeoutMsecs) {
+        break;
+      }
+
+      LOG.info("App : " + appId + " State is : " + app.getState() +
+          " Waiting for state : " + finalStates);
+      Thread.sleep(WAIT_MS_PER_LOOP);
+      timeWaiting += WAIT_MS_PER_LOOP;
+    }
+
+    LOG.info("App State is : " + app.getState());
+    Assert.assertTrue("App State is not correct (timeout).",
+        finalStates.contains(app.getState()));
+  }
+
   /**
    * Wait until an application has reached a specified state.
    * The timeout is 80 seconds.
@@ -254,7 +277,7 @@ public class MockRM extends ResourceManager {
       RMAppAttemptState finalState, int timeoutMsecs)
       throws InterruptedException {
     int timeWaiting = 0;
-    while (!finalState.equals(attempt.getAppAttemptState())) {
+    while (finalState != attempt.getAppAttemptState()) {
       if (timeWaiting >= timeoutMsecs) {
         break;
       }
@@ -267,7 +290,7 @@ public class MockRM extends ResourceManager {
 
     LOG.info("Attempt State is : " + attempt.getAppAttemptState());
     Assert.assertEquals("Attempt state is not correct (timeout).", finalState,
-      attempt.getState());
+        attempt.getState());
   }
 
   public void waitForContainerToComplete(RMAppAttempt attempt,
@@ -964,6 +987,26 @@ public class MockRM extends ResourceManager {
     Assert.assertNotNull("Timed out waiting for SchedulerApplicationAttempt=" +
       attemptId + " to be added.", ((AbstractYarnScheduler)
         rm.getResourceScheduler()).getApplicationAttempt(attemptId));
+  }
+
+  public static MockAM launchAMWhenAsyncSchedulingEnabled(RMApp app, MockRM rm)
+      throws Exception {
+    int i = 0;
+    while (app.getCurrentAppAttempt() == null) {
+      if (i < 100) {
+        i++;
+      }
+      Thread.sleep(50);
+    }
+
+    RMAppAttempt attempt = app.getCurrentAppAttempt();
+
+    rm.waitForState(attempt.getAppAttemptId(),
+        RMAppAttemptState.ALLOCATED);
+    MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
+    rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.LAUNCHED);
+
+    return am;
   }
 
   /**

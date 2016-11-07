@@ -38,7 +38,11 @@ public class CSAssignment {
       new CSAssignment(SkippedType.OTHER);
 
   private Resource resource;
+  // Container allocation locality type
   private NodeType type;
+
+  // Pending request locality type
+  private NodeType requestLocalityType;
   private RMContainer excessReservation;
   private FiCaSchedulerApp application;
   private SkippedType skipped;
@@ -56,6 +60,10 @@ public class CSAssignment {
   private final AssignmentInformation assignmentInformation;
   private boolean increaseAllocation;
   private List<RMContainer> containersToKill;
+
+  // Set when fulfilledReservation = true
+  private RMContainer fulfilledReservedContainer;
+  private SchedulingMode schedulingMode;
 
   public CSAssignment(Resource resource, NodeType type) {
     this(resource, type, null, null, SkippedType.NONE, false);
@@ -172,5 +180,30 @@ public class CSAssignment {
 
   public List<RMContainer> getContainersToKill() {
     return containersToKill;
+  }
+
+  public RMContainer getFulfilledReservedContainer() {
+    return fulfilledReservedContainer;
+  }
+
+  public void setFulfilledReservedContainer(
+      RMContainer fulfilledReservedContainer) {
+    this.fulfilledReservedContainer = fulfilledReservedContainer;
+  }
+
+  public SchedulingMode getSchedulingMode() {
+    return schedulingMode;
+  }
+
+  public void setSchedulingMode(SchedulingMode schedulingMode) {
+    this.schedulingMode = schedulingMode;
+  }
+
+  public NodeType getRequestLocalityType() {
+    return requestLocalityType;
+  }
+
+  public void setRequestLocalityType(NodeType requestLocalityType) {
+    this.requestLocalityType = requestLocalityType;
   }
 }
