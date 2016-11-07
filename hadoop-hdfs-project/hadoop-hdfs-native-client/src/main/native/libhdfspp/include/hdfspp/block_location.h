@@ -41,6 +41,14 @@ public:
     this->ip_addr = ip_addr;
   }
 
+  std::string getNetworkLocation() const {
+    return network_location;
+  }
+
+  void setNetworkLocation(const std::string & location) {
+    this->network_location = location;
+  }
+
   int getXferPort() const {
     return xfer_port;
   }
@@ -75,6 +83,7 @@ public:
 private:
   std::string hostname;
   std::string ip_addr;
+  std::string network_location;
   int         xfer_port;
   int         info_port;
   int         IPC_port;

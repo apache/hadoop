@@ -354,6 +354,8 @@ BlockLocation LocatedBlockToBlockLocation(const hadoop::hdfs::LocatedBlockProto 
         newInfo.setIPCPort(id.ipcport());
     if (id.has_infosecureport())
       newInfo.setInfoSecurePort(id.infosecureport());
+    if (datanode_info.has_location())
+      newInfo.setNetworkLocation(datanode_info.location());
     dn_info.push_back(newInfo);
   }
   result.setDataNodes(dn_info);
