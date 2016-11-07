@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.protocol;
 
 import java.io.PrintStream;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.text.SimpleDateFormat;
 import java.util.Comparator;
 import java.util.Date;
@@ -103,7 +104,7 @@ public class SnapshottableDirectoryStatus {
   public Path getFullPath() {
     String parentFullPathStr =
         (parentFullPath == null || parentFullPath.length == 0) ?
-            null : DFSUtilClient.bytes2String(parentFullPath);
+            null : new String(parentFullPath, UTF_8);
     if (parentFullPathStr == null
         && dirStatus.getLocalNameInBytes().length == 0) {
       // root

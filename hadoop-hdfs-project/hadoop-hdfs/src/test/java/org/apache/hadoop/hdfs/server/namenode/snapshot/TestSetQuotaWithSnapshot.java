@@ -22,13 +22,13 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -49,13 +49,13 @@ public class TestSetQuotaWithSnapshot {
   protected static final long seed = 0;
   protected static final short REPLICATION = 3;
   protected static final long BLOCKSIZE = 1024;
-  
+
   protected Configuration conf;
   protected MiniDFSCluster cluster;
   protected FSNamesystem fsn;
   protected FSDirectory fsdir;
   protected DistributedFileSystem hdfs;
-  
+
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
@@ -79,14 +79,14 @@ public class TestSetQuotaWithSnapshot {
       cluster = null;
     }
   }
-  
+
   @Test (timeout=60000)
   public void testSetQuota() throws Exception {
     final Path dir = new Path("/TestSnapshot");
     hdfs.mkdirs(dir);
     // allow snapshot on dir and create snapshot s1
     SnapshotTestHelper.createSnapshot(hdfs, dir, "s1");
-    
+
     Path sub = new Path(dir, "sub");
     hdfs.mkdirs(sub);
     Path fileInSub = new Path(sub, "file");
@@ -95,13 +95,13 @@ public class TestSetQuotaWithSnapshot {
         fsdir.getINode(sub.toString()), sub);
     // subNode should be a INodeDirectory, but not an INodeDirectoryWithSnapshot
     assertFalse(subNode.isWithSnapshot());
-    
+
     hdfs.setQuota(sub, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
     subNode = INodeDirectory.valueOf(fsdir.getINode(sub.toString()), sub);
     assertTrue(subNode.isQuotaSet());
     assertFalse(subNode.isWithSnapshot());
   }
-  
+
   /**
    * Test clear quota of a snapshottable dir or a dir with snapshot.
    */
@@ -109,28 +109,28 @@ public class TestSetQuotaWithSnapshot {
   public void testClearQuota() throws Exception {
     final Path dir = new Path("/TestSnapshot");
     hdfs.mkdirs(dir);
-    
+
     hdfs.allowSnapshot(dir);
     hdfs.setQuota(dir, HdfsConstants.QUOTA_DONT_SET,
         HdfsConstants.QUOTA_DONT_SET);
     INodeDirectory dirNode = fsdir.getINode4Write(dir.toString()).asDirectory();
     assertTrue(dirNode.isSnapshottable());
     assertEquals(0, dirNode.getDiffs().asList().size());
-    
+
     hdfs.setQuota(dir, HdfsConstants.QUOTA_DONT_SET - 1,
         HdfsConstants.QUOTA_DONT_SET - 1);
     dirNode = fsdir.getINode4Write(dir.toString()).asDirectory();
     assertTrue(dirNode.isSnapshottable());
     assertEquals(0, dirNode.getDiffs().asList().size());
-    
+
     hdfs.setQuota(dir, HdfsConstants.QUOTA_RESET, HdfsConstants.QUOTA_RESET);
     dirNode = fsdir.getINode4Write(dir.toString()).asDirectory();
     assertTrue(dirNode.isSnapshottable());
     assertEquals(0, dirNode.getDiffs().asList().size());
-    
+
     // allow snapshot on dir and create snapshot s1
     SnapshotTestHelper.createSnapshot(hdfs, dir, "s1");
-    
+
     // clear quota of dir
     hdfs.setQuota(dir, HdfsConstants.QUOTA_RESET, HdfsConstants.QUOTA_RESET);
     // dir should still be a snapshottable directory
@@ -140,7 +140,7 @@ public class TestSetQuotaWithSnapshot {
     SnapshottableDirectoryStatus[] status = hdfs.getSnapshottableDirListing();
     assertEquals(1, status.length);
     assertEquals(dir, status[0].getFullPath());
-    
+
     final Path subDir = new Path(dir, "sub");
     hdfs.mkdirs(subDir);
     hdfs.createSnapshot(dir, "s2");
@@ -151,7 +151,7 @@ public class TestSetQuotaWithSnapshot {
     assertTrue(subNode.asDirectory().isWithSnapshot());
     List<DirectoryDiff> diffList = subNode.asDirectory().getDiffs().asList();
     assertEquals(1, diffList.size());
-    Snapshot s2 = dirNode.getSnapshot(DFSUtil.string2Bytes("s2"));
+    Snapshot s2 = dirNode.getSnapshot("s2".getBytes(UTF_8));
     assertEquals(s2.getId(), diffList.get(0).getSnapshotId());
     List<INode> createdList = diffList.get(0).getChildrenDiff().getList(ListType.CREATED);
     assertEquals(1, createdList.size());

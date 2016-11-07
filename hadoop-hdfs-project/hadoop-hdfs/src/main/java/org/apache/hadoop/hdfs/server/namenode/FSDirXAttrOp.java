@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
@@ -35,6 +34,7 @@ import org.apache.hadoop.security.AccessControlException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.ListIterator;
@@ -398,7 +398,7 @@ class FSDirXAttrOp {
    * the configured limit. Setting a limit of zero disables this check.
    */
   private static void checkXAttrSize(FSDirectory fsd, XAttr xAttr) {
-    int size = DFSUtil.string2Bytes(xAttr.getName()).length;
+    int size = xAttr.getName().getBytes(UTF_8).length;
     if (xAttr.getValue() != null) {
       size += xAttr.getValue().length;
     }

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.net.URI;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -25,7 +26,6 @@ import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSUtilClient;
 
 /** Interface that represents the over the wire information for a file.
  */
@@ -192,7 +192,7 @@ public class HdfsFileStatus {
    * @return the local name in string
    */
   public final String getLocalName() {
-    return DFSUtilClient.bytes2String(path);
+    return new String(path, UTF_8);
   }
 
   /**
@@ -239,7 +239,7 @@ public class HdfsFileStatus {
    * @return the symlink as a string.
    */
   public final String getSymlink() {
-    return DFSUtilClient.bytes2String(symlink);
+    return new String(symlink, UTF_8);
   }
 
   public final byte[] getSymlinkInBytes() {

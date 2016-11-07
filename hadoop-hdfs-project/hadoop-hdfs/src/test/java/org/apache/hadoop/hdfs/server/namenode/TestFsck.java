@@ -42,6 +42,7 @@ import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.io.StringWriter;
 import java.io.Writer;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.FileChannel;
@@ -76,7 +77,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSInputStream;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.StorageType;
@@ -136,20 +136,20 @@ public class TestFsck {
 
   static final String AUDITLOG_FILE =
       GenericTestUtils.getTempPath("TestFsck-audit.log");
-  
-  // Pattern for: 
+
+  // Pattern for:
   // allowed=true ugi=name ip=/address cmd=FSCK src=/ dst=null perm=null
   static final Pattern FSCK_PATTERN = Pattern.compile(
       "allowed=.*?\\s" +
-      "ugi=.*?\\s" + 
-      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" + 
-      "cmd=fsck\\ssrc=\\/\\sdst=null\\s" + 
+      "ugi=.*?\\s" +
+      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" +
+      "cmd=fsck\\ssrc=\\/\\sdst=null\\s" +
       "perm=null\\s" + "proto=.*");
   static final Pattern GET_FILE_INFO_PATTERN = Pattern.compile(
       "allowed=.*?\\s" +
-      "ugi=.*?\\s" + 
-      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" + 
-      "cmd=getfileinfo\\ssrc=\\/\\sdst=null\\s" + 
+      "ugi=.*?\\s" +
+      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" +
+      "cmd=getfileinfo\\ssrc=\\/\\sdst=null\\s" +
       "perm=null\\s" + "proto=.*");
 
   static final Pattern NUM_MISSING_BLOCKS_PATTERN = Pattern.compile(
@@ -157,11 +157,11 @@ public class TestFsck {
 
   static final Pattern NUM_CORRUPT_BLOCKS_PATTERN = Pattern.compile(
       ".*Corrupt blocks:\t\t([0123456789]*).*");
-  
+
   private static final String LINE_SEPARATOR =
       System.getProperty("line.separator");
 
-  static String runFsck(Configuration conf, int expectedErrCode, 
+  static String runFsck(Configuration conf, int expectedErrCode,
                         boolean checkErrorCode, String... path)
                         throws Exception {
     ByteArrayOutputStream bStream = new ByteArrayOutputStream();
@@ -250,7 +250,7 @@ public class TestFsck {
         new RollingFileAppender(layout, AUDITLOG_FILE);
     logger.addAppender(appender);
   }
-  
+
   private void verifyAuditLogs() throws IOException {
     // Turn off the logs
     Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
@@ -286,7 +286,7 @@ public class TestFsck {
       }
     }
   }
-  
+
   @Test
   public void testFsckNonExistent() throws Exception {
     DFSTestUtil util = new DFSTestUtil.Builder().setName("TestFsck").
@@ -449,7 +449,7 @@ public class TestFsck {
     final private int numDataNodes;
     final private int blockSize;
     final private byte[] initialContents;
-    
+
     CorruptedTestFile(String name, Set<Integer> blocksToCorrupt,
         DFSClient dfsClient, int numDataNodes, int blockSize)
             throws IOException {
@@ -477,7 +477,7 @@ public class TestFsck {
       }
       return content;
     }
-    
+
     public void removeBlocks(MiniDFSCluster cluster)
         throws AccessControlException, FileNotFoundException,
         UnresolvedLinkException, IOException {
@@ -555,7 +555,7 @@ public class TestFsck {
       }
     }
   }
-  
+
   @Test
   public void testFsckMoveAndDelete() throws Exception {
     final int maxMoveTries = 5;
@@ -621,7 +621,7 @@ public class TestFsck {
     assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
     util.cleanup(fs, topDir);
   }
-  
+
   @Test
   public void testFsckOpenFiles() throws Exception {
     DFSTestUtil util = new DFSTestUtil.Builder().setName("TestFsck").
@@ -762,7 +762,7 @@ public class TestFsck {
     outStr = runFsck(conf, 0, true, "/");
     System.out.println(outStr);
     assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
-    
+
     // corrupt replicas
     File blockFile = cluster.getBlockFile(0, block);
     if (blockFile != null && blockFile.exists()) {
@@ -956,7 +956,7 @@ public class TestFsck {
   }
 
   /** Test if fsck can return -1 in case of failure.
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -986,7 +986,7 @@ public class TestFsck {
     // clean up file system
     fs.delete(filePath, true);
   }
-  
+
   /** check if option -list-corruptfiles of fsck command works properly. */
   @Test
   public void testFsckListCorruptFilesBlocks() throws Exception {
@@ -1049,7 +1049,7 @@ public class TestFsck {
     util.cleanup(fs, "/corruptData");
     util.cleanup(fs, "/goodData");
   }
-  
+
   /**
    * Test for checking fsck command on illegal arguments should print the proper
    * usage.
@@ -1078,7 +1078,7 @@ public class TestFsck {
     // clean up file system
     fs.delete(filePath, true);
   }
-  
+
   /**
    * Tests that the # of missing block replicas and expected replicas is
    * correct.
@@ -1095,11 +1095,11 @@ public class TestFsck {
     final short numBlocks = 3;
     // Set a small-ish blocksize
     final long blockSize = 512;
-    
+
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
-    
+
     DistributedFileSystem dfs = null;
-    
+
     // Startup a minicluster
     cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(numReplicas).build();
@@ -1138,7 +1138,7 @@ public class TestFsck {
         (numBlocks*replFactor) - (numBlocks*numReplicas));
     assertEquals(replRes.numExpectedReplicas, numBlocks*replFactor);
   }
-  
+
   /**
    * Tests that the # of misreplaced replicas is correct.
    * @throws IOException
@@ -1153,14 +1153,14 @@ public class TestFsck {
     final short numBlocks = 3;
     // Set a small-ish blocksize
     final long blockSize = 512;
-    
+
     String[] racks = {"/rack1", "/rack1"};
     String[] hosts = {"host1", "host2"};
-    
+
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
-    
+
     DistributedFileSystem dfs = null;
-    
+
     // Startup a minicluster
     cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(numDn).hosts(hosts)
@@ -1244,7 +1244,7 @@ public class TestFsck {
     String owner = "foo";
     String group = "bar";
     byte[] symlink = null;
-    byte[] path = DFSUtil.string2Bytes(pathString);
+    byte[] path = pathString.getBytes(UTF_8);
     long fileId = 312321L;
     int numChildren = 1;
     byte storagePolicy = 0;

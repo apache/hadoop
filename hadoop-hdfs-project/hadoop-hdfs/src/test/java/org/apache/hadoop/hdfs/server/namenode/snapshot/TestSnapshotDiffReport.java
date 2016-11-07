@@ -22,13 +22,13 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.HashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -48,14 +48,14 @@ public class TestSnapshotDiffReport {
   protected static final short REPLICATION_1 = 2;
   protected static final long BLOCKSIZE = 1024;
   public static final int SNAPSHOTNUMBER = 10;
-  
+
   private final Path dir = new Path("/TestSnapshot");
   private final Path sub1 = new Path(dir, "sub1");
-  
+
   protected Configuration conf;
   protected MiniDFSCluster cluster;
   protected DistributedFileSystem hdfs;
-  
+
   private final HashMap<Path, Integer> snapshotNumberMap = new HashMap<Path, Integer>();
 
   @Before
@@ -74,7 +74,7 @@ public class TestSnapshotDiffReport {
       cluster = null;
     }
   }
-  
+
   private String genSnapshotName(Path snapshotDir) {
     int sNum = -1;
     if (snapshotNumberMap.containsKey(snapshotDir)) {
@@ -83,11 +83,11 @@ public class TestSnapshotDiffReport {
     snapshotNumberMap.put(snapshotDir, ++sNum);
     return "s" + sNum;
   }
-  
+
   /**
    * Create/modify/delete files under a given directory, also create snapshots
    * of directories.
-   */ 
+   */
   private void modifyAndCreateSnapshot(Path modifyDir, Path[] snapshotDirs)
       throws Exception {
     Path file10 = new Path(modifyDir, "file10");
@@ -108,7 +108,7 @@ public class TestSnapshotDiffReport {
       hdfs.allowSnapshot(snapshotDir);
       hdfs.createSnapshot(snapshotDir, genSnapshotName(snapshotDir));
     }
-    
+
     // delete file11
     hdfs.delete(file11, true);
     // modify file12
@@ -121,12 +121,12 @@ public class TestSnapshotDiffReport {
     DFSTestUtil.createFile(hdfs, file14, BLOCKSIZE, REPLICATION, seed);
     // create file15
     DFSTestUtil.createFile(hdfs, file15, BLOCKSIZE, REPLICATION, seed);
-    
+
     // create snapshot
     for (Path snapshotDir : snapshotDirs) {
       hdfs.createSnapshot(snapshotDir, genSnapshotName(snapshotDir));
     }
-    
+
     // create file11 again
     DFSTestUtil.createFile(hdfs, file11, BLOCKSIZE, REPLICATION, seed);
     // delete file12
@@ -139,7 +139,7 @@ public class TestSnapshotDiffReport {
     hdfs.delete(file14, true);
     // modify file15
     hdfs.setReplication(file15, (short) (REPLICATION - 1));
-    
+
     // create snapshot
     for (Path snapshotDir : snapshotDirs) {
       hdfs.createSnapshot(snapshotDir, genSnapshotName(snapshotDir));
@@ -147,7 +147,7 @@ public class TestSnapshotDiffReport {
     // modify file10
     hdfs.setReplication(file10, (short) (REPLICATION + 1));
   }
-  
+
   /** check the correctness of the diff reports */
   private void verifyDiffReport(Path dir, String from, String to,
       DiffReportEntry... entries) throws IOException {
@@ -157,10 +157,10 @@ public class TestSnapshotDiffReport {
         .getSnapshotDiffReport(dir, to, from);
     System.out.println(report.toString());
     System.out.println(inverseReport.toString() + "\n");
-    
+
     assertEquals(entries.length, report.getDiffList().size());
     assertEquals(entries.length, inverseReport.getDiffList().size());
-    
+
     for (DiffReportEntry entry : entries) {
       if (entry.getType() == DiffType.MODIFY) {
         assertTrue(report.getDiffList().contains(entry));
@@ -176,7 +176,7 @@ public class TestSnapshotDiffReport {
       }
     }
   }
-  
+
   /** Test the computation and representation of diff between snapshots */
   @Test (timeout=60000)
   public void testDiffReport() throws Exception {
@@ -187,7 +187,7 @@ public class TestSnapshotDiffReport {
     hdfs.mkdirs(subsubsub1);
     modifyAndCreateSnapshot(sub1, new Path[]{sub1, subsubsub1});
     modifyAndCreateSnapshot(subsubsub1, new Path[]{sub1, subsubsub1});
-    
+
     try {
       hdfs.getSnapshotDiffReport(subsub1, "s1", "s2");
       fail("Expect exception when getting snapshot diff report: " + subsub1
@@ -196,7 +196,7 @@ public class TestSnapshotDiffReport {
       GenericTestUtils.assertExceptionContains(
           "Directory is not a snapshottable directory: " + subsub1, e);
     }
-    
+
     final String invalidName = "invalid";
     try {
       hdfs.getSnapshotDiffReport(sub1, invalidName, invalidName);
@@ -206,16 +206,16 @@ public class TestSnapshotDiffReport {
           "Cannot find the snapshot of directory " + sub1 + " with name "
               + invalidName, e);
     }
-    
+
     // diff between the same snapshot
     SnapshotDiffReport report = hdfs.getSnapshotDiffReport(sub1, "s0", "s0");
     System.out.println(report);
     assertEquals(0, report.getDiffList().size());
-    
+
     report = hdfs.getSnapshotDiffReport(sub1, "", "");
     System.out.println(report);
     assertEquals(0, report.getDiffList().size());
-    
+
     report = hdfs.getSnapshotDiffReport(subsubsub1, "s0", "s2");
     System.out.println(report);
     assertEquals(0, report.getDiffList().size());
@@ -225,75 +225,75 @@ public class TestSnapshotDiffReport {
     System.out.println(report);
     assertEquals(0, report.getDiffList().size());
 
-    verifyDiffReport(sub1, "s0", "s2", 
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file15")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file12")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file13")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("link13")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("link13")));
+    verifyDiffReport(sub1, "s0", "s2",
+        new DiffReportEntry(DiffType.MODIFY, "".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.CREATE, "file15".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.DELETE, "file12".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.DELETE, "file11".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.CREATE, "file11".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.MODIFY, "file13".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.DELETE, "link13".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.CREATE, "link13".getBytes(UTF_8)));
 
-    verifyDiffReport(sub1, "s0", "s5", 
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file15")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file12")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file10")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file13")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("link13")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("link13")),
+    verifyDiffReport(sub1, "s0", "s5",
+        new DiffReportEntry(DiffType.MODIFY, "".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.CREATE, "file15".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.DELETE, "file12".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.MODIFY, "file10".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.DELETE, "file11".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.CREATE, "file11".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.MODIFY, "file13".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.DELETE, "link13".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.CREATE, "link13".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1")),
+            "subsub1/subsubsub1".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file10")),
+            "subsub1/subsubsub1/file10".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
+            "subsub1/subsubsub1/file11".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
+            "subsub1/subsubsub1/file13".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
+            "subsub1/subsubsub1/link13".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file15")));
-    
+            "subsub1/subsubsub1/file15".getBytes(UTF_8)));
+
     verifyDiffReport(sub1, "s2", "s5",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file10")),
+        new DiffReportEntry(DiffType.MODIFY, "file10".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1")),
+            "subsub1/subsubsub1".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file10")),
+            "subsub1/subsubsub1/file10".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
+            "subsub1/subsubsub1/file11".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
+            "subsub1/subsubsub1/file13".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
+            "subsub1/subsubsub1/link13".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file15")));
-    
+            "subsub1/subsubsub1/file15".getBytes(UTF_8)));
+
     verifyDiffReport(sub1, "s3", "",
         new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1")),
+            "subsub1/subsubsub1".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file15")),
+            "subsub1/subsubsub1/file15".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file12")),
+            "subsub1/subsubsub1/file12".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file10")),
+            "subsub1/subsubsub1/file10".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
+            "subsub1/subsubsub1/file11".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
+            "subsub1/subsubsub1/file11".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
+            "subsub1/subsubsub1/file13".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
+            "subsub1/subsubsub1/link13".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")));
+            "subsub1/subsubsub1/link13".getBytes(UTF_8)));
   }
-  
+
   /**
    * Make changes under a sub-directory, then delete the sub-directory. Make
    * sure the diff report computation correctly retrieve the diff from the
@@ -305,31 +305,31 @@ public class TestSnapshotDiffReport {
     Path subsubsub1 = new Path(subsub1, "subsubsub1");
     hdfs.mkdirs(subsubsub1);
     modifyAndCreateSnapshot(subsubsub1, new Path[]{sub1});
-    
+
     // delete subsub1
     hdfs.delete(subsub1, true);
     // check diff report between s0 and s2
-    verifyDiffReport(sub1, "s0", "s2", 
+    verifyDiffReport(sub1, "s0", "s2",
         new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1")), 
-        new DiffReportEntry(DiffType.CREATE, 
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file15")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file12")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
+            "subsub1/subsubsub1".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
+            "subsub1/subsubsub1/file15".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.DELETE,
+            "subsub1/subsubsub1/file12".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.DELETE,
+            "subsub1/subsubsub1/file11".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.CREATE,
+            "subsub1/subsubsub1/file11".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
+            "subsub1/subsubsub1/file13".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
+            "subsub1/subsubsub1/link13".getBytes(UTF_8)),
         new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")));
+            "subsub1/subsubsub1/link13".getBytes(UTF_8)));
     // check diff report between s0 and the current status
-    verifyDiffReport(sub1, "s0", "", 
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("subsub1")));
+    verifyDiffReport(sub1, "s0", "",
+        new DiffReportEntry(DiffType.MODIFY, "".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.DELETE, "subsub1".getBytes(UTF_8)));
   }
 
   /**
@@ -361,16 +361,15 @@ public class TestSnapshotDiffReport {
     hdfs.delete(sdir2, true);
 
     verifyDiffReport(root, "s1", "s2",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir1/foo"),
-            DFSUtil.string2Bytes("dir2/bar/foo")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir2")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("dir1/foo/bar")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1/foo")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil
-            .string2Bytes("dir1/foo/bar"), DFSUtil.string2Bytes("dir2/bar")));
+        new DiffReportEntry(DiffType.MODIFY, "".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.MODIFY, "dir1".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.RENAME, "dir1/foo".getBytes(UTF_8),
+            "dir2/bar/foo".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.MODIFY, "dir2".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.MODIFY, "dir1/foo/bar".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.MODIFY, "dir1/foo".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.RENAME, "dir1/foo/bar".getBytes(UTF_8),
+            "dir2/bar".getBytes(UTF_8)));
   }
 
   /**
@@ -401,11 +400,9 @@ public class TestSnapshotDiffReport {
 
     SnapshotTestHelper.createSnapshot(hdfs, dir1, "s1");
     verifyDiffReport(dir1, "s0", "s1",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes(newBar
-            .getName())),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes(foo.getName())));
+        new DiffReportEntry(DiffType.MODIFY, "".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.CREATE, newBar.getName().getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.DELETE, foo.getName().getBytes(UTF_8)));
   }
 
   /**
@@ -428,25 +425,22 @@ public class TestSnapshotDiffReport {
     hdfs.rename(fileInFoo, fileInBar, Rename.OVERWRITE);
     SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
     verifyDiffReport(root, "s0", "s1",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1/foo")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir2/bar")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil
-            .string2Bytes("dir2/bar/file")),
-        new DiffReportEntry(DiffType.RENAME,
-            DFSUtil.string2Bytes("dir1/foo/file"),
-            DFSUtil.string2Bytes("dir2/bar/file")));
+        new DiffReportEntry(DiffType.MODIFY, "".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.MODIFY, "dir1/foo".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.MODIFY, "dir2/bar".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.DELETE, "dir2/bar/file".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.RENAME, "dir1/foo/file".getBytes(UTF_8),
+            "dir2/bar/file".getBytes(UTF_8)));
 
     // delete bar
     hdfs.delete(bar, true);
     SnapshotTestHelper.createSnapshot(hdfs, root, "s2");
     verifyDiffReport(root, "s0", "s2",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1/foo")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir2")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("dir2/bar")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("dir1/foo/file")));
+        new DiffReportEntry(DiffType.MODIFY, "".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.MODIFY, "dir1/foo".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.MODIFY, "dir2".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.DELETE, "dir2/bar".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.DELETE, "dir1/foo/file".getBytes(UTF_8)));
   }
 
   @Test
@@ -464,11 +458,11 @@ public class TestSnapshotDiffReport {
     SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
 
     verifyDiffReport(root, "s0", "s1",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("foo")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("bar")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("foo/file"),
-            DFSUtil.string2Bytes("bar/file")));
+        new DiffReportEntry(DiffType.MODIFY, "".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.MODIFY, "foo".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.CREATE, "bar".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.RENAME, "foo/file".getBytes(UTF_8),
+            "bar/file".getBytes(UTF_8)));
   }
 
   /**
@@ -488,10 +482,10 @@ public class TestSnapshotDiffReport {
 
     // we always put modification on the file before rename
     verifyDiffReport(root, "s0", "s1",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("foo")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("foo"),
-            DFSUtil.string2Bytes("bar")));
+        new DiffReportEntry(DiffType.MODIFY, "".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.MODIFY, "foo".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.RENAME, "foo".getBytes(UTF_8),
+            "bar".getBytes(UTF_8)));
   }
 
   /**
@@ -524,9 +518,9 @@ public class TestSnapshotDiffReport {
 
     // we always put modification on the file before rename
     verifyDiffReport(root, "s1", "",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("foo2")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("foo2/bar"),
-            DFSUtil.string2Bytes("foo2/bar-new")));
+        new DiffReportEntry(DiffType.MODIFY, "".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.MODIFY, "foo2".getBytes(UTF_8)),
+        new DiffReportEntry(DiffType.RENAME, "foo2/bar".getBytes(UTF_8),
+            "foo2/bar-new".getBytes(UTF_8)));
   }
 }

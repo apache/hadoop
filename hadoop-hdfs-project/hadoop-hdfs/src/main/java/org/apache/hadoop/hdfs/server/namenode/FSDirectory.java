@@ -67,6 +67,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -121,15 +122,13 @@ public class FSDirectory implements Closeable {
   public final static String DOT_RESERVED_STRING = ".reserved";
   public final static String DOT_RESERVED_PATH_PREFIX = Path.SEPARATOR
       + DOT_RESERVED_STRING;
-  public final static byte[] DOT_RESERVED = 
-      DFSUtil.string2Bytes(DOT_RESERVED_STRING);
+  public final static byte[] DOT_RESERVED =
+      DOT_RESERVED_STRING.getBytes(UTF_8);
   private final static String RAW_STRING = "raw";
-  private final static byte[] RAW = DFSUtil.string2Bytes(RAW_STRING);
+  private final static byte[] RAW = RAW_STRING.getBytes(UTF_8);
   public final static String DOT_INODES_STRING = ".inodes";
-  public final static byte[] DOT_INODES = 
-      DFSUtil.string2Bytes(DOT_INODES_STRING);
-  private final static byte[] DOT_DOT =
-      DFSUtil.string2Bytes("..");
+  public final static byte[] DOT_INODES = DOT_INODES_STRING.getBytes(UTF_8);
+  private final static byte[] DOT_DOT = "..".getBytes(UTF_8);
 
   public final static HdfsFileStatus DOT_RESERVED_STATUS =
       new HdfsFileStatus(0, true, 0, 0, 0, 0, new FsPermission((short) 01770),
@@ -237,7 +236,7 @@ public class FSDirectory implements Closeable {
   public final EncryptionZoneManager ezManager;
 
   /**
-   * Caches frequently used file names used in {@link INode} to reuse 
+   * Caches frequently used file names used in {@link INode} to reuse
    * byte[] objects and reduce heap usage.
    */
   private final NameCache<ByteArray> nameCache;
@@ -312,7 +311,7 @@ public class FSDirectory implements Closeable {
     this.contentSleepMicroSec = conf.getLong(
         DFSConfigKeys.DFS_CONTENT_SUMMARY_SLEEP_MICROSEC_KEY,
         DFSConfigKeys.DFS_CONTENT_SUMMARY_SLEEP_MICROSEC_DEFAULT);
-    
+
     // filesystem limits
     this.maxComponentLength = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY,
@@ -887,7 +886,7 @@ public class FSDirectory implements Closeable {
   }
 
   /** update count of each inode with quota
-   * 
+   *
    * @param iip inodes in a path
    * @param numOfINodes the number of inodes to update starting from index 0
    * @param counts the count of space/namespace/type usage to be update
@@ -910,11 +909,11 @@ public class FSDirectory implements Closeable {
     }
     unprotectedUpdateCount(iip, numOfINodes, counts);
   }
-  
-  /** 
-   * update quota of each inode and check to see if quota is exceeded. 
+
+  /**
+   * update quota of each inode and check to see if quota is exceeded.
    * See {@link #updateCount(INodesInPath, int, QuotaCounts, boolean)}
-   */ 
+   */
    void updateCountNoQuotaCheck(INodesInPath inodesInPath,
       int numOfINodes, QuotaCounts counts) {
     assert hasWriteLock();
@@ -924,7 +923,7 @@ public class FSDirectory implements Closeable {
       NameNode.LOG.error("BUG: unexpected exception ", e);
     }
   }
-  
+
   /**
    * updates quota without verification
    * callers responsibility is to make sure quota is not exceeded
@@ -1044,9 +1043,9 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Verify quota for adding or moving a new INode with required 
+   * Verify quota for adding or moving a new INode with required
    * namespace and storagespace to a given position.
-   *  
+   *
    * @param iip INodes corresponding to a path
    * @param pos position where a new INode will be added
    * @param deltas needed namespace, storagespace and storage types
@@ -1110,7 +1109,7 @@ public class FSDirectory implements Closeable {
     if (length > maxComponentLength) {
       final PathComponentTooLongException e = new PathComponentTooLongException(
           maxComponentLength, length, parentPath,
-          DFSUtil.bytes2String(childName));
+          new String(childName, UTF_8));
       if (namesystem.isImageLoaded()) {
         throw e;
       } else {
@@ -1256,7 +1255,7 @@ public class FSDirectory implements Closeable {
    * Note: the caller needs to update the ancestors' quota count.
    *
    * @return -1 for failing to remove;
-   *          0 for removing a reference whose referred inode has other 
+   *          0 for removing a reference whose referred inode has other
    *            reference nodes;
    *          1 otherwise.
    */
@@ -1360,7 +1359,7 @@ public class FSDirectory implements Closeable {
           "EZ XAttr " + xattr.getName() + " dir:" + inode.getFullPathName());
     }
   }
-  
+
   /**
    * This is to handle encryption zone for rootDir when loading from
    * fsimage, and should only be called during NN restart.
@@ -1382,7 +1381,7 @@ public class FSDirectory implements Closeable {
       }
     }
   }
-  
+
   /**
    * Get the inode from inodeMap based on its inode id.
    * @param id The given id
@@ -1396,7 +1395,7 @@ public class FSDirectory implements Closeable {
       readUnlock();
     }
   }
-  
+
   @VisibleForTesting
   int getInodeMapSize() {
     return inodeMap.size();
@@ -1445,12 +1444,12 @@ public class FSDirectory implements Closeable {
       inode.setLocalName(name.getBytes());
     }
   }
-  
+
   void shutdown() {
     nameCache.reset();
     inodeMap.clear();
   }
-  
+
   /**
    * Given an INode get all the path complents leading to it from the root.
    * If an Inode corresponding to C is given in /A/B/C, the returned
@@ -1528,7 +1527,7 @@ public class FSDirectory implements Closeable {
    * if /a/b/c refers to a file that is not in an encryption zone, then
    * /.reserved/raw/a/b/c is equivalent (they both refer to the same
    * unencrypted file).
-   * 
+   *
    * @param pathComponents to be resolved
    * @param fsd FSDirectory
    * @return if the path indicates an inode, return path after replacing up to
@@ -1567,7 +1566,7 @@ public class FSDirectory implements Closeable {
   private static byte[][] resolveDotInodesPath(
       byte[][] pathComponents, FSDirectory fsd)
       throws FileNotFoundException {
-    final String inodeId = DFSUtil.bytes2String(pathComponents[3]);
+    final String inodeId = new String(pathComponents[3], UTF_8);
     final long id;
     try {
       id = Long.parseLong(inodeId);

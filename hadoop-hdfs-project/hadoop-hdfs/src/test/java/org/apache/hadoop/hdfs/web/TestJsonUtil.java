@@ -23,6 +23,7 @@ import static org.apache.hadoop.fs.permission.FsAction.*;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
 
 import java.io.IOException;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -36,7 +37,6 @@ import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -64,7 +64,7 @@ public class TestJsonUtil {
     final String parent = "/dir";
     final HdfsFileStatus status = new HdfsFileStatus(1001L, false, 3, 1L << 26,
         now, now + 10, new FsPermission((short) 0644), "user", "group",
-        DFSUtil.string2Bytes("bar"), DFSUtil.string2Bytes("foo"),
+        "bar".getBytes(UTF_8), "foo".getBytes(UTF_8),
         HdfsConstants.GRANDFATHER_INODE_ID, 0, null, (byte) 0, null);
     final FileStatus fstatus = toFileStatus(status, parent);
     System.out.println("status  = " + status);
@@ -79,11 +79,11 @@ public class TestJsonUtil {
     System.out.println("fs2     = " + fs2);
     Assert.assertEquals(fstatus, fs2);
   }
-  
+
   @Test
   public void testToDatanodeInfoWithoutSecurePort() throws Exception {
     Map<String, Object> response = new HashMap<String, Object>();
-    
+
     response.put("ipAddr", "127.0.0.1");
     response.put("hostName", "localhost");
     response.put("storageID", "fake-id");
@@ -101,7 +101,7 @@ public class TestJsonUtil {
     response.put("adminState", "NORMAL");
     response.put("cacheCapacity", 123l);
     response.put("cacheUsed", 321l);
-    
+
     JsonUtilClient.toDatanodeInfo(response);
   }
 
@@ -154,7 +154,7 @@ public class TestJsonUtil {
     response.put("ipAddr", "127.0.0.1");
     checkDecodeFailure(response);
   }
-  
+
   @Test
   public void testToAclStatus() throws IOException {
     String jsonString =
@@ -196,10 +196,10 @@ public class TestJsonUtil {
         JsonUtil.toJsonString(aclStatusBuilder.build()));
 
   }
-  
+
   @Test
   public void testToJsonFromXAttrs() throws IOException {
-    String jsonString = 
+    String jsonString =
         "{\"XAttrs\":[{\"name\":\"user.a1\",\"value\":\"0x313233\"}," +
         "{\"name\":\"user.a2\",\"value\":\"0x313131\"}]}";
     XAttr xAttr1 = (new XAttr.Builder()).setNameSpace(XAttr.NameSpace.USER).
@@ -209,14 +209,14 @@ public class TestJsonUtil {
     List<XAttr> xAttrs = Lists.newArrayList();
     xAttrs.add(xAttr1);
     xAttrs.add(xAttr2);
-    
-    Assert.assertEquals(jsonString, JsonUtil.toJsonString(xAttrs, 
+
+    Assert.assertEquals(jsonString, JsonUtil.toJsonString(xAttrs,
         XAttrCodec.HEX));
   }
-  
+
   @Test
   public void testToXAttrMap() throws IOException {
-    String jsonString = 
+    String jsonString =
         "{\"XAttrs\":[{\"name\":\"user.a1\",\"value\":\"0x313233\"}," +
         "{\"name\":\"user.a2\",\"value\":\"0x313131\"}]}";
     ObjectReader reader = new ObjectMapper().reader(Map.class);
@@ -230,19 +230,19 @@ public class TestJsonUtil {
     xAttrs.add(xAttr2);
     Map<String, byte[]> xAttrMap = XAttrHelper.buildXAttrMap(xAttrs);
     Map<String, byte[]> parsedXAttrMap = JsonUtilClient.toXAttrs(json);
-    
+
     Assert.assertEquals(xAttrMap.size(), parsedXAttrMap.size());
     Iterator<Entry<String, byte[]>> iter = xAttrMap.entrySet().iterator();
     while(iter.hasNext()) {
       Entry<String, byte[]> entry = iter.next();
-      Assert.assertArrayEquals(entry.getValue(), 
+      Assert.assertArrayEquals(entry.getValue(),
           parsedXAttrMap.get(entry.getKey()));
     }
   }
-  
+
   @Test
   public void testGetXAttrFromJson() throws IOException {
-    String jsonString = 
+    String jsonString =
         "{\"XAttrs\":[{\"name\":\"user.a1\",\"value\":\"0x313233\"}," +
         "{\"name\":\"user.a2\",\"value\":\"0x313131\"}]}";
     ObjectReader reader = new ObjectMapper().reader(Map.class);

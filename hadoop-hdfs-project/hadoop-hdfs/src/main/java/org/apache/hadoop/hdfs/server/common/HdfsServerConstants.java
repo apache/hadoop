@@ -20,11 +20,11 @@ package org.apache.hadoop.hdfs.server.common;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
@@ -84,7 +84,7 @@ public interface HdfsServerConstants {
       FSDirectory.DOT_RESERVED_STRING
   };
   byte[] DOT_SNAPSHOT_DIR_BYTES
-              = DFSUtil.string2Bytes(HdfsConstants.DOT_SNAPSHOT_DIR);
+              = HdfsConstants.DOT_SNAPSHOT_DIR.getBytes(UTF_8);
 
   /**
    * Type of the node
@@ -169,17 +169,17 @@ public interface HdfsServerConstants {
         "(\\w+)\\((\\w+)\\)");
 
     private final String name;
-    
+
     // Used only with format and upgrade options
     private String clusterId = null;
-    
+
     // Used only by rolling upgrade
     private RollingUpgradeStartupOption rollingUpgradeStartupOption;
 
     // Used only with format option
     private boolean isForceFormat = false;
     private boolean isInteractiveFormat = true;
-    
+
     // Used only with recovery option
     private int force = 0;
 
@@ -187,15 +187,15 @@ public interface HdfsServerConstants {
     public String getName() {return name;}
     public NamenodeRole toNodeRole() {
       switch(this) {
-      case BACKUP: 
+      case BACKUP:
         return NamenodeRole.BACKUP;
-      case CHECKPOINT: 
+      case CHECKPOINT:
         return NamenodeRole.CHECKPOINT;
       default:
         return NamenodeRole.NAMENODE;
       }
     }
-    
+
     public void setClusterId(String cid) {
       clusterId = cid;
     }
@@ -203,12 +203,12 @@ public interface HdfsServerConstants {
     public String getClusterId() {
       return clusterId;
     }
-    
+
     public void setRollingUpgradeStartupOption(String opt) {
       Preconditions.checkState(this == ROLLINGUPGRADE);
       rollingUpgradeStartupOption = RollingUpgradeStartupOption.fromString(opt);
     }
-    
+
     public RollingUpgradeStartupOption getRollingUpgradeStartupOption() {
       Preconditions.checkState(this == ROLLINGUPGRADE);
       return rollingUpgradeStartupOption;
@@ -223,27 +223,27 @@ public interface HdfsServerConstants {
     public void setForce(int force) {
       this.force = force;
     }
-    
+
     public int getForce() {
       return this.force;
     }
-    
+
     public boolean getForceFormat() {
       return isForceFormat;
     }
-    
+
     public void setForceFormat(boolean force) {
       isForceFormat = force;
     }
-    
+
     public boolean getInteractiveFormat() {
       return isInteractiveFormat;
     }
-    
+
     public void setInteractiveFormat(boolean interactive) {
       isInteractiveFormat = interactive;
     }
-    
+
     @Override
     public String toString() {
       if (this == ROLLINGUPGRADE) {
@@ -276,7 +276,7 @@ public interface HdfsServerConstants {
 
     private String description = null;
     NamenodeRole(String arg) {this.description = arg;}
-  
+
     @Override
     public String toString() {
       return description;
@@ -346,20 +346,20 @@ public interface HdfsServerConstants {
     /**
      * The block is under recovery.<br>
      * When a file lease expires its last block may not be {@link #COMPLETE}
-     * and needs to go through a recovery procedure, 
+     * and needs to go through a recovery procedure,
      * which synchronizes the existing replicas contents.
      */
     UNDER_RECOVERY,
     /**
      * The block is committed.<br>
      * The client reported that all bytes are written to data-nodes
-     * with the given generation stamp and block length, but no 
-     * {@link ReplicaState#FINALIZED} 
+     * with the given generation stamp and block length, but no
+     * {@link ReplicaState#FINALIZED}
      * replicas has yet been reported by data-nodes themselves.
      */
     COMMITTED
   }
-  
+
   String NAMENODE_LEASE_HOLDER = "HDFS_NameNode";
 
   String CRYPTO_XATTR_ENCRYPTION_ZONE =

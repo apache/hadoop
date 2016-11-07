@@ -45,6 +45,7 @@ import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.net.HttpURLConnection;
@@ -177,18 +178,18 @@ import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_DATA_BLOCKS;
 public class DFSTestUtil {
 
   private static final Log LOG = LogFactory.getLog(DFSTestUtil.class);
-  
+
   private static final Random gen = new Random();
   private static final String[] dirNames = {
     "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"
   };
-  
+
   private final int maxLevels;
   private final int maxSize;
   private final int minSize;
   private final int nFiles;
   private MyFile[] files;
-  
+
   /** Creates a new instance of DFSTestUtil
    *
    * @param nFiles Number of files to be created
@@ -218,7 +219,7 @@ public class DFSTestUtil {
     this.maxSize = maxSize;
     this.minSize = minSize;
   }
-  
+
   /**
    * when formatting a namenode - we must provide clusterid.
    * @param conf
@@ -282,11 +283,11 @@ public class DFSTestUtil {
    * a single file.
    */
   private class MyFile {
-    
+
     private String name = "";
     private final int size;
     private final long seed;
-    
+
     MyFile() {
       int nLevels = gen.nextInt(maxLevels);
       if (nLevels != 0) {
@@ -307,7 +308,7 @@ public class DFSTestUtil {
       size = minSize + gen.nextInt(maxSize - minSize);
       seed = gen.nextLong();
     }
-    
+
     String getName() { return name; }
     int getSize() { return size; }
     long getSeed() { return seed; }
@@ -323,20 +324,20 @@ public class DFSTestUtil {
       return os.toByteArray();
     }
   }
-  
+
   /** create nFiles with random names and directory hierarchies
    *  with random (but reproducible) data in them.
    */
   public void createFiles(FileSystem fs, String topdir,
                    short replicationFactor) throws IOException {
     files = new MyFile[nFiles];
-    
+
     for (int idx = 0; idx < nFiles; idx++) {
       files[idx] = new MyFile();
     }
-    
+
     Path root = new Path(topdir);
-    
+
     for (int idx = 0; idx < nFiles; idx++) {
       createFile(fs, new Path(root, files[idx].getName()), files[idx].getSize(),
           replicationFactor, files[idx].getSeed());
@@ -349,7 +350,7 @@ public class DFSTestUtil {
 	return new String(buf, 0, buf.length);
   }
 
-  public static byte[] readFileBuffer(FileSystem fs, Path fileName) 
+  public static byte[] readFileBuffer(FileSystem fs, Path fileName)
       throws IOException {
     try (ByteArrayOutputStream os = new ByteArrayOutputStream();
          FSDataInputStream in = fs.open(fileName)) {
@@ -357,13 +358,13 @@ public class DFSTestUtil {
       return os.toByteArray();
     }
   }
-  
-  public static void createFile(FileSystem fs, Path fileName, long fileLen, 
+
+  public static void createFile(FileSystem fs, Path fileName, long fileLen,
       short replFactor, long seed) throws IOException {
     createFile(fs, fileName, 1024, fileLen, fs.getDefaultBlockSize(fileName),
         replFactor, seed);
   }
-  
+
   public static void createFile(FileSystem fs, Path fileName, int bufferLen,
       long fileLen, long blockSize, short replFactor, long seed)
       throws IOException {
@@ -418,18 +419,18 @@ public class DFSTestUtil {
       }
     }
   }
-  
+
   public static byte[] calculateFileContentsFromSeed(long seed, int length) {
     Random rb = new Random(seed);
     byte val[] = new byte[length];
     rb.nextBytes(val);
     return val;
   }
-  
+
   /** check if the files have been copied correctly. */
   public boolean checkFiles(FileSystem fs, String topdir) throws IOException {
     Path root = new Path(topdir);
-    
+
     for (int idx = 0; idx < nFiles; idx++) {
       Path fPath = new Path(root, files[idx].getName());
       try (FSDataInputStream in = fs.open(fPath)) {
@@ -445,11 +446,11 @@ public class DFSTestUtil {
         }
       }
     }
-    
+
     return true;
   }
 
-  void setReplication(FileSystem fs, String topdir, short value) 
+  void setReplication(FileSystem fs, String topdir, short value)
                                               throws IOException {
     Path root = new Path(topdir);
     for (int idx = 0; idx < nFiles; idx++) {
@@ -462,7 +463,7 @@ public class DFSTestUtil {
    * Waits for the replication factor of all files to reach the
    * specified target.
    */
-  public void waitReplication(FileSystem fs, String topdir, short value) 
+  public void waitReplication(FileSystem fs, String topdir, short value)
       throws IOException, InterruptedException, TimeoutException {
     Path root = new Path(topdir);
 
@@ -582,7 +583,7 @@ public class DFSTestUtil {
   /*
    * Wait up to 20s for the given DN (IP:port) to be decommissioned
    */
-  public static void waitForDecommission(FileSystem fs, String name) 
+  public static void waitForDecommission(FileSystem fs, String name)
       throws IOException, InterruptedException, TimeoutException {
     DatanodeInfo dn = null;
     int count = 0;
@@ -646,10 +647,10 @@ public class DFSTestUtil {
   }
 
   /*
-   * Wait for the given # live/dead DNs, total capacity, and # vol failures. 
+   * Wait for the given # live/dead DNs, total capacity, and # vol failures.
    */
-  public static void waitForDatanodeStatus(DatanodeManager dm, int expectedLive, 
-      int expectedDead, long expectedVolFails, long expectedTotalCapacity, 
+  public static void waitForDatanodeStatus(DatanodeManager dm, int expectedLive,
+      int expectedDead, long expectedVolFails, long expectedTotalCapacity,
       long timeout) throws InterruptedException, TimeoutException {
     final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
@@ -689,7 +690,7 @@ public class DFSTestUtil {
   /*
    * Wait for the given DN to consider itself dead.
    */
-  public static void waitForDatanodeDeath(DataNode dn) 
+  public static void waitForDatanodeDeath(DataNode dn)
       throws InterruptedException, TimeoutException {
     final int ATTEMPTS = 10;
     int count = 0;
@@ -702,7 +703,7 @@ public class DFSTestUtil {
       throw new TimeoutException("Timed out waiting for DN to die");
     }
   }
-  
+
   /** return list of filenames created as part of createFiles */
   public String[] getFileNames(String topDir) {
     if (nFiles == 0)
@@ -754,20 +755,20 @@ public class DFSTestUtil {
           " to reach " + replFactor + " replicas");
     }
   }
-  
+
   /** delete directory and everything underneath it.*/
   public void cleanup(FileSystem fs, String topdir) throws IOException {
     Path root = new Path(topdir);
     fs.delete(root, true);
     files = null;
   }
-  
+
   public static ExtendedBlock getFirstBlock(FileSystem fs, Path path) throws IOException {
     try (HdfsDataInputStream in = (HdfsDataInputStream) fs.open(path)) {
       in.readByte();
       return in.getCurrentBlock();
     }
-  }  
+  }
 
   public static List<LocatedBlock> getAllBlocks(FSDataInputStream in)
       throws IOException {
@@ -823,7 +824,7 @@ public class DFSTestUtil {
   }
 
   /* Append the given string to the given file */
-  public static void appendFile(FileSystem fs, Path p, String s) 
+  public static void appendFile(FileSystem fs, Path p, String s)
       throws IOException {
     assert fs.exists(p);
     try (InputStream is = new ByteArrayInputStream(s.getBytes());
@@ -831,7 +832,7 @@ public class DFSTestUtil {
       IOUtils.copyBytes(is, os, s.length());
     }
   }
-  
+
   /**
    * Append specified length of bytes to a given file
    * @param fs The file system
@@ -850,30 +851,30 @@ public class DFSTestUtil {
       out.write(toAppend);
     }
   }
-  
+
   /**
    * @return url content as string (UTF-8 encoding assumed)
    */
   public static String urlGet(URL url) throws IOException {
     return new String(urlGetBytes(url), Charsets.UTF_8);
   }
-  
+
   /**
    * @return URL contents as a byte array
    */
   public static byte[] urlGetBytes(URL url) throws IOException {
     URLConnection conn = url.openConnection();
     HttpURLConnection hc = (HttpURLConnection)conn;
-    
+
     assertEquals(HttpURLConnection.HTTP_OK, hc.getResponseCode());
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     IOUtils.copyBytes(conn.getInputStream(), out, 4096, true);
     return out.toByteArray();
   }
-  
+
   /**
    * mock class to get group mapping for fake users
-   * 
+   *
    */
   static class MockUnixGroupsMapping extends ShellBasedUnixGroupsMapping {
     static Map<String, String []> fakeUser2GroupsMap;
@@ -883,14 +884,14 @@ public class DFSTestUtil {
       defaultGroups.add("supergroup");
       fakeUser2GroupsMap = new HashMap<String, String[]>();
     }
-  
+
     @Override
     public List<String> getGroups(String user) throws IOException {
       boolean found = false;
-      
+
       // check to see if this is one of fake users
       List<String> l = new ArrayList<String>();
-      for(String u : fakeUser2GroupsMap.keySet()) {  
+      for(String u : fakeUser2GroupsMap.keySet()) {
         if(user.equals(u)) {
           found = true;
           for(String gr : fakeUser2GroupsMap.get(u)) {
@@ -898,12 +899,12 @@ public class DFSTestUtil {
           }
         }
       }
-      
+
       // default
       if(!found) {
         l =  super.getGroups(user);
         if(l.size() == 0) {
-          System.out.println("failed to get real group for " + user + 
+          System.out.println("failed to get real group for " + user +
               "; using default");
           return defaultGroups;
         }
@@ -911,7 +912,7 @@ public class DFSTestUtil {
       return l;
     }
   }
-  
+
   /**
    * update the configuration with fake class for mapping user to groups
    * @param conf
@@ -922,18 +923,18 @@ public class DFSTestUtil {
     if(map!=null) {
       MockUnixGroupsMapping.fakeUser2GroupsMap = map;
     }
-    
+
     // fake mapping user to groups
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         DFSTestUtil.MockUnixGroupsMapping.class,
         ShellBasedUnixGroupsMapping.class);
-    
+
   }
-  
+
   /**
    * Get a FileSystem instance as specified user in a doAs block.
    */
-  static public FileSystem getFileSystemAs(UserGroupInformation ugi, 
+  static public FileSystem getFileSystemAs(UserGroupInformation ugi,
       final Configuration conf) throws IOException {
     try {
       return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
@@ -956,7 +957,7 @@ public class DFSTestUtil {
 
     return result;
   }
-  
+
   public static Statistics getStatistics(FileSystem fs) {
     return FileSystem.getStatistics(fs.getUri().getScheme(), fs.getClass());
   }
@@ -974,7 +975,7 @@ public class DFSTestUtil {
   }
 
   /** For {@link TestTransferRbw} */
-  public static BlockOpResponseProto transferRbw(final ExtendedBlock b, 
+  public static BlockOpResponseProto transferRbw(final ExtendedBlock b,
       final DFSClient dfsClient, final DatanodeInfo... datanodes) throws IOException {
     assertEquals(2, datanodes.length);
     final long writeTimeout = dfsClient.getDatanodeWriteTimeout(datanodes.length);
@@ -993,7 +994,7 @@ public class DFSTestUtil {
       return BlockOpResponseProto.parseDelimitedFrom(in);
     }
   }
-  
+
   public static void setFederatedConfiguration(MiniDFSCluster cluster,
       Configuration conf) {
     Set<String> nameservices = new HashSet<String>();
@@ -1041,7 +1042,7 @@ public class DFSTestUtil {
     conf.set(DFSConfigKeys.DFS_NAMESERVICES, Joiner.on(",")
         .join(nameservices.keySet()));
   }
-  
+
   private static DatanodeID getDatanodeID(String ipAddr) {
     return new DatanodeID(ipAddr, "localhost",
         UUID.randomUUID().toString(),
@@ -1072,12 +1073,12 @@ public class DFSTestUtil {
   public static DatanodeInfo getDatanodeInfo(String ipAddr) {
     return new DatanodeInfo(getDatanodeID(ipAddr));
   }
-  
+
   public static DatanodeInfo getLocalDatanodeInfo(int port) {
     return new DatanodeInfo(getLocalDatanodeID(port));
   }
 
-  public static DatanodeInfo getDatanodeInfo(String ipAddr, 
+  public static DatanodeInfo getDatanodeInfo(String ipAddr,
       String host, int port) {
     return new DatanodeInfo(new DatanodeID(ipAddr, host,
         UUID.randomUUID().toString(), port,
@@ -1101,10 +1102,10 @@ public class DFSTestUtil {
     return getDatanodeDescriptor(ipAddr, DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT,
         rackLocation);
   }
-  
+
   public static DatanodeDescriptor getDatanodeDescriptor(String ipAddr,
       String rackLocation, String hostname) {
-    return getDatanodeDescriptor(ipAddr, 
+    return getDatanodeDescriptor(ipAddr,
         DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT, rackLocation, hostname);
   }
 
@@ -1112,15 +1113,15 @@ public class DFSTestUtil {
       String storageID, String ip) {
     return createDatanodeStorageInfo(storageID, ip, "defaultRack", "host");
   }
-  
+
   public static DatanodeStorageInfo[] createDatanodeStorageInfos(String[] racks) {
     return createDatanodeStorageInfos(racks, null);
   }
-  
+
   public static DatanodeStorageInfo[] createDatanodeStorageInfos(String[] racks, String[] hostnames) {
     return createDatanodeStorageInfos(racks.length, racks, hostnames);
   }
-  
+
   public static DatanodeStorageInfo[] createDatanodeStorageInfos(int n) {
     return createDatanodeStorageInfos(n, null, null);
   }
@@ -1184,17 +1185,17 @@ public class DFSTestUtil {
         DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT);
     return new DatanodeDescriptor(dnId, rackLocation);
   }
-  
+
   public static DatanodeDescriptor getDatanodeDescriptor(String ipAddr,
       int port, String rackLocation) {
     return getDatanodeDescriptor(ipAddr, port, rackLocation, "host");
   }
-  
+
   public static DatanodeRegistration getLocalDatanodeRegistration() {
     return new DatanodeRegistration(getLocalDatanodeID(), new StorageInfo(
         NodeType.DATA_NODE), new ExportedBlockKeys(), VersionInfo.getVersion());
   }
-  
+
   /** Copy one file's contents into the other **/
   public static void copyFile(File src, File dest) throws IOException {
     FileUtils.copyFile(src, dest);
@@ -1205,10 +1206,10 @@ public class DFSTestUtil {
     private int maxSize = 8*1024;
     private int minSize = 1;
     private int nFiles = 1;
-    
+
     public Builder() {
     }
-    
+
     public Builder setName(String string) {
       return this;
     }
@@ -1217,7 +1218,7 @@ public class DFSTestUtil {
       this.nFiles = nFiles;
       return this;
     }
-    
+
     public Builder setMaxLevels(int maxLevels) {
       this.maxLevels = maxLevels;
       return this;
@@ -1232,21 +1233,21 @@ public class DFSTestUtil {
       this.minSize = minSize;
       return this;
     }
-    
+
     public DFSTestUtil build() {
       return new DFSTestUtil(nFiles, maxLevels, maxSize, minSize);
     }
   }
-  
+
   /**
    * Run a set of operations and generate all edit logs
    */
   public static void runOperations(MiniDFSCluster cluster,
-      DistributedFileSystem filesystem, Configuration conf, long blockSize, 
+      DistributedFileSystem filesystem, Configuration conf, long blockSize,
       int nnIndex) throws IOException {
     // create FileContext for rename2
     FileContext fc = FileContext.getFileContext(cluster.getURI(0), conf);
-    
+
     // OP_ADD 0
     final Path pathFileCreate = new Path("/file_create");
     FSDataOutputStream s = filesystem.create(pathFileCreate);
@@ -1309,7 +1310,7 @@ public class DFSTestUtil {
     long atime = mtime;
     filesystem.setTimes(pathFileCreate, mtime, atime);
     // OP_SET_QUOTA 14
-    filesystem.setQuota(pathDirectoryMkdir, 1000L, 
+    filesystem.setQuota(pathDirectoryMkdir, 1000L,
         HdfsConstants.QUOTA_DONT_SET);
     // OP_SET_QUOTA_BY_STORAGETYPE
     filesystem.setQuotaByStorageType(pathDirectoryMkdir, StorageType.SSD, 888L);
@@ -1341,7 +1342,7 @@ public class DFSTestUtil {
     // OP_SYMLINK 17
     Path pathSymlink = new Path("/file_symlink");
     fc.createSymlink(pathConcatTarget, pathSymlink, false);
-    
+
     // OP_REASSIGN_LEASE 22
     String filePath = "/hard-lease-recovery-test";
     byte[] bytes = "foo-bar-baz".getBytes();
@@ -1410,9 +1411,9 @@ public class DFSTestUtil {
             .build());
     filesystem.setAcl(pathConcatTarget, aclEntryList);
     // OP_SET_XATTR
-    filesystem.setXAttr(pathConcatTarget, "user.a1", 
+    filesystem.setXAttr(pathConcatTarget, "user.a1",
         new byte[]{0x31, 0x32, 0x33});
-    filesystem.setXAttr(pathConcatTarget, "user.a2", 
+    filesystem.setXAttr(pathConcatTarget, "user.a2",
         new byte[]{0x37, 0x38, 0x39});
     // OP_REMOVE_XATTR
     filesystem.removeXAttr(pathConcatTarget, "user.a2");
@@ -1435,7 +1436,7 @@ public class DFSTestUtil {
       final long expectedBlocks, final FsDatasetSpi<?> fsd) throws Exception {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       private int tries = 0;
-      
+
       @Override
       public Boolean get() {
         long curCacheUsed = fsd.getCacheUsed();
@@ -1483,8 +1484,8 @@ public class DFSTestUtil {
     int i = 0;
     for (byte[] e : expected) {
       byte[] actualComponent = actual[i++];
-      assertTrue("expected: " + DFSUtil.bytes2String(e) + ", actual: "
-          + DFSUtil.bytes2String(actualComponent),
+      assertTrue("expected: " + new String(e, UTF_8) + ", actual: "
+          + new String(actualComponent, UTF_8),
           Arrays.equals(e, actualComponent));
     }
   }
@@ -1498,7 +1499,7 @@ public class DFSTestUtil {
     private final TemporarySocketDirectory sockDir;
     private boolean closed = false;
     private final boolean formerTcpReadsDisabled;
-    
+
     public ShortCircuitTestContext(String testName) {
       this.testName = testName;
       this.sockDir = new TemporarySocketDirectory();
@@ -1506,7 +1507,7 @@ public class DFSTestUtil {
       formerTcpReadsDisabled = DFSInputStream.tcpReadsDisabledForTesting;
       Assume.assumeTrue(DomainSocket.getLoadingFailureReason() == null);
     }
-    
+
     public Configuration newConfiguration() {
       Configuration conf = new Configuration();
       conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
@@ -1703,7 +1704,7 @@ public class DFSTestUtil {
       Configuration conf) throws Exception {
     FsShell shell = new FsShell(new Configuration(conf));
     toolRun(shell, cmd, retcode, contain);
-  }  
+  }
 
   public static void DFSAdminRun(String cmd, int retcode, String contain,
       Configuration conf) throws Exception {
@@ -1843,7 +1844,7 @@ public class DFSTestUtil {
     dn.setLastUpdate(Time.now() + offset);
     dn.setLastUpdateMonotonic(Time.monotonicNow() + offset);
   }
-  
+
   /**
    * This method takes a set of block locations and fills the provided buffer
    * with expected bytes based on simulated content from

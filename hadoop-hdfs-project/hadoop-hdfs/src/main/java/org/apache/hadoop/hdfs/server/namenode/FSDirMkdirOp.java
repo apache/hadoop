@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
@@ -34,6 +33,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.security.AccessControlException;
 
 import java.io.IOException;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.List;
 import static org.apache.hadoop.util.Time.now;
 
@@ -210,7 +210,7 @@ class FSDirMkdirOp {
     assert parent.getLastINode() != null;
     if (!parent.getLastINode().isDirectory()) {
       throw new FileAlreadyExistsException("Parent path is not a directory: " +
-          parent.getPath() + " " + DFSUtil.bytes2String(name));
+          parent.getPath() + " " + new String(name, UTF_8));
     }
     final INodeDirectory dir = new INodeDirectory(inodeId, name, permission,
         timestamp);

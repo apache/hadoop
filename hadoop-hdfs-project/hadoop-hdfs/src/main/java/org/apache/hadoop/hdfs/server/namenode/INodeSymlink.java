@@ -18,10 +18,10 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.PrintWriter;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
@@ -35,9 +35,9 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   INodeSymlink(long id, byte[] name, PermissionStatus permissions,
       long mtime, long atime, String symlink) {
     super(id, name, permissions, mtime, atime);
-    this.symlink = DFSUtil.string2Bytes(symlink);
+    this.symlink = symlink.getBytes(UTF_8);
   }
-  
+
   INodeSymlink(INodeSymlink that) {
     super(that);
     this.symlink = that.symlink;
@@ -64,13 +64,13 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   }
 
   public String getSymlinkString() {
-    return DFSUtil.bytes2String(symlink);
+    return new String(symlink, UTF_8);
   }
 
   public byte[] getSymlink() {
     return symlink;
   }
-  
+
   @Override
   public void cleanSubtree(ReclaimContext reclaimContext, final int snapshotId,
       int priorSnapshotId) {
@@ -79,7 +79,7 @@ public class INodeSymlink extends INodeWithAdditionalFields {
       destroyAndCollectBlocks(reclaimContext);
     }
   }
-  
+
   @Override
   public void destroyAndCollectBlocks(ReclaimContext reclaimContext) {
     reclaimContext.removedINodes.add(this);
@@ -122,12 +122,12 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   final XAttrFeature getXAttrFeature(int snapshotId) {
     throw new UnsupportedOperationException("XAttrs are not supported on symlinks");
   }
-  
+
   @Override
   public void removeXAttrFeature() {
     throw new UnsupportedOperationException("XAttrs are not supported on symlinks");
   }
-  
+
   @Override
   public void addXAttrFeature(XAttrFeature f) {
     throw new UnsupportedOperationException("XAttrs are not supported on symlinks");

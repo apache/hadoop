@@ -27,7 +27,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.QuotaUsage;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -46,6 +45,7 @@ import org.apache.hadoop.security.AccessControlException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.Arrays;
 
 import static org.apache.hadoop.util.Time.now;
@@ -59,7 +59,7 @@ class FSDirStatAndListingOp {
     // Get file name when startAfter is an INodePath.  This is not the
     // common case so avoid any unnecessary processing unless required.
     if (startAfter.length > 0 && startAfter[0] == Path.SEPARATOR_CHAR) {
-      final String startAfterString = DFSUtil.bytes2String(startAfter);
+      final String startAfterString = new String(startAfter, UTF_8);
       if (FSDirectory.isReservedName(startAfterString)) {
         try {
           byte[][] components = INode.getPathComponents(startAfterString);

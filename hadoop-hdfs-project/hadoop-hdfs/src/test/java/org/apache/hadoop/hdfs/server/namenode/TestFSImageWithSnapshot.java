@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -33,7 +34,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
@@ -75,7 +75,7 @@ public class TestFSImageWithSnapshot {
   MiniDFSCluster cluster;
   FSNamesystem fsn;
   DistributedFileSystem hdfs;
-  
+
   @Before
   public void setUp() throws Exception {
     conf = new Configuration();
@@ -104,8 +104,8 @@ public class TestFSImageWithSnapshot {
     return new File(dir, String.format("%s_%019d", NameNodeFile.IMAGE,
         imageTxId));
   }
-  
-  /** 
+
+  /**
    * Create a temp file for dumping the fsdir
    * @param dir directory for the temp file
    * @param suffix suffix of of the temp file
@@ -114,8 +114,8 @@ public class TestFSImageWithSnapshot {
   private File getDumpTreeFile(String dir, String suffix) {
     return new File(dir, String.format("dumpTree_%s", suffix));
   }
-  
-  /** 
+
+  /**
    * Dump the fsdir tree to a temp file
    * @param fileSuffix suffix of the temp file for dumping
    * @return the temp file
@@ -125,7 +125,7 @@ public class TestFSImageWithSnapshot {
     SnapshotTestHelper.dumpTree2File(fsn.getFSDirectory(), file);
     return file;
   }
-  
+
   /** Append a file without closing the output stream */
   private HdfsDataOutputStream appendFileWithoutClosing(Path file, int length)
       throws IOException {
@@ -136,7 +136,7 @@ public class TestFSImageWithSnapshot {
     out.write(toAppend);
     return out;
   }
-  
+
   /** Save the fsimage to a temp file */
   private File saveFSImageToTempFile() throws IOException {
     SaveNamespaceContext context = new SaveNamespaceContext(fsn, txid,
@@ -152,7 +152,7 @@ public class TestFSImageWithSnapshot {
     }
     return imageFile;
   }
-  
+
   /** Load the fsimage from a temp file */
   private void loadFSImageFromTempFile(File imageFile) throws IOException {
     FSImageFormat.LoaderDelegator loader = FSImageFormat.newLoader(conf, fsn);
@@ -166,7 +166,7 @@ public class TestFSImageWithSnapshot {
       fsn.writeUnlock();
     }
   }
-  
+
   /**
    * Test when there is snapshot taken on root
    */
@@ -175,14 +175,14 @@ public class TestFSImageWithSnapshot {
     final Path root = new Path("/");
     hdfs.allowSnapshot(root);
     hdfs.createSnapshot(root, "s1");
-    
+
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
         .numDataNodes(NUM_DATANODES).build();
     cluster.waitActive();
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
-    
+
     // save namespace and restart cluster
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
     hdfs.saveNamespace();
@@ -193,23 +193,23 @@ public class TestFSImageWithSnapshot {
     cluster.waitActive();
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
-    
+
     INodeDirectory rootNode = fsn.dir.getINode4Write(root.toString())
         .asDirectory();
-    assertTrue("The children list of root should be empty", 
+    assertTrue("The children list of root should be empty",
         rootNode.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
     // one snapshot on root: s1
     List<DirectoryDiff> diffList = rootNode.getDiffs().asList();
     assertEquals(1, diffList.size());
-    Snapshot s1 = rootNode.getSnapshot(DFSUtil.string2Bytes("s1"));
+    Snapshot s1 = rootNode.getSnapshot("s1".getBytes(UTF_8));
     assertEquals(s1.getId(), diffList.get(0).getSnapshotId());
-    
+
     // check SnapshotManager's snapshottable directory list
     assertEquals(1, fsn.getSnapshotManager().getNumSnapshottableDirs());
     SnapshottableDirectoryStatus[] sdirs = fsn.getSnapshotManager()
         .getSnapshottableDirListing(null);
     assertEquals(root, sdirs[0].getFullPath());
-    
+
     // save namespace and restart cluster
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
     hdfs.saveNamespace();
@@ -252,7 +252,7 @@ public class TestFSImageWithSnapshot {
     DFSTestUtil.createFile(hdfs, sub1file1, BLOCKSIZE, (short) 1, seed);
     DFSTestUtil.createFile(hdfs, sub1file2, BLOCKSIZE, (short) 1, seed);
     checkImage(s);
-    
+
     hdfs.createSnapshot(dir, "s" + ++s);
     Path sub2 = new Path(dir, "sub2");
     Path sub2file1 = new Path(sub2, "sub2file1");
@@ -267,14 +267,14 @@ public class TestFSImageWithSnapshot {
     hdfs.setOwner(sub2, "dr.who", "unknown");
     hdfs.delete(sub2file1, true);
     checkImage(s);
-    
+
     hdfs.createSnapshot(dir, "s" + ++s);
     Path sub1_sub2file2 = new Path(sub1, "sub2file2");
     hdfs.rename(sub2file2, sub1_sub2file2);
-    
+
     hdfs.rename(sub1file1, sub2file1);
     checkImage(s);
-    
+
     hdfs.rename(sub2file1, sub2file2);
     checkImage(s);
   }
@@ -284,10 +284,10 @@ public class TestFSImageWithSnapshot {
 
     // dump the fsdir tree
     File fsnBefore = dumpTree2File(name + "_before");
-    
+
     // save the namesystem to a temp file
     File imageFile = saveFSImageToTempFile();
-    
+
     long numSdirBefore = fsn.getNumSnapshottableDirs();
     long numSnapshotBefore = fsn.getNumSnapshots();
     SnapshottableDirectoryStatus[] dirBefore = hdfs.getSnapshottableDirListing();
@@ -305,20 +305,20 @@ public class TestFSImageWithSnapshot {
     cluster.waitActive();
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
-    
+
     // load the namesystem from the temp file
     loadFSImageFromTempFile(imageFile);
-    
+
     // dump the fsdir tree again
     File fsnAfter = dumpTree2File(name + "_after");
-    
+
     // compare two dumped tree
     SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnAfter, true);
-    
+
     long numSdirAfter = fsn.getNumSnapshottableDirs();
     long numSnapshotAfter = fsn.getNumSnapshots();
     SnapshottableDirectoryStatus[] dirAfter = hdfs.getSnapshottableDirListing();
-    
+
     Assert.assertEquals(numSdirBefore, numSdirAfter);
     Assert.assertEquals(numSnapshotBefore, numSnapshotAfter);
     Assert.assertEquals(dirBefore.length, dirAfter.length);
@@ -330,7 +330,7 @@ public class TestFSImageWithSnapshot {
       Assert.assertTrue(pathListBefore.contains(sAfter.getFullPath().toString()));
     }
   }
-  
+
   /**
    * Test the fsimage saving/loading while file appending.
    */
@@ -341,11 +341,11 @@ public class TestFSImageWithSnapshot {
     Path sub1file2 = new Path(sub1, "sub1file2");
     DFSTestUtil.createFile(hdfs, sub1file1, BLOCKSIZE, (short) 1, seed);
     DFSTestUtil.createFile(hdfs, sub1file2, BLOCKSIZE, (short) 1, seed);
-    
+
     // 1. create snapshot s0
     hdfs.allowSnapshot(dir);
     hdfs.createSnapshot(dir, "s0");
-    
+
     // 2. create snapshot s1 before appending sub1file1 finishes
     HdfsDataOutputStream out = appendFileWithoutClosing(sub1file1, BLOCKSIZE);
     out.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
@@ -353,13 +353,13 @@ public class TestFSImageWithSnapshot {
     DFSTestUtil.appendFile(hdfs, sub1file2, BLOCKSIZE);
     hdfs.createSnapshot(dir, "s1");
     out.close();
-    
+
     // 3. create snapshot s2 before appending finishes
     out = appendFileWithoutClosing(sub1file1, BLOCKSIZE);
     out.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
     hdfs.createSnapshot(dir, "s2");
     out.close();
-    
+
     // 4. save fsimage before appending finishes
     out = appendFileWithoutClosing(sub1file1, BLOCKSIZE);
     out.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
@@ -367,7 +367,7 @@ public class TestFSImageWithSnapshot {
     File fsnBefore = dumpTree2File("before");
     // save the namesystem to a temp file
     File imageFile = saveFSImageToTempFile();
-    
+
     // 5. load fsimage and compare
     // first restart the cluster, and format the cluster
     out.close();
@@ -379,14 +379,14 @@ public class TestFSImageWithSnapshot {
     hdfs = cluster.getFileSystem();
     // then load the fsimage
     loadFSImageFromTempFile(imageFile);
-    
+
     // dump the fsdir tree again
     File fsnAfter = dumpTree2File("after");
-    
+
     // compare two dumped tree
     SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnAfter, true);
   }
-  
+
   /**
    * Test the fsimage loading while there is file under construction.
    */
@@ -397,18 +397,18 @@ public class TestFSImageWithSnapshot {
     Path sub1file2 = new Path(sub1, "sub1file2");
     DFSTestUtil.createFile(hdfs, sub1file1, BLOCKSIZE, (short) 1, seed);
     DFSTestUtil.createFile(hdfs, sub1file2, BLOCKSIZE, (short) 1, seed);
-    
+
     hdfs.allowSnapshot(dir);
     hdfs.createSnapshot(dir, "s0");
-    
+
     HdfsDataOutputStream out = appendFileWithoutClosing(sub1file1, BLOCKSIZE);
-    out.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));      
-    
+    out.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
+
     // save namespace and restart cluster
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
     hdfs.saveNamespace();
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
-    
+
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
         .numDataNodes(NUM_DATANODES).build();
@@ -416,7 +416,7 @@ public class TestFSImageWithSnapshot {
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
   }
-  
+
   /**
    * Test fsimage loading when 1) there is an empty file loaded from fsimage,
    * and 2) there is later an append operation to be applied from edit log.
@@ -427,28 +427,28 @@ public class TestFSImageWithSnapshot {
     Path file = new Path(dir, "file");
     FSDataOutputStream out = hdfs.create(file);
     out.close();
-    
+
     // save namespace
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
     hdfs.saveNamespace();
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
-    
+
     // append to the empty file
     out = hdfs.append(file);
     out.write(1);
     out.close();
-    
+
     // restart cluster
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
         .numDataNodes(NUM_DATANODES).build();
     cluster.waitActive();
     hdfs = cluster.getFileSystem();
-    
+
     FileStatus status = hdfs.getFileStatus(file);
     assertEquals(1, status.getLen());
   }
-  
+
   /**
    * Testing a special case with snapshots. When the following steps happen:
    * <pre>
@@ -460,8 +460,8 @@ public class TestFSImageWithSnapshot {
    * </pre>
    * When we merge the diff from s2 to s1 (since we deleted s2), we need to make
    * sure all the files/dirs created after s1 should be destroyed. Otherwise
-   * we may save these files/dirs to the fsimage, and cause FileNotFound 
-   * Exception while loading fsimage.  
+   * we may save these files/dirs to the fsimage, and cause FileNotFound
+   * Exception while loading fsimage.
    */
   @Test (timeout=300000)
   public void testSaveLoadImageAfterSnapshotDeletion()
@@ -471,25 +471,25 @@ public class TestFSImageWithSnapshot {
     Path subDir = new Path(dir, "subdir");
     Path subsubDir = new Path(subDir, "subsubdir");
     hdfs.mkdirs(subsubDir);
-    
+
     // take snapshots on subdir and dir
     SnapshotTestHelper.createSnapshot(hdfs, dir, "s1");
-    
+
     // create new dir under initial dir
     Path newDir = new Path(subsubDir, "newdir");
     Path newFile = new Path(newDir, "newfile");
     hdfs.mkdirs(newDir);
     DFSTestUtil.createFile(hdfs, newFile, BLOCKSIZE, (short) 1, seed);
-    
+
     // create another snapshot
     SnapshotTestHelper.createSnapshot(hdfs, dir, "s2");
-    
+
     // delete subsubdir
     hdfs.delete(subsubDir, true);
-    
+
     // delete snapshot s2
     hdfs.deleteSnapshot(dir, "s2");
-    
+
     // restart cluster
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES)
@@ -497,12 +497,12 @@ public class TestFSImageWithSnapshot {
     cluster.waitActive();
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
-    
+
     // save namespace to fsimage
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
     hdfs.saveNamespace();
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
-    
+
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
         .numDataNodes(NUM_DATANODES).build();

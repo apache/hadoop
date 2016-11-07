@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -54,6 +53,7 @@ import org.codehaus.jackson.map.ObjectReader;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -117,7 +117,7 @@ class JsonUtilClient {
     final WebHdfsConstants.PathType type =
         WebHdfsConstants.PathType.valueOf((String) m.get("type"));
     final byte[] symlink = type != WebHdfsConstants.PathType.SYMLINK? null
-        : DFSUtilClient.string2Bytes((String) m.get("symlink"));
+        : ((String) m.get("symlink")).getBytes(UTF_8);
 
     final long len = ((Number) m.get("length")).longValue();
     final String owner = (String) m.get("owner");
@@ -138,7 +138,7 @@ class JsonUtilClient {
         HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
     return new HdfsFileStatus(len, type == WebHdfsConstants.PathType.DIRECTORY,
         replication, blockSize, mTime, aTime, permission, owner, group,
-        symlink, DFSUtilClient.string2Bytes(localName),
+        symlink, localName.getBytes(UTF_8),
         fileId, childrenNum, null,
         storagePolicy, null);
   }

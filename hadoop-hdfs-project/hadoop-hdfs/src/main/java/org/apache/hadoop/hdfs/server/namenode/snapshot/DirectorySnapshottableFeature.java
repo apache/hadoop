@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import java.io.PrintWriter;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -26,7 +27,6 @@ import java.util.List;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.Content;
@@ -118,12 +118,12 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     if (newName.equals(oldName)) {
       return;
     }
-    final int indexOfOld = searchSnapshot(DFSUtil.string2Bytes(oldName));
+    final int indexOfOld = searchSnapshot(oldName.getBytes(UTF_8));
     if (indexOfOld < 0) {
       throw new SnapshotException("The snapshot " + oldName
           + " does not exist for directory " + path);
     } else {
-      final byte[] newNameBytes = DFSUtil.string2Bytes(newName);
+      final byte[] newNameBytes = newName.getBytes(UTF_8);
       int indexOfNew = searchSnapshot(newNameBytes);
       if (indexOfNew >= 0) {
         throw new SnapshotException("The snapshot " + newName
@@ -204,7 +204,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
   public Snapshot removeSnapshot(
       INode.ReclaimContext reclaimContext, INodeDirectory snapshotRoot,
       String snapshotName) throws SnapshotException {
-    final int i = searchSnapshot(DFSUtil.string2Bytes(snapshotName));
+    final int i = searchSnapshot(snapshotName.getBytes(UTF_8));
     if (i < 0) {
       throw new SnapshotException("Cannot delete snapshot " + snapshotName
           + " from path " + snapshotRoot.getFullPathName()
@@ -268,7 +268,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       String snapshotName) throws SnapshotException {
     Snapshot s = null;
     if (snapshotName != null && !snapshotName.isEmpty()) {
-      final int index = searchSnapshot(DFSUtil.string2Bytes(snapshotName));
+      final int index = searchSnapshot(snapshotName.getBytes(UTF_8));
       if (index < 0) {
         throw new SnapshotException("Cannot find the snapshot of directory "
             + snapshotRoot.getFullPathName() + " with name " + snapshotName);
