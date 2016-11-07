@@ -17,6 +17,8 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.connectors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.base.Preconditions;
 
 import org.slf4j.Logger;
@@ -24,8 +26,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel
     .DiskBalancerDataNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectReader;
 
 import java.io.File;
 import java.net.URL;

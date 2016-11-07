@@ -165,16 +165,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-core-asl</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-mapper-asl</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>xmlenc</groupId>
       <artifactId>xmlenc</artifactId>
       <scope>compile</scope>
@@ -226,6 +216,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk16</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
     </dependency>
   </dependencies>
 

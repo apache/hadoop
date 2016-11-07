@@ -17,13 +17,13 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.datamodel;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.hdfs.web.JsonUtil;
-import org.codehaus.jackson.annotate.JsonIgnore;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectReader;
 
 import java.io.IOException;
 
