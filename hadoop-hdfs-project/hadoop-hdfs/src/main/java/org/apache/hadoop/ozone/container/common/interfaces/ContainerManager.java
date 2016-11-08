@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,14 +21,12 @@ package org.apache.hadoop.ozone.container.common.interfaces;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.util.RwLock;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
 
 /**
@@ -45,8 +43,7 @@ public interface ContainerManager extends RwLock {
    * @param containerDirs - List of Metadata Container locations.
    * @throws IOException
    */
-  void init(Configuration config, List<Path> containerDirs,
-            FsDatasetSpi<? extends FsVolumeSpi> dataset)
+  void init(Configuration config, List<StorageLocation> containerDirs)
       throws IOException;
 
   /**
