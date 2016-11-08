@@ -1408,7 +1408,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       } else {
         // A finished container
         launchedContainers.remove(containerId);
-        completedContainers.add(remoteContainer.getContainerId());
+        if (completedContainers.add(containerId)) {
+          newlyCompletedContainers.add(remoteContainer);
+        }
         // Unregister from containerAllocationExpirer.
         containerAllocationExpirer
             .unregister(new AllocationExpirationInfo(containerId));

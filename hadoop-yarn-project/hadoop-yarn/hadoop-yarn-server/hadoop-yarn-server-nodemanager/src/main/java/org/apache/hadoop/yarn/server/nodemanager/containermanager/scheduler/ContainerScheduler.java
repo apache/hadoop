@@ -75,7 +75,7 @@ public class ContainerScheduler extends AbstractService implements
   // Containers launched by the Scheduler will take a while to actually
   // move to the RUNNING state, but should still be fair game for killing
   // by the scheduler to make room for guaranteed containers.
-  private final LinkedHashMap<ContainerId, Container> runningContainers =
+  private final LinkedHashMap<ContainerId, Container> scheduledToRunContainers =
       new LinkedHashMap<>();
 
   private final ContainerQueuingLimit queuingLimit =
@@ -155,7 +155,7 @@ public class ContainerScheduler extends AbstractService implements
 
   private void onContainerCompleted(Container container) {
     // decrement only if it was a running container
-    if (runningContainers.containsKey(container.getContainerId())) {
+    if (scheduledToRunContainers.containsKey(container.getContainerId())) {
       this.utilizationManager.subtractContainerResource(container);
       if (container.getContainerTokenIdentifier().getExecutionType() ==
           ExecutionType.OPPORTUNISTIC) {
@@ -170,7 +170,7 @@ public class ContainerScheduler extends AbstractService implements
                 - 1);
       }
     }
-    runningContainers.remove(container.getContainerId());
+    scheduledToRunContainers.remove(container.getContainerId());
     oppContainersMarkedForKill.remove(container.getContainerId());
     startPendingContainers();
   }
@@ -212,14 +212,9 @@ public class ContainerScheduler extends AbstractService implements
         this.utilizationManager.hasResourcesAvailable(container)) {
       startAllocatedContainer(container);
     } else {
-      try {
-        this.context.getNMStateStore().storeContainerQueued(
-            container.getContainerId());
-      } catch (IOException e) {
-        LOG.warn("Could not store container state into store..", e);
-      }
       LOG.info("No available resources for container {} to start its execution "
           + "immediately.", container.getContainerId());
+      boolean isQueued = true;
       if (container.getContainerTokenIdentifier().getExecutionType() ==
           ExecutionType.GUARANTEED) {
         queuedGuaranteedContainers.put(container.getContainerId(), container);
@@ -233,12 +228,21 @@ public class ContainerScheduler extends AbstractService implements
           queuedOpportunisticContainers.put(
               container.getContainerId(), container);
         } else {
+          isQueued = false;
           LOG.info("Opportunistic container [{}] will not be queued at the NM" +
               "since max queue length [{}] has been reached",
               container.getContainerId(), maxOppQueueLength);
           container.sendKillEvent(
               ContainerExitStatus.KILLED_BY_CONTAINER_SCHEDULER,
               "Opportunistic container queue is full.");
+        }
+      }
+      if (isQueued) {
+        try {
+          this.context.getNMStateStore().storeContainerQueued(
+              container.getContainerId());
+        } catch (IOException e) {
+          LOG.warn("Could not store container state into store..", e);
         }
       }
     }
@@ -262,7 +266,7 @@ public class ContainerScheduler extends AbstractService implements
 
   private void startAllocatedContainer(Container container) {
     LOG.info("Starting container [" + container.getContainerId()+ "]");
-    runningContainers.put(container.getContainerId(), container);
+    scheduledToRunContainers.put(container.getContainerId(), container);
     this.utilizationManager.addContainerResources(container);
     if (container.getContainerTokenIdentifier().getExecutionType() ==
         ExecutionType.OPPORTUNISTIC) {
@@ -291,7 +295,7 @@ public class ContainerScheduler extends AbstractService implements
     // Go over the running opportunistic containers.
     // Use a descending iterator to kill more recently started containers.
     Iterator<Container> reverseContainerIterator =
-        new LinkedList<>(runningContainers.values()).descendingIterator();
+        new LinkedList<>(scheduledToRunContainers.values()).descendingIterator();
     while(reverseContainerIterator.hasNext() &&
         !hasSufficientResources(resourcesToFreeUp)) {
       Container runningCont = reverseContainerIterator.next();
