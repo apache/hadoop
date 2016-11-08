@@ -88,6 +88,7 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 
@@ -111,6 +112,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private long nextHeartBeatInterval;
   private ResourceTracker resourceTracker;
   private Resource totalResource;
+  private Resource physicalResource;
   private int httpPort;
   private String nodeManagerVersionId;
   private String minimumResourceManagerVersion;
@@ -185,6 +187,19 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
     this.totalResource = Resource.newInstance(memoryMb, virtualCores);
     metrics.addResource(totalResource);
+
+    // Get actual node physical resources
+    int physicalMemoryMb = memoryMb;
+    int physicalCores = virtualCores;
+    ResourceCalculatorPlugin rcp =
+        ResourceCalculatorPlugin.getNodeResourceMonitorPlugin(conf);
+    if (rcp != null) {
+      physicalMemoryMb = (int) (rcp.getPhysicalMemorySize() / (1024 * 1024));
+      physicalCores = rcp.getNumProcessors();
+    }
+    this.physicalResource =
+        Resource.newInstance(physicalMemoryMb, physicalCores);
+
     this.tokenKeepAliveEnabled = isTokenKeepAliveEnabled(conf);
     this.tokenRemovalDelayMs =
         conf.getInt(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
@@ -341,7 +356,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       RegisterNodeManagerRequest request =
           RegisterNodeManagerRequest.newInstance(nodeId, httpPort, totalResource,
               nodeManagerVersionId, containerReports, getRunningApplications(),
-              nodeLabels);
+              nodeLabels, physicalResource);
       if (containerReports != null) {
         LOG.info("Registering with RM using containers :" + containerReports);
       }

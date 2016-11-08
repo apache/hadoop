@@ -196,6 +196,7 @@ public class TestYarnServerApiClasses {
     resource.setMemorySize(10000);
     resource.setVirtualCores(2);
     original.setResource(resource);
+    original.setPhysicalResource(resource);
     RegisterNodeManagerRequestPBImpl copy = new RegisterNodeManagerRequestPBImpl(
         original.getProto());
 
@@ -203,6 +204,8 @@ public class TestYarnServerApiClasses {
     assertEquals(9090, copy.getNodeId().getPort());
     assertEquals(10000, copy.getResource().getMemorySize());
     assertEquals(2, copy.getResource().getVirtualCores());
+    assertEquals(10000, copy.getPhysicalResource().getMemorySize());
+    assertEquals(2, copy.getPhysicalResource().getVirtualCores());
 
   }
 

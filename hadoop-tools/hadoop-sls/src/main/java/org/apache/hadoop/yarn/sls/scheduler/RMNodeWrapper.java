@@ -207,4 +207,9 @@ public class RMNodeWrapper implements RMNode {
   public Integer getDecommissioningTimeout() {
     return null;
   }
+
+  @Override
+  public Resource getPhysicalResource() {
+    return null;
+  }
 }

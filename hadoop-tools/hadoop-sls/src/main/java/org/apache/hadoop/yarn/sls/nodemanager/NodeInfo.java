@@ -218,6 +218,11 @@ public class NodeInfo {
     public Integer getDecommissioningTimeout() {
       return null;
     }
+
+    @Override
+    public Resource getPhysicalResource() {
+      return null;
+    }
   }
 
   public static RMNode newNodeInfo(String rackName, String hostName,
