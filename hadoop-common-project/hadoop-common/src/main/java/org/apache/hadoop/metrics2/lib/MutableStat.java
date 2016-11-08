@@ -102,6 +102,10 @@ public class MutableStat extends MutableMetric {
 
   /**
    * Add a number of samples and their sum to the running stat
+   *
+   * Note that although use of this method will preserve accurate mean values,
+   * large values for numSamples may result in inaccurate variance values due
+   * to the use of a single step of the Welford method for variance calculation.
    * @param numSamples  number of samples
    * @param sum of the samples
    */
