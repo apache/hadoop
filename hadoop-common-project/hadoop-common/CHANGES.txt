@@ -90,6 +90,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-12483. Maintain wrapped SASL ordering for postponed IPC responses.
     (Daryn Sharp via yliu)
 
+    HADOOP-13804. MutableStat mean loses accuracy if add(long, long) is used.
+    (Erik Krogen via zhz)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
