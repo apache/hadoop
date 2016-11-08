@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -34,10 +35,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
-import java.nio.file.Path;
 
 /**
  * Ozone main class sets up the network server and initializes the container
@@ -48,7 +47,6 @@ public class OzoneContainer {
       LoggerFactory.getLogger(OzoneContainer.class);
 
   private final Configuration ozoneConfig;
-  private final FsDatasetSpi<? extends FsVolumeSpi> dataSet;
   private final ContainerDispatcher dispatcher;
   private final ContainerManager manager;
   private final XceiverServer server;
@@ -65,22 +63,21 @@ public class OzoneContainer {
   public OzoneContainer(
       Configuration ozoneConfig,
       FsDatasetSpi<? extends FsVolumeSpi> dataSet) throws Exception {
-    List<Path> locations = new LinkedList<>();
+    List<StorageLocation> locations = new LinkedList<>();
     String[] paths = ozoneConfig.getStrings(OzoneConfigKeys
         .OZONE_METADATA_DIRS);
     if (paths != null && paths.length > 0) {
       for (String p : paths) {
-        locations.add(Paths.get(p));
+        locations.add(StorageLocation.parse(p));
       }
     } else {
       getDataDir(dataSet, locations);
     }
 
     this.ozoneConfig = ozoneConfig;
-    this.dataSet = dataSet;
 
     manager = new ContainerManagerImpl();
-    manager.init(this.ozoneConfig, locations, this.dataSet);
+    manager.init(this.ozoneConfig, locations);
     this.chunkManager = new ChunkManagerImpl(manager);
     manager.setChunkManager(this.chunkManager);
 
@@ -153,14 +150,14 @@ public class OzoneContainer {
    */
   private void getDataDir(
       FsDatasetSpi<? extends FsVolumeSpi> dataset,
-      List<Path> pathList) throws IOException {
+      List<StorageLocation> pathList) throws IOException {
     FsDatasetSpi.FsVolumeReferences references;
     try {
       synchronized (dataset) {
         references = dataset.getFsVolumeReferences();
         for (int ndx = 0; ndx < references.size(); ndx++) {
           FsVolumeSpi vol = references.get(ndx);
-          pathList.add(Paths.get(vol.getBaseURI().getPath()));
+          pathList.add(StorageLocation.parse(vol.getBaseURI().getPath()));
         }
         references.close();
       }

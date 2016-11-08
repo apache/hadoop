@@ -24,17 +24,17 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.container.common.interfaces.ChunkManager;
-import org.apache.hadoop.ozone.container.common.interfaces.ContainerLocationManager;
+import org.apache.hadoop.ozone.container.common.interfaces
+    .ContainerLocationManager;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,11 +49,13 @@ import java.security.DigestInputStream;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_EXTENSION;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_META;
 
@@ -85,17 +87,16 @@ public class ContainerManagerImpl implements ContainerManager {
    */
   @Override
   public void init(
-      Configuration config, List<Path> containerDirs,
-      FsDatasetSpi<? extends FsVolumeSpi> dataset) throws IOException {
-
+      Configuration config, List<StorageLocation> containerDirs)
+      throws IOException {
     Preconditions.checkNotNull(config);
     Preconditions.checkNotNull(containerDirs);
     Preconditions.checkState(containerDirs.size() > 0);
 
     readLock();
     try {
-      for (Path path : containerDirs) {
-        File directory = path.toFile();
+      for (StorageLocation path : containerDirs) {
+        File directory = path.getFile();
         if (!directory.isDirectory()) {
           LOG.error("Invalid path to container metadata directory. path: {}",
               path.toString());
@@ -112,8 +113,14 @@ public class ContainerManagerImpl implements ContainerManager {
           }
         }
       }
-      this.locationManager = new ContainerLocationManagerImpl(config,
-          containerDirs, dataset);
+
+      List<StorageLocation> dataDirs = new LinkedList<>();
+      for (String dir : config.getStrings(DFS_DATANODE_DATA_DIR_KEY)) {
+        StorageLocation location = StorageLocation.parse(dir);
+        dataDirs.add(location);
+      }
+      this.locationManager =
+          new ContainerLocationManagerImpl(containerDirs, dataDirs);
 
     } finally {
       readUnlock();
@@ -286,8 +293,8 @@ public class ContainerManagerImpl implements ContainerManager {
       // In case of ozone this is *not* a deal breaker since
       // SCM is guaranteed to generate unique container names.
 
-      LOG.error("creation of container failed. Name: {} "
-          , containerData.getContainerName());
+      LOG.error("creation of container failed. Name: {} ",
+          containerData.getContainerName());
       throw ex;
     } finally {
       IOUtils.closeStream(dos);
@@ -528,7 +535,7 @@ public class ContainerManagerImpl implements ContainerManager {
      * @param containerData - ContainerData.
      * @param active        - Active or not active.
      */
-    public ContainerStatus(ContainerData containerData, boolean active) {
+    ContainerStatus(ContainerData containerData, boolean active) {
       this.containerData = containerData;
       this.active = active;
     }

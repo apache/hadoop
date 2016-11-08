@@ -19,26 +19,21 @@
 package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.container.common.interfaces.ContainerLocationManager;
-
-
+import org.apache.hadoop.ozone.container.common.interfaces
+    .ContainerLocationManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
  * A class that tells the ContainerManager where to place the containers.
  * Please note : There is *no* one-to-one correlation between metadata
- * locations and data locations.
+ * metadataLocations and data metadataLocations.
  *
  *  For example : A user could map all container files to a
  *  SSD but leave data/metadata on bunch of other disks.
@@ -47,46 +42,27 @@ public class ContainerLocationManagerImpl implements ContainerLocationManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(ContainerLocationManagerImpl.class);
 
-
-  private final Configuration conf;
-  private final FsDatasetSpi<? extends FsVolumeSpi> dataset;
-  private final Path[] volumePaths;
+  private final List<StorageLocation> dataLocations;
   private int currentIndex;
-  private final List<Path> locations;
-
+  private final List<StorageLocation> metadataLocations;
 
   /**
    * Constructs a Location Manager.
-   * @param conf - Configuration.
+   * @param metadataLocations  - Refers to the metadataLocations
+   * where we store the container metadata.
+   * @param dataDirs - metadataLocations where we store the actual
+   * data or chunk files.
+   * @throws IOException
    */
-  public ContainerLocationManagerImpl(
-      Configuration conf, List<Path> locations,
-      FsDatasetSpi<? extends FsVolumeSpi> dataset) throws IOException {
-    this.conf = conf;
-    this.dataset = dataset;
-    List<Path> pathList = new LinkedList<>();
-    FsDatasetSpi.FsVolumeReferences references;
-    try {
-      synchronized (this.dataset) {
-        references = this.dataset.getFsVolumeReferences();
-        for (int ndx = 0; ndx < references.size(); ndx++) {
-          FsVolumeSpi vol = references.get(ndx);
-          pathList.add(Paths.get(vol.getBaseURI().getPath()));
-        }
-        references.close();
-        volumePaths = pathList.toArray(new Path[pathList.size()]);
-        this.locations = locations;
-      }
-    } catch (IOException ex) {
-      LOG.error("Unable to get volume paths.", ex);
-      throw new IOException("Internal error", ex);
-    }
-
+  public ContainerLocationManagerImpl(List<StorageLocation> metadataLocations,
+      List<StorageLocation> dataDirs)
+      throws IOException {
+    dataLocations = dataDirs;
+    this.metadataLocations = metadataLocations;
   }
-
   /**
    * Returns the path where the container should be placed from a set of
-   * locations.
+   * metadataLocations.
    *
    * @return A path where we should place this container and metadata.
    * @throws IOException
@@ -94,9 +70,10 @@ public class ContainerLocationManagerImpl implements ContainerLocationManager {
   @Override
   public Path getContainerPath()
       throws IOException {
-    Preconditions.checkState(locations.size() > 0);
-    int index = currentIndex % locations.size();
-    return locations.get(index).resolve(OzoneConsts.CONTAINER_ROOT_PREFIX);
+    Preconditions.checkState(metadataLocations.size() > 0);
+    int index = currentIndex % metadataLocations.size();
+    Path path = metadataLocations.get(index).getFile().toPath();
+    return path.resolve(OzoneConsts.CONTAINER_ROOT_PREFIX);
   }
 
   /**
@@ -107,7 +84,8 @@ public class ContainerLocationManagerImpl implements ContainerLocationManager {
    */
   @Override
   public Path getDataPath(String containerName) throws IOException {
-    Path currentPath = volumePaths[currentIndex++ % volumePaths.length];
+    Path currentPath = dataLocations.get(currentIndex++ % dataLocations.size())
+        .getFile().toPath();
     currentPath = currentPath.resolve(OzoneConsts.CONTAINER_PREFIX);
     return currentPath.resolve(containerName);
   }
