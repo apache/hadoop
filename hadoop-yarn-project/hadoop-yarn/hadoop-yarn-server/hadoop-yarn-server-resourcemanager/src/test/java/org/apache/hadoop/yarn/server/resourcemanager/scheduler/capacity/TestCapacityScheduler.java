@@ -134,6 +134,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSc
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimplePlacementSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
@@ -3453,7 +3454,7 @@ public class TestCapacityScheduler {
     scheduler.handle(new NodeRemovedSchedulerEvent(
         rm.getRMContext().getRMNodes().get(nm2.getNodeId())));
     // schedulerNode is removed, try allocate a container
-    scheduler.allocateContainersToNode(node);
+    scheduler.allocateContainersToNode(new SimplePlacementSet<>(node), true);
 
     AppAttemptRemovedSchedulerEvent appRemovedEvent1 =
         new AppAttemptRemovedSchedulerEvent(
@@ -3698,5 +3699,58 @@ public class TestCapacityScheduler {
         new AppAttemptAddedSchedulerEvent(appAttemptId1, false);
     cs.handle(addAttemptEvent1);
     return appAttemptId1;
+  }
+
+  @Test
+  public void testAppAttemptLocalityStatistics() throws Exception {
+    Configuration conf =
+        TestUtils.getConfigurationWithMultipleQueues(new Configuration(false));
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+
+    final RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
+    mgr.init(conf);
+
+    MockRM rm = new MockRM(conf) {
+      protected RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    rm.start();
+    MockNM nm1 =
+        new MockNM("h1:1234", 200 * GB, rm.getResourceTrackerService());
+    nm1.registerNode();
+
+    // Launch app1 in queue=a1
+    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "a");
+
+    // Got one offswitch request and offswitch allocation
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+
+    // am1 asks for 1 GB resource on h1/default-rack/offswitch
+    am1.allocate(Arrays.asList(ResourceRequest
+        .newInstance(Priority.newInstance(1), "*",
+            Resources.createResource(1 * GB), 2), ResourceRequest
+        .newInstance(Priority.newInstance(1), "/default-rack",
+            Resources.createResource(1 * GB), 2), ResourceRequest
+        .newInstance(Priority.newInstance(1), "h1",
+            Resources.createResource(1 * GB), 1)), null);
+
+    CapacityScheduler cs = (CapacityScheduler) rm.getRMContext().getScheduler();
+
+    // Got one nodelocal request and nodelocal allocation
+    cs.nodeUpdate(rm.getRMContext().getRMNodes().get(nm1.getNodeId()));
+
+    // Got one nodelocal request and racklocal allocation
+    cs.nodeUpdate(rm.getRMContext().getRMNodes().get(nm1.getNodeId()));
+
+    RMAppAttemptMetrics attemptMetrics = rm.getRMContext().getRMApps().get(
+        app1.getApplicationId()).getCurrentAppAttempt()
+        .getRMAppAttemptMetrics();
+
+    // We should get one node-local allocation, one rack-local allocation
+    // And one off-switch allocation
+    Assert.assertArrayEquals(new int[][] { { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } },
+        attemptMetrics.getLocalityStatistics());
   }
 }

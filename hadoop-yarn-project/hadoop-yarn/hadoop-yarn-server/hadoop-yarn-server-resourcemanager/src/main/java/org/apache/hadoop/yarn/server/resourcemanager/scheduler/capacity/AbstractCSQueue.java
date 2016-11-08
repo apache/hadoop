@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -54,6 +55,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerAllocationProposal;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.SchedulerContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimplePlacementSet;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -737,5 +744,69 @@ public abstract class AbstractCSQueue implements CSQueue {
   public Iterator<RMContainer> getKillableContainers(String partition) {
     return csContext.getPreemptionManager().getKillableContainers(queueName,
         partition);
+  }
+
+  @VisibleForTesting
+  @Override
+  public CSAssignment assignContainers(Resource clusterResource,
+      FiCaSchedulerNode node, ResourceLimits resourceLimits,
+      SchedulingMode schedulingMode) {
+    return assignContainers(clusterResource, new SimplePlacementSet<>(node),
+        resourceLimits, schedulingMode);
+  }
+
+  @Override
+  public boolean accept(Resource cluster,
+      ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> request) {
+    // Do we need to check parent queue before making this decision?
+    boolean checkParentQueue = false;
+
+    ContainerAllocationProposal<FiCaSchedulerApp, FiCaSchedulerNode> allocation =
+        request.getFirstAllocatedOrReservedContainer();
+    SchedulerContainer<FiCaSchedulerApp, FiCaSchedulerNode> schedulerContainer =
+        allocation.getAllocatedOrReservedContainer();
+
+    // Do not check when allocating new container from a reserved container
+    if (allocation.getAllocateFromReservedContainer() == null) {
+      Resource required = allocation.getAllocatedOrReservedResource();
+      Resource netAllocated = Resources.subtract(required,
+          request.getTotalReleasedResource());
+
+      try {
+        readLock.lock();
+
+        String partition = schedulerContainer.getNodePartition();
+        Resource maxResourceLimit;
+        if (allocation.getSchedulingMode()
+            == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY) {
+          maxResourceLimit = getQueueMaxResource(partition, cluster);
+        } else{
+          maxResourceLimit = labelManager.getResourceByLabel(
+              schedulerContainer.getNodePartition(), cluster);
+        }
+        if (!Resources.fitsIn(resourceCalculator, cluster,
+            Resources.add(queueUsage.getUsed(partition), netAllocated),
+            maxResourceLimit)) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Used resource=" + queueUsage.getUsed(partition)
+                + " exceeded maxResourceLimit of the queue ="
+                + maxResourceLimit);
+          }
+          return false;
+        }
+      } finally {
+        readLock.unlock();
+      }
+
+      // Only check parent queue when something new allocated or reserved.
+      checkParentQueue = true;
+    }
+
+
+    if (parent != null && checkParentQueue) {
+      return parent.accept(cluster, request);
+    }
+
+    return true;
   }
 }
