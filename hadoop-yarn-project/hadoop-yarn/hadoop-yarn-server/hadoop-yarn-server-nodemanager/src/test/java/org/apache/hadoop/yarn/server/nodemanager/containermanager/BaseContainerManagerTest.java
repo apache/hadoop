@@ -289,12 +289,21 @@ public abstract class BaseContainerManagerTest {
       ContainerManagementProtocol containerManager, ContainerId containerID,
       ContainerState finalState)
       throws InterruptedException, YarnException, IOException {
-    waitForContainerState(containerManager, containerID, finalState, 20);
+    waitForContainerState(containerManager, containerID,
+        Arrays.asList(finalState), 20);
   }
 
   public static void waitForContainerState(
       ContainerManagementProtocol containerManager, ContainerId containerID,
       ContainerState finalState, int timeOutMax)
+      throws InterruptedException, YarnException, IOException {
+    waitForContainerState(containerManager, containerID,
+        Arrays.asList(finalState), timeOutMax);
+  }
+
+  public static void waitForContainerState(
+      ContainerManagementProtocol containerManager, ContainerId containerID,
+      List<ContainerState> finalStates, int timeOutMax)
       throws InterruptedException, YarnException, IOException {
     List<ContainerId> list = new ArrayList<ContainerId>();
     list.add(containerID);
@@ -302,7 +311,7 @@ public abstract class BaseContainerManagerTest {
         GetContainerStatusesRequest.newInstance(list);
     ContainerStatus containerStatus = null;
     HashSet<ContainerState> fStates =
-        new HashSet<>(Arrays.asList(finalStates));
+        new HashSet<>(finalStates);
     int timeoutSecs = 0;
     do {
       Thread.sleep(2000);

@@ -372,7 +372,8 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
             context.getContainerTokenSecretManager(), null,
             ExecutionType.GUARANTEED)));
 
-    allRequests = StartContainersRequest.newInstance(list);
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
     containerManager.startContainers(allRequests);
 
     BaseContainerManagerTest.waitForNMContainerState(containerManager,
@@ -466,8 +467,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
             context.getContainerTokenSecretManager(), null,
             ExecutionType.GUARANTEED)));
 
-    StartContainersRequest allRequests =
-        StartContainersRequest.newInstance(list);
+    allRequests = StartContainersRequest.newInstance(list);
     containerManager.startContainers(allRequests);
 
     BaseContainerManagerTest.waitForNMContainerState(
