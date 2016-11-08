@@ -1744,7 +1744,7 @@ public class YarnConfiguration extends Configuration {
 
   public static final String AMRM_PROXY_ADDRESS = NM_PREFIX
       + "amrmproxy.address";
-  public static final int DEFAULT_AMRM_PROXY_PORT = 8048;
+  public static final int DEFAULT_AMRM_PROXY_PORT = 8049;
   public static final String DEFAULT_AMRM_PROXY_ADDRESS = "0.0.0.0:"
       + DEFAULT_AMRM_PROXY_PORT;
 
