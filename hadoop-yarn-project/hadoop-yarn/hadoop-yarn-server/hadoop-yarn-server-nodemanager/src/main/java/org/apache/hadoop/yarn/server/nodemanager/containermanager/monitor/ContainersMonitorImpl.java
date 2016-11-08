@@ -125,15 +125,8 @@ public class ContainersMonitorImpl extends AbstractService implements
             this.conf.getLong(YarnConfiguration.NM_RESOURCE_MON_INTERVAL_MS,
                 YarnConfiguration.DEFAULT_NM_RESOURCE_MON_INTERVAL_MS));
 
-    Class<? extends ResourceCalculatorPlugin> clazz =
-        this.conf.getClass(YarnConfiguration
-                        .NM_CONTAINER_MON_RESOURCE_CALCULATOR,
-            this.conf.getClass(
-                YarnConfiguration.NM_MON_RESOURCE_CALCULATOR, null,
-                ResourceCalculatorPlugin.class),
-            ResourceCalculatorPlugin.class);
     this.resourceCalculatorPlugin =
-        ResourceCalculatorPlugin.getResourceCalculatorPlugin(clazz, this.conf);
+        ResourceCalculatorPlugin.getContainersMonitorPlugin(this.conf);
     LOG.info(" Using ResourceCalculatorPlugin : "
         + this.resourceCalculatorPlugin);
     processTreeClass = this.conf.getClass(

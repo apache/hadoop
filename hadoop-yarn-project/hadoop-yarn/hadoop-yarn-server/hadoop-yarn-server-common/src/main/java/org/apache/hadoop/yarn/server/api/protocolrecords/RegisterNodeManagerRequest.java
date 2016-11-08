@@ -41,6 +41,15 @@ public abstract class RegisterNodeManagerRequest {
       int httpPort, Resource resource, String nodeManagerVersionId,
       List<NMContainerStatus> containerStatuses,
       List<ApplicationId> runningApplications, Set<NodeLabel> nodeLabels) {
+    return newInstance(nodeId, httpPort, resource, nodeManagerVersionId,
+        containerStatuses, runningApplications, nodeLabels, null);
+  }
+
+  public static RegisterNodeManagerRequest newInstance(NodeId nodeId,
+      int httpPort, Resource resource, String nodeManagerVersionId,
+      List<NMContainerStatus> containerStatuses,
+      List<ApplicationId> runningApplications, Set<NodeLabel> nodeLabels,
+      Resource physicalResource) {
     RegisterNodeManagerRequest request =
         Records.newRecord(RegisterNodeManagerRequest.class);
     request.setHttpPort(httpPort);
@@ -50,6 +59,7 @@ public abstract class RegisterNodeManagerRequest {
     request.setContainerStatuses(containerStatuses);
     request.setRunningApplications(runningApplications);
     request.setNodeLabels(nodeLabels);
+    request.setPhysicalResource(physicalResource);
     return request;
   }
   
@@ -88,4 +98,18 @@ public abstract class RegisterNodeManagerRequest {
    */
   public abstract void setRunningApplications(
       List<ApplicationId> runningApplications);
+
+  /**
+   * Get the physical resources in the node to properly estimate resource
+   * utilization.
+   * @return Physical resources in the node.
+   */
+  public abstract Resource getPhysicalResource();
+
+  /**
+   * Set the physical resources in the node to properly estimate resource
+   * utilization.
+   * @param physicalResource Physical resources in the node.
+   */
+  public abstract void setPhysicalResource(Resource physicalResource);
 }

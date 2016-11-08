@@ -63,6 +63,7 @@ message RegisterNodeManagerRequestProto {
   repeated NMContainerStatusProto container_statuses = 6;
   repeated ApplicationIdProto runningApplications = 7;
   optional NodeLabelsProto nodeLabels = 8;
+  optional ResourceProto physicalResource = 9;
 }
 
 message RegisterNodeManagerResponseProto {

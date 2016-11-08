@@ -133,6 +133,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   /* Resource utilization for the node. */
   private ResourceUtilization nodeUtilization;
 
+  /** Physical resources in the node. */
+  private volatile Resource physicalResource;
+
   /* Container Queue Information for the node.. Used by Distributed Scheduler */
   private OpportunisticContainersStatus opportunisticContainersStatus;
 
@@ -353,7 +356,15 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
                              RMNodeEvent> stateMachine;
 
   public RMNodeImpl(NodeId nodeId, RMContext context, String hostName,
-      int cmPort, int httpPort, Node node, Resource capability, String nodeManagerVersion) {
+      int cmPort, int httpPort, Node node, Resource capability,
+      String nodeManagerVersion) {
+    this(nodeId, context, hostName, cmPort, httpPort, node, capability,
+        nodeManagerVersion, null);
+  }
+
+  public RMNodeImpl(NodeId nodeId, RMContext context, String hostName,
+      int cmPort, int httpPort, Node node, Resource capability,
+      String nodeManagerVersion, Resource physResource) {
     this.nodeId = nodeId;
     this.context = context;
     this.hostName = hostName;
@@ -367,6 +378,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     this.lastHealthReportTime = System.currentTimeMillis();
     this.nodeManagerVersion = nodeManagerVersion;
     this.timeStamp = 0;
+    this.physicalResource = physResource;
 
     this.latestNodeHeartBeatResponse.setResponseId(0);
 
@@ -524,6 +536,15 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     } finally {
       this.writeLock.unlock();
     }
+  }
+
+  @Override
+  public Resource getPhysicalResource() {
+    return this.physicalResource;
+  }
+
+  public void setPhysicalResource(Resource physicalResource) {
+    this.physicalResource = physicalResource;
   }
 
   @Override
