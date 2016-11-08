@@ -284,15 +284,17 @@ public abstract class BaseContainerManagerTest {
         .build());
   }
 
-  public static void waitForContainerState(ContainerManagementProtocol containerManager,
-      ContainerId containerID, ContainerState finalState)
+  public static void waitForContainerState(
+      ContainerManagementProtocol containerManager, ContainerId containerID,
+      ContainerState finalState)
       throws InterruptedException, YarnException, IOException {
     waitForContainerState(containerManager, containerID, finalState, 20);
   }
 
-  public static void waitForContainerState(ContainerManagementProtocol containerManager,
-          ContainerId containerID, ContainerState finalState, int timeOutMax)
-          throws InterruptedException, YarnException, IOException {
+  public static void waitForContainerState(
+      ContainerManagementProtocol containerManager, ContainerId containerID,
+      ContainerState finalState, int timeOutMax)
+      throws InterruptedException, YarnException, IOException {
     List<ContainerId> list = new ArrayList<ContainerId>();
     list.add(containerID);
     GetContainerStatusesRequest request =
@@ -314,8 +316,9 @@ public abstract class BaseContainerManagerTest {
           finalState, containerStatus.getState());
   }
 
-  static void waitForApplicationState(ContainerManagerImpl containerManager,
-      ApplicationId appID, ApplicationState finalState)
+  public static void waitForApplicationState(
+      ContainerManagerImpl containerManager, ApplicationId appID,
+      ApplicationState finalState)
       throws InterruptedException {
     // Wait for app-finish
     Application app =
@@ -344,7 +347,16 @@ public abstract class BaseContainerManagerTest {
   public static void waitForNMContainerState(ContainerManagerImpl
       containerManager, ContainerId containerID,
           org.apache.hadoop.yarn.server.nodemanager.containermanager
-          .container.ContainerState finalState, int timeOutMax)
+              .container.ContainerState finalState, int timeOutMax)
+                  throws InterruptedException, YarnException, IOException {
+    waitForNMContainerState(containerManager, containerID,
+        Arrays.asList(finalState), timeOutMax);
+  }
+
+  public static void waitForNMContainerState(ContainerManagerImpl
+      containerManager, ContainerId containerID,
+          List<org.apache.hadoop.yarn.server.nodemanager.containermanager
+          .container.ContainerState> finalStates, int timeOutMax)
               throws InterruptedException, YarnException, IOException {
     Container container = null;
     org.apache.hadoop.yarn.server.nodemanager
@@ -358,15 +370,15 @@ public abstract class BaseContainerManagerTest {
         currentState = container.getContainerState();
       }
       if (currentState != null) {
-        LOG.info("Waiting for NM container to get into state " + finalState
-            + ". Current state is " + currentState);
+        LOG.info("Waiting for NM container to get into one of the following " +
+            "states: " + finalStates + ". Current state is " + currentState);
       }
       timeoutSecs += 2;
-    } while (!currentState.equals(finalState)
+    } while (!finalStates.contains(currentState)
         && timeoutSecs++ < timeOutMax);
     LOG.info("Container state is " + currentState);
-    Assert.assertEquals("ContainerState is not correct (timedout)",
-        finalState, currentState);
+    Assert.assertTrue("ContainerState is not correct (timedout)",
+        finalStates.contains(currentState));
   }
 
   public static Token createContainerToken(ContainerId cId, long rmIdentifier,
