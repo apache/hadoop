@@ -2724,7 +2724,7 @@
     The address of the AMRMProxyService listener.
     </description>
     <name>yarn.nodemanager.amrmproxy.address</name>
-    <value>0.0.0.0:8048</value>
+    <value>0.0.0.0:8049</value>
   </property>
 
   <property>
