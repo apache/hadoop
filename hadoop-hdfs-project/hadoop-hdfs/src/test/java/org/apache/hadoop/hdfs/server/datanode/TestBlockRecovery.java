@@ -65,6 +65,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
@@ -478,8 +479,9 @@ public class TestBlockRecovery {
   private Collection<RecoveringBlock> initRecoveringBlocks() throws IOException {
     Collection<RecoveringBlock> blocks = new ArrayList<RecoveringBlock>(1);
     DatanodeInfo mockOtherDN = DFSTestUtil.getLocalDatanodeInfo();
-    DatanodeInfo[] locs = new DatanodeInfo[] {
-        new DatanodeInfo(dn.getDNRegistrationForBP(block.getBlockPoolId())),
+    DatanodeInfo[] locs = new DatanodeInfo[] {new DatanodeInfoBuilder()
+        .setNodeID(dn.getDNRegistrationForBP(
+            block.getBlockPoolId())).build(),
         mockOtherDN };
     RecoveringBlock rBlock = new RecoveringBlock(block, locs, RECOVERY_ID);
     blocks.add(rBlock);

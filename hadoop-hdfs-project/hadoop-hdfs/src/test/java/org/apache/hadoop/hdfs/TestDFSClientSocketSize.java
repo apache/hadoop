@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 
@@ -91,7 +91,9 @@ public class TestDFSClientSocketSize {
       cluster.waitActive();
       LOG.info("MiniDFSCluster started.");
       try (Socket socket = DataStreamer.createSocketForPipeline(
-          new DatanodeInfo(cluster.dataNodes.get(0).datanode.getDatanodeId()),
+          new DatanodeInfoBuilder()
+              .setNodeID(cluster.dataNodes.get(0).datanode.getDatanodeId())
+              .build(),
           1, cluster.getFileSystem().getClient())) {
         return socket.getSendBufferSize();
       }
