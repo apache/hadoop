@@ -220,34 +220,51 @@ public class OpportunisticContainerAllocatorAMService
   public AllocateResponse allocate(AllocateRequest request) throws
       YarnException, IOException {
 
+    // Partition requests to GUARANTEED and OPPORTUNISTIC.
+    OpportunisticContainerAllocator.PartitionedResourceRequests
+        partitionedAsks =
+        oppContainerAllocator.partitionAskList(request.getAskList());
+
+    // Allocate OPPORTUNISTIC containers.
+    request.setAskList(partitionedAsks.getOpportunistic());
     final ApplicationAttemptId appAttemptId = getAppAttemptId();
     SchedulerApplicationAttempt appAttempt = ((AbstractYarnScheduler)
         rmContext.getScheduler()).getApplicationAttempt(appAttemptId);
+
     OpportunisticContainerContext oppCtx =
         appAttempt.getOpportunisticContainerContext();
     oppCtx.updateNodeList(getLeastLoadedNodes());
+
     List<Container> oppContainers =
         oppContainerAllocator.allocateContainers(request, appAttemptId, oppCtx,
         ResourceManager.getClusterTimeStamp(), appAttempt.getUser());
 
+    // Create RMContainers and update the NMTokens.
     if (!oppContainers.isEmpty()) {
       handleNewContainers(oppContainers, false);
       appAttempt.updateNMTokens(oppContainers);
     }
 
-    // Allocate all guaranteed containers
+    // Allocate GUARANTEED containers.
+    request.setAskList(partitionedAsks.getGuaranteed());
     AllocateResponse allocateResp = super.allocate(request);
 
+    // Add allocated OPPORTUNISTIC containers to the AllocateResponse.
+    if (!oppContainers.isEmpty()) {
+      allocateResp.getAllocatedContainers().addAll(oppContainers);
+    }
+
+    // Update opportunistic container context with the allocated GUARANTEED
+    // containers.
     oppCtx.updateCompletedContainers(allocateResp);
 
     // Add all opportunistic containers
-    allocateResp.getAllocatedContainers().addAll(oppContainers);
     return allocateResp;
   }
 
   @Override
   public RegisterDistributedSchedulingAMResponse
-  registerApplicationMasterForDistributedScheduling(
+      registerApplicationMasterForDistributedScheduling(
       RegisterApplicationMasterRequest request) throws YarnException,
       IOException {
     RegisterApplicationMasterResponse response =
