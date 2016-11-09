@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -735,7 +736,8 @@ public class TestPBHelper {
   @Test
   public void testDataNodeInfoPBHelper() {
     DatanodeID id = DFSTestUtil.getLocalDatanodeID();
-    DatanodeInfo dnInfos0 = new DatanodeInfo(id);
+    DatanodeInfo dnInfos0 = new DatanodeInfoBuilder().setNodeID(id)
+        .build();
     dnInfos0.setCapacity(3500L);
     dnInfos0.setDfsUsed(1000L);
     dnInfos0.setNonDfsUsed(2000L);

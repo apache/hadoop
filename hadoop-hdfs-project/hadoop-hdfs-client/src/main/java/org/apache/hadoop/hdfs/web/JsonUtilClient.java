@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
@@ -271,27 +272,26 @@ class JsonUtilClient {
     }
 
     // TODO: Fix storageID
-    return new DatanodeInfo(
-        ipAddr,
-        (String)m.get("hostName"),
-        (String)m.get("storageID"),
-        xferPort,
-        ((Number) m.get("infoPort")).intValue(),
-        getInt(m, "infoSecurePort", 0),
-        ((Number) m.get("ipcPort")).intValue(),
-
-        getLong(m, "capacity", 0l),
-        getLong(m, "dfsUsed", 0l),
-        getLong(m, "remaining", 0l),
-        getLong(m, "blockPoolUsed", 0l),
-        getLong(m, "cacheCapacity", 0l),
-        getLong(m, "cacheUsed", 0l),
-        getLong(m, "lastUpdate", 0l),
-        getLong(m, "lastUpdateMonotonic", 0l),
-        getInt(m, "xceiverCount", 0),
-        getString(m, "networkLocation", ""),
-        DatanodeInfo.AdminStates.valueOf(getString(m, "adminState", "NORMAL")),
-        getString(m, "upgradeDomain", ""));
+    return new DatanodeInfoBuilder().setIpAddr(ipAddr)
+        .setHostName((String) m.get("hostName"))
+        .setDatanodeUuid((String) m.get("storageID")).setXferPort(xferPort)
+        .setInfoPort(((Number) m.get("infoPort")).intValue())
+        .setInfoSecurePort(getInt(m, "infoSecurePort", 0))
+        .setIpcPort(((Number) m.get("ipcPort")).intValue())
+        .setCapacity(getLong(m, "capacity", 0L))
+        .setDfsUsed(getLong(m, "dfsUsed", 0L))
+        .setRemaining(getLong(m, "remaining", 0L))
+        .setBlockPoolUsed(getLong(m, "blockPoolUsed", 0L))
+        .setCacheCapacity(getLong(m, "cacheCapacity", 0L))
+        .setCacheUsed(getLong(m, "cacheUsed", 0L))
+        .setLastUpdate(getLong(m, "lastUpdate", 0L))
+        .setLastUpdateMonotonic(getLong(m, "lastUpdateMonotonic", 0L))
+        .setXceiverCount(getInt(m, "xceiverCount", 0))
+        .setNetworkLocation(getString(m, "networkLocation", "")).setAdminState(
+            DatanodeInfo.AdminStates
+                .valueOf(getString(m, "adminState", "NORMAL")))
+        .setUpgradeDomain(getString(m, "upgradeDomain", ""))
+        .build();
   }
 
   /** Convert an Object[] to a DatanodeInfo[]. */

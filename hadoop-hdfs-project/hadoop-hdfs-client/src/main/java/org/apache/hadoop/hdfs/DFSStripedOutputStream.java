@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -766,7 +767,8 @@ public class DFSStripedOutputStream extends DFSOutputStream {
         newNodes[i] = nodes[0];
         newStorageIDs[i] = storageIDs[0];
       } else {
-        newNodes[i] = new DatanodeInfo(DatanodeID.EMPTY_DATANODE_ID);
+        newNodes[i] = new DatanodeInfoBuilder()
+            .setNodeID(DatanodeID.EMPTY_DATANODE_ID).build();
         newStorageIDs[i] = "";
       }
     }

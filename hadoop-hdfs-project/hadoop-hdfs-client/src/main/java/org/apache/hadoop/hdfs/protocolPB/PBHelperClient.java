@@ -70,6 +70,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -585,13 +586,18 @@ public class PBHelperClient {
     if (di == null) {
       return null;
     }
-    DatanodeInfo dinfo = new DatanodeInfo(convert(di.getId()),
-        di.hasLocation() ? di.getLocation() : null, di.getCapacity(),
-        di.getDfsUsed(), di.getRemaining(), di.getBlockPoolUsed(),
-        di.getCacheCapacity(), di.getCacheUsed(), di.getLastUpdate(),
-        di.getLastUpdateMonotonic(), di.getXceiverCount(),
-        convert(di.getAdminState()),
-        di.hasUpgradeDomain() ? di.getUpgradeDomain() : null);
+    DatanodeInfoBuilder dinfo =
+        new DatanodeInfoBuilder().setNodeID(convert(di.getId()))
+            .setNetworkLocation(di.hasLocation() ? di.getLocation() : null)
+            .setCapacity(di.getCapacity()).setDfsUsed(di.getDfsUsed())
+            .setRemaining(di.getRemaining())
+            .setBlockPoolUsed(di.getBlockPoolUsed())
+            .setCacheCapacity(di.getCacheCapacity())
+            .setCacheUsed(di.getCacheUsed()).setLastUpdate(di.getLastUpdate())
+            .setLastUpdateMonotonic(di.getLastUpdateMonotonic())
+            .setXceiverCount(di.getXceiverCount())
+            .setAdminState(convert(di.getAdminState())).setUpgradeDomain(
+            di.hasUpgradeDomain() ? di.getUpgradeDomain() : null);
     if (di.hasNonDfsUsed()) {
       dinfo.setNonDfsUsed(di.getNonDfsUsed());
     } else {
@@ -599,7 +605,7 @@ public class PBHelperClient {
       long nonDFSUsed = di.getCapacity() - di.getDfsUsed() - di.getRemaining();
       dinfo.setNonDfsUsed(nonDFSUsed < 0 ? 0 : nonDFSUsed);
     }
-    return dinfo;
+    return dinfo.build();
   }
 
   public static StorageType[] convertStorageTypes(

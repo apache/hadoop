@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
@@ -52,7 +53,8 @@ public class ReportBadBlockAction implements BPServiceActorAction {
     if (bpRegistration == null) {
       return;
     }
-    DatanodeInfo[] dnArr = { new DatanodeInfo(bpRegistration) };
+    DatanodeInfo[] dnArr = {new DatanodeInfoBuilder()
+        .setNodeID(bpRegistration).build()};
     String[] uuids = { storageUuid };
     StorageType[] types = { storageType };
     LocatedBlock[] locatedBlock = { new LocatedBlock(block,

@@ -181,6 +181,7 @@ import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
@@ -4040,7 +4041,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
       DatanodeInfo[] arr = new DatanodeInfo[results.size()];
       for (int i=0; i<arr.length; i++) {
-        arr[i] = new DatanodeInfo(results.get(i));
+        arr[i] = new DatanodeInfoBuilder().setFrom(results.get(i))
+            .build();
       }
       return arr;
     } finally {
@@ -4061,7 +4063,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       DatanodeStorageReport[] reports = new DatanodeStorageReport[datanodes.size()];
       for (int i = 0; i < reports.length; i++) {
         final DatanodeDescriptor d = datanodes.get(i);
-        reports[i] = new DatanodeStorageReport(new DatanodeInfo(d),
+        reports[i] = new DatanodeStorageReport(
+            new DatanodeInfoBuilder().setFrom(d).build(),
             d.getStorageReports());
       }
       return reports;
