@@ -1168,4 +1168,20 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     updateAMContainerDiagnostics(AMState.INACTIVATED,
         diagnosticMessageBldr.toString());
   }
+
+  /*
+   * Overriding to appease findbugs
+   */
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
+
+  /*
+   * Overriding to appease findbugs
+   */
+  @Override
+  public boolean equals(Object o) {
+    return super.equals(o);
+  }
 }

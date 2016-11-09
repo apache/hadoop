@@ -1244,7 +1244,7 @@ public class FairScheduler extends
       }
 
       if (this.conf.getPreemptionEnabled()) {
-        preemptionThread = new FSPreemptionThread(this);
+        createPreemptionThread();
       }
     } finally {
       writeLock.unlock();
@@ -1260,6 +1260,11 @@ public class FairScheduler extends
     } catch (Exception e) {
       throw new IOException("Failed to initialize FairScheduler", e);
     }
+  }
+
+  @VisibleForTesting
+  protected void createPreemptionThread() {
+    preemptionThread = new FSPreemptionThread(this);
   }
 
   private void updateReservationThreshold() {

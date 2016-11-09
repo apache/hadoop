@@ -38,7 +38,7 @@ import java.util.TimerTask;
  */
 public class FSPreemptionThread extends Thread {
   private static final Log LOG = LogFactory.getLog(FSPreemptionThread.class);
-  private final FSContext context;
+  protected final FSContext context;
   private final FairScheduler scheduler;
   private final long warnTimeBeforeKill;
   private final Timer preemptionTimer;
