@@ -369,7 +369,6 @@
           </execution>
           <execution>
             <id>compile-protoc</id>
-            <phase>generate-sources</phase>
             <goals>
               <goal>protoc</goal>
             </goals>
@@ -397,14 +396,12 @@
                   <include>GenericRefreshProtocol.proto</include>
                 </includes>
               </source>
-              <output>${project.build.directory}/generated-sources/java</output>
             </configuration>
           </execution>
           <execution>
             <id>compile-test-protoc</id>
-            <phase>generate-test-sources</phase>
             <goals>
-              <goal>protoc</goal>
+              <goal>test-protoc</goal>
             </goals>
             <configuration>
               <protocVersion>${protobuf.version}</protocVersion>
@@ -419,7 +416,6 @@
                   <include>test_rpc_service.proto</include>
                 </includes>
               </source>
-              <output>${project.build.directory}/generated-test-sources/java</output>
             </configuration>
           </execution>
           <execution>

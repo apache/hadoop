@@ -100,7 +100,6 @@
         <executions>
           <execution>
             <id>compile-protoc</id>
-            <phase>generate-sources</phase>
             <goals>
               <goal>protoc</goal>
             </goals>
@@ -128,7 +127,6 @@
                   <include>server/SCM_Admin_protocol.proto</include>
                 </includes>
               </source>
-              <output>${project.build.directory}/generated-sources/java</output>
             </configuration>
           </execution>
         </executions>

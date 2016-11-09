@@ -287,7 +287,6 @@
         <executions>
           <execution>
             <id>compile-protoc</id>
-            <phase>generate-sources</phase>
             <goals>
               <goal>protoc</goal>
             </goals>
@@ -307,14 +306,12 @@
                   <include>yarn_server_resourcemanager_recovery.proto</include>
                 </includes>
               </source>
-              <output>${project.build.directory}/generated-sources/java</output>
             </configuration>
           </execution>
           <execution>
             <id>compile-test-protoc</id>
-            <phase>generate-sources</phase>
             <goals>
-              <goal>protoc</goal>
+              <goal>test-protoc</goal>
             </goals>
             <configuration>
               <protocVersion>${protobuf.version}</protocVersion>
@@ -327,10 +324,9 @@
               <source>
                 <directory>${basedir}/src/test/proto</directory>
                 <includes>
-                          <include>test_client_tokens.proto</include>
+                  <include>test_client_tokens.proto</include>
                 </includes>
               </source>
-              <output>${project.build.directory}/generated-sources/java</output>
             </configuration>
           </execution>
         </executions>

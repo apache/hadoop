@@ -318,6 +318,7 @@ public class ResourceTrackerService extends AbstractService implements
     int httpPort = request.getHttpPort();
     Resource capability = request.getResource();
     String nodeManagerVersion = request.getNMVersion();
+    Resource physicalResource = request.getPhysicalResource();
 
     RegisterNodeManagerResponse response = recordFactory
         .newRecordInstance(RegisterNodeManagerResponse.class);
@@ -387,7 +388,7 @@ public class ResourceTrackerService extends AbstractService implements
         .getCurrentKey());
 
     RMNode rmNode = new RMNodeImpl(nodeId, rmContext, host, cmPort, httpPort,
-        resolve(host), capability, nodeManagerVersion);
+        resolve(host), capability, nodeManagerVersion, physicalResource);
 
     RMNode oldNode = this.rmContext.getRMNodes().putIfAbsent(nodeId, rmNode);
     if (oldNode == null) {

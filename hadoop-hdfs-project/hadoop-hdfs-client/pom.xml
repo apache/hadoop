@@ -138,7 +138,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <executions>
           <execution>
             <id>compile-protoc</id>
-            <phase>generate-sources</phase>
             <goals>
               <goal>protoc</goal>
             </goals>
@@ -164,7 +163,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>ReconfigurationProtocol.proto</include>
                 </includes>
               </source>
-              <output>${project.build.directory}/generated-sources/java</output>
             </configuration>
           </execution>
         </executions>

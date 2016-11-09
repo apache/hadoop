@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSPacket;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
@@ -132,7 +133,8 @@ class StripedBlockWriter {
           DFSUtilClient.getSmallBufferSize(conf)));
       in = new DataInputStream(unbufIn);
 
-      DatanodeInfo source = new DatanodeInfo(datanode.getDatanodeId());
+      DatanodeInfo source = new DatanodeInfoBuilder()
+          .setNodeID(datanode.getDatanodeId()).build();
       new Sender(out).writeBlock(block, storageType,
           blockToken, "", new DatanodeInfo[]{target},
           new StorageType[]{storageType}, source,

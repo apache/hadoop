@@ -114,6 +114,12 @@ public interface RMNode {
   public ResourceUtilization getNodeUtilization();
 
   /**
+   * the physical resources in the node.
+   * @return the physical resources in the node.
+   */
+  Resource getPhysicalResource();
+
+  /**
    * The rack name for this node manager.
    * @return the rack name.
    */

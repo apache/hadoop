@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -400,7 +401,8 @@ public class TestInterDatanodeProtocol {
 
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
     DatanodeID fakeDnId = DFSTestUtil.getLocalDatanodeID(addr.getPort());
-    DatanodeInfo dInfo = new DatanodeInfo(fakeDnId);
+    DatanodeInfo dInfo = new DatanodeInfoBuilder().setNodeID(fakeDnId)
+        .build();
     InterDatanodeProtocol proxy = null;
 
     try {

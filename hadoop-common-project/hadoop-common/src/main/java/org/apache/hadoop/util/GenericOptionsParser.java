@@ -567,21 +567,28 @@ public class GenericOptionsParser {
    * @param out stream to print the usage message to.
    */
   public static void printGenericCommandUsage(PrintStream out) {
-    
-    out.println("Generic options supported are");
-    out.println("-conf <configuration file>     specify an application configuration file");
-    out.println("-D <property=value>            use value for given property");
-    out.println("-fs <local|namenode:port>      specify a namenode");
-    out.println("-jt <local|resourcemanager:port>    specify a ResourceManager");
-    out.println("-files <comma separated list of files>    " + 
-      "specify comma separated files to be copied to the map reduce cluster");
-    out.println("-libjars <comma separated list of jars>    " +
-      "specify comma separated jar files to include in the classpath.");
-    out.println("-archives <comma separated list of archives>    " +
-                "specify comma separated archives to be unarchived" +
-                " on the compute machines.\n");
-    out.println("The general command line syntax is");
-    out.println("command [genericOptions] [commandOptions]\n");
+    out.println("Generic options supported are:");
+    out.println("-conf <configuration file>        "
+        + "specify an application configuration file");
+    out.println("-D <property=value>               "
+        + "define a value for a given property");
+    out.println("-fs <local|namenode:port>         "
+        + "specify a namenode");
+    out.println("-jt <local|resourcemanager:port>  "
+        + "specify a ResourceManager");
+    out.println("-files <file1,...>                "
+        + "specify a comma-separated list of files to be copied to the map "
+        + "reduce cluster");
+    out.println("-libjars <jar1,...>               "
+        + "specify a comma-separated list of jar files to be included in the "
+        + "classpath");
+    out.println("-archives <archive1,...>          "
+        + "specify a comma-separated list of archives to be unarchived on the "
+        + "compute machines");
+    out.println();
+    out.println("The general command line syntax is:");
+    out.println("command [genericOptions] [commandOptions]");
+    out.println();
   }
   
 }
