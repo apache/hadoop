@@ -752,7 +752,7 @@ public abstract class TestConfigurationFieldsBase {
           // Check only for numerical values.
           if (StringUtils.isNumeric(ent.getValue())) {
             String crtValue =
-                filteredValues.putIfAbsent(ent.getValue(), ent.getKey());
+                filteredValues.put(ent.getValue(), ent.getKey());
             assertTrue("Parameters " + ent.getKey() + " and " + crtValue +
                 " are using the same default value!", crtValue == null);
           }
