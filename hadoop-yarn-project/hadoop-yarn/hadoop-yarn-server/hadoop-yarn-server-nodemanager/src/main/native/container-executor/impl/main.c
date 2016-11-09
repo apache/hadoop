@@ -143,7 +143,8 @@ static void assert_valid_setup(char *argv0) {
   int ret;
   char *executable_file = get_executable(argv0);
   if (!executable_file) {
-    fprintf(ERRORFILE,"realpath of executable: %s\n",strerror(errno));
+    fprintf(ERRORFILE,"realpath of executable: %s\n",
+      errno != 0 ? strerror(errno) : "unknown");
     flush_and_close_log_files();
     exit(-1);
   }
@@ -178,7 +179,7 @@ static void assert_valid_setup(char *argv0) {
   if (group_info == NULL) {
     free(executable_file);
     fprintf(ERRORFILE, "Can't get group information for %s - %s.\n", nm_group,
-            strerror(errno));
+      errno != 0 ? strerror(errno) : "unknown");
     flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }
