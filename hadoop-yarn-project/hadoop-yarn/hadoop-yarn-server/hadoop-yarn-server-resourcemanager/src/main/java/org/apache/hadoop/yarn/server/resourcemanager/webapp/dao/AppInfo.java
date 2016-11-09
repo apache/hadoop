@@ -111,7 +111,7 @@ public class AppInfo {
   protected String appNodeLabelExpression;
   protected String amNodeLabelExpression;
 
-  protected ResourcesInfo resourceInfo;
+  protected ResourcesInfo resourceInfo = null;
 
   public AppInfo() {
   } // JAXB needs this
@@ -232,7 +232,7 @@ public class AppInfo {
               .getApplicationAttempt(attempt.getAppAttemptId());
           resourceInfo = null != ficaAppAttempt
               ? new ResourcesInfo(ficaAppAttempt.getSchedulingResourceUsage())
-              : new ResourcesInfo();
+              : null;
         }
       }
     }
