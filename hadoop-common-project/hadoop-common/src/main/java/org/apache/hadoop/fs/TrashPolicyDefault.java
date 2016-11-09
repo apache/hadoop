@@ -121,9 +121,8 @@ public class TrashPolicyDefault extends TrashPolicy {
     if (!path.isAbsolute())                       // make path absolute
       path = new Path(fs.getWorkingDirectory(), path);
 
-    if (!fs.exists(path))                         // check that path exists
-      throw new FileNotFoundException(path.toString());
-
+    // check that path exists
+    fs.getFileStatus(path);
     String qpath = fs.makeQualified(path).toString();
 
     Path trashRoot = fs.getTrashRoot(path);

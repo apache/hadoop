@@ -489,10 +489,13 @@ public class SwiftTestUtils extends org.junit.Assert {
    */
   public static void assertPathExists(FileSystem fileSystem, String message,
                                Path path) throws IOException {
-    if (!fileSystem.exists(path)) {
+    try {
+      fileSystem.getFileStatus(path);
+    } catch (FileNotFoundException e) {
       //failure, report it
-      fail(message + ": not found " + path + " in " + path.getParent());
-           ls(fileSystem, path.getParent());
+      throw (IOException)new FileNotFoundException(message + ": not found "
+          + path + " in " + path.getParent() + ": " + e + " -- "
+           + ls(fileSystem, path.getParent())).initCause(e);
     }
   }
 

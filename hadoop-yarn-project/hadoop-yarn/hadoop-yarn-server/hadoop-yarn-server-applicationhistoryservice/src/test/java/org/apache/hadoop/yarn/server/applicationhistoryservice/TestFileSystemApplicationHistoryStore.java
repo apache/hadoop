@@ -27,6 +27,7 @@ import org.junit.Assert;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -279,8 +280,8 @@ public class TestFileSystemApplicationHistoryStore extends
     }
 
     // Make sure that directory creation was not attempted
-    verify(fs, times(1)).isDirectory(any(Path.class));
-    verify(fs, times(0)).mkdirs(any(Path.class));
+    verify(fs, never()).isDirectory(any(Path.class));
+    verify(fs, times(1)).mkdirs(any(Path.class));
   }
 
   @Test
@@ -301,7 +302,7 @@ public class TestFileSystemApplicationHistoryStore extends
     }
 
     // Make sure that directory creation was attempted
-    verify(fs, times(1)).isDirectory(any(Path.class));
+    verify(fs, never()).isDirectory(any(Path.class));
     verify(fs, times(1)).mkdirs(any(Path.class));
   }
 }
