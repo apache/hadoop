@@ -328,9 +328,7 @@ class DistCpSync {
     Arrays.sort(diffs, DiffInfo.targetComparator);
     for (DiffInfo diff : diffs) {
       if (diff.getTarget() != null) {
-        if (!targetFs.exists(diff.getTarget().getParent())) {
-          targetFs.mkdirs(diff.getTarget().getParent());
-        }
+        targetFs.mkdirs(diff.getTarget().getParent());
         targetFs.rename(diff.getTmp(), diff.getTarget());
       }
     }

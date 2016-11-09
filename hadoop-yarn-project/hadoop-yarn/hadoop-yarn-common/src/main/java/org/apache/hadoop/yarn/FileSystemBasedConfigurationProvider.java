@@ -74,9 +74,7 @@ public class FileSystemBasedConfigurationProvider
         new Path(bootstrapConf.get(YarnConfiguration.FS_BASED_RM_CONF_STORE,
             YarnConfiguration.DEFAULT_FS_BASED_RM_CONF_STORE));
     fs = configDir.getFileSystem(bootstrapConf);
-    if (!fs.exists(configDir)) {
-      fs.mkdirs(configDir);
-    }
+    fs.mkdirs(configDir);
   }
 
   @Override
