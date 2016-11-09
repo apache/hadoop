@@ -104,7 +104,7 @@ public class ContainerLaunch implements Callable<Integer> {
   private final Context context;
   private final ContainerManagerImpl containerManager;
   
-  protected AtomicBoolean shouldLaunchContainer = new AtomicBoolean(false);
+  protected AtomicBoolean containerAlreadyLaunched = new AtomicBoolean(false);
   protected AtomicBoolean completed = new AtomicBoolean(false);
 
   private volatile boolean killedBeforeStart = false;
@@ -416,7 +416,7 @@ public class ContainerLaunch implements Callable<Integer> {
     context.getNMStateStore().storeContainerLaunched(containerId);
 
     // Check if the container is signalled to be killed.
-    if (!shouldLaunchContainer.compareAndSet(false, true)) {
+    if (!containerAlreadyLaunched.compareAndSet(false, true)) {
       LOG.info("Container " + containerId + " not launched as "
           + "cleanup already called");
       return ExitCode.TERMINATED.getExitCode();
@@ -575,7 +575,7 @@ public class ContainerLaunch implements Callable<Integer> {
     }
 
     // launch flag will be set to true if process already launched
-    boolean alreadyLaunched = !shouldLaunchContainer.compareAndSet(false, true);
+    boolean alreadyLaunched = !containerAlreadyLaunched.compareAndSet(false, true);
     if (!alreadyLaunched) {
       LOG.info("Container " + containerIdStr + " not launched."
           + " No cleanup needed to be done");
@@ -670,7 +670,7 @@ public class ContainerLaunch implements Callable<Integer> {
 
     LOG.info("Sending signal " + command + " to container " + containerIdStr);
 
-    boolean alreadyLaunched = !shouldLaunchContainer.compareAndSet(false, true);
+    boolean alreadyLaunched = !containerAlreadyLaunched.compareAndSet(false, true);
     if (!alreadyLaunched) {
       LOG.info("Container " + containerIdStr + " not launched."
           + " Not sending the signal");
