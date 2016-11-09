@@ -46,6 +46,7 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
   public static final int DEFAULT_EXPIRE = 5*60*1000;//5 mins
   private long expireInterval = DEFAULT_EXPIRE;
   private long monitorInterval = expireInterval / 3;
+  private volatile boolean resetTimerOnStart = true;
 
   private final Clock clock;
 
@@ -105,8 +106,8 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
     register(ob, clock.getTime());
   }
 
-  public synchronized void register(O ob, long monitorStartTime) {
-    running.put(ob, monitorStartTime);
+  public synchronized void register(O ob, long expireTime) {
+    running.put(ob, expireTime);
   }
 
   public synchronized void unregister(O ob) {
@@ -114,10 +115,16 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
   }
 
   public synchronized void resetTimer() {
-    long time = clock.getTime();
-    for (O ob : running.keySet()) {
-      running.put(ob, time);
+    if (resetTimerOnStart) {
+      long time = clock.getTime();
+      for (O ob : running.keySet()) {
+        running.put(ob, time);
+      }
     }
+  }
+
+  protected void setResetTimeOnStart(boolean resetTimeOnStart) {
+    this.resetTimerOnStart = resetTimeOnStart;
   }
 
   private class PingChecker implements Runnable {

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.util;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -29,11 +30,21 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 public class Times {
   private static final Log LOG = LogFactory.getLog(Times.class);
 
+  static final String ISO8601DATEFORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
+
   // This format should match the one used in yarn.dt.plugins.js
   static final ThreadLocal<SimpleDateFormat> dateFormat =
       new ThreadLocal<SimpleDateFormat>() {
         @Override protected SimpleDateFormat initialValue() {
           return new SimpleDateFormat("EEE MMM dd HH:mm:ss Z yyyy");
+        }
+      };
+
+  static final ThreadLocal<SimpleDateFormat> isoFormat =
+      new ThreadLocal<SimpleDateFormat>() {
+        @Override
+        protected SimpleDateFormat initialValue() {
+          return new SimpleDateFormat(ISO8601DATEFORMAT);
         }
       };
 
@@ -73,5 +84,27 @@ public class Times {
   public static String format(long ts) {
     return ts > 0 ? String.valueOf(dateFormat.get().format(new Date(ts)))
                   : "N/A";
+  }
+
+  /**
+   * Given a time stamp returns ISO-8601 formated string in format
+   * "yyyy-MM-dd'T'HH:mm:ss.SSSZ".
+   * @param ts to be formatted in ISO format.
+   * @return ISO 8601 formatted string.
+   */
+  public static String formatISO8601(long ts) {
+    return isoFormat.get().format(new Date(ts));
+  }
+
+  /**
+   * Given ISO formatted string with format "yyyy-MM-dd'T'HH:mm:ss.SSSZ", return
+   * epoch time for local Time zone.
+   * @param isoString in format of "yyyy-MM-dd'T'HH:mm:ss.SSSZ".
+   * @return epoch time for local time zone.
+   * @throws ParseException if given ISO formatted string can not be parsed.
+   */
+  public static long parseISO8601ToLocalTimeInMillis(String isoString)
+      throws ParseException {
+    return isoFormat.get().parse(isoString).getTime();
   }
 }

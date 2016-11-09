@@ -29,6 +29,7 @@ import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ApplicationStateDataProto;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.util.Records;
@@ -56,6 +57,25 @@ public abstract class ApplicationStateData {
     appState.setDiagnostics(diagnostics);
     appState.setFinishTime(finishTime);
     appState.setCallerContext(callerContext);
+    return appState;
+  }
+
+  public static ApplicationStateData newInstance(long submitTime,
+      long startTime, String user,
+      ApplicationSubmissionContext submissionContext, RMAppState state,
+      String diagnostics, long finishTime, CallerContext callerContext,
+      Map<ApplicationTimeoutType, Long> applicationTimeouts) {
+    ApplicationStateData appState =
+        Records.newRecord(ApplicationStateData.class);
+    appState.setSubmitTime(submitTime);
+    appState.setStartTime(startTime);
+    appState.setUser(user);
+    appState.setApplicationSubmissionContext(submissionContext);
+    appState.setState(state);
+    appState.setDiagnostics(diagnostics);
+    appState.setFinishTime(finishTime);
+    appState.setCallerContext(callerContext);
+    appState.setApplicationTimeouts(applicationTimeouts);
     return appState;
   }
 
@@ -168,4 +188,11 @@ public abstract class ApplicationStateData {
   public abstract CallerContext getCallerContext();
   
   public abstract void setCallerContext(CallerContext callerContext);
+
+  @Public
+  public abstract Map<ApplicationTimeoutType, Long> getApplicationTimeouts();
+
+  @Public
+  public abstract void setApplicationTimeouts(
+      Map<ApplicationTimeoutType, Long> applicationTimeouts);
 }
