@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -157,8 +159,12 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
     JSONObject json = response.getEntity(JSONObject.class);
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
-    Object object = apps.getJSONArray("app").getJSONObject(0).get("resourceInfo");
-    Assert.assertTrue("For finshed app null expected", object.equals(null));
+    try {
+      apps.getJSONArray("app").getJSONObject(0).getJSONObject("resourceInfo");
+      fail("resourceInfo object shouldnt be available for finished apps");
+    } catch (Exception e) {
+      assertTrue("resourceInfo shouldn't be available for finished apps", true);
+    }
     rm.stop();
   }
 
