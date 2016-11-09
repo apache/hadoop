@@ -18,6 +18,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-10300. Allowed deferred sending of call responses. (Daryn Sharp via
     yliu)
 
+    HADOOP-13782. Make MutableRates metrics thread-local write, 
+    aggregate-on-read. (Erik Krogen via zhz)
+
   OPTIMIZATIONS
 
   BUG FIXES
