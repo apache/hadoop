@@ -121,6 +121,9 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   private static final Log LOG = LogFactory.getLog(RMAppImpl.class);
   private static final String UNAVAILABLE = "N/A";
+  private static final EnumSet<RMAppState> COMPLETED_APP_STATES =
+      EnumSet.of(RMAppState.FINISHED, RMAppState.FINISHING, RMAppState.FAILED,
+          RMAppState.KILLED, RMAppState.FINAL_SAVING, RMAppState.KILLING);
 
   // Immutable fields
   private final ApplicationId applicationId;
@@ -179,6 +182,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   private Map<NodeId, List<String>> logAggregationFailureMessagesForNMs =
       new HashMap<NodeId, List<String>>();
   private final int maxLogAggregationDiagnosticsInMemory;
+  private Map<ApplicationTimeoutType, Long> applicationTimeouts =
+      new HashMap<ApplicationTimeoutType, Long>();
 
   // These states stored are only valid when app is at killing or final_saving.
   private RMAppState stateBeforeKilling;
@@ -897,6 +902,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.storedFinishTime = appState.getFinishTime();
     this.startTime = appState.getStartTime();
     this.callerContext = appState.getCallerContext();
+    this.applicationTimeouts = appState.getApplicationTimeouts();
     // If interval > 0, some attempts might have been deleted.
     if (this.attemptFailuresValidityInterval > 0) {
       this.firstAttemptIdInStateStore = appState.getFirstAttemptId();
@@ -1109,17 +1115,16 @@ public class RMAppImpl implements RMApp, Recoverable {
         }
       }
 
-      long applicationLifetime =
-          app.getApplicationLifetime(ApplicationTimeoutType.LIFETIME);
-      if (applicationLifetime > 0) {
+      for (Map.Entry<ApplicationTimeoutType, Long> timeout :
+        app.applicationTimeouts.entrySet()) {
         app.rmContext.getRMAppLifetimeMonitor().registerApp(app.applicationId,
-            ApplicationTimeoutType.LIFETIME, app.submitTime,
-            applicationLifetime * 1000);
+            timeout.getKey(), timeout.getValue());
         if (LOG.isDebugEnabled()) {
+          long remainingTime = timeout.getValue() - app.systemClock.getTime();
           LOG.debug("Application " + app.applicationId
-              + " is registered for timeout monitor, type="
-              + ApplicationTimeoutType.LIFETIME + " value="
-              + applicationLifetime + " seconds");
+              + " is registered for timeout monitor, type=" + timeout.getKey()
+              + " remaining timeout="
+              + (remainingTime > 0 ? remainingTime / 1000 : 0) + " seconds");
         }
       }
 
@@ -1235,10 +1240,17 @@ public class RMAppImpl implements RMApp, Recoverable {
       long applicationLifetime =
           app.getApplicationLifetime(ApplicationTimeoutType.LIFETIME);
       if (applicationLifetime > 0) {
+        // calculate next timeout value
+        Long newTimeout =
+            Long.valueOf(app.submitTime + (applicationLifetime * 1000));
         app.rmContext.getRMAppLifetimeMonitor().registerApp(app.applicationId,
-            ApplicationTimeoutType.LIFETIME, app.submitTime,
-            applicationLifetime * 1000);
-        LOG.debug("Application " + app.applicationId
+            ApplicationTimeoutType.LIFETIME, newTimeout);
+
+        // update applicationTimeouts with new absolute value.
+        app.applicationTimeouts.put(ApplicationTimeoutType.LIFETIME,
+            newTimeout);
+
+        LOG.info("Application " + app.applicationId
             + " is registered for timeout monitor, type="
             + ApplicationTimeoutType.LIFETIME + " value=" + applicationLifetime
             + " seconds");
@@ -1292,6 +1304,7 @@ public class RMAppImpl implements RMApp, Recoverable {
         ApplicationStateData.newInstance(this.submitTime, this.startTime,
             this.user, this.submissionContext,
             stateToBeStored, diags, this.storedFinishTime, this.callerContext);
+    appState.setApplicationTimeouts(this.applicationTimeouts);
     this.rmContext.getStateStore().updateApplicationState(appState);
   }
 
@@ -1966,5 +1979,32 @@ public class RMAppImpl implements RMApp, Recoverable {
       applicationLifetime = timeouts.get(type);
     }
     return applicationLifetime;
+  }
+
+  @Override
+  public Map<ApplicationTimeoutType, Long> getApplicationTimeouts() {
+    this.readLock.lock();
+    try {
+      return new HashMap(this.applicationTimeouts);
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  public void updateApplicationTimeout(
+      Map<ApplicationTimeoutType, Long> updateTimeout) {
+    this.writeLock.lock();
+    try {
+      if (COMPLETED_APP_STATES.contains(getState())) {
+        return;
+      }
+      // update monitoring service
+      this.rmContext.getRMAppLifetimeMonitor()
+          .updateApplicationTimeouts(getApplicationId(), updateTimeout);
+      this.applicationTimeouts.putAll(updateTimeout);
+
+    } finally {
+      this.writeLock.unlock();
+    }
   }
 }

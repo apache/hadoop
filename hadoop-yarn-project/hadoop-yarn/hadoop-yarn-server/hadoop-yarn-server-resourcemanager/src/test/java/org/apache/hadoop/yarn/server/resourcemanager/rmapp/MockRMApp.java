@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -313,6 +314,11 @@ public class MockRMApp implements RMApp {
 
   @Override
   public void setCollectorAddr(String collectorAddr) {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+
+  @Override
+  public Map<ApplicationTimeoutType, Long> getApplicationTimeouts() {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 }

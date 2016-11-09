@@ -1540,10 +1540,10 @@ public class YarnConfiguration extends Configuration {
 
 
   // Configurations for applicaiton life time monitor feature
-  public static final String RM_APPLICATION_LIFETIME_MONITOR_INTERVAL_MS =
-      RM_PREFIX + "application-timeouts.lifetime-monitor.interval-ms";
+  public static final String RM_APPLICATION_MONITOR_INTERVAL_MS =
+      RM_PREFIX + "application-timeouts.monitor.interval-ms";
 
-  public static final long DEFAULT_RM_APPLICATION_LIFETIME_MONITOR_INTERVAL_MS =
+  public static final long DEFAULT_RM_APPLICATION_MONITOR_INTERVAL_MS =
       60000;
 
   /**

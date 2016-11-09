@@ -69,6 +69,7 @@ message ApplicationStateDataProto {
     optional string diagnostics = 6 [default = "N/A"];
     optional int64 finish_time = 7;
     optional hadoop.common.RPCCallerContextProto caller_context = 8;
+    repeated ApplicationTimeoutMapProto application_timeouts = 9;
 }
 
 message ApplicationAttemptStateDataProto {

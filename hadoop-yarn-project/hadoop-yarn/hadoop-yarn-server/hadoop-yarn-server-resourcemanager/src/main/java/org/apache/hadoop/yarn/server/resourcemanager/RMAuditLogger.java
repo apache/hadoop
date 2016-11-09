@@ -63,7 +63,9 @@ public class RMAuditLogger {
     public static final String ALLOC_CONTAINER = "AM Allocated Container";
     public static final String RELEASE_CONTAINER = "AM Released Container";
     public static final String UPDATE_APP_PRIORITY =
-        "Update Application Priority Request";
+        "Update Application Priority";
+    public static final String UPDATE_APP_TIMEOUTS =
+        "Update Application Timeouts";
     public static final String CHANGE_CONTAINER_RESOURCE =
         "AM Changed Container Resource";
     public static final String SIGNAL_CONTAINER = "Signal Container Request";

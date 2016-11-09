@@ -59,6 +59,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
@@ -566,4 +568,25 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
   SignalContainerResponse signalToContainer(
       SignalContainerRequest request) throws YarnException,
       IOException;
+
+  /**
+   * <p>
+   * The interface used by client to set ApplicationTimeouts of an application.
+   * The UpdateApplicationTimeoutsRequest should have timeout value with
+   * absolute time with ISO8601 format <b>yyyy-MM-dd'T'HH:mm:ss.SSSZ</b>.
+   * </p>
+   * <b>Note:</b> If application timeout value is less than or equal to current
+   * time then update application throws YarnException.
+   * @param request to set ApplicationTimeouts of an application
+   * @return an empty response that the update has completed successfully.
+   * @throws YarnException if update request has empty values or application is
+   *           in completing states.
+   * @throws IOException on IO failures
+   */
+  @Public
+  @Unstable
+  @Idempotent
+  public UpdateApplicationTimeoutsResponse updateApplicationTimeouts(
+      UpdateApplicationTimeoutsRequest request)
+      throws YarnException, IOException;
 }

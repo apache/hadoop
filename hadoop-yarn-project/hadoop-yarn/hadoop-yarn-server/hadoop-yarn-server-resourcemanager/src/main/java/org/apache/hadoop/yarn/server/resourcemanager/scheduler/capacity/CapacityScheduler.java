@@ -2418,8 +2418,9 @@ public class CapacityScheduler extends
         ApplicationStateData.newInstance(rmApp.getSubmitTime(),
             rmApp.getStartTime(), rmApp.getApplicationSubmissionContext(),
             rmApp.getUser(), rmApp.getCallerContext());
+    appState.setApplicationTimeouts(rmApp.getApplicationTimeouts());
     rmContext.getStateStore().updateApplicationStateSynchronously(appState,
-        false);
+        false, null);
 
     // As we use iterator over a TreeSet for OrderingPolicy, once we change
     // priority then reinsert back to make order correct.

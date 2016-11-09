@@ -377,6 +377,11 @@ message ApplicationTimeoutMapProto {
   optional int64 timeout = 2;
 }
 
+message ApplicationUpdateTimeoutMapProto {
+  optional ApplicationTimeoutTypeProto application_timeout_type = 1;
+  optional string expire_time = 2;
+}
+
 message LogAggregationContextProto {
  optional string include_pattern = 1 [default = ".*"];
  optional string exclude_pattern = 2 [default = ""];

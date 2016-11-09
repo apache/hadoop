@@ -34,6 +34,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -66,6 +67,8 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.SettableFuture;
 
 /**
  * This class manages the list of applications for the resource manager. 
@@ -508,5 +511,39 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       default:
         LOG.error("Invalid eventtype " + event.getType() + ". Ignoring!");
       }
+  }
+
+  // transaction method.
+  public void updateApplicationTimeout(RMApp app,
+      Map<ApplicationTimeoutType, String> newTimeoutInISO8601Format)
+      throws YarnException {
+    ApplicationId applicationId = app.getApplicationId();
+    synchronized (applicationId) {
+      Map<ApplicationTimeoutType, Long> newExpireTime = RMServerUtils
+          .validateISO8601AndConvertToLocalTimeEpoch(newTimeoutInISO8601Format);
+
+      SettableFuture<Object> future = SettableFuture.create();
+
+      Map<ApplicationTimeoutType, Long> currentExpireTimeouts =
+          app.getApplicationTimeouts();
+      currentExpireTimeouts.putAll(newExpireTime);
+
+      ApplicationStateData appState =
+          ApplicationStateData.newInstance(app.getSubmitTime(),
+              app.getStartTime(), app.getApplicationSubmissionContext(),
+              app.getUser(), app.getCallerContext());
+      appState.setApplicationTimeouts(currentExpireTimeouts);
+
+      // update to state store. Though it synchronous call, update via future to
+      // know any exception has been set. It is required because in non-HA mode,
+      // state-store errors are skipped.
+      this.rmContext.getStateStore()
+          .updateApplicationStateSynchronously(appState, false, future);
+
+      Futures.get(future, YarnException.class);
+
+      // update in-memory
+      ((RMAppImpl) app).updateApplicationTimeout(newExpireTime);
+    }
   }
 }

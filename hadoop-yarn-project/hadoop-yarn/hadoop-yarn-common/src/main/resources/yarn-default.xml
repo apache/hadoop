@@ -3048,9 +3048,9 @@
 
   <property>
     <description>
-    The RMAppLifetimeMonitor Service uses this value as lifetime monitor interval
+    The RMAppLifetimeMonitor Service uses this value as monitor interval
     </description>
-    <name>yarn.resourcemanager.application-timeouts.lifetime-monitor.interval-ms</name>
+    <name>yarn.resourcemanager.application-timeouts.monitor.interval-ms</name>
     <value>60000</value>
   </property>
 

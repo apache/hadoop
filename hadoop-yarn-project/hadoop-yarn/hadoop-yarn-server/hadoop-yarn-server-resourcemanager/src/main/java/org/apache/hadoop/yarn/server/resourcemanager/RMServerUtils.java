@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -69,6 +70,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -88,6 +92,8 @@ public class RMServerUtils {
 
   protected static final RecordFactory RECORD_FACTORY =
       RecordFactoryProvider.getRecordFactory(null);
+
+  private static Clock clock = SystemClock.getInstance();
 
   public static List<RMNode> queryRMNodes(RMContext context,
       EnumSet<NodeState> acceptedStates) {
@@ -398,6 +404,7 @@ public class RMServerUtils {
     case FINISHING:
     case FINISHED:
       return YarnApplicationState.FINISHED;
+    case KILLING:
     case KILLED:
       return YarnApplicationState.KILLED;
     case FAILED:
@@ -475,12 +482,51 @@ public class RMServerUtils {
     if (timeouts != null) {
       for (Map.Entry<ApplicationTimeoutType, Long> timeout : timeouts
           .entrySet()) {
-        if (timeout.getValue() < 0) {
+        if (timeout.getValue() <= 0) {
           String message = "Invalid application timeout, value="
               + timeout.getValue() + " for type=" + timeout.getKey();
           throw new YarnException(message);
         }
       }
     }
+  }
+
+  /**
+   * Validate ISO8601 format with epoch time.
+   * @param timeoutsInISO8601 format
+   * @return expire time in local epoch
+   * @throws YarnException if given application timeout value is lesser than
+   *           current time.
+   */
+  public static Map<ApplicationTimeoutType, Long> validateISO8601AndConvertToLocalTimeEpoch(
+      Map<ApplicationTimeoutType, String> timeoutsInISO8601)
+      throws YarnException {
+    long currentTimeMillis = clock.getTime();
+    Map<ApplicationTimeoutType, Long> newApplicationTimeout =
+        new HashMap<ApplicationTimeoutType, Long>();
+    if (timeoutsInISO8601 != null) {
+      for (Map.Entry<ApplicationTimeoutType, String> timeout : timeoutsInISO8601
+          .entrySet()) {
+        long expireTime = 0L;
+        try {
+          expireTime =
+              Times.parseISO8601ToLocalTimeInMillis(timeout.getValue());
+        } catch (ParseException ex) {
+          String message =
+              "Expire time is not in ISO8601 format. ISO8601 supported "
+                  + "format is yyyy-MM-dd'T'HH:mm:ss.SSSZ";
+          throw new YarnException(message);
+        }
+        if (expireTime < currentTimeMillis) {
+          String message =
+              "Expire time is less than current time, current-time="
+                  + Times.formatISO8601(currentTimeMillis) + " expire-time="
+                  + Times.formatISO8601(expireTime);
+          throw new YarnException(message);
+        }
+        newApplicationTimeout.put(timeout.getKey(), expireTime);
+      }
+    }
+    return newApplicationTimeout;
   }
 }

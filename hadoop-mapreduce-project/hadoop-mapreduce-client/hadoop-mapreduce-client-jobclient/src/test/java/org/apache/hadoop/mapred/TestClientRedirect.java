@@ -124,6 +124,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -483,6 +485,13 @@ public class TestClientRedirect {
     @Override
     public SignalContainerResponse signalToContainer(
         SignalContainerRequest request) throws IOException {
+      return null;
+    }
+
+    @Override
+    public UpdateApplicationTimeoutsResponse updateApplicationTimeouts(
+        UpdateApplicationTimeoutsRequest request)
+        throws YarnException, IOException {
       return null;
     }
   }
