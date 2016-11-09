@@ -118,10 +118,9 @@
         <artifactId>hadoop-maven-plugins</artifactId>
         <executions>
           <execution>
-            <id>compile-protoc</id>
-            <phase>generate-sources</phase>
+            <id>compile-test-protoc</id>
             <goals>
-              <goal>protoc</goal>
+              <goal>test-protoc</goal>
             </goals>
             <configuration>
               <protocVersion>${protobuf.version}</protocVersion>
@@ -137,7 +136,6 @@
                   <include>test_token.proto</include>
                 </includes>
               </source>
-              <output>${project.build.directory}/generated-sources/java</output>
             </configuration>
           </execution>
         </executions>
