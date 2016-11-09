@@ -33,6 +33,12 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 
 /**
  * Helper class to manage a group of mutable rate metrics
+ *
+ * This class synchronizes all accesses to the metrics it
+ * contains, so it should not be used in situations where
+ * there is high contention on the metrics.
+ * {@link MutableRatesWithAggregation} is preferable in that
+ * situation.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
