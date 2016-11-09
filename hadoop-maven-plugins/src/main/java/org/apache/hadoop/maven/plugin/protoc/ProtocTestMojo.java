@@ -24,11 +24,11 @@ import org.apache.maven.project.MavenProject;
 import java.io.File;
 
 /**
- * Mojo to generate java classes from .proto files using protoc.
+ * Mojo to generate java test classes from .proto files using protoc.
  * See package info for examples of use in a maven pom.
  */
-@Mojo(name="protoc", defaultPhase = LifecyclePhase.GENERATE_SOURCES)
-public class ProtocMojo extends AbstractMojo {
+@Mojo(name="test-protoc", defaultPhase = LifecyclePhase.GENERATE_TEST_SOURCES)
+public class ProtocTestMojo extends AbstractMojo {
 
   @Parameter(defaultValue="${project}", readonly=true)
   private MavenProject project;
@@ -36,7 +36,8 @@ public class ProtocMojo extends AbstractMojo {
   @Parameter
   private File[] imports;
 
-  @Parameter(defaultValue="${project.build.directory}/generated-sources/java")
+  @Parameter(defaultValue=
+      "${project.build.directory}/generated-test-sources/java")
   private File output;
 
   @Parameter(required=true)
@@ -54,8 +55,7 @@ public class ProtocMojo extends AbstractMojo {
 
   public void execute() throws MojoExecutionException {
     final ProtocRunner protoc = new ProtocRunner(project, imports, output,
-        source, protocCommand, protocVersion, checksumPath, this, false);
+        source, protocCommand, protocVersion, checksumPath, this, true);
     protoc.execute();
   }
-
 }
