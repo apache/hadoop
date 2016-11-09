@@ -4329,7 +4329,9 @@
     <value>15m</value>
     <description>
       The minimum gap between two successive checks of the same DataNode
-      volume.
+      volume. This setting supports multiple time unit suffixes as described
+      in dfs.heartbeat.interval. If no suffix is specified then milliseconds
+      is assumed.
     </description>
   </property>
 
@@ -4339,7 +4341,9 @@
     <description>
       Maximum allowed time for a disk check to complete. If the check does
       not complete within this time interval then the disk is declared as
-      failed.
+      failed. This setting supports multiple time unit suffixes as described
+      in dfs.heartbeat.interval. If no suffix is specified then milliseconds
+      is assumed.
     </description>
   </property>
 

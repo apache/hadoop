@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -101,7 +102,11 @@ public class StorageLocationChecker {
             DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY,
             DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_DEFAULT,
             TimeUnit.MILLISECONDS),
-        Executors.newCachedThreadPool());
+        Executors.newCachedThreadPool(
+            new ThreadFactoryBuilder()
+                .setNameFormat("StorageLocationChecker thread %d")
+                .setDaemon(true)
+                .build()));
   }
 
   /**
@@ -170,9 +175,10 @@ public class StorageLocationChecker {
     }
 
     if (failedLocations.size() > maxVolumeFailuresTolerated) {
-      LOG.error("Too many volume failures {}. Maximum allowed is {}",
-          failedLocations.size(), maxVolumeFailuresTolerated);
-      throw new IOException("Too many volume failures " + failedLocations.size());
+      throw new IOException(
+          "Too many failed volumes: " + failedLocations.size() +
+          ". The configuration allows for a maximum of " +
+          maxVolumeFailuresTolerated + " failed volumes.");
     }
 
     if (goodLocations.size() == 0) {
