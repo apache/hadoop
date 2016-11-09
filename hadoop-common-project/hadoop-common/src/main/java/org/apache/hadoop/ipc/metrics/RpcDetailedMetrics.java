@@ -24,7 +24,7 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
-import org.apache.hadoop.metrics2.lib.MutableRates;
+import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
 
 /**
  * This class is for maintaining RPC method related statistics
@@ -34,7 +34,7 @@ import org.apache.hadoop.metrics2.lib.MutableRates;
 @Metrics(about="Per method RPC metrics", context="rpcdetailed")
 public class RpcDetailedMetrics {
 
-  @Metric MutableRates rates;
+  @Metric MutableRatesWithAggregation rates;
 
   static final Log LOG = LogFactory.getLog(RpcDetailedMetrics.class);
   final MetricsRegistry registry;
