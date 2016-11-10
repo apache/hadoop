@@ -192,8 +192,18 @@ public class NameNodeProxies {
         dtService = SecurityUtil.buildTokenService(
             NameNode.getAddress(nameNodeUri));
       }
-      return new ProxyAndInfo<T>(proxy, dtService,
-          NameNode.getAddress(nameNodeUri));
+
+      InetSocketAddress nnAddress;
+
+      //We dont need to resolve the address if is it a Nameservice ID
+      if(HAUtil.isLogicalUri(conf, nameNodeUri)) {
+        nnAddress = InetSocketAddress.createUnresolved(
+            nameNodeUri.getHost(), NameNode.DEFAULT_PORT);
+      } else {
+        nnAddress = NameNode.getAddress(nameNodeUri);
+      }
+
+      return new ProxyAndInfo<T>(proxy, dtService, nnAddress);
     }
   }
   

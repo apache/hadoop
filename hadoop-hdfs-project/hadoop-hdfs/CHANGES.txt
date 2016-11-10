@@ -67,6 +67,8 @@ Release 2.7.4 - UNRELEASED
     (Erik Krogen via Zhe Zhang)
 
   BUG FIXES
+   
+    HDFS-8307. Spurious DNS Queries from hdfs shell. (Andres Perez via aengineer)
 
     HDFS-9696. Garbage snapshot records linger forever. (kihwal)
 
