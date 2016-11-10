@@ -287,7 +287,8 @@ public class FSXAttrBaseTest {
     } catch (NullPointerException e) {
       GenericTestUtils.assertExceptionContains("XAttr name cannot be null", e);
     } catch (RemoteException e) {
-      GenericTestUtils.assertExceptionContains("XAttr name cannot be null", e);
+      GenericTestUtils.assertExceptionContains("Required param xattr.name for "
+          + "op: SETXATTR is null or empty", e);
     }
     
     // Set xattr with empty name: "user."

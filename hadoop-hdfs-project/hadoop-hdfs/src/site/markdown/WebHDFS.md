@@ -1203,7 +1203,8 @@ Delegation Token Operations
 
 * Submit a HTTP GET request.
 
-        curl -i "http://<HOST>:<PORT>/webhdfs/v1/?op=GETDELEGATIONTOKEN&renewer=<USER>&service=<SERVICE>&kind=<KIND>"
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/?op=GETDELEGATIONTOKEN
+                    [&renewer=<USER>][&service=<SERVICE>][&kind=<KIND>]"
 
     The client receives a response with a [`Token` JSON object](#Token_JSON_Schema):
 
