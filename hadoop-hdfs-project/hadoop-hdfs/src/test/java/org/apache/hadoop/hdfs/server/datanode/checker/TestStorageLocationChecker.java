@@ -19,12 +19,9 @@
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.util.FakeTimer;
-import org.apache.hadoop.util.Timer;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -212,7 +209,7 @@ public class TestStorageLocationChecker {
               return VolumeCheckResult.HEALTHY;
             }
           });
-          
+
       locations.add(location);
     }
     return locations;

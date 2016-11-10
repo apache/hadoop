@@ -155,17 +155,23 @@ public class StorageLocationChecker {
       final StorageLocation location = entry.getKey();
 
       try {
-        switch (entry.getValue().get(timeLeftMs, TimeUnit.MILLISECONDS)) {
-          case HEALTHY:
-            goodLocations.add(entry.getKey());
-            break;
-          case DEGRADED:
-            LOG.warn("StorageLocation {} appears to be degraded.", location);
-            break;
-          case FAILED:
-            LOG.warn("Invalid " + DFS_DATANODE_DATA_DIR_KEY + " "
-                + location.getUri() + " : ");
-            failedLocations.add(location);
+        final VolumeCheckResult result =
+            entry.getValue().get(timeLeftMs, TimeUnit.MILLISECONDS);
+        switch (result) {
+        case HEALTHY:
+          goodLocations.add(entry.getKey());
+          break;
+        case DEGRADED:
+          LOG.warn("StorageLocation {} appears to be degraded.", location);
+          break;
+        case FAILED:
+          LOG.warn("StorageLocation {} detected as failed.", location);
+          failedLocations.add(location);
+          break;
+        default:
+          LOG.error("Unexpected health check result {} for StorageLocation {}",
+              result, location);
+          goodLocations.add(entry.getKey());
         }
       } catch (ExecutionException|TimeoutException e) {
         LOG.warn("Exception checking StorageLocation " + location,
