@@ -159,16 +159,14 @@ public class FSParentQueue extends FSQueue {
         childQueue.updateDemand();
         Resource toAdd = childQueue.getDemand();
         demand = Resources.add(demand, toAdd);
-        demand = Resources.componentwiseMin(demand, maxShare);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Counting resource from " + childQueue.getName() + " " +
               toAdd + "; Total resource demand for " + getName() +
               " now " + demand);
         }
-        if (Resources.equals(demand, maxShare)) {
-          break;
-        }
       }
+      // Cap demand to maxShare to limit allocation to maxShare
+      demand = Resources.componentwiseMin(demand, maxShare);
     } finally {
       writeLock.unlock();
     }
