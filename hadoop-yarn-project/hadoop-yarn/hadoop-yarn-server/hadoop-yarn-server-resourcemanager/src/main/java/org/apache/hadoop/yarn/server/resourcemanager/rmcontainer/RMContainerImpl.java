@@ -736,12 +736,6 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
           .getCurrentAppAttempt();
 
       if (rmAttempt != null) {
-        if (ContainerExitStatus.PREEMPTED == container.finishedStatus
-            .getExitStatus()) {
-            rmAttempt.getRMAppAttemptMetrics().updatePreemptionInfo(resource,
-              container);
-          }
-        
         long usedMillis = container.finishTime - container.creationTime;
         long memorySeconds = resource.getMemorySize()
                               * usedMillis / DateUtils.MILLIS_PER_SECOND;
@@ -749,6 +743,15 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
                              * usedMillis / DateUtils.MILLIS_PER_SECOND;
         rmAttempt.getRMAppAttemptMetrics()
                   .updateAggregateAppResourceUsage(memorySeconds,vcoreSeconds);
+        // If this is a preempted container, update preemption metrics
+        if (ContainerExitStatus.PREEMPTED == container.finishedStatus
+                .getExitStatus()) {
+          rmAttempt.getRMAppAttemptMetrics().updatePreemptionInfo(resource,
+                  container);
+          rmAttempt.getRMAppAttemptMetrics()
+                  .updateAggregatePreemptedAppResourceUsage(memorySeconds,
+                          vcoreSeconds);
+        }
       }
     }
   }

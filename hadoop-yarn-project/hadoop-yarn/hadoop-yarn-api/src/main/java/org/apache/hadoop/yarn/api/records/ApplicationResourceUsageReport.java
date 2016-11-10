@@ -36,7 +36,8 @@ public abstract class ApplicationResourceUsageReport {
   public static ApplicationResourceUsageReport newInstance(
       int numUsedContainers, int numReservedContainers, Resource usedResources,
       Resource reservedResources, Resource neededResources, long memorySeconds,
-      long vcoreSeconds, float queueUsagePerc, float clusterUsagePerc) {
+      long vcoreSeconds, float queueUsagePerc, float clusterUsagePerc,
+      long preemptedMemorySeconds, long preemptedVcoresSeconds) {
     ApplicationResourceUsageReport report =
         Records.newRecord(ApplicationResourceUsageReport.class);
     report.setNumUsedContainers(numUsedContainers);
@@ -48,6 +49,8 @@ public abstract class ApplicationResourceUsageReport {
     report.setVcoreSeconds(vcoreSeconds);
     report.setQueueUsagePercentage(queueUsagePerc);
     report.setClusterUsagePercentage(clusterUsagePerc);
+    report.setPreemptedMemorySeconds(preemptedMemorySeconds);
+    report.setPreemptedVcoreSeconds(preemptedVcoresSeconds);
     return report;
   }
 
@@ -188,4 +191,42 @@ public abstract class ApplicationResourceUsageReport {
   @Private
   @Unstable
   public abstract void setClusterUsagePercentage(float clusterUsagePerc);
+
+  /**
+   * Set the aggregated amount of memory preempted (in megabytes)
+   * the application has allocated times the number of seconds
+   * the application has been running.
+   * @param memorySeconds the aggregated amount of memory seconds
+   */
+  @Private
+  @Unstable
+  public abstract void setPreemptedMemorySeconds(long memorySeconds);
+
+  /**
+   * Get the aggregated amount of memory preempted(in megabytes)
+   * the application has allocated times the number of
+   * seconds the application has been running.
+   * @return the aggregated amount of memory seconds
+   */
+  @Public
+  @Unstable
+  public abstract long getPreemptedMemorySeconds();
+
+  /**
+   * Set the aggregated number of vcores preempted that the application has
+   * allocated times the number of seconds the application has been running.
+   * @param vcoreSeconds the aggregated number of vcore seconds
+   */
+  @Private
+  @Unstable
+  public abstract void setPreemptedVcoreSeconds(long vcoreSeconds);
+
+  /**
+   * Get the aggregated number of vcores preempted that the application has
+   * allocated times the number of seconds the application has been running.
+   * @return the aggregated number of vcore seconds
+   */
+  @Public
+  @Unstable
+  public abstract long getPreemptedVcoreSeconds();
 }
