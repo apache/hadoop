@@ -174,8 +174,6 @@ public class TestStoragePolicySatisfier {
       waitExpectedStorageType(file, StorageType.SSD, distributedFS, 1, 30000);
       waitExpectedStorageType(file, StorageType.DISK, distributedFS, 2, 30000);
 
-      // TODO: Temporarily using the results from StoragePolicySatisfier class.
-      // This has to be revisited as part of HDFS-11029.
       waitForBlocksMovementResult(1, 30000);
     } finally {
       hdfsCluster.shutdown();
@@ -190,8 +188,10 @@ public class TestStoragePolicySatisfier {
       @Override
       public Boolean get() {
         LOG.info("expectedResultsCount={} actualResultsCount={}",
-            expectedResultsCount, sps.results.size());
-        return expectedResultsCount == sps.results.size();
+            expectedResultsCount,
+            sps.getAttemptedItemsMonitor().resultsCount());
+        return expectedResultsCount == sps.getAttemptedItemsMonitor()
+            .resultsCount();
       }
     }, 100, timeout);
   }

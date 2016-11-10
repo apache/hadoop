@@ -69,6 +69,7 @@ public class StoragePolicySatisfier implements Runnable {
   private final Namesystem namesystem;
   private final BlockManager blockManager;
   private final BlockStorageMovementNeeded storageMovementNeeded;
+  private final BlockStorageMovementAttemptedItems storageMovementsMonitor;
 
   public StoragePolicySatisfier(final Namesystem namesystem,
       final BlockStorageMovementNeeded storageMovementNeeded,
@@ -76,15 +77,22 @@ public class StoragePolicySatisfier implements Runnable {
     this.namesystem = namesystem;
     this.storageMovementNeeded = storageMovementNeeded;
     this.blockManager = blkManager;
+    // TODO: below selfRetryTimeout and checkTimeout can be configurable later
+    // Now, the default values of selfRetryTimeout and checkTimeout are 30mins
+    // and 5mins respectively
+    this.storageMovementsMonitor = new BlockStorageMovementAttemptedItems(
+        5 * 60 * 1000, 30 * 60 * 1000, storageMovementNeeded);
   }
 
   /**
-   * Start storage policy satisfier demon thread.
+   * Start storage policy satisfier demon thread. Also start block storage
+   * movements monitor for retry the attempts if needed.
    */
   public void start() {
     storagePolicySatisfierThread = new Daemon(this);
     storagePolicySatisfierThread.setName("StoragePolicySatisfier");
     storagePolicySatisfierThread.start();
+    this.storageMovementsMonitor.start();
   }
 
   /**
@@ -99,6 +107,7 @@ public class StoragePolicySatisfier implements Runnable {
       storagePolicySatisfierThread.join(3000);
     } catch (InterruptedException ie) {
     }
+    this.storageMovementsMonitor.stop();
   }
 
   @Override
@@ -108,6 +117,7 @@ public class StoragePolicySatisfier implements Runnable {
         Long blockCollectionID = storageMovementNeeded.get();
         if (blockCollectionID != null) {
           computeAndAssignStorageMismatchedBlocksToDNs(blockCollectionID);
+          this.storageMovementsMonitor.add(blockCollectionID);
         }
         // TODO: We can think to make this as configurable later, how frequently
         // we want to check block movements.
@@ -398,11 +408,6 @@ public class StoragePolicySatisfier implements Runnable {
     }
   }
 
-  // TODO: Temporarily keeping the results for assertion. This has to be
-  // revisited as part of HDFS-11029.
-  @VisibleForTesting
-  List<BlocksStorageMovementResult> results = new ArrayList<>();
-
   /**
    * Receives the movement results of collection of blocks associated to a
    * trackId.
@@ -415,6 +420,11 @@ public class StoragePolicySatisfier implements Runnable {
     if (blksMovementResults.length <= 0) {
       return;
     }
-    results.addAll(Arrays.asList(blksMovementResults));
+    storageMovementsMonitor.addResults(blksMovementResults);
+  }
+
+  @VisibleForTesting
+  BlockStorageMovementAttemptedItems getAttemptedItemsMonitor() {
+    return storageMovementsMonitor;
   }
 }
