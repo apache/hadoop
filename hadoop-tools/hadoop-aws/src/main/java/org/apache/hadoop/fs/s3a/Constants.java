@@ -107,11 +107,15 @@ public final class Constants {
   public static final String MAX_PAGING_KEYS = "fs.s3a.paging.maximum";
   public static final int DEFAULT_MAX_PAGING_KEYS = 5000;
 
-  // the maximum number of threads to allow in the pool used by TransferManager
+  // the maximum number of threads to allow in the pool used by TransferManager for uploads
   public static final String MAX_THREADS = "fs.s3a.threads.max";
   public static final int DEFAULT_MAX_THREADS = 10;
 
-  // the time an idle thread waits before terminating
+  // the maximum number of threads to allow in the pool used by TransferManager for copies
+  public static final String COPY_MAX_THREADS = "fs.s3a.copy.threads.max";
+  public static final int DEFAULT_COPY_MAX_THREADS = 25;
+
+  // the time an idle thread waits before terminating for uploads and copies
   public static final String KEEPALIVE_TIME = "fs.s3a.threads.keepalivetime";
   public static final int DEFAULT_KEEPALIVE_TIME = 60;
 

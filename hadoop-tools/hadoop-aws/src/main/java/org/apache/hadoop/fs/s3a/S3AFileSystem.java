@@ -34,9 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -65,8 +62,6 @@ import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.Copy;
-import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.event.ProgressEvent;
@@ -143,9 +138,9 @@ public class S3AFileSystem extends FileSystem {
   private Listing listing;
   private long partSize;
   private boolean enableMultiObjectsDelete;
-  private TransferManager transfers;
+  private LazyTransferManager transfers;
+  private LazyTransferManager copies;
   private ListeningExecutorService boundedThreadPool;
-  private ExecutorService unboundedThreadPool;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
   private static final Logger PROGRESS =
@@ -241,11 +236,7 @@ public class S3AFileSystem extends FileSystem {
                     }
                   });
 
-      int maxThreads = conf.getInt(MAX_THREADS, DEFAULT_MAX_THREADS);
-      if (maxThreads < 2) {
-        LOG.warn(MAX_THREADS + " must be at least 2: forcing to 2.");
-        maxThreads = 2;
-      }
+      int maxThreads = getMaxThreads(conf, MAX_THREADS, DEFAULT_MAX_THREADS);
       int totalTasks = intOption(conf,
           MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS, 1);
       long keepAliveTime = longOption(conf, KEEPALIVE_TIME,
@@ -255,12 +246,6 @@ public class S3AFileSystem extends FileSystem {
           maxThreads + totalTasks,
           keepAliveTime, TimeUnit.SECONDS,
           "s3a-transfer-shared");
-      unboundedThreadPool = new ThreadPoolExecutor(
-          maxThreads, Integer.MAX_VALUE,
-          keepAliveTime, TimeUnit.SECONDS,
-          new LinkedBlockingQueue<Runnable>(),
-          BlockingThreadPoolExecutorService.newDaemonThreadFactory(
-              "s3a-transfer-unbounded"));
 
       int listVersion = conf.getInt(LIST_VERSION, DEFAULT_LIST_VERSION);
       if (listVersion < 1 || listVersion > 2) {
@@ -269,7 +254,8 @@ public class S3AFileSystem extends FileSystem {
       }
       useListV1 = (listVersion == 1);
 
-      initTransferManager();
+      this.transfers = LazyTransferManager.createLazyUploadTransferManager(s3, conf, partSize, multiPartThreshold);
+      this.copies = LazyTransferManager.createLazyCopyTransferManager(s3, conf, partSize, multiPartThreshold);
 
       initCannedAcls(conf);
 
@@ -339,18 +325,6 @@ public class S3AFileSystem extends FileSystem {
     return instrumentation;
   }
 
-  private void initTransferManager() {
-    TransferManagerConfiguration transferConfiguration =
-        new TransferManagerConfiguration();
-    transferConfiguration.setMinimumUploadPartSize(partSize);
-    transferConfiguration.setMultipartUploadThreshold(multiPartThreshold);
-    transferConfiguration.setMultipartCopyPartSize(partSize);
-    transferConfiguration.setMultipartCopyThreshold(multiPartThreshold);
-
-    transfers = new TransferManager(s3, unboundedThreadPool);
-    transfers.setConfiguration(transferConfiguration);
-  }
-
   private void initCannedAcls(Configuration conf) {
     String cannedACLName = conf.get(CANNED_ACL, DEFAULT_CANNED_ACL);
     if (!cannedACLName.isEmpty()) {
@@ -371,7 +345,7 @@ public class S3AFileSystem extends FileSystem {
           new Date(new Date().getTime() - purgeExistingMultipartAge * 1000);
 
       try {
-        transfers.abortMultipartUploads(bucket, purgeBefore);
+        transfers.get().abortMultipartUploads(bucket, purgeBefore);
       } catch (AmazonServiceException e) {
         if (e.getStatusCode() == 403) {
           instrumentation.errorIgnored();
@@ -485,6 +459,10 @@ public class S3AFileSystem extends FileSystem {
     return bucket;
   }
 
+  int getMaxEntriesToDelete() {
+    return MAX_ENTRIES_TO_DELETE;
+  }
+
   /**
    * Change the input policy for this FS.
    * @param inputPolicy new policy
@@ -536,7 +514,7 @@ public class S3AFileSystem extends FileSystem {
    * @param key input key
    * @return the path from this key
    */
-  private Path keyToPath(String key) {
+  Path keyToPath(String key) {
     return new Path("/" + key);
   }
 
@@ -890,63 +868,37 @@ public class S3AFileSystem extends FileSystem {
             "cannot rename a directory to a subdirectory of itself ");
       }
 
-      List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>();
-      if (dstStatus != null && dstStatus.isEmptyDirectory() == Tristate.TRUE) {
-        // delete unnecessary fake directory.
-        keysToDelete.add(new DeleteObjectsRequest.KeyVersion(dstKey));
-      }
+      List<CopyContext> copyContexts = new ParallelDirectoryRenamer(this).rename(srcKey, dstKey, dstStatus);
 
-      Path parentPath = keyToPath(srcKey);
-      RemoteIterator<LocatedFileStatus> iterator = listFilesAndEmptyDirectories(
-          parentPath, true);
-      while (iterator.hasNext()) {
-        LocatedFileStatus status = iterator.next();
-        long length = status.getLen();
-        String key = pathToKey(status.getPath());
-        if (status.isDirectory() && !key.endsWith("/")) {
-          key += "/";
-        }
-        keysToDelete
-            .add(new DeleteObjectsRequest.KeyVersion(key));
-        String newDstKey =
-            dstKey + key.substring(srcKey.length());
-        copyFile(key, newDstKey, length);
-
-        if (hasMetadataStore()) {
+      if (hasMetadataStore()) {
+        for (CopyContext copyContext : copyContexts) {
           // with a metadata store, the object entries need to be updated,
           // including, potentially, the ancestors
-          Path childSrc = keyToQualifiedPath(key);
-          Path childDst = keyToQualifiedPath(newDstKey);
-          if (objectRepresentsDirectory(key, length)) {
+          Path childSrc = keyToQualifiedPath(copyContext.getSrcKey());
+          Path childDst = keyToQualifiedPath(copyContext.getDestKey());
+          if (objectRepresentsDirectory(copyContext.getSrcKey(), copyContext.getLength())) {
             S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas, childSrc,
                 childDst, username);
           } else {
             S3Guard.addMoveFile(metadataStore, srcPaths, dstMetas, childSrc,
-                childDst, length, getDefaultBlockSize(childDst), username);
+                childDst, copyContext.getLength(), getDefaultBlockSize(childDst), username);
           }
           // Ancestor directories may not be listed, so we explicitly add them
           S3Guard.addMoveAncestors(metadataStore, srcPaths, dstMetas,
               keyToQualifiedPath(srcKey), childSrc, childDst, username);
         }
+      }
+    }
 
-        if (keysToDelete.size() == MAX_ENTRIES_TO_DELETE) {
-          removeKeys(keysToDelete, true, false);
-        }
-      }
-      if (!keysToDelete.isEmpty()) {
-        removeKeys(keysToDelete, false, false);
-      }
-
-      // We moved all the children, now move the top-level dir
-      // Empty directory should have been added as the object summary
-      if (hasMetadataStore()
-          && srcPaths != null
-          && !srcPaths.contains(src)) {
-        LOG.debug("To move the non-empty top-level dir src={} and dst={}",
-            src, dst);
-        S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas, src, dst,
-            username);
-      }
+    // We moved all the children, now move the top-level dir
+    // Empty directory should have been added as the object summary
+    if (hasMetadataStore()
+        && srcPaths != null
+        && !srcPaths.contains(src)) {
+      LOG.debug("To move the non-empty top-level dir src={} and dst={}",
+          src, dst);
+      S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas, src, dst,
+          username);
     }
 
     metadataStore.move(srcPaths, dstMetas);
@@ -1256,7 +1208,7 @@ public class S3AFileSystem extends FileSystem {
     }
     incrementPutStartStatistics(len);
     try {
-      Upload upload = transfers.upload(putObjectRequest);
+      Upload upload = transfers.get().upload(putObjectRequest);
       incrementPutCompletedStatistics(true, len);
       return new UploadInfo(upload, len);
     } catch (AmazonClientException e) {
@@ -1391,7 +1343,6 @@ public class S3AFileSystem extends FileSystem {
    * be deleted in a multiple object delete operation.
    * @throws AmazonClientException amazon-layer failure.
    */
-  @VisibleForTesting
   void removeKeys(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       boolean clearKeys, boolean deleteFakeDir)
       throws MultiObjectDeleteException, AmazonClientException,
@@ -2138,8 +2089,16 @@ public class S3AFileSystem extends FileSystem {
       super.close();
     } finally {
       if (transfers != null) {
-        transfers.shutdownNow(true);
+        if (transfers.isInitialized()) {
+          transfers.get().shutdownNow(true);
+        }
         transfers = null;
+      }
+      if (copies != null) {
+        if (copies.isInitialized()) {
+          copies.get().shutdownNow(true);
+        }
+        copies = null;
       }
       if (metadataStore != null) {
         metadataStore.close();
@@ -2158,7 +2117,8 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-   * Copy a single object in the bucket via a COPY operation.
+   * Copy a single object in the bucket via a COPY operation. Waits until
+   * the copy has completed before returning.
    * @param srcKey source object path
    * @param dstKey destination object path
    * @param size object size
@@ -2166,8 +2126,36 @@ public class S3AFileSystem extends FileSystem {
    * @throws InterruptedIOException the operation was interrupted
    * @throws IOException Other IO problems
    */
-  private void copyFile(String srcKey, String dstKey, long size)
+  void copyFile(String srcKey, String dstKey, long size)
       throws IOException, InterruptedIOException, AmazonClientException {
+    try {
+      Copy copy = copyFileAsync(srcKey, dstKey);
+      copy.waitForCopyResult();
+      incrementWriteOperations();
+      instrumentation.filesCopied(1, size);
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException("Interrupted copying " + srcKey
+              + " to " + dstKey + ", cancelling");
+    }
+  }
+
+  Copy copyFileAsync(String srcKey, String dstKey)
+      throws IOException, InterruptedIOException, AmazonClientException {
+    return copyFileAsync(srcKey, dstKey, null);
+  }
+
+  /**
+   * Copy a single object in the bucket via a COPY operation, but does not
+   * wait until the copy completes.
+   * @param srcKey source object path
+   * @param dstKey destination object path
+   * @param generalProgressListener listener to track the progress of the copy object request
+   * @throws AmazonClientException on failures inside the AWS SDK
+   * @throws IOException Other IO problems
+   * @return a copy object to track the progress of the copy
+   */
+  Copy copyFileAsync(String srcKey, String dstKey, ProgressListener generalProgressListener)
+      throws IOException, AmazonClientException {
     LOG.debug("copyFile {} -> {} ", srcKey, dstKey);
 
     try {
@@ -2179,6 +2167,9 @@ public class S3AFileSystem extends FileSystem {
       setOptionalCopyObjectRequestParameters(copyObjectRequest);
       copyObjectRequest.setCannedAccessControlList(cannedACL);
       copyObjectRequest.setNewObjectMetadata(dstom);
+      if (generalProgressListener != null) {
+        copyObjectRequest.setGeneralProgressListener(generalProgressListener);
+      }
 
       ProgressListener progressListener = new ProgressListener() {
         public void progressChanged(ProgressEvent progressEvent) {
@@ -2192,16 +2183,9 @@ public class S3AFileSystem extends FileSystem {
         }
       };
 
-      Copy copy = transfers.copy(copyObjectRequest);
+      Copy copy = copies.get().copy(copyObjectRequest);
       copy.addProgressListener(progressListener);
-      try {
-        copy.waitForCopyResult();
-        incrementWriteOperations();
-        instrumentation.filesCopied(1, size);
-      } catch (InterruptedException e) {
-        throw new InterruptedIOException("Interrupted copying " + srcKey
-            + " to " + dstKey + ", cancelling");
-      }
+      return copy;
     } catch (AmazonClientException e) {
       throw translateException("copyFile("+ srcKey+ ", " + dstKey + ")",
           srcKey, e);
@@ -2485,7 +2469,8 @@ public class S3AFileSystem extends FileSystem {
     sb.append(", authoritative=").append(allowAuthoritative);
     sb.append(", useListV1=").append(useListV1);
     sb.append(", boundedExecutor=").append(boundedThreadPool);
-    sb.append(", unboundedExecutor=").append(unboundedThreadPool);
+    sb.append(", upload executor=").append(transfers.getExecutorService());
+    sb.append(", copy executor=").append(copies.getExecutorService());
     sb.append(", statistics {")
         .append(statistics)
         .append("}");

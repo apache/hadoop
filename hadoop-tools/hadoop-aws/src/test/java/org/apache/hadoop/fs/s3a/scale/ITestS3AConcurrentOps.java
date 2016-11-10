@@ -94,6 +94,7 @@ public class ITestS3AConcurrentOps extends S3AScaleTestBase {
   private S3AFileSystem getRestrictedFileSystem() throws Exception {
     Configuration conf = getConfiguration();
     conf.setInt(MAX_THREADS, 2);
+    conf.setInt(COPY_MAX_THREADS, 2);
     conf.setInt(MAX_TOTAL_TASKS, 1);
 
     conf.set(MIN_MULTIPART_THRESHOLD, "10M");

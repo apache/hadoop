@@ -881,4 +881,12 @@ public final class S3AUtils {
     }
   }
 
+  static int getMaxThreads(Configuration conf, String maxThreadsKey, int defaultMaxThreads) {
+    int maxThreads = conf.getInt(maxThreadsKey, defaultMaxThreads);
+    if (maxThreads < 2) {
+      LOG.warn(maxThreadsKey + " must be at least 2: forcing to 2.");
+      maxThreads = 2;
+    }
+    return maxThreads;
+  }
 }
