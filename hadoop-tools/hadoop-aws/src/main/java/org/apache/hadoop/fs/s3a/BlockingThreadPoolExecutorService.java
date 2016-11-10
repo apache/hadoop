@@ -50,7 +50,12 @@ final class BlockingThreadPoolExecutorService
 
   private static final AtomicInteger POOLNUMBER = new AtomicInteger(1);
 
+  private final int maxActiveTasks;
   private final ThreadPoolExecutor eventProcessingExecutor;
+
+  public int getMaxActiveTasks() {
+    return maxActiveTasks;
+  }
 
   /**
    * Returns a {@link java.util.concurrent.ThreadFactory} that names each
@@ -104,10 +109,17 @@ final class BlockingThreadPoolExecutorService
     };
   }
 
+  /**
+   * Create an instance.
+   * @param permitCount total permit count
+   * @param maxActiveTasks maximum number of active tasks (for lookup only)
+   * @param eventProcessingExecutor the executor doing the real work.
+   */
   private BlockingThreadPoolExecutorService(int permitCount,
-      ThreadPoolExecutor eventProcessingExecutor) {
+      int maxActiveTasks, ThreadPoolExecutor eventProcessingExecutor) {
     super(MoreExecutors.listeningDecorator(eventProcessingExecutor),
         permitCount, false);
+    this.maxActiveTasks = maxActiveTasks;
     this.eventProcessingExecutor = eventProcessingExecutor;
   }
 
@@ -131,8 +143,9 @@ final class BlockingThreadPoolExecutorService
     /* Although we generally only expect up to waitingTasks tasks in the
     queue, we need to be able to buffer all tasks in case dequeueing is
     slower than enqueueing. */
+    int totalTasks = waitingTasks + activeTasks;
     final BlockingQueue<Runnable> workQueue =
-        new LinkedBlockingQueue<>(waitingTasks + activeTasks);
+        new LinkedBlockingQueue<>(totalTasks);
     ThreadPoolExecutor eventProcessingExecutor =
         new ThreadPoolExecutor(activeTasks, activeTasks, keepAliveTime, unit,
             workQueue, newDaemonThreadFactory(prefixName),
@@ -146,7 +159,7 @@ final class BlockingThreadPoolExecutorService
               }
             });
     eventProcessingExecutor.allowCoreThreadTimeOut(true);
-    return new BlockingThreadPoolExecutorService(waitingTasks + activeTasks,
+    return new BlockingThreadPoolExecutorService(totalTasks, activeTasks,
         eventProcessingExecutor);
   }
 

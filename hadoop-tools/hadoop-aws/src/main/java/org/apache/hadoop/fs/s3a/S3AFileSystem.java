@@ -25,11 +25,18 @@ import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -59,6 +66,7 @@ import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.event.ProgressEvent;
+import com.amazonaws.services.s3.transfer.model.CopyResult;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -149,6 +157,12 @@ public class S3AFileSystem extends FileSystem {
   private S3ADataBlocks.BlockFactory blockFactory;
   private int blockOutputActiveBlocks;
 
+  /**
+   * Pool of threads which await copy operations to complete.
+   * These do no actual work other than
+   */
+  private BlockingThreadPoolExecutorService copyWaitingThreadPool;
+
   /** Called after a new FileSystem instance is constructed.
    * @param name a uri whose authority section names the host, port, etc.
    *   for this FileSystem
@@ -208,7 +222,13 @@ public class S3AFileSystem extends FileSystem {
           DEFAULT_KEEPALIVE_TIME, 0);
       threadPoolExecutor = BlockingThreadPoolExecutorService.newInstance(
           maxThreads,
-          maxThreads + totalTasks,
+          Math.max(totalTasks - maxThreads, 0),
+          keepAliveTime, TimeUnit.SECONDS,
+          "s3a-transfer-shared");
+
+      copyWaitingThreadPool = BlockingThreadPoolExecutorService.newInstance(
+          maxThreads,
+          0,
           keepAliveTime, TimeUnit.SECONDS,
           "s3a-transfer-shared");
 
@@ -643,15 +663,27 @@ public class S3AFileSystem extends FileSystem {
       return innerRename(src, dst);
     } catch (AmazonClientException e) {
       throw translateException("rename(" + src +", " + dst + ")", src, e);
+    } catch (FileNotFoundException e) {
+      LOG.error("rename: src not found {}", src);
+      return false;
+    } catch (RenameFailedException e) {
+      LOG.debug(e.getMessage());
+      return e.getExitCode();
     }
   }
 
   /**
    * The inner rename operation. See {@link #rename(Path, Path)} for
    * the description of the operation.
+   * This operation throws an exception on any failure which needs to be
+   * reported and downgraded to a failure. That is: if a rename
    * @param src path to be renamed
    * @param dst new path after rename
-   * @return true if rename is successful
+   * @throws RenameFailedException if some criteria for a state changing
+   * rename was not met. This means work didn't happen; it's not something
+   * which is reported upstream to the FileSystem APIs, for which the semantics
+   * of "false" are pretty vague.
+   * @throws FileNotFoundException there's no source file.
    * @throws IOException on IO failure.
    * @throws AmazonClientException on failures inside the AWS SDK
    */
@@ -659,27 +691,24 @@ public class S3AFileSystem extends FileSystem {
       AmazonClientException {
     LOG.debug("Rename path {} to {}", src, dst);
     incrementStatistic(INVOCATION_RENAME);
-
     String srcKey = pathToKey(src);
     String dstKey = pathToKey(dst);
 
-    if (srcKey.isEmpty() || dstKey.isEmpty()) {
-      LOG.debug("rename: source {} or dest {}, is empty", srcKey, dstKey);
-      return false;
+    if (srcKey.isEmpty()) {
+      throw new RenameFailedException(src, dst, "source is root directory");
+    }
+    if (dstKey.isEmpty()) {
+      throw new RenameFailedException(src, dst, "dest is root directory");
     }
 
-    S3AFileStatus srcStatus;
-    try {
-      srcStatus = getFileStatus(src);
-    } catch (FileNotFoundException e) {
-      LOG.error("rename: src not found {}", src);
-      return false;
-    }
+    S3AFileStatus srcStatus = getFileStatus(src);
 
     if (srcKey.equals(dstKey)) {
-      LOG.debug("rename: src and dst refer to the same file or directory: {}",
+      LOG.debug("rename: src and dest refer to the same file or directory: {}",
           dst);
-      return srcStatus.isFile();
+      throw new RenameFailedException(src, dst,
+          "source and dest refer to the same file or directory")
+          .withExitCode(srcStatus.isFile());
     }
 
     S3AFileStatus dstStatus = null;
@@ -687,11 +716,10 @@ public class S3AFileSystem extends FileSystem {
       dstStatus = getFileStatus(dst);
 
       if (srcStatus.isDirectory() && dstStatus.isFile()) {
-        LOG.debug("rename: src {} is a directory and dst {} is a file",
-            src, dst);
-        return false;
+        throw new RenameFailedException(src, dst,
+            "source is a directory and dest is a file")
+            .withExitCode(srcStatus.isFile());
       }
-
       if (dstStatus.isDirectory() && !dstStatus.isEmptyDirectory()) {
         return false;
       }
@@ -703,12 +731,12 @@ public class S3AFileSystem extends FileSystem {
         try {
           S3AFileStatus dstParentStatus = getFileStatus(dst.getParent());
           if (!dstParentStatus.isDirectory()) {
-            return false;
+            throw new RenameFailedException(src, dst,
+                "destination parent is not a directory");
           }
         } catch (FileNotFoundException e2) {
-          LOG.debug("rename: destination path {} has no parent {}",
-              dst, parent);
-          return false;
+          throw new RenameFailedException(src, dst,
+              "destination has no parent ");
         }
       }
     }
@@ -743,9 +771,8 @@ public class S3AFileSystem extends FileSystem {
 
       //Verify dest is not a child of the source directory
       if (dstKey.startsWith(srcKey)) {
-        LOG.debug("cannot rename a directory {}" +
-              " to a subdirectory of self: {}", srcKey, dstKey);
-        return false;
+        throw new RenameFailedException(srcKey, dstKey,
+            "cannot rename a directory to a subdirectory o fitself ");
       }
 
       List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>();
@@ -754,35 +781,7 @@ public class S3AFileSystem extends FileSystem {
         keysToDelete.add(new DeleteObjectsRequest.KeyVersion(dstKey));
       }
 
-      ListObjectsRequest request = new ListObjectsRequest();
-      request.setBucketName(bucket);
-      request.setPrefix(srcKey);
-      request.setMaxKeys(maxKeys);
-
-      ObjectListing objects = listObjects(request);
-
-      while (true) {
-        for (S3ObjectSummary summary : objects.getObjectSummaries()) {
-          keysToDelete.add(
-              new DeleteObjectsRequest.KeyVersion(summary.getKey()));
-          String newDstKey =
-              dstKey + summary.getKey().substring(srcKey.length());
-          copyFile(summary.getKey(), newDstKey, summary.getSize());
-
-          if (keysToDelete.size() == MAX_ENTRIES_TO_DELETE) {
-            removeKeys(keysToDelete, true, false);
-          }
-        }
-
-        if (objects.isTruncated()) {
-          objects = continueListObjects(objects);
-        } else {
-          if (!keysToDelete.isEmpty()) {
-            removeKeys(keysToDelete, false, false);
-          }
-          break;
-        }
-      }
+      renameFilesUnderDirectory(srcKey, dstKey, keysToDelete);
     }
 
     if (src.getParent() != dst.getParent()) {
@@ -790,6 +789,123 @@ public class S3AFileSystem extends FileSystem {
       createFakeDirectoryIfNecessary(src.getParent());
     }
     return true;
+  }
+
+  /**
+   * Rename files under a directory.
+   * @param srcKey key to source directory
+   * @param dstKey destination directory
+   * @param keysToDelete Possibly non-empty list of keys to delete
+   * @throws IOException
+   * @throws AmazonClientException
+   */
+  private void renameFilesUnderDirectory(final String srcKey,
+      final String dstKey,
+      final List<DeleteObjectsRequest.KeyVersion> keysToDelete) throws IOException {
+    ListObjectsRequest request = new ListObjectsRequest();
+    request.setBucketName(bucket);
+    request.setPrefix(srcKey);
+    request.setMaxKeys(maxKeys);
+
+    ObjectListing objects = listObjects(request);
+
+    Comparator<S3ObjectSummary> compareObjectSizes = new Comparator<S3ObjectSummary>() {
+      @Override
+      public int compare(S3ObjectSummary o1, S3ObjectSummary o2) {
+        long result = o1.getSize() - o2.getSize();
+        if (result < 0) {
+          return -1;
+        } else if (result > 0) {
+          return 1;
+        }
+        return 0;
+      }
+    };
+
+
+    // THIS IS WRONG: need to have a queue with a pool of threads taking from
+    // a blocking queue and doing copy + wait. Threads finish when some event
+    // signals that (push in end of queue marker, recipient resubmits then exits?
+    // The primary thread then just needs to
+    // wait for the entire pool finishing.
+    // will need to do the listing and delete operations in a thread too
+    // for max performance; schedule them first.
+    // maybe also add a metric on number of copies queued for monitoring
+    // this is ... complicated...
+    CompletionService<CopyResult> ecs
+        = new ExecutorCompletionService<>(copyWaitingThreadPool);
+    while (true) {
+      List<S3ObjectSummary> objectSummaries = objects.getObjectSummaries();
+      Collections.sort(objectSummaries, compareObjectSizes);
+      for (S3ObjectSummary summary : objectSummaries) {
+        final String copySourceKey = summary.getKey();
+        String newDstKey =
+            dstKey + copySourceKey.substring(srcKey.length());
+        final long size = summary.getSize();
+        final Copy copy = scheduleFileCopy(copySourceKey,
+            newDstKey,
+            size);
+        // submit the next piece of work
+        ecs.submit(new Callable<CopyResult>() {
+          @Override
+          public CopyResult call() throws Exception {
+            CopyResult result = copy.waitForCopyResult();
+            incrementWriteOperations();
+            instrumentation.filesCopied(1, size);
+            keysToDelete.add(
+                new DeleteObjectsRequest.KeyVersion(copySourceKey));
+            return result;
+          }
+        });
+        // now, once that first has been submitted, we can await them finishing
+        try {
+          ecs.take().get();
+        } catch (CancellationException e) {
+          LOG.info("Cancelled copy {} to {}", srcKey, newDstKey, e);
+        } catch (InterruptedException e) {
+          throw new InterruptedIOException("Interrupted copying " + srcKey
+              + " to " + newDstKey + ", cancelling");
+        } catch (ExecutionException e) {
+          Throwable cause = e.getCause();
+          if (cause != null) {
+            // rethrow the cause so as to use Java lang exception mapping
+            try {
+              throw cause;
+            } catch (AmazonClientException | IOException ex) {
+              throw ex;
+            } catch (InterruptedException ex) {
+              throw (IOException) new InterruptedIOException("interrupted")
+                  .initCause(ex);
+            } catch (Throwable ex) {
+              throw new IOException(ex);
+            }
+          } else {
+            throw new IOException(e);
+          }
+        }
+
+      }
+
+      // old code
+      for (S3ObjectSummary summary : objectSummaries) {
+        keysToDelete.add(
+            new DeleteObjectsRequest.KeyVersion(summary.getKey()));
+
+        if (keysToDelete.size() == MAX_ENTRIES_TO_DELETE) {
+          removeKeys(keysToDelete, true, false);
+        }
+        copyFile();
+      }
+
+      if (objects.isTruncated()) {
+        objects = continueListObjects(objects);
+      } else {
+        if (!keysToDelete.isEmpty()) {
+          removeKeys(keysToDelete, false, false);
+        }
+        break;
+      }
+    }
   }
 
   /**
@@ -1700,7 +1816,50 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
+   * A progress listener called during copy operations.
+   */
+  private final ProgressListener copyProgressListener = new ProgressListener() {
+    public void progressChanged(ProgressEvent progressEvent) {
+      switch (progressEvent.getEventType()) {
+      case TRANSFER_PART_COMPLETED_EVENT:
+        incrementWriteOperations();
+        break;
+      default:
+        break;
+      }
+    }
+  };
+
+  /**
    * Copy a single object in the bucket via a COPY operation.
+   * @param srcKey source object path
+   * @param dstKey destination object path
+   * @param size object size
+   * @throws AmazonClientException on failures inside the AWS SDK
+   * @throws IOException Other IO problems
+   */
+  private Copy scheduleFileCopy(String srcKey, String dstKey, long size)
+      throws IOException, AmazonClientException {
+    LOG.debug("copyFile {} -> {} ", srcKey, dstKey);
+
+    ObjectMetadata srcom = getObjectMetadata(srcKey);
+    ObjectMetadata dstom = cloneObjectMetadata(srcom);
+    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
+      dstom.setSSEAlgorithm(serverSideEncryptionAlgorithm);
+    }
+    CopyObjectRequest copyObjectRequest =
+        new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
+    copyObjectRequest.setCannedAccessControlList(cannedACL);
+    copyObjectRequest.setNewObjectMetadata(dstom);
+
+    Copy copy = transfers.copy(copyObjectRequest);
+    copy.addProgressListener(copyProgressListener);
+    return copy;
+  }
+
+  /**
+   * Copy a single object in the bucket via a COPY operation,
+   * blocking until the copy completes.
    * @param srcKey source object path
    * @param dstKey destination object path
    * @param size object size
@@ -1710,44 +1869,13 @@ public class S3AFileSystem extends FileSystem {
    */
   private void copyFile(String srcKey, String dstKey, long size)
       throws IOException, InterruptedIOException, AmazonClientException {
-    LOG.debug("copyFile {} -> {} ", srcKey, dstKey);
-
     try {
-      ObjectMetadata srcom = getObjectMetadata(srcKey);
-      ObjectMetadata dstom = cloneObjectMetadata(srcom);
-      if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
-        dstom.setSSEAlgorithm(serverSideEncryptionAlgorithm);
-      }
-      CopyObjectRequest copyObjectRequest =
-          new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
-      copyObjectRequest.setCannedAccessControlList(cannedACL);
-      copyObjectRequest.setNewObjectMetadata(dstom);
-
-      ProgressListener progressListener = new ProgressListener() {
-        public void progressChanged(ProgressEvent progressEvent) {
-          switch (progressEvent.getEventType()) {
-            case TRANSFER_PART_COMPLETED_EVENT:
-              incrementWriteOperations();
-              break;
-            default:
-              break;
-          }
-        }
-      };
-
-      Copy copy = transfers.copy(copyObjectRequest);
-      copy.addProgressListener(progressListener);
-      try {
-        copy.waitForCopyResult();
-        incrementWriteOperations();
-        instrumentation.filesCopied(1, size);
-      } catch (InterruptedException e) {
-        throw new InterruptedIOException("Interrupted copying " + srcKey
-            + " to " + dstKey + ", cancelling");
-      }
-    } catch (AmazonClientException e) {
-      throw translateException("copyFile("+ srcKey+ ", " + dstKey + ")",
-          srcKey, e);
+      scheduleFileCopy(srcKey, dstKey, size).waitForCopyResult();
+      incrementWriteOperations();
+      instrumentation.filesCopied(1, size);
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException("Interrupted copying " + srcKey
+          + " to " + dstKey + ", cancelling");
     }
   }
 
