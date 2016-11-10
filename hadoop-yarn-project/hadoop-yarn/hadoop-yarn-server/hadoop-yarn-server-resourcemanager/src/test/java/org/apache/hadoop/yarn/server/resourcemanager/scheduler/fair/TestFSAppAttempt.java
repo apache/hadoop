@@ -231,7 +231,7 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
         new FSAppAttempt(mockScheduler, applicationAttemptId, "user1", mockQueue ,
             null, rmContext);
 
-    // Min of Memory and CPU across cluster and queue is used in
+    // Min of Memory, CPU, and GPU across cluster and queue is used in
     // DominantResourceFairnessPolicy
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(DominantResourceFairnessPolicy.class));
@@ -247,17 +247,17 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
             queueMaxResourcesAvailable.getGPUs())
     );
 
-    // Fair and Fifo ignore CPU of queue, so use cluster available CPU
+    // Fair ignores CPU and memory of queue, so use cluster available CPU and memory
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(FairSharePolicy.class));
     verifyHeadroom(schedulerApp,
-        min(queueStarvation.getMemory(),
+        Math.min(
             clusterAvailable.getMemory(),
             queueMaxResourcesAvailable.getMemory()),
         Math.min(
             clusterAvailable.getVirtualCores(),
             queueMaxResourcesAvailable.getVirtualCores()),
-        Math.min(
+        min(queueStarvation.getGPUs(),
             clusterAvailable.getGPUs(),
             queueMaxResourcesAvailable.getGPUs())
     );
@@ -265,13 +265,13 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(FifoPolicy.class));
     verifyHeadroom(schedulerApp,
-        min(queueStarvation.getMemory(),
+        Math.min(
             clusterAvailable.getMemory(),
             queueMaxResourcesAvailable.getMemory()),
         Math.min(
             clusterAvailable.getVirtualCores(),
             queueMaxResourcesAvailable.getVirtualCores()),
-        Math.min(
+        min(queueStarvation.getGPUs(),
             clusterAvailable.getGPUs(),
             queueMaxResourcesAvailable.getGPUs())
     );

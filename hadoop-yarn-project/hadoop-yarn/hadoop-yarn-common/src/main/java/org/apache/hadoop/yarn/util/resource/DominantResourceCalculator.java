@@ -163,8 +163,13 @@ public class DominantResourceCalculator extends ResourceCalculator {
         Math.max(r.getVirtualCores(), minimumResource.getVirtualCores()),
         stepFactor.getVirtualCores()),
       maximumResource.getVirtualCores());
+    int normalizedGPUs = Math.min(
+      roundUp(
+        Math.max(r.getGPUs(), minimumResource.getGPUs()),
+        stepFactor.getGPUs()),
+      maximumResource.getGPUs());
     return Resources.createResource(normalizedMemory,
-      normalizedCores, 0);
+      normalizedCores, normalizedGPUs);
   }
 
   @Override

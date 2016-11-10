@@ -590,7 +590,7 @@ public abstract class AbstractYarnScheduler
   /** {@inheritDoc} */
   @Override
   public EnumSet<SchedulerResourceTypes> getSchedulingResourceTypes() {
-    return EnumSet.of(SchedulerResourceTypes.GPU);
+    return EnumSet.of(SchedulerResourceTypes.MEMORY);
   }
 
   @Override
