@@ -136,3 +136,15 @@
 # See ResourceManager for some examples
 #
 #export YARN_SHAREDCACHEMANAGER_OPTS=
+
+###
+# Services API specific parameters
+###
+# Specify the JVM options to be used when starting the services API.
+#
+# These options will be appended to the options specified as HADOOP_OPTS
+# and therefore may override any similar flags set in HADOOP_OPTS
+#
+# See ResourceManager for some examples
+#
+#export YARN_SERVICESAPI_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -Xloggc:${HADOOP_LOG_DIR}/gc-servicesapi.log-$(date +'%Y%m%d%H%M')"
