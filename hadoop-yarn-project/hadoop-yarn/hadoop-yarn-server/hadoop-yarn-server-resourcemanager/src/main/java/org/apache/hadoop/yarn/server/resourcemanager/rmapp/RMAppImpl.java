@@ -757,6 +757,12 @@ public class RMAppImpl implements RMApp, Recoverable {
         RMAppMetrics rmAppMetrics = getRMAppMetrics();
         appUsageReport.setMemorySeconds(rmAppMetrics.getMemorySeconds());
         appUsageReport.setVcoreSeconds(rmAppMetrics.getVcoreSeconds());
+        appUsageReport.
+            setPreemptedMemorySeconds(rmAppMetrics.
+                getPreemptedMemorySeconds());
+        appUsageReport.
+            setPreemptedVcoreSeconds(rmAppMetrics.
+                getPreemptedVcoreSeconds());
       }
 
       if (currentApplicationAttemptId == null) {
@@ -1630,6 +1636,8 @@ public class RMAppImpl implements RMApp, Recoverable {
     int numNonAMContainerPreempted = 0;
     long memorySeconds = 0;
     long vcoreSeconds = 0;
+    long preemptedMemorySeconds = 0;
+    long preemptedVcoreSeconds = 0;
     for (RMAppAttempt attempt : attempts.values()) {
       if (null != attempt) {
         RMAppAttemptMetrics attemptMetrics =
@@ -1645,12 +1653,15 @@ public class RMAppImpl implements RMApp, Recoverable {
             attempt.getRMAppAttemptMetrics().getAggregateAppResourceUsage();
         memorySeconds += resUsage.getMemorySeconds();
         vcoreSeconds += resUsage.getVcoreSeconds();
+        preemptedMemorySeconds += attemptMetrics.getPreemptedMemory();
+        preemptedVcoreSeconds += attemptMetrics.getPreemptedVcore();
       }
     }
 
     return new RMAppMetrics(resourcePreempted,
         numNonAMContainerPreempted, numAMContainerPreempted,
-        memorySeconds, vcoreSeconds);
+        memorySeconds, vcoreSeconds,
+        preemptedMemorySeconds, preemptedVcoreSeconds);
   }
 
   @Private

@@ -85,6 +85,8 @@ message ApplicationAttemptStateDataProto {
     optional int64 memory_seconds = 10;
     optional int64 vcore_seconds = 11;
     optional int64 finish_time = 12;
+    optional int64 preempted_memory_seconds = 13;
+    optional int64 preempted_vcore_seconds = 14;
 }
 
 message EpochProto {

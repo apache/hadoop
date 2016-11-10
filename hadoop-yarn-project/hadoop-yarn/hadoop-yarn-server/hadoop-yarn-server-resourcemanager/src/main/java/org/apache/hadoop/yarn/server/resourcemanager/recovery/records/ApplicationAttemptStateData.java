@@ -40,7 +40,8 @@ public abstract class ApplicationAttemptStateData {
       Credentials attemptTokens, long startTime, RMAppAttemptState finalState,
       String finalTrackingUrl, String diagnostics,
       FinalApplicationStatus amUnregisteredFinalStatus, int exitStatus,
-      long finishTime, long memorySeconds, long vcoreSeconds) {
+      long finishTime, long memorySeconds, long vcoreSeconds,
+      long preemptedMemorySeconds, long preemptedVcoreSeconds) {
     ApplicationAttemptStateData attemptStateData =
         Records.newRecord(ApplicationAttemptStateData.class);
     attemptStateData.setAttemptId(attemptId);
@@ -55,16 +56,20 @@ public abstract class ApplicationAttemptStateData {
     attemptStateData.setFinishTime(finishTime);
     attemptStateData.setMemorySeconds(memorySeconds);
     attemptStateData.setVcoreSeconds(vcoreSeconds);
+    attemptStateData.setPreemptedMemorySeconds(preemptedMemorySeconds);
+    attemptStateData.setPreemptedVcoreSeconds(preemptedVcoreSeconds);
     return attemptStateData;
   }
 
   public static ApplicationAttemptStateData newInstance(
       ApplicationAttemptId attemptId, Container masterContainer,
       Credentials attemptTokens, long startTime, long memorySeconds,
-      long vcoreSeconds) {
+      long vcoreSeconds, long preemptedMemorySeconds,
+      long preemptedVcoreSeconds) {
     return newInstance(attemptId, masterContainer, attemptTokens,
         startTime, null, "N/A", "", null, ContainerExitStatus.INVALID, 0,
-        memorySeconds, vcoreSeconds);
+        memorySeconds, vcoreSeconds,
+        preemptedMemorySeconds, preemptedVcoreSeconds);
     }
 
 
@@ -182,4 +187,32 @@ public abstract class ApplicationAttemptStateData {
   @Public
   @Unstable
   public abstract void setVcoreSeconds(long vcoreSeconds);
+
+  /**
+   * Get the <em>preempted memory seconds</em>
+   * (in MB seconds) of the application.
+   * @return <em>preempted memory seconds</em>
+   * (in MB seconds) of the application
+   */
+  @Public
+  @Unstable
+  public abstract long getPreemptedMemorySeconds();
+
+  @Public
+  @Unstable
+  public abstract void setPreemptedMemorySeconds(long memorySeconds);
+
+  /**
+   * Get the <em>preempted vcore seconds</em>
+   * of the application.
+   * @return <em>preempted vcore seconds</em>
+   * of the application
+   */
+  @Public
+  @Unstable
+  public abstract long getPreemptedVcoreSeconds();
+
+  @Public
+  @Unstable
+  public abstract void setPreemptedVcoreSeconds(long vcoreSeconds);
 }

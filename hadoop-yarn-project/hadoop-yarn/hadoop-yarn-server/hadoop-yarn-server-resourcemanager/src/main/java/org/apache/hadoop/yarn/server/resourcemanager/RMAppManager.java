@@ -182,6 +182,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           .add("finalStatus", app.getFinalApplicationStatus())
           .add("memorySeconds", metrics.getMemorySeconds())
           .add("vcoreSeconds", metrics.getVcoreSeconds())
+          .add("preemptedMemorySeconds", metrics.getPreemptedMemorySeconds())
+          .add("preemptedVcoreSeconds", metrics.getPreemptedVcoreSeconds())
           .add("preemptedAMContainers", metrics.getNumAMContainersPreempted())
           .add("preemptedNonAMContainers", metrics.getNumNonAMContainersPreempted())
           .add("preemptedResources", metrics.getResourcePreempted())
