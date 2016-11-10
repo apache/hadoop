@@ -98,6 +98,8 @@ public class AppInfo {
   protected long preemptedResourceVCores;
   protected int numNonAMContainerPreempted;
   protected int numAMContainerPreempted;
+  private long preemptedMemorySeconds;
+  private long preemptedVcoreSeconds;
 
   protected List<ResourceRequest> resourceRequests;
 
@@ -203,6 +205,8 @@ public class AppInfo {
           appMetrics.getResourcePreempted().getVirtualCores();
       memorySeconds = appMetrics.getMemorySeconds();
       vcoreSeconds = appMetrics.getVcoreSeconds();
+      preemptedMemorySeconds = appMetrics.getPreemptedMemorySeconds();
+      preemptedVcoreSeconds = appMetrics.getPreemptedVcoreSeconds();
       unmanagedApplication =
           appSubmissionContext.getUnmanagedAM();
       appNodeLabelExpression =
@@ -367,6 +371,14 @@ public class AppInfo {
 
   public long getVcoreSeconds() {
     return vcoreSeconds;
+  }
+
+  public long getPreemptedMemorySeconds() {
+    return preemptedMemorySeconds;
+  }
+
+  public long getPreemptedVcoreSeconds() {
+    return preemptedVcoreSeconds;
   }
 
   public List<ResourceRequest> getResourceRequests() {

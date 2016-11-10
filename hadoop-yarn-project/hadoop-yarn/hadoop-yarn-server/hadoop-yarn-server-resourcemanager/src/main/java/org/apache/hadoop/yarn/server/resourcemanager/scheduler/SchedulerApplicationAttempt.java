@@ -718,7 +718,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         Resources.add(usedResourceClone, reservedResourceClone),
         runningResourceUsage.getMemorySeconds(),
         runningResourceUsage.getVcoreSeconds(), queueUsagePerc,
-        clusterUsagePerc);
+        clusterUsagePerc, 0, 0);
   }
 
   public synchronized Map<ContainerId, RMContainer> getLiveContainersMap() {
