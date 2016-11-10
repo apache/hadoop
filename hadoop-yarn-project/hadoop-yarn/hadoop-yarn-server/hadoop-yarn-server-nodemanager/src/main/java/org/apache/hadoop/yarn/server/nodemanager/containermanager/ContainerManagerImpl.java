@@ -1034,8 +1034,6 @@ public class ContainerManagerImpl extends CompositeService implements
             containerTokenIdentifier.getVersion(), request);
         dispatcher.getEventHandler().handle(
           new ApplicationContainerInitEvent(container));
-        this.context.getNMStateStore().storeContainer(containerId,
-            containerTokenIdentifier.getVersion(), request);
 
         this.context.getContainerTokenSecretManager().startContainerSuccessful(
           containerTokenIdentifier);
