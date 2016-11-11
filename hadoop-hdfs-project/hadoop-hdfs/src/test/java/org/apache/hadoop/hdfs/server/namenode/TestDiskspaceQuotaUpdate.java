@@ -52,6 +52,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -74,6 +75,18 @@ public class TestDiskspaceQuotaUpdate {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
         .build();
     cluster.waitActive();
+  }
+
+  @Before
+  public void resetCluster() throws Exception {
+    if (!cluster.isClusterUp()) {
+      // Previous test seems to have left cluster in a bad state;
+      // recreate the cluster to protect subsequent tests
+      cluster.shutdown();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
+        .build();
+      cluster.waitActive();
+    }
   }
 
   @AfterClass
@@ -254,7 +267,7 @@ public class TestDiskspaceQuotaUpdate {
     assertEquals(spaceUsed, newSpaceUsed);
     // make sure edits aren't corrupted
     getDFS().recoverLease(file);
-    cluster.restartNameNodes();
+    cluster.restartNameNode(true);
   }
 
   /**
@@ -297,7 +310,7 @@ public class TestDiskspaceQuotaUpdate {
     assertEquals(spaceUsed, newSpaceUsed);
     // make sure edits aren't corrupted
     getDFS().recoverLease(file);
-    cluster.restartNameNodes();
+    cluster.restartNameNode(true);
   }
 
   /**
@@ -337,7 +350,7 @@ public class TestDiskspaceQuotaUpdate {
     assertEquals(spaceUsed, newSpaceUsed);
     // make sure edits aren't corrupted
     getDFS().recoverLease(file);
-    cluster.restartNameNodes();
+    cluster.restartNameNode(true);
   }
 
   /**

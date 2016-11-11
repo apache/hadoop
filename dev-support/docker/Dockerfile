@@ -133,6 +133,15 @@ RUN pip install python-dateutil
 ENV MAVEN_OPTS -Xms256m -Xmx512m
 
 ###
+# Install node js tools for web UI frameowkr
+###
+RUN apt-get -y install nodejs && \
+    ln -s /usr/bin/nodejs /usr/bin/node && \
+    apt-get -y install npm && \
+    npm install -g bower && \
+    npm install -g ember-cli
+
+###
 # Everything past this point is either not needed for testing or breaks Yetus.
 # So tell Yetus not to read the rest of the file:
 # YETUS CUT HERE

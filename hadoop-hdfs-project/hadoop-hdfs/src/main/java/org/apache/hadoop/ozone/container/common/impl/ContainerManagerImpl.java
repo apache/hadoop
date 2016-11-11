@@ -96,7 +96,7 @@ public class ContainerManagerImpl implements ContainerManager {
     readLock();
     try {
       for (StorageLocation path : containerDirs) {
-        File directory = path.getFile();
+        File directory = Paths.get(path.getNormalizedUri()).toFile();
         if (!directory.isDirectory()) {
           LOG.error("Invalid path to container metadata directory. path: {}",
               path.toString());

@@ -35,7 +35,7 @@ import org.apache.hadoop.yarn.util.Records;
  * <ul>
  *   <li>{@link Priority} of the request.</li>
  *   <li>
- *     The <em>name</em> of the machine or rack on which the allocation is
+ *     The <em>name</em> of the host or rack on which the allocation is
  *     desired. A special value of <em>*</em> signifies that
  *     <em>any</em> host/rack is acceptable to the application.
  *   </li>

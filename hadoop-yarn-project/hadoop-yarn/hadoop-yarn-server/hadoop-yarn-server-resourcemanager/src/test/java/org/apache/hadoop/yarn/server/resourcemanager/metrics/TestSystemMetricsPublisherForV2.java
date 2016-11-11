@@ -211,7 +211,7 @@ public class TestSystemMetricsPublisherForV2 {
             + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
-    verifyEntity(appFile, 3, ApplicationMetricsConstants.CREATED_EVENT_TYPE, 6);
+    verifyEntity(appFile, 3, ApplicationMetricsConstants.CREATED_EVENT_TYPE, 8);
   }
 
   @Test(timeout = 10000)
@@ -355,7 +355,7 @@ public class TestSystemMetricsPublisherForV2 {
         FinalApplicationStatus.UNDEFINED);
     when(app.getRMAppMetrics()).thenReturn(
         new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, Integer.MAX_VALUE,
-            Long.MAX_VALUE));
+            Long.MAX_VALUE, 0, 0));
     when(app.getApplicationTags()).thenReturn(Collections.<String> emptySet());
     ApplicationSubmissionContext appSubmissionContext =
         mock(ApplicationSubmissionContext.class);

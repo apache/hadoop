@@ -19,6 +19,7 @@
 package org.apache.hadoop.lib.wsrs;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.http.JettyUtils;
 import org.json.simple.JSONStreamAware;
 
 import javax.ws.rs.Produces;
@@ -36,7 +37,7 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 
 @Provider
-@Produces(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
 @InterfaceAudience.Private
 public class JSONProvider implements MessageBodyWriter<JSONStreamAware> {
   private static final String ENTER = System.getProperty("line.separator");

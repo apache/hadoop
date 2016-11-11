@@ -565,7 +565,7 @@ void test_list_as_user() {
   }
 
   // Test with empty dir string
-  sprintf(buffer, "");
+  strcpy(buffer, "");
   int ret = list_as_user(buffer);
 
   if (ret == 0) {
@@ -1051,6 +1051,77 @@ void test_dir_permissions() {
   free(container_dir);
 }
 
+/**
+ * This test is used to verify that trim() works correctly
+ */
+void test_trim_function() {
+  char* trimmed = NULL;
+
+  printf("\nTesting trim function\n");
+
+  // Check NULL input
+  if (trim(NULL) != NULL) {
+    printf("FAIL: trim(NULL) should be NULL\n");
+    exit(1);
+  }
+
+  // Check empty input
+  trimmed = trim("");
+  if (strcmp(trimmed, "") != 0) {
+    printf("FAIL: trim(\"\") should be \"\"\n");
+    exit(1);
+  }
+  free(trimmed);
+
+  // Check single space input
+  trimmed = trim(" ");
+  if (strcmp(trimmed, "") != 0) {
+    printf("FAIL: trim(\" \") should be \"\"\n");
+    exit(1);
+  }
+  free(trimmed);
+
+  // Check multi space input
+  trimmed = trim("   ");
+  if (strcmp(trimmed, "") != 0) {
+    printf("FAIL: trim(\"   \") should be \"\"\n");
+    exit(1);
+  }
+  free(trimmed);
+
+  // Check both side trim input
+  trimmed = trim(" foo ");
+  if (strcmp(trimmed, "foo") != 0) {
+    printf("FAIL: trim(\" foo \") should be \"foo\"\n");
+    exit(1);
+  }
+  free(trimmed);
+
+  // Check left side trim input
+  trimmed = trim("foo   ");
+  if (strcmp(trimmed, "foo") != 0) {
+    printf("FAIL: trim(\"foo   \") should be \"foo\"\n");
+    exit(1);
+  }
+  free(trimmed);
+
+  // Check right side trim input
+  trimmed = trim("   foo");
+  if (strcmp(trimmed, "foo") != 0) {
+    printf("FAIL: trim(\"   foo\") should be \"foo\"\n");
+    exit(1);
+  }
+  free(trimmed);
+
+  // Check no trim input
+  trimmed = trim("foo");
+  if (strcmp(trimmed, "foo") != 0) {
+    printf("FAIL: trim(\"foo\") should be \"foo\"\n");
+    exit(1);
+  }
+  free(trimmed);
+}
+
 // This test is expected to be executed either by a regular
 // user or by root. If executed by a regular user it doesn't
 // test all the functions that would depend on changing the
@@ -1218,9 +1289,13 @@ int main(int argc, char **argv) {
 #endif
 
   run("rm -fr " TEST_ROOT);
+
+  test_trim_function();
+
   printf("\nFinished tests\n");
 
   free(current_username);
   free_executor_configurations();
+
   return 0;
 }

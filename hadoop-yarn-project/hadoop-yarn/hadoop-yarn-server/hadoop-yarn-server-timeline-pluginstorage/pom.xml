@@ -55,7 +55,7 @@
           <artifactId>jasper-compiler</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>org.mortbay.jetty</groupId>
+          <groupId>org.eclipse.jetty</groupId>
           <artifactId>jsp-2.1-jetty</artifactId>
         </exclusion>
       </exclusions>

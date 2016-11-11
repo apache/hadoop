@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt.AMState;
 
 /**
  * Handles tracking and enforcement for user and queue maxRunningApps
@@ -54,25 +55,64 @@ public class MaxRunningAppsEnforcer {
   /**
    * Checks whether making the application runnable would exceed any
    * maxRunningApps limits.
+   *
+   * @param queue the current queue
+   * @param attempt the app attempt being checked
+   * @return true if the application is runnable; false otherwise
    */
-  public boolean canAppBeRunnable(FSQueue queue, String user) {
+  public boolean canAppBeRunnable(FSQueue queue, FSAppAttempt attempt) {
+    boolean ret = true;
+    if (exceedUserMaxApps(attempt.getUser())) {
+      attempt.updateAMContainerDiagnostics(AMState.INACTIVATED,
+          "The user \"" + attempt.getUser() + "\" has reached the maximum limit"
+              + " of runnable applications.");
+      ret = false;
+    } else if (exceedQueueMaxRunningApps(queue)) {
+      attempt.updateAMContainerDiagnostics(AMState.INACTIVATED,
+          "The queue \"" + queue.getName() + "\" has reached the maximum limit"
+              + " of runnable applications.");
+      ret = false;
+    }
+
+    return ret;
+  }
+
+  /**
+   * Checks whether the number of user runnable apps exceeds the limitation.
+   *
+   * @param user the user name
+   * @return true if the number hits the limit; false otherwise
+   */
+  public boolean exceedUserMaxApps(String user) {
     AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
     Integer userNumRunnable = usersNumRunnableApps.get(user);
     if (userNumRunnable == null) {
       userNumRunnable = 0;
     }
     if (userNumRunnable >= allocConf.getUserMaxApps(user)) {
-      return false;
+      return true;
     }
+
+    return false;
+  }
+
+  /**
+   * Recursively checks whether the number of queue runnable apps exceeds the
+   * limitation.
+   *
+   * @param queue the current queue
+   * @return true if the number hits the limit; false otherwise
+   */
+  public boolean exceedQueueMaxRunningApps(FSQueue queue) {
     // Check queue and all parent queues
     while (queue != null) {
       if (queue.getNumRunnableApps() >= queue.getMaxRunningApps()) {
-        return false;
+        return true;
       }
       queue = queue.getParent();
     }
 
-    return true;
+    return false;
   }
 
   /**
@@ -198,7 +238,7 @@ public class MaxRunningAppsEnforcer {
         continue;
       }
 
-      if (canAppBeRunnable(next.getQueue(), next.getUser())) {
+      if (canAppBeRunnable(next.getQueue(), next)) {
         trackRunnableApp(next);
         FSAppAttempt appSched = next;
         next.getQueue().addApp(appSched, true);

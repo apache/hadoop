@@ -223,6 +223,16 @@ public class TestSystemMetricsPublisher {
             app.getRMAppMetrics().getVcoreSeconds(),
             Long.parseLong(entity.getOtherInfo()
                 .get(ApplicationMetricsConstants.APP_CPU_METRICS).toString()));
+        Assert.assertEquals(
+            app.getRMAppMetrics().getPreemptedMemorySeconds(),
+            Long.parseLong(entity.getOtherInfo()
+                .get(ApplicationMetricsConstants.APP_MEM_PREEMPT_METRICS)
+                .toString()));
+        Assert.assertEquals(
+            app.getRMAppMetrics().getPreemptedVcoreSeconds(),
+            Long.parseLong(entity.getOtherInfo()
+                .get(ApplicationMetricsConstants.APP_CPU_PREEMPT_METRICS)
+                .toString()));
       }
       Assert.assertEquals("context", entity.getOtherInfo()
           .get(ApplicationMetricsConstants.YARN_APP_CALLER_CONTEXT));
@@ -496,7 +506,8 @@ public class TestSystemMetricsPublisher {
     when(app.getFinalApplicationStatus()).thenReturn(
         FinalApplicationStatus.UNDEFINED);
     when(app.getRMAppMetrics()).thenReturn(
-        new RMAppMetrics(null, 0, 0, Integer.MAX_VALUE, Long.MAX_VALUE));
+        new RMAppMetrics(null, 0, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
+            Integer.MAX_VALUE, Long.MAX_VALUE));
     Set<String> appTags = new HashSet<String>();
     appTags.add("test");
     appTags.add("tags");

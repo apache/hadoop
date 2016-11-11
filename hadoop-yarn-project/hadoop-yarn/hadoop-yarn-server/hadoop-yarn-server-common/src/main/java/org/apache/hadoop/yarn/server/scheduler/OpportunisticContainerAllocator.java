@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 
+import org.apache.hadoop.yarn.server.api.protocolrecords.RemoteNode;
 import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
@@ -37,7 +38,6 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -156,12 +156,18 @@ public class OpportunisticContainerAllocator {
     }
   }
 
-  static class PartitionedResourceRequests {
+  /**
+   * Class that includes two lists of {@link ResourceRequest}s: one for
+   * GUARANTEED and one for OPPORTUNISTIC {@link ResourceRequest}s.
+   */
+  public static class PartitionedResourceRequests {
     private List<ResourceRequest> guaranteed = new ArrayList<>();
     private List<ResourceRequest> opportunistic = new ArrayList<>();
+
     public List<ResourceRequest> getGuaranteed() {
       return guaranteed;
     }
+
     public List<ResourceRequest> getOpportunistic() {
       return opportunistic;
     }
@@ -174,24 +180,21 @@ public class OpportunisticContainerAllocator {
       new DominantResourceCalculator();
 
   private final BaseContainerTokenSecretManager tokenSecretManager;
-  private int webpagePort;
 
   /**
    * Create a new Opportunistic Container Allocator.
    * @param tokenSecretManager TokenSecretManager
-   * @param webpagePort Webpage Port
    */
   public OpportunisticContainerAllocator(
-      BaseContainerTokenSecretManager tokenSecretManager, int webpagePort) {
+      BaseContainerTokenSecretManager tokenSecretManager) {
     this.tokenSecretManager = tokenSecretManager;
-    this.webpagePort = webpagePort;
   }
 
   /**
-   * Entry point into the Opportunistic Container Allocator.
+   * Allocate OPPORTUNISTIC containers.
    * @param request AllocateRequest
    * @param applicationAttemptId ApplicationAttemptId
-   * @param appContext App Specific OpportunisticContainerContext
+   * @param opportContext App specific OpportunisticContainerContext
    * @param rmIdentifier RM Identifier
    * @param appSubmitter App Submitter
    * @return List of Containers.
@@ -199,37 +202,31 @@ public class OpportunisticContainerAllocator {
    */
   public List<Container> allocateContainers(
       AllocateRequest request, ApplicationAttemptId applicationAttemptId,
-      OpportunisticContainerContext appContext, long rmIdentifier,
+      OpportunisticContainerContext opportContext, long rmIdentifier,
       String appSubmitter) throws YarnException {
-    // Partition requests into GUARANTEED and OPPORTUNISTIC reqs
-    PartitionedResourceRequests partitionedAsks =
-        partitionAskList(request.getAskList());
-
-    if (partitionedAsks.getOpportunistic().isEmpty()) {
-      return Collections.emptyList();
-    }
-
+    // Update released containers.
     List<ContainerId> releasedContainers = request.getReleaseList();
     int numReleasedContainers = releasedContainers.size();
     if (numReleasedContainers > 0) {
       LOG.info("AttemptID: " + applicationAttemptId + " released: "
           + numReleasedContainers);
-      appContext.getContainersAllocated().removeAll(releasedContainers);
+      opportContext.getContainersAllocated().removeAll(releasedContainers);
     }
 
-    // Also, update black list
+    // Update black list.
     ResourceBlacklistRequest rbr = request.getResourceBlacklistRequest();
     if (rbr != null) {
-      appContext.getBlacklist().removeAll(rbr.getBlacklistRemovals());
-      appContext.getBlacklist().addAll(rbr.getBlacklistAdditions());
+      opportContext.getBlacklist().removeAll(rbr.getBlacklistRemovals());
+      opportContext.getBlacklist().addAll(rbr.getBlacklistAdditions());
     }
 
-    // Add OPPORTUNISTIC reqs to the outstanding reqs
-    appContext.addToOutstandingReqs(partitionedAsks.getOpportunistic());
+    // Add OPPORTUNISTIC requests to the outstanding ones.
+    opportContext.addToOutstandingReqs(request.getAskList());
 
+    // Satisfy the outstanding OPPORTUNISTIC requests.
     List<Container> allocatedContainers = new ArrayList<>();
     for (Priority priority :
-        appContext.getOutstandingOpReqs().descendingKeySet()) {
+        opportContext.getOutstandingOpReqs().descendingKeySet()) {
       // Allocated containers :
       //  Key = Requested Capability,
       //  Value = List of Containers of given cap (the actual container size
@@ -237,16 +234,14 @@ public class OpportunisticContainerAllocator {
       //          we need the requested capability (key) to match against
       //          the outstanding reqs)
       Map<Resource, List<Container>> allocated = allocate(rmIdentifier,
-          appContext, priority, applicationAttemptId, appSubmitter);
+          opportContext, priority, applicationAttemptId, appSubmitter);
       for (Map.Entry<Resource, List<Container>> e : allocated.entrySet()) {
-        appContext.matchAllocationToOutstandingRequest(
+        opportContext.matchAllocationToOutstandingRequest(
             e.getKey(), e.getValue());
         allocatedContainers.addAll(e.getValue());
       }
     }
 
-    // Send all the GUARANTEED Reqs to RM
-    request.setAskList(partitionedAsks.getGuaranteed());
     return allocatedContainers;
   }
 
@@ -271,15 +266,15 @@ public class OpportunisticContainerAllocator {
   private void allocateContainersInternal(long rmIdentifier,
       AllocationParams appParams, ContainerIdGenerator idCounter,
       Set<String> blacklist, ApplicationAttemptId id,
-      Map<String, NodeId> allNodes, String userName,
+      Map<String, RemoteNode> allNodes, String userName,
       Map<Resource, List<Container>> containers, ResourceRequest anyAsk)
       throws YarnException {
     int toAllocate = anyAsk.getNumContainers()
         - (containers.isEmpty() ? 0 :
             containers.get(anyAsk.getCapability()).size());
 
-    List<NodeId> nodesForScheduling = new ArrayList<>();
-    for (Entry<String, NodeId> nodeEntry : allNodes.entrySet()) {
+    List<RemoteNode> nodesForScheduling = new ArrayList<>();
+    for (Entry<String, RemoteNode> nodeEntry : allNodes.entrySet()) {
       // Do not use blacklisted nodes for scheduling.
       if (blacklist.contains(nodeEntry.getKey())) {
         continue;
@@ -295,9 +290,9 @@ public class OpportunisticContainerAllocator {
     for (int numCont = 0; numCont < toAllocate; numCont++) {
       nextNodeToSchedule++;
       nextNodeToSchedule %= nodesForScheduling.size();
-      NodeId nodeId = nodesForScheduling.get(nextNodeToSchedule);
+      RemoteNode node = nodesForScheduling.get(nextNodeToSchedule);
       Container container = buildContainer(rmIdentifier, appParams, idCounter,
-          anyAsk, id, userName, nodeId);
+          anyAsk, id, userName, node);
       List<Container> cList = containers.get(anyAsk.getCapability());
       if (cList == null) {
         cList = new ArrayList<>();
@@ -313,7 +308,7 @@ public class OpportunisticContainerAllocator {
   private Container buildContainer(long rmIdentifier,
       AllocationParams appParams, ContainerIdGenerator idCounter,
       ResourceRequest rr, ApplicationAttemptId id, String userName,
-      NodeId nodeId) throws YarnException {
+      RemoteNode node) throws YarnException {
     ContainerId cId =
         ContainerId.newContainerId(id, idCounter.generateContainerId());
 
@@ -324,7 +319,7 @@ public class OpportunisticContainerAllocator {
     long currTime = System.currentTimeMillis();
     ContainerTokenIdentifier containerTokenIdentifier =
         new ContainerTokenIdentifier(
-            cId, 0, nodeId.getHost() + ":" + nodeId.getPort(), userName,
+            cId, 0, node.getNodeId().toString(), userName,
             capability, currTime + appParams.containerTokenExpiryInterval,
             tokenSecretManager.getCurrentKey().getKeyId(), rmIdentifier,
             rr.getPriority(), currTime,
@@ -332,10 +327,10 @@ public class OpportunisticContainerAllocator {
             ExecutionType.OPPORTUNISTIC);
     byte[] pwd =
         tokenSecretManager.createPassword(containerTokenIdentifier);
-    Token containerToken = newContainerToken(nodeId, pwd,
+    Token containerToken = newContainerToken(node.getNodeId(), pwd,
         containerTokenIdentifier);
     Container container = BuilderUtils.newContainer(
-        cId, nodeId, nodeId.getHost() + ":" + webpagePort,
+        cId, node.getNodeId(), node.getHttpAddress(),
         capability, rr.getPriority(), containerToken,
         containerTokenIdentifier.getExecutionType(),
         rr.getAllocationRequestId());
@@ -361,8 +356,14 @@ public class OpportunisticContainerAllocator {
     return containerToken;
   }
 
-  private PartitionedResourceRequests partitionAskList(List<ResourceRequest>
-      askList) {
+  /**
+   * Partitions a list of ResourceRequest to two separate lists, one for
+   * GUARANTEED and one for OPPORTUNISTIC ResourceRequests.
+   * @param askList the list of ResourceRequests to be partitioned
+   * @return the partitioned ResourceRequests
+   */
+  public PartitionedResourceRequests partitionAskList(
+      List<ResourceRequest> askList) {
     PartitionedResourceRequests partitionedRequests =
         new PartitionedResourceRequests();
     for (ResourceRequest rr : askList) {

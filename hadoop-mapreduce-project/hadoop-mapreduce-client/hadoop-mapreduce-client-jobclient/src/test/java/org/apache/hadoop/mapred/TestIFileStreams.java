@@ -22,7 +22,13 @@ import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.junit.Test;
+import org.mockito.Mockito;
+
 import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.io.OutputStream;
+
 import static org.junit.Assert.assertEquals;
 
 public class TestIFileStreams {
@@ -99,4 +105,18 @@ public class TestIFileStreams {
     fail("Did not detect bad data in checksum");
   }
 
+  @Test
+  public void testCloseStreamOnException() throws Exception {
+    OutputStream outputStream = Mockito.mock(OutputStream.class);
+    IFileOutputStream ifos = new IFileOutputStream(outputStream);
+    Mockito.doThrow(new IOException("Dummy Exception")).when(outputStream)
+        .flush();
+    try {
+      ifos.close();
+      fail("IOException is not thrown");
+    } catch (IOException ioe) {
+      assertEquals("Dummy Exception", ioe.getMessage());
+    }
+    Mockito.verify(outputStream).close();
+  }
 }

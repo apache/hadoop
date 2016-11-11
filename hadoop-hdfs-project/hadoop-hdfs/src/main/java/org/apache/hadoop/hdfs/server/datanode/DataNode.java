@@ -126,6 +126,7 @@ import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -217,7 +218,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.htrace.core.Tracer;
-import org.mortbay.util.ajax.JSON;
+import org.eclipse.jetty.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -659,7 +660,7 @@ public class DataNode extends ReconfigurableBase
     // Use the existing StorageLocation to detect storage type changes.
     Map<String, StorageLocation> existingLocations = new HashMap<>();
     for (StorageLocation loc : getStorageLocations(getConf())) {
-      existingLocations.put(loc.getFile().getCanonicalPath(), loc);
+      existingLocations.put(loc.getNormalizedUri().toString(), loc);
     }
 
     ChangedVolumes results = new ChangedVolumes();
@@ -672,11 +673,10 @@ public class DataNode extends ReconfigurableBase
       for (Iterator<StorageLocation> sl = results.newLocations.iterator();
            sl.hasNext(); ) {
         StorageLocation location = sl.next();
-        if (location.getFile().getCanonicalPath().equals(
-            dir.getRoot().getCanonicalPath())) {
+        if (location.matchesStorageDirectory(dir)) {
           sl.remove();
           StorageLocation old = existingLocations.get(
-              location.getFile().getCanonicalPath());
+              location.getNormalizedUri().toString());
           if (old != null &&
               old.getStorageType() != location.getStorageType()) {
             throw new IOException("Changing storage type is not allowed.");
@@ -1001,7 +1001,7 @@ public class DataNode extends ReconfigurableBase
 
     // Is this by the DN user itself?
     assert dnUserName != null;
-    if (callerUgi.getShortUserName().equals(dnUserName)) {
+    if (callerUgi.getUserName().equals(dnUserName)) {
       return;
     }
 
@@ -1362,7 +1362,7 @@ public class DataNode extends ReconfigurableBase
     this.blockPoolTokenSecretManager = new BlockPoolTokenSecretManager();
 
     // Login is done by now. Set the DN user name.
-    dnUserName = UserGroupInformation.getCurrentUser().getShortUserName();
+    dnUserName = UserGroupInformation.getCurrentUser().getUserName();
     LOG.info("dnUserName = " + dnUserName);
     LOG.info("supergroup = " + supergroup);
     initIpcServer();
@@ -2434,7 +2434,8 @@ public class DataNode extends ReconfigurableBase
         in = new DataInputStream(unbufIn);
         blockSender = new BlockSender(b, 0, b.getNumBytes(), 
             false, false, true, DataNode.this, null, cachingStrategy);
-        DatanodeInfo srcNode = new DatanodeInfo(bpReg);
+        DatanodeInfo srcNode = new DatanodeInfoBuilder().setNodeID(bpReg)
+            .build();
 
         new Sender(out).writeBlock(b, targetStorageTypes[0], accessToken,
             clientname, targets, targetStorageTypes, srcNode,
@@ -2726,7 +2727,7 @@ public class DataNode extends ReconfigurableBase
         locations.add(location);
       } catch (IOException ioe) {
         LOG.warn("Invalid " + DFS_DATANODE_DATA_DIR_KEY + " "
-            + location.getFile() + " : ", ioe);
+            + location + " : ", ioe);
         invalidDirs.append("\"").append(uri.getPath()).append("\" ");
       }
     }
@@ -3468,6 +3469,12 @@ public class DataNode extends ReconfigurableBase
       String planFile, String planData, boolean skipDateCheck)
       throws IOException {
     checkSuperuserPrivilege();
+    if (getStartupOption(getConf()) != StartupOption.REGULAR) {
+      throw new DiskBalancerException(
+          "Datanode is in special state, e.g. Upgrade/Rollback etc."
+              + " Disk balancing not permitted.",
+          DiskBalancerException.Result.DATANODE_STATUS_NOT_REGULAR);
+    }
     // TODO : Support force option
     this.diskBalancer.submitPlan(planID, planVersion, planFile, planData,
             skipDateCheck);

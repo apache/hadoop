@@ -18,16 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintStream;
-import java.net.InetSocketAddress;
-import java.nio.charset.Charset;
-import java.security.PrivilegedExceptionAction;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.curator.framework.AuthInfo;
@@ -38,10 +28,12 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.http.lib.StaticUserWebFilter;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
@@ -57,6 +49,7 @@ import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.ZKUtil;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -122,8 +115,21 @@ import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebApps.Builder;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
+import org.eclipse.jetty.webapp.WebAppContext;
 
 import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintStream;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.charset.Charset;
+import java.security.PrivilegedExceptionAction;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The ResourceManager is the main class that is a set of components.
@@ -145,6 +151,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   private static final Log LOG = LogFactory.getLog(ResourceManager.class);
   private static long clusterTimeStamp = System.currentTimeMillis();
+
+  /*
+   * UI2 webapp name
+   */
+  public static final String UI2_WEBAPP_NAME = "/ui2";
 
   /**
    * "Always On" services. Services that need to run always irrespective of
@@ -909,7 +920,35 @@ public class ResourceManager extends CompositeService implements Recoverable {
       }
     }
   }
-  
+
+  /**
+   * Return a HttpServer.Builder that the journalnode / namenode / secondary
+   * namenode can use to initialize their HTTP / HTTPS server.
+   *
+   * @param conf configuration object
+   * @param httpAddr HTTP address
+   * @param httpsAddr HTTPS address
+   * @param name  Name of the server
+   * @throws IOException from Builder
+   * @return builder object
+   */
+  public static HttpServer2.Builder httpServerTemplateForRM(Configuration conf,
+      final InetSocketAddress httpAddr, final InetSocketAddress httpsAddr,
+      String name) throws IOException {
+    HttpServer2.Builder builder = new HttpServer2.Builder().setName(name)
+        .setConf(conf).setSecurityEnabled(false);
+
+    if (httpAddr.getPort() == 0) {
+      builder.setFindPort(true);
+    }
+
+    URI uri = URI.create("http://" + NetUtils.getHostPortString(httpAddr));
+    builder.addEndpoint(uri);
+    LOG.info("Starting Web-server for " + name + " at: " + uri);
+
+    return builder;
+  }
+
   protected void startWepApp() {
 
     // Use the customized yarn filter instead of the standard kerberos filter to
@@ -1024,9 +1063,36 @@ public class ResourceManager extends CompositeService implements Recoverable {
       builder.withAttribute(WebAppProxy.FETCHER_ATTRIBUTE, fetcher);
       String[] proxyParts = proxyHostAndPort.split(":");
       builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE, proxyParts[0]);
-
     }
-    webApp = builder.start(new RMWebApp(this));
+
+    WebAppContext uiWebAppContext = null;
+    if (getConfig().getBoolean(YarnConfiguration.YARN_WEBAPP_UI2_ENABLE,
+        YarnConfiguration.DEFAULT_YARN_WEBAPP_UI2_ENABLE)) {
+      String webPath = UI2_WEBAPP_NAME;
+      String onDiskPath = getConfig()
+          .get(YarnConfiguration.YARN_WEBAPP_UI2_WARFILE_PATH);
+
+      if (null == onDiskPath) {
+        String war = "hadoop-yarn-ui-" + VersionInfo.getVersion() + ".war";
+        URLClassLoader cl = (URLClassLoader) ClassLoader.getSystemClassLoader();
+        URL url = cl.findResource(war);
+
+        if (null == url) {
+          onDiskPath = "";
+        } else {
+          onDiskPath = url.getFile();
+        }
+
+        LOG.info(
+            "New web UI war file name:" + war + ", and path:" + onDiskPath);
+      }
+
+      uiWebAppContext = new WebAppContext();
+      uiWebAppContext.setContextPath(webPath);
+      uiWebAppContext.setWar(onDiskPath);
+    }
+
+    webApp = builder.start(new RMWebApp(this), uiWebAppContext);
   }
 
   /**

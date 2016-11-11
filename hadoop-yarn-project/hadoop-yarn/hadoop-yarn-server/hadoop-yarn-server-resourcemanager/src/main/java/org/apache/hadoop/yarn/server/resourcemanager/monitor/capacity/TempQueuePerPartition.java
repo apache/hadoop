@@ -25,34 +25,29 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.util.ArrayList;
+import java.util.Collection;
 
 /**
  * Temporary data-structure tracking resource availability, pending resource
  * need, current utilization. This is per-queue-per-partition data structure
  */
-public class TempQueuePerPartition {
+public class TempQueuePerPartition extends AbstractPreemptionEntity {
   // Following fields are copied from scheduler
-  final String queueName;
   final String partition;
-  final Resource pending;
 
-  private final Resource current;
   private final Resource killable;
-  private final Resource reserved;
   private final float absCapacity;
   private final float absMaxCapacity;
   final Resource totalPartitionResource;
 
-  // Following fields are setted and used by candidate selection policies
-  Resource idealAssigned;
-  Resource toBePreempted;
+  // Following fields are settled and used by candidate selection policies
   Resource untouchableExtra;
   Resource preemptableExtra;
-  private Resource actuallyToBePreempted;
 
   double normalizedGuarantee;
 
   final ArrayList<TempQueuePerPartition> children;
+  private Collection<TempAppPerPartition> apps;
   LeafQueue leafQueue;
   boolean preemptionDisabled;
 
@@ -60,8 +55,8 @@ public class TempQueuePerPartition {
       boolean preemptionDisabled, String partition, Resource killable,
       float absCapacity, float absMaxCapacity, Resource totalPartitionResource,
       Resource reserved, CSQueue queue) {
-    this.queueName = queueName;
-    this.current = current;
+    super(queueName, current, Resource.newInstance(0, 0), reserved,
+        Resource.newInstance(0, 0));
 
     if (queue instanceof LeafQueue) {
       LeafQueue l = (LeafQueue) queue;
@@ -72,11 +67,9 @@ public class TempQueuePerPartition {
       pending = Resources.createResource(0);
     }
 
-    this.idealAssigned = Resource.newInstance(0, 0);
-    this.actuallyToBePreempted = Resource.newInstance(0, 0);
-    this.toBePreempted = Resource.newInstance(0, 0);
     this.normalizedGuarantee = Float.NaN;
     this.children = new ArrayList<>();
+    this.apps = new ArrayList<>();
     this.untouchableExtra = Resource.newInstance(0, 0);
     this.preemptableExtra = Resource.newInstance(0, 0);
     this.preemptionDisabled = preemptionDisabled;
@@ -85,7 +78,6 @@ public class TempQueuePerPartition {
     this.absCapacity = absCapacity;
     this.absMaxCapacity = absMaxCapacity;
     this.totalPartitionResource = totalPartitionResource;
-    this.reserved = reserved;
   }
 
   public void setLeafQueue(LeafQueue l) {
@@ -95,7 +87,9 @@ public class TempQueuePerPartition {
 
   /**
    * When adding a child we also aggregate its pending resource needs.
-   * @param q the child queue to add to this queue
+   *
+   * @param q
+   *          the child queue to add to this queue
    */
   public void addChild(TempQueuePerPartition q) {
     assert leafQueue == null;
@@ -103,12 +97,8 @@ public class TempQueuePerPartition {
     Resources.addTo(pending, q.pending);
   }
 
-  public ArrayList<TempQueuePerPartition> getChildren(){
+  public ArrayList<TempQueuePerPartition> getChildren() {
     return children;
-  }
-
-  public Resource getUsed() {
-    return current;
   }
 
   public Resource getUsedDeductReservd() {
@@ -122,28 +112,30 @@ public class TempQueuePerPartition {
     Resource absMaxCapIdealAssignedDelta = Resources.componentwiseMax(
         Resources.subtract(getMax(), idealAssigned),
         Resource.newInstance(0, 0));
-    // remain = avail - min(avail, (max - assigned), (current + pending - assigned))
+    // remain = avail - min(avail, (max - assigned), (current + pending -
+    // assigned))
     Resource accepted = Resources.min(rc, clusterResource,
-        absMaxCapIdealAssignedDelta, Resources.min(rc, clusterResource, avail,
-            Resources
-                /*
-                 * When we're using FifoPreemptionSelector
-                 * (considerReservedResource = false).
-                 *
-                 * We should deduct reserved resource to avoid excessive preemption:
-                 *
-                 * For example, if an under-utilized queue has used = reserved = 20.
-                 * Preemption policy will try to preempt 20 containers
-                 * (which is not satisfied) from different hosts.
-                 *
-                 * In FifoPreemptionSelector, there's no guarantee that preempted
-                 * resource can be used by pending request, so policy will preempt
-                 * resources repeatly.
-                 */
-                .subtract(Resources.add(
-                    (considersReservedResource ? getUsed() :
-                      getUsedDeductReservd()),
-                    pending), idealAssigned)));
+        absMaxCapIdealAssignedDelta,
+        Resources.min(rc, clusterResource, avail, Resources
+            /*
+             * When we're using FifoPreemptionSelector (considerReservedResource
+             * = false).
+             *
+             * We should deduct reserved resource to avoid excessive preemption:
+             *
+             * For example, if an under-utilized queue has used = reserved = 20.
+             * Preemption policy will try to preempt 20 containers (which is not
+             * satisfied) from different hosts.
+             *
+             * In FifoPreemptionSelector, there's no guarantee that preempted
+             * resource can be used by pending request, so policy will preempt
+             * resources repeatly.
+             */
+            .subtract(
+                Resources.add((considersReservedResource
+                    ? getUsed()
+                    : getUsedDeductReservd()), pending),
+                idealAssigned)));
     Resource remain = Resources.subtract(avail, accepted);
     Resources.addTo(idealAssigned, accepted);
     return remain;
@@ -162,8 +154,7 @@ public class TempQueuePerPartition {
     untouchableExtra = Resources.none();
     preemptableExtra = Resources.none();
 
-    Resource extra = Resources.subtract(getUsed(),
-        getGuaranteed());
+    Resource extra = Resources.subtract(getUsed(), getGuaranteed());
     if (Resources.lessThan(rc, totalPartitionResource, extra,
         Resources.none())) {
       extra = Resources.none();
@@ -197,26 +188,21 @@ public class TempQueuePerPartition {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append(" NAME: " + queueName)
-        .append(" CUR: ").append(current)
-        .append(" PEN: ").append(pending)
-        .append(" RESERVED: ").append(reserved)
-        .append(" GAR: ").append(getGuaranteed())
-        .append(" NORM: ").append(normalizedGuarantee)
-        .append(" IDEAL_ASSIGNED: ").append(idealAssigned)
-        .append(" IDEAL_PREEMPT: ").append(toBePreempted)
-        .append(" ACTUAL_PREEMPT: ").append(actuallyToBePreempted)
+    sb.append(" NAME: " + queueName).append(" CUR: ").append(current)
+        .append(" PEN: ").append(pending).append(" RESERVED: ").append(reserved)
+        .append(" GAR: ").append(getGuaranteed()).append(" NORM: ")
+        .append(normalizedGuarantee).append(" IDEAL_ASSIGNED: ")
+        .append(idealAssigned).append(" IDEAL_PREEMPT: ").append(toBePreempted)
+        .append(" ACTUAL_PREEMPT: ").append(getActuallyToBePreempted())
         .append(" UNTOUCHABLE: ").append(untouchableExtra)
-        .append(" PREEMPTABLE: ").append(preemptableExtra)
-        .append("\n");
+        .append(" PREEMPTABLE: ").append(preemptableExtra).append("\n");
 
     return sb.toString();
   }
 
   public void assignPreemption(float scalingFactor, ResourceCalculator rc,
       Resource clusterResource) {
-    Resource usedDeductKillable = Resources.subtract(
-        getUsed(), killable);
+    Resource usedDeductKillable = Resources.subtract(getUsed(), killable);
     Resource totalResource = Resources.add(getUsed(), pending);
 
     // The minimum resource that we need to keep for a queue is:
@@ -224,7 +210,8 @@ public class TempQueuePerPartition {
     //
     // Doing this because when we calculate ideal allocation doesn't consider
     // reserved resource, ideal-allocation calculated could be less than
-    // guaranteed and total. We should avoid preempt from a queue if it is already
+    // guaranteed and total. We should avoid preempt from a queue if it is
+    // already
     // <= its guaranteed resource.
     Resource minimumQueueResource = Resources.max(rc, clusterResource,
         Resources.min(rc, clusterResource, totalResource, getGuaranteed()),
@@ -233,33 +220,26 @@ public class TempQueuePerPartition {
     if (Resources.greaterThan(rc, clusterResource, usedDeductKillable,
         minimumQueueResource)) {
       toBePreempted = Resources.multiply(
-          Resources.subtract(usedDeductKillable, minimumQueueResource), scalingFactor);
+          Resources.subtract(usedDeductKillable, minimumQueueResource),
+          scalingFactor);
     } else {
       toBePreempted = Resources.none();
     }
   }
 
-  public Resource getActuallyToBePreempted() {
-    return actuallyToBePreempted;
-  }
-
-  public void setActuallyToBePreempted(Resource res) {
-    this.actuallyToBePreempted = res;
-  }
-
   public void deductActuallyToBePreempted(ResourceCalculator rc,
       Resource cluster, Resource toBeDeduct) {
-    if (Resources.greaterThan(rc, cluster, actuallyToBePreempted, toBeDeduct)) {
-      Resources.subtractFrom(actuallyToBePreempted, toBeDeduct);
+    if (Resources.greaterThan(rc, cluster, getActuallyToBePreempted(),
+        toBeDeduct)) {
+      Resources.subtractFrom(getActuallyToBePreempted(), toBeDeduct);
     }
-    actuallyToBePreempted = Resources.max(rc, cluster, actuallyToBePreempted,
-        Resources.none());
+    setActuallyToBePreempted(Resources.max(rc, cluster,
+        getActuallyToBePreempted(), Resources.none()));
   }
 
   void appendLogString(StringBuilder sb) {
-    sb.append(queueName).append(", ")
-        .append(current.getMemorySize()).append(", ")
-        .append(current.getVirtualCores()).append(", ")
+    sb.append(queueName).append(", ").append(current.getMemorySize())
+        .append(", ").append(current.getVirtualCores()).append(", ")
         .append(pending.getMemorySize()).append(", ")
         .append(pending.getVirtualCores()).append(", ")
         .append(getGuaranteed().getMemorySize()).append(", ")
@@ -267,9 +247,17 @@ public class TempQueuePerPartition {
         .append(idealAssigned.getMemorySize()).append(", ")
         .append(idealAssigned.getVirtualCores()).append(", ")
         .append(toBePreempted.getMemorySize()).append(", ")
-        .append(toBePreempted.getVirtualCores() ).append(", ")
-        .append(actuallyToBePreempted.getMemorySize()).append(", ")
-        .append(actuallyToBePreempted.getVirtualCores());
+        .append(toBePreempted.getVirtualCores()).append(", ")
+        .append(getActuallyToBePreempted().getMemorySize()).append(", ")
+        .append(getActuallyToBePreempted().getVirtualCores());
+  }
+
+  public void addAllApps(Collection<TempAppPerPartition> orderedApps) {
+    this.apps = orderedApps;
+  }
+
+  public Collection<TempAppPerPartition> getApps() {
+    return apps;
   }
 
 }

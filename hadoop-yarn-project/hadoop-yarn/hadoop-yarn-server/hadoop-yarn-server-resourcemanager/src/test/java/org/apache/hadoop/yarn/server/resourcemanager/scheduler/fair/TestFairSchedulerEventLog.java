@@ -45,7 +45,7 @@ public class TestFairSchedulerEventLog {
     Configuration conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, FairScheduler.class,
         ResourceScheduler.class);
-    conf.set("yarn.scheduler.fair.event-log-enabled", "true");
+    conf.set(FairSchedulerConfiguration.EVENT_LOG_ENABLED, "true");
 
     // All tests assume only one assignment per node update
     conf.set(FairSchedulerConfiguration.ASSIGN_MULTIPLE, "false");

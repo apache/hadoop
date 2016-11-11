@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import com.google.common.base.Supplier;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -42,13 +43,14 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
-
 
 /**
  * This file tests the erasure coding metrics in DataNode.
@@ -94,22 +96,35 @@ public class TestDataNodeErasureCodingMetrics {
     DataNode workerDn = doTest("/testEcTasks");
     MetricsRecordBuilder rb = getMetrics(workerDn.getMetrics().name());
 
-    // EcReconstructionTasks metric value will be updated in the finally block
-    // of striped reconstruction thread. Here, giving a grace period to finish
-    // EC reconstruction metric updates in DN.
-    LOG.info("Waiting to finish EC reconstruction metric updates in DN");
-    int retries = 0;
-    while (retries < 20) {
-      long taskMetricValue = getLongCounter("EcReconstructionTasks", rb);
-      if (taskMetricValue > 0) {
-        break;
+    // Ensure that reconstruction task is finished
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        long taskMetricValue = getLongCounter("EcReconstructionTasks", rb);
+        return (taskMetricValue > 0);
       }
-      Thread.sleep(500);
-      retries++;
-      rb = getMetrics(workerDn.getMetrics().name());
-    }
+    }, 500, 10000);
+
     assertCounter("EcReconstructionTasks", (long) 1, rb);
     assertCounter("EcFailedReconstructionTasks", (long) 0, rb);
+  }
+
+  @Test(timeout = 120000)
+  public void testEcCodingTime() throws Exception {
+    DataNode workerDn = doTest("/testEcCodingTime");
+    MetricsRecordBuilder rb = getMetrics(workerDn.getMetrics().name());
+
+    // Ensure that reconstruction task is finished
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        long taskMetricValue = getLongCounter("EcReconstructionTasks", rb);
+        return (taskMetricValue > 0);
+      }
+    }, 500, 10000);
+
+    long decodeTime = getLongCounter("ecDecodingTimeNanos", rb);
+    Assert.assertTrue(decodeTime > 0);
   }
 
   private DataNode doTest(String fileName) throws Exception {

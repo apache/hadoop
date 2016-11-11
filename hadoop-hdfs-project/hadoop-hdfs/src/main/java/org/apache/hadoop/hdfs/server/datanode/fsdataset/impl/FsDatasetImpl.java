@@ -58,7 +58,6 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
-import org.apache.hadoop.hdfs.InstrumentedLock;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -109,6 +108,7 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
+import org.apache.hadoop.util.InstrumentedLock;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
@@ -562,16 +562,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
-  private StorageType getStorageTypeFromLocations(
-      Collection<StorageLocation> dataLocations, File dir) {
-    for (StorageLocation dataLocation : dataLocations) {
-      if (dataLocation.getFile().equals(dir)) {
-        return dataLocation.getStorageType();
-      }
-    }
-    return StorageType.DEFAULT;
-  }
-
   /**
    * Return the total space used by dfs datanode
    */
@@ -635,7 +625,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         infos.length);
     for (VolumeFailureInfo info: infos) {
       failedStorageLocations.add(
-          info.getFailedStorageLocation().getFile().getAbsolutePath());
+          info.getFailedStorageLocation().getNormalizedUri().toString());
     }
     return failedStorageLocations.toArray(
         new String[failedStorageLocations.size()]);
@@ -674,7 +664,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     long estimatedCapacityLostTotal = 0;
     for (VolumeFailureInfo info: infos) {
       failedStorageLocations.add(
-          info.getFailedStorageLocation().getFile().getAbsolutePath());
+          info.getFailedStorageLocation().getNormalizedUri().toString());
       long failureDate = info.getFailureDate();
       if (failureDate > lastVolumeFailureDate) {
         lastVolumeFailureDate = failureDate;
@@ -748,7 +738,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   ReplicaInfo getBlockReplica(String bpid, long blockId) throws IOException {
     ReplicaInfo r = validateBlockFile(bpid, blockId);
     if (r == null) {
-      throw new IOException("BlockId " + blockId + " is not valid.");
+      throw new FileNotFoundException("BlockId " + blockId + " is not valid.");
     }
     return r;
   }
@@ -1724,37 +1714,23 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   /**
-   * Get the list of finalized blocks from in-memory blockmap for a block pool.
+   * Gets a list of references to the finalized blocks for the given block pool.
+   * <p>
+   * Callers of this function should call
+   * {@link FsDatasetSpi#acquireDatasetLock} to avoid blocks' status being
+   * changed during list iteration.
+   * </p>
+   * @return a list of references to the finalized blocks for the given block
+   *         pool.
    */
   @Override
   public List<ReplicaInfo> getFinalizedBlocks(String bpid) {
     try (AutoCloseableLock lock = datasetLock.acquire()) {
-      ArrayList<ReplicaInfo> finalized =
-          new ArrayList<ReplicaInfo>(volumeMap.size(bpid));
+      final List<ReplicaInfo> finalized = new ArrayList<ReplicaInfo>(
+          volumeMap.size(bpid));
       for (ReplicaInfo b : volumeMap.replicas(bpid)) {
         if (b.getState() == ReplicaState.FINALIZED) {
-          finalized.add(new ReplicaBuilder(ReplicaState.FINALIZED)
-              .from(b).build());
-        }
-      }
-      return finalized;
-    }
-  }
-
-  /**
-   * Get the list of finalized blocks from in-memory blockmap for a block pool.
-   */
-  @Override
-  public List<ReplicaInfo> getFinalizedBlocksOnPersistentStorage(
-      String bpid) {
-    try (AutoCloseableLock lock = datasetLock.acquire()) {
-      ArrayList<ReplicaInfo> finalized =
-          new ArrayList<ReplicaInfo>(volumeMap.size(bpid));
-      for (ReplicaInfo b : volumeMap.replicas(bpid)) {
-        if(!b.getVolume().isTransientStorage() &&
-            b.getState() == ReplicaState.FINALIZED) {
-          finalized.add(new ReplicaBuilder(ReplicaState.FINALIZED)
-              .from(b).build());
+          finalized.add(b);
         }
       }
       return finalized;

@@ -710,7 +710,7 @@ public class FairScheduler extends
       }
       application.setCurrentAppAttempt(attempt);
 
-      boolean runnable = maxRunningEnforcer.canAppBeRunnable(queue, user);
+      boolean runnable = maxRunningEnforcer.canAppBeRunnable(queue, attempt);
       queue.addApp(attempt, runnable);
       if (runnable) {
         maxRunningEnforcer.trackRunnableApp(attempt);
@@ -1714,7 +1714,7 @@ public class FairScheduler extends
     boolean wasRunnable = oldQueue.removeApp(attempt);
     // if app was not runnable before, it may be runnable now
     boolean nowRunnable = maxRunningEnforcer.canAppBeRunnable(newQueue,
-        attempt.getUser());
+        attempt);
     if (wasRunnable && !nowRunnable) {
       throw new IllegalStateException("Should have already verified that app "
           + attempt.getApplicationId() + " would be runnable in new queue");

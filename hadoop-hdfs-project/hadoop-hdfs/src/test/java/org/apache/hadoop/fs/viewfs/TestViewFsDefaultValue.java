@@ -63,6 +63,7 @@ public class TestViewFsDefaultValue {
   
   static final String testFileDir = "/tmp/test/";
   static final String testFileName = testFileDir + "testFileStatusSerialziation";
+  static final String NOT_IN_MOUNTPOINT_FILENAME = "/NotInMountpointFile";
   private static MiniDFSCluster cluster;
   private static final FileSystemTestHelper fileSystemTestHelper = new FileSystemTestHelper(); 
   private static final Configuration CONF = new Configuration();
@@ -70,6 +71,8 @@ public class TestViewFsDefaultValue {
   private static FileSystem vfs;
   private static Path testFilePath;
   private static Path testFileDirPath;
+  // Use NotInMountpoint path to trigger the exception
+  private static Path notInMountpointPath;
 
   @BeforeClass
   public static void clusterSetupAtBegining() throws IOException,
@@ -86,12 +89,14 @@ public class TestViewFsDefaultValue {
     cluster.waitClusterUp();
     fHdfs = cluster.getFileSystem();
     fileSystemTestHelper.createFile(fHdfs, testFileName);
+    fileSystemTestHelper.createFile(fHdfs, NOT_IN_MOUNTPOINT_FILENAME);
     Configuration conf = ViewFileSystemTestSetup.createConfig();
     ConfigUtil.addLink(conf, "/tmp", new URI(fHdfs.getUri().toString() +
       "/tmp"));
     vfs = FileSystem.get(FsConstants.VIEWFS_URI, conf);
     testFileDirPath = new Path (testFileDir);
     testFilePath = new Path (testFileName);
+    notInMountpointPath = new Path(NOT_IN_MOUNTPOINT_FILENAME);
   }
 
 
@@ -105,7 +110,7 @@ public class TestViewFsDefaultValue {
     // but we are only looking at the defaultBlockSize, so this 
     // test should still pass
     try {
-      vfs.getDefaultBlockSize();
+      vfs.getDefaultBlockSize(notInMountpointPath);
       fail("getServerDefaults on viewFs did not throw excetion!");
     } catch (NotInMountpointException e) {
       assertEquals(vfs.getDefaultBlockSize(testFilePath), 
@@ -120,7 +125,7 @@ public class TestViewFsDefaultValue {
   public void testGetDefaultReplication()
       throws IOException, URISyntaxException {
     try {
-      vfs.getDefaultReplication();
+      vfs.getDefaultReplication(notInMountpointPath);
       fail("getDefaultReplication on viewFs did not throw excetion!");
     } catch (NotInMountpointException e) {
       assertEquals(vfs.getDefaultReplication(testFilePath), 
@@ -135,7 +140,7 @@ public class TestViewFsDefaultValue {
   @Test
   public void testServerDefaults() throws IOException {
     try {
-      FsServerDefaults serverDefaults = vfs.getServerDefaults();
+      vfs.getServerDefaults(notInMountpointPath);
       fail("getServerDefaults on viewFs did not throw excetion!");
     } catch (NotInMountpointException e) {
       FsServerDefaults serverDefaults = vfs.getServerDefaults(testFilePath);
@@ -215,6 +220,7 @@ public class TestViewFsDefaultValue {
   @AfterClass
   public static void cleanup() throws IOException {
     fHdfs.delete(new Path(testFileName), true);
+    fHdfs.delete(notInMountpointPath, true);
   }
 
 }

@@ -48,6 +48,8 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdenti
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -89,6 +91,8 @@ public abstract class DelegationTokenAuthenticationHandler
   public static final String DELEGATION_TOKEN_UGI_ATTRIBUTE =
       "hadoop.security.delegation-token.ugi";
 
+  public static final String JSON_MAPPER_PREFIX = PREFIX + "json-mapper.";
+
   static {
     DELEGATION_TOKEN_OPS.add(KerberosDelegationTokenAuthenticator.
         DelegationTokenOperation.GETDELEGATIONTOKEN.toString());
@@ -101,6 +105,7 @@ public abstract class DelegationTokenAuthenticationHandler
   private AuthenticationHandler authHandler;
   private DelegationTokenManager tokenManager;
   private String authType;
+  private JsonFactory jsonFactory;
 
   public DelegationTokenAuthenticationHandler(AuthenticationHandler handler) {
     authHandler = handler;
@@ -120,6 +125,7 @@ public abstract class DelegationTokenAuthenticationHandler
   public void init(Properties config) throws ServletException {
     authHandler.init(config);
     initTokenManager(config);
+    initJsonFactory(config);
   }
 
   /**
@@ -151,6 +157,30 @@ public abstract class DelegationTokenAuthenticationHandler
     tokenKind = tokenKind.trim();
     tokenManager = new DelegationTokenManager(conf, new Text(tokenKind));
     tokenManager.init();
+  }
+
+  @VisibleForTesting
+  public void initJsonFactory(Properties config) {
+    boolean hasFeature = false;
+    JsonFactory tmpJsonFactory = new JsonFactory();
+
+    for (Map.Entry entry : config.entrySet()) {
+      String key = (String)entry.getKey();
+      if (key.startsWith(JSON_MAPPER_PREFIX)) {
+        JsonGenerator.Feature feature =
+            JsonGenerator.Feature.valueOf(key.substring(JSON_MAPPER_PREFIX
+                .length()));
+        if (feature != null) {
+          hasFeature = true;
+          boolean enabled = Boolean.parseBoolean((String)entry.getValue());
+          tmpJsonFactory.configure(feature, enabled);
+        }
+      }
+    }
+
+    if (hasFeature) {
+      jsonFactory = tmpJsonFactory;
+    }
   }
 
   @Override
@@ -298,7 +328,7 @@ public abstract class DelegationTokenAuthenticationHandler
             if (map != null) {
               response.setContentType(MediaType.APPLICATION_JSON);
               Writer writer = response.getWriter();
-              ObjectMapper jsonMapper = new ObjectMapper();
+              ObjectMapper jsonMapper = new ObjectMapper(jsonFactory);
               jsonMapper.writeValue(writer, map);
               writer.write(ENTER);
               writer.flush();

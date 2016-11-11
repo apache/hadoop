@@ -22,6 +22,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AnonymousAWSCredentials;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -149,6 +150,16 @@ public class AWSCredentialProviderList implements AWSCredentialsProvider {
     }
     throw new AmazonClientException(message, lastException);
 
+  }
+
+  /**
+   * Returns the underlying list of providers.
+   *
+   * @return providers
+   */
+  @VisibleForTesting
+  List<AWSCredentialsProvider> getProviders() {
+    return providers;
   }
 
   /**

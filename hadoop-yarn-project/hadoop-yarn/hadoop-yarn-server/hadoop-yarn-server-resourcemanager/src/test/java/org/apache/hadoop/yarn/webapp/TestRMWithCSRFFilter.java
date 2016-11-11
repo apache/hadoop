@@ -26,6 +26,7 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.VersionInfo;
@@ -120,7 +121,8 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
         .get(ClientResponse.class);
     assertTrue("Should have been accepted", response.getStatus() ==
                                             Status.OK.getStatusCode());
-    assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     String xml = response.getEntity(String.class);
     verifyClusterInfoXML(xml);
   }
@@ -144,7 +146,8 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
         .get(ClientResponse.class);
     assertTrue("Should have been accepted", response.getStatus() ==
                                             Status.OK.getStatusCode());
-    assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     String xml = response.getEntity(String.class);
     verifyClusterInfoXML(xml);
   }

@@ -19,11 +19,12 @@ package org.apache.hadoop.http;
 
 import java.io.IOException;
 
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.mortbay.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.DefaultServlet;
 
 /**
  * General servlet which is admin-authorized.
@@ -35,9 +36,13 @@ public class AdminAuthorizedServlet extends DefaultServlet {
 
   @Override
   protected void doGet(HttpServletRequest request, HttpServletResponse response)
- throws ServletException, IOException {
-    // Do the authorization
-    if (HttpServer2.hasAdministratorAccess(getServletContext(), request,
+      throws ServletException, IOException {
+    // If user is a static user and auth Type is null, that means
+    // there is a non-security environment and no need authorization,
+    // otherwise, do the authorization.
+    final ServletContext servletContext = getServletContext();
+    if (HttpServer2.isStaticUserAndNoneAuthType(servletContext, request) ||
+        HttpServer2.hasAdministratorAccess(servletContext, request,
         response)) {
       // Authorization is done. Just call super.
       super.doGet(request, response);

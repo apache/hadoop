@@ -52,6 +52,15 @@ public class TestNativeAzureFileSystemOperationsMocked extends
   }
 
   @Override
+  public void testGlobStatusThrowsExceptionForUnreadableDir()
+      throws Exception {
+    System.out.println(
+        "Skipping testGlobStatusThrowsExceptionForUnreadableDir since WASB"
+            + " doesn't honor directory permissions.");
+    assumeNotWindows();
+  }
+
+  @Override
   public String getTestRootDir() {
     return TEST_ROOT_DIR;
   }

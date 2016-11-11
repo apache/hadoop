@@ -65,7 +65,8 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
   private final String user;
   private final ApplicationId appId;
   private final Dispatcher dispatcher;
-  private final ConcurrentMap<LocalResourceRequest,LocalizedResource> localrsrc;
+  @VisibleForTesting
+  final ConcurrentMap<LocalResourceRequest, LocalizedResource> localrsrc;
   private Configuration conf;
   private LocalDirsHandlerService dirsHandler;
   /*

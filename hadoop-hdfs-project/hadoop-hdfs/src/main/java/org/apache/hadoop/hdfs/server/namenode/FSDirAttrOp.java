@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.security.AccessControlException;
 
@@ -59,7 +60,7 @@ public class FSDirAttrOp {
     INodesInPath iip;
     fsd.writeLock();
     try {
-      iip = fsd.resolvePathForWrite(pc, src);
+      iip = fsd.resolvePath(pc, src, DirOp.WRITE);
       fsd.checkOwner(pc, iip);
       unprotectedSetPermission(fsd, iip, permission);
     } finally {
@@ -79,14 +80,16 @@ public class FSDirAttrOp {
     INodesInPath iip;
     fsd.writeLock();
     try {
-      iip = fsd.resolvePathForWrite(pc, src);
+      iip = fsd.resolvePath(pc, src, DirOp.WRITE);
       fsd.checkOwner(pc, iip);
       if (!pc.isSuperUser()) {
         if (username != null && !pc.getUser().equals(username)) {
-          throw new AccessControlException("Non-super user cannot change owner");
+          throw new AccessControlException("User " + username
+              + " is not a super user (non-super user cannot change owner).");
         }
         if (group != null && !pc.isMemberOfGroup(group)) {
-          throw new AccessControlException("User does not belong to " + group);
+          throw new AccessControlException(
+              "User " + username + " does not belong to " + group);
         }
       }
       unprotectedSetOwner(fsd, iip, username, group);
@@ -105,7 +108,7 @@ public class FSDirAttrOp {
     INodesInPath iip;
     fsd.writeLock();
     try {
-      iip = fsd.resolvePathForWrite(pc, src);
+      iip = fsd.resolvePath(pc, src, DirOp.WRITE);
       // Write access is required to set access and modification times
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
@@ -133,7 +136,7 @@ public class FSDirAttrOp {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     fsd.writeLock();
     try {
-      final INodesInPath iip = fsd.resolvePathForWrite(pc, src);
+      final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.WRITE);
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
       }
@@ -180,7 +183,7 @@ public class FSDirAttrOp {
     INodesInPath iip;
     fsd.writeLock();
     try {
-      iip = fsd.resolvePathForWrite(pc, src);
+      iip = fsd.resolvePath(pc, src, DirOp.WRITE);
 
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
@@ -204,7 +207,7 @@ public class FSDirAttrOp {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     fsd.readLock();
     try {
-      final INodesInPath iip = fsd.resolvePath(pc, path, false);
+      final INodesInPath iip = fsd.resolvePath(pc, path, DirOp.READ_LINK);
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.READ);
       }
@@ -224,10 +227,7 @@ public class FSDirAttrOp {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     fsd.readLock();
     try {
-      final INodesInPath iip = fsd.resolvePath(pc, src, false);
-      if (fsd.isPermissionEnabled()) {
-        fsd.checkTraverse(pc, iip);
-      }
+      final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.READ_LINK);
       return INodeFile.valueOf(iip.getLastINode(), iip.getPath())
           .getPreferredBlockSize();
     } finally {
@@ -249,7 +249,7 @@ public class FSDirAttrOp {
 
     fsd.writeLock();
     try {
-      INodesInPath iip = fsd.resolvePathForWrite(pc, src);
+      INodesInPath iip = fsd.resolvePath(pc, src, DirOp.WRITE);
       INodeDirectory changed =
           unprotectedSetQuota(fsd, iip, nsQuota, ssQuota, type);
       if (changed != null) {

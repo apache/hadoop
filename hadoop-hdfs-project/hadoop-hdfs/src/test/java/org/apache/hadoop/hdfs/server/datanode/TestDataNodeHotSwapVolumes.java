@@ -221,7 +221,7 @@ public class TestDataNodeHotSwapVolumes {
     }
     assertFalse(oldLocations.isEmpty());
 
-    String newPaths = oldLocations.get(0).getFile().getAbsolutePath() +
+    String newPaths = new File(oldLocations.get(0).getUri()).getAbsolutePath() +
         ",/foo/path1,/foo/path2";
 
     DataNode.ChangedVolumes changedVolumes =
@@ -229,18 +229,18 @@ public class TestDataNodeHotSwapVolumes {
     List<StorageLocation> newVolumes = changedVolumes.newLocations;
     assertEquals(2, newVolumes.size());
     assertEquals(new File("/foo/path1").getAbsolutePath(),
-      newVolumes.get(0).getFile().getAbsolutePath());
+        new File(newVolumes.get(0).getUri()).getAbsolutePath());
     assertEquals(new File("/foo/path2").getAbsolutePath(),
-      newVolumes.get(1).getFile().getAbsolutePath());
+        new File(newVolumes.get(1).getUri()).getAbsolutePath());
 
     List<StorageLocation> removedVolumes = changedVolumes.deactivateLocations;
     assertEquals(1, removedVolumes.size());
-    assertEquals(oldLocations.get(1).getFile(),
-        removedVolumes.get(0).getFile());
+    assertEquals(oldLocations.get(1).getNormalizedUri(),
+        removedVolumes.get(0).getNormalizedUri());
 
     assertEquals(1, changedVolumes.unchangedLocations.size());
-    assertEquals(oldLocations.get(0).getFile(),
-        changedVolumes.unchangedLocations.get(0).getFile());
+    assertEquals(oldLocations.get(0).getNormalizedUri(),
+        changedVolumes.unchangedLocations.get(0).getNormalizedUri());
   }
 
   @Test
@@ -519,7 +519,7 @@ public class TestDataNodeHotSwapVolumes {
         DFSTestUtil.getAllBlocks(fs, testFile).get(1).getBlock();
     FsVolumeSpi volumeWithBlock = dn.getFSDataset().getVolume(block);
     String dirWithBlock = "[" + volumeWithBlock.getStorageType() + "]" +
-        volumeWithBlock.getStorageLocation().getFile().toURI();
+        volumeWithBlock.getStorageLocation().getUri();
     String newDirs = dirWithBlock;
     for (String dir : oldDirs) {
       if (dirWithBlock.startsWith(dir)) {
@@ -577,7 +577,7 @@ public class TestDataNodeHotSwapVolumes {
     try (FsDatasetSpi.FsVolumeReferences volumes =
         dataset.getFsVolumeReferences()) {
       for (FsVolumeSpi volume : volumes) {
-        assertThat(volume.getStorageLocation().getFile().toString(),
+        assertThat(new File(volume.getStorageLocation().getUri()).toString(),
             is(not(anyOf(is(newDirs.get(0)), is(newDirs.get(2))))));
       }
     }
@@ -593,8 +593,10 @@ public class TestDataNodeHotSwapVolumes {
         dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY).split(",");
     assertEquals(4, effectiveVolumes.length);
     for (String ev : effectiveVolumes) {
-      assertThat(StorageLocation.parse(ev).getFile().getCanonicalPath(),
-          is(not(anyOf(is(newDirs.get(0)), is(newDirs.get(2))))));
+      assertThat(
+          new File(StorageLocation.parse(ev).getUri()).getCanonicalPath(),
+          is(not(anyOf(is(newDirs.get(0)), is(newDirs.get(2)))))
+      );
     }
   }
 

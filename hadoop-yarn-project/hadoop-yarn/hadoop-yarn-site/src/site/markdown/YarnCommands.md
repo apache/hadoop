@@ -173,21 +173,8 @@ Commands useful for administrators of a Hadoop cluster.
 
 ### `daemonlog`
 
-Usage:
-
-```
-   yarn daemonlog -getlevel <host:httpport> <classname> 
-   yarn daemonlog -setlevel <host:httpport> <classname> <level>
-```
-
-| COMMAND\_OPTIONS | Description |
-|:---- |:---- |
-| -getlevel `<host:httpport>` `<classname>` | Prints the log level of the log identified by a qualified `<classname>`, in the daemon running at `<host:httpport>`. This command internally connects to `http://<host:httpport>/logLevel?log=<classname>` |
-| -setlevel `<host:httpport> <classname> <level>` | Sets the log level of the log identified by a qualified `<classname>` in the daemon running at `<host:httpport>`. This command internally connects to `http://<host:httpport>/logLevel?log=<classname>&level=<level>` |
-
-Get/Set the log level for a Log identified by a qualified class name in the daemon.
-
-Example: `$ bin/yarn daemonlog -setlevel 127.0.0.1:8088 org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl DEBUG`
+Get/Set the log level for a Log identified by a qualified class name in the daemon dynamically.
+See the Hadoop [Commands Manual](../../hadoop-project-dist/hadoop-common/CommandsManual.html#daemonlog) for more information.
 
 ### `nodemanager`
 
@@ -228,7 +215,7 @@ Usage:
      -getGroups [username]
      -addToClusterNodeLabels <"label1(exclusive=true),label2(exclusive=false),label3">
      -removeFromClusterNodeLabels <label1,label2,label3> (label splitted by ",")
-     -replaceLabelsOnNode <"node1[:port]=label1,label2 node2[:port]=label1,label2">
+     -replaceLabelsOnNode <"node1[:port]=label1,label2 node2[:port]=label1,label2"> [-failOnUnknownNodes]
      -directlyAccessNodeLabelStore
      -refreshClusterMaxPriority
      -updateNodeResource [NodeID] [MemSize] [vCores] ([OvercommitTimeout])
@@ -252,7 +239,7 @@ Usage:
 | -getGroups [username] | Get groups the specified user belongs to. |
 | -addToClusterNodeLabels <"label1(exclusive=true),label2(exclusive=false),label3"> | Add to cluster node labels. Default exclusivity is true. |
 | -removeFromClusterNodeLabels <label1,label2,label3> (label splitted by ",") | Remove from cluster node labels. |
-| -replaceLabelsOnNode <"node1[:port]=label1,label2 node2[:port]=label1,label2"> | Replace labels on nodes (please note that we do not support specifying multiple labels on a single host for now.) |
+| -replaceLabelsOnNode <"node1[:port]=label1,label2 node2[:port]=label1,label2"> [-failOnUnknownNodes]| Replace labels on nodes (please note that we do not support specifying multiple labels on a single host for now.) -failOnUnknownNodes is optional, when we set this option, it will fail if specified nodes are unknown.|
 | -directlyAccessNodeLabelStore | This is DEPRECATED, will be removed in future releases. Directly access node label store, with this option, all node label related operations will not connect RM. Instead, they will access/modify stored node labels directly. By default, it is false (access via RM). AND PLEASE NOTE: if you configured yarn.node-labels.fs-store.root-dir to a local directory (instead of NFS or HDFS), this option will only work when the command run on the machine where RM is running. |
 | -refreshClusterMaxPriority | Refresh cluster max priority |
 | -updateNodeResource [NodeID] [MemSize] [vCores] \([OvercommitTimeout]\) | Update resource on specific node. |

@@ -78,12 +78,17 @@ public class Count extends FsCommand {
           "The -" + OPTION_EXCLUDE_SNAPSHOT + " option excludes snapshots " +
           "from being calculated. \n" +
           "The -" + OPTION_TYPE + " option displays quota by storage types.\n" +
-          "It must be used with -" + OPTION_QUOTA + " option.\n" +
+          "It should be used with -" + OPTION_QUOTA + " or -" +
+          OPTION_QUOTA_AND_USAGE + " option, otherwise it will be ignored.\n" +
           "If a comma-separated list of storage types is given after the -" +
           OPTION_TYPE + " option, \n" +
           "it displays the quota and usage for the specified types. \n" +
           "Otherwise, it displays the quota and usage for all the storage \n" +
-          "types that support quota \n" +
+          "types that support quota. The list of possible storage " +
+          "types(case insensitive):\n" +
+          "ram_disk, ssd, disk and archive.\n" +
+          "It can also pass the value '', 'all' or 'ALL' to specify all " +
+          "the storage types.\n" +
           "The -" + OPTION_QUOTA_AND_USAGE + " option shows the quota and \n" +
           "the usage against the quota without the detailed content summary.";
 

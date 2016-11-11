@@ -28,6 +28,9 @@ public class StorageReceivedDeletedBlocks {
   final DatanodeStorage storage;
   private final ReceivedDeletedBlockInfo[] blocks;
 
+  /**
+   * @deprecated Use {@link #getStorage()} instead
+   */
   @Deprecated
   public String getStorageID() {
     return storage.getStorageID();
@@ -41,6 +44,10 @@ public class StorageReceivedDeletedBlocks {
     return blocks;
   }
 
+  /**
+   * @deprecated Use {@link #StorageReceivedDeletedBlocks(
+   * DatanodeStorage, ReceivedDeletedBlockInfo[])} instead
+   */
   @Deprecated
   public StorageReceivedDeletedBlocks(final String storageID,
       final ReceivedDeletedBlockInfo[] blocks) {

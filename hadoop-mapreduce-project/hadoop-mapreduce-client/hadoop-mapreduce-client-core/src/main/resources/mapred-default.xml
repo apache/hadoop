@@ -24,6 +24,11 @@
 <configuration>
 
 <property>
+  <name>mapreduce.job.hdfs-servers</name>
+  <value>${fs.defaultFS}</value>
+</property>
+
+<property>
   <name>mapreduce.job.committer.setup.cleanup.needed</name>
   <value>true</value>
   <description> true, if job needs job-setup and job-cleanup.
@@ -1623,6 +1628,14 @@
   <name>mapreduce.jobhistory.webapp.address</name>
   <value>0.0.0.0:19888</value>
   <description>MapReduce JobHistory Server Web UI host:port</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.webapp.https.address</name>
+  <value>0.0.0.0:19890</value>
+  <description>
+    The https address the MapReduce JobHistory Server WebApp is on.
+  </description>
 </property>
 
 <property>

@@ -200,12 +200,13 @@ public class ActivitiesManager extends AbstractService {
   // Add queue, application or container activity into specific application
   // allocation.
   void addSchedulingActivityForApp(ApplicationId applicationId,
-      String containerId, String priority, ActivityState state,
+      ContainerId containerId, String priority, ActivityState state,
       String diagnostic, String type) {
     if (shouldRecordThisApp(applicationId)) {
       AppAllocation appAllocation = appsAllocation.get(applicationId);
-      appAllocation.addAppAllocationActivity(containerId, priority, state,
-          diagnostic, type);
+      appAllocation.addAppAllocationActivity(containerId == null ?
+          "Container-Id-Not-Assigned" :
+          containerId.toString(), priority, state, diagnostic, type);
     }
   }
 

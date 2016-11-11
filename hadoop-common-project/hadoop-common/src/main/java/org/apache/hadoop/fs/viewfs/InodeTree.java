@@ -302,6 +302,12 @@ abstract class InodeTree<T> {
         String src = key.substring(mtPrefix.length());
         if (src.startsWith(linkPrefix)) {
           src = src.substring(linkPrefix.length());
+          if (src.equals(SlashPath.toString())) {
+            throw new UnsupportedFileSystemException("Unexpected mount table "
+                + "link entry '" + key + "'. "
+                + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH  + " is not "
+                + "supported yet.");
+          }
         } else if (src.startsWith(linkMergePrefix)) { // A merge link
           isMergeLink = true;
           src = src.substring(linkMergePrefix.length());

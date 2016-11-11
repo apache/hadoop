@@ -192,6 +192,13 @@
       <directory>${project.build.directory}/site</directory>
       <outputDirectory>/share/doc/hadoop/${hadoop.component}</outputDirectory>
     </fileSet>
+      <fileSet>
+      <directory>hadoop-yarn/hadoop-yarn-ui/target/hadoop-yarn-ui-${project.version}</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/webapps/rm</outputDirectory>
+      <includes>
+        <include>**/*</include>
+      </includes>
+    </fileSet>
   </fileSets>
   <moduleSets>
     <moduleSet>

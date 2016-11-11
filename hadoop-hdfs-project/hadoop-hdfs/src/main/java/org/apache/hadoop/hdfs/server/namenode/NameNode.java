@@ -268,7 +268,6 @@ public class NameNode extends ReconfigurableBase implements
     DFS_NAMENODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
     DFS_HA_FENCE_METHODS_KEY,
     DFS_HA_ZKFC_PORT_KEY,
-    DFS_HA_FENCE_METHODS_KEY
   };
   
   /**

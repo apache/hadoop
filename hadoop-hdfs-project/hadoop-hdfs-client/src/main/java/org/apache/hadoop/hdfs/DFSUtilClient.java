@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.SignedBytes;
 import org.apache.hadoop.conf.Configuration;
@@ -51,6 +52,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
@@ -81,6 +83,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_KEY;
@@ -775,5 +781,49 @@ public class DFSUtilClient {
     return conf.getBoolean(
         DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_KEY,
         DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT);
+  }
+
+  /**
+   * Utility to create a {@link ThreadPoolExecutor}.
+   *
+   * @param corePoolSize - min threads in the pool, even if idle
+   * @param maxPoolSize - max threads in the pool
+   * @param keepAliveTimeSecs - max seconds beyond which excess idle threads
+   *        will be terminated
+   * @param threadNamePrefix - name prefix for the pool threads
+   * @param runRejectedExec - when true, rejected tasks from
+   *        ThreadPoolExecutor are run in the context of calling thread
+   * @return ThreadPoolExecutor
+   */
+  public static ThreadPoolExecutor getThreadPoolExecutor(int corePoolSize,
+      int maxPoolSize, long keepAliveTimeSecs, String threadNamePrefix,
+      boolean runRejectedExec) {
+    Preconditions.checkArgument(corePoolSize > 0);
+    ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(corePoolSize,
+        maxPoolSize, keepAliveTimeSecs, TimeUnit.SECONDS,
+        new SynchronousQueue<Runnable>(), new Daemon.DaemonFactory() {
+          private final AtomicInteger threadIndex = new AtomicInteger(0);
+
+          @Override
+          public Thread newThread(Runnable r) {
+            Thread t = super.newThread(r);
+            t.setName(threadNamePrefix + threadIndex.getAndIncrement());
+            return t;
+          }
+        });
+    if (runRejectedExec) {
+      threadPoolExecutor.setRejectedExecutionHandler(new ThreadPoolExecutor
+          .CallerRunsPolicy() {
+        @Override
+        public void rejectedExecution(Runnable runnable,
+            ThreadPoolExecutor e) {
+          LOG.info(threadNamePrefix + " task is rejected by " +
+                  "ThreadPoolExecutor. Executing it in current thread.");
+          // will run in the current thread
+          super.rejectedExecution(runnable, e);
+        }
+      });
+    }
+    return threadPoolExecutor;
   }
 }

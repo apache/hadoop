@@ -245,6 +245,11 @@ public class TestApplicationHistoryManagerOnTimelineStore {
           applicationResourceUsageReport.getMemorySeconds());
       Assert
           .assertEquals(345, applicationResourceUsageReport.getVcoreSeconds());
+      Assert.assertEquals(456,
+          applicationResourceUsageReport.getPreemptedMemorySeconds());
+      Assert
+          .assertEquals(789, applicationResourceUsageReport
+              .getPreemptedVcoreSeconds());
       Assert.assertEquals(FinalApplicationStatus.UNDEFINED,
           app.getFinalApplicationStatus());
       Assert.assertEquals(YarnApplicationState.FINISHED,
@@ -503,8 +508,10 @@ public class TestApplicationHistoryManagerOnTimelineStore {
         Priority.newInstance(0));
     entityInfo.put(ApplicationMetricsConstants.SUBMITTED_TIME_ENTITY_INFO,
         Integer.MAX_VALUE + 1L);
-    entityInfo.put(ApplicationMetricsConstants.APP_MEM_METRICS,123);
-    entityInfo.put(ApplicationMetricsConstants.APP_CPU_METRICS,345);
+    entityInfo.put(ApplicationMetricsConstants.APP_MEM_METRICS, 123);
+    entityInfo.put(ApplicationMetricsConstants.APP_CPU_METRICS, 345);
+    entityInfo.put(ApplicationMetricsConstants.APP_MEM_PREEMPT_METRICS,456);
+    entityInfo.put(ApplicationMetricsConstants.APP_CPU_PREEMPT_METRICS,789);
     if (emptyACLs) {
       entityInfo.put(ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO, "");
     } else {

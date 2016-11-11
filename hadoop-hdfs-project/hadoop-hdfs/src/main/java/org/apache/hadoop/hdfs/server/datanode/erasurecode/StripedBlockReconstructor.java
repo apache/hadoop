@@ -103,7 +103,10 @@ class StripedBlockReconstructor extends StripedReconstructor
     int[] erasedIndices = stripedWriter.getRealTargetIndices();
     ByteBuffer[] outputs = stripedWriter.getRealTargetBuffers(toReconstructLen);
 
+    long start = System.nanoTime();
     getDecoder().decode(inputs, erasedIndices, outputs);
+    long end = System.nanoTime();
+    this.getDatanode().getMetrics().incrECDecodingTime(end - start);
 
     stripedWriter.updateRealTargetBuffers(toReconstructLen);
   }

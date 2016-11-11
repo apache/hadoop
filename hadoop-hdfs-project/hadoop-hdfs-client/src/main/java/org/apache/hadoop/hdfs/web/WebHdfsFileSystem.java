@@ -49,6 +49,8 @@ import java.util.StringTokenizer;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.hadoop.conf.Configuration;
@@ -103,8 +105,6 @@ import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1622,6 +1622,27 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
+  public Path getTrashRoot(Path path) {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_TRASH_ROOT);
+
+    final HttpOpParam.Op op = GetOpParam.Op.GETTRASHROOT;
+    try {
+      String strTrashPath = new FsPathResponseRunner<String>(op, path) {
+        @Override
+        String decodeResponse(Map<?, ?> json) throws IOException {
+          return JsonUtilClient.getPath(json);
+        }
+      }.run();
+      return new Path(strTrashPath).makeQualified(getUri(), null);
+    } catch(IOException e) {
+      LOG.warn("Cannot find trash root of " + path, e);
+      // keep the same behavior with dfs
+      return super.getTrashRoot(path).makeQualified(getUri(), null);
+    }
+  }
+
+  @Override
   public void access(final Path path, final FsAction mode) throws IOException {
     final HttpOpParam.Op op = GetOpParam.Op.CHECKACCESS;
     new FsPathRunner(op, path, new FsActionParam(mode)).run();
@@ -1831,6 +1852,9 @@ public class WebHdfsFileSystem extends FileSystem
     int read(byte[] b, int off, int len) throws IOException {
       if (runnerState == RunnerState.CLOSED) {
         throw new IOException("Stream closed");
+      }
+      if (len == 0) {
+        return 0;
       }
 
       // Before the first read, pos and fileLength will be 0 and readBuffer

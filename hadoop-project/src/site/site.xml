@@ -131,7 +131,6 @@
       <item name="Writing YARN Applications" href="hadoop-yarn/hadoop-yarn-site/WritingYarnApplications.html"/>
       <item name="YARN Application Security" href="hadoop-yarn/hadoop-yarn-site/YarnApplicationSecurity.html"/>
       <item name="NodeManager" href="hadoop-yarn/hadoop-yarn-site/NodeManager.html"/>
-      <item name="DockerContainerExecutor" href="hadoop-yarn/hadoop-yarn-site/DockerContainerExecutor.html"/>
       <item name="Using CGroups" href="hadoop-yarn/hadoop-yarn-site/NodeManagerCgroups.html"/>
       <item name="Secure Containers" href="hadoop-yarn/hadoop-yarn-site/SecureContainer.html"/>
       <item name="Registry" href="hadoop-yarn/hadoop-yarn-site/registry/index.html"/>

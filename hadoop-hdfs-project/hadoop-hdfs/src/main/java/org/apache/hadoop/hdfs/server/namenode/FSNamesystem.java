@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.commons.lang.StringEscapeUtils.escapeJava;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT;
@@ -180,6 +181,7 @@ import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
@@ -219,6 +221,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.FSDirEncryptionZoneOp.EncryptionKeyInfo;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
@@ -282,7 +285,7 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
 import org.apache.log4j.Logger;
-import org.mortbay.util.ajax.JSON;
+import org.eclipse.jetty.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
@@ -1796,7 +1799,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
          * HDFS-7463. A better fix is to change the edit log of SetTime to
          * use inode id instead of a path.
          */
-        final INodesInPath iip = dir.resolvePath(pc, srcArg);
+        final INodesInPath iip = dir.resolvePath(pc, srcArg, DirOp.READ);
         src = iip.getPath();
 
         INode inode = iip.getLastINode();
@@ -2270,10 +2273,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   boolean recoverLease(String src, String holder, String clientMachine)
       throws IOException {
-    if (!DFSUtil.isValidName(src)) {
-      throw new IOException("Invalid file name: " + src);
-    }
-  
     boolean skipSync = false;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
@@ -2281,7 +2280,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot recover the lease of " + src);
-      final INodesInPath iip = dir.resolvePathForWrite(pc, src);
+      final INodesInPath iip = dir.resolvePath(pc, src, DirOp.WRITE);
       src = iip.getPath();
       final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
       if (!inode.isUnderConstruction()) {
@@ -3283,12 +3282,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String fullName = bc.getName();
     try {
       if (fullName != null && fullName.startsWith(Path.SEPARATOR)
-          && dir.getINode(fullName) == bc) {
+          && dir.getINode(fullName, DirOp.READ) == bc) {
         // If file exists in normal path then no need to look in snapshot
         return false;
       }
-    } catch (UnresolvedLinkException e) {
-      LOG.error("Error while resolving the link : " + fullName, e);
+    } catch (IOException e) {
+      // the snapshot path and current path may contain symlinks, ancestor
+      // dirs replaced by files, etc.
+      LOG.error("Error while resolving the path : " + fullName, e);
       return false;
     }
     /*
@@ -4040,7 +4041,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
       DatanodeInfo[] arr = new DatanodeInfo[results.size()];
       for (int i=0; i<arr.length; i++) {
-        arr[i] = new DatanodeInfo(results.get(i));
+        arr[i] = new DatanodeInfoBuilder().setFrom(results.get(i))
+            .build();
       }
       return arr;
     } finally {
@@ -4061,7 +4063,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       DatanodeStorageReport[] reports = new DatanodeStorageReport[datanodes.size()];
       for (int i = 0; i < reports.length; i++) {
         final DatanodeDescriptor d = datanodes.get(i);
-        reports[i] = new DatanodeStorageReport(new DatanodeInfo(d),
+        reports[i] = new DatanodeStorageReport(
+            new DatanodeInfoBuilder().setFrom(d).build(),
             d.getStorageReports());
       }
       return reports;
@@ -5698,7 +5701,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     List<DirectorySnapshottableFeature> lsf = new ArrayList<>();
     if (snapshottableDirs != null) {
       for (String snap : snapshottableDirs) {
-        final INode isnap = getFSDirectory().getINode(snap, false);
+        final INode isnap = getFSDirectory().getINode(snap, DirOp.READ_LINK);
         final DirectorySnapshottableFeature sf =
             isnap.asDirectory().getDirectorySnapshottableFeature();
         if (sf == null) {
@@ -6791,7 +6794,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      final INodesInPath iip = dir.resolvePath(pc, src);
+      final INodesInPath iip = dir.resolvePath(pc, src, DirOp.READ);
       src = iip.getPath();
       INode inode = iip.getLastINode();
       if (inode == null) {
@@ -6878,6 +6881,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (auditLog.isDebugEnabled() ||
           (auditLog.isInfoEnabled() && !debugCmdSet.contains(cmd))) {
         final StringBuilder sb = STRING_BUILDER.get();
+        src = escapeJava(src);
+        dst = escapeJava(dst);
         sb.setLength(0);
         sb.append("allowed=").append(succeeded).append("\t");
         sb.append("ugi=").append(userName).append("\t");

@@ -113,6 +113,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   public static final int SHUTDOWN_HOOK_PRIORITY = 10;
 
   public static final String TRASH_PREFIX = ".Trash";
+  public static final String USER_HOME_PREFIX = "/user";
 
   /** FileSystem cache */
   static final Cache CACHE = new Cache();
@@ -188,7 +189,11 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @return the uri of the default filesystem
    */
   public static URI getDefaultUri(Configuration conf) {
-    return URI.create(fixName(conf.get(FS_DEFAULT_NAME_KEY, DEFAULT_FS)));
+    URI uri = URI.create(fixName(conf.get(FS_DEFAULT_NAME_KEY, DEFAULT_FS)));
+    if (uri.getScheme() == null) {
+      throw new IllegalArgumentException("No scheme in default FS: " + uri);
+    }
+    return uri;
   }
 
   /** Set the default filesystem URI in a configuration.
@@ -1961,7 +1966,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public Path getHomeDirectory() {
     return this.makeQualified(
-        new Path("/user/"+System.getProperty("user.name")));
+        new Path(USER_HOME_PREFIX + "/" + System.getProperty("user.name")));
   }
 
 

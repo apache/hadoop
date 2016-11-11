@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.mapred.CopyMapper.FileAction;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -44,8 +45,8 @@ public class TestRetriableFileCopyCommand {
 
     File f = File.createTempFile(this.getClass().getSimpleName(), null);
     f.deleteOnExit();
-    FileStatus stat =
-        new FileStatus(1L, false, 1, 1024, 0, new Path(f.toURI()));
+    CopyListingFileStatus stat = new CopyListingFileStatus(
+        new FileStatus(1L, false, 1, 1024, 0, new Path(f.toURI())));
     
     Exception actualEx = null;
     try {

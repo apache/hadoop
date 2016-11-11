@@ -139,7 +139,19 @@ public class RequestLoggerFilter implements Filter {
       status = sc;
     }
 
+    /**
+     * Calls setStatus(int sc, String msg) on the wrapped
+     * {@link HttpServletResponseWrapper} object.
+     *
+     * @param sc the status code
+     * @param msg the status message
+     * @deprecated {@link HttpServletResponseWrapper#setStatus(int, String)} is
+     * deprecated. To set a status code use {@link #setStatus(int)}, to send an
+     * error with a description use {@link #sendError(int, String)}
+     */
     @Override
+    @Deprecated
+    @SuppressWarnings("deprecation")
     public void setStatus(int sc, String msg) {
       super.setStatus(sc, msg);
       status = sc;

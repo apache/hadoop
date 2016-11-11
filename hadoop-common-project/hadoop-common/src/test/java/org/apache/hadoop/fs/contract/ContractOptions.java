@@ -37,16 +37,33 @@ public interface ContractOptions {
   String FS_CONTRACT_KEY = "fs.contract.";
 
   /**
+   * Flag to indicate that a newly created file may overwrite a pre-existing
+   * directory.
+   * {@value}
+   */
+  String CREATE_OVERWRITES_DIRECTORY = "create-overwrites-directory";
+
+  /**
+   * Flag to indicate that a newly created file is not made visible in the
+   * namespace immediately.  Instead, the file becomes visible at a later point
+   * in the file creation lifecycle, such as when the client closes it.
+   * {@value}
+   */
+  String CREATE_VISIBILITY_DELAYED = "create-visibility-delayed";
+
+  /**
    * Is a filesystem case sensitive.
    * Some of the filesystems that say "no" here may mean
    * that it varies from platform to platform -the localfs being the key
    * example.
+   * {@value}
    */
   String IS_CASE_SENSITIVE = "is-case-sensitive";
 
   /**
    * Blobstore flag. Implies it's not a real directory tree and
    * consistency is below that which Hadoop expects
+   * {@value}
    */
   String IS_BLOBSTORE = "is-blobstore";
 
@@ -196,6 +213,7 @@ public interface ContractOptions {
   /**
    * Limit for #of random seeks to perform.
    * Keep low for remote filesystems for faster tests
+   * {@value}
    */
   String TEST_RANDOM_SEEK_COUNT = "test.random-seek-count";
 

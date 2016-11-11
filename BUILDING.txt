@@ -15,6 +15,7 @@ Requirements:
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 * python (for releasedocs)
 * bats (for shell code testing)
+* Node.js / bower / Ember-cli (for YARN UI v2 building)
 
 ----------------------------------------------------------------------------------
 The easiest way to get an environment with all the appropriate tools is by means
@@ -119,7 +120,7 @@ Maven build goals:
  * Run clover                : mvn test -Pclover [-DcloverLicenseLocation=${user.name}/.clover.license]
  * Run Rat                   : mvn apache-rat:check
  * Build javadocs            : mvn javadoc:javadoc
- * Build distribution        : mvn package [-Pdist][-Pdocs][-Psrc][-Pnative][-Dtar][-Preleasedocs]
+ * Build distribution        : mvn package [-Pdist][-Pdocs][-Psrc][-Pnative][-Dtar][-Preleasedocs][-Pyarn-ui]
  * Change Hadoop version     : mvn versions:set -DnewVersion=NEWVERSION
 
  Build options:
@@ -129,6 +130,7 @@ Maven build goals:
   * Use -Psrc to create a project source TAR.GZ
   * Use -Dtar to create a TAR with the distribution (using -Pdist)
   * Use -Preleasedocs to include the changelog and release docs (requires Internet connectivity)
+  * Use -Pyarn-ui to build YARN UI v2. (Requires Internet connectivity)
 
  Snappy build options:
 
@@ -211,6 +213,14 @@ Maven build goals:
     the final tar file. This option requires that -Disal.lib is also given,
     and it ignores the -Disal.prefix option. If -Disal.lib isn't given, the
     bundling and building will fail.
+
+ Special plugins: OWASP's dependency-check:
+
+   OWASP's dependency-check plugin will scan the third party dependencies
+   of this project for known CVEs (security vulnerabilities against them).
+   It will produce a report in target/dependency-check-report.html. To
+   invoke, run 'mvn dependency-check:aggregate'. Note that this plugin
+   requires maven 3.1.1 or greater.
 
 ----------------------------------------------------------------------------------
 Building components separately
@@ -381,3 +391,14 @@ http://www.zlib.net/
 Building distributions:
 
  * Build distribution with native code    : mvn package [-Pdist][-Pdocs][-Psrc][-Dtar]
+
+----------------------------------------------------------------------------------
+Running compatibility checks with checkcompatibility.py
+
+Invoke `./dev-support/bin/checkcompatibility.py` to run Java API Compliance Checker
+to compare the public Java APIs of two git objects. This can be used by release
+managers to compare the compatibility of a previous and current release.
+
+As an example, this invocation will check the compatibility of interfaces annotated as Public or LimitedPrivate:
+
+./dev-support/bin/checkcompatibility.py --annotation org.apache.hadoop.classification.InterfaceAudience.Public --annotation org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate --include "hadoop.*" branch-2.7.2 trunk

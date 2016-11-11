@@ -48,8 +48,9 @@ public class ProcessIdFileReader {
     if (path == null) {
       throw new IOException("Trying to access process id from a null path");
     }
-    
-    LOG.debug("Accessing pid from pid file " + path);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Accessing pid from pid file " + path);
+    }
     String processId = null;
     BufferedReader bufReader = null;
 
@@ -97,9 +98,10 @@ public class ProcessIdFileReader {
         bufReader.close();
       }
     }
-    LOG.debug("Got pid " 
-        + (processId != null? processId : "null")  
-        + " from path " + path);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Got pid " + (processId != null ? processId : "null")
+          + " from path " + path);
+    }
     return processId;
   }
 

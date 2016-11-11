@@ -19,11 +19,13 @@ package org.apache.hadoop.fs.viewfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.ArrayList;
 
+import com.google.common.base.Joiner;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
@@ -34,18 +36,19 @@ import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.viewfs.ConfigUtil;
 import org.apache.hadoop.fs.viewfs.ViewFileSystem.MountPoint;
-import org.apache.hadoop.fs.viewfs.ViewFileSystem;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 
@@ -53,6 +56,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.*;
 
 
@@ -82,6 +87,8 @@ abstract public class ViewFileSystemBaseTest {
   Path targetTestRoot;
   Configuration conf;
   final FileSystemTestHelper fileSystemTestHelper;
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ViewFileSystemBaseTest.class);
 
   public ViewFileSystemBaseTest() {
       this.fileSystemTestHelper = createFileSystemHelper();
@@ -144,6 +151,10 @@ abstract public class ViewFileSystemBaseTest {
   public void testGetMountPoints() {
     ViewFileSystem viewfs = (ViewFileSystem) fsView;
     MountPoint[] mountPoints = viewfs.getMountPoints();
+    for (MountPoint mountPoint : mountPoints) {
+      LOG.info("MountPoint: " + mountPoint.getSrc() + " => "
+          + Joiner.on(",").join(mountPoint.getTargets()));
+    }
     Assert.assertEquals(getExpectedMountPoints(), mountPoints.length); 
   }
   
@@ -911,6 +922,32 @@ abstract public class ViewFileSystemBaseTest {
         }
       } catch (UnsupportedOperationException e) {
         // ignore
+      }
+    }
+  }
+
+  @Test
+  public void testConfLinkSlash() throws Exception {
+    String clusterName = "ClusterX";
+    URI viewFsUri = new URI(FsConstants.VIEWFS_SCHEME, clusterName,
+        "/", null, null);
+
+    Configuration newConf = new Configuration();
+    ConfigUtil.addLink(newConf, clusterName, "/",
+        new Path(targetTestRoot, "/").toUri());
+
+    String mtPrefix = Constants.CONFIG_VIEWFS_PREFIX + "." + clusterName + ".";
+    try {
+      FileSystem.get(viewFsUri, newConf);
+      fail("ViewFileSystem should error out on mount table entry: "
+          + mtPrefix + Constants.CONFIG_VIEWFS_LINK + "." + "/");
+    } catch (Exception e) {
+      if (e instanceof UnsupportedFileSystemException) {
+        String msg = Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH
+            + " is not supported yet.";
+        assertThat(e.getMessage(), containsString(msg));
+      } else {
+        fail("Unexpected exception: " + e.getMessage());
       }
     }
   }

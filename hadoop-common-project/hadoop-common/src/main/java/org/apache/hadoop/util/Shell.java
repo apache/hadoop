@@ -237,7 +237,7 @@ public abstract class Shell {
   /** Return a command to get permission information. */
   public static String[] getGetPermissionCommand() {
     return (WINDOWS) ? new String[] { getWinUtilsPath(), "ls", "-F" }
-                     : new String[] { "/bin/ls", "-ld" };
+                     : new String[] { "ls", "-ld" };
   }
 
   /** Return a command to set permission. */
@@ -734,8 +734,7 @@ public abstract class Shell {
     }
   }
 
-  public static final boolean isBashSupported = checkIsBashSupported();
-  private static boolean checkIsBashSupported() {
+  public static boolean checkIsBashSupported() throws InterruptedIOException {
     if (Shell.WINDOWS) {
       return false;
     }
@@ -746,6 +745,9 @@ public abstract class Shell {
       String[] args = {"bash", "-c", "echo 1000"};
       shexec = new ShellCommandExecutor(args);
       shexec.execute();
+    } catch (InterruptedIOException iioe) {
+      LOG.warn("Interrupted, unable to determine if bash is supported", iioe);
+      throw iioe;
     } catch (IOException ioe) {
       LOG.warn("Bash is not supported by the OS", ioe);
       supported = false;

@@ -294,11 +294,27 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
           rackLocalityThreshold;
 
       // Relax locality constraints once we've surpassed threshold.
-      if (getSchedulingOpportunities(schedulerKey) > (numNodes * threshold)) {
+      int schedulingOpportunities = getSchedulingOpportunities(schedulerKey);
+      double thresholdNum = numNodes * threshold;
+      if (schedulingOpportunities > thresholdNum) {
         if (allowed.equals(NodeType.NODE_LOCAL)) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("SchedulingOpportunities: " + schedulingOpportunities
+                + ", nodeLocalityThreshold: " + thresholdNum
+                + ", change allowedLocality from NODE_LOCAL to RACK_LOCAL"
+                + ", priority: " + schedulerKey.getPriority()
+                + ", app attempt id: " + this.attemptId);
+          }
           allowedLocalityLevel.put(schedulerKey, NodeType.RACK_LOCAL);
           resetSchedulingOpportunities(schedulerKey);
         } else if (allowed.equals(NodeType.RACK_LOCAL)) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("SchedulingOpportunities: " + schedulingOpportunities
+                + ", rackLocalityThreshold: " + thresholdNum
+                + ", change allowedLocality from RACK_LOCAL to OFF_SWITCH"
+                + ", priority: " + schedulerKey.getPriority()
+                + ", app attempt id: " + this.attemptId);
+          }
           allowedLocalityLevel.put(schedulerKey, NodeType.OFF_SWITCH);
           resetSchedulingOpportunities(schedulerKey);
         }
@@ -365,9 +381,23 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
       if (waitTime > thresholdTime) {
         if (allowed.equals(NodeType.NODE_LOCAL)) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Waiting time: " + waitTime
+                + " ms, nodeLocalityDelay time: " + nodeLocalityDelayMs + " ms"
+                + ", change allowedLocality from NODE_LOCAL to RACK_LOCAL"
+                + ", priority: " + schedulerKey.getPriority()
+                + ", app attempt id: " + this.attemptId);
+          }
           allowedLocalityLevel.put(schedulerKey, NodeType.RACK_LOCAL);
           resetSchedulingOpportunities(schedulerKey, currentTimeMs);
         } else if (allowed.equals(NodeType.RACK_LOCAL)) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Waiting time: " + waitTime
+                + " ms, nodeLocalityDelay time: " + nodeLocalityDelayMs + " ms"
+                + ", change allowedLocality from RACK_LOCAL to OFF_SWITCH"
+                + ", priority: " + schedulerKey.getPriority()
+                + ", app attempt id: " + this.attemptId);
+          }
           allowedLocalityLevel.put(schedulerKey, NodeType.OFF_SWITCH);
           resetSchedulingOpportunities(schedulerKey, currentTimeMs);
         }
@@ -736,8 +766,18 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     // The desired container won't fit here, so reserve
     if (isReservable(capability) &&
         reserve(request, node, reservedContainer, type, schedulerKey)) {
+      if (isWaitingForAMContainer()) {
+        updateAMDiagnosticMsg(capability,
+            " exceed the available resources of the node and the request is"
+                + " reserved");
+      }
       return FairScheduler.CONTAINER_RESERVED;
     } else {
+      if (isWaitingForAMContainer()) {
+        updateAMDiagnosticMsg(capability,
+            " exceed the available resources of the node and the request cannot"
+                + " be reserved");
+      }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Couldn't creating reservation for " +
             getName() + ",at priority " +  request.getPriority());
@@ -771,8 +811,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   }
 
   private Resource assignContainer(FSSchedulerNode node, boolean reserved) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Node offered to app: " + getName() + " reserved: " + reserved);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Node offered to app: " + getName() + " reserved: " + reserved);
     }
 
     Collection<SchedulerRequestKey> keysToTry = (reserved) ?
@@ -818,6 +858,12 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
         if (rackLocalRequest != null && rackLocalRequest.getNumContainers() != 0
             && localRequest != null && localRequest.getNumContainers() != 0) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Assign container on " + node.getNodeName()
+                + " node, assignType: NODE_LOCAL" + ", allowedLocality: "
+                + allowedLocality + ", priority: " + schedulerKey.getPriority()
+                + ", app attempt id: " + this.attemptId);
+          }
           return assignContainer(node, localRequest, NodeType.NODE_LOCAL,
               reserved, schedulerKey);
         }
@@ -829,6 +875,12 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
         if (rackLocalRequest != null && rackLocalRequest.getNumContainers() != 0
             && (allowedLocality.equals(NodeType.RACK_LOCAL) || allowedLocality
             .equals(NodeType.OFF_SWITCH))) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Assign container on " + node.getNodeName()
+                + " node, assignType: RACK_LOCAL" + ", allowedLocality: "
+                + allowedLocality + ", priority: " + schedulerKey.getPriority()
+                + ", app attempt id: " + this.attemptId);
+          }
           return assignContainer(node, rackLocalRequest, NodeType.RACK_LOCAL,
               reserved, schedulerKey);
         }
@@ -843,9 +895,22 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
             && offSwitchRequest.getNumContainers() != 0) {
           if (!hasNodeOrRackLocalRequests(schedulerKey) || allowedLocality
               .equals(NodeType.OFF_SWITCH)) {
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Assign container on " + node.getNodeName()
+                  + " node, assignType: OFF_SWITCH" + ", allowedLocality: "
+                  + allowedLocality + ", priority: " + schedulerKey.getPriority()
+                  + ", app attempt id: " + this.attemptId);
+            }
             return assignContainer(node, offSwitchRequest, NodeType.OFF_SWITCH,
                 reserved, schedulerKey);
           }
+        }
+
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Can't assign container on " + node.getNodeName()
+              + " node, allowedLocality: " + allowedLocality + ", priority: "
+              + schedulerKey.getPriority() + ", app attempt id: "
+              + this.attemptId);
         }
       }
     } finally {
@@ -865,23 +930,31 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     ResourceRequest rackRequest = getResourceRequest(key, node.getRackName());
     ResourceRequest nodeRequest = getResourceRequest(key, node.getNodeName());
 
-    return
-        // There must be outstanding requests at the given priority:
+    boolean ret = true;
+    if (!(// There must be outstanding requests at the given priority:
         anyRequest != null && anyRequest.getNumContainers() > 0 &&
-            // If locality relaxation is turned off at *-level, there must be a
-            // non-zero request for the node's rack:
-            (anyRequest.getRelaxLocality() ||
-                (rackRequest != null && rackRequest.getNumContainers() > 0)) &&
-            // If locality relaxation is turned off at rack-level, there must be a
-            // non-zero request at the node:
-            (rackRequest == null || rackRequest.getRelaxLocality() ||
-                (nodeRequest != null && nodeRequest.getNumContainers() > 0)) &&
-            // The requested container must be able to fit on the node:
-            Resources.lessThanOrEqual(RESOURCE_CALCULATOR, null,
-                anyRequest.getCapability(),
-                node.getRMNode().getTotalCapability()) &&
-            // The requested container must fit in queue maximum share:
-            getQueue().fitsInMaxShare(anyRequest.getCapability());
+        // If locality relaxation is turned off at *-level, there must be a
+        // non-zero request for the node's rack:
+        (anyRequest.getRelaxLocality() ||
+        (rackRequest != null && rackRequest.getNumContainers() > 0)) &&
+        // If locality relaxation is turned off at rack-level, there must be a
+        // non-zero request at the node:
+        (rackRequest == null || rackRequest.getRelaxLocality() ||
+        (nodeRequest != null && nodeRequest.getNumContainers() > 0)) &&
+        // The requested container must be able to fit on the node:
+        Resources.lessThanOrEqual(RESOURCE_CALCULATOR, null,
+        anyRequest.getCapability(), node.getRMNode().getTotalCapability()))) {
+      ret = false;
+    } else if (!getQueue().fitsInMaxShare(anyRequest.getCapability())) {
+      // The requested container must fit in queue maximum share
+      if (isWaitingForAMContainer()) {
+        updateAMDiagnosticMsg(anyRequest.getCapability(),
+            " exceeds current queue or its parents maximum resource allowed).");
+      }
+      ret = false;
+    }
+
+    return ret;
   }
 
   private boolean isValidReservation(FSSchedulerNode node) {
@@ -1028,6 +1101,12 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   @Override
   public Resource assignContainer(FSSchedulerNode node) {
     if (isOverAMShareLimit()) {
+      if (isWaitingForAMContainer()) {
+        List<ResourceRequest> ask = appSchedulingInfo.getAllResourceRequests();
+        updateAMDiagnosticMsg(ask.get(0).getCapability(), " exceeds maximum "
+            + "AM resource allowed).");
+      }
+
       if (LOG.isDebugEnabled()) {
         LOG.debug("Skipping allocation because maxAMShare limit would " +
             "be exceeded");
@@ -1035,6 +1114,21 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       return Resources.none();
     }
     return assignContainer(node, false);
+  }
+
+  /**
+   * Build the diagnostic message and update it.
+   *
+   * @param resource resource request
+   * @param reason the reason why AM doesn't get the resource
+   */
+  private void updateAMDiagnosticMsg(Resource resource, String reason) {
+    StringBuilder diagnosticMessageBldr = new StringBuilder();
+    diagnosticMessageBldr.append(" (Resource request: ");
+    diagnosticMessageBldr.append(resource);
+    diagnosticMessageBldr.append(reason);
+    updateAMContainerDiagnostics(AMState.INACTIVATED,
+        diagnosticMessageBldr.toString());
   }
 
   /**

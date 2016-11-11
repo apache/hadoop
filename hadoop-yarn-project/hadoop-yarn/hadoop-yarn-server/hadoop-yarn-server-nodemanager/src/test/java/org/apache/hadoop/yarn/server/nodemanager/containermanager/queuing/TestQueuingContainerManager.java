@@ -467,8 +467,10 @@ public class TestQueuingContainerManager extends BaseContainerManagerTest {
         StartContainersRequest.newInstance(list);
     containerManager.startContainers(allRequests);
 
-    BaseContainerManagerTest.waitForNMContainerState(containerManager,
-        createContainerId(0), ContainerState.DONE, 40);
+    BaseContainerManagerTest.waitForNMContainerState(
+        containerManager, createContainerId(0),
+            Arrays.asList(ContainerState.DONE,
+                ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL), 40);
     Thread.sleep(5000);
 
     // Get container statuses. Container 0 should be killed, container 1

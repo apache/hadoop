@@ -29,6 +29,8 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
@@ -467,7 +469,8 @@ public class TestDataNodeVolumeFailureReporting {
     DataNodeTestUtils.triggerHeartbeat(dn);
     FsDatasetSpi<?> fsd = dn.getFSDataset();
     assertEquals(expectedFailedVolumes.length, fsd.getNumFailedVolumes());
-    assertArrayEquals(expectedFailedVolumes, fsd.getFailedStorageLocations());
+    assertArrayEquals(expectedFailedVolumes,
+        convertToAbsolutePaths(fsd.getFailedStorageLocations()));
     // there shouldn't be any more volume failures due to I/O failure
     checkFailuresAtDataNode(dn, 0, false, expectedFailedVolumes);
 
@@ -550,7 +553,8 @@ public class TestDataNodeVolumeFailureReporting {
     }
     LOG.info(strBuilder.toString());
     assertEquals(expectedFailedVolumes.length, fsd.getNumFailedVolumes());
-    assertArrayEquals(expectedFailedVolumes, fsd.getFailedStorageLocations());
+    assertArrayEquals(expectedFailedVolumes,
+        convertToAbsolutePaths(fsd.getFailedStorageLocations()));
     if (expectedFailedVolumes.length > 0) {
       assertTrue(fsd.getLastVolumeFailureDate() > 0);
       long expectedCapacityLost = getExpectedCapacityLost(expectCapacityKnown,
@@ -582,8 +586,9 @@ public class TestDataNodeVolumeFailureReporting {
     assertEquals(expectedFailedVolumes.length, dd.getVolumeFailures());
     VolumeFailureSummary volumeFailureSummary = dd.getVolumeFailureSummary();
     if (expectedFailedVolumes.length > 0) {
-      assertArrayEquals(expectedFailedVolumes, volumeFailureSummary
-          .getFailedStorageLocations());
+      assertArrayEquals(expectedFailedVolumes,
+          convertToAbsolutePaths(volumeFailureSummary
+              .getFailedStorageLocations()));
       assertTrue(volumeFailureSummary.getLastVolumeFailureDate() > 0);
       long expectedCapacityLost = getExpectedCapacityLost(expectCapacityKnown,
           expectedFailedVolumes.length);
@@ -592,6 +597,30 @@ public class TestDataNodeVolumeFailureReporting {
     } else {
       assertNull(volumeFailureSummary);
     }
+  }
+
+  /**
+   * Converts the provided paths to absolute file paths.
+   * @param locations the array of paths
+   * @return array of absolute paths
+   */
+  private String[] convertToAbsolutePaths(String[] locations) {
+    if (locations == null || locations.length == 0) {
+      return new String[0];
+    }
+
+    String[] absolutePaths = new String[locations.length];
+    for (int count = 0; count < locations.length; count++) {
+      try {
+        absolutePaths[count] = new File(new URI(locations[count]))
+            .getAbsolutePath();
+      } catch (URISyntaxException e) {
+        //if the provided location is not an URI,
+        //we use it as the absolute path
+        absolutePaths[count] = locations[count];
+      }
+    }
+    return absolutePaths;
   }
 
   /**

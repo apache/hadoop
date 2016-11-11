@@ -225,6 +225,7 @@ public class BlockIdManager {
     generationStamp.setCurrentValue(GenerationStamp.LAST_RESERVED_STAMP);
     getBlockIdGenerator().setCurrentValue(SequentialBlockIdGenerator
       .LAST_RESERVED_BLOCK_ID);
+    getBlockGroupIdGenerator().setCurrentValue(Long.MIN_VALUE);
     legacyGenerationStampLimit = HdfsConstants.GRANDFATHER_GENERATION_STAMP;
   }
 

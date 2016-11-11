@@ -36,7 +36,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.SocketException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -80,7 +79,6 @@ import org.apache.hadoop.yarn.server.records.Version;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.AbstractChannel;
@@ -94,7 +92,7 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.Mockito;
-import org.mortbay.jetty.HttpHeaders;
+import org.eclipse.jetty.http.HttpHeader;
 
 public class TestShuffleHandler {
   static final long MiB = 1024 * 1024; 
@@ -301,7 +299,8 @@ public class TestShuffleHandler {
     conn.connect();
     DataInputStream input = new DataInputStream(conn.getInputStream());
     Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
-    Assert.assertEquals("close", conn.getHeaderField(HttpHeaders.CONNECTION));
+    Assert.assertEquals("close",
+        conn.getHeaderField(HttpHeader.CONNECTION.asString()));
     ShuffleHeader header = new ShuffleHeader();
     header.readFields(input);
     input.close();
@@ -411,15 +410,15 @@ public class TestShuffleHandler {
             + "map=attempt_12345_1_m_1_0");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
-      ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+        ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
     conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
-      ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
+        ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
     conn.connect();
     DataInputStream input = new DataInputStream(conn.getInputStream());
-    Assert.assertEquals(HttpHeaders.KEEP_ALIVE,
-      conn.getHeaderField(HttpHeaders.CONNECTION));
+    Assert.assertEquals(HttpHeader.KEEP_ALIVE.asString(),
+        conn.getHeaderField(HttpHeader.CONNECTION.asString()));
     Assert.assertEquals("timeout=1",
-      conn.getHeaderField(HttpHeaders.KEEP_ALIVE));
+        conn.getHeaderField(HttpHeader.KEEP_ALIVE.asString()));
     Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     ShuffleHeader header = new ShuffleHeader();
     header.readFields(input);
@@ -431,15 +430,15 @@ public class TestShuffleHandler {
             + "map=attempt_12345_1_m_1_0&keepAlive=true");
     conn = (HttpURLConnection) url.openConnection();
     conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
-      ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+        ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
     conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
-      ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
+        ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
     conn.connect();
     input = new DataInputStream(conn.getInputStream());
-    Assert.assertEquals(HttpHeaders.KEEP_ALIVE,
-      conn.getHeaderField(HttpHeaders.CONNECTION));
+    Assert.assertEquals(HttpHeader.KEEP_ALIVE.asString(),
+        conn.getHeaderField(HttpHeader.CONNECTION.asString()));
     Assert.assertEquals("timeout=1",
-      conn.getHeaderField(HttpHeaders.KEEP_ALIVE));
+        conn.getHeaderField(HttpHeader.KEEP_ALIVE.asString()));
     Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     header = new ShuffleHeader();
     header.readFields(input);
@@ -609,13 +608,20 @@ public class TestShuffleHandler {
 
     // This connection should be closed because it to above the limit
     try {
-      conns[2].getInputStream();
       rc = conns[2].getResponseCode();
-      Assert.fail("Expected a SocketException");
-    } catch (SocketException se) {
+      Assert.assertEquals("Expected a too-many-requests response code",
+          ShuffleHandler.TOO_MANY_REQ_STATUS.getCode(), rc);
+      long backoff = Long.valueOf(
+          conns[2].getHeaderField(ShuffleHandler.RETRY_AFTER_HEADER));
+      Assert.assertTrue("The backoff value cannot be negative.", backoff > 0);
+      conns[2].getInputStream();
+      Assert.fail("Expected an IOException");
+    } catch (IOException ioe) {
       LOG.info("Expected - connection should not be open");
+    } catch (NumberFormatException ne) {
+      Assert.fail("Expected a numerical value for RETRY_AFTER header field");
     } catch (Exception e) {
-      Assert.fail("Expected a SocketException");
+      Assert.fail("Expected a IOException");
     }
     
     shuffleHandler.stop(); 

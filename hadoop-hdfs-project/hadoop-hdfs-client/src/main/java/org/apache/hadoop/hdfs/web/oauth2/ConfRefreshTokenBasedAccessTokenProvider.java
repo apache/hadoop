@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hdfs.web.oauth2;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.RequestBody;
@@ -28,8 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.util.Timer;
 import org.apache.http.HttpStatus;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectReader;
 
 import java.io.IOException;
 import java.util.Map;

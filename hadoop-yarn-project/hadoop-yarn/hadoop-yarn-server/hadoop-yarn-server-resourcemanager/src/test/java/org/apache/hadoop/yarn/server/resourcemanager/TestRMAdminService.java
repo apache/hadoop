@@ -68,6 +68,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_PROXY_USER_PREFIX;
+import static org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration.NODES;
+import static org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration.PREFIX;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -165,7 +168,8 @@ public class TestRMAdminService {
 
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
-    csConf.set("yarn.scheduler.capacity.maximum-applications", "5000");
+    csConf.set(CapacitySchedulerConfiguration.MAXIMUM_SYSTEM_APPLICATIONS,
+        "5000");
     uploadConfiguration(csConf, "capacity-scheduler.xml");
 
     rm.adminService.refreshQueues(RefreshQueuesRequest.newInstance());
@@ -226,9 +230,9 @@ public class TestRMAdminService {
 
     DynamicResourceConfiguration drConf =
         new DynamicResourceConfiguration();
-    drConf.set("yarn.resource.dynamic.nodes", "h1:1234");
-    drConf.set("yarn.resource.dynamic.h1:1234.vcores", "4");
-    drConf.set("yarn.resource.dynamic.h1:1234.memory", "4096");
+    drConf.set(PREFIX + NODES, "h1:1234");
+    drConf.set(PREFIX + "h1:1234.vcores", "4");
+    drConf.set(PREFIX + "h1:1234.memory", "4096");
     uploadConfiguration(drConf, "dynamic-resources.xml");
 
     rm.adminService.refreshNodesResources(
@@ -266,9 +270,9 @@ public class TestRMAdminService {
 
     DynamicResourceConfiguration drConf =
         new DynamicResourceConfiguration();
-    drConf.set("yarn.resource.dynamic.nodes", "h1:1234");
-    drConf.set("yarn.resource.dynamic.h1:1234.vcores", "4");
-    drConf.set("yarn.resource.dynamic.h1:1234.memory", "4096");
+    drConf.set(PREFIX + NODES, "h1:1234");
+    drConf.set(PREFIX + "h1:1234.vcores", "4");
+    drConf.set(PREFIX + "h1:1234.memory", "4096");
     uploadConfiguration(drConf, "dynamic-resources.xml");
 
     rm.adminService.refreshNodesResources(
@@ -316,9 +320,9 @@ public class TestRMAdminService {
 
     DynamicResourceConfiguration drConf =
         new DynamicResourceConfiguration();
-    drConf.set("yarn.resource.dynamic.nodes", "h1:1234");
-    drConf.set("yarn.resource.dynamic.h1:1234.vcores", "4");
-    drConf.set("yarn.resource.dynamic.h1:1234.memory", "4096");
+    drConf.set(PREFIX + NODES, "h1:1234");
+    drConf.set(PREFIX + "h1:1234.vcores", "4");
+    drConf.set(PREFIX + "h1:1234.memory", "4096");
     uploadConfiguration(drConf, "dynamic-resources.xml");
 
     rm.adminService.refreshNodesResources(
@@ -364,9 +368,9 @@ public class TestRMAdminService {
 
     DynamicResourceConfiguration drConf =
         new DynamicResourceConfiguration();
-    drConf.set("yarn.resource.dynamic.nodes", "h1:1234");
-    drConf.set("yarn.resource.dynamic.h1:1234.vcores", "4");
-    drConf.set("yarn.resource.dynamic.h1:1234.memory", "4096");
+    drConf.set(PREFIX + NODES, "h1:1234");
+    drConf.set(PREFIX + "h1:1234.vcores", "4");
+    drConf.set(PREFIX + "h1:1234.memory", "4096");
     uploadConfiguration(drConf, "dynamic-resources.xml");
 
     rm.adminService.refreshNodesResources(
@@ -611,8 +615,8 @@ public class TestRMAdminService {
         .get("hadoop.proxyuser.test.hosts").contains("test_hosts"));
 
     Configuration yarnConf = new Configuration(false);
-    yarnConf.set("yarn.resourcemanager.proxyuser.test.groups", "test_groups_1");
-    yarnConf.set("yarn.resourcemanager.proxyuser.test.hosts", "test_hosts_1");
+    yarnConf.set(RM_PROXY_USER_PREFIX + "test.groups", "test_groups_1");
+    yarnConf.set(RM_PROXY_USER_PREFIX + "test.hosts", "test_hosts_1");
     uploadConfiguration(yarnConf, "yarn-site.xml");
 
     // RM specific configs will overwrite the common ones
@@ -809,7 +813,8 @@ public class TestRMAdminService {
 
       CapacitySchedulerConfiguration csConf =
           new CapacitySchedulerConfiguration();
-      csConf.set("yarn.scheduler.capacity.maximum-applications", "5000");
+      csConf.set(CapacitySchedulerConfiguration.MAXIMUM_SYSTEM_APPLICATIONS,
+          "5000");
       uploadConfiguration(csConf, "capacity-scheduler.xml");
 
       rm1.adminService.refreshQueues(RefreshQueuesRequest.newInstance());
@@ -897,7 +902,8 @@ public class TestRMAdminService {
 
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
-    csConf.set("yarn.scheduler.capacity.maximum-applications", "5000");
+    csConf.set(CapacitySchedulerConfiguration.MAXIMUM_SYSTEM_APPLICATIONS,
+        "5000");
     uploadConfiguration(csConf, "capacity-scheduler.xml");
 
     String aclsString = "alice,bob users,wheel";

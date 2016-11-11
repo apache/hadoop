@@ -189,8 +189,8 @@ public class TestDirectoryScanner {
           // Volume without a copy of the block. Make a copy now.
           File sourceBlock = new File(b.getBlockURI());
           File sourceMeta = new File(b.getMetadataURI());
-          URI sourceRoot = b.getVolume().getStorageLocation().getFile().toURI();
-          URI destRoot = v.getStorageLocation().getFile().toURI();
+          URI sourceRoot = b.getVolume().getStorageLocation().getUri();
+          URI destRoot = v.getStorageLocation().getUri();
 
           String relativeBlockPath =
               sourceRoot.relativize(sourceBlock.toURI())

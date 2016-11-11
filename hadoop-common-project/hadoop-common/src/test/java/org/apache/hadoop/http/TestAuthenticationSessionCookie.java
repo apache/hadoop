@@ -22,7 +22,7 @@ import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Test;
-import org.mortbay.log.Log;
+import org.eclipse.jetty.util.log.Log;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletResponse;
@@ -33,6 +33,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.HttpCookie;
+import java.util.HashMap;
 import java.util.List;
 
 public class TestAuthenticationSessionCookie {
@@ -71,7 +72,7 @@ public class TestAuthenticationSessionCookie {
     @Override
     public void initFilter(FilterContainer container, Configuration conf) {
       container.addFilter("DummyAuth", DummyAuthenticationFilter.class
-              .getName(), null);
+              .getName(), new HashMap<>());
     }
   }
 
@@ -93,7 +94,7 @@ public class TestAuthenticationSessionCookie {
     @Override
     public void initFilter(FilterContainer container, Configuration conf) {
       container.addFilter("Dummy2Auth", Dummy2AuthenticationFilter.class
-              .getName(), null);
+              .getName(), new HashMap<>());
     }
   }
 
@@ -149,7 +150,7 @@ public class TestAuthenticationSessionCookie {
     String header = conn.getHeaderField("Set-Cookie");
     List<HttpCookie> cookies = HttpCookie.parse(header);
     Assert.assertTrue(!cookies.isEmpty());
-    Log.info(header);
+    Log.getLog().info(header);
     Assert.assertFalse(header.contains("; Expires="));
     Assert.assertTrue("token".equals(cookies.get(0).getValue()));
   }
@@ -171,7 +172,7 @@ public class TestAuthenticationSessionCookie {
     String header = conn.getHeaderField("Set-Cookie");
     List<HttpCookie> cookies = HttpCookie.parse(header);
     Assert.assertTrue(!cookies.isEmpty());
-    Log.info(header);
+    Log.getLog().info(header);
     Assert.assertTrue(header.contains("; Expires="));
     Assert.assertTrue("token".equals(cookies.get(0).getValue()));
   }

@@ -32,7 +32,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mortbay.log.Log;
+import org.eclipse.jetty.util.log.Log;
 
 /**
  * <p>
@@ -797,7 +797,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
       rename(src, dst, false, false, false, Rename.NONE);
       Assert.fail("Should throw FileNotFoundException");
     } catch (IOException e) {
-      Log.info("XXX", e);
+      Log.getLog().info("XXX", e);
       Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
     }
 

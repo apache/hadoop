@@ -110,6 +110,7 @@ import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
@@ -1066,34 +1067,42 @@ public class DFSTestUtil {
   }
 
   public static DatanodeInfo getLocalDatanodeInfo() {
-    return new DatanodeInfo(getLocalDatanodeID());
+    return new DatanodeInfoBuilder().setNodeID(getLocalDatanodeID())
+        .build();
   }
 
   public static DatanodeInfo getDatanodeInfo(String ipAddr) {
-    return new DatanodeInfo(getDatanodeID(ipAddr));
+    return new DatanodeInfoBuilder().setNodeID(getDatanodeID(ipAddr))
+        .build();
   }
   
   public static DatanodeInfo getLocalDatanodeInfo(int port) {
-    return new DatanodeInfo(getLocalDatanodeID(port));
+    return new DatanodeInfoBuilder().setNodeID(getLocalDatanodeID(port))
+        .build();
   }
 
   public static DatanodeInfo getDatanodeInfo(String ipAddr, 
       String host, int port) {
-    return new DatanodeInfo(new DatanodeID(ipAddr, host,
-        UUID.randomUUID().toString(), port,
-        DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
-        DFSConfigKeys.DFS_DATANODE_HTTPS_DEFAULT_PORT,
-        DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT));
+    return new DatanodeInfoBuilder().setNodeID(
+        new DatanodeID(ipAddr, host, UUID.randomUUID().toString(), port,
+            DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
+            DFSConfigKeys.DFS_DATANODE_HTTPS_DEFAULT_PORT,
+            DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT)).build();
   }
 
   public static DatanodeInfo getLocalDatanodeInfo(String ipAddr,
       String hostname, AdminStates adminState) {
-    return new DatanodeInfo(ipAddr, hostname, "",
-        DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT,
-        DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
-        DFSConfigKeys.DFS_DATANODE_HTTPS_DEFAULT_PORT,
-        DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT,
-        1l, 2l, 3l, 4l, 0l, 0l, 0l, 5, 6, "local", adminState);
+    return new DatanodeInfoBuilder().setIpAddr(ipAddr).setHostName(hostname)
+        .setDatanodeUuid("")
+        .setXferPort(DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT)
+        .setInfoPort(DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT)
+        .setInfoSecurePort(DFSConfigKeys.DFS_DATANODE_HTTPS_DEFAULT_PORT)
+        .setIpcPort(DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT).setCapacity(1L)
+        .setDfsUsed(2L).setRemaining(3L).setBlockPoolUsed(4L)
+        .setCacheCapacity(0L).setCacheUsed(0L).setLastUpdate(0L)
+        .setLastUpdateMonotonic(5).setXceiverCount(6)
+        .setNetworkLocation("local").setAdminState(adminState)
+        .build();
   }
 
   public static DatanodeDescriptor getDatanodeDescriptor(String ipAddr,

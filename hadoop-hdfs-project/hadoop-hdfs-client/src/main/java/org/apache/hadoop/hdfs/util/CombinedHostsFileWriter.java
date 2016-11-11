@@ -25,9 +25,9 @@ import java.io.Writer;
 
 import java.util.Set;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
 

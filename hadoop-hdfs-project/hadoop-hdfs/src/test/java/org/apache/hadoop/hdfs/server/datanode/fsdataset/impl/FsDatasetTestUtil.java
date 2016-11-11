@@ -100,7 +100,7 @@ public class FsDatasetTestUtil {
    */
   public static void assertFileLockReleased(String dir) throws IOException {
     StorageLocation sl = StorageLocation.parse(dir);
-    File lockFile = new File(sl.getFile(), Storage.STORAGE_FILE_LOCK);
+    File lockFile = new File(new File(sl.getUri()), Storage.STORAGE_FILE_LOCK);
     try (RandomAccessFile raf = new RandomAccessFile(lockFile, "rws");
         FileChannel channel = raf.getChannel()) {
       FileLock lock = channel.tryLock();

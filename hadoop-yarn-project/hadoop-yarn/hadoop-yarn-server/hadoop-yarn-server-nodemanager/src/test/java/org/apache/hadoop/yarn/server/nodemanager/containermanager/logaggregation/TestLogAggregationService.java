@@ -132,7 +132,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import org.mortbay.util.MultiException;
+import org.eclipse.jetty.util.MultiException;
 
 import com.google.common.base.Supplier;
 
@@ -608,7 +608,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
       throws Exception {
     this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     File aNewFile = new File(String.valueOf("tmp"+System.currentTimeMillis()));
-    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, 
+    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         aNewFile.getAbsolutePath());
 
     LogAggregationService logAggregationService = spy(
@@ -623,6 +623,28 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     boolean existsAfter = aNewFile.exists();
     assertTrue("The new aggregate file is not successfully created", existsAfter);
     aNewFile.delete(); //housekeeping
+  }
+
+  @Test
+  public void testRemoteRootLogDirIsCreatedWithCorrectGroupOwner()
+      throws IOException {
+    this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
+    Path aNewFile = new Path(String.valueOf("tmp"+System.currentTimeMillis()));
+    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, aNewFile.getName());
+
+    LogAggregationService logAggregationService = new LogAggregationService(
+        dispatcher, this.context, this.delSrvc, super.dirsHandler);
+    logAggregationService.init(this.conf);
+    logAggregationService.verifyAndCreateRemoteLogDir(this.conf);
+
+    String targetGroup =
+        UserGroupInformation.getLoginUser().getPrimaryGroupName();
+    FileSystem fs = FileSystem.get(this.conf);
+    FileStatus fileStatus = fs.getFileStatus(aNewFile);
+    Assert.assertEquals("The new aggregate file is not successfully created",
+        fileStatus.getGroup(), targetGroup);
+
+    fs.delete(aNewFile, true);
   }
 
   @Test
@@ -2138,7 +2160,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
             ApplicationEventType.APPLICATION_LOG_HANDLING_INITED) };
     checkEvents(appEventHandler, expectedInitEvents, false, "getType",
         "getApplicationID");
-    reset(appEventHandler);
+    reset(new EventHandler[] {appEventHandler});
 
     logAggregationService.handle(new LogHandlerAppFinishedEvent(appId));
     logAggregationService.stop();

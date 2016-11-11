@@ -24,7 +24,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.DigestInputStream;
@@ -44,8 +43,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathIsNotDirectoryException;
-import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -59,6 +56,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -600,7 +598,7 @@ public class FSImageFormat {
      // Rename .snapshot paths if we're doing an upgrade
      parentPath = renameReservedPathsOnUpgrade(parentPath, getLayoutVersion());
      final INodeDirectory parent = INodeDirectory.valueOf(
-         namesystem.dir.getINode(parentPath, true), parentPath);
+         namesystem.dir.getINode(parentPath, DirOp.READ), parentPath);
      return loadChildren(parent, in, counter);
    }
 
@@ -651,15 +649,14 @@ public class FSImageFormat {
     }
   }
 
-  private INodeDirectory getParentINodeDirectory(byte[][] pathComponents
-      ) throws FileNotFoundException, PathIsNotDirectoryException,
-      UnresolvedLinkException {
+  private INodeDirectory getParentINodeDirectory(byte[][] pathComponents)
+      throws IOException {
     if (pathComponents.length < 2) { // root
       return null;
     }
     // Gets the parent INode
-    final INodesInPath inodes = namesystem.dir.getExistingPathINodes(
-        pathComponents);
+    final INodesInPath inodes =
+        namesystem.dir.getINodesInPath(pathComponents, DirOp.WRITE);
     return INodeDirectory.valueOf(inodes.getINode(-2), pathComponents);
   }
 
@@ -954,7 +951,7 @@ public class FSImageFormat {
           inSnapshot = true;
         } else {
           path = renameReservedPathsOnUpgrade(path, getLayoutVersion());
-          final INodesInPath iip = fsDir.getINodesInPath(path, true);
+          final INodesInPath iip = fsDir.getINodesInPath(path, DirOp.WRITE);
           oldnode = INodeFile.valueOf(iip.getLastINode(), path);
         }
 

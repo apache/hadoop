@@ -84,6 +84,7 @@ import org.apache.hadoop.hdfs.web.ParamFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.*;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ExternalCall;
 import org.apache.hadoop.ipc.RetriableException;
@@ -355,7 +356,8 @@ public class NamenodeWebHdfsMethods {
   @PUT
   @Path("/")
   @Consumes({"*/*"})
-  @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_OCTET_STREAM + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response putRoot(
       @Context final UserGroupInformation ugi,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
@@ -395,13 +397,13 @@ public class NamenodeWebHdfsMethods {
           final CreateParentParam createParent,
       @QueryParam(TokenArgumentParam.NAME) @DefaultValue(TokenArgumentParam.DEFAULT)
           final TokenArgumentParam delegationTokenArgument,
-      @QueryParam(AclPermissionParam.NAME) @DefaultValue(AclPermissionParam.DEFAULT) 
+      @QueryParam(AclPermissionParam.NAME) @DefaultValue(AclPermissionParam.DEFAULT)
           final AclPermissionParam aclPermission,
-      @QueryParam(XAttrNameParam.NAME) @DefaultValue(XAttrNameParam.DEFAULT) 
+      @QueryParam(XAttrNameParam.NAME) @DefaultValue(XAttrNameParam.DEFAULT)
           final XAttrNameParam xattrName,
-      @QueryParam(XAttrValueParam.NAME) @DefaultValue(XAttrValueParam.DEFAULT) 
+      @QueryParam(XAttrValueParam.NAME) @DefaultValue(XAttrValueParam.DEFAULT)
           final XAttrValueParam xattrValue,
-      @QueryParam(XAttrSetFlagParam.NAME) @DefaultValue(XAttrSetFlagParam.DEFAULT) 
+      @QueryParam(XAttrSetFlagParam.NAME) @DefaultValue(XAttrSetFlagParam.DEFAULT)
           final XAttrSetFlagParam xattrSetFlag,
       @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
           final SnapshotNameParam snapshotName,
@@ -422,11 +424,24 @@ public class NamenodeWebHdfsMethods {
         excludeDatanodes, createFlagParam, noredirect);
   }
 
+  /** Validate all required params. */
+  @SuppressWarnings("rawtypes")
+  private void validateOpParams(HttpOpParam<?> op, Param... params) {
+    for (Param param : params) {
+      if (param.getValue() == null || param.getValueString() == null || param
+          .getValueString().isEmpty()) {
+        throw new IllegalArgumentException("Required param " + param.getName()
+            + " for op: " + op.getValueString() + " is null or empty");
+      }
+    }
+  }
+
   /** Handle HTTP PUT request. */
   @PUT
   @Path("{" + UriFsPathParam.NAME + ":.*}")
   @Consumes({"*/*"})
-  @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_OCTET_STREAM + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response put(
       @Context final UserGroupInformation ugi,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
@@ -532,7 +547,7 @@ public class NamenodeWebHdfsMethods {
       final TokenArgumentParam delegationTokenArgument,
       final AclPermissionParam aclPermission,
       final XAttrNameParam xattrName,
-      final XAttrValueParam xattrValue, 
+      final XAttrValueParam xattrValue,
       final XAttrSetFlagParam xattrSetFlag,
       final SnapshotNameParam snapshotName,
       final OldSnapshotNameParam oldSnapshotName,
@@ -573,6 +588,7 @@ public class NamenodeWebHdfsMethods {
     }
     case CREATESYMLINK:
     {
+      validateOpParams(op, destination);
       np.createSymlink(destination.getValue(), fullpath,
           PermissionParam.getDefaultSymLinkFsPermission(),
           createParent.getValue());
@@ -580,6 +596,7 @@ public class NamenodeWebHdfsMethods {
     }
     case RENAME:
     {
+      validateOpParams(op, destination);
       final EnumSet<Options.Rename> s = renameOptions.getValue();
       if (s.isEmpty()) {
         final boolean b = np.rename(fullpath, destination.getValue());
@@ -618,6 +635,7 @@ public class NamenodeWebHdfsMethods {
     }
     case RENEWDELEGATIONTOKEN:
     {
+      validateOpParams(op, delegationTokenArgument);
       final Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>();
       token.decodeFromUrlString(delegationTokenArgument.getValue());
       final long expiryTime = np.renewDelegationToken(token);
@@ -626,16 +644,19 @@ public class NamenodeWebHdfsMethods {
     }
     case CANCELDELEGATIONTOKEN:
     {
+      validateOpParams(op, delegationTokenArgument);
       final Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>();
       token.decodeFromUrlString(delegationTokenArgument.getValue());
       np.cancelDelegationToken(token);
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case MODIFYACLENTRIES: {
+      validateOpParams(op, aclPermission);
       np.modifyAclEntries(fullpath, aclPermission.getAclPermission(true));
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case REMOVEACLENTRIES: {
+      validateOpParams(op, aclPermission);
       np.removeAclEntries(fullpath, aclPermission.getAclPermission(false));
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
@@ -648,10 +669,12 @@ public class NamenodeWebHdfsMethods {
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case SETACL: {
+      validateOpParams(op, aclPermission);
       np.setAcl(fullpath, aclPermission.getAclPermission(true));
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case SETXATTR: {
+      validateOpParams(op, xattrName, xattrSetFlag);
       np.setXAttr(
           fullpath,
           XAttrHelper.buildXAttr(xattrName.getXAttrName(),
@@ -659,6 +682,7 @@ public class NamenodeWebHdfsMethods {
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case REMOVEXATTR: {
+      validateOpParams(op, xattrName);
       np.removeXAttr(fullpath, XAttrHelper.buildXAttr(xattrName.getXAttrName()));
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
@@ -673,6 +697,7 @@ public class NamenodeWebHdfsMethods {
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case RENAMESNAPSHOT: {
+      validateOpParams(op, oldSnapshotName, snapshotName);
       np.renameSnapshot(fullpath, oldSnapshotName.getValue(),
           snapshotName.getValue());
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
@@ -690,7 +715,8 @@ public class NamenodeWebHdfsMethods {
   @POST
   @Path("/")
   @Consumes({"*/*"})
-  @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_OCTET_STREAM + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response postRoot(
       @Context final UserGroupInformation ugi,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
@@ -720,7 +746,8 @@ public class NamenodeWebHdfsMethods {
   @POST
   @Path("{" + UriFsPathParam.NAME + ":.*}")
   @Consumes({"*/*"})
-  @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_OCTET_STREAM + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response post(
       @Context final UserGroupInformation ugi,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
@@ -789,17 +816,15 @@ public class NamenodeWebHdfsMethods {
     }
     case CONCAT:
     {
+      validateOpParams(op, concatSrcs);
       np.concat(fullpath, concatSrcs.getAbsolutePaths());
       return Response.ok().build();
     }
     case TRUNCATE:
     {
-      if (newLength.getValue() == null) {
-        throw new IllegalArgumentException(
-            "newLength parameter is Missing");
-      }
+      validateOpParams(op, newLength);
       // We treat each rest request as a separate client.
-      final boolean b = np.truncate(fullpath, newLength.getValue(), 
+      final boolean b = np.truncate(fullpath, newLength.getValue(),
           "DFSClient_" + DFSUtil.getSecureRandom().nextLong());
       final String js = JsonUtil.toJsonString("boolean", b);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
@@ -812,7 +837,8 @@ public class NamenodeWebHdfsMethods {
   /** Handle HTTP GET request for the root. */
   @GET
   @Path("/")
-  @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_OCTET_STREAM + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response getRoot(
       @Context final UserGroupInformation ugi,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
@@ -831,9 +857,9 @@ public class NamenodeWebHdfsMethods {
           final RenewerParam renewer,
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
           final BufferSizeParam bufferSize,
-      @QueryParam(XAttrNameParam.NAME) @DefaultValue(XAttrNameParam.DEFAULT) 
+      @QueryParam(XAttrNameParam.NAME) @DefaultValue(XAttrNameParam.DEFAULT)
           final List<XAttrNameParam> xattrNames,
-      @QueryParam(XAttrEncodingParam.NAME) @DefaultValue(XAttrEncodingParam.DEFAULT) 
+      @QueryParam(XAttrEncodingParam.NAME) @DefaultValue(XAttrEncodingParam.DEFAULT)
           final XAttrEncodingParam xattrEncoding,
       @QueryParam(ExcludeDatanodesParam.NAME) @DefaultValue(ExcludeDatanodesParam.DEFAULT)
           final ExcludeDatanodesParam excludeDatanodes,
@@ -856,7 +882,8 @@ public class NamenodeWebHdfsMethods {
   /** Handle HTTP GET request. */
   @GET
   @Path("{" + UriFsPathParam.NAME + ":.*}")
-  @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_OCTET_STREAM + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response get(
       @Context final UserGroupInformation ugi,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
@@ -1026,6 +1053,7 @@ public class NamenodeWebHdfsMethods {
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETXATTRS: {
+      validateOpParams(op, xattrEncoding);
       List<String> names = null;
       if (xattrNames != null) {
         names = Lists.newArrayListWithCapacity(xattrNames.size());
@@ -1047,8 +1075,14 @@ public class NamenodeWebHdfsMethods {
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case CHECKACCESS: {
+      validateOpParams(op, fsAction);
       np.checkAccess(fullpath, FsAction.getFsAction(fsAction.getValue()));
       return Response.ok().build();
+    }
+    case GETTRASHROOT: {
+      final String trashPath = getTrashRoot(fullpath, conf);
+      final String jsonStr = JsonUtil.toJsonString("Path", trashPath);
+      return Response.ok(jsonStr).type(MediaType.APPLICATION_JSON).build();
     }
     case LISTSTATUS_BATCH:
     {
@@ -1063,6 +1097,13 @@ public class NamenodeWebHdfsMethods {
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
+  }
+
+  private static String getTrashRoot(String fullPath,
+      Configuration conf) throws IOException {
+    FileSystem fs = FileSystem.get(conf != null ? conf : new Configuration());
+    return fs.getTrashRoot(
+        new org.apache.hadoop.fs.Path(fullPath)).toUri().getPath();
   }
 
   private static DirectoryListing getDirectoryListing(final NamenodeProtocols np,
@@ -1131,7 +1172,7 @@ public class NamenodeWebHdfsMethods {
   /** Handle HTTP DELETE request for the root. */
   @DELETE
   @Path("/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Response deleteRoot(
       @Context final UserGroupInformation ugi,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
@@ -1154,7 +1195,7 @@ public class NamenodeWebHdfsMethods {
   /** Handle HTTP DELETE request. */
   @DELETE
   @Path("{" + UriFsPathParam.NAME + ":.*}")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Response delete(
       @Context final UserGroupInformation ugi,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
@@ -1203,6 +1244,7 @@ public class NamenodeWebHdfsMethods {
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case DELETESNAPSHOT: {
+      validateOpParams(op, snapshotName);
       np.deleteSnapshot(fullpath, snapshotName.getValue());
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }

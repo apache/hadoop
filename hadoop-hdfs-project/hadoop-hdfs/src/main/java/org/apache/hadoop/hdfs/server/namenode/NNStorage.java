@@ -53,7 +53,7 @@ import org.apache.hadoop.hdfs.util.PersistentLongFile;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.Time;
-import org.mortbay.util.ajax.JSON;
+import org.eclipse.jetty.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -338,7 +338,7 @@ public class NNStorage extends Storage implements Closeable,
    * @param uri URI of a storage directory
    * @return The matching storage directory or null if none found
    */
-  StorageDirectory getStorageDirectory(URI uri) {
+  public StorageDirectory getStorageDirectory(URI uri) {
     try {
       uri = Util.fileAsURI(new File(uri));
       Iterator<StorageDirectory> it = dirIterator();

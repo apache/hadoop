@@ -18,49 +18,15 @@
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.junit.Before;
-import org.junit.Test;
 
 /**
- * Test XOR encoding and decoding.
+ * Test pure Java XOR encoding and decoding.
  */
-public class TestXORRawCoder extends TestRawCoderBase {
+public class TestXORRawCoder extends TestXORRawCoderBase {
 
   @Before
   public void setup() {
     this.encoderClass = XORRawEncoder.class;
     this.decoderClass = XORRawDecoder.class;
-  }
-
-  @Test
-  public void testCoding_10x1_erasing_d0() {
-    prepare(null, 10, 1, new int[] {0}, new int[0]);
-    testCodingDoMixAndTwice();
-  }
-
-  @Test
-  public void testCoding_10x1_erasing_p0() {
-    prepare(null, 10, 1, new int[0], new int[] {0});
-    testCodingDoMixAndTwice();
-  }
-
-  @Test
-  public void testCoding_10x1_erasing_d5() {
-    prepare(null, 10, 1, new int[]{5}, new int[0]);
-    testCodingDoMixAndTwice();
-  }
-
-  @Test
-  public void testCodingNegative_10x1_erasing_too_many() {
-    prepare(null, 10, 1, new int[]{2}, new int[]{0});
-    testCodingWithErasingTooMany();
-  }
-
-  @Test
-  public void testCodingNegative_10x1_erasing_d5() {
-    prepare(null, 10, 1, new int[]{5}, new int[0]);
-    testCodingWithBadInput(true);
-    testCodingWithBadOutput(false);
-    testCodingWithBadInput(true);
-    testCodingWithBadOutput(false);
   }
 }

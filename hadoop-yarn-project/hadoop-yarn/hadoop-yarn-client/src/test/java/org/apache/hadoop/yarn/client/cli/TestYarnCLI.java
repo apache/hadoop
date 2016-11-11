@@ -80,10 +80,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.Times;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mortbay.log.Log;
+import org.eclipse.jetty.util.log.Log;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -114,7 +115,7 @@ public class TestYarnCLI {
       ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
       ApplicationResourceUsageReport usageReport = i == 0 ? null :
           ApplicationResourceUsageReport.newInstance(
-              2, 0, null, null, null, 123456, 4567, 0, 0);
+              2, 0, null, null, null, 123456, 4567, 0, 0, 1111, 2222);
       ApplicationReport newApplicationReport = ApplicationReport.newInstance(
           applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
           "user", "queue", "appname", "host", 124, null,
@@ -147,6 +148,8 @@ public class TestYarnCLI {
       pw.println("\tAM Host : host");
       pw.println("\tAggregate Resource Allocation : " +
           (i == 0 ? "N/A" : "123456 MB-seconds, 4567 vcore-seconds"));
+      pw.println("\tAggregate Resource Preempted : " +
+          (i == 0 ? "N/A" : "1111 MB-seconds, 2222 vcore-seconds"));
       pw.println("\tLog Aggregation Status : SUCCEEDED");
       pw.println("\tDiagnostics : diagnostics");
       pw.println("\tUnmanaged Application : false");
@@ -324,11 +327,11 @@ public class TestYarnCLI {
         "http://host:2345", "");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
-    Log.info("ExpectedOutput");
-    Log.info("["+appReportStr+"]");
-    Log.info("OutputFrom command");
+    Log.getLog().info("ExpectedOutput");
+    Log.getLog().info("["+appReportStr+"]");
+    Log.getLog().info("OutputFrom command");
     String actualOutput = sysOutStream.toString("UTF-8");
-    Log.info("["+actualOutput+"]");
+    Log.getLog().info("["+actualOutput+"]");
     Assert.assertEquals(appReportStr, actualOutput);
   }
   
@@ -1704,8 +1707,7 @@ public class TestYarnCLI {
         "org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity."
         + "ProportionalCapacityPreemptionPolicy");
     conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
-    conf.setBoolean(
-        "yarn.scheduler.capacity.root.a.a1.disable_preemption", true);
+    conf.setBoolean(PREFIX + "root.a.a1.disable_preemption", true);
     MiniYARNCluster cluster =
         new MiniYARNCluster("testReservationAPIs", 2, 1, 1);
 

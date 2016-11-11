@@ -134,6 +134,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSc
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimplePlacementSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
@@ -283,10 +284,8 @@ public class TestCapacityScheduler {
           Resources.createResource(2 * GB, 1));
 
     // ResourceRequest priorities
-    Priority priority_0 = 
-      org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.create(0); 
-    Priority priority_1 = 
-      org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.create(1);
+    Priority priority_0 = Priority.newInstance(0);
+    Priority priority_1 = Priority.newInstance(1);
     
     // Submit an application
     Application application_0 = new Application("user_0", "a1", resourceManager);
@@ -1514,12 +1513,8 @@ public class TestCapacityScheduler {
             Resources.createResource(2 * GB, 1));
 
     // ResourceRequest priorities
-    Priority priority_0 =
-        org.apache.hadoop.yarn.server.resourcemanager.resource.Priority
-            .create(0);
-    Priority priority_1 =
-        org.apache.hadoop.yarn.server.resourcemanager.resource.Priority
-            .create(1);
+    Priority priority_0 = Priority.newInstance(0);
+    Priority priority_1 = Priority.newInstance(1);
 
     // Submit application_0
     Application application_0 =
@@ -1634,12 +1629,8 @@ public class TestCapacityScheduler {
             Resources.createResource(5 * GB, 1));
 
     // ResourceRequest priorities
-    Priority priority_0 =
-        org.apache.hadoop.yarn.server.resourcemanager.resource.Priority
-            .create(0);
-    Priority priority_1 =
-        org.apache.hadoop.yarn.server.resourcemanager.resource.Priority
-            .create(1);
+    Priority priority_0 = Priority.newInstance(0);
+    Priority priority_1 = Priority.newInstance(1);
 
     // Submit application_0
     Application application_0 =
@@ -1754,12 +1745,8 @@ public class TestCapacityScheduler {
             Resources.createResource(6 * GB, 1));
 
     // ResourceRequest priorities
-    Priority priority_0 =
-        org.apache.hadoop.yarn.server.resourcemanager.resource.Priority
-            .create(0);
-    Priority priority_1 =
-        org.apache.hadoop.yarn.server.resourcemanager.resource.Priority
-            .create(1);
+    Priority priority_0 = Priority.newInstance(0);
+    Priority priority_1 = Priority.newInstance(1);
 
     // Submit application_0
     Application application_0 =
@@ -1812,12 +1799,8 @@ public class TestCapacityScheduler {
             Resources.createResource(5 * GB, 1));
 
     // ResourceRequest priorities
-    Priority priority_0 =
-        org.apache.hadoop.yarn.server.resourcemanager.resource.Priority
-            .create(0);
-    Priority priority_1 =
-        org.apache.hadoop.yarn.server.resourcemanager.resource.Priority
-            .create(1);
+    Priority priority_0 = Priority.newInstance(0);
+    Priority priority_1 = Priority.newInstance(1);
 
     // Submit application_0
     Application application_0 =
@@ -2934,12 +2917,14 @@ public class TestCapacityScheduler {
   @Test(timeout = 30000)
   public void testAMUsedResource() throws Exception {
     MockRM rm = setUpMove();
+    rm.registerNode("127.0.0.1:1234", 4 * GB);
+
     Configuration conf = rm.getConfig();
     int minAllocMb =
         conf.getInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
     int amMemory = 50;
-    assertTrue("AM memory is greater than or equql to minAllocation",
+    assertTrue("AM memory is greater than or equal to minAllocation",
         amMemory < minAllocMb);
     Resource minAllocResource = Resource.newInstance(minAllocMb, 1);
     String queueName = "a1";
@@ -3288,6 +3273,7 @@ public class TestCapacityScheduler {
   private void verifyAMLimitForLeafQueue(CapacitySchedulerConfiguration config)
       throws Exception {
     MockRM rm = setUpMove(config);
+    rm.registerNode("127.0.0.1:1234", 2 * GB);
 
     String queueName = "a1";
     String userName = "user_0";
@@ -3385,9 +3371,7 @@ public class TestCapacityScheduler {
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
             Resources.createResource(8 * GB, 4));
     // ResourceRequest priorities
-    Priority priority_0 =
-        org.apache.hadoop.yarn.server.resourcemanager.resource.Priority
-            .create(0);
+    Priority priority_0 = Priority.newInstance(0);
 
     // Submit an application
     Application application_0 =
@@ -3470,7 +3454,7 @@ public class TestCapacityScheduler {
     scheduler.handle(new NodeRemovedSchedulerEvent(
         rm.getRMContext().getRMNodes().get(nm2.getNodeId())));
     // schedulerNode is removed, try allocate a container
-    scheduler.allocateContainersToNode(node);
+    scheduler.allocateContainersToNode(new SimplePlacementSet<>(node), true);
 
     AppAttemptRemovedSchedulerEvent appRemovedEvent1 =
         new AppAttemptRemovedSchedulerEvent(
@@ -3715,5 +3699,58 @@ public class TestCapacityScheduler {
         new AppAttemptAddedSchedulerEvent(appAttemptId1, false);
     cs.handle(addAttemptEvent1);
     return appAttemptId1;
+  }
+
+  @Test
+  public void testAppAttemptLocalityStatistics() throws Exception {
+    Configuration conf =
+        TestUtils.getConfigurationWithMultipleQueues(new Configuration(false));
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+
+    final RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
+    mgr.init(conf);
+
+    MockRM rm = new MockRM(conf) {
+      protected RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    rm.start();
+    MockNM nm1 =
+        new MockNM("h1:1234", 200 * GB, rm.getResourceTrackerService());
+    nm1.registerNode();
+
+    // Launch app1 in queue=a1
+    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "a");
+
+    // Got one offswitch request and offswitch allocation
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+
+    // am1 asks for 1 GB resource on h1/default-rack/offswitch
+    am1.allocate(Arrays.asList(ResourceRequest
+        .newInstance(Priority.newInstance(1), "*",
+            Resources.createResource(1 * GB), 2), ResourceRequest
+        .newInstance(Priority.newInstance(1), "/default-rack",
+            Resources.createResource(1 * GB), 2), ResourceRequest
+        .newInstance(Priority.newInstance(1), "h1",
+            Resources.createResource(1 * GB), 1)), null);
+
+    CapacityScheduler cs = (CapacityScheduler) rm.getRMContext().getScheduler();
+
+    // Got one nodelocal request and nodelocal allocation
+    cs.nodeUpdate(rm.getRMContext().getRMNodes().get(nm1.getNodeId()));
+
+    // Got one nodelocal request and racklocal allocation
+    cs.nodeUpdate(rm.getRMContext().getRMNodes().get(nm1.getNodeId()));
+
+    RMAppAttemptMetrics attemptMetrics = rm.getRMContext().getRMApps().get(
+        app1.getApplicationId()).getCurrentAppAttempt()
+        .getRMAppAttemptMetrics();
+
+    // We should get one node-local allocation, one rack-local allocation
+    // And one off-switch allocation
+    Assert.assertArrayEquals(new int[][] { { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } },
+        attemptMetrics.getLocalityStatistics());
   }
 }

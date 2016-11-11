@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 /**
@@ -72,7 +73,7 @@ public class ContainerLocationManagerImpl implements ContainerLocationManager {
       throws IOException {
     Preconditions.checkState(metadataLocations.size() > 0);
     int index = currentIndex % metadataLocations.size();
-    Path path = metadataLocations.get(index).getFile().toPath();
+    Path path = Paths.get(metadataLocations.get(index).getNormalizedUri());
     return path.resolve(OzoneConsts.CONTAINER_ROOT_PREFIX);
   }
 
@@ -84,8 +85,9 @@ public class ContainerLocationManagerImpl implements ContainerLocationManager {
    */
   @Override
   public Path getDataPath(String containerName) throws IOException {
-    Path currentPath = dataLocations.get(currentIndex++ % dataLocations.size())
-        .getFile().toPath();
+    Path currentPath = Paths.get(
+        dataLocations.get(currentIndex++ % dataLocations.size())
+            .getNormalizedUri());
     currentPath = currentPath.resolve(OzoneConsts.CONTAINER_PREFIX);
     return currentPath.resolve(containerName);
   }

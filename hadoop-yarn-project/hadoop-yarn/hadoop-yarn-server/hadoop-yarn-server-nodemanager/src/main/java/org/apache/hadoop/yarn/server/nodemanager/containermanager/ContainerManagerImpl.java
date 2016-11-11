@@ -88,6 +88,7 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
+import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedContainersEvent;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrDecreaseContainersResourceEvent;
@@ -1033,8 +1034,6 @@ public class ContainerManagerImpl extends CompositeService implements
             containerTokenIdentifier.getVersion(), request);
         dispatcher.getEventHandler().handle(
           new ApplicationContainerInitEvent(container));
-        this.context.getNMStateStore().storeContainer(containerId,
-            containerTokenIdentifier.getVersion(), request);
 
         this.context.getContainerTokenSecretManager().startContainerSuccessful(
           containerTokenIdentifier);
@@ -1521,8 +1520,13 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   @Override
+  public OpportunisticContainersStatus getOpportunisticContainersStatus() {
+    return OpportunisticContainersStatus.newInstance();
+  }
+
+  @Override
   public void updateQueuingLimit(ContainerQueuingLimit queuingLimit) {
-    LOG.trace("Implementation does not support queuing of Containers !!");
+    LOG.trace("Implementation does not support queuing of Containers!!");
   }
 
   @SuppressWarnings("unchecked")

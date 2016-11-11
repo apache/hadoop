@@ -28,6 +28,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
+import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -239,6 +241,17 @@ public class FSDirectory implements Closeable {
    * byte[] objects and reduce heap usage.
    */
   private final NameCache<ByteArray> nameCache;
+
+  // used to specify path resolution type. *_LINK will return symlinks instead
+  // of throwing an unresolved exception
+  public enum DirOp {
+    READ,
+    READ_LINK,
+    WRITE,  // disallows snapshot paths.
+    WRITE_LINK,
+    CREATE, // like write, but also blocks invalid path names.
+    CREATE_LINK;
+  };
 
   FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
     this.dirLock = new ReentrantReadWriteLock(true); // fair
@@ -540,65 +553,73 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * This is a wrapper for resolvePath(). If the path passed
-   * is prefixed with /.reserved/raw, then it checks to ensure that the caller
-   * has super user privileges.
+   * Resolves a given path into an INodesInPath.  All ancestor inodes that
+   * exist are validated as traversable directories.  Symlinks in the ancestry
+   * will generate an UnresolvedLinkException.  The returned IIP will be an
+   * accessible path that also passed additional sanity checks based on how
+   * the path will be used as specified by the DirOp.
+   *   READ:   Expands reserved paths and performs permission checks
+   *           during traversal.  Raw paths are only accessible by a superuser.
+   *   WRITE:  In addition to READ checks, ensures the path is not a
+   *           snapshot path.
+   *   CREATE: In addition to WRITE checks, ensures path does not contain
+   *           illegal character sequences.
    *
-   * @param pc The permission checker used when resolving path.
-   * @param path The path to resolve.
+   * @param pc  A permission checker for traversal checks.  Pass null for
+   *            no permission checks.
+   * @param src The path to resolve.
+   * @param dirOp The {@link DirOp} that controls additional checks.
+   * @param resolveLink If false, only ancestor symlinks will be checked.  If
+   *         true, the last inode will also be checked.
    * @return if the path indicates an inode, return path after replacing up to
    *         <inodeid> with the corresponding path of the inode, else the path
    *         in {@code src} as is. If the path refers to a path in the "raw"
    *         directory, return the non-raw pathname.
    * @throws FileNotFoundException
    * @throws AccessControlException
+   * @throws ParentNotDirectoryException
+   * @throws UnresolvedLinkException
    */
   @VisibleForTesting
-  public INodesInPath resolvePath(FSPermissionChecker pc, String src)
-      throws UnresolvedLinkException, FileNotFoundException,
-      AccessControlException {
-    return resolvePath(pc, src, true);
-  }
-
-  @VisibleForTesting
   public INodesInPath resolvePath(FSPermissionChecker pc, String src,
-      boolean resolveLink) throws UnresolvedLinkException,
-  FileNotFoundException, AccessControlException {
+      DirOp dirOp) throws UnresolvedLinkException, FileNotFoundException,
+      AccessControlException, ParentNotDirectoryException {
+    boolean isCreate = (dirOp == DirOp.CREATE || dirOp == DirOp.CREATE_LINK);
+    // prevent creation of new invalid paths
+    if (isCreate && !DFSUtil.isValidName(src)) {
+      throw new InvalidPathException("Invalid file name: " + src);
+    }
+
     byte[][] components = INode.getPathComponents(src);
     boolean isRaw = isReservedRawName(components);
     if (isPermissionEnabled && pc != null && isRaw) {
       pc.checkSuperuserPrivilege();
     }
     components = resolveComponents(components, this);
-    return INodesInPath.resolve(rootDir, components, isRaw, resolveLink);
-  }
-
-  INodesInPath resolvePathForWrite(FSPermissionChecker pc, String src)
-      throws UnresolvedLinkException, FileNotFoundException,
-      AccessControlException {
-    return resolvePathForWrite(pc, src, true);
-  }
-
-  INodesInPath resolvePathForWrite(FSPermissionChecker pc, String src,
-      boolean resolveLink) throws UnresolvedLinkException,
-  FileNotFoundException, AccessControlException {
-    INodesInPath iip = resolvePath(pc, src, resolveLink);
-    if (iip.isSnapshot()) {
-      throw new SnapshotAccessControlException(
-          "Modification on a read-only snapshot is disallowed");
+    INodesInPath iip = INodesInPath.resolve(rootDir, components, isRaw);
+    // verify all ancestors are dirs and traversable.  note that only
+    // methods that create new namespace items have the signature to throw
+    // PNDE
+    try {
+      checkTraverse(pc, iip, dirOp);
+    } catch (ParentNotDirectoryException pnde) {
+      if (!isCreate) {
+        throw new AccessControlException(pnde.getMessage());
+      }
+      throw pnde;
     }
     return iip;
   }
 
   INodesInPath resolvePath(FSPermissionChecker pc, String src, long fileId)
       throws UnresolvedLinkException, FileNotFoundException,
-      AccessControlException {
+      AccessControlException, ParentNotDirectoryException {
     // Older clients may not have given us an inode ID to work with.
     // In this case, we have to try to resolve the path and hope it
     // hasn't changed or been deleted since the file was opened for write.
     INodesInPath iip;
     if (fileId == HdfsConstants.GRANDFATHER_INODE_ID) {
-      iip = resolvePath(pc, src);
+      iip = resolvePath(pc, src, DirOp.WRITE);
     } else {
       INode inode = getInode(fileId);
       if (inode == null) {
@@ -1607,63 +1628,57 @@ public class FSDirectory implements Closeable {
     return null;
   }
 
-  INodesInPath getExistingPathINodes(byte[][] components)
-      throws UnresolvedLinkException {
-    return INodesInPath.resolve(rootDir, components, false);
+  /**
+   * Resolves the given path into inodes.  Reserved paths are not handled and
+   * permissions are not verified.  Client supplied paths should be
+   * resolved via {@link #resolvePath(FSPermissionChecker, String, DirOp)}.
+   * This method should only be used by internal methods.
+   * @return the {@link INodesInPath} containing all inodes in the path.
+   * @throws UnresolvedLinkException
+   * @throws ParentNotDirectoryException
+   * @throws AccessControlException
+   */
+  public INodesInPath getINodesInPath(String src, DirOp dirOp)
+      throws UnresolvedLinkException, AccessControlException,
+      ParentNotDirectoryException {
+    return getINodesInPath(INode.getPathComponents(src), dirOp);
+  }
+
+  public INodesInPath getINodesInPath(byte[][] components, DirOp dirOp)
+      throws UnresolvedLinkException, AccessControlException,
+      ParentNotDirectoryException {
+    INodesInPath iip = INodesInPath.resolve(rootDir, components);
+    checkTraverse(null, iip, dirOp);
+    return iip;
   }
 
   /**
    * Get {@link INode} associated with the file / directory.
+   * See {@link #getINode(String, DirOp)}
    */
-  public INodesInPath getINodesInPath4Write(String src)
-      throws UnresolvedLinkException, SnapshotAccessControlException {
-    return getINodesInPath4Write(src, true);
+  @VisibleForTesting // should be removed after a lot of tests are updated
+  public INode getINode(String src) throws UnresolvedLinkException,
+      AccessControlException, ParentNotDirectoryException {
+    return getINode(src, DirOp.READ);
   }
 
   /**
    * Get {@link INode} associated with the file / directory.
-   * @throws SnapshotAccessControlException if path is in RO snapshot
+   * See {@link #getINode(String, DirOp)}
    */
+  @VisibleForTesting // should be removed after a lot of tests are updated
   public INode getINode4Write(String src) throws UnresolvedLinkException,
-      SnapshotAccessControlException {
-    return getINodesInPath4Write(src, true).getLastINode();
-  }
-
-  /** @return the {@link INodesInPath} containing all inodes in the path. */
-  public INodesInPath getINodesInPath(String path, boolean resolveLink)
-      throws UnresolvedLinkException {
-    final byte[][] components = INode.getPathComponents(path);
-    return INodesInPath.resolve(rootDir, components, resolveLink);
-  }
-
-  /** @return the last inode in the path. */
-  INode getINode(String path, boolean resolveLink)
-      throws UnresolvedLinkException {
-    return getINodesInPath(path, resolveLink).getLastINode();
+      AccessControlException, FileNotFoundException,
+      ParentNotDirectoryException {
+    return getINode(src, DirOp.WRITE);
   }
 
   /**
    * Get {@link INode} associated with the file / directory.
    */
-  public INode getINode(String src) throws UnresolvedLinkException {
-    return getINode(src, true);
-  }
-
-  /**
-   * @return the INodesInPath of the components in src
-   * @throws UnresolvedLinkException if symlink can't be resolved
-   * @throws SnapshotAccessControlException if path is in RO snapshot
-   */
-  INodesInPath getINodesInPath4Write(String src, boolean resolveLink)
-          throws UnresolvedLinkException, SnapshotAccessControlException {
-    final byte[][] components = INode.getPathComponents(src);
-    INodesInPath inodesInPath = INodesInPath.resolve(rootDir, components,
-        resolveLink);
-    if (inodesInPath.isSnapshot()) {
-      throw new SnapshotAccessControlException(
-              "Modification on a read-only snapshot is disallowed");
-    }
-    return inodesInPath;
+  public INode getINode(String src, DirOp dirOp) throws UnresolvedLinkException,
+      AccessControlException, ParentNotDirectoryException {
+    return getINodesInPath(src, dirOp).getLastINode();
   }
 
   FSPermissionChecker getPermissionChecker()
@@ -1706,9 +1721,33 @@ public class FSDirectory implements Closeable {
     checkPermission(pc, iip, false, access, null, null, null);
   }
 
-  void checkTraverse(FSPermissionChecker pc, INodesInPath iip)
-      throws AccessControlException {
-    checkPermission(pc, iip, false, null, null, null, null);
+  void checkTraverse(FSPermissionChecker pc, INodesInPath iip,
+      boolean resolveLink) throws AccessControlException,
+        UnresolvedPathException, ParentNotDirectoryException {
+    FSPermissionChecker.checkTraverse(
+        isPermissionEnabled ? pc : null, iip, resolveLink);
+  }
+
+  void checkTraverse(FSPermissionChecker pc, INodesInPath iip,
+      DirOp dirOp) throws AccessControlException, UnresolvedPathException,
+          ParentNotDirectoryException {
+    final boolean resolveLink;
+    switch (dirOp) {
+      case READ_LINK:
+      case WRITE_LINK:
+      case CREATE_LINK:
+        resolveLink = false;
+        break;
+      default:
+        resolveLink = true;
+        break;
+    }
+    checkTraverse(pc, iip, resolveLink);
+    boolean allowSnapshot = (dirOp == DirOp.READ || dirOp == DirOp.READ_LINK);
+    if (!allowSnapshot && iip.isSnapshot()) {
+      throw new SnapshotAccessControlException(
+          "Modification on a read-only snapshot is disallowed");
+    }
   }
 
   /**

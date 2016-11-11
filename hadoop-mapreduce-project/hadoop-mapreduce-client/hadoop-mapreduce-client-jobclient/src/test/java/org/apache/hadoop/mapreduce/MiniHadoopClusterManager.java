@@ -45,7 +45,7 @@ import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
-import org.mortbay.util.ajax.JSON;
+import org.eclipse.jetty.util.ajax.JSON;
 
 /**
  * This class drives the creation of a mini-cluster on the local machine. By

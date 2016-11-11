@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSet;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -110,15 +111,16 @@ public class TestChildQueueOrder {
     return application;
   }
 
-  private void stubQueueAllocation(final CSQueue queue, 
-      final Resource clusterResource, final FiCaSchedulerNode node, 
+  private void stubQueueAllocation(final CSQueue queue,
+      final Resource clusterResource, final FiCaSchedulerNode node,
       final int allocation) {
-    stubQueueAllocation(queue, clusterResource, node, allocation, 
+    stubQueueAllocation(queue, clusterResource, node, allocation,
         NodeType.NODE_LOCAL);
   }
 
-  private void stubQueueAllocation(final CSQueue queue, 
-      final Resource clusterResource, final FiCaSchedulerNode node, 
+  @SuppressWarnings("unchecked")
+  private void stubQueueAllocation(final CSQueue queue,
+      final Resource clusterResource, final FiCaSchedulerNode node,
       final int allocation, final NodeType type) {
 
     // Simulate the queue allocation
@@ -145,7 +147,7 @@ public class TestChildQueueOrder {
         if (allocation > 0) {
           doReturn(new CSAssignment(Resources.none(), type)).
           when(queue)
-              .assignContainers(eq(clusterResource), eq(node),
+              .assignContainers(eq(clusterResource), any(PlacementSet.class),
                   any(ResourceLimits.class), any(SchedulingMode.class));
 
           // Mock the node's resource availability
@@ -157,7 +159,7 @@ public class TestChildQueueOrder {
         return new CSAssignment(allocatedResource, type);
       }
     }).
-    when(queue).assignContainers(eq(clusterResource), eq(node), 
+    when(queue).assignContainers(eq(clusterResource), any(PlacementSet.class),
         any(ResourceLimits.class), any(SchedulingMode.class));
     doNothing().when(node).releaseContainer(any(Container.class));
   }
@@ -214,6 +216,7 @@ public class TestChildQueueOrder {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   public void testSortedQueues() throws Exception {
     // Setup queue configs
     setupSortedQueues(csConf);
@@ -418,10 +421,10 @@ public class TestChildQueueOrder {
         clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     InOrder allocationOrder = inOrder(d,b);
     allocationOrder.verify(d).assignContainers(eq(clusterResource),
-        any(FiCaSchedulerNode.class), any(ResourceLimits.class),
+        any(PlacementSet.class), any(ResourceLimits.class),
         any(SchedulingMode.class));
     allocationOrder.verify(b).assignContainers(eq(clusterResource),
-        any(FiCaSchedulerNode.class), any(ResourceLimits.class),
+        any(PlacementSet.class), any(ResourceLimits.class),
         any(SchedulingMode.class));
     verifyQueueMetrics(a, 3*GB, clusterResource);
     verifyQueueMetrics(b, 2*GB, clusterResource);

@@ -18,12 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -36,15 +30,20 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
-
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAssignment;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSet;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSetUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
 
 public class IncreaseContainerAllocator extends AbstractContainerAllocator {
   private static final Log LOG =
@@ -76,7 +75,7 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
         request.getDeltaCapacity());
     assignment.getAssignmentInformation().incrReservations();
     assignment.getAssignmentInformation().addReservationDetails(
-        request.getContainerId(), application.getCSLeafQueue().getQueuePath());
+        request.getRMContainer(), application.getCSLeafQueue().getQueuePath());
     assignment.setIncreasedAllocation(true);
     
     LOG.info("Reserved increase container request:" + request.toString());
@@ -93,8 +92,12 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
         request.getDeltaCapacity());
     assignment.getAssignmentInformation().incrAllocations();
     assignment.getAssignmentInformation().addAllocationDetails(
-        request.getContainerId(), application.getCSLeafQueue().getQueuePath());
+        request.getRMContainer(), application.getCSLeafQueue().getQueuePath());
     assignment.setIncreasedAllocation(true);
+
+    if (fromReservation) {
+      assignment.setFulfilledReservedContainer(request.getRMContainer());
+    }
     
     // notify application
     application
@@ -114,19 +117,6 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
       SchedContainerChangeRequest increaseRequest) {
     if (Resources.fitsIn(rc, cluster, increaseRequest.getDeltaCapacity(),
         node.getUnallocatedResource())) {
-      // OK, we can allocate this increase request
-      // Unreserve it first
-      application.unreserve(
-          increaseRequest.getRMContainer().getAllocatedSchedulerKey(),
-          (FiCaSchedulerNode) node, increaseRequest.getRMContainer());
-      
-      // Notify application
-      application.increaseContainer(increaseRequest);
-      
-      // Notify node
-      node.increaseContainer(increaseRequest.getContainerId(),
-          increaseRequest.getDeltaCapacity());
-
       return createSuccessfullyIncreasedCSAssignment(increaseRequest, true);
     } else {
       if (LOG.isDebugEnabled()) {
@@ -144,40 +134,26 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
       Resource cluster, SchedContainerChangeRequest increaseRequest) {
     if (Resources.fitsIn(rc, cluster, increaseRequest.getDeltaCapacity(),
         node.getUnallocatedResource())) {
-      // Notify node
-      node.increaseContainer(increaseRequest.getContainerId(),
-          increaseRequest.getDeltaCapacity());
-
-      // OK, we can allocate this increase request
-      // Notify application
-      application.increaseContainer(increaseRequest);
       return createSuccessfullyIncreasedCSAssignment(increaseRequest, false);
-    } else {
-      boolean reservationSucceeded =
-          application.reserveIncreasedContainer(
-              increaseRequest.getRMContainer().getAllocatedSchedulerKey(),
-              node, increaseRequest.getRMContainer(),
-              increaseRequest.getDeltaCapacity());
-      
-      if (reservationSucceeded) {
-        // We cannot allocate this container, but since queue capacity /
-        // user-limit matches, we can reserve this container on this node.
-        return createReservedIncreasedCSAssignment(increaseRequest);
-      } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Reserve increase request=" + increaseRequest.toString()
-              + " failed. Skipping..");
-        }
-        return CSAssignment.SKIP_ASSIGNMENT;
-      }
+    } else{
+      // We cannot allocate this container, but since queue capacity /
+      // user-limit matches, we can reserve this container on this node.
+      return createReservedIncreasedCSAssignment(increaseRequest);
     }
   }
 
   @Override
   public CSAssignment assignContainers(Resource clusterResource,
-      FiCaSchedulerNode node, SchedulingMode schedulingMode,
+      PlacementSet<FiCaSchedulerNode> ps, SchedulingMode schedulingMode,
       ResourceLimits resourceLimits, RMContainer reservedContainer) {
     AppSchedulingInfo sinfo = application.getAppSchedulingInfo();
+    FiCaSchedulerNode node = PlacementSetUtils.getSingleNode(ps);
+
+    if (null == node) {
+      // This is global scheduling enabled
+      // FIXME, support container increase when global scheduling enabled
+      return CSAssignment.SKIP_ASSIGNMENT;
+    }
     NodeId nodeId = node.getNodeID();
 
     if (reservedContainer == null) {
@@ -258,8 +234,6 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
         }
         Iterator<Entry<ContainerId, SchedContainerChangeRequest>> iter =
             increaseRequestMap.entrySet().iterator();
-        List<SchedContainerChangeRequest> toBeRemovedRequests =
-            new ArrayList<>();
 
         while (iter.hasNext()) {
           Entry<ContainerId, SchedContainerChangeRequest> entry =
@@ -289,7 +263,7 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
             if (LOG.isDebugEnabled()) {
               LOG.debug("  Container is not running any more, skip...");
             }
-            toBeRemovedRequests.add(increaseRequest);
+            application.addToBeRemovedIncreaseRequest(increaseRequest);
             continue;
           }
 
@@ -304,7 +278,7 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
               LOG.debug("  Target capacity is more than what node can offer,"
                   + " node.resource=" + node.getTotalResource());
             }
-            toBeRemovedRequests.add(increaseRequest);
+            application.addToBeRemovedIncreaseRequest(increaseRequest);
             continue;
           }
 
@@ -316,15 +290,6 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
             // When we don't skip this request, which means we either allocated
             // OR reserved this request. We will break
             break;
-          }
-        }
-        
-        // Remove invalid in request requests
-        if (!toBeRemovedRequests.isEmpty()) {
-          for (SchedContainerChangeRequest req : toBeRemovedRequests) {
-            sinfo.removeIncreaseRequest(req.getNodeId(),
-                req.getRMContainer().getAllocatedSchedulerKey(),
-                req.getContainerId());
           }
         }
 

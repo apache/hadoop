@@ -229,6 +229,9 @@ public class TestOpportunisticContainerAllocation {
 
       amClient.registerApplicationMaster("Host", 10000, "");
 
+      testOpportunisticAllocation(
+          (AMRMClientImpl<AMRMClient.ContainerRequest>) amClient);
+
       testAllocation((AMRMClientImpl<AMRMClient.ContainerRequest>)amClient);
 
       amClient
@@ -247,7 +250,6 @@ public class TestOpportunisticContainerAllocation {
       final AMRMClientImpl<AMRMClient.ContainerRequest> amClient)
       throws YarnException, IOException {
     // setup container request
-
     assertEquals(0, amClient.ask.size());
     assertEquals(0, amClient.release.size());
 
@@ -386,6 +388,73 @@ public class TestOpportunisticContainerAllocation {
     }
     assertEquals(0, amClient.ask.size());
     assertEquals(0, amClient.release.size());
+  }
+
+  /**
+   * Tests allocation with requests comprising only opportunistic containers.
+   */
+  private void testOpportunisticAllocation(
+      final AMRMClientImpl<AMRMClient.ContainerRequest> amClient)
+      throws YarnException, IOException {
+    // setup container request
+    assertEquals(0, amClient.ask.size());
+    assertEquals(0, amClient.release.size());
+
+    amClient.addContainerRequest(
+        new AMRMClient.ContainerRequest(capability, null, null, priority, 0,
+            true, null,
+            ExecutionTypeRequest.newInstance(
+                ExecutionType.OPPORTUNISTIC, true)));
+    amClient.addContainerRequest(
+        new AMRMClient.ContainerRequest(capability, null, null, priority, 0,
+            true, null,
+            ExecutionTypeRequest.newInstance(
+                ExecutionType.OPPORTUNISTIC, true)));
+
+    int oppContainersRequestedAny =
+        amClient.getTable(0).get(priority, ResourceRequest.ANY,
+            ExecutionType.OPPORTUNISTIC, capability).remoteRequest
+            .getNumContainers();
+
+    assertEquals(2, oppContainersRequestedAny);
+
+    assertEquals(1, amClient.ask.size());
+    assertEquals(0, amClient.release.size());
+
+    // RM should allocate container within 2 calls to allocate()
+    int allocatedContainerCount = 0;
+    int iterationsLeft = 10;
+    Set<ContainerId> releases = new TreeSet<>();
+
+    amClient.getNMTokenCache().clearCache();
+    Assert.assertEquals(0,
+        amClient.getNMTokenCache().numberOfTokensInCache());
+    HashMap<String, Token> receivedNMTokens = new HashMap<>();
+
+    while (allocatedContainerCount < oppContainersRequestedAny
+        && iterationsLeft-- > 0) {
+      AllocateResponse allocResponse = amClient.allocate(0.1f);
+      assertEquals(0, amClient.ask.size());
+      assertEquals(0, amClient.release.size());
+
+      for (Container container : allocResponse.getAllocatedContainers()) {
+        allocatedContainerCount++;
+        ContainerId rejectContainerId = container.getId();
+        releases.add(rejectContainerId);
+      }
+
+      for (NMToken token : allocResponse.getNMTokens()) {
+        String nodeID = token.getNodeId().toString();
+        receivedNMTokens.put(nodeID, token.getToken());
+      }
+
+      if (allocatedContainerCount < oppContainersRequestedAny) {
+        // sleep to let NM's heartbeat to RM and trigger allocations
+        sleep(100);
+      }
+    }
+
+    assertEquals(1, receivedNMTokens.values().size());
   }
 
   private void sleep(int sleepTime) {

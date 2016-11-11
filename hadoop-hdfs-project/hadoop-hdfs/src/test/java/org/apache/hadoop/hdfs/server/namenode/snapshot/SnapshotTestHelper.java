@@ -469,7 +469,13 @@ public class SnapshotTestHelper {
   public static void dumpTree(String message, MiniDFSCluster cluster
       ) throws UnresolvedLinkException {
     System.out.println("XXX " + message);
-    cluster.getNameNode().getNamesystem().getFSDirectory().getINode("/"
-        ).dumpTreeRecursively(System.out);
+    try {
+      cluster.getNameNode().getNamesystem().getFSDirectory().getINode("/"
+          ).dumpTreeRecursively(System.out);
+    } catch (UnresolvedLinkException ule) {
+      throw ule;
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
   }
 }

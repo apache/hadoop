@@ -556,9 +556,10 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     String user = ctx.getUser();
     String pid = ctx.getPid();
     Signal signal = ctx.getSignal();
-
-    LOG.debug("Sending signal " + signal.getValue() + " to pid " + pid
-        + " as user " + user);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Sending signal " + signal.getValue() + " to pid " + pid
+          + " as user " + user);
+    }
     if (!containerIsAlive(pid)) {
       return false;
     }
@@ -730,6 +731,18 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     // make probability to pick a directory proportional to
     // the available space on the directory.
     long randomPosition = RandomUtils.nextLong() % totalAvailable;
+    int dir = pickDirectory(randomPosition, availableOnDisk);
+
+    return getApplicationDir(new Path(localDirs.get(dir)), user, appId);
+  }
+
+  /**
+   * Picks a directory based on the input random number and
+   * available size at each dir.
+   */
+  @Private
+  @VisibleForTesting
+  int pickDirectory(long randomPosition, final long[] availableOnDisk) {
     int dir = 0;
     // skip zero available space directory,
     // because totalAvailable is greater than 0 and randomPosition
@@ -738,11 +751,10 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     while (availableOnDisk[dir] == 0L) {
       dir++;
     }
-    while (randomPosition > availableOnDisk[dir]) {
+    while (randomPosition >= availableOnDisk[dir]) {
       randomPosition -= availableOnDisk[dir++];
     }
-
-    return getApplicationDir(new Path(localDirs.get(dir)), user, appId);
+    return dir;
   }
 
   /**

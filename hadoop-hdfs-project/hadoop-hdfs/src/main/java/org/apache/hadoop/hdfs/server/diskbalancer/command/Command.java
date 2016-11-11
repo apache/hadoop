@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.command;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -47,11 +49,10 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolumeSe
 import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
@@ -74,7 +75,7 @@ import java.util.TreeSet;
 /**
  * Common interface for command handling.
  */
-public abstract class Command extends Configured {
+public abstract class Command extends Configured implements Closeable {
   private static final ObjectReader READER =
       new ObjectMapper().reader(HashMap.class);
   static final Logger LOG = LoggerFactory.getLogger(Command.class);
@@ -104,6 +105,22 @@ public abstract class Command extends Configured {
     // These arguments are valid for all commands.
     topNodes = 0;
     this.ps = ps;
+  }
+
+  /**
+   * Cleans any resources held by this command.
+   * <p>
+   * The main goal is to delete id file created in
+   * {@link org.apache.hadoop.hdfs.server.balancer
+   * .NameNodeConnector#checkAndMarkRunning}
+   * , otherwise, it's not allowed to run multiple commands in a row.
+   * </p>
+   */
+  @Override
+  public void close() throws IOException {
+    if (fs != null) {
+      fs.close();
+    }
   }
 
   /**

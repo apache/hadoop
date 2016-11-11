@@ -19,9 +19,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -2001,6 +2003,59 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     MetricsSystem ms = DefaultMetricsSystem.instance();
     if (ms.getSource("ClusterMetrics") != null) {
       DefaultMetricsSystem.shutdown();
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testNodeHeartBeatResponseForUnknownContainerCleanUp()
+      throws Exception {
+    Configuration conf = new Configuration();
+    rm = new MockRM(conf);
+    rm.init(conf);
+    rm.start();
+
+    MockNM nm1 = rm.registerNode("host1:1234", 5120);
+    rm.drainEvents();
+
+    // send 1st heartbeat
+    nm1.nodeHeartbeat(true);
+
+    // Create 2 unknown containers tracked by NM
+    ApplicationId applicationId = BuilderUtils.newApplicationId(1, 1);
+    ApplicationAttemptId applicationAttemptId = BuilderUtils
+        .newApplicationAttemptId(applicationId, 1);
+    ContainerId cid1 = BuilderUtils.newContainerId(applicationAttemptId, 2);
+    ContainerId cid2 = BuilderUtils.newContainerId(applicationAttemptId, 3);
+    ArrayList<ContainerStatus> containerStats =
+        new ArrayList<ContainerStatus>();
+    containerStats.add(
+        ContainerStatus.newInstance(cid1, ContainerState.COMPLETE, "", -1));
+    containerStats.add(
+        ContainerStatus.newInstance(cid2, ContainerState.COMPLETE, "", -1));
+
+    Map<ApplicationId, List<ContainerStatus>> conts =
+        new HashMap<ApplicationId, List<ContainerStatus>>();
+    conts.put(applicationAttemptId.getApplicationId(), containerStats);
+
+    // add RMApp into context.
+    RMApp app1 = mock(RMApp.class);
+    when(app1.getApplicationId()).thenReturn(applicationId);
+    rm.getRMContext().getRMApps().put(applicationId, app1);
+
+    // Send unknown container status in heartbeat
+    nm1.nodeHeartbeat(conts, true);
+    rm.drainEvents();
+
+    int containersToBeRemovedFromNM = 0;
+    while (true) {
+      NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
+      rm.drainEvents();
+      containersToBeRemovedFromNM +=
+          nodeHeartbeat.getContainersToBeRemovedFromNM().size();
+      // asserting for 2 since two unknown containers status has been sent
+      if (containersToBeRemovedFromNM == 2) {
+        break;
+      }
     }
   }
 }

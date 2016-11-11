@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.conf;
 
+import org.apache.commons.lang.StringUtils;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -145,6 +146,14 @@ public abstract class TestConfigurationFieldsBase {
    * corresponding Configuration class(es).
    */
   private Set<String> xmlFieldsMissingInConfiguration = null;
+
+  /**
+   * A set of strings used to check for collision of default values.
+   * For each of the set's strings, the default values containing that string
+   * in their name should not coincide.
+   */
+  @SuppressWarnings("checkstyle:visibilitymodifier")
+  protected Set<String> filtersForDefaultValueCollisionCheck = new HashSet<>();
 
   /**
    * Member variable for debugging base class operation
@@ -718,5 +727,43 @@ public abstract class TestConfigurationFieldsBase {
     System.out.println();
     System.out.println("=====");
     System.out.println();
+  }
+
+  /**
+   * For each specified string, get the default parameter values whose names
+   * contain the string. Then check whether any of these default values collide.
+   * This is, for example, useful to make sure there is no collision of default
+   * ports across different services.
+   */
+  @Test
+  public void testDefaultValueCollision() {
+    for (String filter : filtersForDefaultValueCollisionCheck) {
+      System.out.println("Checking if any of the default values whose name " +
+          "contains string \"" + filter + "\" collide.");
+
+      // Map from filtered default value to name of the corresponding parameter.
+      Map<String, String> filteredValues = new HashMap<>();
+
+      int valuesChecked = 0;
+      for (Map.Entry<String, String> ent :
+          configurationDefaultVariables.entrySet()) {
+        // Apply the name filter to the default parameters.
+        if (ent.getKey().contains(filter)) {
+          // Check only for numerical values.
+          if (StringUtils.isNumeric(ent.getValue())) {
+            String crtValue =
+                filteredValues.putIfAbsent(ent.getValue(), ent.getKey());
+            assertTrue("Parameters " + ent.getKey() + " and " + crtValue +
+                " are using the same default value!", crtValue == null);
+          }
+          valuesChecked++;
+        }
+      }
+
+      System.out.println(
+          "Checked " + valuesChecked + " default values for collision.");
+    }
+
+
   }
 }

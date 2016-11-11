@@ -40,6 +40,7 @@ import javax.ws.rs.core.UriInfo;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -95,14 +96,16 @@ public class NMWebServices {
   }
 
   @GET
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public NodeInfo get() {
     return getNodeInfo();
   }
 
   @GET
   @Path("/info")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public NodeInfo getNodeInfo() {
     init();
     return new NodeInfo(this.nmContext, this.rview);
@@ -110,7 +113,8 @@ public class NMWebServices {
 
   @GET
   @Path("/apps")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public AppsInfo getNodeApps(@QueryParam("state") String stateQuery,
       @QueryParam("user") String userQuery) {
     init();
@@ -141,7 +145,8 @@ public class NMWebServices {
 
   @GET
   @Path("/apps/{appid}")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public AppInfo getNodeApp(@PathParam("appid") String appId) {
     init();
     ApplicationId id = WebAppUtils.parseApplicationId(recordFactory, appId);
@@ -155,7 +160,8 @@ public class NMWebServices {
 
   @GET
   @Path("/containers")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public ContainersInfo getNodeContainers(@javax.ws.rs.core.Context
       HttpServletRequest hsr) {
     init();
@@ -175,7 +181,8 @@ public class NMWebServices {
 
   @GET
   @Path("/containers/{containerid}")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public ContainerInfo getNodeContainer(@javax.ws.rs.core.Context
       HttpServletRequest hsr, @PathParam("containerid") String id) {
     ContainerId containerId = null;
@@ -207,7 +214,8 @@ public class NMWebServices {
    */
   @GET
   @Path("/containers/{containerid}/logs")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public ContainerLogsInfo getContainerLogsInfo(@javax.ws.rs.core.Context
       HttpServletRequest hsr,
       @PathParam("containerid") String containerIdStr) {
@@ -246,7 +254,7 @@ public class NMWebServices {
    */
   @GET
   @Path("/containers/{containerid}/logs/{filename}")
-  @Produces({ MediaType.TEXT_PLAIN })
+  @Produces({ MediaType.TEXT_PLAIN + "; " + JettyUtils.UTF_8 })
   @Public
   @Unstable
   public Response getContainerLogFile(
@@ -277,7 +285,7 @@ public class NMWebServices {
    */
   @GET
   @Path("/containerlogs/{containerid}/{filename}")
-  @Produces({ MediaType.TEXT_PLAIN })
+  @Produces({ MediaType.TEXT_PLAIN + "; " + JettyUtils.UTF_8 })
   @Public
   @Unstable
   public Response getLogs(@PathParam("containerid") String containerIdStr,
@@ -363,7 +371,7 @@ public class NMWebServices {
         }
       };
       ResponseBuilder resp = Response.ok(stream);
-      resp.header("Content-Type", contentType);
+      resp.header("Content-Type", contentType + "; " + JettyUtils.UTF_8);
       // Sending the X-Content-Type-Options response header with the value
       // nosniff will prevent Internet Explorer from MIME-sniffing a response
       // away from the declared content-type.

@@ -36,7 +36,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.junit.Before;
 import org.junit.Test;
-import org.mortbay.util.ajax.JSON;
+import org.eclipse.jetty.util.ajax.JSON;
 
 public class TestStartupProgressServlet {
 

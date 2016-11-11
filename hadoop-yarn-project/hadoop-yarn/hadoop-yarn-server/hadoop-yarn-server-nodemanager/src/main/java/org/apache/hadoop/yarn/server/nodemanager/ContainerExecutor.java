@@ -320,7 +320,6 @@ public abstract class ContainerExecutor implements Configurable {
         ContainerLaunch.ShellScriptBuilder.create();
     Set<String> whitelist = new HashSet<>();
 
-    whitelist.add(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
     whitelist.add(ApplicationConstants.Environment.HADOOP_YARN_HOME.name());
     whitelist.add(ApplicationConstants.Environment.HADOOP_COMMON_HOME.name());
     whitelist.add(ApplicationConstants.Environment.HADOOP_HDFS_HOME.name());

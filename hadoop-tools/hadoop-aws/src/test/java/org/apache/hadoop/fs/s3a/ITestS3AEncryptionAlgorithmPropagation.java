@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -41,12 +40,6 @@ public class ITestS3AEncryptionAlgorithmPropagation
     conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
         "DES");
     return conf;
-  }
-
-  @Override
-  public void teardown() throws Exception {
-    super.teardown();
-    IOUtils.closeStream(getFileSystem());
   }
 
   @Test

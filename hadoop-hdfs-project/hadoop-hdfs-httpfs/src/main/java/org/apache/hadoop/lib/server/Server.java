@@ -19,6 +19,7 @@
 package org.apache.hadoop.lib.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.ConfigRedactor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.lib.util.Check;
 import org.apache.hadoop.lib.util.ConfigurationUtils;
@@ -482,15 +483,13 @@ public class Server {
     }
 
     ConfigurationUtils.injectDefaults(defaultConf, config);
-
+    ConfigRedactor redactor = new ConfigRedactor(config);
     for (String name : System.getProperties().stringPropertyNames()) {
       String value = System.getProperty(name);
       if (name.startsWith(getPrefix() + ".")) {
         config.set(name, value);
-        if (name.endsWith(".password") || name.endsWith(".secret")) {
-          value = "*MASKED*";
-        }
-        log.info("System property sets  {}: {}", name, value);
+        String redacted = redactor.redact(name, value);
+        log.info("System property sets  {}: {}", name, redacted);
       }
     }
 
@@ -499,10 +498,8 @@ public class Server {
     for (Map.Entry<String, String> entry : config) {
       String name = entry.getKey();
       String value = config.get(entry.getKey());
-      if (name.endsWith(".password") || name.endsWith(".secret")) {
-        value = "*MASKED*";
-      }
-      log.debug("  {}: {}", entry.getKey(), value);
+      String redacted = redactor.redact(name, value);
+      log.debug("  {}: {}", entry.getKey(), redacted);
     }
     log.debug("------------------------------------------------------");
   }

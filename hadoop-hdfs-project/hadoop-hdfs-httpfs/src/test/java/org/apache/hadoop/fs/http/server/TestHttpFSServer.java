@@ -43,7 +43,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrCodec;
@@ -64,8 +63,8 @@ import org.apache.hadoop.test.TestJettyHelper;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.junit.Test;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.webapp.WebAppContext;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.webapp.WebAppContext;
 
 import com.google.common.collect.Maps;
 import java.util.Properties;
@@ -137,9 +136,9 @@ public class TestHttpFSServer extends HFSTestCase {
     //HDFS configuration
     File hadoopConfDir = new File(new File(homeDir, "conf"), "hadoop-conf");
     hadoopConfDir.mkdirs();
-    String fsDefaultName = TestHdfsHelper.getHdfsConf().get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY);
-    Configuration conf = new Configuration(false);
-    conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, fsDefaultName);
+    Configuration hdfsConf = TestHdfsHelper.getHdfsConf();
+    // Http Server's conf should be based on HDFS's conf
+    Configuration conf = new Configuration(hdfsConf);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
     File hdfsSite = new File(hadoopConfDir, "hdfs-site.xml");
@@ -171,7 +170,7 @@ public class TestHttpFSServer extends HFSTestCase {
     URL url = cl.getResource("webapp");
     WebAppContext context = new WebAppContext(url.getPath(), "/webhdfs");
     Server server = TestJettyHelper.getJettyServer();
-    server.addHandler(context);
+    server.setHandler(context);
     server.start();
     if (addDelegationTokenAuthHandler) {
       HttpFSServerWebApp.get().setAuthority(TestJettyHelper.getAuthority());
@@ -344,6 +343,20 @@ public class TestHttpFSServer extends HFSTestCase {
     JSONObject jsonObject = (JSONObject) parser.parse(statusJson);
     JSONObject details = (JSONObject) jsonObject.get("FileStatus");
     return (String) details.get("permission");
+  }
+
+  /**
+   * Given the JSON output from the GETTRASHPATH call, return the
+   * 'path' value.
+   *
+   * @param statusJson JSON from GETTRASHPATH
+   * @return The value of 'path' in statusJson
+   * @throws Exception
+   */
+  private String getPath(String statusJson) throws Exception {
+    JSONParser parser = new JSONParser();
+    JSONObject details = (JSONObject) parser.parse(statusJson);
+    return (String) details.get("Path");
   }
 
   /**
@@ -675,6 +688,40 @@ public class TestHttpFSServer extends HFSTestCase {
   @TestDir
   @TestJetty
   @TestHdfs
+  public void testGetTrashRoot() throws Exception {
+    String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    createHttpFSServer(false);
+    String trashJson = getStatus("/", "GETTRASHROOT");
+    String trashPath = getPath(trashJson);
+
+    Path expectedPath = new Path(FileSystem.USER_HOME_PREFIX,
+        new Path(user, FileSystem.TRASH_PREFIX));
+    Assert.assertEquals(expectedPath.toUri().getPath(), trashPath);
+
+    byte[] array = new byte[]{0, 1, 2, 3};
+    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    fs.mkdirs(new Path("/tmp"));
+    OutputStream os = fs.create(new Path("/tmp/foo"));
+    os.write(array);
+    os.close();
+
+    trashJson = getStatus("/tmp/foo", "GETTRASHROOT");
+    trashPath = getPath(trashJson);
+    Assert.assertEquals(expectedPath.toUri().getPath(), trashPath);
+
+    //TestHdfsHelp has already set up EZ environment
+    final Path ezFile = TestHdfsHelper.ENCRYPTED_FILE;
+    final Path ezPath = TestHdfsHelper.ENCRYPTION_ZONE;
+    trashJson = getStatus(ezFile.toUri().getPath(), "GETTRASHROOT");
+    trashPath = getPath(trashJson);
+    expectedPath = new Path(ezPath, new Path(FileSystem.TRASH_PREFIX, user));
+    Assert.assertEquals(expectedPath.toUri().getPath(), trashPath);
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
   public void testDelegationTokenOperations() throws Exception {
     createHttpFSServer(true);
 
@@ -754,6 +801,21 @@ public class TestHttpFSServer extends HFSTestCase {
     conn = (HttpURLConnection) url.openConnection();
     Assert.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
                         conn.getResponseCode());
+
+    // getTrash test with delegation
+    url = new URL(TestJettyHelper.getJettyURL(),
+        "/webhdfs/v1/?op=GETTRASHROOT&delegation=" + tokenStr);
+    conn = (HttpURLConnection) url.openConnection();
+    Assert.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+        conn.getResponseCode());
+
+    url = new URL(TestJettyHelper.getJettyURL(),
+        "/webhdfs/v1/?op=GETTRASHROOT");
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestProperty("Cookie",
+        AuthenticatedURL.AUTH_COOKIE  + "=" + tokenSigned);
+    Assert.assertEquals(HttpURLConnection.HTTP_OK,
+        conn.getResponseCode());
   }
 
 }

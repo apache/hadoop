@@ -21,11 +21,12 @@ package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.AllocateResponsePBImpl;
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
-import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RemoteNodeProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateResponse;
+
+
+import org.apache.hadoop.yarn.server.api.protocolrecords.RemoteNode;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -45,7 +46,7 @@ public class DistributedSchedulingAllocateResponsePBImpl extends
   boolean viaProto = false;
 
   private AllocateResponse allocateResponse;
-  private List<NodeId> nodesForScheduling;
+  private List<RemoteNode> nodesForScheduling;
 
   public DistributedSchedulingAllocateResponsePBImpl() {
     builder = YarnServerCommonServiceProtos.
@@ -86,8 +87,8 @@ public class DistributedSchedulingAllocateResponsePBImpl extends
   private synchronized void mergeLocalToBuilder() {
     if (this.nodesForScheduling != null) {
       builder.clearNodesForScheduling();
-      Iterable<YarnProtos.NodeIdProto> iterable = getNodeIdProtoIterable(
-          this.nodesForScheduling);
+      Iterable<YarnServerCommonServiceProtos.RemoteNodeProto> iterable =
+          getNodeIdProtoIterable(this.nodesForScheduling);
       builder.addAllNodesForScheduling(iterable);
     }
     if (this.allocateResponse != null) {
@@ -123,7 +124,7 @@ public class DistributedSchedulingAllocateResponsePBImpl extends
   }
 
   @Override
-  public void setNodesForScheduling(List<NodeId> nodesForScheduling) {
+  public void setNodesForScheduling(List<RemoteNode> nodesForScheduling) {
     maybeInitBuilder();
     if (nodesForScheduling == null || nodesForScheduling.isEmpty()) {
       if (this.nodesForScheduling != null) {
@@ -137,7 +138,7 @@ public class DistributedSchedulingAllocateResponsePBImpl extends
   }
 
   @Override
-  public List<NodeId> getNodesForScheduling() {
+  public List<RemoteNode> getNodesForScheduling() {
     if (nodesForScheduling != null) {
       return nodesForScheduling;
     }
@@ -149,24 +150,25 @@ public class DistributedSchedulingAllocateResponsePBImpl extends
     YarnServerCommonServiceProtos.
         DistributedSchedulingAllocateResponseProtoOrBuilder p =
             viaProto ? proto : builder;
-    List<YarnProtos.NodeIdProto> list = p.getNodesForSchedulingList();
+    List<YarnServerCommonServiceProtos.RemoteNodeProto> list =
+        p.getNodesForSchedulingList();
     nodesForScheduling = new ArrayList<>();
     if (list != null) {
-      for (YarnProtos.NodeIdProto t : list) {
-        nodesForScheduling.add(ProtoUtils.convertFromProtoFormat(t));
+      for (YarnServerCommonServiceProtos.RemoteNodeProto t : list) {
+        nodesForScheduling.add(new RemoteNodePBImpl(t));
       }
     }
   }
 
-  private synchronized Iterable<YarnProtos.NodeIdProto> getNodeIdProtoIterable(
-      final List<NodeId> nodeList) {
+  private synchronized Iterable<RemoteNodeProto> getNodeIdProtoIterable(
+      final List<RemoteNode> nodeList) {
     maybeInitBuilder();
-    return new Iterable<YarnProtos.NodeIdProto>() {
+    return new Iterable<RemoteNodeProto>() {
       @Override
-      public synchronized Iterator<YarnProtos.NodeIdProto> iterator() {
-        return new Iterator<YarnProtos.NodeIdProto>() {
+      public synchronized Iterator<RemoteNodeProto> iterator() {
+        return new Iterator<RemoteNodeProto>() {
 
-          Iterator<NodeId> iter = nodeList.iterator();
+          Iterator<RemoteNode> iter = nodeList.iterator();
 
           @Override
           public boolean hasNext() {
@@ -174,8 +176,8 @@ public class DistributedSchedulingAllocateResponsePBImpl extends
           }
 
           @Override
-          public YarnProtos.NodeIdProto next() {
-            return ProtoUtils.convertToProtoFormat(iter.next());
+          public RemoteNodeProto next() {
+            return ((RemoteNodePBImpl)iter.next()).getProto();
           }
 
           @Override
@@ -186,5 +188,4 @@ public class DistributedSchedulingAllocateResponsePBImpl extends
       }
     };
   }
-
 }

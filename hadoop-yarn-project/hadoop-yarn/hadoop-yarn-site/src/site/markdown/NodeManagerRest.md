@@ -163,7 +163,7 @@ With the Applications API, you can obtain a collection of resources, each of whi
 
 ### Query Parameters Supported
 
-Multiple paramters can be specified.
+Multiple parameters can be specified.
 
       * state - application state 
       * user - user name

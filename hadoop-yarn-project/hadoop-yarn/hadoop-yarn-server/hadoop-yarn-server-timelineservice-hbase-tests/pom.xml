@@ -73,6 +73,10 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-auth</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>tomcat</groupId>
+          <artifactId>jasper-runtime</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -325,6 +329,10 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapreduce-client-core</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>net.sourceforge.findbugs</groupId>
+          <artifactId>annotations</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -349,6 +357,10 @@
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapreduce-client-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>net.sourceforge.findbugs</groupId>
+          <artifactId>annotations</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -416,6 +428,18 @@
           <artifactId>hadoop-mapreduce-client-core</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+
+    <!-- Jetty 9 is needed by the ATS code -->
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-servlet</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-webapp</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 

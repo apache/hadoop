@@ -142,7 +142,8 @@ public class TestRMWebAppFairScheduler {
       MockRMApp app = new MockRMApp(i, i, state) {
         @Override
         public RMAppMetrics getRMAppMetrics() {
-          return new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, 0, 0);
+          return new RMAppMetrics(Resource.newInstance(0, 0),
+              0, 0, 0, 0, 0, 0);
         }
         @Override
         public YarnApplicationState createApplicationState() {

@@ -26,12 +26,15 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
@@ -606,5 +609,53 @@ public class TestFsShellCopy {
     assertThat("Expected failed copyFromLocal to a non-existent directory",
         shellRun("-copyFromLocal", srcPath.toString(), noDirName + "/"),
         is(not(0)));
+  }
+
+  @Test
+  public void testPutSrcDirNoPerm()
+      throws Exception {
+    final Path src = new Path(testRootDir, "srcNoPerm");
+    final Path dst = new Path(testRootDir, "dst");
+    lfs.delete(src, true);
+    lfs.mkdirs(src, new FsPermission((short)0));
+    lfs.delete(dst, true);
+
+    try {
+      final ByteArrayOutputStream err = new ByteArrayOutputStream();
+      PrintStream oldErr = System.err;
+      System.setErr(new PrintStream(err));
+      shellRun(1, "-put", src.toString(), dst.toString());
+      System.setErr(oldErr);
+      System.err.print(err.toString());
+      assertTrue(err.toString().contains(
+          FSExceptionMessages.PERMISSION_DENIED));
+    } finally {
+      // Make sure the test directory can be deleted
+      lfs.setPermission(src, new FsPermission((short)0755));
+    }
+  }
+
+  @Test
+  public void testPutSrcFileNoPerm()
+      throws Exception {
+    final Path src = new Path(testRootDir, "srcNoPerm");
+    final Path dst = new Path(testRootDir, "dst");
+    lfs.delete(src, true);
+    lfs.create(src);
+    lfs.setPermission(src, new FsPermission((short)0));
+    lfs.delete(dst, true);
+
+    try {
+      final ByteArrayOutputStream err = new ByteArrayOutputStream();
+      PrintStream oldErr = System.err;
+      System.setErr(new PrintStream(err));
+      shellRun(1, "-put", src.toString(), dst.toString());
+      System.setErr(oldErr);
+      System.err.print(err.toString());
+      assertTrue(err.toString().contains("(Permission denied)"));
+    } finally {
+      // make sure the test file can be deleted
+      lfs.setPermission(src, new FsPermission((short)0755));
+    }
   }
 }

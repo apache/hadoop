@@ -154,8 +154,7 @@ public class AdminService extends CompositeService implements
         YarnConfiguration.DEFAULT_RM_ADMIN_PORT);
     daemonUser = UserGroupInformation.getCurrentUser();
     authorizer = YarnAuthorizationProvider.getInstance(conf);
-    authorizer.setAdmins(getAdminAclList(conf), UserGroupInformation
-        .getCurrentUser());
+    authorizer.setAdmins(getAdminAclList(conf), daemonUser);
     rmId = conf.get(YarnConfiguration.RM_HA_ID);
 
     isCentralizedNodeLabelConfiguration =
@@ -542,8 +541,7 @@ public class AdminService extends CompositeService implements
     Configuration conf =
         getConfiguration(new Configuration(false),
             YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
-    authorizer.setAdmins(getAdminAclList(conf), UserGroupInformation
-        .getCurrentUser());
+    authorizer.setAdmins(getAdminAclList(conf), daemonUser);
     RMAuditLogger.logSuccess(user.getShortUserName(), operation,
         "AdminService");
 

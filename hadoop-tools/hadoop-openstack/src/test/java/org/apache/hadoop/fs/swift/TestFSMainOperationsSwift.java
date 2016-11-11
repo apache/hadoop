@@ -76,6 +76,12 @@ public class TestFSMainOperationsSwift extends FSMainOperationsBaseTest {
 
   @Test(timeout = SWIFT_TEST_TIMEOUT)
   @Override
+  public void testGlobStatusThrowsExceptionForUnreadableDir() {
+    SwiftTestUtils.skip("unsupported");
+  }
+
+  @Test(timeout = SWIFT_TEST_TIMEOUT)
+  @Override
   public void testFsStatus() throws Exception {
     super.testFsStatus();
   }

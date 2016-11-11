@@ -896,7 +896,7 @@ $H4 Decrypt Encrypted Key
 
 *REQUEST:*
 
-    POST http://HOST:PORT/kms/v1/keyversion/<version-name>/_eek?ee_op=decrypt
+    POST http://HOST:PORT/kms/v1/keyversion/<version-name>/_eek?eek_op=decrypt
     Content-Type: application/json
 
     {

@@ -262,7 +262,17 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_WEBAPP_HTTPS_PORT = 8090;
   public static final String DEFAULT_RM_WEBAPP_HTTPS_ADDRESS = "0.0.0.0:"
       + DEFAULT_RM_WEBAPP_HTTPS_PORT;
-  
+
+  /**
+   * Enable YARN WebApp V2.
+   */
+  public static final String YARN_WEBAPP_UI2_ENABLE = "yarn."
+      + "webapp.ui2.enable";
+  public static final boolean DEFAULT_YARN_WEBAPP_UI2_ENABLE = false;
+
+  public static final String YARN_WEBAPP_UI2_WARFILE_PATH = "yarn."
+      + "webapp.ui2.war-file-path";
+
   public static final String RM_RESOURCE_TRACKER_ADDRESS =
     RM_PREFIX + "resource-tracker.address";
   public static final int DEFAULT_RM_RESOURCE_TRACKER_PORT = 8031;
@@ -1392,18 +1402,6 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_DEFAULT =
       "-Xmx256m";
 
-  /** The Docker image name(For DockerContainerExecutor).*/
-  public static final String NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME =
-    NM_PREFIX + "docker-container-executor.image-name";
-
-  /** The name of the docker executor (For DockerContainerExecutor).*/
-  public static final String NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME =
-    NM_PREFIX + "docker-container-executor.exec-name";
-
-  /** The default docker executor (For DockerContainerExecutor).*/
-  public static final String NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME =
-          "/usr/bin/docker";
-
   /** Prefix for runtime configuration constants. */
   public static final String LINUX_CONTAINER_RUNTIME_PREFIX = NM_PREFIX +
       "runtime.linux.";
@@ -1542,10 +1540,10 @@ public class YarnConfiguration extends Configuration {
 
 
   // Configurations for applicaiton life time monitor feature
-  public static final String RM_APPLICATION_LIFETIME_MONITOR_INTERVAL_MS =
-      RM_PREFIX + "application-timeouts.lifetime-monitor.interval-ms";
+  public static final String RM_APPLICATION_MONITOR_INTERVAL_MS =
+      RM_PREFIX + "application-timeouts.monitor.interval-ms";
 
-  public static final long DEFAULT_RM_APPLICATION_LIFETIME_MONITOR_INTERVAL_MS =
+  public static final long DEFAULT_RM_APPLICATION_MONITOR_INTERVAL_MS =
       60000;
 
   /**
@@ -1746,7 +1744,7 @@ public class YarnConfiguration extends Configuration {
 
   public static final String AMRM_PROXY_ADDRESS = NM_PREFIX
       + "amrmproxy.address";
-  public static final int DEFAULT_AMRM_PROXY_PORT = 8048;
+  public static final int DEFAULT_AMRM_PROXY_PORT = 8049;
   public static final String DEFAULT_AMRM_PROXY_ADDRESS = "0.0.0.0:"
       + DEFAULT_AMRM_PROXY_PORT;
 

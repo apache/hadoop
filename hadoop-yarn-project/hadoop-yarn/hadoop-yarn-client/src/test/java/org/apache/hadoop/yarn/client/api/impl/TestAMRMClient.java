@@ -99,7 +99,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.mortbay.log.Log;
+import org.eclipse.jetty.util.log.Log;
 
 import com.google.common.base.Supplier;
 
@@ -234,6 +234,20 @@ public class TestAMRMClient {
     if (yarnCluster != null && yarnCluster.getServiceState() == STATE.STARTED) {
       yarnCluster.stop();
     }
+  }
+
+  @Test (timeout = 60000)
+  public void testAMRMClientNoMatchingRequests()
+      throws IOException, YarnException {
+    AMRMClient<ContainerRequest> amClient =  AMRMClient.createAMRMClient();
+    amClient.init(conf);
+    amClient.start();
+    amClient.registerApplicationMaster("Host", 10000, "");
+
+    Resource testCapability1 = Resource.newInstance(1024,  2);
+    List<? extends Collection<ContainerRequest>> matches =
+        amClient.getMatchingRequests(priority, node, testCapability1);
+    assertEquals("Expected no macthing requests.", matches.size(), 0);
   }
   
   @Test (timeout=60000)
@@ -640,7 +654,8 @@ public class TestAMRMClient {
       int iterationsLeft = 3;
       while (allocatedContainerCount < 2
           && iterationsLeft-- > 0) {
-        Log.info(" == alloc " + allocatedContainerCount + " it left " + iterationsLeft);
+        Log.getLog().info("Allocated " + allocatedContainerCount + " containers"
+            + " with " + iterationsLeft + " iterations left");
         AllocateResponse allocResponse = amClient.allocate(0.1f);
         assertEquals(0, amClient.ask.size());
         assertEquals(0, amClient.release.size());
@@ -808,7 +823,8 @@ public class TestAMRMClient {
       throws YarnException, IOException {
     int allocatedContainerCount = 0;
     while (iterationsLeft-- > 0) {
-      Log.info(" == alloc " + allocatedContainerCount + " it left " + iterationsLeft);
+      Log.getLog().info("Allocated " + allocatedContainerCount + " containers"
+          + " with " + iterationsLeft + " iterations left");
       AllocateResponse allocResponse = amClient.allocate(0.1f);
       assertEquals(0, amClient.ask.size());
       assertEquals(0, amClient.release.size());

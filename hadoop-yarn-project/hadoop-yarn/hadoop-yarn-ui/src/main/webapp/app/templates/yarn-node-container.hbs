@@ -1,0 +1,72 @@
+{{!--
+  Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements.  See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership.  The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+--}}
+
+{{breadcrumb-bar breadcrumbs=breadcrumbs}}
+
+<div class="col-md-12 container-fluid">
+  <div class="row">
+    {{node-menu-panel path="yarn-node-container" nodeAddr=model.nodeInfo.addr nodeId=model.nodeInfo.id}}
+    <div class="col-md-10 container-fluid">
+      <div class="panel panel-default">
+        <div class="panel-heading"><b>Container Information</b></div>
+        <table class="table">
+          <tbody>
+            <tr>
+              <td>Container ID</td>
+              <td>{{model.nodeContainer.containerId}}</td>
+            </tr>
+            <tr>
+              <td>Container State</td>
+              <td>{{model.nodeContainer.state}}</td>
+            </tr>
+            <tr>
+              <td>Exit Code</td>
+              <td>{{model.nodeContainer.exitCode}}</td>
+            </tr>
+            <tr>
+              <td>Diagnostics</td>
+              <td>{{model.nodeContainer.diagnostics}}</td>
+            </tr>
+            <tr>
+              <td>User</td>
+              <td>{{model.nodeContainer.user}}</td>
+            </tr>
+            <tr>
+              <td>Total Memory Needed</td>
+              <td>{{model.nodeContainer.totalMemoryNeeded}} MB</td>
+            </tr>
+            <tr>
+              <td>Total VCores Needed</td>
+              <td>{{model.nodeContainer.totalVCoresNeeded}}</td>
+            </tr>
+            <tr>
+              <td>Link to Logs</td>
+              <td>
+                {{log-files-comma nodeId=model.nodeInfo.id
+                    nodeAddr=model.nodeInfo.addr
+                    containerId=model.nodeContainer.containerId
+                    logFiles=model.nodeContainer.containerLogFiles}}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+   </div>
+  </div>
+ </div>
+{{outlet}}

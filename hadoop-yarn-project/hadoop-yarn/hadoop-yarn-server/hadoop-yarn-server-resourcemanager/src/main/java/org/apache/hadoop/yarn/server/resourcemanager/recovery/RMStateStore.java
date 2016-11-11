@@ -31,13 +31,14 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 import javax.crypto.SecretKey;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.SettableFuture;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.service.AbstractService;
@@ -51,6 +52,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.proto.YarnProtos.ReservationAllocationStateProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.records.Version;
@@ -67,6 +69,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppR
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
@@ -237,6 +240,8 @@ public abstract class RMStateStore extends AbstractService {
       boolean isFenced = false;
       ApplicationStateData appState =
           ((RMStateUpdateAppEvent) event).getAppState();
+      SettableFuture<Object> result =
+          ((RMStateUpdateAppEvent) event).getResult();
       ApplicationId appId =
           appState.getApplicationSubmissionContext().getApplicationId();
       LOG.info("Updating info for app: " + appId);
@@ -246,9 +251,18 @@ public abstract class RMStateStore extends AbstractService {
           store.notifyApplication(new RMAppEvent(appId,
               RMAppEventType.APP_UPDATE_SAVED));
         }
+
+        if (result != null) {
+          result.set(null);
+        }
+
       } catch (Exception e) {
-        LOG.error("Error updating app: " + appId, e);
+        String msg = "Error updating app: " + appId;
+        LOG.error(msg, e);
         isFenced = store.notifyStoreOperationFailedInternal(e);
+        if (result != null) {
+          result.setException(new YarnException(msg, e));
+        }
       }
       return finalState(isFenced);
     };
@@ -774,18 +788,19 @@ public abstract class RMStateStore extends AbstractService {
     ApplicationStateData appState =
         ApplicationStateData.newInstance(app.getSubmitTime(),
             app.getStartTime(), context, app.getUser(), app.getCallerContext());
+    appState.setApplicationTimeouts(app.getApplicationTimeouts());
     dispatcher.getEventHandler().handle(new RMStateStoreAppEvent(appState));
   }
 
   @SuppressWarnings("unchecked")
-  public void updateApplicationState(
-      ApplicationStateData appState) {
+  public void updateApplicationState(ApplicationStateData appState) {
     dispatcher.getEventHandler().handle(new RMStateUpdateAppEvent(appState));
   }
 
-  public void updateApplicationStateSynchronously(
-      ApplicationStateData appState, boolean notifyApp) {
-    handleStoreEvent(new RMStateUpdateAppEvent(appState, notifyApp));
+  public void updateApplicationStateSynchronously(ApplicationStateData appState,
+      boolean notifyApp, SettableFuture<Object> resultFuture) {
+    handleStoreEvent(
+        new RMStateUpdateAppEvent(appState, notifyApp, resultFuture));
   }
 
   public void updateFencedState() {
@@ -812,16 +827,19 @@ public abstract class RMStateStore extends AbstractService {
    */
   public void storeNewApplicationAttempt(RMAppAttempt appAttempt) {
     Credentials credentials = getCredentialsFromAppAttempt(appAttempt);
-
+    RMAppAttemptMetrics attempMetrics = appAttempt.getRMAppAttemptMetrics();
     AggregateAppResourceUsage resUsage =
-        appAttempt.getRMAppAttemptMetrics().getAggregateAppResourceUsage();
+        attempMetrics.getAggregateAppResourceUsage();
     ApplicationAttemptStateData attemptState =
         ApplicationAttemptStateData.newInstance(
             appAttempt.getAppAttemptId(),
             appAttempt.getMasterContainer(),
             credentials, appAttempt.getStartTime(),
             resUsage.getMemorySeconds(),
-            resUsage.getVcoreSeconds());
+            resUsage.getVcoreSeconds(),
+            attempMetrics.getPreemptedMemory(),
+            attempMetrics.getPreemptedVcore()
+            );
 
     dispatcher.getEventHandler().handle(
       new RMStateStoreAppAttemptEvent(attemptState));

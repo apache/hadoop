@@ -105,3 +105,12 @@ int get_kv_key(const char *input, char *out, size_t out_len);
  *                 0 on success
  */
 int get_kv_value(const char *input, char *out, size_t out_len);
+
+/**
+ * Trim whitespace from beginning and end.
+ *
+ * @param input    Input string that needs to be trimmed
+ *
+ * @return the trimmed string allocated with malloc. I has to be freed by the caller
+*/
+char* trim(char* input);

@@ -267,6 +267,15 @@ message SignalContainerRequestProto {
 message SignalContainerResponseProto {
 }
 
+message UpdateApplicationTimeoutsRequestProto {
+    required ApplicationIdProto applicationId = 1;
+    repeated ApplicationUpdateTimeoutMapProto application_timeouts = 2;
+}
+
+message UpdateApplicationTimeoutsResponseProto {
+    repeated ApplicationUpdateTimeoutMapProto application_timeouts = 1;
+}
+
 //////////////////////////////////////////////////////
 /////// client_NM_Protocol ///////////////////////////
 //////////////////////////////////////////////////////

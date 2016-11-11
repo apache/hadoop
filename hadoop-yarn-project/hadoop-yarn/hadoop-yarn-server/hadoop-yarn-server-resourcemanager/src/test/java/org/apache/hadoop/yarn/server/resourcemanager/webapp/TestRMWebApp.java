@@ -200,6 +200,7 @@ public class TestRMWebApp {
        }
      }; 
     rmContext.setNodeLabelManager(new NullRMNodeLabelsManager());
+    rmContext.setYarnConfiguration(new YarnConfiguration());
     return rmContext;
   }
 
