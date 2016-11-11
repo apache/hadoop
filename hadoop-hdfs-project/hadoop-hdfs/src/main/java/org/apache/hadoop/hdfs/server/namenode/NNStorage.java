@@ -338,7 +338,7 @@ public class NNStorage extends Storage implements Closeable,
    * @param uri URI of a storage directory
    * @return The matching storage directory or null if none found
    */
-  StorageDirectory getStorageDirectory(URI uri) {
+  public StorageDirectory getStorageDirectory(URI uri) {
     try {
       uri = Util.fileAsURI(new File(uri));
       Iterator<StorageDirectory> it = dirIterator();
