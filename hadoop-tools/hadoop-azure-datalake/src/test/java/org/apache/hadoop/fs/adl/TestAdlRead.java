@@ -7,58 +7,51 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-package org.apache.hadoop.hdfs.web;
+package org.apache.hadoop.fs.adl;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.adl.TestADLResponseData;
-import org.apache.hadoop.fs.common.AdlMockWebServer;
-import org.apache.hadoop.fs.common.TestDataForRead;
-import org.junit.After;
+import org.apache.hadoop.fs.adl.common.Parallelized;
+import org.apache.hadoop.fs.adl.common.TestDataForRead;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.ByteArrayInputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Random;
 
+import static org.apache.hadoop.fs.adl.AdlConfKeys.READ_AHEAD_BUFFER_SIZE_KEY;
+
 /**
  * This class is responsible for stress positional reads vs number of network
  * calls required by to fetch the amount of data. Test does ensure the data
- * integrity and order of the data is maintained. This tests are meant to test
- * BufferManager.java and BatchByteArrayInputStream implementation.
+ * integrity and order of the data is maintained.
  */
-@RunWith(Parameterized.class)
+@RunWith(Parallelized.class)
 public class TestAdlRead extends AdlMockWebServer {
 
-  // Keeping timeout of 1 hour to ensure the test does complete and should
-  // not terminate due to high backend latency.
-  @Rule
-  public Timeout globalTimeout = new Timeout(60 * 60000);
   private TestDataForRead testData;
 
   public TestAdlRead(TestDataForRead testData) {
+    Configuration configuration = new Configuration();
+    configuration.setInt(READ_AHEAD_BUFFER_SIZE_KEY, 4 * 1024);
+    setConf(configuration);
     this.testData = testData;
-    getConf().set("adl.feature.override.readahead.max.buffersize", "8192");
-    getConf().set("adl.feature.override.readahead.max.concurrent.connection",
-        "1");
   }
 
   @Parameterized.Parameters(name = "{index}")
@@ -68,32 +61,29 @@ public class TestAdlRead extends AdlMockWebServer {
         //--------------------------
         // Test Data
         //--------------------------
-        {new TestDataForRead("Hello World".getBytes(), 3, 1000, true)},
+        {new TestDataForRead("Hello World".getBytes(), 2, 1000, true)},
         {new TestDataForRead(
             ("the problem you appear to be wrestling with is that this doesn't "
-                + "display very well. ").getBytes(), 3, 1000, true)},
+                + "display very well. ").getBytes(), 2, 1000, true)},
+        {new TestDataForRead(("您的數據是寶貴的資產，以您的組織，並有當前和未來價值。由於這個原因，"
+            + "所有的數據應存儲以供將來分析。今天，這往往是不這樣做，" + "因為傳統的分析基礎架構的限制，"
+            + "像模式的預定義，存儲大數據集和不同的數據筒倉的傳播的成本。"
+            + "為了應對這一挑戰，數據湖面概念被引入作為一個企業級存儲庫來存儲所有"
+            + "類型的在一個地方收集到的數據。對於運作和探索性分析的目的，所有類型的" + "數據可以定義需求或模式之前被存儲在數據湖。")
+            .getBytes(), 2, 1000, true)}, {new TestDataForRead(
+        TestADLResponseData.getRandomByteArrayData(4 * 1024), 2, 10, true)},
+        {new TestDataForRead(TestADLResponseData.getRandomByteArrayData(100), 2,
+            1000, true)}, {new TestDataForRead(
+        TestADLResponseData.getRandomByteArrayData(1 * 1024), 2, 50, true)},
         {new TestDataForRead(
-            ("Chinese Indonesians (Indonesian: Orang Tionghoa-Indonesia; "
-                + "Chinese: "
-                + "trad ???????, simp ???????, pin Y�nd�n�x?y� Hu�r�n), are "
-                + "Indonesians descended from various Chinese ethnic groups, "
-                + "particularly Han.").getBytes(), 3, 1000, true)},
-        {new TestDataForRead(
-            TestADLResponseData.getRandomByteArrayData(5 * 1024), 3, 1000,
-            true)}, {new TestDataForRead(
-        TestADLResponseData.getRandomByteArrayData(1 * 1024), 3, 50, true)},
-        {new TestDataForRead(
-            TestADLResponseData.getRandomByteArrayData(8 * 1024), 3, 10, true)},
-        {new TestDataForRead(
-            TestADLResponseData.getRandomByteArrayData(32 * 1024), 6, 10,
+            TestADLResponseData.getRandomByteArrayData(8 * 1024), 3, 10,
             false)}, {new TestDataForRead(
-        TestADLResponseData.getRandomByteArrayData(48 * 1024), 8, 10, false)}});
-  }
-
-  @After
-  @Before
-  public void cleanReadBuffer() {
-    BufferManager.getInstance().clear();
+        TestADLResponseData.getRandomByteArrayData(16 * 1024), 5, 10, false)},
+        {new TestDataForRead(
+            TestADLResponseData.getRandomByteArrayData(32 * 1024), 9, 10,
+            false)}, {new TestDataForRead(
+        TestADLResponseData.getRandomByteArrayData(64 * 1024), 17, 10,
+        false)}});
   }
 
   @Test
@@ -101,7 +91,18 @@ public class TestAdlRead extends AdlMockWebServer {
     getMockServer().setDispatcher(testData.getDispatcher());
     FSDataInputStream in = getMockAdlFileSystem().open(new Path("/test"));
     byte[] expectedData = new byte[testData.getActualData().length];
-    Assert.assertEquals(in.read(expectedData), expectedData.length);
+    int n = 0;
+    int len = expectedData.length;
+    int off = 0;
+    while (n < len) {
+      int count = in.read(expectedData, off + n, len - n);
+      if (count < 0) {
+        throw new EOFException();
+      }
+      n += count;
+    }
+
+    Assert.assertEquals(testData.getActualData().length, expectedData.length);
     Assert.assertArrayEquals(expectedData, testData.getActualData());
     in.close();
     if (testData.isCheckOfNoOfCalls()) {
@@ -151,15 +152,9 @@ public class TestAdlRead extends AdlMockWebServer {
     in.readFully(0, expectedData);
     Assert.assertArrayEquals(expectedData, testData.getActualData());
 
-    in.seek(0);
-    in.readFully(expectedData, 0, expectedData.length);
+    in.readFully(0, expectedData, 0, expectedData.length);
     Assert.assertArrayEquals(expectedData, testData.getActualData());
     in.close();
-
-    if (testData.isCheckOfNoOfCalls()) {
-      Assert.assertEquals(testData.getExpectedNoNetworkCall(),
-          getMockServer().getRequestCount());
-    }
   }
 
   @Test
@@ -197,9 +192,5 @@ public class TestAdlRead extends AdlMockWebServer {
     }
 
     in.close();
-    if (testData.isCheckOfNoOfCalls()) {
-      Assert.assertEquals(testData.getExpectedNoNetworkCall(),
-          getMockServer().getRequestCount());
-    }
   }
 }

@@ -39,22 +39,22 @@
 
   <property>
     <name>fs.contract.rename-returns-true-if-dest-exists</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
     <name>fs.contract.rename-returns-true-if-source-missing</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
     <name>fs.contract.rename-creates-dest-dirs</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
     <name>fs.contract.rename-remove-dest-if-empty-dir</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
@@ -119,7 +119,7 @@
 
   <property>
     <name>fs.contract.rename-overwrites-dest</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
@@ -136,4 +136,5 @@
     <name>fs.contract.supports-getfilestatus</name>
     <value>true</value>
   </property>
+
 </configuration>

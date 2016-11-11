@@ -17,23 +17,26 @@
  *
  */
 
-package org.apache.hadoop.fs.common;
+package org.apache.hadoop.fs.adl.common;
 
 import com.squareup.okhttp.mockwebserver.Dispatcher;
 import com.squareup.okhttp.mockwebserver.MockResponse;
 import com.squareup.okhttp.mockwebserver.RecordedRequest;
 import okio.Buffer;
 import org.apache.hadoop.fs.adl.TestADLResponseData;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Supporting class for mock test to validate Adls read operation using
- * BufferManager.java and BatchByteArrayInputStream implementation.
+ * Supporting class for mock test to validate Adls read operation.
  */
 public class TestDataForRead {
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestDataForRead.class);
 
   private byte[] actualData;
   private ArrayList<ExpectedResponse> responses;
@@ -44,6 +47,7 @@ public class TestDataForRead {
 
   public TestDataForRead(final byte[] actualData, int expectedNoNetworkCall,
       int intensityOfTest, boolean checkOfNoOfCalls) {
+
     this.checkOfNoOfCalls = checkOfNoOfCalls;
     this.actualData = actualData;
     responses = new ArrayList<ExpectedResponse>();
@@ -54,9 +58,6 @@ public class TestDataForRead {
       @Override
       public MockResponse dispatch(RecordedRequest recordedRequest)
           throws InterruptedException {
-        if (recordedRequest.getPath().equals("/refresh")) {
-          return AdlMockWebServer.getTokenResponse();
-        }
 
         if (recordedRequest.getRequestLine().contains("op=GETFILESTATUS")) {
           return new MockResponse().setResponseCode(200).setBody(
@@ -72,19 +73,20 @@ public class TestDataForRead {
           Pattern pattern = Pattern.compile("offset=([0-9]+)");
           Matcher matcher = pattern.matcher(request);
           if (matcher.find()) {
-            System.out.println(matcher.group(1));
+            LOG.debug(matcher.group(1));
             offset = Integer.parseInt(matcher.group(1));
           }
 
           pattern = Pattern.compile("length=([0-9]+)");
           matcher = pattern.matcher(request);
           if (matcher.find()) {
-            System.out.println(matcher.group(1));
+            LOG.debug(matcher.group(1));
             byteCount = Integer.parseInt(matcher.group(1));
           }
 
           Buffer buf = new Buffer();
-          buf.write(actualData, offset, byteCount);
+          buf.write(actualData, offset,
+              Math.min(actualData.length - offset, byteCount));
           return new MockResponse().setResponseCode(200)
               .setChunkedBody(buf, 4 * 1024 * 1024);
         }

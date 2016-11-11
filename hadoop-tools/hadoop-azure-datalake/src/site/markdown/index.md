@@ -19,9 +19,7 @@
 * [Limitations](#Limitations)
 * [Usage](#Usage)
     * [Concepts](#Concepts)
-        * [Webhdfs Compliance](#Webhdfs_Specification_Compliance)
         * [OAuth2 Support](#OAuth2_Support)
-        * [Read Ahead Buffer Management](Read_Ahead_Buffer_Management)
     * [Configuring Credentials & FileSystem](#Configuring_Credentials)
         * [Using Refresh Token](#Refresh_Token)
         * [Using Client Keys](#Client_Credential_Token)
@@ -38,7 +36,6 @@ The jar file is named azure-datalake-store.jar.
 ## <a name="Features" />Features
 
 * Read and write data stored in an Azure Data Lake Storage account.
-* Partial support for [Webhdfs Specification 2.7.0](https://hadoop.apache.org/docs/r2.7.0/hadoop-project-dist/hadoop-hdfs/WebHDFS.html)
 * Reference file system paths using URLs using the `adl` scheme for Secure Webhdfs i.e. SSL
   encrypted access.
 * Can act as a source of data in a MapReduce job, or a sink.
@@ -46,14 +43,14 @@ The jar file is named azure-datalake-store.jar.
 * Tested for scale.
 
 ## <a name="Limitations" />Limitations
-Partial or no support for the following operations in [Webhdfs Specification 2.7.0](https://hadoop.apache.org/docs/r2.7.0/hadoop-project-dist/hadoop-hdfs/WebHDFS.html):
+Partial or no support for the following operations :
 
 * Operation on Symbolic Link
 * Proxy Users
 * File Truncate
 * File Checksum
 * File replication factor
-* Home Directory Partial supported based on OAuth2 token information and not the active user on Hadoop cluster.
+* Home directory the active user on Hadoop cluster.
 * Extended Attributes(XAttrs) Operations
 * Snapshot Operations
 * Delegation Token Operations
@@ -68,101 +65,23 @@ Azure Data Lake Storage access path syntax is
 
 Get started with azure data lake account with [https://azure.microsoft.com/en-in/documentation/articles/data-lake-store-get-started-portal/](https://azure.microsoft.com/en-in/documentation/articles/data-lake-store-get-started-portal/)
 
-#### <a name="Webhdfs_Specification_Compliance" />Webhdfs Compliance
-Azure Data Lake Storage exposes a public REST endpoint as per [Webhdfs Specification 2.7.0](https://hadoop.apache.org/docs/r2.7.0/hadoop-project-dist/hadoop-hdfs/WebHDFS.html) to access storage file system.
-
-Syntax to access Azure data lake storage account over [Webhdfs Specification 2.7.0](https://hadoop.apache.org/docs/r2.7.0/hadoop-project-dist/hadoop-hdfs/WebHDFS.html) is
-
-    https://<Account Name>.azuredatalakestore.net/webhdfs/v1/<File System Path>?<Query paramaters>
-
-
 #### <a name="#OAuth2_Support" />OAuth2 Support
 Usage of Azure Data Lake Storage requires OAuth2 bearer token to be present as part of the HTTPS header as per OAuth2 specification. Valid OAuth2 bearer token should be obtained from Azure Active Directory for valid users who have  access to Azure Data Lake Storage Account.
 
-Azure Active Directory (Azure AD) is Microsoft’s multi-tenant cloud based directory and identity management service. See [https://azure.microsoft.com/en-in/documentation/articles/active-directory-whatis/](https://azure.microsoft.com/en-in/documentation/articles/active-directory-whatis/)
+Azure Active Directory (Azure AD) is Microsoft's multi-tenant cloud based directory and identity management service. See [https://azure.microsoft.com/en-in/documentation/articles/active-directory-whatis/](https://azure.microsoft.com/en-in/documentation/articles/active-directory-whatis/)
 
 Following sections describes on OAuth2 configuration in core-site.xml.
-
-#### <a name="#Read_Ahead_Buffer_Management" />Read Ahead Buffer Management
-Azure Data Lake Storage offers high throughput. To maximize throughput, applications can  use this feature to buffer data concurrently, in memory during read operation. This data is cached in memory per process per stream.
-
-
-To Enable/Disable read ahead feature.
-
-    <property>
-        <name>adl.feature.override.readahead</name>
-        <value>true</value>
-        <description>
-            Enables read aheads in the ADL client, the feature is used to improve read throughput.
-            This works in conjunction with the value set in adl.feature.override.readahead.max.buffersize.
-            When set to false the read ahead feature is turned off.
-            Default : True if not configured.
-        </description>
-    </property>
-
-To configure read ahead buffer size.
-
-    <property>
-        <name>adl.feature.override.readahead.max.buffersize</name>
-        <value>8388608</value>
-        <description>
-            Define maximum buffer size to cache read ahead data, this is allocated per process to
-            cache read ahead data. Applicable only when adl.feature.override.readahead is set to true.
-            Default : 8388608 Byte i.e. 8MB if not configured.
-        </description>
-    </property>
-
-To configure number of concurrent connection to Azure Data Lake Storage Account.
-
-    <property>
-        <name>adl.feature.override.readahead.max.concurrent.connection</name>
-        <value>2</value>
-        <description>
-            Define maximum concurrent connection can be established to
-            read ahead. If the data size is<4MB then only 1 read n/w connection
-            is set. If the data size is >4MB but<8MB then 2 read n/w
-            connection
-            is set. Data >8MB then value set under the property would
-             take
-            effect. Applicable only when adl.feature.override.readahead is set
-            to true and buffer size is >8MB.
-            It is recommended to reset this property if the adl.feature.override.readahead.max.buffersize
-            is < 8MB to gain performance. Application has to consider
-             throttling
-            limit for the account as well before configuring large buffer size.
-        </description>
-    </property>
 
 ## <a name="Configuring_Credentials" />Configuring Credentials & FileSystem
 Credentials can be configured using either a refresh token (associated with a user) or a client credential (analogous to a service principal).
 
 ### <a name="Refresh_Token" />Using Refresh Token
 
-Update core-site.xml for OAuth2 configuration
-
-         <property>
-            <name>dfs.webhdfs.oauth2.refresh.token.expires.ms.since.epoch</name>
-            <value>0</value>
-         </property>
-
-         <property>
-            <name>dfs.webhdfs.oauth2.credential</name>
-            <value>bearer.and.refresh.token</value>
-         </property>
+Add the following properties to your core-site.xml
 
         <property>
-            <name>dfs.webhdfs.oauth2.access.token</name>
-            <value>NOT_SET</value>
-        </property>
-
-        <property>
-            <name>dfs.webhdfs.oauth2.refresh.url</name>
-            <value>https://login.windows.net/common/oauth2/token/</value>
-        </property>
-
-        <property>
-            <name>dfs.webhdfs.oauth2.access.token.provider</name>
-            <value>org.apache.hadoop.fs.adl.oauth2.CachedRefreshTokenBasedAccessTokenProvider</value>
+            <name>dfs.adls.oauth2.access.token.provider.type</name>
+            <value>RefreshToken</value>
         </property>
 
 Application require to set Client id and OAuth2 refresh token from Azure Active Directory associated with client id. See [https://github.com/AzureAD/azure-activedirectory-library-for-java](https://github.com/AzureAD/azure-activedirectory-library-for-java).
@@ -170,12 +89,12 @@ Application require to set Client id and OAuth2 refresh token from Azure Active 
 **Do not share client id and refresh token, it must be kept secret.**
 
         <property>
-            <name>dfs.webhdfs.oauth2.client.id</name>
+            <name>dfs.adls.oauth2.client.id</name>
             <value></value>
         </property>
 
         <property>
-            <name>dfs.webhdfs.oauth2.refresh.token</name>
+            <name>dfs.adls.oauth2.refresh.token</name>
             <value></value>
         </property>
 
@@ -205,28 +124,18 @@ Application require to set Client id and OAuth2 refresh token from Azure Active 
 Add the following properties to your core-site.xml
 
     <property>
-      <name>dfs.webhdfs.oauth2.access.token.provider</name>
-      <value>org.apache.hadoop.hdfs.web.oauth2.AzureADClientCredentialBasedAccesTokenProvider</value>
-    </property>
-
-    <property>
-      <name>dfs.webhdfs.oauth2.refresh.url</name>
+      <name>dfs.adls.oauth2.refresh.url</name>
       <value>TOKEN ENDPOINT FROM STEP 7 ABOVE</value>
     </property>
 
     <property>
-      <name>dfs.webhdfs.oauth2.client.id</name>
+      <name>dfs.adls.oauth2.client.id</name>
       <value>CLIENT ID FROM STEP 7 ABOVE</value>
     </property>
 
     <property>
-      <name>dfs.webhdfs.oauth2.credential</name>
+      <name>dfs.adls.oauth2.credential</name>
       <value>PASSWORD FROM STEP 7 ABOVE</value>
-    </property>
-
-    <property>
-      <name>fs.adls.oauth2.resource</name>
-      <value>https://management.core.windows.net/</value>
     </property>
 
 
@@ -273,7 +182,12 @@ The hadoop-azure module includes a full suite of unit tests. Most of the tests w
 
 A selection of tests can run against the Azure Data Lake Storage. To run tests against Adl storage. Please configure contract-test-options.xml with Adl account information mentioned in the above sections. Also turn on contract test execution flag to trigger tests against Azure Data Lake Storage.
 
-    <property>
-      <name>dfs.adl.test.contract.enable</name>
-      <value>true</value>
-    </property>
+        <property>
+            <name>dfs.adl.test.contract.enable</name>
+            <value>true</value>
+        </property>
+
+        <property>
+            <name>test.fs.adl.name</name>
+            <value>adl://yourcontainer.azuredatalakestore.net</value>
+        </property>

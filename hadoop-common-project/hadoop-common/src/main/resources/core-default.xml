@@ -2382,53 +2382,6 @@
 
 
   <!-- Azure Data Lake File System Configurations -->
-
-  <property>
-    <name>adl.feature.override.readahead</name>
-    <value>true</value>
-    <description>
-      Enables read aheads in the ADL client, the feature is used to
-      improve read throughput.
-      This works in conjunction with the value set in
-      adl.feature.override.readahead.max.buffersize.
-      When set to false the read ahead feature is turned off.
-      Default : True if not configured.
-    </description>
-  </property>
-
-  <property>
-    <name>adl.feature.override.readahead.max.buffersize</name>
-    <value>8388608</value>
-    <description>
-      Define maximum buffer size to cache read ahead data, this is
-      allocated per process to
-      cache read ahead data. Applicable only when
-      adl.feature.override.readahead is set to true.
-      Default : 8388608 Byte i.e. 8MB if not configured.
-    </description>
-  </property>
-
-  <property>
-    <name>adl.feature.override.readahead.max.concurrent.connection</name>
-    <value>2</value>
-    <description>
-      Define maximum concurrent connection can be established to
-      read ahead. If the data size is less than 4MB then only 1 read n/w
-      connection
-      is set. If the data size is less than 4MB but less than 8MB then 2 read
-      n/w connection
-      is set. Data greater than 8MB then value set under the property would
-      take
-      effect. Applicable only when adl.feature.override.readahead is set
-      to true and buffer size is greater than 8MB.
-      It is recommended to reset this property if the
-      adl.feature.override.readahead.max.buffersize
-      is less than 8MB to gain performance. Application has to consider
-      throttling limit for the account as well before configuring large
-      buffer size.
-    </description>
-  </property>
-
   <property>
     <name>fs.adl.impl</name>
     <value>org.apache.hadoop.fs.adl.AdlFileSystem</value>
@@ -2438,6 +2391,7 @@
     <name>fs.AbstractFileSystem.adl.impl</name>
     <value>org.apache.hadoop.fs.adl.Adl</value>
   </property>
+  <!-- Azure Data Lake File System Configurations Ends Here-->
 
   <property>
     <name>hadoop.caller.context.enabled</name>

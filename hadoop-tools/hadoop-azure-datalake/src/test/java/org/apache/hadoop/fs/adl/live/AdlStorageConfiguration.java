@@ -21,36 +21,39 @@ package org.apache.hadoop.fs.adl.live;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.adl.AdlFileSystem;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
 /**
- * Utility class to configure real Adls storage to run Live test suite against.
+ * Configure Adl storage file system.
  */
 public final class AdlStorageConfiguration {
-  private AdlStorageConfiguration() {}
-
   private static final String CONTRACT_ENABLE_KEY =
-      "dfs.adl.test.contract" + ".enable";
+      "dfs.adl.test.contract.enable";
+
   private static final String TEST_CONFIGURATION_FILE_NAME =
       "contract-test-options.xml";
   private static final String TEST_SUPPORTED_TEST_CONFIGURATION_FILE_NAME =
       "adls.xml";
+  private static final String KEY_FILE_SYSTEM_IMPL = "fs.contract.test.fs";
+  private static final String KEY_FILE_SYSTEM = "test.fs.adl.name";
 
   private static boolean isContractTestEnabled = false;
   private static Configuration conf = null;
 
-  public static Configuration getConfiguration() {
-    Configuration localConf = new Configuration();
-    localConf.addResource(TEST_CONFIGURATION_FILE_NAME);
-    localConf.addResource(TEST_SUPPORTED_TEST_CONFIGURATION_FILE_NAME);
-    return localConf;
+  private AdlStorageConfiguration() {
   }
 
-  public static boolean isContractTestEnabled() {
+  public synchronized static Configuration getConfiguration() {
+    Configuration newConf = new Configuration();
+    newConf.addResource(TEST_CONFIGURATION_FILE_NAME);
+    newConf.addResource(TEST_SUPPORTED_TEST_CONFIGURATION_FILE_NAME);
+    return newConf;
+  }
+
+  public synchronized static boolean isContractTestEnabled() {
     if (conf == null) {
       conf = getConfiguration();
     }
@@ -59,18 +62,33 @@ public final class AdlStorageConfiguration {
     return isContractTestEnabled;
   }
 
-  public static FileSystem createAdlStorageConnector()
+  public synchronized static FileSystem createStorageConnector()
       throws URISyntaxException, IOException {
     if (conf == null) {
       conf = getConfiguration();
     }
 
-    if(!isContractTestEnabled()) {
+    if (!isContractTestEnabled()) {
       return null;
     }
 
-    AdlFileSystem fileSystem = new AdlFileSystem();
-    fileSystem.initialize(new URI(conf.get("fs.defaultFS")), conf);
-    return fileSystem;
+    String fileSystem = conf.get(KEY_FILE_SYSTEM);
+    if (fileSystem == null || fileSystem.trim().length() == 0) {
+      throw new IOException("Default file system not configured.");
+    }
+    String fileSystemImpl = conf.get(KEY_FILE_SYSTEM_IMPL);
+    if (fileSystemImpl == null || fileSystemImpl.trim().length() == 0) {
+      throw new IOException(
+          "Configuration " + KEY_FILE_SYSTEM_IMPL + "does not exist.");
+    }
+    FileSystem fs = null;
+    try {
+      fs = (FileSystem) Class.forName(fileSystemImpl).newInstance();
+    } catch (Exception e) {
+      throw new IOException("Could not instantiate the filesystem.");
+    }
+
+    fs.initialize(new URI(conf.get(KEY_FILE_SYSTEM)), conf);
+    return fs;
   }
 }

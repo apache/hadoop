@@ -7,17 +7,16 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-package org.apache.hadoop.hdfs.web;
+package org.apache.hadoop.fs.adl;
 
 import com.squareup.okhttp.mockwebserver.Dispatcher;
 import com.squareup.okhttp.mockwebserver.MockResponse;
@@ -25,13 +24,13 @@ import com.squareup.okhttp.mockwebserver.RecordedRequest;
 import okio.Buffer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.adl.TestADLResponseData;
-import org.apache.hadoop.fs.common.AdlMockWebServer;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -51,25 +50,22 @@ import java.util.regex.Pattern;
 
 /**
  * This class is responsible for testing multiple threads trying to access same
- * or multiple files from the offset. This tests are meant to test
- * BufferManager.java and BatchByteArrayInputStream implementation.
+ * or multiple files from the offset.
  */
 @RunWith(Parameterized.class)
 public class TestConcurrentDataReadOperations extends AdlMockWebServer {
-
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestConcurrentDataReadOperations.class);
+  private static final Object LOCK = new Object();
   private static FSDataInputStream commonHandle = null;
-  private static Object lock = new Object();
   private int concurrencyLevel;
 
   public TestConcurrentDataReadOperations(int concurrencyLevel) {
     this.concurrencyLevel = concurrencyLevel;
-    getConf().set("adl.feature.override.readahead.max.buffersize", "102400");
-    getConf().set("adl.feature.override.readahead.max.concurrent.connection",
-        "1");
   }
 
   @Parameterized.Parameters(name = "{index}")
-  public static Collection testDataNumberOfConcurrentRun() {
+  public static Collection<?> testDataNumberOfConcurrentRun() {
     return Arrays.asList(new Object[][] {{1}, {2}, {3}, {4}, {5}});
   }
 
@@ -85,10 +81,6 @@ public class TestConcurrentDataReadOperations extends AdlMockWebServer {
       @Override
       public MockResponse dispatch(RecordedRequest recordedRequest)
           throws InterruptedException {
-        if (recordedRequest.getPath().equals("/refresh")) {
-          return AdlMockWebServer.getTokenResponse();
-        }
-
         CreateTestData currentRequest = null;
         for (CreateTestData local : testData) {
           if (recordedRequest.getPath().contains(local.path.toString())) {
@@ -116,19 +108,20 @@ public class TestConcurrentDataReadOperations extends AdlMockWebServer {
           Pattern pattern = Pattern.compile("offset=([0-9]+)");
           Matcher matcher = pattern.matcher(request);
           if (matcher.find()) {
-            System.out.println(matcher.group(1));
+            LOG.debug(matcher.group(1));
             offset = Integer.parseInt(matcher.group(1));
           }
 
           pattern = Pattern.compile("length=([0-9]+)");
           matcher = pattern.matcher(request);
           if (matcher.find()) {
-            System.out.println(matcher.group(1));
+            LOG.debug(matcher.group(1));
             byteCount = Integer.parseInt(matcher.group(1));
           }
 
           Buffer buf = new Buffer();
-          buf.write(currentRequest.data, offset, byteCount);
+          buf.write(currentRequest.data, offset,
+              Math.min(currentRequest.data.length - offset, byteCount));
           return new MockResponse().setResponseCode(200)
               .setChunkedBody(buf, 4 * 1024 * 1024);
         }
@@ -204,7 +197,7 @@ public class TestConcurrentDataReadOperations extends AdlMockWebServer {
 
     for (int i = 0; i < concurrencyLevel * 5; i++) {
       ReadTestData localReadData = new ReadTestData();
-      int offset = random.nextInt((1024 * 1024)-1);
+      int offset = random.nextInt((1024 * 1024) - 1);
       int length = 1024 * 1024 - offset;
       byte[] expectedData = new byte[length];
       buffered.reset();
@@ -279,7 +272,7 @@ public class TestConcurrentDataReadOperations extends AdlMockWebServer {
       try {
         FSDataInputStream in;
         if (useSameStream) {
-          synchronized (lock) {
+          synchronized (LOCK) {
             if (commonHandle == null) {
               commonHandle = getMockAdlFileSystem().open(path);
             }

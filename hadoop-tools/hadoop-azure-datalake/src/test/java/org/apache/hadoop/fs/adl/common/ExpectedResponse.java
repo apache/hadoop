@@ -17,8 +17,7 @@
  *
  */
 
-package org.apache.hadoop.fs.common;
-
+package org.apache.hadoop.fs.adl.common;
 
 import com.squareup.okhttp.mockwebserver.MockResponse;
 

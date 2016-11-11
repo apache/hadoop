@@ -13,45 +13,49 @@
 -->
 <configuration>
   <property>
-    <name>dfs.webhdfs.oauth2.refresh.token.expires.ms.since.epoch</name>
-    <value>0</value>
-  </property>
-  <property>
-    <name>dfs.webhdfs.oauth2.credential</name>
-    <value>bearer.and.refresh.token</value>
-  </property>
-  <property>
-    <name>dfs.webhdfs.oauth2.refresh.url</name>
-    <value>https://login.windows.net/common/oauth2/token/</value>
-  </property>
-  <property>
-    <name>dfs.webhdfs.oauth2.access.token.provider</name>
+    <name>dfs.adls.oauth2.refresh.url</name>
     <value>
-      org.apache.hadoop.fs.adl.oauth2.CachedRefreshTokenBasedAccessTokenProvider
     </value>
   </property>
+
   <property>
-    <name>dfs.webhdfs.oauth2.enabled</name>
-    <value>true</value>
+    <name>dfs.adls.oauth2.credential</name>
+    <value></value>
   </property>
-  <!--USER INPUT REQUIRED-->
+
   <property>
-    <name>dfs.webhdfs.oauth2.client.id</name>
-    <value>ADD CLIENT ID</value>
+    <name>dfs.adls.oauth2.client.id</name>
+    <value></value>
   </property>
-  <!--USER INPUT REQUIRED-->
+
   <property>
-    <name>dfs.webhdfs.oauth2.refresh.token</name>
-    <value>ADD REFRESH TOKEN</value>
+    <name>dfs.adls.oauth2.access.token.provider.type</name>
+    <value>ClientCredential</value>
+    <description>
+      Supported provider type:
+
+      "ClientCredential" : Client id and client credentials(Provided
+      through configuration file) flow.
+
+      "RefreshToken" : Client id and refresh token(Provided
+      through configuration file)flow.
+
+      "Custom" : Custom AAD token management.
+    </description>
   </property>
-  <!--USER INPUT REQUIRED-->
-  <property>
-    <name>fs.defaultFS</name>
-    <value>adl://urAdlAccountGoesHere.azuredatalakestore.net:443/</value>
-  </property>
-  <!--USER INPUT REQUIRED-->
+
   <property>
     <name>dfs.adl.test.contract.enable</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <name>test.fs.adl.name</name>
+    <value></value>
+  </property>
+
+  <property>
+    <name>fs.contract.test.fs</name>
+    <value>org.apache.hadoop.fs.adl.AdlFileSystem</value>
   </property>
 </configuration>
