@@ -138,6 +138,7 @@ ENV MAVEN_OPTS -Xms256m -Xmx512m
 RUN apt-get -y install nodejs && \
     ln -s /usr/bin/nodejs /usr/bin/node && \
     apt-get -y install npm && \
+    npm install npm@latest -g && \
     npm install -g bower && \
     npm install -g ember-cli
 
