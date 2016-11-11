@@ -217,7 +217,10 @@ public class StoragePolicySatisfier implements Runnable {
       // chances, then we can just retry limited number of times and exit.
       return;
     }
-    coordinatorNode.addBlocksToMoveStorage(blockMovingInfos);
+
+    // 'BlockCollectionId' is used as the tracking ID. All the blocks under this
+    // blockCollectionID will be added to this datanode.
+    coordinatorNode.addBlocksToMoveStorage(blockCollectionID, blockMovingInfos);
   }
 
   /**

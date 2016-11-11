@@ -61,4 +61,10 @@ public class BlocksStorageMovementResult {
     return status;
   }
 
+  @Override
+  public String toString() {
+    return new StringBuilder().append("BlocksStorageMovementResult(\n  ")
+        .append("track id: ").append(trackId).append("  status: ")
+        .append(status).append(")").toString();
+  }
 }

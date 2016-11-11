@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList;
 import org.apache.hadoop.hdfs.server.common.Util;
+import org.apache.hadoop.hdfs.server.namenode.BlockStorageMovementInfosBatch;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
@@ -47,7 +48,6 @@ import org.apache.hadoop.hdfs.server.protocol.*;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringStripedBlock;
-import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.*;
 import org.apache.hadoop.net.NetworkTopology.InvalidTopologyException;
@@ -1740,16 +1740,14 @@ public class DatanodeManager {
     }
 
     // check pending block storage movement tasks
-    List<BlockMovingInfo> pendingBlockMovementList = nodeinfo
+    BlockStorageMovementInfosBatch blkStorageMovementInfosBatch = nodeinfo
         .getBlocksToMoveStorages();
-    if (pendingBlockMovementList != null) {
-      // TODO: trackID is used to track the block movement sends to coordinator
-      // datanode. Need to implement tracking logic. Temporarily, using a
-      // constant value -1.
-      long trackID = -1;
+
+    if (blkStorageMovementInfosBatch != null) {
       cmds.add(new BlockStorageMovementCommand(
-          DatanodeProtocol.DNA_BLOCK_STORAGE_MOVEMENT, trackID, blockPoolId,
-          pendingBlockMovementList));
+          DatanodeProtocol.DNA_BLOCK_STORAGE_MOVEMENT,
+          blkStorageMovementInfosBatch.getTrackID(), blockPoolId,
+          blkStorageMovementInfosBatch.getBlockMovingInfo()));
     }
 
     if (!cmds.isEmpty()) {

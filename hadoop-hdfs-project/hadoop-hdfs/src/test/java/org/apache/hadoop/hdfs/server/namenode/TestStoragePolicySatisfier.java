@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -54,15 +56,15 @@ public class TestStoragePolicySatisfier {
   final private int storagesPerDatanode = 2;
   final private long capacity = 2 * 256 * 1024 * 1024;
   final private String file = "/testMoveWhenStoragePolicyNotSatisfying";
-  private DistributedFileSystem distributedFS = null;
+  private DistributedFileSystem dfs = null;
 
   @Before
   public void setUp() throws IOException {
     config.setLong("dfs.block.size", 1024);
     hdfsCluster = startCluster(config, allDiskTypes, numOfDatanodes,
         storagesPerDatanode, capacity);
-    distributedFS = hdfsCluster.getFileSystem();
-    writeContent(distributedFS, file);
+    dfs = hdfsCluster.getFileSystem();
+    writeContent(file);
   }
 
   @Test(timeout = 300000)
@@ -71,7 +73,7 @@ public class TestStoragePolicySatisfier {
 
     try {
       // Change policy to ALL_SSD
-      distributedFS.setStoragePolicy(new Path(file), "COLD");
+      dfs.setStoragePolicy(new Path(file), "COLD");
       FSNamesystem namesystem = hdfsCluster.getNamesystem();
       INode inode = namesystem.getFSDirectory().getINode(file);
 
@@ -86,8 +88,7 @@ public class TestStoragePolicySatisfier {
 
       hdfsCluster.triggerHeartbeats();
       // Wait till namenode notified about the block location details
-      waitExpectedStorageType(file, StorageType.ARCHIVE, distributedFS, 3,
-          30000);
+      waitExpectedStorageType(file, StorageType.ARCHIVE, 3, 30000);
     } finally {
       hdfsCluster.shutdown();
     }
@@ -98,7 +99,7 @@ public class TestStoragePolicySatisfier {
       throws Exception {
     try {
       // Change policy to ALL_SSD
-      distributedFS.setStoragePolicy(new Path(file), "ALL_SSD");
+      dfs.setStoragePolicy(new Path(file), "ALL_SSD");
       FSNamesystem namesystem = hdfsCluster.getNamesystem();
       INode inode = namesystem.getFSDirectory().getINode(file);
 
@@ -115,7 +116,7 @@ public class TestStoragePolicySatisfier {
       hdfsCluster.triggerHeartbeats();
       // Wait till StorgePolicySatisfier Identified that block to move to SSD
       // areas
-      waitExpectedStorageType(file, StorageType.SSD, distributedFS, 3, 30000);
+      waitExpectedStorageType(file, StorageType.SSD, 3, 30000);
     } finally {
       hdfsCluster.shutdown();
     }
@@ -126,7 +127,7 @@ public class TestStoragePolicySatisfier {
       throws Exception {
     try {
       // Change policy to ONE_SSD
-      distributedFS.setStoragePolicy(new Path(file), "ONE_SSD");
+      dfs.setStoragePolicy(new Path(file), "ONE_SSD");
       FSNamesystem namesystem = hdfsCluster.getNamesystem();
       INode inode = namesystem.getFSDirectory().getINode(file);
 
@@ -141,8 +142,8 @@ public class TestStoragePolicySatisfier {
       hdfsCluster.triggerHeartbeats();
       // Wait till StorgePolicySatisfier Identified that block to move to SSD
       // areas
-      waitExpectedStorageType(file, StorageType.SSD, distributedFS, 1, 30000);
-      waitExpectedStorageType(file, StorageType.DISK, distributedFS, 2, 30000);
+      waitExpectedStorageType(file, StorageType.SSD, 1, 30000);
+      waitExpectedStorageType(file, StorageType.DISK, 2, 30000);
     } finally {
       hdfsCluster.shutdown();
     }
@@ -156,7 +157,7 @@ public class TestStoragePolicySatisfier {
   public void testPerTrackIdBlocksStorageMovementResults() throws Exception {
     try {
       // Change policy to ONE_SSD
-      distributedFS.setStoragePolicy(new Path(file), "ONE_SSD");
+      dfs.setStoragePolicy(new Path(file), "ONE_SSD");
       FSNamesystem namesystem = hdfsCluster.getNamesystem();
       INode inode = namesystem.getFSDirectory().getINode(file);
 
@@ -171,8 +172,8 @@ public class TestStoragePolicySatisfier {
       hdfsCluster.triggerHeartbeats();
 
       // Wait till the block is moved to SSD areas
-      waitExpectedStorageType(file, StorageType.SSD, distributedFS, 1, 30000);
-      waitExpectedStorageType(file, StorageType.DISK, distributedFS, 2, 30000);
+      waitExpectedStorageType(file, StorageType.SSD, 1, 30000);
+      waitExpectedStorageType(file, StorageType.DISK, 2, 30000);
 
       waitForBlocksMovementResult(1, 30000);
     } finally {
@@ -180,7 +181,58 @@ public class TestStoragePolicySatisfier {
     }
   }
 
-  private void waitForBlocksMovementResult(int expectedResultsCount,
+  /**
+   * Tests to verify that multiple files are giving to satisfy storage policy
+   * and should work well altogether.
+   */
+  @Test(timeout = 300000)
+  public void testMultipleFilesForSatisfyStoragePolicy() throws Exception {
+    List<String> files = new ArrayList<>();
+    files.add(file);
+
+    // Creates 4 more files. Send all of them for satisfying the storage policy
+    // together.
+    for (int i = 0; i < 4; i++) {
+      String file1 = "/testMoveWhenStoragePolicyNotSatisfying_" + i;
+      files.add(file1);
+      writeContent(file1);
+    }
+
+    try {
+      FSNamesystem namesystem = hdfsCluster.getNamesystem();
+      List<Long> blockCollectionIds = new ArrayList<>();
+      // Change policy to ONE_SSD
+      for (String fileName : files) {
+        dfs.setStoragePolicy(new Path(fileName), "ONE_SSD");
+        INode inode = namesystem.getFSDirectory().getINode(fileName);
+        blockCollectionIds.add(inode.getId());
+      }
+
+      StorageType[][] newtypes =
+          new StorageType[][]{{StorageType.SSD, StorageType.DISK}};
+
+      // Making sure SDD based nodes added to cluster. Adding SSD based
+      // datanodes.
+      startAdditionalDNs(config, 1, numOfDatanodes, newtypes,
+          storagesPerDatanode, capacity, hdfsCluster);
+      for (long inodeId : blockCollectionIds) {
+        namesystem.getBlockManager().satisfyStoragePolicy(inodeId);
+      }
+      hdfsCluster.triggerHeartbeats();
+
+      for (String fileName : files) {
+        // Wait till the block is moved to SSD areas
+        waitExpectedStorageType(fileName, StorageType.SSD, 1, 30000);
+        waitExpectedStorageType(fileName, StorageType.DISK, 2, 30000);
+      }
+
+      waitForBlocksMovementResult(blockCollectionIds.size(), 30000);
+    } finally {
+      hdfsCluster.shutdown();
+    }
+  }
+
+  private void waitForBlocksMovementResult(long expectedBlkMovResultsCount,
       int timeout) throws TimeoutException, InterruptedException {
     BlockManager blockManager = hdfsCluster.getNamesystem().getBlockManager();
     final StoragePolicySatisfier sps = blockManager.getStoragePolicySatisfier();
@@ -188,16 +240,15 @@ public class TestStoragePolicySatisfier {
       @Override
       public Boolean get() {
         LOG.info("expectedResultsCount={} actualResultsCount={}",
-            expectedResultsCount,
+            expectedBlkMovResultsCount,
             sps.getAttemptedItemsMonitor().resultsCount());
-        return expectedResultsCount == sps.getAttemptedItemsMonitor()
-            .resultsCount();
+        return sps.getAttemptedItemsMonitor()
+            .resultsCount() == expectedBlkMovResultsCount;
       }
     }, 100, timeout);
   }
 
-  private void writeContent(final DistributedFileSystem dfs,
-      final String fileName) throws IOException {
+  private void writeContent(final String fileName) throws IOException {
     // write to DISK
     final FSDataOutputStream out = dfs.create(new Path(fileName));
     for (int i = 0; i < 1000; i++) {
@@ -243,8 +294,8 @@ public class TestStoragePolicySatisfier {
   // Check whether the Block movement has been successfully completed to satisfy
   // the storage policy for the given file.
   private void waitExpectedStorageType(final String fileName,
-      final StorageType expectedStorageType, final DistributedFileSystem dfs,
-      int expectedStorageCount, int timeout) throws Exception {
+      final StorageType expectedStorageType, int expectedStorageCount,
+      int timeout) throws Exception {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
