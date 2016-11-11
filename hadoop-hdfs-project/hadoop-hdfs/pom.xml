@@ -354,6 +354,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>fsimage.proto</include>
                   <include>StorageContainerLocationProtocol.proto</include>
                   <include>StorageContainerDatanodeProtocol.proto</include>
+                  <include>CBlockServiceProtocol.proto</include>
                 </includes>
               </source>
               <output>${project.build.directory}/generated-sources/java</output>
