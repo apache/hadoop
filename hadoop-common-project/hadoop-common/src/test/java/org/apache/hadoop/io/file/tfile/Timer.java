@@ -17,8 +17,6 @@
 package org.apache.hadoop.io.file.tfile;
 
 import java.io.IOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 
 import org.apache.hadoop.util.Time;
 
@@ -30,36 +28,34 @@ import org.apache.hadoop.util.Time;
 public  class Timer {
   long startTimeEpoch;
   long finishTimeEpoch;
-  private DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
   
   public void startTime() throws IOException {
-      startTimeEpoch = Time.now();
-    }
+    startTimeEpoch = Time.now();
+  }
 
-    public void stopTime() throws IOException {
-      finishTimeEpoch = Time.now();
-    }
+  public void stopTime() throws IOException {
+    finishTimeEpoch = Time.now();
+  }
 
-    public long getIntervalMillis() throws IOException {
-      return finishTimeEpoch - startTimeEpoch;
-    }
-  
-    public void printlnWithTimestamp(String message) throws IOException {
-      System.out.println(formatCurrentTime() + "  " + message);
-    }
-  
-    public String formatTime(long millis) {
-      return formatter.format(millis);
-    }
-    
-    public String getIntervalString() throws IOException {
-      long time = getIntervalMillis();
-      return formatTime(time);
-    }
-    
-    public String formatCurrentTime() {
-      return formatTime(Time.now());
-    }
+  public long getIntervalMillis() throws IOException {
+    return finishTimeEpoch - startTimeEpoch;
+  }
 
+  public void printlnWithTimestamp(String message) throws IOException {
+    System.out.println(formatCurrentTime() + "  " + message);
+  }
+
+  public String formatTime(long millis) {
+    return Time.formatTime(millis);
+  }
+
+  public String getIntervalString() throws IOException {
+    long time = getIntervalMillis();
+    return formatTime(time);
+  }
+
+  public String formatCurrentTime() {
+    return formatTime(Time.now());
+  }
 }
 
