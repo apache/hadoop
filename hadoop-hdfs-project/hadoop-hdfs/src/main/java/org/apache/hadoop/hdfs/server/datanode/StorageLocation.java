@@ -26,8 +26,18 @@ import java.net.URI;
 import java.util.regex.Matcher;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.datanode.checker.Checkable;
+import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
+import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -37,7 +47,8 @@ import org.apache.hadoop.util.StringUtils;
  *
  */
 @InterfaceAudience.Private
-public class StorageLocation {
+public class StorageLocation
+    implements Checkable<StorageLocation.CheckContext, VolumeCheckResult> {
   final StorageType storageType;
   final File file;
 
@@ -115,5 +126,28 @@ public class StorageLocation {
   @Override
   public int hashCode() {
     return toString().hashCode();
+  }
+
+  @Override  // Checkable
+  public VolumeCheckResult check(CheckContext context) throws IOException {
+    DiskChecker.checkDir(
+        context.localFileSystem,
+        new Path(file.toURI()),
+        context.expectedPermission);
+    return VolumeCheckResult.HEALTHY;
+  }
+
+  /**
+   * Class to hold the parameters for running a {@link #check}.
+   */
+  public static final class CheckContext {
+    private final LocalFileSystem localFileSystem;
+    private final FsPermission expectedPermission;
+
+    public CheckContext(LocalFileSystem localFileSystem,
+                        FsPermission expectedPermission) {
+      this.localFileSystem = localFileSystem;
+      this.expectedPermission = expectedPermission;
+    }
   }
 }
