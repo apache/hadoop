@@ -432,7 +432,6 @@ public abstract class AbstractCSQueue implements CSQueue {
     } finally {
       readLock.unlock();
     }
-
   }
 
   @Private
@@ -448,6 +447,11 @@ public abstract class AbstractCSQueue implements CSQueue {
   @Private
   public ResourceUsage getQueueResourceUsage() {
     return queueUsage;
+  }
+
+  @Override
+  public ReentrantReadWriteLock.ReadLock getReadLock() {
+    return readLock;
   }
 
   /**

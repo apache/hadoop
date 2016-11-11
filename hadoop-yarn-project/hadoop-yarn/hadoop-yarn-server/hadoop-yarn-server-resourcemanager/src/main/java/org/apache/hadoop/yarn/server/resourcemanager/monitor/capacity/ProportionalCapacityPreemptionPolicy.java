@@ -56,6 +56,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 
 /**
  * This class implement a {@link SchedulingEditPolicy} that is designed to be
@@ -430,15 +431,19 @@ public class ProportionalCapacityPreemptionPolicy
   private TempQueuePerPartition cloneQueues(CSQueue curQueue,
       Resource partitionResource, String partitionToLookAt) {
     TempQueuePerPartition ret;
-    synchronized (curQueue) {
+    ReadLock readLock = curQueue.getReadLock();
+    try {
+      // Acquire a read lock from Parent/LeafQueue.
+      readLock.lock();
+
       String queueName = curQueue.getQueueName();
       QueueCapacities qc = curQueue.getQueueCapacities();
       float absCap = qc.getAbsoluteCapacity(partitionToLookAt);
       float absMaxCap = qc.getAbsoluteMaximumCapacity(partitionToLookAt);
       boolean preemptionDisabled = curQueue.getPreemptionDisabled();
 
-      Resource current = Resources.clone(
-          curQueue.getQueueResourceUsage().getUsed(partitionToLookAt));
+      Resource current = Resources
+          .clone(curQueue.getQueueResourceUsage().getUsed(partitionToLookAt));
       Resource killable = Resources.none();
 
       Resource reserved = Resources.clone(
@@ -472,7 +477,10 @@ public class ProportionalCapacityPreemptionPolicy
           ret.addChild(subq);
         }
       }
+    } finally {
+      readLock.unlock();
     }
+
     addTempQueuePartition(ret);
     return ret;
   }
