@@ -261,7 +261,9 @@ public class AllocateResponsePBImpl extends AllocateResponse {
   public synchronized void setUpdateErrors(
       List<UpdateContainerError> updateErrors) {
     if (updateErrors == null) {
-      this.updateErrors.clear();
+      if (this.updateErrors != null) {
+        this.updateErrors.clear();
+      }
       return;
     }
     this.updateErrors = new ArrayList<>(

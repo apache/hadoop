@@ -23,6 +23,7 @@ import java.io.Serializable;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -63,15 +64,18 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   @Stable
   public static ResourceRequest newInstance(Priority priority, String hostName,
       Resource capability, int numContainers) {
-    return newInstance(priority, hostName, capability, numContainers, true);
+    return ResourceRequest.newBuilder().priority(priority)
+        .resourceName(hostName).capability(capability)
+        .numContainers(numContainers).build();
   }
 
   @Public
   @Stable
   public static ResourceRequest newInstance(Priority priority, String hostName,
       Resource capability, int numContainers, boolean relaxLocality) {
-    return newInstance(priority, hostName, capability, numContainers,
-        relaxLocality, null);
+    return ResourceRequest.newBuilder().priority(priority)
+        .resourceName(hostName).capability(capability)
+        .numContainers(numContainers).relaxLocality(relaxLocality).build();
   }
   
   @Public
@@ -79,8 +83,10 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   public static ResourceRequest newInstance(Priority priority, String hostName,
       Resource capability, int numContainers, boolean relaxLocality,
       String labelExpression) {
-    return newInstance(priority, hostName, capability, numContainers,
-        relaxLocality, labelExpression, ExecutionTypeRequest.newInstance());
+    return ResourceRequest.newBuilder().priority(priority)
+        .resourceName(hostName).capability(capability)
+        .numContainers(numContainers).relaxLocality(relaxLocality)
+        .nodeLabelExpression(labelExpression).build();
   }
 
   @Public
@@ -88,15 +94,158 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   public static ResourceRequest newInstance(Priority priority, String hostName,
       Resource capability, int numContainers, boolean relaxLocality, String
       labelExpression, ExecutionTypeRequest executionTypeRequest) {
-    ResourceRequest request = Records.newRecord(ResourceRequest.class);
-    request.setPriority(priority);
-    request.setResourceName(hostName);
-    request.setCapability(capability);
-    request.setNumContainers(numContainers);
-    request.setRelaxLocality(relaxLocality);
-    request.setNodeLabelExpression(labelExpression);
-    request.setExecutionTypeRequest(executionTypeRequest);
-    return request;
+    return ResourceRequest.newBuilder().priority(priority)
+        .resourceName(hostName).capability(capability)
+        .numContainers(numContainers).relaxLocality(relaxLocality)
+        .nodeLabelExpression(labelExpression)
+        .executionTypeRequest(executionTypeRequest).build();
+  }
+
+  @Public
+  @Unstable
+  public static ResourceRequestBuilder newBuilder() {
+    return new ResourceRequestBuilder();
+  }
+
+  /**
+   * Class to construct instances of {@link ResourceRequest} with specific
+   * options.
+   */
+  @Public
+  @Stable
+  public static final class ResourceRequestBuilder {
+    private ResourceRequest resourceRequest =
+        Records.newRecord(ResourceRequest.class);
+
+    private ResourceRequestBuilder() {
+      resourceRequest.setResourceName(ANY);
+      resourceRequest.setNumContainers(1);
+      resourceRequest.setPriority(Priority.newInstance(0));
+      resourceRequest.setRelaxLocality(true);
+      resourceRequest.setExecutionTypeRequest(
+          ExecutionTypeRequest.newInstance());
+    }
+
+    /**
+     * Set the <code>priority</code> of the request.
+     * @see ResourceRequest#setPriority(Priority)
+     * @param priority <code>priority</code> of the request
+     * @return {@link ResourceRequestBuilder}
+     */
+    @Public
+    @Stable
+    public ResourceRequestBuilder priority(Priority priority) {
+      resourceRequest.setPriority(priority);
+      return this;
+    }
+
+    /**
+     * Set the <code>resourceName</code> of the request.
+     * @see ResourceRequest#setResourceName(String)
+     * @param resourceName <code>resourceName</code> of the request
+     * @return {@link ResourceRequestBuilder}
+     */
+    @Public
+    @Stable
+    public ResourceRequestBuilder resourceName(String resourceName) {
+      resourceRequest.setResourceName(resourceName);
+      return this;
+    }
+
+    /**
+     * Set the <code>capability</code> of the request.
+     * @see ResourceRequest#setCapability(Resource)
+     * @param capability <code>capability</code> of the request
+     * @return {@link ResourceRequestBuilder}
+     */
+    @Public
+    @Stable
+    public ResourceRequestBuilder capability(Resource capability) {
+      resourceRequest.setCapability(capability);
+      return this;
+    }
+
+    /**
+     * Set the <code>numContainers</code> of the request.
+     * @see ResourceRequest#setNumContainers(int)
+     * @param numContainers <code>numContainers</code> of the request
+     * @return {@link ResourceRequestBuilder}
+     */
+    @Public
+    @Stable
+    public ResourceRequestBuilder numContainers(int numContainers) {
+      resourceRequest.setNumContainers(numContainers);
+      return this;
+    }
+
+    /**
+     * Set the <code>relaxLocality</code> of the request.
+     * @see ResourceRequest#setRelaxLocality(boolean)
+     * @param relaxLocality <code>relaxLocality</code> of the request
+     * @return {@link ResourceRequestBuilder}
+     */
+    @Public
+    @Stable
+    public ResourceRequestBuilder relaxLocality(boolean relaxLocality) {
+      resourceRequest.setRelaxLocality(relaxLocality);
+      return this;
+    }
+
+    /**
+     * Set the <code>nodeLabelExpression</code> of the request.
+     * @see ResourceRequest#setNodeLabelExpression(String)
+     * @param nodeLabelExpression
+     *          <code>nodeLabelExpression</code> of the request
+     * @return {@link ResourceRequestBuilder}
+     */
+    @Public
+    @Evolving
+    public ResourceRequestBuilder nodeLabelExpression(
+        String nodeLabelExpression) {
+      resourceRequest.setNodeLabelExpression(nodeLabelExpression);
+      return this;
+    }
+
+    /**
+     * Set the <code>executionTypeRequest</code> of the request.
+     * @see ResourceRequest#setExecutionTypeRequest(
+     * ExecutionTypeRequest)
+     * @param executionTypeRequest
+     *          <code>executionTypeRequest</code> of the request
+     * @return {@link ResourceRequestBuilder}
+     */
+    @Public
+    @Evolving
+    public ResourceRequestBuilder executionTypeRequest(
+        ExecutionTypeRequest executionTypeRequest) {
+      resourceRequest.setExecutionTypeRequest(executionTypeRequest);
+      return this;
+    }
+
+    /**
+     * Set the <code>allocationRequestId</code> of the request.
+     * @see ResourceRequest#setAllocationRequestId(long)
+     * @param allocationRequestId
+     *          <code>allocationRequestId</code> of the request
+     * @return {@link ResourceRequestBuilder}
+     */
+    @Public
+    @Evolving
+    public ResourceRequestBuilder allocationRequestId(
+        long allocationRequestId) {
+      resourceRequest.setAllocationRequestId(allocationRequestId);
+      return this;
+    }
+
+    /**
+     * Return generated {@link ResourceRequest} object.
+     * @return {@link ResourceRequest}
+     */
+    @Public
+    @Stable
+    public ResourceRequest build() {
+      return resourceRequest;
+    }
   }
 
   @Public
