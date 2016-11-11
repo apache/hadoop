@@ -681,9 +681,13 @@ public class ViewFileSystem extends FileSystem {
 
   @Override
   public FsServerDefaults getServerDefaults(Path f) throws IOException {
-    InodeTree.ResolveResult<FileSystem> res =
-      fsState.resolve(getUriPath(f), true);
-    return res.targetFileSystem.getServerDefaults(res.remainingPath);    
+    try {
+      InodeTree.ResolveResult<FileSystem> res =
+          fsState.resolve(getUriPath(f), true);
+      return res.targetFileSystem.getServerDefaults(res.remainingPath);
+    } catch (FileNotFoundException e) {
+      throw new NotInMountpointException(f, "getServerDefaults");
+    }
   }
 
   @Override
