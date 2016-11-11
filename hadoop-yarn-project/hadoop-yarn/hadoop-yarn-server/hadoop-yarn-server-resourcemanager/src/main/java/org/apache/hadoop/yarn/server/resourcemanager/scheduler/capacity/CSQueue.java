@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -355,4 +356,10 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
 
   void apply(Resource cluster,
       ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> request);
+
+  /**
+   * Get readLock associated with the Queue.
+   * @return readLock of corresponding queue.
+   */
+  public ReentrantReadWriteLock.ReadLock getReadLock();
 }
