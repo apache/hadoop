@@ -868,6 +868,13 @@ public class CapacityScheduler extends
       String queueName, String user, Priority priority) {
     try {
       writeLock.lock();
+      if (isSystemAppsLimitReached()) {
+        String message = "Maximum system application limit reached,"
+            + "cannot accept submission of application: " + applicationId;
+        this.rmContext.getDispatcher().getEventHandler().handle(new RMAppEvent(
+            applicationId, RMAppEventType.APP_REJECTED, message));
+        return;
+      }
       // Sanity checks.
       CSQueue queue = getQueue(queueName);
       if (queue == null) {
@@ -2021,6 +2028,13 @@ public class CapacityScheduler extends
     List<ApplicationAttemptId> apps = new ArrayList<ApplicationAttemptId>();
     queue.collectSchedulerApplications(apps);
     return apps;
+  }
+
+  public boolean isSystemAppsLimitReached() {
+    if (root.getNumApplications() < conf.getMaximumSystemApplications()) {
+      return false;
+    }
+    return true;
   }
 
   private CapacitySchedulerConfiguration loadCapacitySchedulerConfiguration(
