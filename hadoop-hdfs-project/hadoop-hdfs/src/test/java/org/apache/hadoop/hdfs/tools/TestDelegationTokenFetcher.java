@@ -135,7 +135,8 @@ public class TestDelegationTokenFetcher {
       Credentials creds = Credentials.readTokenStorageFile(p, conf);
       Iterator<Token<?>> itr = creds.getAllTokens().iterator();
       assertTrue("token not exist error", itr.hasNext());
-      assertNotNull("Token should be there without renewer", itr.next());
+      final Token token = itr.next();
+      assertNotNull("Token should be there without renewer", token);
 
       // Test compatibility of DelegationTokenFetcher.printTokensToString
       String expectedNonVerbose = "Token (HDFS_DELEGATION_TOKEN token 1 for " +
@@ -154,8 +155,8 @@ public class TestDelegationTokenFetcher {
         DelegationTokenFetcher.renewTokens(conf, p);
         fail("Should have failed to renew");
       } catch (AccessControlException e) {
-        GenericTestUtils.assertExceptionContains(
-            "tried to renew a token without a renewer", e);
+        GenericTestUtils.assertExceptionContains("tried to renew a token ("
+            + token.decodeIdentifier() + ") without a renewer", e);
       }
     } finally {
       cluster.shutdown();
