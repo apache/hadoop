@@ -111,7 +111,6 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMCommunicator;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator;
-import org.apache.hadoop.mapreduce.v2.app.rm.RMContainerRequestor;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.app.rm.preemption.AMPreemptionPolicy;
 import org.apache.hadoop.mapreduce.v2.app.rm.preemption.NoopAMPreemptionPolicy;
@@ -1156,7 +1155,7 @@ public class MRAppMaster extends CompositeService {
 
     @Override
     public Set<String> getBlacklistedNodes() {
-      return ((RMContainerRequestor) containerAllocator).getBlacklistedNodes();
+      return ((RMContainerAllocator) containerAllocator).getBlacklistedNodes();
     }
     
     @Override

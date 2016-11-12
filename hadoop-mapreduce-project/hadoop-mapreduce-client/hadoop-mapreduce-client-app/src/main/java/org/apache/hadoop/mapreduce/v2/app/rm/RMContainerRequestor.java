@@ -34,10 +34,10 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
-import org.apache.hadoop.mapreduce.v2.app.AppContext;
-import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
+import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
@@ -60,7 +60,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Keeps the data structures to send container requests to RM.
  */
-public abstract class RMContainerRequestor extends RMCommunicator {
+public class RMContainerRequestor extends AbstractService
+    implements ContainerRequestor {
   
   private static final Logger LOG =
       LoggerFactory.getLogger(RMContainerRequestor.class);
@@ -111,9 +112,13 @@ public abstract class RMContainerRequestor extends RMCommunicator {
       .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
   private final Set<String> blacklistRemovals = Collections
       .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+  private final ApplicationId applicationId;
+  private final RMCommunicator rmCommunicator;
 
-  public RMContainerRequestor(ClientService clientService, AppContext context) {
-    super(clientService, context);
+  public RMContainerRequestor(RMCommunicator rmCommunicator) {
+    super(RMContainerRequestor.class.getName());
+    this.rmCommunicator = rmCommunicator;
+    applicationId = rmCommunicator.applicationId;
   }
 
   @Private
@@ -194,17 +199,19 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     LOG.info("blacklistDisablePercent is " + blacklistDisablePercent);
   }
 
-  protected AllocateResponse makeRemoteRequest() throws YarnException,
-      IOException {
+  @Override
+  public AllocateResponse makeRemoteRequest()
+      throws YarnException, IOException {
     applyRequestLimits();
     ResourceBlacklistRequest blacklistRequest =
         ResourceBlacklistRequest.newInstance(new ArrayList<String>(blacklistAdditions),
             new ArrayList<String>(blacklistRemovals));
-    AllocateRequest allocateRequest =
-        AllocateRequest.newInstance(lastResponseID,
-          super.getApplicationProgress(), new ArrayList<ResourceRequest>(ask),
-          new ArrayList<ContainerId>(release), blacklistRequest);
-    AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);
+    AllocateRequest allocateRequest = AllocateRequest.newInstance(
+        lastResponseID, rmCommunicator.getApplicationProgress(),
+        new ArrayList<ResourceRequest>(ask),
+        new ArrayList<ContainerId>(release), blacklistRequest);
+    AllocateResponse allocateResponse = rmCommunicator.scheduler
+        .allocate(allocateRequest);
     lastResponseID = allocateResponse.getResponseId();
     availableResources = allocateResponse.getAvailableResources();
     lastClusterNmCount = clusterNmCount;
@@ -324,7 +331,8 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     }
   }
   
-  protected void containerFailedOnHost(String hostName) {
+  @Override
+  public void containerFailedOnHost(String hostName) {
     if (!nodeBlacklistingEnabled) {
       return;
     }
@@ -389,11 +397,13 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     }
   }
 
-  protected Resource getAvailableResources() {
+  @Override
+  public Resource getAvailableResources() {
     return availableResources == null ? Resources.none() : availableResources;
   }
 
-  protected void addContainerReq(ContainerRequest req) {
+  @Override
+  public void addContainerReq(ContainerRequest req) {
     // Create resource requests
     for (String host : req.hosts) {
       // Data-local
@@ -414,7 +424,8 @@ public abstract class RMContainerRequestor extends RMCommunicator {
         req.nodeLabelExpression);
   }
 
-  protected void decContainerReq(ContainerRequest req) {
+  @Override
+  public void decContainerReq(ContainerRequest req) {
     // Update resource requests
     for (String hostName : req.hosts) {
       decResourceRequest(req.priority, hostName, req.capability);
@@ -540,18 +551,21 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     ask.add(remoteRequest);    
   }
 
-  protected void release(ContainerId containerId) {
+  @Override
+  public void release(ContainerId containerId) {
     release.add(containerId);
   }
   
-  protected boolean isNodeBlacklisted(String hostname) {
+  @Override
+  public boolean isNodeBlacklisted(String hostname) {
     if (!nodeBlacklistingEnabled || ignoreBlacklisting.get()) {
       return false;
     }
     return blacklistedNodes.contains(hostname);
   }
-  
-  protected ContainerRequest getFilteredContainerRequest(ContainerRequest orig) {
+
+  @Override
+  public ContainerRequest filterRequest(ContainerRequest orig) {
     ArrayList<String> newHosts = new ArrayList<String>();
     for (String host : orig.hosts) {
       if (!isNodeBlacklisted(host)) {
