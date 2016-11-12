@@ -133,15 +133,16 @@ public class TestDelegationTokenFetcher {
       Iterator<Token<?>> itr = creds.getAllTokens().iterator();
       // make sure we got back exactly the 1 token we expected
       assertTrue(itr.hasNext());
-      assertNotNull("Token without renewer shouldn't be null", itr.next());
+      final Token token = itr.next();
+      assertNotNull("Token without renewer shouldn't be null", token);
       assertTrue(!itr.hasNext());
       try {
         // Without renewer renewal of token should fail.
         DelegationTokenFetcher.main(new String[] { "--renew", tokenFile });
         fail("Should have failed to renew");
       } catch (AccessControlException e) {
-        GenericTestUtils.assertExceptionContains(
-            "tried to renew a token without a renewer", e);
+        GenericTestUtils.assertExceptionContains("tried to renew a token ("
+            + token.decodeIdentifier() + ") without a renewer", e);
       }
     } finally {
       cluster.shutdown();
