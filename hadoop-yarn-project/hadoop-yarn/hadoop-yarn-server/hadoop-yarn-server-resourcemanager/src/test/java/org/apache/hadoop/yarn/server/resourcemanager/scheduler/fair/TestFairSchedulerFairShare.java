@@ -57,11 +57,6 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
     conf = null;
   }
 
-  private void createClusterWithQueuesAndOneNode(int mem, String policy)
-      throws IOException {
-    createClusterWithQueuesAndOneNode(mem, 0, 0, policy);
-  }
-
   private void createClusterWithQueuesAndOneNode(int mem, int vCores, int GPUs,
       String policy) throws IOException {
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
@@ -98,8 +93,8 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
 
   @Test
   public void testFairShareNoAppsRunning() throws IOException {
-    int nodeCapacity = 16 * 1024;
-    createClusterWithQueuesAndOneNode(nodeCapacity, "fair");
+    int nodeCapacity = 16;
+    createClusterWithQueuesAndOneNode(nodeCapacity * 1024, nodeCapacity, nodeCapacity, "fair");
 
     scheduler.update();
     // No apps are running in the cluster,verify if fair share is zero
@@ -109,27 +104,27 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
 
     for (FSLeafQueue leaf : leafQueues) {
       if (leaf.getName().startsWith("root.parentA")) {
-        assertEquals(0, (double) leaf.getFairShare().getMemory() / nodeCapacity,
+        assertEquals(0, (double) leaf.getFairShare().getGPUs() / nodeCapacity,
             0);
       } else if (leaf.getName().startsWith("root.parentB")) {
-        assertEquals(0, (double) leaf.getFairShare().getMemory() / nodeCapacity,
+        assertEquals(0, (double) leaf.getFairShare().getGPUs() / nodeCapacity,
             0);
       }
     }
 
-    verifySteadyFairShareMemory(leafQueues, nodeCapacity);
+    verifySteadyFairShareGPUs(leafQueues, nodeCapacity);
   }
 
   @Test
   public void testFairShareOneAppRunning() throws IOException {
-    int nodeCapacity = 16 * 1024;
-    createClusterWithQueuesAndOneNode(nodeCapacity, "fair");
+    int nodeCapacity = 16;
+    createClusterWithQueuesAndOneNode(nodeCapacity * 1024, nodeCapacity, nodeCapacity, "fair");
 
     // Run a app in a childA1. Verify whether fair share is 100% in childA1,
     // since it is the only active queue.
     // Also verify if fair share is 0 for childA2. since no app is
     // running in it.
-    createSchedulingRequest(2 * 1024, "root.parentA.childA1", "user1");
+    createSchedulingRequest(2 * 1024, 2, 2, "root.parentA.childA1", "user1");
 
     scheduler.update();
 
@@ -137,95 +132,107 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
         100,
         (double) scheduler.getQueueManager()
             .getLeafQueue("root.parentA.childA1", false).getFairShare()
-            .getMemory() / nodeCapacity * 100, 0.1);
+            .getGPUs() / nodeCapacity * 100, 0.1);
     assertEquals(
         0,
         (double) scheduler.getQueueManager()
             .getLeafQueue("root.parentA.childA2", false).getFairShare()
-            .getMemory() / nodeCapacity, 0.1);
+            .getGPUs() / nodeCapacity, 0.1);
 
-    verifySteadyFairShareMemory(scheduler.getQueueManager().getLeafQueues(),
+    verifySteadyFairShareGPUs(scheduler.getQueueManager().getLeafQueues(),
         nodeCapacity);
   }
 
   @Test
   public void testFairShareMultipleActiveQueuesUnderSameParent()
       throws IOException {
-    int nodeCapacity = 16 * 1024;
-    createClusterWithQueuesAndOneNode(nodeCapacity, "fair");
+    int nodeCapacity = 16;
+    createClusterWithQueuesAndOneNode(nodeCapacity * 1024, nodeCapacity, nodeCapacity, "fair");
 
     // Run apps in childA1,childA2,childA3
-    createSchedulingRequest(2 * 1024, "root.parentA.childA1", "user1");
-    createSchedulingRequest(2 * 1024, "root.parentA.childA2", "user2");
-    createSchedulingRequest(2 * 1024, "root.parentA.childA3", "user3");
+    createSchedulingRequest(2 * 1024, 2, 2, "root.parentA.childA1", "user1");
+    createSchedulingRequest(2 * 1024, 2, 2, "root.parentA.childA2", "user2");
+    createSchedulingRequest(2 * 1024, 2, 2, "root.parentA.childA3", "user3");
 
     scheduler.update();
 
-    // Verify if fair share is 100 / 3 = 33%
+    // Verify fair share:
+    //     16 GPUs / 3 = 5.33 => 6 GPUs
+    //     For each child, 6 / 16 * 100 = 37.5
     for (int i = 1; i <= 3; i++) {
       assertEquals(
-          33,
+          37.5,
           (double) scheduler.getQueueManager()
               .getLeafQueue("root.parentA.childA" + i, false).getFairShare()
-              .getMemory()
+              .getGPUs()
               / nodeCapacity * 100, .9);
     }
 
-    verifySteadyFairShareMemory(scheduler.getQueueManager().getLeafQueues(),
+    verifySteadyFairShareGPUs(scheduler.getQueueManager().getLeafQueues(),
         nodeCapacity);
   }
 
   @Test
   public void testFairShareMultipleActiveQueuesUnderDifferentParent()
       throws IOException {
-    int nodeCapacity = 16 * 1024;
-    createClusterWithQueuesAndOneNode(nodeCapacity, "fair");
+    int nodeCapacity = 16;
+    createClusterWithQueuesAndOneNode(nodeCapacity * 1024, nodeCapacity, nodeCapacity, "fair");
 
     // Run apps in childA1,childA2 which are under parentA
-    createSchedulingRequest(2 * 1024, "root.parentA.childA1", "user1");
-    createSchedulingRequest(3 * 1024, "root.parentA.childA2", "user2");
+    createSchedulingRequest(2 * 1024, 2, 2, "root.parentA.childA1", "user1");
+    createSchedulingRequest(3 * 1024, 3, 3, "root.parentA.childA2", "user2");
 
     // Run app in childB1 which is under parentB
-    createSchedulingRequest(1 * 1024, "root.parentB.childB1", "user3");
+    createSchedulingRequest(1 * 1024, 1, 1, "root.parentB.childB1", "user3");
 
     // Run app in root.default queue
-    createSchedulingRequest(1 * 1024, "root.default", "user4");
+    createSchedulingRequest(1 * 1024, 1, 1, "root.default", "user4");
 
     scheduler.update();
 
     // The two active child queues under parentA would
-    // get fair share of 80/2=40%
+    // get fair share of 80/2=40%, but in GPU case:
+    //     16 GPUs * 0.8 / 2 = 6.4 => 7 GPUs
+    //     For each child, 7 / 16 * 100 = 43.75
     for (int i = 1; i <= 2; i++) {
       assertEquals(
-          40,
+          43.75,
           (double) scheduler.getQueueManager()
               .getLeafQueue("root.parentA.childA" + i, false).getFairShare()
-              .getMemory()
+              .getGPUs()
               / nodeCapacity * 100, .9);
     }
 
     // The child queue under parentB would get a fair share of 10%,
-    // basically all of parentB's fair share
+    // basically all of parentB's fair share, but in GPU case:
+    //     16 GPUs * 0.1 = 1.6, where this child can't get 2 GPUs
+    //     as two childAs already got 7 GPUs each. So, 1 GPU is assigned.
     assertEquals(
-        10,
+        6.25,
         (double) scheduler.getQueueManager()
             .getLeafQueue("root.parentB.childB1", false).getFairShare()
-            .getMemory()
+            .getGPUs()
+            / nodeCapacity * 100, .9);
+    assertEquals(
+        6.25,
+        (double) scheduler.getQueueManager()
+            .getLeafQueue("root.default", false).getFairShare()
+            .getGPUs()
             / nodeCapacity * 100, .9);
 
-    verifySteadyFairShareMemory(scheduler.getQueueManager().getLeafQueues(),
+    verifySteadyFairShareGPUs(scheduler.getQueueManager().getLeafQueues(),
         nodeCapacity);
   }
 
   @Test
   public void testFairShareResetsToZeroWhenAppsComplete() throws IOException {
-    int nodeCapacity = 16 * 1024;
-    createClusterWithQueuesAndOneNode(nodeCapacity, "fair");
+    int nodeCapacity = 16;
+    createClusterWithQueuesAndOneNode(nodeCapacity * 1024, nodeCapacity, nodeCapacity, "fair");
 
     // Run apps in childA1,childA2 which are under parentA
-    ApplicationAttemptId app1 = createSchedulingRequest(2 * 1024,
+    ApplicationAttemptId app1 = createSchedulingRequest(2 * 1024, 2, 2,
         "root.parentA.childA1", "user1");
-    ApplicationAttemptId app2 = createSchedulingRequest(3 * 1024,
+    ApplicationAttemptId app2 = createSchedulingRequest(3 * 1024, 3, 3,
         "root.parentA.childA2", "user2");
 
     scheduler.update();
@@ -237,7 +244,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
           50,
           (double) scheduler.getQueueManager()
               .getLeafQueue("root.parentA.childA" + i, false).getFairShare()
-              .getMemory()
+              .getGPUs()
               / nodeCapacity * 100, .9);
     }
     // Let app under childA1 complete. This should cause the fair share
@@ -254,16 +261,16 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
         0,
         (double) scheduler.getQueueManager()
             .getLeafQueue("root.parentA.childA1", false).getFairShare()
-            .getMemory()
+            .getGPUs()
             / nodeCapacity * 100, 0);
     assertEquals(
         100,
         (double) scheduler.getQueueManager()
             .getLeafQueue("root.parentA.childA2", false).getFairShare()
-            .getMemory()
+            .getGPUs()
             / nodeCapacity * 100, 0.1);
 
-    verifySteadyFairShareMemory(scheduler.getQueueManager().getLeafQueues(),
+    verifySteadyFairShareGPUs(scheduler.getQueueManager().getLeafQueues(),
         nodeCapacity);
   }
 
@@ -344,16 +351,16 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
    * @param leafQueues
    * @param nodeCapacity
    */
-  private void verifySteadyFairShareMemory(Collection<FSLeafQueue> leafQueues,
+  private void verifySteadyFairShareGPUs(Collection<FSLeafQueue> leafQueues,
       int nodeCapacity) {
     for (FSLeafQueue leaf : leafQueues) {
       if (leaf.getName().startsWith("root.parentA")) {
-        assertEquals(0.2,
-            (double) leaf.getSteadyFairShare().getMemory() / nodeCapacity,
+        assertEquals(0.25,
+            (double) leaf.getSteadyFairShare().getGPUs() / nodeCapacity,
             0.001);
       } else if (leaf.getName().startsWith("root.parentB")) {
-        assertEquals(0.05,
-            (double) leaf.getSteadyFairShare().getMemory() / nodeCapacity,
+        assertEquals(0.0625,
+            (double) leaf.getSteadyFairShare().getGPUs() / nodeCapacity,
             0.001);
       }
     }

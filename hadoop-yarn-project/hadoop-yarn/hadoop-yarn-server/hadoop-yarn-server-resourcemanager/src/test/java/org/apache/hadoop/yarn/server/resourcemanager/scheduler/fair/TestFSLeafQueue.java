@@ -107,10 +107,10 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
     out.println("<?xml version=\"1.0\"?>");
     out.println("<allocations>");
     out.println("<queue name=\"queueA\">");
-    out.println("<minResources>2048mb,0vcores</minResources>");
+    out.println("<minResources>0mb,0vcores,2gpus</minResources>");
     out.println("</queue>");
     out.println("<queue name=\"queueB\">");
-    out.println("<minResources>2048mb,0vcores</minResources>");
+    out.println("<minResources>0mb,0vcores,2gpus</minResources>");
     out.println("</queue>");
     out.println("</allocations>");
     out.close();
@@ -128,14 +128,14 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
 
     scheduler.update();
 
-    // Queue A wants 3 * 1024. Node update gives this all to A
-    createSchedulingRequest(3 * 1024, "queueA", "user1");
+    // Queue A wants 3 * 1 GPU. Node update gives this all to A
+    createSchedulingRequest(3 * 1024, 3, 3, "queueA", "user1");
     scheduler.update();
     NodeUpdateSchedulerEvent nodeEvent2 = new NodeUpdateSchedulerEvent(node1);
     scheduler.handle(nodeEvent2);
 
-    // Queue B arrives and wants 1 * 1024
-    createSchedulingRequest(1 * 1024, "queueB", "user1");
+    // Queue B arrives and wants 1 * 1 GPU
+    createSchedulingRequest(1 * 1024, 1, 1, "queueB", "user1");
     scheduler.update();
     Collection<FSLeafQueue> queues = scheduler.getQueueManager().getLeafQueues();
     assertEquals(3, queues.size());
@@ -165,11 +165,11 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
     out.println("</queue>");
     out.println("<queue name=\"queueB\">");
     out.println("<weight>.8</weight>");
-    out.println("<fairSharePreemptionThreshold>.4</fairSharePreemptionThreshold>");
+    out.println("<fairSharePreemptionThreshold>.2</fairSharePreemptionThreshold>");
     out.println("<queue name=\"queueB1\">");
     out.println("</queue>");
     out.println("<queue name=\"queueB2\">");
-    out.println("<fairSharePreemptionThreshold>.6</fairSharePreemptionThreshold>");
+    out.println("<fairSharePreemptionThreshold>.8</fairSharePreemptionThreshold>");
     out.println("</queue>");
     out.println("</queue>");
     out.println("<defaultFairSharePreemptionThreshold>.5</defaultFairSharePreemptionThreshold>");
@@ -189,8 +189,8 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
 
     scheduler.update();
 
-    // Queue A wants 4 * 1024. Node update gives this all to A
-    createSchedulingRequest(1 * 1024, "queueA", "user1", 4);
+    // Queue A wants 4 * 1 GPU. Node update gives this all to A
+    createSchedulingRequest(1 * 1024, 1, 1, "queueA", "user1", 4);
     scheduler.update();
     NodeUpdateSchedulerEvent nodeEvent2 = new NodeUpdateSchedulerEvent(node1);
     for (int i = 0; i < 4; i ++) {
@@ -199,11 +199,11 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
 
     QueueManager queueMgr = scheduler.getQueueManager();
     FSLeafQueue queueA = queueMgr.getLeafQueue("queueA", false);
-    assertEquals(4 * 1024, queueA.getResourceUsage().getMemory());
+    assertEquals(4, queueA.getResourceUsage().getGPUs());
 
-    // Both queue B1 and queue B2 want 3 * 1024
-    createSchedulingRequest(1 * 1024, "queueB.queueB1", "user1", 3);
-    createSchedulingRequest(1 * 1024, "queueB.queueB2", "user1", 3);
+    // Both queue B1 and queue B2 want 3 * 1 GPU
+    createSchedulingRequest(1 * 1024, 1, 1, "queueB.queueB1", "user1", 3);
+    createSchedulingRequest(1 * 1024, 1, 1, "queueB.queueB2", "user1", 3);
     scheduler.update();
     for (int i = 0; i < 4; i ++) {
       scheduler.handle(nodeEvent2);
@@ -211,24 +211,24 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
 
     FSLeafQueue queueB1 = queueMgr.getLeafQueue("queueB.queueB1", false);
     FSLeafQueue queueB2 = queueMgr.getLeafQueue("queueB.queueB2", false);
-    assertEquals(2 * 1024, queueB1.getResourceUsage().getMemory());
-    assertEquals(2 * 1024, queueB2.getResourceUsage().getMemory());
+    assertEquals(2, queueB1.getResourceUsage().getGPUs());
+    assertEquals(2, queueB2.getResourceUsage().getGPUs());
 
-    // For queue B1, the fairSharePreemptionThreshold is 0.4, and the fair share
-    // threshold is 1.6 * 1024
+    // For queue B1, the fairSharePreemptionThreshold is 0.2, and the fair share
+    // threshold is 0.8 * 1 GPU
     assertFalse(queueB1.isStarvedForFairShare());
 
-    // For queue B2, the fairSharePreemptionThreshold is 0.6, and the fair share
-    // threshold is 2.4 * 1024
+    // For queue B2, the fairSharePreemptionThreshold is 0.8, and the fair share
+    // threshold is 3.2 * 1 (= 3) GPU
     assertTrue(queueB2.isStarvedForFairShare());
 
     // Node checks in again
     scheduler.handle(nodeEvent2);
     scheduler.handle(nodeEvent2);
-    assertEquals(3 * 1024, queueB1.getResourceUsage().getMemory());
-    assertEquals(3 * 1024, queueB2.getResourceUsage().getMemory());
+    assertEquals(3, queueB1.getResourceUsage().getGPUs());
+    assertEquals(3, queueB2.getResourceUsage().getGPUs());
 
-    // Both queue B1 and queue B2 usages go to 3 * 1024
+    // Both queue B1 and queue B2 usages go to 3 * 1 GPU
     assertFalse(queueB1.isStarvedForFairShare());
     assertFalse(queueB2.isStarvedForFairShare());
   }
