@@ -526,6 +526,16 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY = "dfs.datanode.directoryscan.threads";
   public static final int     DFS_DATANODE_DIRECTORYSCAN_THREADS_DEFAULT = 1;
 
+  public static final String DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY =
+      "dfs.datanode.disk.check.min.gap";
+  public static final String DFS_DATANODE_DISK_CHECK_MIN_GAP_DEFAULT =
+      "15m";
+
+  public static final String DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY =
+      "dfs.datanode.disk.check.timeout";
+  public static final String DFS_DATANODE_DISK_CHECK_TIMEOUT_DEFAULT =
+      "10m";
+
   public static final String  DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_THREADS_KEY = "dfs.datanode.ec.reconstruction.stripedread.threads";
   public static final int     DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_THREADS_DEFAULT = 20;
   public static final String  DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_BUFFER_SIZE_KEY = "dfs.datanode.ec.reconstruction.stripedread.buffer.size";

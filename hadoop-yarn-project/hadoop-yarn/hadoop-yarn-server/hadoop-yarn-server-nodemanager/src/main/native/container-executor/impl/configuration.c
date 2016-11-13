@@ -31,6 +31,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <limits.h>
+#include <ctype.h>
 
 #define MAX_SIZE 10
 
@@ -126,6 +127,37 @@ int check_configuration_permissions(const char* file_name) {
   return 0;
 }
 
+/**
+ * Trim whitespace from beginning and end.
+*/
+char* trim(char* input)
+{
+    char *val_begin;
+    char *val_end;
+    char *ret;
+
+    if (input == NULL) {
+      return NULL;
+    }
+
+    val_begin = input;
+    val_end = input + strlen(input);
+
+    while (val_begin < val_end && isspace(*val_begin))
+      val_begin++;
+    while (val_end > val_begin && isspace(*(val_end - 1)))
+      val_end--;
+
+    ret = (char *) malloc(
+            sizeof(char) * (val_end - val_begin + 1));
+    if (ret == NULL) {
+      fprintf(ERRORFILE, "Allocation error\n");
+      exit(OUT_OF_MEMORY);
+    }
+
+    strncpy(ret, val_begin, val_end - val_begin);
+    return ret;
+}
 
 void read_config(const char* file_name, struct configuration *cfg) {
   FILE *conf_file;
@@ -202,9 +234,8 @@ void read_config(const char* file_name, struct configuration *cfg) {
     #endif
 
     memset(cfg->confdetails[cfg->size], 0, sizeof(struct confentry));
-    cfg->confdetails[cfg->size]->key = (char *) malloc(
-            sizeof(char) * (strlen(equaltok)+1));
-    strcpy((char *)cfg->confdetails[cfg->size]->key, equaltok);
+    cfg->confdetails[cfg->size]->key = trim(equaltok);
+
     equaltok = strtok_r(NULL, "=", &temp_equaltok);
     if (equaltok == NULL) {
       fprintf(LOGFILE, "configuration tokenization failed \n");
@@ -222,9 +253,7 @@ void read_config(const char* file_name, struct configuration *cfg) {
       fprintf(LOGFILE, "read_config : Adding conf value : %s \n", equaltok);
     #endif
 
-    cfg->confdetails[cfg->size]->value = (char *) malloc(
-            sizeof(char) * (strlen(equaltok)+1));
-    strcpy((char *)cfg->confdetails[cfg->size]->value, equaltok);
+    cfg->confdetails[cfg->size]->value = trim(equaltok);
     if((cfg->size + 1) % MAX_SIZE  == 0) {
       cfg->confdetails = (struct confentry **) realloc(cfg->confdetails,
           sizeof(struct confentry **) * (MAX_SIZE + cfg->size));

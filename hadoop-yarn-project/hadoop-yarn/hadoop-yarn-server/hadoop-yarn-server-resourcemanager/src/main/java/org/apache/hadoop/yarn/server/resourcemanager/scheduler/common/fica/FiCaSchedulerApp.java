@@ -744,8 +744,9 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       }
       int numCont = (int) Math.ceil(
           Resources.divide(rc, clusterResource, tot, minimumAllocation));
-      ResourceRequest rr = ResourceRequest.newInstance(Priority.UNDEFINED,
-          ResourceRequest.ANY, minimumAllocation, numCont);
+      ResourceRequest rr = ResourceRequest.newBuilder()
+          .priority(Priority.UNDEFINED).resourceName(ResourceRequest.ANY)
+          .capability(minimumAllocation).numContainers(numCont).build();
       List<Container> newlyAllocatedContainers = pullNewlyAllocatedContainers();
       List<Container> newlyIncreasedContainers = pullNewlyIncreasedContainers();
       List<Container> newlyDecreasedContainers = pullNewlyDecreasedContainers();

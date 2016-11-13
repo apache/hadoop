@@ -50,6 +50,8 @@ public class RMAppAttemptMetrics {
   private WriteLock writeLock;
   private AtomicLong finishedMemorySeconds = new AtomicLong(0);
   private AtomicLong finishedVcoreSeconds = new AtomicLong(0);
+  private AtomicLong preemptedMemorySeconds = new AtomicLong(0);
+  private AtomicLong preemptedVcoreSeconds = new AtomicLong(0);
   private RMContext rmContext;
 
   private int[][] localityStatistics =
@@ -98,6 +100,14 @@ public class RMAppAttemptMetrics {
     }
   }
 
+  public long getPreemptedMemory() {
+    return preemptedMemorySeconds.get();
+  }
+
+  public long getPreemptedVcore() {
+    return preemptedVcoreSeconds.get();
+  }
+
   public int getNumNonAMContainersPreempted() {
     return numNonAMContainersPreempted.get();
   }
@@ -132,6 +142,12 @@ public class RMAppAttemptMetrics {
                                         long finishedVcoreSeconds) {
     this.finishedMemorySeconds.addAndGet(finishedMemorySeconds);
     this.finishedVcoreSeconds.addAndGet(finishedVcoreSeconds);
+  }
+
+  public void updateAggregatePreemptedAppResourceUsage(
+      long preemptedMemorySeconds, long preemptedVcoreSeconds) {
+    this.preemptedMemorySeconds.addAndGet(preemptedMemorySeconds);
+    this.preemptedVcoreSeconds.addAndGet(preemptedVcoreSeconds);
   }
 
   public void incNumAllocatedContainers(NodeType containerType,

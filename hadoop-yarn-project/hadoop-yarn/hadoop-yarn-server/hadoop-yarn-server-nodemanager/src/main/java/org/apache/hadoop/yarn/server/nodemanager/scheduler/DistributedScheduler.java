@@ -220,16 +220,27 @@ public final class DistributedScheduler extends AbstractRequestInterceptor {
   public DistributedSchedulingAllocateResponse allocateForDistributedScheduling(
       DistributedSchedulingAllocateRequest request)
       throws YarnException, IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Forwarding allocate request to the" +
-          "Distributed Scheduler Service on YARN RM");
-    }
+
+    // Partition requests to GUARANTEED and OPPORTUNISTIC.
+    OpportunisticContainerAllocator.PartitionedResourceRequests
+        partitionedAsks = containerAllocator
+        .partitionAskList(request.getAllocateRequest().getAskList());
+
+    // Allocate OPPORTUNISTIC containers.
+    request.getAllocateRequest().setAskList(partitionedAsks.getOpportunistic());
     List<Container> allocatedContainers =
         containerAllocator.allocateContainers(
             request.getAllocateRequest(), applicationAttemptId,
             oppContainerContext, rmIdentifier, appSubmitter);
 
+    // Prepare request for sending to RM for scheduling GUARANTEED containers.
     request.setAllocatedContainers(allocatedContainers);
+    request.getAllocateRequest().setAskList(partitionedAsks.getGuaranteed());
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Forwarding allocate request to the" +
+          "Distributed Scheduler Service on YARN RM");
+    }
 
     DistributedSchedulingAllocateResponse dsResp =
         getNextInterceptor().allocateForDistributedScheduling(request);

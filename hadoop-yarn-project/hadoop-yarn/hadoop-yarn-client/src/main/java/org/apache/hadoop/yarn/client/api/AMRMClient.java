@@ -31,7 +31,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
@@ -106,14 +105,14 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    * All getters return immutable values.
    */
   public static class ContainerRequest {
-    final Resource capability;
-    final List<String> nodes;
-    final List<String> racks;
-    final Priority priority;
-    final long allocationRequestId;
-    final boolean relaxLocality;
-    final String nodeLabelsExpression;
-    final ExecutionTypeRequest executionTypeRequest;
+    private Resource capability;
+    private List<String> nodes;
+    private List<String> racks;
+    private Priority priority;
+    private long allocationRequestId;
+    private boolean relaxLocality;
+    private String nodeLabelsExpression;
+    private ExecutionTypeRequest executionTypeRequest;
     
     /**
      * Instantiates a {@link ContainerRequest} with the given constraints and
@@ -306,17 +305,6 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
         Priority priority, long allocationRequestId, boolean relaxLocality,
         String nodeLabelsExpression,
         ExecutionTypeRequest executionTypeRequest) {
-      // Validate request
-      Preconditions.checkArgument(capability != null,
-          "The Resource to be requested for each container " +
-              "should not be null ");
-      Preconditions.checkArgument(priority != null,
-          "The priority at which to request containers should not be null ");
-      Preconditions.checkArgument(
-              !(!relaxLocality && (racks == null || racks.length == 0) 
-                  && (nodes == null || nodes.length == 0)),
-              "Can't turn off locality relaxation on a " + 
-              "request with no location constraints");
       this.allocationRequestId = allocationRequestId;
       this.capability = capability;
       this.nodes = (nodes != null ? ImmutableList.copyOf(nodes) : null);
@@ -325,8 +313,25 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
       this.relaxLocality = relaxLocality;
       this.nodeLabelsExpression = nodeLabelsExpression;
       this.executionTypeRequest = executionTypeRequest;
+      sanityCheck();
+    }
+
+    // Validate request
+    private void sanityCheck() {
+      Preconditions.checkArgument(capability != null,
+          "The Resource to be requested for each container " +
+              "should not be null ");
+      Preconditions.checkArgument(priority != null,
+          "The priority at which to request containers should not be null ");
+      Preconditions.checkArgument(
+              !(!relaxLocality && (racks == null || racks.size() == 0)
+                  && (nodes == null || nodes.size() == 0)),
+              "Can't turn off locality relaxation on a " +
+              "request with no location constraints");
     }
     
+    private ContainerRequest() {};
+
     public Resource getCapability() {
       return capability;
     }
@@ -368,8 +373,70 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
           .append("]");
       return sb.toString();
     }
+
+    public static ContainerRequestBuilder newBuilder() {
+      return new ContainerRequestBuilder();
+    }
+
+    /**
+     * Class to construct instances of {@link ContainerRequest} with specific
+     * options.
+     */
+    public static final class ContainerRequestBuilder {
+      private ContainerRequest containerRequest = new ContainerRequest();
+
+      public ContainerRequestBuilder capability(Resource capability) {
+        containerRequest.capability = capability;
+        return this;
+      }
+
+      public ContainerRequestBuilder nodes(String[] nodes) {
+        containerRequest.nodes =
+            (nodes != null ? ImmutableList.copyOf(nodes): null);
+        return this;
+      }
+
+      public ContainerRequestBuilder racks(String[] racks) {
+        containerRequest.racks =
+            (racks != null ? ImmutableList.copyOf(racks) : null);
+        return this;
+      }
+
+      public ContainerRequestBuilder priority(Priority priority) {
+        containerRequest.priority = priority;
+        return this;
+      }
+
+      public ContainerRequestBuilder allocationRequestId(
+          long allocationRequestId) {
+        containerRequest.allocationRequestId = allocationRequestId;
+        return this;
+      }
+
+      public ContainerRequestBuilder relaxLocality(boolean relaxLocality) {
+        containerRequest.relaxLocality = relaxLocality;
+        return this;
+      }
+
+      public ContainerRequestBuilder nodeLabelsExpression(
+          String nodeLabelsExpression) {
+        containerRequest.nodeLabelsExpression = nodeLabelsExpression;
+        return this;
+      }
+
+      public ContainerRequestBuilder executionTypeRequest(
+          ExecutionTypeRequest executionTypeRequest) {
+        containerRequest.executionTypeRequest = executionTypeRequest;
+        return this;
+      }
+
+      public ContainerRequest build() {
+        containerRequest.sanityCheck();
+        return containerRequest;
+      }
+    }
   }
- 
+
   /**
    * Register the application master. This must be called before any 
    * other interaction

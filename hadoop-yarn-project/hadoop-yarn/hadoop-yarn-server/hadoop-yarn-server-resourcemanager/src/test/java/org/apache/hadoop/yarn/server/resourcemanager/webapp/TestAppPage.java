@@ -64,7 +64,8 @@ public class TestAppPage {
     when(app.getFinishTime()).thenReturn(0L);
     when(app.createApplicationState()).thenReturn(YarnApplicationState.FAILED);
     
-    RMAppMetrics appMetrics = new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, 0, 0);
+    RMAppMetrics appMetrics = new RMAppMetrics(
+        Resource.newInstance(0, 0), 0, 0, 0, 0, 0, 0);
     when(app.getRMAppMetrics()).thenReturn(appMetrics);
     
     // initialize RM Context, and create RMApp, without creating RMAppAttempt

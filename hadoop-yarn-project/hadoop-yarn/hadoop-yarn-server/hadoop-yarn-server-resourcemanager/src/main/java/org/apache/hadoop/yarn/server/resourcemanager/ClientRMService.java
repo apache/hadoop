@@ -108,12 +108,15 @@ import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -1589,37 +1592,11 @@ public class ClientRMService extends AbstractService implements
 
     ApplicationId applicationId = request.getApplicationId();
     Priority newAppPriority = request.getApplicationPriority();
-    UserGroupInformation callerUGI;
-    try {
-      callerUGI = UserGroupInformation.getCurrentUser();
-    } catch (IOException ie) {
-      LOG.info("Error getting UGI ", ie);
-      RMAuditLogger.logFailure("UNKNOWN", AuditConstants.UPDATE_APP_PRIORITY,
-          "UNKNOWN", "ClientRMService", "Error getting UGI", applicationId);
-      throw RPCUtil.getRemoteException(ie);
-    }
 
-    RMApp application = this.rmContext.getRMApps().get(applicationId);
-    if (application == null) {
-      RMAuditLogger.logFailure(callerUGI.getUserName(),
-          AuditConstants.UPDATE_APP_PRIORITY, "UNKNOWN", "ClientRMService",
-          "Trying to update priority of an absent application", applicationId);
-      throw new ApplicationNotFoundException(
-          "Trying to update priority of an absent application "
-          + applicationId);
-    }
-
-    if (!checkAccess(callerUGI, application.getUser(),
-        ApplicationAccessType.MODIFY_APP, application)) {
-      RMAuditLogger.logFailure(callerUGI.getShortUserName(),
-          AuditConstants.UPDATE_APP_PRIORITY,
-          "User doesn't have permissions to "
-              + ApplicationAccessType.MODIFY_APP.toString(), "ClientRMService",
-          AuditConstants.UNAUTHORIZED_USER, applicationId);
-      throw RPCUtil.getRemoteException(new AccessControlException("User "
-          + callerUGI.getShortUserName() + " cannot perform operation "
-          + ApplicationAccessType.MODIFY_APP.name() + " on " + applicationId));
-    }
+    UserGroupInformation callerUGI =
+        getCallerUgi(applicationId, AuditConstants.UPDATE_APP_PRIORITY);
+    RMApp application = verifyUserAccessForRMApp(applicationId, callerUGI,
+        AuditConstants.UPDATE_APP_PRIORITY);
 
     UpdateApplicationPriorityResponse response = recordFactory
         .newRecordInstance(UpdateApplicationPriorityResponse.class);
@@ -1722,6 +1699,106 @@ public class ClientRMService extends AbstractService implements
 
     return recordFactory
         .newRecordInstance(SignalContainerResponse.class);
+  }
+
+  @Override
+  public UpdateApplicationTimeoutsResponse updateApplicationTimeouts(
+      UpdateApplicationTimeoutsRequest request)
+      throws YarnException, IOException {
+
+    ApplicationId applicationId = request.getApplicationId();
+    Map<ApplicationTimeoutType, String> applicationTimeouts =
+        request.getApplicationTimeouts();
+
+    UserGroupInformation callerUGI =
+        getCallerUgi(applicationId, AuditConstants.UPDATE_APP_TIMEOUTS);
+    RMApp application = verifyUserAccessForRMApp(applicationId, callerUGI,
+        AuditConstants.UPDATE_APP_TIMEOUTS);
+
+    if (applicationTimeouts.isEmpty()) {
+      String message =
+          "At least one ApplicationTimeoutType should be configured"
+              + " for updating timeouts.";
+      RMAuditLogger.logFailure(callerUGI.getShortUserName(),
+          AuditConstants.UPDATE_APP_TIMEOUTS, "UNKNOWN", "ClientRMService",
+          message, applicationId);
+      throw RPCUtil.getRemoteException(message);
+    }
+
+    UpdateApplicationTimeoutsResponse response = recordFactory
+        .newRecordInstance(UpdateApplicationTimeoutsResponse.class);
+
+    RMAppState state = application.getState();
+    if (!EnumSet
+        .of(RMAppState.SUBMITTED, RMAppState.ACCEPTED, RMAppState.RUNNING)
+        .contains(state)) {
+      if (COMPLETED_APP_STATES.contains(state)) {
+        // If Application is in any of the final states, update timeout
+        // can be skipped rather throwing exception.
+        RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
+            AuditConstants.UPDATE_APP_TIMEOUTS, "ClientRMService",
+            applicationId);
+        return response;
+      }
+      String msg =
+          "Application is in " + state + " state can not update timeout.";
+      RMAuditLogger.logFailure(callerUGI.getShortUserName(),
+          AuditConstants.UPDATE_APP_TIMEOUTS, "UNKNOWN", "ClientRMService",
+          msg);
+      throw RPCUtil.getRemoteException(msg);
+    }
+
+    try {
+      rmAppManager.updateApplicationTimeout(application, applicationTimeouts);
+    } catch (YarnException ex) {
+      RMAuditLogger.logFailure(callerUGI.getShortUserName(),
+          AuditConstants.UPDATE_APP_TIMEOUTS, "UNKNOWN", "ClientRMService",
+          ex.getMessage());
+      throw RPCUtil.getRemoteException(ex);
+    }
+
+    RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
+        AuditConstants.UPDATE_APP_TIMEOUTS, "ClientRMService", applicationId);
+    return response;
+  }
+
+  private UserGroupInformation getCallerUgi(ApplicationId applicationId,
+      String operation) throws YarnException {
+    UserGroupInformation callerUGI;
+    try {
+      callerUGI = UserGroupInformation.getCurrentUser();
+    } catch (IOException ie) {
+      LOG.info("Error getting UGI ", ie);
+      RMAuditLogger.logFailure("UNKNOWN", operation, "UNKNOWN",
+          "ClientRMService", "Error getting UGI", applicationId);
+      throw RPCUtil.getRemoteException(ie);
+    }
+    return callerUGI;
+  }
+
+  private RMApp verifyUserAccessForRMApp(ApplicationId applicationId,
+      UserGroupInformation callerUGI, String operation) throws YarnException {
+    RMApp application = this.rmContext.getRMApps().get(applicationId);
+    if (application == null) {
+      RMAuditLogger.logFailure(callerUGI.getUserName(), operation, "UNKNOWN",
+          "ClientRMService",
+          "Trying to " + operation + " of an absent application",
+          applicationId);
+      throw new ApplicationNotFoundException("Trying to " + operation
+          + " of an absent application " + applicationId);
+    }
+
+    if (!checkAccess(callerUGI, application.getUser(),
+        ApplicationAccessType.MODIFY_APP, application)) {
+      RMAuditLogger.logFailure(callerUGI.getShortUserName(), operation,
+          "User doesn't have permissions to "
+              + ApplicationAccessType.MODIFY_APP.toString(),
+          "ClientRMService", AuditConstants.UNAUTHORIZED_USER, applicationId);
+      throw RPCUtil.getRemoteException(new AccessControlException("User "
+          + callerUGI.getShortUserName() + " cannot perform operation "
+          + ApplicationAccessType.MODIFY_APP.name() + " on " + applicationId));
+    }
+    return application;
   }
 
 }

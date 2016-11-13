@@ -1133,4 +1133,19 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       INTRA_QUEUE_PREEMPTION_CONFIG_PREFIX + "max-allowable-limit";
   public static final float DEFAULT_INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT =
       0.2f;
+
+  /**
+   * Maximum application for a queue to be used when application per queue is
+   * not defined.To be consistent with previous version the default value is set
+   * as UNDEFINED.
+   */
+  @Private
+  public static final String QUEUE_GLOBAL_MAX_APPLICATION =
+      PREFIX + "global-queue-max-application";
+
+  public int getGlobalMaximumApplicationsPerQueue() {
+    int maxApplicationsPerQueue =
+        getInt(QUEUE_GLOBAL_MAX_APPLICATION, (int) UNDEFINED);
+    return maxApplicationsPerQueue;
+  }
 }

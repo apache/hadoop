@@ -424,6 +424,18 @@ public class NamenodeWebHdfsMethods {
         excludeDatanodes, createFlagParam, noredirect);
   }
 
+  /** Validate all required params. */
+  @SuppressWarnings("rawtypes")
+  private void validateOpParams(HttpOpParam<?> op, Param... params) {
+    for (Param param : params) {
+      if (param.getValue() == null || param.getValueString() == null || param
+          .getValueString().isEmpty()) {
+        throw new IllegalArgumentException("Required param " + param.getName()
+            + " for op: " + op.getValueString() + " is null or empty");
+      }
+    }
+  }
+
   /** Handle HTTP PUT request. */
   @PUT
   @Path("{" + UriFsPathParam.NAME + ":.*}")
@@ -576,6 +588,7 @@ public class NamenodeWebHdfsMethods {
     }
     case CREATESYMLINK:
     {
+      validateOpParams(op, destination);
       np.createSymlink(destination.getValue(), fullpath,
           PermissionParam.getDefaultSymLinkFsPermission(),
           createParent.getValue());
@@ -583,6 +596,7 @@ public class NamenodeWebHdfsMethods {
     }
     case RENAME:
     {
+      validateOpParams(op, destination);
       final EnumSet<Options.Rename> s = renameOptions.getValue();
       if (s.isEmpty()) {
         final boolean b = np.rename(fullpath, destination.getValue());
@@ -621,6 +635,7 @@ public class NamenodeWebHdfsMethods {
     }
     case RENEWDELEGATIONTOKEN:
     {
+      validateOpParams(op, delegationTokenArgument);
       final Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>();
       token.decodeFromUrlString(delegationTokenArgument.getValue());
       final long expiryTime = np.renewDelegationToken(token);
@@ -629,16 +644,19 @@ public class NamenodeWebHdfsMethods {
     }
     case CANCELDELEGATIONTOKEN:
     {
+      validateOpParams(op, delegationTokenArgument);
       final Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>();
       token.decodeFromUrlString(delegationTokenArgument.getValue());
       np.cancelDelegationToken(token);
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case MODIFYACLENTRIES: {
+      validateOpParams(op, aclPermission);
       np.modifyAclEntries(fullpath, aclPermission.getAclPermission(true));
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case REMOVEACLENTRIES: {
+      validateOpParams(op, aclPermission);
       np.removeAclEntries(fullpath, aclPermission.getAclPermission(false));
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
@@ -651,10 +669,12 @@ public class NamenodeWebHdfsMethods {
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case SETACL: {
+      validateOpParams(op, aclPermission);
       np.setAcl(fullpath, aclPermission.getAclPermission(true));
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case SETXATTR: {
+      validateOpParams(op, xattrName, xattrSetFlag);
       np.setXAttr(
           fullpath,
           XAttrHelper.buildXAttr(xattrName.getXAttrName(),
@@ -662,6 +682,7 @@ public class NamenodeWebHdfsMethods {
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case REMOVEXATTR: {
+      validateOpParams(op, xattrName);
       np.removeXAttr(fullpath, XAttrHelper.buildXAttr(xattrName.getXAttrName()));
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
@@ -676,6 +697,7 @@ public class NamenodeWebHdfsMethods {
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case RENAMESNAPSHOT: {
+      validateOpParams(op, oldSnapshotName, snapshotName);
       np.renameSnapshot(fullpath, oldSnapshotName.getValue(),
           snapshotName.getValue());
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
@@ -794,15 +816,13 @@ public class NamenodeWebHdfsMethods {
     }
     case CONCAT:
     {
+      validateOpParams(op, concatSrcs);
       np.concat(fullpath, concatSrcs.getAbsolutePaths());
       return Response.ok().build();
     }
     case TRUNCATE:
     {
-      if (newLength.getValue() == null) {
-        throw new IllegalArgumentException(
-            "newLength parameter is Missing");
-      }
+      validateOpParams(op, newLength);
       // We treat each rest request as a separate client.
       final boolean b = np.truncate(fullpath, newLength.getValue(),
           "DFSClient_" + DFSUtil.getSecureRandom().nextLong());
@@ -1033,6 +1053,7 @@ public class NamenodeWebHdfsMethods {
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETXATTRS: {
+      validateOpParams(op, xattrEncoding);
       List<String> names = null;
       if (xattrNames != null) {
         names = Lists.newArrayListWithCapacity(xattrNames.size());
@@ -1054,6 +1075,7 @@ public class NamenodeWebHdfsMethods {
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case CHECKACCESS: {
+      validateOpParams(op, fsAction);
       np.checkAccess(fullpath, FsAction.getFsAction(fsAction.getValue()));
       return Response.ok().build();
     }
@@ -1222,6 +1244,7 @@ public class NamenodeWebHdfsMethods {
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case DELETESNAPSHOT: {
+      validateOpParams(op, snapshotName);
       np.deleteSnapshot(fullpath, snapshotName.getValue());
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }

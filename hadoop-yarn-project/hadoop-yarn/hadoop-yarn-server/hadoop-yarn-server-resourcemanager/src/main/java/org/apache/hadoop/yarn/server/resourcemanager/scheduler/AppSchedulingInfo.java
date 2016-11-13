@@ -946,10 +946,13 @@ public class AppSchedulingInfo {
   }
 
   public ResourceRequest cloneResourceRequest(ResourceRequest request) {
-    ResourceRequest newRequest =
-        ResourceRequest.newInstance(request.getPriority(),
-            request.getResourceName(), request.getCapability(), 1,
-            request.getRelaxLocality(), request.getNodeLabelExpression());
+    ResourceRequest newRequest = ResourceRequest.newBuilder()
+        .priority(request.getPriority())
+        .resourceName(request.getResourceName())
+        .capability(request.getCapability())
+        .numContainers(1)
+        .relaxLocality(request.getRelaxLocality())
+        .nodeLabelExpression(request.getNodeLabelExpression()).build();
     return newRequest;
   }
 

@@ -868,6 +868,13 @@ public class CapacityScheduler extends
       String queueName, String user, Priority priority) {
     try {
       writeLock.lock();
+      if (isSystemAppsLimitReached()) {
+        String message = "Maximum system application limit reached,"
+            + "cannot accept submission of application: " + applicationId;
+        this.rmContext.getDispatcher().getEventHandler().handle(new RMAppEvent(
+            applicationId, RMAppEventType.APP_REJECTED, message));
+        return;
+      }
       // Sanity checks.
       CSQueue queue = getQueue(queueName);
       if (queue == null) {
@@ -2023,6 +2030,13 @@ public class CapacityScheduler extends
     return apps;
   }
 
+  public boolean isSystemAppsLimitReached() {
+    if (root.getNumApplications() < conf.getMaximumSystemApplications()) {
+      return false;
+    }
+    return true;
+  }
+
   private CapacitySchedulerConfiguration loadCapacitySchedulerConfiguration(
       Configuration configuration) throws IOException {
     try {
@@ -2418,8 +2432,9 @@ public class CapacityScheduler extends
         ApplicationStateData.newInstance(rmApp.getSubmitTime(),
             rmApp.getStartTime(), rmApp.getApplicationSubmissionContext(),
             rmApp.getUser(), rmApp.getCallerContext());
+    appState.setApplicationTimeouts(rmApp.getApplicationTimeouts());
     rmContext.getStateStore().updateApplicationStateSynchronously(appState,
-        false);
+        false, null);
 
     // As we use iterator over a TreeSet for OrderingPolicy, once we change
     // priority then reinsert back to make order correct.

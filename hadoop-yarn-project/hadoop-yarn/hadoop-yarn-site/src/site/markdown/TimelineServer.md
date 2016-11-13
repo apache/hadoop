@@ -632,7 +632,7 @@ Use the following URI to obtain all the entity objects of a given
 
 ### HTTP Operations Supported:
 
-    GET  http://localhost:8188/ws/v1/timeline/DS_APP_ATTEMPT
+    GET
 
 
 ### Query Parameters Supported:
@@ -687,7 +687,7 @@ will be returned as a collection of container objects. See also
 
 HTTP Request:
 
-    GET http://<timeline server http address:port>/ws/v1/timeline/{entity-type}
+    GET http://localhost:8188/ws/v1/timeline/DS_APP_ATTEMPT
 
 Response Header:
 
@@ -795,7 +795,7 @@ String.
 
 HTTP Request:
 
-    GET http://<timeline server http address:port>/ws/v1/timeline/{entity-type}/{entity-id}
+    GET http://localhost:8188/ws/v1/timeline/DS_APP_ATTEMPT/appattempt_1430424020775_0003_000001
 
 Response Header:
 
@@ -804,8 +804,6 @@ Response Header:
     Transfer-Encoding: chunked
 
 Response Body:
-
-    http://localhost:8188/ws/v1/timeline/DS_APP_ATTEMPT/appattempt_1430424020775_0003_000001
 
     {
       "events":[
@@ -847,15 +845,17 @@ Use the following URI to obtain the event objects of the given `entityType`.
 
 ### Query Parameters Supported:
 
-1. `entityIds` - The entity IDs to retrieve events for.
+1. `entityId` - The entity IDs to retrieve events for. If null, no events will be returned.
+  Multiple entityIds can be given as comma separated values.
 1. `limit` - A limit on the number of events to return for each entity. If null,
   defaults to 100 events per entity.
 1. `windowStart` - If not null, retrieves only events later than the given time
   (exclusive)
 1. `windowEnd` - If not null, retrieves only events earlier than the given time
   (inclusive)
-1. `eventTypes` - Restricts the events returned to the given types. If null,
-  events of all types will be returned.
+1. `eventType` - Restricts the events returned to the given types. If null,
+  events of all types will be returned. Multiple eventTypes can be given as
+  comma separated values.
 
 ### Elements of the `events` (Timeline Entity List) Object
 
@@ -882,7 +882,7 @@ Below is the elements of a single event object.  Note that `value` of
 
 HTTP Request:
 
-    GET http://<timeline server http address:port>/ws/v1/timeline/entity%20type%200/events
+    GET http://localhost:8188/ws/v1/timeline/DS_APP_ATTEMPT/events?entityId=appattempt_1430424020775_0003_000001
 
 Response Header:
 
@@ -893,9 +893,6 @@ Response Header:
 Response Body:
 
 
-    GET http://localhost:8188/ws/v1/timeline/DS_APP_ATTEMPT/events?entityId=appattempt_1430424020775_0003_000001
-    
-    
     {
     "events": [
       {

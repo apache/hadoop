@@ -1524,13 +1524,13 @@ public class TestNodeStatusUpdater {
       long t = System.currentTimeMillis();
       long duration = t - waitStartTime;
       boolean waitTimeValid = (duration >= nmRmConnectionWaitMs) &&
-          (duration < (connectionWaitMs + delta));
+          (duration < (nmRmConnectionWaitMs + delta));
 
       if(!waitTimeValid) {
         // throw exception if NM doesn't retry long enough
         throw new Exception("NM should have tried re-connecting to RM during " +
-          "period of at least " + connectionWaitMs + " ms, but " +
-          "stopped retrying within " + (connectionWaitMs + delta) +
+          "period of at least " + nmRmConnectionWaitMs + " ms, but " +
+          "stopped retrying within " + (nmRmConnectionWaitMs + delta) +
           " ms: " + e, e);
       }
     }

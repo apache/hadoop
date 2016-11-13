@@ -38,7 +38,6 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -157,12 +156,18 @@ public class OpportunisticContainerAllocator {
     }
   }
 
-  static class PartitionedResourceRequests {
+  /**
+   * Class that includes two lists of {@link ResourceRequest}s: one for
+   * GUARANTEED and one for OPPORTUNISTIC {@link ResourceRequest}s.
+   */
+  public static class PartitionedResourceRequests {
     private List<ResourceRequest> guaranteed = new ArrayList<>();
     private List<ResourceRequest> opportunistic = new ArrayList<>();
+
     public List<ResourceRequest> getGuaranteed() {
       return guaranteed;
     }
+
     public List<ResourceRequest> getOpportunistic() {
       return opportunistic;
     }
@@ -186,10 +191,10 @@ public class OpportunisticContainerAllocator {
   }
 
   /**
-   * Entry point into the Opportunistic Container Allocator.
+   * Allocate OPPORTUNISTIC containers.
    * @param request AllocateRequest
    * @param applicationAttemptId ApplicationAttemptId
-   * @param appContext App Specific OpportunisticContainerContext
+   * @param opportContext App specific OpportunisticContainerContext
    * @param rmIdentifier RM Identifier
    * @param appSubmitter App Submitter
    * @return List of Containers.
@@ -197,37 +202,31 @@ public class OpportunisticContainerAllocator {
    */
   public List<Container> allocateContainers(
       AllocateRequest request, ApplicationAttemptId applicationAttemptId,
-      OpportunisticContainerContext appContext, long rmIdentifier,
+      OpportunisticContainerContext opportContext, long rmIdentifier,
       String appSubmitter) throws YarnException {
-    // Partition requests into GUARANTEED and OPPORTUNISTIC reqs
-    PartitionedResourceRequests partitionedAsks =
-        partitionAskList(request.getAskList());
-
-    if (partitionedAsks.getOpportunistic().isEmpty()) {
-      return Collections.emptyList();
-    }
-
+    // Update released containers.
     List<ContainerId> releasedContainers = request.getReleaseList();
     int numReleasedContainers = releasedContainers.size();
     if (numReleasedContainers > 0) {
       LOG.info("AttemptID: " + applicationAttemptId + " released: "
           + numReleasedContainers);
-      appContext.getContainersAllocated().removeAll(releasedContainers);
+      opportContext.getContainersAllocated().removeAll(releasedContainers);
     }
 
-    // Also, update black list
+    // Update black list.
     ResourceBlacklistRequest rbr = request.getResourceBlacklistRequest();
     if (rbr != null) {
-      appContext.getBlacklist().removeAll(rbr.getBlacklistRemovals());
-      appContext.getBlacklist().addAll(rbr.getBlacklistAdditions());
+      opportContext.getBlacklist().removeAll(rbr.getBlacklistRemovals());
+      opportContext.getBlacklist().addAll(rbr.getBlacklistAdditions());
     }
 
-    // Add OPPORTUNISTIC reqs to the outstanding reqs
-    appContext.addToOutstandingReqs(partitionedAsks.getOpportunistic());
+    // Add OPPORTUNISTIC requests to the outstanding ones.
+    opportContext.addToOutstandingReqs(request.getAskList());
 
+    // Satisfy the outstanding OPPORTUNISTIC requests.
     List<Container> allocatedContainers = new ArrayList<>();
     for (Priority priority :
-        appContext.getOutstandingOpReqs().descendingKeySet()) {
+        opportContext.getOutstandingOpReqs().descendingKeySet()) {
       // Allocated containers :
       //  Key = Requested Capability,
       //  Value = List of Containers of given cap (the actual container size
@@ -235,16 +234,14 @@ public class OpportunisticContainerAllocator {
       //          we need the requested capability (key) to match against
       //          the outstanding reqs)
       Map<Resource, List<Container>> allocated = allocate(rmIdentifier,
-          appContext, priority, applicationAttemptId, appSubmitter);
+          opportContext, priority, applicationAttemptId, appSubmitter);
       for (Map.Entry<Resource, List<Container>> e : allocated.entrySet()) {
-        appContext.matchAllocationToOutstandingRequest(
+        opportContext.matchAllocationToOutstandingRequest(
             e.getKey(), e.getValue());
         allocatedContainers.addAll(e.getValue());
       }
     }
 
-    // Send all the GUARANTEED Reqs to RM
-    request.setAskList(partitionedAsks.getGuaranteed());
     return allocatedContainers;
   }
 
@@ -359,8 +356,14 @@ public class OpportunisticContainerAllocator {
     return containerToken;
   }
 
-  private PartitionedResourceRequests partitionAskList(List<ResourceRequest>
-      askList) {
+  /**
+   * Partitions a list of ResourceRequest to two separate lists, one for
+   * GUARANTEED and one for OPPORTUNISTIC ResourceRequests.
+   * @param askList the list of ResourceRequests to be partitioned
+   * @return the partitioned ResourceRequests
+   */
+  public PartitionedResourceRequests partitionAskList(
+      List<ResourceRequest> askList) {
     PartitionedResourceRequests partitionedRequests =
         new PartitionedResourceRequests();
     for (ResourceRequest rr : askList) {

@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.security.token.delegation.web;
 
+import static org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator.DelegationTokenOperation.*;
+
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
@@ -457,5 +460,52 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
     Mockito.when(response.getWriter()).thenReturn(pwriter);
     Assert.assertFalse(handler.managementOperation(null, request, response));
     Mockito.verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+  }
+
+  @Test
+  public void testWriterNotClosed() throws Exception {
+    Properties conf = new Properties();
+    conf.put(KerberosDelegationTokenAuthenticationHandler.TOKEN_KIND, "foo");
+    conf.put(DelegationTokenAuthenticationHandler.JSON_MAPPER_PREFIX
+        + "AUTO_CLOSE_TARGET", "false");
+    DelegationTokenAuthenticationHandler noAuthCloseHandler =
+        new MockDelegationTokenAuthenticationHandler();
+    try {
+      noAuthCloseHandler.initTokenManager(conf);
+      noAuthCloseHandler.initJsonFactory(conf);
+
+      DelegationTokenAuthenticator.DelegationTokenOperation op =
+          GETDELEGATIONTOKEN;
+      HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+      HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+      Mockito.when(request.getQueryString()).thenReturn(
+          DelegationTokenAuthenticator.OP_PARAM + "=" + op.toString());
+      Mockito.when(request.getMethod()).thenReturn(op.getHttpMethod());
+
+      AuthenticationToken token = Mockito.mock(AuthenticationToken.class);
+      Mockito.when(token.getUserName()).thenReturn("user");
+      final MutableBoolean closed = new MutableBoolean();
+      PrintWriter printWriterCloseCount = new PrintWriter(new StringWriter()) {
+        @Override
+        public void close() {
+          closed.setValue(true);
+          super.close();
+        }
+
+        @Override
+        public void write(String str) {
+          if (closed.booleanValue()) {
+            throw new RuntimeException("already closed!");
+          }
+          super.write(str);
+        }
+
+      };
+      Mockito.when(response.getWriter()).thenReturn(printWriterCloseCount);
+      Assert.assertFalse(noAuthCloseHandler.managementOperation(token, request,
+          response));
+    } finally {
+      noAuthCloseHandler.destroy();
+    }
   }
 }

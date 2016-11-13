@@ -22,14 +22,17 @@ package org.apache.hadoop.fs.adl;
 import com.squareup.okhttp.mockwebserver.MockResponse;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.common.AdlMockWebServer;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+
+import static org.apache.hadoop.fs.adl.AdlConfKeys.ADL_BLOCK_SIZE;
 
 /**
  * This class is responsible for testing local getFileStatus implementation
@@ -39,6 +42,8 @@ import java.net.URISyntaxException;
  * org.apache.hadoop.fs.adl.live testing package.
  */
 public class TestGetFileStatus extends AdlMockWebServer {
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestGetFileStatus.class);
 
   @Test
   public void getFileStatusReturnsAsExpected()
@@ -46,20 +51,20 @@ public class TestGetFileStatus extends AdlMockWebServer {
     getMockServer().enqueue(new MockResponse().setResponseCode(200)
         .setBody(TestADLResponseData.getGetFileStatusJSONResponse()));
     long startTime = Time.monotonicNow();
-    FileStatus fileStatus = getMockAdlFileSystem().getFileStatus(
-        new Path("/test1/test2"));
+    FileStatus fileStatus = getMockAdlFileSystem()
+        .getFileStatus(new Path("/test1/test2"));
     long endTime = Time.monotonicNow();
-    System.out.println("Time : " + (endTime - startTime));
+    LOG.debug("Time : " + (endTime - startTime));
     Assert.assertTrue(fileStatus.isFile());
-    Assert.assertEquals(fileStatus.getPath().toString(),
-        "adl://" + getMockServer().getHostName() + ":"
-            + getMockServer().getPort()
-            + "/test1/test2");
-    Assert.assertEquals(fileStatus.getLen(), 4194304);
-    Assert.assertEquals(fileStatus.getBlockSize(), 268435456);
-    Assert.assertEquals(fileStatus.getReplication(), 0);
-    Assert.assertEquals(fileStatus.getPermission(), new FsPermission("777"));
-    Assert.assertEquals(fileStatus.getOwner(), "NotSupportYet");
-    Assert.assertEquals(fileStatus.getGroup(), "NotSupportYet");
+    Assert.assertEquals("adl://" + getMockServer().getHostName() + ":" +
+        getMockServer().getPort() + "/test1/test2",
+        fileStatus.getPath().toString());
+    Assert.assertEquals(4194304, fileStatus.getLen());
+    Assert.assertEquals(ADL_BLOCK_SIZE, fileStatus.getBlockSize());
+    Assert.assertEquals(1, fileStatus.getReplication());
+    Assert.assertEquals(new FsPermission("777"), fileStatus.getPermission());
+    Assert.assertEquals("NotSupportYet", fileStatus.getOwner());
+    Assert.assertEquals("NotSupportYet", fileStatus.getGroup());
   }
+
 }

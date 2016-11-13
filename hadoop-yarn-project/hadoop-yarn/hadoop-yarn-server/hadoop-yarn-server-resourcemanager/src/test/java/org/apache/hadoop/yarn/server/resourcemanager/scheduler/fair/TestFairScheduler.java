@@ -4813,4 +4813,45 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals(0, metrics.getReservedMB());
     assertEquals(0, metrics.getReservedVirtualCores());
   }
+
+
+  @Test
+  public void testUpdateDemand() throws IOException {
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    Resource maxResource = Resources.createResource(1024 * 8);
+
+    FSAppAttempt app1 = mock(FSAppAttempt.class);
+    Mockito.when(app1.getDemand()).thenReturn(maxResource);
+    FSAppAttempt app2 = mock(FSAppAttempt.class);
+    Mockito.when(app2.getDemand()).thenReturn(maxResource);
+
+    QueueManager queueManager = scheduler.getQueueManager();
+    FSParentQueue queue1 = queueManager.getParentQueue("queue1", true);
+
+    FSLeafQueue aQueue =
+        new FSLeafQueue("root.queue1.a", scheduler, queue1);
+    aQueue.setMaxShare(maxResource);
+    aQueue.addAppSchedulable(app1);
+
+    FSLeafQueue bQueue =
+        new FSLeafQueue("root.queue1.b", scheduler, queue1);
+    bQueue.setMaxShare(maxResource);
+    bQueue.addAppSchedulable(app2);
+
+    queue1.setMaxShare(maxResource);
+    queue1.addChildQueue(aQueue);
+    queue1.addChildQueue(bQueue);
+
+    queue1.updateDemand();
+
+    assertTrue("Demand is greater than max allowed ",
+        Resources.equals(queue1.getDemand(), maxResource));
+    assertTrue("Demand of child queue not updated ",
+        Resources.equals(aQueue.getDemand(), maxResource) &&
+        Resources.equals(bQueue.getDemand(), maxResource));
+  }
+
 }
