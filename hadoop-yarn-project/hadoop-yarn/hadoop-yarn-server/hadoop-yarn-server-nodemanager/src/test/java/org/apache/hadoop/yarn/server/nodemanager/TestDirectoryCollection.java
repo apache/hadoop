@@ -149,7 +149,6 @@ public class TestDirectoryCollection {
     Assert.assertEquals(0, dc.getFullDirs().size());
   }
 
-  @Test
   public void testDiskLimitsCutoffSetters() throws IOException {
 
     String[] dirs = { "dir" };
@@ -174,7 +173,6 @@ public class TestDirectoryCollection {
     Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoff());
   }
 
-  @Test
   public void testFailedDisksBecomingGoodAgain() throws Exception {
 
     String dirA = new File(testDir, "dirA").getPath();

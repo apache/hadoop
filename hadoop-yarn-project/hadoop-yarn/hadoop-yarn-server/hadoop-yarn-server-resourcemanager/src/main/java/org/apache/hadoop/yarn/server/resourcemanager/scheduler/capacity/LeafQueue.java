@@ -449,7 +449,8 @@ public class LeafQueue extends AbstractCSQueue {
     Resource oldMax = getMaximumAllocation();
     Resource newMax = newlyParsedLeafQueue.getMaximumAllocation();
     if (newMax.getMemory() < oldMax.getMemory()
-        || newMax.getVirtualCores() < oldMax.getVirtualCores()) {
+        || newMax.getVirtualCores() < oldMax.getVirtualCores()
+        || newMax.getGPUs() < oldMax.getGPUs()) {
       throw new IOException(
           "Trying to reinitialize "
               + getQueuePath()

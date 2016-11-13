@@ -563,8 +563,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
     int minimumGPUs = getInt(
-            YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS,
-            YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS);
+        YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS);
     return Resources.createResource(minimumMemory, minimumCores, minimumGPUs);
   }
 
@@ -576,8 +576,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
     int maximumGPUs = getInt(
-            YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS,
-            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS);
+        YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS);
     return Resources.createResource(maximumMemory, maximumCores, maximumGPUs);
   }
 
@@ -621,7 +621,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     Resource result = Resources.createResource(maxAllocationMbPerQueue,
         maxAllocationVcoresPerQueue, maxAllocationGPUsPerQueue);
     if (maxAllocationMbPerQueue > clusterMax.getMemory()
-        || maxAllocationVcoresPerQueue > clusterMax.getVirtualCores()) {
+        || maxAllocationVcoresPerQueue > clusterMax.getVirtualCores()
+        || maxAllocationGPUsPerQueue > clusterMax.getGPUs()) {
       throw new IllegalArgumentException(
           "Queue maximum allocation cannot be larger than the cluster setting"
           + " for queue " + queue

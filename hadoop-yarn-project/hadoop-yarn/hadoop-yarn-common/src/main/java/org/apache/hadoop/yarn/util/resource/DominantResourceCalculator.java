@@ -146,7 +146,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
     return Resources.createResource(
         divideAndCeil(numerator.getMemory(), denominator),
         divideAndCeil(numerator.getVirtualCores(), denominator),
-        0
+        divideAndCeil(numerator.getGPUs(), denominator)
         );
   }
 
@@ -177,7 +177,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
     return Resources.createResource(
         roundUp(r.getMemory(), stepFactor.getMemory()), 
         roundUp(r.getVirtualCores(), stepFactor.getVirtualCores()),
-        0
+        roundUp(r.getGPUs(), stepFactor.getGPUs())
         );
   }
 
@@ -186,7 +186,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
     return Resources.createResource(
         roundDown(r.getMemory(), stepFactor.getMemory()),
         roundDown(r.getVirtualCores(), stepFactor.getVirtualCores()),
-        0
+        roundDown(r.getGPUs(), stepFactor.getGPUs())
         );
   }
 
@@ -199,7 +199,9 @@ public class DominantResourceCalculator extends ResourceCalculator {
         roundUp(
             (int)Math.ceil(r.getVirtualCores() * by), 
             stepFactor.getVirtualCores()),
-        0
+        roundUp(
+            (int)Math.ceil(r.getGPUs() * by),
+            stepFactor.getGPUs())
         );
   }
 
@@ -215,7 +217,10 @@ public class DominantResourceCalculator extends ResourceCalculator {
             (int)(r.getVirtualCores() * by), 
             stepFactor.getVirtualCores()
             ),
-        0
+        roundDown(
+            (int)(r.getGPUs() * by),
+            stepFactor.getGPUs()
+            )
         );
   }
 

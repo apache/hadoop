@@ -148,7 +148,7 @@ public class TestDominantResourceFairnessPolicy {
   public void testCalculateShares() {
     Resource used = Resources.createResource(10, 5, 0);
     Resource capacity = Resources.createResource(100, 10, 0);
-    ResourceType[] resourceOrder = new ResourceType[2];
+    ResourceType[] resourceOrder = new ResourceType[3];
     ResourceWeights shares = new ResourceWeights();
     DominantResourceFairnessPolicy.DominantResourceFairnessComparator comparator =
         new DominantResourceFairnessPolicy.DominantResourceFairnessComparator();
