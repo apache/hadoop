@@ -166,7 +166,7 @@ public class ContainerImpl implements Container {
   private String ips;
   private volatile ReInitializationContext reInitContext;
   private volatile boolean isReInitializing = false;
-  private volatile boolean isMarkedToKill = false;
+  private volatile boolean isMarkeForKilling = false;
 
   /** The NM-wide configuration - not specific to this container */
   private final Configuration daemonConf;
@@ -731,7 +731,7 @@ public class ContainerImpl implements Container {
   @SuppressWarnings("unchecked") // dispatcher not typed
   @Override
   public void sendKillEvent(int exitStatus, String description) {
-    this.isMarkedToKill = true;
+    this.isMarkeForKilling = true;
     dispatcher.getEventHandler().handle(
         new ContainerKillEvent(containerId, exitStatus, description));
   }
@@ -1389,7 +1389,7 @@ public class ContainerImpl implements Container {
 
       container.resourceSet =
           container.reInitContext.mergedResourceSet(container.resourceSet);
-      container.isMarkedToKill = false;
+      container.isMarkeForKilling = false;
       container.sendScheduleEvent();
     }
   }
@@ -1742,8 +1742,8 @@ public class ContainerImpl implements Container {
   }
 
   @Override
-  public boolean isMarkedToKill() {
-    return this.isMarkedToKill;
+  public boolean isMarkedForKilling() {
+    return this.isMarkeForKilling;
   }
 
   @Override

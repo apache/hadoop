@@ -402,7 +402,7 @@ public class ContainerLaunch implements Callable<Integer> {
   @SuppressWarnings("unchecked")
   protected int launchContainer(ContainerStartContext ctx) throws IOException {
     ContainerId containerId = container.getContainerId();
-    if (container.isMarkedToKill()) {
+    if (container.isMarkedForKilling()) {
       LOG.info("Container " + containerId + " not launched as it has already "
           + "been marked for Killing");
       this.killedBeforeStart = true;

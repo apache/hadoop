@@ -217,7 +217,7 @@ public class MockContainer implements Container {
   }
 
   @Override
-  public boolean isMarkedToKill() {
+  public boolean isMarkedForKilling() {
     return false;
   }
 

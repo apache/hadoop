@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
@@ -417,6 +418,125 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
     Assert.assertEquals(
         org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
         contStatus1.getState());
+  }
+
+  /**
+   * 1. Submit a GUARANTEED that will suck all NM resources.
+   * 2. Submit 6 OPPORTUNISTIC containers, all of which will be queued.
+   * 3. Update the Queue Limit to 2.
+   * 4. Ensure only 2 containers remain in the Queue, and 4 are de-Queued.
+   * @throws Exception
+   */
+  @Test
+  public void testQueueShedding() throws Exception {
+    containerManager.start();
+
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    containerLaunchContext.setCommands(Arrays.asList("sleep 100"));
+
+    List<StartContainerRequest> list = new ArrayList<>();
+    list.add(StartContainerRequest.newInstance(
+        containerLaunchContext,
+        createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, BuilderUtils.newResource(2048, 1),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.GUARANTEED)));
+
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+    containerManager.startContainers(allRequests);
+
+    list = new ArrayList<>();
+    list.add(StartContainerRequest.newInstance(
+        containerLaunchContext,
+        createContainerToken(createContainerId(1), DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, BuilderUtils.newResource(512, 1),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.OPPORTUNISTIC)));
+    list.add(StartContainerRequest.newInstance(
+        containerLaunchContext,
+        createContainerToken(createContainerId(2), DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, BuilderUtils.newResource(512, 1),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.OPPORTUNISTIC)));
+    list.add(StartContainerRequest.newInstance(
+        containerLaunchContext,
+        createContainerToken(createContainerId(3), DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, BuilderUtils.newResource(512, 1),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.OPPORTUNISTIC)));
+    list.add(StartContainerRequest.newInstance(
+        containerLaunchContext,
+        createContainerToken(createContainerId(4), DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, BuilderUtils.newResource(512, 1),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.OPPORTUNISTIC)));
+    list.add(StartContainerRequest.newInstance(
+        containerLaunchContext,
+        createContainerToken(createContainerId(5), DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, BuilderUtils.newResource(512, 1),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.OPPORTUNISTIC)));
+    list.add(StartContainerRequest.newInstance(
+        containerLaunchContext,
+        createContainerToken(createContainerId(6), DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, BuilderUtils.newResource(512, 1),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.OPPORTUNISTIC)));
+
+    allRequests = StartContainersRequest.newInstance(list);
+    containerManager.startContainers(allRequests);
+
+    ContainerScheduler containerScheduler =
+        containerManager.getContainerScheduler();
+    // Ensure both containers are properly queued.
+    while (containerScheduler.getNumQueuedContainers() < 6) {
+      Thread.sleep(100);
+    }
+    Assert.assertEquals(6, containerScheduler.getNumQueuedContainers());
+
+    ContainerQueuingLimit containerQueuingLimit = ContainerQueuingLimit
+        .newInstance();
+    containerQueuingLimit.setMaxQueueLength(2);
+    containerScheduler.updateQueuingLimit(containerQueuingLimit);
+    while (containerScheduler.getNumQueuedContainers() > 2) {
+      Thread.sleep(100);
+    }
+    Assert.assertEquals(2, containerScheduler.getNumQueuedContainers());
+
+    List<ContainerId> statList = new ArrayList<ContainerId>();
+    for (int i = 1; i < 7; i++) {
+      statList.add(createContainerId(i));
+    }
+    GetContainerStatusesRequest statRequest =
+        GetContainerStatusesRequest.newInstance(statList);
+    List<ContainerStatus> containerStatuses = containerManager
+        .getContainerStatuses(statRequest).getContainerStatuses();
+
+    int deQueuedContainers = 0;
+    int numQueuedOppContainers = 0;
+    for (ContainerStatus status : containerStatuses) {
+      if (status.getExecutionType() == ExecutionType.OPPORTUNISTIC) {
+        if (status.getDiagnostics().contains(
+            "Container De-queued to meet NM queuing limits")) {
+          deQueuedContainers++;
+        }
+        if (status.getState() ==
+            org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED) {
+          numQueuedOppContainers++;
+        }
+      }
+    }
+    Assert.assertEquals(4, deQueuedContainers);
+    Assert.assertEquals(2, numQueuedOppContainers);
   }
 
   /**
