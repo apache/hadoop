@@ -318,8 +318,12 @@ public class ContainerManagerImpl extends CompositeService implements
     }
   }
 
+  @VisibleForTesting
   protected ContainerScheduler createContainerScheduler(Context cntxt) {
-    return new ContainerScheduler(cntxt);
+    // Currently, this dispatcher is shared by the ContainerManager,
+    // all the containers, the container monitor and all the container.
+    // The ContainerScheduler may use its own dispatcher.
+    return new ContainerScheduler(cntxt, dispatcher, metrics);
   }
 
   protected ContainersMonitor createContainersMonitor(ContainerExecutor exec) {
@@ -1274,10 +1278,8 @@ public class ContainerManagerImpl extends CompositeService implements
       }
     } else {
       context.getNMStateStore().storeContainerKilled(containerID);
-      dispatcher.getEventHandler().handle(
-        new ContainerKillEvent(containerID,
-            ContainerExitStatus.KILLED_BY_APPMASTER,
-            "Container killed by the ApplicationMaster."));
+      container.sendKillEvent(ContainerExitStatus.KILLED_BY_APPMASTER,
+          "Container killed by the ApplicationMaster.");
 
       NMAuditLogger.logSuccess(container.getUser(),    
         AuditConstants.STOP_CONTAINER, "ContainerManageImpl", containerID

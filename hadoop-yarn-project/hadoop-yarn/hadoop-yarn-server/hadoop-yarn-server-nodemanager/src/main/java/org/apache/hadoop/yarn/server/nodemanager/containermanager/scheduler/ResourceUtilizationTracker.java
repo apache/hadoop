@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 
-import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
-import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 
@@ -38,15 +36,15 @@ import org.slf4j.LoggerFactory;
  * resource utilization.
  */
 
-public class ResourceUtilizationManager {
+public class ResourceUtilizationTracker {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(ResourceUtilizationManager.class);
+      LoggerFactory.getLogger(ResourceUtilizationTracker.class);
 
   private ResourceUtilization containersAllocation;
   private ContainerScheduler scheduler;
 
-  ResourceUtilizationManager(ContainerScheduler scheduler) {
+  ResourceUtilizationTracker(ContainerScheduler scheduler) {
     this.containersAllocation = ResourceUtilization.newInstance(0, 0, 0.0f);
     this.scheduler = scheduler;
   }

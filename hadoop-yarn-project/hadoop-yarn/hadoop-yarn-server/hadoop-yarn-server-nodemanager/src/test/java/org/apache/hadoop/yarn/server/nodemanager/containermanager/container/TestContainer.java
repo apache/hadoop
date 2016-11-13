@@ -934,7 +934,7 @@ public class TestContainer {
       auxBus = mock(EventHandler.class);
       appBus = mock(EventHandler.class);
       LogBus = mock(EventHandler.class);
-      schedBus = new ContainerScheduler(context, 0) {
+      schedBus = new ContainerScheduler(context, dispatcher, metrics, 0) {
         @Override
         protected void scheduleContainer(Container container) {
           container.sendLaunchEvent();

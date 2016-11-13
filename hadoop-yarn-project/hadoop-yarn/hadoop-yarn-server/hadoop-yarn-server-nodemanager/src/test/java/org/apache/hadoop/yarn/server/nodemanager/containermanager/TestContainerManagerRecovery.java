@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
@@ -97,6 +98,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.Log
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerScheduler;
+
+import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
@@ -555,7 +558,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
       }
       @Override
       protected ContainerScheduler createContainerScheduler(Context context) {
-        return new ContainerScheduler(context){
+        return new ContainerScheduler(context, dispatcher, metrics){
           @Override
           public ContainersMonitor getContainersMonitor() {
             return new ContainersMonitorImpl(null, null, null) {

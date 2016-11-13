@@ -249,7 +249,9 @@ public abstract class SchedulerNode {
    */
   protected synchronized void updateResourceForReleasedContainer(
       Container container) {
-    addUnallocatedResource(container.getResource());
+    if (container.getExecutionType() == ExecutionType.GUARANTEED) {
+      addUnallocatedResource(container.getResource());
+    }
     --numContainers;
   }
 

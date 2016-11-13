@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
@@ -32,6 +33,8 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 
+
+import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +50,7 @@ import java.util.Map;
 
 /**
  * The ContainerScheduler manages a collection of runnable containers. It
- * ensures that a container is launched only if all it launch criteria are
+ * ensures that a container is launched only if all its launch criteria are
  * met. It also ensures that OPPORTUNISTIC containers are killed to make
  * room for GUARANTEED containers.
  */
@@ -69,13 +72,13 @@ public class ContainerScheduler extends AbstractService implements
 
   // Used to keep track of containers that have been marked to be killed
   // to make room for a guaranteed container.
-  private final Map<ContainerId, Container> oppContainersMarkedForKill =
+  private final Map<ContainerId, Container> oppContainersToKill =
       new HashMap<>();
 
   // Containers launched by the Scheduler will take a while to actually
   // move to the RUNNING state, but should still be fair game for killing
   // by the scheduler to make room for guaranteed containers.
-  private final LinkedHashMap<ContainerId, Container> scheduledToRunContainers =
+  private final LinkedHashMap<ContainerId, Container> runningContainers =
       new LinkedHashMap<>();
 
   private final ContainerQueuingLimit queuingLimit =
@@ -83,26 +86,33 @@ public class ContainerScheduler extends AbstractService implements
 
   private final OpportunisticContainersStatus opportunisticContainersStatus;
 
-  // Resource Utilization Manager that decides how utilization of the cluster
-  // increase / decreases based on container start / finish
-  private ResourceUtilizationManager utilizationManager;
+  // Resource Utilization Tracker that decides how utilization of the cluster
+  // increases / decreases based on container start / finish
+  private ResourceUtilizationTracker utilizationTracker;
+
+  private final AsyncDispatcher dispatcher;
+  private final NodeManagerMetrics metrics;
 
   /**
    * Instantiate a Container Scheduler.
    * @param context NodeManager Context.
    */
-  public ContainerScheduler(Context context) {
-    this(context, context.getConf().getInt(
+  public ContainerScheduler(Context context, AsyncDispatcher dispatcher,
+      NodeManagerMetrics metrics) {
+    this(context, dispatcher, metrics, context.getConf().getInt(
         YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH,
         YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH_DEFAULT));
   }
 
   @VisibleForTesting
-  public ContainerScheduler(Context context, int qLength) {
+  public ContainerScheduler(Context context, AsyncDispatcher dispatcher,
+      NodeManagerMetrics metrics, int qLength) {
     super(ContainerScheduler.class.getName());
     this.context = context;
+    this.dispatcher = dispatcher;
+    this.metrics = metrics;
     this.maxOppQueueLength = (qLength <= 0) ? 0 : qLength;
-    this.utilizationManager = new ResourceUtilizationManager(this);
+    this.utilizationTracker = new ResourceUtilizationTracker(this);
     this.opportunisticContainersStatus =
         OpportunisticContainersStatus.newInstance();
   }
@@ -119,6 +129,9 @@ public class ContainerScheduler extends AbstractService implements
       break;
     case CONTAINER_COMPLETED:
       onContainerCompleted(event.getContainer());
+      break;
+    case SHED_QUEUED_CONTAINERS:
+      shedQueuedOpportunisticContainers();
       break;
     default:
       LOG.error("Unknown event arrived at ContainerScheduler: "
@@ -150,29 +163,34 @@ public class ContainerScheduler extends AbstractService implements
         getNumQueuedOpportunisticContainers());
     this.opportunisticContainersStatus.setWaitQueueLength(
         getNumQueuedContainers());
+    this.opportunisticContainersStatus.setOpportMemoryUsed(
+        metrics.getOpportMemoryUsed());
+    this.opportunisticContainersStatus.setOpportCoresUsed(
+        metrics.getOpportCoresUsed());
+    this.opportunisticContainersStatus.setRunningOpportContainers(
+        metrics.getRunningOpportContainers());
     return this.opportunisticContainersStatus;
   }
 
   private void onContainerCompleted(Container container) {
+    oppContainersToKill.remove(container.getContainerId());
+
+    // This could be killed externally for eg. by the ContainerManager,
+    // in which case, the container might still be queued.
+    queuedOpportunisticContainers.remove(container.getContainerId());
+    queuedGuaranteedContainers.remove(container.getContainerId());
+
     // decrement only if it was a running container
-    if (scheduledToRunContainers.containsKey(container.getContainerId())) {
-      this.utilizationManager.subtractContainerResource(container);
+    Container completedContainer = runningContainers.remove(container
+        .getContainerId());
+    if (completedContainer != null) {
+      this.utilizationTracker.subtractContainerResource(container);
       if (container.getContainerTokenIdentifier().getExecutionType() ==
           ExecutionType.OPPORTUNISTIC) {
-        this.opportunisticContainersStatus.setOpportMemoryUsed(
-            this.opportunisticContainersStatus.getOpportMemoryUsed()
-                - container.getResource().getMemorySize());
-        this.opportunisticContainersStatus.setOpportCoresUsed(
-            this.opportunisticContainersStatus.getOpportCoresUsed()
-                - container.getResource().getVirtualCores());
-        this.opportunisticContainersStatus.setRunningOpportContainers(
-            this.opportunisticContainersStatus.getRunningOpportContainers()
-                - 1);
+        this.metrics.opportunisticContainerCompleted(container);
       }
+      startPendingContainers();
     }
-    scheduledToRunContainers.remove(container.getContainerId());
-    oppContainersMarkedForKill.remove(container.getContainerId());
-    startPendingContainers();
   }
 
   private void startPendingContainers() {
@@ -191,7 +209,7 @@ public class ContainerScheduler extends AbstractService implements
     boolean resourcesAvailable = true;
     while (cIter.hasNext() && resourcesAvailable) {
       Container container = cIter.next();
-      if (this.utilizationManager.hasResourcesAvailable(container)) {
+      if (this.utilizationTracker.hasResourcesAvailable(container)) {
         startAllocatedContainer(container);
         cIter.remove();
       } else {
@@ -209,7 +227,7 @@ public class ContainerScheduler extends AbstractService implements
     }
     if (queuedGuaranteedContainers.isEmpty() &&
         queuedOpportunisticContainers.isEmpty() &&
-        this.utilizationManager.hasResourcesAvailable(container)) {
+        this.utilizationTracker.hasResourcesAvailable(container)) {
       startAllocatedContainer(container);
     } else {
       LOG.info("No available resources for container {} to start its execution "
@@ -242,7 +260,8 @@ public class ContainerScheduler extends AbstractService implements
           this.context.getNMStateStore().storeContainerQueued(
               container.getContainerId());
         } catch (IOException e) {
-          LOG.warn("Could not store container state into store..", e);
+          LOG.warn("Could not store container [" + container.getContainerId()
+              + "] state. The Container has been queued.", e);
         }
       }
     }
@@ -256,7 +275,7 @@ public class ContainerScheduler extends AbstractService implements
       contToKill.sendKillEvent(
           ContainerExitStatus.KILLED_BY_CONTAINER_SCHEDULER,
           "Container Killed to make room for Guaranteed Container.");
-      oppContainersMarkedForKill.put(contToKill.getContainerId(), contToKill);
+      oppContainersToKill.put(contToKill.getContainerId(), contToKill);
       LOG.info(
           "Opportunistic container {} will be killed in order to start the "
               + "execution of guaranteed container {}.",
@@ -266,26 +285,18 @@ public class ContainerScheduler extends AbstractService implements
 
   private void startAllocatedContainer(Container container) {
     LOG.info("Starting container [" + container.getContainerId()+ "]");
-    scheduledToRunContainers.put(container.getContainerId(), container);
-    this.utilizationManager.addContainerResources(container);
+    runningContainers.put(container.getContainerId(), container);
+    this.utilizationTracker.addContainerResources(container);
     if (container.getContainerTokenIdentifier().getExecutionType() ==
         ExecutionType.OPPORTUNISTIC) {
-      this.opportunisticContainersStatus.setOpportMemoryUsed(
-          this.opportunisticContainersStatus.getOpportMemoryUsed()
-              + container.getResource().getMemorySize());
-      this.opportunisticContainersStatus.setOpportCoresUsed(
-          this.opportunisticContainersStatus.getOpportCoresUsed()
-              + container.getResource().getVirtualCores());
-      this.opportunisticContainersStatus.setRunningOpportContainers(
-          this.opportunisticContainersStatus.getRunningOpportContainers()
-              + 1);
+      this.metrics.opportunisticContainerStarted(container);
     }
     container.sendLaunchEvent();
   }
 
   private List<Container> pickOpportunisticContainersToKill(
       ContainerId containerToStartId) {
-    // The additional opportunistic containers that need to be killed for the
+    // The opportunistic containers that need to be killed for the
     // given container to start.
     List<Container> extraOpportContainersToKill = new ArrayList<>();
     // Track resources that need to be freed.
@@ -295,29 +306,29 @@ public class ContainerScheduler extends AbstractService implements
     // Go over the running opportunistic containers.
     // Use a descending iterator to kill more recently started containers.
     Iterator<Container> reverseContainerIterator =
-        new LinkedList<>(scheduledToRunContainers.values()).descendingIterator();
+        new LinkedList<>(runningContainers.values()).descendingIterator();
     while(reverseContainerIterator.hasNext() &&
         !hasSufficientResources(resourcesToFreeUp)) {
       Container runningCont = reverseContainerIterator.next();
       if (runningCont.getContainerTokenIdentifier().getExecutionType() ==
           ExecutionType.OPPORTUNISTIC) {
 
-        if (oppContainersMarkedForKill.containsKey(
+        if (oppContainersToKill.containsKey(
             runningCont.getContainerId())) {
           // These containers have already been marked to be killed.
           // So exclude them..
           continue;
         }
         extraOpportContainersToKill.add(runningCont);
-        ResourceUtilizationManager.decreaseResourceUtilization(
+        ResourceUtilizationTracker.decreaseResourceUtilization(
             getContainersMonitor(), resourcesToFreeUp,
             runningCont.getResource());
       }
     }
     if (!hasSufficientResources(resourcesToFreeUp)) {
       LOG.warn("There are no sufficient resources to start guaranteed [{}]" +
-          "even after attempting to kill all running" +
-          "opportunistic containers.", containerToStartId);
+          "at the moment. Opportunistic containers are in the process of" +
+          "being killed to make room.", containerToStartId);
     }
     return extraOpportContainersToKill;
   }
@@ -333,12 +344,12 @@ public class ContainerScheduler extends AbstractService implements
       ContainerId containerToStartId) {
     // Get allocation of currently allocated containers.
     ResourceUtilization resourceAllocationToFreeUp = ResourceUtilization
-        .newInstance(this.utilizationManager.getCurrentUtilization());
+        .newInstance(this.utilizationTracker.getCurrentUtilization());
 
     // Add to the allocation the allocation of the pending guaranteed
     // containers that will start before the current container will be started.
     for (Container container : queuedGuaranteedContainers.values()) {
-      ResourceUtilizationManager.increaseResourceUtilization(
+      ResourceUtilizationTracker.increaseResourceUtilization(
           getContainersMonitor(), resourceAllocationToFreeUp,
           container.getResource());
       if (container.getContainerId().equals(containerToStartId)) {
@@ -346,10 +357,10 @@ public class ContainerScheduler extends AbstractService implements
       }
     }
 
-    // These Resources have already been freed, due to demand from an
-    // earlier Guaranteed container.
-    for (Container container : oppContainersMarkedForKill.values()) {
-      ResourceUtilizationManager.decreaseResourceUtilization(
+    // These resources are being freed, likely at the behest of another
+    // guaranteed container..
+    for (Container container : oppContainersToKill.values()) {
+      ResourceUtilizationTracker.decreaseResourceUtilization(
           getContainersMonitor(), resourceAllocationToFreeUp,
           container.getResource());
     }
@@ -362,9 +373,12 @@ public class ContainerScheduler extends AbstractService implements
 
   public void updateQueuingLimit(ContainerQueuingLimit limit) {
     this.queuingLimit.setMaxQueueLength(limit.getMaxQueueLength());
-    // TODO: Include wait time as well once it is implemented
+    // YARN-2886 should add support for wait-times. Include wait time as
+    // well once it is implemented
     if (this.queuingLimit.getMaxQueueLength() > -1) {
-      shedQueuedOpportunisticContainers();
+      dispatcher.getEventHandler().handle(
+          new ContainerSchedulerEvent(null,
+              ContainerSchedulerEventType.SHED_QUEUED_CONTAINERS));
     }
   }
 
@@ -377,7 +391,7 @@ public class ContainerScheduler extends AbstractService implements
       if (numAllowed <= 0) {
         container.sendKillEvent(
             ContainerExitStatus.KILLED_BY_CONTAINER_SCHEDULER,
-            "Container Killed to make room for Guaranteed Container.");
+            "Container De-queued to meet NM queuing limits.");
         containerIter.remove();
         LOG.info(
             "Opportunistic container {} will be killed to meet NM queuing" +

@@ -1000,7 +1000,7 @@
   </property>
 
   <property>
-    <description>Max numbed of OPPORTUNISTIC containers to queue at the
+    <description>Max number of OPPORTUNISTIC containers to queue at the
       nodemanager.</description>
     <name>yarn.nodemanager.opportunistic-containers-max-queue-length</name>
     <value>0</value>

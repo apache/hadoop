@@ -739,7 +739,7 @@ public class ContainersMonitorImpl extends AbstractService implements
       LOG.warn("Container " + containerId.toString() + "does not exist");
       return;
     }
-    // TODO: Route this through the ContainerScheduler to
+    // YARN-5860: Route this through the ContainerScheduler to
     //       fix containerAllocation
     container.setResource(resource);
   }
