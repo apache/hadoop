@@ -96,12 +96,15 @@ public class ContainerScheduler extends AbstractService implements
   /**
    * Instantiate a Container Scheduler.
    * @param context NodeManager Context.
+   * @param dispatcher AsyncDispatcher.
+   * @param metrics NodeManagerMetrics.
    */
   public ContainerScheduler(Context context, AsyncDispatcher dispatcher,
       NodeManagerMetrics metrics) {
     this(context, dispatcher, metrics, context.getConf().getInt(
         YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH,
-        YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH_DEFAULT));
+        YarnConfiguration.
+            NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH_DEFAULT));
   }
 
   @VisibleForTesting
@@ -371,6 +374,7 @@ public class ContainerScheduler extends AbstractService implements
     return resourceAllocationToFreeUp;
   }
 
+  @SuppressWarnings("unchecked")
   public void updateQueuingLimit(ContainerQueuingLimit limit) {
     this.queuingLimit.setMaxQueueLength(limit.getMaxQueueLength());
     // YARN-2886 should add support for wait-times. Include wait time as

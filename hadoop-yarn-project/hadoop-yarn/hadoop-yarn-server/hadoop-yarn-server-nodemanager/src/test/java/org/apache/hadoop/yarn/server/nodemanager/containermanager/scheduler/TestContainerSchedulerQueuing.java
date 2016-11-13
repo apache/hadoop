@@ -421,7 +421,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
   }
 
   /**
-   * 1. Submit a GUARANTEED that will suck all NM resources.
+   * 1. Submit a long running GUARANTEED container to hog all NM resources.
    * 2. Submit 6 OPPORTUNISTIC containers, all of which will be queued.
    * 3. Update the Queue Limit to 2.
    * 4. Ensure only 2 containers remain in the Queue, and 4 are de-Queued.
@@ -497,8 +497,10 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
 
     ContainerScheduler containerScheduler =
         containerManager.getContainerScheduler();
-    // Ensure both containers are properly queued.
-    while (containerScheduler.getNumQueuedContainers() < 6) {
+    // Ensure all containers are properly queued.
+    int numTries = 30;
+    while ((containerScheduler.getNumQueuedContainers() < 6) &&
+        (numTries-- > 0)) {
       Thread.sleep(100);
     }
     Assert.assertEquals(6, containerScheduler.getNumQueuedContainers());
@@ -507,7 +509,9 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
         .newInstance();
     containerQueuingLimit.setMaxQueueLength(2);
     containerScheduler.updateQueuingLimit(containerQueuingLimit);
-    while (containerScheduler.getNumQueuedContainers() > 2) {
+    numTries = 30;
+    while ((containerScheduler.getNumQueuedContainers() > 2) &&
+        (numTries-- > 0)) {
       Thread.sleep(100);
     }
     Assert.assertEquals(2, containerScheduler.getNumQueuedContainers());
@@ -537,6 +541,74 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
     }
     Assert.assertEquals(4, deQueuedContainers);
     Assert.assertEquals(2, numQueuedOppContainers);
+  }
+
+  /**
+   * 1. Submit a long running GUARANTEED container to hog all NM resources.
+   * 2. Submit 2 OPPORTUNISTIC containers, both of which will be queued.
+   * 3. Send Stop Container to one of the queued containers.
+   * 4. Ensure container is removed from the queue.
+   * @throws Exception
+   */
+  @Test
+  public void testContainerDeQueuedAfterAMKill() throws Exception {
+    containerManager.start();
+
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    containerLaunchContext.setCommands(Arrays.asList("sleep 100"));
+
+    List<StartContainerRequest> list = new ArrayList<>();
+    list.add(StartContainerRequest.newInstance(
+        containerLaunchContext,
+        createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, BuilderUtils.newResource(2048, 1),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.GUARANTEED)));
+
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+    containerManager.startContainers(allRequests);
+
+    list = new ArrayList<>();
+    list.add(StartContainerRequest.newInstance(
+        containerLaunchContext,
+        createContainerToken(createContainerId(1), DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, BuilderUtils.newResource(512, 1),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.OPPORTUNISTIC)));
+    list.add(StartContainerRequest.newInstance(
+        containerLaunchContext,
+        createContainerToken(createContainerId(2), DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, BuilderUtils.newResource(512, 1),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.OPPORTUNISTIC)));
+
+    allRequests = StartContainersRequest.newInstance(list);
+    containerManager.startContainers(allRequests);
+
+    ContainerScheduler containerScheduler =
+        containerManager.getContainerScheduler();
+    // Ensure both containers are properly queued.
+    int numTries = 30;
+    while ((containerScheduler.getNumQueuedContainers() < 2) &&
+        (numTries-- > 0)) {
+      Thread.sleep(100);
+    }
+    Assert.assertEquals(2, containerScheduler.getNumQueuedContainers());
+
+    containerManager.stopContainers(
+        StopContainersRequest.newInstance(Arrays.asList(createContainerId(2))));
+
+    numTries = 30;
+    while ((containerScheduler.getNumQueuedContainers() > 1) &&
+        (numTries-- > 0)) {
+      Thread.sleep(100);
+    }
+    Assert.assertEquals(1, containerScheduler.getNumQueuedContainers());
   }
 
   /**
