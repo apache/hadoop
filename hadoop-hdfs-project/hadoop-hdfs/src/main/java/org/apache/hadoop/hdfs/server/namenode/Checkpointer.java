@@ -264,7 +264,7 @@ class Checkpointer extends Daemon {
         bnStorage.writeAll();
       }
     } finally {
-      backupNode.namesystem.writeUnlock();
+      backupNode.namesystem.writeUnlock("doCheckpoint");
     }
 
     if(cpCmd.needToReturnImage()) {

@@ -2679,6 +2679,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.lock.detailed-metrics.enabled</name>
+  <value>false</value>
+  <description>If true, the namenode will keep track of how long various
+    operations hold the Namesystem lock for and emit this as metrics.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.startup.delay.block.deletion.sec</name>
   <value>0</value>
   <description>The delay in seconds at which we will pause the blocks deletion
