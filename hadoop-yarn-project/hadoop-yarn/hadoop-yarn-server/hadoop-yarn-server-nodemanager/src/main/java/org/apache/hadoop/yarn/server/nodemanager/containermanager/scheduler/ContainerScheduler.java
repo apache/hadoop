@@ -115,7 +115,8 @@ public class ContainerScheduler extends AbstractService implements
     this.dispatcher = dispatcher;
     this.metrics = metrics;
     this.maxOppQueueLength = (qLength <= 0) ? 0 : qLength;
-    this.utilizationTracker = new ResourceUtilizationTracker(this);
+    this.utilizationTracker =
+        new AllocationBasedResourceUtilizationTracker(this);
     this.opportunisticContainersStatus =
         OpportunisticContainersStatus.newInstance();
   }
@@ -308,11 +309,11 @@ public class ContainerScheduler extends AbstractService implements
 
     // Go over the running opportunistic containers.
     // Use a descending iterator to kill more recently started containers.
-    Iterator<Container> reverseContainerIterator =
-        new LinkedList<>(runningContainers.values()).descendingIterator();
-    while(reverseContainerIterator.hasNext() &&
+    Iterator<Container> lifoIterator = new LinkedList<>(
+        runningContainers.values()).descendingIterator();
+    while(lifoIterator.hasNext() &&
         !hasSufficientResources(resourcesToFreeUp)) {
-      Container runningCont = reverseContainerIterator.next();
+      Container runningCont = lifoIterator.next();
       if (runningCont.getContainerTokenIdentifier().getExecutionType() ==
           ExecutionType.OPPORTUNISTIC) {
 
@@ -323,7 +324,7 @@ public class ContainerScheduler extends AbstractService implements
           continue;
         }
         extraOpportContainersToKill.add(runningCont);
-        ResourceUtilizationTracker.decreaseResourceUtilization(
+        ContainersMonitor.decreaseResourceUtilization(
             getContainersMonitor(), resourcesToFreeUp,
             runningCont.getResource());
       }
@@ -352,7 +353,7 @@ public class ContainerScheduler extends AbstractService implements
     // Add to the allocation the allocation of the pending guaranteed
     // containers that will start before the current container will be started.
     for (Container container : queuedGuaranteedContainers.values()) {
-      ResourceUtilizationTracker.increaseResourceUtilization(
+      ContainersMonitor.increaseResourceUtilization(
           getContainersMonitor(), resourceAllocationToFreeUp,
           container.getResource());
       if (container.getContainerId().equals(containerToStartId)) {
@@ -363,7 +364,7 @@ public class ContainerScheduler extends AbstractService implements
     // These resources are being freed, likely at the behest of another
     // guaranteed container..
     for (Container container : oppContainersToKill.values()) {
-      ResourceUtilizationTracker.decreaseResourceUtilization(
+      ContainersMonitor.decreaseResourceUtilization(
           getContainersMonitor(), resourceAllocationToFreeUp,
           container.getResource());
     }
