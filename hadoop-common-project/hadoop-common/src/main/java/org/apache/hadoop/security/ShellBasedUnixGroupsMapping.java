@@ -18,17 +18,23 @@
 package org.apache.hadoop.security;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.StringTokenizer;
+
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A simple shell-based implementation of {@link GroupMappingServiceProvider} 
@@ -37,11 +43,23 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public class ShellBasedUnixGroupsMapping
+public class ShellBasedUnixGroupsMapping extends Configured
   implements GroupMappingServiceProvider {
-  
-  private static final Log LOG =
-    LogFactory.getLog(ShellBasedUnixGroupsMapping.class);
+
+  @VisibleForTesting
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(ShellBasedUnixGroupsMapping.class);
+
+  private long timeout = 0L;
+
+  @Override
+  public void setConf(Configuration conf) {
+    super.setConf(conf);
+    timeout = conf.getLong(
+        CommonConfigurationKeys.HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT,
+        CommonConfigurationKeys.
+            HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_DEFAULT);
+  }
 
   @SuppressWarnings("serial")
   private static class PartialGroupNameException extends IOException {
@@ -98,7 +116,17 @@ public class ShellBasedUnixGroupsMapping
    */
   protected ShellCommandExecutor createGroupExecutor(String userName) {
     return new ShellCommandExecutor(
-        Shell.getGroupsForUserCommand(userName), null, null, 0L);
+        getGroupsForUserCommand(userName), null, null, timeout);
+  }
+
+  /**
+   * Returns just the shell command to be used to fetch a user's groups list.
+   * This is mainly separate to make some tests easier.
+   * @param userName The username that needs to be passed into the command built
+   * @return An appropriate shell command with arguments
+   */
+  protected String[] getGroupsForUserCommand(String userName) {
+    return Shell.getGroupsForUserCommand(userName);
   }
 
   /**
@@ -109,7 +137,17 @@ public class ShellBasedUnixGroupsMapping
    */
   protected ShellCommandExecutor createGroupIDExecutor(String userName) {
     return new ShellCommandExecutor(
-        Shell.getGroupsIDForUserCommand(userName), null, null, 0L);
+        getGroupsIDForUserCommand(userName), null, null, timeout);
+  }
+
+  /**
+   * Returns just the shell command to be used to fetch a user's group IDs list.
+   * This is mainly separate to make some tests easier.
+   * @param userName The username that needs to be passed into the command built
+   * @return An appropriate shell command with arguments
+   */
+  protected String[] getGroupsIDForUserCommand(String userName) {
+    return Shell.getGroupsIDForUserCommand(userName);
   }
 
   /**
@@ -133,8 +171,26 @@ public class ShellBasedUnixGroupsMapping
         groups = resolvePartialGroupNames(user, e.getMessage(),
             executor.getOutput());
       } catch (PartialGroupNameException pge) {
-        LOG.warn("unable to return groups for user " + user, pge);
+        LOG.warn("unable to return groups for user {}", user, pge);
         return new LinkedList<>();
+      }
+    } catch (IOException ioe) {
+      // If its a shell executor timeout, indicate so in the message
+      // but treat the result as empty instead of throwing it up,
+      // similar to how partial resolution failures are handled above
+      if (executor.isTimedOut()) {
+        LOG.warn(
+            "Unable to return groups for user '{}' as shell group lookup " +
+            "command '{}' ran longer than the configured timeout limit of " +
+            "{} seconds.",
+            user,
+            Arrays.asList(executor.getExecString()),
+            timeout
+        );
+        return new LinkedList<>();
+      } else {
+        // If its not an executor timeout, we should let the caller handle it
+        throw ioe;
       }
     }
 
@@ -212,11 +268,11 @@ public class ShellBasedUnixGroupsMapping
       throw new PartialGroupNameException("The user name '" + userName
           + "' is not found. " + errMessage);
     } else {
-      LOG.warn("Some group names for '" + userName + "' are not resolvable. "
-          + errMessage);
+      LOG.warn("Some group names for '{}' are not resolvable. {}",
+          userName, errMessage);
       // attempt to partially resolve group names
+      ShellCommandExecutor exec2 = createGroupIDExecutor(userName);
       try {
-        ShellCommandExecutor exec2 = createGroupIDExecutor(userName);
         exec2.execute();
         return parsePartialGroupNames(groupNames, exec2.getOutput());
       } catch (ExitCodeException ece) {
@@ -225,8 +281,16 @@ public class ShellBasedUnixGroupsMapping
         throw new PartialGroupNameException("failed to get group id list for " +
         "user '" + userName + "'", ece);
       } catch (IOException ioe) {
-        throw new PartialGroupNameException("can't execute the shell command to"
-        + " get the list of group id for user '" + userName + "'", ioe);
+        String message =
+            "Can't execute the shell command to " +
+            "get the list of group id for user '" + userName + "'";
+        if (exec2.isTimedOut()) {
+          message +=
+              " because of the command taking longer than " +
+              "the configured timeout: " + timeout + " seconds";
+          throw new PartialGroupNameException(message);
+        }
+        throw new PartialGroupNameException(message, ioe);
       }
     }
   }
@@ -237,7 +301,8 @@ public class ShellBasedUnixGroupsMapping
    * @param groupNames a string representing the user's group names
    * @return a linked list of group names
    */
-  private List<String> resolveFullGroupNames(String groupNames) {
+  @VisibleForTesting
+  protected List<String> resolveFullGroupNames(String groupNames) {
     StringTokenizer tokenizer =
         new StringTokenizer(groupNames, Shell.TOKEN_SEPARATOR_REGEX);
     List<String> groups = new LinkedList<String>();

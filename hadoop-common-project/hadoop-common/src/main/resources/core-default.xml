@@ -188,6 +188,19 @@
 </property>
 
 <property>
+  <name>hadoop.security.groups.shell.groups.command.timeout</name>
+  <value>0</value>
+  <description>
+    Used by the ShellBasedUnixGroupsMapping class, this property controls how
+    long to wait for the underlying shell command that is run to fetch groups.
+    Expressed in seconds, if the running command takes longer than the value
+    configured, the command is aborted and the groups resolver would return a
+    result of no groups found. A value of 0 (default) would mean an infinite
+    wait (i.e. wait until the command exits on its own).
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.connection.timeout.ms</name>
   <value>60000</value>
   <description>
