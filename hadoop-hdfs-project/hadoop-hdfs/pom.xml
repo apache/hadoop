@@ -353,6 +353,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>StorageContainerLocationProtocol.proto</include>
                   <include>StorageContainerDatanodeProtocol.proto</include>
                   <include>CBlockServiceProtocol.proto</include>
+                  <include>CBlockClientServerProtocol.proto</include>
                 </includes>
               </source>
             </configuration>
