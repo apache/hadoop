@@ -270,9 +270,9 @@ public class TestBalancer {
   public static void destroy() throws Exception {
     if (kdc != null) {
       kdc.stop();
-    }
-    FileUtil.fullyDelete(baseDir);
+      FileUtil.fullyDelete(baseDir);
       KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
+    }
   }
 
   /* create a file with a length of <code>fileLen</code> */
