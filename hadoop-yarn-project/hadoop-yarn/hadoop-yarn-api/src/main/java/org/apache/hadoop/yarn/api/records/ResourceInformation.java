@@ -31,6 +31,8 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
   private String units;
   private ResourceTypes resourceType;
   private Long value;
+  private Long minimumAllocation;
+  private Long maximumAllocation;
 
   private static final String MEMORY_URI = "memory-mb";
   private static final String VCORES_URI = "vcores";
@@ -118,6 +120,42 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
   }
 
   /**
+   * Get the minimum allocation for the resource.
+   *
+   * @return the minimum allocation for the resource
+   */
+  public Long getMinimumAllocation() {
+    return minimumAllocation;
+  }
+
+  /**
+   * Set the minimum allocation for the resource.
+   *
+   * @param minimumAllocation the minimum allocation for the resource
+   */
+  public void setMinimumAllocation(Long minimumAllocation) {
+    this.minimumAllocation = minimumAllocation;
+  }
+
+  /**
+   * Get the maximum allocation for the resource.
+   *
+   * @return the maximum allocation for the resource
+   */
+  public Long getMaximumAllocation() {
+    return maximumAllocation;
+  }
+
+  /**
+   * Set the maximum allocation for the resource.
+   *
+   * @param maximumAllocation the maximum allocation for the resource
+   */
+  public void setMaximumAllocation(Long maximumAllocation) {
+    this.maximumAllocation = maximumAllocation;
+  }
+
+  /**
    * Create a new instance of ResourceInformation from another object.
    *
    * @param other the object from which the new object should be created
@@ -129,33 +167,41 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
     ret.setResourceType(other.getResourceType());
     ret.setUnits(other.getUnits());
     ret.setValue(other.getValue());
+    ret.setMinimumAllocation(other.getMinimumAllocation());
+    ret.setMaximumAllocation(other.getMaximumAllocation());
     return ret;
   }
 
   public static ResourceInformation newInstance(String name, String units,
-      Long value, ResourceTypes type) {
+      Long value, ResourceTypes type, Long minimumAllocation,
+      Long maximumAllocation) {
     ResourceInformation ret = new ResourceInformation();
     ret.setName(name);
     ret.setResourceType(type);
     ret.setUnits(units);
     ret.setValue(value);
+    ret.setMinimumAllocation(minimumAllocation);
+    ret.setMaximumAllocation(maximumAllocation);
     return ret;
   }
 
   public static ResourceInformation newInstance(String name, String units,
       Long value) {
     return ResourceInformation
-        .newInstance(name, units, value, ResourceTypes.COUNTABLE);
+        .newInstance(name, units, value, ResourceTypes.COUNTABLE, 0L,
+            Long.MAX_VALUE);
   }
 
   public static ResourceInformation newInstance(String name, String units) {
     return ResourceInformation
-        .newInstance(name, units, 0L, ResourceTypes.COUNTABLE);
+        .newInstance(name, units, 0L, ResourceTypes.COUNTABLE, 0L,
+            Long.MAX_VALUE);
   }
 
   public static ResourceInformation newInstance(String name, Long value) {
     return ResourceInformation
-        .newInstance(name, "", value, ResourceTypes.COUNTABLE);
+        .newInstance(name, "", value, ResourceTypes.COUNTABLE, 0L,
+            Long.MAX_VALUE);
   }
 
   public static ResourceInformation newInstance(String name) {
@@ -165,7 +211,8 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
   @Override
   public String toString() {
     return "name: " + this.name + ", units: " + this.units + ", type: "
-        + resourceType + ", value: " + value;
+        + resourceType + ", value: " + value + ", minimum allocation: "
+        + minimumAllocation + ", maximum allocation: " + maximumAllocation;
   }
 
   public String getShorthandRepresentation() {
