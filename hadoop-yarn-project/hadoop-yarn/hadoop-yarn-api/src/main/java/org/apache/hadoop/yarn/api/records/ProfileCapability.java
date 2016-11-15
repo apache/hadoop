@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.util.Records;
+
+import java.util.Map;
 
 /**
  * Class to capture capability requirements when using resource profiles. The
@@ -28,31 +31,80 @@ import org.apache.hadoop.yarn.util.Records;
  * profile capability has two pieces - the resource profile name and the
  * overrides. The resource profile specifies the name of the resource profile
  * to be used and the capability override is the overrides desired on specific
- * resource types. For example, you could use the "minimum" profile and set the
- * memory in the capability override to 4096M. This implies that you wish for
- * the resources specified in the "minimum" profile but with 4096M memory. The
- * conversion from the ProfileCapability to the Resource class with the actual
- * resource requirements will be done by the ResourceManager, which has the
- * actual profile to Resource mapping.
+ * resource types.
+ *
+ * For example, if you have a resource profile "small" that maps to
+ * {@literal <4096M, 2 cores, 1 gpu>} and you set the capability override to
+ * {@literal <8192M, 0 cores, 0 gpu>}, then the actual resource allocation on
+ * the ResourceManager will be {@literal <8192M, 2 cores, 1 gpu>}.
+ *
+ * Note that the conversion from the ProfileCapability to the Resource class
+ * with the actual resource requirements will be done by the ResourceManager,
+ * which has the actual profile to Resource mapping.
+ *
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public abstract class ProfileCapability {
 
+  public static final String DEFAULT_PROFILE = "default";
+
+  public static ProfileCapability newInstance(Resource override) {
+    return newInstance(DEFAULT_PROFILE, override);
+  }
+
+  public static ProfileCapability newInstance(String profile) {
+    Preconditions
+        .checkArgument(profile != null, "The profile name cannot be null");
+    ProfileCapability obj = Records.newRecord(ProfileCapability.class);
+    obj.setProfileName(profile);
+    obj.setProfileCapabilityOverride(Resource.newInstance(0, 0));
+    return obj;
+  }
+
   public static ProfileCapability newInstance(String profile,
       Resource override) {
+    Preconditions
+        .checkArgument(profile != null, "The profile name cannot be null");
     ProfileCapability obj = Records.newRecord(ProfileCapability.class);
     obj.setProfileName(profile);
     obj.setProfileCapabilityOverride(override);
     return obj;
   }
 
+  /**
+   * Get the profile name.
+   * @return the profile name
+   */
   public abstract String getProfileName();
 
+  /**
+   * Get the profile capability override.
+   * @return Resource object containing the override.
+   */
   public abstract Resource getProfileCapabilityOverride();
 
+  /**
+   * Set the resource profile name.
+   * @param profileName the resource profile name
+   */
   public abstract void setProfileName(String profileName);
 
+  /**
+   * Set the capability override to override specific resource types on the
+   * resource profile.
+   *
+   * For example, if you have a resource profile "small" that maps to
+   * {@literal <4096M, 2 cores, 1 gpu>} and you set the capability override to
+   * {@literal <8192M, 0 cores, 0 gpu>}, then the actual resource allocation on
+   * the ResourceManager will be {@literal <8192M, 2 cores, 1 gpu>}.
+   *
+   * Note that the conversion from the ProfileCapability to the Resource class
+   * with the actual resource requirements will be done by the ResourceManager,
+   * which has the actual profile to Resource mapping.
+   *
+   * @param r Resource object containing the capability override
+   */
   public abstract void setProfileCapabilityOverride(Resource r);
 
   @Override
@@ -84,5 +136,35 @@ public abstract class ProfileCapability {
   public String toString() {
     return "{ profile: " + this.getProfileName() + ", capabilityOverride: "
         + this.getProfileCapabilityOverride() + " }";
+  }
+
+  /**
+   * Get a representation of the capability as a Resource object.
+   * @param capability the capability we wish to convert
+   * @param resourceProfilesMap map of profile name to Resource object
+   * @return Resource object representing the capability
+   */
+  public static Resource toResource(ProfileCapability capability,
+      Map<String, Resource> resourceProfilesMap) {
+    Preconditions
+        .checkArgument(capability != null, "Capability cannot be null");
+    Preconditions.checkArgument(resourceProfilesMap != null,
+        "Resource profiles map cannot be null");
+    Resource resource = Resource.newInstance(0, 0);
+
+    if (resourceProfilesMap.containsKey(capability.getProfileName())) {
+      resource = Resource
+          .newInstance(resourceProfilesMap.get(capability.getProfileName()));
+    }
+
+    if(capability.getProfileCapabilityOverride()!= null) {
+      for (Map.Entry<String, ResourceInformation> entry : capability
+          .getProfileCapabilityOverride().getResources().entrySet()) {
+        if (entry.getValue() != null && entry.getValue().getValue() != 0) {
+          resource.setResourceInformation(entry.getKey(), entry.getValue());
+        }
+      }
+    }
+    return resource;
   }
 }

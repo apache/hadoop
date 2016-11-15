@@ -19,7 +19,9 @@
 package org.apache.hadoop.yarn.api.records;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
@@ -72,6 +74,18 @@ public abstract class Resource implements Comparable<Resource> {
     resource.setMemorySize(memory);
     resource.setVirtualCores(vCores);
     return resource;
+  }
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public static Resource newInstance(Resource resource) {
+    Resource ret = Resource.newInstance(0, 0);
+    for (Map.Entry<String, ResourceInformation> entry : resource.getResources()
+        .entrySet()) {
+      ret.setResourceInformation(entry.getKey(),
+          ResourceInformation.newInstance(entry.getValue()));
+    }
+    return ret;
   }
 
   /**

@@ -83,6 +83,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -120,6 +121,7 @@ public class ApplicationMasterService extends AbstractService implements
   private final ConcurrentMap<ApplicationAttemptId, AllocateResponseLock> responseMap =
       new ConcurrentHashMap<ApplicationAttemptId, AllocateResponseLock>();
   protected final RMContext rmContext;
+  private ResourceProfilesManager resourceProfilesManager;
 
   public ApplicationMasterService(String name, RMContext rmContext,
       YarnScheduler scheduler) {
@@ -127,6 +129,7 @@ public class ApplicationMasterService extends AbstractService implements
     this.amLivelinessMonitor = rmContext.getAMLivelinessMonitor();
     this.rScheduler = scheduler;
     this.rmContext = rmContext;
+    this.resourceProfilesManager = rmContext.getResourceProfilesManager();
   }
 
   public ApplicationMasterService(RMContext rmContext,
@@ -301,6 +304,12 @@ public class ApplicationMasterService extends AbstractService implements
       response.setSchedulerResourceTypes(rScheduler
         .getSchedulingResourceTypes());
 
+      if (getConfig().getBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
+          YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED)) {
+        response
+            .setResourceProfiles(resourceProfilesManager.getResourceProfiles());
+      }
+
       return response;
     }
   }
@@ -454,6 +463,9 @@ public class ApplicationMasterService extends AbstractService implements
 
       List<ResourceRequest> ask = request.getAskList();
       List<ContainerId> release = request.getReleaseList();
+
+      RMServerUtils.convertProfileToResourceCapability(ask, getConfig(),
+          resourceProfilesManager);
 
       ResourceBlacklistRequest blacklistRequest =
           request.getResourceBlacklistRequest();

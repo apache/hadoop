@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -40,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.ProfileCapability;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
@@ -58,6 +60,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt
     .RMAppAttemptState;
@@ -79,6 +82,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  * Utility methods to aid serving RM data through the REST and RPC APIs
  */
 public class RMServerUtils {
+
+  private static final Log LOG_HANDLE = LogFactory.getLog(RMServerUtils.class);
 
   private static final String UPDATE_OUTSTANDING_ERROR =
       "UPDATE_OUTSTANDING_ERROR";
@@ -522,5 +527,50 @@ public class RMServerUtils {
       }
     }
     return newApplicationTimeout;
+  }
+
+  public static void convertProfileToResourceCapability(
+      List<ResourceRequest> asks, Configuration conf,
+      ResourceProfilesManager resourceProfilesManager) throws YarnException {
+    boolean profilesEnabled =
+        conf.getBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
+            YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED);
+    if (!profilesEnabled) {
+      return;
+    }
+    for (ResourceRequest req : asks) {
+      convertProfileToResourceCapability(req, conf, resourceProfilesManager);
+    }
+  }
+
+  public static void convertProfileToResourceCapability(ResourceRequest ask,
+      Configuration conf, ResourceProfilesManager resourceProfilesManager)
+      throws YarnException {
+
+    if (LOG_HANDLE.isDebugEnabled()) {
+      LOG_HANDLE
+          .debug("Converting profile to resource capability for ask " + ask);
+    }
+
+    boolean profilesEnabled =
+        conf.getBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
+            YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED);
+    if (!profilesEnabled) {
+      if (ask.getProfileCapability() != null && !ask.getProfileCapability()
+          .getProfileCapabilityOverride().equals(Resources.none())) {
+        ask.setCapability(
+            ask.getProfileCapability().getProfileCapabilityOverride());
+      }
+    } else {
+      if (ask.getProfileCapability() != null) {
+        ask.setCapability(ProfileCapability
+            .toResource(ask.getProfileCapability(),
+                resourceProfilesManager.getResourceProfiles()));
+      }
+    }
+    if (LOG_HANDLE.isDebugEnabled()) {
+      LOG_HANDLE
+          .debug("Converted profile to resource capability for ask " + ask);
+    }
   }
 }

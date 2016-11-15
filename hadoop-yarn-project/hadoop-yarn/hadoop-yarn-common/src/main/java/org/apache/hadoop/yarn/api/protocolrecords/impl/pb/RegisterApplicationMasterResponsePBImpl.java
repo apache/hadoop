@@ -33,6 +33,8 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NMTokenPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProfilesProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProfileEntry;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationACLMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
@@ -59,6 +61,7 @@ public class RegisterApplicationMasterResponsePBImpl extends
   private List<Container> containersFromPreviousAttempts = null;
   private List<NMToken> nmTokens = null;
   private EnumSet<SchedulerResourceTypes> schedulerResourceTypes = null;
+  private Map<String, Resource> profiles = null;
 
   public RegisterApplicationMasterResponsePBImpl() {
     builder = RegisterApplicationMasterResponseProto.newBuilder();
@@ -122,6 +125,9 @@ public class RegisterApplicationMasterResponsePBImpl extends
     }
     if(schedulerResourceTypes != null) {
       addSchedulerResourceTypes();
+    }
+    if (profiles != null) {
+      addResourceProfiles();
     }
   }
 
@@ -431,6 +437,58 @@ public class RegisterApplicationMasterResponsePBImpl extends
     initSchedulerResourceTypes();
     this.schedulerResourceTypes.clear();
     this.schedulerResourceTypes.addAll(types);
+  }
+
+  private void addResourceProfiles() {
+    maybeInitBuilder();
+    builder.clearResourceProfiles();
+    if (profiles == null) {
+      return;
+    }
+    ResourceProfilesProto.Builder profilesBuilder =
+        ResourceProfilesProto.newBuilder();
+    for (Map.Entry<String, Resource> entry : profiles.entrySet()) {
+      ResourceProfileEntry.Builder entryBuilder =
+          ResourceProfileEntry.newBuilder();
+      entryBuilder.setName(entry.getKey());
+      entryBuilder.setResources(convertToProtoFormat(entry.getValue()));
+      profilesBuilder.addResourceProfilesMap(entryBuilder.build());
+    }
+    builder.setResourceProfiles(profilesBuilder.build());
+  }
+
+  private void initResourceProfiles() {
+    if (this.profiles != null) {
+      return;
+    }
+    this.profiles = new HashMap<>();
+    RegisterApplicationMasterResponseProtoOrBuilder p =
+        viaProto ? proto : builder;
+
+    if (p.hasResourceProfiles()) {
+      ResourceProfilesProto profilesProto = p.getResourceProfiles();
+      for (ResourceProfileEntry entry : profilesProto
+          .getResourceProfilesMapList()) {
+        this.profiles
+            .put(entry.getName(), convertFromProtoFormat(entry.getResources()));
+      }
+    }
+  }
+
+  @Override
+  public Map<String, Resource> getResourceProfiles() {
+    initResourceProfiles();
+    return this.profiles;
+  }
+
+  @Override
+  public void setResourceProfiles(Map<String, Resource> profilesMap) {
+    if (profilesMap == null) {
+      return;
+    }
+    initResourceProfiles();
+    this.profiles.clear();
+    this.profiles.putAll(profilesMap);
   }
 
   private Resource convertFromProtoFormat(ResourceProto resource) {

@@ -36,10 +36,12 @@ import org.apache.hadoop.yarn.api.records.AbstractResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidLabelResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -233,6 +235,14 @@ public class SchedulerUtils {
   private static void validateResourceRequest(ResourceRequest resReq,
       Resource maximumResource, QueueInfo queueInfo, RMContext rmContext)
       throws InvalidResourceRequestException {
+    try {
+      RMServerUtils.convertProfileToResourceCapability(resReq,
+          rmContext.getYarnConfiguration(),
+          rmContext.getResourceProfilesManager());
+    } catch (YarnException ye) {
+      throw new InvalidResourceRequestException(ye);
+    }
+
     if (resReq.getCapability().getMemorySize() < 0 ||
         resReq.getCapability().getMemorySize() > maximumResource.getMemorySize()) {
       throw new InvalidResourceRequestException("Invalid resource request"
