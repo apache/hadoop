@@ -1333,8 +1333,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
    * @param conf
    * @throws Exception
    */
-  private static void deleteRMStateStore(Configuration conf) throws Exception {
+  @VisibleForTesting
+  static void deleteRMStateStore(Configuration conf) throws Exception {
     RMStateStore rmStore = RMStateStoreFactory.getStore(conf);
+    rmStore.setResourceManager(new ResourceManager());
     rmStore.init(conf);
     rmStore.start();
     try {
@@ -1346,9 +1348,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
   }
 
-  private static void removeApplication(Configuration conf, String applicationId)
+  @VisibleForTesting
+  static void removeApplication(Configuration conf, String applicationId)
       throws Exception {
     RMStateStore rmStore = RMStateStoreFactory.getStore(conf);
+    rmStore.setResourceManager(new ResourceManager());
     rmStore.init(conf);
     rmStore.start();
     try {
