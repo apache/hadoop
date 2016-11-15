@@ -215,6 +215,7 @@ JNIEXPORT jlong JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_init
       THROW(env, "java/lang/IllegalArgumentException", "Invalid key length");
     } else {
       THROW(env, "java/lang/IllegalArgumentException", keyLenErrMsg);
+      free(keyLenErrMsg);
     }
     return (jlong)0;
   }
@@ -224,6 +225,7 @@ JNIEXPORT jlong JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_init
       THROW(env, "java/lang/IllegalArgumentException", "Invalid iv length.");
     } else {
       THROW(env, "java/lang/IllegalArgumentException", ivLenErrMsg);
+      free(ivLenErrMsg);
     }
     return (jlong)0;
   }
