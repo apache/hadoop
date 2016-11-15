@@ -96,6 +96,7 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -1321,8 +1322,51 @@ public abstract class AbstractYarnScheduler
    * @param container Container.
    */
   public void asyncContainerRelease(RMContainer container) {
-    this.rmContext.getDispatcher().getEventHandler()
-        .handle(new ReleaseContainerEvent(container));
+    this.rmContext.getDispatcher().getEventHandler().handle(
+        new ReleaseContainerEvent(container));
+  }
+
+  /*
+   * Get a Resource object with for the minimum allocation possible. If resource
+   * profiles are enabled then the 'minimum' resource profile will be used. If
+   * they are not enabled, use the minimums specified in the config files.
+   *
+   * @return a Resource object with the minimum allocation for the scheduler
+   */
+  public Resource getMinimumAllocation() {
+    boolean profilesEnabled = getConfig()
+        .getBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
+            YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED);
+    Resource ret;
+    if (!profilesEnabled) {
+      ret = ResourceUtils.getResourceTypesMinimumAllocation();
+    } else {
+      ret = rmContext.getResourceProfilesManager().getMinimumProfile();
+    }
+    LOG.info("Minimum allocation = " + ret);
+    return ret;
+  }
+
+  /**
+   * Get a Resource object with for the maximum allocation possible. If resource
+   * profiles are enabled then the 'maximum' resource profile will be used. If
+   * they are not enabled, use the maximums specified in the config files.
+   *
+   * @return a Resource object with the maximum allocation for the scheduler
+   */
+
+  public Resource getMaximumAllocation() {
+    boolean profilesEnabled = getConfig()
+        .getBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
+            YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED);
+    Resource ret;
+    if (!profilesEnabled) {
+      ret = ResourceUtils.getResourceTypesMaximumAllocation();
+    } else {
+      ret = rmContext.getResourceProfilesManager().getMaximumProfile();
+    }
+    LOG.info("Maximum allocation = " + ret);
+    return ret;
   }
 
   @Override

@@ -221,8 +221,7 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
 
       return Resources.createResource(
           Math.min(configuredMaxAllocation.getMemorySize(), maxNodeMemory),
-          Math.min(configuredMaxAllocation.getVirtualCores(), maxNodeVCores)
-      );
+          Math.min(configuredMaxAllocation.getVirtualCores(), maxNodeVCores));
     } finally {
       readLock.unlock();
     }
