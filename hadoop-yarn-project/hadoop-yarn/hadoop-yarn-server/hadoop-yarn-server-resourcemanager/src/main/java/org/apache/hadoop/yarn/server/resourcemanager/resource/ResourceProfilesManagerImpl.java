@@ -88,6 +88,10 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
     while (iterator.hasNext()) {
       Map.Entry entry = (Map.Entry) iterator.next();
       String key = entry.getKey().toString();
+      if (key.isEmpty()) {
+        throw new IOException(
+            "Name of resource profile cannot be an empty string");
+      }
       if (entry.getValue() instanceof Map) {
         Map value = (Map) entry.getValue();
         // ensure memory and vcores are specified

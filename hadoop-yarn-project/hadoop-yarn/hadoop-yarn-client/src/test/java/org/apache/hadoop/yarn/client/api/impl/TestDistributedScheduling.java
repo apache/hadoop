@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ProfileCapability;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
@@ -387,18 +388,21 @@ public class TestDistributedScheduling extends BaseAMRMProxyE2ETest {
 
       RemoteRequestsTable<ContainerRequest> remoteRequestsTable =
           amClient.getTable(0);
+      ProfileCapability profileCapability =
+          ProfileCapability.newInstance(capability);
+
       int containersRequestedNode = remoteRequestsTable.get(priority,
-          node, ExecutionType.GUARANTEED, capability).remoteRequest
+          node, ExecutionType.GUARANTEED, profileCapability).remoteRequest
           .getNumContainers();
       int containersRequestedRack = remoteRequestsTable.get(priority,
-          rack, ExecutionType.GUARANTEED, capability).remoteRequest
+          rack, ExecutionType.GUARANTEED, profileCapability).remoteRequest
           .getNumContainers();
       int containersRequestedAny = remoteRequestsTable.get(priority,
-          ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
+          ResourceRequest.ANY, ExecutionType.GUARANTEED, profileCapability)
           .remoteRequest.getNumContainers();
       int oppContainersRequestedAny =
           remoteRequestsTable.get(priority2, ResourceRequest.ANY,
-              ExecutionType.OPPORTUNISTIC, capability).remoteRequest
+              ExecutionType.OPPORTUNISTIC, profileCapability).remoteRequest
               .getNumContainers();
 
       assertEquals(2, containersRequestedNode);
