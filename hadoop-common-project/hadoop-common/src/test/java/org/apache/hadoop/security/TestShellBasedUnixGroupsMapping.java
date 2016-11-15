@@ -256,7 +256,8 @@ public class TestShellBasedUnixGroupsMapping {
 
     // Test a 1 second max-runtime timeout
     conf.setLong(
-        CommonConfigurationKeys.HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT,
+        CommonConfigurationKeys.
+            HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_SECS,
         testTimeout);
 
     TestDelayedGroupCommand mapping =
@@ -306,8 +307,9 @@ public class TestShellBasedUnixGroupsMapping {
 
     // Test the no-timeout (default) configuration
     conf = new Configuration();
-    long defaultTimeout = CommonConfigurationKeys.
-        HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_DEFAULT;
+    long defaultTimeout =
+        CommonConfigurationKeys.
+            HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_SECS_DEFAULT;
 
     mapping =
         ReflectionUtils.newInstance(TestDelayedGroupCommand.class, conf);

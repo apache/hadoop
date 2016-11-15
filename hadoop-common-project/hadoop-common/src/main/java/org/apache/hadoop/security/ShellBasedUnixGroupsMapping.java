@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.StringTokenizer;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
@@ -51,14 +52,16 @@ public class ShellBasedUnixGroupsMapping extends Configured
       LoggerFactory.getLogger(ShellBasedUnixGroupsMapping.class);
 
   private long timeout = 0L;
+  private final List<String> emptyGroupsList = new LinkedList<>();
 
   @Override
   public void setConf(Configuration conf) {
     super.setConf(conf);
-    timeout = conf.getLong(
-        CommonConfigurationKeys.HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT,
+    timeout = conf.getTimeDuration(
+        CommonConfigurationKeys.HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_SECS,
         CommonConfigurationKeys.
-            HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_DEFAULT);
+                HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_SECS_DEFAULT,
+        TimeUnit.SECONDS);
   }
 
   @SuppressWarnings("serial")
@@ -172,7 +175,7 @@ public class ShellBasedUnixGroupsMapping extends Configured
             executor.getOutput());
       } catch (PartialGroupNameException pge) {
         LOG.warn("unable to return groups for user {}", user, pge);
-        return new LinkedList<>();
+        return emptyGroupsList;
       }
     } catch (IOException ioe) {
       // If its a shell executor timeout, indicate so in the message
@@ -187,7 +190,7 @@ public class ShellBasedUnixGroupsMapping extends Configured
             Arrays.asList(executor.getExecString()),
             timeout
         );
-        return new LinkedList<>();
+        return emptyGroupsList;
       } else {
         // If its not an executor timeout, we should let the caller handle it
         throw ioe;

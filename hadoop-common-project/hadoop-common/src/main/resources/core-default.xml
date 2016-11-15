@@ -188,7 +188,7 @@
 </property>
 
 <property>
-  <name>hadoop.security.groups.shell.groups.command.timeout</name>
+  <name>hadoop.security.groups.shell.command.timeout.secs</name>
   <value>0</value>
   <description>
     Used by the ShellBasedUnixGroupsMapping class, this property controls how
