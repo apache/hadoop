@@ -83,7 +83,13 @@ public interface Container extends EventHandler<ContainerEvent> {
 
   boolean isReInitializing();
 
+  boolean isMarkedForKilling();
+
   boolean canRollback();
 
   void commitUpgrade();
+
+  void sendLaunchEvent();
+
+  void sendKillEvent(int exitStatus, String description);
 }

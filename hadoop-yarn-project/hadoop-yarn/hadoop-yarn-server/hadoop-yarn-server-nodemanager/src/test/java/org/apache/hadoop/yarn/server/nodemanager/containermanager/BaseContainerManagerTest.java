@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -192,10 +193,10 @@ public abstract class BaseContainerManagerTest {
 
     conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
     // Default delSrvc
+    exec = createContainerExecutor();
     delSrvc = createDeletionService();
     delSrvc.init(conf);
 
-    exec = createContainerExecutor();
     dirsHandler = new LocalDirsHandlerService();
     nodeHealthChecker = new NodeHealthCheckerService(
         NodeManager.getNodeHealthScriptRunner(conf), dirsHandler);
@@ -288,32 +289,43 @@ public abstract class BaseContainerManagerTest {
       ContainerManagementProtocol containerManager, ContainerId containerID,
       ContainerState finalState)
       throws InterruptedException, YarnException, IOException {
-    waitForContainerState(containerManager, containerID, finalState, 20);
+    waitForContainerState(containerManager, containerID,
+        Arrays.asList(finalState), 20);
   }
 
   public static void waitForContainerState(
       ContainerManagementProtocol containerManager, ContainerId containerID,
       ContainerState finalState, int timeOutMax)
       throws InterruptedException, YarnException, IOException {
+    waitForContainerState(containerManager, containerID,
+        Arrays.asList(finalState), timeOutMax);
+  }
+
+  public static void waitForContainerState(
+      ContainerManagementProtocol containerManager, ContainerId containerID,
+      List<ContainerState> finalStates, int timeOutMax)
+      throws InterruptedException, YarnException, IOException {
     List<ContainerId> list = new ArrayList<ContainerId>();
     list.add(containerID);
     GetContainerStatusesRequest request =
         GetContainerStatusesRequest.newInstance(list);
     ContainerStatus containerStatus = null;
+    HashSet<ContainerState> fStates =
+        new HashSet<>(finalStates);
     int timeoutSecs = 0;
     do {
       Thread.sleep(2000);
       containerStatus =
           containerManager.getContainerStatuses(request)
               .getContainerStatuses().get(0);
-      LOG.info("Waiting for container to get into state " + finalState
+      LOG.info("Waiting for container to get into one of states " + fStates
           + ". Current state is " + containerStatus.getState());
       timeoutSecs += 2;
-    } while (!containerStatus.getState().equals(finalState)
+    } while (!fStates.contains(containerStatus.getState())
         && timeoutSecs < timeOutMax);
     LOG.info("Container state is " + containerStatus.getState());
-    Assert.assertEquals("ContainerState is not correct (timedout)",
-          finalState, containerStatus.getState());
+    Assert.assertTrue("ContainerState is not correct (timedout)",
+          fStates.contains(containerStatus.getState()));
   }
 
   public static void waitForApplicationState(

@@ -1000,10 +1000,10 @@
   </property>
 
   <property>
-    <description>Enable Queuing of OPPORTUNISTIC containers on the
+    <description>Max number of OPPORTUNISTIC containers to queue at the
       nodemanager.</description>
-    <name>yarn.nodemanager.container-queuing-enabled</name>
-    <value>false</value>
+    <name>yarn.nodemanager.opportunistic-containers-max-queue-length</name>
+    <value>0</value>
   </property>
 
   <property>
