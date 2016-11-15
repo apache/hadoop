@@ -75,12 +75,12 @@ public class Resources {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public void setMemory(int memory) {
       throw new RuntimeException(name + " cannot be modified!");
     }
 
     @Override
-    @SuppressWarnings("deprecation")
     public void setMemorySize(long memory) {
       throw new RuntimeException(name + " cannot be modified!");
     }
@@ -193,13 +193,7 @@ public class Resources {
   }
 
   public static Resource clone(Resource res) {
-    Resource ret = Resource.newInstance(0, 0);
-    for (Map.Entry<String, ResourceInformation> entry : res.getResources()
-        .entrySet()) {
-      ret.setResourceInformation(entry.getKey(),
-          ResourceInformation.newInstance(entry.getValue()));
-    }
-    return ret;
+    return Resource.newInstance(res);
   }
 
   public static Resource addTo(Resource lhs, Resource rhs) {

@@ -104,6 +104,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManag
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -150,6 +151,7 @@ public class MockRM extends ResourceManager {
   public MockRM(Configuration conf, RMStateStore store,
       boolean useNullRMNodeLabelsManager, boolean useRealElector) {
     super();
+    ResourceUtils.resetResourceTypes(conf);
     this.useNullRMNodeLabelsManager = useNullRMNodeLabelsManager;
     this.useRealElector = useRealElector;
     init(conf instanceof YarnConfiguration ? conf : new YarnConfiguration(conf));
