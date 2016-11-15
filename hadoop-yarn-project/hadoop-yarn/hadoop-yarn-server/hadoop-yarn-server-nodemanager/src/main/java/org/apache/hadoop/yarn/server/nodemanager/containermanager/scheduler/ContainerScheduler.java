@@ -77,7 +77,9 @@ public class ContainerScheduler extends AbstractService implements
 
   // Containers launched by the Scheduler will take a while to actually
   // move to the RUNNING state, but should still be fair game for killing
-  // by the scheduler to make room for guaranteed containers.
+  // by the scheduler to make room for guaranteed containers. This holds
+  // containers that are in RUNNING as well as those in SCHEDULED state that
+  // have been marked to run, but not yet RUNNING.
   private final LinkedHashMap<ContainerId, Container> runningContainers =
       new LinkedHashMap<>();
 
@@ -181,8 +183,11 @@ public class ContainerScheduler extends AbstractService implements
 
     // This could be killed externally for eg. by the ContainerManager,
     // in which case, the container might still be queued.
-    queuedOpportunisticContainers.remove(container.getContainerId());
-    queuedGuaranteedContainers.remove(container.getContainerId());
+    Container queued =
+        queuedOpportunisticContainers.remove(container.getContainerId());
+    if (queued == null) {
+      queuedGuaranteedContainers.remove(container.getContainerId());
+    }
 
     // decrement only if it was a running container
     Container completedContainer = runningContainers.remove(container
@@ -380,7 +385,9 @@ public class ContainerScheduler extends AbstractService implements
     this.queuingLimit.setMaxQueueLength(limit.getMaxQueueLength());
     // YARN-2886 should add support for wait-times. Include wait time as
     // well once it is implemented
-    if (this.queuingLimit.getMaxQueueLength() > -1) {
+    if ((queuingLimit.getMaxQueueLength() > -1) &&
+        (queuingLimit.getMaxQueueLength() <
+            queuedOpportunisticContainers.size())) {
       dispatcher.getEventHandler().handle(
           new ContainerSchedulerEvent(null,
               ContainerSchedulerEventType.SHED_QUEUED_CONTAINERS));
