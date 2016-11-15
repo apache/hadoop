@@ -93,6 +93,7 @@ import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.MemoryTimelineStateStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.TimelineStateStore;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
@@ -251,6 +252,7 @@ public class MiniYARNCluster extends CompositeService {
         YarnConfiguration.DEFAULT_YARN_MINICLUSTER_USE_RPC);
     failoverTimeout = conf.getInt(YarnConfiguration.RM_ZK_TIMEOUT_MS,
         YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS);
+    ResourceUtils.resetResourceTypes(conf);
 
     if (useRpc && !useFixedPorts) {
       throw new YarnRuntimeException("Invalid configuration!" +
