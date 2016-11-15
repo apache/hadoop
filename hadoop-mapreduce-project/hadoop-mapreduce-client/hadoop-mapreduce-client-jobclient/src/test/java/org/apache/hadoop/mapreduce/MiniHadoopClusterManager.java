@@ -150,7 +150,6 @@ public class MiniHadoopClusterManager {
    */
   public void start() throws IOException, FileNotFoundException,
       URISyntaxException {
-    conf.setBoolean("dfs.namenode.lock.detailed-metrics.enabled", true);
     if (!noDFS) {
       dfs = new MiniDFSCluster.Builder(conf).nameNodePort(nnPort)
           .numDataNodes(numDataNodes).startupOption(dfsOpts).build();
