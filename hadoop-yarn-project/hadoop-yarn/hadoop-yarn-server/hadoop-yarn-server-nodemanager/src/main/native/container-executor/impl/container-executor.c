@@ -615,15 +615,6 @@ int create_validate_dir(const char* npath, mode_t perm, const char* path,
       if (check_dir(npath, sb.st_mode, perm, finalComponent) == -1) {
         return -1;
       }
-    } else {
-      // Explicitly set permission after creating the directory in case
-      // umask has been set to a restrictive value, i.e., 0077.
-      if (chmod(npath, perm) != 0) {
-        int permInt = perm & (S_IRWXU | S_IRWXG | S_IRWXO);
-        fprintf(LOGFILE, "Can't chmod %s to the required permission %o - %s\n",
-                npath, permInt, strerror(errno));
-        return -1;
-      }
     }
   } else {
     if (check_dir(npath, sb.st_mode, perm, finalComponent) == -1) {
@@ -654,7 +645,7 @@ int check_dir(const char* npath, mode_t st_mode, mode_t desired, int finalCompon
  * Function to prepare the container directories.
  * It creates the container work and log directories.
  */
-int create_container_directories(const char* user, const char *app_id,
+static int create_container_directories(const char* user, const char *app_id,
     const char *container_id, char* const* local_dir, char* const* log_dir, const char *work_dir) {
   // create dirs as 0750
   const mode_t perms = S_IRWXU | S_IRGRP | S_IXGRP;

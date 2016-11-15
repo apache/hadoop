@@ -297,13 +297,3 @@ int is_docker_support_enabled();
  * Run a docker command passing the command file as an argument
  */
 int run_docker(const char *command_file);
-
-/**
- * Function to prepare the container directories.
- * It creates the container work and log directories.
- */
-int create_container_directories(const char* user, const char *app_id,
-                     const char *container_id, char* const* local_dir,
-                     char* const* log_dir, const char *work_dir);
-
-int create_log_dirs(const char *app_id, char * const * log_dirs);
