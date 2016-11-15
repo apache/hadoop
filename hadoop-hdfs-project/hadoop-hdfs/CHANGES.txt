@@ -191,7 +191,10 @@ Release 2.7.4 - UNRELEASED
     HDFS-9500. Fix software version counts for DataNodes during rolling upgrade.
     (Erik Krogen via shv)
 
-    HDFS-11056 Concurrent append and read operations lead to checksum error.
+    HDFS-11087. NamenodeFsck should check if the output writer is still
+    writable. (Erik Krogen via shv)
+
+    HDFS-11056. Concurrent append and read operations lead to checksum error.
     (Wei-Chiu Chuang)
 
 Release 2.7.3 - 2016-08-25
