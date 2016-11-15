@@ -973,7 +973,6 @@ public class ResourceLocalizationService extends CompositeService
         List<LocalResourceStatus> remoteResourceStatuses) {
       LocalizerHeartbeatResponse response =
         recordFactory.newRecordInstance(LocalizerHeartbeatResponse.class);
-
       String user = context.getUser();
       ApplicationId applicationId =
           context.getContainerId().getApplicationAttemptId().getApplicationId();
@@ -994,13 +993,18 @@ public class ResourceLocalizationService extends CompositeService
           LOG.error("Unknown resource reported: " + req);
           continue;
         }
+        LocalResourcesTracker tracker =
+            getLocalResourcesTracker(req.getVisibility(), user, applicationId);
+        if (tracker == null) {
+          // This is likely due to a race between heartbeat and
+          // app cleaning up.
+          continue;
+        }
         switch (stat.getStatus()) {
           case FETCH_SUCCESS:
             // notify resource
             try {
-            getLocalResourcesTracker(req.getVisibility(), user, applicationId)
-              .handle(
-                new ResourceLocalizedEvent(req, ConverterUtils
+              tracker.handle(new ResourceLocalizedEvent(req, ConverterUtils
                   .getPathFromYarnURL(stat.getLocalPath()), stat.getLocalSize()));
             } catch (URISyntaxException e) { }
 
@@ -1015,9 +1019,8 @@ public class ResourceLocalizationService extends CompositeService
             final String diagnostics = stat.getException().toString();
             LOG.warn(req + " failed: " + diagnostics);
             fetchFailed = true;
-            getLocalResourcesTracker(req.getVisibility(), user, applicationId)
-              .handle(new ResourceFailedLocalizationEvent(
-                  req, diagnostics));
+            tracker.handle(new ResourceFailedLocalizationEvent(req,
+                diagnostics));
 
             // unlocking the resource and removing it from scheduled resource
             // list
@@ -1027,9 +1030,8 @@ public class ResourceLocalizationService extends CompositeService
           default:
             LOG.info("Unknown status: " + stat.getStatus());
             fetchFailed = true;
-            getLocalResourcesTracker(req.getVisibility(), user, applicationId)
-              .handle(new ResourceFailedLocalizationEvent(
-                  req, stat.getException().getMessage()));
+            tracker.handle(new ResourceFailedLocalizationEvent(req,
+                stat.getException().getMessage()));
             break;
         }
       }
@@ -1049,10 +1051,14 @@ public class ResourceLocalizationService extends CompositeService
       LocalResource next = findNextResource();
       if (next != null) {
         try {
-          ResourceLocalizationSpec resource =
-              NodeManagerBuilderUtils.newResourceLocalizationSpec(next,
-                getPathForLocalization(next));
-          rsrcs.add(resource);
+          LocalResourcesTracker tracker = getLocalResourcesTracker(
+              next.getVisibility(), user, applicationId);
+          if (tracker != null) {
+            ResourceLocalizationSpec resource =
+                NodeManagerBuilderUtils.newResourceLocalizationSpec(next,
+                getPathForLocalization(next, tracker));
+            rsrcs.add(resource);
+          }
         } catch (IOException e) {
           LOG.error("local path for PRIVATE localization could not be " +
             "found. Disks might have failed.", e);
@@ -1069,14 +1075,12 @@ public class ResourceLocalizationService extends CompositeService
       return response;
     }
 
-    private Path getPathForLocalization(LocalResource rsrc) throws IOException,
-        URISyntaxException {
+    private Path getPathForLocalization(LocalResource rsrc,
+        LocalResourcesTracker tracker) throws IOException, URISyntaxException {
       String user = context.getUser();
       ApplicationId appId =
           context.getContainerId().getApplicationAttemptId().getApplicationId();
       LocalResourceVisibility vis = rsrc.getVisibility();
-      LocalResourcesTracker tracker =
-          getLocalResourcesTracker(vis, user, appId);
       String cacheDirectory = null;
       if (vis == LocalResourceVisibility.PRIVATE) {// PRIVATE Only
         cacheDirectory = getUserFileCachePath(user);
