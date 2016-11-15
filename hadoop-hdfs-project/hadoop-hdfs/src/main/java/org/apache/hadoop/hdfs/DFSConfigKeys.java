@@ -377,6 +377,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_MAX_XATTR_SIZE_KEY = "dfs.namenode.fs-limits.max-xattr-size";
   public static final int     DFS_NAMENODE_MAX_XATTR_SIZE_DEFAULT = 16384;
 
+  public static final String  DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY =
+      "dfs.namenode.lock.detailed-metrics.enabled";
+  public static final boolean DFS_NAMENODE_LOCK_DETAILED_METRICS_DEFAULT =
+      false;
   // Threshold for how long namenode locks must be held for the
   // event to be logged
   public static final String  DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY =
