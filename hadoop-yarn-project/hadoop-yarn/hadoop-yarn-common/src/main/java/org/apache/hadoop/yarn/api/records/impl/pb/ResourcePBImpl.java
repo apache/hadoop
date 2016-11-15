@@ -144,8 +144,8 @@ public class ResourcePBImpl extends Resource {
               ResourceTypes.COUNTABLE;
       String units = entry.hasUnits() ? entry.getUnits() : "";
       Long value = entry.hasValue() ? entry.getValue() : 0L;
-      ResourceInformation ri =
-          ResourceInformation.newInstance(entry.getKey(), units, value, type);
+      ResourceInformation ri = ResourceInformation
+          .newInstance(entry.getKey(), units, value, type, 0L, Long.MAX_VALUE);
       if (resources.containsKey(ri.getName())) {
         resources.get(ri.getName()).setResourceType(ri.getResourceType());
         resources.get(ri.getName()).setUnits(ri.getUnits());

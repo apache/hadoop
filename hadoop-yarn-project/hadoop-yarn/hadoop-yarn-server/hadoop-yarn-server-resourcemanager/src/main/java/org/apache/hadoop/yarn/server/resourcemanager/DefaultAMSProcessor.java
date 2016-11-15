@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt
@@ -100,11 +101,13 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
       RecordFactoryProvider.getRecordFactory(null);
 
   private RMContext rmContext;
+  private ResourceProfilesManager resourceProfilesManager;
 
   @Override
   public void init(ApplicationMasterServiceContext amsContext,
       ApplicationMasterServiceProcessor nextProcessor) {
     this.rmContext = (RMContext)amsContext;
+    this.resourceProfilesManager = rmContext.getResourceProfilesManager();
   }
 
   @Override
@@ -171,6 +174,11 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
     response.setSchedulerResourceTypes(getScheduler()
         .getSchedulingResourceTypes());
+    if (getRmContext().getYarnConfiguration().getBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
+          YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED)) {
+      response
+          .setResourceProfiles(resourceProfilesManager.getResourceProfiles());
+    }
   }
 
   @Override
