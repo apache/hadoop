@@ -59,7 +59,10 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-11069. Tighten the authorization in datanode RPC. (kihwal)
 
-     HDFS-8709. Clarify automatic sync in FSEditLog#logEdit. (wang)
+    HDFS-8709. Clarify automatic sync in FSEditLog#logEdit. (wang)
+
+    HDFS-10872. Add MutableRate metrics for FSNamesystemLock operations.
+    (Erik Krogen via zhz)
 
   OPTIMIZATIONS
 
