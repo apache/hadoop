@@ -281,6 +281,14 @@ public class MetricsRegistry {
     return ret;
   }
 
+  public synchronized MutableRatesWithAggregation newRatesWithAggregation(
+      String name) {
+    checkMetricName(name);
+    MutableRatesWithAggregation rates = new MutableRatesWithAggregation();
+    metricsMap.put(name, rates);
+    return rates;
+  }
+
   synchronized void add(String name, MutableMetric metric) {
     checkMetricName(name);
     metricsMap.put(name, metric);
