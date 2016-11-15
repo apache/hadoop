@@ -62,6 +62,9 @@ Release 2.7.4 - UNRELEASED
     YARN-5837. NPE when getting node status of a decommissioned node after an
     RM restart (Robert Kanter via jlowe)
 
+    YARN-4355. NPE while processing localizer heartbeat. Contributed by
+    Varun Saxena & Jonathan Hung
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
