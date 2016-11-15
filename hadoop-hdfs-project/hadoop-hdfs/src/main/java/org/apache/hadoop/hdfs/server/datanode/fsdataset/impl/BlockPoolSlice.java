@@ -750,7 +750,9 @@ class BlockPoolSlice {
       FsDatasetImpl.LOG.warn(e);
       return 0;
     } finally {
-      ris.close();
+      if (ris != null) {
+        ris.close();
+      }
     }
   }
 
