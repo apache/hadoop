@@ -1394,32 +1394,26 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       }
 
       // Process running containers
-      if (remoteContainer.getState() == ContainerState.RUNNING) {
-        // Process only GUARANTEED containers in the RM.
-        if (remoteContainer.getExecutionType() == ExecutionType.GUARANTEED) {
-          ++numRemoteRunningContainers;
-          if (!launchedContainers.contains(containerId)) {
-            // Just launched container. RM knows about it the first time.
-            launchedContainers.add(containerId);
-            newlyLaunchedContainers.add(remoteContainer);
-            // Unregister from containerAllocationExpirer.
-            containerAllocationExpirer
-                .unregister(new AllocationExpirationInfo(containerId));
-          }
-        }
-      } else {
-        if (remoteContainer.getExecutionType() == ExecutionType.GUARANTEED) {
-          // A finished container
-          launchedContainers.remove(containerId);
+      if (remoteContainer.getState() == ContainerState.RUNNING ||
+          remoteContainer.getState() == ContainerState.SCHEDULED) {
+        ++numRemoteRunningContainers;
+        if (!launchedContainers.contains(containerId)) {
+          // Just launched container. RM knows about it the first time.
+          launchedContainers.add(containerId);
+          newlyLaunchedContainers.add(remoteContainer);
           // Unregister from containerAllocationExpirer.
           containerAllocationExpirer
               .unregister(new AllocationExpirationInfo(containerId));
         }
-        // Completed containers should also include the OPPORTUNISTIC containers
-        // so that the AM gets properly notified.
+      } else {
+        // A finished container
+        launchedContainers.remove(containerId);
         if (completedContainers.add(containerId)) {
           newlyCompletedContainers.add(remoteContainer);
         }
+        // Unregister from containerAllocationExpirer.
+        containerAllocationExpirer
+            .unregister(new AllocationExpirationInfo(containerId));
       }
     }
 

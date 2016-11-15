@@ -104,9 +104,10 @@ public class ContainerLaunch implements Callable<Integer> {
   private final Context context;
   private final ContainerManagerImpl containerManager;
   
-  protected AtomicBoolean shouldLaunchContainer = new AtomicBoolean(false);
+  protected AtomicBoolean containerAlreadyLaunched = new AtomicBoolean(false);
   protected AtomicBoolean completed = new AtomicBoolean(false);
 
+  private volatile boolean killedBeforeStart = false;
   private long sleepDelayBeforeSigKill = 250;
   private long maxKillWaitTime = 2000;
 
@@ -401,7 +402,12 @@ public class ContainerLaunch implements Callable<Integer> {
   @SuppressWarnings("unchecked")
   protected int launchContainer(ContainerStartContext ctx) throws IOException {
     ContainerId containerId = container.getContainerId();
-
+    if (container.isMarkedForKilling()) {
+      LOG.info("Container " + containerId + " not launched as it has already "
+          + "been marked for Killing");
+      this.killedBeforeStart = true;
+      return ExitCode.TERMINATED.getExitCode();
+    }
     // LaunchContainer is a blocking call. We are here almost means the
     // container is launched, so send out the event.
     dispatcher.getEventHandler().handle(new ContainerEvent(
@@ -410,7 +416,7 @@ public class ContainerLaunch implements Callable<Integer> {
     context.getNMStateStore().storeContainerLaunched(containerId);
 
     // Check if the container is signalled to be killed.
-    if (!shouldLaunchContainer.compareAndSet(false, true)) {
+    if (!containerAlreadyLaunched.compareAndSet(false, true)) {
       LOG.info("Container " + containerId + " not launched as "
           + "cleanup already called");
       return ExitCode.TERMINATED.getExitCode();
@@ -451,10 +457,14 @@ public class ContainerLaunch implements Callable<Integer> {
         || exitCode == ExitCode.TERMINATED.getExitCode()) {
       // If the process was killed, Send container_cleanedup_after_kill and
       // just break out of this method.
-      dispatcher.getEventHandler().handle(
-          new ContainerExitEvent(containerId,
-              ContainerEventType.CONTAINER_KILLED_ON_REQUEST, exitCode,
-              diagnosticInfo.toString()));
+
+      // If Container was killed before starting... NO need to do this.
+      if (!killedBeforeStart) {
+        dispatcher.getEventHandler().handle(
+            new ContainerExitEvent(containerId,
+                ContainerEventType.CONTAINER_KILLED_ON_REQUEST, exitCode,
+                diagnosticInfo.toString()));
+      }
     } else if (exitCode != 0) {
       handleContainerExitWithFailure(containerId, exitCode, containerLogDir,
           diagnosticInfo);
@@ -565,7 +575,8 @@ public class ContainerLaunch implements Callable<Integer> {
     }
 
     // launch flag will be set to true if process already launched
-    boolean alreadyLaunched = !shouldLaunchContainer.compareAndSet(false, true);
+    boolean alreadyLaunched =
+        !containerAlreadyLaunched.compareAndSet(false, true);
     if (!alreadyLaunched) {
       LOG.info("Container " + containerIdStr + " not launched."
           + " No cleanup needed to be done");
@@ -660,7 +671,8 @@ public class ContainerLaunch implements Callable<Integer> {
 
     LOG.info("Sending signal " + command + " to container " + containerIdStr);
 
-    boolean alreadyLaunched = !shouldLaunchContainer.compareAndSet(false, true);
+    boolean alreadyLaunched =
+        !containerAlreadyLaunched.compareAndSet(false, true);
     if (!alreadyLaunched) {
       LOG.info("Container " + containerIdStr + " not launched."
           + " Not sending the signal");

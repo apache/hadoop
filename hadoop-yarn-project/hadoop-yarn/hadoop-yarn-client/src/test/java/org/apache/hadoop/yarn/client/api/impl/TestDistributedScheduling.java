@@ -108,7 +108,8 @@ public class TestDistributedScheduling extends BaseAMRMProxyE2ETest {
     conf.setBoolean(YarnConfiguration.
         OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED, true);
     conf.setBoolean(YarnConfiguration.DIST_SCHEDULING_ENABLED, true);
-    conf.setBoolean(YarnConfiguration.NM_CONTAINER_QUEUING_ENABLED, true);
+    conf.setInt(YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH,
+        10);
     cluster.init(conf);
     cluster.start();
     yarnConf = cluster.getConfig();

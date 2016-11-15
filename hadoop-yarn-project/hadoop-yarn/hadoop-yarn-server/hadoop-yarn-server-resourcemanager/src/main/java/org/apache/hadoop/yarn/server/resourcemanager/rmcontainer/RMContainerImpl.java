@@ -80,8 +80,8 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
         RMContainerEventType.KILL)
     .addTransition(RMContainerState.NEW, RMContainerState.RESERVED,
         RMContainerEventType.RESERVED, new ContainerReservedTransition())
-    .addTransition(RMContainerState.NEW, RMContainerState.RUNNING,
-        RMContainerEventType.LAUNCHED)
+    .addTransition(RMContainerState.NEW, RMContainerState.ACQUIRED,
+        RMContainerEventType.ACQUIRED, new AcquiredTransition())
     .addTransition(RMContainerState.NEW,
         EnumSet.of(RMContainerState.RUNNING, RMContainerState.COMPLETED),
         RMContainerEventType.RECOVER, new ContainerRecoveredTransition())

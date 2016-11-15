@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.fs.FileContext;
@@ -158,7 +159,7 @@ public class TestEventFlow {
     containerManager.startContainers(allRequests);
 
     BaseContainerManagerTest.waitForContainerState(containerManager, cID,
-        ContainerState.RUNNING);
+        Arrays.asList(ContainerState.RUNNING, ContainerState.SCHEDULED), 20);
 
     List<ContainerId> containerIds = new ArrayList<ContainerId>();
     containerIds.add(cID);

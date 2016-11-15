@@ -65,7 +65,6 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -1078,128 +1077,6 @@ public class TestNodeStatusUpdater {
     Assert.assertFalse(containerIdSet.contains(cId));
     // running container is not removed;
     Assert.assertTrue(containerIdSet.contains(runningContainerId));
-  }
-
-  @Test(timeout = 90000)
-  public void testKilledQueuedContainers() throws Exception {
-    NodeManager nm = new NodeManager();
-    YarnConfiguration conf = new YarnConfiguration();
-    conf.set(
-        NodeStatusUpdaterImpl
-            .YARN_NODEMANAGER_DURATION_TO_TRACK_STOPPED_CONTAINERS,
-        "10000");
-    nm.init(conf);
-    NodeStatusUpdaterImpl nodeStatusUpdater =
-        (NodeStatusUpdaterImpl) nm.getNodeStatusUpdater();
-    ApplicationId appId = ApplicationId.newInstance(0, 0);
-    ApplicationAttemptId appAttemptId =
-        ApplicationAttemptId.newInstance(appId, 0);
-
-    // Add application to context.
-    nm.getNMContext().getApplications().putIfAbsent(appId,
-        mock(Application.class));
-
-    // Create a running container and add it to the context.
-    ContainerId runningContainerId =
-        ContainerId.newContainerId(appAttemptId, 1);
-    Token runningContainerToken =
-        BuilderUtils.newContainerToken(runningContainerId, 0, "anyHost",
-          1234, "anyUser", BuilderUtils.newResource(1024, 1), 0, 123,
-          "password".getBytes(), 0);
-    Container runningContainer =
-        new ContainerImpl(conf, null, null, null, null,
-          BuilderUtils.newContainerTokenIdentifier(runningContainerToken),
-          nm.getNMContext()) {
-          @Override
-          public ContainerState getCurrentState() {
-            return ContainerState.RUNNING;
-          }
-
-          @Override
-          public org.apache.hadoop.yarn.server.nodemanager.containermanager.
-              container.ContainerState getContainerState() {
-            return org.apache.hadoop.yarn.server.nodemanager.containermanager.
-                container.ContainerState.RUNNING;
-          }
-        };
-
-    nm.getNMContext().getContainers()
-      .put(runningContainerId, runningContainer);
-
-    // Create two killed queued containers and add them to the queuing context.
-    ContainerId killedQueuedContainerId1 = ContainerId.newContainerId(
-        appAttemptId, 2);
-    ContainerTokenIdentifier killedQueuedContainerTokenId1 = BuilderUtils
-        .newContainerTokenIdentifier(BuilderUtils.newContainerToken(
-            killedQueuedContainerId1, 0, "anyHost", 1234, "anyUser",
-            BuilderUtils.newResource(1024, 1), 0, 123,
-            "password".getBytes(), 0));
-    ContainerId killedQueuedContainerId2 = ContainerId.newContainerId(
-        appAttemptId, 3);
-    ContainerTokenIdentifier killedQueuedContainerTokenId2 = BuilderUtils
-        .newContainerTokenIdentifier(BuilderUtils.newContainerToken(
-            killedQueuedContainerId2, 0, "anyHost", 1234, "anyUser",
-            BuilderUtils.newResource(1024, 1), 0, 123,
-            "password".getBytes(), 0));
-
-    nm.getNMContext().getQueuingContext().getKilledQueuedContainers().put(
-        killedQueuedContainerTokenId1, "Queued container killed.");
-    nm.getNMContext().getQueuingContext().getKilledQueuedContainers().put(
-        killedQueuedContainerTokenId2, "Queued container killed.");
-
-    List<ContainerStatus> containerStatuses = nodeStatusUpdater
-        .getContainerStatuses();
-
-    Assert.assertEquals(3, containerStatuses.size());
-
-    ContainerStatus runningContainerStatus = null;
-    ContainerStatus killedQueuedContainerStatus1 = null;
-    ContainerStatus killedQueuedContainerStatus2 = null;
-    for (ContainerStatus cStatus : containerStatuses) {
-      if (ContainerState.RUNNING == cStatus.getState()) {
-        runningContainerStatus = cStatus;
-      }
-      if (ContainerState.COMPLETE == cStatus.getState()) {
-        if (killedQueuedContainerId1.equals(cStatus.getContainerId())) {
-          killedQueuedContainerStatus1 = cStatus;
-        } else {
-          killedQueuedContainerStatus2 = cStatus;
-        }
-      }
-    }
-
-    // Check container IDs and Container Status.
-    Assert.assertNotNull(runningContainerId);
-    Assert.assertNotNull(killedQueuedContainerId1);
-    Assert.assertNotNull(killedQueuedContainerId2);
-
-    // Killed queued container should have ABORTED exit status.
-    Assert.assertEquals(ContainerExitStatus.ABORTED,
-        killedQueuedContainerStatus1.getExitStatus());
-    Assert.assertEquals(ContainerExitStatus.ABORTED,
-        killedQueuedContainerStatus2.getExitStatus());
-
-    // Killed queued container should appear in the recentlyStoppedContainers.
-    Assert.assertTrue(nodeStatusUpdater.isContainerRecentlyStopped(
-        killedQueuedContainerId1));
-    Assert.assertTrue(nodeStatusUpdater.isContainerRecentlyStopped(
-        killedQueuedContainerId2));
-
-    // Check if killed queued containers are successfully removed from the
-    // queuing context.
-    List<ContainerId> ackedContainers = new ArrayList<ContainerId>();
-    ackedContainers.add(killedQueuedContainerId1);
-    ackedContainers.add(killedQueuedContainerId2);
-
-    nodeStatusUpdater.removeOrTrackCompletedContainersFromContext(
-        ackedContainers);
-
-    containerStatuses = nodeStatusUpdater.getContainerStatuses();
-
-    // Only the running container should be in the container statuses now.
-    Assert.assertEquals(1, containerStatuses.size());
-    Assert.assertEquals(ContainerState.RUNNING,
-        containerStatuses.get(0).getState());
   }
 
   @Test(timeout = 10000)
