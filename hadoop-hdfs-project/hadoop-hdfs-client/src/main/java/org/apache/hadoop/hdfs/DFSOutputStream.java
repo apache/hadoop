@@ -726,8 +726,6 @@ public class DFSOutputStream extends FSOutputSummer
         b.add(e);
       }
     }
-
-    dfsClient.endFileLease(fileId);
     final IOException ioe = b.build();
     if (ioe != null) {
       throw ioe;
@@ -740,6 +738,7 @@ public class DFSOutputStream extends FSOutputSummer
 
   void setClosed() {
     closed = true;
+    dfsClient.endFileLease(fileId);
     getStreamer().release();
   }
 
@@ -773,8 +772,6 @@ public class DFSOutputStream extends FSOutputSummer
         b.add(e);
       }
     }
-
-    dfsClient.endFileLease(fileId);
     final IOException ioe = b.build();
     if (ioe != null) {
       throw ioe;
