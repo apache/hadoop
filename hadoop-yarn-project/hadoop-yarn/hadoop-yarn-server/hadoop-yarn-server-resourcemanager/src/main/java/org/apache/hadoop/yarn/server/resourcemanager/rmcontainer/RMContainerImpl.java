@@ -247,7 +247,9 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
        YarnConfiguration
                  .DEFAULT_APPLICATION_HISTORY_SAVE_NON_AM_CONTAINER_META_INFO);
 
-    rmContext.getRMApplicationHistoryWriter().containerStarted(this);
+    if (container.getId() != null) {
+      rmContext.getRMApplicationHistoryWriter().containerStarted(this);
+    }
 
     // If saveNonAMContainerMetaInfo is true, store system metrics for all
     // containers. If false, and if this container is marked as the AM, metrics
@@ -892,6 +894,9 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
     // container creation event to timeline service when id assigned.
     container.setId(containerId);
 
+    if (containerId != null) {
+      rmContext.getRMApplicationHistoryWriter().containerStarted(this);
+    }
     // If saveNonAMContainerMetaInfo is true, store system metrics for all
     // containers. If false, and if this container is marked as the AM, metrics
     // will still be published for this container, but that calculation happens
