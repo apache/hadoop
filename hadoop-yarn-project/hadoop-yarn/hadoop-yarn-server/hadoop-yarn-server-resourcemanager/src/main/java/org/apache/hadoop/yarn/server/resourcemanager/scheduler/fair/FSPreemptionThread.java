@@ -83,8 +83,8 @@ public class FSPreemptionThread extends Thread {
    * @param starvedApp
    * @return
    */
-  private List<RMContainer> identifyContainersToPreempt(FSAppAttempt
-      starvedApp) {
+  private List<RMContainer> identifyContainersToPreempt(
+      FSAppAttempt starvedApp) {
     List<RMContainer> containers = new ArrayList<>(); // return value
 
     // Find the nodes that match the next resource request
@@ -113,20 +113,29 @@ public class FSPreemptionThread extends Thread {
         // is okay to unreserve it if we find enough resources.
       }
 
+      // Figure out list of containers to consider
+      List<RMContainer> containersToCheck =
+          node.getCopiedListOfRunningContainers();
+      containersToCheck.removeAll(node.getContainersForPreemption());
+
       // Initialize potential with unallocated resources
       Resource potential = Resources.clone(node.getUnallocatedResource());
-      for (RMContainer container : node.getCopiedListOfRunningContainers()) {
+      for (RMContainer container : containersToCheck) {
         FSAppAttempt app =
             scheduler.getSchedulerApp(container.getApplicationAttemptId());
 
         if (app.canContainerBePreempted(container)) {
+          // Flag container for preemption
+          containers.add(container);
           Resources.addTo(potential, container.getAllocatedResource());
         }
 
         // Check if we have already identified enough containers
         if (Resources.fitsIn(requestCapability, potential)) {
-          // TODO (KK): Reserve containers so they can't be taken by another
-          // app
+          // Mark the containers as being considered for preemption on the node.
+          // Make sure the containers are subsequently removed by calling
+          // FSSchedulerNode#removeContainerForPreemption.
+          node.addContainersForPreemption(containers);
           return containers;
         }
       }
@@ -166,6 +175,10 @@ public class FSPreemptionThread extends Thread {
         LOG.info("Killing container " + container);
         scheduler.completedContainer(
             container, status, RMContainerEventType.KILL);
+
+        FSSchedulerNode containerNode = (FSSchedulerNode)
+            scheduler.getNodeTracker().getNode(container.getAllocatedNode());
+        containerNode.removeContainerForPreemption(container);
       }
     }
   }

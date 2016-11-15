@@ -19,13 +19,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 
-import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -38,8 +35,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Test class to verify identification of app starvation
@@ -47,7 +42,6 @@ import java.util.List;
 public class TestFSAppStarvation extends FairSchedulerTestBase {
 
   private static final File ALLOC_FILE = new File(TEST_DIR, "test-queues");
-  private final List<RMNode> rmNodes = new ArrayList<>();
 
   // Node Capacity = NODE_CAPACITY_MULTIPLE * (1 GB or 1 vcore)
   private static final int NODE_CAPACITY_MULTIPLE = 4;
@@ -130,7 +124,7 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
   private void setupClusterAndSubmitJobs() throws Exception {
     setupStarvedCluster();
     submitAppsToEachLeafQueue();
-    sendNodeUpdateEvents();
+    sendEnoughNodeUpdatesToAssignFully();
 
     // Sleep to hit the preemption timeouts
     Thread.sleep(10);
@@ -211,7 +205,7 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
         = createSchedulingRequest(1024, 1, "root.default", "default", 8);
 
     scheduler.update();
-    sendNodeUpdateEvents();
+    sendEnoughNodeUpdatesToAssignFully();
 
     assertEquals(8, scheduler.getSchedulerApp(app).getLiveContainers().size());
   }
@@ -224,16 +218,7 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
     scheduler.update();
   }
 
-  private void addNode(int memory, int cores) {
-    int id = rmNodes.size() + 1;
-    RMNode node =
-        MockNodes.newNodeInfo(1, Resources.createResource(memory, cores), id,
-            "127.0.0." + id);
-    scheduler.handle(new NodeAddedSchedulerEvent(node));
-    rmNodes.add(node);
-  }
-
-  private void sendNodeUpdateEvents() {
+  private void sendEnoughNodeUpdatesToAssignFully() {
     for (RMNode node : rmNodes) {
       NodeUpdateSchedulerEvent nodeUpdateSchedulerEvent =
           new NodeUpdateSchedulerEvent(node);

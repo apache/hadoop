@@ -83,7 +83,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   // Preemption related variables
   private Resource fairshareStarvation = Resources.none();
   private Resource minshareStarvation = Resources.none();
-  private Resource preemptedResources = Resources.createResource(0);
+  private final Resource preemptedResources = Resources.clone(Resources.none());
   private final Set<RMContainer> containersToPreempt = new HashSet<>();
   private long lastTimeAtFairShare;
 
@@ -149,7 +149,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
       // Remove from the list of containers
       liveContainers.remove(rmContainer.getContainerId());
-      containersToPreempt.remove(rmContainer);
+      removePreemption(rmContainer);
 
       Resource containerResource = rmContainer.getContainer().getResource();
       RMAuditLogger.logSuccess(getUser(), AuditConstants.RELEASE_CONTAINER,
@@ -524,7 +524,17 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   void addPreemption(RMContainer container) {
     containersToPreempt.add(container);
-    Resources.addTo(preemptedResources, container.getAllocatedResource());
+    synchronized (preemptedResources) {
+      Resources.addTo(preemptedResources, container.getAllocatedResource());
+    }
+  }
+
+  void removePreemption(RMContainer container) {
+    synchronized (preemptedResources) {
+      Resources.subtractFrom(preemptedResources,
+          container.getAllocatedResource());
+    }
+    containersToPreempt.remove(container);
   }
 
   Set<RMContainer> getPreemptionContainers() {
@@ -533,7 +543,9 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   
 
   private Resource getPreemptedResources() {
-    return preemptedResources;
+    synchronized (preemptedResources) {
+      return preemptedResources;
+    }
   }
 
   boolean canContainerBePreempted(RMContainer container) {
@@ -545,20 +557,30 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       return false;
     }
 
+    if (containersToPreempt.contains(container)) {
+      // The container is already under consideration for preemption
+      return false;
+    }
+
     // Check if any of the parent queues are not preemptable
     // TODO (KK): Propagate the "preemptable" flag all the way down to the app
     // to avoid recursing up every time.
-    FSQueue queue = getQueue();
-    while (!queue.getQueueName().equals("root")) {
-      if (!queue.isPreemptable()) {
+    for (FSQueue q = getQueue();
+        !q.getQueueName().equals("root");
+        q = q.getParent()) {
+      if (!q.isPreemptable()) {
         return false;
       }
     }
 
     // Check if the app's allocation will be over its fairshare even
     // after preempting this container
+    Resource currentUsage = getResourceUsage();
+    Resource fairshare = getFairShare();
+    Resource overFairShareBy = Resources.subtract(currentUsage, fairshare);
+
     return (Resources.fitsIn(container.getAllocatedResource(),
-        Resources.subtract(getResourceUsage(), getFairShare())));
+        overFairShareBy));
   }
 
   /**
