@@ -52,16 +52,19 @@ public class ShellBasedUnixGroupsMapping extends Configured
       LoggerFactory.getLogger(ShellBasedUnixGroupsMapping.class);
 
   private long timeout = 0L;
-  private final List<String> emptyGroupsList = new LinkedList<>();
+  private static final List<String> EMPTY_GROUPS = new LinkedList<>();
 
   @Override
   public void setConf(Configuration conf) {
     super.setConf(conf);
-    timeout = conf.getTimeDuration(
-        CommonConfigurationKeys.HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_SECS,
-        CommonConfigurationKeys.
-                HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_SECS_DEFAULT,
-        TimeUnit.SECONDS);
+    if (conf != null) {
+      timeout = conf.getTimeDuration(
+          CommonConfigurationKeys.
+              HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_SECS,
+          CommonConfigurationKeys.
+              HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_SECS_DEFAULT,
+          TimeUnit.SECONDS);
+    }
   }
 
   @SuppressWarnings("serial")
@@ -175,7 +178,7 @@ public class ShellBasedUnixGroupsMapping extends Configured
             executor.getOutput());
       } catch (PartialGroupNameException pge) {
         LOG.warn("unable to return groups for user {}", user, pge);
-        return emptyGroupsList;
+        return EMPTY_GROUPS;
       }
     } catch (IOException ioe) {
       // If its a shell executor timeout, indicate so in the message
@@ -190,7 +193,7 @@ public class ShellBasedUnixGroupsMapping extends Configured
             Arrays.asList(executor.getExecString()),
             timeout
         );
-        return emptyGroupsList;
+        return EMPTY_GROUPS;
       } else {
         // If its not an executor timeout, we should let the caller handle it
         throw ioe;

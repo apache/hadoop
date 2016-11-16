@@ -518,7 +518,7 @@ public class CommonConfigurationKeysPublic {
    * core-default.xml</a>
    */
   public static final String HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_SECS =
-      "hadoop.security.groups.shell.command.timeout.secs";
+      "hadoop.security.groups.shell.command.timeout";
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
