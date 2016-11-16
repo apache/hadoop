@@ -4620,6 +4620,13 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         new org.apache.hadoop.yarn.server.resourcemanager.NodeManager(hostName,
             containerManagerPort, httpPort, rackName, capability,
             resourceManager);
+
+    // after YARN-5375, scheduler event is processed in rm main dispatcher,
+    // wait it processed, or may lead dead lock
+    if (resourceManager instanceof MockRM) {
+      ((MockRM) resourceManager).drainEvents();
+    }
+
     NodeAddedSchedulerEvent nodeAddEvent1 =
         new NodeAddedSchedulerEvent(resourceManager.getRMContext().getRMNodes()
             .get(nm.getNodeId()));
