@@ -1938,7 +1938,7 @@ public class DataNode extends ReconfigurableBase
     }
 
     if (storageLocationChecker != null) {
-      storageLocationChecker.shutdownAndWait(10, TimeUnit.SECONDS);
+      storageLocationChecker.shutdownAndWait(1, TimeUnit.SECONDS);
     }
     
     if (pauseMonitor != null) {

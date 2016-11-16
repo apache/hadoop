@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation.CheckContext;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,11 +81,18 @@ public class StorageLocationChecker {
    */
   private final int maxVolumeFailuresTolerated;
 
-  public StorageLocationChecker(Configuration conf, Timer timer) {
+  public StorageLocationChecker(Configuration conf, Timer timer)
+      throws DiskErrorException {
     maxAllowedTimeForCheckMs = conf.getTimeDuration(
-        DFSConfigKeys.DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY,
-        DFSConfigKeys.DFS_DATANODE_DISK_CHECK_TIMEOUT_DEFAULT,
+        DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY,
+        DFS_DATANODE_DISK_CHECK_TIMEOUT_DEFAULT,
         TimeUnit.MILLISECONDS);
+    
+    if (maxAllowedTimeForCheckMs <= 0) {
+      throw new DiskErrorException("Invalid value configured for "
+          + DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY + " - "
+          + maxAllowedTimeForCheckMs + " (should be > 0)");
+    }
 
     expectedPermission = new FsPermission(
         conf.get(DFS_DATANODE_DATA_DIR_PERMISSION_KEY,
@@ -93,6 +101,12 @@ public class StorageLocationChecker {
     maxVolumeFailuresTolerated = conf.getInt(
         DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY,
         DFS_DATANODE_FAILED_VOLUMES_TOLERATED_DEFAULT);
+    
+    if (maxVolumeFailuresTolerated < 0) {
+      throw new DiskErrorException("Invalid value configured for "
+          + DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY + " - "
+          + maxVolumeFailuresTolerated + " (should be non-negative)");
+    }
 
     this.timer = timer;
 
@@ -139,6 +153,13 @@ public class StorageLocationChecker {
     for (StorageLocation location : dataDirs) {
       futures.put(location,
           delegateChecker.schedule(location, context));
+    }
+
+    if (maxVolumeFailuresTolerated >= dataDirs.size()) {
+      throw new DiskErrorException("Invalid value configured for "
+          + DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY + " - "
+          + maxVolumeFailuresTolerated + ". Value configured is >= "
+          + "to the number of configured volumes (" + dataDirs.size() + ").");
     }
 
     final long checkStartTimeMs = timer.monotonicNow();
