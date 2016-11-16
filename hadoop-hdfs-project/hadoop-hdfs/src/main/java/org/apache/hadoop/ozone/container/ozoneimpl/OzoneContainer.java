@@ -64,8 +64,8 @@ public class OzoneContainer {
       Configuration ozoneConfig,
       FsDatasetSpi<? extends FsVolumeSpi> dataSet) throws Exception {
     List<StorageLocation> locations = new LinkedList<>();
-    String[] paths = ozoneConfig.getStrings(OzoneConfigKeys
-        .OZONE_METADATA_DIRS);
+    String[] paths = ozoneConfig.getStrings(
+        OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS);
     if (paths != null && paths.length > 0) {
       for (String p : paths) {
         locations.add(StorageLocation.parse(p));

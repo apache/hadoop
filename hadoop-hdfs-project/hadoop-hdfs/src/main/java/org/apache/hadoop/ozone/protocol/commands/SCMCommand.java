@@ -18,7 +18,7 @@
 package org.apache.hadoop.ozone.protocol.commands;
 
 import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto.Type;
+    .StorageContainerDatanodeProtocolProtos.Type;
 import com.google.protobuf.GeneratedMessage;
 
 /**
