@@ -115,7 +115,7 @@ public class ContentSummaryComputationContext {
 
     // unlock
     dir.readUnlock();
-    fsn.readUnlock();
+    fsn.readUnlock("contentSummary");
 
     try {
       Thread.sleep(sleepMilliSec, sleepNanoSec);

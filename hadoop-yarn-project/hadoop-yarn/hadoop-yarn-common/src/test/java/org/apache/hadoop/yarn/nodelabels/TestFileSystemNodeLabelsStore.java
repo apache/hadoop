@@ -348,10 +348,10 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
     };
     mockStore.setNodeLabelsManager(mgr);
     mockStore.fs = mockFs;
-    verifyMkdirsCount(mockStore, true, 0);
-    verifyMkdirsCount(mockStore, false, 1);
     verifyMkdirsCount(mockStore, true, 1);
     verifyMkdirsCount(mockStore, false, 2);
+    verifyMkdirsCount(mockStore, true, 3);
+    verifyMkdirsCount(mockStore, false, 4);
   }
 
   private void verifyMkdirsCount(FileSystemNodeLabelsStore store,

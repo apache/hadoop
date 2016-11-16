@@ -22,6 +22,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -326,14 +327,15 @@ public class FileUtil {
       return copy(srcFS, srcs[0], dstFS, dst, deleteSource, overwrite, conf);
 
     // Check if dest is directory
-    if (!dstFS.exists(dst)) {
-      throw new IOException("`" + dst +"': specified destination directory " +
-                            "does not exist");
-    } else {
+    try {
       FileStatus sdst = dstFS.getFileStatus(dst);
       if (!sdst.isDirectory())
         throw new IOException("copying multiple files, but last argument `" +
                               dst + "' is not a directory");
+    } catch (FileNotFoundException e) {
+      throw new IOException(
+          "`" + dst + "': specified destination directory " +
+              "does not exist", e);
     }
 
     for (Path src : srcs) {
@@ -481,8 +483,13 @@ public class FileUtil {
 
   private static Path checkDest(String srcName, FileSystem dstFS, Path dst,
       boolean overwrite) throws IOException {
-    if (dstFS.exists(dst)) {
-      FileStatus sdst = dstFS.getFileStatus(dst);
+    FileStatus sdst;
+    try {
+      sdst = dstFS.getFileStatus(dst);
+    } catch (FileNotFoundException e) {
+      sdst = null;
+    }
+    if (null != sdst) {
       if (sdst.isDirectory()) {
         if (null == srcName) {
           throw new IOException("Target " + dst + " is a directory");

@@ -390,12 +390,16 @@ public class YarnConfiguration extends Configuration {
   public static final float NM_CONTAINER_QUEUING_LIMIT_STDEV_DEFAULT =
       1.0f;
 
-  /** Min length of container queue at NodeManager. */
+  /** Min length of container queue at NodeManager. This is a cluster-wide
+   * configuration that acts as the lower-bound of optimal queue length
+   * calculated by the NodeQueueLoadMonitor */
   public static final String NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH =
       YARN_PREFIX + "nm-container-queuing.min-queue-length";
   public static final int NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH_DEFAULT = 1;
 
-  /** Max length of container queue at NodeManager. */
+  /** Max length of container queue at NodeManager. This is a cluster-wide
+   * configuration that acts as the upper-bound of optimal queue length
+   * calculated by the NodeQueueLoadMonitor */
   public static final String NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH =
       YARN_PREFIX + "nm-container-queuing.max-queue-length";
   public static final int NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH_DEFAULT = 10;
@@ -834,10 +838,11 @@ public class YarnConfiguration extends Configuration {
   /** Prefix for all node manager configs.*/
   public static final String NM_PREFIX = "yarn.nodemanager.";
 
-  /** Enable Queuing of <code>OPPORTUNISTIC</code> containers. */
-  public static final String NM_CONTAINER_QUEUING_ENABLED = NM_PREFIX
-      + "container-queuing-enabled";
-  public static final boolean NM_CONTAINER_QUEUING_ENABLED_DEFAULT = false;
+  /** Max Queue length of <code>OPPORTUNISTIC</code> containers on the NM. */
+  public static final String NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH =
+      NM_PREFIX + "opportunistic-containers-max-queue-length";
+  public static final int NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH_DEFAULT =
+      0;
 
   /** Environment variables that will be sent to containers.*/
   public static final String NM_ADMIN_USER_ENV = NM_PREFIX + "admin-env";

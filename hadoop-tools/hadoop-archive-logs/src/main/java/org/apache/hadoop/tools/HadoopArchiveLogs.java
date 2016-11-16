@@ -178,9 +178,7 @@ public class HadoopArchiveLogs implements Tool {
     } finally {
       if (fs != null) {
         // Cleanup working directory
-        if (fs.exists(workingDir)) {
-          fs.delete(workingDir, true);
-        }
+        fs.delete(workingDir, true);
         fs.close();
       }
     }

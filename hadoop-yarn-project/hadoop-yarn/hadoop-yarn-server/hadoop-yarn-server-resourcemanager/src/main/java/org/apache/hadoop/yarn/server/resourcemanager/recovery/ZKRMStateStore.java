@@ -127,7 +127,8 @@ public class ZKRMStateStore extends RMStateStore {
       "RMDTSequentialNumber";
   private static final String RM_DT_MASTER_KEYS_ROOT_ZNODE_NAME =
       "RMDTMasterKeysRoot";
-  protected static final String ROOT_ZNODE_NAME = "ZKRMStateRoot";
+  @VisibleForTesting
+  public static final String ROOT_ZNODE_NAME = "ZKRMStateRoot";
   protected static final Version CURRENT_VERSION_INFO =
       Version.newInstance(1, 3);
 

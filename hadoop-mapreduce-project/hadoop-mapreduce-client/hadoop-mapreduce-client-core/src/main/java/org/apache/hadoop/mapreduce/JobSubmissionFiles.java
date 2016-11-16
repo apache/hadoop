@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -130,7 +131,7 @@ public class JobSubmissionFiles {
     Path stagingArea = cluster.getStagingAreaDir();
     FileSystem fs = stagingArea.getFileSystem(conf);
     UserGroupInformation currentUser = realUser.getCurrentUser();
-    if (fs.exists(stagingArea)) {
+    try {
       FileStatus fsStatus = fs.getFileStatus(stagingArea);
       String fileOwner = fsStatus.getOwner();
       if (!(fileOwner.equals(currentUser.getShortUserName()) || fileOwner
@@ -156,7 +157,7 @@ public class JobSubmissionFiles {
             "to correct value " + JOB_DIR_PERMISSION);
         fs.setPermission(stagingArea, JOB_DIR_PERMISSION);
       }
-    } else {
+    } catch (FileNotFoundException e) {
       fs.mkdirs(stagingArea, new FsPermission(JOB_DIR_PERMISSION));
     }
     return stagingArea;

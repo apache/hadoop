@@ -2530,8 +2530,9 @@ public class DistributedFileSystem extends FileSystem {
         } else {
           Path userTrash = new Path(ezTrashRoot, System.getProperty(
               "user.name"));
-          if (exists(userTrash)) {
+          try {
             ret.add(getFileStatus(userTrash));
+          } catch (FileNotFoundException ignored) {
           }
         }
       }

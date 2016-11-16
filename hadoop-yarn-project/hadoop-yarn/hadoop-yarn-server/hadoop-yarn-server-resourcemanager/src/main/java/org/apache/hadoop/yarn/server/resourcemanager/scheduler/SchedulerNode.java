@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
@@ -148,7 +149,9 @@ public abstract class SchedulerNode {
    */
   public synchronized void allocateContainer(RMContainer rmContainer) {
     Container container = rmContainer.getContainer();
-    deductUnallocatedResource(container.getResource());
+    if (rmContainer.getExecutionType() != ExecutionType.OPPORTUNISTIC) {
+      deductUnallocatedResource(container.getResource());
+    }
     ++numContainers;
 
     launchedContainers.put(container.getId(), rmContainer);
@@ -246,7 +249,9 @@ public abstract class SchedulerNode {
    */
   protected synchronized void updateResourceForReleasedContainer(
       Container container) {
-    addUnallocatedResource(container.getResource());
+    if (container.getExecutionType() == ExecutionType.GUARANTEED) {
+      addUnallocatedResource(container.getResource());
+    }
     --numContainers;
   }
 

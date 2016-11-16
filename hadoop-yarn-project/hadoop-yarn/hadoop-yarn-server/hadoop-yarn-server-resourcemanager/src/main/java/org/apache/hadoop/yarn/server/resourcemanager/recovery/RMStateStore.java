@@ -86,7 +86,8 @@ import org.apache.hadoop.yarn.state.StateMachineFactory;
 public abstract class RMStateStore extends AbstractService {
 
   // constants for RM App state and RMDTSecretManagerState.
-  protected static final String RM_APP_ROOT = "RMAppRoot";
+  @VisibleForTesting
+  public static final String RM_APP_ROOT = "RMAppRoot";
   protected static final String RM_DT_SECRET_MANAGER_ROOT = "RMDTSecretManagerRoot";
   protected static final String DELEGATION_KEY_PREFIX = "DelegationKey_";
   protected static final String DELEGATION_TOKEN_PREFIX = "RMDelegationToken_";

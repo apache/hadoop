@@ -23,11 +23,14 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
+import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.yarn.api.records.Resource;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container
+    .Container;
 
 @Metrics(about="Metrics for node manager", context="yarn")
 public class NodeManagerMetrics {
@@ -60,6 +63,14 @@ public class NodeManagerMetrics {
       MutableGaugeInt goodLocalDirsDiskUtilizationPerc;
   @Metric("Disk utilization % on good log dirs")
       MutableGaugeInt goodLogDirsDiskUtilizationPerc;
+
+  @Metric("Memory used by Opportunistic Containers in MB")
+      MutableGaugeLong opportMemoryUsed;
+  @Metric("# of Virtual Cores used by opportunistic containers")
+      MutableGaugeInt opportCoresUsed;
+  @Metric("# of running opportunistic containers")
+      MutableGaugeInt runningOpportContainers;
+
   // CHECKSTYLE:ON:VisibilityModifier
 
   private JvmMetrics jvmMetrics = null;
@@ -128,6 +139,30 @@ public class NodeManagerMetrics {
 
   public void endReInitingContainer() {
     containersReIniting.decr();
+  }
+
+  public long getOpportMemoryUsed() {
+    return opportMemoryUsed.value();
+  }
+
+  public int getOpportCoresUsed() {
+    return opportCoresUsed.value();
+  }
+
+  public int getRunningOpportContainers() {
+    return runningOpportContainers.value();
+  }
+
+  public void opportunisticContainerCompleted(Container container) {
+    opportMemoryUsed.decr(container.getResource().getMemorySize());
+    opportCoresUsed.decr(container.getResource().getVirtualCores());
+    runningOpportContainers.decr();
+  }
+
+  public void opportunisticContainerStarted(Container container) {
+    opportMemoryUsed.incr(container.getResource().getMemorySize());
+    opportCoresUsed.incr(container.getResource().getVirtualCores());
+    runningOpportContainers.incr();
   }
 
   public void allocateContainer(Resource res) {

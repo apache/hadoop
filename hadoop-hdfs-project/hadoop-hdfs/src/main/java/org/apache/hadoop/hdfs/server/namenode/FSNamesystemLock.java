@@ -27,11 +27,14 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Timer;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_LOCK_SUPPRESS_WARNING_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_LOCK_SUPPRESS_WARNING_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LOCK_DETAILED_METRICS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_DEFAULT;
@@ -40,11 +43,20 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPOR
 /**
  * Mimics a ReentrantReadWriteLock but does not directly implement the interface
  * so more sophisticated locking capabilities and logging/metrics are possible.
+ * {@link org.apache.hadoop.hdfs.DFSConfigKeys#DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY}
+ * to be true, metrics will be emitted into the FSNamesystem metrics registry
+ * for each operation which acquires this lock indicating how long the operation
+ * held the lock for. Note that if a thread dies, metrics produced after the
+ * most recent snapshot will be lost due to the use of
+ * {@link MutableRatesWithAggregation}. However since threads are re-used
+ * between operations this should not generally be an issue.
  */
 class FSNamesystemLock {
   @VisibleForTesting
   protected ReentrantReadWriteLock coarseLock;
 
+  private final boolean metricsEnabled;
+  private final MutableRatesWithAggregation detailedHoldTimeMetrics;
   private final Timer timer;
 
   /**
@@ -80,12 +92,19 @@ class FSNamesystemLock {
   private final AtomicLong timeStampOfLastReadLockReport = new AtomicLong(0);
   private final AtomicLong longestReadLockHeldInterval = new AtomicLong(0);
 
-  FSNamesystemLock(Configuration conf) {
-    this(conf, new Timer());
+  @VisibleForTesting
+  static final String OP_NAME_OTHER = "OTHER";
+  private static final String READ_LOCK_METRIC_PREFIX = "FSNReadLock";
+  private static final String WRITE_LOCK_METRIC_PREFIX = "FSNWriteLock";
+
+  FSNamesystemLock(Configuration conf,
+      MutableRatesWithAggregation detailedHoldTimeMetrics) {
+    this(conf, detailedHoldTimeMetrics, new Timer());
   }
 
   @VisibleForTesting
-  FSNamesystemLock(Configuration conf, Timer timer) {
+  FSNamesystemLock(Configuration conf,
+      MutableRatesWithAggregation detailedHoldTimeMetrics, Timer timer) {
     boolean fair = conf.getBoolean("dfs.namenode.fslock.fair", true);
     FSNamesystem.LOG.info("fsLock is fair: " + fair);
     this.coarseLock = new ReentrantReadWriteLock(fair);
@@ -100,6 +119,12 @@ class FSNamesystemLock {
     this.lockSuppressWarningInterval = conf.getTimeDuration(
         DFS_LOCK_SUPPRESS_WARNING_INTERVAL_KEY,
         DFS_LOCK_SUPPRESS_WARNING_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
+    this.metricsEnabled = conf.getBoolean(
+        DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY,
+        DFS_NAMENODE_LOCK_DETAILED_METRICS_DEFAULT);
+    FSNamesystem.LOG.info("Detailed lock hold time metrics enabled: " +
+        this.metricsEnabled);
+    this.detailedHoldTimeMetrics = detailedHoldTimeMetrics;
   }
 
   public void readLock() {
@@ -110,12 +135,17 @@ class FSNamesystemLock {
   }
 
   public void readUnlock() {
+    readUnlock(OP_NAME_OTHER);
+  }
+
+  public void readUnlock(String opName) {
     final boolean needReport = coarseLock.getReadHoldCount() == 1;
     final long readLockInterval =
         timer.monotonicNow() - readLockHeldTimeStamp.get();
     coarseLock.readLock().unlock();
 
     if (needReport) {
+      addMetric(opName, readLockInterval, false);
       readLockHeldTimeStamp.remove();
     }
     if (needReport && readLockInterval >= this.readLockReportingThreshold) {
@@ -164,6 +194,10 @@ class FSNamesystemLock {
   }
 
   public void writeUnlock() {
+    writeUnlock(OP_NAME_OTHER);
+  }
+
+  public void writeUnlock(String opName) {
     final boolean needReport = coarseLock.getWriteHoldCount() == 1 &&
         coarseLock.isWriteLockedByCurrentThread();
     final long currentTime = timer.monotonicNow();
@@ -190,6 +224,10 @@ class FSNamesystemLock {
     }
 
     coarseLock.writeLock().unlock();
+
+    if (needReport) {
+      addMetric(opName, writeLockInterval, true);
+    }
 
     if (logReport) {
       FSNamesystem.LOG.info("FSNamesystem write lock held for " +
@@ -227,4 +265,19 @@ class FSNamesystemLock {
   public int getQueueLength() {
     return coarseLock.getQueueLength();
   }
+
+  /**
+   * Add the lock hold time for a recent operation to the metrics.
+   * @param operationName Name of the operation for which to record the time
+   * @param value Length of time the lock was held
+   */
+  private void addMetric(String operationName, long value, boolean isWrite) {
+    if (metricsEnabled) {
+      String metricName =
+          (isWrite ? WRITE_LOCK_METRIC_PREFIX : READ_LOCK_METRIC_PREFIX) +
+          org.apache.commons.lang.StringUtils.capitalize(operationName);
+      detailedHoldTimeMetrics.add(metricName, value);
+    }
+  }
+
 }

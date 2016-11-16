@@ -94,6 +94,10 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.LogHandler;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerScheduler;
+
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
@@ -101,7 +105,6 @@ import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecret
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -550,6 +553,35 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
         if(container == null || container.getUser().equals("Fail")){
           throw new YarnException("Reject this container");
         }
+      }
+      @Override
+      protected ContainerScheduler createContainerScheduler(Context context) {
+        return new ContainerScheduler(context, dispatcher, metrics){
+          @Override
+          public ContainersMonitor getContainersMonitor() {
+            return new ContainersMonitorImpl(null, null, null) {
+              @Override
+              public float getVmemRatio() {
+                return 2.0f;
+              }
+
+              @Override
+              public long getVmemAllocatedForContainers() {
+                return 20480;
+              }
+
+              @Override
+              public long getPmemAllocatedForContainers() {
+                return 10240;
+              }
+
+              @Override
+              public long getVCoresAllocatedForContainers() {
+                return 4;
+              }
+            };
+          }
+        };
       }
     };
   }

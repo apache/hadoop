@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.sharedcachemanager.store;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -189,11 +190,14 @@ public class InMemorySCMStore extends SCMStore {
         conf.get(YarnConfiguration.SHARED_CACHE_ROOT,
             YarnConfiguration.DEFAULT_SHARED_CACHE_ROOT);
     Path root = new Path(location);
-    if (!fs.exists(root)) {
+    try {
+      fs.getFileStatus(root);
+    } catch (FileNotFoundException e) {
       String message =
           "The shared cache root directory " + location + " was not found";
       LOG.error(message);
-      throw new IOException(message);
+      throw (IOException)new FileNotFoundException(message)
+          .initCause(e);
     }
 
     int nestedLevel = SharedCacheUtil.getCacheDepth(conf);

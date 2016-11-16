@@ -587,6 +587,8 @@ public abstract class AbstractYarnScheduler
         LOG.debug("Completed container: " + rmContainer.getContainerId() +
             " in state: " + rmContainer.getState() + " event:" + event);
       }
+      getSchedulerNode(rmContainer.getNodeId()).releaseContainer(
+          rmContainer.getContainer());
     }
 
     // If the container is getting killed in ACQUIRED state, the requester (AM

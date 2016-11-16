@@ -126,7 +126,13 @@ public class SimpleCopyListing extends CopyListing {
 
     Path targetPath = options.getTargetPath();
     FileSystem targetFS = targetPath.getFileSystem(getConf());
-    boolean targetIsFile = targetFS.isFile(targetPath);
+    boolean targetExists = false;
+    boolean targetIsFile = false;
+    try {
+      targetIsFile = targetFS.getFileStatus(targetPath).isFile();
+      targetExists = true;
+    } catch (FileNotFoundException ignored) {
+    }
     targetPath = targetFS.makeQualified(targetPath);
     final boolean targetIsReservedRaw =
         Path.getPathWithoutSchemeAndAuthority(targetPath).toString().
@@ -147,7 +153,7 @@ public class SimpleCopyListing extends CopyListing {
       }
     }
 
-    if (options.shouldAtomicCommit() && targetFS.exists(targetPath)) {
+    if (options.shouldAtomicCommit() && targetExists) {
       throw new InvalidInputException("Target path for atomic-commit already exists: " +
         targetPath + ". Cannot atomic-commit to pre-existing target-path.");
     }
@@ -448,7 +454,7 @@ public class SimpleCopyListing extends CopyListing {
                                                 && !sourceStatus.isDirectory();
 
     if (solitaryFile) {
-      if (targetFS.isFile(target) || !targetPathExists) {
+      if (!targetPathExists || targetFS.isFile(target)) {
         return sourceStatus.getPath();
       } else {
         return sourceStatus.getPath().getParent();
@@ -495,9 +501,7 @@ public class SimpleCopyListing extends CopyListing {
 
   private SequenceFile.Writer getWriter(Path pathToListFile) throws IOException {
     FileSystem fs = pathToListFile.getFileSystem(getConf());
-    if (fs.exists(pathToListFile)) {
-      fs.delete(pathToListFile, false);
-    }
+    fs.delete(pathToListFile, false);
     return SequenceFile.createWriter(getConf(),
             SequenceFile.Writer.file(pathToListFile),
             SequenceFile.Writer.keyClass(Text.class),

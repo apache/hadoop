@@ -116,16 +116,12 @@ public class NonAppendableFSNodeLabelStore extends FileSystemNodeLabelsStore {
       
       // Rename mirror.new.tmp to mirror.new (will remove .new if it's existed)
       Path newPath = new Path(fsWorkingPath, MIRROR_FILENAME + ".new"); 
-      if (fs.exists(newPath)) {
-        fs.delete(newPath, false);
-      }
+      fs.delete(newPath, false);
       fs.rename(newTmpPath, newPath);
       
       // Remove existing mirror and rename mirror.new to mirror
       Path mirrorPath = new Path(fsWorkingPath, MIRROR_FILENAME);
-      if (fs.exists(mirrorPath)) {
-        fs.delete(mirrorPath, false);
-      }
+      fs.delete(mirrorPath, false);
       fs.rename(newPath, mirrorPath);
     } finally {
       readLock.unlock();

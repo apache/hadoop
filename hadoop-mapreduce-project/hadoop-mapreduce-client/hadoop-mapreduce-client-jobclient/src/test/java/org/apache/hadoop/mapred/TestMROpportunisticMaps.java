@@ -68,15 +68,6 @@ public class TestMROpportunisticMaps {
     doTest(4, 1, 1, 2);
   }
 
-  /**
-   * Test will run with 6 Maps and 2 Reducers. All the Maps are OPPORTUNISTIC.
-   * @throws Exception
-   */
-  @Test
-  public void testMultipleReducers() throws Exception {
-    doTest(6, 2, 1, 6);
-  }
-
   public void doTest(int numMappers, int numReducers, int numNodes,
       int percent) throws Exception {
     doTest(numMappers, numReducers, numNodes, 1000, percent);
@@ -94,7 +85,8 @@ public class TestMROpportunisticMaps {
       conf.setBoolean(YarnConfiguration.
           OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED, true);
       conf.setBoolean(YarnConfiguration.DIST_SCHEDULING_ENABLED, true);
-      conf.setBoolean(YarnConfiguration.NM_CONTAINER_QUEUING_ENABLED, true);
+      conf.setInt(
+          YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH, 10);
       dfsCluster = new MiniDFSCluster.Builder(conf)
           .numDataNodes(numNodes).build();
       fileSystem = dfsCluster.getFileSystem();
@@ -104,11 +96,7 @@ public class TestMROpportunisticMaps {
       createInput(fileSystem, numMappers, numLines);
       // Run the test.
 
-      Configuration jobConf = mrCluster.getConfig();
-      jobConf.set(YarnConfiguration.RM_SCHEDULER_ADDRESS,
-          YarnConfiguration.DEFAULT_AMRM_PROXY_ADDRESS);
-
-      runMergeTest(new JobConf(jobConf), fileSystem,
+      runMergeTest(new JobConf(conf), fileSystem,
           numMappers, numReducers, numLines, percent);
     } finally {
       if (dfsCluster != null) {
