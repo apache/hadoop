@@ -40,6 +40,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -344,5 +345,19 @@ public abstract class BaseContainerManagerTest {
     LOG.info("Container state is " + currentState);
     Assert.assertEquals("ContainerState is not correct (timedout)",
         finalState, currentState);
+  }
+
+  public static ContainerId createContainerId(int id) {
+    // Use default appId = 0
+    return createContainerId(id, 0);
+  }
+
+  public static ContainerId createContainerId(int cId, int aId) {
+    ApplicationId appId = ApplicationId.newInstance(0, aId);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId containerId =
+        ContainerId.newContainerId(appAttemptId, cId);
+    return containerId;
   }
 }
