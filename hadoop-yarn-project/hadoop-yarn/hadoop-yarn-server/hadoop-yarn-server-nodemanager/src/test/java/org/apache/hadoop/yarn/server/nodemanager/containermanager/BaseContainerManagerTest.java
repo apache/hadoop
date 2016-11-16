@@ -441,10 +441,16 @@ public abstract class BaseContainerManagerTest {
   }
 
   public static ContainerId createContainerId(int id) {
-    ApplicationId appId = ApplicationId.newInstance(0, 0);
+    // Use default appId = 0
+    return createContainerId(id, 0);
+  }
+
+  public static ContainerId createContainerId(int cId, int aId) {
+    ApplicationId appId = ApplicationId.newInstance(0, aId);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId containerId = ContainerId.newContainerId(appAttemptId, id);
+    ContainerId containerId =
+        ContainerId.newContainerId(appAttemptId, cId);
     return containerId;
   }
 }

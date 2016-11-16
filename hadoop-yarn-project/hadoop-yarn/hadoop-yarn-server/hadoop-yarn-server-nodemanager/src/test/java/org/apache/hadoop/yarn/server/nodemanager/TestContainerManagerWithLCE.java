@@ -190,6 +190,17 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
   }
 
   @Override
+  public void testUnauthorizedRequests() throws IOException, YarnException {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testUnauthorizedRequests");
+    super.testUnauthorizedRequests();
+  }
+
+  @Override
   public void testStartContainerFailureWithUnknownAuxService() throws Exception {
     // Don't run the test if the binary is not available.
     if (!shouldRunTest()) {
