@@ -671,14 +671,18 @@ public abstract class RMStateStore extends AbstractService {
   }
   
   AsyncDispatcher dispatcher;
+  @SuppressWarnings("rawtypes")
+  @VisibleForTesting
+  protected EventHandler rmStateStoreEventHandler;
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception{
     // create async handler
     dispatcher = new AsyncDispatcher();
     dispatcher.init(conf);
+    rmStateStoreEventHandler = new ForwardingEventHandler();
     dispatcher.register(RMStateStoreEventType.class, 
-                        new ForwardingEventHandler());
+                        rmStateStoreEventHandler);
     dispatcher.setDrainEventsOnStop();
     initInternal(conf);
   }
@@ -790,12 +794,12 @@ public abstract class RMStateStore extends AbstractService {
         ApplicationStateData.newInstance(app.getSubmitTime(),
             app.getStartTime(), context, app.getUser(), app.getCallerContext());
     appState.setApplicationTimeouts(app.getApplicationTimeouts());
-    dispatcher.getEventHandler().handle(new RMStateStoreAppEvent(appState));
+    getRMStateStoreEventHandler().handle(new RMStateStoreAppEvent(appState));
   }
 
   @SuppressWarnings("unchecked")
   public void updateApplicationState(ApplicationStateData appState) {
-    dispatcher.getEventHandler().handle(new RMStateUpdateAppEvent(appState));
+    getRMStateStoreEventHandler().handle(new RMStateUpdateAppEvent(appState));
   }
 
   public void updateApplicationStateSynchronously(ApplicationStateData appState,
@@ -842,14 +846,14 @@ public abstract class RMStateStore extends AbstractService {
             attempMetrics.getPreemptedVcore()
             );
 
-    dispatcher.getEventHandler().handle(
+    getRMStateStoreEventHandler().handle(
       new RMStateStoreAppAttemptEvent(attemptState));
   }
 
   @SuppressWarnings("unchecked")
   public void updateApplicationAttemptState(
       ApplicationAttemptStateData attemptState) {
-    dispatcher.getEventHandler().handle(
+    getRMStateStoreEventHandler().handle(
       new RMStateUpdateAppAttemptEvent(attemptState));
   }
 
@@ -1021,7 +1025,8 @@ public abstract class RMStateStore extends AbstractService {
       appState.attempts.put(appAttempt.getAppAttemptId(), null);
     }
     
-    dispatcher.getEventHandler().handle(new RMStateStoreRemoveAppEvent(appState));
+    getRMStateStoreEventHandler().handle(
+        new RMStateStoreRemoveAppEvent(appState));
   }
 
   /**
@@ -1042,7 +1047,7 @@ public abstract class RMStateStore extends AbstractService {
   @SuppressWarnings("unchecked")
   public synchronized void removeApplicationAttempt(
       ApplicationAttemptId applicationAttemptId) {
-    dispatcher.getEventHandler().handle(
+    getRMStateStoreEventHandler().handle(
         new RMStateStoreRemoveAppAttemptEvent(applicationAttemptId));
   }
 
@@ -1210,5 +1215,10 @@ public abstract class RMStateStore extends AbstractService {
     } finally {
       this.readLock.unlock();
     }
+  }
+
+  @SuppressWarnings("rawtypes")
+  protected EventHandler getRMStateStoreEventHandler() {
+    return dispatcher.getEventHandler();
   }
 }
