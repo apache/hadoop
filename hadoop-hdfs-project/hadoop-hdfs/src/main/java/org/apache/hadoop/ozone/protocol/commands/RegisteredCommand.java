@@ -18,15 +18,19 @@
 package org.apache.hadoop.ozone.protocol.commands;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.RegisteredCmdResponseProto;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.RegisteredCmdResponseProto.ErrorCode;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto.Type;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto
+    .ErrorCode;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.Type;
 
 /**
  * Response to Datanode Register call.
  */
-public class RegisteredCommand extends SCMCommand<RegisteredCmdResponseProto> {
-
+public class RegisteredCommand extends
+    SCMCommand<SCMRegisteredCmdResponseProto> {
   private String datanodeUUID;
   private String clusterID;
   private ErrorCode error;
@@ -37,8 +41,6 @@ public class RegisteredCommand extends SCMCommand<RegisteredCmdResponseProto> {
     this.clusterID = clusterID;
     this.error = error;
   }
-
-
 
   /**
    * Returns a new builder.
@@ -56,11 +58,12 @@ public class RegisteredCommand extends SCMCommand<RegisteredCmdResponseProto> {
    */
   @Override
   Type getType() {
-    return Type.registeredCmd;
+    return Type.registeredCommand;
   }
 
   /**
    * Returns datanode UUID.
+   *
    * @return - Datanode ID.
    */
   public String getDatanodeUUID() {
@@ -69,6 +72,7 @@ public class RegisteredCommand extends SCMCommand<RegisteredCmdResponseProto> {
 
   /**
    * Returns cluster ID.
+   *
    * @return -- ClusterID
    */
   public String getClusterID() {
@@ -77,6 +81,7 @@ public class RegisteredCommand extends SCMCommand<RegisteredCmdResponseProto> {
 
   /**
    * Returns ErrorCode.
+   *
    * @return - ErrorCode
    */
   public ErrorCode getError() {
@@ -89,8 +94,8 @@ public class RegisteredCommand extends SCMCommand<RegisteredCmdResponseProto> {
    * @return A protobuf message.
    */
   @Override
-  RegisteredCmdResponseProto getProtoBufMessage() {
-    return RegisteredCmdResponseProto.newBuilder()
+  SCMRegisteredCmdResponseProto getProtoBufMessage() {
+    return SCMRegisteredCmdResponseProto.newBuilder()
         .setClusterID(this.clusterID)
         .setDatanodeUUID(this.datanodeUUID)
         .setErrorCode(this.error)
@@ -122,7 +127,7 @@ public class RegisteredCommand extends SCMCommand<RegisteredCmdResponseProto> {
      * @param response - RegisteredCmdResponseProto
      * @return RegisteredCommand
      */
-    public  RegisteredCommand getFromProtobuf(RegisteredCmdResponseProto
+    public  RegisteredCommand getFromProtobuf(SCMRegisteredCmdResponseProto
                                                         response) {
       Preconditions.checkNotNull(response);
       return new RegisteredCommand(response.getErrorCode(),

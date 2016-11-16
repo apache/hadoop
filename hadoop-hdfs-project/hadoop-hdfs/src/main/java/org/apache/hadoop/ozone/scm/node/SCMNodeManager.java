@@ -29,8 +29,11 @@ import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.RegisteredCmdResponseProto.ErrorCode;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto
+    .ErrorCode;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
 
 import org.apache.hadoop.ozone.scm.VersionInfo;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
@@ -43,7 +46,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -580,21 +582,20 @@ public class SCMNodeManager
   @Override
   public SCMCommand register(DatanodeID datanodeID) {
 
-    SCMCommand errorCode = verifyDatanodeUUID(datanodeID);
-    if (errorCode != null) {
-      return errorCode;
+    SCMCommand responseCommand = verifyDatanodeUUID(datanodeID);
+    if (responseCommand != null) {
+      return responseCommand;
     }
-    DatanodeID newDatanodeID = new DatanodeID(UUID.randomUUID().toString(),
-        datanodeID);
-    nodes.put(newDatanodeID.getDatanodeUuid(), newDatanodeID);
+
+    nodes.put(datanodeID.getDatanodeUuid(), datanodeID);
     totalNodes.incrementAndGet();
-    healthyNodes.put(newDatanodeID.getDatanodeUuid(), monotonicNow());
+    healthyNodes.put(datanodeID.getDatanodeUuid(), monotonicNow());
     healthyNodeCount.incrementAndGet();
     LOG.info("Data node with ID: {} Registered.",
-        newDatanodeID.getDatanodeUuid());
+        datanodeID.getDatanodeUuid());
     return RegisteredCommand.newBuilder()
         .setErrorCode(ErrorCode.success)
-        .setDatanodeUUID(newDatanodeID.getDatanodeUuid())
+        .setDatanodeUUID(datanodeID.getDatanodeUuid())
         .setClusterID(this.clusterID)
         .build();
   }
@@ -607,20 +608,12 @@ public class SCMNodeManager
    */
   private SCMCommand verifyDatanodeUUID(DatanodeID datanodeID) {
 
-    // Make sure that we return the right error code, so that
-    // data node can log the correct error. if it is already registered then
-    // datanode should move to heartbeat state. It implies that somehow we
-    // have an error where the data node is trying to re-register.
-    //
-    // We are going to let the datanode know that there is an error but allow it
-    // to recover by sending it the right info that is needed for recovery.
-
     if (datanodeID.getDatanodeUuid() != null &&
         nodes.containsKey(datanodeID.getDatanodeUuid())) {
-      LOG.error("Datanode is already registered. Datanode: {}",
+      LOG.trace("Datanode is already registered. Datanode: {}",
           datanodeID.toString());
       return RegisteredCommand.newBuilder()
-          .setErrorCode(ErrorCode.errorNodeAlreadyRegistered)
+          .setErrorCode(ErrorCode.success)
           .setClusterID(this.clusterID)
           .setDatanodeUUID(datanodeID.getDatanodeUuid())
           .build();
