@@ -224,7 +224,7 @@ public class TestBlockRecovery {
             new NNHAStatusHeartbeat(HAServiceState.ACTIVE, 1),
             null, ThreadLocalRandom.current().nextLong() | 1L));
 
-    dn = new DataNode(conf, locations, null) {
+    dn = new DataNode(conf, locations, null, null) {
       @Override
       DatanodeProtocolClientSideTranslatorPB connectToNN(
           InetSocketAddress nnAddr) throws IOException {
