@@ -30,6 +30,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 
+import java.io.IOException;
+
 /**
  * Creates a netty server endpoint that acts as the communication layer for
  * Ozone containers.
@@ -58,9 +60,9 @@ public final class XceiverServer {
   /**
    * Starts running the server.
    *
-   * @throws Exception
+   * @throws IOException
    */
-  public void start() throws Exception {
+  public void start() throws IOException {
     bossGroup = new NioEventLoopGroup();
     workerGroup = new NioEventLoopGroup();
     channel = new ServerBootstrap()
