@@ -104,6 +104,11 @@ public class RpcMetrics {
     return server.getNumOpenConnections();
   }
 
+  @Metric("Number of open connections per user")
+  public String numOpenConnectionsPerUser() {
+    return server.getNumOpenConnectionsPerUser();
+  }
+
   @Metric("Length of the call queue") public int callQueueLength() {
     return server.getCallQueueLen();
   }

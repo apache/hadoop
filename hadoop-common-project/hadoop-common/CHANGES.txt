@@ -24,6 +24,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-13655. document object store use with fs shell and distcp.
     (Steve Loughran via Mingliang Liu)
 
+    HADOOP-13742. Expose "NumOpenConnectionsPerUser" as a metric.
+    (Brahma Reddy Battula via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES

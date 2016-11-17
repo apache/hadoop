@@ -40,6 +40,7 @@ import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -995,12 +996,28 @@ public class TestRPC {
         .setBindAddress(ADDRESS).setPort(0).setNumHandlers(5).setVerbose(true)
         .build();
     server.start();
+    String testUser = "testUser";
+    UserGroupInformation anotherUser =
+        UserGroupInformation.createRemoteUser(testUser);
+    TestProtocol proxy2 =
+        anotherUser.doAs(new PrivilegedAction<TestProtocol>() {
+          public TestProtocol run() {
+            try {
+              return RPC.getProxy(TestProtocol.class, 0,
+                  server.getListenerAddress(), conf);
+            } catch (IOException e) {
+              e.printStackTrace();
+            }
+            return null;
+          }
+        });
     final TestProtocol proxy = RPC.getProxy(TestProtocol.class,
         TestProtocol.versionID, server.getListenerAddress(), configuration);
     try {
       for (int i=0; i<1000; i++) {
         proxy.ping();
         proxy.echo("" + i);
+        proxy2.echo("" + i);
       }
       MetricsRecordBuilder rpcMetrics =
           getMetrics(server.getRpcMetrics().name());
@@ -1012,9 +1029,18 @@ public class TestRPC {
           rpcMetrics);
       MetricsAsserts.assertQuantileGauges("RpcProcessingTime" + interval + "s",
           rpcMetrics);
+      String actualUserVsCon = MetricsAsserts
+          .getStringMetric("NumOpenConnectionsPerUser", rpcMetrics);
+      String proxyUser =
+          UserGroupInformation.getCurrentUser().getShortUserName();
+      assertTrue(actualUserVsCon.contains("\"" + proxyUser + "\":1"));
+      assertTrue(actualUserVsCon.contains("\"" + testUser + "\":1"));
     } finally {
       if (proxy != null) {
         RPC.stopProxy(proxy);
+      }
+      if (proxy2 != null) {
+        RPC.stopProxy(proxy2);
       }
       server.stop();
     }
