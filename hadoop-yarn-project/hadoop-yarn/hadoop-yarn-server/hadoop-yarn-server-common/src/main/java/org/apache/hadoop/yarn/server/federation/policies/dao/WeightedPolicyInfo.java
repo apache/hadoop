@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.federation.policies.dao;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -100,7 +100,7 @@ public class WeightedPolicyInfo {
       JSONUnmarshaller unmarshaller = jsonjaxbContext.createJSONUnmarshaller();
       final byte[] bytes = new byte[bb.remaining()];
       bb.get(bytes);
-      String params = new String(bytes, Charset.forName("UTF-8"));
+      String params = new String(bytes, StandardCharsets.UTF_8);
 
       WeightedPolicyInfo weightedPolicyInfo = unmarshaller.unmarshalFromJSON(
           new StringReader(params), WeightedPolicyInfo.class);
@@ -164,7 +164,7 @@ public class WeightedPolicyInfo {
     }
     try {
       String s = toJSONString();
-      return ByteBuffer.wrap(s.getBytes(Charset.forName("UTF-8")));
+      return ByteBuffer.wrap(s.getBytes(StandardCharsets.UTF_8));
     } catch (JAXBException j) {
       throw new FederationPolicyInitializationException(j);
     }
