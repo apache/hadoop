@@ -72,7 +72,6 @@ import java.net.Socket;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -116,6 +115,8 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.ozone.container.common.statemachine
+    .DatanodeStateMachine;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -192,7 +193,6 @@ import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.ozone.OzoneConfiguration;
-import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SaslPropertiesResolver;
 import org.apache.hadoop.security.SecurityUtil;
@@ -396,7 +396,7 @@ public class DataNode extends ReconfigurableBase
   private DiskBalancer diskBalancer;
 
   private final SocketFactory socketFactory;
-  private OzoneContainer ozoneServer;
+  private DatanodeStateMachine datanodeStateMachine;
 
   private static Tracer createTracer(Configuration conf) {
     return new Tracer.Builder("DataNode").
@@ -1615,11 +1615,10 @@ public class DataNode extends ReconfigurableBase
     initDirectoryScanner(getConf());
     if(this.ozoneEnabled) {
       try {
-        ozoneServer = new OzoneContainer(getConf(), this.getFSDataset());
-        ozoneServer.start();
+        datanodeStateMachine = DatanodeStateMachine.initStateMachine(getConf());
         LOG.info("Ozone container server started.");
-      } catch (Exception ex) {
-        LOG.error("Unable to start Ozone. ex: {}", ex.toString());
+      } catch (IOException ex) {
+        LOG.error("Unable to start Ozone. ex: {}", ex);
       }
     }
     initDiskBalancer(data, getConf());
@@ -1975,9 +1974,9 @@ public class DataNode extends ReconfigurableBase
     }
 
     if(this.ozoneEnabled) {
-      if(ozoneServer != null) {
+      if(datanodeStateMachine != null) {
         try {
-          ozoneServer.stop();
+          datanodeStateMachine.close();
         } catch (Exception e) {
           LOG.error("Error is ozone shutdown. ex {}", e.toString());
         }

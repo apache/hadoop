@@ -20,19 +20,12 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.container.common.statemachine
-    .DatanodeStateMachine;
-
-import org.apache.hadoop.ozone.container.common.statemachine
-    .EndpointStateMachine;
-import org.apache.hadoop.ozone.container.common.statemachine
-    .SCMConnectionManager;
-
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine.EndpointStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
 import org.apache.hadoop.ozone.container.common.states.DatanodeState;
-import org.apache.hadoop.ozone.container.common.states.datanode
-    .InitDatanodeState;
-import org.apache.hadoop.ozone.container.common.states.datanode
-    .RunningDatanodeState;
+import org.apache.hadoop.ozone.container.common.states.datanode.InitDatanodeState;
+import org.apache.hadoop.ozone.container.common.states.datanode.RunningDatanodeState;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.junit.After;
@@ -54,18 +47,20 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+
 /**
  * Tests the datanode state machine class and its states.
  */
 public class TestDatanodeStateMachine {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDatanodeStateMachine.class);
   private final int scmServerCount = 3;
   private List<String> serverAddresses;
   private List<RPC.Server> scmServers;
   private List<ScmTestMock> mockServers;
   private ExecutorService executorService;
   private Configuration conf;
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestDatanodeStateMachine.class);
 
   @Before
   public void setUp() throws Exception {
@@ -91,13 +86,14 @@ public class TestDatanodeStateMachine {
     String path = p.getPath().concat(
         TestDatanodeStateMachine.class.getSimpleName());
     File f = new File(path);
-    if(!f.mkdirs()) {
+    if (!f.mkdirs()) {
       LOG.info("Required directories already exist.");
     }
-
+    conf.set(DFS_DATANODE_DATA_DIR_KEY, path);
     path = Paths.get(path.toString(),
         TestDatanodeStateMachine.class.getSimpleName() + ".id").toString();
     conf.set(OzoneConfigKeys.OZONE_SCM_DATANODE_ID, path);
+
 
     executorService = HadoopExecutors.newScheduledThreadPool(
         conf.getInt(
@@ -122,7 +118,6 @@ public class TestDatanodeStateMachine {
   /**
    * Assert that starting statemachine executes the Init State.
    *
-   * @throws IOException
    * @throws InterruptedException
    */
   @Test
@@ -132,7 +127,7 @@ public class TestDatanodeStateMachine {
     Runnable startStateMachineTask = () -> {
       try {
         stateMachine.start();
-      } catch (IOException ex) {
+      } catch (Exception ex) {
       }
     };
     Thread thread1 = new Thread(startStateMachineTask);

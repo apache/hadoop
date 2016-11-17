@@ -32,6 +32,9 @@ import org.junit.rules.Timeout;
 
 import java.net.URL;
 
+/**
+ * Tests ozone containers.
+ */
 public class TestOzoneContainer {
   /**
    * Set the timeout for every test.
@@ -55,12 +58,11 @@ public class TestOzoneContainer {
 
     // We don't start Ozone Container via data node, we will do it
     // independently in our test path.
-    Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline
-        (containerName);
+    Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline(
+        containerName);
     conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
         pipeline.getLeader().getContainerPort());
-    OzoneContainer container = new OzoneContainer(conf, cluster.getDataNodes
-        ().get(0).getFSDataset());
+    OzoneContainer container = new OzoneContainer(conf);
     container.start();
 
     XceiverClient client = new XceiverClient(pipeline, conf);

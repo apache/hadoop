@@ -21,6 +21,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.slf4j.Logger;
@@ -43,27 +44,26 @@ public class DatanodeStateMachine implements Closeable {
   private final ExecutorService executorService;
   private final Configuration conf;
   private final SCMConnectionManager connectionManager;
-  private final long taskWaitTime;
   private final long heartbeatFrequency;
   private StateContext context;
+  private final OzoneContainer container;
 
   /**
-   * Constructs a container state machine.
+   * Constructs a a datanode state machine.
    *
    * @param conf - Configration.
    */
-  public DatanodeStateMachine(Configuration conf) {
+  public DatanodeStateMachine(Configuration conf) throws IOException {
     this.conf = conf;
     executorService = HadoopExecutors.newScheduledThreadPool(
         this.conf.getInt(OzoneConfigKeys.OZONE_SCM_CONTAINER_THREADS,
             OzoneConfigKeys.OZONE_SCM_CONTAINER_THREADS_DEFAULT),
         new ThreadFactoryBuilder().setDaemon(true)
-            .setNameFormat("Container State Machine Thread - %d").build());
+            .setNameFormat("Datanode State Machine Thread - %d").build());
     connectionManager = new SCMConnectionManager(conf);
     context = new StateContext(this.conf, DatanodeStates.getInitState(), this);
-    taskWaitTime = this.conf.getLong(OzoneConfigKeys.OZONE_CONTAINER_TASK_WAIT,
-        OzoneConfigKeys.OZONE_CONTAINER_TASK_WAIT_DEFAULT);
     heartbeatFrequency = OzoneClientUtils.getScmHeartbeatInterval(conf);
+    container = new OzoneContainer(conf);
   }
 
   /**
@@ -81,10 +81,12 @@ public class DatanodeStateMachine implements Closeable {
   public void start() throws IOException {
     long now = 0;
     long nextHB = 0;
+    container.start();
     while (context.getState() != DatanodeStates.SHUTDOWN) {
       try {
         nextHB = Time.monotonicNow() + heartbeatFrequency;
-        context.execute(executorService, taskWaitTime, TimeUnit.SECONDS);
+        context.execute(executorService, heartbeatFrequency,
+            TimeUnit.MILLISECONDS);
         now = Time.monotonicNow();
         if (now < nextHB) {
           Thread.sleep(nextHB - now);
@@ -144,6 +146,10 @@ public class DatanodeStateMachine implements Closeable {
     for (EndpointStateMachine endPoint : connectionManager.getValues()) {
       endPoint.close();
     }
+
+    if(container != null) {
+      container.stop();
+    }
   }
 
   /**
@@ -159,7 +165,7 @@ public class DatanodeStateMachine implements Closeable {
     /**
      * Constructs ContainerStates.
      *
-     * @param value
+     * @param value  Enum Value
      */
     DatanodeStates(int value) {
       this.value = value;
@@ -209,5 +215,23 @@ public class DatanodeStateMachine implements Closeable {
       }
       return getLastState();
     }
+  }
+
+  public static DatanodeStateMachine initStateMachine(Configuration conf)
+      throws IOException {
+    DatanodeStateMachine stateMachine = new DatanodeStateMachine(conf);
+    Runnable startStateMachineTask = () -> {
+      try {
+        stateMachine.start();
+      } catch (Exception ex) {
+        LOG.error("Unable to start the DatanodeState Machine", ex);
+      }
+    };
+    Thread thread =  new ThreadFactoryBuilder()
+        .setDaemon(true)
+        .setNameFormat("Datanode State Machine Thread - %d")
+        .build().newThread(startStateMachineTask);
+    thread.start();
+    return stateMachine;
   }
 }
