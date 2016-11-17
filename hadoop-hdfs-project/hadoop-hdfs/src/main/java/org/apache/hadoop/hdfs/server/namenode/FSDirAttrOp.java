@@ -190,6 +190,33 @@ public class FSDirAttrOp {
     return fsd.getAuditFileInfo(iip);
   }
 
+  static void satisfyStoragePolicy(FSDirectory fsd, BlockManager bm,
+      String src) throws IOException {
+
+    // make sure storage policy is enabled, otherwise
+    // there is no need to satisfy storage policy.
+    if (!fsd.isStoragePolicyEnabled()) {
+      throw new IOException(String.format(
+          "Failed to satisfy storage policy since %s is set to false.",
+          DFS_STORAGE_POLICY_ENABLED_KEY));
+    }
+
+    FSPermissionChecker pc = fsd.getPermissionChecker();
+    INodesInPath iip;
+    fsd.writeLock();
+    try {
+
+      // check operation permission.
+      iip = fsd.resolvePath(pc, src, DirOp.WRITE);
+      if (fsd.isPermissionEnabled()) {
+        fsd.checkPathAccess(pc, iip, FsAction.WRITE);
+      }
+      unprotectedSatisfyStoragePolicy(bm, iip);
+    } finally {
+      fsd.writeUnlock();
+    }
+  }
+
   static BlockStoragePolicy[] getStoragePolicies(BlockManager bm)
       throws IOException {
     return bm.getStoragePolicies();
@@ -448,6 +475,35 @@ public class FSDirAttrOp {
     } else {
       throw new FileNotFoundException(iip.getPath()
           + " is not a file or directory");
+    }
+  }
+
+  static void unprotectedSatisfyStoragePolicy(BlockManager bm,
+      INodesInPath iip) throws IOException {
+
+    // check whether file exists.
+    INode inode = iip.getLastINode();
+    if (inode == null) {
+      throw new FileNotFoundException("File/Directory does not exist: "
+          + iip.getPath());
+    }
+
+    // TODO: need to check whether inode's storage policy
+    // has been satisfied or inode exists in the satisfier
+    // list before calling satisfyStoragePolicy in BlockManager.
+    if (inode.isDirectory()) {
+      final int snapshotId = iip.getLatestSnapshotId();
+      for (INode node : inode.asDirectory().getChildrenList(snapshotId)) {
+        if (node.isFile()) {
+          bm.satisfyStoragePolicy(node.getId());
+
+        }
+      }
+    } else if (inode.isFile()) {
+      bm.satisfyStoragePolicy(inode.getId());
+    } else {
+      throw new FileNotFoundException("File/Directory does not exist: "
+          + iip.getPath());
     }
   }
 

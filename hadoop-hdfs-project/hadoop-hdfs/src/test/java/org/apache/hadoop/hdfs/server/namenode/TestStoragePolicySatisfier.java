@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,20 +25,26 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Supplier;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 
 /**
  * Tests that StoragePolicySatisfier daemon is able to check the blocks to be
@@ -227,6 +234,123 @@ public class TestStoragePolicySatisfier {
       }
 
       waitForBlocksMovementResult(blockCollectionIds.size(), 30000);
+    } finally {
+      hdfsCluster.shutdown();
+    }
+  }
+
+  /**
+   * Tests to verify hdfsAdmin.satisfyStoragePolicy works well for file.
+   * @throws Exception
+   */
+  @Test(timeout = 300000)
+  public void testSatisfyFileWithHdfsAdmin() throws Exception {
+    HdfsAdmin hdfsAdmin =
+        new HdfsAdmin(FileSystem.getDefaultUri(config), config);
+    try {
+
+      // Change policy to COLD
+      dfs.setStoragePolicy(new Path(file), "COLD");
+
+      StorageType[][] newtypes =
+          new StorageType[][]{{StorageType.ARCHIVE, StorageType.ARCHIVE},
+              {StorageType.ARCHIVE, StorageType.ARCHIVE},
+              {StorageType.ARCHIVE, StorageType.ARCHIVE}};
+      startAdditionalDNs(config, 3, numOfDatanodes, newtypes,
+          storagesPerDatanode, capacity, hdfsCluster);
+
+      hdfsAdmin.satisfyStoragePolicy(new Path(file));
+
+      hdfsCluster.triggerHeartbeats();
+      // Wait till namenode notified about the block location details
+      waitExpectedStorageType(file, StorageType.ARCHIVE, 3, 30000);
+    } finally {
+      hdfsCluster.shutdown();
+    }
+  }
+
+  /**
+   * Tests to verify hdfsAdmin.satisfyStoragePolicy works well for dir.
+   * @throws Exception
+   */
+  @Test(timeout = 300000)
+  public void testSatisfyDirWithHdfsAdmin() throws Exception {
+    HdfsAdmin hdfsAdmin =
+        new HdfsAdmin(FileSystem.getDefaultUri(config), config);
+
+    try {
+
+      final String subDir = "/subDir";
+      final String subFile1 = subDir + "/subFile1";
+      final String subDir2 = subDir + "/subDir2";
+      final String subFile2 = subDir2 + "/subFile2";
+      dfs.mkdirs(new Path(subDir));
+      writeContent(subFile1);
+      dfs.mkdirs(new Path(subDir2));
+      writeContent(subFile2);
+
+      // Change policy to COLD
+      dfs.setStoragePolicy(new Path(subDir), "ONE_SSD");
+
+      StorageType[][] newtypes =
+          new StorageType[][]{{StorageType.SSD, StorageType.DISK}};
+      startAdditionalDNs(config, 1, numOfDatanodes, newtypes,
+          storagesPerDatanode, capacity, hdfsCluster);
+
+      hdfsAdmin.satisfyStoragePolicy(new Path(subDir));
+
+      hdfsCluster.triggerHeartbeats();
+
+      // take effect for the file in the directory.
+      waitExpectedStorageType(subFile1, StorageType.SSD, 1, 30000);
+      waitExpectedStorageType(subFile1, StorageType.DISK, 2, 30000);
+
+      // take no effect for the sub-dir's file in the directory.
+      waitExpectedStorageType(subFile2, StorageType.DEFAULT, 3, 30000);
+    } finally {
+      hdfsCluster.shutdown();
+    }
+  }
+
+  /**
+   * Tests to verify hdfsAdmin.satisfyStoragePolicy exceptions.
+   * @throws Exception
+   */
+  @Test(timeout = 300000)
+  public void testSatisfyWithExceptions() throws Exception {
+    try {
+      final String nonExistingFile = "/noneExistingFile";
+      hdfsCluster.getConfiguration(0).
+          setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, false);
+      hdfsCluster.restartNameNodes();
+      hdfsCluster.waitActive();
+      HdfsAdmin hdfsAdmin =
+          new HdfsAdmin(FileSystem.getDefaultUri(config), config);
+
+      try {
+        hdfsAdmin.satisfyStoragePolicy(new Path(file));
+        Assert.fail(String.format(
+            "Should failed to satisfy storage policy "
+                + "for %s since %s is set to false.",
+            file, DFS_STORAGE_POLICY_ENABLED_KEY));
+      } catch (IOException e) {
+        Assert.assertTrue(e.getMessage().contains(String.format(
+            "Failed to satisfy storage policy since %s is set to false.",
+            DFS_STORAGE_POLICY_ENABLED_KEY)));
+      }
+
+      hdfsCluster.getConfiguration(0).
+          setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, true);
+      hdfsCluster.restartNameNodes();
+      hdfsCluster.waitActive();
+      hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(config), config);
+      try {
+        hdfsAdmin.satisfyStoragePolicy(new Path(nonExistingFile));
+        Assert.fail("Should throw FileNotFoundException for " +
+            nonExistingFile);
+      } catch (FileNotFoundException e) {
+
+      }
     } finally {
       hdfsCluster.shutdown();
     }

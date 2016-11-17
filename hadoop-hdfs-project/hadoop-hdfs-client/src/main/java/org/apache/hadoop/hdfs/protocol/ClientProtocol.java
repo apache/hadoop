@@ -1742,4 +1742,18 @@ public interface ClientProtocol {
   @Idempotent
   BatchedEntries<OpenFileEntry> listOpenFiles(long prevId,
       EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException;
+
+  /**
+   * Satisfy the storage policy for a file/directory.
+   * @param path Path of an existing file/directory.
+   * @throws AccessControlException If access is denied.
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException if <code>src</code>
+   *           contains a symlink.
+   * @throws java.io.FileNotFoundException If file/dir <code>src</code> is not
+   *           found.
+   * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException append not
+   *           allowed in safemode.
+   */
+  @Idempotent
+  void satisfyStoragePolicy(String path) throws IOException;
 }

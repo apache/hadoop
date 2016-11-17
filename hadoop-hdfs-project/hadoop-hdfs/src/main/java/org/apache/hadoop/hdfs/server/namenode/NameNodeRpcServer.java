@@ -1406,6 +1406,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
+  public void satisfyStoragePolicy(String src) throws IOException {
+    checkNNStartup();
+    namesystem.satisfyStoragePolicy(src);
+  }
+
+  @Override // ClientProtocol
   public void setQuota(String path, long namespaceQuota, long storagespaceQuota,
                        StorageType type)
       throws IOException {

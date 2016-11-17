@@ -533,6 +533,16 @@ public class HdfsAdmin {
   }
 
   /**
+   * Set the source path to the specified storage policy.
+   *
+   * @param path The source path referring to either a directory or a file.
+   * @throws IOException
+   */
+  public void satisfyStoragePolicy(final Path path) throws IOException {
+    dfs.satisfyStoragePolicy(path);
+  }
+
+  /**
    * Get the Erasure coding policies supported.
    *
    * @throws IOException

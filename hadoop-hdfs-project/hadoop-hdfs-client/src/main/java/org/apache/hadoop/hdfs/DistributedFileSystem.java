@@ -2863,6 +2863,40 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
+   * Set the source path to satisfy storage policy. This API is non-recursive
+   * in nature, i.e., if the source path is a directory then all the files
+   * immediately under the directory would be considered for satisfying the
+   * policy and the sub-directories if any under this path will be skipped.
+   *
+   * @param path The source path referring to either a directory or a file.
+   * @throws IOException
+   */
+  public void satisfyStoragePolicy(final Path path) throws IOException {
+    Path absF = fixRelativePart(path);
+    new FileSystemLinkResolver<Void>() {
+
+      @Override
+      public Void doCall(Path p) throws IOException {
+        dfs.satisfyStoragePolicy(getPathName(p));
+        return null;
+      }
+
+      @Override
+      public Void next(FileSystem fs, Path p) throws IOException {
+        // DFS only
+        if (fs instanceof  DistributedFileSystem) {
+          DistributedFileSystem myDfs = (DistributedFileSystem) fs;
+          myDfs.satisfyStoragePolicy(p);
+          return null;
+        }
+        throw new UnsupportedOperationException(
+            "Cannot satisfyStoragePolicy through a symlink to a "
+                + "non-DistributedFileSystem: " + path + " -> " + p);
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
    * Get erasure coding policy information for the specified path
    *
    * @param path The path of the file or directory

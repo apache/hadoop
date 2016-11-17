@@ -2227,6 +2227,24 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
+   * Satisfy the storage policy for a file or a directory.
+   *
+   * @param src file/directory path
+   */
+  void satisfyStoragePolicy(String src) throws IOException {
+    checkOperation(OperationCategory.WRITE);
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("Cannot satisfy storage policy for " + src);
+      // TODO: need to update editlog for persistence.
+      FSDirAttrOp.satisfyStoragePolicy(dir, blockManager, src);
+    } finally {
+      writeUnlock();
+    }
+  }
+
+  /**
    * unset storage policy set for a given file or a directory.
    *
    * @param src file/directory path
