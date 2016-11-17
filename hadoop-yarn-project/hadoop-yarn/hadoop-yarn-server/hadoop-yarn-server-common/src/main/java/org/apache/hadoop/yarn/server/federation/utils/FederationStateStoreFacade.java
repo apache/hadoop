@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoR
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -262,12 +263,17 @@ public final class FederationStateStoreFacade {
     if (isCachingEnabled()) {
       return getPoliciesConfigurations().get(queue);
     } else {
-      return stateStore
-          .getPolicyConfiguration(
-              GetSubClusterPolicyConfigurationRequest.newInstance(queue))
-          .getPolicyConfiguration();
-    }
 
+      GetSubClusterPolicyConfigurationResponse response =
+          stateStore.getPolicyConfiguration(
+              GetSubClusterPolicyConfigurationRequest.newInstance(queue));
+      if (response == null) {
+        throw new YarnException("The stateStore returned a null for "
+            + "GetSubClusterPolicyConfigurationResponse for queue " + queue);
+      } else {
+        return response.getPolicyConfiguration();
+      }
+    }
   }
 
   /**

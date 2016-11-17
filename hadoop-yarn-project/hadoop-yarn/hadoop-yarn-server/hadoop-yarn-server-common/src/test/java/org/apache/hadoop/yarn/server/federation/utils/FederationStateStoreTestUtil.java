@@ -18,6 +18,8 @@
 package org.apache.hadoop.yarn.server.federation.utils;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -29,6 +31,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHome
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SetSubClusterPolicyConfigurationRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
@@ -62,8 +65,8 @@ public class FederationStateStoreTestUtil {
     String webAppAddress = "1.2.3.4:4";
 
     return SubClusterInfo.newInstance(subClusterId, amRMAddress,
-        clientRMAddress, rmAdminAddress, webAppAddress, SubClusterState.SC_NEW,
-        CLOCK.getTime(), "capability");
+        clientRMAddress, rmAdminAddress, webAppAddress,
+        SubClusterState.SC_RUNNING, CLOCK.getTime(), "capability");
   }
 
   private void registerSubCluster(SubClusterId subClusterId)
@@ -95,6 +98,21 @@ public class FederationStateStoreTestUtil {
       addApplicationHomeSC(ApplicationId.newInstance(clusterTs, i),
           SubClusterId.newInstance(SC_PREFIX + i));
     }
+  }
+
+  public List<SubClusterId> getAllSubClusterIds(
+      boolean filterInactiveSubclusters) throws YarnException {
+
+    List<SubClusterInfo> infos = stateStore
+        .getSubClusters(
+            GetSubClustersInfoRequest.newInstance(filterInactiveSubclusters))
+        .getSubClusters();
+    List<SubClusterId> ids = new ArrayList<>();
+    for (SubClusterInfo s : infos) {
+      ids.add(s.getSubClusterId());
+    }
+
+    return ids;
   }
 
   private SubClusterPolicyConfiguration createSCPolicyConf(String queueName,
