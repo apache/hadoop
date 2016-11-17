@@ -105,7 +105,7 @@ public class FSSchedulerNode extends SchedulerNode {
     this.reservedAppSchedulable = null;
   }
 
-  public synchronized FSAppAttempt getReservedAppSchedulable() {
+  synchronized FSAppAttempt getReservedAppSchedulable() {
     return reservedAppSchedulable;
   }
 
@@ -118,14 +118,14 @@ public class FSSchedulerNode extends SchedulerNode {
    *
    * @param containers container to mark
    */
-  public void addContainersForPreemption(Collection<RMContainer> containers) {
+  void addContainersForPreemption(Collection<RMContainer> containers) {
     containersForPreemption.addAll(containers);
   }
 
   /**
    * @return set of containers marked for preemption.
    */
-  public Set<RMContainer> getContainersForPreemption() {
+  Set<RMContainer> getContainersForPreemption() {
     return containersForPreemption;
   }
 
@@ -134,7 +134,7 @@ public class FSSchedulerNode extends SchedulerNode {
    *
    * @param container container to remove
    */
-  public void removeContainerForPreemption(RMContainer container) {
+  void removeContainerForPreemption(RMContainer container) {
     containersForPreemption.remove(container);
   }
 }

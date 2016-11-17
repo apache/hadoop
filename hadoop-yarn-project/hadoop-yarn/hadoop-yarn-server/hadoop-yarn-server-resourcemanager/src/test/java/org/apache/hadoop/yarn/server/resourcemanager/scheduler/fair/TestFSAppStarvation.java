@@ -41,10 +41,12 @@ import java.io.PrintWriter;
  */
 public class TestFSAppStarvation extends FairSchedulerTestBase {
 
-  private static final File ALLOC_FILE = new File(TEST_DIR, "test-queues");
+  private static final File ALLOC_FILE = new File(TEST_DIR, "test-QUEUES");
 
   // Node Capacity = NODE_CAPACITY_MULTIPLE * (1 GB or 1 vcore)
   private static final int NODE_CAPACITY_MULTIPLE = 4;
+  private static final String[] QUEUES =
+      {"no-preemption", "minshare", "fairshare.child", "drf.child"};
 
   private FairSchedulerWithMockPreemption.MockPreemptionThread preemptionThread;
 
@@ -93,13 +95,15 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
 
     assertNotNull("FSContext does not have an FSStarvedApps instance",
         scheduler.getContext().getStarvedApps());
-    assertEquals("Expecting 2 starved applications, one each for the " +
-            "minshare and fairshare queues", 2,
-        preemptionThread.uniqueAppsAdded());
+    assertEquals("Expecting 3 starved applications, one each for the "
+            + "minshare and fairshare queues",
+        3, preemptionThread.uniqueAppsAdded());
 
     // Verify the apps get added again on a subsequent update
     scheduler.update();
     Thread.yield();
+
+    verifyLeafQueueStarvation();
     assertTrue("Each app is marked as starved exactly once",
         preemptionThread.totalAppsAdded() > preemptionThread.uniqueAppsAdded());
   }
@@ -119,6 +123,16 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
         scheduler.getContext().getStarvedApps());
     assertEquals("Found starved apps when preemption threshold is over 100%", 0,
         preemptionThread.totalAppsAdded());
+  }
+
+  private void verifyLeafQueueStarvation() {
+    for (String q : QUEUES) {
+      if (!q.equals("no-preemption")) {
+        boolean isStarved =
+            scheduler.getQueueManager().getLeafQueue(q, false).isStarved();
+        assertTrue(isStarved);
+      }
+    }
   }
 
   private void setupClusterAndSubmitJobs() throws Exception {
@@ -167,21 +181,24 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
     out.println("<minResources>2048mb,2vcores</minResources>");
     out.println("</queue>");
 
-    // Queue with fairshare preemption enabled
+    // FAIR queue with fairshare preemption enabled
     out.println("<queue name=\"fairshare\">");
     out.println("<fairSharePreemptionThreshold>1" +
         "</fairSharePreemptionThreshold>");
     out.println("<fairSharePreemptionTimeout>0" +
         "</fairSharePreemptionTimeout>");
+    out.println("<schedulingPolicy>fair</schedulingPolicy>");
+    addChildQueue(out);
+    out.println("</queue>");
 
-    // Child queue under fairshare with same settings
-    out.println("<queue name=\"child\">");
+    // DRF queue with fairshare preemption enabled
+    out.println("<queue name=\"drf\">");
     out.println("<fairSharePreemptionThreshold>1" +
         "</fairSharePreemptionThreshold>");
     out.println("<fairSharePreemptionTimeout>0" +
         "</fairSharePreemptionTimeout>");
-    out.println("</queue>");
-
+    out.println("<schedulingPolicy>drf</schedulingPolicy>");
+    addChildQueue(out);
     out.println("</queue>");
 
     out.println("</allocations>");
@@ -210,9 +227,18 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
     assertEquals(8, scheduler.getSchedulerApp(app).getLiveContainers().size());
   }
 
+  private void addChildQueue(PrintWriter out) {
+    // Child queue under fairshare with same settings
+    out.println("<queue name=\"child\">");
+    out.println("<fairSharePreemptionThreshold>1" +
+        "</fairSharePreemptionThreshold>");
+    out.println("<fairSharePreemptionTimeout>0" +
+        "</fairSharePreemptionTimeout>");
+    out.println("</queue>");
+  }
+
   private void submitAppsToEachLeafQueue() {
-    String queues[] = {"no-preemption", "minshare", "fairshare.child"};
-    for (String queue : queues) {
+    for (String queue : QUEUES) {
       createSchedulingRequest(1024, 1, "root." + queue, "user", 1);
     }
     scheduler.update();

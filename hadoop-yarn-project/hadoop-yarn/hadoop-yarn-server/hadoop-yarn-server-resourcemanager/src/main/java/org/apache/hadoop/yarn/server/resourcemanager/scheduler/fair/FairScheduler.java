@@ -998,13 +998,6 @@ public class FairScheduler extends
    * Check if preemption is enabled and the utilization threshold for
    * preemption is met.
    *
-   * TODO (KK): Should we handle the case where usage is less than preemption
-   * threshold, but there are applications requesting resources on nodes that
-   * are otherwise occupied by long running applications over their
-   * fairshare? What if they are occupied by applications not over their
-   * fairshare? Does this mean YARN should not allocate all resources on a
-   * node to long-running services?
-   *
    * @return true if preemption should be attempted, false otherwise.
    */
   private boolean shouldAttemptPreemption() {

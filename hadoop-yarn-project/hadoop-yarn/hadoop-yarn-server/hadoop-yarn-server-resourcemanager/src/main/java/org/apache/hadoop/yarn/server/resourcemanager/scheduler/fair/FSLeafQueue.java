@@ -49,8 +49,9 @@ import static org.apache.hadoop.yarn.util.resource.Resources.none;
 @Private
 @Unstable
 public class FSLeafQueue extends FSQueue {
-  private static final Log LOG = LogFactory.getLog(
-      FSLeafQueue.class.getName());
+  private static final Log LOG = LogFactory.getLog(FSLeafQueue.class.getName());
+  private static final List<FSQueue> EMPTY_LIST = Collections.emptyList();
+
   private FairScheduler scheduler;
   private FSContext context;
 
@@ -71,7 +72,6 @@ public class FSLeafQueue extends FSQueue {
   private Resource amResourceUsage;
 
   private final ActiveUsersManager activeUsersManager;
-  private static final List<FSQueue> EMPTY_LIST = Collections.emptyList();
 
   public FSLeafQueue(String name, FairScheduler scheduler,
       FSParentQueue parent) {
@@ -210,7 +210,7 @@ public class FSLeafQueue extends FSQueue {
     try {
       policy.computeShares(runnableApps, getFairShare());
       if (checkStarvation) {
-        updatedStarvedApps();
+        updateStarvedApps();
       }
     } finally {
       readLock.unlock();
@@ -234,7 +234,7 @@ public class FSLeafQueue extends FSQueue {
    * one application that is starved. And, even if the queue is not
    * starved due to fairshare, there might still be starved applications.
    */
-  private void updatedStarvedApps() {
+  private void updateStarvedApps() {
     // First identify starved applications and track total amount of
     // starvation (in resources)
     Resource fairShareStarvation = Resources.clone(none());
@@ -549,10 +549,33 @@ public class FSLeafQueue extends FSQueue {
 
   /**
    * Helper method for tests to check if a queue is starved for minShare.
-   * @return whether starved for minShare.
+   * @return whether starved for minshare
    */
   @VisibleForTesting
-  boolean isStarvedForMinShare() {
+  private boolean isStarvedForMinShare() {
     return !Resources.isNone(minShareStarvation());
+  }
+
+  /**
+   * Helper method for tests to check if a queue is starved for fairshare.
+   * @return whether starved for fairshare
+   */
+  @VisibleForTesting
+  private boolean isStarvedForFairShare() {
+    for (FSAppAttempt app : runnableApps) {
+      if (app.isStarvedForFairShare()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Helper method for tests to check if a queue is starved.
+   * @return whether starved for either minshare or fairshare
+   */
+  @VisibleForTesting
+  boolean isStarved() {
+    return isStarvedForMinShare() || isStarvedForFairShare();
   }
 }

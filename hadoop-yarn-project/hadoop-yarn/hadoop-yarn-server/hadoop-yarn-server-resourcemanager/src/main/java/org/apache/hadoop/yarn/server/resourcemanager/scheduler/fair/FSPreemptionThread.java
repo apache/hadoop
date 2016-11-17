@@ -36,14 +36,14 @@ import java.util.TimerTask;
 /**
  * Thread that handles FairScheduler preemption.
  */
-public class FSPreemptionThread extends Thread {
+class FSPreemptionThread extends Thread {
   private static final Log LOG = LogFactory.getLog(FSPreemptionThread.class);
   protected final FSContext context;
   private final FairScheduler scheduler;
   private final long warnTimeBeforeKill;
   private final Timer preemptionTimer;
 
-  public FSPreemptionThread(FairScheduler scheduler) {
+  FSPreemptionThread(FairScheduler scheduler) {
     this.scheduler = scheduler;
     this.context = scheduler.getContext();
     FairSchedulerConfiguration fsConf = scheduler.getConf();
@@ -80,8 +80,10 @@ public class FSPreemptionThread extends Thread {
    * Given an app, identify containers to preempt to satisfy the app's next
    * resource request.
    *
-   * @param starvedApp
-   * @return
+   * @param starvedApp starved application for which we are identifying
+   *                   preemption targets
+   * @return list of containers to preempt to satisfy starvedApp, null if the
+   * app cannot be satisfied by preempting any running containers
    */
   private List<RMContainer> identifyContainersToPreempt(
       FSAppAttempt starvedApp) {
@@ -103,14 +105,13 @@ public class FSPreemptionThread extends Thread {
       // Reset containers for the new node being considered.
       containers.clear();
 
+      // TODO (YARN-5829): Attempt to reserve the node for starved app. The
+      // subsequent if-check needs to be reworked accordingly.
       FSAppAttempt nodeReservedApp = node.getReservedAppSchedulable();
       if (nodeReservedApp != null && !nodeReservedApp.equals(starvedApp)) {
         // This node is already reserved by another app. Let us not consider
         // this for preemption.
         continue;
-
-        // TODO (KK): If the nodeReservedApp is over its fairshare, may be it
-        // is okay to unreserve it if we find enough resources.
       }
 
       // Figure out list of containers to consider
@@ -137,13 +138,15 @@ public class FSPreemptionThread extends Thread {
           // FSSchedulerNode#removeContainerForPreemption.
           node.addContainersForPreemption(containers);
           return containers;
+        } else {
+          // TODO (YARN-5829): Unreserve the node for the starved app.
         }
       }
     }
     return null;
   }
 
-  public void preemptContainers(List<RMContainer> containers) {
+  private void preemptContainers(List<RMContainer> containers) {
     // Warn application about containers to be killed
     for (RMContainer container : containers) {
       ApplicationAttemptId appAttemptId = container.getApplicationAttemptId();
@@ -151,7 +154,7 @@ public class FSPreemptionThread extends Thread {
       FSLeafQueue queue = app.getQueue();
       LOG.info("Preempting container " + container +
           " from queue " + queue.getName());
-      app.addPreemption(container);
+      app.trackContainerForPreemption(container);
     }
 
     // Schedule timer task to kill containers

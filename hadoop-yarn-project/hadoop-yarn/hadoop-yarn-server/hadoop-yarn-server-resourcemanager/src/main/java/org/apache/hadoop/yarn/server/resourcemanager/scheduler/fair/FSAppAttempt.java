@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -81,11 +82,13 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   private Resource fairShare = Resources.createResource(0, 0);
 
   // Preemption related variables
-  private Resource fairshareStarvation = Resources.none();
-  private Resource minshareStarvation = Resources.none();
   private final Resource preemptedResources = Resources.clone(Resources.none());
   private final Set<RMContainer> containersToPreempt = new HashSet<>();
+  private Resource fairshareStarvation = Resources.none();
   private long lastTimeAtFairShare;
+
+  // minShareStarvation attributed to this application by the leaf queue
+  private Resource minshareStarvation = Resources.none();
 
   // Used to record node reservation by an app.
   // Key = RackName, Value = Set of Nodes reserved by app on rack
@@ -149,7 +152,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
       // Remove from the list of containers
       liveContainers.remove(rmContainer.getContainerId());
-      removePreemption(rmContainer);
+      untrackContainerForPreemption(rmContainer);
 
       Resource containerResource = rmContainer.getContainer().getResource();
       RMAuditLogger.logSuccess(getUser(), AuditConstants.RELEASE_CONTAINER,
@@ -510,26 +513,42 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   }
 
   // Preemption related methods
+
+  /**
+   * Get overall starvation - fairshare and attributed minshare.
+   *
+   * @return total starvation attributed to this application
+   */
   Resource getStarvation() {
     return Resources.add(fairshareStarvation, minshareStarvation);
   }
 
+  /**
+   * Set the minshare attributed to this application. To be called only from
+   * {@link FSLeafQueue#updateStarvedApps}.
+   *
+   * @param starvation minshare starvation attributed to this app
+   */
   void setMinshareStarvation(Resource starvation) {
     this.minshareStarvation = starvation;
   }
 
+  /**
+   * Reset the minshare starvation attributed to this application. To be
+   * called only from {@link FSLeafQueue#updateStarvedApps}
+   */
   void resetMinshareStarvation() {
     this.minshareStarvation = Resources.none();
   }
 
-  void addPreemption(RMContainer container) {
+  void trackContainerForPreemption(RMContainer container) {
     containersToPreempt.add(container);
     synchronized (preemptedResources) {
       Resources.addTo(preemptedResources, container.getAllocatedResource());
     }
   }
 
-  void removePreemption(RMContainer container) {
+  private void untrackContainerForPreemption(RMContainer container) {
     synchronized (preemptedResources) {
       Resources.subtractFrom(preemptedResources,
           container.getAllocatedResource());
@@ -540,7 +559,6 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   Set<RMContainer> getPreemptionContainers() {
     return containersToPreempt;
   }
-  
 
   private Resource getPreemptedResources() {
     synchronized (preemptedResources) {
@@ -563,8 +581,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     }
 
     // Check if any of the parent queues are not preemptable
-    // TODO (KK): Propagate the "preemptable" flag all the way down to the app
-    // to avoid recursing up every time.
+    // TODO (YARN-5831): Propagate the "preemptable" flag all the way down to
+    // the app to avoid recursing up every time.
     for (FSQueue q = getQueue();
         !q.getQueueName().equals("root");
         q = q.getParent()) {
@@ -585,8 +603,9 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   /**
    * Create and return a container object reflecting an allocation for the
-   * given appliction on the given node with the given capability and
+   * given application on the given node with the given capability and
    * priority.
+   *
    * @param node Node
    * @param capability Capability
    * @param schedulerKey Scheduler Key
@@ -1076,6 +1095,15 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     return appSchedulingInfo.getNextResourceRequest();
   }
 
+  /**
+   * Helper method that captures if this app is identified to be starved.
+   * @return true if the app is starved for fairshare, false otherwise
+   */
+  @VisibleForTesting
+  boolean isStarvedForFairShare() {
+    return !Resources.isNone(fairshareStarvation);
+  }
+
   /* Schedulable methods implementation */
 
   @Override
@@ -1105,14 +1133,13 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   @Override
   public Resource getResourceUsage() {
-    // Here the getPreemptedResources() always return zero, except in
-    // a preemption round
-    // In the common case where preempted resource is zero, return the
-    // current consumption Resource object directly without calling
-    // Resources.subtract which creates a new Resource object for each call.
-    return getPreemptedResources().equals(Resources.none()) ?
-        getCurrentConsumption() :
-        Resources.subtract(getCurrentConsumption(), getPreemptedResources());
+    /*
+     * getResourcesToPreempt() returns zero, except when there are containers
+     * to preempt. Avoid creating an object in the common case.
+     */
+    return getPreemptedResources().equals(Resources.none())
+        ? getCurrentConsumption()
+        : Resources.subtract(getCurrentConsumption(), getPreemptedResources());
   }
 
   @Override
