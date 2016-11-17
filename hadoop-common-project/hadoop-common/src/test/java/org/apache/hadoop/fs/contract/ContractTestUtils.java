@@ -26,6 +26,8 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
+
 import org.junit.Assert;
 import org.junit.internal.AssumptionViolatedException;
 import org.slf4j.Logger;
@@ -46,6 +48,7 @@ import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
@@ -1098,6 +1101,28 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
+   * Get the status of a path eventually, even if the FS doesn't have create
+   * consistency. If the path is not there by the time the timeout completes,
+   * an assertion is raised.
+   * @param fs FileSystem
+   * @param path path to look for
+   * @param timeout timeout in milliseconds
+   * @return the status
+   * @throws Exception any exception raised after the timeout was eventually
+   * reached.
+   */
+  public static FileStatus getFileStatusEventually(FileSystem fs, Path path,
+      int timeout) throws Exception {
+    return LambdaTestUtils.eventually(timeout, 100,
+        new Callable<FileStatus>() {
+          @Override
+          public FileStatus call() throws IOException {
+            return fs.getFileStatus(path);
+          }
+        });
+  }
+
+  /**
    * Recursively list all entries, with a depth first traversal of the
    * directory tree.
    * @param path path
@@ -1471,4 +1496,5 @@ public class ContractTestUtils extends Assert {
       return endTime;
     }
   }
+
 }
