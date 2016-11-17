@@ -64,6 +64,7 @@ import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
+import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1015,7 +1016,7 @@ public class TestRPC extends TestRpcBase {
 
   @Test
   public void testRpcMetrics() throws Exception {
-    Server server;
+    final Server server;
     TestRpcService proxy = null;
 
     final int interval = 1;
@@ -1025,7 +1026,21 @@ public class TestRPC extends TestRpcBase {
         RPC_METRICS_PERCENTILES_INTERVALS_KEY, "" + interval);
 
     server = setupTestServer(conf, 5);
-
+    String testUser = "testUser";
+    UserGroupInformation anotherUser =
+        UserGroupInformation.createRemoteUser(testUser);
+    TestRpcService proxy2 =
+        anotherUser.doAs(new PrivilegedAction<TestRpcService>() {
+          public TestRpcService run() {
+            try {
+              return RPC.getProxy(TestRpcService.class, 0,
+                  server.getListenerAddress(), conf);
+            } catch (IOException e) {
+              e.printStackTrace();
+            }
+            return null;
+          }
+        });
     try {
       proxy = getClient(addr, conf);
 
@@ -1033,6 +1048,7 @@ public class TestRPC extends TestRpcBase {
         proxy.ping(null, newEmptyRequest());
 
         proxy.echo(null, newEchoRequest("" + i));
+        proxy2.echo(null, newEchoRequest("" + i));
       }
       MetricsRecordBuilder rpcMetrics =
           getMetrics(server.getRpcMetrics().name());
@@ -1044,7 +1060,16 @@ public class TestRPC extends TestRpcBase {
           rpcMetrics);
       MetricsAsserts.assertQuantileGauges("RpcProcessingTime" + interval + "s",
           rpcMetrics);
+      String actualUserVsCon = MetricsAsserts
+          .getStringMetric("NumOpenConnectionsPerUser", rpcMetrics);
+      String proxyUser =
+          UserGroupInformation.getCurrentUser().getShortUserName();
+      assertTrue(actualUserVsCon.contains("\"" + proxyUser + "\":1"));
+      assertTrue(actualUserVsCon.contains("\"" + testUser + "\":1"));
     } finally {
+      if (proxy2 != null) {
+        RPC.stopProxy(proxy2);
+      }
       stop(server, proxy);
     }
   }
