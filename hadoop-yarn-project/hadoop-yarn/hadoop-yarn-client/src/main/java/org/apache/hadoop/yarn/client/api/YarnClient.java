@@ -32,6 +32,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
@@ -376,6 +378,30 @@ public abstract class YarnClient extends AbstractService {
       Set<String> users, Set<String> applicationTypes,
       EnumSet<YarnApplicationState> applicationStates) throws YarnException,
       IOException;
+
+  /**
+   * <p>
+   * Get a list of ApplicationReports that match the given
+   * {@link GetApplicationsRequest}.
+   *</p>
+   *
+   * <p>
+   * If the user does not have <code>VIEW_APP</code> access for an application
+   * then the corresponding report will be filtered as described in
+   * {@link #getApplicationReport(ApplicationId)}.
+   * </p>
+   *
+   * @param request the request object to get the list of applications.
+   * @return The list of ApplicationReports that match the request
+   * @throws YarnException Exception specific to YARN.
+   * @throws IOException Exception mostly related to connection errors.
+   */
+  public List<ApplicationReport> getApplications(GetApplicationsRequest request)
+      throws YarnException, IOException {
+    throw new UnsupportedOperationException(
+        "The sub-class extending " + YarnClient.class.getName()
+            + " is expected to implement this !");
+  }
 
   /**
    * <p>
