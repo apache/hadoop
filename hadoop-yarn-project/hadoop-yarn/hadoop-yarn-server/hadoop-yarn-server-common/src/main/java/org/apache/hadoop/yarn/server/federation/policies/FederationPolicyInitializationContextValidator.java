@@ -57,7 +57,7 @@ public final class FederationPolicyInitializationContextValidator {
 
     if (policyContext.getSubClusterPolicyConfiguration() == null) {
       throw new FederationPolicyInitializationException(
-          "The FederationSubclusterResolver provided is null. Cannot "
+          "The SubClusterPolicyConfiguration provided is null. Cannot "
               + "reinitalize successfully.");
     }
 
