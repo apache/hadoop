@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 /**
  * ContainerLocationProtocol is used by an HDFS node to find the set of nodes
@@ -41,4 +42,13 @@ public interface StorageContainerLocationProtocol {
    */
   Set<LocatedContainer> getStorageContainerLocations(Set<String> keys)
       throws IOException;
+
+  /**
+   * Asks SCM where a container should be allocated. SCM responds with the
+   * set of datanodes that should be used creating this container.
+   * @param containerName - Name of the container.
+   * @return Pipeline.
+   * @throws IOException
+   */
+  Pipeline allocateContainer(String containerName) throws IOException;
 }
