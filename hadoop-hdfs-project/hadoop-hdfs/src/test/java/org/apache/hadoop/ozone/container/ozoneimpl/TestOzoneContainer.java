@@ -17,14 +17,15 @@
  */
 
 package org.apache.hadoop.ozone.container.ozoneimpl;
+
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.scm.XceiverClient;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.scm.XceiverClient;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -165,6 +166,64 @@ public class TestOzoneContainer {
 
     client.close();
     cluster.shutdown();
+
+  }
+
+  @Test
+  public void testBothGetandPutSmallFile() throws Exception {
+    String keyName = OzoneUtils.getRequestID();
+    String containerName = OzoneUtils.getRequestID();
+    OzoneConfiguration conf = new OzoneConfiguration();
+    URL p = conf.getClass().getResource("");
+    String path = p.getPath().concat(
+        TestOzoneContainer.class.getSimpleName());
+    path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
+        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
+    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
+
+    // Start ozone container Via Datanode create.
+
+    Pipeline pipeline =
+        ContainerTestHelper.createSingleNodePipeline(containerName);
+    conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
+        pipeline.getLeader().getContainerPort());
+
+    MiniOzoneCluster cluster = new MiniOzoneCluster.Builder(conf)
+        .setHandlerType("local").build();
+
+    // This client talks to ozone container via datanode.
+    XceiverClient client = new XceiverClient(pipeline, conf);
+    client.connect();
+
+    // Create container
+    ContainerProtos.ContainerCommandRequestProto request =
+        ContainerTestHelper.getCreateContainerRequest(containerName);
+    ContainerProtos.ContainerCommandResponseProto response =
+        client.sendCommand(request);
+    Assert.assertNotNull(response);
+    Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+
+
+    ContainerProtos.ContainerCommandRequestProto smallFileRequest =
+        ContainerTestHelper.getWriteSmallFileRequest(pipeline, containerName,
+            keyName, 1024);
+
+
+    response = client.sendCommand(smallFileRequest);
+    Assert.assertNotNull(response);
+    Assert.assertTrue(smallFileRequest.getTraceID()
+        .equals(response.getTraceID()));
+
+    ContainerProtos.ContainerCommandRequestProto getSmallFileRequest =
+        ContainerTestHelper.getReadSmallFileRequest(smallFileRequest
+            .getPutSmallFile().getKey());
+    response = client.sendCommand(getSmallFileRequest);
+    Assert.assertArrayEquals(
+        smallFileRequest.getPutSmallFile().getData().toByteArray(),
+        response.getGetSmallFile().getData().getData().toByteArray());
+
+    cluster.shutdown();
+
 
   }
 

@@ -72,12 +72,12 @@ public class ContainerTestHelper {
    * Creates a ChunkInfo for testing.
    *
    * @param keyName - Name of the key
-   * @param seqNo   - Chunk number.
+   * @param seqNo - Chunk number.
    * @return ChunkInfo
    * @throws IOException
    */
   public static ChunkInfo getChunk(String keyName, int seqNo, long offset,
-                                   long len) throws IOException {
+      long len) throws IOException {
 
     ChunkInfo info = new ChunkInfo(String.format("%s.data.%d", keyName,
         seqNo), offset, len);
@@ -113,17 +113,17 @@ public class ContainerTestHelper {
   /**
    * Returns a writeChunk Request.
    *
-   * @param containerName - Name
-   * @param keyName       - Name
-   * @param datalen       - data len.
-   * @return Request.
+   * @param pipeline - A set of machines where this container lives.
+   * @param containerName - Name of the container.
+   * @param keyName - Name of the Key this chunk is part of.
+   * @param datalen - Length of data.
+   * @return ContainerCommandRequestProto
    * @throws IOException
    * @throws NoSuchAlgorithmException
    */
   public static ContainerCommandRequestProto getWriteChunkRequest(
       Pipeline pipeline, String containerName, String keyName, int datalen)
-      throws
-      IOException, NoSuchAlgorithmException {
+      throws IOException, NoSuchAlgorithmException {
     ContainerProtos.WriteChunkRequestProto.Builder writeRequest =
         ContainerProtos.WriteChunkRequestProto
             .newBuilder();
@@ -147,6 +147,65 @@ public class ContainerTestHelper {
   }
 
   /**
+   * Returns PutSmallFile Request that we can send to the container.
+   *
+   * @param pipeline - Pipeline
+   * @param containerName - ContainerName.
+   * @param keyName - KeyName
+   * @param dataLen - Number of bytes in the data
+   * @return ContainerCommandRequestProto
+   */
+  public static ContainerCommandRequestProto getWriteSmallFileRequest(
+      Pipeline pipeline, String containerName, String keyName, int dataLen)
+      throws Exception {
+    ContainerProtos.PutSmallFileRequestProto.Builder smallFileRequest =
+        ContainerProtos.PutSmallFileRequestProto.newBuilder();
+    pipeline.setContainerName(containerName);
+    byte[] data = getData(dataLen);
+    ChunkInfo info = getChunk(keyName, 0, 0, dataLen);
+    setDataChecksum(info, data);
+
+
+    ContainerProtos.PutKeyRequestProto.Builder putRequest =
+        ContainerProtos.PutKeyRequestProto.newBuilder();
+
+    putRequest.setPipeline(pipeline.getProtobufMessage());
+    KeyData keyData = new KeyData(containerName, keyName);
+
+    List<ContainerProtos.ChunkInfo> newList = new LinkedList<>();
+    newList.add(info.getProtoBufMessage());
+    keyData.setChunks(newList);
+    putRequest.setKeyData(keyData.getProtoBufMessage());
+
+    smallFileRequest.setChunkInfo(info.getProtoBufMessage());
+    smallFileRequest.setData(ByteString.copyFrom(data));
+    smallFileRequest.setKey(putRequest);
+
+    ContainerCommandRequestProto.Builder request =
+        ContainerCommandRequestProto.newBuilder();
+    request.setCmdType(ContainerProtos.Type.PutSmallFile);
+    request.setPutSmallFile(smallFileRequest);
+    return request.build();
+  }
+
+
+  public static ContainerCommandRequestProto getReadSmallFileRequest(
+      ContainerProtos.PutKeyRequestProto putKey)
+      throws Exception {
+    ContainerProtos.GetSmallFileRequestProto.Builder smallFileRequest =
+        ContainerProtos.GetSmallFileRequestProto.newBuilder();
+
+    ContainerCommandRequestProto getKey = getKeyRequest(putKey);
+    smallFileRequest.setKey(getKey.getGetKey());
+
+    ContainerCommandRequestProto.Builder request =
+        ContainerCommandRequestProto.newBuilder();
+    request.setCmdType(ContainerProtos.Type.GetSmallFile);
+    request.setGetSmallFile(smallFileRequest);
+    return request.build();
+  }
+
+  /**
    * Returns a read Request.
    *
    * @param request writeChunkRequest.
@@ -156,8 +215,7 @@ public class ContainerTestHelper {
    */
   public static ContainerCommandRequestProto getReadChunkRequest(
       ContainerProtos.WriteChunkRequestProto request)
-      throws
-      IOException, NoSuchAlgorithmException {
+      throws IOException, NoSuchAlgorithmException {
     ContainerProtos.ReadChunkRequestProto.Builder readRequest =
         ContainerProtos.ReadChunkRequestProto.newBuilder();
 
@@ -298,23 +356,22 @@ public class ContainerTestHelper {
   }
 
   /**
-   *  Verify the response against the request.
-   * @param request  - Request
-   * @param response  - Response
+   * Verify the response against the request.
+   *
+   * @param request - Request
+   * @param response - Response
    */
   public static void verifyGetKey(ContainerCommandRequestProto request,
-                             ContainerCommandResponseProto response) {
+      ContainerCommandResponseProto response) {
     Assert.assertEquals(request.getTraceID(), response.getTraceID());
     Assert.assertEquals(response.getResult(), ContainerProtos.Result.SUCCESS);
     ContainerProtos.PutKeyRequestProto putKey = request.getPutKey();
-    ContainerProtos. GetKeyRequestProto getKey = request.getGetKey();
+    ContainerProtos.GetKeyRequestProto getKey = request.getGetKey();
     Assert.assertEquals(putKey.getKeyData().getChunksCount(),
-                        getKey.getKeyData().getChunksCount());
+        getKey.getKeyData().getChunksCount());
   }
 
-
   /**
-   *
    * @param putKeyRequest - putKeyRequest.
    * @return - Request
    */

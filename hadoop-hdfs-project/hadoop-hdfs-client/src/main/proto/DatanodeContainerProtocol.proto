@@ -86,6 +86,11 @@ enum Type {
    WriteChunk = 12;
    ListChunk = 13;
    CompactChunk = 14;
+
+  /** Combines Key and Chunk Operation into Single RPC. */
+  PutSmallFile = 15;
+  GetSmallFile = 16;
+
 }
 
 
@@ -122,6 +127,9 @@ message ContainerCommandRequestProto {
   optional   WriteChunkRequestProto writeChunk = 13;
   optional   DeleteChunkRequestProto deleteChunk = 14;
   optional   ListChunkRequestProto listChunk = 15;
+
+  optional   PutSmallFileRequestProto putSmallFile = 16;
+  optional   GetSmallFileRequestProto getSmallFile = 17;
 }
 
 message ContainerCommandResponseProto {
@@ -146,6 +154,9 @@ message ContainerCommandResponseProto {
 
   required Result result = 17;
   optional string message = 18;
+
+  optional PutSmallFileResponseProto putSmallFile = 19;
+  optional GetSmallFileResponseProto getSmallFile = 20;
 
 }
 
@@ -318,3 +329,24 @@ message  ListChunkResponseProto {
   repeated ChunkInfo chunkData = 1;
 }
 
+/** For small file access combines write chunk and putKey into a single
+RPC */
+
+message PutSmallFileRequestProto {
+  required PutKeyRequestProto key = 1;
+  required ChunkInfo chunkInfo = 2;
+  required bytes data = 3;
+}
+
+
+message PutSmallFileResponseProto {
+
+}
+
+message GetSmallFileRequestProto {
+  required GetKeyRequestProto key = 1;
+}
+
+message GetSmallFileResponseProto {
+  required ReadChunkResponseProto data = 1;
+}
