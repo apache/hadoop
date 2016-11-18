@@ -35,6 +35,35 @@ In a Hadoop filesystem, that destination is the data under a path in the filesys
 An output stream consists of a buffer `buf: List[byte]`
 
 
+## Model
+
+For this specification, the output stream can be viewed as a cached byte array
+alongside the filesystem. After data is flushed, read operations on the filesystem
+should be in sync with the data
+
+    Stream = (path, isOpen, cache)
+
+when opening a new file, the initial state of the cache is empty
+
+     Stream = (path, true, [])
+
+When appending to a file, that is the output stream is created using
+`FileSystem.append(path, buffersize, progress)`, then the initial state
+of the cache is the current contents of the file
+
+
+    Stream = (path, true, data(FS, path))
+
+After a call to `close()`, the stream is closed for all operations other
+than `close()`; they MAY fail with `IOException` or `RuntimeException` instances.
+
+    Stream =  (path, false, [])
+
+The `close()` operation must become a no-op. That is: followon attempts to
+persist data after a failure MUST NOT be made. (alternatively: users of the
+API MUST NOT expect failing `close()` attemps to succeed if retried) 
+
+
 
 Data written to an `FSDataOutputStream` implementation
 
@@ -52,10 +81,14 @@ public class FSDataOutputStream extends DataOutputStream, FilterOutputStream
 1. `OutputStream.flush()` flushes data to the destination. There
 are no strict persistence requirements.
 1. `Syncable.hflush()` synchronously sends all local data to the destination
-filesystem. After returning to the caller, the data MUST be visible to other readers.
+filesystem. After returning to the caller, the data MUST be visible to other readers,
+it MAY be durable. That is: it does not have to be persisted, merely guaranteed
+to be consistently visible to all clients attempting to open a new stream reading
+data at the path.
 1. `Syncable.hsync()` MUST flush the data and persist data to the underlying durable
 storage.
-1. `close()` MUST flush out all remaining data in the buffers, and persist it.
+1. `close()` The first call to `close()` MUST flush out all remaining data in
+the buffers, and persist it.
 
 
 ## Concurrency
@@ -63,7 +96,8 @@ storage.
 1. The outcome of more than one process writing to the same file is undefined.
 
 1. An input stream opened to read a file *before the file was opened for writing*
-MAY fetch updated data. Because of buffering and caching, this is not a requirement
+MAY fetch data updated by writes to an OutputStream.
+Because of buffering and caching, this is not a requirement
 —and if a input stream does pick up updated data, the point at
 which the updated data is read is undefined. This surfaces in object stores
 where a `seek()` call which closes and re-opens the connection may pick up
@@ -88,13 +122,16 @@ model permits the output stream to `close()`'d while awaiting an acknowledgement
 from datanode or namenode writes in an `hsync()` operation.
 
 
-## Consistency
+## Consistency and Visibility
 
 There is no requirement for the data to be immediately visible to other applications
 —not until a specific call to flush buffers or persist it to the underlying storage
 medium are made.
 
-
+1. If an output stream is created with `FileSystem.create(path)`, with overwrite=true
+and there is an existing file at the path, that is `exists(FS, path)` holds,
+then, the existing data is immediately unavailable; the data at the end of the
+path MUST consist of an empty byte sequence `[]`, with consistent metadata.
 1. The metadata of a file (`length(FS, path)` in particular) SHOULD be consistent
 with the contents of the file after `flush()` and `sync()`.
 HDFS does not do this except when the write crosses a block boundary; to do
@@ -105,8 +142,13 @@ operation.
 1. If the filesystem supports modification timestamps, this
 timestamp MAY be updated while a file is being written, especially after a
 `Syncable.hsync()` call. The timestamps MUST be updated after the file is closed.
-1. After the contents of an input stream have been persisted (`hflush()/hsync()`)
+1. After the contents of an output stream have been persisted (`hflush()/hsync()`)
 all new `open(FS, Path)` operations MUST return the updated data.
+1. After `close()` has been invoked on an output stream returned from a call
+to `FileSystem.create(Path,...)`, a call to `getFileStatus(path)` MUST return the
+final metadata of the written file, including length and modification time.
+The metadata of the file returned in any of the FileSystem `list` operations
+MUST be consistent with this metadata.
 
 ### HDFS
 
@@ -134,9 +176,9 @@ recorded in the metadata.
     1. If `read() != -1`, there is new data.
 
 This algorithm works for filesystems which are consistent with metadata and
-data, as well as HDFS. What is important to know is that even if the length
-of the file is declared to be 0, in HDFS this can mean
-"there is data —it just that the metadata is not up to date"
+data, as well as HDFS. What is important to know is that even if the 
+`getFileStatus(path).getLen()==0` holds, 
+in HDFS there may be data, but the metadata is not up to date"
 
 ### Local Filesystem, `file:`
 
@@ -153,6 +195,7 @@ That is, `sync()` and `hsync()` cannot be guaranteed to persist the data current
 buffered locally.
 
 For anyone thinking "this is a violation of this specification" —they are correct.
+The local filesystem is intended for testing, rather than production use.
 
 ### Object Stores
 
@@ -163,32 +206,40 @@ blocks of data, synchronously or asynchronously.
 
 Accordingly, they tend not to implement the `Syncable` interface.
 However, Exception: Azure's `PageBlobOutputStream` does implement `hsync()`,
-blocking until ongoing writes complete.
+blocking until write operations being executed in separate threads have completed.
+
+Equally importantly
+
+1. The object may not be visible at the end of the path until the final `close()`.
+is called; this holds for `getFileStatus()`, `open()` and all FileSystem list operations.
+1. Any existing data at the end of a path `p`, may remain visible until the final
+`close()` operation overwrites this data.
+1. The check for existing data in a `create()` call with overwrite=false, may
+take place in the `create()` call itself, in the `close()` call prior to/during
+the write, or at some point in between. Expect in the special case that the
+object store supports an atomic PUT operation, the check for existence of
+existing data and the subsequent creation of data at the path contains a race
+condition: other clients may create data at the path between the existence check
+and the subsequent qrite.
 
 
-## Model
-
-For this specification, the output stream can be viewed as a cached byte array
-alongside the filesystem. After data is flushed, read operations on the filesystem
-should be in sync with the data
-
-    (path, cache)
-
-when opening a new file, the initial state of the cache is empty
-
-     (path, [])
-
-When appending to a file, that is the output stream is created using
-`FileSystem.append(path, buffersize, progress)`, then the initial state
-of the cache is the current contents of the file
 
 
-    (path, data(FS, path))
+### <a name="write(data)"></a>`write(int data)`
 
+#### Preconditions
 
-### <a name="write(byte)"></a>`write(byte)`
+    Stream.isOpen else raise IOException
 
-    cache' = cache + [byte]
+#### Postconditions
+
+The cache has the lower 8 bits of the data argument appended to it.
+
+    Stream'.cache = Stream.cache + [data & 0xff]
+
+There may be an explicit limit on the size of cached data, or an implicit
+limit based by the available capacity of the destination filesystem.
+When a limit is reached, `write()` MUST fail with an `IOException`.
 
 ### <a name="write(buffer,offset,len)"></a>`write(byte[] buffer, int offset, int len)`
 
@@ -197,6 +248,7 @@ of the cache is the current contents of the file
 
 The preconditions are all defined in `OutputStream.write()`
 
+    Stream.isOpen else raise IOException
     buffer != null else raise NullPointerException
     offset >= 0 else raise IndexOutOfBoundsException
     len >= 0 else raise IndexOutOfBoundsException
@@ -204,9 +256,16 @@ The preconditions are all defined in `OutputStream.write()`
     offset + len < buffer.length else raise IndexOutOfBoundsException
 
 
+There may be an explicit limit on the size of cached data, or an implicit
+limit based by the available capacity of the destination filesystem.
+When a limit is reached, `write()` MUST fail with an `IOException`.
+
+After the operation has returned, the buffer may be re-used. The outcome
+of updates to the buffer while the `write()` operation is in progress is undefined.
+
 #### Postconditions
 
-    cache' = cache + buffer[offset...offset+len]
+    Stream'.cache = Stream.cache + buffer[offset...offset+len]
 
 
 ### <a name="write(buffer)"></a>`write(byte[] buffer)`
@@ -218,9 +277,12 @@ This is required to be the equivalent of
 
 #### Preconditions
 
-With the offset of 0 and the length known to be that of the buffer, the
-preconditions can be simplified to
+    Stream.isOpen else raise IOException
 
+
+With the offset of 0 and the length known to be that of the buffer, the
+other preconditions of `write(byte[] buffer, int offset, int len)`
+can be simplified to
 
     buffer != null else raise NullPointerException
 
@@ -228,11 +290,11 @@ preconditions can be simplified to
 
 The postconditions become
 
-    cache' = cache + buffer[0...buffer.length]
+     Stream'.cache = Stream.cache + buffer[0...buffer.length]
 
 Which is equivalent to
 
-    cache' = cache + buffer
+     Stream'.cache = Stream.cache + buffer
 
 ### <a name="flush()"></a>`flush()`
 
@@ -244,7 +306,12 @@ It explicitly precludes any guarantees about durability.
 
 #### Preconditions
 
+    Stream.isOpen else raise IOException
+
 #### Postconditions
+
+
+    FS' = FS where data(path) == cache
 
 
 ### <a name="close"></a>`close()`
@@ -260,15 +327,17 @@ updated).
 
 Any locking/leaseholding mechanism is also required to release its lock/lease.
 
-The are two non-requirements of the `close()` operation; code use
 
-The `close()` call MAY fail during its operation. This is clearly an erroneous
-outcome, but it is possible.
+    FS' = FS where data(path) == cache
+    Stream'.isOpen = false
 
-1. Callers of the API MUST expect this and SHOULD code appropriately. Catching
-and swallowing exceptions, while common, is not always the ideal solution.
-1. Even after a failure, `close()` should place the stream into a closed state,
-where future calls to `close()` are ignored, and calls to other methods
+
+The `close()` call MAY fail during its operation.
+
+1. Callers of the API MUST expect for some calls to fail and SHOULD code appropriately.
+Catching and swallowing exceptions, while common, is not always the ideal solution.
+1. Even after a failure, `close()` MUST place the stream into a closed state.
+Follow-on calls to `close()` are ignored, and calls to other methods
 rejected. That is: caller's cannot be expected to call `close()` repeatedly
 until it succeeds.
 1. The duration of the `call()` operation is undefined. Operations which rely
@@ -304,6 +373,13 @@ which implement `Syncable`.
 Flush out the data in client's user buffer. After the return of
 this call, new readers will see the data.
 
+#### Preconditions
+
+    Stream.isOpen else raise IOException
+
+#### Postconditions
+
+
     FS' = FS where data(path) == cache
 
 It's not clear whether this operation is expected to be blocking, that is,
@@ -318,6 +394,13 @@ all the way to the disk device (but the disk may have it in its cache).
 
 That is, it is a requirement for the underlying FS To save all the data to
 the disk hardware itself, where it is expected to be durable.
+
+#### Preconditions
+
+    Stream.isOpen else raise IOException
+
+#### Postconditions
+
 
     FS' = FS where data(path) == cache
 
@@ -348,5 +431,5 @@ environments.
 
 ### <a name="Syncable.hflush"></a>`Syncable.hflush()`
 
-Deprecated: replaced by `hflush()`
+Deprecated: replaced by `hsync()`
 
