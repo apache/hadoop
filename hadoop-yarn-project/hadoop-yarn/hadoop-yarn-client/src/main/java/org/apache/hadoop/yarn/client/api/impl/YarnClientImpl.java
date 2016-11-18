@@ -174,11 +174,24 @@ public class YarnClientImpl extends YarnClient {
 
     if (conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)) {
-      timelineServiceEnabled = true;
-      timelineClient = createTimelineClient();
-      timelineClient.init(conf);
-      timelineDTRenewer = getTimelineDelegationTokenRenewer(conf);
-      timelineService = TimelineUtils.buildTimelineTokenService(conf);
+      try {
+        timelineServiceEnabled = true;
+        timelineClient = createTimelineClient();
+        timelineClient.init(conf);
+        timelineDTRenewer = getTimelineDelegationTokenRenewer(conf);
+        timelineService = TimelineUtils.buildTimelineTokenService(conf);
+      } catch (NoClassDefFoundError error) {
+        // When attempt to initiate the timeline client with
+        // different set of dependencies, it may fail with
+        // NoClassDefFoundError. When some of them are not compatible
+        // with timeline server. This is not necessarily a fatal error
+        // to the client.
+        LOG.warn("Timeline client could not be initialized "
+            + "because dependency missing or incompatible,"
+            + " disabling timeline client.",
+            error);
+        timelineServiceEnabled = false;
+      }
     }
 
     timelineServiceBestEffort = conf.getBoolean(
