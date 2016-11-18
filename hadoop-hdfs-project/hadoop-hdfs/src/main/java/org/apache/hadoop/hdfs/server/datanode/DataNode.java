@@ -384,7 +384,7 @@ public class DataNode extends ReconfigurableBase
       .availableProcessors();
   private static final double CONGESTION_RATIO = 1.5;
   private DiskBalancer diskBalancer;
-  
+
   @Nullable
   private final StorageLocationChecker storageLocationChecker;
 
@@ -1940,7 +1940,7 @@ public class DataNode extends ReconfigurableBase
     if (storageLocationChecker != null) {
       storageLocationChecker.shutdownAndWait(1, TimeUnit.SECONDS);
     }
-    
+
     if (pauseMonitor != null) {
       pauseMonitor.stop();
     }
