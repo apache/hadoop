@@ -1755,7 +1755,7 @@ public class YarnConfiguration extends Configuration {
 
   public static final String AMRM_PROXY_CLIENT_THREAD_COUNT = NM_PREFIX
       + "amrmproxy.client.thread-count";
-  public static final int DEFAULT_AMRM_PROXY_CLIENT_THREAD_COUNT = 25;
+  public static final int DEFAULT_AMRM_PROXY_CLIENT_THREAD_COUNT = 3;
 
   public static final String AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE =
       NM_PREFIX + "amrmproxy.interceptor-class.pipeline";
