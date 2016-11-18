@@ -199,6 +199,21 @@ public class StorageContainerManager
     return locatedContainers;
   }
 
+  /**
+   * Asks SCM where a container should be allocated. SCM responds with the set
+   * of datanodes that should be used creating this container.
+   *
+   * @param containerName - Name of the container.
+   * @return Pipeline.
+   * @throws IOException
+   */
+  @Override
+  public Pipeline allocateContainer(String containerName) throws IOException {
+    // TODO : This whole file will be replaced when we switch over to using
+    // the new protocol. So skipping connecting this code for now.
+    return null;
+  }
+
   @Override
   public DatanodeRegistration registerDatanode(
       DatanodeRegistration registration) throws IOException {

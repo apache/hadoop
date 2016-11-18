@@ -29,9 +29,12 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.ozone.protocol.LocatedContainer;
 import org.apache.hadoop.ozone.protocol.StorageContainerLocationProtocol;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetStorageContainerLocationsRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetStorageContainerLocationsResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.LocatedContainerProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerResponseProto;
 
 /**
  * This class is the server-side translator that forwards requests received on
@@ -85,5 +88,12 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       resp.addLocatedContainers(locatedContainerProto.build());
     }
     return resp.build();
+  }
+
+  @Override
+  public ContainerResponseProto allocateContainer(RpcController unused,
+      StorageContainerLocationProtocolProtos.ContainerRequestProto request)
+      throws ServiceException {
+    return null;
   }
 }

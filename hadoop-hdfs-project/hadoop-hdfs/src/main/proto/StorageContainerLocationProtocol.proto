@@ -29,6 +29,7 @@ option java_generate_equals_and_hash = true;
 package hadoop.hdfs;
 
 import "hdfs.proto";
+import "DatanodeContainerProtocol.proto";
 
 /**
  * keys - batch of object keys to find
@@ -57,6 +58,27 @@ message LocatedContainerProto {
 }
 
 /**
+* Request send to SCM asking where the container should be created.
+*/
+message ContainerRequestProto {
+  required string containerName = 1;
+}
+
+/**
+ * Reply from SCM indicating that the container.
+ */
+message ContainerResponseProto {
+  enum Error {
+    success = 1;
+    errorContainerAlreadyExists = 2;
+    errorContainerMissing = 3;
+  }
+  required Error errorCode = 1;
+  required hadoop.hdfs.ozone.Pipeline pipeline = 2;
+  optional string errorMessage = 3;
+}
+
+/**
  * Protocol used from an HDFS node to StorageContainerManager.  See the request
  * and response messages for details of the RPC calls.
  */
@@ -68,4 +90,10 @@ service StorageContainerLocationProtocolService {
    */
   rpc getStorageContainerLocations(GetStorageContainerLocationsRequestProto)
       returns(GetStorageContainerLocationsResponseProto);
+
+  /**
+   Creates a container entry in SCM.
+   */
+  rpc allocateContainer(ContainerRequestProto) returns (ContainerResponseProto);
+
 }

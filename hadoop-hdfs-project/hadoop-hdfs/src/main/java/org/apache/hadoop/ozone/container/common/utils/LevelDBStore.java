@@ -53,6 +53,22 @@ public class LevelDBStore {
   }
 
   /**
+   * Opens a DB file.
+   *
+   * @param dbPath          - DB File path
+   * @throws IOException
+   */
+  public LevelDBStore(File dbPath, Options options)
+      throws IOException {
+    db = JniDBFactory.factory.open(dbPath, options);
+    if (db == null) {
+      throw new IOException("Db is null");
+    }
+    this.dbFile = dbPath;
+  }
+
+
+  /**
    * Puts a Key into file.
    *
    * @param key   - key
