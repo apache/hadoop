@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -153,6 +154,26 @@ public class TestYarnClient {
     client.start();
     client.stop();
     rm.stop();
+  }
+
+  @Test
+  public void testTimelineClientInitFailure() throws Exception{
+    Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    YarnClient client = YarnClient.createYarnClient();
+    if(client instanceof YarnClientImpl) {
+      YarnClientImpl impl = (YarnClientImpl) client;
+      YarnClientImpl spyClient = spy(impl);
+      when(spyClient.createTimelineClient()).thenThrow(
+          new NoClassDefFoundError(
+              "Mock a failure when init timeline instance"));
+      spyClient.init(conf);
+      spyClient.start();
+      assertFalse("Timeline client should be disabled when"
+          + "it is failed to init",
+          spyClient.timelineServiceEnabled);
+      spyClient.stop();
+    }
   }
 
   @SuppressWarnings("deprecation")
