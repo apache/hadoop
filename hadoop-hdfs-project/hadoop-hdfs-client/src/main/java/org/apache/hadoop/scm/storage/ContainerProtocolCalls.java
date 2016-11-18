@@ -25,6 +25,7 @@ import java.io.IOException;
 
 import com.google.protobuf.ByteString;
 
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
@@ -36,13 +37,22 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ReadChunkRequ
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ReadChunkResponseProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Type;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.WriteChunkRequestProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.PutSmallFileRequestProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.GetSmallFileResponseProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.GetSmallFileRequestProto;
 import org.apache.hadoop.scm.XceiverClient;
 
 /**
- * Implementation of all container protocol calls performed by
- * .
+ * Implementation of all container protocol calls performed by Container
+ * clients.
  */
 public final class ContainerProtocolCalls {
+
+  /**
+   * There is no need to instantiate this class.
+   */
+  private ContainerProtocolCalls() {
+  }
 
   /**
    * Calls the container protocol to get a container key.
@@ -153,6 +163,90 @@ public final class ContainerProtocolCalls {
   }
 
   /**
+   * Allows writing a small file using single RPC. This takes the container
+   * name, key name and data to write sends all that data to the container using
+   * a single RPC. This API is designed to be used for files which are smaller
+   * than 1 MB.
+   *
+   * @param client - client that communicates with the container.
+   * @param containerName - Name of the container
+   * @param key - Name of the Key
+   * @param data - Data to be written into the container.
+   * @param traceID - Trace ID for logging purpose.
+   * @throws IOException
+   */
+  public static void writeSmallFile(XceiverClient client, String containerName,
+      String key, byte[] data, String traceID) throws IOException {
+
+    KeyData containerKeyData = KeyData
+        .newBuilder()
+        .setContainerName(containerName)
+        .setName(key).build();
+    PutKeyRequestProto.Builder createKeyRequest = PutKeyRequestProto
+        .newBuilder()
+        .setPipeline(client.getPipeline().getProtobufMessage())
+        .setKeyData(containerKeyData);
+
+    ChunkInfo chunk = ChunkInfo
+        .newBuilder()
+        .setChunkName(key + "_chunk")
+        .setOffset(0)
+        .setLen(data.length)
+        .build();
+
+    PutSmallFileRequestProto putSmallFileRequest = PutSmallFileRequestProto
+        .newBuilder().setChunkInfo(chunk)
+        .setKey(createKeyRequest)
+        .setData(ByteString.copyFrom(data))
+        .build();
+
+    ContainerCommandRequestProto request = ContainerCommandRequestProto
+        .newBuilder()
+        .setCmdType(Type.PutSmallFile)
+        .setTraceID(traceID)
+        .setPutSmallFile(putSmallFileRequest)
+        .build();
+    ContainerCommandResponseProto response = client.sendCommand(request);
+    validateContainerResponse(response, traceID);
+  }
+
+  /**
+   * Reads the data given the container name and key.
+   *
+   * @param client - client
+   * @param containerName - name of the container
+   * @param key - key
+   * @param traceID - trace ID
+   * @return GetSmallFileResponseProto
+   * @throws IOException
+   */
+  public static GetSmallFileResponseProto readSmallFile(XceiverClient client,
+      String containerName, String key, String traceID) throws IOException {
+    KeyData containerKeyData = KeyData
+        .newBuilder()
+        .setContainerName(containerName)
+        .setName(key).build();
+
+    GetKeyRequestProto.Builder getKey = GetKeyRequestProto
+        .newBuilder()
+        .setPipeline(client.getPipeline().getProtobufMessage())
+        .setKeyData(containerKeyData);
+    ContainerProtos.GetSmallFileRequestProto getSmallFileRequest =
+        GetSmallFileRequestProto
+            .newBuilder().setKey(getKey)
+            .build();
+    ContainerCommandRequestProto request = ContainerCommandRequestProto
+        .newBuilder()
+        .setCmdType(Type.GetSmallFile)
+        .setTraceID(traceID)
+        .setGetSmallFile(getSmallFileRequest)
+        .build();
+    ContainerCommandResponseProto response = client.sendCommand(request);
+    validateContainerResponse(response, traceID);
+    return response.getGetSmallFile();
+  }
+
+  /**
    * Validates a response from a container protocol call.  Any non-successful
    * return code is mapped to a corresponding exception and thrown.
    *
@@ -180,11 +274,5 @@ public final class ContainerProtocolCalls {
       throw new IOException(HTTP_INTERNAL_ERROR +
           "Unrecognized container response:" + traceID);
     }
-  }
-
-  /**
-   * There is no need to instantiate this class.
-   */
-  private ContainerProtocolCalls() {
   }
 }
