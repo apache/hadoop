@@ -581,9 +581,11 @@ and MAY be a `RuntimeException` or subclass. For instance, HDFS may raise a `Inv
 
     FS' where :
        FS'.Files'[p] == []
-       ancestors(p) is-subset-of FS'.Directories'
+       and ancestors(p) is-subset-of FS'.Directories'
 
     result = FSDataOutputStream
+
+A zero byte file must exist at the end of the specified path, visible to all 
 
 The updated (valid) FileSystem must contains all the parent directories of the path, as created by `mkdirs(parent(p))`.
 
@@ -600,8 +602,12 @@ The result is `FSDataOutputStream`, which through its operations may generate ne
 
 * S3N, S3A, Swift and potentially other Object Stores do not currently change the FS state
 until the output stream `close()` operation is completed.
-This MAY be a bug, as it allows >1 client to create a file with `overwrite==false`,
- and potentially confuse file/directory logic
+This is a significant difference between the behavior of object stores
+and that of filesystems, as it allows >1 client to create a file with `overwrite==false`,
+and potentially confuse file/directory logic. In particular, using create() to acquire
+an exclusive lock on a file (whoever creates the file without an error is considered
+the holder of the lock) is not a valid algorithm when working with object stores.
+
 
 * The Local FileSystem raises a `FileNotFoundException` when trying to create a file over
 a directory, hence it is listed as an exception that MAY be raised when
@@ -621,7 +627,7 @@ Implementations MAY throw `UnsupportedOperationException`.
 
 #### Postconditions
 
-    FS
+    FS' = FS
     result = FSDataOutputStream
 
 Return: `FSDataOutputStream`, which can update the entry `FS.Files[p]`
