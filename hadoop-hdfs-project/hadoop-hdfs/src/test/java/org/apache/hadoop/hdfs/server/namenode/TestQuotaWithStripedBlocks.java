@@ -25,7 +25,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -46,11 +45,12 @@ import java.io.IOException;
 public class TestQuotaWithStripedBlocks {
   private static final int BLOCK_SIZE = 1024 * 1024;
   private static final long DISK_QUOTA = BLOCK_SIZE * 10;
-  private static final ErasureCodingPolicy ecPolicy =
+  private final ErasureCodingPolicy ecPolicy =
       ErasureCodingPolicyManager.getSystemDefaultPolicy();
-  private static final int NUM_DATA_BLOCKS = ecPolicy.getNumDataUnits();
-  private static final int NUM_PARITY_BLOCKS = ecPolicy.getNumParityUnits();
-  private static final int GROUP_SIZE = NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS;
+  private final int dataBlocks = ecPolicy.getNumDataUnits();
+  private final int parityBlocsk = ecPolicy.getNumParityUnits();
+  private final int groupSize = dataBlocks + parityBlocsk;
+  private final int cellSize = ecPolicy.getCellSize();
   private static final Path ecDir = new Path("/ec");
 
   private MiniDFSCluster cluster;
@@ -64,7 +64,7 @@ public class TestQuotaWithStripedBlocks {
   public void setUp() throws IOException {
     final Configuration conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(GROUP_SIZE).build();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize).build();
     cluster.waitActive();
 
     dir = cluster.getNamesystem().getFSDirectory();
@@ -109,8 +109,8 @@ public class TestQuotaWithStripedBlocks {
       final long diskUsed = dirNode.getDirectoryWithQuotaFeature()
           .getSpaceConsumed().getTypeSpaces().get(StorageType.DISK);
       // When we add a new block we update the quota using the full block size.
-      Assert.assertEquals(BLOCK_SIZE * GROUP_SIZE, spaceUsed);
-      Assert.assertEquals(BLOCK_SIZE * GROUP_SIZE, diskUsed);
+      Assert.assertEquals(BLOCK_SIZE * groupSize, spaceUsed);
+      Assert.assertEquals(BLOCK_SIZE * groupSize, diskUsed);
 
       dfs.getClient().getNamenode().complete(file.toString(),
           dfs.getClient().getClientName(), previous, fileNode.getId());
@@ -120,9 +120,9 @@ public class TestQuotaWithStripedBlocks {
       final long actualDiskUsed = dirNode.getDirectoryWithQuotaFeature()
           .getSpaceConsumed().getTypeSpaces().get(StorageType.DISK);
       // In this case the file's real size is cell size * block group size.
-      Assert.assertEquals(StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE * GROUP_SIZE,
+      Assert.assertEquals(cellSize * groupSize,
           actualSpaceUsed);
-      Assert.assertEquals(StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE * GROUP_SIZE,
+      Assert.assertEquals(cellSize * groupSize,
           actualDiskUsed);
     } finally {
       IOUtils.cleanup(null, out);

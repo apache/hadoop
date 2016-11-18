@@ -64,6 +64,7 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -72,6 +73,7 @@ import org.apache.hadoop.hdfs.server.balancer.ExitStatus;
 import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
 import org.apache.hadoop.hdfs.server.mover.Mover.MLocation;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.minikdc.MiniKdc;
@@ -469,14 +471,16 @@ public class TestMover {
     }
   }
 
-  int dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
-  int parityBlocks = StripedFileTestUtil.NUM_PARITY_BLOCKS;
-  private final static int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
-  private final static int stripesPerBlock = 4;
-  static int DEFAULT_STRIPE_BLOCK_SIZE = cellSize * stripesPerBlock;
+  private final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private final int dataBlocks = ecPolicy.getNumDataUnits();
+  private final int parityBlocks = ecPolicy.getNumParityUnits();
+  private final int cellSize = ecPolicy.getCellSize();
+  private final int stripesPerBlock = 4;
+  private final int defaultBlockSize = cellSize * stripesPerBlock;
 
-  static void initConfWithStripe(Configuration conf) {
-    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_STRIPE_BLOCK_SIZE);
+  void initConfWithStripe(Configuration conf) {
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, defaultBlockSize);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1L);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, false);
@@ -490,7 +494,7 @@ public class TestMover {
     // start 10 datanodes
     int numOfDatanodes =10;
     int storagesPerDatanode=2;
-    long capacity = 10 * DEFAULT_STRIPE_BLOCK_SIZE;
+    long capacity = 10 * defaultBlockSize;
     long[][] capacities = new long[numOfDatanodes][storagesPerDatanode];
     for (int i = 0; i < numOfDatanodes; i++) {
       for(int j=0;j<storagesPerDatanode;j++){
@@ -529,7 +533,7 @@ public class TestMover {
 
       // write file to barDir
       final String fooFile = "/bar/foo";
-      long fileLen = 20 * DEFAULT_STRIPE_BLOCK_SIZE ;
+      long fileLen = 20 * defaultBlockSize;
       DFSTestUtil.createFile(cluster.getFileSystem(), new Path(fooFile),
           fileLen,(short) 3, 0);
 

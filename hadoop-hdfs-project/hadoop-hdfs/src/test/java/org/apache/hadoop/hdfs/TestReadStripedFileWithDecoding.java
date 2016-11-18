@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -52,9 +54,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.blockSize;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.numDNs;
-
 public class TestReadStripedFileWithDecoding {
   static final Log LOG = LogFactory.getLog(TestReadStripedFileWithDecoding.class);
 
@@ -68,15 +67,22 @@ public class TestReadStripedFileWithDecoding {
 
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
-  private static final short dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
-  private static final short parityBlocks = StripedFileTestUtil.NUM_PARITY_BLOCKS;
-  private final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
-  private final int smallFileLength = blockSize * dataBlocks - 123;
-  private final int largeFileLength = blockSize * dataBlocks + 123;
+  private final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
+  private final short parityBlocks =
+      (short) ecPolicy.getNumParityUnits();
+  private final int numDNs = dataBlocks + parityBlocks;
+  private final int cellSize = ecPolicy.getCellSize();
+  private final int stripPerBlock = 4;
+  private final int blockSize = cellSize * stripPerBlock;
+  private final int blockGroupSize = blockSize * dataBlocks;
+  private final int smallFileLength = blockGroupSize - 123;
+  private final int largeFileLength = blockGroupSize + 123;
   private final int[] fileLengths = {smallFileLength, largeFileLength};
-  private static final int[] dnFailureNums = getDnFailureNums();
+  private final int[] dnFailureNums = getDnFailureNums();
 
-  private static int[] getDnFailureNums() {
+  private int[] getDnFailureNums() {
     int[] dnFailureNums = new int[parityBlocks];
     for (int i = 0; i < dnFailureNums.length; i++) {
       dnFailureNums[i] = i + 1;
@@ -191,7 +197,8 @@ public class TestReadStripedFileWithDecoding {
     StripedFileTestUtil.verifyStatefulRead(fs, testPath, length, expected, buffer);
     StripedFileTestUtil.verifyStatefulRead(fs, testPath, length, expected,
         ByteBuffer.allocate(length + 100));
-    StripedFileTestUtil.verifySeek(fs, testPath, length);
+    StripedFileTestUtil.verifySeek(fs, testPath, length, ecPolicy,
+        blockGroupSize);
   }
 
   private void testReadWithDNFailure(int fileLength, int dnFailureNum)

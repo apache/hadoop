@@ -111,6 +111,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
@@ -171,8 +172,6 @@ import org.mockito.internal.util.reflection.Whitebox;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.annotations.VisibleForTesting;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_DATA_BLOCKS;
 
 /** Utilities for HDFS tests */
 public class DFSTestUtil {
@@ -1971,9 +1970,11 @@ public class DFSTestUtil {
       }
     }
 
+    final ErasureCodingPolicy ecPolicy =
+        fs.getErasureCodingPolicy(new Path(file));
     // 2. RECEIVED_BLOCK IBR
     long blockSize = isStripedBlock ?
-        numStripes * BLOCK_STRIPED_CELL_SIZE : len;
+        numStripes * ecPolicy.getCellSize() : len;
     for (int i = 0; i < groupSize; i++) {
       DataNode dn = dataNodes.get(i);
       final Block block = new Block(lastBlock.getBlockId() + i,
@@ -1987,7 +1988,7 @@ public class DFSTestUtil {
       }
     }
     long bytes = isStripedBlock ?
-        numStripes * BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS : len;
+        numStripes * ecPolicy.getCellSize() * ecPolicy.getNumDataUnits() : len;
     lastBlock.setNumBytes(bytes);
     return lastBlock;
   }

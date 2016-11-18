@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem.WebHdfsInputStream;
 import org.apache.hadoop.io.IOUtils;
@@ -57,23 +56,6 @@ import static org.junit.Assert.assertEquals;
 
 public class StripedFileTestUtil {
   public static final Log LOG = LogFactory.getLog(StripedFileTestUtil.class);
-  /*
-   * These values correspond to the values used by the system default erasure
-   * coding policy.
-   */
-  public static final ErasureCodingPolicy TEST_EC_POLICY =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
-  public static final short NUM_DATA_BLOCKS =
-      (short) TEST_EC_POLICY.getNumDataUnits();
-  public static final short NUM_PARITY_BLOCKS =
-      (short) TEST_EC_POLICY.getNumParityUnits();
-  public static final int BLOCK_STRIPED_CELL_SIZE =
-      TEST_EC_POLICY.getCellSize();
-
-  static int stripesPerBlock = 4;
-  public static int blockSize = BLOCK_STRIPED_CELL_SIZE * stripesPerBlock;
-  static int numDNs = NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS + 2;
-  static int BLOCK_GROUP_SIZE = blockSize * NUM_DATA_BLOCKS;
 
   public static byte[] generateBytes(int cnt) {
     byte[] bytes = new byte[cnt];
@@ -96,10 +78,15 @@ public class StripedFileTestUtil {
 
   static void verifyPread(FileSystem fs, Path srcPath,  int fileLength,
       byte[] expected, byte[] buf) throws IOException {
+    final ErasureCodingPolicy ecPolicy =
+        ((DistributedFileSystem)fs).getErasureCodingPolicy(srcPath);
     try (FSDataInputStream in = fs.open(srcPath)) {
-      int[] startOffsets = {0, 1, BLOCK_STRIPED_CELL_SIZE - 102, BLOCK_STRIPED_CELL_SIZE, BLOCK_STRIPED_CELL_SIZE + 102,
-          BLOCK_STRIPED_CELL_SIZE * (NUM_DATA_BLOCKS - 1), BLOCK_STRIPED_CELL_SIZE * (NUM_DATA_BLOCKS - 1) + 102,
-          BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS, fileLength - 102, fileLength - 1};
+      int[] startOffsets = {0, 1, ecPolicy.getCellSize() - 102,
+          ecPolicy.getCellSize(), ecPolicy.getCellSize() + 102,
+          ecPolicy.getCellSize() * (ecPolicy.getNumDataUnits() - 1),
+          ecPolicy.getCellSize() * (ecPolicy.getNumDataUnits() - 1) + 102,
+          ecPolicy.getCellSize() * ecPolicy.getNumDataUnits(),
+          fileLength - 102, fileLength - 1};
       for (int startOffset : startOffsets) {
         startOffset = Math.max(0, Math.min(startOffset, fileLength - 1));
         int remaining = fileLength - startOffset;
@@ -153,8 +140,8 @@ public class StripedFileTestUtil {
     }
   }
 
-  static void verifySeek(FileSystem fs, Path srcPath, int fileLength)
-      throws IOException {
+  static void verifySeek(FileSystem fs, Path srcPath, int fileLength,
+      ErasureCodingPolicy ecPolicy, int blkGroupSize) throws IOException {
     try (FSDataInputStream in = fs.open(srcPath)) {
       // seek to 1/2 of content
       int pos = fileLength / 2;
@@ -168,21 +155,21 @@ public class StripedFileTestUtil {
       pos = 0;
       assertSeekAndRead(in, pos, fileLength);
 
-      if (fileLength > BLOCK_STRIPED_CELL_SIZE) {
+      if (fileLength > ecPolicy.getCellSize()) {
         // seek to cellSize boundary
-        pos = BLOCK_STRIPED_CELL_SIZE - 1;
+        pos = ecPolicy.getCellSize() - 1;
         assertSeekAndRead(in, pos, fileLength);
       }
 
-      if (fileLength > BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS) {
+      if (fileLength > ecPolicy.getCellSize() * ecPolicy.getNumDataUnits()) {
         // seek to striped cell group boundary
-        pos = BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS - 1;
+        pos = ecPolicy.getCellSize() * ecPolicy.getNumDataUnits() - 1;
         assertSeekAndRead(in, pos, fileLength);
       }
 
-      if (fileLength > blockSize * NUM_DATA_BLOCKS) {
+      if (fileLength > blkGroupSize) {
         // seek to striped block group boundary
-        pos = blockSize * NUM_DATA_BLOCKS - 1;
+        pos = blkGroupSize - 1;
         assertSeekAndRead(in, pos, fileLength);
       }
 
@@ -244,13 +231,16 @@ public class StripedFileTestUtil {
    * If the length of blockGroup is less than a full stripe, it returns the the
    * number of actual data internal blocks. Otherwise returns NUM_DATA_BLOCKS.
    */
-  public static short getRealDataBlockNum(int numBytes) {
-    return (short) Math.min(NUM_DATA_BLOCKS,
-        (numBytes - 1) / BLOCK_STRIPED_CELL_SIZE + 1);
+  public static short getRealDataBlockNum(int numBytesInStrip,
+      ErasureCodingPolicy ecPolicy) {
+    return (short) Math.min(ecPolicy.getNumDataUnits(),
+        (numBytesInStrip - 1) / ecPolicy.getCellSize() + 1);
   }
 
-  public static short getRealTotalBlockNum(int numBytes) {
-    return (short) (getRealDataBlockNum(numBytes) + NUM_PARITY_BLOCKS);
+  public static short getRealTotalBlockNum(int numBytesInStrip,
+      ErasureCodingPolicy ecPolicy) {
+    return (short) (getRealDataBlockNum(numBytesInStrip, ecPolicy) +
+        ecPolicy.getNumParityUnits());
   }
 
   public static void waitBlockGroupsReported(DistributedFileSystem fs,
@@ -267,14 +257,15 @@ public class StripedFileTestUtil {
     boolean success;
     final int ATTEMPTS = 40;
     int count = 0;
-
+    final ErasureCodingPolicy ecPolicy =
+        fs.getErasureCodingPolicy(new Path(src));
     do {
       success = true;
       count++;
       LocatedBlocks lbs = fs.getClient().getLocatedBlocks(src, 0);
       for (LocatedBlock lb : lbs.getLocatedBlocks()) {
-        short expected = (short) (getRealTotalBlockNum((int) lb.getBlockSize())
-            - numDeadDNs);
+        short expected = (short) (getRealTotalBlockNum((int) lb.getBlockSize(),
+            ecPolicy) - numDeadDNs);
         int reported = lb.getLocations().length;
         if (reported < expected){
           success = false;
@@ -357,7 +348,8 @@ public class StripedFileTestUtil {
   }
 
   static void checkData(DistributedFileSystem dfs, Path srcPath, int length,
-      List<DatanodeInfo> killedList, List<Long> oldGSList) throws IOException {
+      List<DatanodeInfo> killedList, List<Long> oldGSList, int blkGroupSize)
+      throws IOException {
 
     StripedFileTestUtil.verifyLength(dfs, srcPath, length);
     List<List<LocatedBlock>> blockGroupList = new ArrayList<>();
@@ -365,10 +357,14 @@ public class StripedFileTestUtil {
         Long.MAX_VALUE);
     int expectedNumGroup = 0;
     if (length > 0) {
-      expectedNumGroup = (length - 1) / BLOCK_GROUP_SIZE + 1;
+      expectedNumGroup = (length - 1) / blkGroupSize + 1;
     }
     assertEquals(expectedNumGroup, lbs.getLocatedBlocks().size());
 
+    final ErasureCodingPolicy ecPolicy = dfs.getErasureCodingPolicy(srcPath);
+    final int cellSize = ecPolicy.getCellSize();
+    final int dataBlkNum = ecPolicy.getNumDataUnits();
+    final int parityBlkNum = ecPolicy.getNumParityUnits();
     int index = 0;
     for (LocatedBlock firstBlock : lbs.getLocatedBlocks()) {
       Assert.assertTrue(firstBlock instanceof LocatedStripedBlock);
@@ -380,39 +376,39 @@ public class StripedFileTestUtil {
       Assert.assertTrue(s, gs >= oldGS);
 
       LocatedBlock[] blocks = StripedBlockUtil.parseStripedBlockGroup(
-          (LocatedStripedBlock) firstBlock, BLOCK_STRIPED_CELL_SIZE,
-          NUM_DATA_BLOCKS, NUM_PARITY_BLOCKS);
+          (LocatedStripedBlock) firstBlock, cellSize,
+          dataBlkNum, parityBlkNum);
       blockGroupList.add(Arrays.asList(blocks));
     }
 
     // test each block group
     for (int group = 0; group < blockGroupList.size(); group++) {
       final boolean isLastGroup = group == blockGroupList.size() - 1;
-      final int groupSize = !isLastGroup? BLOCK_GROUP_SIZE
-          : length - (blockGroupList.size() - 1)*BLOCK_GROUP_SIZE;
-      final int numCellInGroup = (groupSize - 1)/BLOCK_STRIPED_CELL_SIZE + 1;
-      final int lastCellIndex = (numCellInGroup - 1) % NUM_DATA_BLOCKS;
-      final int lastCellSize = groupSize - (numCellInGroup - 1)*BLOCK_STRIPED_CELL_SIZE;
+      final int groupSize = !isLastGroup? blkGroupSize
+          : length - (blockGroupList.size() - 1)*blkGroupSize;
+      final int numCellInGroup = (groupSize - 1) / cellSize + 1;
+      final int lastCellIndex = (numCellInGroup - 1) % dataBlkNum;
+      final int lastCellSize = groupSize - (numCellInGroup - 1) * cellSize;
 
       //get the data of this block
       List<LocatedBlock> blockList = blockGroupList.get(group);
-      byte[][] dataBlockBytes = new byte[NUM_DATA_BLOCKS][];
-      byte[][] parityBlockBytes = new byte[NUM_PARITY_BLOCKS][];
+      byte[][] dataBlockBytes = new byte[dataBlkNum][];
+      byte[][] parityBlockBytes = new byte[parityBlkNum][];
 
       Set<Integer> checkSet = new HashSet<>();
       // for each block, use BlockReader to read data
       for (int i = 0; i < blockList.size(); i++) {
-        final int j = i >= NUM_DATA_BLOCKS? 0: i;
-        final int numCellInBlock = (numCellInGroup - 1)/NUM_DATA_BLOCKS
+        final int j = i >= dataBlkNum? 0: i;
+        final int numCellInBlock = (numCellInGroup - 1) / dataBlkNum
             + (j <= lastCellIndex? 1: 0);
-        final int blockSize = numCellInBlock*BLOCK_STRIPED_CELL_SIZE
-            + (isLastGroup && j == lastCellIndex? lastCellSize - BLOCK_STRIPED_CELL_SIZE: 0);
+        final int blockSize = numCellInBlock * cellSize
+            + (isLastGroup && j == lastCellIndex? lastCellSize - cellSize: 0);
 
         final byte[] blockBytes = new byte[blockSize];
-        if (i < NUM_DATA_BLOCKS) {
+        if (i < dataBlkNum) {
           dataBlockBytes[i] = blockBytes;
         } else {
-          parityBlockBytes[i - NUM_DATA_BLOCKS] = blockBytes;
+          parityBlockBytes[i - dataBlkNum] = blockBytes;
         }
 
         final LocatedBlock lb = blockList.get(i);
@@ -440,7 +436,7 @@ public class StripedFileTestUtil {
       LOG.info("Internal blocks to check: " + checkSet);
 
       // check data
-      final int groupPosInFile = group*BLOCK_GROUP_SIZE;
+      final int groupPosInFile = group * blkGroupSize;
       for (int i = 0; i < dataBlockBytes.length; i++) {
         boolean killed = false;
         if (!checkSet.contains(i)) {
@@ -449,7 +445,7 @@ public class StripedFileTestUtil {
         final byte[] actual = dataBlockBytes[i];
         for (int posInBlk = 0; posInBlk < actual.length; posInBlk++) {
           final long posInFile = StripedBlockUtil.offsetInBlkToOffsetInBG(
-              BLOCK_STRIPED_CELL_SIZE, NUM_DATA_BLOCKS, posInBlk, i) + groupPosInFile;
+              cellSize, dataBlkNum, posInBlk, i) + groupPosInFile;
           Assert.assertTrue(posInFile < length);
           final byte expected = getByte(posInFile);
 
@@ -469,13 +465,14 @@ public class StripedFileTestUtil {
       // check parity
       verifyParityBlocks(dfs.getConf(),
           lbs.getLocatedBlocks().get(group).getBlockSize(),
-          BLOCK_STRIPED_CELL_SIZE, dataBlockBytes, parityBlockBytes, checkSet);
+          cellSize, dataBlockBytes, parityBlockBytes, checkSet,
+          ecPolicy.getCodecName());
     }
   }
 
   static void verifyParityBlocks(Configuration conf, final long size,
       final int cellSize, byte[][] dataBytes, byte[][] parityBytes,
-      Set<Integer> checkSet) {
+      Set<Integer> checkSet, String codecName) {
     // verify the parity blocks
     int parityBlkSize = (int) StripedBlockUtil.getInternalBlockLength(
         size, cellSize, dataBytes.length, dataBytes.length);
@@ -496,8 +493,7 @@ public class StripedFileTestUtil {
     ErasureCoderOptions coderOptions = new ErasureCoderOptions(
         dataBytes.length, parityBytes.length);
     final RawErasureEncoder encoder =
-        CodecUtil.createRawEncoder(conf, TEST_EC_POLICY.getCodecName(),
-            coderOptions);
+        CodecUtil.createRawEncoder(conf, codecName, coderOptions);
     encoder.encode(dataBytes, expectedParityBytes);
     for (int i = 0; i < parityBytes.length; i++) {
       if (checkSet.contains(i + dataBytes.length)){

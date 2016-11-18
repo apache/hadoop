@@ -24,10 +24,12 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.net.NetworkTopology;
@@ -46,10 +48,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_DATA_BLOCKS;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_PARITY_BLOCKS;
-
 public class TestReconstructStripedBlocksWithRackAwareness {
   public static final Logger LOG = LoggerFactory.getLogger(
       TestReconstructStripedBlocksWithRackAwareness.class);
@@ -60,10 +58,14 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     GenericTestUtils.setLogLevel(BlockManager.LOG, Level.ALL);
   }
 
-  private static final String[] hosts =
-      getHosts(NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS + 1);
-  private static final String[] racks =
-      getRacks(NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS + 1, NUM_DATA_BLOCKS);
+  private final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private final int cellSize = ecPolicy.getCellSize();
+  private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
+  private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
+  private final String[] hosts = getHosts(dataBlocks + parityBlocks + 1);
+  private final String[] racks =
+      getRacks(dataBlocks + parityBlocks + 1, dataBlocks);
 
   private static String[] getHosts(int numHosts) {
     String[] hosts = new String[numHosts];
@@ -157,7 +159,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     final Path file = new Path("/foo");
     // the file's block is in 9 dn but 5 racks
     DFSTestUtil.createFile(fs, file,
-        BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS * 2, (short) 1, 0L);
+        cellSize * dataBlocks * 2, (short) 1, 0L);
     Assert.assertEquals(0, bm.numOfUnderReplicatedBlocks());
 
     final INodeFile fileNode = fsn.getFSDirectory()
@@ -169,7 +171,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     for (DatanodeStorageInfo storage : blockInfo.storages) {
       rackSet.add(storage.getDatanodeDescriptor().getNetworkLocation());
     }
-    Assert.assertEquals(NUM_DATA_BLOCKS - 1, rackSet.size());
+    Assert.assertEquals(dataBlocks - 1, rackSet.size());
 
     // restart the stopped datanode
     cluster.restartDataNode(lastHost);
@@ -178,7 +180,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     // make sure we have 6 racks again
     NetworkTopology topology = bm.getDatanodeManager().getNetworkTopology();
     Assert.assertEquals(hosts.length, topology.getNumOfLeaves());
-    Assert.assertEquals(NUM_DATA_BLOCKS, topology.getNumOfRacks());
+    Assert.assertEquals(dataBlocks, topology.getNumOfRacks());
 
     // pause all the heartbeats
     for (DataNode dn : cluster.getDataNodes()) {
@@ -225,7 +227,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
 
     final Path file = new Path("/foo");
     DFSTestUtil.createFile(fs, file,
-        BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS * 2, (short) 1, 0L);
+        cellSize * dataBlocks * 2, (short) 1, 0L);
 
     // stop host1
     MiniDFSCluster.DataNodeProperties host1 = stopDataNode("host1");
@@ -234,7 +236,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     cluster.waitActive();
 
     // wait for reconstruction to finish
-    final short blockNum = (short) (NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS);
+    final short blockNum = (short) (dataBlocks + parityBlocks);
     DFSTestUtil.waitForReplication(fs, file, blockNum, 15 * 1000);
 
     // restart host1
@@ -263,12 +265,12 @@ public class TestReconstructStripedBlocksWithRackAwareness {
    */
   @Test
   public void testReconstructionWithDecommission() throws Exception {
-    final String[] racks = getRacks(NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS + 2,
-        NUM_DATA_BLOCKS);
-    final String[] hosts = getHosts(NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS + 2);
+    final String[] rackNames = getRacks(dataBlocks + parityBlocks + 2,
+        dataBlocks);
+    final String[] hostNames = getHosts(dataBlocks + parityBlocks + 2);
     // we now have 11 hosts on 6 racks with distribution: 2-2-2-2-2-1
-    cluster = new MiniDFSCluster.Builder(conf).racks(racks).hosts(hosts)
-        .numDataNodes(hosts.length).build();
+    cluster = new MiniDFSCluster.Builder(conf).racks(rackNames).hosts(hostNames)
+        .numDataNodes(hostNames.length).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
     fs.setErasureCodingPolicy(new Path("/"), null);
@@ -277,11 +279,13 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     final DatanodeManager dm = bm.getDatanodeManager();
 
     // stop h9 and h10 and create a file with 6+3 internal blocks
-    MiniDFSCluster.DataNodeProperties h9 = stopDataNode(hosts[hosts.length - 3]);
-    MiniDFSCluster.DataNodeProperties h10 = stopDataNode(hosts[hosts.length - 2]);
+    MiniDFSCluster.DataNodeProperties h9 =
+        stopDataNode(hostNames[hostNames.length - 3]);
+    MiniDFSCluster.DataNodeProperties h10 =
+        stopDataNode(hostNames[hostNames.length - 2]);
     final Path file = new Path("/foo");
     DFSTestUtil.createFile(fs, file,
-        BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS * 2, (short) 1, 0L);
+        cellSize * dataBlocks * 2, (short) 1, 0L);
     final BlockInfo blockInfo = cluster.getNamesystem().getFSDirectory()
         .getINode(file.toString()).asFile().getLastBlock();
 
@@ -290,18 +294,19 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     cluster.waitActive();
 
     // stop h11 so that the reconstruction happens
-    MiniDFSCluster.DataNodeProperties h11 = stopDataNode(hosts[hosts.length - 1]);
+    MiniDFSCluster.DataNodeProperties h11 =
+        stopDataNode(hostNames[hostNames.length - 1]);
     boolean recovered = bm.countNodes(blockInfo).liveReplicas() >=
-        NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS;
+        dataBlocks + parityBlocks;
     for (int i = 0; i < 10 & !recovered; i++) {
       Thread.sleep(1000);
       recovered = bm.countNodes(blockInfo).liveReplicas() >=
-          NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS;
+          dataBlocks + parityBlocks;
     }
     Assert.assertTrue(recovered);
 
     // mark h9 as decommissioning
-    DataNode datanode9 = getDataNode(hosts[hosts.length - 3]);
+    DataNode datanode9 = getDataNode(hostNames[hostNames.length - 3]);
     Assert.assertNotNull(datanode9);
     final DatanodeDescriptor dn9 = dm.getDatanode(datanode9.getDatanodeId());
     dn9.startDecommission();
@@ -310,7 +315,8 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     cluster.restartDataNode(h10);
     cluster.restartDataNode(h11);
     cluster.waitActive();
-    DataNodeTestUtils.triggerBlockReport(getDataNode(hosts[hosts.length - 1]));
+    DataNodeTestUtils.triggerBlockReport(
+        getDataNode(hostNames[hostNames.length - 1]));
 
     // start decommissioning h9
     boolean satisfied = bm.isPlacementPolicySatisfied(blockInfo);

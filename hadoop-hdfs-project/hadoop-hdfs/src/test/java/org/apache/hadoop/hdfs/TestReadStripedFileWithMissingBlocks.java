@@ -22,18 +22,15 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
 
 import java.io.IOException;
-
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_PARITY_BLOCKS;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.TEST_EC_POLICY;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.blockSize;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.numDNs;
 
 /**
  * Test reading a striped file when some of its blocks are missing (not included
@@ -45,8 +42,15 @@ public class TestReadStripedFileWithMissingBlocks {
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
   private Configuration conf = new HdfsConfiguration();
-  private final short dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
-  private final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
+  private final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
+  private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
+  private final int cellSize = ecPolicy.getCellSize();
+  private final int stripPerBlock = 4;
+  private final int blockSize = stripPerBlock * cellSize;
+  private final int blockGroupSize = blockSize * dataBlocks;
+  private final int numDNs = dataBlocks + parityBlocks;
   private final int fileLength = blockSize * dataBlocks + 123;
 
   @Rule
@@ -57,7 +61,7 @@ public class TestReadStripedFileWithMissingBlocks {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.getFileSystem().getClient().setErasureCodingPolicy(
-        "/", TEST_EC_POLICY);
+        "/", ecPolicy);
     fs = cluster.getFileSystem();
   }
 
@@ -70,9 +74,9 @@ public class TestReadStripedFileWithMissingBlocks {
 
   @Test
   public void testReadFileWithMissingBlocks() throws Exception {
-    for (int missingData = 1; missingData <= NUM_PARITY_BLOCKS; missingData++) {
+    for (int missingData = 1; missingData <= dataBlocks; missingData++) {
       for (int missingParity = 0; missingParity <=
-          NUM_PARITY_BLOCKS - missingData; missingParity++) {
+          parityBlocks - missingData; missingParity++) {
         try {
           setup();
           readFileWithMissingBlocks(new Path("/foo"), fileLength,
@@ -102,7 +106,7 @@ public class TestReadStripedFileWithMissingBlocks {
     }
     for (int i = 0; i < missingParityNum; i++) {
       missingDataNodes[i + missingDataNum] = i +
-          Math.min(StripedFileTestUtil.NUM_DATA_BLOCKS, dataBlocks);
+          Math.min(ecPolicy.getNumDataUnits(), dataBlocks);
     }
     stopDataNodes(locs, missingDataNodes);
 
@@ -112,7 +116,8 @@ public class TestReadStripedFileWithMissingBlocks {
 
     byte[] smallBuf = new byte[1024];
     byte[] largeBuf = new byte[fileLength + 100];
-    StripedFileTestUtil.verifySeek(fs, srcPath, fileLength);
+    StripedFileTestUtil.verifySeek(fs, srcPath, fileLength, ecPolicy,
+        blockGroupSize);
     StripedFileTestUtil.verifyStatefulRead(fs, srcPath, fileLength, expected,
         smallBuf);
     StripedFileTestUtil.verifyPread(fs, srcPath, fileLength, expected, largeBuf);

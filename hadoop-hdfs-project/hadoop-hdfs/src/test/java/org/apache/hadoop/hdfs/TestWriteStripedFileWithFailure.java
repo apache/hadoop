@@ -23,6 +23,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.Assert;
@@ -31,9 +33,6 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.blockSize;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.numDNs;
 
 public class TestWriteStripedFileWithFailure {
   public static final Log LOG = LogFactory
@@ -47,8 +46,12 @@ public class TestWriteStripedFileWithFailure {
     GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.ALL);
   }
 
-  private final short dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
-  private final short parityBlocks = StripedFileTestUtil.NUM_PARITY_BLOCKS;
+  private final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
+  private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
+  private final int numDNs = dataBlocks + parityBlocks;
+  private final int blockSize = 4 * ecPolicy.getCellSize();
   private final int smallFileLength = blockSize * dataBlocks - 123;
   private final int largeFileLength = blockSize * dataBlocks + 123;
   private final int[] fileLengths = {smallFileLength, largeFileLength};
@@ -153,7 +156,8 @@ public class TestWriteStripedFileWithFailure {
     byte[] largeBuf = new byte[fileLength + 100];
     final byte[] expected = StripedFileTestUtil.generateBytes(fileLength);
     StripedFileTestUtil.verifyLength(fs, srcPath, fileLength);
-    StripedFileTestUtil.verifySeek(fs, srcPath, fileLength);
+    StripedFileTestUtil.verifySeek(fs, srcPath, fileLength, ecPolicy,
+        blockSize * dataBlocks);
     StripedFileTestUtil.verifyStatefulRead(fs, srcPath, fileLength, expected,
         smallBuf);
     StripedFileTestUtil.verifyPread(fs, srcPath, fileLength, expected, largeBuf);
