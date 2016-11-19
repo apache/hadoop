@@ -270,6 +270,10 @@ public class TimelineWebServices {
       // The user doesn't have the access to override the existing domain.
       LOG.error(e.getMessage(), e);
       throw new ForbiddenException(e);
+    } catch (RuntimeException e) {
+      LOG.error("Error putting domain", e);
+      throw new WebApplicationException(e,
+          Response.Status.INTERNAL_SERVER_ERROR);
     } catch (IOException e) {
       LOG.error("Error putting domain", e);
       throw new WebApplicationException(e,

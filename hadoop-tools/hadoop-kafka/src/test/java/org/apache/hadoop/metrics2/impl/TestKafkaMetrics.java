@@ -20,7 +20,7 @@ package org.apache.hadoop.metrics2.impl;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
-import org.apache.commons.configuration.SubsetConfiguration;
+import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricType;
 import org.apache.hadoop.metrics2.MetricsInfo;

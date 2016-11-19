@@ -1357,18 +1357,21 @@ public class ContainerManagerImpl extends CompositeService implements
     if ((!nmTokenAppId.equals(containerId.getApplicationAttemptId().getApplicationId()))
         || (container != null && !nmTokenAppId.equals(container
             .getContainerId().getApplicationAttemptId().getApplicationId()))) {
+      String msg;
       if (stopRequest) {
-        LOG.warn(identifier.getApplicationAttemptId()
+        msg = identifier.getApplicationAttemptId()
             + " attempted to stop non-application container : "
-            + container.getContainerId());
+            + containerId;
         NMAuditLogger.logFailure("UnknownUser", AuditConstants.STOP_CONTAINER,
-          "ContainerManagerImpl", "Trying to stop unknown container!",
-          nmTokenAppId, container.getContainerId());
+            "ContainerManagerImpl", "Trying to stop unknown container!",
+            nmTokenAppId, containerId);
       } else {
-        LOG.warn(identifier.getApplicationAttemptId()
+        msg = identifier.getApplicationAttemptId()
             + " attempted to get status for non-application container : "
-            + container.getContainerId());
+            + containerId;
       }
+      LOG.warn(msg);
+      throw RPCUtil.getRemoteException(msg);
     }
   }
 

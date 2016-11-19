@@ -167,11 +167,24 @@ public class YarnClientImpl extends YarnClient {
 
     if (conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)) {
-      timelineServiceEnabled = true;
-      timelineClient = createTimelineClient();
-      timelineClient.init(conf);
-      timelineDTRenewer = getTimelineDelegationTokenRenewer(conf);
-      timelineService = TimelineUtils.buildTimelineTokenService(conf);
+      try {
+        timelineServiceEnabled = true;
+        timelineClient = createTimelineClient();
+        timelineClient.init(conf);
+        timelineDTRenewer = getTimelineDelegationTokenRenewer(conf);
+        timelineService = TimelineUtils.buildTimelineTokenService(conf);
+      } catch (NoClassDefFoundError error) {
+        // When attempt to initiate the timeline client with
+        // different set of dependencies, it may fail with
+        // NoClassDefFoundError. When some of them are not compatible
+        // with timeline server. This is not necessarily a fatal error
+        // to the client.
+        LOG.warn("Timeline client could not be initialized "
+            + "because dependency missing or incompatible,"
+            + " disabling timeline client.",
+            error);
+        timelineServiceEnabled = false;
+      }
     }
 
     // The AHSClientService is enabled by default when we start the
@@ -539,6 +552,13 @@ public class YarnClientImpl extends YarnClient {
         GetApplicationsRequest.newInstance(applicationTypes, applicationStates);
     request.setQueues(queues);
     request.setUsers(users);
+    GetApplicationsResponse response = rmClient.getApplications(request);
+    return response.getApplicationList();
+  }
+
+  @Override
+  public List<ApplicationReport> getApplications(
+      GetApplicationsRequest request) throws YarnException, IOException {
     GetApplicationsResponse response = rmClient.getApplications(request);
     return response.getApplicationList();
   }

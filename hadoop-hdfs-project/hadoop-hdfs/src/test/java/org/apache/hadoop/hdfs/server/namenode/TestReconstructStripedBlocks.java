@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
@@ -51,9 +52,6 @@ import org.slf4j.LoggerFactory;
 import java.util.BitSet;
 import java.util.List;
 
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_DATA_BLOCKS;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_PARITY_BLOCKS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -61,9 +59,14 @@ import static org.junit.Assert.assertTrue;
 public class TestReconstructStripedBlocks {
   public static final Logger LOG = LoggerFactory.getLogger(
       TestReconstructStripedBlocks.class);
-  private static final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
-  private final short GROUP_SIZE =
-      (short) (NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS);
+  private final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private final int cellSize = ecPolicy.getCellSize();
+  private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
+  private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
+  private final short groupSize = (short) (dataBlocks + parityBlocks);
+  private final int blockSize = 4 * cellSize;
+
 
   private MiniDFSCluster cluster;
   private final Path dirPath = new Path("/dir");
@@ -88,7 +91,7 @@ public class TestReconstructStripedBlocks {
 
   @Test
   public void testMissingStripedBlockWithBusyNode() throws Exception {
-    for (int i = 1; i <= NUM_PARITY_BLOCKS; i++) {
+    for (int i = 1; i <= parityBlocks; i++) {
       doTestMissingStripedBlock(i, 1);
     }
   }
@@ -105,7 +108,7 @@ public class TestReconstructStripedBlocks {
       throws Exception {
     Configuration conf = new HdfsConfiguration();
     initConf(conf);
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(GROUP_SIZE + 1)
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize + 1)
         .build();
 
     try {
@@ -126,10 +129,10 @@ public class TestReconstructStripedBlocks {
       for (BlockInfo blk : blocks) {
         assertTrue(blk.isStriped());
         assertTrue(blk.isComplete());
-        assertEquals(BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS,
+        assertEquals(cellSize * dataBlocks,
             blk.getNumBytes());
         final BlockInfoStriped sb = (BlockInfoStriped) blk;
-        assertEquals(GROUP_SIZE, sb.numNodes());
+        assertEquals(groupSize, sb.numNodes());
       }
 
       final BlockManager bm = cluster.getNamesystem().getBlockManager();
@@ -156,7 +159,7 @@ public class TestReconstructStripedBlocks {
       BlockManagerTestUtil.getComputedDatanodeWork(bm);
 
       // all the reconstruction work will be scheduled on the last DN
-      DataNode lastDn = cluster.getDataNodes().get(GROUP_SIZE);
+      DataNode lastDn = cluster.getDataNodes().get(groupSize);
       DatanodeDescriptor last =
           bm.getDatanodeManager().getDatanode(lastDn.getDatanodeId());
       assertEquals("Counting the number of outstanding EC tasks", numBlocks,
@@ -168,15 +171,15 @@ public class TestReconstructStripedBlocks {
         assertEquals(last, info.getTargetDnInfos()[0]);
         assertEquals(info.getSourceDnInfos().length,
             info.getLiveBlockIndices().length);
-        if (GROUP_SIZE - numOfMissed == NUM_DATA_BLOCKS) {
+        if (groupSize - numOfMissed == dataBlocks) {
           // It's a QUEUE_HIGHEST_PRIORITY block, so the busy DNs will be chosen
           // to make sure we have NUM_DATA_BLOCKS DNs to do reconstruction
           // work.
-          assertEquals(NUM_DATA_BLOCKS, info.getSourceDnInfos().length);
+          assertEquals(dataBlocks, info.getSourceDnInfos().length);
         } else {
           // The block has no highest priority, so we don't use the busy DNs as
           // sources
-          assertEquals(GROUP_SIZE - numOfMissed - numOfBusy,
+          assertEquals(groupSize - numOfMissed - numOfBusy,
               info.getSourceDnInfos().length);
         }
       }
@@ -190,15 +193,15 @@ public class TestReconstructStripedBlocks {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1000);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1000);
-    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, StripedFileTestUtil.blockSize);
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(GROUP_SIZE + 2)
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize + 2)
         .build();
     try {
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
       BlockManager bm = cluster.getNamesystem().getBlockManager();
       fs.getClient().setErasureCodingPolicy("/", null);
-      int fileLen = NUM_DATA_BLOCKS * StripedFileTestUtil.blockSize;
+      int fileLen = dataBlocks * blockSize;
       Path p = new Path("/test2RecoveryTasksForSameBlockGroup");
       final byte[] data = new byte[fileLen];
       DFSTestUtil.writeFile(fs, p, data);
@@ -206,7 +209,7 @@ public class TestReconstructStripedBlocks {
       LocatedStripedBlock lb = (LocatedStripedBlock)fs.getClient()
           .getLocatedBlocks(p.toString(), 0).get(0);
       LocatedBlock[] lbs = StripedBlockUtil.parseStripedBlockGroup(lb,
-          cellSize, NUM_DATA_BLOCKS, NUM_PARITY_BLOCKS);
+          cellSize, dataBlocks, parityBlocks);
 
       assertEquals(0, getNumberOfBlocksToBeErasureCoded(cluster));
       assertEquals(0, bm.getPendingReconstructionBlocksCount());
@@ -255,7 +258,7 @@ public class TestReconstructStripedBlocks {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY,
         false);
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(GROUP_SIZE + 2)
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize + 2)
         .build();
     cluster.waitActive();
     DistributedFileSystem fs = cluster.getFileSystem();
@@ -264,7 +267,7 @@ public class TestReconstructStripedBlocks {
       fs.mkdirs(dirPath);
       fs.setErasureCodingPolicy(dirPath, null);
       DFSTestUtil.createFile(fs, filePath,
-          BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS * 2, (short) 1, 0L);
+          cellSize * dataBlocks * 2, (short) 1, 0L);
 
       // stop a dn
       LocatedBlocks blks = fs.getClient().getLocatedBlocks(filePath.toString(), 0);
@@ -275,7 +278,7 @@ public class TestReconstructStripedBlocks {
       cluster.setDataNodeDead(dnToStop);
 
       // wait for reconstruction to happen
-      DFSTestUtil.waitForReplication(fs, filePath, GROUP_SIZE, 15 * 1000);
+      DFSTestUtil.waitForReplication(fs, filePath, groupSize, 15 * 1000);
 
       // bring the dn back: 10 internal blocks now
       cluster.restartDataNode(dnProp);
@@ -304,7 +307,7 @@ public class TestReconstructStripedBlocks {
       // check if NN can detect the missing internal block and finish the
       // reconstruction
       StripedFileTestUtil.waitForReconstructionFinished(filePath, fs,
-          GROUP_SIZE);
+          groupSize);
       boolean reconstructed = false;
       for (int i = 0; i < 5; i++) {
         NumberReplicas num = null;
@@ -316,7 +319,7 @@ public class TestReconstructStripedBlocks {
         } finally {
           fsn.readUnlock();
         }
-        if (num.liveReplicas() >= GROUP_SIZE) {
+        if (num.liveReplicas() >= groupSize) {
           reconstructed = true;
           break;
         } else {
@@ -327,11 +330,11 @@ public class TestReconstructStripedBlocks {
 
       blks = fs.getClient().getLocatedBlocks(filePath.toString(), 0);
       block = (LocatedStripedBlock) blks.getLastLocatedBlock();
-      BitSet bitSet = new BitSet(GROUP_SIZE);
+      BitSet bitSet = new BitSet(groupSize);
       for (byte index : block.getBlockIndices()) {
         bitSet.set(index);
       }
-      for (int i = 0; i < GROUP_SIZE; i++) {
+      for (int i = 0; i < groupSize; i++) {
         Assert.assertTrue(bitSet.get(i));
       }
     } finally {

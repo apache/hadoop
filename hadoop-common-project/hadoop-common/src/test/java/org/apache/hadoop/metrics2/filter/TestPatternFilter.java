@@ -21,7 +21,7 @@ package org.apache.hadoop.metrics2.filter;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.configuration.SubsetConfiguration;
+import org.apache.commons.configuration2.SubsetConfiguration;
 import org.junit.Test;
 
 import static org.junit.Assert.*;

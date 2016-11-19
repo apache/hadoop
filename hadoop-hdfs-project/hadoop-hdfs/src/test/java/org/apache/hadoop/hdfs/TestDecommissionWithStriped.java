@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_DATA_BLOCKS;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_PARITY_BLOCKS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -39,23 +36,18 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
-import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -90,10 +82,14 @@ public class TestDecommissionWithStriped {
   private Configuration conf;
   private MiniDFSCluster cluster;
   private DistributedFileSystem dfs;
+  private final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
   private int numDNs;
-  private final int blockSize = StripedFileTestUtil.blockSize;
-  private final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
-  private int dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
+  private final int cellSize = ecPolicy.getCellSize();
+  private final int dataBlocks = ecPolicy.getNumDataUnits();
+  private final int parityBlocks = ecPolicy.getNumParityUnits();
+  private final int blockSize = cellSize * 4;
+  private final int blockGroupSize = blockSize * dataBlocks;
   private final Path ecDir = new Path("/" + this.getClass().getSimpleName());
 
   private FSNamesystem fsn;
@@ -132,12 +128,12 @@ public class TestDecommissionWithStriped {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setInt(
         DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_BUFFER_SIZE_KEY,
-        StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE - 1);
+        cellSize - 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY,
         false);
 
-    numDNs = NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS + 2;
+    numDNs = dataBlocks + parityBlocks + 2;
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.waitActive();
     dfs = cluster.getFileSystem(0);
@@ -194,7 +190,7 @@ public class TestDecommissionWithStriped {
     LOG.info("Starting test testDecommissionWithURBlocksForSameBlockGroup");
 
     final Path ecFile = new Path(ecDir, "testDecommissionWithCorruptBlocks");
-    int writeBytes = BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS * 2;
+    int writeBytes = cellSize * dataBlocks * 2;
     writeStripedFile(dfs, ecFile, writeBytes);
     Assert.assertEquals(0, bm.numOfUnderReplicatedBlocks());
 
@@ -202,8 +198,8 @@ public class TestDecommissionWithStriped {
     LocatedBlock lb = dfs.getClient().getLocatedBlocks(ecFile.toString(), 0)
         .get(0);
     DatanodeInfo[] dnLocs = lb.getLocations();
-    assertEquals(NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS, dnLocs.length);
-    int decommNodeIndex = NUM_DATA_BLOCKS - 1;
+    assertEquals(dataBlocks + parityBlocks, dnLocs.length);
+    int decommNodeIndex = dataBlocks - 1;
     int stopNodeIndex = 1;
 
     // add the nodes which will be decommissioning
@@ -273,7 +269,7 @@ public class TestDecommissionWithStriped {
 
     assertNull(checkFile(dfs, ecFile, 9, decommisionNodes, numDNs));
     StripedFileTestUtil.checkData(dfs, ecFile, writeBytes, decommisionNodes,
-        null);
+        null, blockGroupSize);
     cleanupFile(dfs, ecFile);
   }
 
@@ -294,7 +290,7 @@ public class TestDecommissionWithStriped {
     LOG.info("Starting test testFileChecksumAfterDecommission");
 
     final Path ecFile = new Path(ecDir, "testFileChecksumAfterDecommission");
-    int writeBytes = BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS;
+    int writeBytes = cellSize * dataBlocks;
     writeStripedFile(dfs, ecFile, writeBytes);
     Assert.assertEquals(0, bm.numOfUnderReplicatedBlocks());
     FileChecksum fileChecksum1 = dfs.getFileChecksum(ecFile, writeBytes);
@@ -303,7 +299,7 @@ public class TestDecommissionWithStriped {
     LocatedBlock lb = dfs.getClient().getLocatedBlocks(ecFile.toString(), 0)
         .get(0);
     DatanodeInfo[] dnLocs = lb.getLocations();
-    assertEquals(NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS, dnLocs.length);
+    assertEquals(dataBlocks + parityBlocks, dnLocs.length);
     int decommNodeIndex = 1;
 
     // add the node which will be decommissioning
@@ -312,7 +308,7 @@ public class TestDecommissionWithStriped {
     assertEquals(decommisionNodes.size(), fsn.getNumDecomLiveDataNodes());
     assertNull(checkFile(dfs, ecFile, 9, decommisionNodes, numDNs));
     StripedFileTestUtil.checkData(dfs, ecFile, writeBytes, decommisionNodes,
-        null);
+        null, blockGroupSize);
 
     // verify checksum
     FileChecksum fileChecksum2 = dfs.getFileChecksum(ecFile, writeBytes);
@@ -355,7 +351,7 @@ public class TestDecommissionWithStriped {
 
     assertNull(checkFile(dfs, ecFile, storageCount, decommisionNodes, numDNs));
     StripedFileTestUtil.checkData(dfs, ecFile, writeBytes, decommisionNodes,
-        null);
+        null, blockGroupSize);
 
     assertBlockIndexAndTokenPosition(lbs, locToIndexList, locToTokenList);
 
@@ -437,7 +433,7 @@ public class TestDecommissionWithStriped {
     StripedFileTestUtil.waitBlockGroupsReported(dfs, ecFile.toString());
 
     StripedFileTestUtil.checkData(dfs, ecFile, writeBytes,
-        new ArrayList<DatanodeInfo>(), null);
+        new ArrayList<DatanodeInfo>(), null, blockGroupSize);
   }
 
   private void writeConfigFile(Path name, List<String> nodes)
@@ -528,7 +524,7 @@ public class TestDecommissionWithStriped {
    * decommissioned nodes, verify their replication is equal to what is
    * specified.
    *
-   * @param downnode
+   * @param decommissionedNodes
    *          - if null, there is no decommissioned node for this file.
    * @return - null if no failure found, else an error message string.
    */

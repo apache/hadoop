@@ -3719,12 +3719,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Reset all statistics for all file systems
    */
   public static synchronized void clearStatistics() {
-    final Iterator<StorageStatistics> iterator =
-        GlobalStorageStatistics.INSTANCE.iterator();
-    while (iterator.hasNext()) {
-      final StorageStatistics statistics = iterator.next();
-      statistics.reset();
-    }
+    GlobalStorageStatistics.INSTANCE.reset();
   }
 
   /**

@@ -1098,6 +1098,36 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
+   * Get the status of a path eventually, even if the FS doesn't have create
+   * consistency. If the path is not there by the time the timeout completes,
+   * an assertion is raised.
+   * @param fs FileSystem
+   * @param path path to look for
+   * @param timeout timeout in milliseconds
+   * @return the status
+   * @throws IOException if an I/O error occurs while writing or reading the
+   * test file <i>other than file not found</i>
+   */
+  public static FileStatus getFileStatusEventually(FileSystem fs, Path path,
+      int timeout) throws IOException, InterruptedException {
+    long endTime = System.currentTimeMillis() + timeout;
+    FileStatus stat = null;
+    do {
+      try {
+        stat = fs.getFileStatus(path);
+      } catch (FileNotFoundException e) {
+        if (System.currentTimeMillis() > endTime) {
+          // timeout, raise an assert with more diagnostics
+          assertPathExists(fs, "Path not found after " + timeout + " mS", path);
+        } else {
+          Thread.sleep(50);
+        }
+      }
+    } while (stat == null);
+    return stat;
+  }
+
+  /**
    * Recursively list all entries, with a depth first traversal of the
    * directory tree.
    * @param path path
@@ -1471,4 +1501,5 @@ public class ContractTestUtils extends Assert {
       return endTime;
     }
   }
+
 }

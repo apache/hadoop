@@ -65,7 +65,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -109,7 +108,7 @@ import org.mockito.stubbing.Answer;
 import com.google.common.base.Supplier;
 
 /**
- * This tests if sync all replicas in block recovery works correctly
+ * This tests if sync all replicas in block recovery works correctly.
  */
 public class TestBlockRecovery {
   private static final Log LOG = LogFactory.getLog(TestBlockRecovery.class);
@@ -136,30 +135,30 @@ public class TestBlockRecovery {
   @Rule
   public TestName currentTestName = new TestName();
 
-  private static final int CELL_SIZE =
-      StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
-  private static final int bytesPerChecksum = 512;
-  private static final int[][][] BLOCK_LENGTHS_SUITE = {
-      { { 11 * CELL_SIZE, 10 * CELL_SIZE, 9 * CELL_SIZE, 8 * CELL_SIZE,
-          7 * CELL_SIZE, 6 * CELL_SIZE, 5 * CELL_SIZE, 4 * CELL_SIZE,
-          3 * CELL_SIZE }, { 36 * CELL_SIZE } },
+  private final int cellSize =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy().getCellSize();
+  private final int bytesPerChecksum = 512;
+  private final int[][][] blockLengthsSuite = {
+      {{11 * cellSize, 10 * cellSize, 9 * cellSize, 8 * cellSize,
+        7 * cellSize, 6 * cellSize, 5 * cellSize, 4 * cellSize,
+        3 * cellSize}, {36 * cellSize}},
 
-      { { 3 * CELL_SIZE, 4 * CELL_SIZE, 5 * CELL_SIZE, 6 * CELL_SIZE,
-          7 * CELL_SIZE, 8 * CELL_SIZE, 9 * CELL_SIZE, 10 * CELL_SIZE,
-          11 * CELL_SIZE }, { 36 * CELL_SIZE } },
+      {{3 * cellSize, 4 * cellSize, 5 * cellSize, 6 * cellSize,
+        7 * cellSize, 8 * cellSize, 9 * cellSize, 10 * cellSize,
+        11 * cellSize}, {36 * cellSize}},
 
-      { { 11 * CELL_SIZE, 7 * CELL_SIZE, 6 * CELL_SIZE, 5 * CELL_SIZE,
-          4 * CELL_SIZE, 2 * CELL_SIZE, 9 * CELL_SIZE, 10 * CELL_SIZE,
-          11 * CELL_SIZE }, { 36 * CELL_SIZE } },
+      {{11 * cellSize, 7 * cellSize, 6 * cellSize, 5 * cellSize,
+        4 * cellSize, 2 * cellSize, 9 * cellSize, 10 * cellSize,
+        11 * cellSize}, {36 * cellSize}},
 
-      { { 8 * CELL_SIZE + bytesPerChecksum,
-          7 * CELL_SIZE + bytesPerChecksum * 2,
-          6 * CELL_SIZE + bytesPerChecksum * 2,
-          5 * CELL_SIZE - bytesPerChecksum * 3,
-          4 * CELL_SIZE - bytesPerChecksum * 4,
-          3 * CELL_SIZE - bytesPerChecksum * 4, 9 * CELL_SIZE, 10 * CELL_SIZE,
-          11 * CELL_SIZE }, { 36 * CELL_SIZE } }, };
-  
+      {{8 * cellSize + bytesPerChecksum,
+        7 * cellSize + bytesPerChecksum * 2,
+        6 * cellSize + bytesPerChecksum * 2,
+        5 * cellSize - bytesPerChecksum * 3,
+        4 * cellSize - bytesPerChecksum * 4,
+        3 * cellSize - bytesPerChecksum * 4, 9 * cellSize, 10 * cellSize,
+        11 * cellSize}, {36 * cellSize}}, };
+
   static {
     GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.ALL);
     GenericTestUtils.setLogLevel(LOG, Level.ALL);
@@ -807,9 +806,9 @@ public class TestBlockRecovery {
     BlockRecoveryWorker.RecoveryTaskStriped recoveryTask =
         recoveryWorker.new RecoveryTaskStriped(rBlockStriped);
 
-    for (int i = 0; i < BLOCK_LENGTHS_SUITE.length; i++) {
-      int[] blockLengths = BLOCK_LENGTHS_SUITE[i][0];
-      int safeLength = BLOCK_LENGTHS_SUITE[i][1][0];
+    for (int i = 0; i < blockLengthsSuite.length; i++) {
+      int[] blockLengths = blockLengthsSuite[i][0];
+      int safeLength = blockLengthsSuite[i][1][0];
       Map<Long, BlockRecord> syncList = new HashMap<>();
       for (int id = 0; id < blockLengths.length; id++) {
         ReplicaRecoveryInfo rInfo = new ReplicaRecoveryInfo(id,

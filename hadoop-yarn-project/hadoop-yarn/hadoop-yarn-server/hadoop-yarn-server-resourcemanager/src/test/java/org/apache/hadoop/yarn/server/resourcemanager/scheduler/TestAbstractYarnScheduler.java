@@ -574,7 +574,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
       // AM crashes, and a new app-attempt gets created
       node.nodeHeartbeat(applicationAttemptOneID, 1, ContainerState.COMPLETE);
-      rm.waitForState(node, am1ContainerID, RMContainerState.COMPLETED, 30 * 1000);
+      rm.drainEvents();
       RMAppAttempt rmAppAttempt2 = MockRM.waitForAttemptScheduled(rmApp, rm);
       ApplicationAttemptId applicationAttemptTwoID =
           rmAppAttempt2.getAppAttemptId();

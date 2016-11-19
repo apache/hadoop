@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.metrics2.sink.ganglia;
 
-import org.apache.commons.configuration.SubsetConfiguration;
+import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.metrics2.impl.ConfigBuilder;
 import org.junit.Test;
 

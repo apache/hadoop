@@ -124,7 +124,7 @@ public class RMAdminCLI extends HAAdmin {
               "Refresh acls for administration of ResourceManager"))
           .put("-refreshServiceAcl", new UsageInfo("",
               "Reload the service-level authorization policy file. \n\t\t" +
-                  "ResoureceManager will reload the authorization policy file."))
+                  "ResourceManager will reload the authorization policy file."))
           .put("-getGroups", new UsageInfo("[username]",
               "Get the groups which given user belongs to."))
           .put("-addToClusterNodeLabels",

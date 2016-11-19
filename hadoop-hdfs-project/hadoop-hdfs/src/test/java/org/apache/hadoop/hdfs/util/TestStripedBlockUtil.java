@@ -21,7 +21,6 @@ package org.apache.hadoop.hdfs.util;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -81,15 +80,15 @@ import static org.junit.Assert.assertFalse;
  */
 public class TestStripedBlockUtil {
   // use hard coded policy - see HDFS-9816
-  private final ErasureCodingPolicy EC_POLICY =
+  private final ErasureCodingPolicy ecPolicy =
       ErasureCodingPolicyManager.getSystemPolicies()[0];
-  private final short DATA_BLK_NUM = (short) EC_POLICY.getNumDataUnits();
-  private final short PARITY_BLK_NUM = (short) EC_POLICY.getNumParityUnits();
-  private final short BLK_GROUP_WIDTH = (short) (DATA_BLK_NUM + PARITY_BLK_NUM);
-  private final int CELLSIZE = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
-  private final int FULL_STRIPE_SIZE = DATA_BLK_NUM * CELLSIZE;
+  private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
+  private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
+  private final short groupSize = (short) (dataBlocks + parityBlocks);
+  private final int cellSize = ecPolicy.getCellSize();
+  private final int stripeSize = dataBlocks * cellSize;
   /** number of full stripes in a full block group */
-  private final int BLK_GROUP_STRIPE_NUM = 16;
+  private final int stripesPerBlock = 16;
   private final Random random = new Random();
 
   private int[] blockGroupSizes;
@@ -101,23 +100,23 @@ public class TestStripedBlockUtil {
 
   @Before
   public void setup(){
-    blockGroupSizes = new int[]{1, getDelta(CELLSIZE), CELLSIZE,
-        getDelta(DATA_BLK_NUM) * CELLSIZE,
-        getDelta(DATA_BLK_NUM) * CELLSIZE + getDelta(CELLSIZE),
-        FULL_STRIPE_SIZE, FULL_STRIPE_SIZE + getDelta(CELLSIZE),
-        FULL_STRIPE_SIZE + getDelta(DATA_BLK_NUM) * CELLSIZE,
-        FULL_STRIPE_SIZE + getDelta(DATA_BLK_NUM) * CELLSIZE + getDelta(CELLSIZE),
-        getDelta(BLK_GROUP_STRIPE_NUM) * FULL_STRIPE_SIZE,
-        BLK_GROUP_STRIPE_NUM * FULL_STRIPE_SIZE};
-    byteRangeStartOffsets = new int[] {0, getDelta(CELLSIZE), CELLSIZE - 1};
-    byteRangeSizes = new int[]{1, getDelta(CELLSIZE), CELLSIZE,
-        getDelta(DATA_BLK_NUM) * CELLSIZE,
-        getDelta(DATA_BLK_NUM) * CELLSIZE + getDelta(CELLSIZE),
-        FULL_STRIPE_SIZE, FULL_STRIPE_SIZE + getDelta(CELLSIZE),
-        FULL_STRIPE_SIZE + getDelta(DATA_BLK_NUM) * CELLSIZE,
-        FULL_STRIPE_SIZE + getDelta(DATA_BLK_NUM) * CELLSIZE + getDelta(CELLSIZE),
-        getDelta(BLK_GROUP_STRIPE_NUM) * FULL_STRIPE_SIZE,
-        BLK_GROUP_STRIPE_NUM * FULL_STRIPE_SIZE};
+    blockGroupSizes = new int[]{1, getDelta(cellSize), cellSize,
+        getDelta(dataBlocks) * cellSize,
+        getDelta(dataBlocks) * cellSize + getDelta(cellSize),
+        stripeSize, stripeSize + getDelta(cellSize),
+        stripeSize + getDelta(dataBlocks) * cellSize,
+        stripeSize + getDelta(dataBlocks) * cellSize + getDelta(cellSize),
+        getDelta(stripesPerBlock) * stripeSize,
+        stripesPerBlock * stripeSize};
+    byteRangeStartOffsets = new int[] {0, getDelta(cellSize), cellSize - 1};
+    byteRangeSizes = new int[]{1, getDelta(cellSize), cellSize,
+        getDelta(dataBlocks) * cellSize,
+        getDelta(dataBlocks) * cellSize + getDelta(cellSize),
+        stripeSize, stripeSize + getDelta(cellSize),
+        stripeSize + getDelta(dataBlocks) * cellSize,
+        stripeSize + getDelta(dataBlocks) * cellSize + getDelta(cellSize),
+        getDelta(stripesPerBlock) * stripeSize,
+        stripesPerBlock * stripeSize};
   }
 
   private int getDelta(int size) {
@@ -130,12 +129,12 @@ public class TestStripedBlockUtil {
 
   private LocatedStripedBlock createDummyLocatedBlock(int bgSize) {
     final long blockGroupID = -1048576;
-    DatanodeInfo[] locs = new DatanodeInfo[BLK_GROUP_WIDTH];
-    String[] storageIDs = new String[BLK_GROUP_WIDTH];
-    StorageType[] storageTypes = new StorageType[BLK_GROUP_WIDTH];
-    byte[] indices = new byte[BLK_GROUP_WIDTH];
-    for (int i = 0; i < BLK_GROUP_WIDTH; i++) {
-      indices[i] = (byte) ((i + 2) % DATA_BLK_NUM);
+    DatanodeInfo[] locs = new DatanodeInfo[groupSize];
+    String[] storageIDs = new String[groupSize];
+    StorageType[] storageTypes = new StorageType[groupSize];
+    byte[] indices = new byte[groupSize];
+    for (int i = 0; i < groupSize; i++) {
+      indices[i] = (byte) ((i + 2) % dataBlocks);
       // Location port always equal to logical index of a block,
       // for easier verification
       locs[i] = DFSTestUtil.getLocalDatanodeInfo(indices[i]);
@@ -148,20 +147,21 @@ public class TestStripedBlockUtil {
   }
 
   private byte[][] createInternalBlkBuffers(int bgSize) {
-    byte[][] bufs = new byte[DATA_BLK_NUM + PARITY_BLK_NUM][];
-    int[] pos = new int[DATA_BLK_NUM + PARITY_BLK_NUM];
-    for (int i = 0; i < DATA_BLK_NUM + PARITY_BLK_NUM; i++) {
+    byte[][] bufs = new byte[dataBlocks + parityBlocks][];
+    int[] pos = new int[dataBlocks + parityBlocks];
+    for (int i = 0; i < dataBlocks + parityBlocks; i++) {
       int bufSize = (int) getInternalBlockLength(
-          bgSize, CELLSIZE, DATA_BLK_NUM, i);
+          bgSize, cellSize, dataBlocks, i);
       bufs[i] = new byte[bufSize];
       pos[i] = 0;
     }
     int done = 0;
     while (done < bgSize) {
-      Preconditions.checkState(done % CELLSIZE == 0);
-      StripingCell cell = new StripingCell(EC_POLICY, CELLSIZE, done / CELLSIZE, 0);
+      Preconditions.checkState(done % cellSize == 0);
+      StripingCell cell =
+          new StripingCell(ecPolicy, cellSize, done / cellSize, 0);
       int idxInStripe = cell.idxInStripe;
-      int size = Math.min(CELLSIZE, bgSize - done);
+      int size = Math.min(cellSize, bgSize - done);
       for (int i = 0; i < size; i++) {
         bufs[idxInStripe][pos[idxInStripe] + i] = hashIntToByte(done + i);
       }
@@ -175,11 +175,11 @@ public class TestStripedBlockUtil {
   @Test
   public void testParseDummyStripedBlock() {
     LocatedStripedBlock lsb = createDummyLocatedBlock(
-        BLK_GROUP_STRIPE_NUM * FULL_STRIPE_SIZE);
+        stripeSize * stripesPerBlock);
     LocatedBlock[] blocks = parseStripedBlockGroup(
-        lsb, CELLSIZE, DATA_BLK_NUM, PARITY_BLK_NUM);
-    assertEquals(DATA_BLK_NUM + PARITY_BLK_NUM, blocks.length);
-    for (int i = 0; i < DATA_BLK_NUM; i++) {
+        lsb, cellSize, dataBlocks, parityBlocks);
+    assertEquals(dataBlocks + parityBlocks, blocks.length);
+    for (int i = 0; i < dataBlocks; i++) {
       assertFalse(blocks[i].isStriped());
       assertEquals(i,
           BlockIdManager.getBlockIndex(blocks[i].getBlock().getLocalBlock()));
@@ -191,9 +191,9 @@ public class TestStripedBlockUtil {
   }
 
   private void verifyInternalBlocks (int numBytesInGroup, int[] expected) {
-    for (int i = 1; i < BLK_GROUP_WIDTH; i++) {
+    for (int i = 1; i < groupSize; i++) {
       assertEquals(expected[i],
-          getInternalBlockLength(numBytesInGroup, CELLSIZE, DATA_BLK_NUM, i));
+          getInternalBlockLength(numBytesInGroup, cellSize, dataBlocks, i));
     }
   }
 
@@ -203,38 +203,38 @@ public class TestStripedBlockUtil {
     final int delta = 10;
 
     // Block group is smaller than a cell
-    verifyInternalBlocks(CELLSIZE - delta,
-        new int[] {CELLSIZE - delta, 0, 0, 0, 0, 0,
-            CELLSIZE - delta, CELLSIZE - delta, CELLSIZE - delta});
+    verifyInternalBlocks(cellSize - delta,
+        new int[] {cellSize - delta, 0, 0, 0, 0, 0,
+            cellSize - delta, cellSize - delta, cellSize - delta});
 
     // Block group is exactly as large as a cell
-    verifyInternalBlocks(CELLSIZE,
-        new int[] {CELLSIZE, 0, 0, 0, 0, 0,
-            CELLSIZE, CELLSIZE, CELLSIZE});
+    verifyInternalBlocks(cellSize,
+        new int[] {cellSize, 0, 0, 0, 0, 0,
+            cellSize, cellSize, cellSize});
 
     // Block group is a little larger than a cell
-    verifyInternalBlocks(CELLSIZE + delta,
-        new int[] {CELLSIZE, delta, 0, 0, 0, 0,
-            CELLSIZE, CELLSIZE, CELLSIZE});
+    verifyInternalBlocks(cellSize + delta,
+        new int[] {cellSize, delta, 0, 0, 0, 0,
+            cellSize, cellSize, cellSize});
 
     // Block group contains multiple stripes and ends at stripe boundary
-    verifyInternalBlocks(2 * DATA_BLK_NUM * CELLSIZE,
-        new int[] {2 * CELLSIZE, 2 * CELLSIZE, 2 * CELLSIZE,
-            2 * CELLSIZE, 2 * CELLSIZE, 2 * CELLSIZE,
-            2 * CELLSIZE, 2 * CELLSIZE, 2 * CELLSIZE});
+    verifyInternalBlocks(2 * dataBlocks * cellSize,
+        new int[] {2 * cellSize, 2 * cellSize, 2 * cellSize,
+            2 * cellSize, 2 * cellSize, 2 * cellSize,
+            2 * cellSize, 2 * cellSize, 2 * cellSize});
 
     // Block group contains multiple stripes and ends at cell boundary
     // (not ending at stripe boundary)
-    verifyInternalBlocks(2 * DATA_BLK_NUM * CELLSIZE + CELLSIZE,
-        new int[] {3 * CELLSIZE, 2 * CELLSIZE, 2 * CELLSIZE,
-            2 * CELLSIZE, 2 * CELLSIZE, 2 * CELLSIZE,
-            3 * CELLSIZE, 3 * CELLSIZE, 3 * CELLSIZE});
+    verifyInternalBlocks(2 * dataBlocks * cellSize + cellSize,
+        new int[] {3 * cellSize, 2 * cellSize, 2 * cellSize,
+            2 * cellSize, 2 * cellSize, 2 * cellSize,
+            3 * cellSize, 3 * cellSize, 3 * cellSize});
 
     // Block group contains multiple stripes and doesn't end at cell boundary
-    verifyInternalBlocks(2 * DATA_BLK_NUM * CELLSIZE - delta,
-        new int[] {2 * CELLSIZE, 2 * CELLSIZE, 2 * CELLSIZE,
-            2 * CELLSIZE, 2 * CELLSIZE, 2 * CELLSIZE - delta,
-            2 * CELLSIZE, 2 * CELLSIZE, 2 * CELLSIZE});
+    verifyInternalBlocks(2 * dataBlocks * cellSize - delta,
+        new int[] {2 * cellSize, 2 * cellSize, 2 * cellSize,
+            2 * cellSize, 2 * cellSize, 2 * cellSize - delta,
+            2 * cellSize, 2 * cellSize, 2 * cellSize});
   }
 
   /**
@@ -244,7 +244,7 @@ public class TestStripedBlockUtil {
   @Test
   public void testDivideByteRangeIntoStripes() {
     ByteBuffer assembled =
-        ByteBuffer.allocate(BLK_GROUP_STRIPE_NUM * FULL_STRIPE_SIZE);
+        ByteBuffer.allocate(stripesPerBlock * stripeSize);
     for (int bgSize : blockGroupSizes) {
       LocatedStripedBlock blockGroup = createDummyLocatedBlock(bgSize);
       byte[][] internalBlkBufs = createInternalBlkBuffers(bgSize);
@@ -253,11 +253,11 @@ public class TestStripedBlockUtil {
           if (brStart + brSize > bgSize) {
             continue;
           }
-          AlignedStripe[] stripes = divideByteRangeIntoStripes(EC_POLICY,
-              CELLSIZE, blockGroup, brStart, brStart + brSize - 1, assembled);
+          AlignedStripe[] stripes = divideByteRangeIntoStripes(ecPolicy,
+              cellSize, blockGroup, brStart, brStart + brSize - 1, assembled);
 
           for (AlignedStripe stripe : stripes) {
-            for (int i = 0; i < DATA_BLK_NUM; i++) {
+            for (int i = 0; i < dataBlocks; i++) {
               StripingChunk chunk = stripe.chunks[i];
               if (chunk == null || chunk.state != StripingChunk.REQUESTED) {
                 continue;

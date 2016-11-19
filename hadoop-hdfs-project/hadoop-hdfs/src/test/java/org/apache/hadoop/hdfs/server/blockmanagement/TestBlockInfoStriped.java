@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBlockResult;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.Assert;
@@ -33,8 +32,6 @@ import java.io.DataOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_DATA_BLOCKS;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_PARITY_BLOCKS;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -43,11 +40,12 @@ import static org.junit.Assert.fail;
  * Test {@link BlockInfoStriped}
  */
 public class TestBlockInfoStriped {
-  private static final int TOTAL_NUM_BLOCKS = NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS;
   private static final long BASE_ID = -1600;
-  private static final Block baseBlock = new Block(BASE_ID);
-  private static final ErasureCodingPolicy testECPolicy
+  private final Block baseBlock = new Block(BASE_ID);
+  private final ErasureCodingPolicy testECPolicy
       = ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private final int totalBlocks = testECPolicy.getNumDataUnits() +
+      testECPolicy.getNumParityUnits();
   private final BlockInfoStriped info = new BlockInfoStriped(baseBlock,
       testECPolicy);
 
@@ -70,8 +68,8 @@ public class TestBlockInfoStriped {
     // first add NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS storages, i.e., a complete
     // group of blocks/storages
     DatanodeStorageInfo[] storageInfos = DFSTestUtil.createDatanodeStorageInfos(
-        TOTAL_NUM_BLOCKS);
-    Block[] blocks = createReportedBlocks(TOTAL_NUM_BLOCKS);
+        totalBlocks);
+    Block[] blocks = createReportedBlocks(totalBlocks);
     int i = 0;
     for (; i < storageInfos.length; i += 2) {
       info.addStorage(storageInfos[i], blocks[i]);
@@ -85,8 +83,8 @@ public class TestBlockInfoStriped {
 
     // check
     byte[] indices = (byte[]) Whitebox.getInternalState(info, "indices");
-    Assert.assertEquals(TOTAL_NUM_BLOCKS, info.getCapacity());
-    Assert.assertEquals(TOTAL_NUM_BLOCKS, indices.length);
+    Assert.assertEquals(totalBlocks, info.getCapacity());
+    Assert.assertEquals(totalBlocks, indices.length);
     i = 0;
     for (DatanodeStorageInfo storage : storageInfos) {
       int index = info.findStorageInfo(storage);
@@ -99,9 +97,9 @@ public class TestBlockInfoStriped {
     for (DatanodeStorageInfo storage : storageInfos) {
       Assert.assertTrue(info.addStorage(storage, blocks[i++]));
     }
-    Assert.assertEquals(TOTAL_NUM_BLOCKS, info.getCapacity());
-    Assert.assertEquals(TOTAL_NUM_BLOCKS, info.numNodes());
-    Assert.assertEquals(TOTAL_NUM_BLOCKS, indices.length);
+    Assert.assertEquals(totalBlocks, info.getCapacity());
+    Assert.assertEquals(totalBlocks, info.numNodes());
+    Assert.assertEquals(totalBlocks, indices.length);
     i = 0;
     for (DatanodeStorageInfo storage : storageInfos) {
       int index = info.findStorageInfo(storage);
@@ -111,19 +109,19 @@ public class TestBlockInfoStriped {
 
     // the same block is reported from another storage
     DatanodeStorageInfo[] storageInfos2 = DFSTestUtil.createDatanodeStorageInfos(
-        TOTAL_NUM_BLOCKS * 2);
+        totalBlocks * 2);
     // only add the second half of info2
-    for (i = TOTAL_NUM_BLOCKS; i < storageInfos2.length; i++) {
-      info.addStorage(storageInfos2[i], blocks[i % TOTAL_NUM_BLOCKS]);
+    for (i = totalBlocks; i < storageInfos2.length; i++) {
+      info.addStorage(storageInfos2[i], blocks[i % totalBlocks]);
       Assert.assertEquals(i + 1, info.getCapacity());
       Assert.assertEquals(i + 1, info.numNodes());
       indices = (byte[]) Whitebox.getInternalState(info, "indices");
       Assert.assertEquals(i + 1, indices.length);
     }
-    for (i = TOTAL_NUM_BLOCKS; i < storageInfos2.length; i++) {
+    for (i = totalBlocks; i < storageInfos2.length; i++) {
       int index = info.findStorageInfo(storageInfos2[i]);
       Assert.assertEquals(i++, index);
-      Assert.assertEquals(index - TOTAL_NUM_BLOCKS, indices[index]);
+      Assert.assertEquals(index - totalBlocks, indices[index]);
     }
   }
 
@@ -131,8 +129,8 @@ public class TestBlockInfoStriped {
   public void testRemoveStorage() {
     // first add TOTAL_NUM_BLOCKS into the BlockInfoStriped
     DatanodeStorageInfo[] storages = DFSTestUtil.createDatanodeStorageInfos(
-        TOTAL_NUM_BLOCKS);
-    Block[] blocks = createReportedBlocks(TOTAL_NUM_BLOCKS);
+        totalBlocks);
+    Block[] blocks = createReportedBlocks(totalBlocks);
     for (int i = 0; i < storages.length; i++) {
       info.addStorage(storages[i], blocks[i]);
     }
@@ -142,8 +140,8 @@ public class TestBlockInfoStriped {
     info.removeStorage(storages[2]);
 
     // check
-    Assert.assertEquals(TOTAL_NUM_BLOCKS, info.getCapacity());
-    Assert.assertEquals(TOTAL_NUM_BLOCKS - 2, info.numNodes());
+    Assert.assertEquals(totalBlocks, info.getCapacity());
+    Assert.assertEquals(totalBlocks - 2, info.numNodes());
     byte[] indices = (byte[]) Whitebox.getInternalState(info, "indices");
     for (int i = 0; i < storages.length; i++) {
       int index = info.findStorageInfo(storages[i]);
@@ -158,44 +156,44 @@ public class TestBlockInfoStriped {
 
     // the same block is reported from another storage
     DatanodeStorageInfo[] storages2 = DFSTestUtil.createDatanodeStorageInfos(
-        TOTAL_NUM_BLOCKS * 2);
-    for (int i = TOTAL_NUM_BLOCKS; i < storages2.length; i++) {
-      info.addStorage(storages2[i], blocks[i % TOTAL_NUM_BLOCKS]);
+        totalBlocks * 2);
+    for (int i = totalBlocks; i < storages2.length; i++) {
+      info.addStorage(storages2[i], blocks[i % totalBlocks]);
     }
     // now we should have 8 storages
-    Assert.assertEquals(TOTAL_NUM_BLOCKS * 2 - 2, info.numNodes());
-    Assert.assertEquals(TOTAL_NUM_BLOCKS * 2 - 2, info.getCapacity());
+    Assert.assertEquals(totalBlocks * 2 - 2, info.numNodes());
+    Assert.assertEquals(totalBlocks * 2 - 2, info.getCapacity());
     indices = (byte[]) Whitebox.getInternalState(info, "indices");
-    Assert.assertEquals(TOTAL_NUM_BLOCKS * 2 - 2, indices.length);
-    int j = TOTAL_NUM_BLOCKS;
-    for (int i = TOTAL_NUM_BLOCKS; i < storages2.length; i++) {
+    Assert.assertEquals(totalBlocks * 2 - 2, indices.length);
+    int j = totalBlocks;
+    for (int i = totalBlocks; i < storages2.length; i++) {
       int index = info.findStorageInfo(storages2[i]);
-      if (i == TOTAL_NUM_BLOCKS || i == TOTAL_NUM_BLOCKS + 2) {
-        Assert.assertEquals(i - TOTAL_NUM_BLOCKS, index);
+      if (i == totalBlocks || i == totalBlocks + 2) {
+        Assert.assertEquals(i - totalBlocks, index);
       } else {
         Assert.assertEquals(j++, index);
       }
     }
 
     // remove the storages from storages2
-    for (int i = 0; i < TOTAL_NUM_BLOCKS; i++) {
-      info.removeStorage(storages2[i + TOTAL_NUM_BLOCKS]);
+    for (int i = 0; i < totalBlocks; i++) {
+      info.removeStorage(storages2[i + totalBlocks]);
     }
     // now we should have 3 storages
-    Assert.assertEquals(TOTAL_NUM_BLOCKS - 2, info.numNodes());
-    Assert.assertEquals(TOTAL_NUM_BLOCKS * 2 - 2, info.getCapacity());
+    Assert.assertEquals(totalBlocks - 2, info.numNodes());
+    Assert.assertEquals(totalBlocks * 2 - 2, info.getCapacity());
     indices = (byte[]) Whitebox.getInternalState(info, "indices");
-    Assert.assertEquals(TOTAL_NUM_BLOCKS * 2 - 2, indices.length);
-    for (int i = 0; i < TOTAL_NUM_BLOCKS; i++) {
+    Assert.assertEquals(totalBlocks * 2 - 2, indices.length);
+    for (int i = 0; i < totalBlocks; i++) {
       if (i == 0 || i == 2) {
-        int index = info.findStorageInfo(storages2[i + TOTAL_NUM_BLOCKS]);
+        int index = info.findStorageInfo(storages2[i + totalBlocks]);
         Assert.assertEquals(-1, index);
       } else {
         int index = info.findStorageInfo(storages[i]);
         Assert.assertEquals(i, index);
       }
     }
-    for (int i = TOTAL_NUM_BLOCKS; i < TOTAL_NUM_BLOCKS * 2 - 2; i++) {
+    for (int i = totalBlocks; i < totalBlocks * 2 - 2; i++) {
       Assert.assertEquals(-1, indices[i]);
       Assert.assertNull(info.getDatanode(i));
     }
