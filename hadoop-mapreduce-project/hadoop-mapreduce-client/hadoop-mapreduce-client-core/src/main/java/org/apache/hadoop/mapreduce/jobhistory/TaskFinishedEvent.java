@@ -32,6 +32,7 @@ import org.apache.hadoop.mapreduce.util.JobHistoryEventUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
+import org.apache.hadoop.yarn.util.SystemClock;
 
 /**
  * Event to record the successful completion of a task
@@ -49,27 +50,36 @@ public class TaskFinishedEvent implements HistoryEvent {
   private TaskType taskType;
   private String status;
   private Counters counters;
-  
+  private long startTime;
+
   /**
-   * Create an event to record the successful completion of a task
+   * Create an event to record the successful completion of a task.
    * @param id Task ID
    * @param attemptId Task Attempt ID of the successful attempt for this task
    * @param finishTime Finish time of the task
    * @param taskType Type of the task
    * @param status Status string
    * @param counters Counters for the task
+   * @param startTs task start time
    */
   public TaskFinishedEvent(TaskID id, TaskAttemptID attemptId, long finishTime,
                            TaskType taskType,
-                           String status, Counters counters) {
+                           String status, Counters counters, long startTs) {
     this.taskid = id;
     this.successfulAttemptId = attemptId;
     this.finishTime = finishTime;
     this.taskType = taskType;
     this.status = status;
     this.counters = counters;
+    this.startTime = startTs;
   }
-  
+
+  public TaskFinishedEvent(TaskID id, TaskAttemptID attemptId, long finishTime,
+          TaskType taskType, String status, Counters counters) {
+    this(id, attemptId, finishTime, taskType, status, counters,
+        SystemClock.getInstance().getTime());
+  }
+
   TaskFinishedEvent() {}
 
   public Object getDatum() {
@@ -101,23 +111,33 @@ public class TaskFinishedEvent implements HistoryEvent {
     this.counters = EventReader.fromAvro(datum.getCounters());
   }
 
-  /** Get task id */
+  /** Gets task id. */
   public TaskID getTaskId() { return taskid; }
-  /** Get successful task attempt id */
+  /** Gets successful task attempt id. */
   public TaskAttemptID getSuccessfulTaskAttemptId() {
     return successfulAttemptId;
   }
-  /** Get the task finish time */
+  /** Gets the task finish time. */
   public long getFinishTime() { return finishTime; }
-  /** Get task counters */
+  /**
+   * Gets the task start time to be reported to ATSv2.
+   * @return task start time
+   */
+  public long getStartTime() {
+    return startTime;
+  }
+  /** Gets task counters. */
   public Counters getCounters() { return counters; }
-  /** Get task type */
+  /** Gets task type. */
   public TaskType getTaskType() {
     return taskType;
   }
-  /** Get task status */
+  /**
+   * Gets task status.
+   * @return task status
+   */
   public String getTaskStatus() { return status.toString(); }
-  /** Get event type */
+  /** Gets event type. */
   public EventType getEventType() {
     return EventType.TASK_FINISHED;
   }
