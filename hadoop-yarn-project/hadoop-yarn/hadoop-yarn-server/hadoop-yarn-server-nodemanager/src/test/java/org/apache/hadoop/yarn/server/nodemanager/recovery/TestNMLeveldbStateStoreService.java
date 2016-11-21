@@ -234,7 +234,8 @@ public class TestNMLeveldbStateStoreService {
     StartContainerRequest containerReq = createContainerRequest(containerId);
 
     // store a container and verify recovered
-    stateStore.storeContainer(containerId, 0, containerReq);
+    long containerStartTime = System.currentTimeMillis();
+    stateStore.storeContainer(containerId, 0, containerStartTime, containerReq);
 
     // verify the container version key is not stored for new containers
     DB db = stateStore.getDB();
@@ -246,6 +247,7 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(1, recoveredContainers.size());
     RecoveredContainerState rcs = recoveredContainers.get(0);
     assertEquals(0, rcs.getVersion());
+    assertEquals(containerStartTime, rcs.getStartTime());
     assertEquals(RecoveredContainerStatus.REQUESTED, rcs.getStatus());
     assertEquals(ContainerExitStatus.INVALID, rcs.getExitCode());
     assertEquals(false, rcs.getKilled());
@@ -998,7 +1000,7 @@ public class TestNMLeveldbStateStoreService {
     StartContainerRequest containerReq = StartContainerRequest.newInstance(clc,
         containerToken);
 
-    stateStore.storeContainer(containerId, 0, containerReq);
+    stateStore.storeContainer(containerId, 0, 0, containerReq);
 
     // add a invalid key
     byte[] invalidKey = ("ContainerManager/containers/"

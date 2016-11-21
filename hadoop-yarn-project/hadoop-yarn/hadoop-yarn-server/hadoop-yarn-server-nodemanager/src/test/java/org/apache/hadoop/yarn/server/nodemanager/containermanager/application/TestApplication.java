@@ -601,7 +601,7 @@ public class TestApplication {
 
     public void containerFinished(int containerNum) {
       app.handle(new ApplicationContainerFinishedEvent(containers.get(
-          containerNum).cloneAndGetContainerStatus()));
+          containerNum).cloneAndGetContainerStatus(), 0));
       drainDispatcherEvents();
     }
 
