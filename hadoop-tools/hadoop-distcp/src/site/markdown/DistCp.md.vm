@@ -523,7 +523,7 @@ hadoop distcp -update -numListstatusThreads 20  \
 Because object stores are slow to list files, consider setting the `-numListstatusThreads` option when performing a `-update` operation
 on a large directory tree (the limit is 40 threads).
 
-When `DistCp -update` is used with objec stores,
+When `DistCp -update` is used with object stores,
 generally only the modification time and length of the individual files are compared,
 not any checksums. The fact that most object stores do have valid timestamps
 for directories is irrelevant; only the file timestamps are compared.
@@ -541,7 +541,7 @@ the `-atomic` operation doesn't actually deliver what is promised. *Avoid*.
 
 * The `-append` option is not supported.
 
-* The `-diff` option is not supported
+* The `-diff` and `rdiff` options are not supported
  
 * CRC checking will not be performed, irrespective of the value of the `-skipCrc`
 flag.
