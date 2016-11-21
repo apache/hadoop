@@ -68,7 +68,7 @@
 
     <!-- jackson versions -->
     <jackson.version>1.9.13</jackson.version>
-    <jackson2.version>2.2.3</jackson2.version>
+    <jackson2.version>2.7.8</jackson2.version>
 
     <!-- ProtocolBuffer version, used to verify the protoc version and -->
     <!-- define the protobuf JAR version                               -->
