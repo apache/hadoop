@@ -731,7 +731,7 @@ public class TestDFSShell {
           .format(true)
           .numDataNodes(2)
           .nameNodePort(ServerSocketUtil.waitForPort(
-              HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT, 10))
+              HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT, 60))
           .waitSafeMode(true)
           .build();
       FileSystem srcFs = cluster.getFileSystem();
