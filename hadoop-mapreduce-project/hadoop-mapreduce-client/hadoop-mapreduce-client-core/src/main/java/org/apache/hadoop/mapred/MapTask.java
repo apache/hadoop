@@ -967,7 +967,8 @@ public class MapTask extends Task {
       //sanity checks
       final float spillper =
         job.getFloat(JobContext.MAP_SORT_SPILL_PERCENT, (float)0.8);
-      final int sortmb = job.getInt(JobContext.IO_SORT_MB, 100);
+      final int sortmb = job.getInt(MRJobConfig.IO_SORT_MB,
+          MRJobConfig.DEFAULT_IO_SORT_MB);
       indexCacheMemoryLimit = job.getInt(JobContext.INDEX_CACHE_MEMORY_LIMIT,
                                          INDEX_CACHE_MEMORY_LIMIT_DEFAULT);
       if (spillper > (float)1.0 || spillper <= (float)0.0) {
@@ -1920,7 +1921,8 @@ public class MapTask extends Task {
             }
           }
 
-          int mergeFactor = job.getInt(JobContext.IO_SORT_FACTOR, 100);
+          int mergeFactor = job.getInt(MRJobConfig.IO_SORT_FACTOR,
+              MRJobConfig.DEFAULT_IO_SORT_FACTOR);
           // sort the segments only if there are intermediate merges
           boolean sortSegments = segmentList.size() > mergeFactor;
           //merge
