@@ -126,10 +126,12 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
 
   @Override
   public synchronized void storeContainer(ContainerId containerId,
-      int version, StartContainerRequest startRequest) throws IOException {
+      int version, long startTime, StartContainerRequest startRequest)
+      throws IOException {
     RecoveredContainerState rcs = new RecoveredContainerState();
     rcs.startRequest = startRequest;
     rcs.version = version;
+    rcs.setStartTime(startTime);
     containerStates.put(containerId, rcs);
   }
 

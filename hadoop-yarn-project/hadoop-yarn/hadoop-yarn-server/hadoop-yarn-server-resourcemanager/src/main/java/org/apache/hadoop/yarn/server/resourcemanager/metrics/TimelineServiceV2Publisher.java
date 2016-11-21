@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector;
+import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -287,8 +288,8 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
   @Override
   public void appAttemptRegistered(RMAppAttempt appAttempt,
       long registeredTime) {
-    TimelineEntity entity =
-        createAppAttemptEntity(appAttempt.getAppAttemptId());
+    ApplicationAttemptId attemptId = appAttempt.getAppAttemptId();
+    TimelineEntity entity = createAppAttemptEntity(attemptId);
     entity.setCreatedTime(registeredTime);
 
     TimelineEvent tEvent = new TimelineEvent();
@@ -310,6 +311,8 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
           appAttempt.getMasterContainer().getId().toString());
     }
     entity.setInfo(entityInfo);
+    entity.setIdPrefix(
+        TimelineServiceHelper.invertLong(attemptId.getAttemptId()));
 
     getDispatcher().getEventHandler().handle(
         new TimelineV2PublishEvent(SystemMetricsEventType.PUBLISH_ENTITY,
@@ -320,7 +323,7 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
   @Override
   public void appAttemptFinished(RMAppAttempt appAttempt,
       RMAppAttemptState appAttemtpState, RMApp app, long finishedTime) {
-
+    ApplicationAttemptId attemptId = appAttempt.getAppAttemptId();
     ApplicationAttemptEntity entity =
         createAppAttemptEntity(appAttempt.getAppAttemptId());
 
@@ -339,7 +342,8 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
     entityInfo.put(AppAttemptMetricsConstants.STATE_INFO, RMServerUtils
         .createApplicationAttemptState(appAttemtpState).toString());
     entity.setInfo(entityInfo);
-
+    entity.setIdPrefix(
+        TimelineServiceHelper.invertLong(attemptId.getAttemptId()));
 
     getDispatcher().getEventHandler().handle(
         new TimelineV2PublishEvent(SystemMetricsEventType.PUBLISH_ENTITY,
