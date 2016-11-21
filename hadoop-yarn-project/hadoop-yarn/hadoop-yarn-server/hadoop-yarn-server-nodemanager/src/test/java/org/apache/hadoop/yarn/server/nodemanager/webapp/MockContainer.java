@@ -235,4 +235,8 @@ public class MockContainer implements Container {
   public boolean isRecovering() {
     return false;
   }
+
+  public long getContainerStartTime() {
+    return 0;
+  }
 }
