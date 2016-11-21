@@ -873,6 +873,16 @@
   </description>
 </property>
 
+ <property>
+  <name>dfs.mover.max-no-move-interval</name>
+  <value>60000</value>
+  <description>
+    If this specified amount of time has elapsed and no block has been moved
+    out of a source DataNode, on more effort will be made to move blocks out of
+    this DataNode in the current Mover iteration.
+  </description>
+</property>
+
 <property>
   <name>dfs.hosts</name>
   <value></value>
@@ -3061,6 +3071,16 @@
       It is disabled (0) by default.
     </description>
   </property>
+
+<property>
+  <name>dfs.balancer.max-no-move-interval</name>
+  <value>60000</value>
+  <description>
+    If this specified amount of time has elapsed and no block has been moved
+    out of a source DataNode, on more effort will be made to move blocks out of
+    this DataNode in the current Balancer iteration.
+  </description>
+</property>
 
 <property>
   <name>dfs.lock.suppress.warning.interval</name>
