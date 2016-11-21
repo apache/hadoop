@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl.ContainerMetric;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
+import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -140,6 +141,8 @@ public class NMTimelinePublisher extends CompositeService {
             Math.round(cpuUsagePercentPerCore));
         entity.addMetric(cpuMetric);
       }
+      entity.setIdPrefix(TimelineServiceHelper.
+          invertLong(container.getContainerStartTime()));
       ApplicationId appId = container.getContainerId().getApplicationAttemptId()
           .getApplicationId();
       try {
@@ -186,15 +189,17 @@ public class NMTimelinePublisher extends CompositeService {
     tEvent.setId(ContainerMetricsConstants.CREATED_EVENT_TYPE);
     tEvent.setTimestamp(event.getTimestamp());
 
+    long containerStartTime = container.getContainerStartTime();
     entity.addEvent(tEvent);
-    entity.setCreatedTime(event.getTimestamp());
+    entity.setCreatedTime(containerStartTime);
+    entity.setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
     dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
         containerId.getApplicationAttemptId().getApplicationId()));
   }
 
   @SuppressWarnings("unchecked")
   private void publishContainerFinishedEvent(ContainerStatus containerStatus,
-      long timeStamp) {
+      long containerFinishTime, long containerStartTime) {
     ContainerId containerId = containerStatus.getContainerId();
     TimelineEntity entity = createContainerEntity(containerId);
 
@@ -206,13 +211,14 @@ public class NMTimelinePublisher extends CompositeService {
     entityInfo.put(ContainerMetricsConstants.STATE_INFO,
         ContainerState.COMPLETE.toString());
     entityInfo.put(ContainerMetricsConstants.CONTAINER_FINISHED_TIME,
-        timeStamp);
+        containerFinishTime);
     entity.setInfo(entityInfo);
 
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setId(ContainerMetricsConstants.FINISHED_EVENT_TYPE);
-    tEvent.setTimestamp(timeStamp);
+    tEvent.setTimestamp(containerFinishTime);
     entity.addEvent(tEvent);
+    entity.setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
 
     dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
         containerId.getApplicationAttemptId().getApplicationId()));
@@ -228,6 +234,8 @@ public class NMTimelinePublisher extends CompositeService {
     tEvent.setId(eventType);
     tEvent.setTimestamp(event.getTimestamp());
     entity.addEvent(tEvent);
+    entity.setIdPrefix(TimelineServiceHelper.
+        invertLong(container.getContainerStartTime()));
 
     ApplicationId appId =
         container.getContainerId().getApplicationAttemptId().getApplicationId();
@@ -291,7 +299,7 @@ public class NMTimelinePublisher extends CompositeService {
       ApplicationContainerFinishedEvent evnt =
           (ApplicationContainerFinishedEvent) event;
       publishContainerFinishedEvent(evnt.getContainerStatus(),
-          event.getTimestamp());
+          event.getTimestamp(), evnt.getContainerStartTime());
       break;
 
     default:

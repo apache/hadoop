@@ -21,10 +21,8 @@ package org.apache.hadoop.yarn.server.nodemanager.recovery;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -125,10 +123,12 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
 
   @Override
   public synchronized void storeContainer(ContainerId containerId,
-      int version, StartContainerRequest startRequest) throws IOException {
+      int version, long startTime, StartContainerRequest startRequest)
+      throws IOException {
     RecoveredContainerState rcs = new RecoveredContainerState();
     rcs.startRequest = startRequest;
     rcs.version = version;
+    rcs.setStartTime(startTime);
     containerStates.put(containerId, rcs);
   }
 
