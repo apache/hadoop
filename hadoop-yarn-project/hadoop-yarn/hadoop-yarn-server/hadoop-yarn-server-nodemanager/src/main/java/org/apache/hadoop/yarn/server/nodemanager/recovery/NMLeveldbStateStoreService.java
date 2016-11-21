@@ -112,6 +112,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       "ContainerManager/containers/";
   private static final String CONTAINER_REQUEST_KEY_SUFFIX = "/request";
   private static final String CONTAINER_VERSION_KEY_SUFFIX = "/version";
+  private static final String CONTAINER_START_TIME_KEY_SUFFIX = "/starttime";
   private static final String CONTAINER_DIAGS_KEY_SUFFIX = "/diagnostics";
   private static final String CONTAINER_LAUNCHED_KEY_SUFFIX = "/launched";
   private static final String CONTAINER_QUEUED_KEY_SUFFIX = "/queued";
@@ -257,6 +258,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
             StartContainerRequestProto.parseFrom(entry.getValue()));
       } else if (suffix.equals(CONTAINER_VERSION_KEY_SUFFIX)) {
         rcs.version = Integer.parseInt(asString(entry.getValue()));
+      } else if (suffix.equals(CONTAINER_START_TIME_KEY_SUFFIX)) {
+        rcs.setStartTime(Long.parseLong(asString(entry.getValue())));
       } else if (suffix.equals(CONTAINER_DIAGS_KEY_SUFFIX)) {
         rcs.diagnostics = asString(entry.getValue());
       } else if (suffix.equals(CONTAINER_QUEUED_KEY_SUFFIX)) {
@@ -296,21 +299,23 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @Override
   public void storeContainer(ContainerId containerId, int containerVersion,
-      StartContainerRequest startRequest) throws IOException {
+      long startTime, StartContainerRequest startRequest) throws IOException {
     String idStr = containerId.toString();
     if (LOG.isDebugEnabled()) {
       LOG.debug("storeContainer: containerId= " + idStr
           + ", startRequest= " + startRequest);
     }
-    String keyRequest = CONTAINERS_KEY_PREFIX + idStr
-        + CONTAINER_REQUEST_KEY_SUFFIX;
+    String keyRequest = getContainerKey(idStr, CONTAINER_REQUEST_KEY_SUFFIX);
     String keyVersion = getContainerVersionKey(idStr);
+    String keyStartTime =
+        getContainerKey(idStr, CONTAINER_START_TIME_KEY_SUFFIX);
     try {
       WriteBatch batch = db.createWriteBatch();
       try {
         batch.put(bytes(keyRequest),
-            ((StartContainerRequestPBImpl) startRequest)
-                .getProto().toByteArray());
+            ((StartContainerRequestPBImpl) startRequest).getProto().
+                toByteArray());
+        batch.put(bytes(keyStartTime), bytes(Long.toString(startTime)));
         if (containerVersion != 0) {
           batch.put(bytes(keyVersion),
               bytes(Integer.toString(containerVersion)));
@@ -326,7 +331,11 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @VisibleForTesting
   String getContainerVersionKey(String containerId) {
-    return CONTAINERS_KEY_PREFIX + containerId + CONTAINER_VERSION_KEY_SUFFIX;
+    return getContainerKey(containerId, CONTAINER_VERSION_KEY_SUFFIX);
+  }
+
+  private String getContainerKey(String containerId, String suffix) {
+    return CONTAINERS_KEY_PREFIX + containerId + suffix;
   }
 
   @Override

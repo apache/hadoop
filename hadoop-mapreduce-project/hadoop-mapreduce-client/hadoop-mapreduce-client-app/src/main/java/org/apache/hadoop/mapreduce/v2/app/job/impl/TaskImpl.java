@@ -139,6 +139,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   private final Set<TaskAttemptId> inProgressAttempts;
 
   private boolean historyTaskStartGenerated = false;
+  // Launch time reported in history events.
+  private long launchTime;
   
   private static final SingleArcTransition<TaskImpl, TaskEvent> 
      ATTEMPT_KILLED_TRANSITION = new AttemptKilledTransition();
@@ -705,8 +707,9 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   }
 
   private void sendTaskStartedEvent() {
+    launchTime = getLaunchTime();
     TaskStartedEvent tse = new TaskStartedEvent(
-        TypeConverter.fromYarn(taskId), getLaunchTime(),
+        TypeConverter.fromYarn(taskId), launchTime,
         TypeConverter.fromYarn(taskId.getTaskType()),
         getSplitsAsString());
     eventHandler
@@ -714,18 +717,19 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     historyTaskStartGenerated = true;
   }
 
-  private static TaskFinishedEvent createTaskFinishedEvent(TaskImpl task, TaskStateInternal taskState) {
+  private static TaskFinishedEvent createTaskFinishedEvent(TaskImpl task,
+      TaskStateInternal taskState) {
     TaskFinishedEvent tfe =
       new TaskFinishedEvent(TypeConverter.fromYarn(task.taskId),
         TypeConverter.fromYarn(task.successfulAttempt),
         task.getFinishTime(task.successfulAttempt),
         TypeConverter.fromYarn(task.taskId.getTaskType()),
-        taskState.toString(),
-        task.getCounters());
+        taskState.toString(), task.getCounters(), task.launchTime);
     return tfe;
   }
   
-  private static TaskFailedEvent createTaskFailedEvent(TaskImpl task, List<String> diag, TaskStateInternal taskState, TaskAttemptId taId) {
+  private static TaskFailedEvent createTaskFailedEvent(TaskImpl task,
+      List<String> diag, TaskStateInternal taskState, TaskAttemptId taId) {
     StringBuilder errorSb = new StringBuilder();
     if (diag != null) {
       for (String d : diag) {
@@ -740,7 +744,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         errorSb.toString(),
         taskState.toString(),
         taId == null ? null : TypeConverter.fromYarn(taId),
-        task.getCounters());
+        task.getCounters(), task.launchTime);
     return taskFailedEvent;
   }
   
@@ -861,7 +865,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       TaskFailedEvent tfe = new TaskFailedEvent(taskInfo.getTaskId(),
           taskInfo.getFinishTime(), taskInfo.getTaskType(),
           taskInfo.getError(), taskInfo.getTaskStatus(),
-          taskInfo.getFailedDueToAttemptId(), taskInfo.getCounters());
+          taskInfo.getFailedDueToAttemptId(), taskInfo.getCounters(),
+          launchTime);
       eventHandler.handle(new JobHistoryEvent(taskId.getJobId(), tfe));
       eventHandler.handle(
           new JobTaskEvent(taskId, getExternalState(taskState)));

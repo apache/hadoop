@@ -526,13 +526,6 @@ public class ResourceTrackerService extends AbstractService implements
           message);
     }
 
-    boolean timelineV2Enabled =
-        YarnConfiguration.timelineServiceV2Enabled(getConfig());
-    if (timelineV2Enabled) {
-      // Check & update collectors info from request.
-      updateAppCollectorsMap(request);
-    }
-
     // Evaluate whether a DECOMMISSIONING node is ready to be DECOMMISSIONED.
     if (rmNode.getState() == NodeState.DECOMMISSIONING &&
         decommissioningWatcher.checkReadyToBeDecommissioned(
@@ -545,6 +538,13 @@ public class ResourceTrackerService extends AbstractService implements
       this.nmLivelinessMonitor.unregister(nodeId);
       return YarnServerBuilderUtils.newNodeHeartbeatResponse(
           NodeAction.SHUTDOWN, message);
+    }
+
+    boolean timelineV2Enabled =
+        YarnConfiguration.timelineServiceV2Enabled(getConfig());
+    if (timelineV2Enabled) {
+      // Check & update collectors info from request.
+      updateAppCollectorsMap(request);
     }
 
     // Heartbeat response
