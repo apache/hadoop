@@ -737,9 +737,9 @@ This secret sharing can be done using a Zookeeper service which is configured in
   </property>
   <property>
     <name>hadoop.kms.authentication.signer.secret.provider.zookeeper.auth.type</name>
-    <value>kerberos</value>
+    <value>sasl</value>
     <description>
-      The Zookeeper authentication type, 'none' or 'sasl' (Kerberos).
+      The Zookeeper authentication type, 'none' (default) or 'sasl' (Kerberos).
     </description>
   </property>
   <property>
