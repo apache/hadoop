@@ -76,7 +76,7 @@ public class DatanodeManager {
   static final int DEFAULT_ARG_COUNT = 
                      CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_DEFAULT;
 
-  private final String scriptName;
+  private final String netLinkScriptName;
   // Assume a default link cost of 1
   private final int defaultLinkCost = 1;
   private final int maxArgs; //max hostnames per call of the script
@@ -293,7 +293,7 @@ public class DatanodeManager {
     this.blocksPerPostponedMisreplicatedBlocksRescan = conf.getLong(
         DFSConfigKeys.DFS_NAMENODE_BLOCKS_PER_POSTPONEDBLOCKS_RESCAN_KEY,
         DFSConfigKeys.DFS_NAMENODE_BLOCKS_PER_POSTPONEDBLOCKS_RESCAN_KEY_DEFAULT);
-    this.scriptName = conf.get(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY);
+    this.netLinkScriptName = conf.get(DFSConfigKeys.NET_LINK_SCRIPT_FILE_NAME_KEY);
     this.maxArgs = conf.getInt(
         DFSConfigKeys.NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_KEY, DEFAULT_ARG_COUNT);
   }
@@ -1130,13 +1130,12 @@ public class DatanodeManager {
   }
 
   protected int getLinkCost(String rack1, String rack2) {
-    if (scriptName == null) {
+    if (netLinkScriptName == null) {
       LOG.warn("Could not find link cost script");
       return defaultLinkCost;
     }
-    List<String> m = new ArrayList<String>(4);
-    m.add(scriptName);
-    m.add("--cost");
+    List<String> m = new ArrayList<String>(3);
+    m.add(netLinkScriptName);
     m.add(rack1);
     m.add(rack2);
     return runLinkCostCommand(m);

@@ -380,7 +380,7 @@ public class TestDatanodeManager {
    */
   @Test
   public void testGoodLinkCostScript() throws IOException, URISyntaxException {
-    LinkCostHelperFunction("/" + Shell.appendScriptExtension("topology-script"),
+    LinkCostHelperFunction("/" + Shell.appendScriptExtension("link-script"),
                            false);
   }
 
@@ -394,7 +394,7 @@ public class TestDatanodeManager {
    */
   @Test
   public void testBadLinkCostScript() throws IOException, URISyntaxException {
-    LinkCostHelperFunction("/"+ Shell.appendScriptExtension("topology-broken-script"),
+    LinkCostHelperFunction("/"+ Shell.appendScriptExtension("link-broken-script"),
                            true);
   }
   /**
@@ -406,18 +406,32 @@ public class TestDatanodeManager {
    * @throws URISyntaxException
    * @throws IOException
    */
-  public void LinkCostHelperFunction(String scriptFileName, Boolean brokenScript) 
+  public void LinkCostHelperFunction(String linkScriptFileName,
+                                     Boolean brokenScript) 
     throws URISyntaxException, IOException {
     // create the DatanodeManager which will be tested
     Configuration conf = new Configuration();
     FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
     Mockito.when(fsn.hasWriteLock()).thenReturn(true);
-    assertThat(scriptFileName != null && !scriptFileName.isEmpty(), is(true));
-    URL shellScript = getClass().getResource(scriptFileName);
+
+    // Setup topology script so that DM can distinguish between racks
+    String topoScriptFileName = "/"+ Shell.appendScriptExtension("topology-script");
+    assertEquals(true, topoScriptFileName != null && !topoScriptFileName.isEmpty());
+    URL shellScript = getClass().getResource(topoScriptFileName);
     Path resourcePath = Paths.get(shellScript.toURI());
     FileUtil.setExecutable(resourcePath.toFile(), true);
     conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY,
       resourcePath.toString());
+
+    // Setup link cost script so that DM can set link costs between racks
+    assertEquals(true, linkScriptFileName != null && !linkScriptFileName.isEmpty());
+    shellScript = getClass().getResource(linkScriptFileName);
+    resourcePath = Paths.get(shellScript.toURI());
+    FileUtil.setExecutable(resourcePath.toFile(), true);
+    conf.set(DFSConfigKeys.NET_LINK_SCRIPT_FILE_NAME_KEY,
+      resourcePath.toString());
+
+    // Start DatanodeManager
     DatanodeManager dm = mockDatanodeManager(fsn, conf);
 
     // Register 5 datanodes each in a different rack
@@ -436,8 +450,7 @@ public class TestDatanodeManager {
 
     // Verify that we store the correct number of rack names
     Set<String> racks = dm.getNetworkTopology().getRackNames();
-    int expectedRacks = brokenScript ? 1 : 5;
-    assertThat(racks.size(), is(expectedRacks));
+    Assert.assertEquals(5, racks.size());
 
     // Verify that rack costs have been updated as expected
     // We have written the working script such that it returns a value of 10
@@ -446,10 +459,11 @@ public class TestDatanodeManager {
     for (String rack : racks) {
       for (String otherRack : racks) {
         if (!brokenScript && rack.equals(otherRack)) {
-          assertThat(dm.getNetworkTopology().getRackCost(rack, otherRack), is(0));
+          // Cost between a rack and itself must be zero.
+          assertEquals(0, dm.getNetworkTopology().getRackCost(rack, otherRack));
         } else {
-          assertThat(dm.getNetworkTopology().getRackCost(rack, otherRack),
-                     is(expectedCost));
+          assertEquals(expectedCost,
+                       dm.getNetworkTopology().getRackCost(rack, otherRack));
         }
       }
     }
@@ -467,8 +481,7 @@ public class TestDatanodeManager {
 
     // Verify that the rack lists are updated
     racks = dm.getNetworkTopology().getRackNames();
-    expectedRacks = brokenScript ? 1 : 4;
-    assertThat(racks.size(), is(expectedRacks));
+    Assert.assertEquals(4, racks.size());
 
     // Verify that rack costs have also been updated
     expectedCost = brokenScript ? 1 : 10;
@@ -476,10 +489,10 @@ public class TestDatanodeManager {
       for (String otherRack : racks) {
         if (!brokenScript && rack.equals(otherRack)) {
           // Cost between a rack and itself must be zero.
-          assertThat(dm.getNetworkTopology().getRackCost(rack, otherRack), is(0));
+          assertEquals(0, dm.getNetworkTopology().getRackCost(rack, otherRack));
         } else {
-          assertThat(dm.getNetworkTopology().getRackCost(rack, otherRack),
-                     is(expectedCost));
+          assertEquals(expectedCost,
+                       dm.getNetworkTopology().getRackCost(rack, otherRack));
         }
       }
     }

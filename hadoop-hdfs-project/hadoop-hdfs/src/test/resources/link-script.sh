@@ -17,4 +17,8 @@
 # limitations under the License.
 
 
-echo $1 | awk -F'-' '{printf("/rackID-%s",$2)}'
+if [ "$1" == "$2" ] ; then
+  echo "0"
+else
+  echo "10"
+fi
