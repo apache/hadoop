@@ -663,9 +663,6 @@ public class S3AFileSystem extends FileSystem {
       return innerRename(src, dst);
     } catch (AmazonClientException e) {
       throw translateException("rename(" + src +", " + dst + ")", src, e);
-    } catch (FileNotFoundException e) {
-      LOG.error("rename: src not found {}", src);
-      return false;
     } catch (RenameFailedException e) {
       LOG.debug(e.getMessage());
       return e.getExitCode();
@@ -701,6 +698,8 @@ public class S3AFileSystem extends FileSystem {
       throw new RenameFailedException(src, dst, "dest is root directory");
     }
 
+    // get the source file status; this raises a FNFE if there is no source
+    // file.
     S3AFileStatus srcStatus = getFileStatus(src);
 
     if (srcKey.equals(dstKey)) {
@@ -714,15 +713,31 @@ public class S3AFileSystem extends FileSystem {
     S3AFileStatus dstStatus = null;
     try {
       dstStatus = getFileStatus(dst);
+      // if there is no destination entry, an exception is raised.
+      // hence this code sequence can assume that there is something
+      // at the end of the path; the only detail being what it is and
+      // whether or not it can be the destination of the rename.
+      if (srcStatus.isDirectory()) {
+        if (dstStatus.isFile()) {
+          throw new RenameFailedException(src, dst,
+              "source is a directory and dest is a file")
+              .withExitCode(srcStatus.isFile());
+        } else if (!dstStatus.isEmptyDirectory()) {
+          throw new RenameFailedException(src, dst,
+              "Destination is a non-empty directory")
+              .withExitCode(false);
+        }
+        // at this point the destination is an empty directory
+      } else {
+        // source is a file. Look at the destination
+        if (dstStatus.isFile()) {
+          throw new RenameFailedException(src, dst,
+              "destination file for rename operations already exists")
+              .withExitCode(false);
+        }
+        //
+      }
 
-      if (srcStatus.isDirectory() && dstStatus.isFile()) {
-        throw new RenameFailedException(src, dst,
-            "source is a directory and dest is a file")
-            .withExitCode(srcStatus.isFile());
-      }
-      if (dstStatus.isDirectory() && !dstStatus.isEmptyDirectory()) {
-        return false;
-      }
     } catch (FileNotFoundException e) {
       LOG.debug("rename: destination path {} not found", dst);
       // Parent must exist
@@ -880,6 +895,7 @@ public class S3AFileSystem extends FileSystem {
               throw new IOException(ex);
             }
           } else {
+            //no cause
             throw new IOException(e);
           }
         }
