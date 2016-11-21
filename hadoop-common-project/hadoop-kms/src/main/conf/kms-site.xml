@@ -147,9 +147,9 @@
 
   <property>
     <name>hadoop.kms.authentication.signer.secret.provider.zookeeper.auth.type</name>
-    <value>kerberos</value>
+    <value>none</value>
     <description>
-      The Zookeeper authentication type, 'none' or 'sasl' (Kerberos).
+      The Zookeeper authentication type, 'none' (default) or 'sasl' (Kerberos).
     </description>
   </property>
 
