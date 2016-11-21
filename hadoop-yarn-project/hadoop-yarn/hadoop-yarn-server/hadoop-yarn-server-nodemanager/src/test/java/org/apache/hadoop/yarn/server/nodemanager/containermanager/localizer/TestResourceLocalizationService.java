@@ -1886,7 +1886,7 @@ public class TestResourceLocalizationService {
         createContainerLocalizationEvent(container1,
           LocalResourceVisibility.PRIVATE, req));
       Assert
-        .assertTrue(waitForPrivateDownloadToStart(rls, localizerId1, 1, 200));
+        .assertTrue(waitForPrivateDownloadToStart(rls, localizerId1, 1, 5000));
 
       // Container - 2 now makes the request.
       ContainerImpl container2 = createMockContainer(user, 2);
@@ -1900,7 +1900,7 @@ public class TestResourceLocalizationService {
         createContainerLocalizationEvent(container2,
           LocalResourceVisibility.PRIVATE, req));
       Assert
-        .assertTrue(waitForPrivateDownloadToStart(rls, localizerId2, 1, 200));
+        .assertTrue(waitForPrivateDownloadToStart(rls, localizerId2, 1, 5000));
 
       // Retrieving localized resource.
       LocalResourcesTracker tracker =
@@ -1942,7 +1942,7 @@ public class TestResourceLocalizationService {
       Assert
         .assertTrue(waitForResourceState(lr, rls, req,
           LocalResourceVisibility.PRIVATE, user, appId, ResourceState.FAILED,
-          200));
+          5000));
       Assert.assertTrue(lr.getState().equals(ResourceState.FAILED));
       Assert.assertEquals(0, localizerRunner1.scheduled.size());
 
@@ -2058,7 +2058,7 @@ public class TestResourceLocalizationService {
       // Now waiting for resource download to start. Here actual will not start
       // Only the resources will be populated into pending list.
       Assert
-        .assertTrue(waitForPrivateDownloadToStart(rls, localizerId1, 2, 500));
+        .assertTrue(waitForPrivateDownloadToStart(rls, localizerId1, 2, 5000));
 
       // Validating user and application cache paths
 
@@ -2208,10 +2208,10 @@ public class TestResourceLocalizationService {
       // Waiting for resource to change into DOWNLOADING state.
       Assert.assertTrue(waitForResourceState(null, spyService, req,
         LocalResourceVisibility.PUBLIC, user, null, ResourceState.DOWNLOADING,
-        200));
+        5000));
 
       // Waiting for download to start.
-      Assert.assertTrue(waitForPublicDownloadToStart(spyService, 1, 200));
+      Assert.assertTrue(waitForPublicDownloadToStart(spyService, 1, 5000));
 
       LocalizedResource lr =
           getLocalizedResource(spyService, req, LocalResourceVisibility.PUBLIC,
@@ -2234,7 +2234,7 @@ public class TestResourceLocalizationService {
 
       // Waiting for download to start. This should return false as new download
       // will not start
-      Assert.assertFalse(waitForPublicDownloadToStart(spyService, 2, 100));
+      Assert.assertFalse(waitForPublicDownloadToStart(spyService, 2, 5000));
 
       // Now Failing the resource download. As a part of it
       // resource state is changed and then lock is released.
@@ -2246,7 +2246,7 @@ public class TestResourceLocalizationService {
 
       // Waiting for resource to change into FAILED state.
       Assert.assertTrue(waitForResourceState(lr, spyService, req,
-        LocalResourceVisibility.PUBLIC, user, null, ResourceState.FAILED, 200));
+        LocalResourceVisibility.PUBLIC, user, null, ResourceState.FAILED, 5000));
       // releasing lock as a part of download failed process.
       lr.unlock();
       // removing pending download request.
@@ -2266,7 +2266,7 @@ public class TestResourceLocalizationService {
       dispatcher1.getEventHandler().handle(localizerEvent);
       // Waiting for download to start. This should return false as new download
       // will not start
-      Assert.assertFalse(waitForPublicDownloadToStart(spyService, 1, 100));
+      Assert.assertFalse(waitForPublicDownloadToStart(spyService, 1, 5000));
       // Checking available permits now.
       Assert.assertEquals(1, lr.sem.availablePermits());
 
