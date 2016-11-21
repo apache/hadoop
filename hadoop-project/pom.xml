@@ -72,7 +72,7 @@
 
     <!-- jackson versions -->
     <jackson.version>1.9.13</jackson.version>
-    <jackson2.version>2.2.3</jackson2.version>
+    <jackson2.version>2.7.8</jackson2.version>
 
     <!-- com.google.re2j version -->
     <re2j.version>1.0</re2j.version>
