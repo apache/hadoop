@@ -3373,6 +3373,15 @@
 </property>
 
 <property>
+  <name>dfs.client.read.striped.threadpool.size</name>
+  <value>18</value>
+  <description>
+    The maximum number of threads used for parallel reading
+    in striped layout.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.replica.accessor.builder.classes</name>
   <value></value>
   <description>
