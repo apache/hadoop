@@ -170,9 +170,9 @@ public class ContainerImpl implements Container {
 
   /** The NM-wide configuration - not specific to this container */
   private final Configuration daemonConf;
+  private final long startTime;
 
   private static final Log LOG = LogFactory.getLog(ContainerImpl.class);
-
 
   // whether container has been recovered after a restart
   private RecoveredContainerStatus recoveredStatus =
@@ -186,6 +186,16 @@ public class ContainerImpl implements Container {
       ContainerLaunchContext launchContext, Credentials creds,
       NodeManagerMetrics metrics,
       ContainerTokenIdentifier containerTokenIdentifier, Context context) {
+    this(conf, dispatcher, launchContext, creds, metrics,
+        containerTokenIdentifier, context, SystemClock.getInstance().getTime());
+  }
+
+  public ContainerImpl(Configuration conf, Dispatcher dispatcher,
+      ContainerLaunchContext launchContext, Credentials creds,
+      NodeManagerMetrics metrics,
+      ContainerTokenIdentifier containerTokenIdentifier, Context context,
+      long startTs) {
+    this.startTime = startTs;
     this.daemonConf = conf;
     this.dispatcher = dispatcher;
     this.stateStore = context.getNMStateStore();
@@ -260,7 +270,7 @@ public class ContainerImpl implements Container {
       ContainerTokenIdentifier containerTokenIdentifier, Context context,
       RecoveredContainerState rcs) {
     this(conf, dispatcher, launchContext, creds, metrics,
-        containerTokenIdentifier, context);
+        containerTokenIdentifier, context, rcs.getStartTime());
     this.recoveredStatus = rcs.getStatus();
     this.exitCode = rcs.getExitCode();
     this.recoveredAsKilled = rcs.getKilled();
@@ -635,6 +645,11 @@ public class ContainerImpl implements Container {
   }
 
   @Override
+  public long getContainerStartTime() {
+    return this.startTime;
+  }
+
+  @Override
   public Resource getResource() {
     return Resources.clone(this.resource);
   }
@@ -694,7 +709,8 @@ public class ContainerImpl implements Container {
     EventHandler eventHandler = dispatcher.getEventHandler();
 
     ContainerStatus containerStatus = cloneAndGetContainerStatus();
-    eventHandler.handle(new ApplicationContainerFinishedEvent(containerStatus));
+    eventHandler.handle(
+        new ApplicationContainerFinishedEvent(containerStatus, startTime));
 
     // Tell the scheduler the container is Done
     eventHandler.handle(new ContainerSchedulerEvent(this,
