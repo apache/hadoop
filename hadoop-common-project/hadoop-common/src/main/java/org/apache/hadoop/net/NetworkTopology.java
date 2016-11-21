@@ -24,10 +24,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -389,6 +389,10 @@ public class NetworkTopology {
   private int depthOfAllLeaves = -1;
   /** rack counter */
   protected int numOfRacks = 0;
+  /** Known rack names */
+  protected Map<String, Boolean> rackNames;
+  /** Link costs between racks */
+  protected Map<String, Map<String, Integer>> rackCosts;
 
   /**
    * Whether or not this cluster has ever consisted of more than 1 rack,
@@ -400,6 +404,8 @@ public class NetworkTopology {
   protected ReadWriteLock netlock = new ReentrantReadWriteLock();
 
   public NetworkTopology() {
+    rackNames = new HashMap<String, Boolean>();
+    rackCosts = new HashMap<String, Map<String, Integer>>();
     clusterMap = new InnerNode(InnerNode.ROOT);
   }
 
@@ -435,6 +441,7 @@ public class NetworkTopology {
         LOG.info("Adding a new node: "+NodeBase.getPath(node));
         if (rack == null) {
           incrementRacks();
+          addRackName(node.getNetworkLocation());
         }
         if (!(node instanceof InnerNode)) {
           if (depthOfAllLeaves == -1) {
@@ -448,6 +455,63 @@ public class NetworkTopology {
     }
   }
 
+  /** Set this rack's cost to other rack
+   * @param rack one rack location
+   * @param otherRack the other rack location 
+   * @param cost the link cost between the two racks
+   */
+  public void setRackCost(String rack, String otherRack, int cost) {
+    netlock.writeLock().lock();
+    try {
+      if (!rackCosts.containsKey(rack)) {
+        rackCosts.put(rack, new HashMap<String, Integer>());
+      }
+      Map<String, Integer> costs = rackCosts.get(rack);
+      costs.put(otherRack, cost);
+    } finally {
+      netlock.writeLock().unlock();
+    }
+  }
+  /** Delete this rack's cost to other rack
+   * @param rack one rack location
+   * @param otherRack the other rack location 
+   */
+  public void deleteRackCost(String rack, String otherRack) {
+    netlock.writeLock().lock();
+    try {
+      if (rackCosts.containsKey(rack)) {
+        Map<String, Integer> costs = rackCosts.get(rack);
+        costs.remove(otherRack);
+        if (costs.size() == 0) {
+          rackCosts.remove(rack);
+        }
+      }
+    } finally {
+      netlock.writeLock().unlock();
+    }
+  }
+  /** @return rack link cost between two nodes */
+  public int getRackCost(String rack, String otherRack) {
+    netlock.readLock().lock();
+    int cost = -1;
+    try {
+      if (rackCosts.containsKey(rack)) {
+        cost = rackCosts.get(rack).get(otherRack);
+      }
+    } finally {
+      netlock.readLock().unlock();
+    }
+    return cost;
+  }
+
+  protected void addRackName(String rackName) {
+    LOG.info("Adding a new rack: " + rackName);
+    rackNames.put(rackName, true);
+  }
+  protected void removeRackName(String rackName) {
+    LOG.info("Removing a new rack: " + rackName);
+    rackNames.remove(rackName);
+  }
   protected void incrementRacks() {
     numOfRacks++;
     if (!clusterEverBeenMultiRack && numOfRacks > 1) {
@@ -510,9 +574,11 @@ public class NetworkTopology {
     netlock.writeLock().lock();
     try {
       if (clusterMap.remove(node)) {
-        InnerNode rack = (InnerNode)getNode(node.getNetworkLocation());
+        String rackName = node.getNetworkLocation();
+        InnerNode rack = (InnerNode)getNode(rackName);
         if (rack == null) {
           numOfRacks--;
+          removeRackName(rackName);
         }
       }
       LOG.debug("NetworkTopology became:\n{}", this.toString());
@@ -583,6 +649,16 @@ public class NetworkTopology {
     return loc;
   }
   
+  /** @return the total number of rack names */
+  public Set<String> getRackNames() {
+    netlock.readLock().lock();
+    try {
+      return rackNames.keySet();
+    } finally {
+      netlock.readLock().unlock();
+    }
+  }
+
   /** @return the total number of racks */
   public int getNumOfRacks() {
     netlock.readLock().lock();
@@ -1023,6 +1099,56 @@ public class NetworkTopology {
         Collections.shuffle(list, r);
         for (Node n: list) {
           nodes[idx] = n;
+          idx++;
+        }
+      }
+    }
+    Preconditions.checkState(idx == activeLen,
+        "Sorted the wrong number of nodes!");
+  }
+
+  /**
+   * Sort racks array by network distance to rack containing <i>reader</i>.
+   * <p/>
+   * In a three-level topology, a node can be either local, on the same rack,
+   * or on a different rack from the reader. Sorting the nodes based on network
+   * distance from the reader reduces network traffic and improves
+   * performance.
+   * <p/>
+   * As an additional twist, we also randomize the nodes at each network
+   * distance. This helps with load balancing when there is data skew.
+   *
+   * @param reader    Node where data will be read
+   * @param racks     Available racks containing replicas with the requested data
+   * @param activeLen Number of active nodes at the front of the array
+   */
+  public void sortRacksByDistance(Node reader, String[] racks, int activeLen) {
+    /** Sort weights for the nodes array */
+    int[] weights = new int[activeLen];
+    String readerRack = reader.getNetworkLocation();
+    for (int i=0; i<activeLen; i++) {
+      weights[i] = getRackCost(readerRack, racks[i]);
+    }
+    // Add weight/rack pairs to a TreeMap to sort
+    // NOTE - TreeMap keys are sorted in their natural order
+    TreeMap<Integer, List<String>> tree = new TreeMap<Integer, List<String>>();
+    for (int i=0; i<activeLen; i++) {
+      int weight = weights[i];
+      String rack = racks[i];
+      List<String> list = tree.get(weight);
+      if (list == null) {
+        list = Lists.newArrayListWithExpectedSize(1);
+        tree.put(weight, list);
+      }
+      list.add(rack);
+    }
+
+    int idx = 0;
+    for (List<String> list: tree.values()) {
+      if (list != null) {
+        Collections.shuffle(list, r);
+        for (String rack: list) {
+          racks[idx] = rack;
           idx++;
         }
       }

@@ -17,5 +17,17 @@
 # limitations under the License.
 
 
-echo $1 | awk -F'-' '{printf("/rackID-%s",$2)}'
+case "$1" in
+  (-c|--cost)
+    if [ "$2" == "$3" ] ; then
+      echo "0"
+    else
+      echo "10"
+    fi
+    ;;
+  (*)
+    echo $1 | awk -F'-' '{printf("/rackID-%s",$2)}'
+    ;;
+esac
+
 
