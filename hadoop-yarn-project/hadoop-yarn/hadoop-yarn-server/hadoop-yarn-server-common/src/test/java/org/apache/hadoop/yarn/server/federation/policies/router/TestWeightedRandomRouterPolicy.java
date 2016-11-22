@@ -24,8 +24,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.federation.policies.BaseFederationPoliciesTest;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
@@ -41,7 +41,7 @@ import org.junit.Test;
  * number of randomized tests to check we are weighiting correctly even if
  * clusters go inactive.
  */
-public class TestWeightedRandomRouterPolicy extends BaseFederationPoliciesTest {
+public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
 
   @Before
   public void setUp() throws Exception {
@@ -78,13 +78,18 @@ public class TestWeightedRandomRouterPolicy extends BaseFederationPoliciesTest {
   @Test
   public void testClusterChosenWithRightProbability() throws YarnException {
 
+    ApplicationSubmissionContext context =
+        mock(ApplicationSubmissionContext.class);
+    when(context.getQueue()).thenReturn("queue1");
+    setApplicationSubmissionContext(context);
+
     Map<SubClusterId, AtomicLong> counter = new HashMap<>();
     for (SubClusterIdInfo id : getPolicyInfo().getRouterPolicyWeights()
         .keySet()) {
       counter.put(id.toId(), new AtomicLong(0));
     }
 
-    float numberOfDraws = 1000000;
+    float numberOfDraws = 100000;
 
     for (float i = 0; i < numberOfDraws; i++) {
       SubClusterId chosenId = ((FederationRouterPolicy) getPolicy())
@@ -113,8 +118,8 @@ public class TestWeightedRandomRouterPolicy extends BaseFederationPoliciesTest {
         Assert.assertTrue(
             "Id " + counterEntry.getKey() + " Actual weight: " + actualWeight
                 + " expected weight: " + expectedWeight,
-            expectedWeight == 0 || (actualWeight / expectedWeight) < 1.1
-                && (actualWeight / expectedWeight) > 0.9);
+            expectedWeight == 0 || (actualWeight / expectedWeight) < 1.2
+                && (actualWeight / expectedWeight) > 0.8);
       } else {
         Assert
             .assertTrue(

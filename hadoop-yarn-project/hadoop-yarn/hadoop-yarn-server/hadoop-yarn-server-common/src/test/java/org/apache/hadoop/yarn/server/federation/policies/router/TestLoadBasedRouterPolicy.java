@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.federation.policies.BaseFederationPoliciesTest;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
@@ -36,7 +35,7 @@ import org.junit.Test;
  * Simple test class for the {@link LoadBasedRouterPolicy}. Test that the load
  * is properly considered for allocation.
  */
-public class TestLoadBasedRouterPolicy extends BaseFederationPoliciesTest {
+public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
 
   @Before
   public void setUp() throws Exception {
