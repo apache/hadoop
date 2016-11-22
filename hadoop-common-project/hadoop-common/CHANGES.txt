@@ -21,6 +21,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-13782. Make MutableRates metrics thread-local write, 
     aggregate-on-read. (Erik Krogen via zhz)
 
+    HADOOP-13655. document object store use with fs shell and distcp.
+    (Steve Loughran via Mingliang Liu)
+
   OPTIMIZATIONS
 
   BUG FIXES
