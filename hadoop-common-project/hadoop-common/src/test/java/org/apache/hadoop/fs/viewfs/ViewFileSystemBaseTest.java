@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -952,4 +953,71 @@ abstract public class ViewFileSystemBaseTest {
     }
   }
 
+  @Test
+  public void testTrashRoot() throws IOException {
+
+    Path mountDataRootPath = new Path("/data");
+    Path fsTargetFilePath = new Path("debug.log");
+    Path mountDataFilePath = new Path(mountDataRootPath, fsTargetFilePath);
+    Path mountDataNonExistingFilePath = new Path(mountDataRootPath, "no.log");
+    fileSystemTestHelper.createFile(fsTarget, fsTargetFilePath);
+
+    // Get Trash roots for paths via ViewFileSystem handle
+    Path mountDataRootTrashPath = fsView.getTrashRoot(mountDataRootPath);
+    Path mountDataFileTrashPath = fsView.getTrashRoot(mountDataFilePath);
+
+    // Get Trash roots for the same set of paths via the mounted filesystem
+    Path fsTargetRootTrashRoot = fsTarget.getTrashRoot(mountDataRootPath);
+    Path fsTargetFileTrashPath = fsTarget.getTrashRoot(mountDataFilePath);
+
+    // Verify if Trash roots from ViewFileSystem matches that of the ones
+    // from the target mounted FileSystem.
+    assertEquals(mountDataRootTrashPath.toUri().getPath(),
+        fsTargetRootTrashRoot.toUri().getPath());
+    assertEquals(mountDataFileTrashPath.toUri().getPath(),
+        fsTargetFileTrashPath.toUri().getPath());
+    assertEquals(mountDataRootTrashPath.toUri().getPath(),
+        mountDataFileTrashPath.toUri().getPath());
+
+
+    // Verify trash root for an non-existing file but on a valid mountpoint.
+    Path trashRoot = fsView.getTrashRoot(mountDataNonExistingFilePath);
+    assertEquals(mountDataRootTrashPath.toUri().getPath(),
+        trashRoot.toUri().getPath());
+
+    // Verify trash root for invalid mounts.
+    Path invalidMountRootPath = new Path("/invalid_mount");
+    Path invalidMountFilePath = new Path(invalidMountRootPath, "debug.log");
+    try {
+      fsView.getTrashRoot(invalidMountRootPath);
+      fail("ViewFileSystem getTashRoot should fail for non-mountpoint paths.");
+    } catch (NotInMountpointException e) {
+      //expected exception
+    }
+    try {
+      fsView.getTrashRoot(invalidMountFilePath);
+      fail("ViewFileSystem getTashRoot should fail for non-mountpoint paths.");
+    } catch (NotInMountpointException e) {
+      //expected exception
+    }
+    try {
+      fsView.getTrashRoot(null);
+      fail("ViewFileSystem getTashRoot should fail for empty paths.");
+    } catch (NotInMountpointException e) {
+      //expected exception
+    }
+
+    // Move the file to trash
+    FileStatus fileStatus = fsTarget.getFileStatus(fsTargetFilePath);
+    Configuration newConf = new Configuration(conf);
+    newConf.setLong("fs.trash.interval", 1000);
+    Trash lTrash = new Trash(fsTarget, newConf);
+    boolean trashed = lTrash.moveToTrash(fsTargetFilePath);
+    Assert.assertTrue("File " + fileStatus + " move to " +
+        "trash failed.", trashed);
+
+    // Verify ViewFileSystem trash roots shows the ones from
+    // target mounted FileSystem.
+    Assert.assertTrue("", fsView.getTrashRoots(true).size() > 0);
+  }
 }
