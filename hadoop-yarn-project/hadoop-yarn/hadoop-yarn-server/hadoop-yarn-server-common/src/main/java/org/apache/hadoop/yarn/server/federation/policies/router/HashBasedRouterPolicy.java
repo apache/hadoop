@@ -18,9 +18,9 @@
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -31,55 +31,51 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 
 /**
- * This simple policy picks at uniform random among any of the currently active
- * subclusters. This policy is easy to use and good for testing.
- *
- * NOTE: this is "almost" subsumed by the {@code WeightedRandomRouterPolicy}.
- * Behavior only diverges when there are active sub-clusters that are not part
- * of the "weights", in which case the {@link UniformRandomRouterPolicy} send
- * load to them, while {@code WeightedRandomRouterPolicy} does not.
+ * This {@link FederationRouterPolicy} pick a subcluster based on the hash of
+ * the job's queue name. Useful to provide a default behavior when too many
+ * queues exist in a system. This also ensures that all jobs belonging to a
+ * queue are mapped to the same sub-cluster (likely help with locality).
  */
-public class UniformRandomRouterPolicy extends AbstractRouterPolicy {
-
-  private Random rand;
-
-  public UniformRandomRouterPolicy() {
-    rand = new Random(System.currentTimeMillis());
-  }
+public class HashBasedRouterPolicy extends AbstractRouterPolicy {
 
   @Override
-  public void reinitialize(FederationPolicyInitializationContext policyContext)
+  public void reinitialize(
+      FederationPolicyInitializationContext federationPolicyContext)
       throws FederationPolicyInitializationException {
-    FederationPolicyInitializationContextValidator.validate(policyContext,
-        this.getClass().getCanonicalName());
+    FederationPolicyInitializationContextValidator
+        .validate(federationPolicyContext, this.getClass().getCanonicalName());
 
-    // note: this overrides AbstractRouterPolicy and ignores the weights
-
-    setPolicyContext(policyContext);
+    // note: this overrides BaseRouterPolicy and ignores the weights
+    setPolicyContext(federationPolicyContext);
   }
 
   /**
-   * Simply picks a random active subcluster to start the AM (this does NOT
-   * depend on the weights in the policy).
+   * Simply picks from alphabetically-sorted active subclusters based on the
+   * hash of quey name. Jobs of the same queue will all be routed to the same
+   * sub-cluster, as far as the number of active sub-cluster and their names
+   * remain the same.
    *
-   * @param appSubmissionContext the context for the app being submitted
-   *          (ignored).
+   * @param appSubmissionContext the context for the app being submitted.
    *
-   * @return a randomly chosen subcluster.
+   * @return a hash-based chosen subcluster.
    *
    * @throws YarnException if there are no active subclusters.
    */
   public SubClusterId getHomeSubcluster(
       ApplicationSubmissionContext appSubmissionContext) throws YarnException {
 
-    // null checks and default-queue behavior
-    validate(appSubmissionContext);
-
+    // throws if no active subclusters available
     Map<SubClusterId, SubClusterInfo> activeSubclusters =
         getActiveSubclusters();
 
+    validate(appSubmissionContext);
+
+    int chosenPosition = Math.abs(
+        appSubmissionContext.getQueue().hashCode() % activeSubclusters.size());
+
     List<SubClusterId> list = new ArrayList<>(activeSubclusters.keySet());
-    return list.get(rand.nextInt(list.size()));
+    Collections.sort(list);
+    return list.get(chosenPosition);
   }
 
 }

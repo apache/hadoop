@@ -15,8 +15,9 @@
  * the License.
  */
 
-package org.apache.hadoop.yarn.server.federation.policies;
+package org.apache.hadoop.yarn.server.federation.policies.manager;
 
+import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouterPolicy;
