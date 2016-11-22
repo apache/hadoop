@@ -767,7 +767,8 @@ public class FairScheduler extends
     } catch (InvalidQueueNameException qne) {
       appRejectMsg = qne.getMessage();
     } catch (IOException ioe) {
-      appRejectMsg = "Error assigning app to queue " + queueName;
+      // IOException should only happen for a user without groups
+      appRejectMsg = "Error assigning app to a queue: " + ioe.getMessage();
     }
 
     if (appRejectMsg != null && rmApp != null) {
