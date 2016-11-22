@@ -500,26 +500,21 @@ public class TestDataNodeVolumeFailure {
 
     // bring up one more DataNode
     assertEquals(repl, cluster.getDataNodes().size());
-    cluster.startDataNodes(newConf, 1, false, null, null);
+
+    try {
+      cluster.startDataNodes(newConf, 1, false, null, null);
+      assertTrue("Failed to get expected IOException", tolerated);
+    } catch (IOException ioe) {
+      assertFalse("Unexpected IOException " + ioe, tolerated);
+      return;
+    }
+
     assertEquals(repl + 1, cluster.getDataNodes().size());
 
-    if (tolerated) {
-      // create new file and it should be able to replicate to 3 nodes
-      final Path p = new Path("/test1.txt");
-      DFSTestUtil.createFile(fs, p, block_size * blocks_num, (short) 3, 1L);
-      DFSTestUtil.waitReplication(fs, p, (short) (repl + 1));
-    } else {
-      // DataNode should stop soon if it does not tolerate disk failure
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
-          final String bpid = cluster.getNamesystem().getBlockPoolId();
-          final BPOfferService bpos = cluster.getDataNodes().get(2)
-              .getBPOfferService(bpid);
-          return !bpos.isAlive();
-        }
-      }, 100, 30 * 1000);
-    }
+    // create new file and it should be able to replicate to 3 nodes
+    final Path p = new Path("/test1.txt");
+    DFSTestUtil.createFile(fs, p, block_size * blocks_num, (short) 3, 1L);
+    DFSTestUtil.waitReplication(fs, p, (short) (repl + 1));
   }
 
   /**

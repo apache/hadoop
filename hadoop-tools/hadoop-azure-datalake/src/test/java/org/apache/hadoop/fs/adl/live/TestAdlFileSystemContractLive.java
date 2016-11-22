@@ -34,7 +34,7 @@ public class TestAdlFileSystemContractLive extends FileSystemContractBaseTest {
 
   @Override
   protected void setUp() throws Exception {
-    adlStore = AdlStorageConfiguration.createAdlStorageConnector();
+    adlStore = AdlStorageConfiguration.createStorageConnector();
     if (AdlStorageConfiguration.isContractTestEnabled()) {
       fs = adlStore;
     }

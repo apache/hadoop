@@ -17,6 +17,11 @@
 
 package org.apache.hadoop.yarn.server.timeline;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.MappingJsonFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -49,10 +54,6 @@ import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager.CheckAcl;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.map.MappingJsonFactory;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.xc.JaxbAnnotationIntrospector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -293,7 +294,8 @@ public class EntityGroupFSTimelineStore extends CompositeService
     }
 
     objMapper = new ObjectMapper();
-    objMapper.setAnnotationIntrospector(new JaxbAnnotationIntrospector());
+    objMapper.setAnnotationIntrospector(
+        new JaxbAnnotationIntrospector(TypeFactory.defaultInstance()));
     jsonFactory = new MappingJsonFactory(objMapper);
     final long scanIntervalSecs = conf.getLong(
         YarnConfiguration

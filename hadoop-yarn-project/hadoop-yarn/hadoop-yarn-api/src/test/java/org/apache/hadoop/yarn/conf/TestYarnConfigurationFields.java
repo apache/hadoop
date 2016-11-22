@@ -147,5 +147,16 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
 
     // Currently defined in RegistryConstants/core-site.xml
     xmlPrefixToSkipCompare.add("hadoop.registry");
+
+    // Add the filters used for checking for collision of default values.
+    initDefaultValueCollisionCheck();
+  }
+
+  /**
+   * Add filters used to perform the check of default values collision by
+   * {@link TestConfigurationFieldsBase#filtersForDefaultValueCollisionCheck}.
+   */
+  private void initDefaultValueCollisionCheck() {
+    filtersForDefaultValueCollisionCheck.add("_PORT");
   }
 }

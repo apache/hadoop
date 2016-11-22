@@ -88,6 +88,12 @@ public class ApplicationMetricsConstants {
   public static final String APP_AM_CONTAINER_PREEMPTED =
       "YARN_APPLICATION_AM_CONTAINER_PREEMPTED";
 
+  public static final String APP_CPU_PREEMPT_METRICS =
+      "YARN_APPLICATION_CPU_PREEMPT_METRIC";
+
+  public static final String APP_MEM_PREEMPT_METRICS =
+      "YARN_APPLICATION_MEM_PREEMPT_METRIC";
+
   public static final String LATEST_APP_ATTEMPT_EVENT_INFO =
       "YARN_APPLICATION_LATEST_APP_ATTEMPT";
   

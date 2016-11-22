@@ -75,6 +75,7 @@ import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction.RetryDecision;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -527,6 +528,15 @@ public class TestWebHDFS {
       final Path s1path = SnapshotTestHelper.getSnapshotRoot(foo, "s1");
       Assert.assertTrue(webHdfs.exists(s1path));
 
+      // delete operation snapshot name as null
+      try {
+        webHdfs.deleteSnapshot(foo, null);
+        fail("Expected IllegalArgumentException");
+      } catch (RemoteException e) {
+        Assert.assertEquals("Required param snapshotname for "
+            + "op: DELETESNAPSHOT is null or empty", e.getLocalizedMessage());
+      }
+
       // delete the two snapshots
       webHdfs.deleteSnapshot(foo, "s1");
       assertFalse(webHdfs.exists(s1path));
@@ -584,6 +594,15 @@ public class TestWebHDFS {
       webHdfs.createSnapshot(foo, "s1");
       final Path s1path = SnapshotTestHelper.getSnapshotRoot(foo, "s1");
       Assert.assertTrue(webHdfs.exists(s1path));
+
+      // rename s1 to s2 with oldsnapshotName as null
+      try {
+        webHdfs.renameSnapshot(foo, null, "s2");
+        fail("Expected IllegalArgumentException");
+      } catch (RemoteException e) {
+        Assert.assertEquals("Required param oldsnapshotname for "
+            + "op: RENAMESNAPSHOT is null or empty", e.getLocalizedMessage());
+      }
 
       // rename s1 to s2
       webHdfs.renameSnapshot(foo, "s1", "s2");
@@ -643,7 +662,7 @@ public class TestWebHDFS {
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
       final FileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
-          WebHdfsConstants.WEBHDFS_SCHEME);
+            WebHdfsConstants.WEBHDFS_SCHEME);
       Assert.assertNull(webHdfs.getDelegationToken(null));
     } finally {
       if (cluster != null) {

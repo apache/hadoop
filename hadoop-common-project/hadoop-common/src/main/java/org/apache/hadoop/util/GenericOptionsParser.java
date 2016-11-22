@@ -41,6 +41,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -328,9 +329,7 @@ public class GenericOptionsParser {
       // check if the local file exists
       FileSystem localFs = FileSystem.getLocal(conf);
       Path p = localFs.makeQualified(new Path(fileName));
-      if (!localFs.exists(p)) {
-          throw new FileNotFoundException("File "+fileName+" does not exist.");
-      }
+      localFs.getFileStatus(p);
       if(LOG.isDebugEnabled()) {
         LOG.debug("setting conf tokensFile: " + fileName);
       }
@@ -437,9 +436,7 @@ public class GenericOptionsParser {
       if (pathURI.getScheme() == null) {
         //default to the local file system
         //check if the file exists or not first
-        if (!localFs.exists(path)) {
-          throw new FileNotFoundException("File " + tmp + " does not exist.");
-        }
+        localFs.getFileStatus(path);
         if (isWildcard) {
           expandWildcard(finalPaths, path, localFs);
         } else {
@@ -452,9 +449,8 @@ public class GenericOptionsParser {
         // these files to the file system ResourceManager is running
         // on.
         FileSystem fs = path.getFileSystem(conf);
-        if (!fs.exists(path)) {
-          throw new FileNotFoundException("File " + tmp + " does not exist.");
-        }
+        // existence check
+        fs.getFileStatus(path);
         if (isWildcard) {
           expandWildcard(finalPaths, path, fs);
         } else {
@@ -476,7 +472,8 @@ public class GenericOptionsParser {
 
   private void expandWildcard(List<String> finalPaths, Path path, FileSystem fs)
       throws IOException {
-    if (!fs.isDirectory(path)) {
+    FileStatus status = fs.getFileStatus(path);
+    if (!status.isDirectory()) {
       throw new FileNotFoundException(path + " is not a directory.");
     }
     // get all the jars in the directory
@@ -567,21 +564,28 @@ public class GenericOptionsParser {
    * @param out stream to print the usage message to.
    */
   public static void printGenericCommandUsage(PrintStream out) {
-    
-    out.println("Generic options supported are");
-    out.println("-conf <configuration file>     specify an application configuration file");
-    out.println("-D <property=value>            use value for given property");
-    out.println("-fs <local|namenode:port>      specify a namenode");
-    out.println("-jt <local|resourcemanager:port>    specify a ResourceManager");
-    out.println("-files <comma separated list of files>    " + 
-      "specify comma separated files to be copied to the map reduce cluster");
-    out.println("-libjars <comma separated list of jars>    " +
-      "specify comma separated jar files to include in the classpath.");
-    out.println("-archives <comma separated list of archives>    " +
-                "specify comma separated archives to be unarchived" +
-                " on the compute machines.\n");
-    out.println("The general command line syntax is");
-    out.println("command [genericOptions] [commandOptions]\n");
+    out.println("Generic options supported are:");
+    out.println("-conf <configuration file>        "
+        + "specify an application configuration file");
+    out.println("-D <property=value>               "
+        + "define a value for a given property");
+    out.println("-fs <local|namenode:port>         "
+        + "specify a namenode");
+    out.println("-jt <local|resourcemanager:port>  "
+        + "specify a ResourceManager");
+    out.println("-files <file1,...>                "
+        + "specify a comma-separated list of files to be copied to the map "
+        + "reduce cluster");
+    out.println("-libjars <jar1,...>               "
+        + "specify a comma-separated list of jar files to be included in the "
+        + "classpath");
+    out.println("-archives <archive1,...>          "
+        + "specify a comma-separated list of archives to be unarchived on the "
+        + "compute machines");
+    out.println();
+    out.println("The general command line syntax is:");
+    out.println("command [genericOptions] [commandOptions]");
+    out.println();
   }
   
 }

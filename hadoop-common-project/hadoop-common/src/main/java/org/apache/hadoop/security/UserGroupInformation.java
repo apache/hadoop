@@ -43,6 +43,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.Subject;
 import javax.security.auth.callback.CallbackHandler;
@@ -54,14 +55,18 @@ import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import javax.security.auth.spi.LoginModule;
 
+import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
+import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
+import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
@@ -85,7 +90,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce", "HBase", "Hive", "Oozie"})
 @InterfaceStability.Evolving
 public class UserGroupInformation {
-  private static final Logger LOG = LoggerFactory.getLogger(
+  @VisibleForTesting
+  static final Logger LOG = LoggerFactory.getLogger(
       UserGroupInformation.class);
 
   /**
@@ -121,6 +127,10 @@ public class UserGroupInformation {
     MutableRate loginFailure;
     @Metric("GetGroups") MutableRate getGroups;
     MutableQuantiles[] getGroupsQuantiles;
+    @Metric("Renewal failures since startup")
+    private MutableGaugeLong renewalFailuresTotal;
+    @Metric("Renewal failures since last successful login")
+    private MutableGaugeInt renewalFailures;
 
     static UgiMetrics create() {
       return DefaultMetricsSystem.instance().register(new UgiMetrics());
@@ -137,6 +147,10 @@ public class UserGroupInformation {
           q.add(latency);
         }
       }
+    }
+
+    MutableGaugeInt getRenewalFailures() {
+      return renewalFailures;
     }
   }
   
@@ -963,6 +977,7 @@ public class UserGroupInformation {
           return;
         }
         long nextRefresh = getRefreshTime(tgt);
+        RetryPolicy rp = null;
         while (true) {
           try {
             long now = Time.now();
@@ -986,13 +1001,40 @@ public class UserGroupInformation {
             }
             nextRefresh = Math.max(getRefreshTime(tgt),
               now + kerberosMinSecondsBeforeRelogin);
+            metrics.renewalFailures.set(0);
+            rp = null;
           } catch (InterruptedException ie) {
             LOG.warn("Terminating renewal thread");
             return;
           } catch (IOException ie) {
-            LOG.warn("Exception encountered while running the" +
-                " renewal command. Aborting renew thread. " + ie);
-            return;
+            metrics.renewalFailuresTotal.incr();
+            final long tgtEndTime = tgt.getEndTime().getTime();
+            LOG.warn("Exception encountered while running the renewal "
+                    + "command for {}. (TGT end time:{}, renewalFailures: {},"
+                    + "renewalFailuresTotal: {})", getUserName(), tgtEndTime,
+                metrics.renewalFailures, metrics.renewalFailuresTotal, ie);
+            final long now = Time.now();
+            if (rp == null) {
+              // Use a dummy maxRetries to create the policy. The policy will
+              // only be used to get next retry time with exponential back-off.
+              // The final retry time will be later limited within the
+              // tgt endTime in getNextTgtRenewalTime.
+              rp = RetryPolicies.exponentialBackoffRetry(Long.SIZE - 2,
+                  kerberosMinSecondsBeforeRelogin, TimeUnit.MILLISECONDS);
+            }
+            try {
+              nextRefresh = getNextTgtRenewalTime(tgtEndTime, now, rp);
+            } catch (Exception e) {
+              LOG.error("Exception when calculating next tgt renewal time", e);
+              return;
+            }
+            metrics.renewalFailures.incr();
+            // retry until close enough to tgt endTime.
+            if (now > nextRefresh) {
+              LOG.error("TGT is expired. Aborting renew thread for {}.",
+                  getUserName());
+              return;
+            }
           }
         }
       }
@@ -1001,6 +1043,26 @@ public class UserGroupInformation {
     t.setName("TGT Renewer for " + getUserName());
     t.start();
   }
+
+  /**
+   * Get time for next login retry. This will allow the thread to retry with
+   * exponential back-off, until tgt endtime.
+   * Last retry is {@link #kerberosMinSecondsBeforeRelogin} before endtime.
+   *
+   * @param tgtEndTime EndTime of the tgt.
+   * @param now Current time.
+   * @param rp The retry policy.
+   * @return Time for next login retry.
+   */
+  @VisibleForTesting
+  static long getNextTgtRenewalTime(final long tgtEndTime, final long now,
+      final RetryPolicy rp) throws Exception {
+    final long lastRetryTime = tgtEndTime - kerberosMinSecondsBeforeRelogin;
+    final RetryPolicy.RetryAction ra = rp.shouldRetry(null,
+        metrics.renewalFailures.value(), 0, false);
+    return Math.min(lastRetryTime, now + ra.delayMillis);
+  }
+
   /**
    * Log a user in from a keytab file. Loads a user identity from a keytab
    * file and logs them in. They become the currently logged-in user.

@@ -39,16 +39,17 @@ public class TestErasureCodingPolicyWithSnapshot {
   private DistributedFileSystem fs;
   private Configuration conf;
 
-  private final static short GROUP_SIZE = (short) (StripedFileTestUtil.
-      NUM_DATA_BLOCKS + StripedFileTestUtil.NUM_PARITY_BLOCKS);
   private final static int SUCCESS = 0;
   private final ErasureCodingPolicy sysDefaultPolicy =
-      StripedFileTestUtil.TEST_EC_POLICY;
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private final short groupSize = (short) (
+      sysDefaultPolicy.getNumDataUnits() +
+          sysDefaultPolicy.getNumParityUnits());
 
   @Before
   public void setupCluster() throws IOException {
     conf = new HdfsConfiguration();
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(GROUP_SIZE).build();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
   }

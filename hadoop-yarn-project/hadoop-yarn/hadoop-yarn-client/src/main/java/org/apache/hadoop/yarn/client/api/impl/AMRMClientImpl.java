@@ -112,10 +112,10 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     
     ResourceRequestInfo(Long allocationRequestId, Priority priority,
         String resourceName, Resource capability, boolean relaxLocality) {
-      remoteRequest = ResourceRequest.newInstance(priority, resourceName,
-          capability, 0);
-      remoteRequest.setAllocationRequestId(allocationRequestId);
-      remoteRequest.setRelaxLocality(relaxLocality);
+      remoteRequest = ResourceRequest.newBuilder().priority(priority)
+          .resourceName(resourceName).capability(capability).numContainers(0)
+          .allocationRequestId(allocationRequestId)
+          .relaxLocality(relaxLocality).build();
       containerRequests = new LinkedHashSet<T>();
     }
   }
@@ -279,10 +279,11 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         ResourceBlacklistRequest blacklistRequest =
             ResourceBlacklistRequest.newInstance(blacklistToAdd,
                 blacklistToRemove);
-        
-        allocateRequest =
-            AllocateRequest.newInstance(lastResponseId, progressIndicator,
-                askList, releaseList, blacklistRequest, updateList);
+
+        allocateRequest = AllocateRequest.newBuilder()
+            .responseId(lastResponseId).progress(progressIndicator)
+            .askList(askList).resourceBlacklistRequest(blacklistRequest)
+            .releaseList(releaseList).updateRequests(updateList).build();
         // clear blacklistAdditions and blacklistRemovals before
         // unsynchronized part
         blacklistAdditions.clear();
@@ -415,11 +416,13 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     for(ResourceRequest r : ask) {
       // create a copy of ResourceRequest as we might change it while the
       // RPC layer is using it to send info across
-      ResourceRequest rr = ResourceRequest.newInstance(r.getPriority(),
-          r.getResourceName(), r.getCapability(), r.getNumContainers(),
-          r.getRelaxLocality(), r.getNodeLabelExpression(),
-          r.getExecutionTypeRequest());
-      rr.setAllocationRequestId(r.getAllocationRequestId());
+      ResourceRequest rr = ResourceRequest.newBuilder()
+          .priority(r.getPriority()).resourceName(r.getResourceName())
+          .capability(r.getCapability()).numContainers(r.getNumContainers())
+          .relaxLocality(r.getRelaxLocality())
+          .nodeLabelExpression(r.getNodeLabelExpression())
+          .executionTypeRequest(r.getExecutionTypeRequest())
+          .allocationRequestId(r.getAllocationRequestId()).build();
       askList.add(rr);
     }
     return askList;

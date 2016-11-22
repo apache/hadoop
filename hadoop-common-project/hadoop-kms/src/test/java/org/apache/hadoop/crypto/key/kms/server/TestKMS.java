@@ -1821,8 +1821,11 @@ public class TestKMS {
                 Assert.fail("client should not be allowed to renew token with"
                     + "renewer=client1");
               } catch (Exception e) {
+                final DelegationTokenIdentifier identifier =
+                    (DelegationTokenIdentifier) token.decodeIdentifier();
                 GenericTestUtils.assertExceptionContains(
-                    "tries to renew a token with renewer", e);
+                    "tries to renew a token (" + identifier
+                        + ") with non-matching renewer", e);
               }
             }
 

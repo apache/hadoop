@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.protocolPB;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.VersionRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.VersionResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.EndCheckpointRequestProto;
@@ -78,8 +79,9 @@ public class NamenodeProtocolServerSideTranslatorPB implements
   @Override
   public GetBlocksResponseProto getBlocks(RpcController unused,
       GetBlocksRequestProto request) throws ServiceException {
-    DatanodeInfo dnInfo = new DatanodeInfo(PBHelperClient.convert(request
-        .getDatanode()));
+    DatanodeInfo dnInfo = new DatanodeInfoBuilder()
+        .setNodeID(PBHelperClient.convert(request.getDatanode()))
+        .build();
     BlocksWithLocations blocks;
     try {
       blocks = impl.getBlocks(dnInfo, request.getSize());

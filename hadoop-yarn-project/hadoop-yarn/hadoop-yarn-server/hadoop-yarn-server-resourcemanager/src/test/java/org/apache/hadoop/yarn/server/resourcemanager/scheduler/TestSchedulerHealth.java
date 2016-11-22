@@ -238,8 +238,10 @@ public class TestSchedulerHealth {
     SchedulerHealth sh =
         ((CapacityScheduler) resourceManager.getResourceScheduler())
           .getSchedulerHealth();
-    Assert.assertEquals(2, sh.getAllocationCount().longValue());
-    Assert.assertEquals(Resource.newInstance(3 * 1024, 2),
+    // Now SchedulerHealth records last container allocated, aggregated
+    // allocation account will not be changed
+    Assert.assertEquals(1, sh.getAllocationCount().longValue());
+    Assert.assertEquals(Resource.newInstance(1 * 1024, 1),
       sh.getResourcesAllocated());
     Assert.assertEquals(2, sh.getAggregateAllocationCount().longValue());
     Assert.assertEquals("host_0:1234", sh.getLastAllocationDetails()

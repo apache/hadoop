@@ -136,6 +136,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Change
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
+
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerScheduler;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredApplicationsState;
@@ -205,6 +208,7 @@ public class ContainerManagerImpl extends CompositeService implements
   private final WriteLock writeLock;
   private AMRMProxyService amrmProxyService;
   protected boolean amrmProxyEnabled = false;
+  private final ContainerScheduler containerScheduler;
 
   private long waitForContainersOnShutdownMillis;
 
@@ -231,6 +235,8 @@ public class ContainerManagerImpl extends CompositeService implements
     addService(containersLauncher);
 
     this.nodeStatusUpdater = nodeStatusUpdater;
+    this.containerScheduler = createContainerScheduler(context);
+    addService(containerScheduler);
 
     // Start configurable services
     auxiliaryServices = new AuxServices();
@@ -259,7 +265,8 @@ public class ContainerManagerImpl extends CompositeService implements
     dispatcher.register(AuxServicesEventType.class, auxiliaryServices);
     dispatcher.register(ContainersMonitorEventType.class, containersMonitor);
     dispatcher.register(ContainersLauncherEventType.class, containersLauncher);
-    
+    dispatcher.register(ContainerSchedulerEventType.class, containerScheduler);
+
     addService(dispatcher);
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -309,6 +316,14 @@ public class ContainerManagerImpl extends CompositeService implements
     } else {
       LOG.info("AMRMProxyService is disabled");
     }
+  }
+
+  @VisibleForTesting
+  protected ContainerScheduler createContainerScheduler(Context cntxt) {
+    // Currently, this dispatcher is shared by the ContainerManager,
+    // all the containers, the container monitor and all the container.
+    // The ContainerScheduler may use its own dispatcher.
+    return new ContainerScheduler(cntxt, dispatcher, metrics);
   }
 
   protected ContainersMonitor createContainersMonitor(ContainerExecutor exec) {
@@ -1034,8 +1049,6 @@ public class ContainerManagerImpl extends CompositeService implements
             containerTokenIdentifier.getVersion(), request);
         dispatcher.getEventHandler().handle(
           new ApplicationContainerInitEvent(container));
-        this.context.getNMStateStore().storeContainer(containerId,
-            containerTokenIdentifier.getVersion(), request);
 
         this.context.getContainerTokenSecretManager().startContainerSuccessful(
           containerTokenIdentifier);
@@ -1265,10 +1278,8 @@ public class ContainerManagerImpl extends CompositeService implements
       }
     } else {
       context.getNMStateStore().storeContainerKilled(containerID);
-      dispatcher.getEventHandler().handle(
-        new ContainerKillEvent(containerID,
-            ContainerExitStatus.KILLED_BY_APPMASTER,
-            "Container killed by the ApplicationMaster."));
+      container.sendKillEvent(ContainerExitStatus.KILLED_BY_APPMASTER,
+          "Container killed by the ApplicationMaster.");
 
       NMAuditLogger.logSuccess(container.getUser(),    
         AuditConstants.STOP_CONTAINER, "ContainerManageImpl", containerID
@@ -1346,18 +1357,21 @@ public class ContainerManagerImpl extends CompositeService implements
     if ((!nmTokenAppId.equals(containerId.getApplicationAttemptId().getApplicationId()))
         || (container != null && !nmTokenAppId.equals(container
             .getContainerId().getApplicationAttemptId().getApplicationId()))) {
+      String msg;
       if (stopRequest) {
-        LOG.warn(identifier.getApplicationAttemptId()
+        msg = identifier.getApplicationAttemptId()
             + " attempted to stop non-application container : "
-            + container.getContainerId());
+            + containerId;
         NMAuditLogger.logFailure("UnknownUser", AuditConstants.STOP_CONTAINER,
-          "ContainerManagerImpl", "Trying to stop unknown container!",
-          nmTokenAppId, container.getContainerId());
+            "ContainerManagerImpl", "Trying to stop unknown container!",
+            nmTokenAppId, containerId);
       } else {
-        LOG.warn(identifier.getApplicationAttemptId()
+        msg = identifier.getApplicationAttemptId()
             + " attempted to get status for non-application container : "
-            + container.getContainerId());
+            + containerId;
       }
+      LOG.warn(msg);
+      throw RPCUtil.getRemoteException(msg);
     }
   }
 
@@ -1523,12 +1537,12 @@ public class ContainerManagerImpl extends CompositeService implements
 
   @Override
   public OpportunisticContainersStatus getOpportunisticContainersStatus() {
-    return null;
+    return this.containerScheduler.getOpportunisticContainersStatus();
   }
 
   @Override
   public void updateQueuingLimit(ContainerQueuingLimit queuingLimit) {
-    LOG.trace("Implementation does not support queuing of Containers!!");
+    this.containerScheduler.updateQueuingLimit(queuingLimit);
   }
 
   @SuppressWarnings("unchecked")
@@ -1688,5 +1702,10 @@ public class ContainerManagerImpl extends CompositeService implements
     } else {
       LOG.info("Container " + containerId + " no longer exists");
     }
+  }
+
+  @Override
+  public ContainerScheduler getContainerScheduler() {
+    return this.containerScheduler;
   }
 }

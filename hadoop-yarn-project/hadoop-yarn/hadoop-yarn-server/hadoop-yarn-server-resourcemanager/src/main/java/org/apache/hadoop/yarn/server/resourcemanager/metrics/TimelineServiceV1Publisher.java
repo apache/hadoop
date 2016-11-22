@@ -88,7 +88,7 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
         ApplicationMetricsConstants.UNMANAGED_APPLICATION_ENTITY_INFO,
         app.getApplicationSubmissionContext().getUnmanagedAM());
     entityInfo.put(ApplicationMetricsConstants.APPLICATION_PRIORITY_INFO,
-        app.getApplicationSubmissionContext().getPriority().getPriority());
+        app.getApplicationPriority().getPriority());
     entityInfo.put(ApplicationMetricsConstants.AM_NODE_LABEL_EXPRESSION,
         app.getAmNodeLabelExpression());
     entityInfo.put(ApplicationMetricsConstants.APP_NODE_LABEL_EXPRESSION,
@@ -144,6 +144,10 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
         appMetrics.getVcoreSeconds());
     entity.addOtherInfo(ApplicationMetricsConstants.APP_MEM_METRICS,
         appMetrics.getMemorySeconds());
+    entity.addOtherInfo(ApplicationMetricsConstants.APP_MEM_PREEMPT_METRICS,
+            appMetrics.getPreemptedMemorySeconds());
+    entity.addOtherInfo(ApplicationMetricsConstants.APP_CPU_PREEMPT_METRICS,
+            appMetrics.getPreemptedVcoreSeconds());
     tEvent.setEventInfo(eventInfo);
 
     entity.addEvent(tEvent);
@@ -160,7 +164,7 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
     eventInfo.put(ApplicationMetricsConstants.QUEUE_ENTITY_INFO,
         app.getQueue());
     eventInfo.put(ApplicationMetricsConstants.APPLICATION_PRIORITY_INFO,
-        app.getApplicationSubmissionContext().getPriority().getPriority());
+        app.getApplicationPriority().getPriority());
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setEventType(ApplicationMetricsConstants.UPDATED_EVENT_TYPE);
     tEvent.setTimestamp(updatedTime);

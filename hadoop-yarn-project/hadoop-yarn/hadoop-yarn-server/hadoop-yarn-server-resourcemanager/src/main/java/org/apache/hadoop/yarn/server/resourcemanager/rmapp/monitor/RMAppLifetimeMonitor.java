@@ -18,9 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp.monitor;
 
-import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -33,7 +32,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.util.AbstractLivelinessMonitor;
 import org.apache.hadoop.yarn.util.SystemClock;
 
@@ -47,12 +45,6 @@ public class RMAppLifetimeMonitor
   private static final Log LOG = LogFactory.getLog(RMAppLifetimeMonitor.class);
 
   private RMContext rmContext;
-  private Map<RMAppToMonitor, Long> monitoredApps =
-      new HashMap<RMAppToMonitor, Long>();
-
-  private static final EnumSet<RMAppState> COMPLETED_APP_STATES =
-      EnumSet.of(RMAppState.FINISHED, RMAppState.FINISHING, RMAppState.FAILED,
-          RMAppState.KILLED, RMAppState.FINAL_SAVING, RMAppState.KILLING);
 
   public RMAppLifetimeMonitor(RMContext rmContext) {
     super(RMAppLifetimeMonitor.class.getName(), SystemClock.getInstance());
@@ -61,14 +53,16 @@ public class RMAppLifetimeMonitor
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    long monitorInterval = conf.getLong(
-        YarnConfiguration.RM_APPLICATION_LIFETIME_MONITOR_INTERVAL_MS,
-        YarnConfiguration.DEFAULT_RM_APPLICATION_LIFETIME_MONITOR_INTERVAL_MS);
+    long monitorInterval =
+        conf.getLong(YarnConfiguration.RM_APPLICATION_MONITOR_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_RM_APPLICATION_MONITOR_INTERVAL_MS);
     if (monitorInterval <= 0) {
       monitorInterval =
-          YarnConfiguration.DEFAULT_RM_APPLICATION_LIFETIME_MONITOR_INTERVAL_MS;
+          YarnConfiguration.DEFAULT_RM_APPLICATION_MONITOR_INTERVAL_MS;
     }
     setMonitorInterval(monitorInterval);
+    setExpireInterval(0); // No need of expire interval for App.
+    setResetTimeOnStart(false); // do not reset expire time on restart
     LOG.info("Application lifelime monitor interval set to " + monitorInterval
         + " ms.");
     super.serviceInit(conf);
@@ -77,54 +71,42 @@ public class RMAppLifetimeMonitor
   @SuppressWarnings("unchecked")
   @Override
   protected synchronized void expire(RMAppToMonitor monitoredAppKey) {
-    Long remove = monitoredApps.remove(monitoredAppKey);
     ApplicationId appId = monitoredAppKey.getApplicationId();
     RMApp app = rmContext.getRMApps().get(appId);
     if (app == null) {
       return;
     }
-    // Don't trigger a KILL event if application is in completed states
-    if (!COMPLETED_APP_STATES.contains(app.getState())) {
-      String diagnostics =
-          "Application killed due to exceeding its lifetime period " + remove
-              + " milliseconds";
-      rmContext.getDispatcher().getEventHandler()
-          .handle(new RMAppEvent(appId, RMAppEventType.KILL, diagnostics));
-    } else {
-      LOG.info("Application " + appId
-          + " is about to complete. So not killing the application.");
-    }
+    String diagnostics =
+        "Application killed due to exceeding its lifetime period";
+    rmContext.getDispatcher().getEventHandler()
+        .handle(new RMAppEvent(appId, RMAppEventType.KILL, diagnostics));
   }
 
-  public synchronized void registerApp(ApplicationId appId,
-      ApplicationTimeoutType timeoutType, long monitorStartTime, long timeout) {
+  public void registerApp(ApplicationId appId,
+      ApplicationTimeoutType timeoutType, long expireTime) {
     RMAppToMonitor appToMonitor = new RMAppToMonitor(appId, timeoutType);
-    register(appToMonitor, monitorStartTime);
-    monitoredApps.putIfAbsent(appToMonitor, timeout);
+    register(appToMonitor, expireTime);
   }
 
-  @Override
-  protected synchronized long getExpireInterval(
-      RMAppToMonitor monitoredAppKey) {
-    return monitoredApps.get(monitoredAppKey);
-  }
-
-  public synchronized void unregisterApp(ApplicationId appId,
+  public void unregisterApp(ApplicationId appId,
       ApplicationTimeoutType timeoutType) {
-    RMAppToMonitor appToRemove = new RMAppToMonitor(appId, timeoutType);
-    unregister(appToRemove);
-    monitoredApps.remove(appToRemove);
+    RMAppToMonitor remove = new RMAppToMonitor(appId, timeoutType);
+    unregister(remove);
   }
 
-  public synchronized void unregisterApp(ApplicationId appId,
-      Set<ApplicationTimeoutType> types) {
-    for (ApplicationTimeoutType type : types) {
-      unregisterApp(appId, type);
+  public void unregisterApp(ApplicationId appId,
+      Set<ApplicationTimeoutType> timeoutTypes) {
+    for (ApplicationTimeoutType timeoutType : timeoutTypes) {
+      unregisterApp(appId, timeoutType);
     }
   }
 
-  public synchronized void updateApplicationTimeouts(ApplicationId appId,
+  public void updateApplicationTimeouts(ApplicationId appId,
       Map<ApplicationTimeoutType, Long> timeouts) {
-    // TODO in YARN-5611
+    for (Entry<ApplicationTimeoutType, Long> entry : timeouts.entrySet()) {
+      ApplicationTimeoutType timeoutType = entry.getKey();
+      RMAppToMonitor update = new RMAppToMonitor(appId, timeoutType);
+      register(update, entry.getValue());
+    }
   }
 }

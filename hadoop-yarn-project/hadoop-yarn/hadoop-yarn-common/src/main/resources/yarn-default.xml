@@ -180,6 +180,20 @@
   </property>
 
   <property>
+    <description>To enable RM web ui2 application.</description>
+    <name>yarn.webapp.ui2.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Explicitly provide WAR file path for ui2 if needed.
+    </description>
+    <name>yarn.webapp.ui2.war-file-path</name>
+    <value></value>
+  </property>
+
+  <property>
     <name>yarn.resourcemanager.resource-tracker.address</name>
     <value>${yarn.resourcemanager.hostname}:8031</value>
   </property>
@@ -986,10 +1000,10 @@
   </property>
 
   <property>
-    <description>Enable Queuing of OPPORTUNISTIC containers on the
+    <description>Max number of OPPORTUNISTIC containers to queue at the
       nodemanager.</description>
-    <name>yarn.nodemanager.container-queuing-enabled</name>
-    <value>false</value>
+    <name>yarn.nodemanager.opportunistic-containers-max-queue-length</name>
+    <value>0</value>
   </property>
 
   <property>
@@ -2710,7 +2724,7 @@
     The address of the AMRMProxyService listener.
     </description>
     <name>yarn.nodemanager.amrmproxy.address</name>
-    <value>0.0.0.0:8048</value>
+    <value>0.0.0.0:8049</value>
   </property>
 
   <property>
@@ -3034,9 +3048,9 @@
 
   <property>
     <description>
-    The RMAppLifetimeMonitor Service uses this value as lifetime monitor interval
+    The RMAppLifetimeMonitor Service uses this value as monitor interval
     </description>
-    <name>yarn.resourcemanager.application-timeouts.lifetime-monitor.interval-ms</name>
+    <name>yarn.resourcemanager.application-timeouts.monitor.interval-ms</name>
     <value>60000</value>
   </property>
 

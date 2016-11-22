@@ -78,7 +78,8 @@ import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.RequestInterceptor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.queuing.QueuingContainerManagerImpl;
+
+
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
@@ -723,8 +724,9 @@ public class MiniYARNCluster extends CompositeService {
         ContainerExecutor exec, DeletionService del,
         NodeStatusUpdater nodeStatusUpdater, ApplicationACLsManager aclsManager,
         LocalDirsHandlerService dirsHandler) {
-      if (getConfig().getBoolean(YarnConfiguration.NM_CONTAINER_QUEUING_ENABLED,
-          YarnConfiguration.NM_CONTAINER_QUEUING_ENABLED_DEFAULT)) {
+      if (getConfig().getInt(
+          YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH, 0)
+          > 0) {
         return new CustomQueueingContainerManagerImpl(context, exec, del,
             nodeStatusUpdater, metrics, dirsHandler);
       } else {
@@ -864,32 +866,13 @@ public class MiniYARNCluster extends CompositeService {
   }
 
   private class CustomQueueingContainerManagerImpl extends
-      QueuingContainerManagerImpl {
+      ContainerManagerImpl {
 
     public CustomQueueingContainerManagerImpl(Context context,
         ContainerExecutor exec, DeletionService del, NodeStatusUpdater
         nodeStatusUpdater, NodeManagerMetrics metrics,
         LocalDirsHandlerService dirsHandler) {
       super(context, exec, del, nodeStatusUpdater, metrics, dirsHandler);
-    }
-
-    @Override
-    protected ContainersMonitor createContainersMonitor(ContainerExecutor
-        exec) {
-      return new ContainersMonitorImpl(exec, dispatcher, this.context) {
-
-        @Override
-        public void increaseContainersAllocation(ProcessTreeInfo pti) { }
-
-        @Override
-        public void decreaseContainersAllocation(ProcessTreeInfo pti) { }
-
-        @Override
-        public boolean hasResourcesAvailable(
-            ContainersMonitorImpl.ProcessTreeInfo pti) {
-          return true;
-        }
-      };
     }
 
     @Override
@@ -909,6 +892,32 @@ public class MiniYARNCluster extends CompositeService {
       } else {
         LOG.info("CustomAMRMProxyService is disabled");
       }
+    }
+
+    @Override
+    protected ContainersMonitor createContainersMonitor(ContainerExecutor
+        exec) {
+      return new ContainersMonitorImpl(exec, dispatcher, this.context) {
+        @Override
+        public float getVmemRatio() {
+          return 2.0f;
+        }
+
+        @Override
+        public long getVmemAllocatedForContainers() {
+          return 16 * 1024L * 1024L * 1024L;
+        }
+
+        @Override
+        public long getPmemAllocatedForContainers() {
+          return 8 * 1024L * 1024L * 1024L;
+        }
+
+        @Override
+        public long getVCoresAllocatedForContainers() {
+          return 10;
+        }
+      };
     }
   }
 

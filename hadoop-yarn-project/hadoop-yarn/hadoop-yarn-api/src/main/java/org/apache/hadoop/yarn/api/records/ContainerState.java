@@ -36,6 +36,6 @@ public enum ContainerState {
   /** Completed container */
   COMPLETE,
 
-  /** Queued at the NM. */
-  QUEUED
+  /** Scheduled (awaiting resources) at the NM. */
+  SCHEDULED
 }

@@ -140,7 +140,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       // note that for append case, it is possible that we append partial data
       // and then fail. In that case, for the next retry, we either reuse the
       // partial appended data if it is good or we overwrite the whole file
-      if (!toAppend && targetFS.exists(targetPath)) {
+      if (!toAppend) {
         targetFS.delete(targetPath, false);
       }
     }

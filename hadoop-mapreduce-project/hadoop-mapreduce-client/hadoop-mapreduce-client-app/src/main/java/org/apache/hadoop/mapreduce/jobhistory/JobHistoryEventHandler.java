@@ -76,9 +76,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.JsonNodeFactory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.ClientHandlerException;
 
@@ -1622,9 +1622,7 @@ public class JobHistoryEventHandler extends AbstractService
     if (stagingDirFS.exists(fromPath)) {
       LOG.info("Copying " + fromPath.toString() + " to " + toPath.toString());
       // TODO temporarily removing the existing dst
-      if (doneDirFS.exists(toPath)) {
-        doneDirFS.delete(toPath, true);
-      }
+      doneDirFS.delete(toPath, true);
       boolean copied = FileUtil.copy(stagingDirFS, fromPath, doneDirFS, toPath,
           false, getConfig());
 
@@ -1635,10 +1633,6 @@ public class JobHistoryEventHandler extends AbstractService
       doneDirFS.setPermission(toPath, new FsPermission(
           JobHistoryUtils.HISTORY_INTERMEDIATE_FILE_PERMISSIONS));
     }
-  }
-
-  boolean pathExists(FileSystem fileSys, Path path) throws IOException {
-    return fileSys.exists(path);
   }
 
   private String getTempFileName(String srcFile) {

@@ -2679,6 +2679,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.lock.detailed-metrics.enabled</name>
+  <value>false</value>
+  <description>If true, the namenode will keep track of how long various
+    operations hold the Namesystem lock for and emit this as metrics.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.startup.delay.block.deletion.sec</name>
   <value>0</value>
   <description>The delay in seconds at which we will pause the blocks deletion
@@ -3244,6 +3252,16 @@
 </property>
 
 <property>
+  <name>dfs.balancer.max-no-move-interval</name>
+  <value>60000</value>
+  <description>
+    If this specified amount of time has elapsed and no block has been moved
+    out of a source DataNode, on more effort will be made to move blocks out of
+    this DataNode in the current Balancer iteration.
+  </description>
+</property>
+
+<property>
   <name>dfs.block.invalidate.limit</name>
   <value>1000</value>
   <description>
@@ -3361,6 +3379,15 @@
   <value>1048576</value>
   <description>
     Buffer size in bytes for short-circuit local reads.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.read.striped.threadpool.size</name>
+  <value>18</value>
+  <description>
+    The maximum number of threads used for parallel reading
+    in striped layout.
   </description>
 </property>
 
@@ -3823,6 +3850,16 @@
     own fully qualified hostname at startup. The _HOST placeholder
     allows using the same configuration setting on different servers.
     Keytab based login can be enabled with dfs.mover.keytab.enabled.
+  </description>
+</property>
+
+<property>
+  <name>dfs.mover.max-no-move-interval</name>
+  <value>60000</value>
+  <description>
+    If this specified amount of time has elapsed and no block has been moved
+    out of a source DataNode, on more effort will be made to move blocks out of
+    this DataNode in the current Mover iteration.
   </description>
 </property>
 
@@ -4322,6 +4359,29 @@
     <value>true</value>
     <description>Enables routing of webhdfs calls through rpc
       call queue</description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.disk.check.min.gap</name>
+    <value>15m</value>
+    <description>
+      The minimum gap between two successive checks of the same DataNode
+      volume. This setting supports multiple time unit suffixes as described
+      in dfs.heartbeat.interval. If no suffix is specified then milliseconds
+      is assumed.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.disk.check.timeout</name>
+    <value>10m</value>
+    <description>
+      Maximum allowed time for a disk check to complete. If the check does
+      not complete within this time interval then the disk is declared as
+      failed. This setting supports multiple time unit suffixes as described
+      in dfs.heartbeat.interval. If no suffix is specified then milliseconds
+      is assumed.
+    </description>
   </property>
 
 </configuration>

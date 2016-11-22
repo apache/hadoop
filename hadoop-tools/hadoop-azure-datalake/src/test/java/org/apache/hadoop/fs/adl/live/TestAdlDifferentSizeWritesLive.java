@@ -73,7 +73,7 @@ public class TestAdlDifferentSizeWritesLive {
     Path path = new Path("/test/dataIntegrityCheck");
     FileSystem fs = null;
     try {
-      fs = AdlStorageConfiguration.createAdlStorageConnector();
+      fs = AdlStorageConfiguration.createStorageConnector();
     } catch (URISyntaxException e) {
       throw new IllegalStateException("Can not initialize ADL FileSystem. "
           + "Please check fs.defaultFS property.", e);

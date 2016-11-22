@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.examples.terasort;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
@@ -115,7 +116,7 @@ public class TeraOutputFormat extends FileOutputFormat<Text,Text> {
 
     final FileSystem fs = outDir.getFileSystem(jobConf);
 
-    if (fs.exists(outDir)) {
+    try {
       // existing output dir is considered empty iff its only content is the
       // partition file.
       //
@@ -131,6 +132,7 @@ public class TeraOutputFormat extends FileOutputFormat<Text,Text> {
         throw new FileAlreadyExistsException("Output directory " + outDir
             + " already exists");
       }
+    } catch (FileNotFoundException ignored) {
     }
   }
 

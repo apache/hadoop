@@ -38,11 +38,13 @@ public class AssignmentInformation {
   }
 
   public static class AssignmentDetails {
+    public RMContainer rmContainer;
     public ContainerId containerId;
     public String queue;
 
-    public AssignmentDetails(ContainerId containerId, String queue) {
-      this.containerId = containerId;
+    public AssignmentDetails(RMContainer rmContainer, String queue) {
+      this.containerId = rmContainer.getContainerId();
+      this.rmContainer = rmContainer;
       this.queue = queue;
     }
   }
@@ -58,7 +60,7 @@ public class AssignmentInformation {
     for (Operation op : Operation.values()) {
       operationCounts.put(op, 0);
       operationResources.put(op, Resource.newInstance(0, 0));
-      operationDetails.put(op, new ArrayList<AssignmentDetails>());
+      operationDetails.put(op, new ArrayList<>());
     }
   }
 
@@ -98,17 +100,17 @@ public class AssignmentInformation {
     return operationResources.get(Operation.RESERVATION);
   }
 
-  private void addAssignmentDetails(Operation op, ContainerId containerId,
+  private void addAssignmentDetails(Operation op, RMContainer rmContainer,
       String queue) {
-    operationDetails.get(op).add(new AssignmentDetails(containerId, queue));
+    operationDetails.get(op).add(new AssignmentDetails(rmContainer, queue));
   }
 
-  public void addAllocationDetails(ContainerId containerId, String queue) {
-    addAssignmentDetails(Operation.ALLOCATION, containerId, queue);
+  public void addAllocationDetails(RMContainer rmContainer, String queue) {
+    addAssignmentDetails(Operation.ALLOCATION, rmContainer, queue);
   }
 
-  public void addReservationDetails(ContainerId containerId, String queue) {
-    addAssignmentDetails(Operation.RESERVATION, containerId, queue);
+  public void addReservationDetails(RMContainer rmContainer, String queue) {
+    addAssignmentDetails(Operation.RESERVATION, rmContainer, queue);
   }
 
   public List<AssignmentDetails> getAllocationDetails() {
@@ -119,23 +121,31 @@ public class AssignmentInformation {
     return operationDetails.get(Operation.RESERVATION);
   }
 
-  private ContainerId getFirstContainerIdFromOperation(Operation op) {
+  private RMContainer getFirstRMContainerFromOperation(Operation op) {
     if (null != operationDetails.get(op)) {
       List<AssignmentDetails> assignDetails =
           operationDetails.get(op);
       if (!assignDetails.isEmpty()) {
-        return assignDetails.get(0).containerId;
+        return assignDetails.get(0).rmContainer;
       }
     }
     return null;
   }
 
-  public ContainerId getFirstAllocatedOrReservedContainerId() {
-    ContainerId containerId;
-    containerId = getFirstContainerIdFromOperation(Operation.ALLOCATION);
-    if (null != containerId) {
-      return containerId;
+  public RMContainer getFirstAllocatedOrReservedRMContainer() {
+    RMContainer rmContainer;
+    rmContainer = getFirstRMContainerFromOperation(Operation.ALLOCATION);
+    if (null != rmContainer) {
+      return rmContainer;
     }
-    return getFirstContainerIdFromOperation(Operation.RESERVATION);
+    return getFirstRMContainerFromOperation(Operation.RESERVATION);
+  }
+
+  public ContainerId getFirstAllocatedOrReservedContainerId() {
+    RMContainer rmContainer = getFirstAllocatedOrReservedRMContainer();
+    if (null != rmContainer) {
+      return rmContainer.getContainerId();
+    }
+    return null;
   }
 }

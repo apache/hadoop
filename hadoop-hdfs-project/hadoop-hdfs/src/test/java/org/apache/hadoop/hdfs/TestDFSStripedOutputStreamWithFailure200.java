@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.hdfs.TestDFSStripedOutputStreamWithFailure.TestBase;
-
-public class TestDFSStripedOutputStreamWithFailure200 extends TestBase {}
+/**
+ * Test striped file write operation with data node failures.
+ */
+public class TestDFSStripedOutputStreamWithFailure200
+    extends TestDFSStripedOutputStreamWithFailure {}

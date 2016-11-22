@@ -59,9 +59,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica
     .FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSet;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimplePlacementSet;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestContainerResizing {
@@ -97,13 +100,14 @@ public class TestContainerResizing {
     }
 
     @Override
-    public synchronized void allocateContainersToNode(FiCaSchedulerNode node) {
+    public CSAssignment allocateContainersToNode(
+        PlacementSet<FiCaSchedulerNode> ps, boolean withNodeHeartbeat) {
       try {
         Thread.sleep(1000);
       } catch(InterruptedException e) {
         LOG.debug("Thread interrupted.");
       }
-      super.allocateContainersToNode(node);
+      return super.allocateContainersToNode(ps, withNodeHeartbeat);
     }
   }
 
@@ -452,7 +456,7 @@ public class TestContainerResizing {
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 1);
     sentRMContainerLaunched(rm1, containerId1);
 
-    // am1 asks to change its AM container from 1GB to 3GB
+    // am1 asks to change its AM container from 1GB to 7GB
     am1.sendContainerResizingRequest(Arrays.asList(
             UpdateContainerRequest
                 .newInstance(0, containerId1,

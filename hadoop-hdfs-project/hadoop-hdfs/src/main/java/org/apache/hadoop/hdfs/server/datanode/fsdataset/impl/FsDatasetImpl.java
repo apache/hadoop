@@ -364,14 +364,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     Set<StorageLocation> failedLocationSet = Sets.newHashSetWithExpectedSize(
         dataLocations.size());
     for (StorageLocation sl: dataLocations) {
-      LOG.info("Adding to failedLocationSet " + sl);
       failedLocationSet.add(sl);
     }
     for (Iterator<Storage.StorageDirectory> it = storage.dirIterator();
          it.hasNext(); ) {
       Storage.StorageDirectory sd = it.next();
       failedLocationSet.remove(sd.getStorageLocation());
-      LOG.info("Removing from failedLocationSet " + sd.getStorageLocation());
     }
     List<VolumeFailureInfo> volumeFailureInfos = Lists.newArrayListWithCapacity(
         failedLocationSet.size());

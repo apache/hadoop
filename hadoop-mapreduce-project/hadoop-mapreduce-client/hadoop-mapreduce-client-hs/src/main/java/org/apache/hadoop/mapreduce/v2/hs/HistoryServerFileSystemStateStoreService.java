@@ -182,7 +182,7 @@ public class HistoryServerFileSystemStateStoreService
     Path keyPath = new Path(tokenKeysStatePath,
         TOKEN_MASTER_KEY_FILE_PREFIX + key.getKeyId());
     if (fs.exists(keyPath)) {
-      throw new IOException(keyPath + " already exists");
+      throw new FileAlreadyExistsException(keyPath + " already exists");
     }
 
     ByteArrayOutputStream memStream = new ByteArrayOutputStream();

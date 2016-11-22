@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -55,22 +56,19 @@ public class TestLeaseRecoveryStriped {
   public static final Log LOG = LogFactory
       .getLog(TestLeaseRecoveryStriped.class);
 
-  private static final ErasureCodingPolicy ecPolicy =
-      StripedFileTestUtil.TEST_EC_POLICY;
-  private static final int NUM_DATA_BLOCKS = StripedFileTestUtil.NUM_DATA_BLOCKS;
-  private static final int NUM_PARITY_BLOCKS = StripedFileTestUtil.NUM_PARITY_BLOCKS;
-  private static final int CELL_SIZE = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
-  private static final int STRIPE_SIZE = NUM_DATA_BLOCKS * CELL_SIZE;
-  private static final int STRIPES_PER_BLOCK = 15;
-  private static final int BLOCK_SIZE = CELL_SIZE * STRIPES_PER_BLOCK;
-  private static final int BLOCK_GROUP_SIZE = BLOCK_SIZE * NUM_DATA_BLOCKS;
+  private final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private final int dataBlocks = ecPolicy.getNumDataUnits();
+  private final int parityBlocks = ecPolicy.getNumParityUnits();
+  private final int cellSize = ecPolicy.getCellSize();
+  private final int stripSize = dataBlocks * cellSize;
+  private final int stripesPerBlock = 15;
+  private final int blockSize = cellSize * stripesPerBlock;
+  private final int blockGroupSize = blockSize * dataBlocks;
   private static final int bytesPerChecksum = 512;
 
   static {
     GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
-    StripedFileTestUtil.stripesPerBlock = STRIPES_PER_BLOCK;
-    StripedFileTestUtil.blockSize = BLOCK_SIZE;
-    StripedFileTestUtil.BLOCK_GROUP_SIZE = BLOCK_GROUP_SIZE;
   }
 
   static private final String fakeUsername = "fakeUser1";
@@ -85,13 +83,13 @@ public class TestLeaseRecoveryStriped {
   @Before
   public void setup() throws IOException {
     conf = new HdfsConfiguration();
-    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setLong(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 6000L);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY,
         false);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
-    final int numDNs = NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS;
+    final int numDNs = dataBlocks + parityBlocks;
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.waitActive();
     dfs = cluster.getFileSystem();
@@ -106,7 +104,7 @@ public class TestLeaseRecoveryStriped {
     }
   }
 
-  private static int[][][] getBlockLengthsSuite() {
+  private int[][][] getBlockLengthsSuite() {
     final int groups = 4;
     final int minNumCell = 3;
     final int maxNumCell = 11;
@@ -120,13 +118,13 @@ public class TestLeaseRecoveryStriped {
         delta = bytesPerChecksum;
       }
       int[][] suite = new int[2][];
-      int[] lens = new int[NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS];
+      int[] lens = new int[dataBlocks + parityBlocks];
       long[] lenInLong = new long[lens.length];
       for (int j = 0; j < lens.length; j++) {
         int numCell = random.nextInt(maxNumCell - minNumCell + 1) + minNumCell;
-        int numDelta = j < NUM_DATA_BLOCKS ?
+        int numDelta = j < dataBlocks ?
             random.nextInt(maxNumDelta - minNumDelta + 1) + minNumDelta : 0;
-        lens[j] = CELL_SIZE * numCell + delta * numDelta;
+        lens[j] = cellSize * numCell + delta * numDelta;
         lenInLong[j] = lens[j];
       }
       suite[0] = lens;
@@ -137,13 +135,13 @@ public class TestLeaseRecoveryStriped {
     return blkLenSuite;
   }
 
-  private static final int[][][] BLOCK_LENGTHS_SUITE = getBlockLengthsSuite();
+  private final int[][][] blockLengthsSuite = getBlockLengthsSuite();
 
   @Test
   public void testLeaseRecovery() throws Exception {
-    for (int i = 0; i < BLOCK_LENGTHS_SUITE.length; i++) {
-      int[] blockLengths = BLOCK_LENGTHS_SUITE[i][0];
-      int safeLength = BLOCK_LENGTHS_SUITE[i][1][0];
+    for (int i = 0; i < blockLengthsSuite.length; i++) {
+      int[] blockLengths = blockLengthsSuite[i][0];
+      int safeLength = blockLengthsSuite[i][1][0];
       try {
         runTest(blockLengths, safeLength);
       } catch (Throwable e) {
@@ -162,20 +160,20 @@ public class TestLeaseRecoveryStriped {
     List<Long> oldGS = new ArrayList<>();
     oldGS.add(1001L);
     StripedFileTestUtil.checkData(dfs, p, safeLength,
-        new ArrayList<DatanodeInfo>(), oldGS);
+        new ArrayList<DatanodeInfo>(), oldGS, blockGroupSize);
     // After recovery, storages are reported by primary DN. we should verify
     // storages reported by blockReport.
     cluster.restartNameNode(true);
     cluster.waitFirstBRCompleted(0, 10000);
     StripedFileTestUtil.checkData(dfs, p, safeLength,
-        new ArrayList<DatanodeInfo>(), oldGS);
+        new ArrayList<DatanodeInfo>(), oldGS, blockGroupSize);
   }
 
   private void writePartialBlocks(int[] blockLengths) throws Exception {
     final FSDataOutputStream out = dfs.create(p);
     final DFSStripedOutputStream stripedOut = (DFSStripedOutputStream) out
         .getWrappedStream();
-    int length = (STRIPES_PER_BLOCK - 1) * STRIPE_SIZE;
+    int length = (stripesPerBlock - 1) * stripSize;
     int[] posToKill = getPosToKill(blockLengths);
     int checkingPos = nextCheckingPos(posToKill, 0);
     try {
@@ -209,20 +207,20 @@ public class TestLeaseRecoveryStriped {
   }
 
   private int[] getPosToKill(int[] blockLengths) {
-    int[] posToKill = new int[NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS];
-    for (int i = 0; i < NUM_DATA_BLOCKS; i++) {
-      int numStripe = (blockLengths[i] - 1) / CELL_SIZE;
-      posToKill[i] = numStripe * STRIPE_SIZE + i * CELL_SIZE
-          + blockLengths[i] % CELL_SIZE;
-      if (blockLengths[i] % CELL_SIZE == 0) {
-        posToKill[i] += CELL_SIZE;
+    int[] posToKill = new int[dataBlocks + parityBlocks];
+    for (int i = 0; i < dataBlocks; i++) {
+      int numStripe = (blockLengths[i] - 1) / cellSize;
+      posToKill[i] = numStripe * stripSize + i * cellSize
+          + blockLengths[i] % cellSize;
+      if (blockLengths[i] % cellSize == 0) {
+        posToKill[i] += cellSize;
       }
     }
-    for (int i = NUM_DATA_BLOCKS; i < NUM_DATA_BLOCKS
-        + NUM_PARITY_BLOCKS; i++) {
-      Preconditions.checkArgument(blockLengths[i] % CELL_SIZE == 0);
-      int numStripe = (blockLengths[i]) / CELL_SIZE;
-      posToKill[i] = numStripe * STRIPE_SIZE;
+    for (int i = dataBlocks; i < dataBlocks
+        + parityBlocks; i++) {
+      Preconditions.checkArgument(blockLengths[i] % cellSize == 0);
+      int numStripe = (blockLengths[i]) / cellSize;
+      posToKill[i] = numStripe * stripSize;
     }
     return posToKill;
   }

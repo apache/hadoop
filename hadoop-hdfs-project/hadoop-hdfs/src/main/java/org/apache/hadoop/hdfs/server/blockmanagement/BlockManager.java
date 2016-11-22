@@ -3232,24 +3232,26 @@ public class BlockManager implements BlockStatsMXBean {
         while (processed < numBlocksPerIteration && blocksItr.hasNext()) {
           BlockInfo block = blocksItr.next();
           MisReplicationResult res = processMisReplicatedBlock(block);
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("block " + block + ": " + res);
-          }
           switch (res) {
           case UNDER_REPLICATED:
+            LOG.trace("under replicated block {}: {}", block, res);
             nrUnderReplicated++;
             break;
           case OVER_REPLICATED:
+            LOG.trace("over replicated block {}: {}", block, res);
             nrOverReplicated++;
             break;
           case INVALID:
+            LOG.trace("invalid block {}: {}", block, res);
             nrInvalid++;
             break;
           case POSTPONE:
+            LOG.trace("postpone block {}: {}", block, res);
             nrPostponed++;
             postponeBlock(block);
             break;
           case UNDER_CONSTRUCTION:
+            LOG.trace("under construction block {}: {}", block, res);
             nrUnderConstruction++;
             break;
           case OK:

@@ -231,38 +231,36 @@ public class HistoryFileManager extends AbstractService {
         JobId firstMoveFailedKey = null;
         int moveFailedCount = 0;
 
-        while(cache.size() > maxSize && keys.hasNext()) {
+        while (cache.size() > maxSize && keys.hasNext()) {
           JobId key = keys.next();
           HistoryFileInfo firstValue = cache.get(key);
-          if(firstValue != null) {
-            synchronized(firstValue) {
-              if (firstValue.isMovePending()) {
-                if(firstValue.didMoveFail() &&
-                    firstValue.jobIndexInfo.getFinishTime() <= cutoff) {
-                  cache.remove(key);
-                  //Now lets try to delete it
-                  try {
-                    firstValue.delete();
-                  } catch (IOException e) {
-                    LOG.error("Error while trying to delete history files" +
-                    		" that could not be moved to done.", e);
-                  }
-                } else {
-                  if (firstValue.didMoveFail()) {
-                    if (moveFailedCount == 0) {
-                      firstMoveFailedKey = key;
-                    }
-                    moveFailedCount += 1;
-                  } else {
-                    if (inIntermediateCount == 0) {
-                      firstInIntermediateKey = key;
-                    }
-                    inIntermediateCount += 1;
-                  }
+          if (firstValue != null) {
+            if (firstValue.isMovePending()) {
+              if (firstValue.didMoveFail() &&
+                  firstValue.jobIndexInfo.getFinishTime() <= cutoff) {
+                cache.remove(key);
+                // Now lets try to delete it
+                try {
+                  firstValue.delete();
+                } catch (IOException e) {
+                  LOG.error("Error while trying to delete history files" +
+                      " that could not be moved to done.", e);
                 }
               } else {
-                cache.remove(key);
+                if (firstValue.didMoveFail()) {
+                  if (moveFailedCount == 0) {
+                    firstMoveFailedKey = key;
+                  }
+                  moveFailedCount += 1;
+                } else {
+                  if (inIntermediateCount == 0) {
+                    firstInIntermediateKey = key;
+                  }
+                  inIntermediateCount += 1;
+                }
               }
+            } else {
+              cache.remove(key);
             }
           }
         }

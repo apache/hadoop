@@ -67,6 +67,9 @@ public class MutableMetricsFactory {
     if (cls == MutableRates.class) {
       return new MutableRates(registry);
     }
+    if (cls == MutableRatesWithAggregation.class) {
+      return registry.newRatesWithAggregation(info.name());
+    }
     if (cls == MutableStat.class) {
       return registry.newStat(info.name(), info.description(),
                               annotation.sampleName(), annotation.valueName(),

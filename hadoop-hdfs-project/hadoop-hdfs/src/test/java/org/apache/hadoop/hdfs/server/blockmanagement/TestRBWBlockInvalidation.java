@@ -41,8 +41,10 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.TestDNFencing.RandomDeleterPolicy;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 /**
@@ -141,7 +143,7 @@ public class TestRBWBlockInvalidation {
    * were RWR replicas with out-of-date genstamps, the NN could accidentally
    * delete good replicas instead of the bad replicas.
    */
-  @Test(timeout=60000)
+  @Test(timeout=120000)
   public void testRWRInvalidation() throws Exception {
     Configuration conf = new HdfsConfiguration();
 
@@ -156,10 +158,11 @@ public class TestRBWBlockInvalidation {
     // Speed up the test a bit with faster heartbeats.
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
 
+    int numFiles = 10;
     // Test with a bunch of separate files, since otherwise the test may
     // fail just due to "good luck", even if a bug is present.
     List<Path> testPaths = Lists.newArrayList();
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < numFiles; i++) {
       testPaths.add(new Path("/test" + i));
     }
     
@@ -176,8 +179,11 @@ public class TestRBWBlockInvalidation {
           out.writeBytes("old gs data\n");
           out.hflush();
         }
-        
-        
+
+        for (Path path : testPaths) {
+          DFSTestUtil.waitReplication(cluster.getFileSystem(), path, (short)2);
+        }
+
         // Shutdown one of the nodes in the pipeline
         DataNodeProperties oldGenstampNode = cluster.stopDataNode(0);
 
@@ -195,7 +201,11 @@ public class TestRBWBlockInvalidation {
           cluster.getFileSystem().setReplication(path, (short)1);
           out.close();
         }
-        
+
+        for (Path path : testPaths) {
+          DFSTestUtil.waitReplication(cluster.getFileSystem(), path, (short)1);
+        }
+
         // Upon restart, there will be two replicas, one with an old genstamp
         // and one current copy. This test wants to ensure that the old genstamp
         // copy is the one that is deleted.
@@ -218,7 +228,8 @@ public class TestRBWBlockInvalidation {
         cluster.triggerHeartbeats();
         HATestUtil.waitForDNDeletions(cluster);
         cluster.triggerDeletionReports();
-        
+
+        waitForNumTotalBlocks(cluster, numFiles);
         // Make sure we can still read the blocks.
         for (Path path : testPaths) {
           String ret = DFSTestUtil.readFile(cluster.getFileSystem(), path);
@@ -231,5 +242,27 @@ public class TestRBWBlockInvalidation {
       cluster.shutdown();
     }
 
+  }
+
+  private void waitForNumTotalBlocks(final MiniDFSCluster cluster,
+      final int numTotalBlocks) throws Exception {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+
+      @Override
+      public Boolean get() {
+        try {
+          cluster.triggerBlockReports();
+
+          // Wait total blocks
+          if (cluster.getNamesystem().getBlocksTotal() == numTotalBlocks) {
+            return true;
+          }
+        } catch (Exception ignored) {
+          // Ignore the exception
+        }
+
+        return false;
+      }
+    }, 1000, 60000);
   }
 }

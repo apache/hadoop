@@ -1577,6 +1577,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
     // start RM
     final MockRM rm1 = createMockRM(conf, memStore);
+    rm1.disableDrainEventsImplicitly();
     rm1.start();
 
     // create apps.

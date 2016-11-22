@@ -36,6 +36,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 import javax.crypto.spec.SecretKeySpec;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -167,9 +168,9 @@ public class JavaKeyStoreProvider extends KeyProvider {
       // rewrite the keystore in flush()
       permissions = perm;
     } catch (KeyStoreException e) {
-      throw new IOException("Can't create keystore", e);
+      throw new IOException("Can't create keystore: " + e, e);
     } catch (GeneralSecurityException e) {
-      throw new IOException("Can't load keystore " + path, e);
+      throw new IOException("Can't load keystore " + path + " : " + e , e);
     }
   }
 
@@ -190,9 +191,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
     try {
       perm = loadFromPath(path, password);
       // Remove _OLD if exists
-      if (fs.exists(backupPath)) {
-        fs.delete(backupPath, true);
-      }
+      fs.delete(backupPath, true);
       LOG.debug("KeyStore loaded successfully !!");
     } catch (IOException ioe) {
       // If file is corrupted for some reason other than
@@ -260,9 +259,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
         LOG.debug(String.format("KeyStore loaded successfully from '%s'!!",
             pathToLoad));
       }
-      if (fs.exists(pathToDelete)) {
-        fs.delete(pathToDelete, true);
-      }
+      fs.delete(pathToDelete, true);
     } catch (IOException e) {
       // Check for password issue : don't want to trash file due
       // to wrong password
@@ -539,13 +536,15 @@ public class JavaKeyStoreProvider extends KeyProvider {
         return;
       }
       // Might exist if a backup has been restored etc.
-      if (fs.exists(newPath)) {
+      try {
         renameOrFail(newPath, new Path(newPath.toString()
             + "_ORPHANED_" + System.currentTimeMillis()));
+      } catch (FileNotFoundException ignored) {
       }
-      if (fs.exists(oldPath)) {
+      try {
         renameOrFail(oldPath, new Path(oldPath.toString()
             + "_ORPHANED_" + System.currentTimeMillis()));
+      } catch (FileNotFoundException ignored) {
       }
       // put all of the updates into the keystore
       for(Map.Entry<String, Metadata> entry: cache.entrySet()) {
@@ -601,9 +600,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
     // Rename _NEW to CURRENT
     renameOrFail(newPath, path);
     // Delete _OLD
-    if (fs.exists(oldPath)) {
-      fs.delete(oldPath, true);
-    }
+    fs.delete(oldPath, true);
   }
 
   protected void writeToNew(Path newPath) throws IOException {
@@ -623,12 +620,12 @@ public class JavaKeyStoreProvider extends KeyProvider {
 
   protected boolean backupToOld(Path oldPath)
       throws IOException {
-    boolean fileExisted = false;
-    if (fs.exists(path)) {
+    try {
       renameOrFail(path, oldPath);
-      fileExisted = true;
+      return true;
+    } catch (FileNotFoundException e) {
+      return false;
     }
-    return fileExisted;
   }
 
   private void revertFromOld(Path oldPath, boolean fileExisted)

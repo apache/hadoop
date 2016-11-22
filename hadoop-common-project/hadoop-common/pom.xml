@@ -173,8 +173,13 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>commons-configuration</groupId>
-      <artifactId>commons-configuration</artifactId>
+      <groupId>commons-beanutils</groupId>
+      <artifactId>commons-beanutils</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-configuration2</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -369,7 +374,6 @@
           </execution>
           <execution>
             <id>compile-protoc</id>
-            <phase>generate-sources</phase>
             <goals>
               <goal>protoc</goal>
             </goals>
@@ -397,14 +401,12 @@
                   <include>GenericRefreshProtocol.proto</include>
                 </includes>
               </source>
-              <output>${project.build.directory}/generated-sources/java</output>
             </configuration>
           </execution>
           <execution>
             <id>compile-test-protoc</id>
-            <phase>generate-test-sources</phase>
             <goals>
-              <goal>protoc</goal>
+              <goal>test-protoc</goal>
             </goals>
             <configuration>
               <protocVersion>${protobuf.version}</protocVersion>
@@ -419,7 +421,6 @@
                   <include>test_rpc_service.proto</include>
                 </includes>
               </source>
-              <output>${project.build.directory}/generated-test-sources/java</output>
             </configuration>
           </execution>
           <execution>

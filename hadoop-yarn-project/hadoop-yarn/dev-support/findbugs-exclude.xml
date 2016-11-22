@@ -574,4 +574,13 @@
     </Or>
     <Bug pattern="VO_VOLATILE_INCREMENT" />
   </Match>
+
+
+  <!-- Ignore false alert for UL_UNRELEASED_LOCK_EXCEPTION_PATH -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler$ResourceCommitterService"/>
+    <Method name="run" />
+    <Bug pattern="UL_UNRELEASED_LOCK_EXCEPTION_PATH" />
+  </Match>
+
 </FindBugsFilter>

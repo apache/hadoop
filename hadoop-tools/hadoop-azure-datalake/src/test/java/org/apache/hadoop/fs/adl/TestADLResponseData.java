@@ -24,15 +24,16 @@ import org.apache.hadoop.fs.FileStatus;
 import java.util.Random;
 
 /**
- * This class is responsible to provide generic test methods for mock up test
- * to generate stub response for a network request.
+ * Mock up response data returned from Adl storage account.
  */
 public final class TestADLResponseData {
 
-  private TestADLResponseData() {}
+  private TestADLResponseData() {
+
+  }
 
   public static String getGetFileStatusJSONResponse(FileStatus status) {
-    String str = "{\"FileStatus\":{\"length\":" + status.getLen() + "," +
+    return "{\"FileStatus\":{\"length\":" + status.getLen() + "," +
         "\"pathSuffix\":\"\",\"type\":\"" + (status.isDirectory() ?
         "DIRECTORY" :
         "FILE") + "\"" +
@@ -42,21 +43,27 @@ public final class TestADLResponseData {
         ",\"replication\":" + status.getReplication() + ",\"permission\":\""
         + status.getPermission() + "\",\"owner\":\"" + status.getOwner()
         + "\",\"group\":\"" + status.getGroup() + "\"}}";
-
-    return str;
   }
 
   public static String getGetFileStatusJSONResponse() {
     return getGetFileStatusJSONResponse(4194304);
   }
 
+  public static String getGetAclStatusJSONResponse() {
+    return "{\n" + "    \"AclStatus\": {\n" + "        \"entries\": [\n"
+        + "            \"user:carla:rw-\", \n" + "            \"group::r-x\"\n"
+        + "        ], \n" + "        \"group\": \"supergroup\", \n"
+        + "        \"owner\": \"hadoop\", \n"
+        + "        \"permission\":\"775\",\n" + "        \"stickyBit\": false\n"
+        + "    }\n" + "}";
+  }
+
   public static String getGetFileStatusJSONResponse(long length) {
-    String str = "{\"FileStatus\":{\"length\":" + length + "," +
+    return "{\"FileStatus\":{\"length\":" + length + "," +
         "\"pathSuffix\":\"\",\"type\":\"FILE\",\"blockSize\":268435456," +
         "\"accessTime\":1452103827023,\"modificationTime\":1452103827023," +
         "\"replication\":0,\"permission\":\"777\"," +
         "\"owner\":\"NotSupportYet\",\"group\":\"NotSupportYet\"}}";
-    return str;
   }
 
   public static String getListFileStatusJSONResponse(int dirSize) {
@@ -71,40 +78,60 @@ public final class TestADLResponseData {
     }
 
     list = list.substring(0, list.length() - 1);
-    String str = "{\"FileStatuses\":{\"FileStatus\":[" + list + "]}}";
-
-    return str;
+    return "{\"FileStatuses\":{\"FileStatus\":[" + list + "]}}";
   }
 
   public static String getJSONResponse(boolean status) {
-    String str = "{\"boolean\":" + status + "}";
-    return str;
+    return "{\"boolean\":" + status + "}";
   }
 
   public static String getErrorIllegalArgumentExceptionJSONResponse() {
-    String str = "{\n" +
+    return "{\n" +
         "  \"RemoteException\":\n" +
         "  {\n" +
         "    \"exception\"    : \"IllegalArgumentException\",\n" +
         "    \"javaClassName\": \"java.lang.IllegalArgumentException\",\n" +
-        "    \"message\"      : \"Bad Offset 0x83090015\"" +
+        "    \"message\"      : \"Invalid\"" +
         "  }\n" +
         "}";
+  }
 
-    return str;
+  public static String getErrorBadOffsetExceptionJSONResponse() {
+    return "{\n" +
+        "  \"RemoteException\":\n" +
+        "  {\n" +
+        "    \"exception\"    : \"BadOffsetException\",\n" +
+        "    \"javaClassName\": \"org.apache.hadoop.fs.adl"
+        + ".BadOffsetException\",\n" +
+        "    \"message\"      : \"Invalid\"" +
+        "  }\n" +
+        "}";
   }
 
   public static String getErrorInternalServerExceptionJSONResponse() {
-    String str = "{\n" +
+    return "{\n" +
         "  \"RemoteException\":\n" +
         "  {\n" +
-        "    \"exception\"    : \"RumtimeException\",\n" +
-        "    \"javaClassName\": \"java.lang.RumtimeException\",\n" +
+        "    \"exception\"    : \"RuntimeException\",\n" +
+        "    \"javaClassName\": \"java.lang.RuntimeException\",\n" +
         "    \"message\"      : \"Internal Server Error\"" +
         "  }\n" +
         "}";
+  }
 
-    return str;
+  public static String getAccessControlException() {
+    return "{\n" + "  \"RemoteException\":\n" + "  {\n"
+        + "    \"exception\"    : \"AccessControlException\",\n"
+        + "    \"javaClassName\": \"org.apache.hadoop.security"
+        + ".AccessControlException\",\n"
+        + "    \"message\"      : \"Permission denied: ...\"\n" + "  }\n" + "}";
+  }
+
+  public static String getFileNotFoundException() {
+    return "{\n" + "  \"RemoteException\":\n" + "  {\n"
+        + "    \"exception\"    : \"FileNotFoundException\",\n"
+        + "    \"javaClassName\": \"java.io.FileNotFoundException\",\n"
+        + "    \"message\"      : \"File does not exist\"\n" + "  }\n" + "}";
   }
 
   public static byte[] getRandomByteArrayData() {

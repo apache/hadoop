@@ -674,10 +674,9 @@ public class FileOutputCommitter extends OutputCommitter {
       if (algorithmVersion == 1) {
         if (fs.exists(previousCommittedTaskPath)) {
           Path committedTaskPath = getCommittedTaskPath(context);
-          if (fs.exists(committedTaskPath)) {
-            if (!fs.delete(committedTaskPath, true)) {
-              throw new IOException("Could not delete "+committedTaskPath);
-            }
+          if (!fs.delete(committedTaskPath, true) &&
+              fs.exists(committedTaskPath)) {
+            throw new IOException("Could not delete " + committedTaskPath);
           }
           //Rename can fail if the parent directory does not yet exist.
           Path committedParent = committedTaskPath.getParent();
@@ -693,11 +692,12 @@ public class FileOutputCommitter extends OutputCommitter {
         // essentially a no-op, but for backwards compatibility
         // after upgrade to the new fileOutputCommitter,
         // check if there are any output left in committedTaskPath
-        if (fs.exists(previousCommittedTaskPath)) {
+        try {
+          FileStatus from = fs.getFileStatus(previousCommittedTaskPath);
           LOG.info("Recovering task for upgrading scenario, moving files from "
               + previousCommittedTaskPath + " to " + outputPath);
-          FileStatus from = fs.getFileStatus(previousCommittedTaskPath);
           mergePaths(fs, from, outputPath);
+        } catch (FileNotFoundException ignored) {
         }
         LOG.info("Done recovering task " + attemptId);
       }

@@ -23,7 +23,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.junit.After;
@@ -41,11 +43,13 @@ import static org.junit.Assert.assertTrue;
 
 public class TestSafeModeWithStripedFile {
 
-  static final short DATA_BLK_NUM = StripedFileTestUtil.NUM_DATA_BLOCKS;
-  static final short PARITY_BLK_NUM = StripedFileTestUtil.NUM_PARITY_BLOCKS;
-  static final int numDNs = DATA_BLK_NUM + PARITY_BLK_NUM;
-  static final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
-  static final int blockSize = cellSize * 2;
+  private final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
+  private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
+  private final int numDNs = dataBlocks + parityBlocks;
+  private final int cellSize = ecPolicy.getCellSize();
+  private final int blockSize = cellSize * 2;
 
   private MiniDFSCluster cluster;
   private Configuration conf;
@@ -78,7 +82,7 @@ public class TestSafeModeWithStripedFile {
 
   @Test
   public void testStripedFile1() throws IOException {
-    int numCell = DATA_BLK_NUM - 1;
+    int numCell = dataBlocks - 1;
     doTest(cellSize * numCell, numCell);
   }
 
@@ -101,7 +105,7 @@ public class TestSafeModeWithStripedFile {
     // If we only have 1 block, NN won't enter safemode in the first place
     // because the threshold is 0 blocks.
     // So we need to add another 2 blocks.
-    int bigSize = blockSize * DATA_BLK_NUM * 2;
+    int bigSize = blockSize * dataBlocks * 2;
     Path bigFilePath = new Path("/testStripedFile_" + bigSize);
     data = StripedFileTestUtil.generateBytes(bigSize);
     DFSTestUtil.writeFile(fs, bigFilePath, data);
@@ -143,7 +147,7 @@ public class TestSafeModeWithStripedFile {
     assertEquals(1, NameNodeAdapter.getSafeModeSafeBlocks(nn));
 
     // the 2 blocks of bigFile need DATA_BLK_NUM storages to be safe
-    for (int i = minStorages; i < DATA_BLK_NUM - 1; i++) {
+    for (int i = minStorages; i < dataBlocks - 1; i++) {
       cluster.restartDataNode(dnprops.remove(0));
       cluster.waitActive();
       cluster.triggerBlockReports();

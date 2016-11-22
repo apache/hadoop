@@ -117,6 +117,9 @@ public class ITestS3AMiniYarnCluster extends AbstractS3ATestBase {
     Map<String, Integer> result = new HashMap<>();
     for (String line : outputAsStr.split("\n")) {
       String[] tokens = line.split("\t");
+      assertTrue("Not enough tokens in in string \" "+ line
+            + "\" from output \"" + outputAsStr + "\"",
+          tokens.length > 1);
       result.put(tokens[0], Integer.parseInt(tokens[1]));
     }
     return result;

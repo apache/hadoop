@@ -34,6 +34,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -66,6 +67,8 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.SettableFuture;
 
 /**
  * This class manages the list of applications for the resource manager. 
@@ -179,6 +182,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           .add("finalStatus", app.getFinalApplicationStatus())
           .add("memorySeconds", metrics.getMemorySeconds())
           .add("vcoreSeconds", metrics.getVcoreSeconds())
+          .add("preemptedMemorySeconds", metrics.getPreemptedMemorySeconds())
+          .add("preemptedVcoreSeconds", metrics.getPreemptedVcoreSeconds())
           .add("preemptedAMContainers", metrics.getNumAMContainersPreempted())
           .add("preemptedNonAMContainers", metrics.getNumNonAMContainersPreempted())
           .add("preemptedResources", metrics.getResourcePreempted())
@@ -352,9 +357,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
     // Verify and get the update application priority and set back to
     // submissionContext
-    Priority appPriority = rmContext.getScheduler()
-        .checkAndGetApplicationPriority(submissionContext.getPriority(), user,
-            submissionContext.getQueue(), applicationId);
+    Priority appPriority = scheduler.checkAndGetApplicationPriority(
+        submissionContext.getPriority(), user, submissionContext.getQueue(),
+        applicationId);
     submissionContext.setPriority(appPriority);
 
     UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(user);
@@ -508,5 +513,82 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       default:
         LOG.error("Invalid eventtype " + event.getType() + ". Ignoring!");
       }
+  }
+
+  // transaction method.
+  public void updateApplicationTimeout(RMApp app,
+      Map<ApplicationTimeoutType, String> newTimeoutInISO8601Format)
+      throws YarnException {
+    ApplicationId applicationId = app.getApplicationId();
+    synchronized (applicationId) {
+      if (app.isAppInCompletedStates()) {
+        return;
+      }
+
+      Map<ApplicationTimeoutType, Long> newExpireTime = RMServerUtils
+          .validateISO8601AndConvertToLocalTimeEpoch(newTimeoutInISO8601Format);
+
+      SettableFuture<Object> future = SettableFuture.create();
+
+      Map<ApplicationTimeoutType, Long> currentExpireTimeouts =
+          app.getApplicationTimeouts();
+      currentExpireTimeouts.putAll(newExpireTime);
+
+      ApplicationStateData appState =
+          ApplicationStateData.newInstance(app.getSubmitTime(),
+              app.getStartTime(), app.getApplicationSubmissionContext(),
+              app.getUser(), app.getCallerContext());
+      appState.setApplicationTimeouts(currentExpireTimeouts);
+
+      // update to state store. Though it synchronous call, update via future to
+      // know any exception has been set. It is required because in non-HA mode,
+      // state-store errors are skipped.
+      this.rmContext.getStateStore()
+          .updateApplicationStateSynchronously(appState, false, future);
+
+      Futures.get(future, YarnException.class);
+
+      // update in-memory
+      ((RMAppImpl) app).updateApplicationTimeout(newExpireTime);
+    }
+  }
+
+  /**
+   * updateApplicationPriority will invoke scheduler api to update the
+   * new priority to RM and StateStore.
+   * @param applicationId Application Id
+   * @param newAppPriority proposed new application priority
+   * @throws YarnException Handle exceptions
+   */
+  public void updateApplicationPriority(ApplicationId applicationId,
+      Priority newAppPriority) throws YarnException {
+    RMApp app = this.rmContext.getRMApps().get(applicationId);
+
+    synchronized (applicationId) {
+      if (app.isAppInCompletedStates()) {
+        return;
+      }
+
+      // Create a future object to capture exceptions from StateStore.
+      SettableFuture<Object> future = SettableFuture.create();
+
+      // Invoke scheduler api to update priority in scheduler and to
+      // State Store.
+      Priority appPriority = rmContext.getScheduler()
+          .updateApplicationPriority(newAppPriority, applicationId, future);
+
+      if (app.getApplicationPriority().equals(appPriority)) {
+        return;
+      }
+
+      Futures.get(future, YarnException.class);
+
+      // update in-memory
+      ((RMAppImpl) app).setApplicationPriority(appPriority);
+    }
+
+    // Update the changed application state to timeline server
+    rmContext.getSystemMetricsPublisher().appUpdated(app,
+        System.currentTimeMillis());
   }
 }

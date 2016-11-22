@@ -22,6 +22,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
+import org.apache.hadoop.service.Service;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -66,8 +67,8 @@ public class TestKill {
     Job job = app.submit(new Configuration());
     
     //wait and vailidate for Job to become RUNNING
-    app.waitForState(job, JobState.RUNNING);
-    
+    app.waitForInternalState((JobImpl) job, JobStateInternal.RUNNING);
+
     //send the kill signal to Job
     app.getContext().getEventHandler().handle(
         new JobEvent(job.getID(), JobEventType.JOB_KILL));
@@ -77,6 +78,10 @@ public class TestKill {
 
     //wait and validate for Job to be KILLED
     app.waitForState(job, JobState.KILLED);
+    // make sure all events are processed. The AM is stopped
+    // only when all tasks and task attempts have been killed
+    app.waitForState(Service.STATE.STOPPED);
+
     Map<TaskId,Task> tasks = job.getTasks();
     Assert.assertEquals("No of tasks is not correct", 1, 
         tasks.size());

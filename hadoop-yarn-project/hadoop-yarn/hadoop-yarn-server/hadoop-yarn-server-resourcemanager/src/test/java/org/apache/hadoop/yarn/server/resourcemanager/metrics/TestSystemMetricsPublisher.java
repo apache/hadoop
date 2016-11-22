@@ -126,6 +126,7 @@ public class TestSystemMetricsPublisher {
             .thenReturn(Collections.singletonList("java -Xmx1024m"));
         when(asc.getAMContainerSpec()).thenReturn(containerLaunchContext);
         when(app.getApplicationSubmissionContext()).thenReturn(asc);
+        when(app.getApplicationPriority()).thenReturn(Priority.newInstance(1));
         metricsPublisher.appUpdated(app, 4L);
       } else {
         metricsPublisher.appUpdated(app, 4L);
@@ -223,6 +224,16 @@ public class TestSystemMetricsPublisher {
             app.getRMAppMetrics().getVcoreSeconds(),
             Long.parseLong(entity.getOtherInfo()
                 .get(ApplicationMetricsConstants.APP_CPU_METRICS).toString()));
+        Assert.assertEquals(
+            app.getRMAppMetrics().getPreemptedMemorySeconds(),
+            Long.parseLong(entity.getOtherInfo()
+                .get(ApplicationMetricsConstants.APP_MEM_PREEMPT_METRICS)
+                .toString()));
+        Assert.assertEquals(
+            app.getRMAppMetrics().getPreemptedVcoreSeconds(),
+            Long.parseLong(entity.getOtherInfo()
+                .get(ApplicationMetricsConstants.APP_CPU_PREEMPT_METRICS)
+                .toString()));
       }
       Assert.assertEquals("context", entity.getOtherInfo()
           .get(ApplicationMetricsConstants.YARN_APP_CALLER_CONTEXT));
@@ -496,7 +507,8 @@ public class TestSystemMetricsPublisher {
     when(app.getFinalApplicationStatus()).thenReturn(
         FinalApplicationStatus.UNDEFINED);
     when(app.getRMAppMetrics()).thenReturn(
-        new RMAppMetrics(null, 0, 0, Integer.MAX_VALUE, Long.MAX_VALUE));
+        new RMAppMetrics(null, 0, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
+            Integer.MAX_VALUE, Long.MAX_VALUE));
     Set<String> appTags = new HashSet<String>();
     appTags.add("test");
     appTags.add("tags");
@@ -516,6 +528,7 @@ public class TestSystemMetricsPublisher {
     when(amReq.getNodeLabelExpression()).thenReturn("high-mem");
     when(app.getAMResourceRequest()).thenReturn(amReq);
     when(app.getAmNodeLabelExpression()).thenCallRealMethod();
+    when(app.getApplicationPriority()).thenReturn(Priority.newInstance(10));
     when(app.getCallerContext())
         .thenReturn(new CallerContext.Builder("context").build());
     return app;

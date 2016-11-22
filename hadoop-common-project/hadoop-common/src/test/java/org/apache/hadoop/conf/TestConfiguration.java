@@ -70,6 +70,9 @@ public class TestConfiguration extends TestCase {
             IBM_JAVA?"<?xml version=\"1.0\" encoding=\"UTF-8\"?><configuration>":
   "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><configuration>";
 
+  /** Four apostrophes. */
+  public static final String ESCAPED = "&apos;&#39;&#0039;&#x27;";
+
   @Override
   protected void setUp() throws Exception {
     super.setUp();
@@ -402,7 +405,18 @@ public class TestConfiguration extends TestCase {
     //two spaces one after "this", one before "contains"
     assertEquals("this  contains a comment", conf.get("my.comment"));
   }
-  
+
+  public void testEscapedCharactersInValue() throws IOException {
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("my.comment", ESCAPED);
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    //two spaces one after "this", one before "contains"
+    assertEquals("''''", conf.get("my.comment"));
+  }
+
   public void testTrim() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();

@@ -66,12 +66,8 @@ public class NodeResourceMonitorImpl extends AbstractService implements
         conf.getLong(YarnConfiguration.NM_RESOURCE_MON_INTERVAL_MS,
             YarnConfiguration.DEFAULT_NM_RESOURCE_MON_INTERVAL_MS);
 
-    Class<? extends ResourceCalculatorPlugin> clazz =
-        conf.getClass(YarnConfiguration.NM_MON_RESOURCE_CALCULATOR, null,
-            ResourceCalculatorPlugin.class);
-
     this.resourceCalculatorPlugin =
-        ResourceCalculatorPlugin.getResourceCalculatorPlugin(clazz, conf);
+        ResourceCalculatorPlugin.getNodeResourceMonitorPlugin(conf);
 
     LOG.info(" Using ResourceCalculatorPlugin : "
         + this.resourceCalculatorPlugin);

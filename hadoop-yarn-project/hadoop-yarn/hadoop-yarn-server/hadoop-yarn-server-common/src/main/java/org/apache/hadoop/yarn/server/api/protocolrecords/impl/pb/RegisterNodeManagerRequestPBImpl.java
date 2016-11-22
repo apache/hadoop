@@ -56,6 +56,9 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
   private List<ApplicationId> runningApplications = null;
   private Set<NodeLabel> labels = null;
 
+  /** Physical resources in the node. */
+  private Resource physicalResource = null;
+
   public RegisterNodeManagerRequestPBImpl() {
     builder = RegisterNodeManagerRequestProto.newBuilder();
   }
@@ -92,6 +95,9 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
         newBuilder.addNodeLabels(convertToProtoFormat(label));
       }
       builder.setNodeLabels(newBuilder.build());
+    }
+    if (this.physicalResource != null) {
+      builder.setPhysicalResource(convertToProtoFormat(this.physicalResource));
     }
   }
 
@@ -269,7 +275,29 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
     initContainerRecoveryReports();
     this.containerStatuses.addAll(containerReports);
   }
-  
+
+  @Override
+  public synchronized Resource getPhysicalResource() {
+    RegisterNodeManagerRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.physicalResource != null) {
+      return this.physicalResource;
+    }
+    if (!p.hasPhysicalResource()) {
+      return null;
+    }
+    this.physicalResource = convertFromProtoFormat(p.getPhysicalResource());
+    return this.physicalResource;
+  }
+
+  @Override
+  public synchronized void setPhysicalResource(Resource pPhysicalResource) {
+    maybeInitBuilder();
+    if (pPhysicalResource == null) {
+      builder.clearPhysicalResource();
+    }
+    this.physicalResource = pPhysicalResource;
+  }
+
   @Override
   public int hashCode() {
     return getProto().hashCode();

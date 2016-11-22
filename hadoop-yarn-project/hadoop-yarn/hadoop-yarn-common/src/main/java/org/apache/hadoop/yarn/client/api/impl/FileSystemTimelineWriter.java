@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.Closeable;
-import java.io.FileNotFoundException;
 import java.io.Flushable;
 import java.io.IOException;
 import java.net.URI;
@@ -58,14 +57,14 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonGenerator;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig.Feature;
-import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
-import org.codehaus.jackson.util.MinimalPrettyPrinter;
-import org.codehaus.jackson.xc.JaxbAnnotationIntrospector;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.util.MinimalPrettyPrinter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
 import com.sun.jersey.api.client.Client;
 
 /**
@@ -114,10 +113,8 @@ public class FileSystemTimelineWriter extends TimelineWriter{
           .TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_ACTIVE_DIR_DEFAULT));
     fs = FileSystem.newInstance(activePath.toUri(), fsConf);
 
-    if (!fs.exists(activePath)) {
-      throw new FileNotFoundException(activePath + " does not exist");
-    }
-
+    // raise FileNotFoundException if the path is not found
+    fs.getFileStatus(activePath);
     summaryEntityTypes = new HashSet<String>(
         conf.getStringCollection(YarnConfiguration
             .TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_SUMMARY_ENTITY_TYPES));
@@ -276,9 +273,9 @@ public class FileSystemTimelineWriter extends TimelineWriter{
 
   private ObjectMapper createObjectMapper() {
     ObjectMapper mapper = new ObjectMapper();
-    mapper.setAnnotationIntrospector(new JaxbAnnotationIntrospector());
-    mapper.setSerializationInclusion(Inclusion.NON_NULL);
-    mapper.configure(Feature.CLOSE_CLOSEABLE, false);
+    mapper.setAnnotationIntrospector(
+        new JaxbAnnotationIntrospector(TypeFactory.defaultInstance()));
+    mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     return mapper;
   }
 
@@ -369,7 +366,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
 
     protected void prepareForWrite() throws IOException{
       this.stream = createLogFileStream(fs, logPath);
-      this.jsonGenerator = new JsonFactory().createJsonGenerator(stream);
+      this.jsonGenerator = new JsonFactory().createGenerator(stream);
       this.jsonGenerator.setPrettyPrinter(new MinimalPrettyPrinter("\n"));
       this.jsonGenerator.configure(
           JsonGenerator.Feature.FLUSH_PASSED_TO_STREAM, false);
@@ -985,9 +982,8 @@ public class FileSystemTimelineWriter extends TimelineWriter{
       Path appDir = createApplicationDir(appAttemptId.getApplicationId());
 
       Path attemptDir = new Path(appDir, appAttemptId.toString());
-      if (!fs.exists(attemptDir)) {
-        FileSystem.mkdirs(fs, attemptDir, new FsPermission(
-            APP_LOG_DIR_PERMISSIONS));
+      if (FileSystem.mkdirs(fs, attemptDir,
+          new FsPermission(APP_LOG_DIR_PERMISSIONS))) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("New attempt directory created - " + attemptDir);
         }
@@ -998,9 +994,8 @@ public class FileSystemTimelineWriter extends TimelineWriter{
     private Path createApplicationDir(ApplicationId appId) throws IOException {
       Path appDir =
           new Path(activePath, appId.toString());
-      if (!fs.exists(appDir)) {
-        FileSystem.mkdirs(fs, appDir,
-            new FsPermission(APP_LOG_DIR_PERMISSIONS));
+      if (FileSystem.mkdirs(fs, appDir,
+          new FsPermission(APP_LOG_DIR_PERMISSIONS))) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("New app directory created - " + appDir);
         }

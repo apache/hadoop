@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.shortcircuit.DfsClientShmManager.PerDatanodeVisitorInfo;
 import org.apache.hadoop.hdfs.shortcircuit.DfsClientShmManager.Visitor;
@@ -333,8 +334,9 @@ public class TestBlockReaderFactory {
     Assert.assertTrue(Arrays.equals(contents, expected));
     final ShortCircuitCache cache =
         fs.getClient().getClientContext().getShortCircuitCache();
-    final DatanodeInfo datanode =
-        new DatanodeInfo(cluster.getDataNodes().get(0).getDatanodeId());
+    final DatanodeInfo datanode = new DatanodeInfoBuilder()
+        .setNodeID(cluster.getDataNodes().get(0).getDatanodeId())
+        .build();
     cache.getDfsClientShmManager().visit(new Visitor() {
       @Override
       public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info)

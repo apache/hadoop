@@ -542,7 +542,8 @@ public class ApplicationMasterService extends AbstractService implements
       RMAppAttempt appAttempt = app.getRMAppAttempt(appAttemptId);
       AllocateResponse allocateResponse =
           recordFactory.newRecordInstance(AllocateResponse.class);
-      if (!allocation.getContainers().isEmpty()) {
+      if (allocation.getNMTokens() != null &&
+          !allocation.getNMTokens().isEmpty()) {
         allocateResponse.setNMTokens(allocation.getNMTokens());
       }
 
@@ -615,7 +616,7 @@ public class ApplicationMasterService extends AbstractService implements
 
       // Set application priority
       allocateResponse.setApplicationPriority(app
-          .getApplicationSubmissionContext().getPriority());
+          .getApplicationPriority());
 
       // update AMRMToken if the token is rolled-up
       MasterKeyData nextMasterKey =

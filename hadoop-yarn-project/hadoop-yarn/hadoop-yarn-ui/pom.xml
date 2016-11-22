@@ -1,0 +1,193 @@
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <parent>
+    <artifactId>hadoop-yarn</artifactId>
+    <groupId>org.apache.hadoop</groupId>
+    <version>3.0.0-alpha2-SNAPSHOT</version>
+  </parent>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.apache.hadoop</groupId>
+  <artifactId>hadoop-yarn-ui</artifactId>
+  <version>3.0.0-alpha2-SNAPSHOT</version>
+  <name>Apache Hadoop YARN UI</name>
+  <packaging>${packaging.type}</packaging>
+
+  <properties>
+    <packaging.type>pom</packaging.type>
+    <webappTgtDir>${basedir}/target/src/main/webapp</webappTgtDir>
+    <node.executable>node</node.executable>
+    <nodeVersion>v0.12.2</nodeVersion>
+    <npmVersion>2.10.0</npmVersion>
+    <keep-ui-build-cache>false</keep-ui-build-cache>
+  </properties>
+
+  <build>
+    <plugins>
+      <!-- Apache RAT -->
+      <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>src/main/webapp/jsconfig.json</exclude>
+            <exclude>src/main/webapp/bower.json</exclude>
+            <exclude>src/main/webapp/package.json</exclude>
+            <exclude>src/main/webapp/testem.json</exclude>
+            <exclude>src/main/webapp/public/assets/images/**/*</exclude>
+            <exclude>src/main/webapp/public/assets/images/*</exclude>
+            <exclude>src/main/webapp/public/robots.txt</exclude>
+            <exclude>public/crossdomain.xml</exclude>
+            <exclude>src/main/webapp/.bowerrc</exclude>
+            <exclude>src/main/webapp/.ember-cli</exclude>
+            <exclude>src/main/webapp/.jshintrc</exclude>
+            <exclude>src/main/webapp/.watchmanconfig</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>3.0.0</version>
+        <configuration>
+          <skip>${keep-ui-build-cache}</skip>
+          <followSymLinks>false</followSymLinks>
+          <filesets>
+            <fileset>
+              <directory>${webappTgtDir}/bower_components</directory>
+            </fileset>
+            <fileset>
+              <directory>${webappTgtDir}/node_modules</directory>
+            </fileset>
+          </filesets>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>yarn-ui</id>
+
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+
+      <properties>
+        <packaging.type>war</packaging.type>
+      </properties>
+
+      <build>
+        <plugins>
+          <!-- prepare source code -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>prepare-source-code</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <copy toDir="${basedir}/target/src/main/webapp">
+                      <fileset dir="${basedir}/src/main/webapp"/>
+                    </copy>
+
+                    <copy toDir="${basedir}/target/src/public">
+                      <fileset dir="${basedir}/public"/>
+                    </copy>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+
+          <!-- Bower install & grunt build-->
+          <plugin>
+            <artifactId>exec-maven-plugin</artifactId>
+            <groupId>org.codehaus.mojo</groupId>
+            <executions>
+              <execution>
+                <phase>generate-sources</phase>
+                <id>npm install</id>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <workingDirectory>${webappTgtDir}</workingDirectory>
+                  <executable>npm</executable>
+                  <arguments>
+                    <argument>install</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <phase>generate-sources</phase>
+                <id>bower install</id>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <workingDirectory>${webappTgtDir}</workingDirectory>
+                  <executable>bower</executable>
+                  <arguments>
+                    <argument>--allow-root</argument>
+                    <argument>install</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>ember build</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <workingDirectory>${webappTgtDir}</workingDirectory>
+                  <executable>ember</executable>
+                  <arguments>
+                    <argument>build</argument>
+                    <argument>-prod</argument>
+                    <argument>--output-path</argument>
+                    <argument>${basedir}/target/dist</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <!-- Package into war -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-war-plugin</artifactId>
+            <configuration>
+              <webXml>${basedir}/src/main/webapp/WEB-INF/web.xml</webXml>
+              <warSourceDirectory>${basedir}/target/dist</warSourceDirectory>
+            </configuration>
+          </plugin>
+
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

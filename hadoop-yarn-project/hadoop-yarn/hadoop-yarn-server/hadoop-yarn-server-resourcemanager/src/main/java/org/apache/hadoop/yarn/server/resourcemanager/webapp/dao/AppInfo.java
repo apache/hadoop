@@ -100,6 +100,8 @@ public class AppInfo {
   protected long preemptedResourceVCores;
   protected int numNonAMContainerPreempted;
   protected int numAMContainerPreempted;
+  private long preemptedMemorySeconds;
+  private long preemptedVcoreSeconds;
 
   // list of resource requests
   @XmlElement(name = "resourceRequests")
@@ -111,7 +113,7 @@ public class AppInfo {
   protected String appNodeLabelExpression;
   protected String amNodeLabelExpression;
 
-  protected ResourcesInfo resourceInfo;
+  protected ResourcesInfo resourceInfo = null;
 
   public AppInfo() {
   } // JAXB needs this
@@ -146,10 +148,9 @@ public class AppInfo {
       this.name = app.getName().toString();
       this.queue = app.getQueue().toString();
       this.priority = 0;
-      ApplicationSubmissionContext appSubmissionContext =
-          app.getApplicationSubmissionContext();
-      if (appSubmissionContext.getPriority() != null) {
-        this.priority = appSubmissionContext.getPriority()
+
+      if (app.getApplicationPriority() != null) {
+        this.priority = app.getApplicationPriority()
             .getPriority();
       }
       this.progress = app.getProgress() * 100;
@@ -216,6 +217,10 @@ public class AppInfo {
           appMetrics.getResourcePreempted().getVirtualCores();
       memorySeconds = appMetrics.getMemorySeconds();
       vcoreSeconds = appMetrics.getVcoreSeconds();
+      preemptedMemorySeconds = appMetrics.getPreemptedMemorySeconds();
+      preemptedVcoreSeconds = appMetrics.getPreemptedVcoreSeconds();
+      ApplicationSubmissionContext appSubmissionContext =
+          app.getApplicationSubmissionContext();
       unmanagedApplication =
           appSubmissionContext.getUnmanagedAM();
       appNodeLabelExpression =
@@ -232,7 +237,7 @@ public class AppInfo {
               .getApplicationAttempt(attempt.getAppAttemptId());
           resourceInfo = null != ficaAppAttempt
               ? new ResourcesInfo(ficaAppAttempt.getSchedulingResourceUsage())
-              : new ResourcesInfo();
+              : null;
         }
       }
     }
@@ -382,6 +387,13 @@ public class AppInfo {
     return vcoreSeconds;
   }
 
+  public long getPreemptedMemorySeconds() {
+    return preemptedMemorySeconds;
+  }
+
+  public long getPreemptedVcoreSeconds() {
+    return preemptedVcoreSeconds;
+  }
   public List<ResourceRequestInfo> getResourceRequests() {
     return this.resourceRequests;
   }

@@ -21,8 +21,12 @@ package org.apache.hadoop.hdfs.server.namenode;
 import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.lib.MetricsRegistry;
+import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.FakeTimer;
 import org.apache.log4j.Level;
 import org.junit.Test;
@@ -36,6 +40,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 
 import static org.junit.Assert.*;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 
 /**
  * Tests the FSNamesystemLock, looking at lock compatibilities and
@@ -48,17 +54,17 @@ public class TestFSNamesystemLock {
     Configuration conf = new Configuration();
 
     conf.setBoolean("dfs.namenode.fslock.fair", true);
-    FSNamesystemLock fsnLock = new FSNamesystemLock(conf);
+    FSNamesystemLock fsnLock = new FSNamesystemLock(conf, null);
     assertTrue(fsnLock.coarseLock.isFair());
 
     conf.setBoolean("dfs.namenode.fslock.fair", false);
-    fsnLock = new FSNamesystemLock(conf);
+    fsnLock = new FSNamesystemLock(conf, null);
     assertFalse(fsnLock.coarseLock.isFair());
   }
 
   @Test
   public void testFSNamesystemLockCompatibility() {
-    FSNamesystemLock rwLock = new FSNamesystemLock(new Configuration());
+    FSNamesystemLock rwLock = new FSNamesystemLock(new Configuration(), null);
 
     assertEquals(0, rwLock.getReadHoldCount());
     rwLock.readLock();
@@ -98,7 +104,7 @@ public class TestFSNamesystemLock {
     final CountDownLatch latch = new CountDownLatch(threadCount);
     final Configuration conf = new Configuration();
     conf.setBoolean("dfs.namenode.fslock.fair", true);
-    final FSNamesystemLock rwLock = new FSNamesystemLock(conf);
+    final FSNamesystemLock rwLock = new FSNamesystemLock(conf, null);
     rwLock.writeLock();
     ExecutorService helper = Executors.newFixedThreadPool(threadCount);
 
@@ -141,7 +147,7 @@ public class TestFSNamesystemLock {
         writeLockSuppressWarningInterval, TimeUnit.MILLISECONDS);
 
     final FakeTimer timer = new FakeTimer();
-    final FSNamesystemLock fsnLock = new FSNamesystemLock(conf, timer);
+    final FSNamesystemLock fsnLock = new FSNamesystemLock(conf, null, timer);
     timer.advance(writeLockSuppressWarningInterval);
 
     LogCapturer logs = LogCapturer.captureLogs(FSNamesystem.LOG);
@@ -216,7 +222,7 @@ public class TestFSNamesystemLock {
         readLockSuppressWarningInterval, TimeUnit.MILLISECONDS);
 
     final FakeTimer timer = new FakeTimer();
-    final FSNamesystemLock fsnLock = new FSNamesystemLock(conf, timer);
+    final FSNamesystemLock fsnLock = new FSNamesystemLock(conf, null, timer);
     timer.advance(readLockSuppressWarningInterval);
 
     LogCapturer logs = LogCapturer.captureLogs(FSNamesystem.LOG);
@@ -303,7 +309,7 @@ public class TestFSNamesystemLock {
     t2.join();
     // Look for the differentiating class names in the stack trace
     String stackTracePatternString =
-        String.format("INFO.+%s(.+\n){4}\\Q%%s\\E\\.run", readLockLogStmt);
+        String.format("INFO.+%s(.+\n){5}\\Q%%s\\E\\.run", readLockLogStmt);
     Pattern t1Pattern = Pattern.compile(
         String.format(stackTracePatternString, t1.getClass().getName()));
     assertTrue(t1Pattern.matcher(logs.getOutput()).find());
@@ -312,6 +318,45 @@ public class TestFSNamesystemLock {
     assertFalse(t2Pattern.matcher(logs.getOutput()).find());
     assertTrue(logs.getOutput().contains(
         "Number of suppressed read-lock reports: 2"));
+  }
+
+  @Test
+  public void testDetailedHoldMetrics() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY, true);
+    FakeTimer timer = new FakeTimer();
+    MetricsRegistry registry = new MetricsRegistry("Test");
+    MutableRatesWithAggregation rates =
+        registry.newRatesWithAggregation("Test");
+    FSNamesystemLock fsLock = new FSNamesystemLock(conf, rates, timer);
+
+    fsLock.readLock();
+    timer.advance(1);
+    fsLock.readUnlock("foo");
+    fsLock.readLock();
+    timer.advance(2);
+    fsLock.readUnlock("foo");
+
+    fsLock.readLock();
+    timer.advance(1);
+    fsLock.readLock();
+    timer.advance(1);
+    fsLock.readUnlock("bar");
+    fsLock.readUnlock("bar");
+
+    fsLock.writeLock();
+    timer.advance(1);
+    fsLock.writeUnlock("baz");
+
+    MetricsRecordBuilder rb = MetricsAsserts.mockMetricsRecordBuilder();
+    rates.snapshot(rb, true);
+
+    assertGauge("FSNReadLockFooAvgTime", 1.5, rb);
+    assertCounter("FSNReadLockFooNumOps", 2L, rb);
+    assertGauge("FSNReadLockBarAvgTime", 2.0, rb);
+    assertCounter("FSNReadLockBarNumOps", 1L, rb);
+    assertGauge("FSNWriteLockBazAvgTime", 1.0, rb);
+    assertCounter("FSNWriteLockBazNumOps", 1L, rb);
   }
 
 }

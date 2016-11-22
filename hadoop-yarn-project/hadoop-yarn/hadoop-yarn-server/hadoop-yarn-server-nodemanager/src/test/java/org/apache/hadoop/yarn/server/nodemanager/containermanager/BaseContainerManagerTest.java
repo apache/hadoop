@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -192,10 +193,10 @@ public abstract class BaseContainerManagerTest {
 
     conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
     // Default delSrvc
+    exec = createContainerExecutor();
     delSrvc = createDeletionService();
     delSrvc.init(conf);
 
-    exec = createContainerExecutor();
     dirsHandler = new LocalDirsHandlerService();
     nodeHealthChecker = new NodeHealthCheckerService(
         NodeManager.getNodeHealthScriptRunner(conf), dirsHandler);
@@ -284,38 +285,52 @@ public abstract class BaseContainerManagerTest {
         .build());
   }
 
-  public static void waitForContainerState(ContainerManagementProtocol containerManager,
-      ContainerId containerID, ContainerState finalState)
+  public static void waitForContainerState(
+      ContainerManagementProtocol containerManager, ContainerId containerID,
+      ContainerState finalState)
       throws InterruptedException, YarnException, IOException {
-    waitForContainerState(containerManager, containerID, finalState, 20);
+    waitForContainerState(containerManager, containerID,
+        Arrays.asList(finalState), 20);
   }
 
-  public static void waitForContainerState(ContainerManagementProtocol containerManager,
-          ContainerId containerID, ContainerState finalState, int timeOutMax)
-          throws InterruptedException, YarnException, IOException {
+  public static void waitForContainerState(
+      ContainerManagementProtocol containerManager, ContainerId containerID,
+      ContainerState finalState, int timeOutMax)
+      throws InterruptedException, YarnException, IOException {
+    waitForContainerState(containerManager, containerID,
+        Arrays.asList(finalState), timeOutMax);
+  }
+
+  public static void waitForContainerState(
+      ContainerManagementProtocol containerManager, ContainerId containerID,
+      List<ContainerState> finalStates, int timeOutMax)
+      throws InterruptedException, YarnException, IOException {
     List<ContainerId> list = new ArrayList<ContainerId>();
     list.add(containerID);
     GetContainerStatusesRequest request =
         GetContainerStatusesRequest.newInstance(list);
     ContainerStatus containerStatus = null;
+    HashSet<ContainerState> fStates =
+        new HashSet<>(finalStates);
     int timeoutSecs = 0;
     do {
       Thread.sleep(2000);
       containerStatus =
           containerManager.getContainerStatuses(request)
               .getContainerStatuses().get(0);
-      LOG.info("Waiting for container to get into state " + finalState
+      LOG.info("Waiting for container to get into one of states " + fStates
           + ". Current state is " + containerStatus.getState());
       timeoutSecs += 2;
-    } while (!containerStatus.getState().equals(finalState)
+    } while (!fStates.contains(containerStatus.getState())
         && timeoutSecs < timeOutMax);
     LOG.info("Container state is " + containerStatus.getState());
-    Assert.assertEquals("ContainerState is not correct (timedout)",
-          finalState, containerStatus.getState());
+    Assert.assertTrue("ContainerState is not correct (timedout)",
+          fStates.contains(containerStatus.getState()));
   }
 
-  static void waitForApplicationState(ContainerManagerImpl containerManager,
-      ApplicationId appID, ApplicationState finalState)
+  public static void waitForApplicationState(
+      ContainerManagerImpl containerManager, ApplicationId appID,
+      ApplicationState finalState)
       throws InterruptedException {
     // Wait for app-finish
     Application app =
@@ -344,7 +359,16 @@ public abstract class BaseContainerManagerTest {
   public static void waitForNMContainerState(ContainerManagerImpl
       containerManager, ContainerId containerID,
           org.apache.hadoop.yarn.server.nodemanager.containermanager
-          .container.ContainerState finalState, int timeOutMax)
+              .container.ContainerState finalState, int timeOutMax)
+                  throws InterruptedException, YarnException, IOException {
+    waitForNMContainerState(containerManager, containerID,
+        Arrays.asList(finalState), timeOutMax);
+  }
+
+  public static void waitForNMContainerState(ContainerManagerImpl
+      containerManager, ContainerId containerID,
+          List<org.apache.hadoop.yarn.server.nodemanager.containermanager
+          .container.ContainerState> finalStates, int timeOutMax)
               throws InterruptedException, YarnException, IOException {
     Container container = null;
     org.apache.hadoop.yarn.server.nodemanager
@@ -358,15 +382,15 @@ public abstract class BaseContainerManagerTest {
         currentState = container.getContainerState();
       }
       if (currentState != null) {
-        LOG.info("Waiting for NM container to get into state " + finalState
-            + ". Current state is " + currentState);
+        LOG.info("Waiting for NM container to get into one of the following " +
+            "states: " + finalStates + ". Current state is " + currentState);
       }
       timeoutSecs += 2;
-    } while (!currentState.equals(finalState)
+    } while (!finalStates.contains(currentState)
         && timeoutSecs++ < timeOutMax);
     LOG.info("Container state is " + currentState);
-    Assert.assertEquals("ContainerState is not correct (timedout)",
-        finalState, currentState);
+    Assert.assertTrue("ContainerState is not correct (timedout)",
+        finalStates.contains(currentState));
   }
 
   public static Token createContainerToken(ContainerId cId, long rmIdentifier,
@@ -417,10 +441,16 @@ public abstract class BaseContainerManagerTest {
   }
 
   public static ContainerId createContainerId(int id) {
-    ApplicationId appId = ApplicationId.newInstance(0, 0);
+    // Use default appId = 0
+    return createContainerId(id, 0);
+  }
+
+  public static ContainerId createContainerId(int cId, int aId) {
+    ApplicationId appId = ApplicationId.newInstance(0, aId);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId containerId = ContainerId.newContainerId(appAttemptId, id);
+    ContainerId containerId =
+        ContainerId.newContainerId(appAttemptId, cId);
     return containerId;
   }
 }

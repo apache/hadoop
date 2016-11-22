@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 
 import com.google.common.base.Supplier;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -43,7 +44,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportReplica;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
@@ -161,8 +161,9 @@ public class TestFileCorruption {
       FSNamesystem ns = cluster.getNamesystem();
       ns.writeLock();
       try {
-        cluster.getNamesystem().getBlockManager().findAndMarkBlockAsCorrupt(
-            blk, new DatanodeInfo(dnR), "TEST", "STORAGE_ID");
+        cluster.getNamesystem().getBlockManager().findAndMarkBlockAsCorrupt(blk,
+            new DatanodeInfoBuilder().setNodeID(dnR).build(), "TEST",
+            "STORAGE_ID");
       } finally {
         ns.writeUnlock();
       }

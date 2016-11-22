@@ -70,6 +70,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
@@ -525,6 +526,8 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
         queue = leafQueue;
       }
 
+      ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+      when(queue.getReadLock()).thenReturn(lock.readLock());
       setupQueue(queue, q, queueExprArray, idx);
       if (queue.getQueueName().equals(ROOT)) {
         rootQueue = (ParentQueue) queue;

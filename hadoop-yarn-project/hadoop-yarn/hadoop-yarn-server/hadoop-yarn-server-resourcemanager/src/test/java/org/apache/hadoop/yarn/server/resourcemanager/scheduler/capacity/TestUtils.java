@@ -24,6 +24,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -429,5 +431,29 @@ public class TestUtils {
     ResourceRequest req = ResourceRequest.newInstance(pri, null, null, 0);
     req.setAllocationRequestId(allocationRequestId);
     return SchedulerRequestKey.create(req);
+  }
+
+  public static void applyResourceCommitRequest(Resource clusterResource,
+      CSAssignment csAssignment,
+      final Map<NodeId, FiCaSchedulerNode> nodes,
+      final Map<ApplicationAttemptId, FiCaSchedulerApp> apps)
+      throws IOException {
+    CapacityScheduler cs = new CapacityScheduler() {
+      @Override
+      public FiCaSchedulerNode getNode(NodeId nodeId) {
+        return nodes.get(nodeId);
+      }
+
+      @Override
+      public FiCaSchedulerApp getApplicationAttempt(
+          ApplicationAttemptId applicationAttemptId) {
+        return apps.get(applicationAttemptId);
+      }
+    };
+
+    cs.setResourceCalculator(new DefaultResourceCalculator());
+
+    cs.submitResourceCommitRequest(clusterResource,
+        csAssignment);
   }
 }

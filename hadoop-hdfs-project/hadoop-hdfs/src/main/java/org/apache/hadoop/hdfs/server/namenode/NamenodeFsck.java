@@ -522,7 +522,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     } catch (FileNotFoundException fnfe) {
       blocks = null;
     } finally {
-      fsn.readUnlock();
+      fsn.readUnlock("fsckGetBlockLocations");
     }
     return blocks;
   }

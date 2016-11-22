@@ -22,6 +22,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,6 +30,7 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -325,14 +327,15 @@ public class FileUtil {
       return copy(srcFS, srcs[0], dstFS, dst, deleteSource, overwrite, conf);
 
     // Check if dest is directory
-    if (!dstFS.exists(dst)) {
-      throw new IOException("`" + dst +"': specified destination directory " +
-                            "does not exist");
-    } else {
+    try {
       FileStatus sdst = dstFS.getFileStatus(dst);
       if (!sdst.isDirectory())
         throw new IOException("copying multiple files, but last argument `" +
                               dst + "' is not a directory");
+    } catch (FileNotFoundException e) {
+      throw new IOException(
+          "`" + dst + "': specified destination directory " +
+              "does not exist", e);
     }
 
     for (Path src : srcs) {
@@ -480,8 +483,13 @@ public class FileUtil {
 
   private static Path checkDest(String srcName, FileSystem dstFS, Path dst,
       boolean overwrite) throws IOException {
-    if (dstFS.exists(dst)) {
-      FileStatus sdst = dstFS.getFileStatus(dst);
+    FileStatus sdst;
+    try {
+      sdst = dstFS.getFileStatus(dst);
+    } catch (FileNotFoundException e) {
+      sdst = null;
+    }
+    if (null != sdst) {
       if (sdst.isDirectory()) {
         if (null == srcName) {
           throw new IOException("Target " + dst + " is a directory");
@@ -1139,9 +1147,14 @@ public class FileUtil {
    * an IOException to be thrown.
    * @param dir directory for which listing should be performed
    * @return list of file names or empty string list
-   * @exception IOException for invalid directory or for a bad disk.
+   * @exception AccessDeniedException for unreadable directory
+   * @exception IOException for invalid directory or for bad disk
    */
   public static String[] list(File dir) throws IOException {
+    if (!canRead(dir)) {
+      throw new AccessDeniedException(dir.toString(), null,
+          FSExceptionMessages.PERMISSION_DENIED);
+    }
     String[] fileNames = dir.list();
     if(fileNames == null) {
       throw new IOException("Invalid directory or I/O error occurred for dir: "

@@ -103,10 +103,6 @@ public class TestRMWebServicesSchedulerActivities
           verifyStateOfAllocations(allocations.getJSONObject(i),
               "finalAllocationState", "ALLOCATED");
           verifyQueueOrder(allocations.getJSONObject(i), "root-a-b-b2-b3-b1");
-        } else {
-          verifyStateOfAllocations(allocations.getJSONObject(i),
-              "finalAllocationState", "SKIPPED");
-          verifyQueueOrder(allocations.getJSONObject(i), "root-a-b");
         }
       }
     }
@@ -409,9 +405,9 @@ public class TestRMWebServicesSchedulerActivities
       verifyStateOfAllocations(allocations, "finalAllocationState",
           "ALLOCATED");
 
-      verifyNumberOfNodes(allocations, 6);
+      verifyNumberOfNodes(allocations, 5);
 
-      verifyQueueOrder(json.getJSONObject("allocations"), "root-a-b-b1");
+      verifyQueueOrder(json.getJSONObject("allocations"), "root-b-b1");
     }
     finally {
       rm.stop();

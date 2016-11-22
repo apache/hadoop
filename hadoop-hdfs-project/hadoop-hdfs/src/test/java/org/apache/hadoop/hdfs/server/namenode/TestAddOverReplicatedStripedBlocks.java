@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
@@ -54,13 +55,15 @@ public class TestAddOverReplicatedStripedBlocks {
   private DistributedFileSystem fs;
   private final Path dirPath = new Path("/striped");
   private Path filePath = new Path(dirPath, "file");
-  private final short DATA_BLK_NUM = StripedFileTestUtil.NUM_DATA_BLOCKS;
-  private final short PARITY_BLK_NUM = StripedFileTestUtil.NUM_PARITY_BLOCKS;
-  private final short GROUP_SIZE = (short) (DATA_BLK_NUM + PARITY_BLK_NUM);
-  private final int CELLSIZE = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
-  private final int NUM_STRIPE_PER_BLOCK = 4;
-  private final int BLOCK_SIZE = NUM_STRIPE_PER_BLOCK * CELLSIZE;
-  private final int numDNs = GROUP_SIZE + 3;
+  private final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
+  private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
+  private final short groupSize = (short) (dataBlocks + parityBlocks);
+  private final int cellSize = ecPolicy.getCellSize();
+  private final int stripesPerBlock = 4;
+  private final int blockSize = stripesPerBlock * cellSize;
+  private final int numDNs = groupSize + 3;
 
   @Rule
   public Timeout globalTimeout = new Timeout(300000);
@@ -68,7 +71,7 @@ public class TestAddOverReplicatedStripedBlocks {
   @Before
   public void setup() throws IOException {
     Configuration conf = new Configuration();
-    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     // disable block recovery
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
@@ -92,17 +95,17 @@ public class TestAddOverReplicatedStripedBlocks {
   @Test
   public void testProcessOverReplicatedStripedBlock() throws Exception {
     // create a file which has exact one block group to the first GROUP_SIZE DNs
-    long fileLen = DATA_BLK_NUM * BLOCK_SIZE;
+    long fileLen = dataBlocks * blockSize;
     DFSTestUtil.createStripedFile(cluster, filePath, null, 1,
-        NUM_STRIPE_PER_BLOCK, false);
+        stripesPerBlock, false);
     LocatedBlocks lbs = cluster.getNameNodeRpc().getBlockLocations(
         filePath.toString(), 0, fileLen);
     LocatedStripedBlock bg = (LocatedStripedBlock) (lbs.get(0));
     long gs = bg.getBlock().getGenerationStamp();
     String bpid = bg.getBlock().getBlockPoolId();
     long groupId = bg.getBlock().getBlockId();
-    Block blk = new Block(groupId, BLOCK_SIZE, gs);
-    for (int i = 0; i < GROUP_SIZE; i++) {
+    Block blk = new Block(groupId, blockSize, gs);
+    for (int i = 0; i < groupSize; i++) {
       blk.setBlockId(groupId + i);
       cluster.injectBlocks(i, Arrays.asList(blk), bpid);
     }
@@ -113,7 +116,7 @@ public class TestAddOverReplicatedStripedBlocks {
     cluster.injectBlocks(numDNs - 3, Arrays.asList(blk), bpid);
     cluster.injectBlocks(numDNs - 2, Arrays.asList(blk), bpid);
     // let a internal block be over replicated with 1 redundant block.
-    blk.setBlockId(groupId + DATA_BLK_NUM);
+    blk.setBlockId(groupId + dataBlocks);
     cluster.injectBlocks(numDNs - 1, Arrays.asList(blk), bpid);
 
     // update blocksMap
@@ -128,14 +131,14 @@ public class TestAddOverReplicatedStripedBlocks {
     // verify that all internal blocks exists
     lbs = cluster.getNameNodeRpc().getBlockLocations(
         filePath.toString(), 0, fileLen);
-    StripedFileTestUtil.verifyLocatedStripedBlocks(lbs, GROUP_SIZE);
+    StripedFileTestUtil.verifyLocatedStripedBlocks(lbs, groupSize);
   }
 
   @Test
   public void testProcessOverReplicatedSBSmallerThanFullBlocks()
       throws Exception {
     // Create a EC file which doesn't fill full internal blocks.
-    int fileLen = CELLSIZE * (DATA_BLK_NUM - 1);
+    int fileLen = cellSize * (dataBlocks - 1);
     byte[] content = new byte[fileLen];
     DFSTestUtil.writeFile(fs, filePath, new String(content));
     LocatedBlocks lbs = cluster.getNameNodeRpc().getBlockLocations(
@@ -144,7 +147,7 @@ public class TestAddOverReplicatedStripedBlocks {
     long gs = bg.getBlock().getGenerationStamp();
     String bpid = bg.getBlock().getBlockPoolId();
     long groupId = bg.getBlock().getBlockId();
-    Block blk = new Block(groupId, BLOCK_SIZE, gs);
+    Block blk = new Block(groupId, blockSize, gs);
     cluster.triggerBlockReports();
     List<DatanodeInfo> infos = Arrays.asList(bg.getLocations());
 
@@ -171,25 +174,25 @@ public class TestAddOverReplicatedStripedBlocks {
     // verify that all internal blocks exists
     lbs = cluster.getNameNodeRpc().getBlockLocations(
         filePath.toString(), 0, fileLen);
-    StripedFileTestUtil.verifyLocatedStripedBlocks(lbs, GROUP_SIZE - 1);
+    StripedFileTestUtil.verifyLocatedStripedBlocks(lbs, groupSize - 1);
   }
 
   @Test
   public void testProcessOverReplicatedAndCorruptStripedBlock()
       throws Exception {
-    long fileLen = DATA_BLK_NUM * BLOCK_SIZE;
+    long fileLen = dataBlocks * blockSize;
     DFSTestUtil.createStripedFile(cluster, filePath, null, 1,
-        NUM_STRIPE_PER_BLOCK, false);
+        stripesPerBlock, false);
     LocatedBlocks lbs = cluster.getNameNodeRpc().getBlockLocations(
         filePath.toString(), 0, fileLen);
     LocatedStripedBlock bg = (LocatedStripedBlock) (lbs.get(0));
     long gs = bg.getBlock().getGenerationStamp();
     String bpid = bg.getBlock().getBlockPoolId();
     long groupId = bg.getBlock().getBlockId();
-    Block blk = new Block(groupId, BLOCK_SIZE, gs);
+    Block blk = new Block(groupId, blockSize, gs);
     BlockInfoStriped blockInfo = new BlockInfoStriped(blk,
         ErasureCodingPolicyManager.getSystemDefaultPolicy());
-    for (int i = 0; i < GROUP_SIZE; i++) {
+    for (int i = 0; i < groupSize; i++) {
       blk.setBlockId(groupId + i);
       cluster.injectBlocks(i, Arrays.asList(blk), bpid);
     }
@@ -225,14 +228,14 @@ public class TestAddOverReplicatedStripedBlocks {
     lbs = cluster.getNameNodeRpc().getBlockLocations(filePath.toString(), 0,
         fileLen);
     bg = (LocatedStripedBlock) (lbs.get(0));
-    assertEquals(GROUP_SIZE + 1, bg.getBlockIndices().length);
-    assertEquals(GROUP_SIZE + 1, bg.getLocations().length);
-    BitSet set = new BitSet(GROUP_SIZE);
+    assertEquals(groupSize + 1, bg.getBlockIndices().length);
+    assertEquals(groupSize + 1, bg.getLocations().length);
+    BitSet set = new BitSet(groupSize);
     for (byte index : bg.getBlockIndices()) {
       set.set(index);
     }
     Assert.assertFalse(set.get(0));
-    for (int i = 1; i < GROUP_SIZE; i++) {
+    for (int i = 1; i < groupSize; i++) {
       assertTrue(set.get(i));
     }
   }
@@ -243,18 +246,18 @@ public class TestAddOverReplicatedStripedBlocks {
   @Test
   public void testProcessOverReplicatedAndMissingStripedBlock()
       throws Exception {
-    long fileLen = CELLSIZE * DATA_BLK_NUM;
+    long fileLen = cellSize * dataBlocks;
     DFSTestUtil.createStripedFile(cluster, filePath, null, 1,
-        NUM_STRIPE_PER_BLOCK, false);
+        stripesPerBlock, false);
     LocatedBlocks lbs = cluster.getNameNodeRpc().getBlockLocations(
         filePath.toString(), 0, fileLen);
     LocatedStripedBlock bg = (LocatedStripedBlock) (lbs.get(0));
     long gs = bg.getBlock().getGenerationStamp();
     String bpid = bg.getBlock().getBlockPoolId();
     long groupId = bg.getBlock().getBlockId();
-    Block blk = new Block(groupId, BLOCK_SIZE, gs);
+    Block blk = new Block(groupId, blockSize, gs);
     // only inject GROUP_SIZE - 1 blocks, so there is one block missing
-    for (int i = 0; i < GROUP_SIZE - 1; i++) {
+    for (int i = 0; i < groupSize - 1; i++) {
       blk.setBlockId(groupId + i);
       cluster.injectBlocks(i, Arrays.asList(blk), bpid);
     }
@@ -282,14 +285,14 @@ public class TestAddOverReplicatedStripedBlocks {
     lbs = cluster.getNameNodeRpc().getBlockLocations(filePath.toString(), 0,
         fileLen);
     bg = (LocatedStripedBlock) (lbs.get(0));
-    assertEquals(GROUP_SIZE + 1, bg.getBlockIndices().length);
-    assertEquals(GROUP_SIZE + 1, bg.getLocations().length);
-    BitSet set = new BitSet(GROUP_SIZE);
+    assertEquals(groupSize + 1, bg.getBlockIndices().length);
+    assertEquals(groupSize + 1, bg.getLocations().length);
+    BitSet set = new BitSet(groupSize);
     for (byte index : bg.getBlockIndices()) {
       set.set(index);
     }
-    Assert.assertFalse(set.get(GROUP_SIZE - 1));
-    for (int i = 0; i < GROUP_SIZE - 1; i++) {
+    Assert.assertFalse(set.get(groupSize - 1));
+    for (int i = 0; i < groupSize - 1; i++) {
       assertTrue(set.get(i));
     }
   }

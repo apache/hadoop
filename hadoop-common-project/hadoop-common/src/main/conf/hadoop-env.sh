@@ -223,12 +223,6 @@ esac
 # Java property: hadoop.security.logger
 # export HADOOP_SECURITY_LOGGER=INFO,NullAppender
 
-# Default log level for file system audit messages.
-# Generally, this is specifically set in the namenode-specific
-# options line.
-# Java property: hdfs.audit.logger
-# export HADOOP_AUDIT_LOGGER=INFO,NullAppender
-
 # Default process priority level
 # Note that sub-processes will also run at this level!
 # export HADOOP_NICENESS=0

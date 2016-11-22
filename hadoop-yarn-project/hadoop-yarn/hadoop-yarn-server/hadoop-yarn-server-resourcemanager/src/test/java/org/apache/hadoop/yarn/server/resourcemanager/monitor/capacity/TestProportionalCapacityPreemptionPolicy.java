@@ -74,6 +74,7 @@ import java.util.NavigableSet;
 import java.util.Random;
 import java.util.StringTokenizer;
 import java.util.TreeSet;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType.MARK_CONTAINER_FOR_KILLABLE;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType.MARK_CONTAINER_FOR_PREEMPTION;
@@ -1203,6 +1204,8 @@ public class TestProportionalCapacityPreemptionPolicy {
     ParentQueue pq = mock(ParentQueue.class);
     List<CSQueue> cqs = new ArrayList<CSQueue>();
     when(pq.getChildQueues()).thenReturn(cqs);
+    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    when(pq.getReadLock()).thenReturn(lock.readLock());
     for (int i = 0; i < subqueues; ++i) {
       pqs.add(pq);
     }
@@ -1264,6 +1267,8 @@ public class TestProportionalCapacityPreemptionPolicy {
     if(setAMResourcePercent != 0.0f){
       when(lq.getMaxAMResourcePerQueuePercent()).thenReturn(setAMResourcePercent);
     }
+    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    when(lq.getReadLock()).thenReturn(lock.readLock());
     p.getChildQueues().add(lq);
     return lq;
   }

@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
@@ -60,12 +61,14 @@ import org.junit.Test;
 public class TestReconstructStripedFile {
   public static final Log LOG = LogFactory.getLog(TestReconstructStripedFile.class);
 
-  private static final int dataBlkNum = StripedFileTestUtil.NUM_DATA_BLOCKS;
-  private static final int parityBlkNum = StripedFileTestUtil.NUM_PARITY_BLOCKS;
-  private static final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
-  private static final int blockSize = cellSize * 3;
-  private static final int groupSize = dataBlkNum + parityBlkNum;
-  private static final int dnNum = groupSize + parityBlkNum;
+  private final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private final int dataBlkNum = ecPolicy.getNumDataUnits();
+  private final int parityBlkNum = ecPolicy.getNumParityUnits();
+  private final int cellSize = ecPolicy.getCellSize();
+  private final int blockSize = cellSize * 3;
+  private final int groupSize = dataBlkNum + parityBlkNum;
+  private final int dnNum = groupSize + parityBlkNum;
 
   static {
     GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);

@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CacheFlag;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -512,10 +513,10 @@ public class HdfsAdmin {
 
     Path trashPath = new Path(ez.getPath(), FileSystem.TRASH_PREFIX);
 
-    if (dfs.exists(trashPath)) {
+    try {
+      FileStatus trashFileStatus = dfs.getFileStatus(trashPath);
       String errMessage = "Will not provision new trash directory for " +
           "encryption zone " + ez.getPath() + ". Path already exists.";
-      FileStatus trashFileStatus = dfs.getFileStatus(trashPath);
       if (!trashFileStatus.isDirectory()) {
         errMessage += "\r\n" +
             "Warning: " + trashPath.toString() + " is not a directory";
@@ -525,7 +526,9 @@ public class HdfsAdmin {
             "Warning: the permission of " +
             trashPath.toString() + " is not " + TRASH_PERMISSION;
       }
-      throw new IOException(errMessage);
+      throw new FileAlreadyExistsException(errMessage);
+    } catch (FileNotFoundException ignored) {
+      // no trash path
     }
 
     // Update the permission bits

@@ -17,6 +17,8 @@
 */
 package org.apache.hadoop.yarn.event;
 
+import org.apache.hadoop.conf.Configuration;
+
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -37,6 +39,13 @@ public class DrainDispatcher extends AsyncDispatcher {
     this.mutex = this;
   }
 
+  @Override
+  public void serviceInit(Configuration conf)
+      throws Exception {
+    conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, false);
+    super.serviceInit(conf);
+  }
+
   /**
    *  Wait till event thread enters WAITING state (i.e. waiting for new events).
    */
@@ -50,7 +59,7 @@ public class DrainDispatcher extends AsyncDispatcher {
    * Busy loop waiting for all queued events to drain.
    */
   public void await() {
-    while (!drained) {
+    while (!isDrained()) {
       Thread.yield();
     }
   }
@@ -96,7 +105,9 @@ public class DrainDispatcher extends AsyncDispatcher {
 
   @Override
   protected boolean isDrained() {
-    return drained;
+    synchronized (mutex) {
+      return drained;
+    }
   }
 
   @Override

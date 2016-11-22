@@ -19,29 +19,51 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl.ProcessTreeInfo;
 
 public interface ContainersMonitor extends Service,
     EventHandler<ContainersMonitorEvent>, ResourceView {
-  public ResourceUtilization getContainersUtilization();
+  ResourceUtilization getContainersUtilization();
 
-  ResourceUtilization getContainersAllocation();
-
-  boolean hasResourcesAvailable(ProcessTreeInfo pti);
-
-  void increaseContainersAllocation(ProcessTreeInfo pti);
-
-  void decreaseContainersAllocation(ProcessTreeInfo pti);
-
-  void increaseResourceUtilization(ResourceUtilization resourceUtil,
-      ProcessTreeInfo pti);
-
-  void decreaseResourceUtilization(ResourceUtilization resourceUtil,
-      ProcessTreeInfo pti);
+  float getVmemRatio();
 
   void subtractNodeResourcesFromResourceUtilization(
       ResourceUtilization resourceUtil);
+
+  /**
+   * Utility method to add a {@link Resource} to the
+   * {@link ResourceUtilization}.
+   * @param containersMonitor Containers Monitor.
+   * @param resourceUtil Resource Utilization.
+   * @param resource Resource.
+   */
+  static void increaseResourceUtilization(
+      ContainersMonitor containersMonitor, ResourceUtilization resourceUtil,
+      Resource resource) {
+    float vCores = (float) resource.getVirtualCores() /
+        containersMonitor.getVCoresAllocatedForContainers();
+    int vmem = (int) (resource.getMemorySize()
+        * containersMonitor.getVmemRatio());
+    resourceUtil.addTo((int)resource.getMemorySize(), vmem, vCores);
+  }
+
+  /**
+   * Utility method to subtract a {@link Resource} from the
+   * {@link ResourceUtilization}.
+   * @param containersMonitor Containers Monitor.
+   * @param resourceUtil Resource Utilization.
+   * @param resource Resource.
+   */
+  static void decreaseResourceUtilization(
+      ContainersMonitor containersMonitor, ResourceUtilization resourceUtil,
+      Resource resource) {
+    float vCores = (float) resource.getVirtualCores() /
+        containersMonitor.getVCoresAllocatedForContainers();
+    int vmem = (int) (resource.getMemorySize()
+        * containersMonitor.getVmemRatio());
+    resourceUtil.subtractFrom((int)resource.getMemorySize(), vmem, vCores);
+  }
 }

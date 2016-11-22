@@ -133,6 +133,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   /* Resource utilization for the node. */
   private ResourceUtilization nodeUtilization;
 
+  /** Physical resources in the node. */
+  private volatile Resource physicalResource;
+
   /* Container Queue Information for the node.. Used by Distributed Scheduler */
   private OpportunisticContainersStatus opportunisticContainersStatus;
 
@@ -353,7 +356,15 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
                              RMNodeEvent> stateMachine;
 
   public RMNodeImpl(NodeId nodeId, RMContext context, String hostName,
-      int cmPort, int httpPort, Node node, Resource capability, String nodeManagerVersion) {
+      int cmPort, int httpPort, Node node, Resource capability,
+      String nodeManagerVersion) {
+    this(nodeId, context, hostName, cmPort, httpPort, node, capability,
+        nodeManagerVersion, null);
+  }
+
+  public RMNodeImpl(NodeId nodeId, RMContext context, String hostName,
+      int cmPort, int httpPort, Node node, Resource capability,
+      String nodeManagerVersion, Resource physResource) {
     this.nodeId = nodeId;
     this.context = context;
     this.hostName = hostName;
@@ -367,6 +378,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     this.lastHealthReportTime = System.currentTimeMillis();
     this.nodeManagerVersion = nodeManagerVersion;
     this.timeStamp = 0;
+    this.physicalResource = physResource;
 
     this.latestNodeHeartBeatResponse.setResponseId(0);
 
@@ -524,6 +536,15 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     } finally {
       this.writeLock.unlock();
     }
+  }
+
+  @Override
+  public Resource getPhysicalResource() {
+    return this.physicalResource;
+  }
+
+  public void setPhysicalResource(Resource physicalResource) {
+    this.physicalResource = physicalResource;
   }
 
   @Override
@@ -1373,32 +1394,26 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       }
 
       // Process running containers
-      if (remoteContainer.getState() == ContainerState.RUNNING) {
-        // Process only GUARANTEED containers in the RM.
-        if (remoteContainer.getExecutionType() == ExecutionType.GUARANTEED) {
-          ++numRemoteRunningContainers;
-          if (!launchedContainers.contains(containerId)) {
-            // Just launched container. RM knows about it the first time.
-            launchedContainers.add(containerId);
-            newlyLaunchedContainers.add(remoteContainer);
-            // Unregister from containerAllocationExpirer.
-            containerAllocationExpirer
-                .unregister(new AllocationExpirationInfo(containerId));
-          }
-        }
-      } else {
-        if (remoteContainer.getExecutionType() == ExecutionType.GUARANTEED) {
-          // A finished container
-          launchedContainers.remove(containerId);
+      if (remoteContainer.getState() == ContainerState.RUNNING ||
+          remoteContainer.getState() == ContainerState.SCHEDULED) {
+        ++numRemoteRunningContainers;
+        if (!launchedContainers.contains(containerId)) {
+          // Just launched container. RM knows about it the first time.
+          launchedContainers.add(containerId);
+          newlyLaunchedContainers.add(remoteContainer);
           // Unregister from containerAllocationExpirer.
           containerAllocationExpirer
               .unregister(new AllocationExpirationInfo(containerId));
         }
-        // Completed containers should also include the OPPORTUNISTIC containers
-        // so that the AM gets properly notified.
+      } else {
+        // A finished container
+        launchedContainers.remove(containerId);
         if (completedContainers.add(containerId)) {
           newlyCompletedContainers.add(remoteContainer);
         }
+        // Unregister from containerAllocationExpirer.
+        containerAllocationExpirer
+            .unregister(new AllocationExpirationInfo(containerId));
       }
     }
 

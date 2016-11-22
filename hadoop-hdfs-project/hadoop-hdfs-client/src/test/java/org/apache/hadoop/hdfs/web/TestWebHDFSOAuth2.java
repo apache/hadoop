@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hdfs.web;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -27,7 +28,6 @@ import org.apache.hadoop.hdfs.web.oauth2.ConfCredentialBasedAccessTokenProvider;
 import org.apache.hadoop.hdfs.web.oauth2.CredentialBasedAccessTokenProvider;
 import org.apache.hadoop.hdfs.web.oauth2.OAuth2ConnectionConfigurator;
 import org.apache.http.HttpStatus;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

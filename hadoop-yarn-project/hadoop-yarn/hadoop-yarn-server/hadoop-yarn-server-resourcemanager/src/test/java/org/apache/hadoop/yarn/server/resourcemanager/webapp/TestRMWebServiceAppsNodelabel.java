@@ -19,10 +19,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 import javax.ws.rs.core.MediaType;
@@ -153,10 +154,13 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
     JSONObject json = response.getEntity(JSONObject.class);
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
-    JSONObject jsonObject =
-        apps.getJSONArray("app").getJSONObject(0).getJSONObject("resourceInfo");
-    Iterator<?> keys = jsonObject.keys();
-    assertEquals("For finshed app no values expected", false, keys.hasNext());
+    try {
+      apps.getJSONArray("app").getJSONObject(0).getJSONObject("resourceInfo");
+      fail("resourceInfo object shouldnt be available for finished apps");
+    } catch (Exception e) {
+      assertTrue("resourceInfo shouldn't be available for finished apps",
+          true);
+    }
     rm.stop();
   }
 

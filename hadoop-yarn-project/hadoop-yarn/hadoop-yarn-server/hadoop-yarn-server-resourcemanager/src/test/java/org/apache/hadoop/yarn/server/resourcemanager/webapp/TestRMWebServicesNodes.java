@@ -90,6 +90,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
       rm = new MockRM(new Configuration());
       rm.getRMContext().getContainerTokenSecretManager().rollMasterKey();
       rm.getRMContext().getNMTokenSecretManager().rollMasterKey();
+      rm.disableDrainEventsImplicitly();
       bind(ResourceManager.class).toInstance(rm);
       serve("/*").with(GuiceContainer.class);
     }

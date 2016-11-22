@@ -122,6 +122,11 @@ public class Dispatcher {
   private final long getBlocksSize;
   private final long getBlocksMinBlockSize;
   private final long blockMoveTimeout;
+  /**
+   * If no block can be moved out of a {@link Source} after this configured
+   * amount of time, the Source should give up choosing the next possible move.
+   */
+  private final int maxNoMoveInterval;
 
   private final int ioFileBufferSize;
 
@@ -866,7 +871,7 @@ public class Dispatcher {
      */
     private void dispatchBlocks() {
       this.blocksToReceive = 2 * getScheduledSize();
-      int noPendingMoveIteration = 0;
+      long previousMoveTimestamp = Time.monotonicNow();
       while (getScheduledSize() > 0 && !isIterationOver()
           && (!srcBlocks.isEmpty() || blocksToReceive > 0)) {
         if (LOG.isTraceEnabled()) {
@@ -876,8 +881,8 @@ public class Dispatcher {
         }
         final PendingMove p = chooseNextMove();
         if (p != null) {
-          // Reset no pending move counter
-          noPendingMoveIteration=0;
+          // Reset previous move timestamp
+          previousMoveTimestamp = Time.monotonicNow();
           executePendingMove(p);
           continue;
         }
@@ -900,13 +905,11 @@ public class Dispatcher {
             return;
           }
         } else {
-          // source node cannot find a pending block to move, iteration +1
-          noPendingMoveIteration++;
-          // in case no blocks can be moved for source node's task,
-          // jump out of while-loop after 5 iterations.
-          if (noPendingMoveIteration >= MAX_NO_PENDING_MOVE_ITERATIONS) {
-            LOG.info("Failed to find a pending move "  + noPendingMoveIteration
-                + " times.  Skipping " + this);
+          // jump out of while-loop after the configured timeout.
+          long noMoveInterval = Time.monotonicNow() - previousMoveTimestamp;
+          if (noMoveInterval > maxNoMoveInterval) {
+            LOG.info("Failed to find a pending move for "  + noMoveInterval
+                + " ms.  Skipping " + this);
             resetScheduledSize();
           }
         }
@@ -917,6 +920,9 @@ public class Dispatcher {
           synchronized (Dispatcher.this) {
             Dispatcher.this.wait(1000); // wait for targets/sources to be idle
           }
+          // Didn't find a possible move in this iteration of the while loop,
+          // adding a small delay before choosing next move again.
+          Thread.sleep(100);
         } catch (InterruptedException ignored) {
         }
       }
@@ -941,17 +947,18 @@ public class Dispatcher {
   /** Constructor called by Mover. */
   public Dispatcher(NameNodeConnector nnc, Set<String> includedNodes,
       Set<String> excludedNodes, long movedWinWidth, int moverThreads,
-      int dispatcherThreads, int maxConcurrentMovesPerNode, Configuration conf) {
+      int dispatcherThreads, int maxConcurrentMovesPerNode,
+      int maxNoMoveInterval, Configuration conf) {
     this(nnc, includedNodes, excludedNodes, movedWinWidth,
         moverThreads, dispatcherThreads, maxConcurrentMovesPerNode,
-        0L, 0L, 0,  conf);
+        0L, 0L, 0, maxNoMoveInterval, conf);
   }
 
   Dispatcher(NameNodeConnector nnc, Set<String> includedNodes,
       Set<String> excludedNodes, long movedWinWidth, int moverThreads,
       int dispatcherThreads, int maxConcurrentMovesPerNode,
       long getBlocksSize, long getBlocksMinBlockSize,
-      int blockMoveTimeout, Configuration conf) {
+      int blockMoveTimeout, int maxNoMoveInterval, Configuration conf) {
     this.nnc = nnc;
     this.excludedNodes = excludedNodes;
     this.includedNodes = includedNodes;
@@ -967,6 +974,7 @@ public class Dispatcher {
     this.getBlocksSize = getBlocksSize;
     this.getBlocksMinBlockSize = getBlocksMinBlockSize;
     this.blockMoveTimeout = blockMoveTimeout;
+    this.maxNoMoveInterval = maxNoMoveInterval;
 
     this.saslClient = new SaslDataTransferClient(conf,
         DataTransferSaslUtil.getSaslPropertiesResolver(conf),

@@ -20,10 +20,11 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.StripedFileTestUtil;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.junit.Rule;
@@ -33,12 +34,13 @@ import org.junit.rules.Timeout;
 import java.io.IOException;
 
 public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
-
-  private final static int dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
-  private final static int parityBlocks = StripedFileTestUtil.NUM_PARITY_BLOCKS;
-  private final static int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
-  private final static int stripesPerBlock = 4;
-  private final static int numDNs = dataBlocks + parityBlocks + 2;
+  private final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private final int dataBlocks = ecPolicy.getNumDataUnits();
+  private final int parityBlocks = ecPolicy.getNumParityUnits();
+  private final int cellSize = ecPolicy.getCellSize();
+  private final int stripesPerBlock = 4;
+  private final int numDNs = dataBlocks + parityBlocks + 2;
   private MiniDFSCluster cluster;
   private Configuration conf;
 

@@ -236,6 +236,13 @@ public class MetricsAsserts {
     return captor.getValue();
   }
 
+  public static String getStringMetric(String name, MetricsRecordBuilder rb) {
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(rb, atLeast(0)).tag(eqName(info(name, "")), captor.capture());
+    checkCaptured(captor, name);
+    return captor.getValue();
+  }
+
    /**
    * Assert a float gauge metric as expected
    * @param name  of the metric

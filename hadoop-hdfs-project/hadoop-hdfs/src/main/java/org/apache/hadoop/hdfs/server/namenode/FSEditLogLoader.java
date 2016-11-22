@@ -155,7 +155,7 @@ public class FSEditLogLoader {
       return numEdits;
     } finally {
       edits.close();
-      fsNamesys.writeUnlock();
+      fsNamesys.writeUnlock("loadFSEdits");
       prog.endStep(Phase.LOADING_EDITS, step);
     }
   }
@@ -292,7 +292,7 @@ public class FSEditLogLoader {
         in.close();
       }
       fsDir.writeUnlock();
-      fsNamesys.writeUnlock();
+      fsNamesys.writeUnlock("loadEditRecords");
 
       if (LOG.isTraceEnabled()) {
         LOG.trace("replaying edit log finished");
