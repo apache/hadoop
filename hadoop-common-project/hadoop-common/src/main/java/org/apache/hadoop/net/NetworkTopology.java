@@ -1122,19 +1122,20 @@ public class NetworkTopology {
    * @param racks     Available racks containing replicas with the requested data
    * @param activeLen Number of active nodes at the front of the array
    */
-  public void sortRacksByDistance(Node reader, String[] racks, int activeLen) {
+  public TreeMap<Integer, List<String>> sortRacksByDistance(Node reader,
+            List<String> racks) {
     /** Sort weights for the nodes array */
-    int[] weights = new int[activeLen];
+    int[] weights = new int[racks.size()];
     String readerRack = reader.getNetworkLocation();
-    for (int i=0; i<activeLen; i++) {
-      weights[i] = getRackCost(readerRack, racks[i]);
+    for (int i = 0; i < racks.size(); i++) {
+      weights[i] = getRackCost(readerRack, racks.get(i));
     }
     // Add weight/rack pairs to a TreeMap to sort
     // NOTE - TreeMap keys are sorted in their natural order
     TreeMap<Integer, List<String>> tree = new TreeMap<Integer, List<String>>();
-    for (int i=0; i<activeLen; i++) {
+    for (int i = 0; i < racks.size(); i++) {
       int weight = weights[i];
-      String rack = racks[i];
+      String rack = racks.get(i);
       List<String> list = tree.get(weight);
       if (list == null) {
         list = Lists.newArrayListWithExpectedSize(1);
@@ -1142,18 +1143,11 @@ public class NetworkTopology {
       }
       list.add(rack);
     }
-
-    int idx = 0;
     for (List<String> list: tree.values()) {
       if (list != null) {
         Collections.shuffle(list, r);
-        for (String rack: list) {
-          racks[idx] = rack;
-          idx++;
-        }
       }
     }
-    Preconditions.checkState(idx == activeLen,
-        "Sorted the wrong number of nodes!");
+    return tree;
   }
 }

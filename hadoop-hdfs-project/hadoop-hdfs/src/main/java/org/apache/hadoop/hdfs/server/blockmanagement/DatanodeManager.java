@@ -77,9 +77,7 @@ public class DatanodeManager {
                      CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_DEFAULT;
 
   private final String netLinkScriptName;
-  // Assume a default link cost of 1
-  private final int defaultLinkCost = 1;
-  private final int maxArgs; //max hostnames per call of the script
+  private final int defaultLinkCost;
 
   static final Log LOG = LogFactory.getLog(DatanodeManager.class);
 
@@ -294,8 +292,9 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_NAMENODE_BLOCKS_PER_POSTPONEDBLOCKS_RESCAN_KEY,
         DFSConfigKeys.DFS_NAMENODE_BLOCKS_PER_POSTPONEDBLOCKS_RESCAN_KEY_DEFAULT);
     this.netLinkScriptName = conf.get(DFSConfigKeys.NET_LINK_SCRIPT_FILE_NAME_KEY);
-    this.maxArgs = conf.getInt(
-        DFSConfigKeys.NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_KEY, DEFAULT_ARG_COUNT);
+    this.defaultLinkCost = conf.getInt(
+        DFSConfigKeys.NET_LINK_DEFAULT_COST_KEY,
+        DFSConfigKeys.NET_LINK_DEFAULT_COST_DEFAULT);
   }
 
   private static long getStaleIntervalFromConf(Configuration conf,

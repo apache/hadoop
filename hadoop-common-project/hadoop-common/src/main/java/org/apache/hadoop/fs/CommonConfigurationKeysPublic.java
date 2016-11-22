@@ -121,10 +121,16 @@ public class CommonConfigurationKeysPublic {
    */
   public static final String  NET_LINK_SCRIPT_FILE_NAME_KEY =
     "net.link.script.file.name";
+
+  public static final String  NET_LINK_DEFAULT_COST_KEY =
+    "net.link.default.cost";
+  /** Default value for NET_LINK_DEFAULT_COST_KEY */
+  public static final int  NET_LINK_DEFAULT_COST_DEFAULT = 1;
+
   public static final String  NET_LINK_SAME_RACK_PENALTY_KEY =
     "net.link.samerack.penalty";
   /** Default value for NET_LINK_SAME_RACK_PENALTY_KEY */
-  public static final long  NET_LINK_SAME_RACK_PENALTY_DEFAULT = 5;
+  public static final int  NET_LINK_SAME_RACK_PENALTY_DEFAULT = 5;
 
   /**
    * @see
