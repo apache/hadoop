@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation.CheckContext;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +40,9 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -80,11 +83,18 @@ public class StorageLocationChecker {
    */
   private final int maxVolumeFailuresTolerated;
 
-  public StorageLocationChecker(Configuration conf, Timer timer) {
+  public StorageLocationChecker(Configuration conf, Timer timer)
+      throws DiskErrorException {
     maxAllowedTimeForCheckMs = conf.getTimeDuration(
-        DFSConfigKeys.DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY,
-        DFSConfigKeys.DFS_DATANODE_DISK_CHECK_TIMEOUT_DEFAULT,
+        DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY,
+        DFS_DATANODE_DISK_CHECK_TIMEOUT_DEFAULT,
         TimeUnit.MILLISECONDS);
+
+    if (maxAllowedTimeForCheckMs <= 0) {
+      throw new DiskErrorException("Invalid value configured for "
+          + DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY + " - "
+          + maxAllowedTimeForCheckMs + " (should be > 0)");
+    }
 
     expectedPermission = new FsPermission(
         conf.get(DFS_DATANODE_DATA_DIR_PERMISSION_KEY,
@@ -93,6 +103,12 @@ public class StorageLocationChecker {
     maxVolumeFailuresTolerated = conf.getInt(
         DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY,
         DFS_DATANODE_FAILED_VOLUMES_TOLERATED_DEFAULT);
+
+    if (maxVolumeFailuresTolerated < 0) {
+      throw new DiskErrorException("Invalid value configured for "
+          + DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY + " - "
+          + maxVolumeFailuresTolerated + " (should be non-negative)");
+    }
 
     this.timer = timer;
 
@@ -113,6 +129,9 @@ public class StorageLocationChecker {
    * Initiate a check of the supplied storage volumes and return
    * a list of failed volumes.
    *
+   * StorageLocations are returned in the same order as the input
+   * for compatibility with existing unit tests.
+   *
    * @param conf HDFS configuration.
    * @param dataDirs list of volumes to check.
    * @return returns a list of failed volumes. Returns the empty list if
@@ -128,7 +147,8 @@ public class StorageLocationChecker {
       final Collection<StorageLocation> dataDirs)
       throws InterruptedException, IOException {
 
-    final ArrayList<StorageLocation> goodLocations = new ArrayList<>();
+    final HashMap<StorageLocation, Boolean> goodLocations =
+        new LinkedHashMap<>();
     final Set<StorageLocation> failedLocations = new HashSet<>();
     final Map<StorageLocation, ListenableFuture<VolumeCheckResult>> futures =
         Maps.newHashMap();
@@ -137,8 +157,16 @@ public class StorageLocationChecker {
 
     // Start parallel disk check operations on all StorageLocations.
     for (StorageLocation location : dataDirs) {
+      goodLocations.put(location, true);
       futures.put(location,
           delegateChecker.schedule(location, context));
+    }
+
+    if (maxVolumeFailuresTolerated >= dataDirs.size()) {
+      throw new DiskErrorException("Invalid value configured for "
+          + DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY + " - "
+          + maxVolumeFailuresTolerated + ". Value configured is >= "
+          + "to the number of configured volumes (" + dataDirs.size() + ").");
     }
 
     final long checkStartTimeMs = timer.monotonicNow();
@@ -159,7 +187,6 @@ public class StorageLocationChecker {
             entry.getValue().get(timeLeftMs, TimeUnit.MILLISECONDS);
         switch (result) {
         case HEALTHY:
-          goodLocations.add(entry.getKey());
           break;
         case DEGRADED:
           LOG.warn("StorageLocation {} appears to be degraded.", location);
@@ -167,16 +194,17 @@ public class StorageLocationChecker {
         case FAILED:
           LOG.warn("StorageLocation {} detected as failed.", location);
           failedLocations.add(location);
+          goodLocations.remove(location);
           break;
         default:
           LOG.error("Unexpected health check result {} for StorageLocation {}",
               result, location);
-          goodLocations.add(entry.getKey());
         }
       } catch (ExecutionException|TimeoutException e) {
         LOG.warn("Exception checking StorageLocation " + location,
             e.getCause());
         failedLocations.add(location);
+        goodLocations.remove(location);
       }
     }
 
@@ -193,7 +221,7 @@ public class StorageLocationChecker {
           + failedLocations);
     }
 
-    return goodLocations;
+    return new ArrayList<>(goodLocations.keySet());
   }
 
   public void shutdownAndWait(int gracePeriod, TimeUnit timeUnit) {

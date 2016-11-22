@@ -28,11 +28,6 @@ import org.junit.Test;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
-
-import org.apache.hadoop.fs.LocalFileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.server.datanode.DataNode.DataNodeDiskChecker;
 
 public class TestDataDirs {
 
@@ -95,26 +90,5 @@ public class TestDataDirs {
     assertThat(locations.get(0).getUri(), is(dir0.toURI()));
     assertThat(locations.get(1).getStorageType(), is(StorageType.DISK));
     assertThat(locations.get(1).getUri(), is(dir1.toURI()));
-  }
-
-  @Test(timeout = 30000)
-  public void testDataDirValidation() throws Throwable {
-
-    DataNodeDiskChecker diskChecker = mock(DataNodeDiskChecker.class);
-    doThrow(new IOException()).doThrow(new IOException()).doNothing()
-        .when(diskChecker)
-        .checkDir(any(LocalFileSystem.class), any(Path.class));
-    LocalFileSystem fs = mock(LocalFileSystem.class);
-    AbstractList<StorageLocation> locations = new ArrayList<StorageLocation>();
-
-    locations.add(StorageLocation.parse("file:/p1/"));
-    locations.add(StorageLocation.parse("file:/p2/"));
-    locations.add(StorageLocation.parse("file:/p3/"));
-
-    List<StorageLocation> checkedLocations =
-        DataNode.checkStorageLocations(locations, fs, diskChecker);
-    assertEquals("number of valid data dirs", 1, checkedLocations.size());
-    String validDir = checkedLocations.iterator().next().getFile().getPath();
-    assertThat("p3 should be valid", new File("/p3/").getPath(), is(validDir));
   }
 }
