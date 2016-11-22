@@ -15,8 +15,9 @@
  * the License.
  */
 
-package org.apache.hadoop.yarn.server.federation.policies;
+package org.apache.hadoop.yarn.server.federation.policies.manager;
 
+import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouterPolicy;
@@ -32,7 +33,6 @@ import org.junit.Test;
  */
 public abstract class BasePolicyManagerTest {
 
-
   @SuppressWarnings("checkstyle:visibilitymodifier")
   protected FederationPolicyManager wfp = null;
   @SuppressWarnings("checkstyle:visibilitymodifier")
@@ -42,12 +42,10 @@ public abstract class BasePolicyManagerTest {
   @SuppressWarnings("checkstyle:visibilitymodifier")
   protected Class expectedRouterPolicy;
 
-
   @Test
   public void testSerializeAndInstantiate() throws Exception {
     serializeAndDeserializePolicyManager(wfp, expectedPolicyManager,
-        expectedAMRMProxyPolicy,
-        expectedRouterPolicy);
+        expectedAMRMProxyPolicy, expectedRouterPolicy);
   }
 
   @Test(expected = FederationPolicyInitializationException.class)
@@ -73,11 +71,10 @@ public abstract class BasePolicyManagerTest {
       Class expAMRMProxyPolicy, Class expRouterPolicy) throws Exception {
 
     // serializeConf it in a context
-    SubClusterPolicyConfiguration fpc =
-        wfp.serializeConf();
+    SubClusterPolicyConfiguration fpc = wfp.serializeConf();
     fpc.setType(policyManagerType.getCanonicalName());
-    FederationPolicyInitializationContext context = new
-        FederationPolicyInitializationContext();
+    FederationPolicyInitializationContext context =
+        new FederationPolicyInitializationContext();
     context.setSubClusterPolicyConfiguration(fpc);
     context
         .setFederationStateStoreFacade(FederationPoliciesTestUtil.initFacade());
@@ -92,7 +89,7 @@ public abstract class BasePolicyManagerTest {
     FederationAMRMProxyPolicy federationAMRMProxyPolicy =
         wfp2.getAMRMPolicy(context, null);
 
-    //needed only for tests (getARMRMPolicy change the "type" in conf)
+    // needed only for tests (getARMRMPolicy change the "type" in conf)
     fpc.setType(wfp.getClass().getCanonicalName());
 
     FederationRouterPolicy federationRouterPolicy =
@@ -101,8 +98,7 @@ public abstract class BasePolicyManagerTest {
     Assert.assertEquals(federationAMRMProxyPolicy.getClass(),
         expAMRMProxyPolicy);
 
-    Assert.assertEquals(federationRouterPolicy.getClass(),
-        expRouterPolicy);
+    Assert.assertEquals(federationRouterPolicy.getClass(), expRouterPolicy);
   }
 
 }

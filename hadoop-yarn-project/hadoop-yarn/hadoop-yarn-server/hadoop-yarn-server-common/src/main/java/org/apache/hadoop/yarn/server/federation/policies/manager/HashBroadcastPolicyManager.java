@@ -15,26 +15,24 @@
  * the License.
  */
 
-package org.apache.hadoop.yarn.server.federation.policies;
+package org.apache.hadoop.yarn.server.federation.policies.manager;
 
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.BroadcastAMRMProxyPolicy;
-import org.apache.hadoop.yarn.server.federation.policies.router.UniformRandomRouterPolicy;
-import org.junit.Before;
+import org.apache.hadoop.yarn.server.federation.policies.router.HashBasedRouterPolicy;
 
 /**
- * Simple test of {@link UniformBroadcastPolicyManager}.
+ * Policy that routes applications via hashing of their queuename, and broadcast
+ * resource requests. This picks a {@link HashBasedRouterPolicy} for the router
+ * and a {@link BroadcastAMRMProxyPolicy} for the amrmproxy as they are designed
+ * to work together.
  */
-public class TestUniformBroadcastPolicyManager extends BasePolicyManagerTest {
+public class HashBroadcastPolicyManager extends AbstractPolicyManager {
 
-  @Before
-  public void setup() {
-    //config policy
-    wfp = new UniformBroadcastPolicyManager();
-    wfp.setQueue("queue1");
-
-    //set expected params that the base test class will use for tests
-    expectedPolicyManager = UniformBroadcastPolicyManager.class;
-    expectedAMRMProxyPolicy = BroadcastAMRMProxyPolicy.class;
-    expectedRouterPolicy = UniformRandomRouterPolicy.class;
+  public HashBroadcastPolicyManager() {
+    // this structurally hard-codes two compatible policies for Router and
+    // AMRMProxy.
+    routerFederationPolicy = HashBasedRouterPolicy.class;
+    amrmProxyFederationPolicy = BroadcastAMRMProxyPolicy.class;
   }
+
 }
