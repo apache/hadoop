@@ -51,6 +51,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
+import com.google.common.util.concurrent.SettableFuture;
+
 /**
  * This interface is used by the components to talk to the
  * scheduler for allocating of resources, cleaning up resources.
@@ -318,9 +320,14 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @param newPriority Submitted Application priority.
    *
    * @param applicationId Application ID
+   *
+   * @param future Sets any type of exception happened from StateStore
+   *
+   * @return updated priority
    */
-  public void updateApplicationPriority(Priority newPriority,
-      ApplicationId applicationId) throws YarnException;
+  public Priority updateApplicationPriority(Priority newPriority,
+      ApplicationId applicationId, SettableFuture<Object> future)
+      throws YarnException;
 
   /**
    *

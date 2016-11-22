@@ -779,10 +779,12 @@ public abstract class AbstractYarnScheduler
   }
 
   @Override
-  public void updateApplicationPriority(Priority newPriority,
-      ApplicationId applicationId) throws YarnException {
+  public Priority updateApplicationPriority(Priority newPriority,
+      ApplicationId applicationId, SettableFuture<Object> future)
+      throws YarnException {
     // Dummy Implementation till Application Priority changes are done in
     // specific scheduler.
+    return Priority.newInstance(0);
   }
 
   @Override

@@ -145,6 +145,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.SettableFuture;
 
 @LimitedPrivate("yarn")
 @Evolving
@@ -2405,8 +2406,9 @@ public class CapacityScheduler extends
   }
 
   @Override
-  public void updateApplicationPriority(Priority newPriority,
-      ApplicationId applicationId) throws YarnException {
+  public Priority updateApplicationPriority(Priority newPriority,
+      ApplicationId applicationId, SettableFuture<Object> future)
+      throws YarnException {
     Priority appPriority = null;
     SchedulerApplication<FiCaSchedulerApp> application = applications
         .get(applicationId);
@@ -2417,38 +2419,36 @@ public class CapacityScheduler extends
     }
 
     RMApp rmApp = rmContext.getRMApps().get(applicationId);
+
     appPriority = checkAndGetApplicationPriority(newPriority, rmApp.getUser(),
         rmApp.getQueue(), applicationId);
 
     if (application.getPriority().equals(appPriority)) {
-      return;
+      future.set(null);
+      return appPriority;
     }
 
-    // Update new priority in Submission Context to keep track in HA
+    // Update new priority in Submission Context to update to StateStore.
     rmApp.getApplicationSubmissionContext().setPriority(appPriority);
 
     // Update to state store
-    ApplicationStateData appState =
-        ApplicationStateData.newInstance(rmApp.getSubmitTime(),
-            rmApp.getStartTime(), rmApp.getApplicationSubmissionContext(),
-            rmApp.getUser(), rmApp.getCallerContext());
+    ApplicationStateData appState = ApplicationStateData.newInstance(
+        rmApp.getSubmitTime(), rmApp.getStartTime(),
+        rmApp.getApplicationSubmissionContext(), rmApp.getUser(),
+        rmApp.getCallerContext());
     appState.setApplicationTimeouts(rmApp.getApplicationTimeouts());
     rmContext.getStateStore().updateApplicationStateSynchronously(appState,
-        false, null);
+        false, future);
 
     // As we use iterator over a TreeSet for OrderingPolicy, once we change
     // priority then reinsert back to make order correct.
     LeafQueue queue = (LeafQueue) getQueue(rmApp.getQueue());
-
     queue.updateApplicationPriority(application, appPriority);
-
-    // Update the changed application state to timeline server
-    rmContext.getSystemMetricsPublisher().appUpdated(rmApp,
-        System.currentTimeMillis());
 
     LOG.info("Priority '" + appPriority + "' is updated in queue :"
         + rmApp.getQueue() + " for application: " + applicationId
         + " for the user: " + rmApp.getUser());
+    return appPriority;
   }
 
   @Override

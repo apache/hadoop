@@ -148,10 +148,9 @@ public class AppInfo {
       this.name = app.getName().toString();
       this.queue = app.getQueue().toString();
       this.priority = 0;
-      ApplicationSubmissionContext appSubmissionContext =
-          app.getApplicationSubmissionContext();
-      if (appSubmissionContext.getPriority() != null) {
-        this.priority = appSubmissionContext.getPriority()
+
+      if (app.getApplicationPriority() != null) {
+        this.priority = app.getApplicationPriority()
             .getPriority();
       }
       this.progress = app.getProgress() * 100;
@@ -220,6 +219,8 @@ public class AppInfo {
       vcoreSeconds = appMetrics.getVcoreSeconds();
       preemptedMemorySeconds = appMetrics.getPreemptedMemorySeconds();
       preemptedVcoreSeconds = appMetrics.getPreemptedVcoreSeconds();
+      ApplicationSubmissionContext appSubmissionContext =
+          app.getApplicationSubmissionContext();
       unmanagedApplication =
           appSubmissionContext.getUnmanagedAM();
       appNodeLabelExpression =

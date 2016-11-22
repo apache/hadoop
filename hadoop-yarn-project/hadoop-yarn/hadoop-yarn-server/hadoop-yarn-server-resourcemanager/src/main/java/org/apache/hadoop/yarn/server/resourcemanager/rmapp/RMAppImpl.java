@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -196,6 +197,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   private CallerContext callerContext;
 
   Object transitionTodo;
+
+  private Priority applicationPriority;
 
   private static final StateMachineFactory<RMAppImpl,
                                            RMAppState,
@@ -461,6 +464,10 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.applicationType = applicationType;
     this.applicationTags = applicationTags;
     this.amReq = amReq;
+    if (submissionContext.getPriority() != null) {
+      this.applicationPriority = Priority
+          .newInstance(submissionContext.getPriority().getPriority());
+    }
 
     int globalMaxAppAttempts = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -533,8 +540,6 @@ public class RMAppImpl implements RMApp, Recoverable {
             DEFAULT_AM_SCHEDULING_NODE_BLACKLISTING_DISABLE_THRESHOLD;
       }
     }
-
-
   }
 
   /**
@@ -777,7 +782,7 @@ public class RMAppImpl implements RMApp, Recoverable {
           createApplicationState(), diags, trackingUrl, this.startTime,
           this.finishTime, finishState, appUsageReport, origTrackingUrl,
           progress, this.applicationType, amrmToken, applicationTags,
-          this.submissionContext.getPriority());
+          this.getApplicationPriority());
       report.setLogAggregationStatus(logAggregationStatus);
       report.setUnmanagedApp(submissionContext.getUnmanagedAM());
       report.setAppNodeLabelExpression(getAppNodeLabelExpression());
@@ -1138,14 +1143,14 @@ public class RMAppImpl implements RMApp, Recoverable {
       // started or started but not yet saved.
       if (app.attempts.isEmpty()) {
         app.scheduler.handle(new AppAddedSchedulerEvent(app.user,
-            app.submissionContext, false));
+            app.submissionContext, false, app.applicationPriority));
         return RMAppState.SUBMITTED;
       }
 
       // Add application to scheduler synchronously to guarantee scheduler
       // knows applications before AM or NM re-registers.
       app.scheduler.handle(new AppAddedSchedulerEvent(app.user,
-          app.submissionContext, true));
+          app.submissionContext, true, app.applicationPriority));
 
       // recover attempts
       app.recoverAppAttempts();
@@ -1162,7 +1167,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.handler.handle(new AppAddedSchedulerEvent(app.user,
-          app.submissionContext, false));
+          app.submissionContext, false, app.applicationPriority));
       // send the ATS create Event
       app.sendATSCreateEvent();
     }
@@ -1619,7 +1624,16 @@ public class RMAppImpl implements RMApp, Recoverable {
     return appState == RMAppState.FAILED || appState == RMAppState.FINISHED
         || appState == RMAppState.KILLED;
   }
-  
+
+  @Override
+  public boolean isAppInCompletedStates() {
+    RMAppState appState = getState();
+    return appState == RMAppState.FINISHED || appState == RMAppState.FINISHING
+        || appState == RMAppState.FAILED || appState == RMAppState.KILLED
+        || appState == RMAppState.FINAL_SAVING
+        || appState == RMAppState.KILLING;
+  }
+
   public RMAppState getRecoveredFinalState() {
     return this.recoveredFinalState;
   }
@@ -2017,5 +2031,14 @@ public class RMAppImpl implements RMApp, Recoverable {
     } finally {
       this.writeLock.unlock();
     }
+  }
+
+  @Override
+  public Priority getApplicationPriority() {
+    return applicationPriority;
+  }
+
+  public void setApplicationPriority(Priority applicationPriority) {
+    this.applicationPriority = applicationPriority;
   }
 }
