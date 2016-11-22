@@ -117,7 +117,7 @@
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <native-maven-plugin.version>1.0-alpha-8</native-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
-    <aws-java-sdk.version>1.10.6</aws-java-sdk.version>
+    <aws-java-sdk.version>1.11.45</aws-java-sdk.version>
   </properties>
 
   <dependencyManagement>
@@ -796,6 +796,11 @@
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-annotations</artifactId>
+        <version>${jackson2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.dataformat</groupId>
+        <artifactId>jackson-dataformat-cbor</artifactId>
         <version>${jackson2.version}</version>
       </dependency>
       <dependency>
