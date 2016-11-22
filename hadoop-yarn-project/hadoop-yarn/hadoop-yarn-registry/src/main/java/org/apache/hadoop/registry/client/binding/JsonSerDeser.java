@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.registry.client.binding;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -30,13 +36,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.registry.client.exceptions.InvalidRecordException;
 import org.apache.hadoop.registry.client.exceptions.NoRecordException;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.JsonProcessingException;
-import org.codehaus.jackson.map.DeserializationConfig;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,8 +76,7 @@ public class JsonSerDeser<T> {
     Preconditions.checkArgument(classType != null, "null classType");
     this.classType = classType;
     this.mapper = new ObjectMapper();
-    mapper.configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES,
-        false);
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
   }
 
   /**
@@ -94,7 +92,8 @@ public class JsonSerDeser<T> {
    *
    * @param json input
    * @return the parsed JSON
-   * @throws IOException IO
+   * @throws IOException IO problems
+   * @throws JsonParseException If the input is not well-formatted
    * @throws JsonMappingException failure to map from the JSON to this class
    */
   @SuppressWarnings("unchecked")
@@ -113,6 +112,7 @@ public class JsonSerDeser<T> {
    * @param jsonFile input file
    * @return the parsed JSON
    * @throws IOException IO problems
+   * @throws JsonParseException If the input is not well-formatted
    * @throws JsonMappingException failure to map from the JSON to this class
    */
   @SuppressWarnings("unchecked")
@@ -131,6 +131,7 @@ public class JsonSerDeser<T> {
    * @param resource input file
    * @return the parsed JSON
    * @throws IOException IO problems
+   * @throws JsonParseException If the input is not well-formatted
    * @throws JsonMappingException failure to map from the JSON to this class
    */
   @SuppressWarnings({"IOResourceOpenedButNotSafelyClosed"})
@@ -281,13 +282,10 @@ public class JsonSerDeser<T> {
    * Convert an instance to a JSON string
    * @param instance instance to convert
    * @return a JSON string description
-   * @throws JsonParseException parse problems
-   * @throws JsonMappingException O/J mapping problems
+   * @throws JsonProcessingException Json generation problems
    */
-  public synchronized String toJson(T instance) throws IOException,
-      JsonGenerationException,
-      JsonMappingException {
-    mapper.configure(SerializationConfig.Feature.INDENT_OUTPUT, true);
+  public synchronized String toJson(T instance) throws JsonProcessingException {
+    mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
     return mapper.writeValueAsString(instance);
   }
 
@@ -302,7 +300,7 @@ public class JsonSerDeser<T> {
     Preconditions.checkArgument(instance != null, "Null instance argument");
     try {
       return toJson(instance);
-    } catch (IOException e) {
+    } catch (JsonProcessingException e) {
       return "Failed to convert to a string: " + e;
     }
   }
