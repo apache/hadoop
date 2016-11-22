@@ -29,6 +29,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -298,17 +299,29 @@ public class FileSystemRMStateStore extends RMStateStore {
       String dirName = dir.getPath().getName();
       for (FileStatus fileNodeStatus : listStatusWithRetries(dir.getPath())) {
         assert fileNodeStatus.isFile();
-        String fileName = fileNodeStatus.getPath().getName();
-        if (checkAndRemovePartialRecordWithRetries(fileNodeStatus.getPath())) {
-          continue;
-        }
-        byte[] fileData = readFileWithRetries(fileNodeStatus.getPath(),
-                fileNodeStatus.getLen());
-        // Set attribute if not already set
-        setUnreadableBySuperuserXattrib(fileNodeStatus.getPath());
+        try {
+          String fileName = fileNodeStatus.getPath().getName();
+          if (checkAndRemovePartialRecordWithRetries(fileNodeStatus.getPath())) {
+            continue;
+          }
+          byte[] fileData = readFileWithRetries(fileNodeStatus.getPath(),
+                  fileNodeStatus.getLen());
+          // Set attribute if not already set
+          setUnreadableBySuperuserXattrib(fileNodeStatus.getPath());
 
-        rmAppStateFileProcessor.processChildNode(dirName, fileName,
-            fileData);
+          rmAppStateFileProcessor.processChildNode(dirName, fileName,
+                    fileData);
+        } catch (InvalidProtocolBufferException ex) {
+          LOG.warn("Removing broken " + dir.getPath() + " app's directory as its data is invalid, to prevent RM restart failure.", ex);
+          // removing directory with broken data
+          if (existsWithRetries(dir.getPath())) {
+            deleteFileWithRetries(dir.getPath());
+          }
+          break;
+        } catch (Exception ex) {
+          LOG.warn("Skipping state loading for " + dir.getPath() + " app's directory because of exception to prevent RM restart failure", ex);
+          break;
+        }
       }
     }
   }

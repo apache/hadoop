@@ -208,6 +208,38 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
   }
 
   @Test(timeout = 60000)
+  public void testInvalidAppDataLoad() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster =
+            new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    try {
+      fsTester = new TestFSRMStateStoreTester(cluster, false);
+      // If the state store is FileSystemRMStateStore then add invalid application data.
+      // It should discard the entry and remove application with broken data from the file system.
+      FileSystemRMStateStore fileSystemRMStateStore =
+              (FileSystemRMStateStore) fsTester.getRMStateStore();
+      String appIdStr = "application_1477986176766_0134";
+      ApplicationId appId =
+              ApplicationId.fromString(appIdStr);
+      Path appDir =
+              fsTester.store.getAppDir(appId.toString());
+      Path tempAppFile =
+              new Path(appDir, appId.toString());
+      
+        // write invalid data
+      try (FSDataOutputStream fsOut = fileSystemRMStateStore.fs.create(tempAppFile, false)) {
+        fsOut.write("\\00\\00\\00\\00\\00".getBytes());
+      }
+
+      Assert.assertTrue(fileSystemRMStateStore.fs.exists(tempAppFile));
+      fsTester.getRMStateStore().loadState();
+      Assert.assertFalse(fileSystemRMStateStore.fs.exists(tempAppFile));
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test(timeout = 60000)
   public void testHDFSRMStateStore() throws Exception {
     final HdfsConfiguration conf = new HdfsConfiguration();
     UserGroupInformation yarnAdmin =
