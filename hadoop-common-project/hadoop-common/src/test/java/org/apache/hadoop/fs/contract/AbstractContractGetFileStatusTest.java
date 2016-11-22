@@ -73,6 +73,12 @@ public abstract class AbstractContractGetFileStatusTest extends
   }
 
   @Test
+  public void testGetFileStatusRoot() throws Throwable {
+    ContractTestUtils.assertIsDirectory(
+        getFileSystem().getFileStatus(new Path("/")));
+  }
+
+  @Test
   public void testListStatusEmptyDirectory() throws IOException {
     describe("List status on an empty directory");
     Path subfolder = createDirWithEmptySubFolder();
