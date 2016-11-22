@@ -141,7 +141,7 @@ public class InternalDataNodeTestUtils {
             HAServiceState.ACTIVE, 1), null, ThreadLocalRandom.current()
             .nextLong() | 1L));
 
-    DataNode dn = new DataNode(conf, locations, null) {
+    DataNode dn = new DataNode(conf, locations, null, null) {
       @Override
       DatanodeProtocolClientSideTranslatorPB connectToNN(
           InetSocketAddress nnAddr) throws IOException {
