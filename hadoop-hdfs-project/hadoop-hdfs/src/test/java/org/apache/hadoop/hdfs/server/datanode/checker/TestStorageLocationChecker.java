@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY;
 import static org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult.*;
@@ -97,8 +96,8 @@ public class TestStorageLocationChecker {
   }
 
   /**
-   * Test handling when the number of failed locations is above the
-   * max volume failure threshold.
+   * Test handling when the number of volume failures tolerated is the
+   * same as the number of volumes.
    *
    * @throws Exception
    */
@@ -122,15 +121,14 @@ public class TestStorageLocationChecker {
    * @throws Exception
    */
   @Test(timeout=30000)
-  public void testAllFailedLocations() throws Exception {
+  public void testBadConfiguration() throws Exception {
     final List<StorageLocation> locations =
-        makeMockLocations(FAILED, FAILED, FAILED);
+        makeMockLocations(HEALTHY, HEALTHY, HEALTHY);
     final Configuration conf = new HdfsConfiguration();
     conf.setInt(DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 3);
 
     thrown.expect(IOException.class);
-    thrown.expectMessage("All directories in " + DFS_DATANODE_DATA_DIR_KEY +
-        " are invalid");
+    thrown.expectMessage("Invalid value configured");
     StorageLocationChecker checker =
         new StorageLocationChecker(conf, new FakeTimer());
     checker.check(conf, locations);

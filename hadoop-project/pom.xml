@@ -72,7 +72,7 @@
 
     <!-- jackson versions -->
     <jackson.version>1.9.13</jackson.version>
-    <jackson2.version>2.2.3</jackson2.version>
+    <jackson2.version>2.7.8</jackson2.version>
 
     <!-- com.google.re2j version -->
     <re2j.version>1.0</re2j.version>
@@ -126,7 +126,7 @@
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <native-maven-plugin.version>1.0-alpha-8</native-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
-    <aws-java-sdk.version>1.10.6</aws-java-sdk.version>
+    <aws-java-sdk.version>1.11.45</aws-java-sdk.version>
   </properties>
 
   <dependencyManagement>
@@ -863,6 +863,21 @@
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-annotations</artifactId>
+        <version>${jackson2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.module</groupId>
+        <artifactId>jackson-module-jaxb-annotations</artifactId>
+        <version>${jackson2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.jaxrs</groupId>
+        <artifactId>jackson-jaxrs-json-provider</artifactId>
+        <version>${jackson2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.dataformat</groupId>
+        <artifactId>jackson-dataformat-cbor</artifactId>
         <version>${jackson2.version}</version>
       </dependency>
       <dependency>

@@ -53,9 +53,13 @@ Returns 0 on success and 1 on error.
 cat
 ---
 
-Usage: `hadoop fs -cat URI [URI ...]`
+Usage: `hadoop fs -cat [-ignoreCrc] URI [URI ...]`
 
 Copies source paths to stdout.
+
+Options
+
+* The `-ignoreCrc` option disables checkshum verification.
 
 Example:
 
@@ -116,11 +120,16 @@ copyFromLocal
 
 Usage: `hadoop fs -copyFromLocal <localsrc> URI`
 
-Similar to put command, except that the source is restricted to a local file reference.
+Similar to the `fs -put` command, except that the source is restricted to a local file reference.
 
 Options:
 
-* The -f option will overwrite the destination if it already exists.
+* `-p` : Preserves access and modification times, ownership and the permissions.
+(assuming the permissions can be propagated across filesystems)
+* `-f` : Overwrites the destination if it already exists.
+* `-l` : Allow DataNode to lazily persist the file to disk, Forces a replication
+ factor of 1. This flag will result in reduced durability. Use with care.
+* `-d` : Skip creation of temporary file with the suffix `._COPYING_`.
 
 copyToLocal
 -----------
@@ -300,7 +309,7 @@ Returns 0 on success and -1 on error.
 get
 ---
 
-Usage: `hadoop fs -get [-ignorecrc] [-crc] <src> <localdst> `
+Usage: `hadoop fs -get [-ignorecrc] [-crc] [-p] [-f] <src> <localdst> `
 
 Copy files to the local file system. Files that fail the CRC check may be copied with the -ignorecrc option. Files and CRCs may be copied using the -crc option.
 
@@ -315,7 +324,11 @@ Returns 0 on success and -1 on error.
 
 Options:
 
-The -f option will overwrite the destination if it already exists.
+* `-p` : Preserves access and modification times, ownership and the permissions.
+(assuming the permissions can be propagated across filesystems)
+* `-f` : Overwrites the destination if it already exists.
+* `-ignorecrc` : Skip CRC checks on the file(s) downloaded.
+* `-crc`: write CRC checksums for the files downloaded.
 
 getfacl
 -------
@@ -483,13 +496,28 @@ Returns 0 on success and -1 on error.
 put
 ---
 
-Usage: `hadoop fs -put <localsrc> ... <dst> `
+Usage: `hadoop fs -put  [-f] [-p] [-l] [-d] [ - | <localsrc1>  .. ]. <dst>`
 
-Copy single src, or multiple srcs from local file system to the destination file system. Also reads input from stdin and writes to destination file system.
+Copy single src, or multiple srcs from local file system to the destination file system.
+Also reads input from stdin and writes to destination file system if the source is set to "-"
+
+Copying fails if the file already exists, unless the -f flag is given.
+
+Options:
+
+* `-p` : Preserves access and modification times, ownership and the permissions.
+(assuming the permissions can be propagated across filesystems)
+* `-f` : Overwrites the destination if it already exists.
+* `-l` : Allow DataNode to lazily persist the file to disk, Forces a replication
+ factor of 1. This flag will result in reduced durability. Use with care.
+* `-d` : Skip creation of temporary file with the suffix `._COPYING_`.
+
+
+Examples:
 
 * `hadoop fs -put localfile /user/hadoop/hadoopfile`
-* `hadoop fs -put localfile1 localfile2 /user/hadoop/hadoopdir`
-* `hadoop fs -put localfile hdfs://nn.example.com/hadoop/hadoopfile`
+* `hadoop fs -put -f localfile1 localfile2 /user/hadoop/hadoopdir`
+* `hadoop fs -put -d localfile hdfs://nn.example.com/hadoop/hadoopfile`
 * `hadoop fs -put - hdfs://nn.example.com/hadoop/hadoopfile` Reads the input from stdin.
 
 Exit Code:
@@ -696,7 +724,7 @@ touchz
 
 Usage: `hadoop fs -touchz URI [URI ...]`
 
-Create a file of zero length.
+Create a file of zero length. An error is returned if the file exists with non-zero length.
 
 Example:
 
@@ -729,3 +757,279 @@ usage
 Usage: `hadoop fs -usage command`
 
 Return the help for an individual command.
+
+
+<a name="ObjectStores" />Working with Object Storage
+====================================================
+
+The Hadoop FileSystem shell works with Object Stores such as Amazon S3,
+Azure WASB and OpenStack Swift.
+
+
+
+```bash
+# Create a directory
+hadoop fs -mkdir s3a://bucket/datasets/
+
+# Upload a file from the cluster filesystem
+hadoop fs -put /datasets/example.orc s3a://bucket/datasets/
+
+# touch a file
+hadoop fs -touchz wasb://yourcontainer@youraccount.blob.core.windows.net/touched
+```
+
+Unlike a normal filesystem, renaming files and directories in an object store
+usually takes time proportional to the size of the objects being manipulated.
+As many of the filesystem shell operations
+use renaming as the final stage in operations, skipping that stage
+can avoid long delays.
+
+In particular, the `put` and `copyFromLocal` commands should
+both have the `-d` options set for a direct upload.
+
+
+```bash
+# Upload a file from the cluster filesystem
+hadoop fs -put -d /datasets/example.orc s3a://bucket/datasets/
+
+# Upload a file from under the user's home directory in the local filesystem.
+# Note it is the shell expanding the "~", not the hadoop fs command
+hadoop fs -copyFromLocal -d -f ~/datasets/devices.orc s3a://bucket/datasets/
+
+# create a file from stdin
+# the special "-" source means "use stdin"
+echo "hello" | hadoop fs -put -d -f - wasb://yourcontainer@youraccount.blob.core.windows.net/hello.txt
+
+```
+
+Objects can be downloaded and viewed:
+
+```bash
+# copy a directory to the local filesystem
+hadoop fs -copyToLocal s3a://bucket/datasets/
+
+# copy a file from the object store to the cluster filesystem.
+hadoop fs -get wasb://yourcontainer@youraccount.blob.core.windows.net/hello.txt /examples
+
+# print the object
+hadoop fs -cat wasb://yourcontainer@youraccount.blob.core.windows.net/hello.txt
+
+# print the object, unzipping it if necessary
+hadoop fs -text wasb://yourcontainer@youraccount.blob.core.windows.net/hello.txt
+
+## download log files into a local file
+hadoop fs -getmerge wasb://yourcontainer@youraccount.blob.core.windows.net/logs\* log.txt
+```
+
+Commands which list many files tend to be significantly slower than when
+working with HDFS or other filesystems
+
+```bash
+hadoop fs -count s3a://bucket/
+hadoop fs -du s3a://bucket/
+```
+
+Other slow commands include `find`, `mv`, `cp` and `rm`.
+
+**Find**
+
+This can be very slow on a large store with many directories under the path
+supplied.
+
+```bash
+# enumerate all files in the object store's container.
+hadoop fs -find s3a://bucket/ -print
+
+# remember to escape the wildcards to stop the shell trying to expand them first
+hadoop fs -find s3a://bucket/datasets/ -name \*.txt -print
+```
+
+**Rename**
+
+The time to rename a file depends on its size.
+
+The time to rename a directory depends on the number and size of all files
+beneath that directory.
+
+```bash
+hadoop fs -mv s3a://bucket/datasets s3a://bucket/historical
+```
+
+If the operation is interrupted, the object store will be in an undefined
+state.
+
+**Copy**
+
+```bash
+hadoop fs -cp s3a://bucket/datasets s3a://bucket/historical
+```
+
+The copy operation reads each file and then writes it back to the object store;
+the time to complete depends on the amount of data to copy, and the bandwidth
+in both directions between the local computer and the object store.
+
+**The further the computer is from the object store, the longer the copy takes**
+
+Deleting objects
+----------------
+
+The `rm` command will delete objects and directories full of objects.
+If the object store is *eventually consistent*, `fs ls` commands
+and other accessors may briefly return the details of the now-deleted objects; this
+is an artifact of object stores which cannot be avoided.
+
+If the filesystem client is configured to copy files to a trash directory,
+this will be in the bucket; the `rm` operation will then take time proportional
+to the size of the data. Furthermore, the deleted files will continue to incur
+storage costs.
+
+To avoid this, use the the `-skipTrash` option.
+
+```bash
+hadoop fs -rm -skipTrash s3a://bucket/dataset
+```
+
+Data moved to the `.Trash` directory can be purged using the `expunge` command.
+As this command only works with the default filesystem, it must be configured to
+make the default filesystem the target object store.
+
+```bash
+hadoop fs -expunge -D fs.defaultFS=s3a://bucket/
+```
+
+Overwriting Objects
+----------------
+
+If an object store is *eventually consistent*, then any operation which
+overwrites existing objects may not be immediately visible to all clients/queries.
+That is: later operations which query the same object's status or contents
+may get the previous object. This can sometimes surface within the same client,
+while reading a single object.
+
+Avoid having a sequence of commands which overwrite objects and then immediately
+work on the updated data; there is a risk that the previous data will be used
+instead.
+
+Timestamps
+----------
+
+Timestamps of objects and directories in Object Stores
+may not follow the behavior of files and directories in HDFS.
+
+1. The creation and initial modification times of an object will be the
+time it was created on the object store; this will be at the end of the write process,
+not the beginning.
+1. The timestamp will be taken from the object store infrastructure's clock, not that of
+the client.
+1. If an object is overwritten, the modification time will be updated.
+1. Directories may or may not have valid timestamps. They are unlikely
+to have their modification times updated when an object underneath is updated.
+1. The `atime` access time feature is not supported by any of the object stores
+found in the Apache Hadoop codebase.
+
+Consult the `DistCp` documentation for details on how this may affect the
+`distcp -update` operation.
+
+Security model and operations
+-----------------------------
+
+The security and permissions models of object stores are usually very different
+from those of a Unix-style filesystem; operations which query or manipulate
+permissions are generally unsupported.
+
+Operations to which this applies include: `chgrp`, `chmod`, `chown`,
+`getfacl`, and `setfacl`. The related attribute commands `getfattr` and`setfattr`
+are also usually unavailable.
+
+* Filesystem commands which list permission and user/group details, usually
+simulate these details.
+
+* Operations which try to preserve permissions (example `fs -put -p`)
+do not preserve permissions for this reason. (Special case: `wasb://`, which preserves
+permissions but does not enforce them).
+
+When interacting with read-only object stores, the permissions found in "list"
+and "stat" commands may indicate that the user has write access, when in fact they do not.
+
+Object stores usually have permissions models of their own,
+models can be manipulated through store-specific tooling.
+Be aware that some of the permissions which an object store may provide
+(such as write-only paths, or different permissions on the root path) may
+be incompatible with the Hadoop filesystem clients. These tend to require full
+read and write access to the entire object store bucket/container into which they write data.
+
+As an example of how permissions are mocked, here is a listing of Amazon's public,
+read-only bucket of Landsat images:
+
+```bash
+$ hadoop fs -ls s3a://landsat-pds/
+Found 10 items
+drwxrwxrwx   - mapred          0 2016-09-26 12:16 s3a://landsat-pds/L8
+-rw-rw-rw-   1 mapred      23764 2015-01-28 18:13 s3a://landsat-pds/index.html
+drwxrwxrwx   - mapred          0 2016-09-26 12:16 s3a://landsat-pds/landsat-pds_stats
+-rw-rw-rw-   1 mapred        105 2016-08-19 18:12 s3a://landsat-pds/robots.txt
+-rw-rw-rw-   1 mapred         38 2016-09-26 12:16 s3a://landsat-pds/run_info.json
+drwxrwxrwx   - mapred          0 2016-09-26 12:16 s3a://landsat-pds/runs
+-rw-rw-rw-   1 mapred   27458808 2016-09-26 12:16 s3a://landsat-pds/scene_list.gz
+drwxrwxrwx   - mapred          0 2016-09-26 12:16 s3a://landsat-pds/tarq
+drwxrwxrwx   - mapred          0 2016-09-26 12:16 s3a://landsat-pds/tarq_corrupt
+drwxrwxrwx   - mapred          0 2016-09-26 12:16 s3a://landsat-pds/test
+```
+
+1. All files are listed as having full read/write permissions.
+1. All directories appear to have full `rwx` permissions.
+1. The replication count of all files is "1".
+1. The owner of all files and directories is declared to be the current user (`mapred`).
+1. The timestamp of all directories is actually that of the time the `-ls` operation
+was executed. This is because these directories are not actual objects in the store;
+they are simulated directories based on the existence of objects under their paths.
+
+When an attempt is made to delete one of the files, the operation fails —despite
+the permissions shown by the `ls` command:
+
+```bash
+$ hadoop fs -rm s3a://landsat-pds/scene_list.gz
+rm: s3a://landsat-pds/scene_list.gz: delete on s3a://landsat-pds/scene_list.gz:
+  com.amazonaws.services.s3.model.AmazonS3Exception: Access Denied (Service: Amazon S3;
+  Status Code: 403; Error Code: AccessDenied; Request ID: 1EF98D5957BCAB3D),
+  S3 Extended Request ID: wi3veOXFuFqWBUCJgV3Z+NQVj9gWgZVdXlPU4KBbYMsw/gA+hyhRXcaQ+PogOsDgHh31HlTCebQ=
+```
+
+This demonstrates that the listed permissions cannot
+be taken as evidence of write access; only object manipulation can determine
+this.
+
+Note that the Microsoft Azure WASB filesystem does allow permissions to be set and checked,
+however the permissions are not actually enforced. This feature offers
+the ability for a HDFS directory tree to be backed up with DistCp, with
+its permissions preserved, permissions which may be restored when copying
+the directory back into HDFS. For securing access to the data in the object
+store, however, Azure's [own model and tools must be used](https://azure.microsoft.com/en-us/documentation/articles/storage-security-guide/).
+
+
+Commands of limited value
+---------------------------
+
+Here is the list of shell commands which generally have no effect —and  may
+actually fail.
+
+| command   | limitations |
+|-----------|-------------|
+| `appendToFile` | generally unsupported |
+| `checksum` | the usual checksum is "NONE" |
+| `chgrp` | generally unsupported permissions model; no-op |
+| `chmod` | generally unsupported permissions model; no-op|
+| `chown` | generally unsupported permissions model; no-op |
+| `createSnapshot` | generally unsupported |
+| `deleteSnapshot` | generally unsupported |
+| `df` | default values are normally displayed |
+| `getfacl` | may or may not be supported |
+| `getfattr` | generally supported |
+| `renameSnapshot` | generally unsupported |
+| `setfacl` | generally unsupported permissions model |
+| `setfattr` | generally unsupported permissions model |
+| `setrep`| has no effect |
+| `truncate` | generally unsupported |
+
+Different object store clients *may* support these commands: do consult the
+documentation and test against the target store.

@@ -68,7 +68,7 @@ $H3 Basic Usage
 
   This will expand the namespace under `/foo/bar` on nn1 into a temporary file,
   partition its contents among a set of map tasks, and start a copy on each
-  NodeManager from nn1 to nn2.
+  NodeManager from `nn1` to `nn2`.
 
   One can also specify multiple source directories on the command line:
 
@@ -110,7 +110,7 @@ $H3 Basic Usage
   It's also worth noting that if another client is still writing to a source
   file, the copy will likely fail. Attempting to overwrite a file being written
   at the destination should also fail on HDFS. If a source file is (re)moved
-  before it is copied, the copy will fail with a FileNotFoundException.
+  before it is copied, the copy will fail with a `FileNotFoundException`.
 
   Please refer to the detailed Command Line Reference for information on all
   the options available in DistCp.
@@ -196,20 +196,20 @@ $H3 raw Namespace Extended Attribute Preservation
 
   This section only applies to HDFS.
 
-  If the target and all of the source pathnames are in the /.reserved/raw
+  If the target and all of the source pathnames are in the `/.reserved/raw`
   hierarchy, then 'raw' namespace extended attributes will be preserved.
   'raw' xattrs are used by the system for internal functions such as encryption
   meta data. They are only visible to users when accessed through the
-  /.reserved/raw hierarchy.
+  `/.reserved/raw` hierarchy.
 
   raw xattrs are preserved based solely on whether /.reserved/raw prefixes are
   supplied. The -p (preserve, see below) flag does not impact preservation of
   raw xattrs.
 
   To prevent raw xattrs from being preserved, simply do not use the
-  /.reserved/raw prefix on any of the source and target paths.
+  `/.reserved/raw` prefix on any of the source and target paths.
 
-  If the /.reserved/raw prefix is specified on only a subset of the source and
+  If the `/.reserved/raw `prefix is specified on only a subset of the source and
   target paths, an error will be displayed and a non-0 exit code returned.
 
 Command Line Options
@@ -288,27 +288,27 @@ $H3 Copy-listing Generator
   that need copy into a SequenceFile, for consumption by the DistCp Hadoop
   Job. The main classes in this module include:
 
-  1. CopyListing: The interface that should be implemented by any
+  1. `CopyListing`: The interface that should be implemented by any
      copy-listing-generator implementation. Also provides the factory method by
      which the concrete CopyListing implementation is chosen.
-  2. SimpleCopyListing: An implementation of CopyListing that accepts multiple
+  2. `SimpleCopyListing`: An implementation of `CopyListing` that accepts multiple
      source paths (files/directories), and recursively lists all the individual
      files and directories under each, for copy.
-  3. GlobbedCopyListing: Another implementation of CopyListing that expands
+  3. `GlobbedCopyListing`: Another implementation of `CopyListing` that expands
      wild-cards in the source paths.
-  4. FileBasedCopyListing: An implementation of CopyListing that reads the
+  4. `FileBasedCopyListing`: An implementation of `CopyListing` that reads the
      source-path list from a specified file.
 
   Based on whether a source-file-list is specified in the DistCpOptions, the
   source-listing is generated in one of the following ways:
 
-  1. If there's no source-file-list, the GlobbedCopyListing is used. All
+  1. If there's no source-file-list, the `GlobbedCopyListing` is used. All
      wild-cards are expanded, and all the expansions are forwarded to the
      SimpleCopyListing, which in turn constructs the listing (via recursive
      descent of each path).
-  2. If a source-file-list is specified, the FileBasedCopyListing is used.
+  2. If a source-file-list is specified, the `FileBasedCopyListing` is used.
      Source-paths are read from the specified file, and then forwarded to the
-     GlobbedCopyListing. The listing is then constructed as described above.
+     `GlobbedCopyListing`. The listing is then constructed as described above.
 
   One may customize the method by which the copy-listing is constructed by
   providing a custom implementation of the CopyListing interface. The behaviour
@@ -343,13 +343,13 @@ $H3 InputFormats and MapReduce Components
     implementation keeps the setup-time low.
 
   * **DynamicInputFormat and DynamicRecordReader:**
-    The DynamicInputFormat implements org.apache.hadoop.mapreduce.InputFormat,
+    The DynamicInputFormat implements `org.apache.hadoop.mapreduce.InputFormat`,
     and is new to DistCp. The listing-file is split into several "chunk-files",
     the exact number of chunk-files being a multiple of the number of maps
     requested for in the Hadoop Job. Each map task is "assigned" one of the
     chunk-files (by renaming the chunk to the task's id), before the Job is
     launched.
-    Paths are read from each chunk using the DynamicRecordReader, and
+    Paths are read from each chunk using the `DynamicRecordReader`, and
     processed in the CopyMapper. After all the paths in a chunk are processed,
     the current chunk is deleted and a new chunk is acquired. The process
     continues until no more chunks are available.
@@ -403,7 +403,7 @@ $H3 Map sizing
   slower nodes. While this distribution isn't uniform, it is fair with regard
   to each mapper's capacity.
 
-  The dynamic-strategy is implemented by the DynamicInputFormat. It provides
+  The dynamic-strategy is implemented by the `DynamicInputFormat`. It provides
   superior performance under most conditions.
 
   Tuning the number of maps to the size of the source and destination clusters,
@@ -431,6 +431,105 @@ $H3 MapReduce and other side-effects
     will be killed (unless `-i` is set).
   * If `mapreduce.map.speculative` is set set final and true, the result of the
     copy is undefined.
+
+$H3 DistCp and Object Stores
+
+DistCp works with Object Stores such as Amazon S3, Azure WASB and OpenStack Swift.
+
+Prequisites
+
+1. The JAR containing the object store implementation is on the classpath,
+along with all of its dependencies.
+1. Unless the JAR automatically registers its bundled filesystem clients,
+the configuration may need to be modified to state the class which
+implements the filesystem schema. All of the ASF's own object store clients
+are self-registering.
+1. The relevant object store access credentials must be available in the cluster
+configuration, or be otherwise available in all cluster hosts.
+
+DistCp can be used to upload data
+
+```bash
+hadoop distcp hdfs://nn1:8020/datasets/set1 s3a://bucket/datasets/set1
+```
+
+To download data
+
+```bash
+hadoop distcp s3a://bucket/generated/results hdfs://nn1:8020/results
+```
+
+To copy data between object stores
+
+```bash
+hadoop distcp s3a://bucket/generated/results \
+  wasb://updates@example.blob.core.windows.net
+```
+
+And do copy data within an object store
+
+```bash
+hadoop distcp wasb://updates@example.blob.core.windows.net/current \
+  wasb://updates@example.blob.core.windows.net/old
+```
+
+And to use `-update` to only copy changed files.
+
+```bash
+hadoop distcp -update -numListstatusThreads 20  \
+  swift://history.cluster1/2016 \
+  hdfs://nn1:8020/history/2016
+```
+
+Because object stores are slow to list files, consider setting the `-numListstatusThreads` option when performing a `-update` operation
+on a large directory tree (the limit is 40 threads).
+
+When `DistCp -update` is used with object stores,
+generally only the modification time and length of the individual files are compared,
+not any checksums. The fact that most object stores do have valid timestamps
+for directories is irrelevant; only the file timestamps are compared.
+However, it is important to have the clock of the client computers close
+to that of the infrastructure, so that timestamps are consistent between
+the client/HDFS cluster and that of the object store. Otherwise, changed files may be
+missed/copied too often.
+
+**Notes**
+
+* The `-atomic` option causes a rename of the temporary data, so significantly
+increases the time to commit work at the end of the operation. Furthermore,
+as Object Stores other than (optionally) `wasb://` do not offer atomic renames of directories
+the `-atomic` operation doesn't actually deliver what is promised. *Avoid*.
+
+* The `-append` option is not supported.
+
+* The `-diff` and `rdiff` options are not supported
+
+* CRC checking will not be performed, irrespective of the value of the `-skipCrc`
+flag.
+
+* All `-p` options, including those to preserve permissions, user and group information, attributes
+checksums and replication are generally ignored. The `wasb://` connector will
+preserve the information, but not enforce the permissions.
+
+* Some object store connectors offer an option for in-memory buffering of
+output —for example the S3A connector. Using such option while copying
+large files may trigger some form of out of memory event,
+be it a heap overflow or a YARN container termination.
+This is particularly common if the network bandwidth
+between the cluster and the object store is limited (such as when working
+with remote object stores). It is best to disable/avoid such options and
+rely on disk buffering.
+
+* Copy operations within a single object store still take place in the Hadoop cluster
+—even when the object store implements a more efficient COPY operation internally
+
+    That is, an operation such as
+
+      hadoop distcp s3a://bucket/datasets/set1 s3a://bucket/datasets/set2
+
+    Copies each byte down to the Hadoop worker nodes and back to the
+bucket. As well as being slow, it means that charges may be incurred.
+
 
 Frequently Asked Questions
 --------------------------

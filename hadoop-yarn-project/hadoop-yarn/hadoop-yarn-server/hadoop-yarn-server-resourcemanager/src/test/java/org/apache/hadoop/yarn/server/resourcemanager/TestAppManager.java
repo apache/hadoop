@@ -251,6 +251,7 @@ public class TestAppManager{
     asContext.setApplicationId(appId);
     asContext.setAMContainerSpec(mockContainerLaunchContext(recordFactory));
     asContext.setResource(mockResource());
+    asContext.setPriority(Priority.newInstance(0));
     setupDispatcher(rmContext, conf);
   }
 

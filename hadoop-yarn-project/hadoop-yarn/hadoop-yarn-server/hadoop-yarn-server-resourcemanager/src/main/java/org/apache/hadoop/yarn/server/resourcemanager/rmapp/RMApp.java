@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -283,4 +284,17 @@ public interface RMApp extends EventHandler<RMAppEvent> {
   CallerContext getCallerContext();
 
   Map<ApplicationTimeoutType, Long> getApplicationTimeouts();
+
+  /**
+   * Get priority of the application.
+   * @return priority
+   */
+  Priority getApplicationPriority();
+
+  /**
+   * To verify whether app has reached in its completing/completed states.
+   *
+   * @return True/False to confirm whether app is in final states
+   */
+  boolean isAppInCompletedStates();
 }

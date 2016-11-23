@@ -3252,6 +3252,16 @@
 </property>
 
 <property>
+  <name>dfs.balancer.max-no-move-interval</name>
+  <value>60000</value>
+  <description>
+    If this specified amount of time has elapsed and no block has been moved
+    out of a source DataNode, on more effort will be made to move blocks out of
+    this DataNode in the current Balancer iteration.
+  </description>
+</property>
+
+<property>
   <name>dfs.block.invalidate.limit</name>
   <value>1000</value>
   <description>
@@ -3369,6 +3379,15 @@
   <value>1048576</value>
   <description>
     Buffer size in bytes for short-circuit local reads.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.read.striped.threadpool.size</name>
+  <value>18</value>
+  <description>
+    The maximum number of threads used for parallel reading
+    in striped layout.
   </description>
 </property>
 
@@ -3831,6 +3850,16 @@
     own fully qualified hostname at startup. The _HOST placeholder
     allows using the same configuration setting on different servers.
     Keytab based login can be enabled with dfs.mover.keytab.enabled.
+  </description>
+</property>
+
+<property>
+  <name>dfs.mover.max-no-move-interval</name>
+  <value>60000</value>
+  <description>
+    If this specified amount of time has elapsed and no block has been moved
+    out of a source DataNode, on more effort will be made to move blocks out of
+    this DataNode in the current Mover iteration.
   </description>
 </property>
 

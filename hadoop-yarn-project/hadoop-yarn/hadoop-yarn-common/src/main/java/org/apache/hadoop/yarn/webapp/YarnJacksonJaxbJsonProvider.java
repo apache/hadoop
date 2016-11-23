@@ -21,13 +21,14 @@ package org.apache.hadoop.yarn.webapp;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.ext.Provider;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.AnnotationIntrospector;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
-import org.codehaus.jackson.map.AnnotationIntrospector;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
-import org.codehaus.jackson.xc.JaxbAnnotationIntrospector;
 
 import com.google.inject.Singleton;
 
@@ -54,9 +55,10 @@ public class YarnJacksonJaxbJsonProvider extends JacksonJaxbJsonProvider {
   }
 
   public static void configObjectMapper(ObjectMapper mapper) {
-    AnnotationIntrospector introspector = new JaxbAnnotationIntrospector();
+    AnnotationIntrospector introspector =
+        new JaxbAnnotationIntrospector(TypeFactory.defaultInstance());
     mapper.setAnnotationIntrospector(introspector);
-    mapper.setSerializationInclusion(Inclusion.NON_NULL);
+    mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
   }
 
 }

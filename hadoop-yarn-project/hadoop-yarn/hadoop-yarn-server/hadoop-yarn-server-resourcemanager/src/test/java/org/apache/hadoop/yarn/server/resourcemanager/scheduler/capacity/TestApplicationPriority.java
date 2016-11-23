@@ -344,7 +344,7 @@ public class TestApplicationPriority {
 
     // Change the priority of App1 to 8
     Priority appPriority2 = Priority.newInstance(8);
-    cs.updateApplicationPriority(appPriority2, app1.getApplicationId());
+    cs.updateApplicationPriority(appPriority2, app1.getApplicationId(), null);
 
     // get scheduler app
     FiCaSchedulerApp schedulerAppAttempt = cs.getSchedulerApplications()
@@ -378,7 +378,7 @@ public class TestApplicationPriority {
 
     // Change the priority of App1 to 15
     Priority appPriority2 = Priority.newInstance(15);
-    cs.updateApplicationPriority(appPriority2, app1.getApplicationId());
+    cs.updateApplicationPriority(appPriority2, app1.getApplicationId(), null);
 
     // get scheduler app
     FiCaSchedulerApp schedulerAppAttempt = cs.getSchedulerApplications()
@@ -428,7 +428,7 @@ public class TestApplicationPriority {
 
     // Change the priority of App1 to 8
     Priority appPriority2 = Priority.newInstance(8);
-    cs.updateApplicationPriority(appPriority2, app1.getApplicationId());
+    cs.updateApplicationPriority(appPriority2, app1.getApplicationId(), null);
 
     // let things settle down
     Thread.sleep(1000);
@@ -449,8 +449,7 @@ public class TestApplicationPriority {
         .get(app1.getApplicationId());
 
     // Verify whether priority 15 is reset to 10
-    Assert.assertEquals(appPriority2, loadedApp.getCurrentAppAttempt()
-        .getSubmissionContext().getPriority());
+    Assert.assertEquals(appPriority2, loadedApp.getApplicationPriority());
 
     rm2.stop();
     rm1.stop();
@@ -558,7 +557,7 @@ public class TestApplicationPriority {
 
     // Change the priority of App1 to 3 (lowest)
     Priority appPriority3 = Priority.newInstance(3);
-    cs.updateApplicationPriority(appPriority3, app2.getApplicationId());
+    cs.updateApplicationPriority(appPriority3, app2.getApplicationId(), null);
 
     // add request for containers App2
     am2.allocate("127.0.0.1", 2 * GB, 3, new ArrayList<ContainerId>());
@@ -790,7 +789,7 @@ public class TestApplicationPriority {
       throws YarnException {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     cs.updateApplicationPriority(Priority.newInstance(2),
-        app.getApplicationId());
+        app.getApplicationId(), null);
     SchedulerEvent removeAttempt;
     removeAttempt = new AppAttemptRemovedSchedulerEvent(
         app.getCurrentAppAttempt().getAppAttemptId(), RMAppAttemptState.KILLED,

@@ -78,6 +78,11 @@ public class NodeResourceMonitorImpl extends AbstractService implements
    * @return <em>true</em> if we can monitor the node resource utilization.
    */
   private boolean isEnabled() {
+    if (this.monitoringInterval <= 0) {
+      LOG.info("Node Resource monitoring interval is <=0. "
+          + this.getClass().getName() + " is disabled.");
+      return false;
+    }
     if (resourceCalculatorPlugin == null) {
       LOG.info("ResourceCalculatorPlugin is unavailable on this system. "
           + this.getClass().getName() + " is disabled.");

@@ -151,7 +151,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
         while (!isDrained() && eventHandlingThread != null
             && eventHandlingThread.isAlive()
             && System.currentTimeMillis() < endTime) {
-          waitForDrained.wait(1000);
+          waitForDrained.wait(100);
           LOG.info("Waiting for AsyncDispatcher to drain. Thread state is :" +
               eventHandlingThread.getState());
         }
@@ -307,5 +307,9 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
 
   protected boolean isDrained() {
     return drained;
+  }
+
+  protected boolean isStopped() {
+    return stopped;
   }
 }

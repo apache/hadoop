@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -797,6 +798,39 @@ public class ViewFileSystem extends FileSystem {
       }
     }
     return allPolicies;
+  }
+
+  /**
+   * Get the trash root directory for current user when the path
+   * specified is deleted.
+   *
+   * @param path the trash root of the path to be determined.
+   * @return the trash root path.
+   */
+  @Override
+  public Path getTrashRoot(Path path) {
+    try {
+      InodeTree.ResolveResult<FileSystem> res =
+          fsState.resolve(getUriPath(path), true);
+      return res.targetFileSystem.getTrashRoot(res.remainingPath);
+    } catch (Exception e) {
+      throw new NotInMountpointException(path, "getTrashRoot");
+    }
+  }
+
+  /**
+   * Get all the trash roots for current user or all users.
+   *
+   * @param allUsers return trash roots for all users if true.
+   * @return all Trash root directories.
+   */
+  @Override
+  public Collection<FileStatus> getTrashRoots(boolean allUsers) {
+    List<FileStatus> trashRoots = new ArrayList<>();
+    for (FileSystem fs : getChildFileSystems()) {
+      trashRoots.addAll(fs.getTrashRoots(allUsers));
+    }
+    return trashRoots;
   }
 
   /**

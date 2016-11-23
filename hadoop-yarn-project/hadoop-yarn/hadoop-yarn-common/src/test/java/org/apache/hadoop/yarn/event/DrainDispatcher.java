@@ -25,7 +25,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 @SuppressWarnings("rawtypes")
 public class DrainDispatcher extends AsyncDispatcher {
   private volatile boolean drained = false;
-  private volatile boolean stopped = false;
   private final BlockingQueue<Event> queue;
   private final Object mutex;
 
@@ -69,7 +68,7 @@ public class DrainDispatcher extends AsyncDispatcher {
     return new Runnable() {
       @Override
       public void run() {
-        while (!stopped && !Thread.currentThread().isInterrupted()) {
+        while (!isStopped() && !Thread.currentThread().isInterrupted()) {
           synchronized (mutex) {
             // !drained if dispatch queued new events on this dispatcher
             drained = queue.isEmpty();
@@ -108,11 +107,5 @@ public class DrainDispatcher extends AsyncDispatcher {
     synchronized (mutex) {
       return drained;
     }
-  }
-
-  @Override
-  protected void serviceStop() throws Exception {
-    stopped = true;
-    super.serviceStop();
   }
 }

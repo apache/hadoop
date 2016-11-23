@@ -43,10 +43,11 @@ public class AppAddedSchedulerEvent extends SchedulerEvent {
   }
 
   public AppAddedSchedulerEvent(String user,
-      ApplicationSubmissionContext submissionContext, boolean isAppRecovering) {
+      ApplicationSubmissionContext submissionContext, boolean isAppRecovering,
+      Priority appPriority) {
     this(submissionContext.getApplicationId(), submissionContext.getQueue(),
         user, isAppRecovering, submissionContext.getReservationID(),
-        submissionContext.getPriority());
+        appPriority);
   }
 
   public AppAddedSchedulerEvent(ApplicationId applicationId, String queue,

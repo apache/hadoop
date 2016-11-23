@@ -175,7 +175,8 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
         MRJobConfig.REDUCE_MEMORY_TOTAL_BYTES,
         Runtime.getRuntime().maxMemory()) * maxInMemCopyUse);
 
-    this.ioSortFactor = jobConf.getInt(MRJobConfig.IO_SORT_FACTOR, 100);
+    this.ioSortFactor = jobConf.getInt(MRJobConfig.IO_SORT_FACTOR,
+        MRJobConfig.DEFAULT_IO_SORT_FACTOR);
 
     final float singleShuffleMemoryLimitPercent =
         jobConf.getFloat(MRJobConfig.SHUFFLE_MEMORY_LIMIT_PERCENT,

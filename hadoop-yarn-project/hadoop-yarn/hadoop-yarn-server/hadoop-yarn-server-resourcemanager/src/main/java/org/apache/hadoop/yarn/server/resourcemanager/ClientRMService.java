@@ -1602,14 +1602,14 @@ public class ClientRMService extends AbstractService implements
         .newRecordInstance(UpdateApplicationPriorityResponse.class);
     // Update priority only when app is tracked by the scheduler
     if (!ACTIVE_APP_STATES.contains(application.getState())) {
-      if (COMPLETED_APP_STATES.contains(application.getState())) {
+      if (application.isAppInCompletedStates()) {
         // If Application is in any of the final states, change priority
         // can be skipped rather throwing exception.
         RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
             AuditConstants.UPDATE_APP_PRIORITY, "ClientRMService",
             applicationId);
         response.setApplicationPriority(application
-            .getApplicationSubmissionContext().getPriority());
+            .getApplicationPriority());
         return response;
       }
       String msg = "Application in " + application.getState()
@@ -1622,8 +1622,7 @@ public class ClientRMService extends AbstractService implements
     }
 
     try {
-      rmContext.getScheduler().updateApplicationPriority(newAppPriority,
-          applicationId);
+      rmAppManager.updateApplicationPriority(applicationId, newAppPriority);
     } catch (YarnException ex) {
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
           AuditConstants.UPDATE_APP_PRIORITY, "UNKNOWN", "ClientRMService",
@@ -1633,8 +1632,7 @@ public class ClientRMService extends AbstractService implements
 
     RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
         AuditConstants.UPDATE_APP_PRIORITY, "ClientRMService", applicationId);
-    response.setApplicationPriority(application
-        .getApplicationSubmissionContext().getPriority());
+    response.setApplicationPriority(application.getApplicationPriority());
     return response;
   }
 
