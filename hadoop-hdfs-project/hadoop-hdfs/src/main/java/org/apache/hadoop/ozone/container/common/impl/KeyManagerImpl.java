@@ -29,7 +29,7 @@ import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
-import org.apache.hadoop.ozone.container.common.utils.LevelDBStore;
+import org.apache.hadoop.utils.LevelDBStore;
 
 import java.io.IOException;
 import java.util.List;

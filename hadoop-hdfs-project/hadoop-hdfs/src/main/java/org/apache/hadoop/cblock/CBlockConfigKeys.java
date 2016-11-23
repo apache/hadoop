@@ -57,6 +57,12 @@ public final class CBlockConfigKeys {
       "dfs.storage.service.handler.count";
   public static final int DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_DEFAULT = 10;
 
+  public static final String DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY =
+      "dfs.cblock.service.leveldb.path";
+  //TODO : find a better place
+  public static final String DFS_CBLOCK_SERVICE_LEVELDB_PATH_DEFAULT =
+      "/tmp/cblock_levelDB.dat";
+
   private CBlockConfigKeys() {
 
   }

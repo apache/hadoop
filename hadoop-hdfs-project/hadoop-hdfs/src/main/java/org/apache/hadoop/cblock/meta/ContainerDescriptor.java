@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.cblock.meta;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.cblock.protocol.proto.CBlockClientServerProtocolProtos;
+
 /**
  *
  * The internal representation of a container maintained by CBlock server.
@@ -29,12 +32,17 @@ package org.apache.hadoop.cblock.meta;
 public class ContainerDescriptor {
   private final String containerID;
   // the index of this container with in a volume
-  // on creation, there is no way to know the index of the container
+  // on creation, there may be no way to know the index of the container
   // as it is a volume specific information
   private int containerIndex;
 
   public ContainerDescriptor(String containerID) {
     this.containerID = containerID;
+  }
+
+  public ContainerDescriptor(String containerID, int containerIndex) {
+    this.containerID = containerID;
+    this.containerIndex = containerIndex;
   }
 
   public void setContainerIndex(int idx) {
@@ -51,5 +59,36 @@ public class ContainerDescriptor {
 
   public long getUtilization() {
     return 0;
+  }
+
+  public CBlockClientServerProtocolProtos.ContainerIDProto toProtobuf() {
+    CBlockClientServerProtocolProtos.ContainerIDProto.Builder builder =
+            CBlockClientServerProtocolProtos.ContainerIDProto.newBuilder();
+    builder.setContainerID(containerID);
+    builder.setIndex(containerIndex);
+    return builder.build();
+  }
+
+  public static ContainerDescriptor fromProtobuf(byte[] data)
+      throws InvalidProtocolBufferException {
+    CBlockClientServerProtocolProtos.ContainerIDProto id =
+            CBlockClientServerProtocolProtos.ContainerIDProto.parseFrom(data);
+    return new ContainerDescriptor(id.getContainerID(),
+            (int)id.getIndex());
+  }
+
+  @Override
+  public int hashCode() {
+    return containerID.hashCode()*37 + containerIndex;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o != null && o instanceof ContainerDescriptor) {
+      ContainerDescriptor other = (ContainerDescriptor)o;
+      return containerID.equals(other.containerID) &&
+          containerIndex == other.containerIndex;
+    }
+    return false;
   }
 }

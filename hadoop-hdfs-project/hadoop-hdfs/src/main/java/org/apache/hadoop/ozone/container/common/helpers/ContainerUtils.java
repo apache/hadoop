@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
-import org.apache.hadoop.ozone.container.common.utils.LevelDBStore;
+import org.apache.hadoop.utils.LevelDBStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

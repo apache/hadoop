@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.cblock;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 import org.apache.hadoop.cblock.meta.VolumeDescriptor;
 import org.apache.hadoop.cblock.meta.VolumeInfo;
@@ -31,16 +32,22 @@ import org.apache.hadoop.cblock.protocolPB.CBlockServiceProtocolPB;
 import org.apache.hadoop.cblock.protocolPB.CBlockServiceProtocolServerSideTranslatorPB;
 import org.apache.hadoop.cblock.storage.IStorageClient;
 import org.apache.hadoop.cblock.storage.StorageManager;
+import org.apache.hadoop.cblock.util.KeyUtil;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.utils.LevelDBStore;
+import org.iq80.leveldb.DBIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_JSCSIRPC_ADDRESS_DEFAULT;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY;
@@ -50,6 +57,8 @@ import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_AD
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_BIND_HOST_KEY;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICE_LEVELDB_PATH_DEFAULT;
+import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY;
 
 /**
  * The main entry point of CBlock operations, ALL the CBlock operations
@@ -74,9 +83,20 @@ public class CBlockManager implements CBlockServiceProtocol,
 
   private final StorageManager storageManager;
 
+  private final LevelDBStore levelDBStore;
+  private final String dbPath;
+
+  private Charset encoding = Charset.forName("UTF-8");
+
   public CBlockManager(CBlockConfiguration conf, IStorageClient storageClient
   ) throws IOException {
     storageManager = new StorageManager(storageClient);
+
+    dbPath = conf.getTrimmed(DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY,
+        DFS_CBLOCK_SERVICE_LEVELDB_PATH_DEFAULT);
+    levelDBStore = new LevelDBStore(new File(dbPath), true);
+    LOG.info("Try to load exising volume information");
+    readFromPersistentStore();
 
     RPC.setProtocolEngine(conf, CBlockServiceProtocolPB.class,
         ProtobufRpcEngine.class);
@@ -182,13 +202,13 @@ public class CBlockManager implements CBlockServiceProtocol,
   }
 
   @Override
-  public MountVolumeResponse mountVolume(
+  public synchronized MountVolumeResponse mountVolume(
       String userName, String volumeName) throws IOException {
     return storageManager.isVolumeValid(userName, volumeName);
   }
 
   @Override
-  public void createVolume(String userName, String volumeName,
+  public synchronized void createVolume(String userName, String volumeName,
       long volumeSize, int blockSize) throws IOException {
     LOG.info("Create volume received: userName: {} volumeName: {} " +
         "volumeSize: {} blockSize: {}", userName, volumeName,
@@ -205,25 +225,82 @@ public class CBlockManager implements CBlockServiceProtocol,
     if (volume == null) {
       throw new IOException("Volume creation failed!");
     }
+    String volumeKey = KeyUtil.getVolumeKey(userName, volumeName);
+    writeToPersistentStore(volumeKey.getBytes(encoding),
+        volume.toProtobuf().toByteArray());
   }
 
   @Override
-  public void deleteVolume(String userName,
+  public synchronized void deleteVolume(String userName,
       String volumeName, boolean force) throws IOException {
-    LOG.info("Delete volume received: volume:" + volumeName
-        + " force?:" + force);
+    LOG.info("Delete volume received: volume: {} {} ", volumeName, force);
     storageManager.deleteVolume(userName, volumeName, force);
+    // being here means volume is successfully deleted now
+    String volumeKey = KeyUtil.getVolumeKey(userName, volumeName);
+    removeFromPersistentStore(volumeKey.getBytes(encoding));
+  }
+
+  // No need to synchronize on the following three methods, since write and
+  // remove's caller are synchronized. read's caller is the constructor and
+  // no other method call can happen at that time.
+  @VisibleForTesting
+  public void writeToPersistentStore(byte[] key, byte[] value) {
+    levelDBStore.put(key, value);
+  }
+
+  @VisibleForTesting
+  public void removeFromPersistentStore(byte[] key) {
+    levelDBStore.delete(key);
+  }
+
+  public void readFromPersistentStore() {
+    DBIterator iter = levelDBStore.getIterator();
+    iter.seekToFirst();
+    while (iter.hasNext()) {
+      Map.Entry<byte[], byte[]> entry = iter.next();
+      String volumeKey = new String(entry.getKey(), encoding);
+      try {
+        VolumeDescriptor volumeDescriptor =
+            VolumeDescriptor.fromProtobuf(entry.getValue());
+        storageManager.addVolume(volumeDescriptor);
+      } catch (IOException e) {
+        LOG.error("Loading volume " + volumeKey + " error " + e);
+      }
+    }
   }
 
   @Override
-  public VolumeInfo infoVolume(String userName, String volumeName
+  public synchronized VolumeInfo infoVolume(String userName, String volumeName
   ) throws IOException {
     LOG.info("Info volume received: volume: {}", volumeName);
     return storageManager.infoVolume(userName, volumeName);
   }
 
+  @VisibleForTesting
+  public synchronized List<VolumeDescriptor> getAllVolumes() {
+    return storageManager.getAllVolume(null);
+  }
+
+  public synchronized void close() {
+    try {
+      levelDBStore.close();
+    } catch (IOException e) {
+      LOG.error("Error when closing levelDB " + e);
+    }
+  }
+
+  public synchronized void clean() {
+    try {
+      levelDBStore.close();
+      levelDBStore.destroy();
+    } catch (IOException e) {
+      LOG.error("Error when deleting levelDB " + e);
+    }
+  }
+
   @Override
-  public List<VolumeInfo> listVolume(String userName) throws IOException {
+  public synchronized List<VolumeInfo> listVolume(String userName)
+      throws IOException {
     ArrayList<VolumeInfo> response = new ArrayList<>();
     List<VolumeDescriptor> allVolumes =
         storageManager.getAllVolume(userName);
