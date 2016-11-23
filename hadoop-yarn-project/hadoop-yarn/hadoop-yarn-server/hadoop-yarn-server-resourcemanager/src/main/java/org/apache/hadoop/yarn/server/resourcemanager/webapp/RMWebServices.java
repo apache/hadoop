@@ -1221,7 +1221,7 @@ public class RMWebServices extends WebServices {
 
     AppPriority ret = new AppPriority();
     ret.setPriority(
-        app.getApplicationSubmissionContext().getPriority().getPriority());
+        app.getApplicationPriority().getPriority());
 
     return ret;
   }
@@ -1261,7 +1261,7 @@ public class RMWebServices extends WebServices {
           "Trying to update priority an absent application " + appId);
       throw e;
     }
-    Priority priority = app.getApplicationSubmissionContext().getPriority();
+    Priority priority = app.getApplicationPriority();
     if (priority == null
         || priority.getPriority() != targetPriority.getPriority()) {
       return modifyApplicationPriority(app, callerUGI,
@@ -1308,7 +1308,7 @@ public class RMWebServices extends WebServices {
       }
     }
     AppPriority ret = new AppPriority(
-        app.getApplicationSubmissionContext().getPriority().getPriority());
+        app.getApplicationPriority().getPriority());
     return Response.status(Status.OK).entity(ret).build();
   }
 

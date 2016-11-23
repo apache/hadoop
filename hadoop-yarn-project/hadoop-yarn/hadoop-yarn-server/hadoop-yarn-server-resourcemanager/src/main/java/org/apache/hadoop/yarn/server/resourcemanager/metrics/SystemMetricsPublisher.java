@@ -129,8 +129,7 @@ public class SystemMetricsPublisher extends CompositeService {
     if (publishSystemMetrics) {
       dispatcher.getEventHandler()
           .handle(new ApplicationUpdatedEvent(app.getApplicationId(),
-              app.getQueue(), updatedTime,
-              app.getApplicationSubmissionContext().getPriority()));
+              app.getQueue(), updatedTime, app.getApplicationPriority()));
     }
   }
 

@@ -604,7 +604,7 @@ public class ApplicationMasterService extends AbstractService implements
 
       // Set application priority
       allocateResponse.setApplicationPriority(app
-          .getApplicationSubmissionContext().getPriority());
+          .getApplicationPriority());
 
       // update AMRMToken if the token is rolled-up
       MasterKeyData nextMasterKey =

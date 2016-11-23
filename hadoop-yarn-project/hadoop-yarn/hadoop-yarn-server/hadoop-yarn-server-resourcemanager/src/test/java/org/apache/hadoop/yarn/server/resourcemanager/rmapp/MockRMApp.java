@@ -307,4 +307,14 @@ public class MockRMApp implements RMApp {
   public Map<ApplicationTimeoutType, Long> getApplicationTimeouts() {
     throw new UnsupportedOperationException("Not supported yet.");
   }
+
+  @Override
+  public Priority getApplicationPriority() {
+    return null;
+  }
+
+  @Override
+  public boolean isAppInCompletedStates() {
+    return false;
+  }
 }

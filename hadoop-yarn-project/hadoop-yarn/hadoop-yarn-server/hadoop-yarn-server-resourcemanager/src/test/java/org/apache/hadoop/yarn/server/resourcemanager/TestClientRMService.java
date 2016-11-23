@@ -455,7 +455,7 @@ public class TestClientRMService {
     }
   }
 
-  public ClientRMService createRMService() throws IOException {
+  public ClientRMService createRMService() throws IOException, YarnException {
     YarnScheduler yarnScheduler = mockYarnScheduler();
     RMContext rmContext = mock(RMContext.class);
     mockRMContext(yarnScheduler, rmContext);
@@ -956,6 +956,7 @@ public class TestClientRMService {
     submissionContext.setApplicationType(appType);
     submissionContext.setApplicationTags(tags);
     submissionContext.setUnmanagedAM(unmanaged);
+    submissionContext.setPriority(Priority.newInstance(0));
 
     SubmitApplicationRequest submitRequest =
         recordFactory.newRecordInstance(SubmitApplicationRequest.class);
@@ -1030,6 +1031,7 @@ public class TestClientRMService {
     ApplicationSubmissionContext asContext = mock(ApplicationSubmissionContext.class);
     when(asContext.getMaxAppAttempts()).thenReturn(1);
     when(asContext.getNodeLabelExpression()).thenReturn(appNodeLabelExpression);
+    when(asContext.getPriority()).thenReturn(Priority.newInstance(0));
     RMAppImpl app =
         spy(new RMAppImpl(applicationId3, rmContext, config, null, null,
             queueName, asContext, yarnScheduler, null,
@@ -1064,6 +1066,7 @@ public class TestClientRMService {
     attempts.put(attemptId, rmAppAttemptImpl);
     when(app.getCurrentAppAttempt()).thenReturn(rmAppAttemptImpl);
     when(app.getAppAttempts()).thenReturn(attempts);
+    when(app.getApplicationPriority()).thenReturn(Priority.newInstance(0));
     when(rmAppAttemptImpl.getMasterContainer()).thenReturn(container);
     ResourceScheduler rs = mock(ResourceScheduler.class);
     when(rmContext.getScheduler()).thenReturn(rs);
@@ -1086,7 +1089,7 @@ public class TestClientRMService {
     return app;
   }
 
-  private static YarnScheduler mockYarnScheduler() {
+  private static YarnScheduler mockYarnScheduler() throws YarnException {
     YarnScheduler yarnScheduler = mock(YarnScheduler.class);
     when(yarnScheduler.getMinimumResourceCapability()).thenReturn(
         Resources.createResource(
@@ -1104,6 +1107,9 @@ public class TestClientRMService {
     ResourceCalculator rs = mock(ResourceCalculator.class);
     when(yarnScheduler.getResourceCalculator()).thenReturn(rs);
 
+    when(yarnScheduler.checkAndGetApplicationPriority(any(Priority.class),
+        anyString(), anyString(), any(ApplicationId.class)))
+            .thenReturn(Priority.newInstance(0));
     return yarnScheduler;
   }
 
@@ -1663,8 +1669,7 @@ public class TestClientRMService {
     RMApp app1 = rm.submitApp(1024, Priority.newInstance(appPriority));
 
     Assert.assertEquals("Incorrect priority has been set to application",
-        appPriority, app1.getApplicationSubmissionContext().getPriority()
-            .getPriority());
+        appPriority, app1.getApplicationPriority().getPriority());
 
     appPriority = 11;
     ClientRMService rmService = rm.getClientRMService();
