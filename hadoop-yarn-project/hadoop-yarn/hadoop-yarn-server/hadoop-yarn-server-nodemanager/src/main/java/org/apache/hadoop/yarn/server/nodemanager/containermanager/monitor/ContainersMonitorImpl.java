@@ -172,7 +172,8 @@ public class ContainersMonitorImpl extends AbstractService implements
     LOG.info("Physical memory check enabled: " + pmemCheckEnabled);
     LOG.info("Virtual memory check enabled: " + vmemCheckEnabled);
 
-    containersMonitorEnabled = isContainerMonitorEnabled();
+    containersMonitorEnabled =
+        isContainerMonitorEnabled() && monitoringInterval > 0;
     LOG.info("ContainersMonitor enabled: " + containersMonitorEnabled);
 
     nodeCpuPercentageForYARN =
