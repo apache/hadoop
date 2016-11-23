@@ -177,8 +177,8 @@ public class FederationStateStoreService extends AbstractService
         config.getSocketAddr(YarnConfiguration.RM_ADMIN_ADDRESS,
             YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
             YarnConfiguration.DEFAULT_RM_ADMIN_PORT));
-    String webAppAddress =
-        WebAppUtils.getResolvedRemoteRMWebAppURLWithoutScheme(config);
+    String webAppAddress = getServiceAddress(NetUtils
+        .createSocketAddr(WebAppUtils.getRMWebAppURLWithScheme(config)));
 
     SubClusterInfo subClusterInfo = SubClusterInfo.newInstance(subClusterId,
         amRMAddress, clientRMAddress, rmAdminAddress, webAppAddress,
