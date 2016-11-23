@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.federation;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.net.UnknownHostException;
 
 import javax.xml.bind.JAXBException;
 
@@ -157,12 +158,20 @@ public class TestFederationRMStateStoreService {
   }
 
   private String checkSubClusterInfo(SubClusterState state)
-      throws YarnException {
+      throws YarnException, UnknownHostException {
     Assert.assertNotNull(stateStore.getSubCluster(request));
     SubClusterInfo response =
         stateStore.getSubCluster(request).getSubClusterInfo();
     Assert.assertEquals(state, response.getState());
     Assert.assertTrue(response.getLastHeartBeat() >= lastHearbeatTS);
+    String expectedAddress =
+        (response.getClientRMServiceAddress().split(":"))[0];
+    Assert.assertEquals(expectedAddress,
+        (response.getAMRMServiceAddress().split(":"))[0]);
+    Assert.assertEquals(expectedAddress,
+        (response.getRMAdminServiceAddress().split(":"))[0]);
+    Assert.assertEquals(expectedAddress,
+        (response.getRMWebServiceAddress().split(":"))[0]);
     lastHearbeatTS = response.getLastHeartBeat();
     return response.getCapability();
   }
