@@ -37,6 +37,12 @@ public class NodeManagerHardwareUtils {
   private static final Log LOG = LogFactory
       .getLog(NodeManagerHardwareUtils.class);
 
+  private static boolean isHardwareDetectionEnabled(Configuration conf) {
+    return conf.getBoolean(
+        YarnConfiguration.NM_ENABLE_HARDWARE_CAPABILITY_DETECTION,
+        YarnConfiguration.DEFAULT_NM_ENABLE_HARDWARE_CAPABILITY_DETECTION);
+  }
+
   /**
    *
    * Returns the number of CPUs on the node. This value depends on the
@@ -138,6 +144,15 @@ public class NodeManagerHardwareUtils {
     return nodeCpuPercentage;
   }
 
+  private static int getConfiguredVCores(Configuration conf) {
+    int cores = conf.getInt(YarnConfiguration.NM_VCORES,
+        YarnConfiguration.DEFAULT_NM_VCORES);
+    if (cores == -1) {
+      cores = YarnConfiguration.DEFAULT_NM_VCORES;
+    }
+    return cores;
+  }
+
   /**
    * Function to return the number of vcores on the system that can be used for
    * YARN containers. If a number is specified in the configuration file, then
@@ -154,11 +169,16 @@ public class NodeManagerHardwareUtils {
    *
    */
   public static int getVCores(Configuration conf) {
+    if (!isHardwareDetectionEnabled(conf)) {
+      return getConfiguredVCores(conf);
+    }
     // is this os for which we can determine cores?
     ResourceCalculatorPlugin plugin =
         ResourceCalculatorPlugin.getResourceCalculatorPlugin(null, conf);
-
-    return NodeManagerHardwareUtils.getVCores(plugin, conf);
+    if (plugin == null) {
+      return getConfiguredVCores(conf);
+    }
+    return getVCoresInternal(plugin, conf);
   }
 
   /**
@@ -180,43 +200,35 @@ public class NodeManagerHardwareUtils {
    */
   public static int getVCores(ResourceCalculatorPlugin plugin,
       Configuration conf) {
+    if (!isHardwareDetectionEnabled(conf) || plugin == null) {
+      return getConfiguredVCores(conf);
+    }
+    return getVCoresInternal(plugin, conf);
+  }
 
-    int cores;
-    boolean hardwareDetectionEnabled =
-        conf.getBoolean(
-          YarnConfiguration.NM_ENABLE_HARDWARE_CAPABILITY_DETECTION,
-          YarnConfiguration.DEFAULT_NM_ENABLE_HARDWARE_CAPABILITY_DETECTION);
-
+  private static int getVCoresInternal(ResourceCalculatorPlugin plugin,
+      Configuration conf) {
     String message;
-    if (!hardwareDetectionEnabled || plugin == null) {
-      cores =
-          conf.getInt(YarnConfiguration.NM_VCORES,
-            YarnConfiguration.DEFAULT_NM_VCORES);
-      if (cores == -1) {
-        cores = YarnConfiguration.DEFAULT_NM_VCORES;
-      }
-    } else {
-      cores = conf.getInt(YarnConfiguration.NM_VCORES, -1);
-      if (cores == -1) {
-        float physicalCores =
-            NodeManagerHardwareUtils.getContainersCPUs(plugin, conf);
-        float multiplier =
-            conf.getFloat(YarnConfiguration.NM_PCORES_VCORES_MULTIPLIER,
-                YarnConfiguration.DEFAULT_NM_PCORES_VCORES_MULTIPLIER);
-        if (multiplier > 0) {
-          float tmp = physicalCores * multiplier;
-          if (tmp > 0 && tmp < 1) {
-            // on a single core machine - tmp can be between 0 and 1
-            cores = 1;
-          } else {
-            cores = (int) tmp;
-          }
+    int cores = conf.getInt(YarnConfiguration.NM_VCORES, -1);
+    if (cores == -1) {
+      float physicalCores =
+          NodeManagerHardwareUtils.getContainersCPUs(plugin, conf);
+      float multiplier =
+          conf.getFloat(YarnConfiguration.NM_PCORES_VCORES_MULTIPLIER,
+              YarnConfiguration.DEFAULT_NM_PCORES_VCORES_MULTIPLIER);
+      if (multiplier > 0) {
+        float tmp = physicalCores * multiplier;
+        if (tmp > 0 && tmp < 1) {
+          // on a single core machine - tmp can be between 0 and 1
+          cores = 1;
         } else {
-          message = "Illegal value for "
-              + YarnConfiguration.NM_PCORES_VCORES_MULTIPLIER
-              + ". Value must be greater than 0.";
-          throw new IllegalArgumentException(message);
+          cores = (int) tmp;
         }
+      } else {
+        message = "Illegal value for "
+            + YarnConfiguration.NM_PCORES_VCORES_MULTIPLIER
+            + ". Value must be greater than 0.";
+        throw new IllegalArgumentException(message);
       }
     }
     if(cores <= 0) {
@@ -226,6 +238,15 @@ public class NodeManagerHardwareUtils {
     }
 
     return cores;
+  }
+
+  private static int getConfiguredMemoryMB(Configuration conf) {
+    int memoryMb = conf.getInt(YarnConfiguration.NM_PMEM_MB,
+        YarnConfiguration.DEFAULT_NM_PMEM_MB);
+    if (memoryMb == -1) {
+      memoryMb = YarnConfiguration.DEFAULT_NM_PMEM_MB;
+    }
+    return memoryMb;
   }
 
   /**
@@ -244,8 +265,15 @@ public class NodeManagerHardwareUtils {
    * @return the amount of memory that will be used for YARN containers in MB.
    */
   public static int getContainerMemoryMB(Configuration conf) {
-    return NodeManagerHardwareUtils.getContainerMemoryMB(
-      ResourceCalculatorPlugin.getResourceCalculatorPlugin(null, conf), conf);
+    if (!isHardwareDetectionEnabled(conf)) {
+      return getConfiguredMemoryMB(conf);
+    }
+    ResourceCalculatorPlugin plugin =
+        ResourceCalculatorPlugin.getResourceCalculatorPlugin(null, conf);
+    if (plugin == null) {
+      return getConfiguredMemoryMB(conf);
+    }
+    return getContainerMemoryMBInternal(plugin, conf);
   }
 
   /**
@@ -267,41 +295,35 @@ public class NodeManagerHardwareUtils {
    */
   public static int getContainerMemoryMB(ResourceCalculatorPlugin plugin,
       Configuration conf) {
+    if (!isHardwareDetectionEnabled(conf) || plugin == null) {
+      return getConfiguredMemoryMB(conf);
+    }
+    return getContainerMemoryMBInternal(plugin, conf);
+  }
 
-    int memoryMb;
-    boolean hardwareDetectionEnabled = conf.getBoolean(
-          YarnConfiguration.NM_ENABLE_HARDWARE_CAPABILITY_DETECTION,
-          YarnConfiguration.DEFAULT_NM_ENABLE_HARDWARE_CAPABILITY_DETECTION);
-
-    if (!hardwareDetectionEnabled || plugin == null) {
-      memoryMb = conf.getInt(YarnConfiguration.NM_PMEM_MB,
-            YarnConfiguration.DEFAULT_NM_PMEM_MB);
-      if (memoryMb == -1) {
-        memoryMb = YarnConfiguration.DEFAULT_NM_PMEM_MB;
+  private static int getContainerMemoryMBInternal(ResourceCalculatorPlugin plugin,
+      Configuration conf) {
+    int memoryMb = conf.getInt(YarnConfiguration.NM_PMEM_MB, -1);
+    if (memoryMb == -1) {
+      int physicalMemoryMB =
+          (int) (plugin.getPhysicalMemorySize() / (1024 * 1024));
+      int hadoopHeapSizeMB =
+          (int) (Runtime.getRuntime().maxMemory() / (1024 * 1024));
+      int containerPhysicalMemoryMB =
+          (int) (0.8f * (physicalMemoryMB - (2 * hadoopHeapSizeMB)));
+      int reservedMemoryMB =
+          conf.getInt(YarnConfiguration.NM_SYSTEM_RESERVED_PMEM_MB, -1);
+      if (reservedMemoryMB != -1) {
+        containerPhysicalMemoryMB = physicalMemoryMB - reservedMemoryMB;
       }
-    } else {
-      memoryMb = conf.getInt(YarnConfiguration.NM_PMEM_MB, -1);
-      if (memoryMb == -1) {
-        int physicalMemoryMB =
-            (int) (plugin.getPhysicalMemorySize() / (1024 * 1024));
-        int hadoopHeapSizeMB =
-            (int) (Runtime.getRuntime().maxMemory() / (1024 * 1024));
-        int containerPhysicalMemoryMB =
-            (int) (0.8f * (physicalMemoryMB - (2 * hadoopHeapSizeMB)));
-        int reservedMemoryMB =
-            conf.getInt(YarnConfiguration.NM_SYSTEM_RESERVED_PMEM_MB, -1);
-        if (reservedMemoryMB != -1) {
-          containerPhysicalMemoryMB = physicalMemoryMB - reservedMemoryMB;
-        }
-        if(containerPhysicalMemoryMB <= 0) {
-          LOG.error("Calculated memory for YARN containers is too low."
-              + " Node memory is " + physicalMemoryMB
-              + " MB, system reserved memory is "
-              + reservedMemoryMB + " MB.");
-        }
-        containerPhysicalMemoryMB = Math.max(containerPhysicalMemoryMB, 0);
-        memoryMb = containerPhysicalMemoryMB;
+      if(containerPhysicalMemoryMB <= 0) {
+        LOG.error("Calculated memory for YARN containers is too low."
+            + " Node memory is " + physicalMemoryMB
+            + " MB, system reserved memory is "
+            + reservedMemoryMB + " MB.");
       }
+      containerPhysicalMemoryMB = Math.max(containerPhysicalMemoryMB, 0);
+      memoryMb = containerPhysicalMemoryMB;
     }
     if(memoryMb <= 0) {
       String message = "Illegal value for " + YarnConfiguration.NM_PMEM_MB
