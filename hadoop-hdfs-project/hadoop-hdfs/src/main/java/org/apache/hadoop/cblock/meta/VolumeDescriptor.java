@@ -17,10 +17,13 @@
  */
 package org.apache.hadoop.cblock.meta;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.cblock.protocol.proto.CBlockClientServerProtocolProtos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -161,5 +164,91 @@ public class VolumeDescriptor {
     string += "containerIds:" + containerIdOrdered + "\n";
     string += "containerIdsWithObject:" + containerMap.keySet();
     return string;
+  }
+
+  public CBlockClientServerProtocolProtos.MountVolumeResponseProto
+      toProtobuf() {
+    CBlockClientServerProtocolProtos.MountVolumeResponseProto.Builder volume =
+        CBlockClientServerProtocolProtos.MountVolumeResponseProto.newBuilder();
+    volume.setIsValid(true);
+    volume.setVolumeName(volumeName);
+    volume.setUserName(userName);
+    volume.setVolumeSize(volumeSize);
+    volume.setBlockSize(blockSize);
+    for (String containerIDString : containerIdOrdered) {
+      ContainerDescriptor containerDescriptor = containerMap.get(
+          containerIDString);
+      volume.addAllContainerIDs(containerDescriptor.toProtobuf());
+    }
+    return volume.build();
+  }
+
+  public static VolumeDescriptor fromProtobuf(byte[] data)
+      throws InvalidProtocolBufferException {
+    CBlockClientServerProtocolProtos.MountVolumeResponseProto volume =
+        CBlockClientServerProtocolProtos.MountVolumeResponseProto
+            .parseFrom(data);
+    String userName = volume.getUserName();
+    String volumeName = volume.getVolumeName();
+    long volumeSize = volume.getVolumeSize();
+    int blockSize = volume.getBlockSize();
+    VolumeDescriptor volumeDescriptor = new VolumeDescriptor(userName,
+        volumeName, volumeSize, blockSize);
+    List<CBlockClientServerProtocolProtos.ContainerIDProto> containers
+        = volume.getAllContainerIDsList();
+
+    String[] containerOrdering = new String[containers.size()];
+
+    for (CBlockClientServerProtocolProtos.ContainerIDProto containerProto :
+        containers) {
+      ContainerDescriptor containerDescriptor = new ContainerDescriptor(
+          containerProto.getContainerID(),
+          (int)containerProto.getIndex());
+      volumeDescriptor.addContainer(containerDescriptor);
+      containerOrdering[containerDescriptor.getContainerIndex()] =
+          containerDescriptor.getContainerID();
+    }
+    volumeDescriptor.setContainerIDs(
+        new ArrayList<>(Arrays.asList(containerOrdering)));
+    return volumeDescriptor;
+  }
+
+  @Override
+  public int hashCode() {
+    return userName.hashCode()*37 + volumeName.hashCode();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o != null && o instanceof VolumeDescriptor) {
+      VolumeDescriptor other = (VolumeDescriptor)o;
+      if (!userName.equals(other.getUserName()) ||
+          !volumeName.equals(other.getVolumeName()) ||
+          volumeSize != other.getVolumeSize() ||
+          blockSize != other.getBlockSize()) {
+        return false;
+      }
+      if (containerIdOrdered.size() != other.containerIdOrdered.size() ||
+          containerMap.size() != other.containerMap.size()) {
+        return false;
+      }
+      for (int i = 0; i<containerIdOrdered.size(); i++) {
+        if (!containerIdOrdered.get(i).equals(
+            other.containerIdOrdered.get(i))) {
+          return false;
+        }
+      }
+      for (String containerKey : containerMap.keySet()) {
+        if (!other.containerMap.containsKey(containerKey)) {
+          return false;
+        }
+        if (!containerMap.get(containerKey).equals(
+            other.containerMap.get(containerKey))) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return false;
   }
 }

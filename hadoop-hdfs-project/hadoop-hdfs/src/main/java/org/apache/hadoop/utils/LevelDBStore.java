@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.container.common.utils;
+package org.apache.hadoop.utils;
 
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.DB;
@@ -33,6 +33,7 @@ import java.io.IOException;
 public class LevelDBStore {
   private DB db;
   private final File dbFile;
+  private final Options dbOptions;
 
   /**
    * Opens a DB file.
@@ -43,9 +44,9 @@ public class LevelDBStore {
    */
   public LevelDBStore(File dbPath, boolean createIfMissing) throws
       IOException {
-    Options options = new Options();
-    options.createIfMissing(createIfMissing);
-    db = JniDBFactory.factory.open(dbPath, options);
+    dbOptions = new Options();
+    dbOptions.createIfMissing(createIfMissing);
+    db = JniDBFactory.factory.open(dbPath, dbOptions);
     if (db == null) {
       throw new IOException("Db is null");
     }
@@ -60,6 +61,7 @@ public class LevelDBStore {
    */
   public LevelDBStore(File dbPath, Options options)
       throws IOException {
+    dbOptions = options;
     db = JniDBFactory.factory.open(dbPath, options);
     if (db == null) {
       throw new IOException("Db is null");
@@ -140,4 +142,16 @@ public class LevelDBStore {
     return db;
   }
 
+  /**
+   * Returns an iterator on all the key-value pairs in the DB.
+   * @return an iterator on DB entries.
+   */
+  public DBIterator getIterator() {
+    return db.iterator();
+  }
+
+
+  public void destroy() throws IOException {
+    JniDBFactory.factory.destroy(dbFile, dbOptions);
+  }
 }

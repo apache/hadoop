@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.collections.map.LRUMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.utils.LevelDBStore;
 
 import java.io.IOException;
 import java.util.concurrent.locks.Lock;
