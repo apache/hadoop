@@ -34,11 +34,13 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ReportCompiler;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.datanode.checker.Checkable;
+import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 
 /**
  * This is an interface for the underlying volume.
  */
-public interface FsVolumeSpi {
+public interface FsVolumeSpi extends Checkable<Boolean, VolumeCheckResult> {
   /**
    * Obtain a reference object that had increased 1 reference count of the
    * volume.

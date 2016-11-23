@@ -42,6 +42,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -556,6 +557,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
         LinkedList<ScanInfo> report, ReportCompiler reportCompiler)
         throws InterruptedException, IOException {
       return null;
+    }
+
+    @Override
+    public VolumeCheckResult check(Boolean context) throws Exception {
+      return VolumeCheckResult.HEALTHY;
     }
   }
 

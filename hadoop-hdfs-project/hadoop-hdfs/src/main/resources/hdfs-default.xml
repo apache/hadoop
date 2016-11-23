@@ -4376,11 +4376,11 @@
     <name>dfs.datanode.disk.check.timeout</name>
     <value>10m</value>
     <description>
-      Maximum allowed time for a disk check to complete. If the check does
-      not complete within this time interval then the disk is declared as
-      failed. This setting supports multiple time unit suffixes as described
-      in dfs.heartbeat.interval. If no suffix is specified then milliseconds
-      is assumed.
+      Maximum allowed time for a disk check to complete during DataNode
+      startup. If the check does not complete within this time interval
+      then the disk is declared as failed. This setting supports
+      multiple time unit suffixes as described in dfs.heartbeat.interval.
+      If no suffix is specified then milliseconds is assumed.
     </description>
   </property>
 
