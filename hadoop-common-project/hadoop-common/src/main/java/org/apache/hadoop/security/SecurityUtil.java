@@ -58,13 +58,19 @@ import sun.net.util.IPAddressUtil;
 
 import com.google.common.annotations.VisibleForTesting;
 
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+/**
+ * Security Utils.
+ */
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class SecurityUtil {
+public final class SecurityUtil {
   public static final Log LOG = LogFactory.getLog(SecurityUtil.class);
   public static final String HOSTNAME_PATTERN = "_HOST";
   public static final String FAILED_TO_GET_UGI_MSG_HEADER = 
       "Failed to obtain user group information:";
+
+  private SecurityUtil() {
+  }
 
   // controls whether buildTokenService will use an ip or host/ip as given
   // by the user

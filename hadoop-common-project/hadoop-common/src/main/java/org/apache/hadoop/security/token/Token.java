@@ -399,10 +399,10 @@ public class Token<T extends TokenIdentifier> implements Writable {
    * A trivial renewer for token kinds that aren't managed. Sub-classes need
    * to implement getKind for their token kind.
    */
-  @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+  @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static class TrivialRenewer extends TokenRenewer {
-    
+
     // define the kind for this renewer
     protected Text getKind() {
       return null;
