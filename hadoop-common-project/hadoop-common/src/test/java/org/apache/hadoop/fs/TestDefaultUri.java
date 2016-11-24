@@ -21,14 +21,14 @@ import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.test.GenericTestUtils;
+
 import org.junit.Test;
+import static org.apache.hadoop.test.LambdaTestUtils.*;
 
 /**
  * Test default URI related APIs in {@link FileSystem}.
@@ -69,15 +69,12 @@ public class TestDefaultUri {
   }
 
   @Test
-  public void tetGetDefaultUriNoSchemeTrailingSlash() {
+  public void tetGetDefaultUriNoSchemeTrailingSlash() throws Exception {
     conf.set(FS_DEFAULT_NAME_KEY, "nn_host/");
-    try {
-      FileSystem.getDefaultUri(conf);
-      fail("Expect IAE: No scheme in default FS");
-    } catch (IllegalArgumentException e) {
-      GenericTestUtils.assertExceptionContains(
-          "No scheme in default FS", e);
-    }
+    intercept(IllegalArgumentException.class,
+        "No scheme in default FS",
+        () -> FileSystem.getDefaultUri(conf));
+
   }
 
   @Test
@@ -88,28 +85,19 @@ public class TestDefaultUri {
   }
 
   @Test
-  public void tetFsGetNoScheme() throws IOException {
+  public void tetFsGetNoScheme() throws Exception {
     // Bare host name or address indicates hdfs scheme
     conf.set(FS_DEFAULT_NAME_KEY, "nn_host");
-    try {
-      FileSystem.get(conf);
-      fail("Expect IOE: No FileSystem for scheme: hdfs");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(
-          "No FileSystem for scheme: hdfs", e);
-    }
+    intercept(UnsupportedFileSystemException.class, "hdfs",
+        () -> FileSystem.get(conf));
   }
 
   @Test
-  public void tetFsGetNoSchemeTrailingSlash() throws IOException {
+  public void tetFsGetNoSchemeTrailingSlash() throws Exception {
     // Bare host name or address with trailing slash is invalid
     conf.set(FS_DEFAULT_NAME_KEY, "nn_host/");
-    try {
-      FileSystem.get(conf);
-      fail("Expect IAE: No scheme in default FS");
-    } catch (IllegalArgumentException e) {
-      GenericTestUtils.assertExceptionContains(
-          "No scheme in default FS", e);
-    }
+    intercept(IllegalArgumentException.class,
+        "No scheme in default FS",
+        () -> FileSystem.get(conf));
   }
 }
