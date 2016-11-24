@@ -497,16 +497,23 @@ public abstract class Server {
     }
   }
 
-  void updateMetrics(String name, int queueTime, int processingTime) {
+  void updateMetrics(String name, int queueTime, int processingTime,
+                     boolean deferredCall) {
     rpcMetrics.addRpcQueueTime(queueTime);
-    rpcMetrics.addRpcProcessingTime(processingTime);
-    rpcDetailedMetrics.addProcessingTime(name, processingTime);
-    callQueue.addResponseTime(name, getPriorityLevel(), queueTime,
-        processingTime);
-
-    if (isLogSlowRPC()) {
-      logSlowRpcCalls(name, processingTime);
+    if (!deferredCall) {
+      rpcMetrics.addRpcProcessingTime(processingTime);
+      rpcDetailedMetrics.addProcessingTime(name, processingTime);
+      callQueue.addResponseTime(name, getPriorityLevel(), queueTime,
+          processingTime);
+      if (isLogSlowRPC()) {
+        logSlowRpcCalls(name, processingTime);
+      }
     }
+  }
+
+  void updateDeferredMetrics(String name, long processingTime) {
+    rpcMetrics.addDeferredRpcProcessingTime(processingTime);
+    rpcDetailedMetrics.addDeferredProcessingTime(name, processingTime);
   }
 
   /**
@@ -674,6 +681,7 @@ public abstract class Server {
     final byte[] clientId;
     private final TraceScope traceScope; // the HTrace scope on the server side
     private final CallerContext callerContext; // the call context
+    private boolean deferredResponse = false;
     private int priorityLevel;
     // the priority level assigned by scheduler, 0 by default
 
@@ -782,6 +790,22 @@ public abstract class Server {
     public void setPriorityLevel(int priorityLevel) {
       this.priorityLevel = priorityLevel;
     }
+
+    @InterfaceStability.Unstable
+    public void deferResponse() {
+      this.deferredResponse = true;
+    }
+
+    @InterfaceStability.Unstable
+    public boolean isResponseDeferred() {
+      return this.deferredResponse;
+    }
+
+    public void setDeferredResponse(Writable response) {
+    }
+
+    public void setDeferredError(Throwable t) {
+    }
   }
 
   /** A RPC extended call queued for handling. */
@@ -835,41 +859,56 @@ public abstract class Server {
         Server.LOG.info(Thread.currentThread().getName() + ": skipped " + this);
         return null;
       }
-      String errorClass = null;
-      String error = null;
-      RpcStatusProto returnStatus = RpcStatusProto.SUCCESS;
-      RpcErrorCodeProto detailedErr = null;
       Writable value = null;
+      ResponseParams responseParams = new ResponseParams();
 
       try {
         value = call(
             rpcKind, connection.protocolName, rpcRequest, timestamp);
       } catch (Throwable e) {
-        if (e instanceof UndeclaredThrowableException) {
-          e = e.getCause();
-        }
-        logException(Server.LOG, e, this);
-        if (e instanceof RpcServerException) {
-          RpcServerException rse = ((RpcServerException)e);
-          returnStatus = rse.getRpcStatusProto();
-          detailedErr = rse.getRpcErrorCodeProto();
-        } else {
-          returnStatus = RpcStatusProto.ERROR;
-          detailedErr = RpcErrorCodeProto.ERROR_APPLICATION;
-        }
-        errorClass = e.getClass().getName();
-        error = StringUtils.stringifyException(e);
-        // Remove redundant error class name from the beginning of the
-        // stack trace
-        String exceptionHdr = errorClass + ": ";
-        if (error.startsWith(exceptionHdr)) {
-          error = error.substring(exceptionHdr.length());
+        populateResponseParamsOnError(e, responseParams);
+      }
+      if (!isResponseDeferred()) {
+        setupResponse(this, responseParams.returnStatus,
+            responseParams.detailedErr,
+            value, responseParams.errorClass, responseParams.error);
+        sendResponse();
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Deferring response for callId: " + this.callId);
         }
       }
-      setupResponse(this, returnStatus, detailedErr,
-          value, errorClass, error);
-      sendResponse();
       return null;
+    }
+
+    /**
+     * @param t              the {@link java.lang.Throwable} to use to set
+     *                       errorInfo
+     * @param responseParams the {@link ResponseParams} instance to populate
+     */
+    private void populateResponseParamsOnError(Throwable t,
+                                               ResponseParams responseParams) {
+      if (t instanceof UndeclaredThrowableException) {
+        t = t.getCause();
+      }
+      logException(Server.LOG, t, this);
+      if (t instanceof RpcServerException) {
+        RpcServerException rse = ((RpcServerException) t);
+        responseParams.returnStatus = rse.getRpcStatusProto();
+        responseParams.detailedErr = rse.getRpcErrorCodeProto();
+      } else {
+        responseParams.returnStatus = RpcStatusProto.ERROR;
+        responseParams.detailedErr = RpcErrorCodeProto.ERROR_APPLICATION;
+      }
+      responseParams.errorClass = t.getClass().getName();
+      responseParams.error = StringUtils.stringifyException(t);
+      // Remove redundant error class name from the beginning of the
+      // stack trace
+      String exceptionHdr = responseParams.errorClass + ": ";
+      if (responseParams.error.startsWith(exceptionHdr)) {
+        responseParams.error =
+            responseParams.error.substring(exceptionHdr.length());
+      }
     }
 
     void setResponse(ByteBuffer response) throws IOException {
@@ -889,6 +928,80 @@ public abstract class Server {
             null, t.getClass().getName(), StringUtils.stringifyException(t));
       }
       connection.sendResponse(call);
+    }
+
+    /**
+     * Send a deferred response, ignoring errors.
+     */
+    private void sendDeferedResponse() {
+      try {
+        connection.sendResponse(this);
+      } catch (Exception e) {
+        // For synchronous calls, application code is done once it's returned
+        // from a method. It does not expect to receive an error.
+        // This is equivalent to what happens in synchronous calls when the
+        // Responder is not able to send out the response.
+        LOG.error("Failed to send deferred response. ThreadName=" + Thread
+            .currentThread().getName() + ", CallId="
+            + callId + ", hostname=" + getHostAddress());
+      }
+    }
+
+    @Override
+    public void setDeferredResponse(Writable response) {
+      if (this.connection.getServer().running) {
+        try {
+          setupResponse(this, RpcStatusProto.SUCCESS, null, response,
+              null, null);
+        } catch (IOException e) {
+          // For synchronous calls, application code is done once it has
+          // returned from a method. It does not expect to receive an error.
+          // This is equivalent to what happens in synchronous calls when the
+          // response cannot be sent.
+          LOG.error(
+              "Failed to setup deferred successful response. ThreadName=" +
+                  Thread.currentThread().getName() + ", Call=" + this);
+          return;
+        }
+        sendDeferedResponse();
+      }
+    }
+
+    @Override
+    public void setDeferredError(Throwable t) {
+      if (this.connection.getServer().running) {
+        if (t == null) {
+          t = new IOException(
+              "User code indicated an error without an exception");
+        }
+        try {
+          ResponseParams responseParams = new ResponseParams();
+          populateResponseParamsOnError(t, responseParams);
+          setupResponse(this, responseParams.returnStatus,
+              responseParams.detailedErr,
+              null, responseParams.errorClass, responseParams.error);
+        } catch (IOException e) {
+          // For synchronous calls, application code is done once it has
+          // returned from a method. It does not expect to receive an error.
+          // This is equivalent to what happens in synchronous calls when the
+          // response cannot be sent.
+          LOG.error(
+              "Failed to setup deferred error response. ThreadName=" +
+                  Thread.currentThread().getName() + ", Call=" + this);
+        }
+        sendDeferedResponse();
+      }
+    }
+
+    /**
+     * Holds response parameters. Defaults set to work for successful
+     * invocations
+     */
+    private class ResponseParams {
+      String errorClass = null;
+      String error = null;
+      RpcErrorCodeProto detailedErr = null;
+      RpcStatusProto returnStatus = RpcStatusProto.SUCCESS;
     }
 
     @Override
@@ -1589,6 +1702,10 @@ public abstract class Server {
       return lastContact;
     }
 
+    public Server getServer() {
+      return Server.this;
+    }
+
     /* Return true if the connection has no outstanding rpc */
     private boolean isIdle() {
       return rpcCount.get() == 0;
@@ -2133,8 +2250,21 @@ public abstract class Server {
     }
     
     /**
+<<<<<<< HEAD
      * Process an RPC Request - handle connection setup and decoding of
      * request into a Call
+=======
+     * Process one RPC Request from buffer read from socket stream 
+     *  - decode rpc in a rpc-Call
+     *  - handle out-of-band RPC requests such as the initial connectionContext
+     *  - A successfully decoded RpcCall will be deposited in RPC-Q and
+     *    its response will be sent later when the request is processed.
+     * 
+     * Prior to this call the connectionHeader ("hrpc...") has been handled and
+     * if SASL then SASL has been established and the buf we are passed
+     * has been unwrapped from SASL.
+     * 
+>>>>>>> 3d94da1... HADOOP-11552. Allow handoff on the server side for RPC requests. Contributed by Siddharth Seth
      * @param bb - contains the RPC request header and the rpc request
      * @throws IOException - internal error that should not be returned to
      *         client, typically failure to respond to client
@@ -2355,8 +2485,11 @@ public abstract class Server {
     
     /**
      * Decode the a protobuf from the given input stream 
+<<<<<<< HEAD
      * @param message - Representation of the type of message
      * @param buffer - a buffer to read the protobuf
+=======
+>>>>>>> 3d94da1... HADOOP-11552. Allow handoff on the server side for RPC requests. Contributed by Siddharth Seth
      * @return Message - decoded protobuf
      * @throws WrappedRpcServerException - deserialization failed
      */
@@ -2660,11 +2793,10 @@ public abstract class Server {
   private void closeConnection(Connection connection) {
     connectionManager.close(connection);
   }
-  
+
   /**
    * Setup response for the IPC Call.
    * 
-   * @param responseBuf buffer to serialize the response into
    * @param call {@link Call} to which we are setting up the response
    * @param status of the IPC call
    * @param rv return value for the IPC Call, if the call was successful

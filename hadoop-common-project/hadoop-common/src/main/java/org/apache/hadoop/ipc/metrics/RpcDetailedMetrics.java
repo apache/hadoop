@@ -35,6 +35,7 @@ import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
 public class RpcDetailedMetrics {
 
   @Metric MutableRatesWithAggregation rates;
+  @Metric MutableRatesWithAggregation deferredRpcRates;
 
   static final Log LOG = LogFactory.getLog(RpcDetailedMetrics.class);
   final MetricsRegistry registry;
@@ -60,6 +61,7 @@ public class RpcDetailedMetrics {
    */
   public void init(Class<?> protocol) {
     rates.init(protocol);
+    deferredRpcRates.init(protocol);
   }
 
   /**
@@ -70,6 +72,10 @@ public class RpcDetailedMetrics {
   //@Override // some instrumentation interface
   public void addProcessingTime(String name, int processingTime) {
     rates.add(name, processingTime);
+  }
+
+  public void addDeferredProcessingTime(String name, long processingTime) {
+    deferredRpcRates.add(name, processingTime);
   }
 
   /**
