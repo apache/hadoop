@@ -214,6 +214,13 @@ message ApplicationReportProto {
   optional PriorityProto priority = 23;
   optional string appNodeLabelExpression = 24;
   optional string amNodeLabelExpression = 25;
+  repeated ApplicationTimeoutProto application_timeouts = 26;
+}
+
+message ApplicationTimeoutProto {
+  required ApplicationTimeoutTypeProto application_timeout_type = 1;
+  optional string expire_time = 2;
+  optional int64 remaining_time = 3;
 }
 
 enum LogAggregationStatusProto {

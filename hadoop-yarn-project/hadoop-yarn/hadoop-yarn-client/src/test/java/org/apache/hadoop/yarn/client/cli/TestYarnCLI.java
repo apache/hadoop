@@ -36,6 +36,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -46,11 +47,14 @@ import java.util.regex.Pattern;
 import org.apache.commons.cli.Options;
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeout;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -124,6 +128,11 @@ public class TestYarnCLI {
           null, null, false, Priority.newInstance(0), "high-mem", "high-mem");
       newApplicationReport.setLogAggregationStatus(LogAggregationStatus.SUCCEEDED);
       newApplicationReport.setPriority(Priority.newInstance(0));
+      ApplicationTimeout timeout = ApplicationTimeout
+          .newInstance(ApplicationTimeoutType.LIFETIME, "UNLIMITED", -1);
+      newApplicationReport
+          .setApplicationTimeouts(Collections.singletonList(timeout));
+
       when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
           newApplicationReport);
       int result = cli.run(new String[] { "application", "-status", applicationId.toString() });
@@ -155,6 +164,10 @@ public class TestYarnCLI {
       pw.println("\tUnmanaged Application : false");
       pw.println("\tApplication Node Label Expression : high-mem");
       pw.println("\tAM container Node Label Expression : high-mem");
+      pw.print("\tTimeoutType : LIFETIME");
+      pw.print("\tExpiryTime : UNLIMITED");
+      pw.println("\tRemainingTime : -1seconds");
+      pw.println();
       pw.close();
       String appReportStr = baos.toString("UTF-8");
       Assert.assertEquals(appReportStr, sysOutStream.toString());
@@ -1984,6 +1997,10 @@ public class TestYarnCLI {
     pw.println("                                 specify which queue to move an");
     pw.println("                                 application to.");
     pw.println(" -status <Application ID>        Prints the status of the application.");
+    pw.println(" -updateLifetime <Timeout>       update timeout of an application from");
+    pw.println("                                 NOW. ApplicationId can be passed using");
+    pw.println("                                 'appId' option. Timeout value is in");
+    pw.println("                                 seconds.");
     pw.println(" -updatePriority <Priority>      update priority of an application.");
     pw.println("                                 ApplicationId can be passed using 'appId'");
     pw.println("                                 option.");
@@ -2073,5 +2090,28 @@ public class TestYarnCLI {
         cli.run(new String[] { "applicationattempt", "-list",
             applicationId.toString() });
     assertEquals(0, result);
+  }
+
+  @Test(timeout = 60000)
+  public void testUpdateApplicationTimeout() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 6);
+
+    ApplicationReport appReport = ApplicationReport.newInstance(applicationId,
+        ApplicationAttemptId.newInstance(applicationId, 1), "user", "queue",
+        "appname", "host", 124, null, YarnApplicationState.RUNNING,
+        "diagnostics", "url", 0, 0, FinalApplicationStatus.UNDEFINED, null,
+        "N/A", 0.53789f, "YARN", null);
+    ApplicationTimeout timeout = ApplicationTimeout
+        .newInstance(ApplicationTimeoutType.LIFETIME, "N/A", -1);
+    appReport.setApplicationTimeouts(Collections.singletonList(timeout));
+    when(client.getApplicationReport(any(ApplicationId.class)))
+        .thenReturn(appReport);
+
+    int result = cli.run(new String[] { "application", "-appId",
+        applicationId.toString(), "-updateLifetime", "10" });
+    Assert.assertEquals(result, 0);
+    verify(client)
+        .updateApplicationTimeouts(any(UpdateApplicationTimeoutsRequest.class));
   }
 }
