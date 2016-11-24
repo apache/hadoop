@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -49,6 +48,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
@@ -90,34 +90,35 @@ public class ViewFileSystem extends FileSystem {
     return readOnlyMountTable(operation, p.toString());
   }
 
-  static public class MountPoint {
-    /**
-     *  The source of the mount.
-     */
-    private Path src;
+  /**
+   * MountPoint representation built from the configuration.
+   */
+  public static class MountPoint {
 
     /**
-     * One or more targets of the mount.
-     * Multiple targets imply MergeMount.
+     * The mounted on path location.
      */
-    private URI[] targets;
+    private final Path mountedOnPath;
 
-    MountPoint(Path srcPath, URI[] targetURIs) {
-      src = srcPath;
-      targets = targetURIs;
+    /**
+     * Array of target FileSystem URIs.
+     */
+    private final URI[] targetFileSystemURIs;
+
+    MountPoint(Path srcPath, URI[] targetFs) {
+      mountedOnPath = srcPath;
+      targetFileSystemURIs = targetFs;
     }
 
-    @VisibleForTesting
-    Path getSrc() {
-      return src;
+    public Path getMountedOnPath() {
+      return mountedOnPath;
     }
 
-    @VisibleForTesting
-    URI[] getTargets() {
-      return targets;
+    public URI[] getTargetFileSystemURIs() {
+      return targetFileSystemURIs;
     }
   }
-  
+
   final long creationTime; // of the the mount table
   final UserGroupInformation ugi; // the user/group of user who created mtable
   URI myUri;
@@ -134,7 +135,7 @@ public class ViewFileSystem extends FileSystem {
    * @param p path
    * @return path-part of the Path p
    */
-  private String getUriPath(final Path p) {
+  String getUriPath(final Path p) {
     checkPath(p);
     return makeAbsolute(p).toUri().getPath();
   }
@@ -732,8 +733,8 @@ public class ViewFileSystem extends FileSystem {
     
     MountPoint[] result = new MountPoint[mountPoints.size()];
     for ( int i = 0; i < mountPoints.size(); ++i ) {
-      result[i] = new MountPoint(new Path(mountPoints.get(i).src), 
-                              mountPoints.get(i).target.targetDirLinkList);
+      result[i] = new MountPoint(new Path(mountPoints.get(i).src),
+          mountPoints.get(i).target.targetDirLinkList);
     }
     return result;
   }
@@ -831,6 +832,21 @@ public class ViewFileSystem extends FileSystem {
       trashRoots.addAll(fs.getTrashRoots(allUsers));
     }
     return trashRoots;
+  }
+
+  @Override
+  public FsStatus getStatus() throws IOException {
+    return getStatus(null);
+  }
+
+  @Override
+  public FsStatus getStatus(Path p) throws IOException {
+    if (p == null) {
+      p = InodeTree.SlashPath;
+    }
+    InodeTree.ResolveResult<FileSystem> res = fsState.resolve(
+        getUriPath(p), true);
+    return res.targetFileSystem.getStatus(p);
   }
 
   /**

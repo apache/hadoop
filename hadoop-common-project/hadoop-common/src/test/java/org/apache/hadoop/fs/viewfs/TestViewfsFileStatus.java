@@ -86,19 +86,20 @@ public class TestViewfsFileStatus {
   // .getFileChecksum with res.remainingPath and not with f
   @Test
   public void testGetFileChecksum() throws IOException {
+    final Path path = new Path("/tmp/someFile");
     FileSystem mockFS = Mockito.mock(FileSystem.class);
     InodeTree.ResolveResult<FileSystem> res =
       new InodeTree.ResolveResult<FileSystem>(null, mockFS , null,
         new Path("someFile"));
     @SuppressWarnings("unchecked")
     InodeTree<FileSystem> fsState = Mockito.mock(InodeTree.class);
-    Mockito.when(fsState.resolve("/tmp/someFile", true)).thenReturn(res);
+    Mockito.when(fsState.resolve(path.toString(), true)).thenReturn(res);
     ViewFileSystem vfs = Mockito.mock(ViewFileSystem.class);
     vfs.fsState = fsState;
 
-    Mockito.when(vfs.getFileChecksum(new Path("/tmp/someFile")))
-      .thenCallRealMethod();
-    vfs.getFileChecksum(new Path("/tmp/someFile"));
+    Mockito.when(vfs.getFileChecksum(path)).thenCallRealMethod();
+    Mockito.when(vfs.getUriPath(path)).thenCallRealMethod();
+    vfs.getFileChecksum(path);
 
     Mockito.verify(mockFS).getFileChecksum(new Path("someFile"));
   }
