@@ -24,18 +24,23 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeout;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -101,8 +106,9 @@ public class TestApplicationLifetimeMonitor {
           new HashMap<ApplicationTimeoutType, String>();
       long newLifetime = 10L;
       // update 10L seconds more to timeout
-      updateTimeout.put(ApplicationTimeoutType.LIFETIME,
-          Times.formatISO8601(System.currentTimeMillis() + newLifetime * 1000));
+      String formatISO8601 =
+          Times.formatISO8601(System.currentTimeMillis() + newLifetime * 1000);
+      updateTimeout.put(ApplicationTimeoutType.LIFETIME, formatISO8601);
       UpdateApplicationTimeoutsRequest request =
           UpdateApplicationTimeoutsRequest.newInstance(app2.getApplicationId(),
               updateTimeout);
@@ -123,6 +129,26 @@ public class TestApplicationLifetimeMonitor {
 
       Assert.assertTrue("Application lifetime value not updated",
           afterUpdate > beforeUpdate);
+
+      // verify for application report.
+      RecordFactory recordFactory =
+          RecordFactoryProvider.getRecordFactory(null);
+      GetApplicationReportRequest appRequest =
+          recordFactory.newRecordInstance(GetApplicationReportRequest.class);
+      appRequest.setApplicationId(app2.getApplicationId());
+      List<ApplicationTimeout> applicationTimeoutList = rm.getRMContext()
+          .getClientRMService().getApplicationReport(appRequest)
+          .getApplicationReport().getApplicationTimeouts();
+      Assert.assertTrue("Application Timeout list are empty.",
+          !applicationTimeoutList.isEmpty());
+      ApplicationTimeout timeout = applicationTimeoutList.iterator().next();
+      Assert.assertEquals("Application timeout Type is incorrect.",
+          ApplicationTimeoutType.LIFETIME.toString(),
+          timeout.getTimeoutType().toString());
+      Assert.assertEquals("Application timeout string is incorrect.",
+          formatISO8601, timeout.getExpiryTime());
+      Assert.assertTrue("Application remaining time is incorrect",
+          timeout.getRemainingTime() > 0);
 
       rm.waitForState(app2.getApplicationId(), RMAppState.KILLED);
       // verify for app killed with updated lifetime
