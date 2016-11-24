@@ -301,7 +301,8 @@ public class FileSystemRMStateStore extends RMStateStore {
         assert fileNodeStatus.isFile();
         try {
           String fileName = fileNodeStatus.getPath().getName();
-          if (checkAndRemovePartialRecordWithRetries(fileNodeStatus.getPath())) {
+          if (checkAndRemovePartialRecordWithRetries(
+                  fileNodeStatus.getPath())) {
             continue;
           }
           byte[] fileData = readFileWithRetries(fileNodeStatus.getPath(),
@@ -312,14 +313,17 @@ public class FileSystemRMStateStore extends RMStateStore {
           rmAppStateFileProcessor.processChildNode(dirName, fileName,
                     fileData);
         } catch (InvalidProtocolBufferException ex) {
-          LOG.warn("Removing broken " + dir.getPath() + " app's directory as its data is invalid, to prevent RM restart failure.", ex);
+          LOG.warn("Removing broken " + dir.getPath() + " app's directory " +
+                  "as its data is invalid, to prevent RM restart failure.", ex);
           // removing directory with broken data
           if (existsWithRetries(dir.getPath())) {
             deleteFileWithRetries(dir.getPath());
           }
           break;
         } catch (Exception ex) {
-          LOG.warn("Skipping state loading for " + dir.getPath() + " app's directory because of exception to prevent RM restart failure", ex);
+          LOG.warn("Skipping state loading for " + dir.getPath() + 
+                  " app's directory because of exception" +
+                  " to prevent RM restart failure", ex);
           break;
         }
       }
