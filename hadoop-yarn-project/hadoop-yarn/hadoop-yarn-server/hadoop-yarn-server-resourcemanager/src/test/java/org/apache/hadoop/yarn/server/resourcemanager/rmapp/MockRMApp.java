@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -306,7 +305,7 @@ public class MockRMApp implements RMApp {
 
   @Override
   public Map<ApplicationTimeoutType, Long> getApplicationTimeouts() {
-    return Collections.emptyMap();
+    throw new UnsupportedOperationException("Not supported yet.");
   }
 
   @Override

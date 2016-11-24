@@ -1734,7 +1734,7 @@ public class ClientRMService extends AbstractService implements
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
           AuditConstants.UPDATE_APP_TIMEOUTS, "UNKNOWN", "ClientRMService",
           ex.getMessage());
-      throw ex;
+      throw RPCUtil.getRemoteException(ex);
     }
 
     RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
