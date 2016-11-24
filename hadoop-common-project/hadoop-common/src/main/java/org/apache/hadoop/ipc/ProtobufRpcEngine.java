@@ -31,7 +31,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
-import org.apache.hadoop.ipc.RpcWritable;
 import org.apache.hadoop.ipc.protobuf.ProtobufRpcEngineProtos.RequestHeaderProto;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
@@ -345,6 +344,60 @@ public class ProtobufRpcEngine implements RpcEngine {
   }
   
   public static class Server extends RPC.Server {
+
+    static final ThreadLocal<ProtobufRpcEngineCallback> currentCallback =
+        new ThreadLocal<>();
+
+    static final ThreadLocal<CallInfo> currentCallInfo = new ThreadLocal<>();
+
+    static class CallInfo {
+      private final RPC.Server server;
+      private final String methodName;
+
+      public CallInfo(RPC.Server server, String methodName) {
+        this.server = server;
+        this.methodName = methodName;
+      }
+    }
+
+    static class ProtobufRpcEngineCallbackImpl
+        implements ProtobufRpcEngineCallback {
+
+      private final RPC.Server server;
+      private final Call call;
+      private final String methodName;
+      private final long setupTime;
+
+      public ProtobufRpcEngineCallbackImpl() {
+        this.server = currentCallInfo.get().server;
+        this.call = Server.getCurCall().get();
+        this.methodName = currentCallInfo.get().methodName;
+        this.setupTime = Time.now();
+      }
+
+      @Override
+      public void setResponse(Message message) {
+        long processingTime = Time.now() - setupTime;
+        call.setDeferredResponse(RpcWritable.wrap(message));
+        server.updateDeferredMetrics(methodName, processingTime);
+      }
+
+      @Override
+      public void error(Throwable t) {
+        long processingTime = Time.now() - setupTime;
+        String detailedMetricsName = t.getClass().getSimpleName();
+        server.updateDeferredMetrics(detailedMetricsName, processingTime);
+        call.setDeferredError(t);
+      }
+    }
+
+    @InterfaceStability.Unstable
+    public static ProtobufRpcEngineCallback registerForDeferredResponse() {
+      ProtobufRpcEngineCallback callback = new ProtobufRpcEngineCallbackImpl();
+      currentCallback.set(callback);
+      return callback;
+    }
+
     /**
      * Construct an RPC server.
      * 
@@ -462,9 +515,19 @@ public class ProtobufRpcEngine implements RpcEngine {
         long startTime = Time.now();
         int qTime = (int) (startTime - receiveTime);
         Exception exception = null;
+        boolean isDeferred = false;
         try {
           server.rpcDetailedMetrics.init(protocolImpl.protocolClass);
+          currentCallInfo.set(new CallInfo(server, methodName));
           result = service.callBlockingMethod(methodDescriptor, null, param);
+          // Check if this needs to be a deferred response,
+          // by checking the ThreadLocal callback being set
+          if (currentCallback.get() != null) {
+            Server.getCurCall().get().deferResponse();
+            isDeferred = true;
+            currentCallback.set(null);
+            return null;
+          }
         } catch (ServiceException e) {
           exception = (Exception) e.getCause();
           throw (Exception) e.getCause();
@@ -472,10 +535,13 @@ public class ProtobufRpcEngine implements RpcEngine {
           exception = e;
           throw e;
         } finally {
+          currentCallInfo.set(null);
           int processingTime = (int) (Time.now() - startTime);
           if (LOG.isDebugEnabled()) {
-            String msg = "Served: " + methodName + " queueTime= " + qTime +
-                " procesingTime= " + processingTime;
+            String msg =
+                "Served: " + methodName + (isDeferred ? ", deferred" : "") +
+                    ", queueTime= " + qTime +
+                    " procesingTime= " + processingTime;
             if (exception != null) {
               msg += " exception= " + exception.getClass().getSimpleName();
             }
@@ -484,7 +550,8 @@ public class ProtobufRpcEngine implements RpcEngine {
           String detailedMetricsName = (exception == null) ?
               methodName :
               exception.getClass().getSimpleName();
-          server.updateMetrics(detailedMetricsName, qTime, processingTime);
+          server.updateMetrics(detailedMetricsName, qTime, processingTime,
+              isDeferred);
         }
         return RpcWritable.wrap(result);
       }
