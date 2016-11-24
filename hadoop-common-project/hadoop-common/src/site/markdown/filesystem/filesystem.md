@@ -416,7 +416,7 @@ If the filesystem is not location aware, it SHOULD return
         BlockLocation(["localhost:50010"] ,
                   ["localhost"],
                   ["/default/localhost"]
-                   0, F.getLen())
+                   0, f.getLen())
        ] ;
 
 
