@@ -45,7 +45,7 @@ public class TestNNMetricFilesInGetListingOps {
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 100);
     CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 1);
     CONF.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
-    CONF.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
+    CONF.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
   }
      
   private MiniDFSCluster cluster;

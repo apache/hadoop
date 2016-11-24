@@ -43,8 +43,11 @@ The following table lists the configuration property names that are deprecated i
 | dfs.permissions | dfs.permissions.enabled |
 | dfs.permissions.supergroup | dfs.permissions.superusergroup |
 | dfs.read.prefetch.size | dfs.client.read.prefetch.size |
-| dfs.replication.considerLoad | dfs.namenode.replication.considerLoad |
-| dfs.replication.interval | dfs.namenode.replication.interval |
+| dfs.replication.considerLoad | dfs.namenode.redundancy.considerLoad |
+| dfs.namenode.replication.considerLoad | dfs.namenode.redundancy.considerLoad |
+| dfs.namenode.replication.considerLoad.factor | dfs.namenode.redundancy.considerLoad.factor |
+| dfs.replication.interval | dfs.namenode.redundancy.interval |
+| dfs.namenode.replication.interval | dfs.namenode.redundancy.interval |
 | dfs.replication.min | dfs.namenode.replication.min |
 | dfs.replication.pending.timeout.sec | dfs.namenode.reconstruction.pending.timeout-sec |
 | dfs.namenode.replication.pending.timeout-sec | dfs.namenode.reconstruction.pending.timeout-sec |

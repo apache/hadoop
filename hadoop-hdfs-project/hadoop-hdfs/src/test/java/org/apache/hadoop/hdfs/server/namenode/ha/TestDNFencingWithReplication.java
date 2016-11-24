@@ -110,7 +110,7 @@ public class TestDNFencingWithReplication {
     harness.conf.setInt(
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1);
     harness.conf.setInt(
-        DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
+        DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
 
     final MiniDFSCluster cluster = harness.startCluster();
     try {

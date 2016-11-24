@@ -192,7 +192,8 @@ public class TestReconstructStripedBlocks {
   public void test2RecoveryTasksForSameBlockGroup() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1000);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1000);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
+        1000);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize + 2)
         .build();
@@ -255,8 +256,8 @@ public class TestReconstructStripedBlocks {
   @Test
   public void testCountLiveReplicas() throws Exception {
     final HdfsConfiguration conf = new HdfsConfiguration();
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY,
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize + 2)
         .build();
@@ -299,7 +300,7 @@ public class TestReconstructStripedBlocks {
       FSNamesystem fsn = cluster.getNamesystem();
       BlockManager bm = fsn.getBlockManager();
 
-      Thread.sleep(3000); // wait 3 running cycles of replication monitor
+      Thread.sleep(3000); // wait 3 running cycles of redundancy monitor
       for (DataNode dn : cluster.getDataNodes()) {
         DataNodeTestUtils.triggerHeartbeat(dn);
       }

@@ -156,7 +156,7 @@ public class TestFSEditLogLoader {
     // start a cluster 
     Configuration conf = getConf();
     // Replicate and heartbeat fast to shave a few seconds off test
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
 
     MiniDFSCluster cluster = null;

@@ -836,7 +836,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     int DFS_NAMENODE_REPLICATION_INTERVAL = 1000;
     int HIGH_PRIORITY = 0;
     Configuration conf = new Configuration();
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
         .format(true).build();
     try {

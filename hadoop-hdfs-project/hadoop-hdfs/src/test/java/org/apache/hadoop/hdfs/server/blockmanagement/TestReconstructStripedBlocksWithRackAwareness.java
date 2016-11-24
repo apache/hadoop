@@ -96,8 +96,8 @@ public class TestReconstructStripedBlocksWithRackAwareness {
 
   @BeforeClass
   public static void setup() throws Exception {
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY,
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 1);
   }
@@ -139,7 +139,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
    *
    * In this test, we first need to create a scenario that a striped block has
    * all the internal blocks but distributed in <6 racks. Then we check if the
-   * replication monitor can correctly schedule the reconstruction work for it.
+   * redundancy monitor can correctly schedule the reconstruction work for it.
    */
   @Test
   public void testReconstructForNotEnoughRacks() throws Exception {
@@ -194,7 +194,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
       fsn.writeUnlock();
     }
 
-    // check if replication monitor correctly schedule the replication work
+    // check if redundancy monitor correctly schedule the reconstruction work.
     boolean scheduled = false;
     for (int i = 0; i < 5; i++) { // retry 5 times
       for (DatanodeStorageInfo storage : blockInfo.storages) {
