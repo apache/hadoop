@@ -87,7 +87,7 @@ import org.slf4j.LoggerFactory;
  * user's username and groups. It supports both the Windows, Unix and Kerberos 
  * login modules.
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce", "HBase", "Hive", "Oozie"})
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class UserGroupInformation {
   @VisibleForTesting
@@ -716,7 +716,7 @@ public class UserGroupInformation {
    * 
    * @param user                The principal name to load from the ticket
    *                            cache
-   * @param ticketCachePath     the path to the ticket cache file
+   * @param ticketCache     the path to the ticket cache file
    *
    * @throws IOException        if the kerberos login fails
    */
@@ -779,7 +779,7 @@ public class UserGroupInformation {
    /**
    * Create a UserGroupInformation from a Subject with Kerberos principal.
    *
-   * @param user                The KerberosPrincipal to use in UGI
+   * @param subject                The KerberosPrincipal to use in UGI
    *
    * @throws IOException
    * @throws KerberosAuthException if the kerberos login fails
@@ -838,7 +838,7 @@ public class UserGroupInformation {
 
   /**
    * Log in a user using the given subject
-   * @parma subject the subject to use when logging in a user, or null to 
+   * @param subject the subject to use when logging in a user, or null to
    * create a new subject.
    * @throws IOException if login fails
    */
@@ -1692,7 +1692,7 @@ public class UserGroupInformation {
   }
 
   /**
-   * Get the group names for this user. {@ #getGroups(String)} is less
+   * Get the group names for this user. {@link #getGroups()} is less
    * expensive alternative when checking for a contained element.
    * @return the list of users with the primary group first. If the command
    *    fails, it returns an empty list.

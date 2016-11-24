@@ -377,7 +377,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    *         if the filesystem does not implement tokens
    * @see SecurityUtil#buildDTServiceName(URI, int)
    */
-  @InterfaceAudience.LimitedPrivate({ "HDFS", "MapReduce" })
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public String getCanonicalServiceName() {
     return (getChildFileSystems() == null)
       ? SecurityUtil.buildDTServiceName(getUri(), getDefaultPort())
@@ -611,7 +612,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @return list of new delegation tokens
    * @throws IOException
    */
-  @InterfaceAudience.LimitedPrivate({ "HDFS", "MapReduce" })
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public Token<?>[] addDelegationTokens(
       final String renewer, Credentials credentials) throws IOException {
     if (credentials == null) {

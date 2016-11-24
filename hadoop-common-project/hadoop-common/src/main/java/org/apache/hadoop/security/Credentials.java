@@ -50,10 +50,10 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
 /**
- * A class that provides the facilities of reading and writing 
+ * A class that provides the facilities of reading and writing
  * secret keys and Tokens.
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class Credentials implements Writable {
   private static final Log LOG = LogFactory.getLog(Credentials.class);
