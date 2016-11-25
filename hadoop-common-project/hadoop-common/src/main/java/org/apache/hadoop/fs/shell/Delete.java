@@ -29,8 +29,10 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.PathIsDirectoryException;
+import org.apache.hadoop.fs.TrashOptionNotExistsException;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
+import org.apache.hadoop.fs.PathIsNotInTrashException;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.util.ToolRunner;
@@ -55,7 +57,7 @@ class Delete {
   /** remove non-directory paths */
   public static class Rm extends FsCommand {
     public static final String NAME = "rm";
-    public static final String USAGE = "[-f] [-r|-R] [-skipTrash] " +
+    public static final String USAGE = "[-f] [-r|-R] [-skipTrash] [-T]" +
         "[-safely] <src> ...";
     public static final String DESCRIPTION =
         "Delete all files that match the specified file pattern. " +
@@ -65,6 +67,7 @@ class Delete {
             "-[rR]:  Recursively deletes directories.\n" +
             "-skipTrash: option bypasses trash, if enabled, and immediately " +
             "deletes <src>.\n" +
+            "-T: Delete items in .Trash must add this option.\n" +
             "-safely: option requires safety confirmation, if enabled, " +
             "requires confirmation before deleting large directory with more " +
             "than <hadoop.shell.delete.limit.num.files> files. Delay is " +
@@ -75,15 +78,17 @@ class Delete {
     private boolean deleteDirs = false;
     private boolean ignoreFNF = false;
     private boolean safeDelete = false;
+    private boolean deleteTrash = false;
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
       CommandFormat cf = new CommandFormat(
-          1, Integer.MAX_VALUE, "f", "r", "R", "skipTrash", "safely");
+          1, Integer.MAX_VALUE, "f", "r", "R", "skipTrash", "T", "safely");
       cf.parse(args);
       ignoreFNF = cf.getOpt("f");
       deleteDirs = cf.getOpt("r") || cf.getOpt("R");
       skipTrash = cf.getOpt("skipTrash");
+      deleteTrash = cf.getOpt("T");
       safeDelete = cf.getOpt("safely");
     }
 
@@ -111,6 +116,13 @@ class Delete {
         throw new PathIsDirectoryException(item.toString());
       }
 
+      if (deleteTrash && !inTrash(item)) {
+        throw new PathIsNotInTrashException(item.toString());
+      }
+      if (!deleteTrash && inTrash(item)) {
+        throw new TrashOptionNotExistsException(item.toString());
+      }
+
       // TODO: if the user wants the trash to be used but there is any
       // problem (ie. creating the trash dir, moving the item to be deleted,
       // etc), then the path will just be deleted because moveToTrash returns
@@ -122,6 +134,10 @@ class Delete {
         throw new PathIOException(item.toString());
       }
       out.println("Deleted " + item);
+    }
+
+    private boolean inTrash(PathData item) {
+      return item.uri.getPath().contains(".Trash");
     }
 
     private boolean canBeSafelyDeleted(PathData item)
