@@ -20,8 +20,8 @@ package org.apache.hadoop.fs.viewfs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
-import java.util.ArrayList;
 import java.util.List;
 
 
@@ -885,4 +885,24 @@ abstract public class ViewFileSystemBaseTest {
   public void testInternalDeleteSnapshot() throws IOException {
     fsView.deleteSnapshot(new Path("/internalDir"), "snap1");
   }
+
+  @Test
+  public void testCheckOwnerWithFileStatus()
+      throws IOException, InterruptedException {
+    final UserGroupInformation userUgi = UserGroupInformation
+        .createUserForTesting("user@HADOOP.COM", new String[]{"hadoop"});
+    userUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Object run() throws IOException {
+        UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+        String doAsUserName = ugi.getUserName();
+        assertEquals(doAsUserName, "user@HADOOP.COM");
+        FileSystem vfs = FileSystem.get(FsConstants.VIEWFS_URI, conf);
+        FileStatus stat = vfs.getFileStatus(new Path("/internalDir"));
+        assertEquals(userUgi.getShortUserName(), stat.getOwner());
+        return null;
+      }
+    });
+  }
+
 }
