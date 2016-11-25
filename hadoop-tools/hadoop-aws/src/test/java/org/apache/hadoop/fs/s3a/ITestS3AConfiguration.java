@@ -176,6 +176,39 @@ public class ITestS3AConfiguration {
   }
 
   @Test
+  public void testProxyPasswordFromCredentialProvider() throws Exception {
+    ClientConfiguration awsConf = new ClientConfiguration();
+    // set up conf to have a cred provider
+    final Configuration conf2 = new Configuration();
+    final File file = tempDir.newFile("test.jks");
+    final URI jks = ProviderUtils.nestURIForLocalJavaKeyStoreProvider(
+        file.toURI());
+    conf2.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
+        jks.toString());
+
+    provisionProxyPassword(conf2, "password");
+
+    // let's set the password in config and ensure that it uses the credential
+    // provider provisioned value instead.
+    conf2.set(Constants.PROXY_PASSWORD, "passwordLJM");
+    char[] pwd = conf2.getPassword(Constants.PROXY_PASSWORD);
+    assertNotNull("Proxy password should not retrun null.", pwd);
+    if (pwd != null) {
+      assertEquals("Proxy password override did NOT work.", "password",
+          new String(pwd));
+    }
+  }
+
+  void provisionProxyPassword(final Configuration conf2, String pwd)
+      throws Exception {
+    // add our password to the provider
+    final CredentialProvider provider =
+        CredentialProviderFactory.getProviders(conf2).get(0);
+    provider.createCredentialEntry(Constants.PROXY_PASSWORD, pwd.toCharArray());
+    provider.flush();
+  }
+
+  @Test
   public void testUsernameInconsistentWithPassword() throws Exception {
     conf = new Configuration();
     conf.setInt(Constants.MAX_ERROR_RETRIES, 2);

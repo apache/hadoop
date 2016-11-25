@@ -118,7 +118,8 @@ interface S3ClientFactory {
      * @throws IllegalArgumentException if misconfigured
      */
     private static void initProxySupport(Configuration conf,
-        ClientConfiguration awsConf) throws IllegalArgumentException {
+        ClientConfiguration awsConf)
+            throws IllegalArgumentException, IOException {
       String proxyHost = conf.getTrimmed(PROXY_HOST, "");
       int proxyPort = conf.getInt(PROXY_PORT, -1);
       if (!proxyHost.isEmpty()) {
@@ -135,7 +136,11 @@ interface S3ClientFactory {
           }
         }
         String proxyUsername = conf.getTrimmed(PROXY_USERNAME);
-        String proxyPassword = conf.getTrimmed(PROXY_PASSWORD);
+        String proxyPassword = null;
+        char[] proxyPass = conf.getPassword(PROXY_PASSWORD);
+        if (proxyPass != null) {
+          proxyPassword = new String(proxyPass).trim();
+        }
         if ((proxyUsername == null) != (proxyPassword == null)) {
           String msg = "Proxy error: " + PROXY_USERNAME + " or " +
               PROXY_PASSWORD + " set without the other.";
@@ -147,11 +152,11 @@ interface S3ClientFactory {
         awsConf.setProxyDomain(conf.getTrimmed(PROXY_DOMAIN));
         awsConf.setProxyWorkstation(conf.getTrimmed(PROXY_WORKSTATION));
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Using proxy server {}:{} as user {} with password {} on " +
-                  "domain {} as workstation {}", awsConf.getProxyHost(),
+          LOG.debug("Using proxy server {}:{} as user {} on " +
+                "domain {} as workstation {}", awsConf.getProxyHost(),
               awsConf.getProxyPort(),
               String.valueOf(awsConf.getProxyUsername()),
-              awsConf.getProxyPassword(), awsConf.getProxyDomain(),
+              awsConf.getProxyDomain(),
               awsConf.getProxyWorkstation());
         }
       } else if (proxyPort >= 0) {
