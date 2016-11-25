@@ -173,7 +173,7 @@ Create a new encryption zone.
 | | |
 |:---- |:---- |
 | *path* | The path of the encryption zone to create. It must be an empty directory. A trash directory is provisioned under this path.|
-| *keyName* | Name of the key to use for the encryption zone. |
+| *keyName* | Name of the key to use for the encryption zone. Uppercase key names are unsupported. |
 
 ### <a name="listZones"></a>listZones
 
