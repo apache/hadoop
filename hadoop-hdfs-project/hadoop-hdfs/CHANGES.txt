@@ -200,6 +200,8 @@ Release 2.7.4 - UNRELEASED
     HDFS-11056. Concurrent append and read operations lead to checksum error.
     (Wei-Chiu Chuang)
 
+    HDFS-11174. Wrong HttpFS test command in doc. (John Zhuge via aajisaka)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
