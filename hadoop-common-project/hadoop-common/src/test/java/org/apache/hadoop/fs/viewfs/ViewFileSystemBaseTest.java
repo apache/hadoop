@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.viewfs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -1087,5 +1088,24 @@ abstract public class ViewFileSystemBaseTest {
 
     // Case 7: Verify FsStatus of a non MountPoint path throws exception
     ViewFileSystemUtil.getStatus(fileSystem, new Path("/non-existing"));
+  }
+
+  @Test
+  public void testCheckOwnerWithFileStatus()
+      throws IOException, InterruptedException {
+    final UserGroupInformation userUgi = UserGroupInformation
+        .createUserForTesting("user@HADOOP.COM", new String[]{"hadoop"});
+    userUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Object run() throws IOException {
+        UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+        String doAsUserName = ugi.getUserName();
+        assertEquals(doAsUserName, "user@HADOOP.COM");
+        FileSystem vfs = FileSystem.get(FsConstants.VIEWFS_URI, conf);
+        FileStatus stat = vfs.getFileStatus(new Path("/internalDir"));
+        assertEquals(userUgi.getShortUserName(), stat.getOwner());
+        return null;
+      }
+    });
   }
 }
