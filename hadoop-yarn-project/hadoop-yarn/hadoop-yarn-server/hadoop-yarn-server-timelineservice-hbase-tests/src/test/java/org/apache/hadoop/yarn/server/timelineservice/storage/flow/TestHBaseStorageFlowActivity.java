@@ -119,7 +119,7 @@ public class TestHBaseStorageFlowActivity {
         .getEntityMinStartTime(minStartTs);
 
     try {
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
 
@@ -229,7 +229,7 @@ public class TestHBaseStorageFlowActivity {
     HBaseTimelineWriterImpl hbi = null;
     Configuration c1 = util.getConfiguration();
     try {
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       String appName = "application_1111999999_1234";
       hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
@@ -343,7 +343,7 @@ public class TestHBaseStorageFlowActivity {
     HBaseTimelineWriterImpl hbi = null;
     Configuration c1 = util.getConfiguration();
     try {
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       String appName = "application_11888888888_1111";
       hbi.write(cluster, user, flow, flowVersion1, runid1, appName, te);
