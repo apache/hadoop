@@ -334,7 +334,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     HBaseTimelineWriterImpl hbi = null;
     Configuration c1 = util.getConfiguration();
     try {
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       hbi.write(cluster, user, flow, flowVersion, runid, entity.getId(), te);
       hbi.write(cluster, user, flow, flowVersion, runid, entity1.getId(), te1);
