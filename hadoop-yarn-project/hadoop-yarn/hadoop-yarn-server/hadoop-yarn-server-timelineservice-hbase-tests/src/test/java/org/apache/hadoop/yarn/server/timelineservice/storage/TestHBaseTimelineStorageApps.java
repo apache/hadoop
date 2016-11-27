@@ -155,7 +155,7 @@ public class TestHBaseTimelineStorageApps {
     HBaseTimelineWriterImpl hbi = null;
     try {
       Configuration c1 = util.getConfiguration();
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       hbi.start();
       String cluster = "cluster_check_null_application";
@@ -275,7 +275,7 @@ public class TestHBaseTimelineStorageApps {
     HBaseTimelineWriterImpl hbi = null;
     try {
       Configuration c1 = util.getConfiguration();
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       hbi.start();
       String cluster = "cluster_test_write_app";
@@ -502,7 +502,7 @@ public class TestHBaseTimelineStorageApps {
     HBaseTimelineWriterImpl hbi = null;
     try {
       Configuration c1 = util.getConfiguration();
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       hbi.start();
       String cluster = "cluster_test_events";
@@ -620,7 +620,7 @@ public class TestHBaseTimelineStorageApps {
     HBaseTimelineWriterImpl hbi = null;
     try {
       Configuration c1 = util.getConfiguration();
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       hbi.start();
       // Writing application entity.
