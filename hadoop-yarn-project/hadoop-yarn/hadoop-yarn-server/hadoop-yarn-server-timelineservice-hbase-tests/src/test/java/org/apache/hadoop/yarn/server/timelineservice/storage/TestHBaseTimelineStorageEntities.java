@@ -194,7 +194,7 @@ public class TestHBaseTimelineStorageEntities {
     HBaseTimelineWriterImpl hbi = null;
     try {
       Configuration c1 = util.getConfiguration();
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       hbi.start();
       String cluster = "cluster_test_write_entity";
@@ -391,7 +391,7 @@ public class TestHBaseTimelineStorageEntities {
     HBaseTimelineWriterImpl hbi = null;
     try {
       Configuration c1 = util.getConfiguration();
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       hbi.start();
       String cluster = "cluster_test_empty_eventkey";
@@ -496,7 +496,7 @@ public class TestHBaseTimelineStorageEntities {
     HBaseTimelineWriterImpl hbi = null;
     try {
       Configuration c1 = util.getConfiguration();
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       hbi.start();
       String cluster = "clus!ter_\ttest_ev  ents";

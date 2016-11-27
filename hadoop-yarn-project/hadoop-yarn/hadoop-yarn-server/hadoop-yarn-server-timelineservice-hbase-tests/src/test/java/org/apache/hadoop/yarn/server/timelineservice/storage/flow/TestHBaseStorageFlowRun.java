@@ -184,7 +184,7 @@ public class TestHBaseStorageFlowRun {
         .getEntityMinStartTime(minStartTs);
 
     try {
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
 
@@ -290,7 +290,7 @@ public class TestHBaseStorageFlowRun {
     HBaseTimelineWriterImpl hbi = null;
     Configuration c1 = util.getConfiguration();
     try {
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       String appName = "application_11111111111111_1111";
       hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
@@ -559,7 +559,7 @@ public class TestHBaseStorageFlowRun {
     HBaseTimelineWriterImpl hbi = null;
     Configuration c1 = util.getConfiguration();
     try {
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       String appName = "application_11111111111111_1111";
       hbi.write(cluster, user, flow, flowVersion, 1002345678919L, appName, te);
@@ -644,7 +644,7 @@ public class TestHBaseStorageFlowRun {
     HBaseTimelineWriterImpl hbi = null;
     Configuration c1 = util.getConfiguration();
     try {
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       String appName = "application_11111111111111_1111";
       hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
@@ -737,7 +737,7 @@ public class TestHBaseStorageFlowRun {
     TimelineEntity entityApp1 = null;
     TimelineEntity entityApp2 = null;
     try {
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
 
       for (int i = start; i < count; i++) {
@@ -826,7 +826,7 @@ public class TestHBaseStorageFlowRun {
     HBaseTimelineWriterImpl hbi = null;
     Configuration c1 = util.getConfiguration();
     try {
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       hbi.write(cluster, user, flow, "CF7022C10F1354", 1002345678919L,
           "application_11111111111111_1111", te);
@@ -908,7 +908,7 @@ public class TestHBaseStorageFlowRun {
     HBaseTimelineWriterImpl hbi = null;
     Configuration c1 = util.getConfiguration();
     try {
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       hbi.write(cluster, user, flow, "CF7022C10F1354", 1002345678919L,
           "application_11111111111111_1111", te);
