@@ -285,7 +285,7 @@ public class TestHBaseStorageFlowRunCompaction {
     TimelineEntities te1 = null;
     TimelineEntity entityApp1 = null;
     try {
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       // now insert count * ( 100 + 100) metrics
       // each call to getEntityMetricsApp1 brings back 100 values
