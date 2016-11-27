@@ -209,7 +209,7 @@ public class MRAppBenchmark {
           ClientService clientService, AppContext context) {
 
         AMPreemptionPolicy policy = new NoopAMPreemptionPolicy();
-        return new RMContainerAllocator(clientService, context, policy) {
+        return new RMContainerAllocator(clientService, context, policy, null) {
           @Override
           protected ApplicationMasterProtocol createSchedulerProxy() {
             return new ApplicationMasterProtocol() {

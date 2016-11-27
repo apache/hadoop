@@ -2027,7 +2027,8 @@ public class TestRMContainerAllocator {
     // Use this constructor when using a real job.
     MyContainerAllocator(MyResourceManager rm,
         ApplicationAttemptId appAttemptId, AppContext context) {
-      super(createMockClientService(), context, new NoopAMPreemptionPolicy());
+      super(createMockClientService(), context, new NoopAMPreemptionPolicy(),
+          null);
       this.rm = rm;
     }
 
@@ -2035,7 +2036,7 @@ public class TestRMContainerAllocator {
     public MyContainerAllocator(MyResourceManager rm, Configuration conf,
         ApplicationAttemptId appAttemptId, Job job) {
       super(createMockClientService(), createAppContext(appAttemptId, job),
-          new NoopAMPreemptionPolicy());
+          new NoopAMPreemptionPolicy(), null);
       this.rm = rm;
       super.init(conf);
       super.start();
@@ -2045,7 +2046,7 @@ public class TestRMContainerAllocator {
         ApplicationAttemptId appAttemptId, Job job, Clock clock) {
       super(createMockClientService(),
           createAppContext(appAttemptId, job, clock),
-          new NoopAMPreemptionPolicy());
+          new NoopAMPreemptionPolicy(), null);
       this.rm = rm;
       super.init(conf);
       super.start();
@@ -2166,7 +2167,7 @@ public class TestRMContainerAllocator {
     AMPreemptionPolicy policy = mock(AMPreemptionPolicy.class);
     when(communicator.getJob()).thenReturn(mockJob);
     RMContainerAllocator allocator = new RMContainerAllocator(service, context,
-        policy);
+        policy, null);
     AllocateResponse response = Records.newRecord(AllocateResponse.class);
     allocator.handleJobPriorityChange(response);
   }
@@ -2369,7 +2370,7 @@ public class TestRMContainerAllocator {
 
     RMContainerAllocator allocator = new RMContainerAllocator(
         mock(ClientService.class), appContext,
-        new NoopAMPreemptionPolicy()) {
+        new NoopAMPreemptionPolicy(), null) {
           @Override
           protected void register() {
           }
@@ -2420,8 +2421,8 @@ public class TestRMContainerAllocator {
   public void testCompletedContainerEvent() {
     RMContainerAllocator allocator = new RMContainerAllocator(
         mock(ClientService.class), mock(AppContext.class),
-        new NoopAMPreemptionPolicy());
-
+        new NoopAMPreemptionPolicy(), null);
+    
     TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(
         MRBuilderUtils.newTaskId(
             MRBuilderUtils.newJobId(1, 1, 1), 1, TaskType.MAP), 1);
@@ -3319,7 +3320,7 @@ public class TestRMContainerAllocator {
       extends RMContainerAllocator {
     public RMContainerAllocatorForFinishedContainer(ClientService clientService,
         AppContext context, AMPreemptionPolicy preemptionPolicy) {
-      super(clientService, context, preemptionPolicy);
+      super(clientService, context, preemptionPolicy, null);
     }
     @Override
     protected AssignedRequests createAssignedRequests() {
