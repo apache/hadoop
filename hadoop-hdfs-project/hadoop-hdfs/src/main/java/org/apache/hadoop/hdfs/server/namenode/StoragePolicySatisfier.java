@@ -211,10 +211,32 @@ public class StoragePolicySatisfier implements Runnable {
       }
     }
 
+    addBlockMovingInfosToCoordinatorDn(blockCollectionID, blockMovingInfos,
+        coordinatorNode);
+  }
+
+  private void addBlockMovingInfosToCoordinatorDn(long blockCollectionID,
+      List<BlockMovingInfo> blockMovingInfos,
+      DatanodeDescriptor coordinatorNode) {
+
     if (blockMovingInfos.size() < 1) {
       // TODO: Major: handle this case. I think we need retry cases to
       // be implemented. Idea is, if some files are not getting storage movement
       // chances, then we can just retry limited number of times and exit.
+      return;
+    }
+
+    boolean needBlockStorageMovement = false;
+    for (BlockMovingInfo blkMovingInfo : blockMovingInfos) {
+      // Check for atleast one block storage movement has been chosen
+      if (blkMovingInfo.getTargets().length > 0){
+        needBlockStorageMovement = true;
+        break;
+      }
+    }
+    if (!needBlockStorageMovement) {
+      // Simply return as there is no targets selected for scheduling the block
+      // movement.
       return;
     }
 
@@ -251,9 +273,8 @@ public class StoragePolicySatisfier implements Runnable {
     List<DatanodeDescriptor> chosenNodes = new ArrayList<>();
     for (int i = 0; i < sourceWithStorageList.size(); i++) {
       StorageTypeNodePair existingTypeNodePair = sourceWithStorageList.get(i);
-      StorageTypeNodePair chosenTarget =
-          chooseTargetTypeInSameNode(existingTypeNodePair.dn, expected,
-              locsForExpectedStorageTypes, chosenNodes);
+      StorageTypeNodePair chosenTarget = chooseTargetTypeInSameNode(
+          existingTypeNodePair.dn, expected);
 
       if (chosenTarget == null && blockManager.getDatanodeManager()
           .getNetworkTopology().isNodeGroupAware()) {
@@ -282,15 +303,14 @@ public class StoragePolicySatisfier implements Runnable {
         chosenNodes.add(chosenTarget.dn);
         // TODO: We can increment scheduled block count for this node?
       } else {
-        // TODO: Failed to ChooseTargetNodes...So let just retry. Shall we
-        // proceed without this targets? Then what should be final result?
-        // How about pack empty target, means target node could not be chosen ,
-        // so result should be RETRY_REQUIRED from DN always.
-        // Log..unable to choose target node for source datanodeDescriptor
+        LOG.warn(
+            "Failed to choose target datanode for the required"
+                + " storage types {}, block:{}, existing storage type:{}",
+            expected, blockInfo, existingTypeNodePair.storageType);
         sourceNodes.add(existingTypeNodePair.dn);
         sourceStorageTypes.add(existingTypeNodePair.storageType);
-        targetNodes.add(null);
-        targetStorageTypes.add(null);
+        // Imp: Not setting the target details, empty targets. Later, this is
+        // used as an indicator for retrying this block movement.
       }
     }
     BlockMovingInfo blkMovingInfo = new BlockMovingInfo(blockInfo,
@@ -302,15 +322,13 @@ public class StoragePolicySatisfier implements Runnable {
   }
 
   /**
-   * Choose the target storage within same Datanode if possible.
+   * Choose the target storage within same datanode if possible.
    *
-   * @param locsForExpectedStorageTypes
-   * @param chosenNodes
+   * @param source source datanode
+   * @param targetTypes list of target storage types
    */
   private StorageTypeNodePair chooseTargetTypeInSameNode(
-      DatanodeDescriptor source, List<StorageType> targetTypes,
-      StorageTypeNodeMap locsForExpectedStorageTypes,
-      List<DatanodeDescriptor> chosenNodes) {
+      DatanodeDescriptor source, List<StorageType> targetTypes) {
     for (StorageType t : targetTypes) {
       DatanodeStorageInfo chooseStorage4Block =
           source.chooseStorage4Block(t, 0);
@@ -328,6 +346,9 @@ public class StoragePolicySatisfier implements Runnable {
     for (StorageType t : targetTypes) {
       List<DatanodeDescriptor> nodesWithStorages =
           locsForExpectedStorageTypes.getNodesWithStorages(t);
+      if (nodesWithStorages == null || nodesWithStorages.isEmpty()) {
+        continue; // no target nodes with the required storage type.
+      }
       Collections.shuffle(nodesWithStorages);
       for (DatanodeDescriptor target : nodesWithStorages) {
         if (!chosenNodes.contains(target) && matcher.match(

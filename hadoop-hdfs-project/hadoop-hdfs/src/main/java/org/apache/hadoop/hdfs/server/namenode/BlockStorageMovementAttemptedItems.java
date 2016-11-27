@@ -218,4 +218,8 @@ public class BlockStorageMovementAttemptedItems {
     return storageMovementAttemptedResults.size();
   }
 
+  @VisibleForTesting
+  public int getAttemptedItemsCount() {
+    return storageMovementAttemptedItems.size();
+  }
 }

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -43,8 +45,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Supplier;
-
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 
 /**
  * Tests that StoragePolicySatisfier daemon is able to check the blocks to be
@@ -79,7 +79,7 @@ public class TestStoragePolicySatisfier {
       throws Exception {
 
     try {
-      // Change policy to ALL_SSD
+      // Change policy to COLD
       dfs.setStoragePolicy(new Path(file), "COLD");
       FSNamesystem namesystem = hdfsCluster.getNamesystem();
       INode inode = namesystem.getFSDirectory().getINode(file);
@@ -354,6 +354,108 @@ public class TestStoragePolicySatisfier {
     } finally {
       hdfsCluster.shutdown();
     }
+  }
+
+  /**
+   * Tests to verify that for the given path, some of the blocks or block src
+   * locations(src nodes) under the given path will be scheduled for block
+   * movement.
+   *
+   * For example, there are two block for a file:
+   *
+   * File1 => blk_1[locations=A(DISK),B(DISK),C(DISK)],
+   * blk_2[locations=A(DISK),B(DISK),C(DISK)]. Now, set storage policy to COLD.
+   * Only one datanode is available with storage type ARCHIVE, say D.
+   *
+   * SPS will schedule block movement to the coordinator node with the details,
+   * blk_1[move A(DISK) -> D(ARCHIVE)], blk_2[move A(DISK) -> D(ARCHIVE)].
+   */
+  @Test(timeout = 300000)
+  public void testWhenOnlyFewTargetDatanodeAreAvailableToSatisfyStoragePolicy()
+      throws Exception {
+    try {
+      // Change policy to COLD
+      dfs.setStoragePolicy(new Path(file), "COLD");
+      FSNamesystem namesystem = hdfsCluster.getNamesystem();
+      INode inode = namesystem.getFSDirectory().getINode(file);
+
+      StorageType[][] newtypes =
+          new StorageType[][]{{StorageType.ARCHIVE, StorageType.ARCHIVE}};
+
+      // Adding ARCHIVE based datanodes.
+      startAdditionalDNs(config, 1, numOfDatanodes, newtypes,
+          storagesPerDatanode, capacity, hdfsCluster);
+
+      namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+      hdfsCluster.triggerHeartbeats();
+      // Wait till StorgePolicySatisfier identified that block to move to
+      // ARCHIVE area.
+      waitExpectedStorageType(file, StorageType.ARCHIVE, 1, 30000);
+      waitExpectedStorageType(file, StorageType.DISK, 2, 30000);
+
+      waitForBlocksMovementResult(1, 30000);
+    } finally {
+      hdfsCluster.shutdown();
+    }
+  }
+
+  /**
+   * Tests to verify that for the given path, no blocks or block src
+   * locations(src nodes) under the given path will be scheduled for block
+   * movement as there are no available datanode with required storage type.
+   *
+   * For example, there are two block for a file:
+   *
+   * File1 => blk_1[locations=A(DISK),B(DISK),C(DISK)],
+   * blk_2[locations=A(DISK),B(DISK),C(DISK)]. Now, set storage policy to COLD.
+   * No datanode is available with storage type ARCHIVE.
+   *
+   * SPS won't schedule any block movement for this path.
+   */
+  @Test(timeout = 300000)
+  public void testWhenNoTargetDatanodeToSatisfyStoragePolicy()
+      throws Exception {
+    try {
+      // Change policy to COLD
+      dfs.setStoragePolicy(new Path(file), "COLD");
+      FSNamesystem namesystem = hdfsCluster.getNamesystem();
+      INode inode = namesystem.getFSDirectory().getINode(file);
+
+      StorageType[][] newtypes =
+          new StorageType[][]{{StorageType.DISK, StorageType.DISK}};
+      // Adding DISK based datanodes
+      startAdditionalDNs(config, 1, numOfDatanodes, newtypes,
+          storagesPerDatanode, capacity, hdfsCluster);
+
+      namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+      hdfsCluster.triggerHeartbeats();
+
+      // No block movement will be scheduled as there is no target node available
+      // with the required storage type.
+      waitForAttemptedItems(1, 30000);
+      waitExpectedStorageType(file, StorageType.DISK, 3, 30000);
+      // Since there is no target node the item will get timed out and then
+      // re-attempted.
+      waitForAttemptedItems(1, 30000);
+    } finally {
+      hdfsCluster.shutdown();
+    }
+  }
+
+  private void waitForAttemptedItems(long expectedBlkMovAttemptedCount,
+      int timeout) throws TimeoutException, InterruptedException {
+    BlockManager blockManager = hdfsCluster.getNamesystem().getBlockManager();
+    final StoragePolicySatisfier sps = blockManager.getStoragePolicySatisfier();
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        LOG.info("expectedAttemptedItemsCount={} actualAttemptedItemsCount={}",
+            expectedBlkMovAttemptedCount,
+            sps.getAttemptedItemsMonitor().getAttemptedItemsCount());
+        return sps.getAttemptedItemsMonitor()
+            .getAttemptedItemsCount() == expectedBlkMovAttemptedCount;
+      }
+    }, 100, timeout);
   }
 
   private void waitForBlocksMovementResult(long expectedBlkMovResultsCount,
