@@ -98,7 +98,9 @@ include_directories(
 # add gtest as system library to suppress gcc warnings
 include_directories(SYSTEM ${SRC}/gtest/include)
 
+set(CMAKE_MACOSX_RPATH TRUE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
     # macosx does not have -lrt
