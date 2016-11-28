@@ -53,7 +53,7 @@ public class TestReplicationPolicyConsiderLoad
   @Override
   DatanodeDescriptor[] getDatanodeDescriptors(Configuration conf) {
     conf.setDouble(DFSConfigKeys
-        .DFS_NAMENODE_REPLICATION_CONSIDERLOAD_FACTOR, 1.2);
+        .DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_FACTOR, 1.2);
     final String[] racks = {
         "/rack1",
         "/rack1",

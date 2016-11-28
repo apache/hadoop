@@ -104,6 +104,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeout;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -397,6 +398,7 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
     generateByNewInstance(RestartContainerResponse.class);
     generateByNewInstance(RollbackResponse.class);
     generateByNewInstance(CommitResponse.class);
+    generateByNewInstance(ApplicationTimeout.class);
   }
 
   @Test

@@ -296,14 +296,14 @@
 </property>
 
 <property>
-  <name>dfs.namenode.replication.considerLoad</name>
+  <name>dfs.namenode.redundancy.considerLoad</name>
   <value>true</value>
   <description>Decide if chooseTarget considers the target's load or not
   </description>
 </property>
 
   <property>
-    <name>dfs.namenode.replication.considerLoad.factor</name>
+    <name>dfs.namenode.redundancy.considerLoad.factor</name>
     <value>2.0</value>
     <description>The factor by which a node's load can exceed the average
       before being rejected for writes, only if considerLoad is true.
@@ -980,10 +980,10 @@
 </property>
 
 <property>
-  <name>dfs.namenode.replication.interval</name>
+  <name>dfs.namenode.redundancy.interval.seconds</name>
   <value>3s</value>
   <description>The periodicity in seconds with which the namenode computes 
-  replication work for datanodes. Support multiple time unit suffix(case insensitive),
+  low redundancy work for datanodes. Support multiple time unit suffix(case insensitive),
   as described in dfs.heartbeat.interval.
   </description>
 </property>

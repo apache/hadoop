@@ -165,9 +165,11 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
   }
 
   @Override
-  public void addNode(List<NMContainerStatus> containerStatuses, RMNode
-      rmNode) {
-    LOG.debug("Node added event from: " + rmNode.getNode().getName());
+  public void addNode(List<NMContainerStatus> containerStatuses,
+      RMNode rmNode) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Node added event from: " + rmNode.getNode().getName());
+    }
     // Ignoring this currently : at least one NODE_UPDATE heartbeat is
     // required to ensure node eligibility.
   }

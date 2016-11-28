@@ -64,12 +64,8 @@ NOTE: Invoking the script without any parameters list all possible parameters (s
 Test HttpFS is working
 ----------------------
 
-    ~ $ curl -i "http://<HTTPFSHOSTNAME>:14000?user.name=babu&op=homedir"
-    HTTP/1.1 200 OK
-    Content-Type: application/json
-    Transfer-Encoding: chunked
-
-    {"homeDir":"http:\/\/<HTTPFS_HOST>:14000\/user\/babu"}
+    $ curl -sS 'http://<HTTPFSHOSTNAME>:14000/webhdfs/v1?op=gethomedirectory&user.name=hdfs'
+    {"Path":"\/user\/hdfs"}
 
 Embedded Tomcat Configuration
 -----------------------------

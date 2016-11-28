@@ -158,8 +158,9 @@ public class RPC {
   
   /**
    * Get the protocol version from protocol class.
-   * If the protocol class has a ProtocolAnnotation, then get the protocol
-   * name from the annotation; otherwise the class name is the protocol name.
+   * If the protocol class has a ProtocolAnnotation,
+   * then get the protocol version from the annotation;
+   * otherwise get it from the versionID field of the protocol class.
    */
   static public long getProtocolVersion(Class<?> protocol) {
     if (protocol == null) {

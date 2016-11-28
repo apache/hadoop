@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeout;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
@@ -112,6 +113,7 @@ import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
@@ -122,6 +124,8 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   private static final Log LOG = LogFactory.getLog(RMAppImpl.class);
   private static final String UNAVAILABLE = "N/A";
+  private static final String UNLIMITED = "UNLIMITED";
+  private static final long UNKNOWN = -1L;
   private static final EnumSet<RMAppState> COMPLETED_APP_STATES =
       EnumSet.of(RMAppState.FINISHED, RMAppState.FINISHING, RMAppState.FAILED,
           RMAppState.KILLED, RMAppState.FINAL_SAVING, RMAppState.KILLING);
@@ -787,6 +791,19 @@ public class RMAppImpl implements RMApp, Recoverable {
       report.setUnmanagedApp(submissionContext.getUnmanagedAM());
       report.setAppNodeLabelExpression(getAppNodeLabelExpression());
       report.setAmNodeLabelExpression(getAmNodeLabelExpression());
+
+      ApplicationTimeout timeout = ApplicationTimeout
+          .newInstance(ApplicationTimeoutType.LIFETIME, UNLIMITED, UNKNOWN);
+      // Currently timeout type supported is LIFETIME. When more timeout types
+      // are supported in YARN-5692, the below logic need to be changed.
+      if (!this.applicationTimeouts.isEmpty()) {
+        long timeoutInMillis = applicationTimeouts
+            .get(ApplicationTimeoutType.LIFETIME).longValue();
+        timeout.setExpiryTime(Times.formatISO8601(timeoutInMillis));
+        timeout.setRemainingTime(
+            Math.max((timeoutInMillis - systemClock.getTime()) / 1000, 0));
+      }
+      report.setApplicationTimeouts(Collections.singletonList(timeout));
       return report;
     } finally {
       this.readLock.unlock();

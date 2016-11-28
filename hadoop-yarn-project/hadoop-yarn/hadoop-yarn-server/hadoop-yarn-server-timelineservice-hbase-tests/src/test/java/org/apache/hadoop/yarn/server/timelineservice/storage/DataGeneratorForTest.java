@@ -182,7 +182,7 @@ final class DataGeneratorForTest {
     te2.addEntity(entity2);
     HBaseTimelineWriterImpl hbi = null;
     try {
-      hbi = new HBaseTimelineWriterImpl(util.getConfiguration());
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(util.getConfiguration());
       hbi.start();
       String cluster = "cluster1";
@@ -360,7 +360,7 @@ final class DataGeneratorForTest {
     te.addEntity(entity2);
     HBaseTimelineWriterImpl hbi = null;
     try {
-      hbi = new HBaseTimelineWriterImpl(util.getConfiguration());
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(util.getConfiguration());
       hbi.start();
       String cluster = "cluster1";

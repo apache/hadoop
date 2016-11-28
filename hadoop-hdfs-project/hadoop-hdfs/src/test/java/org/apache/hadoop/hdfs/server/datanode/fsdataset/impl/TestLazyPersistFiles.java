@@ -104,8 +104,8 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
     Thread.sleep(30000L);
     assertThat(cluster.getNamesystem().getNumDeadDataNodes(), is(1));
 
-    // Next, wait for the replication monitor to mark the file as corrupt
-    Thread.sleep(2 * DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT * 1000);
+    // Next, wait for the redundancy monitor to mark the file as corrupt.
+    Thread.sleep(2 * DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_DEFAULT * 1000);
 
     // Wait for the LazyPersistFileScrubber to run
     Thread.sleep(2 * LAZY_WRITE_FILE_SCRUBBER_INTERVAL_SEC * 1000);
@@ -137,8 +137,8 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
     cluster.shutdownDataNodes();
     Thread.sleep(30000L);
 
-    // Next, wait for the replication monitor to mark the file as corrupt
-    Thread.sleep(2 * DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT * 1000);
+    // Next, wait for the redundancy monitor to mark the file as corrupt.
+    Thread.sleep(2 * DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_DEFAULT * 1000);
 
     // Wait for the LazyPersistFileScrubber to run
     Thread.sleep(2 * LAZY_WRITE_FILE_SCRUBBER_INTERVAL_SEC * 1000);
@@ -164,8 +164,8 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
 
     cluster.restartNameNodes();
 
-    // wait for the replication monitor to mark the file as corrupt
-    Thread.sleep(2 * DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT * 1000);
+    // wait for the redundancy monitor to mark the file as corrupt.
+    Thread.sleep(2 * DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_DEFAULT * 1000);
 
     Long corruptBlkCount = (long) Iterators.size(cluster.getNameNode()
         .getNamesystem().getBlockManager().getCorruptReplicaBlockIterator());

@@ -44,7 +44,7 @@ import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Preconditions;
 
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce", "Hive"})
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract 
 class AbstractDelegationTokenSecretManager<TokenIdent 

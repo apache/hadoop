@@ -1237,8 +1237,8 @@ public class NNThroughputBenchmark implements Tool {
   }   // end BlockReportStats
 
   /**
-   * Measures how fast replication monitor can compute data-node work.
-   * 
+   * Measures how fast redundancy monitor can compute data-node work.
+   *
    * It runs only one thread until no more work can be scheduled.
    */
   class ReplicationStats extends OperationStatsBase {
@@ -1265,7 +1265,7 @@ public class NNThroughputBenchmark implements Tool {
       parseArguments(args);
       // number of operations is 4 times the number of decommissioned
       // blocks divided by the number of needed replications scanned 
-      // by the replication monitor in one iteration
+      // by the redundancy monitor in one iteration
       numOpsRequired = (totalBlocks*replication*nodesToDecommission*2)
             / (numDatanodes*numDatanodes);
 
@@ -1314,8 +1314,8 @@ public class NNThroughputBenchmark implements Tool {
 
       // start data-nodes; create a bunch of files; generate block reports.
       blockReportObject.generateInputs(ignore);
-      // stop replication monitor
-      BlockManagerTestUtil.stopReplicationThread(namesystem.getBlockManager());
+      // stop redundancy monitor thread.
+      BlockManagerTestUtil.stopRedundancyThread(namesystem.getBlockManager());
 
       // report blocks once
       int nrDatanodes = blockReportObject.getNumDatanodes();

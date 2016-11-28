@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEven
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed.NodeQueueLoadMonitor;
 
@@ -409,15 +410,19 @@ public class OpportunisticContainerAllocatorAMService
   private List<RemoteNode> convertToRemoteNodes(List<NodeId> nodeIds) {
     ArrayList<RemoteNode> retNodes = new ArrayList<>();
     for (NodeId nId : nodeIds) {
-      retNodes.add(convertToRemoteNode(nId));
+      RemoteNode remoteNode = convertToRemoteNode(nId);
+      if (null != remoteNode) {
+        retNodes.add(remoteNode);
+      }
     }
     return retNodes;
   }
 
   private RemoteNode convertToRemoteNode(NodeId nodeId) {
-    return RemoteNode.newInstance(nodeId,
-        ((AbstractYarnScheduler)rmContext.getScheduler()).getNode(nodeId)
-            .getHttpAddress());
+    SchedulerNode node =
+        ((AbstractYarnScheduler) rmContext.getScheduler()).getNode(nodeId);
+    return node != null ? RemoteNode.newInstance(nodeId, node.getHttpAddress())
+        : null;
   }
 
   private Resource createMaxContainerResource() {

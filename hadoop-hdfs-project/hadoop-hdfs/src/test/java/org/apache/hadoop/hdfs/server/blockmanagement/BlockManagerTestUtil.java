@@ -105,25 +105,24 @@ public class BlockManagerTestUtil {
   }
 
   /**
-   * @return replication monitor thread instance from block manager.
+   * @return redundancy monitor thread instance from block manager.
    */
-  public static Daemon getReplicationThread(final BlockManager blockManager)
-  {
-    return blockManager.replicationThread;
+  public static Daemon getRedundancyThread(final BlockManager blockManager) {
+    return blockManager.getRedundancyThread();
   }
-  
+
   /**
-   * Stop the replication monitor thread
+   * Stop the redundancy monitor thread.
    */
-  public static void stopReplicationThread(final BlockManager blockManager) 
+  public static void stopRedundancyThread(final BlockManager blockManager)
       throws IOException {
     blockManager.enableRMTerminationForTesting();
-    blockManager.replicationThread.interrupt();
+    blockManager.getRedundancyThread().interrupt();
     try {
-      blockManager.replicationThread.join();
-    } catch(InterruptedException ie) {
+      blockManager.getRedundancyThread().join();
+    } catch (InterruptedException ie) {
       throw new IOException(
-          "Interrupted while trying to stop ReplicationMonitor");
+          "Interrupted while trying to stop RedundancyMonitor");
     }
   }
 
