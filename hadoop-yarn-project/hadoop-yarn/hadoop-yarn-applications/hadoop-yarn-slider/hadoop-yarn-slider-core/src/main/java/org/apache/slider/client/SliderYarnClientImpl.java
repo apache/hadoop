@@ -53,6 +53,8 @@ import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -115,10 +117,59 @@ public class SliderYarnClientImpl extends YarnClientImpl {
    */
   public List<ApplicationReport> listDeployedInstances(String user)
     throws YarnException, IOException {
+    return listDeployedInstances(user, null);
+  }
+
+  /**
+   * List Slider <i>deployed</i>instances belonging to a specific user in a
+   * given set of states.
+   * <p>
+   * Deployed means: known about in the YARN cluster; it will include all apps
+   * in the specified set of states.
+   *
+   * @param user
+   *          user: "" means all users
+   * @param appStates
+   *          filter by a set of YarnApplicationState
+   * @return a possibly empty list of Slider AMs
+   * @throws YarnException
+   * @throws IOException
+   */
+  public List<ApplicationReport> listDeployedInstances(String user,
+      EnumSet<YarnApplicationState> appStates)
+      throws YarnException, IOException {
+    return listDeployedInstances(user, appStates, null);
+  }
+
+  /**
+   * List Slider <i>deployed</i>instances belonging to a specific user in a
+   * given set of states and filtered by an application name tag.
+   * <p>
+   * Deployed means: known about in the YARN cluster; it will include all apps
+   * in the specified set of states and tagged with the specified app name.
+   *
+   * @param user
+   *          user: "" means all users
+   * @param appStates
+   *          filter by a set of YarnApplicationState
+   * @param appname
+   *          an application name tag in the format defined by
+   *          {@link SliderUtils#createNameTag(String)}
+   * @return a possibly empty list of Slider AMs
+   * @throws YarnException
+   * @throws IOException
+   */
+  public List<ApplicationReport> listDeployedInstances(String user,
+      EnumSet<YarnApplicationState> appStates, String appname)
+      throws YarnException, IOException {
     Preconditions.checkArgument(user != null, "Null User");
     Set<String> types = new HashSet<>(1);
     types.add(SliderKeys.APP_TYPE);
-    List<ApplicationReport> allApps = getApplications(types);
+    Set<String> tags = null;
+    if (appname != null) {
+      tags = Collections.singleton(SliderUtils.createNameTag(appname));
+    }
+    List<ApplicationReport> allApps = getApplications(types, appStates, tags);
     List<ApplicationReport> results = new ArrayList<>();
     for (ApplicationReport report : allApps) {
       if (StringUtils.isEmpty(user) || user.equals(report.getUser())) {
@@ -136,20 +187,11 @@ public class SliderYarnClientImpl extends YarnClientImpl {
    * @param appname application name
    * @return the list of all matching application instances
    */
-  public List<ApplicationReport> findAllInstances(String user,
-                                                  String appname)
+  public List<ApplicationReport> findAllInstances(String user, String appname)
       throws IOException, YarnException {
     Preconditions.checkArgument(appname != null, "Null application name");
 
-    List<ApplicationReport> instances = listDeployedInstances(user);
-    List<ApplicationReport> results =
-      new ArrayList<>(instances.size());
-    for (ApplicationReport report : instances) {
-      if (report.getName().equals(appname)) {
-        results.add(report);
-      }
-    }
-    return results;
+    return listDeployedInstances(user, null, appname);
   }
   
   /**
@@ -204,14 +246,12 @@ public class SliderYarnClientImpl extends YarnClientImpl {
       // user wants all instances killed
       String user = getUsername();
       log.info("Killing all applications belonging to {}", user);
-      Collection<ApplicationReport> instances = listDeployedInstances(user);
+      Collection<ApplicationReport> instances = listDeployedInstances(user,
+          SliderUtils.getAllLiveAppStates());
       for (ApplicationReport instance : instances) {
-        if (isApplicationLive(instance)) {
-          ApplicationId appId = instance.getApplicationId();
-          log.info("Killing Application {}", appId);
-
-          killRunningApplication(appId, "forced kill");
-        }
+        ApplicationId appId = instance.getApplicationId();
+        log.info("Killing Application {}", appId);
+        killRunningApplication(appId, "forced kill");
       }
     } else {
       ApplicationId appId = ConverterUtils.toApplicationId(applicationId);
@@ -290,21 +330,11 @@ public class SliderYarnClientImpl extends YarnClientImpl {
    * @return the list of all matching application instances
    */
   public List<ApplicationReport> findAllLiveInstances(String user,
-                                                      String appname) throws
-                                                                      YarnException,
-                                                                      IOException {
+      String appname) throws YarnException, IOException {
     Preconditions.checkArgument(StringUtils.isNotEmpty(appname),
         "Null/empty application name");
-    List<ApplicationReport> instances = listDeployedInstances(user);
-    List<ApplicationReport> results =
-      new ArrayList<ApplicationReport>(instances.size());
-    for (ApplicationReport app : instances) {
-      if (app.getName().equals(appname)
-          && isApplicationLive(app)) {
-        results.add(app);
-      }
-    }
-    return results;
+    return listDeployedInstances(user, SliderUtils.getAllLiveAppStates(),
+        appname);
   }
 
   /**

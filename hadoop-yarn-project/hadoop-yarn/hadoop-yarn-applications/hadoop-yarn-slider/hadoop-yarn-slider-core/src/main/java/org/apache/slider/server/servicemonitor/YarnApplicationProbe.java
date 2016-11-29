@@ -68,23 +68,19 @@ public class YarnApplicationProbe extends Probe {
    */
   @Override
   public ProbeStatus ping(boolean livePing) {
-    
     ProbeStatus status = new ProbeStatus();
     try {
-
-      List<ApplicationReport> instances =
-        yarnClient.listDeployedInstances(username);
-      ApplicationReport instance =
-        yarnClient.findClusterInInstanceList(instances, clustername);
+      List<ApplicationReport> instances = yarnClient
+          .listDeployedInstances(username, null, clustername);
+      ApplicationReport instance = yarnClient
+          .findClusterInInstanceList(instances, clustername);
       if (null == instance) {
         throw UnknownApplicationInstanceException.unknownInstance(clustername);
       }
-
       status.succeed(this);
     } catch (Exception e) {
       status.fail(this, e);
     }
     return status;
-
   }
 }

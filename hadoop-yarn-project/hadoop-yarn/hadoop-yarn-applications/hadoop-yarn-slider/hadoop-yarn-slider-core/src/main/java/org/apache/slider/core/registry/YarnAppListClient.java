@@ -86,7 +86,7 @@ public class YarnAppListClient {
   public ApplicationReport findInstance(String appname) throws
                                                         YarnException,
                                                         IOException {
-    List<ApplicationReport> instances = listInstances(null);
+    List<ApplicationReport> instances = listInstances(null, appname);
     return yarnClient.findClusterInInstanceList(instances, appname);
   }
 
@@ -107,8 +107,25 @@ public class YarnAppListClient {
    */
   public List<ApplicationReport> listInstances(String user)
       throws YarnException, IOException {
+    return listInstances(user, null);
+  }
+
+  /**
+   * List all instances belonging to a specific user and a specific appname.
+   *
+   * @param user
+   *          user if not the default. null means default, "" means all users,
+   *          otherwise it is the name of a user
+   * @param appname
+   *          application name set as an application tag
+   * @return a possibly empty list of AMs
+   * @throws YarnException
+   * @throws IOException
+   */
+  public List<ApplicationReport> listInstances(String user, String appname)
+      throws YarnException, IOException {
     String listUser = user == null ? username : user;
-    return yarnClient.listDeployedInstances(listUser);
+    return yarnClient.listDeployedInstances(listUser, null, appname);
   }
 
   /**
