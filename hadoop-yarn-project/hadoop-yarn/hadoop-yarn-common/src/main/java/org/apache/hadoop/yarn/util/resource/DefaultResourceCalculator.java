@@ -17,6 +17,8 @@
 */
 package org.apache.hadoop.yarn.util.resource;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -24,7 +26,9 @@ import org.apache.hadoop.yarn.api.records.Resource;
 @Private
 @Unstable
 public class DefaultResourceCalculator extends ResourceCalculator {
-  
+  private static final Log LOG =
+      LogFactory.getLog(DefaultResourceCalculator.class);
+
   @Override
   public int compare(Resource unused, Resource lhs, Resource rhs) {
     // Only consider memory
@@ -64,18 +68,19 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   @Override
   public Resource normalize(Resource r, Resource minimumResource,
       Resource maximumResource, Resource stepFactor) {
+    if (stepFactor.getMemorySize() == 0) {
+      LOG.error("Memory cannot be allocated in increments of zero. Assuming " +
+          minimumResource.getMemorySize() + "MB increment size. "
+          + "Please ensure the scheduler configuration is correct.");
+      stepFactor = minimumResource;
+    }
+
     long normalizedMemory = Math.min(
         roundUp(
             Math.max(r.getMemorySize(), minimumResource.getMemorySize()),
             stepFactor.getMemorySize()),
             maximumResource.getMemorySize());
     return Resources.createResource(normalizedMemory);
-  }
-
-  @Override
-  public Resource normalize(Resource r, Resource minimumResource,
-                            Resource maximumResource) {
-    return normalize(r, minimumResource, maximumResource, minimumResource);
   }
 
   @Override

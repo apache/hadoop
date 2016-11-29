@@ -58,7 +58,8 @@ import org.apache.hadoop.yarn.util.Records;
  */
 @Public
 @Stable
-public abstract class ResourceRequest implements Comparable<ResourceRequest> {
+public abstract class ResourceRequest extends AbstractResourceRequest
+    implements Comparable<ResourceRequest>{
 
   @Public
   @Stable
@@ -345,22 +346,6 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   @Stable
   public abstract void setResourceName(String resourceName);
   
-  /**
-   * Get the <code>Resource</code> capability of the request.
-   * @return <code>Resource</code> capability of the request
-   */
-  @Public
-  @Stable
-  public abstract Resource getCapability();
-  
-  /**
-   * Set the <code>Resource</code> capability of the request
-   * @param capability <code>Resource</code> capability of the request
-   */
-  @Public
-  @Stable
-  public abstract void setCapability(Resource capability);
-
   /**
    * Get the number of containers required with the given specifications.
    * @return number of containers required with the given specifications

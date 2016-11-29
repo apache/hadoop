@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
+import org.apache.hadoop.yarn.api.records.AbstractResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -222,12 +223,12 @@ public class FairScheduler extends
         getClusterResource(), resource, reservationThreshold);
   }
 
-  private void validateConf(Configuration conf) {
+  private void validateConf(FairSchedulerConfiguration config) {
     // validate scheduler memory allocation setting
-    int minMem = conf.getInt(
+    int minMem = config.getInt(
       YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
       YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
-    int maxMem = conf.getInt(
+    int maxMem = config.getInt(
       YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
 
@@ -242,11 +243,19 @@ public class FairScheduler extends
         + "the minimum allocation value.");
     }
 
+    long incrementMem = config.getIncrementAllocation().getMemorySize();
+    if (incrementMem <= 0) {
+      throw new YarnRuntimeException("Invalid resource scheduler memory"
+          + " allocation configuration: "
+          + FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_MB
+          + "=" + incrementMem + ". Values must be greater than 0.");
+    }
+
     // validate scheduler vcores allocation setting
-    int minVcores = conf.getInt(
+    int minVcores = config.getInt(
       YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
       YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
-    int maxVcores = conf.getInt(
+    int maxVcores = config.getInt(
       YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
 
@@ -259,6 +268,14 @@ public class FairScheduler extends
         + "=" + maxVcores + ".  Both values must be greater than or equal to 0"
           + "and the maximum allocation value must be greater than or equal to"
           + "the minimum allocation value.");
+    }
+
+    int incrementVcore = config.getIncrementAllocation().getVirtualCores();
+    if (incrementVcore <= 0) {
+      throw new YarnRuntimeException("Invalid resource scheduler vcores"
+          + " allocation configuration: "
+          + FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES
+          + "=" + incrementVcore + ". Values must be greater than 0.");
     }
   }
 
@@ -964,6 +981,15 @@ public class FairScheduler extends
   }
 
   @Override
+  public void normalizeRequest(AbstractResourceRequest ask) {
+    SchedulerUtils.normalizeRequest(ask,
+        DOMINANT_RESOURCE_CALCULATOR,
+        minimumAllocation,
+        getMaximumResourceCapability(),
+        incrAllocation);
+  }
+
+  @Override
   public Allocation allocate(ApplicationAttemptId appAttemptId,
       List<ResourceRequest> ask, List<ContainerId> release,
       List<String> blacklistAdditions, List<String> blacklistRemovals,
@@ -979,9 +1005,7 @@ public class FairScheduler extends
     }
 
     // Sanity check
-    SchedulerUtils.normalizeRequests(ask, DOMINANT_RESOURCE_CALCULATOR,
-        getClusterResource(), minimumAllocation, getMaximumResourceCapability(),
-        incrAllocation);
+    normalizeRequests(ask);
 
     // Record container allocation start time
     application.recordContainerRequestTime(getClock().getTime());
