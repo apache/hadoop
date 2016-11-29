@@ -17,7 +17,6 @@
 package org.apache.slider.server.appmaster.web;
 
 import org.apache.hadoop.registry.client.api.RegistryOperations;
-import org.apache.slider.api.SliderClusterProtocol;
 import org.apache.slider.providers.ProviderService;
 import org.apache.slider.server.appmaster.AppMasterActionOperations;
 import org.apache.slider.server.appmaster.actions.QueueAccess;
@@ -25,7 +24,6 @@ import org.apache.slider.server.appmaster.management.MetricsAndMonitoring;
 import org.apache.slider.server.appmaster.state.AppState;
 import org.apache.slider.server.appmaster.state.RoleStatus;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
-import org.apache.slider.server.appmaster.web.rest.agent.AgentRestOperations;
 import org.apache.slider.server.appmaster.web.rest.application.resources.ContentCache;
 import org.apache.slider.server.services.security.CertificateManager;
 
@@ -57,11 +55,6 @@ public interface WebAppApi {
    * is a computed value and not just a getter
    */
   Map<String, RoleStatus> getRoleStatusByName();
-
-  /**
-   * Returns an interface that can support the agent-based REST operations.
-   */
-  AgentRestOperations getAgentRestOperations();
   
   /**
    * Registry operations accessor

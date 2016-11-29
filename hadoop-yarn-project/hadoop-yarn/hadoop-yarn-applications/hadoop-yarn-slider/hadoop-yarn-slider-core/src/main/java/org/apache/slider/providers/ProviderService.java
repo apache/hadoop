@@ -20,10 +20,10 @@ package org.apache.slider.providers;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.slider.api.ClusterDescription;
 import org.apache.slider.common.tools.SliderFileSystem;
@@ -37,7 +37,6 @@ import org.apache.slider.server.appmaster.actions.QueueAccess;
 import org.apache.slider.server.appmaster.operations.RMOperationHandlerActions;
 import org.apache.slider.server.appmaster.state.ContainerReleaseSelector;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
-import org.apache.slider.server.appmaster.web.rest.agent.AgentRestOperations;
 import org.apache.slider.server.services.yarnregistry.YarnRegistryViewForProviders;
 
 import java.io.File;
@@ -174,12 +173,6 @@ public interface ProviderService extends ProviderCore,
    * @param yarnRegistry YARN registry
    */
   void bindToYarnRegistry(YarnRegistryViewForProviders yarnRegistry);
-
-  /**
-   * Returns the agent rest operations interface.
-   * @return  the interface if available, null otherwise.
-   */
-  AgentRestOperations getAgentRestOperations();
 
   /**
    * Build up the endpoint details for this service

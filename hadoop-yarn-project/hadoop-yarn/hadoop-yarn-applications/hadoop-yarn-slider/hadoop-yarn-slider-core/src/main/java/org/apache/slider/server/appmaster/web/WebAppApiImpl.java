@@ -23,7 +23,6 @@ import org.apache.slider.server.appmaster.actions.QueueAccess;
 import org.apache.slider.server.appmaster.management.MetricsAndMonitoring;
 import org.apache.slider.server.appmaster.state.RoleStatus;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
-import org.apache.slider.server.appmaster.web.rest.agent.AgentRestOperations;
 import org.apache.slider.server.appmaster.web.rest.application.resources.ContentCache;
 import org.apache.slider.server.services.security.CertificateManager;
 import org.slf4j.Logger;
@@ -94,11 +93,6 @@ public class WebAppApiImpl implements WebAppApi {
       map.put(status.getName(), status);
     }
     return map;
-  }
-
-  @Override
-  public AgentRestOperations getAgentRestOperations() {
-    return provider.getAgentRestOperations();
   }
 
   @Override

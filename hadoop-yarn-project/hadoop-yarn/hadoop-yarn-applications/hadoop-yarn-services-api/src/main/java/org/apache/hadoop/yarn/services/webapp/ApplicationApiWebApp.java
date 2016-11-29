@@ -30,7 +30,7 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.services.api.impl.ApplicationApiService;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
-import org.mortbay.jetty.webapp.Configuration;
+import org.eclipse.jetty.webapp.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

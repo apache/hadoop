@@ -19,7 +19,6 @@ package org.apache.slider.server.appmaster.web.rest;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.slider.server.appmaster.web.WebAppApi;
-import org.apache.slider.server.appmaster.web.rest.agent.AgentResource;
 import org.apache.slider.server.appmaster.web.rest.application.ApplicationResource;
 import org.apache.slider.server.appmaster.web.rest.management.ManagementResource;
 import org.apache.slider.server.appmaster.web.rest.publisher.PublisherResource;
