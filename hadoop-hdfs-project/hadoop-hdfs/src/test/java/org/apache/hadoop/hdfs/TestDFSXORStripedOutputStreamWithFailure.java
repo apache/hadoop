@@ -15,30 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.io.erasurecode;
+package org.apache.hadoop.hdfs;
+
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 
 /**
- * Constants related to the erasure code feature.
+ * This tests write operation of DFS striped file with XOR-2-1-64k erasure code
+ * policy when there is data node failure.
  */
-public final class ErasureCodeConstants {
+public class TestDFSXORStripedOutputStreamWithFailure
+    extends TestDFSStripedOutputStreamWithFailure{
 
-  private ErasureCodeConstants() {
+  @Override
+  public ErasureCodingPolicy getEcPolicy() {
+    return ErasureCodingPolicyManager.getPolicyByPolicyID(
+        HdfsConstants.XOR_2_1_POLICY_ID);
   }
-
-  public static final String RS_DEFAULT_CODEC_NAME = "rs-default";
-  public static final String RS_LEGACY_CODEC_NAME = "rs-legacy";
-  public static final String XOR_CODEC_NAME = "xor";
-  public static final String HHXOR_CODEC_NAME = "hhxor";
-
-  public static final ECSchema RS_6_3_SCHEMA = new ECSchema(
-      RS_DEFAULT_CODEC_NAME, 6, 3);
-
-  public static final ECSchema RS_3_2_SCHEMA = new ECSchema(
-      RS_DEFAULT_CODEC_NAME, 3, 2);
-
-  public static final ECSchema RS_6_3_LEGACY_SCHEMA = new ECSchema(
-      RS_LEGACY_CODEC_NAME, 6, 3);
-
-  public static final ECSchema XOR_2_1_SCHEMA = new ECSchema(
-      XOR_CODEC_NAME, 2, 1);
 }

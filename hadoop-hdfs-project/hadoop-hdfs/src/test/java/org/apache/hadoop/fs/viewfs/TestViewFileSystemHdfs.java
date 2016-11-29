@@ -31,6 +31,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
@@ -217,5 +219,32 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     DFSTestUtil.FsShellRun("-df /internalDir", 0, "/internalDir", newConf);
     DFSTestUtil.FsShellRun("-df /", 0, null, newConf);
     DFSTestUtil.FsShellRun("-df", 0, null, newConf);
+  }
+
+  @Test
+  public void testFileChecksum() throws IOException {
+    ViewFileSystem viewFs = (ViewFileSystem) fsView;
+    Path mountDataRootPath = new Path("/data");
+    String fsTargetFileName = "debug.log";
+    Path fsTargetFilePath = new Path(targetTestRoot, "data/debug.log");
+    Path mountDataFilePath = new Path(mountDataRootPath, fsTargetFileName);
+
+    fileSystemTestHelper.createFile(fsTarget, fsTargetFilePath);
+    FileStatus fileStatus = viewFs.getFileStatus(mountDataFilePath);
+    long fileLength = fileStatus.getLen();
+
+    FileChecksum fileChecksumViaViewFs =
+        viewFs.getFileChecksum(mountDataFilePath);
+    FileChecksum fileChecksumViaTargetFs =
+        fsTarget.getFileChecksum(fsTargetFilePath);
+    Assert.assertTrue("File checksum not matching!",
+        fileChecksumViaViewFs.equals(fileChecksumViaTargetFs));
+
+    fileChecksumViaViewFs =
+        viewFs.getFileChecksum(mountDataFilePath, fileLength / 2);
+    fileChecksumViaTargetFs =
+        fsTarget.getFileChecksum(fsTargetFilePath, fileLength / 2);
+    Assert.assertTrue("File checksum not matching!",
+        fileChecksumViaViewFs.equals(fileChecksumViaTargetFs));
   }
 }

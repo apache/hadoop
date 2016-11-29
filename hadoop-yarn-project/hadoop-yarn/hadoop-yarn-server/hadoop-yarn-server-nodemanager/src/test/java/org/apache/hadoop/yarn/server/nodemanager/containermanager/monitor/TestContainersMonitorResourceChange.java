@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +38,7 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl.ProcessTreeInfo;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerLivenessContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
@@ -64,6 +66,7 @@ public class TestContainersMonitorResourceChange {
   private AsyncDispatcher dispatcher;
   private Context context;
   private MockContainerEventHandler containerEventHandler;
+  private ConcurrentMap<ContainerId, Container> containerMap;
 
   static final int WAIT_MS_PER_LOOP = 20; // 20 milli seconds
 
@@ -131,8 +134,10 @@ public class TestContainersMonitorResourceChange {
     executor = new MockExecutor();
     dispatcher = new AsyncDispatcher();
     context = Mockito.mock(Context.class);
-    Mockito.doReturn(new ConcurrentSkipListMap<ContainerId, Container>())
-        .when(context).getContainers();
+    containerMap = new ConcurrentSkipListMap<>();
+    Container container = Mockito.mock(ContainerImpl.class);
+    containerMap.put(getContainerId(1), container);
+    Mockito.doReturn(containerMap).when(context).getContainers();
     conf = new Configuration();
     conf.set(
         YarnConfiguration.NM_CONTAINER_MON_RESOURCE_CALCULATOR,
@@ -181,7 +186,12 @@ public class TestContainersMonitorResourceChange {
             getContainerId(1)).getProcessTree();
     mockTree.setRssMemorySize(2500L);
     // verify that this container is killed
-    Thread.sleep(200);
+    for (int waitMs = 0; waitMs < 5000; waitMs += 50) {
+      if (containerEventHandler.isContainerKilled(getContainerId(1))) {
+        break;
+      }
+      Thread.sleep(50);
+    }
     assertTrue(containerEventHandler
         .isContainerKilled(getContainerId(1)));
     // create container 2

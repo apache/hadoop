@@ -22,7 +22,6 @@
     <version>3.0.0-alpha2-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
-  <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-sls</artifactId>
   <version>3.0.0-alpha2-SNAPSHOT</version>
   <description>Apache Hadoop Scheduler Load Simulator</description>

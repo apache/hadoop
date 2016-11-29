@@ -350,6 +350,15 @@ public class ViewFileSystem extends FileSystem {
     return res.targetFileSystem.getFileChecksum(res.remainingPath);
   }
 
+  @Override
+  public FileChecksum getFileChecksum(final Path f, final long length)
+      throws AccessControlException, FileNotFoundException,
+      IOException {
+    InodeTree.ResolveResult<FileSystem> res =
+        fsState.resolve(getUriPath(f), true);
+    return res.targetFileSystem.getFileChecksum(res.remainingPath, length);
+  }
+
   private static FileStatus fixFileStatus(FileStatus orig,
       Path qualified) throws IOException {
     // FileStatus#getPath is a fully qualified path relative to the root of

@@ -536,15 +536,21 @@ public class ContainersMonitorImpl extends AbstractService implements
           }
 
           Container container = context.getContainers().get(containerId);
-          String[] ipAndHost = containerExecutor.getIpAndHost(container);
-          if (ipAndHost != null && ipAndHost[0] != null
-                  && ipAndHost[1] != null) {
-            container.setIpAndHost(ipAndHost);
-            LOG.info(containerId + "'s ip = " + ipAndHost[0]
-                    + ", and hostname = " + ipAndHost[1]);
+
+          if (container != null) {
+            String[] ipAndHost = containerExecutor.getIpAndHost(container);
+
+            if ((ipAndHost != null) && (ipAndHost[0] != null) &&
+                (ipAndHost[1] != null)) {
+              container.setIpAndHost(ipAndHost);
+              LOG.info(containerId + "'s ip = " + ipAndHost[0]
+                  + ", and hostname = " + ipAndHost[1]);
+            } else {
+              LOG.info("Can not get both ip and hostname: "
+                  + Arrays.toString(ipAndHost));
+            }
           } else {
-            LOG.info("Can not get both ip and hostname: " + Arrays
-                    .toString(ipAndHost));
+            LOG.info(containerId + " is missing. Not setting ip and hostname");
           }
         }
       }
@@ -683,11 +689,15 @@ public class ContainersMonitorImpl extends AbstractService implements
         long currentPmemUsage, float cpuUsagePercentPerCore) {
       ContainerImpl container =
               (ContainerImpl) context.getContainers().get(containerId);
-      NMTimelinePublisher nmMetricsPublisher =
-              container.getNMTimelinePublisher();
-      if (nmMetricsPublisher != null) {
-        nmMetricsPublisher.reportContainerResourceUsage(container,
-                currentPmemUsage, cpuUsagePercentPerCore);
+      if (container != null) {
+        NMTimelinePublisher nmMetricsPublisher =
+                container.getNMTimelinePublisher();
+        if (nmMetricsPublisher != null) {
+          nmMetricsPublisher.reportContainerResourceUsage(container,
+                  currentPmemUsage, cpuUsagePercentPerCore);
+        }
+      } else {
+        LOG.info(containerId + " does not exist to report");
       }
     }
 
