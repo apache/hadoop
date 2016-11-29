@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Timer;
 import org.slf4j.Logger;
@@ -45,7 +46,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -356,14 +356,8 @@ public class DatasetVolumeChecker {
     }
 
     private void cleanup() {
-      try {
-        reference.close();
-      } catch (IOException ioe) {
-        LOG.warn("Unexpected exception releasing reference on volume " +
-            reference.getVolume(), ioe);
-      } finally {
-        invokeCallback();
-      }
+      IOUtils.cleanup(null, reference);
+      invokeCallback();
     }
 
     private void invokeCallback() {
