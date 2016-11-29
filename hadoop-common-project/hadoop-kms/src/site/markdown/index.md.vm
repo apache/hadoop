@@ -298,6 +298,8 @@ The answer to "What is your first and last name?" (i.e. "CN") must be the hostna
 
 NOTE: You need to restart the KMS for the configuration changes to take effect.
 
+NOTE: Some old SSL clients may use weak ciphers that are not supported by the KMS server. It is recommended to upgrade the SSL client.
+
 $H4 ACLs (Access Control Lists)
 
 KMS supports ACLs (Access Control Lists) for fine-grained permission control.
