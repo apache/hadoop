@@ -173,14 +173,20 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       LOG.debug("Renewing delegation token {}", token);
       KeyProvider keyProvider = KMSUtil.createKeyProvider(conf,
           KeyProviderFactory.KEY_PROVIDER_PATH);
-      if (!(keyProvider instanceof
-          KeyProviderDelegationTokenExtension.DelegationTokenExtension)) {
-        LOG.warn("keyProvider {} cannot renew dt.", keyProvider == null ?
-            "null" : keyProvider.getClass());
-        return 0;
+      try {
+        if (!(keyProvider instanceof
+            KeyProviderDelegationTokenExtension.DelegationTokenExtension)) {
+          LOG.warn("keyProvider {} cannot renew dt.", keyProvider == null ?
+              "null" : keyProvider.getClass());
+          return 0;
+        }
+        return ((KeyProviderDelegationTokenExtension.DelegationTokenExtension)
+            keyProvider).renewDelegationToken(token);
+      } finally {
+        if (keyProvider != null) {
+          keyProvider.close();
+        }
       }
-      return ((KeyProviderDelegationTokenExtension.DelegationTokenExtension)
-          keyProvider).renewDelegationToken(token);
     }
 
     @Override
@@ -188,14 +194,20 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       LOG.debug("Canceling delegation token {}", token);
       KeyProvider keyProvider = KMSUtil.createKeyProvider(conf,
           KeyProviderFactory.KEY_PROVIDER_PATH);
-      if (!(keyProvider instanceof
-          KeyProviderDelegationTokenExtension.DelegationTokenExtension)) {
-        LOG.warn("keyProvider {} cannot cancel dt.", keyProvider == null ?
-            "null" : keyProvider.getClass());
-        return;
+      try {
+        if (!(keyProvider instanceof
+            KeyProviderDelegationTokenExtension.DelegationTokenExtension)) {
+          LOG.warn("keyProvider {} cannot cancel dt.", keyProvider == null ?
+              "null" : keyProvider.getClass());
+          return;
+        }
+        ((KeyProviderDelegationTokenExtension.DelegationTokenExtension)
+            keyProvider).cancelDelegationToken(token);
+      } finally {
+        if (keyProvider != null) {
+          keyProvider.close();
+        }
       }
-      ((KeyProviderDelegationTokenExtension.DelegationTokenExtension)
-          keyProvider).cancelDelegationToken(token);
     }
   }
 
@@ -1072,6 +1084,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     } finally {
       if (sslFactory != null) {
         sslFactory.destroy();
+        sslFactory = null;
       }
     }
   }
