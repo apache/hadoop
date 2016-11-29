@@ -690,6 +690,8 @@ class BlockPoolSlice {
    * @return the number of valid bytes
    */
   private long validateIntegrityAndSetLength(File blockFile, long genStamp) {
+    DataInputStream checksumIn = null;
+    InputStream blockIn = null;
     ReplicaInputStreams ris = null;
     try {
       final File metaFile = FsDatasetUtil.getMetaFile(blockFile, genStamp);
@@ -700,7 +702,7 @@ class BlockPoolSlice {
           !metaFile.exists() || metaFileLen < crcHeaderLen) {
         return 0;
       }
-      DataInputStream checksumIn = new DataInputStream(
+      checksumIn = new DataInputStream(
           new BufferedInputStream(new FileInputStream(metaFile),
               ioFileBufferSize));
 
@@ -715,7 +717,7 @@ class BlockPoolSlice {
       if (numChunks == 0) {
         return 0;
       }
-      InputStream blockIn = new FileInputStream(blockFile);
+      blockIn = new FileInputStream(blockFile);
       ris = new ReplicaInputStreams(blockIn, checksumIn,
           volume.obtainReference());
       ris.skipChecksumFully((numChunks-1)*checksumSize);
@@ -730,7 +732,7 @@ class BlockPoolSlice {
       long validFileLength;
       if (checksum.compare(buf, lastChunkSize)) { // last chunk matches crc
         validFileLength = lastChunkStartPos + lastChunkSize;
-      } else { // last chunck is corrupt
+      } else { // last chunk is corrupt
         validFileLength = lastChunkStartPos;
       }
 
@@ -752,6 +754,9 @@ class BlockPoolSlice {
     } finally {
       if (ris != null) {
         ris.close();
+      } else {
+        IOUtils.closeStream(checksumIn);
+        IOUtils.closeStream(blockIn);
       }
     }
   }
