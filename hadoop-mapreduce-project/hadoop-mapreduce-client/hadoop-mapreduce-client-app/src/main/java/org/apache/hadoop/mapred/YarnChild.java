@@ -78,6 +78,8 @@ class YarnChild {
     // Initing with our JobConf allows us to avoid loading confs twice
     Limits.init(job);
     UserGroupInformation.setConfiguration(job);
+    // MAPREDUCE-6565: need to set configuration for SecurityUtil.
+    SecurityUtil.setConfiguration(job);
 
     String host = args[0];
     int port = Integer.parseInt(args[1]);

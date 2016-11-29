@@ -123,6 +123,7 @@ import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
@@ -1690,6 +1691,8 @@ public class MRAppMaster extends CompositeService {
       final JobConf conf, String jobUserName) throws IOException,
       InterruptedException {
     UserGroupInformation.setConfiguration(conf);
+    // MAPREDUCE-6565: need to set configuration for SecurityUtil.
+    SecurityUtil.setConfiguration(conf);
     // Security framework already loaded the tokens into current UGI, just use
     // them
     Credentials credentials =
