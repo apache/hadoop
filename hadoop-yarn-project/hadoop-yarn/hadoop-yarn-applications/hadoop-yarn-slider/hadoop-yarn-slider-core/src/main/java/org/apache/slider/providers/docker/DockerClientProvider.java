@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.apache.slider.providers.docker.DockerKeys.DOCKER_IMAGE;
 
@@ -93,4 +94,11 @@ public class DockerClientProvider extends AbstractClientProvider
       }
     }
   }
+
+  @Override
+  public Set<String> getApplicationTags(SliderFileSystem fileSystem,
+      ConfTreeOperations appConf, String appName) throws SliderException {
+    return createApplicationTags(appName, null, null);
+  }
+
 }
