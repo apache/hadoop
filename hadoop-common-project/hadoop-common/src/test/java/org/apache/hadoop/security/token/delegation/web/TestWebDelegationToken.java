@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.security.token.delegation.web;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.minikdc.MiniKdc;
@@ -30,7 +31,6 @@ import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHa
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -60,8 +60,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
 import java.net.HttpURLConnection;
-import java.net.InetAddress;
-import java.net.ServerSocket;
 import java.net.URL;
 import java.security.Principal;
 import java.security.PrivilegedActionException;
