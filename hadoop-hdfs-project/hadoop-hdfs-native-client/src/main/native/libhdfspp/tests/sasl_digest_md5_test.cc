@@ -18,6 +18,7 @@
 #include "common/sasl_authenticator.h"
 
 #include <gtest/gtest.h>
+#include <google/protobuf/stubs/common.h>
 
 namespace hdfs {
 
@@ -40,5 +41,7 @@ TEST(DigestMD5AuthenticatorTest, TestResponse) {
   ASSERT_TRUE(status.ok());
   ASSERT_TRUE(result.find("response=3a286c2c385b92a06ebc66d58b8c4330") !=
               std::string::npos);
+
+  google::protobuf::ShutdownProtobufLibrary();
 }
 }

@@ -16,32 +16,31 @@
  * limitations under the License.
  */
 
-#include "hdfs_public_api.h"
+#ifndef COMMON_HDFS_IOSERVICE_H_
+#define COMMON_HDFS_IOSERVICE_H_
 
-#include "common/logging.h"
+#include "hdfspp/hdfspp.h"
+
+#include <asio/io_service.hpp>
 
 namespace hdfs {
 
-IoService::~IoService() {}
+/*
+ *  A thin wrapper over the asio::io_service.
+ *    -In the future this could own the worker threads that execute io tasks which
+ *     makes it easier to share IoServices between FileSystems. See HDFS-10796 for
+ *     rationale.
+ */
 
-IoService *IoService::New() { return new IoServiceImpl(); }
-
-void IoServiceImpl::Run() {
-  // As recommended in http://www.boost.org/doc/libs/1_39_0/doc/html/boost_asio/reference/io_service.html#boost_asio.reference.io_service.effect_of_exceptions_thrown_from_handlers
-  asio::io_service::work work(io_service_);
-  for(;;)
-  {
-    try
-    {
-      io_service_.run();
-      break;
-    } catch (const std::exception & e) {
-      LOG_WARN(kFileSystem, << "Unexpected exception in libhdfspp worker thread: " << e.what());
-    } catch (...) {
-      LOG_WARN(kFileSystem, << "Unexpected value not derived from std::exception in libhdfspp worker thread");
-    }
-  }
-}
-
+class IoServiceImpl : public IoService {
+ public:
+  virtual void Run() override;
+  virtual void Stop() override { io_service_.stop(); }
+  ::asio::io_service &io_service() { return io_service_; }
+ private:
+  ::asio::io_service io_service_;
+};
 
 }
+
+#endif
