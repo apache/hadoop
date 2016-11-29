@@ -75,7 +75,7 @@
 
     <zookeeper.version>3.4.6</zookeeper.version>
 
-    <tomcat.version>6.0.41</tomcat.version>
+    <tomcat.version>6.0.48</tomcat.version>
     <maven-remote-resources-plugin.version>1.5</maven-remote-resources-plugin.version>
   </properties>
 

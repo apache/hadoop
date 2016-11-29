@@ -197,6 +197,9 @@ hadoop-${project.version} $ sbin/kms.sh start
   NOTE: You need to restart the KMS for the configuration changes to take
   effect.
 
+  NOTE: Some old SSL clients may use weak ciphers that are not supported
+  by the KMS server. It is recommended to upgrade the SSL client.
+
 *** KMS Proxyuser Configuration
 
   Each proxyuser must be configured in <<<etc/hadoop/kms-site.xml>>> using the
