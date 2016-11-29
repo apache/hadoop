@@ -70,7 +70,6 @@ import org.apache.slider.core.exceptions.SliderException;
 import org.apache.slider.core.launch.ClasspathConstructor;
 import org.apache.slider.core.main.LauncherExitCodes;
 import org.apache.slider.providers.agent.AgentKeys;
-import org.apache.slider.providers.agent.application.metadata.Component;
 import org.apache.slider.server.services.utility.PatternValidator;
 import org.apache.slider.server.services.workflow.ForkedProcessService;
 import org.apache.zookeeper.server.util.KerberosUtil;
