@@ -4,6 +4,8 @@ Release 2.7.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-13812. Upgrade Tomcat to 6.0.48. (John Zhuge via aajisaka)
+
   NEW FEATURES
 
   IMPROVEMENTS

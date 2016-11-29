@@ -216,7 +216,7 @@ The answer to "What is your first and last name?" (i.e. "CN") must be the hostna
 
 NOTE: You need to restart the KMS for the configuration changes to take effect.
 
-$H4 KMS Access Control
+NOTE: Some old SSL clients may use weak ciphers that are not supported by the KMS server. It is recommended to upgrade the SSL client.
 
 KMS ACLs configuration are defined in the KMS `etc/hadoop/kms-acls.xml` configuration file. This file is hot-reloaded when it changes.
 
