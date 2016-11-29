@@ -19,17 +19,17 @@
 package org.apache.slider.providers;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.registry.client.binding.RegistryTypeUtils;
+import org.apache.hadoop.registry.client.exceptions.InvalidRecordException;
+import org.apache.hadoop.registry.client.types.AddressTypes;
+import org.apache.hadoop.registry.client.types.Endpoint;
+import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
-import org.apache.hadoop.registry.client.binding.RegistryTypeUtils;
-import org.apache.hadoop.registry.client.exceptions.InvalidRecordException;
-import org.apache.hadoop.registry.client.types.AddressTypes;
-import org.apache.hadoop.registry.client.types.Endpoint;
-import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.slider.api.ClusterDescription;
 import org.apache.slider.common.SliderKeys;
 import org.apache.slider.common.tools.ConfigHelper;
@@ -44,7 +44,6 @@ import org.apache.slider.server.appmaster.operations.AbstractRMOperation;
 import org.apache.slider.server.appmaster.state.ContainerReleaseSelector;
 import org.apache.slider.server.appmaster.state.MostRecentContainerReleaseSelector;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
-import org.apache.slider.server.appmaster.web.rest.agent.AgentRestOperations;
 import org.apache.slider.server.services.workflow.ForkedProcessService;
 import org.apache.slider.server.services.workflow.ServiceParent;
 import org.apache.slider.server.services.workflow.WorkflowSequenceService;
@@ -77,7 +76,6 @@ public abstract class AbstractProviderService
   private static final Logger log =
     LoggerFactory.getLogger(AbstractProviderService.class);
   protected StateAccessForProviders amState;
-  protected AgentRestOperations restOps;
   protected URL amWebAPI;
   protected YarnRegistryViewForProviders yarnRegistry;
   protected QueueAccess queueAccess;
@@ -127,16 +125,7 @@ public abstract class AbstractProviderService
   }
 
   @Override
-  public AgentRestOperations getAgentRestOperations() {
-    return restOps;
-  }
-
-  @Override
   public void notifyContainerCompleted(ContainerId containerId) {
-  }
-
-  public void setAgentRestOperations(AgentRestOperations agentRestOperations) {
-    this.restOps = agentRestOperations;
   }
 
   /**

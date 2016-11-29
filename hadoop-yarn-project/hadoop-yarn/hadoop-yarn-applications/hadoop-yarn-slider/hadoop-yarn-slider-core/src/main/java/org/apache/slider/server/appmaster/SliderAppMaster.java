@@ -20,12 +20,8 @@ package org.apache.slider.server.appmaster;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.health.HealthCheckRegistry;
-import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
-import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
-import com.codahale.metrics.jvm.ThreadStatesGaugeSet;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.BlockingService;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -36,8 +32,14 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.registry.client.api.RegistryOperations;
+import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.registry.client.binding.RegistryTypeUtils;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
+import org.apache.hadoop.registry.client.types.ServiceRecord;
+import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
+import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
+import org.apache.hadoop.registry.server.integration.RMRegistryOperationsService;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -66,18 +68,9 @@ import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.impl.NMClientAsyncImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.*;
-import static org.apache.slider.common.Constants.HADOOP_JAAS_DEBUG;
-
 import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.registry.client.api.RegistryOperations;
-import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
-import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
-import org.apache.hadoop.registry.client.types.ServiceRecord;
-import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
-import org.apache.hadoop.registry.server.integration.RMRegistryOperationsService;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
@@ -122,18 +115,16 @@ import org.apache.slider.providers.ProviderCompleted;
 import org.apache.slider.providers.ProviderRole;
 import org.apache.slider.providers.ProviderService;
 import org.apache.slider.providers.SliderProviderFactory;
-import org.apache.slider.providers.agent.AgentKeys;
-import org.apache.slider.providers.agent.AgentProviderService;
 import org.apache.slider.providers.slideram.SliderAMClientProvider;
 import org.apache.slider.providers.slideram.SliderAMProviderService;
 import org.apache.slider.server.appmaster.actions.ActionRegisterServiceInstance;
-import org.apache.slider.server.appmaster.actions.EscalateOutstandingRequests;
-import org.apache.slider.server.appmaster.actions.RegisterComponentInstance;
-import org.apache.slider.server.appmaster.actions.QueueExecutor;
-import org.apache.slider.server.appmaster.actions.QueueService;
 import org.apache.slider.server.appmaster.actions.ActionStopSlider;
 import org.apache.slider.server.appmaster.actions.ActionUpgradeContainers;
 import org.apache.slider.server.appmaster.actions.AsyncAction;
+import org.apache.slider.server.appmaster.actions.EscalateOutstandingRequests;
+import org.apache.slider.server.appmaster.actions.QueueExecutor;
+import org.apache.slider.server.appmaster.actions.QueueService;
+import org.apache.slider.server.appmaster.actions.RegisterComponentInstance;
 import org.apache.slider.server.appmaster.actions.RenewingAction;
 import org.apache.slider.server.appmaster.actions.ResetFailureWindow;
 import org.apache.slider.server.appmaster.actions.ReviewAndFlexApplicationSize;
@@ -143,26 +134,24 @@ import org.apache.slider.server.appmaster.management.YarnServiceHealthCheck;
 import org.apache.slider.server.appmaster.monkey.ChaosKillAM;
 import org.apache.slider.server.appmaster.monkey.ChaosKillContainer;
 import org.apache.slider.server.appmaster.monkey.ChaosMonkeyService;
+import org.apache.slider.server.appmaster.operations.AbstractRMOperation;
 import org.apache.slider.server.appmaster.operations.AsyncRMOperationHandler;
 import org.apache.slider.server.appmaster.operations.ProviderNotifyingOperationHandler;
+import org.apache.slider.server.appmaster.operations.RMOperationHandler;
 import org.apache.slider.server.appmaster.rpc.RpcBinder;
 import org.apache.slider.server.appmaster.rpc.SliderAMPolicyProvider;
 import org.apache.slider.server.appmaster.rpc.SliderClusterProtocolPBImpl;
-import org.apache.slider.server.appmaster.operations.AbstractRMOperation;
 import org.apache.slider.server.appmaster.rpc.SliderIPCService;
 import org.apache.slider.server.appmaster.security.SecurityConfiguration;
 import org.apache.slider.server.appmaster.state.AppState;
 import org.apache.slider.server.appmaster.state.AppStateBindingInfo;
 import org.apache.slider.server.appmaster.state.ContainerAssignment;
 import org.apache.slider.server.appmaster.state.ProviderAppState;
-import org.apache.slider.server.appmaster.operations.RMOperationHandler;
 import org.apache.slider.server.appmaster.state.RoleInstance;
-import org.apache.slider.server.appmaster.web.AgentService;
-import org.apache.slider.server.appmaster.web.rest.InsecureAmFilterInitializer;
-import org.apache.slider.server.appmaster.web.rest.agent.AgentWebApp;
 import org.apache.slider.server.appmaster.web.SliderAMWebApp;
 import org.apache.slider.server.appmaster.web.WebAppApi;
 import org.apache.slider.server.appmaster.web.WebAppApiImpl;
+import org.apache.slider.server.appmaster.web.rest.InsecureAmFilterInitializer;
 import org.apache.slider.server.appmaster.web.rest.RestPaths;
 import org.apache.slider.server.appmaster.web.rest.application.ApplicationResouceContentCacheFactory;
 import org.apache.slider.server.appmaster.web.rest.application.resources.ContentCache;
@@ -181,7 +170,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -198,6 +186,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.*;
+import static org.apache.slider.common.Constants.HADOOP_JAAS_DEBUG;
 
 /**
  * This is the AM, which directly implements the callbacks from the AM and NM
@@ -765,11 +756,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
                                     appMasterContainerID.toString(),
                                     clustername);
       certificateManager.setPassphrase(instanceDefinition.getPassphrase());
- 
-      if (component.getOptionBool(
-          AgentKeys.KEY_AGENT_TWO_WAY_SSL_ENABLED, false)) {
-        uploadServerCertForLocalization(clustername, fs);
-      }
 
       // Web service endpoints: initialize
       WebAppApiImpl webAppApi =
@@ -784,10 +770,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
               contentCache);
       initAMFilterOptions(serviceConf);
 
-      if (providerService instanceof AgentProviderService) {
-        // start the agent web app
-        startAgentWebApp(appInformation, serviceConf, webAppApi);
-      }
       int webAppPort = deployWebApplication(webAppApi);
 
       String scheme = WebAppUtils.HTTP_PREFIX;
@@ -1165,26 +1147,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
     return portScanner.getAvailablePort();
   }
 
-  private void uploadServerCertForLocalization(String clustername,
-                                               SliderFileSystem fs)
-      throws IOException {
-    Path certsDir = fs.buildClusterSecurityDirPath(clustername);
-    if (!fs.getFileSystem().exists(certsDir)) {
-      fs.getFileSystem().mkdirs(certsDir,
-        new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE));
-    }
-    Path destPath = new Path(certsDir, SliderKeys.CRT_FILE_NAME);
-    if (!fs.getFileSystem().exists(destPath)) {
-      fs.getFileSystem().copyFromLocalFile(
-          new Path(CertificateManager.getServerCertficateFilePath().getAbsolutePath()),
-          destPath);
-      log.info("Uploaded server cert to localization path {}", destPath);
-    }
-
-    fs.getFileSystem().setPermission(destPath,
-        new FsPermission(FsAction.READ, FsAction.NONE, FsAction.NONE));
-  }
-
   protected void login(String principal, File localKeytabFile)
       throws IOException, SliderException {
     log.info("Logging in as {} with keytab {}", principal, localKeytabFile);
@@ -1218,53 +1180,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
         iter.remove();
       }
     }
-  }
-
-  /**
-   * Set up and start the agent web application 
-   * @param appInformation application information
-   * @param serviceConf service configuration
-   * @param webAppApi web app API instance to bind to
-   * @throws IOException
-   */
-  private void startAgentWebApp(MapOperations appInformation,
-      Configuration serviceConf, WebAppApiImpl webAppApi) throws IOException, SliderException {
-    URL[] urls = ((URLClassLoader) AgentWebApp.class.getClassLoader() ).getURLs();
-    StringBuilder sb = new StringBuilder("AM classpath:");
-    for (URL url : urls) {
-      sb.append("\n").append(url.toString());
-    }
-    LOG_YARN.debug(sb.append("\n").toString());
-    initAMFilterOptions(serviceConf);
-
-
-    // Start up the agent web app and track the URL for it
-    MapOperations appMasterConfig = getInstanceDefinition()
-        .getAppConfOperations().getComponent(SliderKeys.COMPONENT_AM);
-    AgentWebApp agentWebApp = AgentWebApp.$for(AgentWebApp.BASE_PATH,
-        webAppApi,
-        RestPaths.AGENT_WS_CONTEXT)
-        .withComponentConfig(appMasterConfig)
-        .withPort(getPortToRequest())
-        .withSecuredPort(getPortToRequest())
-            .start();
-    agentOpsUrl =
-        "https://" + appMasterHostname + ":" + agentWebApp.getSecuredPort();
-    agentStatusUrl =
-        "https://" + appMasterHostname + ":" + agentWebApp.getPort();
-    AgentService agentService =
-      new AgentService("slider-agent", agentWebApp);
-
-    agentService.init(serviceConf);
-    agentService.start();
-    addService(agentService);
-
-    appInformation.put(StatusKeys.INFO_AM_AGENT_OPS_URL, agentOpsUrl + "/");
-    appInformation.put(StatusKeys.INFO_AM_AGENT_STATUS_URL, agentStatusUrl + "/");
-    appInformation.set(StatusKeys.INFO_AM_AGENT_STATUS_PORT,
-                       agentWebApp.getPort());
-    appInformation.set(StatusKeys.INFO_AM_AGENT_OPS_PORT,
-                       agentWebApp.getSecuredPort());
   }
 
   /**
@@ -1327,17 +1242,8 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
         serviceRecord);
 
     // provider service dynamic definitions.
-    if (providerService instanceof AgentProviderService) {
-      URL agentOpsURI = new URL(agentOpsUrl);
-      URL agentStatusURI = new URL(agentStatusUrl);
-      ((AgentProviderService)providerService).applyInitialRegistryDefinitions(
-          amWebURI,
-          agentOpsURI,
-          agentStatusURI,
-          serviceRecord);
-    } else {
-      providerService.applyInitialRegistryDefinitions(amWebURI, serviceRecord);
-    }
+    providerService.applyInitialRegistryDefinitions(amWebURI, serviceRecord);
+
 
     // set any provided attributes
     setProvidedServiceRecordAttributes(
@@ -1800,11 +1706,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
     }
     LOG_YARN.info("Final list of containers to be upgraded (total {}) : {}",
         containers.size(), containers);
-    if (providerService instanceof AgentProviderService) {
-      AgentProviderService agentProviderService = (AgentProviderService) providerService;
-      agentProviderService.setInUpgradeMode(true);
-      agentProviderService.addUpgradeContainers(containers);
-    }
   }
 
   // create a reverse map of roles -> set of all live containers
@@ -1968,11 +1869,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
    * Shutdown operation: release all containers
    */
   private void releaseAllContainers() {
-    if (providerService instanceof AgentProviderService) {
-      log.info("Setting stopInitiated flag to true");
-      AgentProviderService agentProviderService = (AgentProviderService) providerService;
-      agentProviderService.setAppStopInitiated(true);
-    }
     // Add the sleep here (before releasing containers) so that applications get
     // time to perform graceful shutdown
     try {
