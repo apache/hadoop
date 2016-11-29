@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.slider.common.tools.SliderFileSystem;
+import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.core.conf.AggregateConf;
 import org.apache.slider.core.conf.ConfTreeOperations;
 import org.apache.slider.core.conf.MapOperations;
@@ -37,6 +38,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Set;
 
 import static org.apache.slider.api.ResourceKeys.COMPONENT_INSTANCES;
@@ -217,8 +219,32 @@ public abstract class AbstractClientProvider extends Configured {
    * @return the set of tags.
    */
   public Set<String> getApplicationTags(SliderFileSystem fileSystem,
-                                        ConfTreeOperations appConf) throws SliderException {
+      ConfTreeOperations appConf, String appName) throws SliderException {
     return Collections.emptySet();
+  }
+
+  /**
+   * Generates a fixed format of application tags given one or more of
+   * application name, version and description. This allows subsequent query for
+   * an application with a name only, version only or description only or any
+   * combination of those as filters.
+   *
+   * @param appName name of the application
+   * @param appVersion version of the application
+   * @param appDescription brief description of the application
+   * @return
+   */
+  public final Set<String> createApplicationTags(String appName,
+      String appVersion, String appDescription) {
+    Set<String> tags = new HashSet<>();
+    tags.add(SliderUtils.createNameTag(appName));
+    if (appVersion != null) {
+      tags.add(SliderUtils.createVersionTag(appVersion));
+    }
+    if (appDescription != null) {
+      tags.add(SliderUtils.createDescriptionTag(appDescription));
+    }
+    return tags;
   }
 
   /**

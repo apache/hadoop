@@ -198,6 +198,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -2083,7 +2084,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
 
     // add the tags if available
     Set<String> applicationTags = provider.getApplicationTags(sliderFileSystem,
-        appOperations);
+        appOperations, clustername);
 
     Credentials credentials = null;
     if (clusterSecure) {
@@ -3031,9 +3032,10 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
             appstate.ordinal() < YarnApplicationState.FINISHED.ordinal();
     } else {
       // scan for instance in single --state state
-      List<ApplicationReport> userInstances = yarnClient.listDeployedInstances("");
       state = state.toUpperCase(Locale.ENGLISH);
       YarnApplicationState desiredState = extractYarnApplicationState(state);
+      List<ApplicationReport> userInstances = yarnClient
+          .listDeployedInstances("", EnumSet.of(desiredState), name);
       ApplicationReport foundInstance =
           yarnClient.findAppInInstanceList(userInstances, name, desiredState);
       if (foundInstance != null) {

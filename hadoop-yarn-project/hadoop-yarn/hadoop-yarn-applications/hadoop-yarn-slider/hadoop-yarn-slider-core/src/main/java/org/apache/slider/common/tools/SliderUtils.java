@@ -104,6 +104,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
@@ -2655,5 +2656,39 @@ public final class SliderUtils {
       return prefix.substring(0, prefix.length()-1);
     }
     return prefix;
+  }
+
+  public static String createNameTag(String name) {
+    return "Name: " + name;
+  }
+
+  public static String createVersionTag(String version) {
+    return "Version: " + version;
+  }
+
+  public static String createDescriptionTag(String description) {
+    return "Description: " + description;
+  }
+
+  /**
+   * Get all YarnApplicationState values which signify that an application is
+   * in RUNNING or pre-RUNNING state.
+   *
+   * @return all live app states
+   */
+  public static EnumSet<YarnApplicationState> getAllLiveAppStates() {
+    return EnumSet.range(YarnApplicationState.NEW,
+        YarnApplicationState.RUNNING);
+  }
+
+  /**
+   * Get all YarnApplicationState values which signify that an application is
+   * not live, which means it is in one of the post RUNNING states.
+   *
+   * @return all non live app states
+   */
+  public static EnumSet<YarnApplicationState> getAllNonLiveAppStates() {
+    return EnumSet.range(YarnApplicationState.FINISHED,
+        YarnApplicationState.KILLED);
   }
 }
