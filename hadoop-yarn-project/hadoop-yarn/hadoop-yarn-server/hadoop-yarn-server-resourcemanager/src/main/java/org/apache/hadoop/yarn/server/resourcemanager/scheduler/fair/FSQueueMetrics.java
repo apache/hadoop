@@ -41,6 +41,10 @@ public class FSQueueMetrics extends QueueMetrics {
   @Metric("Maximum share of memory in MB") MutableGaugeLong maxShareMB;
   @Metric("Maximum share of CPU in vcores") MutableGaugeLong maxShareVCores;
   @Metric("Maximum number of applications") MutableGaugeInt maxApps;
+  @Metric("Maximum AM share of memory in MB") MutableGaugeLong maxAMShareMB;
+  @Metric("Maximum AM share of CPU in vcores") MutableGaugeInt maxAMShareVCores;
+  @Metric("AM resource usage of memory in MB") MutableGaugeLong amResourceUsageMB;
+  @Metric("AM resource usage of CPU in vcores") MutableGaugeInt amResourceUsageVCores;
 
   private String schedulingPolicy;
 
@@ -107,6 +111,62 @@ public class FSQueueMetrics extends QueueMetrics {
 
   public void setMaxApps(int max) {
     maxApps.set(max);
+  }
+
+  /**
+   * Get the maximum memory size AM can use in MB.
+   *
+   * @return the maximum memory size AM can use
+   */
+  public long getMaxAMShareMB() {
+    return maxAMShareMB.value();
+  }
+
+  /**
+   * Get the maximum number of VCores AM can use.
+   *
+   * @return the maximum number of VCores AM can use
+   */
+  public int getMaxAMShareVCores() {
+    return maxAMShareVCores.value();
+  }
+
+  /**
+   * Set the maximum resource AM can use.
+   *
+   * @param resource the maximum resource AM can use
+   */
+  public void setMaxAMShare(Resource resource) {
+    maxAMShareMB.set(resource.getMemorySize());
+    maxAMShareVCores.set(resource.getVirtualCores());
+  }
+
+  /**
+   * Get the AM memory usage in MB.
+   *
+   * @return the AM memory usage
+   */
+  public long getAMResourceUsageMB() {
+    return amResourceUsageMB.value();
+  }
+
+  /**
+   * Get the AM VCore usage.
+   *
+   * @return the AM VCore usage
+   */
+  public int getAMResourceUsageVCores() {
+    return amResourceUsageVCores.value();
+  }
+
+  /**
+   * Set the AM resource usage.
+   *
+   * @param resource the AM resource usage
+   */
+  public void setAMResourceUsage(Resource resource) {
+    amResourceUsageMB.set(resource.getMemorySize());
+    amResourceUsageVCores.set(resource.getVirtualCores());
   }
 
   public String getSchedulingPolicy() {
