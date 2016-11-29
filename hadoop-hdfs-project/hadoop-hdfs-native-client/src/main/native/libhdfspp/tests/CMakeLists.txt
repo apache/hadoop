@@ -72,7 +72,7 @@ target_link_libraries(remote_block_reader_test test_common reader proto common c
 add_memcheck_test(remote_block_reader remote_block_reader_test)
 
 add_executable(sasl_digest_md5_test sasl_digest_md5_test.cc)
-target_link_libraries(sasl_digest_md5_test common ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(sasl_digest_md5_test common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(sasl_digest_md5 sasl_digest_md5_test)
 
 add_executable(retry_policy_test retry_policy_test.cc)
