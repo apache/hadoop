@@ -62,7 +62,7 @@ import org.apache.hadoop.yarn.util.Records;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public abstract class UpdateContainerRequest {
+public abstract class UpdateContainerRequest extends AbstractResourceRequest {
 
   @InterfaceAudience.Public
   @InterfaceStability.Unstable
@@ -126,22 +126,6 @@ public abstract class UpdateContainerRequest {
   @InterfaceAudience.Public
   @InterfaceStability.Unstable
   public abstract void setContainerId(ContainerId containerId);
-
-  /**
-   * Get the <code>Resource</code> capability of the container.
-   * @return <code>Resource</code> capability of the container
-   */
-  @InterfaceAudience.Public
-  @InterfaceStability.Unstable
-  public abstract Resource getCapability();
-
-  /**
-   * Set the <code>Resource</code> capability of the container.
-   * @param capability <code>Resource</code> capability of the container
-   */
-  @InterfaceAudience.Public
-  @InterfaceStability.Unstable
-  public abstract void setCapability(Resource capability);
 
   /**
    * Get the target <code>ExecutionType</code> of the container.

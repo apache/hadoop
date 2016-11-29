@@ -335,9 +335,7 @@ public class FifoScheduler extends
     }
 
     // Sanity check
-    SchedulerUtils.normalizeRequests(ask, resourceCalculator, 
-        getClusterResource(), minimumAllocation,
-        getMaximumResourceCapability());
+    normalizeRequests(ask);
 
     // Release containers
     releaseContainers(release, application);

@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
@@ -33,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.AbstractResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidLabelResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
@@ -124,72 +124,31 @@ public class SchedulerUtils {
   }
 
   /**
-   * Utility method to normalize a list of resource requests, by insuring that
-   * the memory for each request is a multiple of minMemory and is not zero.
-   */
-  public static void normalizeRequests(
-    List<ResourceRequest> asks,
-    ResourceCalculator resourceCalculator,
-    Resource clusterResource,
-    Resource minimumResource,
-    Resource maximumResource) {
-    for (ResourceRequest ask : asks) {
-      normalizeRequest(
-        ask, resourceCalculator, clusterResource, minimumResource,
-        maximumResource, minimumResource);
-    }
-  }
-
-  /**
    * Utility method to normalize a resource request, by insuring that the
    * requested memory is a multiple of minMemory and is not zero.
    */
   public static void normalizeRequest(
     ResourceRequest ask,
     ResourceCalculator resourceCalculator,
-    Resource clusterResource,
     Resource minimumResource,
     Resource maximumResource) {
-    Resource normalized =
-      Resources.normalize(
-        resourceCalculator, ask.getCapability(), minimumResource,
-        maximumResource, minimumResource);
-    ask.setCapability(normalized);
-  }
-  
-  /**
-   * Utility method to normalize a list of resource requests, by insuring that
-   * the memory for each request is a multiple of minMemory and is not zero.
-   */
-  public static void normalizeRequests(
-      List<ResourceRequest> asks,
-      ResourceCalculator resourceCalculator, 
-      Resource clusterResource,
-      Resource minimumResource,
-      Resource maximumResource,
-      Resource incrementResource) {
-    for (ResourceRequest ask : asks) {
-      normalizeRequest(
-          ask, resourceCalculator, clusterResource, minimumResource,
-          maximumResource, incrementResource);
-    }
+    normalizeRequest(ask, resourceCalculator,
+        minimumResource, maximumResource, minimumResource);
   }
 
   /**
    * Utility method to normalize a resource request, by insuring that the
-   * requested memory is a multiple of minMemory and is not zero.
+   * requested memory is a multiple of increment resource and is not zero.
    */
   public static void normalizeRequest(
-      ResourceRequest ask, 
-      ResourceCalculator resourceCalculator, 
-      Resource clusterResource,
+      AbstractResourceRequest ask,
+      ResourceCalculator resourceCalculator,
       Resource minimumResource,
       Resource maximumResource,
       Resource incrementResource) {
-    Resource normalized = 
-        Resources.normalize(
-            resourceCalculator, ask.getCapability(), minimumResource,
-            maximumResource, incrementResource);
+    Resource normalized = Resources.normalize(
+        resourceCalculator, ask.getCapability(), minimumResource,
+        maximumResource, incrementResource);
     ask.setCapability(normalized);
   }
 
