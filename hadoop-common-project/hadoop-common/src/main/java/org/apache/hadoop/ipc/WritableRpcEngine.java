@@ -552,7 +552,8 @@ public class WritableRpcEngine implements RpcEngine {
           String detailedMetricsName = (exception == null) ?
               call.getMethodName() :
               exception.getClass().getSimpleName();
-          server.updateMetrics(detailedMetricsName, qTime, processingTime);
+          server
+              .updateMetrics(detailedMetricsName, qTime, processingTime, false);
         }
       }
     }

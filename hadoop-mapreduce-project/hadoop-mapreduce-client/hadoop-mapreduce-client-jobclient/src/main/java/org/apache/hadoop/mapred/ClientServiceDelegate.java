@@ -335,8 +335,8 @@ public class ClientServiceDelegate {
           throw new IOException(e.getTargetException());
         }
 
-        // if it's AM shut down, do not decrement maxClientRetry as we wait for
-        // AM to be restarted.
+        // if its AM shut down, do not decrement maxClientRetry while we wait
+        // for its AM to be restarted.
         if (!usingAMProxy.get()) {
           maxClientRetry--;
         }

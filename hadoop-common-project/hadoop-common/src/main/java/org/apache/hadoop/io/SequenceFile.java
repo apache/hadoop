@@ -24,6 +24,7 @@ import java.util.*;
 import java.rmi.server.UID;
 import java.security.MessageDigest;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.*;
 import org.apache.hadoop.util.Options;
 import org.apache.hadoop.fs.*;
@@ -146,7 +147,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SKIP_CHECKSU
  *   </ul>
  * </li>
  * <li>
- * A sync-marker every few <code>100</code> bytes or so.
+ * A sync-marker every few <code>100</code> kilobytes or so.
  * </li>
  * </ul>
  *
@@ -165,7 +166,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SKIP_CHECKSU
  *   </ul>
  * </li>
  * <li>
- * A sync-marker every few <code>100</code> bytes or so.
+ * A sync-marker every few <code>100</code> kilobytes or so.
  * </li>
  * </ul>
  * 
@@ -217,8 +218,11 @@ public class SequenceFile {
   private static final int SYNC_HASH_SIZE = 16;   // number of bytes in hash 
   private static final int SYNC_SIZE = 4+SYNC_HASH_SIZE; // escape + hash
 
-  /** The number of bytes between sync points.*/
-  public static final int SYNC_INTERVAL = 100*SYNC_SIZE; 
+  /**
+   * The number of bytes between sync points. 100 KB, default.
+   * Computed as 5 KB * 20 = 100 KB
+   */
+  public static final int SYNC_INTERVAL = 5 * 1024 * SYNC_SIZE; // 5KB*(16+4)
 
   /** 
    * The compression type used to compress key/value pairs in the 
@@ -856,6 +860,9 @@ public class SequenceFile {
     // starts and ends by scanning for this value.
     long lastSyncPos;                     // position of last sync
     byte[] sync;                          // 16 random bytes
+    @VisibleForTesting
+    int syncInterval;
+
     {
       try {                                       
         MessageDigest digester = MessageDigest.getInstance("MD5");
@@ -987,7 +994,16 @@ public class SequenceFile {
     private static Option filesystem(FileSystem fs) {
       return new SequenceFile.Writer.FileSystemOption(fs);
     }
-    
+
+    private static class SyncIntervalOption extends Options.IntegerOption
+        implements Option {
+      SyncIntervalOption(int val) {
+        // If a negative sync interval is provided,
+        // fall back to the default sync interval.
+        super(val < 0 ? SYNC_INTERVAL : val);
+      }
+    }
+
     public static Option bufferSize(int value) {
       return new BufferSizeOption(value);
     }
@@ -1032,11 +1048,15 @@ public class SequenceFile {
         CompressionCodec codec) {
       return new CompressionOption(value, codec);
     }
-    
+
+    public static Option syncInterval(int value) {
+      return new SyncIntervalOption(value);
+    }
+
     /**
      * Construct a uncompressed writer from a set of options.
      * @param conf the configuration to use
-     * @param options the options used when creating the writer
+     * @param opts the options used when creating the writer
      * @throws IOException if it fails
      */
     Writer(Configuration conf, 
@@ -1062,6 +1082,8 @@ public class SequenceFile {
         Options.getOption(MetadataOption.class, opts);
       CompressionOption compressionTypeOption =
         Options.getOption(CompressionOption.class, opts);
+      SyncIntervalOption syncIntervalOption =
+          Options.getOption(SyncIntervalOption.class, opts);
       // check consistency of options
       if ((fileOption == null) == (streamOption == null)) {
         throw new IllegalArgumentException("file or stream must be specified");
@@ -1163,7 +1185,12 @@ public class SequenceFile {
                                            "GzipCodec without native-hadoop " +
                                            "code!");
       }
-      init(conf, out, ownStream, keyClass, valueClass, codec, metadata);
+      this.syncInterval = (syncIntervalOption == null) ?
+          SYNC_INTERVAL :
+          syncIntervalOption.getValue();
+      init(
+          conf, out, ownStream, keyClass, valueClass,
+          codec, metadata, syncInterval);
     }
 
     /** Create the named file.
@@ -1176,7 +1203,7 @@ public class SequenceFile {
                   Class keyClass, Class valClass) throws IOException {
       this.compress = CompressionType.NONE;
       init(conf, fs.create(name), true, keyClass, valClass, null, 
-           new Metadata());
+           new Metadata(), SYNC_INTERVAL);
     }
     
     /** Create the named file with write-progress reporter.
@@ -1190,7 +1217,7 @@ public class SequenceFile {
                   Progressable progress, Metadata metadata) throws IOException {
       this.compress = CompressionType.NONE;
       init(conf, fs.create(name, progress), true, keyClass, valClass,
-           null, metadata);
+           null, metadata, SYNC_INTERVAL);
     }
     
     /** Create the named file with write-progress reporter. 
@@ -1206,7 +1233,7 @@ public class SequenceFile {
       this.compress = CompressionType.NONE;
       init(conf,
            fs.create(name, true, bufferSize, replication, blockSize, progress),
-           true, keyClass, valClass, null, metadata);
+           true, keyClass, valClass, null, metadata, SYNC_INTERVAL);
     }
 
     boolean isCompressed() { return compress != CompressionType.NONE; }
@@ -1234,18 +1261,21 @@ public class SequenceFile {
 
     /** Initialize. */
     @SuppressWarnings("unchecked")
-    void init(Configuration conf, FSDataOutputStream out, boolean ownStream,
-              Class keyClass, Class valClass,
-              CompressionCodec codec, Metadata metadata) 
+    void init(Configuration config, FSDataOutputStream outStream,
+              boolean ownStream, Class key, Class val,
+              CompressionCodec compCodec, Metadata meta,
+              int syncIntervalVal)
       throws IOException {
-      this.conf = conf;
-      this.out = out;
+      this.conf = config;
+      this.out = outStream;
       this.ownOutputStream = ownStream;
-      this.keyClass = keyClass;
-      this.valClass = valClass;
-      this.codec = codec;
-      this.metadata = metadata;
-      SerializationFactory serializationFactory = new SerializationFactory(conf);
+      this.keyClass = key;
+      this.valClass = val;
+      this.codec = compCodec;
+      this.metadata = meta;
+      this.syncInterval = syncIntervalVal;
+      SerializationFactory serializationFactory =
+          new SerializationFactory(config);
       this.keySerializer = serializationFactory.getSerializer(keyClass);
       if (this.keySerializer == null) {
         throw new IOException(
@@ -1366,7 +1396,7 @@ public class SequenceFile {
 
     synchronized void checkAndWriteSync() throws IOException {
       if (sync != null &&
-          out.getPos() >= lastSyncPos+SYNC_INTERVAL) { // time to emit sync
+          out.getPos() >= lastSyncPos+this.syncInterval) { // time to emit sync
         sync();
       }
     }

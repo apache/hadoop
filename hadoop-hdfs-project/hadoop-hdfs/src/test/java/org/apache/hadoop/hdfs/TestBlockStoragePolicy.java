@@ -58,7 +58,7 @@ public class TestBlockStoragePolicy {
   static {
     conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
     POLICY_SUITE = BlockStoragePolicySuite.createDefaultSuite();
     DEFAULT_STORAGE_POLICY = POLICY_SUITE.getDefaultPolicy();
   }

@@ -24,9 +24,11 @@ import java.nio.ByteBuffer;
 import java.security.AccessControlException;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -96,10 +98,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -189,6 +193,7 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.AdHocLogDumper;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -2428,4 +2433,185 @@ public class RMWebServices extends WebServices {
     return Response.status(Status.OK).entity(resResponse).build();
   }
 
+  @GET
+  @Path("/apps/{appid}/timeout/{type}")
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public AppTimeoutInfo getAppTimeout(@Context HttpServletRequest hsr,
+      @PathParam("appid") String appId, @PathParam("type") String type)
+      throws AuthorizationException {
+    init();
+    RMApp app = validateAppTimeoutRequest(hsr, appId);
+
+    ApplicationTimeoutType appTimeoutType = parseTimeoutType(type);
+    Long timeoutValue = app.getApplicationTimeouts().get(appTimeoutType);
+    AppTimeoutInfo timeout =
+        constructAppTimeoutDao(appTimeoutType, timeoutValue);
+    return timeout;
+  }
+
+  private RMApp validateAppTimeoutRequest(HttpServletRequest hsr,
+      String appId) {
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    String userName = "UNKNOWN-USER";
+    if (callerUGI != null) {
+      userName = callerUGI.getUserName();
+    }
+
+    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
+      String msg = "The default static user cannot carry out this operation.";
+      RMAuditLogger.logFailure(userName, AuditConstants.GET_APP_TIMEOUTS,
+          "UNKNOWN", "RMWebService", msg);
+      throw new ForbiddenException(msg);
+    }
+
+    RMApp app = null;
+    try {
+      app = getRMAppForAppId(appId);
+    } catch (NotFoundException e) {
+      RMAuditLogger.logFailure(userName, AuditConstants.GET_APP_TIMEOUTS,
+          "UNKNOWN", "RMWebService",
+          "Trying to get timeouts of an absent application " + appId);
+      throw e;
+    }
+    return app;
+  }
+
+  @GET
+  @Path("/apps/{appid}/timeouts")
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public AppTimeoutsInfo getAppTimeouts(@Context HttpServletRequest hsr,
+      @PathParam("appid") String appId) throws AuthorizationException {
+    init();
+
+    RMApp app = validateAppTimeoutRequest(hsr, appId);
+
+    AppTimeoutsInfo timeouts = new AppTimeoutsInfo();
+    Map<ApplicationTimeoutType, Long> applicationTimeouts =
+        app.getApplicationTimeouts();
+    if (applicationTimeouts.isEmpty()) {
+      // If application is not set timeout, lifetime should be sent as default
+      // with expiryTime=UNLIMITED and remainingTime=-1
+      timeouts
+          .add(constructAppTimeoutDao(ApplicationTimeoutType.LIFETIME, null));
+    } else {
+      for (Entry<ApplicationTimeoutType, Long> timeout : app
+          .getApplicationTimeouts().entrySet()) {
+        AppTimeoutInfo timeoutInfo =
+            constructAppTimeoutDao(timeout.getKey(), timeout.getValue());
+        timeouts.add(timeoutInfo);
+      }
+    }
+    return timeouts;
+  }
+
+  private ApplicationTimeoutType parseTimeoutType(String type) {
+    try {
+      // enum string is in the uppercase
+      return ApplicationTimeoutType
+          .valueOf(StringUtils.toUpperCase(type.trim()));
+    } catch (RuntimeException e) {
+      ApplicationTimeoutType[] typeArray = ApplicationTimeoutType.values();
+      String allAppTimeoutTypes = Arrays.toString(typeArray);
+      throw new BadRequestException("Invalid application-state " + type.trim()
+          + " specified. It should be one of " + allAppTimeoutTypes);
+    }
+  }
+
+  private AppTimeoutInfo constructAppTimeoutDao(ApplicationTimeoutType type,
+      Long timeoutInMillis) {
+    AppTimeoutInfo timeout = new AppTimeoutInfo();
+    timeout.setTimeoutType(type);
+    if (timeoutInMillis != null) {
+      timeout.setExpiryTime(Times.formatISO8601(timeoutInMillis.longValue()));
+      timeout.setRemainingTime(
+          Math.max((timeoutInMillis - System.currentTimeMillis()) / 1000, 0));
+    }
+    return timeout;
+  }
+
+  @PUT
+  @Path("/apps/{appid}/timeout")
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response updateApplicationTimeout(AppTimeoutInfo appTimeout,
+      @Context HttpServletRequest hsr, @PathParam("appid") String appId)
+      throws AuthorizationException, YarnException, InterruptedException,
+      IOException {
+    init();
+
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    if (callerUGI == null) {
+      throw new AuthorizationException(
+          "Unable to obtain user name, user not authenticated");
+    }
+
+    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
+      return Response.status(Status.FORBIDDEN)
+          .entity("The default static user cannot carry out this operation.")
+          .build();
+    }
+
+    String userName = callerUGI.getUserName();
+    RMApp app = null;
+    try {
+      app = getRMAppForAppId(appId);
+    } catch (NotFoundException e) {
+      RMAuditLogger.logFailure(userName, AuditConstants.UPDATE_APP_TIMEOUTS,
+          "UNKNOWN", "RMWebService",
+          "Trying to update timeout of an absent application " + appId);
+      throw e;
+    }
+
+    return updateApplicationTimeouts(app, callerUGI, appTimeout);
+  }
+
+  private Response updateApplicationTimeouts(final RMApp app,
+      UserGroupInformation callerUGI, final AppTimeoutInfo appTimeout)
+      throws IOException, InterruptedException {
+
+    if (appTimeout.getTimeoutType() == null) {
+      return Response.status(Status.BAD_REQUEST).entity("Timeout type is null.")
+          .build();
+    }
+
+    String userName = callerUGI.getUserName();
+    try {
+      callerUGI.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws IOException, YarnException {
+          UpdateApplicationTimeoutsRequest request =
+              UpdateApplicationTimeoutsRequest
+                  .newInstance(app.getApplicationId(), Collections.singletonMap(
+                      appTimeout.getTimeoutType(), appTimeout.getExpireTime()));
+          rm.getClientRMService().updateApplicationTimeouts(request);
+          return null;
+        }
+      });
+    } catch (UndeclaredThrowableException ue) {
+      // if the root cause is a permissions issue
+      // bubble that up to the user
+      if (ue.getCause() instanceof YarnException) {
+        YarnException ye = (YarnException) ue.getCause();
+        if (ye.getCause() instanceof AccessControlException) {
+          String appId = app.getApplicationId().toString();
+          String msg = "Unauthorized attempt to change timeout of app " + appId
+              + " by remote user " + userName;
+          return Response.status(Status.FORBIDDEN).entity(msg).build();
+        } else if (ye.getCause() instanceof ParseException) {
+          return Response.status(Status.BAD_REQUEST)
+              .entity(ye.getMessage()).build();
+        } else {
+          throw ue;
+        }
+      } else {
+        throw ue;
+      }
+    }
+    AppTimeoutInfo timeout = constructAppTimeoutDao(appTimeout.getTimeoutType(),
+        app.getApplicationTimeouts().get(appTimeout.getTimeoutType()));
+    return Response.status(Status.OK).entity(timeout).build();
+  }
 }

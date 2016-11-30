@@ -1119,9 +1119,7 @@ public class CapacityScheduler extends
     decreaseContainers(decreaseRequests, application);
 
     // Sanity check for new allocation requests
-    SchedulerUtils.normalizeRequests(ask, getResourceCalculator(),
-        getClusterResource(), getMinimumResourceCapability(),
-        getMaximumResourceCapability());
+    normalizeRequests(ask);
 
     Allocation allocation;
 

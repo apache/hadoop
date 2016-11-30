@@ -101,11 +101,6 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     super(HBaseTimelineWriterImpl.class.getName());
   }
 
-  public HBaseTimelineWriterImpl(Configuration conf) throws IOException {
-    super(conf.get("yarn.application.id",
-        HBaseTimelineWriterImpl.class.getName()));
-  }
-
   /**
    * initializes the hbase connection to write to the entity table.
    */

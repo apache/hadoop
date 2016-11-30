@@ -20,12 +20,14 @@ package org.apache.hadoop.fs.viewfs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.Map.Entry;
 
-import com.google.common.base.Joiner;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
@@ -33,6 +35,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
+import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -153,8 +156,8 @@ abstract public class ViewFileSystemBaseTest {
     ViewFileSystem viewfs = (ViewFileSystem) fsView;
     MountPoint[] mountPoints = viewfs.getMountPoints();
     for (MountPoint mountPoint : mountPoints) {
-      LOG.info("MountPoint: " + mountPoint.getSrc() + " => "
-          + Joiner.on(",").join(mountPoint.getTargets()));
+      LOG.info("MountPoint: " + mountPoint.getMountedOnPath() + " => "
+          + mountPoint.getTargetFileSystemURIs()[0]);
     }
     Assert.assertEquals(getExpectedMountPoints(), mountPoints.length); 
   }
@@ -1019,5 +1022,90 @@ abstract public class ViewFileSystemBaseTest {
     // Verify ViewFileSystem trash roots shows the ones from
     // target mounted FileSystem.
     Assert.assertTrue("", fsView.getTrashRoots(true).size() > 0);
+  }
+
+  @Test(expected = NotInMountpointException.class)
+  public void testViewFileSystemUtil() throws Exception {
+    Configuration newConf = new Configuration(conf);
+
+    FileSystem fileSystem = FileSystem.get(FsConstants.LOCAL_FS_URI,
+        newConf);
+    Assert.assertFalse("Unexpected FileSystem: " + fileSystem,
+        ViewFileSystemUtil.isViewFileSystem(fileSystem));
+
+    fileSystem = FileSystem.get(FsConstants.VIEWFS_URI,
+        newConf);
+    Assert.assertTrue("Unexpected FileSystem: " + fileSystem,
+        ViewFileSystemUtil.isViewFileSystem(fileSystem));
+
+    // Case 1: Verify FsStatus of root path returns all MountPoints status.
+    Map<MountPoint, FsStatus> mountPointFsStatusMap =
+        ViewFileSystemUtil.getStatus(fileSystem, InodeTree.SlashPath);
+    Assert.assertEquals(getExpectedMountPoints(), mountPointFsStatusMap.size());
+
+    // Case 2: Verify FsStatus of an internal dir returns all
+    // MountPoints status.
+    mountPointFsStatusMap =
+        ViewFileSystemUtil.getStatus(fileSystem, new Path("/internalDir"));
+    Assert.assertEquals(getExpectedMountPoints(), mountPointFsStatusMap.size());
+
+    // Case 3: Verify FsStatus of a matching MountPoint returns exactly
+    // the corresponding MountPoint status.
+    mountPointFsStatusMap =
+        ViewFileSystemUtil.getStatus(fileSystem, new Path("/user"));
+    Assert.assertEquals(1, mountPointFsStatusMap.size());
+    for (Entry<MountPoint, FsStatus> entry : mountPointFsStatusMap.entrySet()) {
+      Assert.assertEquals(entry.getKey().getMountedOnPath().toString(),
+          "/user");
+    }
+
+    // Case 4: Verify FsStatus of a path over a MountPoint returns the
+    // corresponding MountPoint status.
+    mountPointFsStatusMap =
+        ViewFileSystemUtil.getStatus(fileSystem, new Path("/user/cloud"));
+    Assert.assertEquals(1, mountPointFsStatusMap.size());
+    for (Entry<MountPoint, FsStatus> entry : mountPointFsStatusMap.entrySet()) {
+      Assert.assertEquals(entry.getKey().getMountedOnPath().toString(),
+          "/user");
+    }
+
+    // Case 5: Verify FsStatus of any level of an internal dir
+    // returns all MountPoints status.
+    mountPointFsStatusMap =
+        ViewFileSystemUtil.getStatus(fileSystem,
+            new Path("/internalDir/internalDir2"));
+    Assert.assertEquals(getExpectedMountPoints(), mountPointFsStatusMap.size());
+
+    // Case 6: Verify FsStatus of a MountPoint URI returns
+    // the MountPoint status.
+    mountPointFsStatusMap =
+        ViewFileSystemUtil.getStatus(fileSystem, new Path("viewfs:/user/"));
+    Assert.assertEquals(1, mountPointFsStatusMap.size());
+    for (Entry<MountPoint, FsStatus> entry : mountPointFsStatusMap.entrySet()) {
+      Assert.assertEquals(entry.getKey().getMountedOnPath().toString(),
+          "/user");
+    }
+
+    // Case 7: Verify FsStatus of a non MountPoint path throws exception
+    ViewFileSystemUtil.getStatus(fileSystem, new Path("/non-existing"));
+  }
+
+  @Test
+  public void testCheckOwnerWithFileStatus()
+      throws IOException, InterruptedException {
+    final UserGroupInformation userUgi = UserGroupInformation
+        .createUserForTesting("user@HADOOP.COM", new String[]{"hadoop"});
+    userUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Object run() throws IOException {
+        UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+        String doAsUserName = ugi.getUserName();
+        assertEquals(doAsUserName, "user@HADOOP.COM");
+        FileSystem vfs = FileSystem.get(FsConstants.VIEWFS_URI, conf);
+        FileStatus stat = vfs.getFileStatus(new Path("/internalDir"));
+        assertEquals(userUgi.getShortUserName(), stat.getOwner());
+        return null;
+      }
+    });
   }
 }

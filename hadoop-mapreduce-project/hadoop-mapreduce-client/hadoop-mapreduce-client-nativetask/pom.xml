@@ -22,7 +22,6 @@
     <version>3.0.0-alpha2-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-mapreduce-client-nativetask</artifactId>
   <version>3.0.0-alpha2-SNAPSHOT</version>
   <name>Apache Hadoop MapReduce NativeTask</name>
@@ -208,12 +207,16 @@
                 <phase>test</phase>
                 <goals><goal>cmake-test</goal></goals>
                 <configuration>
-                  <testName>test-native-task</testName>
+                  <!-- this should match the xml name without the TEST-part down below -->
+                  <testName>nativetask-nttest</testName>
                   <workingDirectory>${project.build.directory}/native/test</workingDirectory>
                   <source>${basedir}/src</source>
                   <binary>${project.build.directory}/native/test/nttest</binary>
-                  <args><arg>--gtest_filter=-Perf.</arg></args>
-                  <results>${project.build.directory}/native/test/native-results</results>
+                  <args>
+                    <arg>--gtest_filter=-Perf.</arg>
+                    <arg>--gtest_output=xml:${project.build.directory}/surefire-reports/TEST-nativetask-nttest.xml</arg>
+                  </args>
+                  <results>${project.build.directory}/surefire-reports</results>
                 </configuration>
               </execution>
             </executions>

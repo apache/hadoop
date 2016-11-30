@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
+import com.google.common.base.Supplier;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
@@ -74,11 +75,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
 public class TestKMS {
   private static final Logger LOG = LoggerFactory.getLogger(TestKMS.class);
+
+  private static final String SSL_RELOADER_THREAD_NAME =
+      "Truststore reloader thread";
 
   @Rule
   public final Timeout testTimeout = new Timeout(180000);
@@ -348,7 +353,7 @@ public class TestKMS {
           Thread reloaderThread = null;
           for (Thread thread : threads) {
             if ((thread.getName() != null)
-                && (thread.getName().contains("Truststore reloader thread"))) {
+                && (thread.getName().contains(SSL_RELOADER_THREAD_NAME))) {
               reloaderThread = thread;
             }
           }
@@ -378,6 +383,7 @@ public class TestKMS {
                     .addDelegationTokens("myuser", new Credentials());
                 Assert.assertEquals(1, tokens.length);
                 Assert.assertEquals("kms-dt", tokens[0].getKind().toString());
+                kp.close();
                 return null;
               }
             });
@@ -393,6 +399,7 @@ public class TestKMS {
               .addDelegationTokens("myuser", new Credentials());
           Assert.assertEquals(1, tokens.length);
           Assert.assertEquals("kms-dt", tokens[0].getKind().toString());
+          kp.close();
         }
         return null;
       }
@@ -1755,34 +1762,63 @@ public class TestKMS {
     });
   }
 
-  @Test
-  public void testDelegationTokensOpsSimple() throws Exception {
-    final Configuration conf = new Configuration();
-    testDelegationTokensOps(conf, false);
-  }
-
-  @Test
-  public void testDelegationTokensOpsKerberized() throws Exception {
-    final Configuration conf = new Configuration();
+  private Configuration setupConfForKerberos(File confDir) throws Exception {
+    final Configuration conf =  createBaseKMSConf(confDir, null);
     conf.set("hadoop.security.authentication", "kerberos");
-    testDelegationTokensOps(conf, true);
+    conf.set("hadoop.kms.authentication.type", "kerberos");
+    conf.set("hadoop.kms.authentication.kerberos.keytab",
+        keytab.getAbsolutePath());
+    conf.set("hadoop.kms.authentication.kerberos.principal",
+        "HTTP/localhost");
+    conf.set("hadoop.kms.authentication.kerberos.name.rules", "DEFAULT");
+    return conf;
   }
 
-  private void testDelegationTokensOps(Configuration conf,
-      final boolean useKrb) throws Exception {
-    File confDir = getTestDir();
-    conf = createBaseKMSConf(confDir, conf);
-    if (useKrb) {
-      conf.set("hadoop.kms.authentication.type", "kerberos");
-      conf.set("hadoop.kms.authentication.kerberos.keytab",
-          keytab.getAbsolutePath());
-      conf.set("hadoop.kms.authentication.kerberos.principal",
-          "HTTP/localhost");
-      conf.set("hadoop.kms.authentication.kerberos.name.rules", "DEFAULT");
+  @Test
+  public void testDelegationTokensOpsHttpPseudo() throws Exception {
+    testDelegationTokensOps(false, false);
+  }
+
+  @Test
+  public void testDelegationTokensOpsHttpKerberized() throws Exception {
+    testDelegationTokensOps(false, true);
+  }
+
+  @Test
+  public void testDelegationTokensOpsHttpsPseudo() throws Exception {
+    testDelegationTokensOps(true, false);
+  }
+
+  @Test
+  public void testDelegationTokensOpsHttpsKerberized() throws Exception {
+    testDelegationTokensOps(true, true);
+  }
+
+  private void testDelegationTokensOps(final boolean ssl, final boolean kerb)
+      throws Exception {
+    final File confDir = getTestDir();
+    final Configuration conf;
+    if (kerb) {
+      conf = setupConfForKerberos(confDir);
+    } else {
+      conf = createBaseKMSConf(confDir, null);
+    }
+
+    final String keystore;
+    final String password;
+    if (ssl) {
+      final String sslConfDir = KeyStoreTestUtil.getClasspathDir(TestKMS.class);
+      KeyStoreTestUtil.setupSSLConfig(confDir.getAbsolutePath(), sslConfDir,
+          conf, false);
+      keystore = confDir.getAbsolutePath() + "/serverKS.jks";
+      password = "serverP";
+    } else {
+      keystore = null;
+      password = null;
     }
     writeConf(confDir, conf);
 
-    runServer(null, null, confDir, new KMSCallable<Void>() {
+    runServer(keystore, password, confDir, new KMSCallable<Void>() {
       @Override
       public Void call() throws Exception {
         final Configuration clientConf = new Configuration();
@@ -1830,7 +1866,7 @@ public class TestKMS {
             }
 
             final UserGroupInformation otherUgi;
-            if (useKrb) {
+            if (kerb) {
               UserGroupInformation
                   .loginUserFromKeytab("client1", keytab.getAbsolutePath());
               otherUgi = UserGroupInformation.getLoginUser();
@@ -1885,6 +1921,9 @@ public class TestKMS {
                   return null;
                 }
               });
+              // Close the client provider. We will verify all providers'
+              // Truststore reloader threads are closed later.
+              kp.close();
               return null;
             } finally {
               otherUgi.logoutUserFromKeytab();
@@ -1894,6 +1933,22 @@ public class TestKMS {
         return null;
       }
     });
+
+    // verify that providers created by KMSTokenRenewer are closed.
+    if (ssl) {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          final Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
+          for (Thread t : threadSet) {
+            if (t.getName().contains(SSL_RELOADER_THREAD_NAME)) {
+              return false;
+            }
+          }
+          return true;
+        }
+      }, 1000, 10000);
+    }
   }
 
   @Test

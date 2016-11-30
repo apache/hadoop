@@ -61,6 +61,7 @@ import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHand
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
@@ -83,15 +84,17 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CredentialsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LocalResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LogAggregationContextInfo;
-import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
+import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.After;
@@ -117,6 +120,7 @@ import com.sun.jersey.api.client.ClientResponse.Status;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 import com.sun.jersey.api.client.filter.LoggingFilter;
+import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.api.json.JSONJAXBContext;
 import com.sun.jersey.api.json.JSONMarshaller;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
@@ -1293,6 +1297,137 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     Element element = (Element) nodes.item(0);
     String responseQueue = WebServicesTestUtils.getXmlString(element, "queue");
     assertEquals(queue, responseQueue);
+  }
+
+  @Test(timeout = 90000)
+  public void testUpdateAppTimeout() throws Exception {
+    client().addFilter(new LoggingFilter(System.out));
+
+    rm.start();
+    rm.registerNode("127.0.0.1:1234", 2048);
+    String[] mediaTypes =
+        { MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML };
+    MediaType[] contentTypes =
+        { MediaType.APPLICATION_JSON_TYPE, MediaType.APPLICATION_XML_TYPE };
+    for (String mediaType : mediaTypes) {
+      for (MediaType contentType : contentTypes) {
+        // application submitted without timeout
+        RMApp app = rm.submitApp(CONTAINER_MB, "", webserviceUserName);
+
+        ClientResponse response =
+            this.constructWebResource("apps", app.getApplicationId().toString(),
+                "timeouts").accept(mediaType).get(ClientResponse.class);
+        if (mediaType.contains(MediaType.APPLICATION_JSON)) {
+          assertEquals(
+              MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+              response.getType().toString());
+          JSONObject js =
+              response.getEntity(JSONObject.class).getJSONObject("timeouts");
+          JSONArray entity = js.getJSONArray("timeout");
+          verifyAppTimeoutJson(entity.getJSONObject(0),
+              ApplicationTimeoutType.LIFETIME, "UNLIMITED", -1);
+        }
+
+        AppTimeoutInfo timeoutUpdate = new AppTimeoutInfo();
+        long timeOutFromNow = 60;
+        String expireTime = Times
+            .formatISO8601(System.currentTimeMillis() + timeOutFromNow * 1000);
+        timeoutUpdate.setTimeoutType(ApplicationTimeoutType.LIFETIME);
+        timeoutUpdate.setExpiryTime(expireTime);
+
+        Object entity;
+        if (contentType.equals(MediaType.APPLICATION_JSON_TYPE)) {
+          entity = appTimeoutToJSON(timeoutUpdate);
+        } else {
+          entity = timeoutUpdate;
+        }
+        response = this
+            .constructWebResource("apps", app.getApplicationId().toString(),
+                "timeout")
+            .entity(entity, contentType).accept(mediaType)
+            .put(ClientResponse.class);
+
+        if (!isAuthenticationEnabled()) {
+          assertResponseStatusCode(Status.UNAUTHORIZED,
+              response.getStatusInfo());
+          continue;
+        }
+        assertResponseStatusCode(Status.OK, response.getStatusInfo());
+        if (mediaType.contains(MediaType.APPLICATION_JSON)) {
+          verifyAppTimeoutJson(response, ApplicationTimeoutType.LIFETIME,
+              expireTime, timeOutFromNow);
+        } else {
+          verifyAppTimeoutXML(response, ApplicationTimeoutType.LIFETIME,
+              expireTime, timeOutFromNow);
+        }
+
+        // invoke get
+        response =
+            this.constructWebResource("apps", app.getApplicationId().toString(),
+                "timeout", ApplicationTimeoutType.LIFETIME.toString())
+                .accept(mediaType).get(ClientResponse.class);
+        assertResponseStatusCode(Status.OK, response.getStatusInfo());
+        if (mediaType.contains(MediaType.APPLICATION_JSON)) {
+          verifyAppTimeoutJson(response, ApplicationTimeoutType.LIFETIME,
+              expireTime, timeOutFromNow);
+        }
+      }
+    }
+    rm.stop();
+  }
+
+  protected static void verifyAppTimeoutJson(ClientResponse response,
+      ApplicationTimeoutType type, String expireTime, long timeOutFromNow)
+      throws JSONException {
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    JSONObject jsonTimeout = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, jsonTimeout.length());
+    JSONObject json = jsonTimeout.getJSONObject("timeout");
+    verifyAppTimeoutJson(json, type, expireTime, timeOutFromNow);
+  }
+
+  protected static void verifyAppTimeoutJson(JSONObject json,
+      ApplicationTimeoutType type, String expireTime, long timeOutFromNow)
+      throws JSONException {
+    assertEquals("incorrect number of elements", 3, json.length());
+    assertEquals(type.toString(), json.getString("type"));
+    assertEquals(expireTime, json.getString("expiryTime"));
+    assertTrue(json.getLong("remainingTimeInSeconds") <= timeOutFromNow);
+  }
+
+  protected static void verifyAppTimeoutXML(ClientResponse response,
+      ApplicationTimeoutType type, String expireTime, long timeOutFromNow)
+      throws ParserConfigurationException, IOException, SAXException {
+    assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    String xml = response.getEntity(String.class);
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilder db = dbf.newDocumentBuilder();
+    InputSource is = new InputSource();
+    is.setCharacterStream(new StringReader(xml));
+    Document dom = db.parse(is);
+    NodeList nodes = dom.getElementsByTagName("timeout");
+    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    Element element = (Element) nodes.item(0);
+    assertEquals(type.toString(),
+        WebServicesTestUtils.getXmlString(element, "type"));
+    assertEquals(expireTime,
+        WebServicesTestUtils.getXmlString(element, "expiryTime"));
+    assertTrue(WebServicesTestUtils.getXmlLong(element,
+        "remainingTimeInSeconds") < timeOutFromNow);
+  }
+
+  protected static String appTimeoutToJSON(AppTimeoutInfo timeout)
+      throws Exception {
+    StringWriter sw = new StringWriter();
+    JSONJAXBContext ctx = new JSONJAXBContext(
+        JSONConfiguration.natural().rootUnwrapping(false).build(),
+        AppTimeoutInfo.class);
+    JSONMarshaller jm = ctx.createJSONMarshaller();
+    jm.marshallToJSON(timeout, sw);
+    jm.marshallToJSON(timeout, System.out);
+    return sw.toString();
   }
 
 }

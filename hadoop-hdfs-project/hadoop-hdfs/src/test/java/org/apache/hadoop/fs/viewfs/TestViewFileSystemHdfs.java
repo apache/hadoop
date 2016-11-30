@@ -31,6 +31,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
@@ -193,5 +195,56 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     DFSTestUtil.verifyDelete(shell, fsTarget, zone, true);
     Assert.assertTrue("ViewFileSystem trash roots should include EZ zone trash",
         (fsView.getTrashRoots(true).size() == 2));
+  }
+
+  @Test
+  public void testDf() throws Exception {
+    Configuration newConf = new Configuration(conf);
+
+    // Verify if DF on non viewfs produces output as before, that is
+    // without "Mounted On" header.
+    DFSTestUtil.FsShellRun("-df", 0, "Use%" + System.lineSeparator(), newConf);
+
+    // Setting the default Fs to viewfs
+    newConf.set("fs.default.name", "viewfs:///");
+
+    // Verify if DF on viewfs produces a new header "Mounted on"
+    DFSTestUtil.FsShellRun("-df /user", 0, "Mounted on", newConf);
+
+    DFSTestUtil.FsShellRun("-df viewfs:///user", 0, "/user", newConf);
+    DFSTestUtil.FsShellRun("-df /user3", 1, "/user3", newConf);
+    DFSTestUtil.FsShellRun("-df /user2/abc", 1, "No such file or directory",
+        newConf);
+    DFSTestUtil.FsShellRun("-df /user2/", 0, "/user2", newConf);
+    DFSTestUtil.FsShellRun("-df /internalDir", 0, "/internalDir", newConf);
+    DFSTestUtil.FsShellRun("-df /", 0, null, newConf);
+    DFSTestUtil.FsShellRun("-df", 0, null, newConf);
+  }
+
+  @Test
+  public void testFileChecksum() throws IOException {
+    ViewFileSystem viewFs = (ViewFileSystem) fsView;
+    Path mountDataRootPath = new Path("/data");
+    String fsTargetFileName = "debug.log";
+    Path fsTargetFilePath = new Path(targetTestRoot, "data/debug.log");
+    Path mountDataFilePath = new Path(mountDataRootPath, fsTargetFileName);
+
+    fileSystemTestHelper.createFile(fsTarget, fsTargetFilePath);
+    FileStatus fileStatus = viewFs.getFileStatus(mountDataFilePath);
+    long fileLength = fileStatus.getLen();
+
+    FileChecksum fileChecksumViaViewFs =
+        viewFs.getFileChecksum(mountDataFilePath);
+    FileChecksum fileChecksumViaTargetFs =
+        fsTarget.getFileChecksum(fsTargetFilePath);
+    Assert.assertTrue("File checksum not matching!",
+        fileChecksumViaViewFs.equals(fileChecksumViaTargetFs));
+
+    fileChecksumViaViewFs =
+        viewFs.getFileChecksum(mountDataFilePath, fileLength / 2);
+    fileChecksumViaTargetFs =
+        fsTarget.getFileChecksum(fsTargetFilePath, fileLength / 2);
+    Assert.assertTrue("File checksum not matching!",
+        fileChecksumViaViewFs.equals(fileChecksumViaTargetFs));
   }
 }

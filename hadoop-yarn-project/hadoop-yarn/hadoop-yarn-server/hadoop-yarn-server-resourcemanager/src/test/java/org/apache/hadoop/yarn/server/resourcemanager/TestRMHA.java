@@ -465,8 +465,7 @@ public class TestRMHA {
 
     MemoryRMStateStore memStore = new MemoryRMStateStore() {
       @Override
-      public synchronized void updateApplicationState(
-          ApplicationStateData appState) {
+      public void updateApplicationState(ApplicationStateData appState) {
         notifyStoreOperationFailed(new StoreFencedException());
       }
     };

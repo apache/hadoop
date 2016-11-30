@@ -24,7 +24,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 /**
  * An exception class for access control related issues.
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class AccessControlException extends IOException {
 

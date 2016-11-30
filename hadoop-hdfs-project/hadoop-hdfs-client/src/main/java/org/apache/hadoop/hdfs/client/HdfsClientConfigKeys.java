@@ -204,10 +204,12 @@ public interface HdfsClientConfigKeys {
     String DFS_METRICS_SESSION_ID_KEY = "dfs.metrics.session-id";
     String DFS_NAMENODE_ACCESSTIME_PRECISION_KEY =
         "dfs.namenode.accesstime.precision";
-    String DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY =
-        "dfs.namenode.replication.considerLoad";
-    String DFS_NAMENODE_REPLICATION_INTERVAL_KEY =
-        "dfs.namenode.replication.interval";
+    String DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY =
+        "dfs.namenode.redundancy.considerLoad";
+    String DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_FACTOR =
+        "dfs.namenode.redundancy.considerLoad.factor";
+    String DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY =
+        "dfs.namenode.redundancy.interval.seconds";
     String DFS_NAMENODE_REPLICATION_MIN_KEY = "dfs.namenode.replication.min";
     String DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY =
         "dfs.namenode.reconstruction.pending.timeout-sec";

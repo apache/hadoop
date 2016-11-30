@@ -1419,7 +1419,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
   public void verifyAppInfo(JSONObject info, RMApp app) throws JSONException,
       Exception {
 
-    int expectedNumberOfElements = 34;
+    int expectedNumberOfElements = 35;
     String appNodeLabelExpression = null;
     String amNodeLabelExpression = null;
     if (app.getApplicationSubmissionContext()

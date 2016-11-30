@@ -23,7 +23,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <version>3.0.0-alpha2-SNAPSHOT</version>
     <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
-  <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-hdfs-client</artifactId>
   <version>3.0.0-alpha2-SNAPSHOT</version>
   <description>Apache Hadoop HDFS Client</description>

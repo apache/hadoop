@@ -64,12 +64,8 @@ NOTE: Invoking the script without any parameters list all possible parameters (s
 Test HttpFS is working
 ----------------------
 
-    ~ $ curl -i "http://<HTTPFSHOSTNAME>:14000?user.name=babu&op=homedir"
-    HTTP/1.1 200 OK
-    Content-Type: application/json
-    Transfer-Encoding: chunked
-
-    {"homeDir":"http:\/\/<HTTPFS_HOST>:14000\/user\/babu"}
+    $ curl -sS 'http://<HTTPFSHOSTNAME>:14000/webhdfs/v1?op=gethomedirectory&user.name=hdfs'
+    {"Path":"\/user\/hdfs"}
 
 Embedded Tomcat Configuration
 -----------------------------
@@ -123,3 +119,5 @@ The answer to "What is your first and last name?" (i.e. "CN") must be the hostna
 Start HttpFS. It should work over HTTPS.
 
 Using the Hadoop `FileSystem` API or the Hadoop FS shell, use the `swebhdfs://` scheme. Make sure the JVM is picking up the truststore containing the public key of the SSL certificate if using a self-signed certificate.
+
+NOTE: Some old SSL clients may use weak ciphers that are not supported by the HttpFS server. It is recommended to upgrade the SSL client.

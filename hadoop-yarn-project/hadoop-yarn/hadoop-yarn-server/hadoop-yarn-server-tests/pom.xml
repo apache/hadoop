@@ -21,7 +21,6 @@
     <groupId>org.apache.hadoop</groupId>
     <version>3.0.0-alpha2-SNAPSHOT</version>
   </parent>
-  <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-server-tests</artifactId>
   <version>3.0.0-alpha2-SNAPSHOT</version>
   <name>Apache Hadoop YARN Server Tests</name>

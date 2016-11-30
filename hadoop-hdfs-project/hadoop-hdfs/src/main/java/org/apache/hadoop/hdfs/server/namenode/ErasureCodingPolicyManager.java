@@ -36,7 +36,7 @@ import java.util.TreeMap;
 public final class ErasureCodingPolicyManager {
 
   /**
-   * TODO: HDFS-8095
+   * TODO: HDFS-8095.
    */
   private static final int DEFAULT_CELLSIZE = 64 * 1024;
   private static final ErasureCodingPolicy SYS_POLICY1 =
@@ -48,10 +48,14 @@ public final class ErasureCodingPolicyManager {
   private static final ErasureCodingPolicy SYS_POLICY3 =
       new ErasureCodingPolicy(ErasureCodeConstants.RS_6_3_LEGACY_SCHEMA,
           DEFAULT_CELLSIZE, HdfsConstants.RS_6_3_LEGACY_POLICY_ID);
+  private static final ErasureCodingPolicy SYS_POLICY4 =
+      new ErasureCodingPolicy(ErasureCodeConstants.XOR_2_1_SCHEMA,
+          DEFAULT_CELLSIZE, HdfsConstants.XOR_2_1_POLICY_ID);
 
   //We may add more later.
   private static final ErasureCodingPolicy[] SYS_POLICIES =
-      new ErasureCodingPolicy[]{SYS_POLICY1, SYS_POLICY2, SYS_POLICY3};
+      new ErasureCodingPolicy[]{SYS_POLICY1, SYS_POLICY2, SYS_POLICY3,
+          SYS_POLICY4};
 
   // Supported storage policies for striped EC files
   private static final byte[] SUITABLE_STORAGE_POLICIES_FOR_EC_STRIPED_MODE = new byte[] {
@@ -94,6 +98,19 @@ public final class ErasureCodingPolicyManager {
   public static ErasureCodingPolicy getSystemDefaultPolicy() {
     // make this configurable?
     return SYS_POLICY1;
+  }
+
+  /**
+   * Get system-wide policy by policy ID.
+   * @return ecPolicy
+   */
+  public static ErasureCodingPolicy getPolicyByPolicyID(byte id) {
+    for (ErasureCodingPolicy policy : SYS_POLICIES) {
+      if (policy.getId() == id) {
+        return policy;
+      }
+    }
+    return null;
   }
 
   /**
@@ -141,7 +158,7 @@ public final class ErasureCodingPolicyManager {
   }
 
   /**
-   * Clear and clean up
+   * Clear and clean up.
    */
   public void clear() {
     activePoliciesByName.clear();

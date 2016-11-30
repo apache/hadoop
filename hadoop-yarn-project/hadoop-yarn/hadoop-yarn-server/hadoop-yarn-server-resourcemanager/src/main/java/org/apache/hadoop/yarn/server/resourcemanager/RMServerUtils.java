@@ -73,7 +73,6 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.Times;
-import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -304,13 +303,7 @@ public class RMServerUtils {
       return false;
     }
     ResourceScheduler scheduler = rmContext.getScheduler();
-    ResourceCalculator rc = scheduler.getResourceCalculator();
-    Resource targetResource = Resources.normalize(rc, request.getCapability(),
-        scheduler.getMinimumResourceCapability(),
-        scheduler.getMaximumResourceCapability(),
-        scheduler.getMinimumResourceCapability());
-    // Update normalized target resource
-    request.setCapability(targetResource);
+    scheduler.normalizeRequest(request);
     return true;
   }
 
@@ -515,7 +508,7 @@ public class RMServerUtils {
           String message =
               "Expire time is not in ISO8601 format. ISO8601 supported "
                   + "format is yyyy-MM-dd'T'HH:mm:ss.SSSZ";
-          throw new YarnException(message);
+          throw new YarnException(message, ex);
         }
         if (expireTime < currentTimeMillis) {
           String message =
