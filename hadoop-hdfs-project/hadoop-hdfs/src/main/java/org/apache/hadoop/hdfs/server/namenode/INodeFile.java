@@ -455,13 +455,9 @@ public class INodeFile extends INodeWithAdditionalFields
     if(!isStriped()){
       return max;
     }
-
+    // TODO support more policies based on policyId
     ErasureCodingPolicy ecPolicy =
-        ErasureCodingPolicyManager.getPolicyByPolicyID(
-            getErasureCodingPolicyID());
-    if (ecPolicy == null){
-      ecPolicy = ErasureCodingPolicyManager.getSystemDefaultPolicy();
-    }
+        ErasureCodingPolicyManager.getSystemDefaultPolicy();
     return (short) (ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits());
   }
 

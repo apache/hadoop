@@ -47,7 +47,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Assume;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -77,35 +76,17 @@ public class TestDFSStripedOutputStreamWithFailure {
         .getLogger().setLevel(Level.ALL);
   }
 
-  private ErasureCodingPolicy ecPolicy;
-  private int dataBlocks;
-  private int parityBlocks;
-  private int cellSize;
+  private final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private final int dataBlocks = ecPolicy.getNumDataUnits();
+  private final int parityBlocks = ecPolicy.getNumParityUnits();
+  private final int cellSize = ecPolicy.getCellSize();
   private final int stripesPerBlock = 4;
-  private int blockSize;
-  private int blockGroupSize;
+  private final int blockSize = cellSize * stripesPerBlock;
+  private final int blockGroupSize = blockSize * dataBlocks;
 
   private static final int FLUSH_POS =
       9 * DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT + 1;
-
-  public ErasureCodingPolicy getEcPolicy() {
-    return ErasureCodingPolicyManager.getSystemDefaultPolicy();
-  }
-
-  /*
-   * Initialize erasure coding policy.
-   */
-  @Before
-  public void init(){
-    ecPolicy = getEcPolicy();
-    dataBlocks = ecPolicy.getNumDataUnits();
-    parityBlocks = ecPolicy.getNumParityUnits();
-    cellSize = ecPolicy.getCellSize();
-    blockSize = cellSize * stripesPerBlock;
-    blockGroupSize = blockSize * dataBlocks;
-    dnIndexSuite = getDnIndexSuite();
-    lengths = newLengths();
-  }
 
   List<Integer> newLengths() {
     final List<Integer> lens = new ArrayList<>();
@@ -123,7 +104,7 @@ public class TestDFSStripedOutputStreamWithFailure {
     return lens;
   }
 
-  private int[][] dnIndexSuite;
+  private final int[][] dnIndexSuite = getDnIndexSuite();
 
   private int[][] getDnIndexSuite() {
     final int maxNumLevel = 2;
@@ -186,7 +167,7 @@ public class TestDFSStripedOutputStreamWithFailure {
     return positions;
   }
 
-  private List<Integer> lengths;
+  private final List<Integer> lengths = newLengths();
 
   Integer getLength(int i) {
     return i >= 0 && i < lengths.size()? lengths.get(i): null;
