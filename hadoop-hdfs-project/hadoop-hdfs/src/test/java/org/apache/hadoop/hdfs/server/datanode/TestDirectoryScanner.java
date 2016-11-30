@@ -590,8 +590,15 @@ public class TestDirectoryScanner {
           100);
       DataNode dataNode = cluster.getDataNodes().get(0);
 
-      createFile(GenericTestUtils.getMethodName(),
-          BLOCK_LENGTH * blocks, false);
+      final int maxBlocksPerFile = (int) DFSConfigKeys
+          .DFS_NAMENODE_MAX_BLOCKS_PER_FILE_DEFAULT;
+      int numBlocksToCreate = blocks;
+      while (numBlocksToCreate > 0) {
+        final int toCreate = Math.min(maxBlocksPerFile, numBlocksToCreate);
+        createFile(GenericTestUtils.getMethodName() + numBlocksToCreate,
+            BLOCK_LENGTH * toCreate, false);
+        numBlocksToCreate -= toCreate;
+      }
 
       float ratio = 0.0f;
       int retries = maxRetries;

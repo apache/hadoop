@@ -571,7 +571,7 @@ public class TestNameNodeMetrics {
     Path file1_Path = new Path(TEST_ROOT_DIR_PATH, "ReadData.dat");
 
     //Perform create file operation
-    createFile(file1_Path, 1024 * 1024,(short)2);
+    createFile(file1_Path, 1024, (short) 2);
 
     // Perform read file operation on earlier created file
     readFile(fs, file1_Path);
