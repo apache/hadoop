@@ -193,7 +193,8 @@ public class DockerProviderService extends AbstractProviderService implements
         "/bin/bash"));
 
     operation.add("> " + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/"
-        + OUT_FILE + " 2>" + ERR_FILE);
+        + OUT_FILE + " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/"
+        + ERR_FILE);
 
     launcher.addCommand(operation.build());
 
