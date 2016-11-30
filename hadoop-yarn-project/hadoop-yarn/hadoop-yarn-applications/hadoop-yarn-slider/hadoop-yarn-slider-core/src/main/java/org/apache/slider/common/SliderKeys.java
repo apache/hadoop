@@ -304,8 +304,6 @@ public interface SliderKeys extends SliderXmlConfKeys {
 
   String APP_RESOURCES = "application.resources";
   String APP_RESOURCES_DIR = "app/resources";
-  String PER_COMPONENT = "per.component";
-  String PER_GROUP = "per.group";
 
   String APP_PACKAGES_DIR = "app/packages";
 }

@@ -614,8 +614,16 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
         throw new BadConfigException("Config format " + configFileType +
             " doesn't exist");
       }
+      boolean perComponent = appConf.getComponentOptBool(roleGroup,
+          OptionKeys.CONF_FILE_PREFIX + configEntry.getKey() + OptionKeys
+              .PER_COMPONENT, false);
+      boolean perGroup = appConf.getComponentOptBool(roleGroup,
+          OptionKeys.CONF_FILE_PREFIX + configEntry.getKey() + OptionKeys
+              .PER_GROUP, false);
+
       localizeConfigFile(launcher, roleName, roleGroup, configEntry.getKey(),
-          configFormat, configFileName, configs, env, fileSystem, clusterName);
+          configFormat, configFileName, configs, env, fileSystem,
+          clusterName, perComponent, perGroup);
     }
   }
 
@@ -631,6 +639,8 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
    * @param env environment variables
    * @param fileSystem file system
    * @param clusterName app name
+   * @param perComponent true if file should be created per unique component
+   * @param perGroup true if file should be created per component group
    * @throws IOException file cannot be uploaded
    */
   public void localizeConfigFile(ContainerLauncher launcher,
@@ -639,7 +649,9 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
       Map<String, Map<String, String>> configs,
       MapOperations env,
       SliderFileSystem fileSystem,
-      String clusterName)
+      String clusterName,
+      boolean perComponent,
+      boolean perGroup)
       throws IOException {
     if (launcher == null) {
       return;
@@ -655,9 +667,9 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
     }
 
     String folder = null;
-    if ("true".equals(config.get(PER_COMPONENT))) {
+    if (perComponent) {
       folder = roleName;
-    } else if ("true".equals(config.get(PER_GROUP))) {
+    } else if (perGroup) {
       folder = roleGroup;
     }
     if (folder != null) {
