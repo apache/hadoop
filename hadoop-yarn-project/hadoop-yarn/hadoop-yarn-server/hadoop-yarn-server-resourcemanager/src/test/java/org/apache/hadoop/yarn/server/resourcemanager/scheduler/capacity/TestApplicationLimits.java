@@ -111,7 +111,8 @@ public class TestApplicationLimits {
     when(csContext.getClusterResource()).
         thenReturn(Resources.createResource(10 * 16 * GB, 10 * 32));
     when(csContext.getNonPartitionedQueueComparator()).
-        thenReturn(CapacityScheduler.nonPartitionedQueueComparator);
+        thenReturn(
+            CapacitySchedulerQueueManager.NON_PARTITIONED_QUEUE_COMPARATOR);
     when(csContext.getResourceCalculator()).
         thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
@@ -123,9 +124,9 @@ public class TestApplicationLimits {
         containerTokenSecretManager);
 
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
-    CSQueue root = 
-        CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
-            queues, queues, 
+    CSQueue root = CapacitySchedulerQueueManager
+        .parseQueue(csContext, csConf, null, "root",
+            queues, queues,
             TestUtils.spyHook);
 
     
@@ -276,7 +277,8 @@ public class TestApplicationLimits {
     when(csContext.getMaximumResourceCapability()).
         thenReturn(Resources.createResource(16*GB, 16));
     when(csContext.getNonPartitionedQueueComparator()).
-        thenReturn(CapacityScheduler.nonPartitionedQueueComparator);
+        thenReturn(
+            CapacitySchedulerQueueManager.NON_PARTITIONED_QUEUE_COMPARATOR);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
@@ -288,8 +290,8 @@ public class TestApplicationLimits {
     
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CSQueue root = 
-        CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
-            queues, queues, TestUtils.spyHook);
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+            "root", queues, queues, TestUtils.spyHook);
 
     LeafQueue queue = (LeafQueue)queues.get(A);
     
@@ -356,9 +358,9 @@ public class TestApplicationLimits {
         + ".maximum-am-resource-percent", 0.5f);
     // Re-create queues to get new configs.
     queues = new HashMap<String, CSQueue>();
-    root = 
-        CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
-            queues, queues, TestUtils.spyHook);
+    root = CapacitySchedulerQueueManager.parseQueue(
+        csContext, csConf, null, "root",
+        queues, queues, TestUtils.spyHook);
     clusterResource = Resources.createResource(100 * 16 * GB);
 
     queue = (LeafQueue)queues.get(A);
@@ -378,9 +380,9 @@ public class TestApplicationLimits {
         9999);
     // Re-create queues to get new configs.
     queues = new HashMap<String, CSQueue>();
-    root = 
-        CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
-            queues, queues, TestUtils.spyHook);
+    root = CapacitySchedulerQueueManager.parseQueue(
+        csContext, csConf, null, "root",
+        queues, queues, TestUtils.spyHook);
 
     queue = (LeafQueue)queues.get(A);
     assertEquals(9999, (int)csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
@@ -580,7 +582,8 @@ public class TestApplicationLimits {
     when(csContext.getMaximumResourceCapability()).
         thenReturn(Resources.createResource(16*GB));
     when(csContext.getNonPartitionedQueueComparator()).
-        thenReturn(CapacityScheduler.nonPartitionedQueueComparator);
+        thenReturn(
+            CapacitySchedulerQueueManager.NON_PARTITIONED_QUEUE_COMPARATOR);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
     
@@ -589,8 +592,8 @@ public class TestApplicationLimits {
     when(csContext.getClusterResource()).thenReturn(clusterResource);
     
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
-    CSQueue rootQueue = CapacityScheduler.parseQueue(csContext, csConf, null,
-        "root", queues, queues, TestUtils.spyHook);
+    CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(csContext,
+        csConf, null, "root", queues, queues, TestUtils.spyHook);
 
     ResourceUsage queueCapacities = rootQueue.getQueueResourceUsage();
     when(csContext.getClusterResourceUsage())

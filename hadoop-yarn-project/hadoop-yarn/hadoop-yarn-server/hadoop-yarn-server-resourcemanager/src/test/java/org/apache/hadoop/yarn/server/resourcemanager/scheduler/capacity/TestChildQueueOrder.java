@@ -95,11 +95,12 @@ public class TestChildQueueOrder {
     when(csContext.getMaximumResourceCapability()).thenReturn(
         Resources.createResource(16*GB, 32));
     when(csContext.getClusterResource()).
-    thenReturn(Resources.createResource(100 * 16 * GB, 100 * 32));
+        thenReturn(Resources.createResource(100 * 16 * GB, 100 * 32));
     when(csContext.getNonPartitionedQueueComparator()).
-    thenReturn(CapacityScheduler.nonPartitionedQueueComparator);
+        thenReturn(
+            CapacitySchedulerQueueManager.NON_PARTITIONED_QUEUE_COMPARATOR);
     when(csContext.getResourceCalculator()).
-    thenReturn(resourceComparator);
+        thenReturn(resourceComparator);
     when(csContext.getRMContext()).thenReturn(rmContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
   }
@@ -222,7 +223,7 @@ public class TestChildQueueOrder {
     setupSortedQueues(csConf);
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CSQueue root = 
-      CapacityScheduler.parseQueue(csContext, csConf, null, 
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues, 
           TestUtils.spyHook);
 
