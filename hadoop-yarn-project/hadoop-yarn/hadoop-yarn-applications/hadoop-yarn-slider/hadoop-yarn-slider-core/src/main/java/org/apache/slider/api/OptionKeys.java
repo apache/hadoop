@@ -53,8 +53,22 @@ public interface OptionKeys extends InternalKeys {
    * Prefix for export options: {@value}
    */
   String EXPORT_PREFIX = "export.";
+  /**
+   * Type suffix for config file and package options: {@value}
+   */
   String TYPE_SUFFIX = ".type";
+  /**
+   * Name suffix for config file and package options: {@value}
+   */
   String NAME_SUFFIX = ".name";
+  /**
+   * Per component suffix for config file options: {@value}
+   */
+  String PER_COMPONENT = ".per.component";
+  /**
+   * Per group suffix for config file options: {@value}
+   */
+  String PER_GROUP = ".per.group";
 
   /**
    * Zookeeper quorum host list: {@value}
