@@ -560,7 +560,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     }
 
     @Override
-    public VolumeCheckResult check(Boolean context) throws Exception {
+    public VolumeCheckResult check(VolumeCheckContext context)
+        throws Exception {
       return VolumeCheckResult.HEALTHY;
     }
   }

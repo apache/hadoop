@@ -900,7 +900,8 @@ public class TestDirectoryScanner {
 
 
     @Override
-    public VolumeCheckResult check(Boolean context) throws Exception {
+    public VolumeCheckResult check(VolumeCheckContext context)
+        throws Exception {
       return VolumeCheckResult.HEALTHY;
     }
   }

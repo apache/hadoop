@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.*;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.VolumeCheckContext;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.FakeTimer;
 import org.junit.Rule;
@@ -41,7 +42,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult.*;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
-import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Mockito.*;
 
 
@@ -117,7 +117,7 @@ public class TestDatasetVolumeChecker {
     });
 
     // Ensure that the check was invoked at least once.
-    verify(volume, times(1)).check(anyBoolean());
+    verify(volume, times(1)).check(anyObject());
     assertThat(numCallbackInvocations.get(), is(1L));
   }
 
@@ -149,7 +149,7 @@ public class TestDatasetVolumeChecker {
 
     // Ensure each volume's check() method was called exactly once.
     for (FsVolumeSpi volume : volumes) {
-      verify(volume, times(1)).check(anyBoolean());
+      verify(volume, times(1)).check(anyObject());
     }
   }
 
@@ -194,7 +194,7 @@ public class TestDatasetVolumeChecker {
 
     // Ensure each volume's check() method was called exactly once.
     for (FsVolumeSpi volume : volumes) {
-      verify(volume, times(1)).check(anyBoolean());
+      verify(volume, times(1)).check(anyObject());
     }
   }
 
@@ -203,10 +203,11 @@ public class TestDatasetVolumeChecker {
    * an ImmediateFuture.
    */
   static class DummyChecker
-      implements AsyncChecker<Boolean, VolumeCheckResult> {
+      implements AsyncChecker<VolumeCheckContext, VolumeCheckResult> {
     @Override
     public ListenableFuture<VolumeCheckResult> schedule(
-        Checkable<Boolean, VolumeCheckResult> target, Boolean context) {
+        Checkable<VolumeCheckContext, VolumeCheckResult> target,
+        VolumeCheckContext context) {
       try {
         return Futures.immediateFuture(target.check(context));
       } catch (Exception e) {
@@ -248,10 +249,10 @@ public class TestDatasetVolumeChecker {
       when(volume.getStorageLocation()).thenReturn(location);
 
       if (health != null) {
-        when(volume.check(anyBoolean())).thenReturn(health);
+        when(volume.check(anyObject())).thenReturn(health);
       } else {
         final DiskErrorException de = new DiskErrorException("Fake Exception");
-        when(volume.check(anyBoolean())).thenThrow(de);
+        when(volume.check(anyObject())).thenThrow(de);
       }
       volumes.add(volume);
     }

@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.VolumeCheckContext;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Timer;
@@ -39,7 +40,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.HashSet;
@@ -50,6 +50,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DISK_CHECK_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_DEFAULT;
@@ -67,7 +68,7 @@ public class DatasetVolumeChecker {
   public static final Logger LOG =
       LoggerFactory.getLogger(DatasetVolumeChecker.class);
 
-  private AsyncChecker<Boolean, VolumeCheckResult> delegateChecker;
+  private AsyncChecker<VolumeCheckContext, VolumeCheckResult> delegateChecker;
 
   private final AtomicLong numVolumeChecks = new AtomicLong(0);
   private final AtomicLong numSyncDatasetChecks = new AtomicLong(0);
@@ -97,6 +98,9 @@ public class DatasetVolumeChecker {
   private long lastAllVolumesCheck;
 
   private final Timer timer;
+  
+  private static final VolumeCheckContext IGNORED_CONTEXT =
+      new VolumeCheckContext();
 
   /**
    * @param conf Configuration object.
@@ -125,6 +129,12 @@ public class DatasetVolumeChecker {
         DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY,
         DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_DEFAULT,
         TimeUnit.MILLISECONDS);
+    
+    if (minDiskCheckGapMs < 0) {
+      throw new DiskErrorException("Invalid value configured for "
+          + DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY + " - "
+          + minDiskCheckGapMs + " (should be >= 0)");
+    }
 
     lastAllVolumesCheck = timer.monotonicNow() - minDiskCheckGapMs;
 
@@ -173,7 +183,7 @@ public class DatasetVolumeChecker {
       final FsVolumeReference reference = references.getReference(i);
       allVolumes.add(reference.getVolume().getStorageLocation());
       ListenableFuture<VolumeCheckResult> future =
-          delegateChecker.schedule(reference.getVolume(), true);
+          delegateChecker.schedule(reference.getVolume(), IGNORED_CONTEXT);
       LOG.info("Scheduled health check for volume {}", reference.getVolume());
       Futures.addCallback(future, new ResultHandler(
           reference, healthyVolumes, failedVolumes, resultsLatch, null));
@@ -182,7 +192,7 @@ public class DatasetVolumeChecker {
     // Wait until our timeout elapses, after which we give up on
     // the remaining volumes.
     if (!resultsLatch.await(maxAllowedTimeForCheckMs, TimeUnit.MILLISECONDS)) {
-      LOG.warn("checkAllVolumes timed out after {}ms" +
+      LOG.warn("checkAllVolumes timed out after {} ms" +
           maxAllowedTimeForCheckMs);
     }
 
@@ -233,7 +243,7 @@ public class DatasetVolumeChecker {
       final FsVolumeReference reference = references.getReference(i);
       // The context parameter is currently ignored.
       ListenableFuture<VolumeCheckResult> future =
-          delegateChecker.schedule(reference.getVolume(), true);
+          delegateChecker.schedule(reference.getVolume(), IGNORED_CONTEXT);
       Futures.addCallback(future, new ResultHandler(
           reference, healthyVolumes, failedVolumes, latch, callback));
     }
@@ -276,7 +286,7 @@ public class DatasetVolumeChecker {
       return;
     }
     ListenableFuture<VolumeCheckResult> future =
-        delegateChecker.schedule(volume, true);
+        delegateChecker.schedule(volume, IGNORED_CONTEXT);
     numVolumeChecks.incrementAndGet();
     Futures.addCallback(future, new ResultHandler(
         volumeReference, new HashSet<>(), new HashSet<>(),
@@ -385,7 +395,7 @@ public class DatasetVolumeChecker {
     try {
       delegateChecker.shutdownAndWait(gracePeriod, timeUnit);
     } catch (InterruptedException e) {
-      LOG.warn("StorageLocationChecker interrupted during shutdown.");
+      LOG.warn("DatasetVolumeChecker interrupted during shutdown.");
       Thread.currentThread().interrupt();
     }
   }
@@ -397,7 +407,7 @@ public class DatasetVolumeChecker {
    */
   @VisibleForTesting
   void setDelegateChecker(
-      AsyncChecker<Boolean, VolumeCheckResult> testDelegate) {
+      AsyncChecker<VolumeCheckContext, VolumeCheckResult> testDelegate) {
     delegateChecker = testDelegate;
   }
 

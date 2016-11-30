@@ -40,7 +40,9 @@ import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 /**
  * This is an interface for the underlying volume.
  */
-public interface FsVolumeSpi extends Checkable<Boolean, VolumeCheckResult> {
+public interface FsVolumeSpi
+    extends Checkable<FsVolumeSpi.VolumeCheckContext, VolumeCheckResult> {
+
   /**
    * Obtain a reference object that had increased 1 reference count of the
    * volume.
@@ -410,4 +412,10 @@ public interface FsVolumeSpi extends Checkable<Boolean, VolumeCheckResult> {
   LinkedList<ScanInfo> compileReport(String bpid,
       LinkedList<ScanInfo> report, ReportCompiler reportCompiler)
       throws InterruptedException, IOException;
+  
+  /**
+   * Context for the {@link #check} call.
+   */
+  class VolumeCheckContext {
+  }
 }
