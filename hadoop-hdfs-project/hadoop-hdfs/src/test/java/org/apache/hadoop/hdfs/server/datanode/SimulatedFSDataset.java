@@ -38,6 +38,7 @@ import javax.management.StandardMBean;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -528,6 +529,12 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     public byte[] loadLastPartialChunkChecksum(
         File blockFile, File metaFile) throws IOException {
       return null;
+    }
+
+    @Override
+    public VolumeCheckResult check(VolumeCheckContext context)
+        throws Exception {
+      return VolumeCheckResult.HEALTHY;
     }
   }
 
