@@ -159,6 +159,13 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
       return references.get(index).getVolume();
     }
 
+    /**
+     * Get the reference for a given index.
+     */
+    public FsVolumeReference getReference(int index) {
+      return references.get(index);
+    }
+
     @Override
     public void close() throws IOException {
       IOException ioe = null;
