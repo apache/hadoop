@@ -28,6 +28,8 @@ import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -37,6 +39,7 @@ import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -55,6 +58,11 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
+import org.apache.hadoop.yarn.security.AccessType;
+import org.apache.hadoop.yarn.security.Permission;
+import org.apache.hadoop.yarn.security.PrivilegedEntity;
+import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
+import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
@@ -123,6 +131,7 @@ public class FairScheduler extends
   private FairSchedulerConfiguration conf;
 
   private FSContext context;
+  private YarnAuthorizationProvider authorizer;
   private Resource incrAllocation;
   private QueueManager queueMgr;
   private boolean usePortForNodeName;
@@ -1214,6 +1223,7 @@ public class FairScheduler extends
       writeLock.lock();
       this.conf = new FairSchedulerConfiguration(conf);
       validateConf(this.conf);
+      authorizer = YarnAuthorizationProvider.getInstance(conf);
       minimumAllocation = this.conf.getMinimumAllocation();
       initMaximumResourceCapability(this.conf.getMaximumAllocation());
       incrAllocation = this.conf.getIncrementAllocation();
@@ -1422,21 +1432,44 @@ public class FairScheduler extends
       AllocationFileLoaderService.Listener {
 
     @Override
-    public void onReload(AllocationConfiguration queueInfo) {
+    public void onReload(AllocationConfiguration queueInfo)
+        throws IOException {
       // Commit the reload; also create any queue defined in the alloc file
       // if it does not already exist, so it can be displayed on the web UI.
 
       writeLock.lock();
       try {
-        allocConf = queueInfo;
-        allocConf.getDefaultSchedulingPolicy().initialize(getClusterResource());
-        queueMgr.updateAllocationConfiguration(allocConf);
-        applyChildDefaults();
-        maxRunningEnforcer.updateRunnabilityOnReload();
+        if (queueInfo == null) {
+          authorizer.setPermission(allocsLoader.getDefaultPermissions(),
+              UserGroupInformation.getCurrentUser());
+        } else {
+          allocConf = queueInfo;
+          setQueueAcls(allocConf.getQueueAcls());
+          allocConf.getDefaultSchedulingPolicy().initialize(
+              getClusterResource());
+          queueMgr.updateAllocationConfiguration(allocConf);
+          applyChildDefaults();
+          maxRunningEnforcer.updateRunnabilityOnReload();
+        }
       } finally {
         writeLock.unlock();
       }
     }
+  }
+
+  private void setQueueAcls(
+      Map<String, Map<AccessType, AccessControlList>> queueAcls)
+      throws IOException {
+    authorizer.setPermission(allocsLoader.getDefaultPermissions(),
+        UserGroupInformation.getCurrentUser());
+    List<Permission> permissions = new ArrayList<>();
+    for (Entry<String, Map<AccessType, AccessControlList>> queueAcl : queueAcls
+        .entrySet()) {
+      permissions.add(new Permission(new PrivilegedEntity(EntityType.QUEUE,
+          queueAcl.getKey()), queueAcl.getValue()));
+    }
+    authorizer.setPermission(permissions,
+        UserGroupInformation.getCurrentUser());
   }
 
   /**
