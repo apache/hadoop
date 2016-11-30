@@ -175,7 +175,8 @@ public class TestLeafQueue {
     when(csContext.getClusterResource()).
         thenReturn(Resources.createResource(100 * 16 * GB, 100 * 32));
     when(csContext.getNonPartitionedQueueComparator()).
-        thenReturn(CapacityScheduler.nonPartitionedQueueComparator);
+        thenReturn(
+            CapacitySchedulerQueueManager.NON_PARTITIONED_QUEUE_COMPARATOR);
     when(csContext.getResourceCalculator()).
         thenReturn(resourceCalculator);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
@@ -188,7 +189,7 @@ public class TestLeafQueue {
         containerTokenSecretManager);
 
     root = 
-        CapacityScheduler.parseQueue(csContext, csConf, null, 
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, 
             queues, queues, 
             TestUtils.spyHook);
@@ -2380,7 +2381,7 @@ public class TestLeafQueue {
         .DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT * 2);
     Map<String, CSQueue> newQueues = new HashMap<String, CSQueue>();
     CSQueue newRoot =
-        CapacityScheduler.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT,
             newQueues, queues,
             TestUtils.spyHook);
@@ -2405,7 +2406,7 @@ public class TestLeafQueue {
         .NODE_LOCALITY_DELAY, 60);
     Map<String, CSQueue> newQueues = new HashMap<String, CSQueue>();
     CSQueue newRoot =
-        CapacityScheduler.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT,
             newQueues, queues,
             TestUtils.spyHook);

@@ -141,7 +141,7 @@ public class TestUtils {
   /**
    * Hook to spy on queues.
    */
-  static class SpyHook extends CapacityScheduler.QueueHook {
+  static class SpyHook extends CapacitySchedulerQueueManager.QueueHook {
     @Override
     public CSQueue hook(CSQueue queue) {
       return spy(queue);

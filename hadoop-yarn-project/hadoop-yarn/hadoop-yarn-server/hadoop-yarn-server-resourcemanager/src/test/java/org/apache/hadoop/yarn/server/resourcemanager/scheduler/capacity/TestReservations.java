@@ -134,7 +134,7 @@ public class TestReservations {
     when(csContext.getClusterResource()).thenReturn(
         Resources.createResource(100 * 16 * GB, 100 * 12));
     when(csContext.getNonPartitionedQueueComparator()).thenReturn(
-        CapacityScheduler.nonPartitionedQueueComparator);
+        CapacitySchedulerQueueManager.NON_PARTITIONED_QUEUE_COMPARATOR);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
     when(csContext.getRMContext()).thenReturn(rmContext);
@@ -144,7 +144,7 @@ public class TestReservations {
     when(csContext.getContainerTokenSecretManager()).thenReturn(
         containerTokenSecretManager);
 
-    root = CapacityScheduler.parseQueue(csContext, csConf, null,
+    root = CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues, TestUtils.spyHook);
 
     ResourceUsage queueResUsage = root.getQueueResourceUsage();
@@ -1180,8 +1180,8 @@ public class TestReservations {
     csConf.setBoolean(
         CapacitySchedulerConfiguration.RESERVE_CONT_LOOK_ALL_NODES, false);
     Map<String, CSQueue> newQueues = new HashMap<String, CSQueue>();
-    CSQueue newRoot = CapacityScheduler.parseQueue(csContext, csConf, null,
-        CapacitySchedulerConfiguration.ROOT, newQueues, queues,
+    CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(csContext,
+        csConf, null, CapacitySchedulerConfiguration.ROOT, newQueues, queues,
         TestUtils.spyHook);
     queues = newQueues;
     root.reinitialize(newRoot, cs.getClusterResource());
