@@ -66,7 +66,6 @@ final public class S3Guard {
    * @return Reference to new MetadataStore.
    */
   public static MetadataStore getMetadataStore(FileSystem fs) {
-
     Preconditions.checkNotNull(fs);
     Configuration conf = fs.getConf();
     Preconditions.checkNotNull(conf);
@@ -74,8 +73,8 @@ final public class S3Guard {
     try {
       Class<? extends MetadataStore> msClass = getMetadataStoreClass(conf);
       msInstance = ReflectionUtils.newInstance(msClass, conf);
-      LOG.info("Using {} for {} filesystem", msClass.getSimpleName(),
-          fs.getScheme());
+      LOG.debug("Using {} metadata store for {} filesystem",
+          msClass.getSimpleName(), fs.getScheme());
     } catch (RuntimeException e) {
       LOG.error("Failed to instantiate {}, using NullMetadataStore:",
           conf.get(S3_METADATA_STORE_IMPL), e);
