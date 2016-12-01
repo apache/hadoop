@@ -52,6 +52,7 @@ import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
@@ -65,6 +66,7 @@ import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.Times;
 import org.apache.slider.api.ClusterDescription;
 import org.apache.slider.api.ClusterNode;
 import org.apache.slider.api.SliderApplicationApi;
@@ -177,14 +179,12 @@ import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
 import java.io.Console;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -1602,8 +1602,33 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   public int actionUpdate(String clustername,
       AbstractClusterBuildingActionArgs buildInfo) throws
       YarnException, IOException {
-    buildInstanceDefinition(clustername, buildInfo, true, true);
-    return EXIT_SUCCESS; 
+    if (buildInfo.lifetime > 0) {
+      updateLifetime(clustername, buildInfo.lifetime);
+    } else {
+      buildInstanceDefinition(clustername, buildInfo, true, true);
+    }
+    return EXIT_SUCCESS;
+  }
+
+  public void updateLifetime(String appName, long lifetime)
+      throws YarnException, IOException {
+    ApplicationReport report = findInstance(appName);
+    if (report == null) {
+      throw new YarnException("Application not found for " + appName);
+    }
+    ApplicationId appId = report.getApplicationId();
+    log.info("Updating lifetime of an application: appName = " + appName
+        + ", appId = " + appId+ ", lifetime = " + lifetime);
+    Map<ApplicationTimeoutType, String> map = new HashMap<>();
+    String newTimeout =
+        Times.formatISO8601(System.currentTimeMillis() + lifetime * 1000);
+    map.put(ApplicationTimeoutType.LIFETIME, newTimeout);
+    UpdateApplicationTimeoutsRequest request =
+        UpdateApplicationTimeoutsRequest.newInstance(appId, map);
+    yarnClient.updateApplicationTimeouts(request);
+    log.info("Successfully updated lifetime for an application: appName = "
+        + appName + ", appId = " + appId
+        + ". New expiry time in ISO8601 format is " + newTimeout);
   }
 
   /**
