@@ -1215,7 +1215,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.UNCHECKED);
     namesystem.checkSuperuserPrivilege();
-    return namesystem.getFSImage().getLastAppliedOrWrittenTxId();
+    return namesystem.getFSImage().getCorrectLastAppliedOrWrittenTxId();
   }
   
   @Override // NamenodeProtocol
