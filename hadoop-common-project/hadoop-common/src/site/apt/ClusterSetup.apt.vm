@@ -124,7 +124,7 @@ Hadoop MapReduce Next Generation - Cluster Setup
       don't exist.
 
     * <<<HADOOP_HEAPSIZE>>> / <<<YARN_HEAPSIZE>>> - The maximum amount of
-      heapsize to use, in MB e.g. if the varibale is set to 1000 the heap
+      heapsize to use, in MB e.g. if the variable is set to 1000 the heap
       will be set to 1000MB.  This is used to configure the heap
       size for the daemon. By default, the value is 1000.  If you want to
       configure the values separately for each deamon you can use.
@@ -579,110 +579,6 @@ $ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh stop proxyserver --config $HADOOP_CONF_D
 $ $HADOOP_PREFIX/sbin/mr-jobhistory-daemon.sh stop historyserver --config $HADOOP_CONF_DIR
 ----    	
 
-
-* {Operating the Hadoop Cluster}
-
-  Once all the necessary configuration is complete, distribute the files to the
-  <<<HADOOP_CONF_DIR>>> directory on all the machines.
-
-  This section also describes the various Unix users who should be starting the
-  various components and uses the same Unix accounts and groups used previously:
-
-** Hadoop Startup
-
-    To start a Hadoop cluster you will need to start both the HDFS and YARN
-    cluster.
-
-    Format a new distributed filesystem as <hdfs>:
-
-----
-[hdfs]$ $HADOOP_PREFIX/bin/hdfs namenode -format <cluster_name>
-----
-
-    Start the HDFS with the following command, run on the designated NameNode
-    as <hdfs>:
-
-----
-[hdfs]$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs start namenode
-----    	
-
-    Run a script to start DataNodes on all slaves as <root> with a special
-    environment variable <<<HADOOP_SECURE_DN_USER>>> set to <hdfs>:
-
-----
-[root]$ HADOOP_SECURE_DN_USER=hdfs $HADOOP_PREFIX/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs start datanode
-----    	
-
-    Start the YARN with the following command, run on the designated
-    ResourceManager as <yarn>:
-
-----
-[yarn]$ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start resourcemanager
-----    	
-
-    Run a script to start NodeManagers on all slaves as <yarn>:
-
-----
-[yarn]$ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start nodemanager
-----    	
-
-    Start a standalone WebAppProxy server. Run on the WebAppProxy
-    server as <yarn>.  If multiple servers are used with load balancing
-    it should be run on each of them:
-
-----
-[yarn]$ $HADOOP_YARN_HOME/bin/yarn start proxyserver --config $HADOOP_CONF_DIR
-----    	
-
-    Start the MapReduce JobHistory Server with the following command, run on the
-    designated server as <mapred>:
-
-----
-[mapred]$ $HADOOP_PREFIX/sbin/mr-jobhistory-daemon.sh start historyserver --config $HADOOP_CONF_DIR
-----    	
-
-** Hadoop Shutdown
-
-  Stop the NameNode with the following command, run on the designated NameNode
-  as <hdfs>:
-
-----
-[hdfs]$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs stop namenode
-----    	
-
-  Run a script to stop DataNodes on all slaves as <root>:
-
-----
-[root]$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs stop datanode
-----    	
-
-  Stop the ResourceManager with the following command, run on the designated
-  ResourceManager as <yarn>:
-
-----
-[yarn]$ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop resourcemanager
-----    	
-
-  Run a script to stop NodeManagers on all slaves as <yarn>:
-
-----
-[yarn]$ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop nodemanager
-----    	
-
-  Stop the WebAppProxy server. Run on the WebAppProxy  server as
-  <yarn>.  If multiple servers are used with load balancing it
-  should be run on each of them:
-
-----
-[yarn]$ $HADOOP_YARN_HOME/bin/yarn stop proxyserver --config $HADOOP_CONF_DIR
-----
-
-  Stop the MapReduce JobHistory Server with the following command, run on the
-  designated server as <mapred>:
-
-----
-[mapred]$ $HADOOP_PREFIX/sbin/mr-jobhistory-daemon.sh stop historyserver --config $HADOOP_CONF_DIR
-----    	
 
 * {Web Interfaces}
 
