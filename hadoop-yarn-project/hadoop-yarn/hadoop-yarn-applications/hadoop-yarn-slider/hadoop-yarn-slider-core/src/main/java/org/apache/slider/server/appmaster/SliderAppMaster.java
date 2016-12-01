@@ -705,6 +705,11 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
     synchronized (appState) {
       int heartbeatInterval = HEARTBEAT_INTERVAL;
 
+      // configure AM to wait forever for RM
+      getConfig().setLong(YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_MS,
+          -1);
+      getConfig().unset(YarnConfiguration.CLIENT_FAILOVER_MAX_ATTEMPTS);
+
       // add the RM client -this brings the callbacks in
       asyncRMClient = AMRMClientAsync.createAMRMClientAsync(heartbeatInterval, this);
       addService(asyncRMClient);
