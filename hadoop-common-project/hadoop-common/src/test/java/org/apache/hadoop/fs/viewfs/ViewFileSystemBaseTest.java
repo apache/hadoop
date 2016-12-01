@@ -1108,4 +1108,33 @@ abstract public class ViewFileSystemBaseTest {
       }
     });
   }
+
+  @Test
+  public void testUsed() throws IOException {
+    try {
+      fsView.getUsed();
+      fail("ViewFileSystem getUsed() should fail for slash root path when the" +
+          " slash root mount point is not configured.");
+    } catch (NotInMountpointException e) {
+      // expected exception.
+    }
+    long usedSpaceByPathViaViewFs = fsView.getUsed(new Path("/user"));
+    long usedSpaceByPathViaTargetFs =
+        fsTarget.getUsed(new Path(targetTestRoot, "user"));
+    assertEquals("Space used not matching between ViewFileSystem and " +
+        "the mounted FileSystem!",
+        usedSpaceByPathViaTargetFs, usedSpaceByPathViaViewFs);
+
+    Path mountDataRootPath = new Path("/data");
+    String fsTargetFileName = "debug.log";
+    Path fsTargetFilePath = new Path(targetTestRoot, "data/debug.log");
+    Path mountDataFilePath = new Path(mountDataRootPath, fsTargetFileName);
+    fileSystemTestHelper.createFile(fsTarget, fsTargetFilePath);
+
+    usedSpaceByPathViaViewFs = fsView.getUsed(mountDataFilePath);
+    usedSpaceByPathViaTargetFs = fsTarget.getUsed(fsTargetFilePath);
+    assertEquals("Space used not matching between ViewFileSystem and " +
+        "the mounted FileSystem!",
+        usedSpaceByPathViaTargetFs, usedSpaceByPathViaViewFs);
+  }
 }
