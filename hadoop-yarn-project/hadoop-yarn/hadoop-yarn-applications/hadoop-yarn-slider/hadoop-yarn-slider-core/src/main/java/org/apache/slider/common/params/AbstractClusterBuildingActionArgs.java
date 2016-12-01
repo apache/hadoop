@@ -103,8 +103,7 @@ public abstract class AbstractClusterBuildingActionArgs extends
   public String queue;
 
   @Parameter(names = {ARG_LIFETIME},
-      description = "Life time of the application since application started at"
-          + " running state")
+      description = "Lifetime of the application from the time of request")
   public long lifetime;
 
   @ParametersDelegate

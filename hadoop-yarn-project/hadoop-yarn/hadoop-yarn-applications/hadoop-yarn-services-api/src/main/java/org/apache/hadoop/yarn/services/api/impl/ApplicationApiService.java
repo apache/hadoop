@@ -77,6 +77,7 @@ import org.apache.slider.common.params.ActionFreezeArgs;
 import org.apache.slider.common.params.ActionListArgs;
 import org.apache.slider.common.params.ActionRegistryArgs;
 import org.apache.slider.common.params.ActionThawArgs;
+import org.apache.slider.common.params.ActionUpdateArgs;
 import org.apache.slider.common.params.ComponentArgsDelegate;
 import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.common.tools.SliderVersionInfo;
@@ -1398,12 +1399,32 @@ public class ApplicationApiService implements ApplicationApi {
     }
 
     // If new lifetime value specified then update it
-    if (updateAppData.getLifetime() != null) {
-      // TODO: Once YARN-3813 and YARN-4205 are available
+    if (updateAppData.getLifetime() != null
+        && updateAppData.getLifetime() > 0) {
+      try {
+        updateAppLifetime(appName, updateAppData.getLifetime());
+      } catch (Exception e) {
+        logger.error("Failed to update application (" + appName + ") lifetime ("
+            + updateAppData.getLifetime() + ")", e);
+        return Response.status(Status.INTERNAL_SERVER_ERROR).build();
+      }
     }
 
     // If nothing happens consider it a no-op
     return Response.status(Status.NO_CONTENT).build();
+  }
+
+  private Void updateAppLifetime(String appName, long lifetime)
+      throws InterruptedException, YarnException, IOException {
+    return invokeSliderClientRunnable(new SliderClientContextRunnable<Void>() {
+      @Override public Void run(SliderClient sliderClient)
+          throws YarnException, IOException, InterruptedException {
+        ActionUpdateArgs args = new ActionUpdateArgs();
+        args.lifetime = lifetime;
+        sliderClient.actionUpdate(appName, args);
+        return null;
+      }
+    });
   }
 
   // create default component and initialize with app level global values
