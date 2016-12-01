@@ -114,6 +114,8 @@ Release 2.7.4 - UNRELEASED
     HDFS-9710. DN can be configured to send block receipt IBRs in batches.
     (Tsz-Wo Nicholas Sze. Backport HDFS-11837 by Vinitha Reddy Gankidi)
 
+    HDFS-8674. Improve performance of postponed block scans. (Daryn Sharp)
+
   BUG FIXES
    
     HDFS-8307. Spurious DNS Queries from hdfs shell. (Andres Perez via aengineer)
