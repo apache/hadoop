@@ -283,6 +283,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
     mapper.setAnnotationIntrospector(new JaxbAnnotationIntrospector());
     mapper.setSerializationInclusion(Inclusion.NON_NULL);
     mapper.configure(Feature.CLOSE_CLOSEABLE, false);
+    mapper.configure(Feature.FLUSH_AFTER_WRITE_VALUE, false);
     return mapper;
   }
 
@@ -363,6 +364,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
 
     public void flush() throws IOException {
       if (stream != null) {
+        jsonGenerator.flush();
         stream.hflush();
       }
     }
@@ -375,8 +377,6 @@ public class FileSystemTimelineWriter extends TimelineWriter{
       this.stream = createLogFileStream(fs, logPath);
       this.jsonGenerator = new JsonFactory().createJsonGenerator(stream);
       this.jsonGenerator.setPrettyPrinter(new MinimalPrettyPrinter("\n"));
-      this.jsonGenerator.configure(
-          JsonGenerator.Feature.FLUSH_PASSED_TO_STREAM, false);
       this.lastModifiedTime = Time.monotonicNow();
     }
 
