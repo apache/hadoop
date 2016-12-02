@@ -54,6 +54,7 @@ import javax.ws.rs.core.StreamingOutput;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -883,6 +884,22 @@ public class NamenodeWebHdfsMethods {
           doAsUser, fullpath, op.getValue(), offset.getValue(), -1L,
           excludeDatanodes.getValue(), offset, length, bufferSize);
       return Response.temporaryRedirect(uri).type(MediaType.APPLICATION_OCTET_STREAM).build();
+    }
+    case GETFILEBLOCKLOCATIONS:
+    {
+      final long offsetValue = offset.getValue();
+      final Long lengthValue = length.getValue();
+
+      try (final FileSystem fs = FileSystem.get(conf != null ?
+          conf : new Configuration())) {
+        BlockLocation[] locations = fs.getFileBlockLocations(
+            new org.apache.hadoop.fs.Path(fullpath),
+            offsetValue,
+            lengthValue != null? lengthValue: Long.MAX_VALUE);
+        final String js = JsonUtil.toJsonString("BlockLocations",
+            JsonUtil.toJsonArray(locations));
+        return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+      }
     }
     case GET_BLOCK_LOCATIONS:
     {
