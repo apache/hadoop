@@ -1597,13 +1597,20 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.GET_FILE_BLOCK_LOCATIONS);
 
-    final HttpOpParam.Op op = GetOpParam.Op.GET_BLOCK_LOCATIONS;
+    final HttpOpParam.Op op = GetOpParam.Op.GETFILEBLOCKLOCATIONS;
     return new FsPathResponseRunner<BlockLocation[]>(op, p,
         new OffsetParam(offset), new LengthParam(length)) {
       @Override
+      @SuppressWarnings("unchecked")
       BlockLocation[] decodeResponse(Map<?,?> json) throws IOException {
-        return DFSUtilClient.locatedBlocks2Locations(
-            JsonUtilClient.toLocatedBlocks(json));
+        List<?> list = JsonUtilClient.getList(json, "BlockLocations");
+        BlockLocation[] locations = new BlockLocation[list.size()];
+        for(int i=0; i<locations.length; i++) {
+          BlockLocation bl = JsonUtilClient.
+              toBlockLocation((Map<String, Object>) list.get(i));
+          locations[i] = bl;
+        }
+        return locations;
       }
     }.run();
   }
