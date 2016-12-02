@@ -23,11 +23,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractAppendTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Verify Adls APPEND semantics compliance with Hadoop.
+ * Test Append on Adl file system.
  */
 public class TestAdlContractAppendLive extends AbstractContractAppendTest {
 
@@ -41,13 +40,5 @@ public class TestAdlContractAppendLive extends AbstractContractAppendTest {
   public void testRenameFileBeingAppended() throws Throwable {
     ContractTestUtils.unsupported("Skipping since renaming file in append "
         + "mode not supported in Adl");
-  }
-
-  @Before
-  @Override
-  public void setup() throws Exception {
-    org.junit.Assume
-        .assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
-    super.setup();
   }
 }

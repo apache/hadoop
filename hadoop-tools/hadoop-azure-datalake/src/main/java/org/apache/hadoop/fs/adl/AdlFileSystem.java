@@ -346,7 +346,6 @@ public class AdlFileSystem extends FileSystem {
    * @see #setPermission(Path, FsPermission)
    * @deprecated API only for 0.20-append
    */
-  @Deprecated
   @Override
   public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
       EnumSet<CreateFlag> flags, int bufferSize, short replication,
@@ -471,6 +470,10 @@ public class AdlFileSystem extends FileSystem {
   @Override
   public boolean rename(final Path src, final Path dst) throws IOException {
     statistics.incrementWriteOps(1);
+    if (toRelativeFilePath(src).equals("/")) {
+      return false;
+    }
+
     return adlClient.rename(toRelativeFilePath(src), toRelativeFilePath(dst));
   }
 
@@ -522,9 +525,24 @@ public class AdlFileSystem extends FileSystem {
   public boolean delete(final Path path, final boolean recursive)
       throws IOException {
     statistics.incrementWriteOps(1);
+    String relativePath = toRelativeFilePath(path);
+    // Delete on root directory not supported.
+    if (relativePath.equals("/")) {
+      // This is important check after recent commit
+      // HADOOP-12977 and HADOOP-13716 validates on root for
+      // 1. if root is empty and non recursive delete then return false.
+      // 2. if root is non empty and non recursive delete then throw exception.
+      if (!recursive
+          && adlClient.enumerateDirectory(toRelativeFilePath(path), 1).size()
+          > 0) {
+        throw new IOException("Delete on root is not supported.");
+      }
+      return false;
+    }
+
     return recursive ?
-        adlClient.deleteRecursive(toRelativeFilePath(path)) :
-        adlClient.delete(toRelativeFilePath(path));
+        adlClient.deleteRecursive(relativePath) :
+        adlClient.delete(relativePath);
   }
 
   /**
