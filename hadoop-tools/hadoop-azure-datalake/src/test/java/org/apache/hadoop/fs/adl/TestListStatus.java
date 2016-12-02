@@ -50,7 +50,7 @@ public class TestListStatus extends AdlMockWebServer {
         .listStatus(new Path("/test1/test2"));
     long endTime = Time.monotonicNow();
     LOG.debug("Time : " + (endTime - startTime));
-    Assert.assertEquals(ls.length, 10);
+    Assert.assertEquals(10, ls.length);
 
     getMockServer().enqueue(new MockResponse().setResponseCode(200)
         .setBody(TestADLResponseData.getListFileStatusJSONResponse(200)));
@@ -58,7 +58,7 @@ public class TestListStatus extends AdlMockWebServer {
     ls = getMockAdlFileSystem().listStatus(new Path("/test1/test2"));
     endTime = Time.monotonicNow();
     LOG.debug("Time : " + (endTime - startTime));
-    Assert.assertEquals(ls.length, 200);
+    Assert.assertEquals(200, ls.length);
 
     getMockServer().enqueue(new MockResponse().setResponseCode(200)
         .setBody(TestADLResponseData.getListFileStatusJSONResponse(2048)));
@@ -66,7 +66,7 @@ public class TestListStatus extends AdlMockWebServer {
     ls = getMockAdlFileSystem().listStatus(new Path("/test1/test2"));
     endTime = Time.monotonicNow();
     LOG.debug("Time : " + (endTime - startTime));
-    Assert.assertEquals(ls.length, 2048);
+    Assert.assertEquals(2048, ls.length);
   }
 
   @Test
