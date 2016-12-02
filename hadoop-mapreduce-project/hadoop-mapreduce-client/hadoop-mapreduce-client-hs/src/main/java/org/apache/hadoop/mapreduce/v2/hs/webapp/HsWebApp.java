@@ -50,6 +50,8 @@ public class HsWebApp extends WebApp implements AMParams {
     route("/app", HsController.class);
     route(pajoin("/job", JOB_ID), HsController.class, "job");
     route(pajoin("/conf", JOB_ID), HsController.class, "conf");
+    routeWithoutDefaultView(pajoin("/downloadconf", JOB_ID),
+        HsController.class, "downloadConf");
     route(pajoin("/jobcounters", JOB_ID), HsController.class, "jobCounters");
     route(pajoin("/singlejobcounter",JOB_ID, COUNTER_GROUP, COUNTER_NAME),
         HsController.class, "singleJobCounter");
