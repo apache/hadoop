@@ -37,6 +37,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
+import java.util.Map;
 import java.util.Random;
 
 import org.apache.commons.io.IOUtils;
@@ -88,6 +89,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.internal.util.reflection.Whitebox;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.MapType;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.doReturn;
@@ -852,11 +855,59 @@ public class TestWebHDFS {
         Assert.assertTrue(storageTypes != null && storageTypes.length > 0 &&
             storageTypes[0] == StorageType.DISK);
       }
+
+      // Query webhdfs REST API to get block locations
+      InetSocketAddress addr = cluster.getNameNode().getHttpAddress();
+      URL url = new URL("http", addr.getHostString(), addr.getPort(),
+          WebHdfsFileSystem.PATH_PREFIX + "/foo?op=GETFILEBLOCKLOCATIONS");
+      LOG.info("Sending GETFILEBLOCKLOCATIONS request " + url);
+
+      String response = getResponse(url, "GET");
+      LOG.info("The output of GETFILEBLOCKLOCATIONS request " + response);
+      // Expected output from rest API
+      // { "BlockLoactions" : [{Block_Loation_Json}, ...] }
+      ObjectMapper mapper = new ObjectMapper();
+      MapType jsonType = mapper.getTypeFactory().constructMapType(
+          Map.class,
+          String.class,
+          BlockLocation[].class);
+      Map<String, BlockLocation[]> jsonMap = mapper.readValue(response,
+          jsonType);
+      BlockLocation[] array = jsonMap.get("BlockLocations");
+
+      for(int i=0; i<locations.length; i++) {
+        BlockLocation raw = locations[i];
+        BlockLocation rest = array[i];
+        Assert.assertEquals(raw.getLength(),
+            rest.getLength());
+        Assert.assertEquals(raw.getOffset(),
+            rest.getOffset());
+        Assert.assertArrayEquals(raw.getCachedHosts(),
+            rest.getCachedHosts());
+        Assert.assertArrayEquals(raw.getHosts(),
+            rest.getHosts());
+        Assert.assertArrayEquals(raw.getNames(),
+            rest.getNames());
+        Assert.assertArrayEquals(raw.getStorageIds(),
+            rest.getStorageIds());
+        Assert.assertArrayEquals(raw.getTopologyPaths(),
+            rest.getTopologyPaths());
+        Assert.assertArrayEquals(raw.getStorageTypes(),
+            rest.getStorageTypes());
+      }
     } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
     }
+  }
+
+  private static String getResponse(URL url, String httpRequestType)
+      throws IOException {
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(httpRequestType);
+    conn.setInstanceFollowRedirects(false);
+    return IOUtils.toString(conn.getInputStream());
   }
 
   private WebHdfsFileSystem createWebHDFSAsTestUser(final Configuration conf,
