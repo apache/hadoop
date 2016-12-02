@@ -105,7 +105,7 @@ public class TestKill {
     Job job = app.submit(new Configuration());
     
     //wait and vailidate for Job to become RUNNING
-    app.waitForState(job, JobState.RUNNING);
+    app.waitForInternalState((JobImpl) job, JobStateInternal.RUNNING);
     Map<TaskId,Task> tasks = job.getTasks();
     Assert.assertEquals("No of tasks is not correct", 2, 
         tasks.size());
