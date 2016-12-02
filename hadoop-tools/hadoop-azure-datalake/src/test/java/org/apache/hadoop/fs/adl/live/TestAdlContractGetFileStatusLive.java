@@ -20,13 +20,14 @@
 package org.apache.hadoop.fs.adl.live;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.contract.AbstractContractCreateTest;
+import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
 /**
- * Test creating files, overwrite options.
+ * Test getFileStatus contract test.
  */
-public class TestAdlContractCreateLive extends AbstractContractCreateTest {
+public class TestAdlContractGetFileStatusLive extends
+    AbstractContractGetFileStatusTest {
 
   @Override
   protected AbstractFSContract createContract(Configuration configuration) {
