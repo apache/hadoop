@@ -37,6 +37,33 @@
     
     <plugins>
       <plugin>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-maven-plugins</artifactId>
+        <executions>
+          <execution>
+            <id>compile-protoc</id>
+            <goals>
+              <goal>protoc</goal>
+            </goals>
+            <configuration>
+              <protocVersion>${protobuf.version}</protocVersion>
+              <protocCommand>${protoc.path}</protocCommand>
+              <imports>
+                <param>${basedir}/src/main/proto</param>
+              </imports>
+              <source>
+                <directory>${basedir}/src/main/proto</directory>
+                <includes>
+                  <include>SliderClusterMessages.proto</include>
+                  <include>SliderClusterProtocol.proto</include>
+                </includes>
+              </source>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
@@ -85,9 +112,6 @@
           <excludes>
             <exclude>**/*.json</exclude>
             <exclude>src/main/resources/webapps/slideram/.keep</exclude>
-            <!-- protobuf generated classes -->
-            <exclude>src/main/java/org/apache/slider/api/proto/Messages.java</exclude>
-            <exclude>src/main/java/org/apache/slider/api/proto/SliderClusterAPI.java</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -355,41 +379,6 @@
                   <descriptorRefs>
                     <descriptorRef>hadoop-yarn-slider-dist</descriptorRef>
                   </descriptorRefs>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>compile-protobuf</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-maven-plugins</artifactId>
-            <executions>
-              <execution>
-                <id>compile-protoc</id>
-                <phase>generate-sources</phase>
-                <goals>
-                  <goal>protoc</goal>
-                </goals>
-                <configuration>
-                  <protocVersion>${protobuf.version}</protocVersion>
-                  <protocCommand>protoc</protocCommand>
-                  <imports>
-                    <param>${basedir}/src/main/proto</param>
-                  </imports>
-                  <source>
-                    <directory>${basedir}/src/main/proto</directory>
-                    <includes>
-                      <include>SliderClusterMessages.proto</include>
-                      <include>SliderClusterProtocol.proto</include>
-                    </includes>
-                  </source>
-                  <output>${basedir}/src/main/java</output>
                 </configuration>
               </execution>
             </executions>
