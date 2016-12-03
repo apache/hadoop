@@ -291,7 +291,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       authorizer = YarnAuthorizationProvider.getInstance(csContext.getConf());
 
-      this.state = csContext.getConfiguration().getState(getQueuePath());
+      initializeQueueState();
+
       this.acls = csContext.getConfiguration().getAcls(getQueuePath());
 
       // Update metrics
@@ -327,6 +328,29 @@ public abstract class AbstractCSQueue implements CSQueue {
       this.preemptionDisabled = isQueueHierarchyPreemptionDisabled(this);
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  private void initializeQueueState() {
+    // inherit from parent if state not set, only do this when we are not root
+    if (parent != null) {
+      QueueState configuredState = csContext.getConfiguration()
+          .getConfiguredState(getQueuePath());
+      QueueState parentState = parent.getState();
+      if (configuredState == null) {
+        this.state = parentState;
+      } else if (configuredState == QueueState.RUNNING
+          && parentState == QueueState.STOPPED) {
+        throw new IllegalArgumentException(
+            "The parent queue:" + parent.getQueueName() + " state is STOPPED, "
+            + "child queue:" + queueName + " state cannot be RUNNING.");
+      } else {
+        this.state = configuredState;
+      }
+    } else {
+      // if this is the root queue, get the state from the configuration.
+      // if the state is not set, use RUNNING as default state.
+      this.state = csContext.getConfiguration().getState(getQueuePath());
     }
   }
 
