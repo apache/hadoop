@@ -159,4 +159,28 @@ public class TestFSNamesystemMBean {
       }
     }
   }
+
+  // The test makes sure JMX request can be processed even if FSEditLog
+  // is synchronized.
+  @Test
+  public void testWithFSEditLogLock() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster.waitActive();
+      synchronized (cluster.getNameNode().getFSImage().getEditLog()) {
+        MBeanClient client = new MBeanClient();
+        client.start();
+        client.join(20000);
+        assertTrue("JMX calls are blocked when FSEditLog" +
+            " is synchronized by another thread", client.succeeded);
+        client.interrupt();
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 }

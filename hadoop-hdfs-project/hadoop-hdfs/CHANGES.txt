@@ -202,6 +202,9 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-11174. Wrong HttpFS test command in doc. (John Zhuge via aajisaka)
 
+    HDFS-11180. Intermittent deadlock in NameNode when failover happens.
+    (aajisaka)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES

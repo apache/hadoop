@@ -1003,7 +1003,7 @@ public class FSImage implements Closeable {
       Canceler canceler) throws IOException {
     FSImageCompression compression =
         FSImageCompression.createCompression(conf);
-    long txid = getLastAppliedOrWrittenTxId();
+    long txid = getCorrectLastAppliedOrWrittenTxId();
     SaveNamespaceContext ctx = new SaveNamespaceContext(source, txid,
         canceler);
     FSImageFormat.Saver saver = new FSImageFormat.Saver(ctx);
@@ -1101,7 +1101,7 @@ public class FSImage implements Closeable {
     if (editLogWasOpen) {
       editLog.endCurrentLogSegment(true);
     }
-    long imageTxId = getLastAppliedOrWrittenTxId();
+    long imageTxId = getCorrectLastAppliedOrWrittenTxId();
     if (!addToCheckpointing(imageTxId)) {
       throw new IOException(
           "FS image is being downloaded from another NN at txid " + imageTxId);
@@ -1463,6 +1463,15 @@ public class FSImage implements Closeable {
   }
 
   public long getLastAppliedOrWrittenTxId() {
+    return Math.max(lastAppliedTxId,
+        editLog != null ? editLog.getLastWrittenTxIdWithoutLock() : 0);
+  }
+
+  /**
+   * This method holds a lock of FSEditLog to get the correct value.
+   * This method must not be used for metrics.
+   */
+  public long getCorrectLastAppliedOrWrittenTxId() {
     return Math.max(lastAppliedTxId,
         editLog != null ? editLog.getLastWrittenTxId() : 0);
   }
