@@ -70,7 +70,7 @@ public class ConfBlock extends HtmlBlock {
     try {
       ConfInfo info = new ConfInfo(job);
 
-      html.div().h3(confPath.toString())._();
+      html.div().a("/jobhistory/downloadconf/" + jid, confPath.toString());
       TBODY<TABLE<Hamlet>> tbody = html.
         // Tasks table
       table("#conf").

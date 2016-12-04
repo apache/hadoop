@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.conf;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.common.annotations.VisibleForTesting;
 
 import java.io.BufferedInputStream;
@@ -91,8 +93,6 @@ import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonGenerator;
 import org.w3c.dom.Attr;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
@@ -3028,7 +3028,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           propertyName + " not found");
     } else {
       JsonFactory dumpFactory = new JsonFactory();
-      JsonGenerator dumpGenerator = dumpFactory.createJsonGenerator(out);
+      JsonGenerator dumpGenerator = dumpFactory.createGenerator(out);
       dumpGenerator.writeStartObject();
       dumpGenerator.writeFieldName("property");
       appendJSONProperty(dumpGenerator, config, propertyName);
@@ -3066,7 +3066,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   public static void dumpConfiguration(Configuration config,
       Writer out) throws IOException {
     JsonFactory dumpFactory = new JsonFactory();
-    JsonGenerator dumpGenerator = dumpFactory.createJsonGenerator(out);
+    JsonGenerator dumpGenerator = dumpFactory.createGenerator(out);
     dumpGenerator.writeStartObject();
     dumpGenerator.writeFieldName("properties");
     dumpGenerator.writeStartArray();

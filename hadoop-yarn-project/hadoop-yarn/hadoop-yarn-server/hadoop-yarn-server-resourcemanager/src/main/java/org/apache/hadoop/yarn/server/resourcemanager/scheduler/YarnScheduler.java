@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
+import org.apache.hadoop.yarn.api.records.AbstractResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -368,4 +369,11 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @return SchedulerNode corresponds to nodeId
    */
   SchedulerNode getSchedulerNode(NodeId nodeId);
+
+  /**
+   * Normalize a resource request.
+   *
+   * @param request the resource request to be normalized
+   */
+  void normalizeRequest(AbstractResourceRequest request);
 }

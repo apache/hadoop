@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import static java.util.concurrent.TimeUnit.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import junit.framework.TestCase;
 import static org.junit.Assert.assertArrayEquals;
 
@@ -52,7 +53,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
-import org.codehaus.jackson.map.ObjectMapper;
 import org.mockito.Mockito;
 
 public class TestConfiguration extends TestCase {

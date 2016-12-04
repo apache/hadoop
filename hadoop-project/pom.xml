@@ -85,7 +85,7 @@
     <curator.version>2.7.1</curator.version>
     <findbugs.version>3.0.0</findbugs.version>
 
-    <tomcat.version>6.0.44</tomcat.version>
+    <tomcat.version>6.0.48</tomcat.version>
     <guice.version>4.0</guice.version>
     <joda-time.version>2.9.4</joda-time.version>
 

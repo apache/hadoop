@@ -448,12 +448,26 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     setFloat(getQueuePrefix(queue) + USER_LIMIT_FACTOR, userLimitFactor); 
   }
   
-  public QueueState getState(String queue) {
+  public QueueState getConfiguredState(String queue) {
     String state = get(getQueuePrefix(queue) + STATE);
-    return (state != null) ? 
-        QueueState.valueOf(StringUtils.toUpperCase(state)) : QueueState.RUNNING;
+    if (state == null) {
+      return null;
+    } else {
+      return QueueState.valueOf(StringUtils.toUpperCase(state));
+    }
   }
-  
+
+  public QueueState getState(String queue) {
+    QueueState state = getConfiguredState(queue);
+    return (state == null) ? QueueState.RUNNING : state;
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setState(String queue, QueueState state) {
+    set(getQueuePrefix(queue) + STATE, state.name());
+  }
+
   public void setAccessibleNodeLabels(String queue, Set<String> labels) {
     if (labels == null) {
       return;

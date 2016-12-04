@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -37,9 +38,16 @@ import org.apache.hadoop.yarn.api.records.QueueStatistics;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.security.AccessRequest;
+import org.apache.hadoop.yarn.security.PrivilegedEntity;
+import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
+import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import com.google.common.annotations.VisibleForTesting;
 
 @Private
 @Unstable
@@ -51,6 +59,8 @@ public abstract class FSQueue implements Queue, Schedulable {
   private Resource steadyFairShare = Resources.createResource(0, 0);
   private final String name;
   protected final FairScheduler scheduler;
+  private final YarnAuthorizationProvider authorizer;
+  private final PrivilegedEntity queueEntity;
   private final FSQueueMetrics metrics;
   
   protected final FSParentQueue parent;
@@ -76,6 +86,9 @@ public abstract class FSQueue implements Queue, Schedulable {
   public FSQueue(String name, FairScheduler scheduler, FSParentQueue parent) {
     this.name = name;
     this.scheduler = scheduler;
+    this.authorizer =
+        YarnAuthorizationProvider.getInstance(scheduler.getConf());
+    this.queueEntity = new PrivilegedEntity(EntityType.QUEUE, name);
     this.metrics = FSQueueMetrics.forQueue(getName(), parent, true, scheduler.getConf());
     this.parent = parent;
   }
@@ -94,16 +107,16 @@ public abstract class FSQueue implements Queue, Schedulable {
   public String getName() {
     return name;
   }
-  
+
   @Override
   public String getQueueName() {
     return name;
   }
-  
+
   public SchedulingPolicy getPolicy() {
     return policy;
   }
-  
+
   public FSParentQueue getParent() {
     return parent;
   }
@@ -158,6 +171,11 @@ public abstract class FSQueue implements Queue, Schedulable {
 
   public int getMaxRunningApps() {
     return maxRunningApps;
+  }
+
+  @VisibleForTesting
+  protected float getMaxAMShare() {
+    return maxAMShare;
   }
 
   public void setMaxAMShare(float maxAMShare){
@@ -259,7 +277,10 @@ public abstract class FSQueue implements Queue, Schedulable {
   }
 
   public boolean hasAccess(QueueACL acl, UserGroupInformation user) {
-    return scheduler.getAllocationConfiguration().hasAccess(name, acl, user);
+    return authorizer.checkPermission(
+        new AccessRequest(queueEntity, user,
+            SchedulerUtils.toAccessType(acl), null, null,
+            Server.getRemoteAddress(), null));
   }
 
   long getFairSharePreemptionTimeout() {

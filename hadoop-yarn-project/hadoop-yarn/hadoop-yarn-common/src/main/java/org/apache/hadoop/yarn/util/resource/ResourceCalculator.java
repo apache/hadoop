@@ -99,22 +99,7 @@ public abstract class ResourceCalculator {
   /**
    * Normalize resource <code>r</code> given the base 
    * <code>minimumResource</code> and verify against max allowed
-   * <code>maximumResource</code>
-   * 
-   * @param r resource
-   * @param minimumResource step-factor
-   * @param maximumResource the upper bound of the resource to be allocated
-   * @return normalized resource
-   */
-  public Resource normalize(Resource r, Resource minimumResource,
-      Resource maximumResource) {
-    return normalize(r, minimumResource, maximumResource, minimumResource);
-  }
-
-  /**
-   * Normalize resource <code>r</code> given the base 
-   * <code>minimumResource</code> and verify against max allowed
-   * <code>maximumResource</code> using a step factor for hte normalization.
+   * <code>maximumResource</code> using a step factor for the normalization.
    *
    * @param r resource
    * @param minimumResource minimum value

@@ -155,14 +155,16 @@ public class FSEditLog implements LogsPurgeable {
   private EditLogOutputStream editLogStream = null;
 
   // a monotonically increasing counter that represents transactionIds.
-  private long txid = 0;
+  // All of the threads which update/increment txid are synchronized,
+  // so make txid volatile instead of AtomicLong.
+  private volatile long txid = 0;
 
   // stores the last synced transactionId.
   private long synctxid = 0;
 
   // the first txid of the log that's currently open for writing.
   // If this value is N, we are currently writing to edits_inprogress_N
-  private long curSegmentTxId = HdfsServerConstants.INVALID_TXID;
+  private volatile long curSegmentTxId = HdfsServerConstants.INVALID_TXID;
 
   // the time of printing the statistics to the log file.
   private long lastPrintTime;
@@ -338,12 +340,33 @@ public class FSEditLog implements LogsPurgeable {
     return state == State.IN_SEGMENT ||
       state == State.BETWEEN_LOG_SEGMENTS;
   }
-  
+
+  /**
+   * Return true if the log is currently open in write mode.
+   * This method is not synchronized and must be used only for metrics.
+   * @return true if the log is currently open in write mode, regardless
+   * of whether it actually has an open segment.
+   */
+  boolean isOpenForWriteWithoutLock() {
+    return state == State.IN_SEGMENT ||
+        state == State.BETWEEN_LOG_SEGMENTS;
+  }
+
   /**
    * @return true if the log is open in write mode and has a segment open
    * ready to take edits.
    */
   synchronized boolean isSegmentOpen() {
+    return state == State.IN_SEGMENT;
+  }
+
+  /**
+   * Return true the state is IN_SEGMENT.
+   * This method is not synchronized and must be used only for metrics.
+   * @return true if the log is open in write mode and has a segment open
+   * ready to take edits.
+   */
+  boolean isSegmentOpenWithoutLock() {
     return state == State.IN_SEGMENT;
   }
 
@@ -522,7 +545,16 @@ public class FSEditLog implements LogsPurgeable {
   public synchronized long getLastWrittenTxId() {
     return txid;
   }
-  
+
+  /**
+   * Return the transaction ID of the last transaction written to the log.
+   * This method is not synchronized and must be used only for metrics.
+   * @return The transaction ID of the last transaction written to the log
+   */
+  long getLastWrittenTxIdWithoutLock() {
+    return txid;
+  }
+
   /**
    * @return the first transaction ID in the current log segment
    */
@@ -531,7 +563,16 @@ public class FSEditLog implements LogsPurgeable {
         "Bad state: %s", state);
     return curSegmentTxId;
   }
-  
+
+  /**
+   * Return the first transaction ID in the current log segment.
+   * This method is not synchronized and must be used only for metrics.
+   * @return The first transaction ID in the current log segment
+   */
+  long getCurSegmentTxIdWithoutLock() {
+    return curSegmentTxId;
+  }
+
   /**
    * Set the transaction ID to use for the next transaction written.
    */
@@ -1182,7 +1223,9 @@ public class FSEditLog implements LogsPurgeable {
   /**
    * Get all the journals this edit log is currently operating on.
    */
-  synchronized List<JournalAndStream> getJournals() {
+  List<JournalAndStream> getJournals() {
+    // The list implementation is CopyOnWriteArrayList,
+    // so we don't need to synchronize this method.
     return journalSet.getAllJournalStreams();
   }
   
@@ -1190,7 +1233,7 @@ public class FSEditLog implements LogsPurgeable {
    * Used only by tests.
    */
   @VisibleForTesting
-  synchronized public JournalSet getJournalSet() {
+  public JournalSet getJournalSet() {
     return journalSet;
   }
   
@@ -1731,11 +1774,18 @@ public class FSEditLog implements LogsPurgeable {
    * Return total number of syncs happened on this edit log.
    * @return long - count
    */
-  public synchronized long getTotalSyncCount() {
-    if (editLogStream != null) {
-      return editLogStream.getNumSync();
-    } else {
+  public long getTotalSyncCount() {
+    // Avoid NPE as possible.
+    if (editLogStream == null) {
       return 0;
     }
+    long count = 0;
+    try {
+      count = editLogStream.getNumSync();
+    } catch (NullPointerException ignore) {
+      // This method is used for metrics, so we don't synchronize it.
+      // Therefore NPE can happen even if there is a null check before.
+    }
+    return count;
   }
 }

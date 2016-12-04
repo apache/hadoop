@@ -22,31 +22,14 @@ package org.apache.hadoop.fs.adl.live;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractRootDirectoryTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.junit.Before;
-import org.junit.Test;
 
 /**
- * Verify Adls root level operation support.
+ * Test operation on root level.
  */
 public class TestAdlContractRootDirLive
     extends AbstractContractRootDirectoryTest {
   @Override
   protected AbstractFSContract createContract(Configuration configuration) {
     return new AdlStorageContract(configuration);
-  }
-
-  @Before
-  @Override
-  public void setup() throws Exception {
-    org.junit.Assume
-        .assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
-    super.setup();
-  }
-
-  @Test
-  public void testRmNonEmptyRootDirNonRecursive() throws Throwable {
-    ContractTestUtils.unsupported(
-        "BUG : Adl should throw exception instred " + "of returning false.");
   }
 }

@@ -859,6 +859,24 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
+   * Return the total size of all files under "/", if {@link
+   * Constants#CONFIG_VIEWFS_LINK_MERGE_SLASH} is supported and is a valid
+   * mount point. Else, throw NotInMountpointException.
+   *
+   * @throws IOException
+   */
+  @Override
+  public long getUsed() throws IOException {
+    InodeTree.ResolveResult<FileSystem> res = fsState.resolve(
+        getUriPath(InodeTree.SlashPath), true);
+    if (res.isInternalDir()) {
+      throw new NotInMountpointException(InodeTree.SlashPath, "getUsed");
+    } else {
+      return res.targetFileSystem.getUsed();
+    }
+  }
+
+  /**
    * An instance of this class represents an internal dir of the viewFs
    * that is internal dir of the mount table.
    * It is a read only mount tables and create, mkdir or delete operations
