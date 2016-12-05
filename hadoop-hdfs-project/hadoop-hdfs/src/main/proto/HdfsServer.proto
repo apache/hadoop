@@ -32,6 +32,7 @@ option java_generate_equals_and_hash = true;
 package hadoop.hdfs;
 
 import "hdfs.proto";
+import "HAServiceProtocol.proto";
 
 /**
  * Block access token information
@@ -101,6 +102,7 @@ message NamespaceInfoProto {
   required StorageInfoProto storageInfo = 4;// Node information
   required string softwareVersion = 5;      // Software version number (e.g. 2.0.0)
   optional uint64 capabilities = 6 [default = 0]; // feature flags
+  optional hadoop.common.HAServiceStateProto state = 7;
 }
 
 /**

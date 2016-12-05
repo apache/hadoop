@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
@@ -44,6 +45,7 @@ public class NamespaceInfo extends StorageInfo {
   String blockPoolID = "";    // id of the block pool
   String softwareVersion;
   long capabilities;
+  HAServiceState state;
 
   // only authoritative on the server-side to determine advertisement to
   // clients.  enum will update the supported values
@@ -88,6 +90,14 @@ public class NamespaceInfo extends StorageInfo {
         CAPABILITIES_SUPPORTED);
   }
 
+  public NamespaceInfo(int nsID, String clusterID, String bpID,
+      long cT, String buildVersion, String softwareVersion,
+      long capabilities, HAServiceState st) {
+    this(nsID, clusterID, bpID, cT, buildVersion, softwareVersion,
+        capabilities);
+    this.state = st;
+  }
+
   // for use by server and/or client
   public NamespaceInfo(int nsID, String clusterID, String bpID,
       long cT, String buildVersion, String softwareVersion,
@@ -105,6 +115,13 @@ public class NamespaceInfo extends StorageInfo {
     this(nsID, clusterID, bpID, cT, Storage.getBuildVersion(),
         VersionInfo.getVersion());
   }
+
+  public NamespaceInfo(int nsID, String clusterID, String bpID,
+      long cT, HAServiceState st) {
+    this(nsID, clusterID, bpID, cT, Storage.getBuildVersion(),
+        VersionInfo.getVersion());
+    this.state = st;
+  }
   
   public long getCapabilities() {
     return capabilities;
@@ -113,6 +130,11 @@ public class NamespaceInfo extends StorageInfo {
   @VisibleForTesting
   public void setCapabilities(long capabilities) {
     this.capabilities = capabilities;
+  }
+
+  @VisibleForTesting
+  public void setState(HAServiceState state) {
+    this.state = state;
   }
 
   public boolean isCapabilitySupported(Capability capability) {
@@ -132,6 +154,10 @@ public class NamespaceInfo extends StorageInfo {
   
   public String getSoftwareVersion() {
     return softwareVersion;
+  }
+
+  public HAServiceState getState() {
+    return state;
   }
 
   @Override
