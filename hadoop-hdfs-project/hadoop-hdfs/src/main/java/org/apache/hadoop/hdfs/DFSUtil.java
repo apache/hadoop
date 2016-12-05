@@ -1364,7 +1364,7 @@ public class DFSUtil {
         DFSConfigKeys.DFS_HTTP_POLICY_DEFAULT);
     HttpConfig.Policy policy = HttpConfig.Policy.fromString(policyStr);
     if (policy == null) {
-      throw new HadoopIllegalArgumentException("Unrecognized value '"
+      throw new HadoopIllegalArgumentException("Unregonized value '"
           + policyStr + "' for " + DFSConfigKeys.DFS_HTTP_POLICY_KEY);
     }
 

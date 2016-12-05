@@ -130,7 +130,7 @@ class OpenFileCtxCache {
           }
           toEvict = openFileMap.remove(pairs.getKey());
           Preconditions.checkState(toEvict == pairs.getValue(),
-              "The deleted entry is not the same as oldest found.");
+              "The deleted entry is not the same as odlest found.");
         }
       }
       openFileMap.put(h, context);
