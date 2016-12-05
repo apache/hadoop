@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
@@ -28,18 +30,48 @@ import org.apache.hadoop.yarn.util.Records;
 @Public
 @Evolving
 public abstract class GetClusterNodeLabelsResponse {
-  public static GetClusterNodeLabelsResponse newInstance(List<NodeLabel> labels) {
-    GetClusterNodeLabelsResponse request =
-        Records.newRecord(GetClusterNodeLabelsResponse.class);
-    request.setNodeLabels(labels);
-    return request;
+  /**
+   * Creates a new instance.
+   *
+   * @param labels Node labels
+   * @return response
+   * @deprecated Use {@link #newInstance(List)} instead.
+   */
+  @Deprecated
+  public static GetClusterNodeLabelsResponse newInstance(Set<String> labels) {
+    List<NodeLabel> list = new ArrayList<>();
+    for (String label : labels) {
+      list.add(NodeLabel.newInstance(label));
+    }
+    return newInstance(list);
   }
 
-  @Public
-  @Evolving
-  public abstract void setNodeLabels(List<NodeLabel> labels);
+  public static GetClusterNodeLabelsResponse newInstance(List<NodeLabel> labels) {
+    GetClusterNodeLabelsResponse response =
+        Records.newRecord(GetClusterNodeLabelsResponse.class);
+    response.setNodeLabelList(labels);
+    return response;
+  }
 
-  @Public
-  @Evolving
-  public abstract List<NodeLabel> getNodeLabels();
+  public abstract void setNodeLabelList(List<NodeLabel> labels);
+
+  public abstract List<NodeLabel> getNodeLabelList();
+
+  /**
+   * Set node labels to the response.
+   *
+   * @param labels Node labels
+   * @deprecated Use {@link #setNodeLabelList(List)} instead.
+   */
+  @Deprecated
+  public abstract void setNodeLabels(Set<String> labels);
+
+  /**
+   * Get node labels of the response.
+   *
+   * @return Node labels
+   * @deprecated Use {@link #getNodeLabelList()} instead.
+   */
+  @Deprecated
+  public abstract Set<String> getNodeLabels();
 }
