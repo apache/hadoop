@@ -52,8 +52,9 @@ import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaWaitingToBeRecovered;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
+
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker;
@@ -145,7 +146,7 @@ class BlockPoolSlice {
     //
     this.tmpDir = new File(bpDir, DataStorage.STORAGE_DIR_TMP);
     if (tmpDir.exists()) {
-      FileUtil.fullyDelete(tmpDir);
+      DataStorage.fullyDelete(tmpDir);
     }
     this.rbwDir = new File(currentDir, DataStorage.STORAGE_DIR_RBW);
     final boolean supportAppends = conf.getBoolean(
@@ -430,7 +431,7 @@ class BlockPoolSlice {
 
           final File targetMetaFile = new File(targetDir, metaFile.getName());
           try {
-            NativeIO.renameTo(metaFile, targetMetaFile);
+            ReplicaInfo.rename(metaFile, targetMetaFile);
           } catch (IOException e) {
             LOG.warn("Failed to move meta file from "
                 + metaFile + " to " + targetMetaFile, e);
@@ -440,7 +441,7 @@ class BlockPoolSlice {
 
           final File targetBlockFile = new File(targetDir, blockFile.getName());
           try {
-            NativeIO.renameTo(blockFile, targetBlockFile);
+            ReplicaInfo.rename(blockFile, targetBlockFile);
           } catch (IOException e) {
             LOG.warn("Failed to move block file from "
                 + blockFile + " to " + targetBlockFile, e);
@@ -670,8 +671,6 @@ class BlockPoolSlice {
    * @return the number of valid bytes
    */
   private long validateIntegrityAndSetLength(File blockFile, long genStamp) {
-    DataInputStream checksumIn = null;
-    InputStream blockIn = null;
     try {
       final File metaFile = FsDatasetUtil.getMetaFile(blockFile, genStamp);
       long blockFileLen = blockFile.length();
@@ -681,57 +680,52 @@ class BlockPoolSlice {
           !metaFile.exists() || metaFileLen < crcHeaderLen) {
         return 0;
       }
-      checksumIn = new DataInputStream(
+      try (DataInputStream checksumIn = new DataInputStream(
           new BufferedInputStream(new FileInputStream(metaFile),
-              ioFileBufferSize));
-
-      // read and handle the common header here. For now just a version
-      final DataChecksum checksum = BlockMetadataHeader.readDataChecksum(
-          checksumIn, metaFile);
-      int bytesPerChecksum = checksum.getBytesPerChecksum();
-      int checksumSize = checksum.getChecksumSize();
-      long numChunks = Math.min(
-          (blockFileLen + bytesPerChecksum - 1)/bytesPerChecksum,
-          (metaFileLen - crcHeaderLen)/checksumSize);
-      if (numChunks == 0) {
-        return 0;
-      }
-      IOUtils.skipFully(checksumIn, (numChunks-1)*checksumSize);
-      blockIn = new FileInputStream(blockFile);
-      long lastChunkStartPos = (numChunks-1)*bytesPerChecksum;
-      IOUtils.skipFully(blockIn, lastChunkStartPos);
-      int lastChunkSize = (int)Math.min(
-          bytesPerChecksum, blockFileLen-lastChunkStartPos);
-      byte[] buf = new byte[lastChunkSize+checksumSize];
-      checksumIn.readFully(buf, lastChunkSize, checksumSize);
-      IOUtils.readFully(blockIn, buf, 0, lastChunkSize);
-
-      checksum.update(buf, 0, lastChunkSize);
-      long validFileLength;
-      if (checksum.compare(buf, lastChunkSize)) { // last chunk matches crc
-        validFileLength = lastChunkStartPos + lastChunkSize;
-      } else { // last chunck is corrupt
-        validFileLength = lastChunkStartPos;
-      }
-
-      // truncate if extra bytes are present without CRC
-      if (blockFile.length() > validFileLength) {
-        RandomAccessFile blockRAF = new RandomAccessFile(blockFile, "rw");
-        try {
-          // truncate blockFile
-          blockRAF.setLength(validFileLength);
-        } finally {
-          blockRAF.close();
+              ioFileBufferSize))) {
+        // read and handle the common header here. For now just a version
+        final DataChecksum checksum = BlockMetadataHeader.readDataChecksum(
+            checksumIn, metaFile);
+        int bytesPerChecksum = checksum.getBytesPerChecksum();
+        int checksumSize = checksum.getChecksumSize();
+        long numChunks = Math.min(
+            (blockFileLen + bytesPerChecksum - 1) / bytesPerChecksum,
+            (metaFileLen - crcHeaderLen) / checksumSize);
+        if (numChunks == 0) {
+          return 0;
+        }
+        try (InputStream blockIn = new FileInputStream(blockFile);
+             ReplicaInputStreams ris = new ReplicaInputStreams(blockIn,
+                 checksumIn, volume.obtainReference())) {
+          ris.skipChecksumFully((numChunks - 1) * checksumSize);
+          long lastChunkStartPos = (numChunks - 1) * bytesPerChecksum;
+          ris.skipDataFully(lastChunkStartPos);
+          int lastChunkSize = (int) Math.min(
+              bytesPerChecksum, blockFileLen - lastChunkStartPos);
+          byte[] buf = new byte[lastChunkSize + checksumSize];
+          ris.readChecksumFully(buf, lastChunkSize, checksumSize);
+          ris.readDataFully(buf, 0, lastChunkSize);
+          checksum.update(buf, 0, lastChunkSize);
+          long validFileLength;
+          if (checksum.compare(buf, lastChunkSize)) { // last chunk matches crc
+            validFileLength = lastChunkStartPos + lastChunkSize;
+          } else { // last chunk is corrupt
+            validFileLength = lastChunkStartPos;
+          }
+          // truncate if extra bytes are present without CRC
+          if (blockFile.length() > validFileLength) {
+            try (RandomAccessFile blockRAF =
+                     new RandomAccessFile(blockFile, "rw")) {
+              // truncate blockFile
+              blockRAF.setLength(validFileLength);
+            }
+          }
+          return validFileLength;
         }
       }
-
-      return validFileLength;
     } catch (IOException e) {
       FsDatasetImpl.LOG.warn(e);
       return 0;
-    } finally {
-      IOUtils.closeStream(checksumIn);
-      IOUtils.closeStream(blockIn);
     }
   }
 

@@ -366,6 +366,10 @@ public class DNConf {
     return volsConfigured;
   }
 
+  public long getSlowIoWarningThresholdMs() {
+    return datanodeSlowIoWarningThresholdMs;
+  }
+
   int getMaxDataLength() {
     return maxDataLength;
   }
