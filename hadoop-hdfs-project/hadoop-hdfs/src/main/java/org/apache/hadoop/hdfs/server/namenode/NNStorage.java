@@ -1025,7 +1025,7 @@ public class NNStorage extends Storage implements Closeable,
     
     if (!blockpoolID.equals("") && !blockpoolID.equals(bpid)) {
       throw new InconsistentFSStateException(storage,
-          "Unexepcted blockpoolID " + bpid + " . Expected " + blockpoolID);
+          "Unexpected blockpoolID " + bpid + " . Expected " + blockpoolID);
     }
     setBlockPoolID(bpid);
   }

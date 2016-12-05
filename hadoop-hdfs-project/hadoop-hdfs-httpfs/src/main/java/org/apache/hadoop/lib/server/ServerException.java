@@ -38,7 +38,7 @@ public class ServerException extends XException {
     S04("Service [{0}] does not implement declared interface [{1}]"),
     S05("[{0}] is not a file"),
     S06("Could not load file [{0}], {1}"),
-    S07("Could not instanciate service class [{0}], {1}"),
+    S07("Could not instantiate service class [{0}], {1}"),
     S08("Could not load service classes, {0}"),
     S09("Could not set service [{0}] programmatically -server shutting down-, {1}"),
     S10("Service [{0}] requires service [{1}]"),

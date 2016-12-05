@@ -97,7 +97,7 @@ public class QueryCommand extends Command {
     String header = "Query Plan queries a given data node about the " +
         "current state of disk balancer execution.\n\n";
 
-    String footer = "\nQuery command retrievs the plan ID and the current " +
+    String footer = "\nQuery command retrieves the plan ID and the current " +
         "running state. ";
 
     HelpFormatter helpFormatter = new HelpFormatter();

@@ -1052,7 +1052,7 @@ public class DFSInputStream extends FSInputStream
             reader.getNetworkDistance(), nread);
         if (nread != len) {
           throw new IOException("truncated return from reader.read(): " +
-              "excpected " + len + ", got " + nread);
+              "expected " + len + ", got " + nread);
         }
         DFSClientFaultInjector.get().readFromDatanodeDelay();
         return;
