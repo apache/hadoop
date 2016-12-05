@@ -427,8 +427,9 @@ public class KeyProviderCryptoExtension extends
 
   @Override
   public void close() throws IOException {
-    if (getKeyProvider() != null) {
-      getKeyProvider().close();
+    KeyProvider provider = getKeyProvider();
+    if (provider != null && provider != this) {
+      provider.close();
     }
   }
 
