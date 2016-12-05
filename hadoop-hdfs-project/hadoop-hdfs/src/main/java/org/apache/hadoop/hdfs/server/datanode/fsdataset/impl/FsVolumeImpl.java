@@ -1067,7 +1067,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
         DataStorage.STORAGE_DIR_LAZY_PERSIST);
     File rbwDir = new File(bpCurrentDir, DataStorage.STORAGE_DIR_RBW);
     if (force) {
-      FileUtil.fullyDelete(bpDir);
+      DataStorage.fullyDelete(bpDir);
     } else {
       if (!rbwDir.delete()) {
         throw new IOException("Failed to delete " + rbwDir);
@@ -1081,7 +1081,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
           !FileUtil.fullyDelete(lazypersistDir)))) {
         throw new IOException("Failed to delete " + lazypersistDir);
       }
-      FileUtil.fullyDelete(tmpDir);
+      DataStorage.fullyDelete(tmpDir);
       for (File f : FileUtil.listFiles(bpCurrentDir)) {
         if (!f.delete()) {
           throw new IOException("Failed to delete " + f);
@@ -1437,4 +1437,3 @@ public class FsVolumeImpl implements FsVolumeSpi {
         replicaState);
   }
 }
-

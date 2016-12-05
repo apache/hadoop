@@ -18,32 +18,62 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 
 import java.io.Closeable;
+import java.io.FileDescriptor;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.io.IOException;
 
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.io.nativeio.NativeIOException;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
 
 /**
  * Contains the output streams for the data and checksum of a replica.
  */
 public class ReplicaOutputStreams implements Closeable {
-  private final OutputStream dataOut;
+  public static final Logger LOG = DataNode.LOG;
+
+  private FileDescriptor outFd = null;
+  /** Stream to block. */
+  private OutputStream dataOut;
+  /** Stream to checksum. */
   private final OutputStream checksumOut;
   private final DataChecksum checksum;
   private final boolean isTransientStorage;
+  private final long slowLogThresholdMs;
 
   /**
    * Create an object with a data output stream, a checksum output stream
    * and a checksum.
    */
-  public ReplicaOutputStreams(OutputStream dataOut, OutputStream checksumOut,
-      DataChecksum checksum, boolean isTransientStorage) {
+  public ReplicaOutputStreams(OutputStream dataOut,
+      OutputStream checksumOut, DataChecksum checksum,
+      boolean isTransientStorage, long slowLogThresholdMs) {
     this.dataOut = dataOut;
-    this.checksumOut = checksumOut;
     this.checksum = checksum;
+    this.slowLogThresholdMs = slowLogThresholdMs;
     this.isTransientStorage = isTransientStorage;
+    this.checksumOut = checksumOut;
+
+    try {
+      if (this.dataOut instanceof FileOutputStream) {
+        this.outFd = ((FileOutputStream)this.dataOut).getFD();
+      } else {
+        LOG.debug("Could not get file descriptor for outputstream of class " +
+            this.dataOut.getClass());
+      }
+    } catch (IOException e) {
+      LOG.warn("Could not get file descriptor for outputstream of class " +
+          this.dataOut.getClass());
+    }
+  }
+
+  public FileDescriptor getOutFd() {
+    return outFd;
   }
 
   /** @return the data output stream. */
@@ -72,12 +102,17 @@ public class ReplicaOutputStreams implements Closeable {
     IOUtils.closeStream(checksumOut);
   }
 
+  public void closeDataStream() throws IOException {
+    dataOut.close();
+    dataOut = null;
+  }
+
   /**
    * Sync the data stream if it supports it.
    */
   public void syncDataOut() throws IOException {
     if (dataOut instanceof FileOutputStream) {
-      ((FileOutputStream)dataOut).getChannel().force(true);
+      sync((FileOutputStream)dataOut);
     }
   }
   
@@ -86,8 +121,68 @@ public class ReplicaOutputStreams implements Closeable {
    */
   public void syncChecksumOut() throws IOException {
     if (checksumOut instanceof FileOutputStream) {
-      ((FileOutputStream)checksumOut).getChannel().force(true);
+      sync((FileOutputStream)checksumOut);
     }
   }
 
+  /**
+   * Flush the data stream if it supports it.
+   */
+  public void flushDataOut() throws IOException {
+    flush(dataOut);
+  }
+
+  /**
+   * Flush the checksum stream if it supports it.
+   */
+  public void flushChecksumOut() throws IOException {
+    flush(checksumOut);
+  }
+
+  private void flush(OutputStream dos) throws IOException {
+    long begin = Time.monotonicNow();
+    dos.flush();
+    long duration = Time.monotonicNow() - begin;
+    LOG.trace("ReplicaOutputStreams#flush takes {} ms.", duration);
+    if (duration > slowLogThresholdMs) {
+      LOG.warn("Slow flush took {} ms (threshold={} ms)", duration,
+          slowLogThresholdMs);
+    }
+  }
+
+  private void sync(FileOutputStream fos) throws IOException {
+    long begin = Time.monotonicNow();
+    fos.getChannel().force(true);
+    long duration = Time.monotonicNow() - begin;
+    LOG.trace("ReplicaOutputStreams#sync takes {} ms.", duration);
+    if (duration > slowLogThresholdMs) {
+      LOG.warn("Slow fsync took {} ms (threshold={} ms)", duration,
+          slowLogThresholdMs);
+    }
+  }
+
+  public long writeToDisk(byte[] b, int off, int len) throws IOException {
+    long begin = Time.monotonicNow();
+    dataOut.write(b, off, len);
+    long duration = Time.monotonicNow() - begin;
+    LOG.trace("DatanodeIO#writeToDisk takes {} ms.", duration);
+    if (duration > slowLogThresholdMs) {
+      LOG.warn("Slow BlockReceiver write data to disk cost: {} ms " +
+          "(threshold={} ms)", duration, slowLogThresholdMs);
+    }
+    return duration;
+  }
+
+  public void syncFileRangeIfPossible(long offset, long nbytes,
+      int flags) throws NativeIOException {
+    assert this.outFd != null : "null outFd!";
+    NativeIO.POSIX.syncFileRangeIfPossible(outFd, offset, nbytes, flags);
+  }
+
+  public void dropCacheBehindWrites(String identifier,
+      long offset, long len, int flags) throws NativeIOException {
+    assert this.outFd != null : "null outFd!";
+    NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(
+        identifier, outFd, offset, len, flags);
+  }
 }
