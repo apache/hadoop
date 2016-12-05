@@ -57,11 +57,11 @@ public class LongBitFormat implements Serializable {
   public long combine(long value, long record) {
     if (value < MIN) {
       throw new IllegalArgumentException(
-          "Illegal value: " + NAME + " = " + value + " < MIN = " + MIN);
+          "Illagal value: " + NAME + " = " + value + " < MIN = " + MIN);
     }
     if (value > MAX) {
       throw new IllegalArgumentException(
-          "Illegal value: " + NAME + " = " + value + " > MAX = " + MAX);
+          "Illagal value: " + NAME + " = " + value + " > MAX = " + MAX);
     }
     return (record & ~MASK) | (value << OFFSET);
   }

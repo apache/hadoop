@@ -134,7 +134,7 @@ final class FSDirTruncateOp {
       if (!onBlockBoundary) {
         // Open file for write, but don't log into edits
         long lastBlockDelta = file.computeFileSize() - newLength;
-        assert lastBlockDelta > 0 : "delta is 0 only if on block boundary";
+        assert lastBlockDelta > 0 : "delta is 0 only if on block bounday";
         truncateBlock = prepareFileForTruncate(fsn, iip, clientName,
             clientMachine, lastBlockDelta, null);
       }

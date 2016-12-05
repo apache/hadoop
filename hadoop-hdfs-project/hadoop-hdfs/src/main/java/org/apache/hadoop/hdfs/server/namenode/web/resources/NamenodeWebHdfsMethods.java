@@ -219,7 +219,7 @@ public class NamenodeWebHdfsMethods {
       final String remoteAddr) throws IOException {
     FSNamesystem fsn = namenode.getNamesystem();
     if (fsn == null) {
-      throw new IOException("Namesystem has not been initialized yet.");
+      throw new IOException("Namesystem has not been intialized yet.");
     }
     final BlockManager bm = fsn.getBlockManager();
     

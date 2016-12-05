@@ -2772,7 +2772,7 @@ public class BlockManager implements BlockStatsMXBean {
       throws IOException {
     for (ReportedBlockInfo rbi : rbis) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Processing previously queued message " + rbi);
+        LOG.debug("Processing previouly queued message " + rbi);
       }
       if (rbi.getReportedState() == null) {
         // This is a DELETE_BLOCK request
