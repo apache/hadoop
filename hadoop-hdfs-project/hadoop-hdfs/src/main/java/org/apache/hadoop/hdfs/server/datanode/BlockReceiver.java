@@ -24,7 +24,10 @@ import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.ByteBuffer;
@@ -50,6 +53,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
@@ -84,6 +88,8 @@ class BlockReceiver implements Closeable {
    * the DataNode needs to recalculate checksums before writing.
    */
   private final boolean needsChecksumTranslation;
+  private OutputStream out = null; // to block file at local disk
+  private FileDescriptor outFd;
   private DataOutputStream checksumOut = null; // to crc file at local disk
   private final int bytesPerChecksum;
   private final int checksumSize;
@@ -244,8 +250,7 @@ class BlockReceiver implements Closeable {
       
       final boolean isCreate = isDatanode || isTransfer 
           || stage == BlockConstructionStage.PIPELINE_SETUP_CREATE;
-      streams = replicaInfo.createStreams(isCreate, requestedChecksum,
-          datanodeSlowLogThresholdMs);
+      streams = replicaInfo.createStreams(isCreate, requestedChecksum);
       assert streams != null : "null streams!";
 
       // read checksum meta information
@@ -255,6 +260,13 @@ class BlockReceiver implements Closeable {
       this.bytesPerChecksum = diskChecksum.getBytesPerChecksum();
       this.checksumSize = diskChecksum.getChecksumSize();
 
+      this.out = streams.getDataOut();
+      if (out instanceof FileOutputStream) {
+        this.outFd = ((FileOutputStream)out).getFD();
+      } else {
+        LOG.warn("Could not get file descriptor for outputstream of class " +
+            out.getClass());
+      }
       this.checksumOut = new DataOutputStream(new BufferedOutputStream(
           streams.getChecksumOut(), DFSUtilClient.getSmallBufferSize(
           datanode.getConf())));
@@ -307,7 +319,7 @@ class BlockReceiver implements Closeable {
     packetReceiver.close();
 
     IOException ioe = null;
-    if (syncOnClose && (streams.getDataOut() != null || checksumOut != null)) {
+    if (syncOnClose && (out != null || checksumOut != null)) {
       datanode.metrics.incrFsyncCount();      
     }
     long flushTotalNanos = 0;
@@ -336,9 +348,9 @@ class BlockReceiver implements Closeable {
     }
     // close block file
     try {
-      if (streams.getDataOut() != null) {
+      if (out != null) {
         long flushStartNanos = System.nanoTime();
-        streams.flushDataOut();
+        out.flush();
         long flushEndNanos = System.nanoTime();
         if (syncOnClose) {
           long fsyncStartNanos = flushEndNanos;
@@ -347,13 +359,14 @@ class BlockReceiver implements Closeable {
         }
         flushTotalNanos += flushEndNanos - flushStartNanos;
         measuredFlushTime = true;
-        streams.closeDataStream();
+        out.close();
+        out = null;
       }
     } catch (IOException e) {
       ioe = e;
     }
     finally{
-      streams.close();
+      IOUtils.closeStream(out);
     }
     if (replicaHandler != null) {
       IOUtils.cleanup(null, replicaHandler);
@@ -406,9 +419,9 @@ class BlockReceiver implements Closeable {
       }
       flushTotalNanos += flushEndNanos - flushStartNanos;
     }
-    if (streams.getDataOut() != null) {
+    if (out != null) {
       long flushStartNanos = System.nanoTime();
-      streams.flushDataOut();
+      out.flush();
       long flushEndNanos = System.nanoTime();
       if (isSync) {
         long fsyncStartNanos = flushEndNanos;
@@ -417,10 +430,10 @@ class BlockReceiver implements Closeable {
       }
       flushTotalNanos += flushEndNanos - flushStartNanos;
     }
-    if (checksumOut != null || streams.getDataOut() != null) {
+    if (checksumOut != null || out != null) {
       datanode.metrics.addFlushNanos(flushTotalNanos);
       if (isSync) {
-        datanode.metrics.incrFsyncCount();
+    	  datanode.metrics.incrFsyncCount();      
       }
     }
     long duration = Time.monotonicNow() - begin;
@@ -703,11 +716,15 @@ class BlockReceiver implements Closeable {
           int numBytesToDisk = (int)(offsetInBlock-onDiskLen);
           
           // Write data to disk.
-          long duration = streams.writeToDisk(dataBuf.array(),
-              startByteToDisk, numBytesToDisk);
-
+          long begin = Time.monotonicNow();
+          out.write(dataBuf.array(), startByteToDisk, numBytesToDisk);
+          long duration = Time.monotonicNow() - begin;
           if (duration > maxWriteToDiskMs) {
             maxWriteToDiskMs = duration;
+          }
+          if (duration > datanodeSlowLogThresholdMs) {
+            LOG.warn("Slow BlockReceiver write data to disk cost:" + duration
+                + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms)");
           }
 
           final byte[] lastCrc;
@@ -825,7 +842,7 @@ class BlockReceiver implements Closeable {
 
   private void manageWriterOsCache(long offsetInBlock) {
     try {
-      if (streams.getOutFd() != null &&
+      if (outFd != null &&
           offsetInBlock > lastCacheManagementOffset + CACHE_DROP_LAG_BYTES) {
         long begin = Time.monotonicNow();
         //
@@ -840,11 +857,12 @@ class BlockReceiver implements Closeable {
         if (syncBehindWrites) {
           if (syncBehindWritesInBackground) {
             this.datanode.getFSDataset().submitBackgroundSyncFileRangeRequest(
-                block, streams, lastCacheManagementOffset,
+                block, outFd, lastCacheManagementOffset,
                 offsetInBlock - lastCacheManagementOffset,
                 SYNC_FILE_RANGE_WRITE);
           } else {
-            streams.syncFileRangeIfPossible(lastCacheManagementOffset,
+            NativeIO.POSIX.syncFileRangeIfPossible(outFd,
+                lastCacheManagementOffset,
                 offsetInBlock - lastCacheManagementOffset,
                 SYNC_FILE_RANGE_WRITE);
           }
@@ -861,8 +879,8 @@ class BlockReceiver implements Closeable {
         //                     
         long dropPos = lastCacheManagementOffset - CACHE_DROP_LAG_BYTES;
         if (dropPos > 0 && dropCacheBehindWrites) {
-          streams.dropCacheBehindWrites(block.getBlockName(), 0, dropPos,
-              POSIX_FADV_DONTNEED);
+          NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(
+              block.getBlockName(), outFd, 0, dropPos, POSIX_FADV_DONTNEED);
         }
         lastCacheManagementOffset = offsetInBlock;
         long duration = Time.monotonicNow() - begin;
@@ -971,7 +989,7 @@ class BlockReceiver implements Closeable {
               // The worst case is not recovering this RBW replica. 
               // Client will fall back to regular pipeline recovery.
             } finally {
-              IOUtils.closeStream(streams.getDataOut());
+              IOUtils.closeStream(out);
             }
             try {              
               // Even if the connection is closed after the ack packet is
@@ -1029,8 +1047,8 @@ class BlockReceiver implements Closeable {
    * will be overwritten.
    */
   private void adjustCrcFilePosition() throws IOException {
-    if (streams.getDataOut() != null) {
-      streams.flushDataOut();
+    if (out != null) {
+     out.flush();
     }
     if (checksumOut != null) {
       checksumOut.flush();
@@ -1076,10 +1094,10 @@ class BlockReceiver implements Closeable {
     byte[] crcbuf = new byte[checksumSize];
     try (ReplicaInputStreams instr =
         datanode.data.getTmpInputStreams(block, blkoff, ckoff)) {
-      instr.readDataFully(buf, 0, sizePartialChunk);
+      IOUtils.readFully(instr.getDataIn(), buf, 0, sizePartialChunk);
 
       // open meta file and read in crc value computer earlier
-      instr.readChecksumFully(crcbuf, 0, crcbuf.length);
+      IOUtils.readFully(instr.getChecksumIn(), crcbuf, 0, crcbuf.length);
     }
 
     // compute crc of partial chunk from data read in the block file.

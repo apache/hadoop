@@ -1355,9 +1355,4 @@ public class DataStorage extends Storage {
   synchronized void removeBlockPoolStorage(String bpId) {
     bpStorageMap.remove(bpId);
   }
-
-  public static boolean fullyDelete(final File dir) {
-    boolean result = FileUtil.fullyDelete(dir);
-    return result;
-  }
 }
