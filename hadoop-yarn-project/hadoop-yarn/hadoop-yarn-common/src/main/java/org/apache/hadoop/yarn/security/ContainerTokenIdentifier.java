@@ -71,6 +71,31 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
         CommonNodeLabelsManager.NO_LABEL, ContainerType.TASK);
   }
 
+  /**
+   * Creates a instance.
+   *
+   * @param appSubmitter appSubmitter
+   * @param containerID container ID
+   * @param creationTime creation time
+   * @param expiryTimeStamp expiry timestamp
+   * @param hostName hostname
+   * @param logAggregationContext log aggregation context
+   * @param masterKeyId master key ID
+   * @param priority priority
+   * @param r resource needed by the container
+   * @param rmIdentifier ResourceManager identifier
+   * @deprecated Use one of the other constructors instead.
+   */
+  @Deprecated
+  public ContainerTokenIdentifier(ContainerId containerID, String hostName,
+      String appSubmitter, Resource r, long expiryTimeStamp, int masterKeyId,
+      long rmIdentifier, Priority priority, long creationTime,
+      LogAggregationContext logAggregationContext) {
+    this(containerID, hostName, appSubmitter, r, expiryTimeStamp, masterKeyId,
+        rmIdentifier, priority, creationTime, logAggregationContext,
+        CommonNodeLabelsManager.NO_LABEL);
+  }
+
   public ContainerTokenIdentifier(ContainerId containerID, String hostName,
       String appSubmitter, Resource r, long expiryTimeStamp, int masterKeyId,
       long rmIdentifier, Priority priority, long creationTime,

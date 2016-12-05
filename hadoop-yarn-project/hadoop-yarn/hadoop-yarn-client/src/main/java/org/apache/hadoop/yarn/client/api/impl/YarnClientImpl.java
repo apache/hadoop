@@ -874,7 +874,7 @@ public class YarnClientImpl extends YarnClient {
   @Override
   public List<NodeLabel> getClusterNodeLabels() throws YarnException, IOException {
     return rmClient.getClusterNodeLabels(
-        GetClusterNodeLabelsRequest.newInstance()).getNodeLabels();
+        GetClusterNodeLabelsRequest.newInstance()).getNodeLabelList();
   }
 
   @Override
