@@ -58,10 +58,8 @@ public class ExternalReplicaInPipeline implements ReplicaInPipeline {
 
   @Override
   public ReplicaOutputStreams createStreams(boolean isCreate,
-      DataChecksum requestedChecksum, long slowLogThresholdMs)
-      throws IOException {
-    return new ReplicaOutputStreams(null, null, requestedChecksum, false,
-        slowLogThresholdMs);
+      DataChecksum requestedChecksum) throws IOException {
+    return new ReplicaOutputStreams(null, null, requestedChecksum, false);
   }
 
   @Override

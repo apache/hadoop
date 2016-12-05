@@ -29,6 +29,9 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -43,8 +46,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.DataChecksum;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -68,7 +69,15 @@ abstract public class LocalReplica extends ReplicaInfo {
 
   private static final Map<String, File> internedBaseDirs = new HashMap<String, File>();
 
-  static final Logger LOG = LoggerFactory.getLogger(LocalReplica.class);
+  static final Log LOG = LogFactory.getLog(LocalReplica.class);
+  private final static boolean IS_NATIVE_IO_AVAIL;
+  static {
+    IS_NATIVE_IO_AVAIL = NativeIO.isAvailable();
+    if (Path.WINDOWS && !IS_NATIVE_IO_AVAIL) {
+      LOG.warn("Data node cannot fully support concurrent reading"
+          + " and writing without native code extensions on Windows.");
+    }
+  }
 
   /**
    * Constructor
@@ -190,14 +199,14 @@ abstract public class LocalReplica extends ReplicaInfo {
     File tmpFile = DatanodeUtil.createTmpFile(b, DatanodeUtil.getUnlinkTmpFile(file));
     try (FileInputStream in = new FileInputStream(file)) {
       try (FileOutputStream out = new FileOutputStream(tmpFile)){
-        copyBytes(in, out, 16 * 1024);
+        IOUtils.copyBytes(in, out, 16 * 1024);
       }
       if (file.length() != tmpFile.length()) {
         throw new IOException("Copy of file " + file + " size " + file.length()+
                               " into file " + tmpFile +
                               " resulted in a size of " + tmpFile.length());
       }
-      replaceFile(tmpFile, file);
+      FileUtil.replaceFile(tmpFile, file);
     } catch (IOException e) {
       boolean done = tmpFile.delete();
       if (!done) {
@@ -232,13 +241,13 @@ abstract public class LocalReplica extends ReplicaInfo {
     }
     File meta = getMetaFile();
 
-    int linkCount = getHardLinkCount(file);
+    int linkCount = HardLink.getLinkCount(file);
     if (linkCount > 1) {
       DataNode.LOG.info("Breaking hardlink for " + linkCount + "x-linked " +
           "block " + this);
       breakHardlinks(file, this);
     }
-    if (getHardLinkCount(meta) > 1) {
+    if (HardLink.getLinkCount(meta) > 1) {
       breakHardlinks(meta, this);
     }
     return true;
@@ -251,7 +260,18 @@ abstract public class LocalReplica extends ReplicaInfo {
 
   @Override
   public InputStream getDataInputStream(long seekOffset) throws IOException {
-    return getDataInputStream(getBlockFile(), seekOffset);
+
+    File blockFile = getBlockFile();
+    if (IS_NATIVE_IO_AVAIL) {
+      return NativeIO.getShareDeleteFileInputStream(blockFile, seekOffset);
+    } else {
+      try {
+        return FsDatasetUtil.openAndSeek(blockFile, seekOffset);
+      } catch (FileNotFoundException fnfe) {
+        throw new IOException("Block " + this + " is not valid. " +
+            "Expected block file at " + blockFile + " does not exist.");
+      }
+    }
   }
 
   @Override
@@ -266,7 +286,7 @@ abstract public class LocalReplica extends ReplicaInfo {
 
   @Override
   public boolean deleteBlockData() {
-    return fullyDelete(getBlockFile());
+    return getBlockFile().delete();
   }
 
   @Override
@@ -300,7 +320,7 @@ abstract public class LocalReplica extends ReplicaInfo {
 
   @Override
   public boolean deleteMetadata() {
-    return fullyDelete(getMetaFile());
+    return getMetaFile().delete();
   }
 
   @Override
@@ -320,7 +340,7 @@ abstract public class LocalReplica extends ReplicaInfo {
 
   private boolean renameFile(File srcfile, File destfile) throws IOException {
     try {
-      rename(srcfile, destfile);
+      NativeIO.renameTo(srcfile, destfile);
       return true;
     } catch (IOException e) {
       throw new IOException("Failed to move block file for " + this
@@ -347,14 +367,22 @@ abstract public class LocalReplica extends ReplicaInfo {
 
   @Override
   public boolean getPinning(LocalFileSystem localFS) throws IOException {
-    return getPinning(localFS, new Path(getBlockFile().getAbsolutePath()));
+    FileStatus fss =
+        localFS.getFileStatus(new Path(getBlockFile().getAbsolutePath()));
+    return fss.getPermission().getStickyBit();
   }
 
   @Override
   public void setPinning(LocalFileSystem localFS) throws IOException {
     File f = getBlockFile();
     Path p = new Path(f.getAbsolutePath());
-    setPinning(localFS, p);
+
+    FsPermission oldPermission = localFS.getFileStatus(
+        new Path(f.getAbsolutePath())).getPermission();
+    //sticky bit is used for pinning purpose
+    FsPermission permission = new FsPermission(oldPermission.getUserAction(),
+        oldPermission.getGroupAction(), oldPermission.getOtherAction(), true);
+    localFS.setPermission(p, permission);
   }
 
   @Override
@@ -370,7 +398,7 @@ abstract public class LocalReplica extends ReplicaInfo {
     }
     try {
       // calling renameMeta on the ReplicaInfo doesn't work here
-      rename(oldmeta, newmeta);
+      NativeIO.renameTo(oldmeta, newmeta);
     } catch (IOException e) {
       setGenerationStamp(oldGS); // restore old GS
       throw new IOException("Block " + this + " reopen failed. " +
@@ -389,113 +417,7 @@ abstract public class LocalReplica extends ReplicaInfo {
     return info.getBlockFile().compareTo(getBlockFile());
   }
 
-  @Override
-  public void copyMetadata(URI destination) throws IOException {
-    //for local replicas, we assume the destination URI is file
-    nativeCopyFileUnbuffered(getMetaFile(), new File(destination), true);
-  }
-
-  @Override
-  public void copyBlockdata(URI destination) throws IOException {
-    //for local replicas, we assume the destination URI is file
-    nativeCopyFileUnbuffered(getBlockFile(), new File(destination), true);
-  }
-
-  public void renameMeta(File newMetaFile) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Renaming " + getMetaFile() + " to " + newMetaFile);
-    }
-    renameFile(getMetaFile(), newMetaFile);
-  }
-
-  public void renameBlock(File newBlockFile) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Renaming " + getBlockFile() + " to " + newBlockFile
-          + ", file length=" + getBlockFile().length());
-    }
-    renameFile(getBlockFile(), newBlockFile);
-  }
-
-  public static void rename(File from, File to) throws IOException {
-    Storage.rename(from, to);
-  }
-
-  /**
-   * Get input stream for a local file and optionally seek to the offset.
-   * @param f path to the file
-   * @param seekOffset offset to seek
-   * @return
-   * @throws IOException
-   */
-  private FileInputStream getDataInputStream(File f, long seekOffset)
-      throws IOException {
-    FileInputStream fis;
-    if (NativeIO.isAvailable()) {
-      fis = NativeIO.getShareDeleteFileInputStream(f, seekOffset);
-    } else {
-      try {
-        fis = FsDatasetUtil.openAndSeek(f, seekOffset);
-      } catch (FileNotFoundException fnfe) {
-        throw new IOException("Expected block file at " + f +
-            " does not exist.");
-      }
-    }
-    return fis;
-  }
-
-  private void nativeCopyFileUnbuffered(File srcFile, File destFile,
-      boolean preserveFileDate) throws IOException {
-    Storage.nativeCopyFileUnbuffered(srcFile, destFile, preserveFileDate);
-  }
-
-  private void copyBytes(InputStream in, OutputStream out, int
-      buffSize) throws IOException{
-    IOUtils.copyBytes(in, out, buffSize);
-  }
-
-  private void replaceFile(File src, File target) throws IOException {
-    FileUtil.replaceFile(src, target);
-  }
-
-  public static boolean fullyDelete(final File dir) {
-    boolean result = DataStorage.fullyDelete(dir);
-    return result;
-  }
-
-  public static int getHardLinkCount(File fileName) throws IOException {
-    int linkCount = HardLink.getLinkCount(fileName);
-    return linkCount;
-  }
-
-  /**
-   *  Get pin status of a file by checking the sticky bit.
-   * @param localFS local file system
-   * @param path path to be checked
-   * @return
-   * @throws IOException
-   */
-  public boolean getPinning(LocalFileSystem localFS, Path path) throws
-      IOException {
-    boolean stickyBit =
-        localFS.getFileStatus(path).getPermission().getStickyBit();
-    return stickyBit;
-  }
-
-  /**
-   * Set sticky bit on path to pin file.
-   * @param localFS local file system
-   * @param path path to be pinned with sticky bit
-   * @throws IOException
-   */
-  public void setPinning(LocalFileSystem localFS, Path path) throws
-      IOException {
-    FsPermission oldPermission = localFS.getFileStatus(path).getPermission();
-    FsPermission permission = new FsPermission(oldPermission.getUserAction(),
-        oldPermission.getGroupAction(), oldPermission.getOtherAction(), true);
-    localFS.setPermission(path, permission);
-  }
-
-  public static void truncateBlock(File blockFile, File metaFile,
+  static public void truncateBlock(File blockFile, File metaFile,
       long oldlen, long newlen) throws IOException {
     LOG.info("truncateBlock: blockFile=" + blockFile
         + ", metaFile=" + metaFile
@@ -545,4 +467,19 @@ abstract public class LocalReplica extends ReplicaInfo {
       metaRAF.close();
     }
   }
+
+  @Override
+  public void copyMetadata(URI destination) throws IOException {
+    //for local replicas, we assume the destination URI is file
+    Storage.nativeCopyFileUnbuffered(getMetaFile(),
+        new File(destination), true);
+  }
+
+  @Override
+  public void copyBlockdata(URI destination) throws IOException {
+    //for local replicas, we assume the destination URI is file
+    Storage.nativeCopyFileUnbuffered(getBlockFile(),
+        new File(destination), true);
+  }
+
 }

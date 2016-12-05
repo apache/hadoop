@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 
@@ -245,8 +246,7 @@ public class LocalReplicaInPipeline extends LocalReplica
 
   @Override // ReplicaInPipeline
   public ReplicaOutputStreams createStreams(boolean isCreate,
-      DataChecksum requestedChecksum, long slowLogThresholdMs)
-      throws IOException {
+      DataChecksum requestedChecksum) throws IOException {
     File blockFile = getBlockFile();
     File metaFile = getMetaFile();
     if (DataNode.LOG.isDebugEnabled()) {
@@ -313,7 +313,7 @@ public class LocalReplicaInPipeline extends LocalReplica
         crcOut.getChannel().position(crcDiskSize);
       }
       return new ReplicaOutputStreams(blockOut, crcOut, checksum,
-          getVolume().isTransientStorage(), slowLogThresholdMs);
+          getVolume().isTransientStorage());
     } catch (IOException e) {
       IOUtils.closeStream(blockOut);
       IOUtils.closeStream(metaRAF);
@@ -373,30 +373,40 @@ public class LocalReplicaInPipeline extends LocalReplica
           + " should be derived from LocalReplica");
     }
 
-    LocalReplica oldReplica = (LocalReplica) oldReplicaInfo;
-    File oldmeta = oldReplica.getMetaFile();
+    LocalReplica localReplica = (LocalReplica) oldReplicaInfo;
+
+    File oldmeta = localReplica.getMetaFile();
     File newmeta = getMetaFile();
 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Renaming " + oldmeta + " to " + newmeta);
+    }
     try {
-      oldReplica.renameMeta(newmeta);
+      NativeIO.renameTo(oldmeta, newmeta);
     } catch (IOException e) {
       throw new IOException("Block " + oldReplicaInfo + " reopen failed. " +
                             " Unable to move meta file  " + oldmeta +
                             " to rbw dir " + newmeta, e);
     }
 
+    File blkfile = localReplica.getBlockFile();
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Renaming " + blkfile + " to " + newBlkFile
+          + ", file length=" + blkfile.length());
+    }
     try {
-      oldReplica.renameBlock(newBlkFile);
+      NativeIO.renameTo(blkfile, newBlkFile);
     } catch (IOException e) {
       try {
-        renameMeta(oldmeta);
+        NativeIO.renameTo(newmeta, oldmeta);
       } catch (IOException ex) {
         LOG.warn("Cannot move meta file " + newmeta +
             "back to the finalized directory " + oldmeta, ex);
       }
       throw new IOException("Block " + oldReplicaInfo + " reopen failed. " +
-          " Unable to move block file " + oldReplica.getBlockFile() +
-          " to rbw dir " + newBlkFile, e);
+                              " Unable to move block file " + blkfile +
+                              " to rbw dir " + newBlkFile, e);
     }
   }
 

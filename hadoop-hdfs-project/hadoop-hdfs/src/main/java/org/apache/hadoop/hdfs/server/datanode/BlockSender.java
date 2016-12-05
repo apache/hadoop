@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -41,11 +42,11 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ReadaheadPool.ReadaheadRequest;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.SocketOutputStream;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.DataChecksum;
@@ -119,11 +120,12 @@ class BlockSender implements java.io.Closeable {
   
   /** the block to read from */
   private final ExtendedBlock block;
-
-  /** InputStreams and file descriptors to read block/checksum. */
-  private ReplicaInputStreams ris;
+  /** Stream to read block data from */
+  private InputStream blockIn;
   /** updated while using transferTo() */
   private long blockInPosition = -1;
+  /** Stream to read checksum */
+  private DataInputStream checksumIn;
   /** Checksum utility */
   private final DataChecksum checksum;
   /** Initial position to read */
@@ -150,6 +152,11 @@ class BlockSender implements java.io.Closeable {
   private final String clientTraceFmt;
   private volatile ChunkChecksum lastChunkChecksum = null;
   private DataNode datanode;
+  
+  /** The file descriptor of the block being sent */
+  private FileDescriptor blockInFd;
+  /** The reference to the volume where the block is located */
+  private FsVolumeReference volumeRef;
 
   /** The replica of the block that is being read. */
   private final Replica replica;
@@ -194,9 +201,6 @@ class BlockSender implements java.io.Closeable {
               boolean sendChecksum, DataNode datanode, String clientTraceFmt,
               CachingStrategy cachingStrategy)
       throws IOException {
-    InputStream blockIn = null;
-    DataInputStream checksumIn = null;
-    FsVolumeReference volumeRef = null;
     try {
       this.block = block;
       this.corruptChecksumOk = corruptChecksumOk;
@@ -277,7 +281,7 @@ class BlockSender implements java.io.Closeable {
         (!is32Bit || length <= Integer.MAX_VALUE);
 
       // Obtain a reference before reading data
-      volumeRef = datanode.data.getVolume(block).obtainReference();
+      this.volumeRef = datanode.data.getVolume(block).obtainReference();
 
       /* 
        * (corruptChecksumOK, meta_file_exist): operation
@@ -401,9 +405,14 @@ class BlockSender implements java.io.Closeable {
         DataNode.LOG.debug("replica=" + replica);
       }
       blockIn = datanode.data.getBlockInputStream(block, offset); // seek to offset
-      ris = new ReplicaInputStreams(blockIn, checksumIn, volumeRef);
+      if (blockIn instanceof FileInputStream) {
+        blockInFd = ((FileInputStream)blockIn).getFD();
+      } else {
+        blockInFd = null;
+      }
     } catch (IOException ioe) {
       IOUtils.closeStream(this);
+      IOUtils.closeStream(blockIn);
       throw ioe;
     }
   }
@@ -413,11 +422,12 @@ class BlockSender implements java.io.Closeable {
    */
   @Override
   public void close() throws IOException {
-    if (ris.getDataInFd() != null &&
+    if (blockInFd != null &&
         ((dropCacheBehindAllReads) ||
          (dropCacheBehindLargeReads && isLongRead()))) {
       try {
-        ris.dropCacheBehindReads(block.getBlockName(), lastCacheDropOffset,
+        NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(
+            block.getBlockName(), blockInFd, lastCacheDropOffset,
             offset - lastCacheDropOffset, POSIX_FADV_DONTNEED);
       } catch (Exception e) {
         LOG.warn("Unable to drop cache on file close", e);
@@ -426,12 +436,32 @@ class BlockSender implements java.io.Closeable {
     if (curReadahead != null) {
       curReadahead.cancel();
     }
-
-    try {
-      ris.closeStreams();
-    } finally {
-      IOUtils.closeStream(ris);
-      ris = null;
+    
+    IOException ioe = null;
+    if(checksumIn!=null) {
+      try {
+        checksumIn.close(); // close checksum file
+      } catch (IOException e) {
+        ioe = e;
+      }
+      checksumIn = null;
+    }   
+    if(blockIn!=null) {
+      try {
+        blockIn.close(); // close data file
+      } catch (IOException e) {
+        ioe = e;
+      }
+      blockIn = null;
+      blockInFd = null;
+    }
+    if (volumeRef != null) {
+      IOUtils.cleanup(null, volumeRef);
+      volumeRef = null;
+    }
+    // throw IOException if there is any
+    if(ioe!= null) {
+      throw ioe;
     }
   }
   
@@ -535,7 +565,7 @@ class BlockSender implements java.io.Closeable {
     int checksumOff = pkt.position();
     byte[] buf = pkt.array();
     
-    if (checksumSize > 0 && ris.getChecksumIn() != null) {
+    if (checksumSize > 0 && checksumIn != null) {
       readChecksum(buf, checksumOff, checksumDataLen);
 
       // write in progress that we need to use to get last checksum
@@ -551,7 +581,7 @@ class BlockSender implements java.io.Closeable {
     
     int dataOff = checksumOff + checksumDataLen;
     if (!transferTo) { // normal transfer
-      ris.readDataFully(buf, dataOff, dataLen);
+      IOUtils.readFully(blockIn, buf, dataOff, dataLen);
 
       if (verifyChecksum) {
         verifyChecksum(buf, dataOff, dataLen, numChunks, checksumOff);
@@ -563,12 +593,12 @@ class BlockSender implements java.io.Closeable {
         SocketOutputStream sockOut = (SocketOutputStream)out;
         // First write header and checksums
         sockOut.write(buf, headerOff, dataOff - headerOff);
-
+        
         // no need to flush since we know out is not a buffered stream
-        FileChannel fileCh = ((FileInputStream)ris.getDataIn()).getChannel();
+        FileChannel fileCh = ((FileInputStream)blockIn).getChannel();
         LongWritable waitTime = new LongWritable();
         LongWritable transferTime = new LongWritable();
-        sockOut.transferToFully(fileCh, blockInPosition, dataLen,
+        sockOut.transferToFully(fileCh, blockInPosition, dataLen, 
             waitTime, transferTime);
         datanode.metrics.addSendDataPacketBlockedOnNetworkNanos(waitTime.get());
         datanode.metrics.addSendDataPacketTransferNanos(transferTime.get());
@@ -600,7 +630,7 @@ class BlockSender implements java.io.Closeable {
         if (!ioem.startsWith("Broken pipe") && !ioem.startsWith("Connection reset")) {
           LOG.error("BlockSender.sendChunks() exception: ", e);
           datanode.getBlockScanner().markSuspectBlock(
-              ris.getVolumeRef().getVolume().getStorageID(),
+              volumeRef.getVolume().getStorageID(),
               block);
         }
       }
@@ -623,15 +653,16 @@ class BlockSender implements java.io.Closeable {
    */
   private void readChecksum(byte[] buf, final int checksumOffset,
       final int checksumLen) throws IOException {
-    if (checksumSize <= 0 && ris.getChecksumIn() == null) {
+    if (checksumSize <= 0 && checksumIn == null) {
       return;
     }
     try {
-      ris.readChecksumFully(buf, checksumOffset, checksumLen);
+      checksumIn.readFully(buf, checksumOffset, checksumLen);
     } catch (IOException e) {
       LOG.warn(" Could not read or failed to verify checksum for data"
           + " at offset " + offset + " for block " + block, e);
-      ris.closeChecksumStream();
+      IOUtils.closeStream(checksumIn);
+      checksumIn = null;
       if (corruptChecksumOk) {
         if (checksumOffset < checksumLen) {
           // Just fill the array with zeros.
@@ -715,10 +746,10 @@ class BlockSender implements java.io.Closeable {
     
     lastCacheDropOffset = initialOffset;
 
-    if (isLongRead() && ris.getDataInFd() != null) {
+    if (isLongRead() && blockInFd != null) {
       // Advise that this file descriptor will be accessed sequentially.
-      ris.dropCacheBehindReads(block.getBlockName(), 0, 0,
-          POSIX_FADV_SEQUENTIAL);
+      NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(
+          block.getBlockName(), blockInFd, 0, 0, POSIX_FADV_SEQUENTIAL);
     }
     
     // Trigger readahead of beginning of file if configured.
@@ -730,10 +761,9 @@ class BlockSender implements java.io.Closeable {
       int pktBufSize = PacketHeader.PKT_MAX_HEADER_LEN;
       boolean transferTo = transferToAllowed && !verifyChecksum
           && baseStream instanceof SocketOutputStream
-          && ris.getDataIn() instanceof FileInputStream;
+          && blockIn instanceof FileInputStream;
       if (transferTo) {
-        FileChannel fileChannel =
-            ((FileInputStream)ris.getDataIn()).getChannel();
+        FileChannel fileChannel = ((FileInputStream)blockIn).getChannel();
         blockInPosition = fileChannel.position();
         streamForSendChunks = baseStream;
         maxChunksPerPacket = numberOfChunks(TRANSFERTO_BUFFER_SIZE);
@@ -788,16 +818,14 @@ class BlockSender implements java.io.Closeable {
   private void manageOsCache() throws IOException {
     // We can't manage the cache for this block if we don't have a file
     // descriptor to work with.
-    if (ris.getDataInFd() == null) {
-      return;
-    }
+    if (blockInFd == null) return;
 
     // Perform readahead if necessary
     if ((readaheadLength > 0) && (datanode.readaheadPool != null) &&
           (alwaysReadahead || isLongRead())) {
       curReadahead = datanode.readaheadPool.readaheadStream(
-          clientTraceFmt, ris.getDataInFd(), offset, readaheadLength,
-          Long.MAX_VALUE, curReadahead);
+          clientTraceFmt, blockInFd, offset, readaheadLength, Long.MAX_VALUE,
+          curReadahead);
     }
 
     // Drop what we've just read from cache, since we aren't
@@ -807,7 +835,8 @@ class BlockSender implements java.io.Closeable {
       long nextCacheDropOffset = lastCacheDropOffset + CACHE_DROP_INTERVAL_BYTES;
       if (offset >= nextCacheDropOffset) {
         long dropLength = offset - lastCacheDropOffset;
-        ris.dropCacheBehindReads(block.getBlockName(), lastCacheDropOffset,
+        NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(
+            block.getBlockName(), blockInFd, lastCacheDropOffset,
             dropLength, POSIX_FADV_DONTNEED);
         lastCacheDropOffset = offset;
       }

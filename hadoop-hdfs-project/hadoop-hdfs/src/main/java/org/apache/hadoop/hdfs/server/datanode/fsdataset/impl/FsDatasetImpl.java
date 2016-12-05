@@ -21,6 +21,7 @@ import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -2754,9 +2755,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   @Override
   public void submitBackgroundSyncFileRangeRequest(ExtendedBlock block,
-      ReplicaOutputStreams outs, long offset, long nbytes, int flags) {
+      FileDescriptor fd, long offset, long nbytes, int flags) {
     FsVolumeImpl fsVolumeImpl = this.getVolume(block);
-    asyncDiskService.submitSyncFileRangeRequest(fsVolumeImpl, outs, offset,
+    asyncDiskService.submitSyncFileRangeRequest(fsVolumeImpl, fd, offset,
         nbytes, flags);
   }
 
