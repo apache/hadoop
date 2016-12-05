@@ -2045,10 +2045,10 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    *          The key to search for.
    * @return The wanted directory, or null if not found.
    */
-  private static FileMetadata getDirectoryInList(
+  private static FileMetadata getFileMetadataInList(
       final Iterable<FileMetadata> list, String key) {
     for (FileMetadata current : list) {
-      if (current.isDir() && current.getKey().equals(key)) {
+      if (current.getKey().equals(key)) {
         return current;
       }
     }
@@ -2114,7 +2114,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
           // Add the metadata to the list, but remove any existing duplicate
           // entries first that we may have added by finding nested files.
-          FileMetadata existing = getDirectoryInList(fileMetadata, blobKey);
+          FileMetadata existing = getFileMetadataInList(fileMetadata, blobKey);
           if (existing != null) {
             fileMetadata.remove(existing);
           }
@@ -2141,7 +2141,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
           // Add the directory metadata to the list only if it's not already
           // there.
-          if (getDirectoryInList(fileMetadata, dirKey) == null) {
+          if (getFileMetadataInList(fileMetadata, dirKey) == null) {
             fileMetadata.add(directoryMetadata);
           }
 
@@ -2249,7 +2249,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
           // Add the directory metadata to the list only if it's not already
           // there.
-          FileMetadata existing = getDirectoryInList(aFileMetadataList, blobKey);
+          FileMetadata existing = getFileMetadataInList(aFileMetadataList, blobKey);
           if (existing != null) {
             aFileMetadataList.remove(existing);
           }
@@ -2278,7 +2278,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
             // absolute path is being used or not.
             String dirKey = normalizeKey(directory);
 
-            if (getDirectoryInList(aFileMetadataList, dirKey) == null) {
+            if (getFileMetadataInList(aFileMetadataList, dirKey) == null) {
               // Reached the targeted listing depth. Return metadata for the
               // directory using default permissions.
               //
@@ -2376,18 +2376,24 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
 
+  /**
+   * API implementation to delete a blob in the back end azure storage.
+   */
   @Override
-  public void delete(String key, SelfRenewingLease lease) throws IOException {
+  public boolean delete(String key, SelfRenewingLease lease) throws IOException {
     try {
       if (checkContainer(ContainerAccessType.ReadThenWrite) == ContainerState.DoesntExist) {
         // Container doesn't exist, no need to do anything
-        return;
+        return true;
       }
 
       // Get the blob reference and delete it.
       CloudBlobWrapper blob = getBlobReference(key);
       if (blob.exists(getInstrumentedContext())) {
         safeDelete(blob, lease);
+        return true;
+      } else {
+        return false;
       }
     } catch (Exception e) {
       // Re-throw as an Azure storage exception.
@@ -2395,10 +2401,13 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
 
+  /**
+   * API implementation to delete a blob in the back end azure storage.
+   */
   @Override
-  public void delete(String key) throws IOException {
+  public boolean delete(String key) throws IOException {
     try {
-      delete(key, null);
+      return delete(key, null);
     } catch (IOException e) {
       Throwable t = e.getCause();
       if(t != null && t instanceof StorageException) {
@@ -2407,7 +2416,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           SelfRenewingLease lease = null;
           try {
             lease = acquireLease(key);
-            delete(key, lease);
+            return delete(key, lease);
           } catch (AzureException e3) {
             LOG.warn("Got unexpected exception trying to acquire lease on "
                 + key + "." + e3.getMessage());
