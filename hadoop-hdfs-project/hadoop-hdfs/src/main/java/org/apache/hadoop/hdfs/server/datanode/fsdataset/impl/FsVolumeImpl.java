@@ -1292,7 +1292,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
     try {
       fileNames = IOUtils.listDirectory(dir, BlockDirFilter.INSTANCE);
     } catch (IOException ioe) {
-      LOG.warn("Exception occured while compiling report: ", ioe);
+      LOG.warn("Exception occurred while compiling report: ", ioe);
       // Initiate a check on disk failure.
       dataset.datanode.checkDiskErrorAsync();
       // Ignore this directory and proceed.

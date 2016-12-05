@@ -1082,7 +1082,7 @@ public class FSEditLogLoader {
       boolean removed = FSDirWriteFileOp.unprotectedRemoveBlock(
           fsDir, path, iip, file, oldBlock);
       if (!removed && !(op instanceof UpdateBlocksOp)) {
-        throw new IOException("Trying to delete non-existant block " + oldBlock);
+        throw new IOException("Trying to delete non-existent block " + oldBlock);
       }
     } else if (newBlocks.length > oldBlocks.length) {
       final boolean isStriped = ecPolicy != null;
