@@ -86,4 +86,17 @@ public final class TimelineEntityReaderFactory {
       return new GenericEntityReader(context, filters, dataToRetrieve, false);
     }
   }
+
+  /**
+   * Creates a timeline entity type reader that will read all available entity
+   * types within the specified context.
+   *
+   * @param context Reader context which defines the scope in which query has to
+   *                be made. Limited to application level only.
+   * @return an <cite>EntityTypeReader</cite> object
+   */
+  public static EntityTypeReader createEntityTypeReader(
+      TimelineReaderContext context) {
+    return new EntityTypeReader(context);
+  }
 }

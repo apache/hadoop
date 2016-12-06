@@ -2859,4 +2859,106 @@ public class TimelineReaderWebServices {
         flowName, flowRunId, confsToRetrieve, metricsToRetrieve, fields,
         metricsLimit);
   }
+
+  /**
+   * Returns a set of available entity types for a given app id. Cluster ID is
+   * not provided by client so default cluster ID has to be taken. If userid,
+   * flow name and flow run id which are optional query parameters are not
+   * specified, they will be queried based on app id and cluster id from the
+   * flow context information stored in underlying storage implementation.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param appId Application id to be queried(Mandatory path param).
+   * @param flowName Flow name which should match for the app(Optional query
+   *     param).
+   * @param flowRunId Run id which should match for the app(Optional query
+   *     param).
+   * @param userId User id which should match for the app(Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   *     list contains all timeline entity types is returned.<br>
+   *     On failures,<br>
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.<br>
+   *     If flow context information cannot be retrieved or app for the given
+   *     app id cannot be found, HTTP 404(Not Found) is returned.<br>
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
+   */
+  @GET
+  @Path("/apps/{appid}/entity-types")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Set<String> getEntityTypes(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("appid") String appId,
+      @QueryParam("flowname") String flowName,
+      @QueryParam("flowrunid") String flowRunId,
+      @QueryParam("userid") String userId) {
+    return getEntityTypes(req, res, null, appId, flowName, flowRunId, userId);
+  }
+
+  /**
+   * Returns a set of available entity types for a given app id. If userid,
+   * flow name and flow run id which are optional query parameters are not
+   * specified, they will be queried based on app id and cluster id from the
+   * flow context information stored in underlying storage implementation.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   * @param clusterId Cluster id to which the app to be queried belong to(
+   *     Mandatory path param).
+   * @param appId Application id to be queried(Mandatory path param).
+   * @param flowName Flow name which should match for the app(Optional query
+   *     param).
+   * @param flowRunId Run id which should match for the app(Optional query
+   *     param).
+   * @param userId User id which should match for the app(Optional query param).
+   *
+   * @return If successful, a HTTP 200(OK) response having a JSON representing a
+   *     list contains all timeline entity types is returned.<br>
+   *     On failures,<br>
+   *     If any problem occurs in parsing request, HTTP 400(Bad Request) is
+   *     returned.<br>
+   *     If flow context information cannot be retrieved or app for the given
+   *     app id cannot be found, HTTP 404(Not Found) is returned.<br>
+   *     For all other errors while retrieving data, HTTP 500(Internal Server
+   *     Error) is returned.
+   */
+  @GET
+  @Path("/clusters/{clusterid}/apps/{appid}/entity-types")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Set<String> getEntityTypes(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("clusterid") String clusterId,
+      @PathParam("appid") String appId,
+      @QueryParam("flowname") String flowName,
+      @QueryParam("flowrunid") String flowRunId,
+      @QueryParam("userid") String userId) {
+    String url = req.getRequestURI() +
+        (req.getQueryString() == null ? "" :
+            QUERY_STRING_SEP + req.getQueryString());
+    UserGroupInformation callerUGI =
+        TimelineReaderWebServicesUtils.getUser(req);
+    LOG.info("Received URL " + url + " from user " +
+        TimelineReaderWebServicesUtils.getUserName(callerUGI));
+    long startTime = Time.monotonicNow();
+    init(res);
+    TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
+    Set<String> results = null;
+    try {
+      results = timelineReaderManager.getEntityTypes(
+          TimelineReaderWebServicesUtils.createTimelineReaderContext(
+          clusterId, userId, flowName, flowRunId, appId,
+          null, null));
+    } catch (Exception e) {
+      handleException(e, url, startTime, "flowrunid");
+    }
+    long endTime = Time.monotonicNow();
+    LOG.info("Processed URL " + url +
+        " (Took " + (endTime - startTime) + " ms.)");
+    return results;
+  }
 }
