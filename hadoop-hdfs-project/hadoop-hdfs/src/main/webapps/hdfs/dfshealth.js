@@ -212,12 +212,12 @@
           var n = nodes[i];
           n.usedPercentage = Math.round((n.used + n.nonDfsUsedSpace) * 1.0 / n.capacity * 100);
 
-          var addr = n.infoSecureAddr;
-          var position = addr.lastIndexOf(":");
-          var port = addr.substring(position + 1, addr.length);
-          n.secureMode = "off";
-          if (port != 0) {
-            n.secureMode = "on";
+          var port = n.infoAddr.split(":")[1];
+          var securePort = n.infoSecureAddr.split(":")[1];
+          var dnHost = n.name.split(":")[0];
+          n.dnWebAddress = dnHost + ":" + port;
+          if (securePort != 0) {
+            n.dnWebAddress = dnHost + ":" + securePort;
           }
 
           if (n.adminState === "In Service") {
