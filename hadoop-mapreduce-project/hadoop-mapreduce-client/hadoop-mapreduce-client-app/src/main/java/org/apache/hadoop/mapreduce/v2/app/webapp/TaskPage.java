@@ -125,7 +125,7 @@ public class TaskPage extends AppView {
 
       for (TaskAttempt attempt : getTaskAttempts()) {
         TaskAttemptInfo ta = new TaskAttemptInfo(attempt, true);
-        String progress = StringUtils.formatPercent(ta.getProgress() / 100, 2);
+        String progress = StringUtils.format("%.2f", ta.getProgress());
 
         String nodeHttpAddr = ta.getNode();
         String diag = ta.getNote() == null ? "" : ta.getNote();
