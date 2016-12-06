@@ -205,6 +205,12 @@ public abstract class TestConfigurationFieldsBase {
       if (!f.getType().getName().equals("java.lang.String")) {
         continue;
       }
+
+      // filter out default-value fields
+      if (isFieldADefaultValue(f)) {
+        continue;
+      }
+
       // Convert found member into String
       try {
         value = (String) f.get(null);
@@ -332,6 +338,17 @@ public abstract class TestConfigurationFieldsBase {
   }
 
   /**
+   * Test if a field is a default value of another property by
+   * checking if its name starts with "DEFAULT_" or ends with
+   * "_DEFAULT".
+   * @param field the field to check
+   */
+  private static boolean isFieldADefaultValue(Field field) {
+    return field.getName().startsWith("DEFAULT_") ||
+        field.getName().endsWith("_DEFAULT");
+  }
+
+  /**
    * Utility function to extract &quot;public static final&quot; default
    * member variables from a Configuration type class.
    *
@@ -363,8 +380,7 @@ public abstract class TestConfigurationFieldsBase {
       }
       // Special: Stuff any property beginning with "DEFAULT_" into a
       // different hash for later processing
-      if (f.getName().startsWith("DEFAULT_") ||
-          f.getName().endsWith("_DEFAULT")) {
+      if (isFieldADefaultValue(f)) {
         if (retVal.containsKey(f.getName())) {
           continue;
         }
