@@ -49,11 +49,13 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
+import org.apache.hadoop.hdfs.server.datanode.LocalReplica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaBuilder;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.RamDiskReplicaTracker.RamDiskReplica;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
+
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker;
@@ -145,7 +147,7 @@ class BlockPoolSlice {
     //
     this.tmpDir = new File(bpDir, DataStorage.STORAGE_DIR_TMP);
     if (tmpDir.exists()) {
-      FileUtil.fullyDelete(tmpDir);
+      DataStorage.fullyDelete(tmpDir);
     }
     this.rbwDir = new File(currentDir, DataStorage.STORAGE_DIR_RBW);
     if (!rbwDir.mkdirs()) {  // create rbw directory if not exist
@@ -436,7 +438,7 @@ class BlockPoolSlice {
 
           final File targetMetaFile = new File(targetDir, metaFile.getName());
           try {
-            NativeIO.renameTo(metaFile, targetMetaFile);
+            LocalReplica.rename(metaFile, targetMetaFile);
           } catch (IOException e) {
             LOG.warn("Failed to move meta file from "
                 + metaFile + " to " + targetMetaFile, e);
@@ -446,7 +448,7 @@ class BlockPoolSlice {
 
           final File targetBlockFile = new File(targetDir, blockFile.getName());
           try {
-            NativeIO.renameTo(blockFile, targetBlockFile);
+            LocalReplica.rename(blockFile, targetBlockFile);
           } catch (IOException e) {
             LOG.warn("Failed to move block file from "
                 + blockFile + " to " + targetBlockFile, e);
@@ -690,6 +692,7 @@ class BlockPoolSlice {
   private long validateIntegrityAndSetLength(File blockFile, long genStamp) {
     DataInputStream checksumIn = null;
     InputStream blockIn = null;
+    ReplicaInputStreams ris = null;
     try {
       final File metaFile = FsDatasetUtil.getMetaFile(blockFile, genStamp);
       long blockFileLen = blockFile.length();
@@ -714,21 +717,22 @@ class BlockPoolSlice {
       if (numChunks == 0) {
         return 0;
       }
-      IOUtils.skipFully(checksumIn, (numChunks-1)*checksumSize);
       blockIn = new FileInputStream(blockFile);
+      ris = new ReplicaInputStreams(blockIn, checksumIn,
+          volume.obtainReference());
+      ris.skipChecksumFully((numChunks-1)*checksumSize);
       long lastChunkStartPos = (numChunks-1)*bytesPerChecksum;
-      IOUtils.skipFully(blockIn, lastChunkStartPos);
+      ris.skipDataFully(lastChunkStartPos);
       int lastChunkSize = (int)Math.min(
           bytesPerChecksum, blockFileLen-lastChunkStartPos);
       byte[] buf = new byte[lastChunkSize+checksumSize];
-      checksumIn.readFully(buf, lastChunkSize, checksumSize);
-      IOUtils.readFully(blockIn, buf, 0, lastChunkSize);
-
+      ris.readChecksumFully(buf, lastChunkSize, checksumSize);
+      ris.readDataFully(buf, 0, lastChunkSize);
       checksum.update(buf, 0, lastChunkSize);
       long validFileLength;
       if (checksum.compare(buf, lastChunkSize)) { // last chunk matches crc
         validFileLength = lastChunkStartPos + lastChunkSize;
-      } else { // last chunck is corrupt
+      } else { // last chunk is corrupt
         validFileLength = lastChunkStartPos;
       }
 
@@ -748,8 +752,12 @@ class BlockPoolSlice {
       FsDatasetImpl.LOG.warn(e);
       return 0;
     } finally {
-      IOUtils.closeStream(checksumIn);
-      IOUtils.closeStream(blockIn);
+      if (ris != null) {
+        ris.close();
+      } else {
+        IOUtils.closeStream(checksumIn);
+        IOUtils.closeStream(blockIn);
+      }
     }
   }
 
