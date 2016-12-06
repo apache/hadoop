@@ -92,8 +92,6 @@
         <configuration>
           <excludes>
             <exclude>src/main/native/testData/*</exclude>
-            <!-- gtest has a compatible license -->
-            <exclude>src/main/native/gtest/**/*</exclude>
           </excludes>
         </configuration>
       </plugin>
