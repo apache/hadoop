@@ -1,5 +1,20 @@
 Hadoop HDFS Change Log
 
+Release 2.6.6 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-11180. Intermittent deadlock in NameNode when failover happens.
+    (aajisaka)
+
 Release 2.6.5 - 2016-10-08
 
   INCOMPATIBLE CHANGES

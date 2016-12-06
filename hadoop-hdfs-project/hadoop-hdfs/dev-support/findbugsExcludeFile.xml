@@ -115,6 +115,33 @@
         <Field name="journalSet" />
         <Bug pattern="IS2_INCONSISTENT_SYNC" />
     </Match>
+    <!--
+      FSEditLog#getTotalSyncCount is not synchronized because this method is
+      used by metrics. NullPointerException can happen and it is ignored.
+    -->
+    <Match>
+      <Class name="org.apache.hadoop.hdfs.server.namenode.FSEditLog" />
+      <Field name="editLogStream" />
+      <Bug pattern="IS2_INCONSISTENT_SYNC" />
+    </Match>
+    <!--
+      FSEditLog#isOpenForWriteWithoutLock and FSEditLog#isSegmentOpenWithoutLock
+      are not synchronized because these methods are used by metrics.
+    -->
+    <Match>
+      <Class name="org.apache.hadoop.hdfs.server.namenode.FSEditLog" />
+      <Field name="state" />
+      <Bug pattern="IS2_INCONSISTENT_SYNC" />
+    </Match>
+    <!--
+      All of the threads which update/increment txid are synchronized,
+      so make txid volatile instead of AtomicLong.
+    -->
+    <Match>
+      <Class name="org.apache.hadoop.hdfs.server.namenode.FSEditLog" />
+      <Field name="txid" />
+      <Bug pattern="VO_VOLATILE_INCREMENT" />
+    </Match>
      <!--
       This method isn't performance-critical and is much clearer to write as it's written.
       -->
