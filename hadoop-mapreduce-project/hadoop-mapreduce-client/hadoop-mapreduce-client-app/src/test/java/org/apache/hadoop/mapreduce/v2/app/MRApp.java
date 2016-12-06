@@ -814,19 +814,5 @@ public class MRApp extends MRAppMaster {
     return token.decodeIdentifier();
   }
 
-  @Override
-  protected void shutdownTaskLog() {
-    // Avoid closing the logging system during unit tests,
-    // otherwise subsequent MRApp instances in the same test
-    // will fail to log anything.
-  }
-
-  @Override
-  protected void shutdownLogManager() {
-    // Avoid closing the logging system during unit tests,
-    // otherwise subsequent MRApp instances in the same test
-    // will fail to log anything.
-  }
-
 }
  
