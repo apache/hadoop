@@ -42,6 +42,7 @@ public class KMSRESTConstants {
   public static final String EEK_GENERATE = "generate";
   public static final String EEK_DECRYPT = "decrypt";
   public static final String EEK_NUM_KEYS = "num_keys";
+  public static final String EEK_REENCRYPT = "reencrypt";
 
   public static final String IV_FIELD = "iv";
   public static final String NAME_FIELD = "name";

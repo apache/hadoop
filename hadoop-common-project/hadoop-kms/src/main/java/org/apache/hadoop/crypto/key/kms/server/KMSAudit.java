@@ -55,8 +55,8 @@ import java.util.Set;
 public class KMSAudit {
   @VisibleForTesting
   static final Set<KMS.KMSOp> AGGREGATE_OPS_WHITELIST = Sets.newHashSet(
-    KMS.KMSOp.GET_KEY_VERSION, KMS.KMSOp.GET_CURRENT_KEY,
-    KMS.KMSOp.DECRYPT_EEK, KMS.KMSOp.GENERATE_EEK
+      KMS.KMSOp.GET_KEY_VERSION, KMS.KMSOp.GET_CURRENT_KEY,
+      KMS.KMSOp.DECRYPT_EEK, KMS.KMSOp.GENERATE_EEK, KMS.KMSOp.REENCRYPT_EEK
   );
 
   private Cache<String, AuditEvent> cache;
