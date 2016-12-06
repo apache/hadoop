@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -407,5 +408,25 @@ public class FileSystemTimelineReaderImpl extends AbstractService
             File.separator + context.getAppId() + File.separator +
             context.getEntityType());
     return getEntities(dir, context.getEntityType(), filters, dataToRetrieve);
+  }
+
+  @Override public Set<String> getEntityTypes(TimelineReaderContext context)
+      throws IOException {
+    Set<String> result = new TreeSet<>();
+    String flowRunPath = getFlowRunPath(context.getUserId(),
+        context.getClusterId(), context.getFlowName(), context.getFlowRunId(),
+        context.getAppId());
+    File dir = new File(new File(rootPath, ENTITIES_DIR),
+        context.getClusterId() + File.separator + flowRunPath
+            + File.separator + context.getAppId());
+    File[] fileList = dir.listFiles();
+    if (fileList != null) {
+      for (File f : fileList) {
+        if (f.isDirectory()) {
+          result.add(f.getName());
+        }
+      }
+    }
+    return result;
   }
 }

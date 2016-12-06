@@ -176,4 +176,24 @@ public class TimelineReaderManager extends AbstractService {
     }
     return entity;
   }
+
+  /**
+   * Gets a list of available timeline entity types for an application. This can
+   * be done by making a call to the backend storage implementation. The meaning
+   * of each argument in detail is the same as {@link TimelineReader#getEntity}.
+   * If cluster ID has not been supplied by the client, fills the cluster id
+   * from config before making a call to backend storage.
+   *
+   * @param context Timeline context within the scope of which entity types
+   *                have to be fetched. Entity type field of this context should
+   *                be null.
+   * @return A set which contains available timeline entity types, represented
+   * as strings if found, empty otherwise.
+   * @throws IOException  if any problem occurs while getting entity types.
+   */
+  public Set<String> getEntityTypes(TimelineReaderContext context)
+      throws IOException{
+    context.setClusterId(getClusterID(context.getClusterId(), getConfig()));
+    return reader.getEntityTypes(new TimelineReaderContext(context));
+  }
 }

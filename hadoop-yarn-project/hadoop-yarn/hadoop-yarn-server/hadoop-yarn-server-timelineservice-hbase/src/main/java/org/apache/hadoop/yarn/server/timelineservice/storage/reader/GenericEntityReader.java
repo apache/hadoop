@@ -41,9 +41,6 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContex
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
-import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowColumn;
-import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowRowKey;
-import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter;
@@ -56,7 +53,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
-import org.apache.hadoop.yarn.webapp.NotFoundException;
 
 import com.google.common.base.Preconditions;
 
@@ -66,11 +62,6 @@ import com.google.common.base.Preconditions;
  */
 class GenericEntityReader extends TimelineEntityReader {
   private static final EntityTable ENTITY_TABLE = new EntityTable();
-
-  /**
-   * Used to look up the flow context.
-   */
-  private final AppToFlowTable appToFlowTable = new AppToFlowTable();
 
   /**
    * Used to convert strings key components to and from storage format.
@@ -400,60 +391,6 @@ class GenericEntityReader extends TimelineEntityReader {
     return listBasedOnFields;
   }
 
-  /**
-   * Looks up flow context from AppToFlow table.
-   *
-   * @param appToFlowRowKey to identify Cluster and App Ids.
-   * @param hbaseConf HBase configuration.
-   * @param conn HBase Connection.
-   * @return flow context information.
-   * @throws IOException if any problem occurs while fetching flow information.
-   */
-  protected FlowContext lookupFlowContext(AppToFlowRowKey appToFlowRowKey,
-      Configuration hbaseConf, Connection conn) throws IOException {
-    byte[] rowKey = appToFlowRowKey.getRowKey();
-    Get get = new Get(rowKey);
-    Result result = appToFlowTable.getResult(hbaseConf, conn, get);
-    if (result != null && !result.isEmpty()) {
-      return new FlowContext(AppToFlowColumn.USER_ID.readResult(result)
-          .toString(), AppToFlowColumn.FLOW_ID.readResult(result).toString(),
-          ((Number) AppToFlowColumn.FLOW_RUN_ID.readResult(result))
-          .longValue());
-    } else {
-      throw new NotFoundException(
-          "Unable to find the context flow ID and flow run ID for clusterId="
-              + appToFlowRowKey.getClusterId() + ", appId="
-              + appToFlowRowKey.getAppId());
-    }
-  }
-
-  /**
-   * Encapsulates flow context information.
-   */
-  protected static class FlowContext {
-    private final String userId;
-    private final String flowName;
-    private final Long flowRunId;
-
-    public FlowContext(String user, String flowName, Long flowRunId) {
-      this.userId = user;
-      this.flowName = flowName;
-      this.flowRunId = flowRunId;
-    }
-
-    protected String getUserId() {
-      return userId;
-    }
-
-    protected String getFlowName() {
-      return flowName;
-    }
-
-    protected Long getFlowRunId() {
-      return flowRunId;
-    }
-  }
-
   @Override
   protected void validateParams() {
     Preconditions.checkNotNull(getContext(), "context shouldn't be null");
@@ -474,19 +411,7 @@ class GenericEntityReader extends TimelineEntityReader {
   @Override
   protected void augmentParams(Configuration hbaseConf, Connection conn)
       throws IOException {
-    TimelineReaderContext context = getContext();
-    // In reality all three should be null or neither should be null
-    if (context.getFlowName() == null || context.getFlowRunId() == null
-        || context.getUserId() == null) {
-      // Get flow context information from AppToFlow table.
-      AppToFlowRowKey appToFlowRowKey =
-          new AppToFlowRowKey(context.getClusterId(), context.getAppId());
-      FlowContext flowContext =
-          lookupFlowContext(appToFlowRowKey, hbaseConf, conn);
-      context.setFlowName(flowContext.flowName);
-      context.setFlowRunId(flowContext.flowRunId);
-      context.setUserId(flowContext.userId);
-    }
+    defaultAugmentParams(hbaseConf, conn);
     // Add configs/metrics to fields to retrieve if confsToRetrieve and/or
     // metricsToRetrieve are specified.
     getDataToRetrieve().addFieldsBasedOnConfsAndMetricsToRetrieve();
