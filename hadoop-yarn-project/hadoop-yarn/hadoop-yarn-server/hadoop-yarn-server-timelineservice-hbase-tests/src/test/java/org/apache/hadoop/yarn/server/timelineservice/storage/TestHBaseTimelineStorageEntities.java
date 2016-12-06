@@ -1668,6 +1668,29 @@ public class TestHBaseTimelineStorageEntities {
     assertEquals(3, entities.size());
   }
 
+  @Test(timeout = 90000)
+  public void testListTypesInApp() throws Exception {
+    Set<String> types = reader.getEntityTypes(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+            1002345678919L, "application_1231111111_1111", null, null));
+    assertEquals(4, types.size());
+
+    types = reader.getEntityTypes(
+        new TimelineReaderContext("cluster1", null, null,
+            null, "application_1231111111_1111", null, null));
+    assertEquals(4, types.size());
+
+    types = reader.getEntityTypes(
+        new TimelineReaderContext("cluster1", null, null,
+            null, "application_1231111111_1112", null, null));
+    assertEquals(4, types.size());
+
+    types = reader.getEntityTypes(
+        new TimelineReaderContext("cluster1", "user1", "some_flow_name",
+            1002345678919L, "application_1231111111_1113", null, null));
+    assertEquals(0, types.size());
+  }
+
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     util.shutdownMiniCluster();

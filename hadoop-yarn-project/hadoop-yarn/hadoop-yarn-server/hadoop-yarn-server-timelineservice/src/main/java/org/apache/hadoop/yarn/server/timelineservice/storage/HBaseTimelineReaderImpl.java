@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrie
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.reader.EntityTypeReader;
 import org.apache.hadoop.yarn.server.timelineservice.storage.reader.TimelineEntityReader;
 import org.apache.hadoop.yarn.server.timelineservice.storage.reader.TimelineEntityReaderFactory;
 
@@ -84,5 +85,12 @@ public class HBaseTimelineReaderImpl
         TimelineEntityReaderFactory.createMultipleEntitiesReader(context,
             filters, dataToRetrieve);
     return reader.readEntities(hbaseConf, conn);
+  }
+
+  @Override
+  public Set<String> getEntityTypes(TimelineReaderContext context)
+      throws IOException {
+    EntityTypeReader reader = new EntityTypeReader(context);
+    return reader.readEntityTypes(hbaseConf, conn);
   }
 }
