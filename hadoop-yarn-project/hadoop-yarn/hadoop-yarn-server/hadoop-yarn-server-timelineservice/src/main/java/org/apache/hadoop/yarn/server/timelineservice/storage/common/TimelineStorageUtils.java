@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -35,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -603,6 +605,40 @@ public final class TimelineStorageUtils {
       hbaseConf = HBaseConfiguration.create(conf);
     }
     return hbaseConf;
+  }
+
+  /**
+   * Given a row key prefix stored in a byte array, return a byte array for its
+   * immediate next row key.
+   *
+   * @param rowKeyPrefix The provided row key prefix, represented in an array.
+   * @return the closest next row key of the provided row key.
+   */
+  public static byte[] calculateTheClosestNextRowKeyForPrefix(
+      byte[] rowKeyPrefix) {
+    // Essentially we are treating it like an 'unsigned very very long' and
+    // doing +1 manually.
+    // Search for the place where the trailing 0xFFs start
+    int offset = rowKeyPrefix.length;
+    while (offset > 0) {
+      if (rowKeyPrefix[offset - 1] != (byte) 0xFF) {
+        break;
+      }
+      offset--;
+    }
+
+    if (offset == 0) {
+      // We got an 0xFFFF... (only FFs) stopRow value which is
+      // the last possible prefix before the end of the table.
+      // So set it to stop at the 'end of the table'
+      return HConstants.EMPTY_END_ROW;
+    }
+
+    // Copy the right length of the original
+    byte[] newStopRow = Arrays.copyOfRange(rowKeyPrefix, 0, offset);
+    // And increment the last one
+    newStopRow[newStopRow.length - 1]++;
+    return newStopRow;
   }
 
 }

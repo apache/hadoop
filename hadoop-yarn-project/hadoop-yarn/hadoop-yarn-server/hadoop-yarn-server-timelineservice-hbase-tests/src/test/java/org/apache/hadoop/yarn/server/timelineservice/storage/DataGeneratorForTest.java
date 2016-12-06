@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric.Type;
+import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 
 final class DataGeneratorForTest {
   static void loadApps(HBaseTestingUtility util) throws IOException {
@@ -358,6 +359,46 @@ final class DataGeneratorForTest {
     relatesTo3.put("container2", relatesToSet14);
     entity2.setRelatesToEntities(relatesTo3);
     te.addEntity(entity2);
+
+    // For listing types
+    for (int i = 0; i < 10; i++) {
+      TimelineEntity entity3 = new TimelineEntity();
+      String id3 = "typeTest" + i;
+      entity3.setId(id3);
+      StringBuilder typeName = new StringBuilder("newType");
+      for (int j = 0; j < (i % 3); j++) {
+        typeName.append(" ").append(j);
+      }
+      entity3.setType(typeName.toString());
+      entity3.setCreatedTime(cTime + 80L + i);
+      te.addEntity(entity3);
+    }
+
+    // Create app entity for app to flow table
+    TimelineEntities appTe1 = new TimelineEntities();
+    TimelineEntity entityApp1 = new TimelineEntity();
+    String appName1 = "application_1231111111_1111";
+    entityApp1.setId(appName1);
+    entityApp1.setType(TimelineEntityType.YARN_APPLICATION.toString());
+    entityApp1.setCreatedTime(cTime + 40L);
+    TimelineEvent appCreationEvent1 = new TimelineEvent();
+    appCreationEvent1.setId(ApplicationMetricsConstants.CREATED_EVENT_TYPE);
+    appCreationEvent1.setTimestamp(cTime);
+    entityApp1.addEvent(appCreationEvent1);
+    appTe1.addEntity(entityApp1);
+
+    TimelineEntities appTe2 = new TimelineEntities();
+    TimelineEntity entityApp2 = new TimelineEntity();
+    String appName2 = "application_1231111111_1112";
+    entityApp2.setId(appName2);
+    entityApp2.setType(TimelineEntityType.YARN_APPLICATION.toString());
+    entityApp2.setCreatedTime(cTime + 50L);
+    TimelineEvent appCreationEvent2 = new TimelineEvent();
+    appCreationEvent2.setId(ApplicationMetricsConstants.CREATED_EVENT_TYPE);
+    appCreationEvent2.setTimestamp(cTime);
+    entityApp2.addEvent(appCreationEvent2);
+    appTe2.addEntity(entityApp2);
+
     HBaseTimelineWriterImpl hbi = null;
     try {
       hbi = new HBaseTimelineWriterImpl(util.getConfiguration());
@@ -368,8 +409,10 @@ final class DataGeneratorForTest {
       String flow = "some_flow_name";
       String flowVersion = "AB7822C10F1111";
       long runid = 1002345678919L;
-      String appName = "application_1231111111_1111";
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
+      hbi.write(cluster, user, flow, flowVersion, runid, appName1, te);
+      hbi.write(cluster, user, flow, flowVersion, runid, appName2, te);
+      hbi.write(cluster, user, flow, flowVersion, runid, appName1, appTe1);
+      hbi.write(cluster, user, flow, flowVersion, runid, appName2, appTe2);
       hbi.stop();
     } finally {
       if (hbi != null) {
