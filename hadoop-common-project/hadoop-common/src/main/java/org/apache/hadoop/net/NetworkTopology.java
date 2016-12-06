@@ -169,7 +169,7 @@ public class NetworkTopology {
       if (!isAncestor(n)) {
         throw new IllegalArgumentException(n.getName()
             + ", which is located at " + n.getNetworkLocation()
-            + ", is not a descendent of " + getPath(this));
+            + ", is not a descendant of " + getPath(this));
       }
       if (isParent(n)) {
         // this node is the parent of n; add n directly
@@ -231,7 +231,7 @@ public class NetworkTopology {
       if (!isAncestor(n)) {
         throw new IllegalArgumentException(n.getName()
             + ", which is located at " + n.getNetworkLocation()
-            + ", is not a descendent of " + getPath(this));
+            + ", is not a descendant of " + getPath(this));
       }
       if (isParent(n)) {
         // this node is the parent of n; remove n directly

@@ -525,7 +525,7 @@ public class LocalDirAllocator {
         try {
           advance();
         } catch (IOException ie) {
-          throw new RuntimeException("Can't check existance of " + next, ie);
+          throw new RuntimeException("Can't check existence of " + next, ie);
         }
         if (result == null) {
           throw new NoSuchElementException();
