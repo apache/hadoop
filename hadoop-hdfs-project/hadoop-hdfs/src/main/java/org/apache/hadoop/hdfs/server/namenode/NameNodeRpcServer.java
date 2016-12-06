@@ -2521,4 +2521,15 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     namesystem.logAuditEvent(true, operationName, null);
     return result;
   }
+
+  @Override
+  public boolean isStoragePolicySatisfierRunning() throws IOException {
+    checkNNStartup();
+    if (nn.isStandbyState()) {
+      throw new StandbyException("Not supported by Standby Namenode.");
+    }
+    StoragePolicySatisfier sps = namesystem.getBlockManager()
+        .getStoragePolicySatisfier();
+    return sps != null && sps.isRunning();
+  }
 }

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -70,6 +72,7 @@ public class StoragePolicySatisfier implements Runnable {
   private final BlockManager blockManager;
   private final BlockStorageMovementNeeded storageMovementNeeded;
   private final BlockStorageMovementAttemptedItems storageMovementsMonitor;
+  private volatile boolean isRunning = false;
 
   public StoragePolicySatisfier(final Namesystem namesystem,
       final BlockStorageMovementNeeded storageMovementNeeded,
@@ -99,6 +102,7 @@ public class StoragePolicySatisfier implements Runnable {
    * Stop storage policy satisfier demon thread.
    */
   public void stop() {
+    isRunning = false;
     if (storagePolicySatisfierThread == null) {
       return;
     }
@@ -110,8 +114,40 @@ public class StoragePolicySatisfier implements Runnable {
     this.storageMovementsMonitor.stop();
   }
 
+  /**
+   * Check whether StoragePolicySatisfier is running.
+   * @return true if running
+   */
+  public boolean isRunning() {
+    return isRunning;
+  }
+
+  // Return true if a Mover instance is running
+  private boolean checkIfMoverRunning() {
+    boolean ret = false;
+    try {
+      String moverId = HdfsServerConstants.MOVER_ID_PATH.toString();
+      INode inode = namesystem.getFSDirectory().getINode(
+          moverId, FSDirectory.DirOp.READ);
+      if (inode != null) {
+        ret = true;
+      }
+    } catch (IOException e) {
+      LOG.info("StoragePolicySatisfier is enabled as no Mover ID file found.");
+      ret = false;
+    }
+    return ret;
+  }
+
   @Override
   public void run() {
+    isRunning = !checkIfMoverRunning();
+    if (!isRunning) {
+      LOG.error("StoragePolicySatisfier thread stopped "
+          + "as Mover ID file " + HdfsServerConstants.MOVER_ID_PATH.toString()
+          + " exists");
+      return;
+    }
     while (namesystem.isRunning()) {
       try {
         Long blockCollectionID = storageMovementNeeded.get();
@@ -123,6 +159,7 @@ public class StoragePolicySatisfier implements Runnable {
         // we want to check block movements.
         Thread.sleep(3000);
       } catch (Throwable t) {
+        isRunning = false;
         if (!namesystem.isRunning()) {
           LOG.info("Stopping StoragePolicySatisfier.");
           if (!(t instanceof InterruptedException)) {

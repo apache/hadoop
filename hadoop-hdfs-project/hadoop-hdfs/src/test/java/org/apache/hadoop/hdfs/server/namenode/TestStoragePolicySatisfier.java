@@ -31,12 +31,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -437,6 +439,27 @@ public class TestStoragePolicySatisfier {
       // Since there is no target node the item will get timed out and then
       // re-attempted.
       waitForAttemptedItems(1, 30000);
+    } finally {
+      hdfsCluster.shutdown();
+    }
+  }
+
+  /**
+   * Tests to verify that SPS should not start when a Mover instance
+   * is running.
+   */
+  @Test(timeout = 300000)
+  public void testWhenMoverIsAlreadyRunningBeforeStoragePolicySatisfier()
+      throws IOException {
+    try {
+      // Simulate Mover by creating MOVER_ID file
+      DFSTestUtil.createFile(hdfsCluster.getFileSystem(),
+          HdfsServerConstants.MOVER_ID_PATH, 0, (short) 1, 0);
+      hdfsCluster.restartNameNode(true);
+      boolean running = hdfsCluster.getFileSystem()
+          .getClient().isStoragePolicySatisfierRunning();
+      Assert.assertFalse("SPS should not start "
+          + "when a Mover instance is running", running);
     } finally {
       hdfsCluster.shutdown();
     }

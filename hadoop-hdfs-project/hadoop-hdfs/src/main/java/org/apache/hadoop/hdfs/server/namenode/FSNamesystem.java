@@ -3897,8 +3897,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
       // TODO: Handle blocks movement results send by the coordinator datanode.
       // This has to be revisited as part of HDFS-11029.
-      blockManager.getStoragePolicySatisfier()
-          .handleBlocksStorageMovementResults(blksMovementResults);
+      if (blockManager.getStoragePolicySatisfier() != null) {
+        blockManager.getStoragePolicySatisfier()
+            .handleBlocksStorageMovementResults(blksMovementResults);
+      }
 
       //create ha status
       final NNHAStatusHeartbeat haState = new NNHAStatusHeartbeat(

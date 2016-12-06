@@ -4496,6 +4496,15 @@
 </property>
 
 <property>
+  <name>dfs.storage.policy.satisfier.activate</name>
+  <value>true</value>
+  <description>
+    If true, activate StoragePolicySatisfier.
+    By default, StoragePolicySatisfier is activated.
+  </description>
+</property>
+
+<property>
   <name>dfs.pipeline.ecn</name>
   <value>false</value>
   <description>
