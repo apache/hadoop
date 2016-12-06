@@ -278,7 +278,7 @@ public class DataNode extends ReconfigurableBase
         ", offset: %s" + // offset
         ", srvID: %s" +  // DatanodeRegistration
         ", blockid: %s" + // block id
-        ", duration: %s";  // duration time
+        ", duration(ns): %s";  // duration time
         
   static final Log ClientTraceLog =
     LogFactory.getLog(DataNode.class.getName() + ".clienttrace");
