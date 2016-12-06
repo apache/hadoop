@@ -148,6 +148,7 @@ public final class HdfsConstants {
   public static final byte RS_3_2_POLICY_ID = 1;
   public static final byte RS_6_3_LEGACY_POLICY_ID = 2;
   public static final byte XOR_2_1_POLICY_ID = 3;
+  public static final byte RS_10_4_POLICY_ID = 4;
 
   /* Hidden constructor */
   protected HdfsConstants() {
