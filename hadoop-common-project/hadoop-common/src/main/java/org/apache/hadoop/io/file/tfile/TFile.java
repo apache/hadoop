@@ -1789,7 +1789,7 @@ public class TFile {
         public int getKey(byte[] buf, int offset) throws IOException {
           if ((offset | (buf.length - offset - klen)) < 0) {
             throw new IndexOutOfBoundsException(
-                "Bufer not enough to store the key");
+                "Buffer not enough to store the key");
           }
           System.arraycopy(keyBuffer, 0, buf, offset, klen);
           return klen;
