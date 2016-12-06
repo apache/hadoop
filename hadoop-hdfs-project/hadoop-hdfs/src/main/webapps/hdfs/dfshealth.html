@@ -352,6 +352,7 @@
 
 <div class="page-header"><h1><small>Decommissioning</small></h1></div>
 <small>
+{?DecomNodes}
 <table class="table">
   <thead>
     <tr>
@@ -370,6 +371,9 @@
   </tr>
   {/DecomNodes}
 </table>
+{:else}
+No nodes are decommissioning
+{/DecomNodes}
 </small>
 </script>
 
