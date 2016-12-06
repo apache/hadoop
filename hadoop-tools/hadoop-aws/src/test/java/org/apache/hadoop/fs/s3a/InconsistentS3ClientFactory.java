@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,31 +18,18 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import java.io.IOException;
-import java.net.URI;
-
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
 /**
- * Factory for creation of S3 client instances to be used by {@link S3Store}.
+ * S3 Client factory used for testing with eventual consistency fault injection.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-interface S3ClientFactory {
+public class InconsistentS3ClientFactory extends DefaultS3ClientFactory {
 
-  /**
-   * Creates a new {@link AmazonS3} client.  This method accepts the S3A file
-   * system URI both in raw input form and validated form as separate arguments,
-   * because both values may be useful in logging.
-   *
-   * @param name raw input S3A file system URI
-   * @param uri validated form of S3A file system URI
-   * @return S3 client
-   * @throws IOException IO problem
-   */
-  AmazonS3 createS3Client(URI name, URI uri) throws IOException;
-
+  @Override
+  protected AmazonS3 newAmazonS3Client(AWSCredentialsProvider credentials,
+      ClientConfiguration awsConf) {
+    return new InconsistentAmazonS3Client(credentials, awsConf);
+  }
 }
