@@ -94,7 +94,7 @@ public class TasksBlock extends HtmlBlock {
 
       TaskInfo info = new TaskInfo(task);
       String tid = info.getId();
-      String pct = StringUtils.formatPercent(info.getProgress() / 100, 2);
+      String pct = StringUtils.format("%.2f", info.getProgress());
       tasksTableData.append("[\"<a href='").append(url("task", tid))
       .append("'>").append(tid).append("</a>\",\"")
       //Progress bar
