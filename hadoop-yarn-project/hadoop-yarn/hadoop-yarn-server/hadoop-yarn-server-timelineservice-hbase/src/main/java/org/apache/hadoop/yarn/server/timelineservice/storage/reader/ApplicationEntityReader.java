@@ -48,7 +48,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.application.Applica
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
-import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.RowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
@@ -343,20 +342,9 @@ class ApplicationEntityReader extends GenericEntityReader {
   @Override
   protected void augmentParams(Configuration hbaseConf, Connection conn)
       throws IOException {
-    TimelineReaderContext context = getContext();
     if (isSingleEntityRead()) {
       // Get flow context information from AppToFlow table.
-      if (context.getFlowName() == null || context.getFlowRunId() == null
-          || context.getUserId() == null) {
-        AppToFlowRowKey appToFlowRowKey =
-            new AppToFlowRowKey(context.getClusterId(), context.getAppId());
-        FlowContext flowContext =
-            lookupFlowContext(appToFlowRowKey,
-                hbaseConf, conn);
-        context.setFlowName(flowContext.getFlowName());
-        context.setFlowRunId(flowContext.getFlowRunId());
-        context.setUserId(flowContext.getUserId());
-      }
+      defaultAugmentParams(hbaseConf, conn);
     }
     // Add configs/metrics to fields to retrieve if confsToRetrieve and/or
     // metricsToRetrieve are specified.

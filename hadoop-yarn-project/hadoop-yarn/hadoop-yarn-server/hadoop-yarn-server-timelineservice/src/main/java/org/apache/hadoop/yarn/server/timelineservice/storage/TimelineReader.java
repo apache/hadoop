@@ -177,4 +177,17 @@ public interface TimelineReader extends Service {
       TimelineReaderContext context,
       TimelineEntityFilters filters,
       TimelineDataToRetrieve dataToRetrieve) throws IOException;
+
+  /**
+   * The API to list all available entity types of the given context.
+   *
+   * @param context A context defines the scope of this query. The incoming
+   * context should contain at least the cluster id and application id.
+   *
+   * @return A set of entity types available in the given context.
+   *
+   * @throws IOException if an exception occurred while listing from backend
+   * storage.
+   */
+  Set<String> getEntityTypes(TimelineReaderContext context) throws IOException;
 }
