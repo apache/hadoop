@@ -258,7 +258,7 @@ public class ZKSignerSecretProvider extends RolloverSignerSecretProvider {
     } catch (KeeperException.BadVersionException bve) {
       LOG.debug("Unable to push to znode; another server already did it");
     } catch (Exception ex) {
-      LOG.error("An unexpected exception occured pushing data to ZooKeeper",
+      LOG.error("An unexpected exception occurred pushing data to ZooKeeper",
               ex);
     }
   }

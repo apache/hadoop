@@ -593,7 +593,7 @@ public class KDiag extends Configured implements Tool, Closeable {
 
     Keytab loadKeytab = Keytab.loadKeytab(kt);
     List<PrincipalName> principals = loadKeytab.getPrincipals();
-    println("keytab princial count: %d", principals.size());
+    println("keytab principal count: %d", principals.size());
     int entrySize = 0;
     for (PrincipalName princ : principals) {
       List<KeytabEntry> entries = loadKeytab.getKeytabEntries(princ);
