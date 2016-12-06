@@ -41,4 +41,7 @@ public final class ErasureCodeConstants {
 
   public static final ECSchema XOR_2_1_SCHEMA = new ECSchema(
       XOR_CODEC_NAME, 2, 1);
+
+  public static final ECSchema RS_10_4_SCHEMA = new ECSchema(
+      RS_DEFAULT_CODEC_NAME, 10, 4);
 }
