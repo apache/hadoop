@@ -146,7 +146,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       List response = call(conn, null,
           HttpURLConnection.HTTP_OK, List.class);
       List<EncryptedKeyVersion> ekvs =
-          parseJSONEncKeyVersion(keyName, response);
+          parseJSONEncKeyVersions(keyName, response);
       keyQueue.addAll(ekvs);
     }
   }
@@ -221,37 +221,41 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
 
   @SuppressWarnings("rawtypes")
   private static List<EncryptedKeyVersion>
-      parseJSONEncKeyVersion(String keyName, List valueList) {
+      parseJSONEncKeyVersions(String keyName, List valueList) {
     List<EncryptedKeyVersion> ekvs = new LinkedList<EncryptedKeyVersion>();
     if (!valueList.isEmpty()) {
       for (Object values : valueList) {
         Map valueMap = (Map) values;
-
-        String versionName = checkNotNull(
-                (String) valueMap.get(KMSRESTConstants.VERSION_NAME_FIELD),
-                KMSRESTConstants.VERSION_NAME_FIELD);
-
-        byte[] iv = Base64.decodeBase64(checkNotNull(
-                (String) valueMap.get(KMSRESTConstants.IV_FIELD),
-                KMSRESTConstants.IV_FIELD));
-
-        Map encValueMap = checkNotNull((Map)
-                valueMap.get(KMSRESTConstants.ENCRYPTED_KEY_VERSION_FIELD),
-                KMSRESTConstants.ENCRYPTED_KEY_VERSION_FIELD);
-
-        String encVersionName = checkNotNull((String)
-                encValueMap.get(KMSRESTConstants.VERSION_NAME_FIELD),
-                KMSRESTConstants.VERSION_NAME_FIELD);
-
-        byte[] encKeyMaterial = Base64.decodeBase64(checkNotNull((String)
-                encValueMap.get(KMSRESTConstants.MATERIAL_FIELD),
-                KMSRESTConstants.MATERIAL_FIELD));
-
-        ekvs.add(new KMSEncryptedKeyVersion(keyName, versionName, iv,
-            encVersionName, encKeyMaterial));
+        ekvs.add(parseJSONEncKeyVersion(keyName, valueMap));
       }
     }
     return ekvs;
+  }
+
+  private static EncryptedKeyVersion parseJSONEncKeyVersion(String keyName,
+      Map valueMap) {
+    String versionName = checkNotNull(
+        (String) valueMap.get(KMSRESTConstants.VERSION_NAME_FIELD),
+        KMSRESTConstants.VERSION_NAME_FIELD);
+
+    byte[] iv = Base64.decodeBase64(checkNotNull(
+        (String) valueMap.get(KMSRESTConstants.IV_FIELD),
+        KMSRESTConstants.IV_FIELD));
+
+    Map encValueMap = checkNotNull((Map)
+            valueMap.get(KMSRESTConstants.ENCRYPTED_KEY_VERSION_FIELD),
+        KMSRESTConstants.ENCRYPTED_KEY_VERSION_FIELD);
+
+    String encVersionName = checkNotNull((String)
+            encValueMap.get(KMSRESTConstants.VERSION_NAME_FIELD),
+        KMSRESTConstants.VERSION_NAME_FIELD);
+
+    byte[] encKeyMaterial = Base64.decodeBase64(checkNotNull((String)
+            encValueMap.get(KMSRESTConstants.MATERIAL_FIELD),
+        KMSRESTConstants.MATERIAL_FIELD));
+
+    return new KMSEncryptedKeyVersion(keyName, versionName, iv,
+        encVersionName, encKeyMaterial);
   }
 
   private static KeyVersion parseJSONKeyVersion(Map valueMap) {
@@ -835,6 +839,35 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     Map response =
         call(conn, jsonPayload, HttpURLConnection.HTTP_OK, Map.class);
     return parseJSONKeyVersion(response);
+  }
+
+  @Override
+  public EncryptedKeyVersion reencryptEncryptedKey(EncryptedKeyVersion ekv)
+      throws IOException, GeneralSecurityException {
+    checkNotNull(ekv.getEncryptionKeyVersionName(), "versionName");
+    checkNotNull(ekv.getEncryptedKeyIv(), "iv");
+    checkNotNull(ekv.getEncryptedKeyVersion(), "encryptedKey");
+    Preconditions.checkArgument(ekv.getEncryptedKeyVersion().getVersionName()
+            .equals(KeyProviderCryptoExtension.EEK),
+        "encryptedKey version name must be '%s', is '%s'",
+        KeyProviderCryptoExtension.EEK,
+        ekv.getEncryptedKeyVersion().getVersionName());
+    final Map<String, String> params = new HashMap<>();
+    params.put(KMSRESTConstants.EEK_OP, KMSRESTConstants.EEK_REENCRYPT);
+    final Map<String, Object> jsonPayload = new HashMap<>();
+    jsonPayload.put(KMSRESTConstants.NAME_FIELD, ekv.getEncryptionKeyName());
+    jsonPayload.put(KMSRESTConstants.IV_FIELD,
+        Base64.encodeBase64String(ekv.getEncryptedKeyIv()));
+    jsonPayload.put(KMSRESTConstants.MATERIAL_FIELD,
+        Base64.encodeBase64String(ekv.getEncryptedKeyVersion().getMaterial()));
+    final URL url = createURL(KMSRESTConstants.KEY_VERSION_RESOURCE,
+        ekv.getEncryptionKeyVersionName(), KMSRESTConstants.EEK_SUB_RESOURCE,
+        params);
+    final HttpURLConnection conn = createConnection(url, HTTP_POST);
+    conn.setRequestProperty(CONTENT_TYPE, APPLICATION_JSON_MIME);
+    final Map response =
+        call(conn, jsonPayload, HttpURLConnection.HTTP_OK, Map.class);
+    return parseJSONEncKeyVersion(ekv.getEncryptionKeyName(), response);
   }
 
   @Override
