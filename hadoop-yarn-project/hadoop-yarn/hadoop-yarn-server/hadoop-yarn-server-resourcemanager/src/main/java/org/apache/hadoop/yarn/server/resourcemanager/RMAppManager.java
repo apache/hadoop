@@ -490,17 +490,26 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     ApplicationId applicationId = event.getApplicationId();
     LOG.debug("RMAppManager processing event for " 
         + applicationId + " of type " + event.getType());
-    switch(event.getType()) {
-      case APP_COMPLETED: 
-      {
-        finishApplication(applicationId);
-        logApplicationSummary(applicationId);
-        checkAppNumCompletedLimit(); 
-      } 
+    switch (event.getType()) {
+    case APP_COMPLETED :
+      finishApplication(applicationId);
+      logApplicationSummary(applicationId);
+      checkAppNumCompletedLimit();
       break;
-      default:
-        LOG.error("Invalid eventtype " + event.getType() + ". Ignoring!");
+    case APP_MOVE :
+      // moveAllApps from scheduler will fire this event for each of
+      // those applications which needed to be moved to a new queue.
+      // Use the standard move application api to do the same.
+      try {
+        moveApplicationAcrossQueue(applicationId,
+            event.getTargetQueueForMove());
+      } catch (YarnException e) {
+        LOG.warn("Move Application has failed: " + e.getMessage());
       }
+      break;
+    default :
+      LOG.error("Invalid eventtype " + event.getType() + ". Ignoring!");
+    }
   }
 
   // transaction method.
@@ -578,5 +587,88 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // Update the changed application state to timeline server
     rmContext.getSystemMetricsPublisher().appUpdated(app,
         System.currentTimeMillis());
+  }
+
+  /**
+   * moveToQueue will invoke scheduler api to perform move queue operation.
+   *
+   * @param applicationId
+   *          Application Id.
+   * @param targetQueue
+   *          Target queue to which this app has to be moved.
+   * @throws YarnException
+   *           Handle exceptions.
+   */
+  public void moveApplicationAcrossQueue(ApplicationId applicationId, String targetQueue)
+      throws YarnException {
+    RMApp app = this.rmContext.getRMApps().get(applicationId);
+
+    // Capacity scheduler will directly follow below approach.
+    // 1. Do a pre-validate check to ensure that changes are fine.
+    // 2. Update this information to state-store
+    // 3. Perform real move operation and update in-memory data structures.
+    synchronized (applicationId) {
+      if (app.isAppInCompletedStates()) {
+        return;
+      }
+
+      String sourceQueue = app.getQueue();
+      // 1. pre-validate move application request to check for any access
+      // violations or other errors. If there are any violations, YarnException
+      // will be thrown.
+      rmContext.getScheduler().preValidateMoveApplication(applicationId,
+          targetQueue);
+
+      // 2. Update to state store with new queue and throw exception is failed.
+      updateAppDataToStateStore(targetQueue, app, false);
+
+      // 3. Perform the real move application
+      String queue = "";
+      try {
+        queue = rmContext.getScheduler().moveApplication(applicationId,
+            targetQueue);
+      } catch (YarnException e) {
+        // Revert to source queue since in-memory move has failed. Chances
+        // of this is very rare as we have already done the pre-validation.
+        updateAppDataToStateStore(sourceQueue, app, true);
+        throw e;
+      }
+
+      // update in-memory
+      if (queue != null && !queue.isEmpty()) {
+        app.setQueue(queue);
+      }
+    }
+
+    rmContext.getSystemMetricsPublisher().appUpdated(app,
+        System.currentTimeMillis());
+  }
+
+  private void updateAppDataToStateStore(String queue, RMApp app,
+      boolean toSuppressException) throws YarnException {
+    // Create a future object to capture exceptions from StateStore.
+    SettableFuture<Object> future = SettableFuture.create();
+
+    // Update new queue in Submission Context to update to StateStore.
+    app.getApplicationSubmissionContext().setQueue(queue);
+
+    ApplicationStateData appState = ApplicationStateData.newInstance(
+        app.getSubmitTime(), app.getStartTime(),
+        app.getApplicationSubmissionContext(), app.getUser(),
+        app.getCallerContext());
+    appState.setApplicationTimeouts(app.getApplicationTimeouts());
+    rmContext.getStateStore().updateApplicationStateSynchronously(appState,
+        false, future);
+
+    try {
+      Futures.get(future, YarnException.class);
+    } catch (YarnException ex) {
+      if (!toSuppressException) {
+        throw ex;
+      }
+      LOG.error("Statestore update failed for move application '"
+          + app.getApplicationId() + "' to queue '" + queue
+          + "' with below exception:" + ex.getMessage());
+    }
   }
 }
