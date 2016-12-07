@@ -451,7 +451,7 @@ public class TimelineClientImpl extends TimelineClient {
       String errMessage = "TimelineClient has reached to max retry times : "
           + this.maxServiceRetries
           + ", but failed to fetch timeline service address. Please verify"
-          + " Timeline Auxillary Service is configured in all the NMs";
+          + " Timeline Auxiliary Service is configured in all the NMs";
       LOG.error(errMessage);
       throw new YarnException(errMessage);
     }
