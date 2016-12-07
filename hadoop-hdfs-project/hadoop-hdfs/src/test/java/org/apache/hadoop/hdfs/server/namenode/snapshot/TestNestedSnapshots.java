@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshott
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.Random;
 import java.util.regex.Pattern;
 
@@ -30,7 +31,6 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -61,11 +61,11 @@ public class TestNestedSnapshots {
 
   private static final short REPLICATION = 3;
   private static final long BLOCKSIZE = 1024;
-  
+
   private static final Configuration conf = new Configuration();
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem hdfs;
-  
+
   @Before
   public void setUp() throws Exception {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
@@ -81,12 +81,12 @@ public class TestNestedSnapshots {
       cluster = null;
     }
   }
-  
+
   /**
    * Create a snapshot for /test/foo and create another snapshot for
    * /test/foo/bar.  Files created before the snapshots should appear in both
    * snapshots and the files created after the snapshots should not appear in
-   * any of the snapshots.  
+   * any of the snapshots.
    */
   @Test (timeout=300000)
   public void testNestedSnapshots() throws Exception {
@@ -99,14 +99,14 @@ public class TestNestedSnapshots {
     print("create file " + file1);
 
     final String s1name = "foo-s1";
-    final Path s1path = SnapshotTestHelper.getSnapshotRoot(foo, s1name); 
+    final Path s1path = SnapshotTestHelper.getSnapshotRoot(foo, s1name);
     hdfs.allowSnapshot(foo);
     print("allow snapshot " + foo);
     hdfs.createSnapshot(foo, s1name);
     print("create snapshot " + s1name);
 
     final String s2name = "bar-s2";
-    final Path s2path = SnapshotTestHelper.getSnapshotRoot(bar, s2name); 
+    final Path s2path = SnapshotTestHelper.getSnapshotRoot(bar, s2name);
     hdfs.allowSnapshot(bar);
     print("allow snapshot " + bar);
     hdfs.createSnapshot(bar, s2name);
@@ -115,7 +115,7 @@ public class TestNestedSnapshots {
     final Path file2 = new Path(bar, "file2");
     DFSTestUtil.createFile(hdfs, file2, BLOCKSIZE, REPLICATION, SEED);
     print("create file " + file2);
-    
+
     assertFile(s1path, s2path, file1, true, true, true);
     assertFile(s1path, s2path, file2, true, false, false);
 
@@ -130,11 +130,11 @@ public class TestNestedSnapshots {
     print("delete snapshot " + rootSnapshot);
     hdfs.disallowSnapshot(rootPath);
     print("disallow snapshot " + rootStr);
-    
+
     //change foo to non-snapshottable
     hdfs.deleteSnapshot(foo, s1name);
     hdfs.disallowSnapshot(foo);
-    
+
     //test disallow nested snapshots
     cluster.getNamesystem().getSnapshotManager().setAllowNestedSnapshots(false);
     try {
@@ -170,7 +170,7 @@ public class TestNestedSnapshots {
           se, "ancestor");
     }
   }
-  
+
   static void assertNestedSnapshotException(SnapshotException se, String substring) {
     Assert.assertTrue(se.getMessage().startsWith(
         "Nested snapshottable directories not allowed"));
@@ -212,7 +212,7 @@ public class TestNestedSnapshots {
       final String snapshotName = "s" + s;
       hdfs.createSnapshot(dir, snapshotName);
 
-      //create a file occasionally 
+      //create a file occasionally
       if (s % step == 0) {
         final Path file = new Path(dirStr, "f" + s);
         DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, REPLICATION, SEED);
@@ -257,7 +257,7 @@ public class TestNestedSnapshots {
       final Path snapshotPath = hdfs.createSnapshot(dir);
 
       //check snapshot path and the default snapshot name
-      final String snapshotName = snapshotPath.getName(); 
+      final String snapshotName = snapshotPath.getName();
       Assert.assertTrue("snapshotName=" + snapshotName, Pattern.matches(
           "s\\d\\d\\d\\d\\d\\d\\d\\d-\\d\\d\\d\\d\\d\\d\\.\\d\\d\\d",
           snapshotName));
@@ -275,7 +275,7 @@ public class TestNestedSnapshots {
     final PermissionStatus perm = PermissionStatus.createImmutable(
         "user", "group", FsPermission.createImmutable((short)0));
     final INodeDirectory snapshottable = new INodeDirectory(0,
-        DFSUtil.string2Bytes("foo"), perm, 0L);
+        "foo".getBytes(UTF_8), perm, 0L);
     snapshottable.addSnapshottableFeature();
     final Snapshot[] snapshots = {
       new Snapshot(1, "s1", snapshottable),
@@ -288,7 +288,7 @@ public class TestNestedSnapshots {
     for(Snapshot s : snapshots) {
       Assert.assertTrue(Snapshot.ID_COMPARATOR.compare(null, s) > 0);
       Assert.assertTrue(Snapshot.ID_COMPARATOR.compare(s, null) < 0);
-      
+
       for(Snapshot t : snapshots) {
         final int expected = s.getRoot().getLocalName().compareTo(
             t.getRoot().getLocalName());
@@ -299,7 +299,7 @@ public class TestNestedSnapshots {
       }
     }
   }
-  
+
   /**
    * When we have nested snapshottable directories and if we try to reset the
    * snapshottable descendant back to an regular directory, we need to replace
@@ -312,19 +312,19 @@ public class TestNestedSnapshots {
     final Path dir = new Path("/dir");
     final Path sub = new Path(dir, "sub");
     hdfs.mkdirs(sub);
-    
+
     SnapshotTestHelper.createSnapshot(hdfs, dir, "s1");
     final Path file = new Path(sub, "file");
     DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, REPLICATION, SEED);
-    
+
     FSDirectory fsdir = cluster.getNamesystem().getFSDirectory();
     INode subNode = fsdir.getINode(sub.toString());
     assertTrue(subNode.asDirectory().isWithSnapshot());
-    
+
     hdfs.allowSnapshot(sub);
     subNode = fsdir.getINode(sub.toString());
     assertTrue(subNode.isDirectory() && subNode.asDirectory().isSnapshottable());
-    
+
     hdfs.disallowSnapshot(sub);
     subNode = fsdir.getINode(sub.toString());
     assertTrue(subNode.asDirectory().isWithSnapshot());

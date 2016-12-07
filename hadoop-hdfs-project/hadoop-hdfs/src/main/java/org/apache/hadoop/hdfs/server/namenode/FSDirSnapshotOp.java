@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.ChunkedArrayList;
 
 import java.io.IOException;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -47,7 +48,7 @@ class FSDirSnapshotOp {
       throw new HadoopIllegalArgumentException(
           "Snapshot name cannot contain \"" + Path.SEPARATOR + "\"");
     }
-    final byte[] bytes = DFSUtil.string2Bytes(snapshotName);
+    final byte[] bytes = snapshotName.getBytes(UTF_8);
     fsd.verifyINodeName(bytes);
     fsd.verifyMaxComponentLength(bytes, path);
   }

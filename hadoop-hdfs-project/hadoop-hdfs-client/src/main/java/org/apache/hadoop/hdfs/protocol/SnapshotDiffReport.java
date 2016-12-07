@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -121,7 +122,7 @@ public class SnapshotDiffReport {
     }
 
     static String getPathString(byte[] path) {
-      String pathStr = DFSUtilClient.bytes2String(path);
+      String pathStr = new String(path, UTF_8);
       if (pathStr.isEmpty()) {
         return Path.CUR_DIR;
       } else {

@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -120,7 +121,7 @@ public abstract class INodeAttributeProvider {
       INodeAttributes inode) {
     String[] elements = new String[components.length];
     for (int i = 0; i < elements.length; i++) {
-      elements[i] = DFSUtil.bytes2String(components[i]);
+      elements[i] = new String(components[i], UTF_8);
     }
     return getAttributes(elements, inode);
   }

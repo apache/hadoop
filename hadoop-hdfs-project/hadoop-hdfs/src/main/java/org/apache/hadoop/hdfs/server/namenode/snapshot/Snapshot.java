@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -27,7 +28,6 @@ import java.util.Date;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
 import org.apache.hadoop.hdfs.server.namenode.ContentSummaryComputationContext;
@@ -50,13 +50,13 @@ public class Snapshot implements Comparable<byte[]> {
    */
   public static final int CURRENT_STATE_ID = Integer.MAX_VALUE - 1;
   public static final int NO_SNAPSHOT_ID = -1;
-  
+
   /**
    * The pattern for generating the default snapshot name.
    * E.g. s20130412-151029.033
    */
   private static final String DEFAULT_SNAPSHOT_NAME_PATTERN = "'s'yyyyMMdd-HHmmss.SSS";
-  
+
   public static String generateDefaultSnapshotName() {
     return new SimpleDateFormat(DEFAULT_SNAPSHOT_NAME_PATTERN).format(new Date());
   }
@@ -72,7 +72,7 @@ public class Snapshot implements Comparable<byte[]> {
         .append(snapshotRelativePath)
         .toString();
   }
-  
+
   /**
    * Get the name of the given snapshot.
    * @param s The given snapshot.
@@ -81,7 +81,7 @@ public class Snapshot implements Comparable<byte[]> {
   static String getSnapshotName(Snapshot s) {
     return s != null ? s.getRoot().getLocalName() : "";
   }
-  
+
   public static int getSnapshotId(Snapshot s) {
     return s == null ? CURRENT_STATE_ID : s.getId();
   }
@@ -107,7 +107,7 @@ public class Snapshot implements Comparable<byte[]> {
       = new Comparator<Integer>() {
     @Override
     public int compare(Integer left, Integer right) {
-      // Snapshot.CURRENT_STATE_ID means the current state, thus should be the 
+      // Snapshot.CURRENT_STATE_ID means the current state, thus should be the
       // largest
       return left - right;
     }
@@ -116,12 +116,12 @@ public class Snapshot implements Comparable<byte[]> {
   /**
    * Find the latest snapshot that 1) covers the given inode (which means the
    * snapshot was either taken on the inode or taken on an ancestor of the
-   * inode), and 2) was taken before the given snapshot (if the given snapshot 
+   * inode), and 2) was taken before the given snapshot (if the given snapshot
    * is not null).
-   * 
+   *
    * @param inode the given inode that the returned snapshot needs to cover
    * @param anchor the returned snapshot should be taken before this given id.
-   * @return id of the latest snapshot that covers the given inode and was taken 
+   * @return id of the latest snapshot that covers the given inode and was taken
    *         before the the given snapshot (if it is not null).
    */
   public static int findLatestSnapshot(INode inode, final int anchor) {
@@ -136,7 +136,7 @@ public class Snapshot implements Comparable<byte[]> {
     }
     return latest;
   }
-  
+
   static Snapshot read(DataInput in, FSImageFormat.Loader loader)
       throws IOException {
     final int snapshotId = in.readInt();
@@ -153,13 +153,13 @@ public class Snapshot implements Comparable<byte[]> {
 
           @Override
           public boolean apply(Feature input) {
-            if (AclFeature.class.isInstance(input) 
+            if (AclFeature.class.isInstance(input)
                 || XAttrFeature.class.isInstance(input)) {
               return true;
             }
             return false;
           }
-          
+
         }))
         .toArray(new Feature[0]));
     }
@@ -202,7 +202,7 @@ public class Snapshot implements Comparable<byte[]> {
 
   Snapshot(int id, String name, INodeDirectory dir) {
     this(id, dir, dir);
-    this.root.setLocalName(DFSUtil.string2Bytes(name));
+    this.root.setLocalName(name.getBytes(UTF_8));
   }
 
   Snapshot(int id, INodeDirectory dir, INodeDirectory parent) {
@@ -210,7 +210,7 @@ public class Snapshot implements Comparable<byte[]> {
     this.root = new Root(dir);
     this.root.setParent(parent);
   }
-  
+
   public int getId() {
     return id;
   }
@@ -224,7 +224,7 @@ public class Snapshot implements Comparable<byte[]> {
   public int compareTo(byte[] bytes) {
     return root.compareTo(bytes);
   }
-  
+
   @Override
   public boolean equals(Object that) {
     if (this == that) {
@@ -234,12 +234,12 @@ public class Snapshot implements Comparable<byte[]> {
     }
     return this.id == ((Snapshot)that).id;
   }
-  
+
   @Override
   public int hashCode() {
     return id;
   }
-  
+
   @Override
   public String toString() {
     return getClass().getSimpleName() + "." + root.getLocalName() + "(id=" + id + ")";

@@ -18,13 +18,14 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertEquals;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.Arrays;
 
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.junit.Test;
 
 /**
- * 
+ *
  */
 public class TestPathComponents {
 
@@ -96,7 +97,7 @@ public class TestPathComponents {
     String[] actual = new String[components.length];
     for (int i=0; i < components.length; i++) {
       if (components[i] != null) {
-        actual[i] = DFSUtil.bytes2String(components[i]);
+        actual[i] = new String(components[i], UTF_8);
       }
     }
     assertEquals(Arrays.asList(expected), Arrays.asList(actual));

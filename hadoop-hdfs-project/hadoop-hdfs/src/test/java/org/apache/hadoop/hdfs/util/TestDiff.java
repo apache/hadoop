@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hdfs.util;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.util.Diff;
@@ -85,8 +85,8 @@ public class TestDiff {
 
     // make modifications to current and record the diff
     final List<INode> current = new ArrayList<INode>(previous);
-    
-    final List<Diff<byte[], INode>> diffs = 
+
+    final List<Diff<byte[], INode>> diffs =
         new ArrayList<Diff<byte[], INode>>();
     for(int j = 0; j < 5; j++) {
       diffs.add(new Diff<byte[], INode>());
@@ -199,7 +199,7 @@ public class TestDiff {
           final Container<INode> r = combined.accessCurrent(inode.getKey());
           final INode computed;
           if (r != null) {
-            computed = r.getElement(); 
+            computed = r.getElement();
           } else {
             final int i = Diff.search(previous, inode.getKey());
             computed = i < 0? null: previous.get(i);
@@ -243,7 +243,7 @@ public class TestDiff {
   }
 
   static INode newINode(int n, int width) {
-    byte[] name = DFSUtil.string2Bytes(String.format("n%0" + width + "d", n));
+    byte[] name = String.format("n%0" + width + "d", n).getBytes(UTF_8);
     return new INodeDirectory(n, name, PERM, 0L);
   }
 
@@ -331,7 +331,7 @@ public class TestDiff {
       }
     }
   }
-  
+
   static void assertDiff(String s, Diff<byte[], INode> diff) {
     Assert.assertEquals(s, diff.toString());
   }

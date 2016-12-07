@@ -22,7 +22,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -30,6 +29,7 @@ import org.apache.hadoop.tools.CopyListing.InvalidInputException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
@@ -215,13 +215,13 @@ class DistCpSync {
             dt == SnapshotDiffReport.DiffType.CREATE ||
             dt == SnapshotDiffReport.DiffType.DELETE) {
           final Path source =
-              new Path(DFSUtilClient.bytes2String(entry.getSourcePath()));
+              new Path(new String(entry.getSourcePath(), UTF_8));
           list.add(new DiffInfo(source, null, dt));
         } else if (dt == SnapshotDiffReport.DiffType.RENAME) {
           final Path source =
-              new Path(DFSUtilClient.bytes2String(entry.getSourcePath()));
+              new Path(new String(entry.getSourcePath(), UTF_8));
           final Path target =
-              new Path(DFSUtilClient.bytes2String(entry.getTargetPath()));
+              new Path(new String(entry.getTargetPath(), UTF_8));
           list.add(new DiffInfo(source, target, dt));
         }
       }

@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -84,13 +85,13 @@ public class INodesInPath {
    * Example: <br>
    * Given the path /c1/c2/c3 where only /c1/c2 exists, resulting in the
    * following path components: ["","c1","c2","c3"]
-   * 
+   *
    * <p>
    * <code>getExistingPathINodes(["","c1","c2"])</code> should fill
    * the array with [rootINode,c1,c2], <br>
    * <code>getExistingPathINodes(["","c1","c2","c3"])</code> should
    * fill the array with [rootINode,c1,c2,null]
-   * 
+   *
    * @param startingDir the starting directory
    * @param components array of path component name
    * @return the specified number of existing INodes in the path
@@ -127,13 +128,13 @@ public class INodesInPath {
       } else if (isRef && isDir && !lastComp) {
         // If the curNode is a reference node, need to check its dstSnapshot:
         // 1. if the existing snapshot is no later than the dstSnapshot (which
-        // is the latest snapshot in dst before the rename), the changes 
+        // is the latest snapshot in dst before the rename), the changes
         // should be recorded in previous snapshots (belonging to src).
-        // 2. however, if the ref node is already the last component, we still 
-        // need to know the latest snapshot among the ref node's ancestors, 
+        // 2. however, if the ref node is already the last component, we still
+        // need to know the latest snapshot among the ref node's ancestors,
         // in case of processing a deletion operation. Thus we do not overwrite
         // the latest snapshot if lastComp is true. In case of the operation is
-        // a modification operation, we do a similar check in corresponding 
+        // a modification operation, we do a similar check in corresponding
         // recordModification method.
         if (!isSnapshot) {
           int dstSnapshotId = curNode.asReference().getDstSnapshotId();
@@ -142,7 +143,7 @@ public class INodesInPath {
                dstSnapshotId >= snapshotId)) { // the above scenario
             int lastSnapshot = CURRENT_STATE_ID;
             DirectoryWithSnapshotFeature sf;
-            if (curNode.isDirectory() && 
+            if (curNode.isDirectory() &&
                 (sf = curNode.asDirectory().getDirectoryWithSnapshotFeature()) != null) {
               lastSnapshot = sf.getLastSnapshotId();
             }
@@ -175,8 +176,9 @@ public class INodesInPath {
         // preserved so a path can be reconstructed.
         byte[][] componentsCopy =
             Arrays.copyOf(components, components.length - 1);
-        componentsCopy[count] = DFSUtil.string2Bytes(
-            DFSUtil.byteArray2PathString(components, count, 2));
+        componentsCopy[count] = DFSUtil.byteArray2PathString(
+          components, count, 2).getBytes(UTF_8);
+
         // shift the remaining components after snapshot name
         int start = count + 2;
         System.arraycopy(components, start, componentsCopy, count + 1,
@@ -256,8 +258,8 @@ public class INodesInPath {
   private final boolean isRaw;
 
   /**
-   * For snapshot paths, it is the id of the snapshot; or 
-   * {@link Snapshot#CURRENT_STATE_ID} if the snapshot does not exist. For 
+   * For snapshot paths, it is the id of the snapshot; or
+   * {@link Snapshot#CURRENT_STATE_ID} if the snapshot does not exist. For
    * non-snapshot paths, it is the id of the latest snapshot found in the path;
    * or {@link Snapshot#CURRENT_STATE_ID} if no snapshot is found.
    */
@@ -285,7 +287,7 @@ public class INodesInPath {
     Preconditions.checkState(!isSnapshot);
     return snapshotId;
   }
-  
+
   /**
    * For snapshot paths, return the id of the snapshot specified in the path.
    * For non-snapshot paths, return {@link Snapshot#CURRENT_STATE_ID}.
@@ -309,7 +311,7 @@ public class INodesInPath {
       throw new NoSuchElementException("inodes.length == " + inodes.length);
     }
   }
-  
+
   /** @return the last inode. */
   public INode getLastINode() {
     return getINode(-1);

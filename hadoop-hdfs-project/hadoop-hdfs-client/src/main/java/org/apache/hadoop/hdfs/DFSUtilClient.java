@@ -72,7 +72,6 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
 import java.nio.channels.SocketChannel;
-import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Collections;
@@ -97,29 +96,6 @@ public class DFSUtilClient {
   public static final byte[] EMPTY_BYTES = {};
   private static final Logger LOG = LoggerFactory.getLogger(
       DFSUtilClient.class);
-
-  // Using the charset canonical name for String/byte[] conversions is much
-  // more efficient due to use of cached encoders/decoders.
-  private static final String UTF8_CSN = StandardCharsets.UTF_8.name();
-
-  /**
-   * Converts a string to a byte array using UTF8 encoding.
-   */
-  public static byte[] string2Bytes(String str) {
-    try {
-      return str.getBytes(UTF8_CSN);
-    } catch (UnsupportedEncodingException e) {
-      // should never happen!
-      throw new IllegalArgumentException("UTF8 decoding is not supported", e);
-    }
-  }
-
-  /**
-   * Converts a byte array to a string using UTF8 encoding.
-   */
-  public static String bytes2String(byte[] bytes) {
-    return bytes2String(bytes, 0, bytes.length);
-  }
 
   /** Return used as percentage of capacity */
   public static float getPercentUsed(long used, long capacity) {
@@ -286,24 +262,6 @@ public class DFSUtilClient {
       }
     }
     return path;
-  }
-
-  /**
-   * Decode a specific range of bytes of the given byte array to a string
-   * using UTF8.
-   *
-   * @param bytes The bytes to be decoded into characters
-   * @param offset The index of the first byte to decode
-   * @param length The number of bytes to decode
-   * @return The decoded string
-   */
-  static String bytes2String(byte[] bytes, int offset, int length) {
-    try {
-      return new String(bytes, offset, length, UTF8_CSN);
-    } catch (UnsupportedEncodingException e) {
-      // should never happen!
-      throw new IllegalArgumentException("UTF8 encoding is not supported", e);
-    }
   }
 
   /**

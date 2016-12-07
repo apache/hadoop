@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.Collection;
 import java.util.Stack;
 
@@ -35,11 +36,11 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 
-/** 
+/**
  * Class that helps in checking file system permission.
  * The state of this class need not be synchronized as it has data structures that
  * are read-only.
- * 
+ *
  * Some of the helper methods are gaurded by {@link FSNamesystem#readLock()}.
  */
 class FSPermissionChecker implements AccessControlEnforcer {
@@ -116,17 +117,17 @@ class FSPermissionChecker implements AccessControlEnforcer {
   }
 
   /**
-   * Verify if the caller has the required permission. This will result into 
+   * Verify if the caller has the required permission. This will result into
    * an exception if the caller is not allowed to access the resource.
    */
   public void checkSuperuserPrivilege()
       throws AccessControlException {
     if (!isSuperUser()) {
-      throw new AccessControlException("Access denied for user " 
+      throw new AccessControlException("Access denied for user "
           + getUser() + ". Superuser privilege is required");
     }
   }
-  
+
   /**
    * Check whether current user have permissions to access the path.
    * Traverse is always checked.
@@ -155,7 +156,7 @@ class FSPermissionChecker implements AccessControlEnforcer {
    * If path is not a directory, there is no effect.
    * @param ignoreEmptyDir Ignore permission checking for empty directory?
    * @throws AccessControlException
-   * 
+   *
    * Guarded by {@link FSNamesystem#readLock()}
    * Caller of this method must hold that lock.
    */
@@ -240,7 +241,7 @@ class FSPermissionChecker implements AccessControlEnforcer {
     if (getAttributesProvider() != null) {
       String[] elements = new String[pathIdx + 1];
       for (int i = 0; i < elements.length; i++) {
-        elements[i] = DFSUtil.bytes2String(pathByNameArr[i]);
+        elements[i] = new String(pathByNameArr[i], UTF_8);
       }
       inodeAttrs = getAttributesProvider().getAttributes(elements, inodeAttrs);
     }
