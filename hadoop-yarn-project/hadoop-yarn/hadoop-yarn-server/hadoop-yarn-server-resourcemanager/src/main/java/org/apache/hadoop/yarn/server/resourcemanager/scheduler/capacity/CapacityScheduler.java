@@ -2049,9 +2049,8 @@ public class CapacityScheduler extends
           sourceQueueName);
       String destQueueName = handleMoveToPlanQueue(targetQueueName);
       LeafQueue dest = this.queueManager.getAndCheckLeafQueue(destQueueName);
-      // Validation check - ACLs, submission limits for user & queue
+
       String user = app.getUser();
-      checkQueuePartition(app, dest);
       try {
         dest.submitApplication(appId, user, destQueueName);
       } catch (AccessControlException e) {
@@ -2074,6 +2073,30 @@ public class CapacityScheduler extends
       LOG.info("App: " + app.getApplicationId() + " successfully moved from "
           + sourceQueueName + " to: " + destQueueName);
       return targetQueueName;
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  @Override
+  public void preValidateMoveApplication(ApplicationId appId,
+      String newQueue) throws YarnException {
+    try {
+      writeLock.lock();
+      FiCaSchedulerApp app = getApplicationAttempt(
+          ApplicationAttemptId.newInstance(appId, 0));
+      String sourceQueueName = app.getQueue().getQueueName();
+      this.queueManager.getAndCheckLeafQueue(sourceQueueName);
+      String destQueueName = handleMoveToPlanQueue(newQueue);
+      LeafQueue dest = this.queueManager.getAndCheckLeafQueue(destQueueName);
+      // Validation check - ACLs, submission limits for user & queue
+      String user = app.getUser();
+      checkQueuePartition(app, dest);
+      try {
+        dest.validateSubmitApplication(appId, user, destQueueName);
+      } catch (AccessControlException e) {
+        throw new YarnException(e);
+      }
     } finally {
       writeLock.unlock();
     }
