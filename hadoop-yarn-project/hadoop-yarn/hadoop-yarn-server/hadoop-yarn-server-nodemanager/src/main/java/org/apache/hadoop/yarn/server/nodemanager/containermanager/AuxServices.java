@@ -146,7 +146,7 @@ public class AuxServices extends AbstractService
         }
         // TODO better use s.getName()?
         if(!sName.equals(s.getName())) {
-          LOG.warn("The Auxilurary Service named '"+sName+"' in the "
+          LOG.warn("The Auxiliary Service named '"+sName+"' in the "
               +"configuration is for "+s.getClass()+" which has "
               +"a name of '"+s.getName()+"'. Because these are "
               +"not the same tools trying to send ServiceData and read "

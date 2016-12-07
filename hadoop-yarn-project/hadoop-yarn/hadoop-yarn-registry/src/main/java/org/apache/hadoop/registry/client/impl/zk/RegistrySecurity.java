@@ -358,7 +358,7 @@ public class RegistrySecurity extends AbstractService {
    * @return the system principals
    */
   public List<ACL> getSystemACLs() {
-    Preconditions.checkNotNull(systemACLs, "registry security is unitialized");
+    Preconditions.checkNotNull(systemACLs, "registry security is uninitialized");
     return Collections.unmodifiableList(systemACLs);
   }
 
