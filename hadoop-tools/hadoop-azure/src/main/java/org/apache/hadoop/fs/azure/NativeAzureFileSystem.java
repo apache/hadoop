@@ -1765,8 +1765,11 @@ public class NativeAzureFileSystem extends FileSystem {
       }
 
       try {
-        store.delete(key);
-        instrumentation.fileDeleted();
+        if (store.delete(key)) {
+          instrumentation.fileDeleted();
+        } else {
+          return false;
+        }
       } catch(IOException e) {
 
         Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
@@ -1885,7 +1888,7 @@ public class NativeAzureFileSystem extends FileSystem {
       }
 
       // Delete the current directory
-      if (!deleteFile(metaFile.getKey(), metaFile.isDir())) {
+      if (store.retrieveMetadata(metaFile.getKey()) != null && !deleteFile(metaFile.getKey(), metaFile.isDir())) {
         LOG.error("Failed delete directory {}", f.toString());
         return false;
       }
@@ -1913,11 +1916,15 @@ public class NativeAzureFileSystem extends FileSystem {
   @VisibleForTesting
   boolean deleteFile(String key, boolean isDir) throws IOException {
     try {
-      store.delete(key);
-      if (isDir) {
-        instrumentation.directoryDeleted();
+      if (store.delete(key)) {
+        if (isDir) {
+          instrumentation.directoryDeleted();
+        } else {
+          instrumentation.fileDeleted();
+        }
+        return true;
       } else {
-        instrumentation.fileDeleted();
+        return false;
       }
     } catch(IOException e) {
       Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
@@ -1929,8 +1936,6 @@ public class NativeAzureFileSystem extends FileSystem {
 
       throw e;
     }
-
-    return true;
   }
 
   @Override
@@ -2790,6 +2795,8 @@ public class NativeAzureFileSystem extends FileSystem {
         throws IOException {
 
       LOG.debug("Deleting dangling file {}", file.getKey());
+      // Not handling delete return type as false return essentially
+      // means its a no-op for the caller
       store.delete(file.getKey());
       store.delete(tempFile.getKey());
     }

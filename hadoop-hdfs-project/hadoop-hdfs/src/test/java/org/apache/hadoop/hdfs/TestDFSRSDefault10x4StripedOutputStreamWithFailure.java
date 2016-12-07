@@ -15,25 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs;
 
-package org.apache.hadoop.yarn.state;
-
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 
 /**
- * The exception that happens when you call invalid state transition.
- *
+ * This tests write operation of DFS striped file with RS-DEFAULT-10-4-64k
+ *  erasure code policy under Datanode failure conditions.
  */
-@Public
-@Evolving
-@SuppressWarnings("deprecation")
-public class InvalidStateTransitionException extends
-    InvalidStateTransitonException {
+public class TestDFSRSDefault10x4StripedOutputStreamWithFailure
+    extends TestDFSStripedOutputStreamWithFailure {
 
-  private static final long serialVersionUID = 8610511635996283691L;
-
-  public InvalidStateTransitionException(Enum<?> currentState, Enum<?> event) {
-    super(currentState, event);
+  @Override
+  public ErasureCodingPolicy getEcPolicy() {
+    return ErasureCodingPolicyManager.getPolicyByPolicyID(
+        HdfsConstants.RS_10_4_POLICY_ID);
   }
 }

@@ -51,11 +51,14 @@ public final class ErasureCodingPolicyManager {
   private static final ErasureCodingPolicy SYS_POLICY4 =
       new ErasureCodingPolicy(ErasureCodeConstants.XOR_2_1_SCHEMA,
           DEFAULT_CELLSIZE, HdfsConstants.XOR_2_1_POLICY_ID);
+  private static final ErasureCodingPolicy SYS_POLICY5 =
+      new ErasureCodingPolicy(ErasureCodeConstants.RS_10_4_SCHEMA,
+          DEFAULT_CELLSIZE, HdfsConstants.RS_10_4_POLICY_ID);
 
   //We may add more later.
   private static final ErasureCodingPolicy[] SYS_POLICIES =
       new ErasureCodingPolicy[]{SYS_POLICY1, SYS_POLICY2, SYS_POLICY3,
-          SYS_POLICY4};
+          SYS_POLICY4, SYS_POLICY5};
 
   // Supported storage policies for striped EC files
   private static final byte[] SUITABLE_STORAGE_POLICIES_FOR_EC_STRIPED_MODE = new byte[] {

@@ -85,11 +85,17 @@ public abstract class ContainerStatus {
    */
   @Public
   @Evolving
-  public abstract ExecutionType getExecutionType();
+  public ExecutionType getExecutionType() {
+    throw new UnsupportedOperationException(
+        "subclass must implement this method");
+  }
 
   @Private
   @Unstable
-  public abstract void setExecutionType(ExecutionType executionType);
+  public void setExecutionType(ExecutionType executionType) {
+    throw new UnsupportedOperationException(
+        "subclass must implement this method");
+  }
 
   /**
    * Get the <code>ContainerState</code> of the container.
@@ -148,11 +154,17 @@ public abstract class ContainerStatus {
    */
   @Public
   @Unstable
-  public abstract Resource getCapability();
+  public Resource getCapability() {
+    throw new UnsupportedOperationException(
+        "subclass must implement this method");
+  }
 
   @Private
   @Unstable
-  public abstract void setCapability(Resource capability);
+  public void setCapability(Resource capability) {
+    throw new UnsupportedOperationException(
+        "subclass must implement this method");
+  }
 
   /**
    * Get all the IP addresses with which the container run.
@@ -160,11 +172,17 @@ public abstract class ContainerStatus {
    */
   @Public
   @Unstable
-  public abstract List<String> getIPs();
+  public List<String> getIPs() {
+    throw new UnsupportedOperationException(
+        "subclass must implement this method");
+  }
 
   @Private
   @Unstable
-  public abstract void setIPs(List<String> ips);
+  public void setIPs(List<String> ips) {
+    throw new UnsupportedOperationException(
+        "subclass must implement this method");
+  }
 
   /**
    * Get the hostname where the container runs.
@@ -172,9 +190,15 @@ public abstract class ContainerStatus {
    */
   @Public
   @Unstable
-  public abstract String getHost();
+  public String getHost() {
+    throw new UnsupportedOperationException(
+        "subclass must implement this method");
+  }
 
   @Private
   @Unstable
-  public abstract void setHost(String host);
+  public void setHost(String host) {
+    throw new UnsupportedOperationException(
+        "subclass must implement this method");
+  }
 }

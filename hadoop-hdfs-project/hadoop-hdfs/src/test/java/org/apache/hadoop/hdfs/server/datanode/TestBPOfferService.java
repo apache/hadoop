@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
@@ -798,5 +799,35 @@ public class TestBPOfferService {
       }
     }
     return -1;
+  }
+
+   /*
+    *
+    */
+  @Test
+  public void testNNHAStateUpdateFromVersionRequest() throws Exception {
+    final BPOfferService bpos = setupBPOSForNNs(mockNN1, mockNN2);
+    BPServiceActor actor = bpos.getBPServiceActors().get(0);
+    bpos.start();
+    waitForInitialization(bpos);
+    // Should start with neither NN as active.
+    assertNull(bpos.getActiveNN());
+
+    // getNamespaceInfo() will not include HAServiceState
+    NamespaceInfo nsInfo = mockNN1.versionRequest();
+    bpos.verifyAndSetNamespaceInfo(actor, nsInfo);
+
+    assertNull(bpos.getActiveNN());
+
+    // Change mock so getNamespaceInfo() will include HAServiceState
+    Mockito.doReturn(new NamespaceInfo(1, FAKE_CLUSTERID, FAKE_BPID, 0,
+        HAServiceState.ACTIVE)).when(mockNN1).versionRequest();
+
+    // Update the bpos NamespaceInfo
+    nsInfo = mockNN1.versionRequest();
+    bpos.verifyAndSetNamespaceInfo(actor, nsInfo);
+
+    assertNotNull(bpos.getActiveNN());
+
   }
 }

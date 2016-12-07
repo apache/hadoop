@@ -80,6 +80,8 @@ public class RMContextImpl implements RMContext {
 
   private QueueLimitCalculator queueLimitCalculator;
 
+  private final Object haServiceStateLock = new Object();
+
   /**
    * Default constructor. To be used in conjunction with setter methods for
    * individual fields.
@@ -254,9 +256,9 @@ public class RMContextImpl implements RMContext {
     this.isHAEnabled = isHAEnabled;
   }
 
-  void setHAServiceState(HAServiceState haServiceState) {
-    synchronized (haServiceState) {
-      this.haServiceState = haServiceState;
+  void setHAServiceState(HAServiceState serviceState) {
+    synchronized (haServiceStateLock) {
+      this.haServiceState = serviceState;
     }
   }
 
@@ -352,7 +354,7 @@ public class RMContextImpl implements RMContext {
 
   @Override
   public HAServiceState getHAServiceState() {
-    synchronized (haServiceState) {
+    synchronized (haServiceStateLock) {
       return haServiceState;
     }
   }

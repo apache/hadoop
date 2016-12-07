@@ -32,7 +32,6 @@ import org.apache.hadoop.security.token.delegation.web.HttpUserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -65,7 +64,7 @@ public class KMS {
     CREATE_KEY, DELETE_KEY, ROLL_NEW_VERSION,
     GET_KEYS, GET_KEYS_METADATA,
     GET_KEY_VERSIONS, GET_METADATA, GET_KEY_VERSION, GET_CURRENT_KEY,
-    GENERATE_EEK, DECRYPT_EEK
+    GENERATE_EEK, DECRYPT_EEK, REENCRYPT_EEK
   }
 
   private KeyProviderCryptoExtension provider;
@@ -510,7 +509,7 @@ public class KMS {
   @Path(KMSRESTConstants.KEY_VERSION_RESOURCE + "/{versionName:.*}/" +
       KMSRESTConstants.EEK_SUB_RESOURCE)
   @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
-  public Response decryptEncryptedKey(
+  public Response handleEncryptedKeyOp(
       @PathParam("versionName") final String versionName,
       @QueryParam(KMSRESTConstants.EEK_OP) String eekOp,
       Map jsonPayload)
@@ -528,15 +527,15 @@ public class KMS {
       String ivStr = (String) jsonPayload.get(KMSRESTConstants.IV_FIELD);
       String encMaterialStr =
               (String) jsonPayload.get(KMSRESTConstants.MATERIAL_FIELD);
+      KMSClientProvider.checkNotNull(ivStr, KMSRESTConstants.IV_FIELD);
+      final byte[] iv = Base64.decodeBase64(ivStr);
+      KMSClientProvider.checkNotNull(encMaterialStr,
+          KMSRESTConstants.MATERIAL_FIELD);
+      final byte[] encMaterial = Base64.decodeBase64(encMaterialStr);
       Object retJSON;
       if (eekOp.equals(KMSRESTConstants.EEK_DECRYPT)) {
         assertAccess(KMSACLs.Type.DECRYPT_EEK, user, KMSOp.DECRYPT_EEK,
                 keyName);
-        KMSClientProvider.checkNotNull(ivStr, KMSRESTConstants.IV_FIELD);
-        final byte[] iv = Base64.decodeBase64(ivStr);
-        KMSClientProvider.checkNotNull(encMaterialStr,
-                KMSRESTConstants.MATERIAL_FIELD);
-        final byte[] encMaterial = Base64.decodeBase64(encMaterialStr);
 
         KeyProvider.KeyVersion retKeyVersion = user.doAs(
                 new PrivilegedExceptionAction<KeyVersion>() {
@@ -554,6 +553,23 @@ public class KMS {
 
         retJSON = KMSServerJSONUtils.toJSON(retKeyVersion);
         kmsAudit.ok(user, KMSOp.DECRYPT_EEK, keyName, "");
+      } else if (eekOp.equals(KMSRESTConstants.EEK_REENCRYPT)) {
+        assertAccess(KMSACLs.Type.GENERATE_EEK, user, KMSOp.REENCRYPT_EEK,
+            keyName);
+
+        EncryptedKeyVersion retEncryptedKeyVersion =
+            user.doAs(new PrivilegedExceptionAction<EncryptedKeyVersion>() {
+              @Override
+              public EncryptedKeyVersion run() throws Exception {
+                return provider.reencryptEncryptedKey(
+                    new KMSClientProvider.KMSEncryptedKeyVersion(keyName,
+                        versionName, iv, KeyProviderCryptoExtension.EEK,
+                        encMaterial));
+              }
+            });
+
+        retJSON = KMSServerJSONUtils.toJSON(retEncryptedKeyVersion);
+        kmsAudit.ok(user, KMSOp.REENCRYPT_EEK, keyName, "");
       } else {
         StringBuilder error;
         error = new StringBuilder("IllegalArgumentException Wrong ");
@@ -566,11 +582,11 @@ public class KMS {
         throw new IllegalArgumentException(error.toString());
       }
       KMSWebApp.getDecryptEEKCallsMeter().mark();
-      LOG.trace("Exiting decryptEncryptedKey method.");
+      LOG.trace("Exiting handleEncryptedKeyOp method.");
       return Response.ok().type(MediaType.APPLICATION_JSON).entity(retJSON)
-              .build();
+          .build();
     } catch (Exception e) {
-      LOG.debug("Exception in decryptEncryptedKey.", e);
+      LOG.debug("Exception in handleEncryptedKeyOp.", e);
       throw e;
     }
   }

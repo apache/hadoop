@@ -248,7 +248,7 @@ public class CommandFormat {
     private static final long serialVersionUID = 0L;
 
     public DuplicatedOptionException(String duplicatedOption) {
-      super("option " + duplicatedOption + " already exsits!");
+      super("option " + duplicatedOption + " already exists!");
     }
   }
 }

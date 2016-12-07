@@ -169,7 +169,7 @@ Client-side can be changed via the following properties in the `etc/hadoop/core-
 
 $H3 KMS Aggregated Audit logs
 
-Audit logs are aggregated for API accesses to the GET\_KEY\_VERSION, GET\_CURRENT\_KEY, DECRYPT\_EEK, GENERATE\_EEK operations.
+Audit logs are aggregated for API accesses to the GET\_KEY\_VERSION, GET\_CURRENT\_KEY, DECRYPT\_EEK, GENERATE\_EEK, REENCRYPT\_EEK operations.
 
 Entries are grouped by the (user,key,operation) combined key for a configurable aggregation interval after which the number of accesses to the specified end-point by the user for a given key is flushed to the audit log.
 
@@ -481,7 +481,7 @@ $H5 Key ACLs
 KMS supports access control for all non-read operations at the Key level. All Key Access operations are classified as :
 
 * MANAGEMENT - createKey, deleteKey, rolloverNewVersion
-* GENERATE_EEK - generateEncryptedKey, warmUpEncryptedKeys
+* GENERATE_EEK - generateEncryptedKey, reencryptEncryptedKey, warmUpEncryptedKeys
 * DECRYPT_EEK - decryptEncryptedKey
 * READ - getKeyVersion, getKeyVersions, getMetadata, getKeysMetadata, getCurrentKey
 * ALL - all of the above
@@ -876,7 +876,7 @@ $H4 Generate Encrypted Key for Current KeyVersion
     Content-Type: application/json
     [
       {
-        "versionName"         : "encryptionVersionName",
+        "versionName"         : "<encryptionVersionName>",
         "iv"                  : "<iv>",          //base64
         "encryptedKeyVersion" : {
             "versionName"       : "EEK",
@@ -884,7 +884,7 @@ $H4 Generate Encrypted Key for Current KeyVersion
         }
       },
       {
-        "versionName"         : "encryptionVersionName",
+        "versionName"         : "<encryptionVersionName>",
         "iv"                  : "<iv>",          //base64
         "encryptedKeyVersion" : {
             "versionName"       : "EEK",
@@ -915,6 +915,37 @@ $H4 Decrypt Encrypted Key
     {
       "name"        : "EK",
       "material"    : "<material>",    //base64
+    }
+
+$H4 Re-encrypt Encrypted Key With The Latest KeyVersion
+
+This command takes a previously generated encrypted key, and re-encrypts it using the latest KeyVersion encryption key in the KeyProvider. If the latest KeyVersion is the same as the one used to generate the encrypted key, the same encrypted key is returned.
+
+This is usually useful after a [Rollover](Rollover_Key) of an encryption key. Re-encrypting the encrypted key will allow it to be encrypted using the latest version of the encryption key, but still with the same key material and initialization vector.
+
+*REQUEST:*
+
+    POST http://HOST:PORT/kms/v1/keyversion/<version-name>/_eek?eek_op=reencrypt
+    Content-Type: application/json
+
+    {
+      "name"        : "<key-name>",
+      "iv"          : "<iv>",          //base64
+      "material"    : "<material>",    //base64
+    }
+
+*RESPONSE:*
+
+    200 OK
+    Content-Type: application/json
+
+    {
+      "versionName"         : "<encryptionVersionName>",
+      "iv"                  : "<iv>",            //base64
+      "encryptedKeyVersion" : {
+          "versionName"       : "EEK",
+          "material"          : "<material>",    //base64
+      }
     }
 
 $H4 Get Key Version

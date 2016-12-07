@@ -289,7 +289,7 @@ For src/main/native/src/org/apache/hadoop/io/compress/lz4/{lz4.h,lz4.c,lz4hc.h,l
 */
 
 
-For hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-nativetask/src/main/native/gtest
+For hadoop-common-project/hadoop-common/src/main/native/gtest
 ---------------------------------------------------------------------
 Copyright 2008, Google Inc.
 All rights reserved.

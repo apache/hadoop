@@ -424,7 +424,7 @@ abstract public class LocalReplica extends ReplicaInfo {
    * Get input stream for a local file and optionally seek to the offset.
    * @param f path to the file
    * @param seekOffset offset to seek
-   * @return
+   * @return input stream for read
    * @throws IOException
    */
   private FileInputStream getDataInputStream(File f, long seekOffset)
@@ -471,7 +471,7 @@ abstract public class LocalReplica extends ReplicaInfo {
    *  Get pin status of a file by checking the sticky bit.
    * @param localFS local file system
    * @param path path to be checked
-   * @return
+   * @return true if the file is pinned with sticky bit
    * @throws IOException
    */
   public boolean getPinning(LocalFileSystem localFS, Path path) throws
