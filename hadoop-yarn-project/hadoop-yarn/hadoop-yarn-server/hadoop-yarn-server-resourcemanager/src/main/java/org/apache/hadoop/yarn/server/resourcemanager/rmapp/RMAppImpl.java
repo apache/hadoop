@@ -723,10 +723,17 @@ public class RMAppImpl implements RMApp, Recoverable {
         long timeoutInMillis = applicationTimeouts
             .get(ApplicationTimeoutType.LIFETIME).longValue();
         timeout.setExpiryTime(Times.formatISO8601(timeoutInMillis));
-        timeout.setRemainingTime(
-            Math.max((timeoutInMillis - systemClock.getTime()) / 1000, 0));
+        if (isAppInCompletedStates()) {
+          // if application configured with timeout and finished before timeout
+          // happens then remaining time should not be calculated.
+          timeout.setRemainingTime(0);
+        } else {
+          timeout.setRemainingTime(
+              Math.max((timeoutInMillis - systemClock.getTime()) / 1000, 0));
+        }
       }
-      report.setApplicationTimeouts(Collections.singletonList(timeout));
+      report.setApplicationTimeouts(
+          Collections.singletonMap(timeout.getTimeoutType(), timeout));
       return report;
     } finally {
       this.readLock.unlock();
