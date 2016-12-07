@@ -633,14 +633,20 @@ public class FairScheduler extends
       RMAppAttemptState rmAppAttemptFinalState, boolean keepContainers) {
     try {
       writeLock.lock();
-      LOG.info(
-          "Application " + applicationAttemptId + " is done." + " finalState="
+      LOG.info("Application " + applicationAttemptId + " is done. finalState="
               + rmAppAttemptFinalState);
       FSAppAttempt attempt = getApplicationAttempt(applicationAttemptId);
 
       if (attempt == null) {
         LOG.info(
             "Unknown application " + applicationAttemptId + " has completed!");
+        return;
+      }
+
+      // Check if the attempt is already stopped and don't stop it twice.
+      if (attempt.isStopped()) {
+        LOG.info("Application " + applicationAttemptId + " has already been "
+            + "stopped!");
         return;
       }
 
@@ -1521,6 +1527,13 @@ public class FairScheduler extends
       try {
         attempt.getWriteLock().lock();
         FSLeafQueue oldQueue = (FSLeafQueue) app.getQueue();
+        // Check if the attempt is already stopped: don't move stopped app
+        // attempt. The attempt has already been removed from all queues.
+        if (attempt.isStopped()) {
+          LOG.info("Application " + appId + " is stopped and can't be moved!");
+          throw new YarnException("Application " + appId
+              + " is stopped and can't be moved!");
+        }
         String destQueueName = handleMoveToPlanQueue(queueName);
         FSLeafQueue targetQueue = queueMgr.getLeafQueue(destQueueName, false);
         if (targetQueue == null) {
@@ -1617,16 +1630,23 @@ public class FairScheduler extends
    * operations will be atomic.
    */
   private void executeMove(SchedulerApplication<FSAppAttempt> app,
-      FSAppAttempt attempt, FSLeafQueue oldQueue, FSLeafQueue newQueue) {
-    boolean wasRunnable = oldQueue.removeApp(attempt);
+      FSAppAttempt attempt, FSLeafQueue oldQueue, FSLeafQueue newQueue)
+      throws YarnException {
+    // Check current runs state. Do not remove the attempt from the queue until
+    // after the check has been performed otherwise it could remove the app
+    // from a queue without moving it to a new queue.
+    boolean wasRunnable = oldQueue.isRunnableApp(attempt);
     // if app was not runnable before, it may be runnable now
     boolean nowRunnable = maxRunningEnforcer.canAppBeRunnable(newQueue,
         attempt);
     if (wasRunnable && !nowRunnable) {
-      throw new IllegalStateException("Should have already verified that app "
+      throw new YarnException("Should have already verified that app "
           + attempt.getApplicationId() + " would be runnable in new queue");
     }
-    
+
+    // Now it is safe to remove from the queue.
+    oldQueue.removeApp(attempt);
+
     if (wasRunnable) {
       maxRunningEnforcer.untrackRunnableApp(attempt);
     } else if (nowRunnable) {
