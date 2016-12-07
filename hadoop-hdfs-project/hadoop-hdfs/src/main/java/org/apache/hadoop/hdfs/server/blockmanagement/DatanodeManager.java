@@ -371,9 +371,11 @@ public class DatanodeManager {
     //sort the blocks
     // As it is possible for the separation of node manager and datanode, 
     // here we should get node but not datanode only .
+    boolean nonDatanodeReader = false;
     Node client = getDatanodeByHost(targethost);
     if (client == null) {
-      List<String> hosts = new ArrayList<> (1);
+      nonDatanodeReader = true;
+      List<String> hosts = new ArrayList<>(1);
       hosts.add(targethost);
       List<String> resolvedHosts = dnsToSwitchMapping.resolve(hosts);
       if (resolvedHosts != null && !resolvedHosts.isEmpty()) {
@@ -401,8 +403,14 @@ public class DatanodeManager {
       while (lastActiveIndex > 0 && isInactive(di[lastActiveIndex])) {
           --lastActiveIndex;
       }
-      int activeLen = lastActiveIndex + 1;      
-      networktopology.sortByDistance(client, b.getLocations(), activeLen);
+      int activeLen = lastActiveIndex + 1;
+
+      if(nonDatanodeReader) {
+        networktopology.sortByDistanceUsingNetworkLocation(client,
+            b.getLocations(), activeLen);
+      } else {
+        networktopology.sortByDistance(client, b.getLocations(), activeLen);
+      }
       // must update cache since we modified locations array
       b.updateCachedStorageInfo();
     }
