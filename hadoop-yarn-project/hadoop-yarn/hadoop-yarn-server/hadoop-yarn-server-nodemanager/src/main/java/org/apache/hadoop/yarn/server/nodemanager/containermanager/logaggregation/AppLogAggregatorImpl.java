@@ -494,7 +494,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       doAppLogAggregation();
     } catch (Exception e) {
       // do post clean up of log directories on any exception
-      LOG.error("Error occured while aggregating the log for the application "
+      LOG.error("Error occurred while aggregating the log for the application "
           + appId, e);
       doAppLogAggregationPostCleanUp();
     } finally {

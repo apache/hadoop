@@ -1128,7 +1128,7 @@ public class ResourceLocalizationService extends CompositeService
           LOG.error("local path for PRIVATE localization could not be " +
             "found. Disks might have failed.", e);
         } catch (IllegalArgumentException e) {
-          LOG.error("Inorrect path for PRIVATE localization."
+          LOG.error("Incorrect path for PRIVATE localization."
               + next.getResource().getFile(), e);
         } catch (URISyntaxException e) {
           LOG.error(

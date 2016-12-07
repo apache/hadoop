@@ -240,7 +240,7 @@ public class LogsCLI extends Configured implements Tool {
       if (appState == YarnApplicationState.NEW
           || appState == YarnApplicationState.NEW_SAVING
           || appState == YarnApplicationState.SUBMITTED) {
-        System.err.println("Logs are not avaiable right now.");
+        System.err.println("Logs are not available right now.");
         return -1;
       }
     } catch (IOException | YarnException e) {

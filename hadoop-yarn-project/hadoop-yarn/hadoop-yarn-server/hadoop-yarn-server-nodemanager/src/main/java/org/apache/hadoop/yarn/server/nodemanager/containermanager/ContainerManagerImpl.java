@@ -1576,7 +1576,7 @@ public class ContainerManagerImpl extends CompositeService implements
     authorizeUser(remoteUgi, nmTokenIdentifier);
     if (!nmTokenIdentifier.getApplicationAttemptId().getApplicationId()
         .equals(containerId.getApplicationAttemptId().getApplicationId())) {
-      throw new YarnException("ApplicationMaster not autorized to perform " +
+      throw new YarnException("ApplicationMaster not authorized to perform " +
           "["+ op + "] on Container [" + containerId + "]!!");
     }
     Container container = context.getContainers().get(containerId);

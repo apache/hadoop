@@ -721,7 +721,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
              app.appReport.getApplicationId())) {
            throw new AuthorizationException("User "
                + UserGroupInformation.getCurrentUser().getShortUserName()
-               + " does not have privilage to see this application "
+               + " does not have privilege to see this application "
                + app.appReport.getApplicationId());
          }
        } finally {

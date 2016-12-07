@@ -62,7 +62,7 @@ public class WebAppProxy extends AbstractService {
     } else if ("kerberos".equals(auth)) {
       isSecurityEnabled = true;
     } else {
-      LOG.warn("Unrecongized attribute value for " +
+      LOG.warn("Unrecognized attribute value for " +
           CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION +
           " of " + auth);
     }
