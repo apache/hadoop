@@ -1544,7 +1544,41 @@ public class FairScheduler extends
       writeLock.unlock();
     }
   }
-  
+
+  @Override
+  public void preValidateMoveApplication(ApplicationId appId, String newQueue)
+      throws YarnException {
+    try {
+      writeLock.lock();
+      SchedulerApplication<FSAppAttempt> app = applications.get(appId);
+      if (app == null) {
+        throw new YarnException("App to be moved " + appId + " not found.");
+      }
+
+      FSAppAttempt attempt = app.getCurrentAppAttempt();
+      // To serialize with FairScheduler#allocate, synchronize on app attempt
+
+      try {
+        attempt.getWriteLock().lock();
+        FSLeafQueue oldQueue = (FSLeafQueue) app.getQueue();
+        String destQueueName = handleMoveToPlanQueue(newQueue);
+        FSLeafQueue targetQueue = queueMgr.getLeafQueue(destQueueName, false);
+        if (targetQueue == null) {
+          throw new YarnException("Target queue " + newQueue
+              + " not found or is not a leaf queue.");
+        }
+
+        if (oldQueue.isRunnableApp(attempt)) {
+          verifyMoveDoesNotViolateConstraints(attempt, oldQueue, targetQueue);
+        }
+      } finally {
+        attempt.getWriteLock().unlock();
+      }
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
   private void verifyMoveDoesNotViolateConstraints(FSAppAttempt app,
       FSLeafQueue oldQueue, FSLeafQueue targetQueue) throws YarnException {
     String queueName = targetQueue.getQueueName();

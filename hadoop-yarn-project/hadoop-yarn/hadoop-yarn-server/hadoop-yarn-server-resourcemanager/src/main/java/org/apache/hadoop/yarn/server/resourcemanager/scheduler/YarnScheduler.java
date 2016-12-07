@@ -230,6 +230,17 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
       throws YarnException;
 
   /**
+   *
+   * @param appId Application ID
+   * @param newQueue Target QueueName
+   * @throws YarnException if the pre-validation for move cannot be carried out
+   */
+  @LimitedPrivate("yarn")
+  @Evolving
+  public void preValidateMoveApplication(ApplicationId appId,
+      String newQueue) throws YarnException;
+
+  /**
    * Completely drain sourceQueue of applications, by moving all of them to
    * destQueue.
    *

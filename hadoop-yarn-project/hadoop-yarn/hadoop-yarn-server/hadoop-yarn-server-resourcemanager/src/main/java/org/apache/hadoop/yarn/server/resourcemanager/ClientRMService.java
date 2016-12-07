@@ -152,7 +152,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSyst
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppKillByClientEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMoveEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
@@ -174,8 +173,6 @@ import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.UTCClock;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.SettableFuture;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 
@@ -1191,23 +1188,18 @@ public class ClientRMService extends AbstractService implements
     }
     
     // Moves only allowed when app is in a state that means it is tracked by
-    // the scheduler
-    if (EnumSet.of(RMAppState.NEW, RMAppState.NEW_SAVING, RMAppState.FAILED,
-        RMAppState.FINAL_SAVING, RMAppState.FINISHING, RMAppState.FINISHED,
-        RMAppState.KILLED, RMAppState.KILLING, RMAppState.FAILED)
-        .contains(application.getState())) {
+    // the scheduler. Introducing SUBMITTED state also to this list as there
+    // could be a corner scenario that app may not be in Scheduler in SUBMITTED
+    // state.
+    if (!ACTIVE_APP_STATES.contains(application.getState())) {
       String msg = "App in " + application.getState() + " state cannot be moved.";
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
           AuditConstants.MOVE_APP_REQUEST, "UNKNOWN", "ClientRMService", msg);
       throw new YarnException(msg);
     }
 
-    SettableFuture<Object> future = SettableFuture.create();
-    this.rmContext.getDispatcher().getEventHandler().handle(
-        new RMAppMoveEvent(applicationId, request.getTargetQueue(), future));
-    
     try {
-      Futures.get(future, YarnException.class);
+      this.rmAppManager.moveApplicationAcrossQueue(applicationId, request.getTargetQueue());
     } catch (YarnException ex) {
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
           AuditConstants.MOVE_APP_REQUEST, "UNKNOWN", "ClientRMService",
