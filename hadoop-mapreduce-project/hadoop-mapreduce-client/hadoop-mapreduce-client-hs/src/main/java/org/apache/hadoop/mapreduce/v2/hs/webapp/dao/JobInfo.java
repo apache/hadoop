@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapreduce.v2.hs.webapp.dao;
 
+import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -27,6 +28,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -44,7 +46,8 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 @XmlRootElement(name = "job")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class JobInfo {
-  private static final String NA = "N/A";
+  @VisibleForTesting
+  static final String NA = "N/A";
 
   protected long submitTime;
   protected long startTime;
@@ -226,6 +229,16 @@ public class JobInfo {
 
   public long getStartTime() {
     return this.startTime;
+  }
+
+  public String getFormattedStartTimeStr(final DateFormat dateFormat) {
+    String str = NA;
+
+    if (startTime >= 0) {
+      str = dateFormat.format(new Date(startTime));
+    }
+
+    return str;
   }
 
   public String getStartTimeStr() {
