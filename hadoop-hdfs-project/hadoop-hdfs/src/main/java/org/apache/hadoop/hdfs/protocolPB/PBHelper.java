@@ -26,7 +26,7 @@ import com.google.protobuf.ByteString;
 
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
-import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceStateProto;
+import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -338,8 +338,7 @@ public class PBHelper {
     StorageInfoProto storage = info.getStorageInfo();
     return new NamespaceInfo(storage.getNamespceID(), storage.getClusterID(),
         info.getBlockPoolID(), storage.getCTime(), info.getBuildVersion(),
-        info.getSoftwareVersion(), info.getCapabilities(),
-        convert(info.getState()));
+        info.getSoftwareVersion(), info.getCapabilities());
   }
 
   public static NamenodeCommand convert(NamenodeCommandProto cmd) {
@@ -745,68 +744,43 @@ public class PBHelper {
   }
   
   public static NamespaceInfoProto convert(NamespaceInfo info) {
-    NamespaceInfoProto.Builder builder = NamespaceInfoProto.newBuilder();
-    builder.setBlockPoolID(info.getBlockPoolID())
+    return NamespaceInfoProto.newBuilder()
+        .setBlockPoolID(info.getBlockPoolID())
         .setBuildVersion(info.getBuildVersion())
         .setUnused(0)
         .setStorageInfo(PBHelper.convert((StorageInfo)info))
         .setSoftwareVersion(info.getSoftwareVersion())
-        .setCapabilities(info.getCapabilities());
-    HAServiceState state = info.getState();
-    if(state != null) {
-      builder.setState(convert(info.getState()));
-    }
-    return builder.build();
-  }
-
-  public static HAServiceState convert(HAServiceStateProto s) {
-    if (s == null) {
-      return null;
-    }
-    switch (s) {
-    case INITIALIZING:
-      return HAServiceState.INITIALIZING;
-    case ACTIVE:
-      return HAServiceState.ACTIVE;
-    case STANDBY:
-      return HAServiceState.STANDBY;
-    default:
-      throw new IllegalArgumentException("Unexpected HAServiceStateProto:"
-          + s);
-    }
-  }
-
-  public static HAServiceStateProto convert(HAServiceState s) {
-    if (s == null) {
-      return null;
-    }
-    switch (s) {
-    case INITIALIZING:
-      return HAServiceStateProto.INITIALIZING;
-    case ACTIVE:
-      return HAServiceStateProto.ACTIVE;
-    case STANDBY:
-      return HAServiceStateProto.STANDBY;
-    default:
-      throw new IllegalArgumentException("Unexpected HAServiceState:"
-          + s);
-    }
+        .setCapabilities(info.getCapabilities())
+        .build();
   }
 
   public static NNHAStatusHeartbeat convert(NNHAStatusHeartbeatProto s) {
-    if (s == null) {
-      return null;
+    if (s == null) return null;
+    switch (s.getState()) {
+    case ACTIVE:
+      return new NNHAStatusHeartbeat(HAServiceState.ACTIVE, s.getTxid());
+    case STANDBY:
+      return new NNHAStatusHeartbeat(HAServiceState.STANDBY, s.getTxid());
+    default:
+      throw new IllegalArgumentException("Unexpected NNHAStatusHeartbeat.State:" + s.getState());
     }
-    return new NNHAStatusHeartbeat(convert(s.getState()), s.getTxid());
   }
 
   public static NNHAStatusHeartbeatProto convert(NNHAStatusHeartbeat hb) {
-    if (hb == null) {
-      return null;
-    }
+    if (hb == null) return null;
     NNHAStatusHeartbeatProto.Builder builder =
-        NNHAStatusHeartbeatProto.newBuilder();
-    builder.setState(convert(hb.getState()));
+      NNHAStatusHeartbeatProto.newBuilder();
+    switch (hb.getState()) {
+      case ACTIVE:
+        builder.setState(HAServiceProtocolProtos.HAServiceStateProto.ACTIVE);
+        break;
+      case STANDBY:
+        builder.setState(HAServiceProtocolProtos.HAServiceStateProto.STANDBY);
+        break;
+      default:
+        throw new IllegalArgumentException("Unexpected NNHAStatusHeartbeat.State:" +
+            hb.getState());
+    }
     builder.setTxid(hb.getTxId());
     return builder.build();
   }
