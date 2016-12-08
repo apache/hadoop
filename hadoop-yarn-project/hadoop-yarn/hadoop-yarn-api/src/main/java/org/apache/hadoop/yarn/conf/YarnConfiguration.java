@@ -2054,8 +2054,8 @@ public class YarnConfiguration extends Configuration {
       TIMELINE_SERVICE_PREFIX + "reader.class";
 
   public static final String DEFAULT_TIMELINE_SERVICE_READER_CLASS =
-      "org.apache.hadoop.yarn.server.timelineservice" +
-          ".storage.HBaseTimelineReaderImpl";
+      "org.apache.hadoop.yarn.server.timelineservice.storage" + 
+          ".HBaseTimelineReaderImpl";
 
   /**
    * default schema prefix for hbase tables.
