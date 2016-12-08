@@ -390,7 +390,7 @@ http://www.zlib.net/
 ----------------------------------------------------------------------------------
 Building distributions:
 
- * Build distribution with native code    : mvn package [-Pdist][-Pdocs][-Psrc][-Dtar]
+ * Build distribution with native code    : mvn package [-Pdist][-Pdocs][-Psrc][-Dtar][-Dmaven.javadoc.skip=true]
 
 ----------------------------------------------------------------------------------
 Running compatibility checks with checkcompatibility.py
@@ -402,3 +402,12 @@ managers to compare the compatibility of a previous and current release.
 As an example, this invocation will check the compatibility of interfaces annotated as Public or LimitedPrivate:
 
 ./dev-support/bin/checkcompatibility.py --annotation org.apache.hadoop.classification.InterfaceAudience.Public --annotation org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate --include "hadoop.*" branch-2.7.2 trunk
+
+----------------------------------------------------------------------------------
+Changing the Hadoop version declared returned by VersionInfo
+
+If for compatibility reasons the version of Hadoop has to be declared as a 2.x release in the information returned by
+org.apache.hadoop.util.VersionInfo, set the property declared.hadoop.version to the desired version.
+For example: mvn package -Pdist -Ddeclared.hadoop.version=2.11
+
+If unset, the project version declared in the POM file is used.
