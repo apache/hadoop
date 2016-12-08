@@ -182,6 +182,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-14356. Update CHANGES.txt to reflect all the changes in branch-2.7.
     (Brahma Reddy Battula)
 
+    HADOOP-13867. FilterFileSystem should override rename(.., options) to take effect of Rename options called via
+    FilterFileSystem implementations. (Vinayakumar B via Brahma Reddy Battula)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
