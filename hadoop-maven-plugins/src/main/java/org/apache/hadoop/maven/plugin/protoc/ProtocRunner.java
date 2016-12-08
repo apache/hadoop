@@ -13,14 +13,15 @@
  */
 package org.apache.hadoop.maven.plugin.protoc;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.hadoop.maven.plugin.util.Exec;
 import org.apache.hadoop.maven.plugin.util.FileSetUtils;
 import org.apache.maven.model.FileSet;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;

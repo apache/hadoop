@@ -17,6 +17,7 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -25,13 +26,14 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.ReservationACL;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -69,7 +71,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   private final float queueMaxAMShareDefault;
 
   // ACL's for each queue. Only specifies non-default ACL's from configuration.
-  private final Map<String, Map<QueueACL, AccessControlList>> queueAcls;
+  private final Map<String, Map<AccessType, AccessControlList>> queueAcls;
 
   // Reservation ACL's for each queue. Only specifies non-default ACL's from
   // configuration.
@@ -123,7 +125,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
       Map<String, Long> minSharePreemptionTimeouts,
       Map<String, Long> fairSharePreemptionTimeouts,
       Map<String, Float> fairSharePreemptionThresholds,
-      Map<String, Map<QueueACL, AccessControlList>> queueAcls,
+      Map<String, Map<AccessType, AccessControlList>> queueAcls,
       Map<String, Map<ReservationACL, AccessControlList>> resAcls,
       QueuePlacementPolicy placementPolicy,
       Map<FSQueueType, Set<String>> configuredQueues,
@@ -191,14 +193,23 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
    * nobody ("")
    */
   public AccessControlList getQueueAcl(String queue, QueueACL operation) {
-    Map<QueueACL, AccessControlList> queueAcls = this.queueAcls.get(queue);
-    if (queueAcls != null) {
-      AccessControlList operationAcl = queueAcls.get(operation);
+    Map<AccessType, AccessControlList> acls = this.queueAcls.get(queue);
+    if (acls != null) {
+      AccessControlList operationAcl =
+          acls.get(SchedulerUtils.toAccessType(operation));
       if (operationAcl != null) {
         return operationAcl;
       }
     }
     return (queue.equals("root")) ? EVERYBODY_ACL : NOBODY_ACL;
+  }
+
+  /**
+   * Get the map of ACLs of all queues.
+   * @return the map of ACLs of all queues
+   */
+  public Map<String, Map<AccessType, AccessControlList>> getQueueAcls() {
+    return Collections.unmodifiableMap(this.queueAcls);
   }
 
   @Override
@@ -313,21 +324,6 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   @VisibleForTesting
   Resource getMaxChildResources(String queue) {
     return maxChildQueueResources.get(queue);
-  }
-
-  public boolean hasAccess(String queueName, QueueACL acl,
-      UserGroupInformation user) {
-    int lastPeriodIndex = queueName.length();
-    while (lastPeriodIndex != -1) {
-      String queue = queueName.substring(0, lastPeriodIndex);
-      if (getQueueAcl(queue, acl).isUserAllowed(user)) {
-        return true;
-      }
-
-      lastPeriodIndex = queueName.lastIndexOf('.', lastPeriodIndex - 1);
-    }
-    
-    return false;
   }
 
   @VisibleForTesting

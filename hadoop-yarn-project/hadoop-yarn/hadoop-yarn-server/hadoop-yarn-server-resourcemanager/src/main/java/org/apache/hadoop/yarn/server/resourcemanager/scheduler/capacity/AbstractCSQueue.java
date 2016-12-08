@@ -32,8 +32,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -67,6 +69,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import com.google.common.collect.Sets;
 
 public abstract class AbstractCSQueue implements CSQueue {
+
   private static final Log LOG = LogFactory.getLog(AbstractCSQueue.class);  
   volatile CSQueue parent;
   final String queueName;
@@ -291,7 +294,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       authorizer = YarnAuthorizationProvider.getInstance(csContext.getConf());
 
-      this.state = csContext.getConfiguration().getState(getQueuePath());
+      initializeQueueState();
+
       this.acls = csContext.getConfiguration().getAcls(getQueuePath());
 
       // Update metrics
@@ -327,6 +331,29 @@ public abstract class AbstractCSQueue implements CSQueue {
       this.preemptionDisabled = isQueueHierarchyPreemptionDisabled(this);
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  private void initializeQueueState() {
+    // inherit from parent if state not set, only do this when we are not root
+    if (parent != null) {
+      QueueState configuredState = csContext.getConfiguration()
+          .getConfiguredState(getQueuePath());
+      QueueState parentState = parent.getState();
+      if (configuredState == null) {
+        this.state = parentState;
+      } else if (configuredState == QueueState.RUNNING
+          && parentState == QueueState.STOPPED) {
+        throw new IllegalArgumentException(
+            "The parent queue:" + parent.getQueueName() + " state is STOPPED, "
+            + "child queue:" + queueName + " state cannot be RUNNING.");
+      } else {
+        this.state = configuredState;
+      }
+    } else {
+      // if this is the root queue, get the state from the configuration.
+      // if the state is not set, use RUNNING as default state.
+      this.state = csContext.getConfiguration().getState(getQueuePath());
     }
   }
 
@@ -812,5 +839,11 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
 
     return true;
+  }
+
+  @Override
+  public void validateSubmitApplication(ApplicationId applicationId,
+      String userName, String queue) throws AccessControlException {
+    // Dummy implementation
   }
 }

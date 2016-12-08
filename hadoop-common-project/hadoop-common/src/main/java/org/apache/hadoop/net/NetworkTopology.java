@@ -57,6 +57,10 @@ public class NetworkTopology {
   public static final Logger LOG =
       LoggerFactory.getLogger(NetworkTopology.class);
 
+  private static final char PATH_SEPARATOR = '/';
+  private static final String PATH_SEPARATOR_STR = "/";
+  private static final String ROOT = "/";
+
   public static class InvalidTopologyException extends RuntimeException {
     private static final long serialVersionUID = 1L;
     public InvalidTopologyException(String msg) {
@@ -169,7 +173,7 @@ public class NetworkTopology {
       if (!isAncestor(n)) {
         throw new IllegalArgumentException(n.getName()
             + ", which is located at " + n.getNetworkLocation()
-            + ", is not a descendent of " + getPath(this));
+            + ", is not a descendant of " + getPath(this));
       }
       if (isParent(n)) {
         // this node is the parent of n; add n directly
@@ -231,7 +235,7 @@ public class NetworkTopology {
       if (!isAncestor(n)) {
         throw new IllegalArgumentException(n.getName()
             + ", which is located at " + n.getNetworkLocation()
-            + ", is not a descendent of " + getPath(this));
+            + ", is not a descendant of " + getPath(this));
       }
       if (isParent(n)) {
         // this node is the parent of n; remove n directly
@@ -916,7 +920,7 @@ public class NetworkTopology {
     }
   }
 
-  /** convert a network tree to a string */
+  /** convert a network tree to a string. */
   @Override
   public String toString() {
     // print the number of racks
@@ -970,17 +974,106 @@ public class NetworkTopology {
    * @return weight
    */
   protected int getWeight(Node reader, Node node) {
-    // 0 is local, 1 is same rack, 2 is off rack
-    // Start off by initializing to off rack
-    int weight = 2;
-    if (reader != null) {
-      if (reader.equals(node)) {
-        weight = 0;
-      } else if (isOnSameRack(reader, node)) {
-        weight = 1;
+    // 0 is local, 2 is same rack, and each level on each node increases the
+    //weight by 1
+    //Start off by initializing to Integer.MAX_VALUE
+    int weight = Integer.MAX_VALUE;
+    if (reader != null && node != null) {
+      if(reader.equals(node)) {
+        return 0;
+      }
+      int maxReaderLevel = reader.getLevel();
+      int maxNodeLevel = node.getLevel();
+      int currentLevelToCompare = maxReaderLevel > maxNodeLevel ?
+          maxNodeLevel : maxReaderLevel;
+      Node r = reader;
+      Node n = node;
+      weight = 0;
+      while(r != null && r.getLevel() > currentLevelToCompare) {
+        r = r.getParent();
+        weight++;
+      }
+      while(n != null && n.getLevel() > currentLevelToCompare) {
+        n = n.getParent();
+        weight++;
+      }
+      while(r != null && n != null && !r.equals(n)) {
+        r = r.getParent();
+        n = n.getParent();
+        weight+=2;
       }
     }
     return weight;
+  }
+
+  /**
+   * Returns an integer weight which specifies how far away <i>node</i> is
+   * from <i>reader</i>. A lower value signifies that a node is closer.
+   * It uses network location to calculate the weight
+   *
+   * @param reader Node where data will be read
+   * @param node Replica of data
+   * @return weight
+   */
+  private static int getWeightUsingNetworkLocation(Node reader, Node node) {
+    //Start off by initializing to Integer.MAX_VALUE
+    int weight = Integer.MAX_VALUE;
+    if(reader != null && node != null) {
+      String readerPath = normalizeNetworkLocationPath(
+          reader.getNetworkLocation());
+      String nodePath = normalizeNetworkLocationPath(
+          node.getNetworkLocation());
+
+      //same rack
+      if(readerPath.equals(nodePath)) {
+        if(reader.getName().equals(node.getName())) {
+          weight = 0;
+        } else {
+          weight = 2;
+        }
+      } else {
+        String[] readerPathToken = readerPath.split(PATH_SEPARATOR_STR);
+        String[] nodePathToken = nodePath.split(PATH_SEPARATOR_STR);
+        int maxLevelToCompare = readerPathToken.length > nodePathToken.length ?
+            nodePathToken.length : readerPathToken.length;
+        int currentLevel = 1;
+        //traverse through the path and calculate the distance
+        while(currentLevel < maxLevelToCompare) {
+          if(!readerPathToken[currentLevel]
+              .equals(nodePathToken[currentLevel])){
+            break;
+          }
+          currentLevel++;
+        }
+        weight = (readerPathToken.length - currentLevel) +
+            (nodePathToken.length - currentLevel);
+      }
+    }
+    return weight;
+  }
+
+  /** Normalize a path by stripping off any trailing {@link #PATH_SEPARATOR}.
+   * @param path path to normalize.
+   * @return the normalised path
+   * If <i>path</i>is null or empty {@link #ROOT} is returned
+   * @throws IllegalArgumentException if the first character of a non empty path
+   * is not {@link #PATH_SEPARATOR}
+   */
+  private static String normalizeNetworkLocationPath(String path) {
+    if (path == null || path.length() == 0) {
+      return ROOT;
+    }
+
+    if (path.charAt(0) != PATH_SEPARATOR) {
+      throw new IllegalArgumentException("Network Location"
+          + "path doesn't start with " +PATH_SEPARATOR+ ": "+path);
+    }
+
+    int len = path.length();
+    if (path.charAt(len-1) == PATH_SEPARATOR) {
+      return path.substring(0, len-1);
+    }
+    return path;
   }
 
   /**
@@ -999,10 +1092,55 @@ public class NetworkTopology {
    * @param activeLen Number of active nodes at the front of the array
    */
   public void sortByDistance(Node reader, Node[] nodes, int activeLen) {
+    /*
+     * This method is called if the reader is a datanode,
+     * so nonDataNodeReader flag is set to false.
+     */
+    sortByDistance(reader, nodes, activeLen, false);
+  }
+
+  /**
+   * Sort nodes array by network distance to <i>reader</i>.
+   * <p/> using network location. This is used when the reader
+   * is not a datanode. Sorting the nodes based on network distance
+   * from the reader reduces network traffic and improves
+   * performance.
+   * <p/>
+   *
+   * @param reader    Node where data will be read
+   * @param nodes     Available replicas with the requested data
+   * @param activeLen Number of active nodes at the front of the array
+   */
+  public void sortByDistanceUsingNetworkLocation(Node reader, Node[] nodes,
+      int activeLen) {
+    /*
+     * This method is called if the reader is not a datanode,
+     * so nonDataNodeReader flag is set to true.
+     */
+    sortByDistance(reader, nodes, activeLen, true);
+  }
+
+  /**
+   * Sort nodes array by network distance to <i>reader</i>.
+   * <p/>
+   * As an additional twist, we also randomize the nodes at each network
+   * distance. This helps with load balancing when there is data skew.
+   *
+   * @param reader    Node where data will be read
+   * @param nodes     Available replicas with the requested data
+   * @param activeLen Number of active nodes at the front of the array
+   * @param nonDataNodeReader True if the reader is not a datanode
+   */
+  private void sortByDistance(Node reader, Node[] nodes, int activeLen,
+      boolean nonDataNodeReader) {
     /** Sort weights for the nodes array */
     int[] weights = new int[activeLen];
     for (int i=0; i<activeLen; i++) {
-      weights[i] = getWeight(reader, nodes[i]);
+      if(nonDataNodeReader) {
+        weights[i] = getWeightUsingNetworkLocation(reader, nodes[i]);
+      } else {
+        weights[i] = getWeight(reader, nodes[i]);
+      }
     }
     // Add weight/node pairs to a TreeMap to sort
     TreeMap<Integer, List<Node>> tree = new TreeMap<Integer, List<Node>>();

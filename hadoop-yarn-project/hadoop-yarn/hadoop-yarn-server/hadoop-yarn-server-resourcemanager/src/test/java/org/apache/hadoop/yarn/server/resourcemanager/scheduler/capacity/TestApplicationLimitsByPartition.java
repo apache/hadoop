@@ -595,7 +595,8 @@ public class TestApplicationLimitsByPartition {
     when(csContext.getMaximumResourceCapability())
         .thenReturn(Resources.createResource(16 * GB));
     when(csContext.getNonPartitionedQueueComparator())
-        .thenReturn(CapacityScheduler.nonPartitionedQueueComparator);
+        .thenReturn(
+            CapacitySchedulerQueueManager.NON_PARTITIONED_QUEUE_COMPARATOR);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     RMContext rmContext = TestUtils.getMockRMContext();
     RMContext spyRMContext = spy(rmContext);
@@ -614,8 +615,8 @@ public class TestApplicationLimitsByPartition {
     when(csContext.getClusterResource()).thenReturn(clusterResource);
 
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
-    CSQueue rootQueue = CapacityScheduler.parseQueue(csContext, csConf, null,
-        "root", queues, queues, TestUtils.spyHook);
+    CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(csContext,
+        csConf, null, "root", queues, queues, TestUtils.spyHook);
 
     ResourceUsage queueResUsage = rootQueue.getQueueResourceUsage();
     when(csContext.getClusterResourceUsage())

@@ -57,8 +57,17 @@
 	    <h4 class="modal-title" id="file-info-title">File information</h4>
 	  </div>
 	  <div class="modal-body" id="file-info-body">
-	    <a id="file-info-download">Download</a>
-        <!--<a id="file-info-preview" style="cursor:pointer">Tail the file (last 32K)</a>-->
+	    <div class=row>
+              <span class="col-xs-4">
+                <a id="file-info-download">Download</a>
+              </span>
+              <span class="col-xs-4">
+                <a id="file-info-preview-head" style="cursor:pointer">Head the file (first 32K)</a>
+              </span>
+              <span class="col-xs-4">
+                <a id="file-info-preview-tail" style="cursor:pointer">Tail the file (last 32K)</a>
+	      </span>
+	    </div>
 	    <hr />
 	    <div class="panel panel-success" id="file-info-blockinfo-panel">
 	      <div class="panel-heading">

@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -56,6 +57,8 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -586,6 +589,52 @@ class JsonUtilClient {
     final boolean isLastBlockComplete = (Boolean)m.get("isLastBlockComplete");
     return new LocatedBlocks(fileLength, isUnderConstruction, locatedBlocks,
         lastLocatedBlock, isLastBlockComplete, null, null);
+  }
+
+  public static Collection<BlockStoragePolicy> getStoragePolicies(
+      Map<?, ?> json) {
+    Map<?, ?> policiesJson = (Map<?, ?>) json.get("BlockStoragePolicies");
+    if (policiesJson != null) {
+      List<?> objs = (List<?>) policiesJson.get(BlockStoragePolicy.class
+          .getSimpleName());
+      if (objs != null) {
+        BlockStoragePolicy[] storagePolicies = new BlockStoragePolicy[objs
+            .size()];
+        for (int i = 0; i < objs.size(); i++) {
+          final Map<?, ?> m = (Map<?, ?>) objs.get(i);
+          BlockStoragePolicy blockStoragePolicy = toBlockStoragePolicy(m);
+          storagePolicies[i] = blockStoragePolicy;
+        }
+        return Arrays.asList(storagePolicies);
+      }
+    }
+    return new ArrayList<BlockStoragePolicy>(0);
+  }
+
+  public static BlockStoragePolicy toBlockStoragePolicy(Map<?, ?> m) {
+    byte id = ((Number) m.get("id")).byteValue();
+    String name = (String) m.get("name");
+    StorageType[] storageTypes = toStorageTypes((List<?>) m
+        .get("storageTypes"));
+    StorageType[] creationFallbacks = toStorageTypes((List<?>) m
+        .get("creationFallbacks"));
+    StorageType[] replicationFallbacks = toStorageTypes((List<?>) m
+        .get("replicationFallbacks"));
+    Boolean copyOnCreateFile = (Boolean) m.get("copyOnCreateFile");
+    return new BlockStoragePolicy(id, name, storageTypes, creationFallbacks,
+        replicationFallbacks, copyOnCreateFile.booleanValue());
+  }
+
+  private static StorageType[] toStorageTypes(List<?> list) {
+    if (list == null) {
+      return null;
+    } else {
+      StorageType[] storageTypes = new StorageType[list.size()];
+      for (int i = 0; i < list.size(); i++) {
+        storageTypes[i] = StorageType.parseStorageType((String) list.get(i));
+      }
+      return storageTypes;
+    }
   }
 
 }

@@ -49,7 +49,7 @@ public class ProxyUriUtils {
   
   private static String uriEncode(Object o) {
     try {
-      assert (o != null) : "o canot be null";
+      assert (o != null) : "o cannot be null";
       return URLEncoder.encode(o.toString(), "UTF-8");
     } catch (UnsupportedEncodingException e) {
       //This should never happen

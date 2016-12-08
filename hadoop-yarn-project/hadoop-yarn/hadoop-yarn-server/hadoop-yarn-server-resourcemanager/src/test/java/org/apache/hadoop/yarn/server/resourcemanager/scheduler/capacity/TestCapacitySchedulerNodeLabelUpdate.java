@@ -457,6 +457,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     CapacityScheduler scheduler =
         ((CapacityScheduler) rm.getResourceScheduler());
     try {
+      scheduler.preValidateMoveApplication(app1.getApplicationId(), "a2");
       scheduler.moveApplication(app1.getApplicationId(), "a2");
       fail("Should throw exception since target queue doesnt have "
           + "required labels");

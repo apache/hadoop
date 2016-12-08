@@ -36,6 +36,9 @@
     <is.hadoop.common.component>true</is.hadoop.common.component>
     <wsce.config.dir>../etc/hadoop</wsce.config.dir>
     <wsce.config.file>wsce-site.xml</wsce.config.file>
+    <!-- the version of Hadoop declared in the version resources; can be overridden
+    so that Hadoop 3.x can declare itself a 2.x artifact. -->
+    <declared.hadoop.version>${pom.version}</declared.hadoop.version>
   </properties>
 
 
@@ -523,6 +526,7 @@
             <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4hc.h</exclude>
             <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4hc.c</exclude>
             <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4hc_encoder.h</exclude>
+            <exclude>src/main/native/gtest/**/*</exclude>
             <exclude>src/test/resources/test-untar.tgz</exclude>
             <exclude>src/test/resources/test.har/_SUCCESS</exclude>
             <exclude>src/test/resources/test.har/_index</exclude>

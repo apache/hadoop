@@ -129,13 +129,13 @@ The allocation file must be in XML format. The format contains five types of ele
 
 * **A defaultFairSharePreemptionThreshold element**: which sets the fair share preemption threshold for the root queue; overridden by fairSharePreemptionThreshold element in root queue.
 
-* **A queueMaxAppsDefault element**: which sets the default running app limit for queues; overriden by maxRunningApps element in each queue.
+* **A queueMaxAppsDefault element**: which sets the default running app limit for queues; overridden by maxRunningApps element in each queue.
 
-* **A queueMaxResourcesDefault element**: which sets the default max resource limit for queue; overriden by maxResources element in each queue.
+* **A queueMaxResourcesDefault element**: which sets the default max resource limit for queue; overridden by maxResources element in each queue.
 
-* **A queueMaxAMShareDefault element**: which sets the default AM resource limit for queue; overriden by maxAMShare element in each queue.
+* **A queueMaxAMShareDefault element**: which sets the default AM resource limit for queue; overridden by maxAMShare element in each queue.
 
-* **A defaultQueueSchedulingPolicy element**: which sets the default scheduling policy for queues; overriden by the schedulingPolicy element in each queue if specified. Defaults to "fair".
+* **A defaultQueueSchedulingPolicy element**: which sets the default scheduling policy for queues; overridden by the schedulingPolicy element in each queue if specified. Defaults to "fair".
 
 * **A queuePlacementPolicy element**: which contains a list of rule elements that tell the scheduler how to place incoming apps into queues. Rules are applied in the order that they are listed. Rules may take arguments. All rules accept the "create" argument, which indicates whether the rule can create a new queue. "Create" defaults to true; if set to false and the rule would place the app in a queue that is not configured in the allocations file, we continue on to the next rule. The last rule must be one that can never issue a continue. Valid rules are:
 

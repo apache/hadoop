@@ -714,7 +714,8 @@ public class ApplicationCLI extends YarnCLI {
       appReportStr.println(appReport.getAppNodeLabelExpression());
       appReportStr.print("\tAM container Node Label Expression : ");
       appReportStr.println(appReport.getAmNodeLabelExpression());
-      for (ApplicationTimeout timeout : appReport.getApplicationTimeouts()) {
+      for (ApplicationTimeout timeout : appReport.getApplicationTimeouts()
+          .values()) {
         appReportStr.print("\tTimeoutType : " + timeout.getTimeoutType());
         appReportStr.print("\tExpiryTime : " + timeout.getExpiryTime());
         appReportStr.println(

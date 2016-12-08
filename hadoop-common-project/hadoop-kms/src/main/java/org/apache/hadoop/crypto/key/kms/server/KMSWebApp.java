@@ -40,9 +40,9 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
-import java.util.List;
 
 @InterfaceAudience.Private
 public class KMSWebApp implements ServletContextListener {
@@ -215,6 +215,11 @@ public class KMSWebApp implements ServletContextListener {
 
   @Override
   public void contextDestroyed(ServletContextEvent sce) {
+    try {
+      keyProviderCryptoExtension.close();
+    } catch (IOException ioe) {
+      LOG.error("Error closing KeyProviderCryptoExtension", ioe);
+    }
     kmsAudit.shutdown();
     kmsAcls.stopReloader();
     jmxReporter.stop();

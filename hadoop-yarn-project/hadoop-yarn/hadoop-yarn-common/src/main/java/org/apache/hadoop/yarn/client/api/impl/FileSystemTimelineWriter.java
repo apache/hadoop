@@ -63,6 +63,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.util.MinimalPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
 import com.sun.jersey.api.client.Client;
@@ -276,6 +277,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
     mapper.setAnnotationIntrospector(
         new JaxbAnnotationIntrospector(TypeFactory.defaultInstance()));
     mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    mapper.configure(SerializationFeature.FLUSH_AFTER_WRITE_VALUE, false);
     return mapper;
   }
 
@@ -356,6 +358,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
 
     public void flush() throws IOException {
       if (stream != null) {
+        jsonGenerator.flush();
         stream.hflush();
       }
     }
@@ -368,8 +371,6 @@ public class FileSystemTimelineWriter extends TimelineWriter{
       this.stream = createLogFileStream(fs, logPath);
       this.jsonGenerator = new JsonFactory().createGenerator(stream);
       this.jsonGenerator.setPrettyPrinter(new MinimalPrettyPrinter("\n"));
-      this.jsonGenerator.configure(
-          JsonGenerator.Feature.FLUSH_PASSED_TO_STREAM, false);
       this.lastModifiedTime = Time.monotonicNow();
     }
 

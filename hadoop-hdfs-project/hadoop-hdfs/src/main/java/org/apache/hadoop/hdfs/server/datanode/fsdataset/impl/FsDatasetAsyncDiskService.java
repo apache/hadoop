@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.File;
-import java.io.FileDescriptor;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,9 +37,9 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIOException;
 
 /**
@@ -202,13 +201,13 @@ class FsDatasetAsyncDiskService {
   }
 
   public void submitSyncFileRangeRequest(FsVolumeImpl volume,
-      final FileDescriptor fd, final long offset, final long nbytes,
+      final ReplicaOutputStreams streams, final long offset, final long nbytes,
       final int flags) {
     execute(volume, new Runnable() {
       @Override
       public void run() {
         try {
-          NativeIO.POSIX.syncFileRangeIfPossible(fd, offset, nbytes, flags);
+          streams.syncFileRangeIfPossible(offset, nbytes, flags);
         } catch (NativeIOException e) {
           LOG.warn("sync_file_range error", e);
         }

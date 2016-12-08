@@ -70,6 +70,7 @@ import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -94,10 +95,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdate
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
-
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
-
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
@@ -153,6 +152,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     }
     QueueMetrics.clearQueueMetrics();
     DefaultMetricsSystem.shutdown();
+    YarnAuthorizationProvider.destroy();
   }
 
 
@@ -4549,6 +4549,95 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSQueue ancestorQueue =
         scheduler.findLowestCommonAncestorQueue(a1Queue, b1Queue);
     assertEquals(ancestorQueue, queue1);
+  }
+
+  @Test
+  public void testDoubleRemoval() throws Exception {
+    String testUser = "user1"; // convenience var
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    ApplicationAttemptId attemptId = createAppAttemptId(1, 1);
+    // The placement rule will add the app to the user based queue but the
+    // passed in queue must exist.
+    AppAddedSchedulerEvent appAddedEvent =
+        new AppAddedSchedulerEvent(attemptId.getApplicationId(), testUser,
+            testUser);
+    scheduler.handle(appAddedEvent);
+    AppAttemptAddedSchedulerEvent attemptAddedEvent =
+        new AppAttemptAddedSchedulerEvent(createAppAttemptId(1, 1), false);
+    scheduler.handle(attemptAddedEvent);
+
+    // Get a handle on the attempt.
+    FSAppAttempt attempt = scheduler.getSchedulerApp(attemptId);
+
+    AppAttemptRemovedSchedulerEvent attemptRemovedEvent =
+        new AppAttemptRemovedSchedulerEvent(createAppAttemptId(1, 1),
+            RMAppAttemptState.FINISHED, false);
+
+    // Make sure the app attempt is in the queue.
+    List<ApplicationAttemptId> attemptList =
+        scheduler.getAppsInQueue(testUser);
+    assertNotNull("Queue missing", attemptList);
+    assertTrue("Attempt should be in the queue",
+        attemptList.contains(attemptId));
+    assertFalse("Attempt is stopped", attempt.isStopped());
+
+    // Now remove the app attempt
+    scheduler.handle(attemptRemovedEvent);
+    // The attempt is not in the queue, and stopped
+    attemptList = scheduler.getAppsInQueue(testUser);
+    assertFalse("Attempt should not be in the queue",
+        attemptList.contains(attemptId));
+    assertTrue("Attempt should have been stopped", attempt.isStopped());
+
+    // Now remove the app attempt again, since it is stopped nothing happens.
+    scheduler.handle(attemptRemovedEvent);
+    // The attempt should still show the original queue info.
+    assertTrue("Attempt queue has changed",
+        attempt.getQueue().getName().endsWith(testUser));
+  }
+
+  @Test (expected = YarnException.class)
+  public void testMoveAfterRemoval() throws Exception {
+    String testUser = "user1"; // convenience var
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    ApplicationAttemptId attemptId = createAppAttemptId(1, 1);
+    AppAddedSchedulerEvent appAddedEvent =
+        new AppAddedSchedulerEvent(attemptId.getApplicationId(), testUser,
+            testUser);
+    scheduler.handle(appAddedEvent);
+    AppAttemptAddedSchedulerEvent attemptAddedEvent =
+        new AppAttemptAddedSchedulerEvent(createAppAttemptId(1, 1), false);
+    scheduler.handle(attemptAddedEvent);
+
+    // Get a handle on the attempt.
+    FSAppAttempt attempt = scheduler.getSchedulerApp(attemptId);
+
+    AppAttemptRemovedSchedulerEvent attemptRemovedEvent =
+        new AppAttemptRemovedSchedulerEvent(createAppAttemptId(1, 1),
+            RMAppAttemptState.FINISHED, false);
+
+    // Remove the app attempt
+    scheduler.handle(attemptRemovedEvent);
+    // Make sure the app attempt is not in the queue and stopped.
+    List<ApplicationAttemptId> attemptList =
+        scheduler.getAppsInQueue(testUser);
+    assertNotNull("Queue missing", attemptList);
+    assertFalse("Attempt should not be in the queue",
+        attemptList.contains(attemptId));
+    assertTrue("Attempt should have been stopped", attempt.isStopped());
+    // The attempt should still show the original queue info.
+    assertTrue("Attempt queue has changed",
+        attempt.getQueue().getName().endsWith(testUser));
+
+    // Now move the app: not using an event since there is none
+    // in the scheduler. This should throw.
+    scheduler.moveApplication(attemptId.getApplicationId(), "default");
   }
 
   @Test

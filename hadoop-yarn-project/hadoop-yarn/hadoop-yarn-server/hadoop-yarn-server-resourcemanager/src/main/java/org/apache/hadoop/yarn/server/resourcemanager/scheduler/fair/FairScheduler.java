@@ -25,6 +25,8 @@ import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -34,6 +36,7 @@ import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -53,6 +56,11 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
+import org.apache.hadoop.yarn.security.AccessType;
+import org.apache.hadoop.yarn.security.Permission;
+import org.apache.hadoop.yarn.security.PrivilegedEntity;
+import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
+import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
@@ -124,6 +132,7 @@ public class FairScheduler extends
   private FairSchedulerConfiguration conf;
 
   private FSContext context;
+  private YarnAuthorizationProvider authorizer;
   private Resource incrAllocation;
   private QueueManager queueMgr;
   private boolean usePortForNodeName;
@@ -624,14 +633,20 @@ public class FairScheduler extends
       RMAppAttemptState rmAppAttemptFinalState, boolean keepContainers) {
     try {
       writeLock.lock();
-      LOG.info(
-          "Application " + applicationAttemptId + " is done." + " finalState="
+      LOG.info("Application " + applicationAttemptId + " is done. finalState="
               + rmAppAttemptFinalState);
       FSAppAttempt attempt = getApplicationAttempt(applicationAttemptId);
 
       if (attempt == null) {
         LOG.info(
             "Unknown application " + applicationAttemptId + " has completed!");
+        return;
+      }
+
+      // Check if the attempt is already stopped and don't stop it twice.
+      if (attempt.isStopped()) {
+        LOG.info("Application " + applicationAttemptId + " has already been "
+            + "stopped!");
         return;
       }
 
@@ -1209,6 +1224,7 @@ public class FairScheduler extends
       writeLock.lock();
       this.conf = new FairSchedulerConfiguration(conf);
       validateConf(this.conf);
+      authorizer = YarnAuthorizationProvider.getInstance(conf);
       minimumAllocation = this.conf.getMinimumAllocation();
       initMaximumResourceCapability(this.conf.getMaximumAllocation());
       incrAllocation = this.conf.getIncrementAllocation();
@@ -1417,21 +1433,44 @@ public class FairScheduler extends
       AllocationFileLoaderService.Listener {
 
     @Override
-    public void onReload(AllocationConfiguration queueInfo) {
+    public void onReload(AllocationConfiguration queueInfo)
+        throws IOException {
       // Commit the reload; also create any queue defined in the alloc file
       // if it does not already exist, so it can be displayed on the web UI.
 
       writeLock.lock();
       try {
-        allocConf = queueInfo;
-        allocConf.getDefaultSchedulingPolicy().initialize(getClusterResource());
-        queueMgr.updateAllocationConfiguration(allocConf);
-        applyChildDefaults();
-        maxRunningEnforcer.updateRunnabilityOnReload();
+        if (queueInfo == null) {
+          authorizer.setPermission(allocsLoader.getDefaultPermissions(),
+              UserGroupInformation.getCurrentUser());
+        } else {
+          allocConf = queueInfo;
+          setQueueAcls(allocConf.getQueueAcls());
+          allocConf.getDefaultSchedulingPolicy().initialize(
+              getClusterResource());
+          queueMgr.updateAllocationConfiguration(allocConf);
+          applyChildDefaults();
+          maxRunningEnforcer.updateRunnabilityOnReload();
+        }
       } finally {
         writeLock.unlock();
       }
     }
+  }
+
+  private void setQueueAcls(
+      Map<String, Map<AccessType, AccessControlList>> queueAcls)
+      throws IOException {
+    authorizer.setPermission(allocsLoader.getDefaultPermissions(),
+        UserGroupInformation.getCurrentUser());
+    List<Permission> permissions = new ArrayList<>();
+    for (Entry<String, Map<AccessType, AccessControlList>> queueAcl : queueAcls
+        .entrySet()) {
+      permissions.add(new Permission(new PrivilegedEntity(EntityType.QUEUE,
+          queueAcl.getKey()), queueAcl.getValue()));
+    }
+    authorizer.setPermission(permissions,
+        UserGroupInformation.getCurrentUser());
   }
 
   /**
@@ -1488,6 +1527,13 @@ public class FairScheduler extends
       try {
         attempt.getWriteLock().lock();
         FSLeafQueue oldQueue = (FSLeafQueue) app.getQueue();
+        // Check if the attempt is already stopped: don't move stopped app
+        // attempt. The attempt has already been removed from all queues.
+        if (attempt.isStopped()) {
+          LOG.info("Application " + appId + " is stopped and can't be moved!");
+          throw new YarnException("Application " + appId
+              + " is stopped and can't be moved!");
+        }
         String destQueueName = handleMoveToPlanQueue(queueName);
         FSLeafQueue targetQueue = queueMgr.getLeafQueue(destQueueName, false);
         if (targetQueue == null) {
@@ -1511,7 +1557,41 @@ public class FairScheduler extends
       writeLock.unlock();
     }
   }
-  
+
+  @Override
+  public void preValidateMoveApplication(ApplicationId appId, String newQueue)
+      throws YarnException {
+    try {
+      writeLock.lock();
+      SchedulerApplication<FSAppAttempt> app = applications.get(appId);
+      if (app == null) {
+        throw new YarnException("App to be moved " + appId + " not found.");
+      }
+
+      FSAppAttempt attempt = app.getCurrentAppAttempt();
+      // To serialize with FairScheduler#allocate, synchronize on app attempt
+
+      try {
+        attempt.getWriteLock().lock();
+        FSLeafQueue oldQueue = (FSLeafQueue) app.getQueue();
+        String destQueueName = handleMoveToPlanQueue(newQueue);
+        FSLeafQueue targetQueue = queueMgr.getLeafQueue(destQueueName, false);
+        if (targetQueue == null) {
+          throw new YarnException("Target queue " + newQueue
+              + " not found or is not a leaf queue.");
+        }
+
+        if (oldQueue.isRunnableApp(attempt)) {
+          verifyMoveDoesNotViolateConstraints(attempt, oldQueue, targetQueue);
+        }
+      } finally {
+        attempt.getWriteLock().unlock();
+      }
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
   private void verifyMoveDoesNotViolateConstraints(FSAppAttempt app,
       FSLeafQueue oldQueue, FSLeafQueue targetQueue) throws YarnException {
     String queueName = targetQueue.getQueueName();
@@ -1550,16 +1630,23 @@ public class FairScheduler extends
    * operations will be atomic.
    */
   private void executeMove(SchedulerApplication<FSAppAttempt> app,
-      FSAppAttempt attempt, FSLeafQueue oldQueue, FSLeafQueue newQueue) {
-    boolean wasRunnable = oldQueue.removeApp(attempt);
+      FSAppAttempt attempt, FSLeafQueue oldQueue, FSLeafQueue newQueue)
+      throws YarnException {
+    // Check current runs state. Do not remove the attempt from the queue until
+    // after the check has been performed otherwise it could remove the app
+    // from a queue without moving it to a new queue.
+    boolean wasRunnable = oldQueue.isRunnableApp(attempt);
     // if app was not runnable before, it may be runnable now
     boolean nowRunnable = maxRunningEnforcer.canAppBeRunnable(newQueue,
         attempt);
     if (wasRunnable && !nowRunnable) {
-      throw new IllegalStateException("Should have already verified that app "
+      throw new YarnException("Should have already verified that app "
           + attempt.getApplicationId() + " would be runnable in new queue");
     }
-    
+
+    // Now it is safe to remove from the queue.
+    oldQueue.removeApp(attempt);
+
     if (wasRunnable) {
       maxRunningEnforcer.untrackRunnableApp(attempt);
     } else if (nowRunnable) {

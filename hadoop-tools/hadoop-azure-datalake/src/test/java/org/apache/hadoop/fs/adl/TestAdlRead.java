@@ -102,7 +102,7 @@ public class TestAdlRead extends AdlMockWebServer {
       n += count;
     }
 
-    Assert.assertEquals(testData.getActualData().length, expectedData.length);
+    Assert.assertEquals(expectedData.length, testData.getActualData().length);
     Assert.assertArrayEquals(expectedData, testData.getActualData());
     in.close();
     if (testData.isCheckOfNoOfCalls()) {
@@ -119,8 +119,8 @@ public class TestAdlRead extends AdlMockWebServer {
     for (int i = 0; i < 1000; ++i) {
       int position = random.nextInt(testData.getActualData().length);
       in.seek(position);
-      Assert.assertEquals(in.getPos(), position);
-      Assert.assertEquals(in.read(), testData.getActualData()[position] & 0xFF);
+      Assert.assertEquals(position, in.getPos());
+      Assert.assertEquals(testData.getActualData()[position] & 0xFF, in.read());
     }
     in.close();
     if (testData.isCheckOfNoOfCalls()) {

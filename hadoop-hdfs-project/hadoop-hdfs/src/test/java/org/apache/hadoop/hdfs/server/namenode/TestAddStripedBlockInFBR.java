@@ -30,15 +30,16 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
+
+import com.google.common.base.Supplier;
 
 import java.io.IOException;
 
@@ -98,14 +99,27 @@ public class TestAddStripedBlockInFBR {
     DFSTestUtil.createFile(dfs, ecFile,
         cellSize * dataBlocks, (short) 1, 0L);
 
-    // trigger dn's FBR. The FBR will add block-dn mapping.
-    DataNodeTestUtils.triggerBlockReport(dn);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
 
-    // make sure NN has correct block-dn mapping
-    BlockInfoStriped blockInfo = (BlockInfoStriped) cluster.getNamesystem()
-        .getFSDirectory().getINode(ecFile.toString()).asFile().getLastBlock();
-    NumberReplicas nr = spy.countNodes(blockInfo);
-    Assert.assertEquals(groupSize, nr.liveReplicas());
-    Assert.assertEquals(0, nr.excessReplicas());
+      @Override
+      public Boolean get() {
+        try {
+          // trigger dn's FBR. The FBR will add block-dn mapping.
+          cluster.triggerBlockReports();
+
+          // make sure NN has correct block-dn mapping
+          BlockInfoStriped blockInfo = (BlockInfoStriped) cluster
+              .getNamesystem().getFSDirectory().getINode(ecFile.toString())
+              .asFile().getLastBlock();
+          NumberReplicas nr = spy.countNodes(blockInfo);
+
+          return nr.excessReplicas() == 0 && nr.liveReplicas() == groupSize;
+        } catch (Exception ignored) {
+          // Ignore the exception
+        }
+
+        return false;
+      }
+    }, 3000, 60000);
   }
 }

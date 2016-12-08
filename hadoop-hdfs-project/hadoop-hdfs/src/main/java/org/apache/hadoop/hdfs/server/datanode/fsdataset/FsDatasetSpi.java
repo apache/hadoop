@@ -21,7 +21,6 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.File;
-import java.io.FileDescriptor;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -157,6 +156,13 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
      */
     public FsVolumeSpi get(int index) {
       return references.get(index).getVolume();
+    }
+
+    /**
+     * Get the reference for a given index.
+     */
+    public FsVolumeReference getReference(int index) {
+      return references.get(index);
     }
 
     @Override
@@ -598,7 +604,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * submit a sync_file_range request to AsyncDiskService.
    */
   void submitBackgroundSyncFileRangeRequest(final ExtendedBlock block,
-      final FileDescriptor fd, final long offset, final long nbytes,
+      final ReplicaOutputStreams outs, final long offset, final long nbytes,
       final int flags);
 
   /**

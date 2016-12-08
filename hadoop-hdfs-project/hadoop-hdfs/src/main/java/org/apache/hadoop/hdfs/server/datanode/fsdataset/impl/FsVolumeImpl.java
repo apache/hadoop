@@ -49,6 +49,8 @@ import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
+import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
@@ -69,7 +71,6 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipeline;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.BlockDirFilter;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ReportCompiler;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.RamDiskReplicaTracker.RamDiskReplica;
@@ -914,7 +915,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   @Override
-  public FsDatasetSpi getDataset() {
+  public FsDatasetSpi<? extends FsVolumeSpi> getDataset() {
     return dataset;
   }
 
@@ -961,6 +962,16 @@ public class FsVolumeImpl implements FsVolumeSpi {
     for(BlockPoolSlice s : bpSlices.values()) {
       s.checkDirs();
     }
+  }
+
+  @Override
+  public VolumeCheckResult check(VolumeCheckContext ignored)
+      throws DiskErrorException {
+    // TODO:FEDERATION valid synchronization
+    for(BlockPoolSlice s : bpSlices.values()) {
+      s.checkDirs();
+    }
+    return VolumeCheckResult.HEALTHY;
   }
     
   void getVolumeMap(ReplicaMap volumeMap,
@@ -1056,7 +1067,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
         DataStorage.STORAGE_DIR_LAZY_PERSIST);
     File rbwDir = new File(bpCurrentDir, DataStorage.STORAGE_DIR_RBW);
     if (force) {
-      FileUtil.fullyDelete(bpDir);
+      DataStorage.fullyDelete(bpDir);
     } else {
       if (!rbwDir.delete()) {
         throw new IOException("Failed to delete " + rbwDir);
@@ -1070,7 +1081,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
           !FileUtil.fullyDelete(lazypersistDir)))) {
         throw new IOException("Failed to delete " + lazypersistDir);
       }
-      FileUtil.fullyDelete(tmpDir);
+      DataStorage.fullyDelete(tmpDir);
       for (File f : FileUtil.listFiles(bpCurrentDir)) {
         if (!f.delete()) {
           throw new IOException("Failed to delete " + f);
@@ -1426,4 +1437,3 @@ public class FsVolumeImpl implements FsVolumeSpi {
         replicaState);
   }
 }
-

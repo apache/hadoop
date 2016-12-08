@@ -32,7 +32,7 @@ extern FILE * LOG_DEVICE;
 #define LOG(_fmt_, args...)   if (LOG_DEVICE) { \
     time_t log_timer; struct tm log_tm; \
     time(&log_timer); localtime_r(&log_timer, &log_tm); \
-    fprintf(LOG_DEVICE, "%02d/%02d/%02d %02d:%02d:%02d INFO "_fmt_"\n", \
+    fprintf(LOG_DEVICE, "%02d/%02d/%02d %02d:%02d:%02d INFO " _fmt_ "\n", \
     log_tm.tm_year%100, log_tm.tm_mon+1, log_tm.tm_mday, \
     log_tm.tm_hour, log_tm.tm_min, log_tm.tm_sec, \
     ##args);}

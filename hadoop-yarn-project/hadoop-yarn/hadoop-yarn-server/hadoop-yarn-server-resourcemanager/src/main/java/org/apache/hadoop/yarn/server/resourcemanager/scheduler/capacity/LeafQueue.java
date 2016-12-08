@@ -564,6 +564,21 @@ public class LeafQueue extends AbstractCSQueue {
   public void submitApplication(ApplicationId applicationId, String userName,
       String queue)  throws AccessControlException {
     // Careful! Locking order is important!
+    validateSubmitApplication(applicationId, userName, queue);
+
+    // Inform the parent queue
+    try {
+      getParent().submitApplication(applicationId, userName, queue);
+    } catch (AccessControlException ace) {
+      LOG.info("Failed to submit application to parent-queue: " +
+          getParent().getQueuePath(), ace);
+      throw ace;
+    }
+
+  }
+
+  public void validateSubmitApplication(ApplicationId applicationId,
+      String userName, String queue) throws AccessControlException {
     try {
       writeLock.lock();
       // Check if the queue is accepting jobs
@@ -598,15 +613,13 @@ public class LeafQueue extends AbstractCSQueue {
       writeLock.unlock();
     }
 
-    // Inform the parent queue
     try {
-      getParent().submitApplication(applicationId, userName, queue);
+      getParent().validateSubmitApplication(applicationId, userName, queue);
     } catch (AccessControlException ace) {
       LOG.info("Failed to submit application to parent-queue: " + 
           getParent().getQueuePath(), ace);
       throw ace;
     }
-
   }
   
   public Resource getAMResourceLimit() {

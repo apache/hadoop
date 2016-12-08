@@ -15,30 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs;
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 
-import org.apache.hadoop.yarn.api.records.ApplicationId;
+/**
+ * This tests write operation of DFS striped file with RS-DEFAULT-10-4-64k
+ *  erasure code policy under Datanode failure conditions.
+ */
+public class TestDFSRSDefault10x4StripedOutputStreamWithFailure
+    extends TestDFSStripedOutputStreamWithFailure {
 
-import com.google.common.util.concurrent.SettableFuture;
-
-public class RMAppMoveEvent extends RMAppEvent {
-  private String targetQueue;
-  private SettableFuture<Object> result;
-  
-  public RMAppMoveEvent(ApplicationId id, String newQueue,
-      SettableFuture<Object> resultFuture) {
-    super(id, RMAppEventType.MOVE);
-    this.targetQueue = newQueue;
-    this.result = resultFuture;
+  @Override
+  public ErasureCodingPolicy getEcPolicy() {
+    return ErasureCodingPolicyManager.getPolicyByPolicyID(
+        HdfsConstants.RS_10_4_POLICY_ID);
   }
-  
-  public String getTargetQueue() {
-    return targetQueue;
-  }
-  
-  public SettableFuture<Object> getResult() {
-    return result;
-  }
-
 }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
@@ -169,6 +170,12 @@ public class FSQueueMetrics extends QueueMetrics {
     amResourceUsageVCores.set(resource.getVirtualCores());
   }
 
+  /**
+   * Get the scheduling policy.
+   *
+   * @return the scheduling policy
+   */
+  @Metric("Scheduling policy")
   public String getSchedulingPolicy() {
     return schedulingPolicy;
   }
@@ -181,21 +188,38 @@ public class FSQueueMetrics extends QueueMetrics {
   static FSQueueMetrics forQueue(String queueName, Queue parent,
       boolean enableUserMetrics, Configuration conf) {
     MetricsSystem ms = DefaultMetricsSystem.instance();
+    return forQueue(ms, queueName, parent, enableUserMetrics, conf);
+  }
+
+  /**
+   * Get the FS queue metric for the given queue. Create one and register it to
+   * metrics system if there isn't one for the queue.
+   *
+   * @param ms the metric system
+   * @param queueName queue name
+   * @param parent parent queue
+   * @param enableUserMetrics  if user metrics is needed
+   * @param conf configuration
+   * @return a FSQueueMetrics object
+   */
+  @VisibleForTesting
+  public synchronized
+  static FSQueueMetrics forQueue(MetricsSystem ms, String queueName,
+      Queue parent, boolean enableUserMetrics, Configuration conf) {
     QueueMetrics metrics = queueMetrics.get(queueName);
     if (metrics == null) {
       metrics = new FSQueueMetrics(ms, queueName, parent, enableUserMetrics, conf)
           .tag(QUEUE_INFO, queueName);
-      
+
       // Register with the MetricsSystems
       if (ms != null) {
         metrics = ms.register(
-                sourceName(queueName).toString(), 
-                "Metrics for queue: " + queueName, metrics);
+            sourceName(queueName).toString(),
+            "Metrics for queue: " + queueName, metrics);
       }
       queueMetrics.put(queueName, metrics);
     }
 
     return (FSQueueMetrics)metrics;
   }
-
 }

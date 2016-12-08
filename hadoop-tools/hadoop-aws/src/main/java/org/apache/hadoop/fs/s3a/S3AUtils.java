@@ -40,6 +40,7 @@ import org.slf4j.Logger;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -113,6 +114,10 @@ public final class S3AUtils {
         path != null ? (" on " + path) : "",
         exception);
     if (!(exception instanceof AmazonServiceException)) {
+      if (containsInterruptedException(exception)) {
+        return (IOException)new InterruptedIOException(message)
+            .initCause(exception);
+      }
       return new AWSClientIOException(message, exception);
     } else {
 
@@ -192,6 +197,24 @@ public final class S3AUtils {
       ioe = new IOException(operation + " failed: " + cause, cause);
     }
     return ioe;
+  }
+
+  /**
+   * Recurse down the exception loop looking for any inner details about
+   * an interrupted exception.
+   * @param thrown exception thrown
+   * @return true if down the execution chain the operation was an interrupt
+   */
+  static boolean containsInterruptedException(Throwable thrown) {
+    if (thrown == null) {
+      return false;
+    }
+    if (thrown instanceof InterruptedException ||
+        thrown instanceof InterruptedIOException) {
+      return true;
+    }
+    // tail recurse
+    return containsInterruptedException(thrown.getCause());
   }
 
   /**

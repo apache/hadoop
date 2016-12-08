@@ -57,12 +57,6 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
     // Remove deprecated properties listed in Configuration#DeprecationDelta
     configurationPropsToSkipCompare.add(DFSConfigKeys.DFS_DF_INTERVAL_KEY);
 
-    // Remove default properties
-    configurationPropsToSkipCompare
-        .add(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_DEFAULT);
-    configurationPropsToSkipCompare
-        .add(DFSConfigKeys.DFS_WEBHDFS_AUTHENTICATION_FILTER_DEFAULT);
-
     // Remove support property
     configurationPropsToSkipCompare
         .add(DFSConfigKeys.DFS_NAMENODE_MIN_SUPPORTED_DATANODE_VERSION_KEY);

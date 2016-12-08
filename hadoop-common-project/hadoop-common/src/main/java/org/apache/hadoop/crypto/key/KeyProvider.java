@@ -33,6 +33,8 @@ import java.util.Map;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -86,6 +88,7 @@ public abstract class KeyProvider {
       return material;
     }
 
+    @Override
     public String toString() {
       StringBuilder buf = new StringBuilder();
       buf.append("key(");
@@ -104,6 +107,31 @@ public abstract class KeyProvider {
         }
       }
       return buf.toString();
+    }
+
+    @Override
+    public boolean equals(Object rhs) {
+      if (this == rhs) {
+        return true;
+      }
+      if (rhs == null || getClass() != rhs.getClass()) {
+        return false;
+      }
+      final KeyVersion kv = (KeyVersion) rhs;
+      return new EqualsBuilder().
+          append(name, kv.name).
+          append(versionName, kv.versionName).
+          append(material, kv.material).
+          isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+      return new HashCodeBuilder().
+          append(name).
+          append(versionName).
+          append(material).
+          toHashCode();
     }
   }
 

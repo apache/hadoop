@@ -167,7 +167,7 @@ public final class ReloadingX509TrustManager
     KeyStore ks = KeyStore.getInstance(type);
     FileInputStream in = new FileInputStream(file);
     try {
-      ks.load(in, password.toCharArray());
+      ks.load(in, (password == null) ? null : password.toCharArray());
       lastLoaded = file.lastModified();
       LOG.debug("Loaded truststore '" + file + "'");
     } finally {
