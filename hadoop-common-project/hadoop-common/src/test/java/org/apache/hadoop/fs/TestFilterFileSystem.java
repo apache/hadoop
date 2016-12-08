@@ -64,7 +64,6 @@ public class TestFilterFileSystem {
     public FSDataOutputStream append(Path f, int bufferSize) throws
         IOException;
     public long getLength(Path f);
-    public void rename(Path src, Path dst, Rename... options);
     public boolean exists(Path f);
     public boolean isDirectory(Path f);
     public boolean isFile(Path f);
@@ -260,6 +259,17 @@ public class TestFilterFileSystem {
     reset(mockFs);
     fs.setWriteChecksum(true);
     verify(mockFs).setWriteChecksum(eq(true));
+  }
+
+  @Test
+  public void testRenameOptions() throws Exception {
+    FileSystem mockFs = mock(FileSystem.class);
+    FileSystem fs = new FilterFileSystem(mockFs);
+    Path src = new Path("/src");
+    Path dst = new Path("/dest");
+    Rename opt = Rename.TO_TRASH;
+    fs.rename(src, dst, opt);
+    verify(mockFs).rename(eq(src), eq(dst), eq(opt));
   }
 
   private void checkInit(FilterFileSystem fs, boolean expectInit)
