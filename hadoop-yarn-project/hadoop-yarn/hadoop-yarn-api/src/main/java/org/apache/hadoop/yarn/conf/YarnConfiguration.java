@@ -2019,8 +2019,17 @@ public class YarnConfiguration extends Configuration {
   public static final String TIMELINE_SERVICE_WRITER_CLASS =
       TIMELINE_SERVICE_PREFIX + "writer.class";
 
+  public static final String DEFAULT_TIMELINE_SERVICE_WRITER_CLASS =
+      "org.apache.hadoop.yarn.server.timelineservice"
+          + ".storage.HBaseTimelineWriterImpl";
+
   public static final String TIMELINE_SERVICE_READER_CLASS =
       TIMELINE_SERVICE_PREFIX + "reader.class";
+
+  public static final String DEFAULT_TIMELINE_SERVICE_READER_CLASS =
+      "org.apache.hadoop.yarn.server.timelineservice" +
+          ".storage.HBaseTimelineReaderImpl";
+
 
   /** The setting that controls how often the timeline collector flushes the
    * timeline writer.
