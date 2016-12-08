@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
 import org.junit.Test;
@@ -54,4 +55,46 @@ public class TestTimelineReaderServer {
       server.stop();
     }
   }
+
+  @Test(timeout = 60000, expected = YarnRuntimeException.class)
+  public void testTimelineReaderServerWithInvalidTimelineReader() {
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
+    conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+        "localhost:0");
+    conf.set(YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
+        Object.class.getName());
+    runTimelineReaderServerWithConfig(conf);
+  }
+
+  @Test(timeout = 60000, expected = YarnRuntimeException.class)
+  public void testTimelineReaderServerWithNonexistentTimelineReader() {
+    String nonexistentTimelineReaderClass = "org.apache.org.yarn.server." +
+        "timelineservice.storage.XXXXXXXX";
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
+    conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+        "localhost:0");
+    conf.set(YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
+        nonexistentTimelineReaderClass);
+    runTimelineReaderServerWithConfig(conf);
+  }
+
+  /**
+   * Run a TimelineReaderServer with a given configuration.
+   * @param conf configuration to run TimelineReaderServer with
+   */
+  private static void runTimelineReaderServerWithConfig(
+      final Configuration conf) {
+    TimelineReaderServer server = new TimelineReaderServer();
+    try {
+      server.init(conf);
+      server.start();
+    } finally {
+      server.stop();
+    }
+  }
+
 }
