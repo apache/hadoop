@@ -507,7 +507,8 @@ public class RMServerUtils {
         } catch (ParseException ex) {
           String message =
               "Expire time is not in ISO8601 format. ISO8601 supported "
-                  + "format is yyyy-MM-dd'T'HH:mm:ss.SSSZ";
+                  + "format is yyyy-MM-dd'T'HH:mm:ss.SSSZ. Configured "
+                  + "timeout value is " + timeout.getValue();
           throw new YarnException(message, ex);
         }
         if (expireTime < currentTimeMillis) {
