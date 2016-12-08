@@ -40,11 +40,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang.time.FastDateFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -66,7 +66,7 @@ public class DirectoryScanner implements Runnable {
   private static final int MILLIS_PER_SECOND = 1000;
   private static final String START_MESSAGE =
       "Periodic Directory Tree Verification scan"
-      + " starting at %dms with interval of %dms";
+      + " starting at %s with interval of %dms";
   private static final String START_MESSAGE_WITH_THROTTLE = START_MESSAGE
       + " and throttle limit of %dms/s";
 
@@ -465,10 +465,12 @@ public class DirectoryScanner implements Runnable {
     String logMsg;
 
     if (throttleLimitMsPerSec < MILLIS_PER_SECOND) {
-      logMsg = String.format(START_MESSAGE_WITH_THROTTLE, firstScanTime,
-          scanPeriodMsecs, throttleLimitMsPerSec);
+      logMsg = String.format(START_MESSAGE_WITH_THROTTLE,
+          FastDateFormat.getInstance().format(firstScanTime), scanPeriodMsecs,
+          throttleLimitMsPerSec);
     } else {
-      logMsg = String.format(START_MESSAGE, firstScanTime, scanPeriodMsecs);
+      logMsg = String.format(START_MESSAGE,
+          FastDateFormat.getInstance().format(firstScanTime), scanPeriodMsecs);
     }
 
     LOG.info(logMsg);
