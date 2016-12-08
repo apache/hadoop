@@ -50,7 +50,7 @@ IMPORTANT: Replace `#HTTPFSUSER#` with the Unix user that will start the HttpFS 
 Restart Hadoop
 --------------
 
-You need to restart Hadoop for the proxyuser configuration ot become active.
+You need to restart Hadoop for the proxyuser configuration to become active.
 
 Start/Stop HttpFS
 -----------------
