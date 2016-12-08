@@ -372,8 +372,12 @@ public class EncryptionZoneManager {
        contain a reference INode.
       */
       final String pathName = getFullPathName(ezi);
-      INodesInPath iip = dir.getINodesInPath(pathName, DirOp.READ_LINK);
-      INode lastINode = iip.getLastINode();
+      INode inode = dir.getInode(ezi.getINodeId());
+      INode lastINode = null;
+      if (inode.getParent() != null || inode.isRoot()) {
+        INodesInPath iip = dir.getINodesInPath(pathName, DirOp.READ_LINK);
+        lastINode = iip.getLastINode();
+      }
       if (lastINode == null || lastINode.getId() != ezi.getINodeId()) {
         continue;
       }

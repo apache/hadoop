@@ -62,6 +62,7 @@ public class TestCryptoAdminCLI extends CLITestHelperDFS {
     conf.setClass(PolicyProvider.POLICY_PROVIDER_CONFIG,
         HDFSPolicyProvider.class, PolicyProvider.class);
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
+    conf.setLong(CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY, 10);
 
     tmpDir = new File(System.getProperty("test.build.data", "target"),
         UUID.randomUUID().toString()).getAbsoluteFile();
@@ -127,7 +128,7 @@ public class TestCryptoAdminCLI extends CLITestHelperDFS {
   }
 
   private class TestConfigFileParserCryptoAdmin extends
-      CLITestHelper.TestConfigFileParser {
+      CLITestHelperDFS.TestConfigFileParserDFS {
     @Override
     public void endElement(String uri, String localName, String qName)
         throws SAXException {
