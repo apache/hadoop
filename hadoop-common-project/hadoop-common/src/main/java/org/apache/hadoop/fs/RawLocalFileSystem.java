@@ -791,6 +791,15 @@ public class RawLocalFileSystem extends FileSystem {
           pathToFile(p).toPath(), BasicFileAttributeView.class);
       FileTime fmtime = (mtime >= 0) ? FileTime.fromMillis(mtime) : null;
       FileTime fatime = (atime >= 0) ? FileTime.fromMillis(atime) : null;
+
+      // On some macOS environment, BasicFileAttributeView.setTimes
+      // does not set times correctly when the argument of accessTime is null.
+      // TODO: Remove this after the issue is fixed.
+      if (fatime == null && Shell.MAC) {
+        FileStatus f = getFileStatus(p);
+        fatime = FileTime.fromMillis(f.getAccessTime());
+      }
+
       view.setTimes(fmtime, fatime, null);
     } catch (NoSuchFileException e) {
       throw new FileNotFoundException("File " + p + " does not exist");
