@@ -26,7 +26,6 @@ import com.google.protobuf.ByteString;
 
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
-import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -772,10 +771,10 @@ public class PBHelper {
       NNHAStatusHeartbeatProto.newBuilder();
     switch (hb.getState()) {
       case ACTIVE:
-        builder.setState(HAServiceProtocolProtos.HAServiceStateProto.ACTIVE);
+        builder.setState(NNHAStatusHeartbeatProto.State.ACTIVE);
         break;
       case STANDBY:
-        builder.setState(HAServiceProtocolProtos.HAServiceStateProto.STANDBY);
+        builder.setState(NNHAStatusHeartbeatProto.State.STANDBY);
         break;
       default:
         throw new IllegalArgumentException("Unexpected NNHAStatusHeartbeat.State:" +
