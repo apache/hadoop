@@ -36,9 +36,6 @@
     <is.hadoop.common.component>true</is.hadoop.common.component>
     <wsce.config.dir>../etc/hadoop</wsce.config.dir>
     <wsce.config.file>wsce-site.xml</wsce.config.file>
-    <!-- the version of Hadoop declared in the version resources; can be overridden
-    so that Hadoop 3.x can declare itself a 2.x artifact. -->
-    <declared.hadoop.version>${pom.version}</declared.hadoop.version>
   </properties>
 
 
