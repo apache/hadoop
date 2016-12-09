@@ -17,18 +17,19 @@
  */
 package org.apache.hadoop.fs;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-
 import junit.framework.AssertionFailedError;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.fs.shell.Command;
+import org.apache.hadoop.fs.shell.CommandFactory;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tracing.SetSpanReceiver;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.htrace.core.AlwaysSampler;
 import org.apache.htrace.core.Tracer;
+import org.hamcrest.core.StringContains;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestFsShell {
 
@@ -73,30 +74,42 @@ public class TestFsShell {
 
   @Test
   public void testDFSWithInvalidCommmand() throws Throwable {
-    Configuration conf = new Configuration();
-    FsShell shell = new FsShell(conf);
-    String[] args = new String[1];
-    args[0] = "dfs -mkdirs";
-    final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    final PrintStream out = new PrintStream(bytes);
-    final PrintStream oldErr = System.err;
-    try {
-      System.setErr(out);
-      ToolRunner.run(shell, args);
-      String errorValue=new String(bytes.toString());
-      Assert
-      .assertTrue(
-          "FSShell dfs command did not print the error " +
-          "message when invalid command is passed",
-          errorValue.contains("-mkdirs: Unknown command"));
-      Assert
-          .assertTrue(
-              "FSShell dfs command did not print help " +
+    FsShell shell = new FsShell(new Configuration());
+    try (GenericTestUtils.SystemErrCapturer capture =
+             new GenericTestUtils.SystemErrCapturer()) {
+      ToolRunner.run(shell, new String[]{"dfs -mkdirs"});
+      Assert.assertThat("FSShell dfs command did not print the error " +
               "message when invalid command is passed",
-          errorValue.contains("Usage: hadoop fs [generic options]"));
-    } finally {
-      IOUtils.closeStream(out);
-      System.setErr(oldErr);
+          capture.getOutput(), StringContains.containsString(
+              "-mkdirs: Unknown command"));
+      Assert.assertThat("FSShell dfs command did not print help " +
+              "message when invalid command is passed",
+          capture.getOutput(), StringContains.containsString(
+              "Usage: hadoop fs [generic options]"));
+    }
+  }
+
+  @Test
+  public void testExceptionNullMessage() throws Exception {
+    final String cmdName = "-cmdExNullMsg";
+    final Command cmd = Mockito.mock(Command.class);
+    Mockito.when(cmd.run(Mockito.anyVararg())).thenThrow(
+        new IllegalArgumentException());
+    Mockito.when(cmd.getUsage()).thenReturn(cmdName);
+
+    final CommandFactory cmdFactory = Mockito.mock(CommandFactory.class);
+    final String[] names = {cmdName};
+    Mockito.when(cmdFactory.getNames()).thenReturn(names);
+    Mockito.when(cmdFactory.getInstance(cmdName)).thenReturn(cmd);
+
+    FsShell shell = new FsShell(new Configuration());
+    shell.commandFactory = cmdFactory;
+    try (GenericTestUtils.SystemErrCapturer capture =
+             new GenericTestUtils.SystemErrCapturer()) {
+      ToolRunner.run(shell, new String[]{cmdName});
+      Assert.assertThat(capture.getOutput(),
+          StringContains.containsString(cmdName
+              + ": Null exception message"));
     }
   }
 }
