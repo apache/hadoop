@@ -54,6 +54,7 @@ Many subcommands honor a common set of configuration options to alter their beha
 
 | GENERIC\_OPTION | Description |
 |:---- |:---- |
+| `-fs <local> or <namenode:port>` | Specify a NameNode. |
 | `-archives <comma separated list of archives> ` | Specify comma separated archives to be unarchived on the compute machines. Applies only to job. |
 | `-conf <configuration file> ` | Specify an application configuration file. |
 | `-D <property>=<value> ` | Use value for given property. |
