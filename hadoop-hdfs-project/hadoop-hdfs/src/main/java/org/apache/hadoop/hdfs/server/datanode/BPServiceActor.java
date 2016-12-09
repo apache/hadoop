@@ -504,7 +504,12 @@ class BPServiceActor implements Runnable {
         volumeFailureSummary,
         requestBlockReportLease);
   }
-  
+
+  @VisibleForTesting
+  void sendLifelineForTests() throws IOException {
+    lifelineSender.sendLifeline();
+  }
+
   //This must be called only by BPOfferService
   void start() {
     if ((bpThread != null) && (bpThread.isAlive())) {

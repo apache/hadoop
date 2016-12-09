@@ -275,6 +275,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   @VisibleForTesting
+  public boolean isHeartbeatedSinceRegistration() {
+   return heartbeatedSinceRegistration;
+  }
+
+  @VisibleForTesting
   public DatanodeStorageInfo getStorageInfo(String storageID) {
     synchronized (storageMap) {
       return storageMap.get(storageID);
