@@ -39,24 +39,47 @@ namespace hdfs {
  * When an operation is queued into an IoService, the IoService will
  * run the callback handler associated with the operation. Note that
  * the IoService must be stopped before destructing the objects that
- * file the operations.
+ * post the operations.
  *
- * From an implementation point of view the IoService object wraps the
- * ::asio::io_service objects. Please see the related documentation
- * for more details.
+ * From an implementation point of view the hdfs::IoService provides
+ * a thin wrapper over an asio::io_service object so that additional
+ * instrumentation and functionality can be added.
  **/
-class IoService {
+
+class IoService : public std::enable_shared_from_this<IoService>
+{
  public:
   static IoService *New();
+  static std::shared_ptr<IoService> MakeShared();
+  virtual ~IoService();
+
+  /**
+   * Start up as many threads as there are logical processors.
+   * Return number of threads created.
+   **/
+  virtual unsigned int InitDefaultWorkers() = 0;
+
+  /**
+   * Initialize with thread_count handler threads.
+   * If thread count is less than one print a log message and default to one thread.
+   * Return number of threads created.
+   **/
+  virtual unsigned int InitWorkers(unsigned int thread_count) = 0;
+
+  /**
+   * Place an item on the execution queue.  Will be invoked from outside of the calling context.
+   **/
+  virtual void PostTask(std::function<void(void)>& asyncTask) = 0;
+
   /**
    * Run the asynchronous tasks associated with this IoService.
    **/
   virtual void Run() = 0;
   /**
    * Stop running asynchronous tasks associated with this IoService.
+   * All worker threads will return as soon as they finish executing their current task.
    **/
   virtual void Stop() = 0;
-  virtual ~IoService();
 };
 
 /**
@@ -162,6 +185,13 @@ class FileSystem {
    **/
   static FileSystem *New(
       IoService *&io_service, const std::string &user_name, const Options &options);
+
+  /**
+   * Works the same as the other FileSystem::New but takes a copy of an existing IoService.
+   * The shared IoService is expected to already have worker threads initialized.
+   **/
+  static FileSystem *New(
+      std::shared_ptr<IoService>, const std::string &user_name, const Options &options);
 
   /**
    * Returns a new instance with default user and option, with the default IOService.

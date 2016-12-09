@@ -39,7 +39,11 @@ Options::Options() : rpc_timeout(kDefaultRpcTimeout),
                      failover_max_retries(kDefaultFailoverMaxRetries),
                      failover_connection_max_retries(kDefaultFailoverConnectionMaxRetries),
                      authentication(kDefaultAuthentication),
-                     block_size(kDefaultBlockSize) {}
+                     block_size(kDefaultBlockSize),
+                     io_threads_(kDefaultIoThreads)
+{
+
+}
 
 std::string NamenodeInfo::get_host() const {
   return uri.get_host();

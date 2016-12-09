@@ -27,6 +27,7 @@
 #include <sstream>
 #include <mutex>
 #include <memory>
+#include <thread>
 
 #include <asio/ip/tcp.hpp>
 
@@ -49,11 +50,12 @@ enum LogLevel {
 };
 
 enum LogSourceComponent {
-  kUnknown     = 1 << 0,
-  kRPC         = 1 << 1,
-  kBlockReader = 1 << 2,
-  kFileHandle  = 1 << 3,
-  kFileSystem  = 1 << 4,
+  kUnknown      = 1 << 0,
+  kRPC          = 1 << 1,
+  kBlockReader  = 1 << 2,
+  kFileHandle   = 1 << 3,
+  kFileSystem   = 1 << 4,
+  kAsyncRuntime = 1 << 5,
 };
 
 #define LOG_TRACE(C, MSG) do { \
@@ -195,6 +197,9 @@ class LogMessage {
 
   //asio types
   LogMessage& operator<<(const ::asio::ip::tcp::endpoint& endpoint);
+
+  //thread and mutex types
+  LogMessage& operator<<(const std::thread::id& tid);
 
 
   std::string MsgString() const;
