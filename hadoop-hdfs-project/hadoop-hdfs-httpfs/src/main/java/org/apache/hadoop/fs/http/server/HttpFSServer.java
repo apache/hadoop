@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OperationParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OverwriteParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OwnerParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.PermissionParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.PolicyNameParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.RecursiveParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.ReplicationParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.SourcesParam;
@@ -75,6 +76,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -320,6 +322,22 @@ public class HttpFSServer {
       response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
       break;
     }
+    case GETALLSTORAGEPOLICY: {
+      FSOperations.FSGetAllStoragePolicies command =
+          new FSOperations.FSGetAllStoragePolicies();
+      JSONObject json = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", path);
+      response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
+    case GETSTORAGEPOLICY: {
+      FSOperations.FSGetStoragePolicy command =
+          new FSOperations.FSGetStoragePolicy(path);
+      JSONObject json = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", path);
+      response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
     default: {
       throw new IOException(
           MessageFormat.format("Invalid HTTP GET operation [{0}]", op.value()));
@@ -446,6 +464,14 @@ public class HttpFSServer {
         AUDIT_LOG.info("Truncate [{}] to length [{}]", path, newLength);
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
+      }
+      case UNSETSTORAGEPOLICY: {
+        FSOperations.FSUnsetStoragePolicy command =
+             new FSOperations.FSUnsetStoragePolicy(path);
+         fsExecute(user, command);
+         AUDIT_LOG.info("Unset storage policy [{}]", path);
+         response = Response.ok().build();
+         break;
       }
       default: {
         throw new IOException(
@@ -661,6 +687,16 @@ public class HttpFSServer {
                 new FSOperations.FSRemoveDefaultAcl(path);
         fsExecute(user, command);
         AUDIT_LOG.info("[{}] remove default acl", path);
+        response = Response.ok().build();
+        break;
+      }
+      case SETSTORAGEPOLICY: {
+        String policyName = params.get(PolicyNameParam.NAME,
+            PolicyNameParam.class);
+        FSOperations.FSSetStoragePolicy command =
+            new FSOperations.FSSetStoragePolicy(path, policyName);
+        fsExecute(user, command);
+        AUDIT_LOG.info("[{}] to policy [{}]", path, policyName);
         response = Response.ok().build();
         break;
       }

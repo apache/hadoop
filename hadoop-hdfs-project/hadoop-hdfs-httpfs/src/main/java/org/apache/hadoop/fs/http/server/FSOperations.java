@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.http.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
@@ -25,12 +26,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.GlobFilter;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.util.StringUtils;
@@ -40,6 +43,7 @@ import org.json.simple.JSONObject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -234,6 +238,46 @@ public class FSOperations {
   private static JSONObject toJSON(String name, Object value) {
     JSONObject json = new JSONObject();
     json.put(name, value);
+    return json;
+  }
+
+  @SuppressWarnings({ "unchecked" })
+  private static JSONObject storagePolicyToJSON(BlockStoragePolicySpi policy) {
+    BlockStoragePolicy p = (BlockStoragePolicy) policy;
+    JSONObject policyJson = new JSONObject();
+    policyJson.put("id", p.getId());
+    policyJson.put("name", p.getName());
+    policyJson.put("storageTypes", toJsonArray(p.getStorageTypes()));
+    policyJson.put("creationFallbacks", toJsonArray(p.getCreationFallbacks()));
+    policyJson.put("replicationFallbacks",
+        toJsonArray(p.getReplicationFallbacks()));
+    policyJson.put("copyOnCreateFile", p.isCopyOnCreateFile());
+    return policyJson;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static JSONArray toJsonArray(StorageType[] storageTypes) {
+    JSONArray jsonArray = new JSONArray();
+    for (StorageType type : storageTypes) {
+      jsonArray.add(type.toString());
+    }
+    return jsonArray;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static JSONObject storagePoliciesToJSON(
+      Collection<? extends BlockStoragePolicySpi> storagePolicies) {
+    JSONObject json = new JSONObject();
+    JSONArray jsonArray = new JSONArray();
+    JSONObject policies = new JSONObject();
+    if (storagePolicies != null) {
+      for (BlockStoragePolicySpi policy : storagePolicies) {
+        JSONObject policyMap = storagePolicyToJSON(policy);
+        jsonArray.add(policyMap);
+      }
+    }
+    policies.put(HttpFSFileSystem.STORAGE_POLICY_JSON, jsonArray);
+    json.put(HttpFSFileSystem.STORAGE_POLICIES_JSON, policies);
     return json;
   }
 
@@ -1232,6 +1276,93 @@ public class FSOperations {
         xattrs = fs.getXAttrs(path);
       }
       return xAttrsToJSON(xattrs, encoding);
+    }
+  }
+
+
+  /**
+   * Executor that performs a getAllStoragePolicies FileSystemAccess files
+   * system operation.
+   */
+  @SuppressWarnings({ "unchecked" })
+  @InterfaceAudience.Private
+  public static class FSGetAllStoragePolicies implements
+      FileSystemAccess.FileSystemExecutor<JSONObject> {
+
+    @Override
+    public JSONObject execute(FileSystem fs) throws IOException {
+      Collection<? extends BlockStoragePolicySpi> storagePolicies = fs
+          .getAllStoragePolicies();
+      return storagePoliciesToJSON(storagePolicies);
+    }
+  }
+
+  /**
+   * Executor that performs a getStoragePolicy FileSystemAccess files system
+   * operation.
+   */
+  @SuppressWarnings({ "unchecked" })
+  @InterfaceAudience.Private
+  public static class FSGetStoragePolicy implements
+      FileSystemAccess.FileSystemExecutor<JSONObject> {
+
+    private Path path;
+
+    public FSGetStoragePolicy(String path) {
+      this.path = new Path(path);
+    }
+
+    @Override
+    public JSONObject execute(FileSystem fs) throws IOException {
+      BlockStoragePolicySpi storagePolicy = fs.getStoragePolicy(path);
+      JSONObject json = new JSONObject();
+      json.put(HttpFSFileSystem.STORAGE_POLICY_JSON,
+          storagePolicyToJSON(storagePolicy));
+      return json;
+    }
+  }
+
+  /**
+   * Executor that performs a setStoragePolicy FileSystemAccess files system
+   * operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSSetStoragePolicy implements
+      FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+    private String policyName;
+
+    public FSSetStoragePolicy(String path, String policyName) {
+      this.path = new Path(path);
+      this.policyName = policyName;
+    }
+
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      fs.setStoragePolicy(path, policyName);
+      return null;
+    }
+  }
+
+  /**
+   * Executor that performs a unsetStoragePolicy FileSystemAccess files system
+   * operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSUnsetStoragePolicy implements
+      FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+
+    public FSUnsetStoragePolicy(String path) {
+      this.path = new Path(path);
+    }
+
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      fs.unsetStoragePolicy(path);
+      return null;
     }
   }
 }

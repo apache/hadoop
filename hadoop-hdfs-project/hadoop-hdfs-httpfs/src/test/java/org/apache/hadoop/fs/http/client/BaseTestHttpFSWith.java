@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.http.client;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
@@ -34,6 +35,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.HFSTestCase;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
@@ -44,6 +47,7 @@ import org.apache.hadoop.test.TestHdfsHelper;
 import org.apache.hadoop.test.TestJetty;
 import org.apache.hadoop.test.TestJettyHelper;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -859,11 +863,55 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     assertFalse(httpStatus.isEncrypted());
   }
 
+  private void testStoragePolicy() throws Exception {
+    Assume.assumeFalse("Assume its not a local FS", isLocalFS());
+    FileSystem fs = FileSystem.get(getProxiedFSConf());
+    fs.mkdirs(getProxiedFSTestDir());
+    Path path = new Path(getProxiedFSTestDir(), "policy.txt");
+    FileSystem httpfs = getHttpFSFileSystem();
+    // test getAllStoragePolicies
+    BlockStoragePolicy[] dfsPolicies = (BlockStoragePolicy[]) fs
+       .getAllStoragePolicies().toArray();
+    BlockStoragePolicy[] httpPolicies = (BlockStoragePolicy[]) httpfs
+        .getAllStoragePolicies().toArray();
+    Assert.assertArrayEquals(
+        "Policy array returned from the DFS and HttpFS should be equals",
+        dfsPolicies, httpPolicies);
+
+    // test get/set/unset policies
+    DFSTestUtil.createFile(fs, path, 0, (short) 1, 0L);
+    // get defaultPolicy
+   BlockStoragePolicySpi defaultdfsPolicy = fs.getStoragePolicy(path);
+    // set policy through webhdfs
+    httpfs.setStoragePolicy(path, HdfsConstants.COLD_STORAGE_POLICY_NAME);
+    // get policy from dfs
+    BlockStoragePolicySpi dfsPolicy = fs.getStoragePolicy(path);
+    // get policy from webhdfs
+    BlockStoragePolicySpi httpFsPolicy = httpfs.getStoragePolicy(path);
+    Assert
+       .assertEquals(
+            "Storage policy returned from the get API should"
+            + " be same as set policy",
+            HdfsConstants.COLD_STORAGE_POLICY_NAME.toString(),
+            httpFsPolicy.getName());
+    Assert.assertEquals(
+        "Storage policy returned from the DFS and HttpFS should be equals",
+        httpFsPolicy, dfsPolicy);
+    // unset policy
+    httpfs.unsetStoragePolicy(path);
+    Assert
+       .assertEquals(
+            "After unset storage policy, the get API shoudld"
+            + " return the default policy",
+            defaultdfsPolicy, httpfs.getStoragePolicy(path));
+    fs.close();
+  }
+
   protected enum Operation {
     GET, OPEN, CREATE, APPEND, TRUNCATE, CONCAT, RENAME, DELETE, LIST_STATUS, 
     WORKING_DIRECTORY, MKDIRS, SET_TIMES, SET_PERMISSION, SET_OWNER, 
     SET_REPLICATION, CHECKSUM, CONTENT_SUMMARY, FILEACLS, DIRACLS, SET_XATTR,
-    GET_XATTRS, REMOVE_XATTR, LIST_XATTRS, ENCRYPTION
+    GET_XATTRS, REMOVE_XATTR, LIST_XATTRS, ENCRYPTION, STORAGEPOLICY
   }
 
   private void operation(Operation op) throws Exception {
@@ -939,6 +987,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
         break;
       case ENCRYPTION:
         testEncryption();
+        break;
+      case STORAGEPOLICY:
+        testStoragePolicy();
         break;
     }
   }

@@ -453,4 +453,12 @@ public class TestParam {
       LOG.info("EXPECTED: " + e);
     }
   }
+
+  @Test
+  public void testStoragePolicyParam() {
+    StoragePolicyParam p = new StoragePolicyParam(StoragePolicyParam.DEFAULT);
+    Assert.assertEquals(null, p.getValue());
+    p = new StoragePolicyParam("COLD");
+    Assert.assertEquals("COLD", p.getValue());
+  }
 }
