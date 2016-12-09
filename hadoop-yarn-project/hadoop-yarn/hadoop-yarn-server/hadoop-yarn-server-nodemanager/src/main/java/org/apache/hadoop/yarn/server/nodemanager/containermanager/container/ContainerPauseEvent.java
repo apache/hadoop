@@ -16,31 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api.records;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 
 /**
- * <p>State of a <code>Container</code>.</p>
+ * ContainerEvent for ContainerEventType.PAUSE_CONTAINER.
  */
-@Public
-@Stable
-public enum ContainerState {
-  /** New container */
-  NEW, 
-  
-  /** Running container */
-  RUNNING, 
+public class ContainerPauseEvent extends ContainerEvent {
 
-  /** Completed container */
-  COMPLETE,
+  private final String diagnostic;
 
-  /** Scheduled (awaiting resources) at the NM. */
-  @InterfaceStability.Unstable
-  SCHEDULED,
+  public ContainerPauseEvent(ContainerId cId,
+      String diagnostic) {
+    super(cId, ContainerEventType.PAUSE_CONTAINER);
+    this.diagnostic = diagnostic;
+  }
 
-  /** Paused at the NM. */
-  PAUSED
+  public String getDiagnostic() {
+    return this.diagnostic;
+  }
 }
+
