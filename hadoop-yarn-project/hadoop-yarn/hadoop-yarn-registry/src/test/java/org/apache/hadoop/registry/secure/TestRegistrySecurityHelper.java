@@ -36,7 +36,7 @@ import java.util.List;
 import static org.apache.hadoop.registry.client.api.RegistryConstants.*;
 
 /**
- * Test for registry security operations
+ * Test for registry security operations.
  */
 public class TestRegistrySecurityHelper extends Assert {
   private static final Logger LOG =
@@ -189,23 +189,5 @@ public class TestRegistrySecurityHelper extends Assert {
     assertFalse(RegistrySecurity.ALL_READWRITE_ACCESS.equals(acl));
     LOG.info("User {} has ACL {}", user, acl);
   }
-
-
-  @Test
-  public void testSecurityImpliesKerberos() throws Throwable {
-    Configuration conf = new Configuration();
-    conf.setBoolean("hadoop.security.authentication", true);
-    conf.setBoolean(KEY_REGISTRY_SECURE, true);
-    conf.set(KEY_REGISTRY_KERBEROS_REALM, "KERBEROS");
-    RegistrySecurity security = new RegistrySecurity("registry security");
-    try {
-      security.init(conf);
-    } catch (Exception e) {
-      assertTrue(
-          "did not find "+ RegistrySecurity.E_NO_KERBEROS + " in " + e,
-          e.toString().contains(RegistrySecurity.E_NO_KERBEROS));
-    }
-  }
-
 
 }

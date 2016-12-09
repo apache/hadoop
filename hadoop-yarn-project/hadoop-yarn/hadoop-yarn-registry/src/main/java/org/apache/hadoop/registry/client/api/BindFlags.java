@@ -29,7 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 public interface BindFlags {
 
   /**
-   * Create the entry.. This is just "0" and can be "or"ed with anything
+   * Create the entry.. This is just "0" and can be "or"ed with anything.
    */
   int CREATE = 0;
 

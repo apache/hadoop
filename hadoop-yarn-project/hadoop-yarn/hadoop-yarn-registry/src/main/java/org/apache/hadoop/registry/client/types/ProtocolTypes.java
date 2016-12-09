@@ -74,7 +74,7 @@ public interface ProtocolTypes {
   String PROTOCOL_UDP = "udp";
 
   /**
-   * Default value —the protocol is unknown : "{@value}"
+   * Default value -the protocol is unknown : "{@value}"
    */
   String PROTOCOL_UNKNOWN = "";
 

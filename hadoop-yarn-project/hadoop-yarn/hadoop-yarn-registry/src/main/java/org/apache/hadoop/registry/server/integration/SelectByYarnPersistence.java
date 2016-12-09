@@ -26,7 +26,7 @@ import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
 import org.apache.hadoop.registry.server.services.RegistryAdminService;
 
 /**
- * Select an entry by the YARN persistence policy
+ * Select an entry by the YARN persistence policy.
  */
 public class SelectByYarnPersistence
     implements RegistryAdminService.NodeSelector {

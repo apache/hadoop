@@ -18,10 +18,15 @@
 
 package org.apache.hadoop.registry.client.exceptions;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Exception raised when client access wasn't authenticated.
  * That is: the credentials provided were incomplete or invalid.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class AuthenticationFailedException extends RegistryIOException {
   public AuthenticationFailedException(String path, Throwable cause) {
     super(path, cause);

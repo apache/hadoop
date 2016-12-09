@@ -65,9 +65,11 @@ import java.net.UnknownHostException;
 @InterfaceStability.Evolving
 public class MicroZookeeperService
     extends AbstractService
-    implements RegistryBindingSource, RegistryConstants,
+    implements RegistryBindingSource,
+    RegistryConstants,
+    RegistryInternalConstants,
     ZookeeperConfigOptions,
-    MicroZookeeperServiceKeys{
+    MicroZookeeperServiceKeys {
 
 
   private static final Logger
@@ -86,7 +88,7 @@ public class MicroZookeeperService
   private StringBuilder diagnostics = new StringBuilder();
 
   /**
-   * Create an instance
+   * Create an instance.
    * @param name service name
    */
   public MicroZookeeperService(String name) {
@@ -105,7 +107,7 @@ public class MicroZookeeperService
   }
 
   /**
-   * Get the connection address
+   * Get the connection address.
    * @return the connection as an address
    * @throws IllegalStateException if the connection is not yet valid
    */
@@ -115,7 +117,7 @@ public class MicroZookeeperService
   }
 
   /**
-   * Create an inet socket addr from the local host + port number
+   * Create an inet socket addr from the local host + port number.
    * @param port port to use
    * @return a (hostname, port) pair
    * @throws UnknownHostException if the server cannot resolve the host
@@ -125,9 +127,9 @@ public class MicroZookeeperService
   }
 
   /**
-   * Initialize the service, including choosing a path for the data
+   * Initialize the service, including choosing a path for the data.
    * @param conf configuration
-   * @throws Exception
+   * @throws Exception initialization problem
    */
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
@@ -156,7 +158,7 @@ public class MicroZookeeperService
   /**
    * Create a directory, ignoring if the dir is already there,
    * and failing if a file or something else was at the end of that
-   * path
+   * path.
    * @param dir dir to guarantee the existence of
    * @throws IOException IO problems, or path exists but is not a dir
    */
@@ -173,14 +175,14 @@ public class MicroZookeeperService
    * <p>
    * A newline is appended afterwards.
    * @param text text including any format commands
-   * @param args arguments for the forma operation.
+   * @param args arguments for the format operation.
    */
   protected void addDiagnostics(String text, Object ... args) {
     diagnostics.append(String.format(text, args)).append('\n');
   }
 
   /**
-   * Get the diagnostics info
+   * Get the diagnostics info.
    * @return the diagnostics string built up
    */
   public String getDiagnostics() {
@@ -206,8 +208,8 @@ public class MicroZookeeperService
             "true"));
 
       //needed so that you can use sasl: strings in the registry
-      System.setProperty(RegistryInternalConstants.ZOOKEEPER_AUTH_PROVIDER +".1",
-          RegistryInternalConstants.SASLAUTHENTICATION_PROVIDER);
+      System.setProperty(ZOOKEEPER_AUTH_PROVIDER +".1",
+          SASLAUTHENTICATION_PROVIDER);
       String serverContext =
           System.getProperty(PROP_ZK_SERVER_SASL_CONTEXT);
       addDiagnostics("Server JAAS context s = %s", serverContext);
@@ -220,7 +222,7 @@ public class MicroZookeeperService
   /**
    * Startup: start ZK. It is only after this that
    * the binding information is valid.
-   * @throws Exception
+   * @throws Exception startup problem.
    */
   @Override
   protected void serviceStart() throws Exception {
@@ -259,8 +261,8 @@ public class MicroZookeeperService
 
   /**
    * When the service is stopped, it deletes the data directory
-   * and its contents
-   * @throws Exception
+   * and its contents.
+   * @throws Exception any problem stopping.
    */
   @Override
   protected void serviceStop() throws Exception {

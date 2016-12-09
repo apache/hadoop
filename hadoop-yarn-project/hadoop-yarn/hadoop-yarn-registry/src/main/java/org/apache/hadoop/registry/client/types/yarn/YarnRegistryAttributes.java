@@ -19,7 +19,7 @@
 package org.apache.hadoop.registry.client.types.yarn;
 
 /**
- * YARN specific attributes in the registry
+ * YARN specific attributes in the registry.
  */
 public class YarnRegistryAttributes {
 

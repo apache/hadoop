@@ -47,29 +47,29 @@ public class ServiceRecord implements Cloneable {
   public static final String RECORD_TYPE = "JSONServiceRecord";
 
   /**
-   * The type field. This must be the string {@link #RECORD_TYPE}
+   * The type field. This must be the string {@link #RECORD_TYPE}.
    */
   public String type = RECORD_TYPE;
 
   /**
-   * Description string
+   * Description string.
    */
   public String description;
 
   /**
    * map to handle unknown attributes.
    */
-  private Map<String, String> attributes = new HashMap<String, String>(4);
+  private Map<String, String> attributes = new HashMap<>(4);
 
   /**
-   * List of endpoints intended for use to external callers
+   * List of endpoints intended for use to external callers.
    */
-  public List<Endpoint> external = new ArrayList<Endpoint>();
+  public List<Endpoint> external = new ArrayList<>();
 
   /**
    * List of endpoints for use <i>within</i> an application.
    */
-  public List<Endpoint> internal = new ArrayList<Endpoint>();
+  public List<Endpoint> internal = new ArrayList<>();
 
   /**
    * Create a service record with no ID, description or registration time.
@@ -79,7 +79,7 @@ public class ServiceRecord implements Cloneable {
   }
 
   /**
-   * Deep cloning constructor
+   * Deep cloning constructor.
    * @param that service record source
    */
   public ServiceRecord(ServiceRecord that) {
@@ -92,14 +92,14 @@ public class ServiceRecord implements Cloneable {
     // endpoints
     List<Endpoint> src = that.internal;
     if (src != null) {
-      internal = new ArrayList<Endpoint>(src.size());
+      internal = new ArrayList<>(src.size());
       for (Endpoint endpoint : src) {
         internal.add(new Endpoint(endpoint));
       }
     }
     src = that.external;
     if (src != null) {
-      external = new ArrayList<Endpoint>(src.size());
+      external = new ArrayList<>(src.size());
       for (Endpoint endpoint : src) {
         external.add(new Endpoint(endpoint));
       }
@@ -107,7 +107,7 @@ public class ServiceRecord implements Cloneable {
   }
 
   /**
-   * Add an external endpoint
+   * Add an external endpoint.
    * @param endpoint endpoint to set
    */
   public void addExternalEndpoint(Endpoint endpoint) {
@@ -117,7 +117,7 @@ public class ServiceRecord implements Cloneable {
   }
 
   /**
-   * Add an internal endpoint
+   * Add an internal endpoint.
    * @param endpoint endpoint to set
    */
   public void addInternalEndpoint(Endpoint endpoint) {
@@ -127,7 +127,7 @@ public class ServiceRecord implements Cloneable {
   }
 
   /**
-   * Look up an internal endpoint
+   * Look up an internal endpoint.
    * @param api API
    * @return the endpoint or null if there was no match
    */
@@ -136,7 +136,7 @@ public class ServiceRecord implements Cloneable {
   }
 
   /**
-   * Look up an external endpoint
+   * Look up an external endpoint.
    * @param api API
    * @return the endpoint or null if there was no match
    */
@@ -146,7 +146,7 @@ public class ServiceRecord implements Cloneable {
 
   /**
    * Handle unknown attributes by storing them in the
-   * {@link #attributes} map
+   * {@link #attributes} map.
    * @param key attribute name
    * @param value attribute value.
    */
@@ -167,7 +167,7 @@ public class ServiceRecord implements Cloneable {
   }
 
   /**
-   * Get the "other" attribute with a specific key
+   * Get the "other" attribute with a specific key.
    * @param key key to look up
    * @return the value or null
    */
@@ -188,7 +188,7 @@ public class ServiceRecord implements Cloneable {
   }
 
   /**
-   * Find an endpoint by its API
+   * Find an endpoint by its API.
    * @param list list
    * @param api api name
    * @return the endpoint or null if there was no match
@@ -235,9 +235,9 @@ public class ServiceRecord implements Cloneable {
   }
 
   /**
-   * Shallow clone: all endpoints will be shared across instances
+   * Shallow clone: all endpoints will be shared across instances.
    * @return a clone of the instance
-   * @throws CloneNotSupportedException
+   * @throws CloneNotSupportedException if cloning is not supported
    */
   @Override
   protected Object clone() throws CloneNotSupportedException {

@@ -47,11 +47,12 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.registry.client.api.RegistryConstants.*;
 
 /**
- * Verify that the {@link RMRegistryOperationsService} works securely
+ * Verify that the {@link RMRegistryOperationsService} works securely.
  */
 public class TestSecureRMRegistryOperations extends AbstractSecureRegistryTest {
   private static final Logger LOG =
@@ -103,6 +104,7 @@ public class TestSecureRMRegistryOperations extends AbstractSecureRegistryTest {
             operations.init(secureConf);
             LOG.info(operations.bindingDiagnosticDetails());
             operations.start();
+            operations.getRootPathsFuture().get(30, TimeUnit.SECONDS);
             return operations;
           }
         });
@@ -111,7 +113,7 @@ public class TestSecureRMRegistryOperations extends AbstractSecureRegistryTest {
   }
 
   /**
-   * test that ZK can write as itself
+   * test that ZK can write as itself.
    * @throws Throwable
    */
   @Test
@@ -170,7 +172,7 @@ public class TestSecureRMRegistryOperations extends AbstractSecureRegistryTest {
   }
 
   /**
-   * Expect a mknode operation to fail
+   * Expect a mknode operation to fail.
    * @param operations operations instance
    * @param path path
    * @throws IOException An IO failure other than those permitted
@@ -188,7 +190,7 @@ public class TestSecureRMRegistryOperations extends AbstractSecureRegistryTest {
   }
 
   /**
-   * Expect a delete operation to fail
+   * Expect a delete operation to fail.
    * @param operations operations instance
    * @param path path
    * @param recursive

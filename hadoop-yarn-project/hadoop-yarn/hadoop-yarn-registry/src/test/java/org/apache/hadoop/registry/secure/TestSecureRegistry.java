@@ -39,7 +39,7 @@ import javax.security.auth.login.LoginContext;
 import static org.apache.hadoop.registry.client.api.RegistryConstants.*;
 
 /**
- * Verify that the Mini ZK service can be started up securely
+ * Verify that the Mini ZK service can be started up securely.
  */
 public class TestSecureRegistry extends AbstractSecureRegistryTest {
   private static final Logger LOG =
@@ -58,7 +58,7 @@ public class TestSecureRegistry extends AbstractSecureRegistryTest {
 
   /**
   * this is a cut and paste of some of the ZK internal code that was
-   * failing on windows and swallowing its exceptions
+   * failing on windows and swallowing its exceptions.
    */
   @Test
   public void testLowlevelZKSaslLogin() throws Throwable {
@@ -107,7 +107,7 @@ public class TestSecureRegistry extends AbstractSecureRegistryTest {
   }
 
   /**
-   * test that ZK can write as itself
+   * test that ZK can write as itself.
    * @throws Throwable
    */
   @Test
@@ -139,7 +139,7 @@ public class TestSecureRegistry extends AbstractSecureRegistryTest {
   }
 
   /**
-   * Start a curator service instance
+   * Start a curator service instance.
    * @param name name
    * @param secure flag to indicate the cluster is secure
    * @return an inited and started curator service

@@ -32,7 +32,7 @@ import static org.apache.hadoop.registry.client.api.RegistryConstants.*;
  * <i>Each created instance will be returned initialized.</i>
  * <p>
  * That is, the service will have had <code>Service.init(conf)</code> applied
- * to it —possibly after the configuration has been modified to
+ * to it, possibly after the configuration has been modified to
  * support the specific binding/security mechanism used
  */
 public final class RegistryOperationsFactory {

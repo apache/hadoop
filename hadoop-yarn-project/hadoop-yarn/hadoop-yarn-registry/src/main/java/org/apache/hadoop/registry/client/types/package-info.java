@@ -32,10 +32,16 @@
  * </ul>
  *
  * The {@link org.apache.hadoop.registry.client.types.RegistryPathStatus}
- * class is not saved to the registry —it is the status of a registry
+ * class is not saved to the registry -it is the status of a registry
  * entry that can be retrieved from the API call. It is still
  * designed to be marshalled to and from JSON, as it can be served up
  * from REST front ends to the registry.
  *
  */
+
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 package org.apache.hadoop.registry.client.types;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

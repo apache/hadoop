@@ -431,7 +431,7 @@ public class TestQueueParsing {
         new RMContextImpl(null, null, null, null, null, null,
             new RMContainerTokenSecretManager(conf),
             new NMTokenSecretManagerInRM(conf),
-            new ClientToAMTokenSecretManagerInRM(), null);
+            new ClientToAMTokenSecretManagerInRM());
     rmContext.setNodeLabelManager(nodeLabelManager);
     capacityScheduler.setConf(conf);
     capacityScheduler.setRMContext(rmContext);
@@ -520,7 +520,7 @@ public class TestQueueParsing {
         new RMContextImpl(null, null, null, null, null, null,
             new RMContainerTokenSecretManager(csConf),
             new NMTokenSecretManagerInRM(csConf),
-            new ClientToAMTokenSecretManagerInRM(), null);
+            new ClientToAMTokenSecretManagerInRM());
     rmContext.setNodeLabelManager(nodeLabelManager);
     capacityScheduler.setConf(csConf);
     capacityScheduler.setRMContext(rmContext);
@@ -544,7 +544,7 @@ public class TestQueueParsing {
         new RMContextImpl(null, null, null, null, null, null,
             new RMContainerTokenSecretManager(csConf),
             new NMTokenSecretManagerInRM(csConf),
-            new ClientToAMTokenSecretManagerInRM(), null);
+            new ClientToAMTokenSecretManagerInRM());
     rmContext.setNodeLabelManager(nodeLabelManager);
     capacityScheduler.setConf(csConf);
     capacityScheduler.setRMContext(rmContext);
@@ -567,7 +567,7 @@ public class TestQueueParsing {
         new RMContextImpl(null, null, null, null, null, null,
             new RMContainerTokenSecretManager(csConf),
             new NMTokenSecretManagerInRM(csConf),
-            new ClientToAMTokenSecretManagerInRM(), null);
+            new ClientToAMTokenSecretManagerInRM());
     
     RMNodeLabelsManager nodeLabelsManager = new NullRMNodeLabelsManager();
     nodeLabelsManager.init(conf);
@@ -595,7 +595,7 @@ public class TestQueueParsing {
         new RMContextImpl(null, null, null, null, null, null,
             new RMContainerTokenSecretManager(csConf),
             new NMTokenSecretManagerInRM(csConf),
-            new ClientToAMTokenSecretManagerInRM(), null);
+            new ClientToAMTokenSecretManagerInRM());
     
     RMNodeLabelsManager nodeLabelsManager = new NullRMNodeLabelsManager();
     nodeLabelsManager.init(conf);
@@ -623,7 +623,7 @@ public class TestQueueParsing {
         new RMContextImpl(null, null, null, null, null, null,
             new RMContainerTokenSecretManager(csConf),
             new NMTokenSecretManagerInRM(csConf),
-            new ClientToAMTokenSecretManagerInRM(), null);
+            new ClientToAMTokenSecretManagerInRM());
     
     RMNodeLabelsManager nodeLabelsManager = new NullRMNodeLabelsManager();
     nodeLabelsManager.init(conf);
@@ -650,7 +650,7 @@ public class TestQueueParsing {
         new RMContextImpl(null, null, null, null, null, null,
             new RMContainerTokenSecretManager(csConf),
             new NMTokenSecretManagerInRM(csConf),
-            new ClientToAMTokenSecretManagerInRM(), null);
+            new ClientToAMTokenSecretManagerInRM());
     
     RMNodeLabelsManager nodeLabelsManager = new NullRMNodeLabelsManager();
     nodeLabelsManager.init(conf);
@@ -685,7 +685,7 @@ public class TestQueueParsing {
         new RMContextImpl(null, null, null, null, null, null,
             new RMContainerTokenSecretManager(csConf),
             new NMTokenSecretManagerInRM(csConf),
-            new ClientToAMTokenSecretManagerInRM(), null);
+            new ClientToAMTokenSecretManagerInRM());
     rmContext.setNodeLabelManager(nodeLabelManager);
     capacityScheduler.setRMContext(rmContext);
     capacityScheduler.init(conf);
@@ -794,7 +794,7 @@ public class TestQueueParsing {
         new RMContextImpl(null, null, null, null, null, null,
             new RMContainerTokenSecretManager(csConf),
             new NMTokenSecretManagerInRM(csConf),
-            new ClientToAMTokenSecretManagerInRM(), null);
+            new ClientToAMTokenSecretManagerInRM());
     rmContext.setNodeLabelManager(nodeLabelManager);
     capacityScheduler.setConf(csConf);
     capacityScheduler.setRMContext(rmContext);
@@ -825,7 +825,7 @@ public class TestQueueParsing {
         new RMContextImpl(null, null, null, null, null, null,
             new RMContainerTokenSecretManager(csConf),
             new NMTokenSecretManagerInRM(csConf),
-            new ClientToAMTokenSecretManagerInRM(), null);
+            new ClientToAMTokenSecretManagerInRM());
     rmContext.setNodeLabelManager(nodeLabelManager);
     capacityScheduler.setConf(csConf);
     capacityScheduler.setRMContext(rmContext);
@@ -860,7 +860,7 @@ public class TestQueueParsing {
         new RMContextImpl(null, null, null, null, null, null,
             new RMContainerTokenSecretManager(csConf),
             new NMTokenSecretManagerInRM(csConf),
-            new ClientToAMTokenSecretManagerInRM(), null);
+            new ClientToAMTokenSecretManagerInRM());
     rmContext.setNodeLabelManager(nodeLabelManager);
     capacityScheduler.setConf(csConf);
     capacityScheduler.setRMContext(rmContext);
@@ -886,7 +886,7 @@ public class TestQueueParsing {
         new RMContextImpl(null, null, null, null, null, null,
             new RMContainerTokenSecretManager(csConf),
             new NMTokenSecretManagerInRM(csConf),
-            new ClientToAMTokenSecretManagerInRM(), null);
+            new ClientToAMTokenSecretManagerInRM());
     rmContext.setNodeLabelManager(nodeLabelManager);
     capacityScheduler.setConf(csConf);
     capacityScheduler.setRMContext(rmContext);

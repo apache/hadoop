@@ -23,13 +23,13 @@ import org.apache.zookeeper.server.ZooKeeperSaslServer;
 
 /**
  * Configuration options which are internal to Zookeeper,
- * as well as some other ZK constants
+ * as well as some other ZK constants.
  * <p>
  * Zookeeper options are passed via system properties prior to the ZK
  * Methods/classes being invoked. This implies that:
  * <ol>
  *   <li>There can only be one instance of a ZK client or service class
- *   in a single JVM —else their configuration options will conflict.</li>
+ *   in a single JVM -else their configuration options will conflict.</li>
  *   <li>It is safest to set these properties immediately before
  *   invoking ZK operations.</li>
  * </ol>
@@ -77,7 +77,7 @@ public interface ZookeeperConfigOptions {
 
   /**
    * The SASL Server context, referring to a context in the JVM's
-   * JAAS context file: {@value}
+   * JAAS context file: {@value}.
    */
   String PROP_ZK_SERVER_SASL_CONTEXT =
       ZooKeeperSaslServer.LOGIN_CONTEXT_NAME_KEY;

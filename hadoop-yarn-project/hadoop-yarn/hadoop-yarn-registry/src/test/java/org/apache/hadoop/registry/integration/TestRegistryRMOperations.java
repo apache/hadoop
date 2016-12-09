@@ -52,7 +52,7 @@ public class TestRegistryRMOperations extends AbstractRegistryTest {
       LoggerFactory.getLogger(TestRegistryRMOperations.class);
 
   /**
-   * trigger a purge operation
+   * trigger a purge operation.
    * @param path path
    * @param id yarn ID
    * @param policyMatch policy to match ID on
@@ -72,8 +72,8 @@ public class TestRegistryRMOperations extends AbstractRegistryTest {
 
   /**
    *
-   * trigger a purge operation
-   * @param path pathn
+   * trigger a purge operation.
+   * @param path path
    * @param id yarn ID
    * @param policyMatch policy to match ID on
    * @param purgePolicy policy when there are children under a match
@@ -211,8 +211,7 @@ public class TestRegistryRMOperations extends AbstractRegistryTest {
   }
 
   /**
-   * Create a complex example app
-   * @throws Throwable
+   * Create a complex example app.
    */
   @Test
   public void testCreateComplexApplication() throws Throwable {

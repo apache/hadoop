@@ -32,7 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test record marshalling
+ * Test record marshalling.
  */
 public class TestMarshalling extends RegistryTestHelper {
   private static final Logger

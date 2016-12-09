@@ -77,7 +77,7 @@ public class RegistryOperationsService extends CuratorService
 
   /**
    * Get the aggregate set of ACLs the client should use
-   * to create directories
+   * to create directories.
    * @return the ACL list
    */
   public List<ACL> getClientAcls() {
@@ -85,7 +85,7 @@ public class RegistryOperationsService extends CuratorService
   }
 
   /**
-   * Validate a path
+   * Validate a path.
    * @param path path to validate
    * @throws InvalidPathnameException if a path is considered invalid
    */

@@ -102,7 +102,7 @@ public class RegistryUtils {
   }
 
   /**
-   * Create a service classpath
+   * Create a service classpath.
    * @param user username or ""
    * @param serviceClass service name
    * @return a full path
@@ -116,7 +116,7 @@ public class RegistryUtils {
   }
 
   /**
-   * Create a path to a service under a user and service class
+   * Create a path to a service under a user and service class.
    * @param user username or ""
    * @param serviceClass service name
    * @param serviceName service name unique for that user and service class
@@ -132,7 +132,7 @@ public class RegistryUtils {
   }
 
   /**
-   * Create a path for listing components under a service
+   * Create a path for listing components under a service.
    * @param user username or ""
    * @param serviceClass service name
    * @param serviceName service name unique for that user and service class
@@ -146,7 +146,7 @@ public class RegistryUtils {
   }
 
   /**
-   * Create the path to a service record for a component
+   * Create the path to a service record for a component.
    * @param user username or ""
    * @param serviceClass service name
    * @param serviceName service name unique for that user and service class
@@ -162,12 +162,12 @@ public class RegistryUtils {
   }
 
   /**
-   * List service records directly under a path
+   * List service records directly under a path.
    * @param registryOperations registry operations instance
    * @param path path to list
    * @return a mapping of the service records that were resolved, indexed
    * by their full path
-   * @throws IOException
+   * @throws IOException IO problems
    */
   public static Map<String, ServiceRecord> listServiceRecords(
       RegistryOperations registryOperations,
@@ -186,8 +186,9 @@ public class RegistryUtils {
    * This is not an atomic operation; A child may be deleted
    * during the iteration through the child entries. If this happens,
    * the <code>PathNotFoundException</code> is caught and that child
-   * entry ommitted.
+   * entry omitted.
    *
+   * @param registryOperations operations instance to use
    * @param path path
    * @return a possibly empty map of child entries listed by
    * their short name.
@@ -203,7 +204,7 @@ public class RegistryUtils {
       IOException {
     List<String> childNames = registryOperations.list(path);
     Map<String, RegistryPathStatus> results =
-        new HashMap<String, RegistryPathStatus>();
+        new HashMap<>();
     for (String childName : childNames) {
       String child = join(path, childName);
       try {
@@ -279,7 +280,7 @@ public class RegistryUtils {
   }
 
   /**
-   * Get the current user path formatted for the registry
+   * Get the current user path formatted for the registry.
    * <p>
    *  In an insecure cluster, the environment variable
    *  <code>HADOOP_USER_NAME </code> is queried <i>first</i>.
@@ -312,7 +313,7 @@ public class RegistryUtils {
       RegistryOperations operations,
       String parentpath,
       Collection<RegistryPathStatus> stats) throws IOException {
-    Map<String, ServiceRecord> results = new HashMap<String, ServiceRecord>(stats.size());
+    Map<String, ServiceRecord> results = new HashMap<>(stats.size());
     for (RegistryPathStatus stat : stats) {
       if (stat.size > ServiceRecord.RECORD_TYPE.length()) {
         // maybe has data
@@ -344,6 +345,7 @@ public class RegistryUtils {
    * <p>
    * @param operations operation support for fetches
    * @param parentpath path of the parent of all the entries
+   * @param stats list of registry stat values to examine
    * @return a possibly empty map of fullpath:record.
    * @throws IOException for any IO Operation that wasn't ignored.
    */
@@ -376,7 +378,7 @@ public class RegistryUtils {
 
 
   /**
-   * Static instance of service record marshalling
+   * Static instance of service record marshalling.
    */
   public static class ServiceRecordMarshal extends JsonSerDeser<ServiceRecord> {
     public ServiceRecordMarshal() {

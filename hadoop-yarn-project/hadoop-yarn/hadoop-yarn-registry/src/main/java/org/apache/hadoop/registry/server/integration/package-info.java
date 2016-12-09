@@ -20,4 +20,9 @@
  * This package contains the classes which integrate with the YARN resource
  * manager.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 package org.apache.hadoop.registry.server.integration;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

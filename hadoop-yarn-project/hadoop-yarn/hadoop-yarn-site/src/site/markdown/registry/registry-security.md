@@ -46,7 +46,7 @@ In which different authentication schemes may be used to restrict access
 to different znodes. This permits the registry to use a mixed
 Kerberos + Private password model.
 
-* The YARN-based registry (the `RMRegistryOperationsService`), uses kerberos
+* The YARN-based registry (the `RMRegistryOperationsService`), uses Kerberos
 as the authentication mechanism for YARN itself.
 * The registry configures the base of the registry to be writeable only by
 itself and other hadoop system accounts holding the relevant kerberos credentials.
