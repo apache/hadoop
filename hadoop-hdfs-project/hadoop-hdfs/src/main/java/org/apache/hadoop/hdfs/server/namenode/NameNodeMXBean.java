@@ -24,9 +24,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 
 /**
- * This is the JMX management interface for namenode information
+ * This is the JMX management interface for namenode information.
+ * End users shouldn't be implementing these interfaces, and instead
+ * access this information through the JMX APIs.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Stable
 public interface NameNodeMXBean {
 
