@@ -113,7 +113,7 @@ private:
 
 class MiniCluster  {
 public:
-  MiniCluster() : io_service(IoService::New()) {
+  MiniCluster() : io_service(IoService::MakeShared()) {
     struct NativeMiniDfsConf conf = {
         1, /* doFormat */
         0, /* webhdfs */
@@ -137,6 +137,10 @@ public:
   // Connect via the C++ API
   FSHandle connect(const std::string username) {
     Options options;
+
+    unsigned int worker_count = io_service->InitDefaultWorkers();
+    EXPECT_NE(0, worker_count);
+
     FileSystem * fs = FileSystem::New(io_service, username, options);
     EXPECT_NE(nullptr, fs);
     FSHandle result(fs);
@@ -184,7 +188,7 @@ public:
 
 protected:
   struct NativeMiniDfsCluster* clusterInfo;
-  IoService * io_service;
+  std::shared_ptr<IoService> io_service;
 };
 
 } // namespace

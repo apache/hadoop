@@ -123,6 +123,13 @@ struct Options {
   long block_size;
   static const long kDefaultBlockSize = 128*1024*1024;
 
+  /**
+   * Asio worker thread count
+   * default: -1, indicates number of hardware threads
+   **/
+  int io_threads_;
+  static const int kDefaultIoThreads = -1;
+
   Options();
 };
 }

@@ -183,6 +183,11 @@ LogMessage& LogMessage::operator<<(void *ptr) {
 }
 
 
+LogMessage& LogMessage::operator<<(const std::thread::id& tid) {
+  msg_buffer_ << tid;
+  return *this;
+}
+
 std::string LogMessage::MsgString() const {
   return msg_buffer_.str();
 }
@@ -199,12 +204,13 @@ const char * LogMessage::level_string() const {
   return kLevelStrings[level_];
 }
 
-const char * kComponentStrings[5] = {
-  "[Unknown     ]",
-  "[RPC         ]",
-  "[BlockReader ]",
-  "[FileHandle  ]",
-  "[FileSystem  ]"
+const char * kComponentStrings[6] = {
+  "[Unknown       ]",
+  "[RPC           ]",
+  "[BlockReader   ]",
+  "[FileHandle    ]",
+  "[FileSystem    ]",
+  "[Async Runtime ]",
 };
 
 const char * LogMessage::component_string() const {
@@ -213,6 +219,7 @@ const char * LogMessage::component_string() const {
     case kBlockReader: return kComponentStrings[2];
     case kFileHandle: return kComponentStrings[3];
     case kFileSystem: return kComponentStrings[4];
+    case kAsyncRuntime: return kComponentStrings[5];
     default: return kComponentStrings[0];
   }
 }

@@ -46,7 +46,8 @@ namespace hdfs {
 class FileSystemImpl : public FileSystem {
 public:
   MEMCHECKED_CLASS(FileSystemImpl)
-  FileSystemImpl(IoService *&io_service, const std::string& user_name, const Options &options);
+  explicit FileSystemImpl(IoService *&io_service, const std::string& user_name, const Options &options);
+  explicit FileSystemImpl(std::shared_ptr<IoService>, const std::string& user_name, const Options &options);
   ~FileSystemImpl() override;
 
   /* attempt to connect to namenode, return bad status on failure */
@@ -176,7 +177,7 @@ public:
   int AddWorkerThread();
 
   /* how many worker threads are servicing asio requests */
-  int WorkerThreadCount() { return worker_threads_.size(); }
+  int WorkerThreadCount();
 
   /* all monitored events will need to lookup handlers */
   std::shared_ptr<LibhdfsEvents> get_event_handlers();
@@ -184,23 +185,17 @@ public:
   Options get_options();
 
 private:
-  const Options options_;
-  const std::string client_name_;
-  std::string cluster_name_;
   /**
    *  The IoService must be the first member variable to ensure that it gets
    *  destroyed last.  This allows other members to dequeue things from the
    *  service in their own destructors.
    **/
-  std::unique_ptr<IoServiceImpl> io_service_;
+  std::shared_ptr<IoServiceImpl> io_service_;
+  const Options options_;
+  const std::string client_name_;
+  std::string cluster_name_;
   NameNodeOperations nn_;
   std::shared_ptr<BadDataNodeTracker> bad_node_tracker_;
-
-  struct WorkerDeleter {
-    void operator()(std::thread *t);
-  };
-  typedef std::unique_ptr<std::thread, WorkerDeleter> WorkerPtr;
-  std::vector<WorkerPtr> worker_threads_;
 
   /**
    * Runtime event monitoring handlers.
