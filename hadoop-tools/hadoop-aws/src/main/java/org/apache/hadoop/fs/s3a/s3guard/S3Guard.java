@@ -19,6 +19,9 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import com.google.common.base.Preconditions;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -44,6 +47,57 @@ final public class S3Guard {
   /* Constants. */
   public static final String S3_METADATA_STORE_IMPL =
       "fs.s3a.metadatastore.impl";
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  static final String S3GUARD_DDB_CLIENT_FACTORY_IMPL =
+      "fs.s3a.s3guard.ddb.client.factory.impl";
+
+  static final Class<? extends DynamoDBClientFactory>
+      S3GUARD_DDB_CLIENT_FACTORY_IMPL_DEFAULT =
+      DynamoDBClientFactory.DefaultDynamoDBClientFactory.class;
+
+  /**
+   * The endpoint of the DynamoDB service.
+   *
+   * This config has not default value. If the user does not set this, the AWS
+   * SDK will find the endpoint automatically by the Region.
+   */
+  @InterfaceStability.Unstable
+  static final String S3GUARD_DDB_ENDPOINT_KEY =
+      "fs.s3a.s3guard.ddb.endpoint";
+
+  /**
+   * The DynamoDB table name to use.
+   *
+   * This config has no default value. If the user does not set this, the
+   * S3Guard implementation will use the respective S3 bucket name.
+   */
+  @InterfaceStability.Unstable
+  static final String S3GUARD_DDB_TABLE_NAME_KEY =
+      "fs.s3a.s3guard.ddb.table";
+
+  /**
+   * Whether to create the table.
+   *
+   * This is for internal usage and users should not set this one directly.
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  static final String S3GUARD_DDB_TABLE_CREATE_KEY =
+      "fs.s3a.s3guard.ddb.table.create";
+
+  @InterfaceStability.Unstable
+  static final String S3GUARD_DDB_TABLE_CAPACITY_READ_KEY =
+      "fs.s3a.s3guard.ddb.table.capacity.read";
+
+  static final long S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT = 500;
+
+  @InterfaceStability.Unstable
+  static final String S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY =
+      "fs.s3a.s3guard.ddb.table.capacity.write";
+
+  static final long S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT = 100;
 
   // Utility class.  All static functions.
   private S3Guard() { }

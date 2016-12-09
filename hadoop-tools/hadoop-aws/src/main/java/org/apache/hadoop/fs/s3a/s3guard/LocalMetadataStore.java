@@ -249,6 +249,13 @@ public class LocalMetadataStore implements MetadataStore {
 
   }
 
+  @Override
+  public void destroy() throws IOException {
+    if (dirHash != null) {
+      dirHash.clear();
+    }
+  }
+
   @VisibleForTesting
   static <T> void clearHashByAncestor(Path ancestor, Map<Path, T> hash) {
     for (Iterator<Map.Entry<Path, T>> it = hash.entrySet().iterator();

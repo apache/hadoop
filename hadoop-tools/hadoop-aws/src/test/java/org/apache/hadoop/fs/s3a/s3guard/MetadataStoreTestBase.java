@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+
+import com.google.common.collect.Sets;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -29,8 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -50,11 +50,11 @@ public abstract class MetadataStoreTestBase extends Assert {
       LoggerFactory.getLogger(MetadataStoreTestBase.class);
 
   /** Some dummy values for sanity-checking FileStatus contents. */
-  protected static final long BLOCK_SIZE = 32 * 1024 * 1024;
-  protected static final int REPLICATION = 1;
-  private static final FsPermission PERMISSION = new FsPermission((short)0755);
-  private static final String OWNER = "bob";
-  private static final String GROUP = "uncles";
+  static final long BLOCK_SIZE = 32 * 1024 * 1024;
+  static final int REPLICATION = 1;
+  static final FsPermission PERMISSION = new FsPermission((short)0755);
+  static final String OWNER = "bob";
+  static final String GROUP = "uncles";
   private final long accessTime = System.currentTimeMillis();
   private final long modTime = accessTime - 5000;
 
@@ -62,7 +62,7 @@ public abstract class MetadataStoreTestBase extends Assert {
    * Each test should override this.
    * @return Contract which specifies the MetadataStore under test plus config.
    */
-  public abstract AbstractMSContract createContract();
+  public abstract AbstractMSContract createContract() throws IOException;
 
   /**
    * Tests assume that implementations will return recently set results.  If
@@ -94,8 +94,49 @@ public abstract class MetadataStoreTestBase extends Assert {
   public void tearDown() throws Exception {
     LOG.debug("== Tear down. ==");
     if (ms != null) {
-      ms.close();
+      ms.destroy();
       ms = null;
+    }
+  }
+
+  /**
+   * Test that we can get the whole sub-tree by iterating DescendantsIterator.
+   *
+   * The tree is similar to or same as the example in code comment.
+   */
+  @Test
+  public void testDescendantsIterator() throws IOException {
+    final String[] tree = new String[] {
+        "/dir1",
+        "/dir1/dir2",
+        "/dir1/dir3",
+        "/dir1/dir2/file1",
+        "/dir1/dir2/file2",
+        "/dir1/dir3/dir4",
+        "/dir1/dir3/dir5",
+        "/dir1/dir3/dir4/file3",
+        "/dir1/dir3/dir5/file4",
+        "/dir1/dir3/dir6"
+    };
+    // we set up the example file system tree in metadata store
+    for (String pathStr : tree) {
+      final FileStatus status = pathStr.contains("file")
+          ? basicFileStatus(strToPath(pathStr), 100, false)
+          : basicFileStatus(strToPath(pathStr), 0, true);
+      ms.put(new PathMetadata(status));
+    }
+
+    final Set<String> actual = new HashSet<>();
+    final PathMetadata rootMeta = new PathMetadata(makeDirStatus("/"));
+    for (DescendantsIterator desc = new DescendantsIterator(ms, rootMeta);
+         desc.hasNext();) {
+      final Path p = desc.next().getFileStatus().getPath();
+      actual.add(Path.getPathWithoutSchemeAndAuthority(p).toString());
+    }
+    LOG.info("We got {} by iterating DescendantsIterator", actual);
+
+    if (!allowMissing()) {
+      assertEquals(Sets.newHashSet(tree), actual);
     }
   }
 
@@ -110,13 +151,13 @@ public abstract class MetadataStoreTestBase extends Assert {
      */
     ms.put(new PathMetadata(makeFileStatus("/da1/db1/fc1", 100)));
 
-    assertEmptyDirs("/da1", "/da2", "/da3");
+    assertEmptyDirs("/da2", "/da3");
     assertDirectorySize("/da1/db1", 1);
 
     /* Check contents of dir status. */
     PathMetadata dirMeta = ms.get(strToPath("/da1"));
     if (!allowMissing() || dirMeta != null) {
-      verifyDirStatus(dirMeta);
+      verifyDirStatus(dirMeta.getFileStatus());
     }
 
     /* This already exists, and should silently replace it. */
@@ -136,8 +177,7 @@ public abstract class MetadataStoreTestBase extends Assert {
     PathMetadata meta = ms.get(strToPath("/da1/db1/fc2"));
     if (!allowMissing() || meta != null) {
       assertNotNull("Get file after put new.", meta);
-      assertEquals("Cached file size correct.", 200,
-          meta.getFileStatus().getLen());
+      verifyFileStatus(meta.getFileStatus(), 200);
     }
   }
 
@@ -149,13 +189,13 @@ public abstract class MetadataStoreTestBase extends Assert {
     ms.put(new PathMetadata(makeDirStatus(dirPath)));
     PathMetadata meta = ms.get(strToPath(filePath));
     if (!allowMissing() || meta != null) {
-      verifyBasicFileStatus(meta);
+      verifyFileStatus(meta.getFileStatus(), 100);
     }
 
     ms.put(new PathMetadata(basicFileStatus(strToPath(filePath), 9999, false)));
     meta = ms.get(strToPath(filePath));
     if (!allowMissing() || meta != null) {
-      assertEquals("Updated size", 9999, meta.getFileStatus().getLen());
+      verifyFileStatus(meta.getFileStatus(), 9999);
     }
   }
 
@@ -194,7 +234,7 @@ public abstract class MetadataStoreTestBase extends Assert {
 
   @Test
   public void testDeleteSubtreeHostPath() throws Exception {
-    deleteSubtreeHelper("s3a://test-bucket-name");
+    deleteSubtreeHelper(contract.getFileSystem().getUri().toString());
   }
 
   private void deleteSubtreeHelper(String pathPrefix) throws Exception {
@@ -273,7 +313,7 @@ public abstract class MetadataStoreTestBase extends Assert {
     PathMetadata meta = ms.get(strToPath(filePath));
     if (!allowMissing() || meta != null) {
       assertNotNull("Get found file", meta);
-      verifyBasicFileStatus(meta);
+      verifyFileStatus(meta.getFileStatus(), 100);
     }
 
     meta = ms.get(strToPath(dirPath));
@@ -389,7 +429,7 @@ public abstract class MetadataStoreTestBase extends Assert {
     meta = ms.get(strToPath("/b1/file1"));
     if (!allowMissing() || meta != null) {
       assertNotNull("dest file not null", meta);
-      verifyBasicFileStatus(meta);
+      verifyFileStatus(meta.getFileStatus(), 100);
     }
 
     dirMeta = ms.listChildren(strToPath("/b1"));
@@ -455,7 +495,7 @@ public abstract class MetadataStoreTestBase extends Assert {
     for (String ps : pathStrs) {
       b.add(strToPath(ps));
     }
-    assertTrue("Same set of files", a.equals(b));
+    assertEquals("Same set of files", b, a);
   }
 
   private void putListStatusFiles(String dirPath, boolean authoritative,
@@ -508,21 +548,13 @@ public abstract class MetadataStoreTestBase extends Assert {
     assertNotNull(pathStr + " should be cached.", meta);
   }
 
-  // Convenience to add scheme if missing
+  /**
+   * Convenience to create a fully qualified Path from string.
+   */
   private Path strToPath(String p) {
-    Path path = new Path(p);
-    URI uri = path.toUri();
-    if (uri.getScheme() == null) {
-      String fsScheme = contract.getFileSystem().getScheme();
-      try {
-        return new Path(new URI(fsScheme, uri.getHost(), uri.getPath(),
-            uri.getFragment()));
-      } catch (URISyntaxException e) {
-        throw new IllegalArgumentException("FileStatus path invalid with " +
-            "scheme " + fsScheme + " added", e);
-      }
-    }
-    return path;
+    final Path path = new Path(p);
+    assert path.isAbsolute();
+    return path.makeQualified(contract.getFileSystem().getUri(), null);
   }
 
   private void assertEmptyDirectory(String pathStr) throws IOException {
@@ -535,40 +567,42 @@ public abstract class MetadataStoreTestBase extends Assert {
     }
   }
 
-  private FileStatus basicFileStatus(Path path, int size, boolean isDir) {
+  FileStatus basicFileStatus(Path path, int size, boolean isDir)
+      throws IOException {
     return new FileStatus(size, isDir, REPLICATION, BLOCK_SIZE, modTime,
         accessTime, PERMISSION, OWNER, GROUP, path);
   }
 
-  private FileStatus makeFileStatus(String pathStr, int size) {
+  private FileStatus makeFileStatus(String pathStr, int size)
+      throws IOException {
     return basicFileStatus(strToPath(pathStr), size, false);
   }
 
-  private void verifyBasicFileStatus(PathMetadata meta) {
-    FileStatus status = meta.getFileStatus();
+  void verifyFileStatus(FileStatus status, long size) {
     assertFalse("Not a dir", status.isDirectory());
-    assertEquals("Replication value", REPLICATION, status.getReplication());
-    assertEquals("Access time", accessTime, status.getAccessTime());
     assertEquals("Mod time", modTime, status.getModificationTime());
+    assertEquals("File size", size, status.getLen());
     assertEquals("Block size", BLOCK_SIZE, status.getBlockSize());
-    assertEquals("Owner", OWNER, status.getOwner());
-    assertEquals("Group", GROUP, status.getGroup());
-    assertEquals("Permission", PERMISSION, status.getPermission());
   }
 
-  private FileStatus makeDirStatus(String pathStr) {
+  private FileStatus makeDirStatus(String pathStr) throws IOException {
     return basicFileStatus(strToPath(pathStr), 0, true);
   }
 
-  private void verifyDirStatus(PathMetadata meta) {
-    FileStatus status = meta.getFileStatus();
+  /**
+   * Verify the directory file status. Subclass may verify additional fields.
+   */
+  void verifyDirStatus(FileStatus status) {
     assertTrue("Is a dir", status.isDirectory());
     assertEquals("zero length", 0, status.getLen());
-    assertEquals("Replication value", REPLICATION, status.getReplication());
-    assertEquals("Access time", accessTime, status.getAccessTime());
-    assertEquals("Mod time", modTime, status.getModificationTime());
-    assertEquals("Owner", OWNER, status.getOwner());
-    assertEquals("Group", GROUP, status.getGroup());
-    assertEquals("Permission", PERMISSION, status.getPermission());
   }
+
+  long getModTime() {
+    return modTime;
+  }
+
+  long getAccessTime() {
+    return accessTime;
+  }
+
 }

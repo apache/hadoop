@@ -143,4 +143,17 @@ public interface MetadataStore extends Closeable {
    * @throws IOException if there is an error
    */
   void put(DirListingMetadata meta) throws IOException;
+
+  /**
+   * Destroy all resources associated with the metadata store.
+   *
+   * The destroyed resources can be DynamoDB tables, MySQL databases/tables, or
+   * HDFS directories. Any operations after calling this method may possibly
+   * fail.
+   *
+   * This operation is idempotent.
+   *
+   * @throws IOException if there is an error
+   */
+  void destroy() throws IOException;
 }

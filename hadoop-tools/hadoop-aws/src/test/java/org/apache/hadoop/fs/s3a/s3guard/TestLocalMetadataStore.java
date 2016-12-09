@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
@@ -98,6 +99,29 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
     assertEquals(String.format("Map should have %d entries", leftoverSize),
         leftoverSize, map.size());
     map.clear();
+  }
+
+  @Override
+  protected void verifyFileStatus(FileStatus status, long size) {
+    super.verifyFileStatus(status, size);
+
+    assertEquals("Replication value", REPLICATION, status.getReplication());
+    assertEquals("Access time", getAccessTime(), status.getAccessTime());
+    assertEquals("Owner", OWNER, status.getOwner());
+    assertEquals("Group", GROUP, status.getGroup());
+    assertEquals("Permission", PERMISSION, status.getPermission());
+  }
+
+  @Override
+  protected void verifyDirStatus(FileStatus status) {
+    super.verifyDirStatus(status);
+
+    assertEquals("Mod time", getModTime(), status.getModificationTime());
+    assertEquals("Replication value", REPLICATION, status.getReplication());
+    assertEquals("Access time", getAccessTime(), status.getAccessTime());
+    assertEquals("Owner", OWNER, status.getOwner());
+    assertEquals("Group", GROUP, status.getGroup());
+    assertEquals("Permission", PERMISSION, status.getPermission());
   }
 
 }

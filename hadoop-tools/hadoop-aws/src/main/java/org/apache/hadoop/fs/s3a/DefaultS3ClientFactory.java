@@ -50,12 +50,22 @@ public class DefaultS3ClientFactory extends Configured implements
     Configuration conf = getConf();
     AWSCredentialsProvider credentials =
         createAWSCredentialProviderSet(name, conf, uri);
-    ClientConfiguration awsConf = new ClientConfiguration();
+    final ClientConfiguration awsConf = createAwsConf(getConf());
+    AmazonS3 s3 = newAmazonS3Client(credentials, awsConf);
+    return createAmazonS3Client(s3, conf, credentials, awsConf);
+  }
+
+  /**
+   * Create a new {@link ClientConfiguration}.
+   * @param conf The Hadoop configuration
+   * @return new AWS client configuration
+   */
+  public static ClientConfiguration createAwsConf(Configuration conf) {
+    final ClientConfiguration awsConf = new ClientConfiguration();
     initConnectionSettings(conf, awsConf);
     initProxySupport(conf, awsConf);
     initUserAgent(conf, awsConf);
-    AmazonS3 s3 = newAmazonS3Client(credentials, awsConf);
-    return createAmazonS3Client(s3, conf, credentials, awsConf);
+    return awsConf;
   }
 
   /**

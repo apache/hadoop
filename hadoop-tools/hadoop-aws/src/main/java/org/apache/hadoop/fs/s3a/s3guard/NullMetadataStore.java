@@ -76,4 +76,9 @@ public class NullMetadataStore implements MetadataStore {
   public void put(DirListingMetadata meta) throws IOException {
     return;
   }
+
+  @Override
+  public void destroy() throws IOException {
+  }
+
 }
