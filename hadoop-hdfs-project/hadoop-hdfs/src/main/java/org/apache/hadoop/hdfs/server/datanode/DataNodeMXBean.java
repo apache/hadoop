@@ -24,9 +24,11 @@ import java.util.Map;
 
 /**
  * 
- * This is the JMX management interface for data node information
+ * This is the JMX management interface for data node information.
+ * End users shouldn't be implementing these interfaces, and instead
+ * access this information through the JMX APIs.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Stable
 public interface DataNodeMXBean {
   
