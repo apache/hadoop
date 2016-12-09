@@ -104,6 +104,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-13804. MutableStat mean loses accuracy if add(long, long) is used.
     (Erik Krogen via zhz)
 
+    HADOOP-11859. PseudoAuthenticationHandler fails with httpcomponents v4.4.
+    (Eugene Koifman via jitendra)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
