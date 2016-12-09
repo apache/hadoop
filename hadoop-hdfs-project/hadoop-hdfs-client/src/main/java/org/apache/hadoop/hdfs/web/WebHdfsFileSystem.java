@@ -39,6 +39,7 @@ import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -79,6 +80,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtilClient;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -1712,6 +1714,50 @@ public class WebHdfsFileSystem extends FileSystem
   public String getCanonicalServiceName() {
     return tokenServiceName == null ? super.getCanonicalServiceName()
         : tokenServiceName.toString();
+  }
+
+  @Override
+  public void setStoragePolicy(Path p, String policyName) throws IOException {
+    if (policyName == null) {
+      throw new IOException("policyName == null");
+    }
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.SET_STORAGE_POLICY);
+    final HttpOpParam.Op op = PutOpParam.Op.SETSTORAGEPOLICY;
+    new FsPathRunner(op, p, new StoragePolicyParam(policyName)).run();
+  }
+
+  @Override
+  public Collection<BlockStoragePolicy> getAllStoragePolicies()
+      throws IOException {
+    final HttpOpParam.Op op = GetOpParam.Op.GETALLSTORAGEPOLICY;
+    return new FsPathResponseRunner<Collection<BlockStoragePolicy>>(op, null) {
+      @Override
+      Collection<BlockStoragePolicy> decodeResponse(Map<?, ?> json)
+          throws IOException {
+        return JsonUtilClient.getStoragePolicies(json);
+      }
+    }.run();
+  }
+
+  @Override
+  public BlockStoragePolicy getStoragePolicy(Path src) throws IOException {
+    final HttpOpParam.Op op = GetOpParam.Op.GETSTORAGEPOLICY;
+    return new FsPathResponseRunner<BlockStoragePolicy>(op, src) {
+      @Override
+      BlockStoragePolicy decodeResponse(Map<?, ?> json) throws IOException {
+        return JsonUtilClient.toBlockStoragePolicy((Map<?, ?>) json
+            .get(BlockStoragePolicy.class.getSimpleName()));
+      }
+    }.run();
+  }
+
+  @Override
+  public void unsetStoragePolicy(Path src) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.UNSET_STORAGE_POLICY);
+    final HttpOpParam.Op op = PostOpParam.Op.UNSETSTORAGEPOLICY;
+    new FsPathRunner(op, src).run();
   }
 
   @VisibleForTesting

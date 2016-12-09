@@ -460,4 +460,12 @@ public class TestParam {
     StartAfterParam param = new StartAfterParam(s);
     Assert.assertEquals(s, param.getValue());
   }
+
+  @Test
+  public void testStoragePolicyParam() {
+    StoragePolicyParam p = new StoragePolicyParam(StoragePolicyParam.DEFAULT);
+    Assert.assertEquals(null, p.getValue());
+    p = new StoragePolicyParam("COLD");
+    Assert.assertEquals("COLD", p.getValue());
+  }
 }

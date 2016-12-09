@@ -18,6 +18,8 @@
 package org.apache.hadoop.fs.http.client;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -34,6 +36,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -41,6 +44,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.lib.wsrs.EnumSetParam;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -115,6 +119,7 @@ public class HttpFSFileSystem extends FileSystem
   public static final String XATTR_ENCODING_PARAM = "encoding";
   public static final String NEW_LENGTH_PARAM = "newlength";
   public static final String START_AFTER_PARAM = "startAfter";
+  public static final String POLICY_NAME_PARAM = "storagepolicy";
 
   public static final Short DEFAULT_PERMISSION = 0755;
   public static final String ACLSPEC_DEFAULT = "";
@@ -194,6 +199,9 @@ public class HttpFSFileSystem extends FileSystem
   public static final String PARTIAL_LISTING_JSON = "partialListing";
   public static final String REMAINING_ENTRIES_JSON = "remainingEntries";
 
+  public static final String STORAGE_POLICIES_JSON = "BlockStoragePolicies";
+  public static final String STORAGE_POLICY_JSON = "BlockStoragePolicy";
+
   public static final int HTTP_TEMPORARY_REDIRECT = 307;
 
   private static final String HTTP_GET = "GET";
@@ -213,7 +221,9 @@ public class HttpFSFileSystem extends FileSystem
     MODIFYACLENTRIES(HTTP_PUT), REMOVEACLENTRIES(HTTP_PUT),
     REMOVEDEFAULTACL(HTTP_PUT), REMOVEACL(HTTP_PUT), SETACL(HTTP_PUT),
     DELETE(HTTP_DELETE), SETXATTR(HTTP_PUT), GETXATTRS(HTTP_GET),
-    REMOVEXATTR(HTTP_PUT), LISTXATTRS(HTTP_GET), LISTSTATUS_BATCH(HTTP_GET);
+    REMOVEXATTR(HTTP_PUT), LISTXATTRS(HTTP_GET), LISTSTATUS_BATCH(HTTP_GET),
+    GETALLSTORAGEPOLICY(HTTP_GET), GETSTORAGEPOLICY(HTTP_GET),
+    SETSTORAGEPOLICY(HTTP_PUT), UNSETSTORAGEPOLICY(HTTP_POST);
 
     private String httpMethod;
 
@@ -1310,6 +1320,86 @@ public class HttpFSFileSystem extends FileSystem
     params.put(XATTR_NAME_PARAM, name);
     HttpURLConnection conn = getConnection(Operation.REMOVEXATTR.getMethod(),
         params, f, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  @Override
+  public Collection<BlockStoragePolicy> getAllStoragePolicies()
+      throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETALLSTORAGEPOLICY.toString());
+    HttpURLConnection conn = getConnection(
+        Operation.GETALLSTORAGEPOLICY.getMethod(), params, new Path(getUri()
+            .toString(), "/"), false);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return createStoragePolicies((JSONObject) json.get(STORAGE_POLICIES_JSON));
+  }
+
+  private Collection<BlockStoragePolicy> createStoragePolicies(JSONObject map)
+      throws IOException {
+    JSONArray jsonArray = (JSONArray) map.get(STORAGE_POLICY_JSON);
+    BlockStoragePolicy[] policies = new BlockStoragePolicy[jsonArray.size()];
+    for (int i = 0; i < jsonArray.size(); i++) {
+      policies[i] = createStoragePolicy((JSONObject) jsonArray.get(i));
+    }
+    return Arrays.asList(policies);
+  }
+
+  @Override
+  public BlockStoragePolicy getStoragePolicy(Path src) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETSTORAGEPOLICY.toString());
+    HttpURLConnection conn = getConnection(
+        Operation.GETSTORAGEPOLICY.getMethod(), params, src, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return createStoragePolicy((JSONObject) json.get(STORAGE_POLICY_JSON));
+  }
+
+  private BlockStoragePolicy createStoragePolicy(JSONObject policyJson)
+      throws IOException {
+    byte id = ((Number) policyJson.get("id")).byteValue();
+    String name = (String) policyJson.get("name");
+    StorageType[] storageTypes = toStorageTypes((JSONArray) policyJson
+        .get("storageTypes"));
+    StorageType[] creationFallbacks = toStorageTypes((JSONArray) policyJson
+        .get("creationFallbacks"));
+    StorageType[] replicationFallbacks = toStorageTypes((JSONArray) policyJson
+        .get("replicationFallbacks"));
+    Boolean copyOnCreateFile = (Boolean) policyJson.get("copyOnCreateFile");
+    return new BlockStoragePolicy(id, name, storageTypes, creationFallbacks,
+        replicationFallbacks, copyOnCreateFile.booleanValue());
+  }
+
+  private StorageType[] toStorageTypes(JSONArray array) throws IOException {
+    if (array == null) {
+      return null;
+    } else {
+      List<StorageType> storageTypes = new ArrayList<StorageType>(array.size());
+      for (Object name : array) {
+        storageTypes.add(StorageType.parseStorageType((String) name));
+      }
+      return storageTypes.toArray(new StorageType[storageTypes.size()]);
+    }
+  }
+
+  @Override
+  public void setStoragePolicy(Path src, String policyName) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.SETSTORAGEPOLICY.toString());
+    params.put(POLICY_NAME_PARAM, policyName);
+    HttpURLConnection conn = getConnection(
+        Operation.SETSTORAGEPOLICY.getMethod(), params, src, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  @Override
+  public void unsetStoragePolicy(Path src) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.UNSETSTORAGEPOLICY.toString());
+    HttpURLConnection conn = getConnection(
+        Operation.UNSETSTORAGEPOLICY.getMethod(), params, src, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 }
