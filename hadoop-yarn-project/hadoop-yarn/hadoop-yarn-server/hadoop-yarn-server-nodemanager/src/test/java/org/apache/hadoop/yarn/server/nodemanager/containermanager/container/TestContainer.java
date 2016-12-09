@@ -105,6 +105,7 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
+import org.mockito.Mockito;
 
 public class TestContainer {
 
@@ -191,6 +192,42 @@ public class TestContainer {
       reset(wc.localizerBus);
       wc.containerKilledOnRequest();
       assertEquals(ContainerState.EXITED_WITH_FAILURE, 
+          wc.c.getContainerState());
+      assertNull(wc.c.getLocalizedResources());
+      verifyCleanupCall(wc);
+      int failed = metrics.getFailedContainers();
+      wc.containerResourcesCleanup();
+      assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      assertEquals(failed + 1, metrics.getFailedContainers());
+      assertEquals(running, metrics.getRunningContainers());
+    }
+    finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked") // mocked generic
+  public void testContainerPauseAndResume() throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(13, 314159265358979L, 4344, "yak");
+      wc.initContainer();
+      wc.localizeResources();
+      int running = metrics.getRunningContainers();
+      wc.launchContainer();
+      assertEquals(running + 1, metrics.getRunningContainers());
+      reset(wc.localizerBus);
+      wc.pauseContainer();
+      assertEquals(ContainerState.PAUSED,
+          wc.c.getContainerState());
+      wc.resumeContainer();
+      assertEquals(ContainerState.RUNNING,
+          wc.c.getContainerState());
+      wc.containerKilledOnRequest();
+      assertEquals(ContainerState.EXITED_WITH_FAILURE,
           wc.c.getContainerState());
       assertNull(wc.c.getLocalizedResources());
       verifyCleanupCall(wc);
@@ -988,6 +1025,8 @@ public class TestContainer {
       NodeStatusUpdater nodeStatusUpdater = mock(NodeStatusUpdater.class);
       when(context.getNodeStatusUpdater()).thenReturn(nodeStatusUpdater);
       ContainerExecutor executor = mock(ContainerExecutor.class);
+      Mockito.doNothing().when(executor).pauseContainer(any(Container.class));
+      Mockito.doNothing().when(executor).resumeContainer(any(Container.class));
       launcher =
           new ContainersLauncher(context, dispatcher, executor, null, null);
       // create a mock ExecutorService, which will not really launch
@@ -1193,6 +1232,18 @@ public class TestContainer {
       c.handle(new ContainerKillEvent(cId,
           ContainerExitStatus.KILLED_BY_RESOURCEMANAGER,
           "KillRequest"));
+      drainDispatcherEvents();
+    }
+
+    public void pauseContainer() {
+      c.handle(new ContainerPauseEvent(cId,
+          "PauseRequest"));
+      drainDispatcherEvents();
+    }
+
+    public void resumeContainer() {
+      c.handle(new ContainerResumeEvent(cId,
+          "ResumeRequest"));
       drainDispatcherEvents();
     }
 

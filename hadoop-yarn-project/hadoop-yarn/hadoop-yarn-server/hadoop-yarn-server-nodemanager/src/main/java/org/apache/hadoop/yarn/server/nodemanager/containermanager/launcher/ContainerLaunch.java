@@ -75,6 +75,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
@@ -86,6 +87,7 @@ import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class ContainerLaunch implements Callable<Integer> {
 
@@ -106,8 +108,10 @@ public class ContainerLaunch implements Callable<Integer> {
   private final Configuration conf;
   private final Context context;
   private final ContainerManagerImpl containerManager;
-  
+
   protected AtomicBoolean containerAlreadyLaunched = new AtomicBoolean(false);
+  protected AtomicBoolean shouldPauseContainer = new AtomicBoolean(false);
+
   protected AtomicBoolean completed = new AtomicBoolean(false);
 
   private volatile boolean killedBeforeStart = false;
@@ -800,6 +804,90 @@ public class ContainerLaunch implements Callable<Integer> {
         break;
     }
     return signal;
+  }
+
+  /**
+   * Pause the container.
+   * Cancels the launch if the container isn't launched yet. Otherwise asks the
+   * executor to pause the container.
+   * @throws IOException in case of errors.
+   */
+  @SuppressWarnings("unchecked") // dispatcher not typed
+  public void pauseContainer() throws IOException {
+    ContainerId containerId = container.getContainerId();
+    String containerIdStr = containerId.toString();
+    LOG.info("Pausing the container " + containerIdStr);
+
+    // The pause event is only handled if the container is in the running state
+    // (the container state machine), so we don't check for
+    // shouldLaunchContainer over here
+
+    if (!shouldPauseContainer.compareAndSet(false, true)) {
+      LOG.info("Container " + containerId + " not paused as "
+          + "resume already called");
+      return;
+    }
+
+    try {
+      // Pause the container
+      exec.pauseContainer(container);
+
+      // PauseContainer is a blocking call. We are here almost means the
+      // container is paused, so send out the event.
+      dispatcher.getEventHandler().handle(new ContainerEvent(
+          containerId,
+          ContainerEventType.CONTAINER_PAUSED));
+    } catch (Exception e) {
+      String message =
+          "Exception when trying to pause container " + containerIdStr
+              + ": " + StringUtils.stringifyException(e);
+      LOG.info(message);
+      container.handle(new ContainerKillEvent(container.getContainerId(),
+          ContainerExitStatus.PREEMPTED, "Container preempted as there was "
+          + " an exception in pausing it."));
+    }
+  }
+
+  /**
+   * Resume the container.
+   * Cancels the launch if the container isn't launched yet. Otherwise asks the
+   * executor to pause the container.
+   * @throws IOException in case of error.
+   */
+  @SuppressWarnings("unchecked") // dispatcher not typed
+  public void resumeContainer() throws IOException {
+    ContainerId containerId = container.getContainerId();
+    String containerIdStr = containerId.toString();
+    LOG.info("Resuming the container " + containerIdStr);
+
+    // The resume event is only handled if the container is in a paused state
+    // so we don't check for the launched flag here.
+
+    // paused flag will be set to true if process already paused
+    boolean alreadyPaused = !shouldPauseContainer.compareAndSet(false, true);
+    if (!alreadyPaused) {
+      LOG.info("Container " + containerIdStr + " not paused."
+          + " No resume necessary");
+      return;
+    }
+
+    // If the container has already started
+    try {
+        exec.resumeContainer(container);
+        // ResumeContainer is a blocking call. We are here almost means the
+        // container is resumed, so send out the event.
+        dispatcher.getEventHandler().handle(new ContainerEvent(
+            containerId,
+            ContainerEventType.CONTAINER_RESUMED));
+    } catch (Exception e) {
+      String message =
+          "Exception when trying to resume container " + containerIdStr
+              + ": " + StringUtils.stringifyException(e);
+      LOG.info(message);
+      container.handle(new ContainerKillEvent(container.getContainerId(),
+          ContainerExitStatus.PREEMPTED, "Container preempted as there was "
+          + " an exception in pausing it."));
+    }
   }
 
   /**
