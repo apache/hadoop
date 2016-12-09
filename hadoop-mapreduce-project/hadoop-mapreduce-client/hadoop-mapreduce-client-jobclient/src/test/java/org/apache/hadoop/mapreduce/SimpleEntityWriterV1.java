@@ -32,7 +32,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
-import org.apache.hadoop.yarn.client.api.impl.TimelineClientImpl;
 
 /**
    * Adds simple entities with random string payload, events, metrics, and
@@ -46,7 +45,7 @@ class SimpleEntityWriterV1
 
   public void map(IntWritable key, IntWritable val, Context context)
       throws IOException {
-    TimelineClient tlc = new TimelineClientImpl();
+    TimelineClient tlc = TimelineClient.createTimelineClient();
     Configuration conf = context.getConfiguration();
 
     final int kbs = conf.getInt(KBS_SENT, KBS_SENT_DEFAULT);
