@@ -62,7 +62,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriter
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -109,8 +109,8 @@ public class TestHBaseStorageFlowRun {
       HRegionServer server = util.getRSForFirstRegionInTable(table);
       List<Region> regions = server.getOnlineRegions(table);
       for (Region region : regions) {
-        assertTrue(TimelineStorageUtils.isFlowRunTable(region.getRegionInfo(),
-            hbaseConf));
+        assertTrue(HBaseTimelineStorageUtils.isFlowRunTable(
+            region.getRegionInfo(), hbaseConf));
       }
     }
 
@@ -124,8 +124,8 @@ public class TestHBaseStorageFlowRun {
       HRegionServer server = util.getRSForFirstRegionInTable(table);
       List<Region> regions = server.getOnlineRegions(table);
       for (Region region : regions) {
-        assertFalse(TimelineStorageUtils.isFlowRunTable(region.getRegionInfo(),
-            hbaseConf));
+        assertFalse(HBaseTimelineStorageUtils.isFlowRunTable(
+            region.getRegionInfo(), hbaseConf));
       }
     }
 
@@ -139,8 +139,8 @@ public class TestHBaseStorageFlowRun {
       HRegionServer server = util.getRSForFirstRegionInTable(table);
       List<Region> regions = server.getOnlineRegions(table);
       for (Region region : regions) {
-        assertFalse(TimelineStorageUtils.isFlowRunTable(region.getRegionInfo(),
-            hbaseConf));
+        assertFalse(HBaseTimelineStorageUtils.isFlowRunTable(
+            region.getRegionInfo(), hbaseConf));
       }
     }
   }
