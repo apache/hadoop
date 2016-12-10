@@ -79,7 +79,7 @@ public abstract class AbstractSystemMetricsPublisher extends CompositeService
     }
 
     @Override
-    public EventHandler getEventHandler() {
+    public EventHandler<Event> getEventHandler() {
       return new CompositEventHandler();
     }
 

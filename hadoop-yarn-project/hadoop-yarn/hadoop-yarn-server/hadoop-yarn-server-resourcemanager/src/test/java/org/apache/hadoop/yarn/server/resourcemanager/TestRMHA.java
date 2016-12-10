@@ -761,7 +761,7 @@ public class TestRMHA {
     }
 
     @Override
-    public EventHandler getEventHandler() {
+    public EventHandler<Event> getEventHandler() {
       return null;
     }
 

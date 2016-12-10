@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
-import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
+import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 
-public class MockEventHandler implements EventHandler<TaskAttemptEvent> {
+public class MockEventHandler implements EventHandler<Event> {
   @Override
-  public void handle(TaskAttemptEvent event) {
+  public void handle(Event event) {
   }
 }
