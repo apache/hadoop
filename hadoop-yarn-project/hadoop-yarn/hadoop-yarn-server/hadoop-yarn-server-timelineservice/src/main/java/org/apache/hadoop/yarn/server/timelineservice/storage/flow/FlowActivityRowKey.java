@@ -18,10 +18,10 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage.flow;
 
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 
 /**
  * Represents a rowkey for the flow activity table.
@@ -59,7 +59,7 @@ public class FlowActivityRowKey {
       String flowName, boolean convertDayTsToTopOfDay) {
     this.clusterId = clusterId;
     if (convertDayTsToTopOfDay && (timestamp != null)) {
-      this.dayTs = TimelineStorageUtils.getTopOfTheDayTimestamp(timestamp);
+      this.dayTs = HBaseTimelineStorageUtils.getTopOfTheDayTimestamp(timestamp);
     } else {
       this.dayTs = timestamp;
     }
