@@ -103,7 +103,7 @@ public class TestLocalContainerLauncher {
     AppContext context = mock(AppContext.class);
     // a simple event handler solely to detect the container cleaned event
     final CountDownLatch isDone = new CountDownLatch(1);
-    EventHandler handler = new EventHandler() {
+    EventHandler<Event> handler = new EventHandler<Event>() {
       @Override
       public void handle(Event event) {
         LOG.info("handling event " + event.getClass() +

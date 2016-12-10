@@ -438,7 +438,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     when(container.getLaunchContext()).thenReturn(containerLaunchContext);
     when(container.getLocalizedResources()).thenReturn(null);
     Dispatcher dispatcher = mock(Dispatcher.class);
-    EventHandler eventHandler = new EventHandler() {
+    EventHandler<Event> eventHandler = new EventHandler<Event>() {
       public void handle(Event event) {
         Assert.assertTrue(event instanceof ContainerExitEvent);
         ContainerExitEvent exitEvent = (ContainerExitEvent) event;
@@ -602,8 +602,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         eventHandler.isContainerExitEventOccured());
   }
 
-  private static class ContainerExitHandler
-      implements EventHandler<ContainerEvent> {
+  private static class ContainerExitHandler implements EventHandler<Event> {
     private boolean testForMultiFile;
 
     ContainerExitHandler(boolean testForMultiFile) {
@@ -616,7 +615,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       return containerExitEventOccured;
     }
 
-    public void handle(ContainerEvent event) {
+    public void handle(Event event) {
       if (event instanceof ContainerExitEvent) {
         containerExitEventOccured = true;
         ContainerExitEvent exitEvent = (ContainerExitEvent) event;
@@ -1064,7 +1063,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     when(container.getLaunchContext()).thenReturn(clc);
     when(container.getLocalizedResources()).thenReturn(null);
     Dispatcher dispatcher = mock(Dispatcher.class);
-    EventHandler eventHandler = new EventHandler() {
+    EventHandler<Event> eventHandler = new EventHandler<Event>() {
+      @Override
       public void handle(Event event) {
         Assert.assertTrue(event instanceof ContainerExitEvent);
         ContainerExitEvent exitEvent = (ContainerExitEvent) event;

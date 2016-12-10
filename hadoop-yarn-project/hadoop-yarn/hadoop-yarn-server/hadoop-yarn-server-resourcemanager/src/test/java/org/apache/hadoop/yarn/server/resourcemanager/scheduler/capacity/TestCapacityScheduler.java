@@ -3348,7 +3348,7 @@ public class TestCapacityScheduler {
     // to have 0 available resource
     RMContext spyContext = Mockito.spy(resourceManager.getRMContext());
     Dispatcher mockDispatcher = mock(AsyncDispatcher.class);
-    when(mockDispatcher.getEventHandler()).thenReturn(new EventHandler() {
+    when(mockDispatcher.getEventHandler()).thenReturn(new EventHandler<Event>() {
       @Override
       public void handle(Event event) {
         if (event instanceof RMNodeResourceUpdateEvent) {

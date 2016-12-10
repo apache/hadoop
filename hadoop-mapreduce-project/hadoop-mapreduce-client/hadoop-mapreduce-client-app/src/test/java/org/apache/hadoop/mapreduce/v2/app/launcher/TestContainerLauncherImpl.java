@@ -167,8 +167,8 @@ public class TestContainerLauncherImpl {
   public void testHandle() throws Exception {
     LOG.info("STARTING testHandle");
     AppContext mockContext = mock(AppContext.class);
-    @SuppressWarnings("rawtypes")
-    EventHandler mockEventHandler = mock(EventHandler.class);
+    @SuppressWarnings("unchecked")
+    EventHandler<Event> mockEventHandler = mock(EventHandler.class);
     when(mockContext.getEventHandler()).thenReturn(mockEventHandler);
     String cmAddress = "127.0.0.1:8000";
     ContainerManagementProtocolClient mockCM =
@@ -228,8 +228,8 @@ public class TestContainerLauncherImpl {
   public void testOutOfOrder() throws Exception {
     LOG.info("STARTING testOutOfOrder");
     AppContext mockContext = mock(AppContext.class);
-    @SuppressWarnings("rawtypes")
-    EventHandler mockEventHandler = mock(EventHandler.class);
+    @SuppressWarnings("unchecked")
+    EventHandler<Event> mockEventHandler = mock(EventHandler.class);
     when(mockContext.getEventHandler()).thenReturn(mockEventHandler);
 
     ContainerManagementProtocolClient mockCM =
@@ -290,8 +290,8 @@ public class TestContainerLauncherImpl {
     LOG.info("in test Shutdown");
 
     AppContext mockContext = mock(AppContext.class);
-    @SuppressWarnings("rawtypes")
-    EventHandler mockEventHandler = mock(EventHandler.class);
+    @SuppressWarnings("unchecked")
+    EventHandler<Event> mockEventHandler = mock(EventHandler.class);
     when(mockContext.getEventHandler()).thenReturn(mockEventHandler);
 
     ContainerManagementProtocolClient mockCM =

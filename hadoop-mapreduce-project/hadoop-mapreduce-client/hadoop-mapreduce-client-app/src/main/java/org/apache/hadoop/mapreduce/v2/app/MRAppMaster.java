@@ -1120,7 +1120,7 @@ public class MRAppMaster extends CompositeService {
     }
 
     @Override
-    public EventHandler getEventHandler() {
+    public EventHandler<Event> getEventHandler() {
       return dispatcher.getEventHandler();
     }
 
