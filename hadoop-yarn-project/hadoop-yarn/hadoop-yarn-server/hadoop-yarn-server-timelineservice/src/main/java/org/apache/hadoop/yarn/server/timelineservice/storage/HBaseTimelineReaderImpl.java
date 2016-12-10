@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.reader.EntityTypeReader;
 import org.apache.hadoop.yarn.server.timelineservice.storage.reader.TimelineEntityReader;
 import org.apache.hadoop.yarn.server.timelineservice.storage.reader.TimelineEntityReaderFactory;
@@ -55,7 +55,7 @@ public class HBaseTimelineReaderImpl
   @Override
   public void serviceInit(Configuration conf) throws Exception {
     super.serviceInit(conf);
-    hbaseConf = TimelineStorageUtils.getTimelineServiceHBaseConf(conf);
+    hbaseConf = HBaseTimelineStorageUtils.getTimelineServiceHBaseConf(conf);
     conn = ConnectionFactory.createConnection(hbaseConf);
   }
 

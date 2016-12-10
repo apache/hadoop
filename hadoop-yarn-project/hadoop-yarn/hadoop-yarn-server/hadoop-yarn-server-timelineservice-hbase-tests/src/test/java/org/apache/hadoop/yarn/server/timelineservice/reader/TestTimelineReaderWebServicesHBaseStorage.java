@@ -52,7 +52,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -78,7 +78,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   private static HBaseTestingUtility util;
   private static long ts = System.currentTimeMillis();
   private static long dayTs =
-      TimelineStorageUtils.getTopOfTheDayTimestamp(ts);
+      HBaseTimelineStorageUtils.getTopOfTheDayTimestamp(ts);
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -962,7 +962,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       assertEquals(1, entities.size());
 
       long firstFlowActivity =
-          TimelineStorageUtils.getTopOfTheDayTimestamp(1425016501000L);
+          HBaseTimelineStorageUtils.getTopOfTheDayTimestamp(1425016501000L);
 
       DateFormat fmt = TimelineReaderWebServices.DATE_FORMAT.get();
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +

@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowTable;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTable;
@@ -69,7 +69,7 @@ public final class TimelineSchemaCreator {
   public static void main(String[] args) throws Exception {
 
     Configuration hbaseConf =
-        TimelineStorageUtils.getTimelineServiceHBaseConf(null);
+        HBaseTimelineStorageUtils.getTimelineServiceHBaseConf(null);
     // Grab input args and allow for -Dxyz style arguments
     String[] otherArgs = new GenericOptionsParser(hbaseConf, args)
         .getRemainingArgs();

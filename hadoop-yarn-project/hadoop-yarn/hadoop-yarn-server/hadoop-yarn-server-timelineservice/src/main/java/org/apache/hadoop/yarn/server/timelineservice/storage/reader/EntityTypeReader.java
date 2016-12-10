@@ -31,8 +31,8 @@ import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
@@ -153,8 +153,8 @@ public final class EntityTypeReader extends AbstractTimelineStorageReader {
     System.arraycopy(entityTypeEncoded, 0, currRowKey, currRowKeyPrefix.length,
         entityTypeEncoded.length);
 
-    return
-        TimelineStorageUtils.calculateTheClosestNextRowKeyForPrefix(currRowKey);
+    return HBaseTimelineStorageUtils.calculateTheClosestNextRowKeyForPrefix(
+        currRowKey);
   }
 
   private ResultScanner getResult(Configuration hbaseConf, Connection conn,
