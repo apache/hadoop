@@ -205,6 +205,8 @@ Release 2.7.4 - UNRELEASED
     HDFS-11180. Intermittent deadlock in NameNode when failover happens.
     (aajisaka)
 
+    HDFS-11229. HDFS-11056 failed to close meta file. (Wei-Chiu Chuang)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
