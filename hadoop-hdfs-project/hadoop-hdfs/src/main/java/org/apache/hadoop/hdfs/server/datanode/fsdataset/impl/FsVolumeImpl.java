@@ -1132,9 +1132,10 @@ public class FsVolumeImpl implements FsVolumeSpi {
     int offsetInChecksum = BlockMetadataHeader.getHeaderSize() +
         (int)(onDiskLen / bytesPerChecksum * checksumSize);
     byte[] lastChecksum = new byte[checksumSize];
-    RandomAccessFile raf = new RandomAccessFile(metaFile, "r");
-    raf.seek(offsetInChecksum);
-    raf.read(lastChecksum, 0, checksumSize);
+    try (RandomAccessFile raf = new RandomAccessFile(metaFile, "r")) {
+      raf.seek(offsetInChecksum);
+      raf.read(lastChecksum, 0, checksumSize);
+    }
     return lastChecksum;
   }
 
