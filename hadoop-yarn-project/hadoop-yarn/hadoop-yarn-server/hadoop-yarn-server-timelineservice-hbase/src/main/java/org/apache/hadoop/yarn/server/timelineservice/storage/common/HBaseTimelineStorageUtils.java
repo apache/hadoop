@@ -204,24 +204,6 @@ public final class HBaseTimelineStorageUtils {
     return appId;
   }
 
-  public static boolean isFlowRunTable(HRegionInfo hRegionInfo,
-                                       Configuration conf) {
-    String regionTableName = hRegionInfo.getTable().getNameAsString();
-    String flowRunTableName = conf.get(FlowRunTable.TABLE_NAME_CONF_NAME,
-        FlowRunTable.DEFAULT_TABLE_NAME);
-    if (HBaseTimelineStorageUtils.LOG.isDebugEnabled()) {
-      HBaseTimelineStorageUtils.LOG.debug("regionTableName=" + regionTableName);
-    }
-    if (flowRunTableName.equalsIgnoreCase(regionTableName)) {
-      if (HBaseTimelineStorageUtils.LOG.isDebugEnabled()) {
-        HBaseTimelineStorageUtils.LOG.debug(
-            "table is the flow run table!! " + flowRunTableName);
-      }
-      return true;
-    }
-    return false;
-  }
-
   /**
    * Converts an int into it's inverse int to be used in (row) keys
    * where we want to have the largest int value in the top of the table
@@ -259,17 +241,16 @@ public final class HBaseTimelineStorageUtils {
    */
   public static Configuration getTimelineServiceHBaseConf(Configuration conf)
       throws MalformedURLException {
+    Configuration hbaseConf;
+
     if (conf == null) {
-      throw new NullPointerException();
+      return HBaseConfiguration.create();
     }
 
-    Configuration hbaseConf;
     String timelineServiceHBaseConfFileURL =
         conf.get(YarnConfiguration.TIMELINE_SERVICE_HBASE_CONFIGURATION_FILE);
     if (timelineServiceHBaseConfFileURL != null
         && timelineServiceHBaseConfFileURL.length() > 0) {
-      LOG.info("Using hbase configuration at " +
-          timelineServiceHBaseConfFileURL);
       // create a clone so that we don't mess with out input one
       hbaseConf = new Configuration(conf);
       Configuration plainHBaseConf = new Configuration(false);
@@ -315,5 +296,17 @@ public final class HBaseTimelineStorageUtils {
     // And increment the last one
     newStopRow[newStopRow.length - 1]++;
     return newStopRow;
+  }
+
+  /**
+   * Checks if passed object is of integral type(Short/Integer/Long).
+   *
+   * @param obj Object to be checked.
+   * @return true if object passed is of type Short or Integer or Long, false
+   * otherwise.
+   */
+  public static boolean isIntegralValue(Object obj) {
+    return (obj instanceof Short) || (obj instanceof Integer) ||
+        (obj instanceof Long);
   }
 }
