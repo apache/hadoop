@@ -187,7 +187,7 @@ public interface Reducer<K2, V2, K3, V3> extends JobConfigurable, Closeable {
    * takes a significant amount of time to process individual key/value 
    * pairs, this is crucial since the framework might assume that the task has 
    * timed-out and kill that task. The other way of avoiding this is to set 
-   * <a href="{@docRoot}/../mapred-default.html#mapreduce.task.timeout">
+   * <a href="{@docRoot}/../hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml#mapreduce.task.timeout">
    * mapreduce.task.timeout</a> to a high-enough value (or even zero for no 
    * time-outs).</p>
    * 
