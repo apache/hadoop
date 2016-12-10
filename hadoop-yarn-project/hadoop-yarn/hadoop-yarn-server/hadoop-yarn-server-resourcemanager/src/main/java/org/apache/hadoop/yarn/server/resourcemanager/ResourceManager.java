@@ -256,16 +256,17 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.rmContext.setHAEnabled(HAUtil.isHAEnabled(this.conf));
     if (this.rmContext.isHAEnabled()) {
       HAUtil.verifyAndSetConfiguration(this.conf);
-      curatorEnabled = conf.getBoolean(YarnConfiguration.CURATOR_LEADER_ELECTOR,
-          YarnConfiguration.DEFAULT_CURATOR_LEADER_ELECTOR_ENABLED);
-      if (curatorEnabled) {
-        this.curator = createAndStartCurator(conf);
-        LeaderElectorService elector = new LeaderElectorService(rmContext, this);
-        addService(elector);
+
+      // If the RM is configured to use an embedded leader elector,
+      // initialize the leader elector.
+      if (HAUtil.isAutomaticFailoverEnabled(conf) &&
+          HAUtil.isAutomaticFailoverEmbedded(conf)) {
+        EmbeddedElector elector = createEmbeddedElector();
+        addIfService(elector);
         rmContext.setLeaderElectorService(elector);
       }
     }
-    
+
     // Set UGI and do login
     // If security is enabled, use login user
     // If security is not enabled, use current user
@@ -303,6 +304,20 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmContext.setSystemMetricsPublisher(systemMetricsPublisher);
 
     super.serviceInit(this.conf);
+  }
+
+  protected EmbeddedElector createEmbeddedElector() throws IOException {
+    EmbeddedElector elector;
+    curatorEnabled =
+        conf.getBoolean(YarnConfiguration.CURATOR_LEADER_ELECTOR,
+            YarnConfiguration.DEFAULT_CURATOR_LEADER_ELECTOR_ENABLED);
+    if (curatorEnabled) {
+      this.curator = createAndStartCurator(conf);
+      elector = new CuratorBasedElectorService(rmContext, this);
+    } else {
+      elector = new ActiveStandbyElectorBasedElectorService(rmContext);
+    }
+    return elector;
   }
 
   public CuratorFramework createAndStartCurator(Configuration conf)
@@ -754,14 +769,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
         // Transition to standby and reinit active services
         LOG.info("Transitioning RM to Standby mode");
         transitionToStandby(true);
-        if (curatorEnabled) {
-          rmContext.getLeaderElectorService().reJoinElection();
-        } else {
-          adminService.resetLeaderElection();
+        EmbeddedElector elector = rmContext.getLeaderElectorService();
+        if (elector != null) {
+          elector.rejoinElection();
         }
-        return;
       } catch (Exception e) {
-        LOG.fatal("Failed to transition RM to Standby mode.");
+        LOG.fatal("Failed to transition RM to Standby mode.", e);
         ExitUtil.terminate(1, e);
       }
     }

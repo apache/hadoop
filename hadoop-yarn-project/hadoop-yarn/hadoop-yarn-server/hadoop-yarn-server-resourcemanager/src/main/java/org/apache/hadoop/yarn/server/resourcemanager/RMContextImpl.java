@@ -75,7 +75,7 @@ public class RMContextImpl implements RMContext {
 
   private RMApplicationHistoryWriter rmApplicationHistoryWriter;
   private SystemMetricsPublisher systemMetricsPublisher;
-  private LeaderElectorService elector;
+  private EmbeddedElector elector;
 
   private QueueLimitCalculator queueLimitCalculator;
 
@@ -142,12 +142,12 @@ public class RMContextImpl implements RMContext {
   }
 
   @Override
-  public void setLeaderElectorService(LeaderElectorService elector) {
+  public void setLeaderElectorService(EmbeddedElector elector) {
     this.elector = elector;
   }
 
   @Override
-  public LeaderElectorService getLeaderElectorService() {
+  public EmbeddedElector getLeaderElectorService() {
     return this.elector;
   }
 
@@ -499,5 +499,14 @@ public class RMContextImpl implements RMContext {
   @Override
   public RMAppLifetimeMonitor getRMAppLifetimeMonitor() {
     return this.activeServiceContext.getRMAppLifetimeMonitor();
+  }
+
+  public String getHAZookeeperConnectionState() {
+    if (elector == null) {
+      return "Could not find leader elector. Verify both HA and automatic " +
+          "failover are enabled.";
+    } else {
+      return elector.getZookeeperConnectionState();
+    }
   }
 }
