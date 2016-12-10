@@ -157,7 +157,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   }
   
   DrainDispatcher dispatcher;
-  EventHandler<ApplicationEvent> appEventHandler;
+  EventHandler<Event> appEventHandler;
 
   @Override
   @SuppressWarnings("unchecked")

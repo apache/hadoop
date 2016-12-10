@@ -2434,7 +2434,7 @@ public class RMWebServices extends WebServices {
   }
 
   @GET
-  @Path("/apps/{appid}/timeout/{type}")
+  @Path("/apps/{appid}/timeouts/{type}")
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public AppTimeoutInfo getAppTimeout(@Context HttpServletRequest hsr,
@@ -2571,10 +2571,10 @@ public class RMWebServices extends WebServices {
   private Response updateApplicationTimeouts(final RMApp app,
       UserGroupInformation callerUGI, final AppTimeoutInfo appTimeout)
       throws IOException, InterruptedException {
-
-    if (appTimeout.getTimeoutType() == null) {
-      return Response.status(Status.BAD_REQUEST).entity("Timeout type is null.")
-          .build();
+    if (appTimeout.getTimeoutType() == null
+        || appTimeout.getExpireTime() == null) {
+      return Response.status(Status.BAD_REQUEST)
+          .entity("Timeout type or ExpiryTime is null.").build();
     }
 
     String userName = callerUGI.getUserName();

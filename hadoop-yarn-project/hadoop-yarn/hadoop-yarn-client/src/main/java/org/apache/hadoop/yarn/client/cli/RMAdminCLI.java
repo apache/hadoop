@@ -379,7 +379,7 @@ public class RMAdminCLI extends HAAdmin {
     }
     if (nodesDecommissioning) {
       System.out.println("Graceful decommissioning not completed in " + timeout
-          + " seconds, issueing forceful decommissioning command.");
+          + " seconds, issuing forceful decommissioning command.");
       RefreshNodesRequest forcefulRequest = RefreshNodesRequest
           .newInstance(DecommissionType.FORCEFUL);
       adminProtocol.refreshNodes(forcefulRequest);

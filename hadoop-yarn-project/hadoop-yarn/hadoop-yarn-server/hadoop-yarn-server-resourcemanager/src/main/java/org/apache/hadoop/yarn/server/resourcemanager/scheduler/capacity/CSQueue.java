@@ -362,4 +362,14 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @return readLock of corresponding queue.
    */
   public ReentrantReadWriteLock.ReadLock getReadLock();
+
+  /**
+   * Validate submitApplication api so that moveApplication do a pre-check.
+   * @param applicationId Application ID
+   * @param userName User Name
+   * @param queue Queue Name
+   * @throws AccessControlException if any acl violation is there.
+   */
+  public void validateSubmitApplication(ApplicationId applicationId,
+      String userName, String queue) throws AccessControlException;
 }

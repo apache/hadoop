@@ -214,7 +214,12 @@ message ApplicationReportProto {
   optional PriorityProto priority = 23;
   optional string appNodeLabelExpression = 24;
   optional string amNodeLabelExpression = 25;
-  repeated ApplicationTimeoutProto application_timeouts = 26;
+  repeated AppTimeoutsMapProto appTimeouts = 26;
+}
+
+message AppTimeoutsMapProto {
+  optional ApplicationTimeoutTypeProto application_timeout_type = 1;
+  optional ApplicationTimeoutProto application_timeout = 2;
 }
 
 message ApplicationTimeoutProto {

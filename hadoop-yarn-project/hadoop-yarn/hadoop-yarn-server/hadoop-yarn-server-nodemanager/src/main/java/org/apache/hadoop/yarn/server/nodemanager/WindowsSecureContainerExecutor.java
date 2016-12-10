@@ -509,7 +509,7 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
               output.append(buf, 0, nRead);
             }
           } catch (Throwable t) {
-            LOG.error("Error occured reading the process stdout", t);
+            LOG.error("Error occurred reading the process stdout", t);
           }
         }
       };
@@ -722,7 +722,7 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
       }
       catch(Throwable e) {
         LOG.warn(String.format(
-            "An exception occured during the cleanup of localizer job %s:%n%s",
+            "An exception occurred during the cleanup of localizer job %s:%n%s",
             localizerPid,
             org.apache.hadoop.util.StringUtils.stringifyException(e)));
       }

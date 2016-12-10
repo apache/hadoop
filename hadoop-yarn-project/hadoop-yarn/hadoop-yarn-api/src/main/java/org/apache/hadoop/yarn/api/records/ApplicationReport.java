@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.util.Records;
 
-import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -451,10 +451,10 @@ public abstract class ApplicationReport {
 
   @Public
   @Unstable
-  public abstract List<ApplicationTimeout> getApplicationTimeouts();
+  public abstract Map<ApplicationTimeoutType, ApplicationTimeout> getApplicationTimeouts();
 
   @Private
   @Unstable
   public abstract void setApplicationTimeouts(
-      List<ApplicationTimeout> timeouts);
+      Map<ApplicationTimeoutType, ApplicationTimeout> timeouts);
 }

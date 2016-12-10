@@ -278,8 +278,8 @@
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /src/.Trash</command>
-        <command>-fs NAMENODE -rmdir /src</command>
-        <command>-fs NAMENODE -rmdir /dst</command>
+        <command>-fs NAMENODE -rm -r /src</command>
+        <command>-fs NAMENODE -rm -r /dst</command>
       </cleanup-commands>
       <comparators>
         <comparator>
@@ -475,6 +475,100 @@
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>No FileEncryptionInfo found for path </expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test list encryption zones when no zone has been deleted</description>
+      <test-commands>
+        <command>-fs NAMENODE -rm -r .Trash/Current/*</command>
+        <command>-fs NAMENODE -mkdir /test1</command>
+        <crypto-admin-command>-createZone -path /test1 -keyName myKey</crypto-admin-command>
+        <crypto-admin-command>-listZones</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /test1</command>
+        <command>-fs NAMENODE -rm -r .Trash/Current/*</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpAcrossOutputComparator</type>
+          <expected-output>(/test1)\s*(myKey)\s*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test adding two zones, then deleting one and listing zones. The deleted zone should still be listed, as it's under user's Trash folder'</description>
+      <test-commands>
+        <command>-fs NAMENODE -rm -r .Trash/Current/*</command>
+        <command>-fs NAMENODE -mkdir /test1</command>
+        <command>-fs NAMENODE -mkdir /test2</command>
+        <crypto-admin-command>-createZone -path /test1 -keyName myKey</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /test2 -keyName myKey</crypto-admin-command>
+        <command>-fs NAMENODE -rm -r /test2</command>
+        <crypto-admin-command>-listZones</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /test1</command>
+        <command>-fs NAMENODE -rm -r .Trash/Current/*</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpAcrossOutputComparator</type>
+          <expected-output>(/test1)\s*(myKey)\s*(/user/).*(/.Trash/Current/test2)\s*(myKey)\s*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test adding two zones, then permanently deleting one and listing zones.</description>
+      <test-commands>
+        <command>-fs NAMENODE -rm -r .Trash/Current/*</command>
+        <command>-fs NAMENODE -mkdir /test1</command>
+        <command>-fs NAMENODE -mkdir /test2</command>
+        <crypto-admin-command>-createZone -path /test1 -keyName myKey</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /test2 -keyName myKey</crypto-admin-command>
+        <command>-fs NAMENODE -rm -r /test2</command>
+        <command>-fs NAMENODE -rm -r .Trash/Current/*</command>
+        <crypto-admin-command>-listZones</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /test1</command>
+        <command>-fs NAMENODE -rm -r .Trash/Current/*</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpAcrossOutputComparator</type>
+          <expected-output>(/test1)\s*(myKey)\s*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test adding two zones to a snapshotable directory, take snapshot, permanently delete one of the EZs, then list zones</description>
+      <test-commands>
+        <command>-fs NAMENODE -rm -r .Trash/Current/*</command>
+        <command>-fs NAMENODE -mkdir /snapshotable</command>
+        <command>-fs NAMENODE -mkdir /snapshotable/test1</command>
+        <command>-fs NAMENODE -mkdir /snapshotable/test2</command>
+        <dfs-admin-command>-fs NAMENODE -allowSnapshot /snapshotable</dfs-admin-command>
+        <command>-fs NAMENODE -createSnapshot /snapshotable snapshot1</command>
+        <crypto-admin-command>-createZone -path /snapshotable/test1 -keyName myKey</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /snapshotable/test2 -keyName myKey</crypto-admin-command>
+        <command>-fs NAMENODE -rm -r /snapshotable/test2</command>
+        <command>-fs NAMENODE -rm -r .Trash/Current/*</command>
+        <crypto-admin-command>-listZones</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /snapshotable</command>
+        <command>-fs NAMENODE -rm -r .Trash/Current/*</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpAcrossOutputComparator</type>
+          <expected-output>(/test1)\s*(myKey)\s*</expected-output>
         </comparator>
       </comparators>
     </test>

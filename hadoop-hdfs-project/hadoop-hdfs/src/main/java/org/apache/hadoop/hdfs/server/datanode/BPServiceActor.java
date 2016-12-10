@@ -269,11 +269,11 @@ class BPServiceActor implements Runnable {
     // First phase of the handshake with NN - get the namespace
     // info.
     NamespaceInfo nsInfo = retrieveNamespaceInfo();
-
+    
     // Verify that this matches the other NN in this HA pair.
     // This also initializes our block pool in the DN if we are
     // the first NN connection for this BP.
-    bpos.verifyAndSetNamespaceInfo(this, nsInfo);
+    bpos.verifyAndSetNamespaceInfo(nsInfo);
     
     // Second phase of the handshake with the NN.
     register(nsInfo);
@@ -504,7 +504,12 @@ class BPServiceActor implements Runnable {
         volumeFailureSummary,
         requestBlockReportLease);
   }
-  
+
+  @VisibleForTesting
+  void sendLifelineForTests() throws IOException {
+    lifelineSender.sendLifeline();
+  }
+
   //This must be called only by BPOfferService
   void start() {
     if ((bpThread != null) && (bpThread.isAlive())) {

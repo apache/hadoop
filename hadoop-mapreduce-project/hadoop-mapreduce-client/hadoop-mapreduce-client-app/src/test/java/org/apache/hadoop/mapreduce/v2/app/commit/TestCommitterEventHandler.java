@@ -73,7 +73,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestCommitterEventHandler {
-  public static class WaitForItHandler implements EventHandler {
+  public static class WaitForItHandler implements EventHandler<Event> {
 
     private Event event = null;
     

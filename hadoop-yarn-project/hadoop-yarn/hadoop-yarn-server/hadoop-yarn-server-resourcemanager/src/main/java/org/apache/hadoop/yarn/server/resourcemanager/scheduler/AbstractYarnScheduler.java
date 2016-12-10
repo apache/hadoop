@@ -57,6 +57,8 @@ import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -64,7 +66,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMoveEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
@@ -358,6 +359,13 @@ public abstract class AbstractYarnScheduler
       throws YarnException {
     throw new YarnException(getClass().getSimpleName()
         + " does not support moving apps between queues");
+  }
+
+  @Override
+  public void preValidateMoveApplication(ApplicationId appId,
+      String newQueue) throws YarnException {
+    throw new YarnException(getClass().getSimpleName()
+        + " does not support pre-validation of moving apps between queues");
   }
 
   public void removeQueue(String queueName) throws YarnException {
@@ -675,10 +683,10 @@ public abstract class AbstractYarnScheduler
         throw new YarnException(errMsg);
       }
       // generate move events for each pending/running app
-      for (ApplicationAttemptId app : apps) {
-        SettableFuture<Object> future = SettableFuture.create();
-        this.rmContext.getDispatcher().getEventHandler().handle(
-            new RMAppMoveEvent(app.getApplicationId(), destQueue, future));
+      for (ApplicationAttemptId appAttemptId : apps) {
+        this.rmContext.getDispatcher().getEventHandler()
+            .handle(new RMAppManagerEvent(appAttemptId.getApplicationId(),
+                destQueue, RMAppManagerEventType.APP_MOVE));
       }
     } finally {
       writeLock.unlock();

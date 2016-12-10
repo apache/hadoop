@@ -37,6 +37,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.Random;
 
 import org.apache.commons.io.IOUtils;
@@ -44,6 +45,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -58,10 +60,13 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.hdfs.TestFileCreation;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
@@ -1111,6 +1116,69 @@ public class TestWebHDFS {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+
+  @Test
+  public void testStoragePolicy() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final Path path = new Path("/file");
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final WebHdfsFileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(
+          conf, WebHdfsConstants.WEBHDFS_SCHEME);
+
+      // test getAllStoragePolicies
+      BlockStoragePolicy[] dfsPolicies = (BlockStoragePolicy[]) dfs
+          .getAllStoragePolicies().toArray();
+      BlockStoragePolicy[] webHdfsPolicies = (BlockStoragePolicy[]) webHdfs
+          .getAllStoragePolicies().toArray();
+      Assert.assertTrue(Arrays.equals(dfsPolicies, webHdfsPolicies));
+
+      // test get/set/unset policies
+      DFSTestUtil.createFile(dfs, path, 0, (short) 1, 0L);
+      // get defaultPolicy
+      BlockStoragePolicySpi defaultdfsPolicy = dfs.getStoragePolicy(path);
+      // set policy through webhdfs
+      webHdfs.setStoragePolicy(path, HdfsConstants.COLD_STORAGE_POLICY_NAME);
+      // get policy from dfs
+      BlockStoragePolicySpi dfsPolicy = dfs.getStoragePolicy(path);
+      // get policy from webhdfs
+      BlockStoragePolicySpi webHdfsPolicy = webHdfs.getStoragePolicy(path);
+      Assert.assertEquals(HdfsConstants.COLD_STORAGE_POLICY_NAME.toString(),
+          webHdfsPolicy.getName());
+      Assert.assertEquals(webHdfsPolicy, dfsPolicy);
+      // unset policy
+      webHdfs.unsetStoragePolicy(path);
+      Assert.assertEquals(defaultdfsPolicy, webHdfs.getStoragePolicy(path));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testSetStoragePolicyWhenPolicyDisabled() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, false);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+        .build();
+    try {
+      cluster.waitActive();
+      final WebHdfsFileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(
+          conf, WebHdfsConstants.WEBHDFS_SCHEME);
+      webHdfs.setStoragePolicy(new Path("/"),
+          HdfsConstants.COLD_STORAGE_POLICY_NAME);
+      fail("Should throw exception, when storage policy disabled");
+    } catch (IOException e) {
+      Assert.assertTrue(e.getMessage().contains(
+          "Failed to set storage policy since"));
+    } finally {
+      cluster.shutdown();
     }
   }
 }

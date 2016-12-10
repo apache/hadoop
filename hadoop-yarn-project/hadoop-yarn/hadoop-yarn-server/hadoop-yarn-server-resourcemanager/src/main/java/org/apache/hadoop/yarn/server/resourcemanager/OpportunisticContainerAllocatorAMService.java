@@ -43,7 +43,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRespons
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -199,11 +198,12 @@ public class OpportunisticContainerAllocatorAMService
         }
       });
       int tokenExpiryInterval = getConfig()
-          .getInt(YarnConfiguration.OPPORTUNISTIC_CONTAINERS_TOKEN_EXPIRY_MS,
-              YarnConfiguration.
-                  OPPORTUNISTIC_CONTAINERS_TOKEN_EXPIRY_MS_DEFAULT);
-      opCtx.updateAllocationParams(createMinContainerResource(),
-          createMaxContainerResource(), createIncrContainerResource(),
+          .getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
+              YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS);
+      opCtx.updateAllocationParams(
+          rmContext.getScheduler().getMinimumResourceCapability(),
+          rmContext.getScheduler().getMaximumResourceCapability(),
+          rmContext.getScheduler().getMinimumResourceCapability(),
           tokenExpiryInterval);
       appAttempt.setOpportunisticContainerContext(opCtx);
     }
@@ -273,14 +273,14 @@ public class OpportunisticContainerAllocatorAMService
     RegisterDistributedSchedulingAMResponse dsResp = recordFactory
         .newRecordInstance(RegisterDistributedSchedulingAMResponse.class);
     dsResp.setRegisterResponse(response);
-    dsResp.setMinContainerResource(createMinContainerResource());
-    dsResp.setMaxContainerResource(createMaxContainerResource());
-    dsResp.setIncrContainerResource(createIncrContainerResource());
+    dsResp.setMinContainerResource(
+        rmContext.getScheduler().getMinimumResourceCapability());
+    dsResp.setMaxContainerResource(
+        rmContext.getScheduler().getMaximumResourceCapability());
     dsResp.setContainerTokenExpiryInterval(
         getConfig().getInt(
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_TOKEN_EXPIRY_MS,
-            YarnConfiguration.
-                OPPORTUNISTIC_CONTAINERS_TOKEN_EXPIRY_MS_DEFAULT));
+            YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS));
     dsResp.setContainerIdStart(
         this.rmContext.getEpoch() << ResourceManager.EPOCH_BIT_SHIFT);
 
@@ -384,18 +384,6 @@ public class OpportunisticContainerAllocatorAMService
     return nodeMonitor.getThresholdCalculator();
   }
 
-  private Resource createIncrContainerResource() {
-    return Resource.newInstance(
-        getConfig().getInt(
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_INCR_MEMORY_MB,
-            YarnConfiguration.
-                OPPORTUNISTIC_CONTAINERS_INCR_MEMORY_MB_DEFAULT),
-        getConfig().getInt(
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_INCR_VCORES,
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_INCR_VCORES_DEFAULT)
-    );
-  }
-
   private synchronized List<RemoteNode> getLeastLoadedNodes() {
     long currTime = System.currentTimeMillis();
     if ((currTime - lastCacheUpdateTime > cacheRefreshInterval)
@@ -423,30 +411,6 @@ public class OpportunisticContainerAllocatorAMService
         ((AbstractYarnScheduler) rmContext.getScheduler()).getNode(nodeId);
     return node != null ? RemoteNode.newInstance(nodeId, node.getHttpAddress())
         : null;
-  }
-
-  private Resource createMaxContainerResource() {
-    return Resource.newInstance(
-        getConfig().getInt(
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MAX_MEMORY_MB,
-            YarnConfiguration
-                .OPPORTUNISTIC_CONTAINERS_MAX_MEMORY_MB_DEFAULT),
-        getConfig().getInt(
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MAX_VCORES,
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MAX_VCORES_DEFAULT)
-    );
-  }
-
-  private Resource createMinContainerResource() {
-    return Resource.newInstance(
-        getConfig().getInt(
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MIN_MEMORY_MB,
-            YarnConfiguration.
-                OPPORTUNISTIC_CONTAINERS_MIN_MEMORY_MB_DEFAULT),
-        getConfig().getInt(
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MIN_VCORES,
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MIN_VCORES_DEFAULT)
-    );
   }
 
   private static ApplicationAttemptId getAppAttemptId() throws YarnException {

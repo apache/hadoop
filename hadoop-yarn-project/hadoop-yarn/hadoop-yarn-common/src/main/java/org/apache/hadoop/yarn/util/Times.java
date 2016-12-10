@@ -105,6 +105,9 @@ public class Times {
    */
   public static long parseISO8601ToLocalTimeInMillis(String isoString)
       throws ParseException {
+    if (isoString == null) {
+      throw new ParseException("Invalid input.", -1);
+    }
     return isoFormat.get().parse(isoString).getTime();
   }
 }

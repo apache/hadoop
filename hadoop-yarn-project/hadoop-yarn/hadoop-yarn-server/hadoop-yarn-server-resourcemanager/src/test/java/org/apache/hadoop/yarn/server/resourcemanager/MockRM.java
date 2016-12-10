@@ -109,6 +109,7 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 
+
 @SuppressWarnings("unchecked")
 public class MockRM extends ResourceManager {
 
@@ -123,6 +124,8 @@ public class MockRM extends ResourceManager {
   private final boolean useNullRMNodeLabelsManager;
   private boolean disableDrainEventsImplicitly;
 
+  private boolean useRealElector = false;
+
   public MockRM() {
     this(new YarnConfiguration());
   }
@@ -132,13 +135,23 @@ public class MockRM extends ResourceManager {
   }
   
   public MockRM(Configuration conf, RMStateStore store) {
-    this(conf, store, true);
+    this(conf, store, true, false);
   }
-  
+
+  public MockRM(Configuration conf, boolean useRealElector) {
+    this(conf, null, true, useRealElector);
+  }
+
   public MockRM(Configuration conf, RMStateStore store,
-      boolean useNullRMNodeLabelsManager) {
+      boolean useRealElector) {
+    this(conf, store, true, useRealElector);
+  }
+
+  public MockRM(Configuration conf, RMStateStore store,
+      boolean useNullRMNodeLabelsManager, boolean useRealElector) {
     super();
     this.useNullRMNodeLabelsManager = useNullRMNodeLabelsManager;
+    this.useRealElector = useRealElector;
     init(conf instanceof YarnConfiguration ? conf : new YarnConfiguration(conf));
     if (store != null) {
       setRMStateStore(store);
@@ -190,6 +203,15 @@ public class MockRM extends ResourceManager {
   @Override
   protected Dispatcher createDispatcher() {
     return new DrainDispatcher();
+  }
+
+  @Override
+  protected EmbeddedElector createEmbeddedElector() throws IOException {
+    if (useRealElector) {
+      return super.createEmbeddedElector();
+    } else {
+      return null;
+    }
   }
 
   @Override
@@ -983,11 +1005,6 @@ public class MockRM extends ResourceManager {
       @Override
       protected void stopServer() {
         // don't do anything
-      }
-
-      @Override
-      protected EmbeddedElectorService createEmbeddedElectorService() {
-        return null;
       }
     };
   }

@@ -1594,7 +1594,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   NamespaceInfo unprotectedGetNamespaceInfo() {
     return new NamespaceInfo(getFSImage().getStorage().getNamespaceID(),
         getClusterId(), getBlockPoolId(),
-        getFSImage().getStorage().getCTime(), getState());
+        getFSImage().getStorage().getCTime());
   }
 
   /**
@@ -4531,14 +4531,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       return 0;
     }
   }
-
+  
   @Metric
   public int getBlockCapacity() {
     return blockManager.getCapacity();
-  }
-
-  public HAServiceState getState() {
-    return haContext == null ? null : haContext.getState().getServiceState();
   }
 
   @Override // FSNamesystemMBean

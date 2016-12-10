@@ -40,7 +40,7 @@ public interface Dispatcher {
 
   public static final boolean DEFAULT_DISPATCHER_EXIT_ON_ERROR = false;
 
-  EventHandler getEventHandler();
+  EventHandler<Event> getEventHandler();
 
   void register(Class<? extends Enum> eventType, EventHandler handler);
 

@@ -31,7 +31,6 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 package hadoop.hdfs.datanode;
 
-import "HAServiceProtocol.proto";
 import "hdfs.proto";
 import "erasurecoding.proto";
 import "HdfsServer.proto";
@@ -214,7 +213,11 @@ message HeartbeatRequestProto {
  * txid - Highest transaction ID this NN has seen
  */
 message NNHAStatusHeartbeatProto {
-  required hadoop.common.HAServiceStateProto state = 1;
+  enum State {
+    ACTIVE = 0;
+    STANDBY = 1;
+  }
+  required State state = 1; 
   required uint64 txid = 2;
 }
 

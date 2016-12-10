@@ -1328,19 +1328,11 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
               ApplicationTimeoutType.LIFETIME, "UNLIMITED", -1);
         }
 
-        AppTimeoutInfo timeoutUpdate = new AppTimeoutInfo();
         long timeOutFromNow = 60;
         String expireTime = Times
             .formatISO8601(System.currentTimeMillis() + timeOutFromNow * 1000);
-        timeoutUpdate.setTimeoutType(ApplicationTimeoutType.LIFETIME);
-        timeoutUpdate.setExpiryTime(expireTime);
-
-        Object entity;
-        if (contentType.equals(MediaType.APPLICATION_JSON_TYPE)) {
-          entity = appTimeoutToJSON(timeoutUpdate);
-        } else {
-          entity = timeoutUpdate;
-        }
+        Object entity = getAppTimeoutInfoEntity(ApplicationTimeoutType.LIFETIME,
+            contentType, expireTime);
         response = this
             .constructWebResource("apps", app.getApplicationId().toString(),
                 "timeout")
@@ -1361,10 +1353,20 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
               expireTime, timeOutFromNow);
         }
 
+        // verify for negative cases
+        entity = getAppTimeoutInfoEntity(null,
+            contentType, null);
+        response = this
+            .constructWebResource("apps", app.getApplicationId().toString(),
+                "timeout")
+            .entity(entity, contentType).accept(mediaType)
+            .put(ClientResponse.class);
+        assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
+
         // invoke get
         response =
             this.constructWebResource("apps", app.getApplicationId().toString(),
-                "timeout", ApplicationTimeoutType.LIFETIME.toString())
+                "timeouts", ApplicationTimeoutType.LIFETIME.toString())
                 .accept(mediaType).get(ClientResponse.class);
         assertResponseStatusCode(Status.OK, response.getStatusInfo());
         if (mediaType.contains(MediaType.APPLICATION_JSON)) {
@@ -1374,6 +1376,21 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
       }
     }
     rm.stop();
+  }
+
+  private Object getAppTimeoutInfoEntity(ApplicationTimeoutType type,
+      MediaType contentType, String expireTime) throws Exception {
+    AppTimeoutInfo timeoutUpdate = new AppTimeoutInfo();
+    timeoutUpdate.setTimeoutType(type);
+    timeoutUpdate.setExpiryTime(expireTime);
+
+    Object entity;
+    if (contentType.equals(MediaType.APPLICATION_JSON_TYPE)) {
+      entity = appTimeoutToJSON(timeoutUpdate);
+    } else {
+      entity = timeoutUpdate;
+    }
+    return entity;
   }
 
   protected static void verifyAppTimeoutJson(ClientResponse response,

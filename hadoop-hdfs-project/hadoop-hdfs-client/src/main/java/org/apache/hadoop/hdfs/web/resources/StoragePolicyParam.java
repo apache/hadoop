@@ -15,30 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs.web.resources;
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
+/** policy parameter. */
+public class StoragePolicyParam extends StringParam {
+  /** Parameter name. */
+  public static final String NAME = "storagepolicy";
+  /** Default parameter value. */
+  public static final String DEFAULT = "";
 
-import org.apache.hadoop.yarn.api.records.ApplicationId;
+  private static final Domain DOMAIN = new Domain(NAME, null);
 
-import com.google.common.util.concurrent.SettableFuture;
-
-public class RMAppMoveEvent extends RMAppEvent {
-  private String targetQueue;
-  private SettableFuture<Object> result;
-  
-  public RMAppMoveEvent(ApplicationId id, String newQueue,
-      SettableFuture<Object> resultFuture) {
-    super(id, RMAppEventType.MOVE);
-    this.targetQueue = newQueue;
-    this.result = resultFuture;
-  }
-  
-  public String getTargetQueue() {
-    return targetQueue;
-  }
-  
-  public SettableFuture<Object> getResult() {
-    return result;
+  /**
+   * Constructor.
+   *
+   * @param str
+   *          a string representation of the parameter value.
+   */
+  public StoragePolicyParam(final String str) {
+    super(DOMAIN, str == null || str.equals(DEFAULT) ? null : str);
   }
 
+  @Override
+  public String getName() {
+    return NAME;
+  }
 }

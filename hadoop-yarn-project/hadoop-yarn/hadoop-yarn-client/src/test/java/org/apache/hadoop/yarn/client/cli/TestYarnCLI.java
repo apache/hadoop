@@ -130,8 +130,8 @@ public class TestYarnCLI {
       newApplicationReport.setPriority(Priority.newInstance(0));
       ApplicationTimeout timeout = ApplicationTimeout
           .newInstance(ApplicationTimeoutType.LIFETIME, "UNLIMITED", -1);
-      newApplicationReport
-          .setApplicationTimeouts(Collections.singletonList(timeout));
+      newApplicationReport.setApplicationTimeouts(
+          Collections.singletonMap(timeout.getTimeoutType(), timeout));
 
       when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
           newApplicationReport);
@@ -2104,7 +2104,8 @@ public class TestYarnCLI {
         "N/A", 0.53789f, "YARN", null);
     ApplicationTimeout timeout = ApplicationTimeout
         .newInstance(ApplicationTimeoutType.LIFETIME, "N/A", -1);
-    appReport.setApplicationTimeouts(Collections.singletonList(timeout));
+    appReport.setApplicationTimeouts(
+        Collections.singletonMap(timeout.getTimeoutType(), timeout));
     when(client.getApplicationReport(any(ApplicationId.class)))
         .thenReturn(appReport);
 

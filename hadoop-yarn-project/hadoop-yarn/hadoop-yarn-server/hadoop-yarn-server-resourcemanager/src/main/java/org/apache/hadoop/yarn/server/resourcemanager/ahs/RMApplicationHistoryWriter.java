@@ -323,7 +323,7 @@ public class RMApplicationHistoryWriter extends CompositeService {
     }
 
     @Override
-    public EventHandler getEventHandler() {
+    public EventHandler<Event> getEventHandler() {
       return new CompositEventHandler();
     }
 

@@ -15,33 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.event.AbstractEvent;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.service.Service;
 
-public class RMAppManagerEvent extends AbstractEvent<RMAppManagerEventType> {
+/**
+ * Interface that all embedded leader electors must implement.
+ */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+public interface EmbeddedElector extends Service{
+  /**
+   * Leave and rejoin leader election.
+   */
+  void rejoinElection();
 
-  private final ApplicationId appId;
-  private final String targetQueueForMove;
-
-  public RMAppManagerEvent(ApplicationId appId, RMAppManagerEventType type) {
-    this(appId, "", type);
-  }
-
-  public RMAppManagerEvent(ApplicationId appId, String targetQueueForMove,
-      RMAppManagerEventType type) {
-    super(type);
-    this.appId = appId;
-    this.targetQueueForMove = targetQueueForMove;
-  }
-
-  public ApplicationId getApplicationId() {
-    return this.appId;
-  }
-
-  public String getTargetQueueForMove() {
-    return this.targetQueueForMove;
-  }
+  /**
+   * Get information about the elector's connection to Zookeeper.
+   *
+   * @return zookeeper connection state
+   */
+  String getZookeeperConnectionState();
 }
