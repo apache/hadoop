@@ -45,9 +45,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Bytes.ByteArrayComparator;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.GenericConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.NumericValueConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimestampGenerator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ValueConverter;
 
@@ -249,7 +249,7 @@ class FlowScanner implements RegionScanner, Closeable {
     List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
         cell.getTagsLength());
     // We assume that all the operations for a particular column are the same
-    return TimelineStorageUtils.getAggregationOperationFromTagsList(tags);
+    return HBaseTimelineStorageUtils.getAggregationOperationFromTagsList(tags);
   }
 
   /**
@@ -323,7 +323,7 @@ class FlowScanner implements RegionScanner, Closeable {
       // only if this app has not been seen yet, add to current column cells
       List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
           cell.getTagsLength());
-      String aggDim = TimelineStorageUtils
+      String aggDim = HBaseTimelineStorageUtils
           .getAggregationCompactionDimension(tags);
       if (!alreadySeenAggDim.contains(aggDim)) {
         // if this agg dimension has already been seen,
@@ -418,7 +418,8 @@ class FlowScanner implements RegionScanner, Closeable {
       sum = converter.add(sum, currentValue);
     }
     byte[] sumBytes = converter.encodeValue(sum);
-    Cell sumCell = TimelineStorageUtils.createNewCell(mostRecentCell, sumBytes);
+    Cell sumCell =
+        HBaseTimelineStorageUtils.createNewCell(mostRecentCell, sumBytes);
     return sumCell;
   }
 
@@ -460,7 +461,7 @@ class FlowScanner implements RegionScanner, Closeable {
       // if this is the existing flow sum cell
       List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
           cell.getTagsLength());
-      String appId = TimelineStorageUtils
+      String appId = HBaseTimelineStorageUtils
           .getAggregationCompactionDimension(tags);
       if (appId == FLOW_APP_ID) {
         sum = converter.add(sum, currentValue);
@@ -502,7 +503,7 @@ class FlowScanner implements RegionScanner, Closeable {
           Bytes.toBytes(FLOW_APP_ID));
       tags.add(t);
       byte[] tagByteArray = Tag.fromList(tags);
-      Cell sumCell = TimelineStorageUtils.createNewCell(
+      Cell sumCell = HBaseTimelineStorageUtils.createNewCell(
           CellUtil.cloneRow(anyCell),
           CellUtil.cloneFamily(anyCell),
           CellUtil.cloneQualifier(anyCell),

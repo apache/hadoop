@@ -54,7 +54,8 @@ public final class AppIdKeyConverter implements KeyConverter<String> {
     byte[] clusterTs = Bytes.toBytes(
         LongConverter.invertLong(appId.getClusterTimestamp()));
     System.arraycopy(clusterTs, 0, appIdBytes, 0, Bytes.SIZEOF_LONG);
-    byte[] seqId = Bytes.toBytes(TimelineStorageUtils.invertInt(appId.getId()));
+    byte[] seqId = Bytes.toBytes(
+        HBaseTimelineStorageUtils.invertInt(appId.getId()));
     System.arraycopy(seqId, 0, appIdBytes, Bytes.SIZEOF_LONG, Bytes.SIZEOF_INT);
     return appIdBytes;
   }
@@ -79,7 +80,7 @@ public final class AppIdKeyConverter implements KeyConverter<String> {
     }
     long clusterTs = LongConverter.invertLong(
         Bytes.toLong(appIdBytes, 0, Bytes.SIZEOF_LONG));
-    int seqId = TimelineStorageUtils.invertInt(
+    int seqId = HBaseTimelineStorageUtils.invertInt(
         Bytes.toInt(appIdBytes, Bytes.SIZEOF_LONG, Bytes.SIZEOF_INT));
     return ApplicationId.newInstance(clusterTs, seqId).toString();
   }
