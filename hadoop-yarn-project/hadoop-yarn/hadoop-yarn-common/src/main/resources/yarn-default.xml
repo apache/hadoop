@@ -2708,63 +2708,6 @@
 
   <property>
     <description>
-      Minimum memory (in MB) used for allocating an opportunistic container.
-    </description>
-    <name>yarn.opportunistic-containers.min-memory-mb</name>
-    <value>512</value>
-  </property>
-
-  <property>
-    <description>
-      Minimum virtual CPU cores used for allocating an opportunistic container.
-    </description>
-    <name>yarn.opportunistic-containers.min-vcores</name>
-    <value>1</value>
-  </property>
-
-  <property>
-    <description>
-    Maximum memory (in MB) used for allocating an opportunistic container.
-    </description>
-    <name>yarn.opportunistic-containers.max-memory-mb</name>
-    <value>2048</value>
-  </property>
-
-  <property>
-    <description>
-    Maximum virtual CPU cores used for allocating an opportunistic container.
-    </description>
-    <name>yarn.opportunistic-containers.max-vcores</name>
-    <value>4</value>
-  </property>
-
-  <property>
-    <description>
-    Incremental memory (in MB) used for allocating an opportunistic container.
-    </description>
-    <name>yarn.opportunistic-containers.incr-memory-mb</name>
-    <value>512</value>
-  </property>
-
-  <property>
-    <description>
-    Incremental virtual CPU cores used for allocating an opportunistic
-      container.
-    </description>
-    <name>yarn.opportunistic-containers.incr-vcores</name>
-    <value>1</value>
-  </property>
-
-  <property>
-    <description>
-    Container token expiry for opportunistic containers.
-    </description>
-    <name>yarn.opportunistic-containers.container-token-expiry-ms</name>
-    <value>600000</value>
-  </property>
-
-  <property>
-    <description>
     Number of nodes to be used by the Opportunistic Container Allocator for
     dispatching containers during container allocation.
     </description>

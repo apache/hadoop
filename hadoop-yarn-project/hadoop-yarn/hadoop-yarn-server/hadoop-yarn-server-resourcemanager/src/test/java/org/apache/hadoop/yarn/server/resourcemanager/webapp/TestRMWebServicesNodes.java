@@ -705,7 +705,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
               "aggregatedContainersVirtualMemoryMB"),
           WebServicesTestUtils.getXmlFloat(element, "containersCPUUsage"),
           WebServicesTestUtils.getXmlInt(element, "numRunningOpportContainers"),
-          WebServicesTestUtils.getXmlLong(element, "usedMemoryOpport"),
+          WebServicesTestUtils.getXmlLong(element, "usedMemoryOpportGB"),
           WebServicesTestUtils.getXmlInt(element, "usedVirtualCoresOpport"),
           WebServicesTestUtils.getXmlInt(element, "numQueuedContainers"));
     }
@@ -732,7 +732,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
         resourceInfo.getInt("aggregatedContainersVirtualMemoryMB"),
         resourceInfo.getDouble("containersCPUUsage"),
         nodeInfo.getInt("numRunningOpportContainers"),
-        nodeInfo.getLong("usedMemoryOpport"),
+        nodeInfo.getLong("usedMemoryOpportGB"),
         nodeInfo.getInt("usedVirtualCoresOpport"),
         nodeInfo.getInt("numQueuedContainers"));
   }
@@ -745,7 +745,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
       int nodePhysicalMemoryMB, int nodeVirtualMemoryMB, double nodeCPUUsage,
       int containersPhysicalMemoryMB, int containersVirtualMemoryMB,
       double containersCPUUsage, int numRunningOpportContainers,
-      long usedMemoryOpport, int usedVirtualCoresOpport,
+      long usedMemoryOpportGB, int usedVirtualCoresOpport,
       int numQueuedContainers)
       throws JSONException, Exception {
 
@@ -806,8 +806,8 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
               numRunningOpportContainers,
           opportunisticStatus.getRunningOpportContainers(),
           numRunningOpportContainers);
-      assertEquals("usedMemoryOpport doesn't match: " + usedMemoryOpport,
-          opportunisticStatus.getOpportMemoryUsed(), usedMemoryOpport);
+      assertEquals("usedMemoryOpportGB doesn't match: " + usedMemoryOpportGB,
+          opportunisticStatus.getOpportMemoryUsed(), usedMemoryOpportGB);
       assertEquals(
           "usedVirtualCoresOpport doesn't match: " + usedVirtualCoresOpport,
           opportunisticStatus.getOpportCoresUsed(), usedVirtualCoresOpport);
