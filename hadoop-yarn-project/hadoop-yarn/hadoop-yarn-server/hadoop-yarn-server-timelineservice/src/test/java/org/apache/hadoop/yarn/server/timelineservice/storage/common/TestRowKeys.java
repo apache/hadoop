@@ -189,7 +189,7 @@ public class TestRowKeys {
   @Test
   public void testFlowActivityRowKey() {
     Long ts = 1459900830000L;
-    Long dayTimestamp = TimelineStorageUtils.getTopOfTheDayTimestamp(ts);
+    Long dayTimestamp = HBaseTimelineStorageUtils.getTopOfTheDayTimestamp(ts);
     byte[] byteRowKey =
         new FlowActivityRowKey(CLUSTER, ts, USER, FLOW_NAME).getRowKey();
     FlowActivityRowKey rowKey = FlowActivityRowKey.parseRowKey(byteRowKey);
