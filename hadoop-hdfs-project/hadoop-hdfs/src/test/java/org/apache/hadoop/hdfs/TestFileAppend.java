@@ -700,9 +700,9 @@ public class TestFileAppend{
 
       // write data to block file
       ReplicaBeingWritten rbw =
-          (ReplicaBeingWritten)replicaHandler.getReplica();
-      ReplicaOutputStreams
-          outputStreams = rbw.createStreams(false, DEFAULT_CHECKSUM, 300);
+          (ReplicaBeingWritten) replicaHandler.getReplica();
+      ReplicaOutputStreams outputStreams =
+          rbw.createStreams(false, DEFAULT_CHECKSUM);
       OutputStream dataOutput = outputStreams.getDataOut();
 
       byte[] appendBytes = new byte[1];
