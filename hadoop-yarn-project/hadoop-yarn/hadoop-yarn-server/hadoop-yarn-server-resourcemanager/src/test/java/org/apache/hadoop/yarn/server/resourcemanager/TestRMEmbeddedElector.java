@@ -127,7 +127,8 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
     myConf.setInt(YarnConfiguration.RM_ZK_TIMEOUT_MS, 50);
     when(rc.getRMAdminService()).thenReturn(as);
 
-    EmbeddedElectorService ees = new EmbeddedElectorService(rc);
+    ActiveStandbyElectorBasedElectorService
+        ees = new ActiveStandbyElectorBasedElectorService(rc);
     ees.init(myConf);
 
     ees.enterNeutralMode();
@@ -164,7 +165,8 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
    * @throws InterruptedException if interrupted
    */
   private void testCallbackSynchronizationActive(AdminService as,
-      EmbeddedElectorService ees) throws IOException, InterruptedException {
+      ActiveStandbyElectorBasedElectorService ees)
+      throws IOException, InterruptedException {
     ees.becomeActive();
 
     Thread.sleep(100);
@@ -183,7 +185,8 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
    * @throws InterruptedException if interrupted
    */
   private void testCallbackSynchronizationStandby(AdminService as,
-      EmbeddedElectorService ees) throws IOException, InterruptedException {
+      ActiveStandbyElectorBasedElectorService ees)
+      throws IOException, InterruptedException {
     ees.becomeStandby();
 
     Thread.sleep(100);
@@ -201,7 +204,8 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
    * @throws InterruptedException if interrupted
    */
   private void testCallbackSynchronizationNeutral(AdminService as,
-      EmbeddedElectorService ees) throws IOException, InterruptedException {
+      ActiveStandbyElectorBasedElectorService ees)
+      throws IOException, InterruptedException {
     ees.enterNeutralMode();
 
     Thread.sleep(100);
@@ -220,7 +224,8 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
    * @throws InterruptedException if interrupted
    */
   private void testCallbackSynchronizationTimingActive(AdminService as,
-      EmbeddedElectorService ees) throws IOException, InterruptedException {
+      ActiveStandbyElectorBasedElectorService ees)
+      throws IOException, InterruptedException {
     synchronized (ees.zkDisconnectLock) {
       // Sleep while holding the lock so that the timer thread can't do
       // anything when it runs.  Sleep until we're pretty sure the timer thread
@@ -250,7 +255,8 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
    * @throws InterruptedException if interrupted
    */
   private void testCallbackSynchronizationTimingStandby(AdminService as,
-      EmbeddedElectorService ees) throws IOException, InterruptedException {
+      ActiveStandbyElectorBasedElectorService ees)
+      throws IOException, InterruptedException {
     synchronized (ees.zkDisconnectLock) {
       // Sleep while holding the lock so that the timer thread can't do
       // anything when it runs.  Sleep until we're pretty sure the timer thread
@@ -283,25 +289,20 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
     }
 
     @Override
-    protected AdminService createAdminService() {
-      return new AdminService(MockRMWithElector.this, getRMContext()) {
+    protected EmbeddedElector createEmbeddedElector() {
+      return new ActiveStandbyElectorBasedElectorService(getRMContext()) {
         @Override
-        protected EmbeddedElectorService createEmbeddedElectorService() {
-          return new EmbeddedElectorService(getRMContext()) {
-            @Override
-            public void becomeActive() throws
-                ServiceFailedException {
-              try {
-                callbackCalled.set(true);
-                TestRMEmbeddedElector.LOG.info("Callback called. Sleeping now");
-                Thread.sleep(delayMs);
-                TestRMEmbeddedElector.LOG.info("Sleep done");
-              } catch (InterruptedException e) {
-                e.printStackTrace();
-              }
-              super.becomeActive();
-            }
-          };
+        public void becomeActive() throws
+            ServiceFailedException {
+          try {
+            callbackCalled.set(true);
+            TestRMEmbeddedElector.LOG.info("Callback called. Sleeping now");
+            Thread.sleep(delayMs);
+            TestRMEmbeddedElector.LOG.info("Sleep done");
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+          super.becomeActive();
         }
       };
     }

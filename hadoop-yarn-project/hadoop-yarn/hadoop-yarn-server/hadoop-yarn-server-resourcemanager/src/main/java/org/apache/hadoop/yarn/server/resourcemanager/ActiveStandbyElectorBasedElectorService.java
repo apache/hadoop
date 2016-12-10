@@ -43,12 +43,16 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
+/**
+ * Leader election implementation that uses {@link ActiveStandbyElector}.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class EmbeddedElectorService extends AbstractService
-    implements ActiveStandbyElector.ActiveStandbyElectorCallback {
-  private static final Log LOG =
-      LogFactory.getLog(EmbeddedElectorService.class.getName());
+public class ActiveStandbyElectorBasedElectorService extends AbstractService
+    implements EmbeddedElector,
+    ActiveStandbyElector.ActiveStandbyElectorCallback {
+  private static final Log LOG = LogFactory.getLog(
+      ActiveStandbyElectorBasedElectorService.class.getName());
   private static final HAServiceProtocol.StateChangeRequestInfo req =
       new HAServiceProtocol.StateChangeRequestInfo(
           HAServiceProtocol.RequestSource.REQUEST_BY_ZKFC);
@@ -62,19 +66,21 @@ public class EmbeddedElectorService extends AbstractService
   @VisibleForTesting
   final Object zkDisconnectLock = new Object();
 
-  EmbeddedElectorService(RMContext rmContext) {
-    super(EmbeddedElectorService.class.getName());
+  ActiveStandbyElectorBasedElectorService(RMContext rmContext) {
+    super(ActiveStandbyElectorBasedElectorService.class.getName());
     this.rmContext = rmContext;
   }
 
   @Override
   protected void serviceInit(Configuration conf)
       throws Exception {
-    conf = conf instanceof YarnConfiguration ? conf : new YarnConfiguration(conf);
+    conf = conf instanceof YarnConfiguration
+        ? conf
+        : new YarnConfiguration(conf);
 
     String zkQuorum = conf.get(YarnConfiguration.RM_ZK_ADDRESS);
     if (zkQuorum == null) {
-     throw new YarnRuntimeException("Embedded automatic failover " +
+      throw new YarnRuntimeException("Embedded automatic failover " +
           "is enabled, but " + YarnConfiguration.RM_ZK_ADDRESS +
           " is not set");
     }
@@ -199,7 +205,8 @@ public class EmbeddedElectorService extends AbstractService
   @Override
   public void notifyFatalError(String errorMessage) {
     rmContext.getDispatcher().getEventHandler().handle(
-        new RMFatalEvent(RMFatalEventType.EMBEDDED_ELECTOR_FAILED, errorMessage));
+        new RMFatalEvent(RMFatalEventType.EMBEDDED_ELECTOR_FAILED,
+            errorMessage));
   }
 
   @Override
@@ -249,12 +256,16 @@ public class EmbeddedElectorService extends AbstractService
     return true;
   }
 
-  public void resetLeaderElection() {
+  // EmbeddedElector methods
+
+  @Override
+  public void rejoinElection() {
     elector.quitElection(false);
     elector.joinElection(localActiveNodeInfo);
   }
 
-  public String getHAZookeeperConnectionState() {
+  @Override
+  public String getZookeeperConnectionState() {
     return elector.getHAZookeeperConnectionState();
   }
 }

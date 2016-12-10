@@ -161,8 +161,8 @@ public class TestRMHA {
 
     ClientResponse response =
         webResource.path("ws").path("v1").path("cluster").path("apps")
-          .path(path).accept(MediaType.APPLICATION_JSON)
-          .get(ClientResponse.class);
+            .path(path).accept(MediaType.APPLICATION_JSON)
+            .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
@@ -178,13 +178,13 @@ public class TestRMHA {
    * 1. Standby: Should be a no-op
    * 2. Active: Active services should start
    * 3. Active: Should be a no-op.
-   *    While active, submit a couple of jobs
+   * While active, submit a couple of jobs
    * 4. Standby: Active services should stop
    * 5. Active: Active services should start
    * 6. Stop the RM: All services should stop and RM should not be ready to
    * become Active
    */
-  @Test (timeout = 30000)
+  @Test(timeout = 30000)
   public void testFailoverAndTransitions() throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     Configuration conf = new YarnConfiguration(configuration);
@@ -204,37 +204,37 @@ public class TestRMHA {
     checkMonitorHealth();
     checkStandbyRMFunctionality();
     verifyClusterMetrics(0, 0, 0, 0, 0, 0);
-    
+
     // 1. Transition to Standby - must be a no-op
     rm.adminService.transitionToStandby(requestInfo);
     checkMonitorHealth();
     checkStandbyRMFunctionality();
     verifyClusterMetrics(0, 0, 0, 0, 0, 0);
-    
+
     // 2. Transition to active
     rm.adminService.transitionToActive(requestInfo);
     checkMonitorHealth();
     checkActiveRMFunctionality();
     verifyClusterMetrics(1, 1, 1, 1, 2048, 1);
-    
+
     // 3. Transition to active - no-op
     rm.adminService.transitionToActive(requestInfo);
     checkMonitorHealth();
     checkActiveRMFunctionality();
     verifyClusterMetrics(1, 2, 2, 2, 2048, 2);
-    
+
     // 4. Transition to standby
     rm.adminService.transitionToStandby(requestInfo);
     checkMonitorHealth();
     checkStandbyRMFunctionality();
     verifyClusterMetrics(0, 0, 0, 0, 0, 0);
-   
+
     // 5. Transition to active to check Active->Standby->Active works
     rm.adminService.transitionToActive(requestInfo);
     checkMonitorHealth();
     checkActiveRMFunctionality();
     verifyClusterMetrics(1, 1, 1, 1, 2048, 1);
-    
+
     // 6. Stop the RM. All services should stop and RM should not be ready to
     // become active
     rm.stop();
@@ -340,7 +340,7 @@ public class TestRMHA {
     rm.adminService.transitionToStandby(requestInfo);
     rm.adminService.transitionToActive(requestInfo);
     rm.adminService.transitionToStandby(requestInfo);
-    
+
     MyCountingDispatcher dispatcher =
         (MyCountingDispatcher) rm.getRMContext().getDispatcher();
     assertTrue(!dispatcher.isStopped());
@@ -348,24 +348,24 @@ public class TestRMHA {
     rm.adminService.transitionToActive(requestInfo);
     assertEquals(errorMessageForEventHandler, expectedEventHandlerCount,
         ((MyCountingDispatcher) rm.getRMContext().getDispatcher())
-        .getEventHandlerCount());
+            .getEventHandlerCount());
     assertEquals(errorMessageForService, expectedServiceCount,
         rm.getServices().size());
 
-    
+
     // Keep the dispatcher reference before transitioning to standby
     dispatcher = (MyCountingDispatcher) rm.getRMContext().getDispatcher();
-    
-    
+
+
     rm.adminService.transitionToStandby(requestInfo);
     assertEquals(errorMessageForEventHandler, expectedEventHandlerCount,
         ((MyCountingDispatcher) rm.getRMContext().getDispatcher())
-        .getEventHandlerCount());
+            .getEventHandlerCount());
     assertEquals(errorMessageForService, expectedServiceCount,
         rm.getServices().size());
 
     assertTrue(dispatcher.isStopped());
-    
+
     rm.stop();
   }
 
@@ -386,7 +386,8 @@ public class TestRMHA {
     assertEquals(conf.get(YarnConfiguration.RM_HA_ID), RM1_NODE_ID);
 
     //test if RM_HA_ID can not be found
-    configuration.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID+ "," + RM3_NODE_ID);
+    configuration
+        .set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + "," + RM3_NODE_ID);
     configuration.unset(YarnConfiguration.RM_HA_ID);
     conf = new YarnConfiguration(configuration);
     try {
@@ -458,7 +459,7 @@ public class TestRMHA {
     checkActiveRMFunctionality();
   }
 
-  @Test(timeout = 90000)
+  @Test
   public void testTransitionedToStandbyShouldNotHang() throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     Configuration conf = new YarnConfiguration(configuration);
