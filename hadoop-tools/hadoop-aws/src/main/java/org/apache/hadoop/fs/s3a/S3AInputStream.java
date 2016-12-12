@@ -132,7 +132,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       throws IOException {
 
     if (wrappedStream != null) {
-      closeStream("reopen(" + reason + ")", contentRangeFinish);
+      closeStream("reopen(" + reason + ")", contentRangeFinish, false);
     }
 
     contentRangeFinish = calculateRequestLimit(inputPolicy, targetPos,
@@ -257,7 +257,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
 
     // if the code reaches here, the stream needs to be reopened.
     // close the stream; if read the object will be opened at the new pos
-    closeStream("seekInStream()", this.contentRangeFinish);
+    closeStream("seekInStream()", this.contentRangeFinish, false);
     pos = targetPos;
   }
 
@@ -414,7 +414,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       closed = true;
       try {
         // close or abort the stream
-        closeStream("close() operation", this.contentRangeFinish);
+        closeStream("close() operation", this.contentRangeFinish, false);
         // this is actually a no-op
         super.close();
       } finally {
@@ -431,17 +431,17 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    * an abort.
    *
    * This does not set the {@link #closed} flag.
-   *
    * @param reason reason for stream being closed; used in messages
    * @param length length of the stream.
+   * @param forceAbort force an abort; used if explicitly requested.
    */
-  private void closeStream(String reason, long length) {
+  private void closeStream(String reason, long length, boolean forceAbort) {
     if (wrappedStream != null) {
 
       // if the amount of data remaining in the current request is greater
       // than the readahead value: abort.
       long remaining = remainingInCurrentRequest();
-      boolean shouldAbort = remaining > readahead;
+      boolean shouldAbort = forceAbort || remaining > readahead;
       if (!shouldAbort) {
         try {
           // clean close. This will read to the end of the stream,
@@ -468,6 +468,27 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
           length);
       wrappedStream = null;
     }
+  }
+
+  /**
+   * Forcibly reset the stream, by aborting the connection. The next
+   * {@code read()} operation will trigger the opening of a new HTTPS
+   * connection.
+   *
+   * This is potentially very inefficient, and should only be invoked
+   * in extreme circumstances. It logs at info for this reason.
+   * @return true if the connection was actually reset.
+   * @throws IOException if invoked on a closed stream.
+   */
+  @InterfaceStability.Unstable
+  public synchronized boolean resetConnection() throws IOException {
+    checkNotClosed();
+    boolean connectionOpen = wrappedStream != null;
+    if (connectionOpen) {
+      LOG.info("Forced reset of connection to {}", uri);
+      closeStream("reset()", contentRangeFinish, true);
+    }
+    return connectionOpen;
   }
 
   @Override
