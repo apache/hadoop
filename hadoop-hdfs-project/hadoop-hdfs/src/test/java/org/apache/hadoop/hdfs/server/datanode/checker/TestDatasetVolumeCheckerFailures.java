@@ -68,7 +68,7 @@ public class TestDatasetVolumeCheckerFailures {
         new DatasetVolumeChecker(conf, new FakeTimer());
 
     // Ensure that the hung volume is detected as failed.
-    Set<StorageLocation> failedVolumes = checker.checkAllVolumes(dataset);
+    Set<FsVolumeSpi> failedVolumes = checker.checkAllVolumes(dataset);
     assertThat(failedVolumes.size(), is(1));
   }
 
@@ -88,25 +88,28 @@ public class TestDatasetVolumeCheckerFailures {
 
     DatasetVolumeChecker checker =
         new DatasetVolumeChecker(new HdfsConfiguration(), new FakeTimer());
-    Set<StorageLocation> failedVolumes = checker.checkAllVolumes(dataset);
+    Set<FsVolumeSpi> failedVolumes = checker.checkAllVolumes(dataset);
     assertThat(failedVolumes.size(), is(0));
+    assertThat(checker.getNumSyncDatasetChecks(), is(0L));
 
     // The closed volume should not have been checked as it cannot
     // be referenced.
     verify(volumes.get(0), times(0)).check(anyObject());
   }
-
+  
   @Test(timeout=60000)
   public void testMinGapIsEnforcedForSyncChecks() throws Exception {
+    final List<FsVolumeSpi> volumes =
+        TestDatasetVolumeChecker.makeVolumes(1, VolumeCheckResult.HEALTHY);
     final FsDatasetSpi<FsVolumeSpi> dataset =
-        TestDatasetVolumeChecker.makeDataset(Collections.emptyList());
+        TestDatasetVolumeChecker.makeDataset(volumes);
     final FakeTimer timer = new FakeTimer();
     final Configuration conf = new HdfsConfiguration();
     final long minGapMs = 100;
     conf.setTimeDuration(DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY,
         minGapMs, TimeUnit.MILLISECONDS);
     final DatasetVolumeChecker checker = new DatasetVolumeChecker(conf, timer);
-
+    
     checker.checkAllVolumes(dataset);
     assertThat(checker.getNumSyncDatasetChecks(), is(1L));
 
@@ -124,8 +127,10 @@ public class TestDatasetVolumeCheckerFailures {
 
   @Test(timeout=60000)
   public void testMinGapIsEnforcedForASyncChecks() throws Exception {
+    final List<FsVolumeSpi> volumes =
+        TestDatasetVolumeChecker.makeVolumes(1, VolumeCheckResult.HEALTHY);
     final FsDatasetSpi<FsVolumeSpi> dataset =
-        TestDatasetVolumeChecker.makeDataset(Collections.emptyList());
+        TestDatasetVolumeChecker.makeDataset(volumes);
     final FakeTimer timer = new FakeTimer();
     final Configuration conf = new HdfsConfiguration();
     final long minGapMs = 100;

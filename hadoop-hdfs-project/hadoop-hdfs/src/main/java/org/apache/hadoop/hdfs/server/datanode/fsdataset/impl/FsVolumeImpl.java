@@ -956,13 +956,6 @@ public class FsVolumeImpl implements FsVolumeSpi {
     return cacheExecutor;
   }
 
-  void checkDirs() throws DiskErrorException {
-    // TODO:FEDERATION valid synchronization
-    for(BlockPoolSlice s : bpSlices.values()) {
-      s.checkDirs();
-    }
-  }
-
   @Override
   public VolumeCheckResult check(VolumeCheckContext ignored)
       throws DiskErrorException {

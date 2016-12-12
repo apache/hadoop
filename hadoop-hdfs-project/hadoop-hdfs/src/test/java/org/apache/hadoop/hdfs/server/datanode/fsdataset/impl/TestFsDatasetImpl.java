@@ -52,13 +52,10 @@ import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.FakeTimer;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
@@ -66,8 +63,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -81,17 +76,21 @@ import java.util.concurrent.CountDownLatch;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DN_CACHED_DFSUSED_CHECK_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY;
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyListOf;
+import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -337,68 +336,6 @@ public class TestFsDatasetImpl {
     volumesToRemove.add(loc);
     dataset.removeVolumes(volumesToRemove, true);
     assertEquals(numExistingVolumes, getNumVolumes());
-  }
-
-  @Test(timeout = 5000)
-  public void testChangeVolumeWithRunningCheckDirs() throws IOException {
-    RoundRobinVolumeChoosingPolicy<FsVolumeImpl> blockChooser =
-        new RoundRobinVolumeChoosingPolicy<>();
-    conf.setLong(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);
-    final BlockScanner blockScanner = new BlockScanner(datanode);
-    final FsVolumeList volumeList = new FsVolumeList(
-        Collections.<VolumeFailureInfo>emptyList(), blockScanner, blockChooser);
-    final List<FsVolumeImpl> oldVolumes = new ArrayList<>();
-
-    // Initialize FsVolumeList with 5 mock volumes.
-    final int NUM_VOLUMES = 5;
-    for (int i = 0; i < NUM_VOLUMES; i++) {
-      FsVolumeImpl volume = mock(FsVolumeImpl.class);
-      oldVolumes.add(volume);
-      when(volume.getStorageLocation()).thenReturn(
-          StorageLocation.parse(new File("data" + i).toURI().toString()));
-      when(volume.checkClosed()).thenReturn(true);
-      FsVolumeReference ref = mock(FsVolumeReference.class);
-      when(ref.getVolume()).thenReturn(volume);
-      volumeList.addVolume(ref);
-    }
-
-    // When call checkDirs() on the 2nd volume, anther "thread" removes the 5th
-    // volume and add another volume. It does not affect checkDirs() running.
-    final FsVolumeImpl newVolume = mock(FsVolumeImpl.class);
-    final FsVolumeReference newRef = mock(FsVolumeReference.class);
-    when(newRef.getVolume()).thenReturn(newVolume);
-    when(newVolume.getStorageLocation()).thenReturn(
-        StorageLocation.parse(new File("data4").toURI().toString()));
-    FsVolumeImpl blockedVolume = volumeList.getVolumes().get(1);
-    doAnswer(new Answer() {
-      @Override
-      public Object answer(InvocationOnMock invocationOnMock)
-          throws Throwable {
-        volumeList.removeVolume(
-            StorageLocation.parse((new File("data4")).toURI().toString()),
-            false);
-        volumeList.addVolume(newRef);
-        return null;
-      }
-    }).when(blockedVolume).checkDirs();
-
-    FsVolumeImpl brokenVolume = volumeList.getVolumes().get(2);
-    doThrow(new DiskChecker.DiskErrorException("broken"))
-        .when(brokenVolume).checkDirs();
-
-    volumeList.checkDirs();
-
-    // Since FsVolumeImpl#checkDirs() get a snapshot of the list of volumes
-    // before running removeVolume(), it is supposed to run checkDirs() on all
-    // the old volumes.
-    for (FsVolumeImpl volume : oldVolumes) {
-      verify(volume).checkDirs();
-    }
-    // New volume is not visible to checkDirs() process.
-    verify(newVolume, never()).checkDirs();
-    assertTrue(volumeList.getVolumes().contains(newVolume));
-    assertFalse(volumeList.getVolumes().contains(brokenVolume));
-    assertEquals(NUM_VOLUMES - 1, volumeList.getVolumes().size());
   }
 
   @Test
@@ -717,6 +654,9 @@ public class TestFsDatasetImpl {
       Configuration config = new HdfsConfiguration();
       config.setLong(
           DFSConfigKeys.DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_KEY, 1000);
+      config.setTimeDuration(
+          DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY, 0,
+          TimeUnit.MILLISECONDS);
       config.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 1);
 
       cluster = new MiniDFSCluster.Builder(config).numDataNodes(1).build();
@@ -734,7 +674,9 @@ public class TestFsDatasetImpl {
           getVolume(block);
       File finalizedDir = volume.getFinalizedDir(cluster.getNamesystem()
           .getBlockPoolId());
-
+      LocatedBlock lb = DFSTestUtil.getAllBlocks(fs, filePath).get(0);
+      DatanodeInfo info = lb.getLocations()[0];
+      
       if (finalizedDir.exists()) {
         // Remove write and execute access so that checkDiskErrorThread detects
         // this volume is bad.
@@ -744,15 +686,14 @@ public class TestFsDatasetImpl {
       Assert.assertTrue("Reference count for the volume should be greater "
           + "than 0", volume.getReferenceCount() > 0);
       // Invoke the synchronous checkDiskError method
-      dataNode.getFSDataset().checkDataDir();
+      dataNode.checkDiskError();
       // Sleep for 1 second so that datanode can interrupt and cluster clean up
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
           @Override public Boolean get() {
               return volume.getReferenceCount() == 0;
             }
           }, 100, 10);
-      LocatedBlock lb = DFSTestUtil.getAllBlocks(fs, filePath).get(0);
-      DatanodeInfo info = lb.getLocations()[0];
+      assertThat(dataNode.getFSDataset().getNumFailedVolumes(), is(1));
 
       try {
         out.close();

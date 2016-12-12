@@ -35,7 +35,10 @@ import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -103,8 +106,8 @@ public class TestDatasetVolumeChecker {
      */
     checker.checkVolume(volume, new DatasetVolumeChecker.Callback() {
       @Override
-      public void call(Set<StorageLocation> healthyVolumes,
-                       Set<StorageLocation> failedVolumes) {
+      public void call(Set<FsVolumeSpi> healthyVolumes,
+                       Set<FsVolumeSpi> failedVolumes) {
         numCallbackInvocations.incrementAndGet();
         if (expectedVolumeHealth != null && expectedVolumeHealth != FAILED) {
           assertThat(healthyVolumes.size(), is(1));
@@ -138,7 +141,7 @@ public class TestDatasetVolumeChecker {
         new DatasetVolumeChecker(new HdfsConfiguration(), new FakeTimer());
     checker.setDelegateChecker(new DummyChecker());
 
-    Set<StorageLocation> failedVolumes = checker.checkAllVolumes(dataset);
+    Set<FsVolumeSpi> failedVolumes = checker.checkAllVolumes(dataset);
     LOG.info("Got back {} failed volumes", failedVolumes.size());
 
     if (expectedVolumeHealth == null || expectedVolumeHealth == FAILED) {
@@ -174,8 +177,8 @@ public class TestDatasetVolumeChecker {
         dataset, new DatasetVolumeChecker.Callback() {
           @Override
           public void call(
-              Set<StorageLocation> healthyVolumes,
-              Set<StorageLocation> failedVolumes) {
+              Set<FsVolumeSpi> healthyVolumes,
+              Set<FsVolumeSpi> failedVolumes) {
             LOG.info("Got back {} failed volumes", failedVolumes.size());
             if (expectedVolumeHealth == null ||
                 expectedVolumeHealth == FAILED) {
@@ -236,7 +239,7 @@ public class TestDatasetVolumeChecker {
     return dataset;
   }
 
-  private static List<FsVolumeSpi> makeVolumes(
+  static List<FsVolumeSpi> makeVolumes(
       int numVolumes, VolumeCheckResult health) throws Exception {
     final List<FsVolumeSpi> volumes = new ArrayList<>(numVolumes);
     for (int i = 0; i < numVolumes; ++i) {

@@ -485,7 +485,17 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
     @Override
     public FsVolumeReference obtainReference() throws ClosedChannelException {
-      return null;
+      return new FsVolumeReference() {
+        @Override
+        public void close() throws IOException {
+          // no-op.
+        }
+
+        @Override
+        public FsVolumeSpi getVolume() {
+          return SimulatedVolume.this;
+        }
+      };
     }
 
     @Override
@@ -1064,9 +1074,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
-  public Set<StorageLocation> checkDataDir() {
-    // nothing to check for simulated data set
-    return null;
+  public void handleVolumeFailures(Set<FsVolumeSpi> failedVolumes) {
   }
 
   @Override // FsDatasetSpi
@@ -1335,7 +1343,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public FsVolumeReferences getFsVolumeReferences() {
-    throw new UnsupportedOperationException();
+    return new FsVolumeReferences(Collections.singletonList(volume));
   }
 
   @Override
