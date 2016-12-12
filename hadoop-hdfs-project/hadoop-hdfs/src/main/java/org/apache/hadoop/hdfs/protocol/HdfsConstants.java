@@ -70,9 +70,12 @@ public class HdfsConstants {
   // to 1k.
   public static final int MAX_PATH_LENGTH = 8000;
   public static final int MAX_PATH_DEPTH = 1000;
+  
+  // specify socket buffer size in bytes, useful to increase for high latency/high bandwidth systems.
+  // As a special case, values <=0 cause the setReceiveBufferSize/setSendBufferSize function call to be skipped;
+  // letting the kernel do the right thing. -1 is the default, old default was 128*1024 bytes
+  public static final int DEFAULT_DATA_SOCKET_SIZE = new HdfsConfiguration().getInt("fs.hdfs.data.socket.size", -1); 
 
-  // TODO should be conf injected?
-  public static final int DEFAULT_DATA_SOCKET_SIZE = 128 * 1024;
   public static final int IO_FILE_BUFFER_SIZE = new HdfsConfiguration().getInt(
       DFSConfigKeys.IO_FILE_BUFFER_SIZE_KEY,
       DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT);
