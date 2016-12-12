@@ -33,8 +33,8 @@ import java.net.URI;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.MetricDiff;
 import static org.apache.hadoop.test.GenericTestUtils.getTestDir;
+import static org.junit.Assume.assumeFalse;
 
 /**
  * Use metrics to assert about the cost of file status queries.
@@ -195,6 +195,13 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
         + "In S3, rename deletes any fake directories as a part of "
         + "clean up activity");
     S3AFileSystem fs = getFileSystem();
+
+    // As this test uses the s3 metrics to count the number of fake directory
+    // operations, it depends on side effects happening internally. With
+    // metadata store enabled, it is brittle to change. We disable this test
+    // before the internal behavior w/ or w/o metadata store.
+    assumeFalse(fs.isMetadataStoreConfigured());
+
     Path srcBaseDir = path("src");
     mkdirs(srcBaseDir);
     MetricDiff deleteRequests =
