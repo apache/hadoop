@@ -14,7 +14,10 @@
 @rem See the License for the specific language governing permissions and
 @rem limitations under the License.
 
-set HADOOP_JOB_HISTORYSERVER_HEAPSIZE=1000
+@rem when HADOOP_JOB_HISTORYSERVER_HEAPSIZE is not defined, set it
+if not defined HADOOP_JOB_HISTORYSERVER_HEAPSIZE (
+  set HADOOP_JOB_HISTORYSERVER_HEAPSIZE=1000
+)
 
 set HADOOP_MAPRED_ROOT_LOGGER=%HADOOP_LOGLEVEL%,RFA
 
