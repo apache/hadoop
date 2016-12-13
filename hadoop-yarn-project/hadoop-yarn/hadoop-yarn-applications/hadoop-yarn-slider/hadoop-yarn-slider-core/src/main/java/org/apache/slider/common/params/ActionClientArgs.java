@@ -37,38 +37,9 @@ public class ActionClientArgs extends AbstractActionArgs {
       description = "Install client")
   public boolean install;
 
-  @Parameter(names = {ARG_GETCERTSTORE},
-      description = "Get a certificate store")
-  public boolean getCertStore;
-
-  @Parameter(names = {ARG_KEYSTORE},
-      description = "Retrieve keystore to specified location")
-  public File keystore;
-
-  @Parameter(names = {ARG_TRUSTSTORE},
-      description = "Retrieve truststore to specified location")
-  public File truststore;
-
-  @Parameter(names = {ARG_HOSTNAME},
-      description = "(Optional) Specify the hostname to use for generation of keystore certificate")
-  public String hostname;
-
   @Parameter(names = {ARG_NAME},
       description = "The name of the application")
   public String name;
-
-  @Parameter(names = {ARG_PROVIDER},
-      description = "The credential provider in which the password is stored")
-  public String provider;
-
-  @Parameter(names = {ARG_ALIAS},
-      description = "The credential provider alias associated with the password")
-  public String alias;
-
-  @Parameter(names = {ARG_PASSWORD},
-      description = "The certificate store password (alternative to " +
-          "provider/alias; if password is specified, those will be ignored)")
-  public String password;
 
   @Parameter(names = {ARG_PACKAGE},
       description = "Path to app package")

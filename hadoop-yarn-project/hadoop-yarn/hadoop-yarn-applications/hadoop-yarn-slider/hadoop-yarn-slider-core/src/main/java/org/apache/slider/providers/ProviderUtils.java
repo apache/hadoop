@@ -30,7 +30,6 @@ import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
 import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.slider.api.ClusterNode;
@@ -38,7 +37,6 @@ import org.apache.slider.api.InternalKeys;
 import org.apache.slider.api.OptionKeys;
 import org.apache.slider.api.ResourceKeys;
 import org.apache.slider.api.RoleKeys;
-import org.apache.slider.common.SliderExitCodes;
 import org.apache.slider.common.SliderKeys;
 import org.apache.slider.common.SliderXmlConfKeys;
 import org.apache.slider.common.tools.SliderFileSystem;
@@ -59,9 +57,6 @@ import org.apache.slider.core.registry.docstore.PublishedConfigurationOutputter;
 import org.apache.slider.core.registry.docstore.PublishedExports;
 import org.apache.slider.server.appmaster.state.RoleInstance;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
-import org.apache.slider.server.services.security.CertificateManager;
-import org.apache.slider.server.services.security.SecurityStore;
-import org.apache.slider.server.services.security.StoresGenerator;
 import org.apache.slider.server.services.yarnregistry.YarnRegistryViewForProviders;
 import org.slf4j.Logger;
 
@@ -398,61 +393,6 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
     }
   }
 
-  /**
-   * Return whether two-way SSL is enabled for Agent / AM communication.
-   * @param amComponent component specification
-   * @return true if enabled
-   */
-  public boolean hasTwoWaySSLEnabled(MapOperations amComponent) {
-    return amComponent != null ?
-        amComponent.getOptionBool(TWO_WAY_SSL_ENABLED, false) : false;
-  }
-
-  /**
-   * Generate and localize SSL certs for Agent / AM communication
-   * @param launcher container launcher
-   * @param container allocated container information
-   * @param fileSystem file system
-   * @param clusterName app name
-   * @throws SliderException certs cannot be generated/uploaded
-   */
-  public void localizeContainerSSLResources(ContainerLauncher launcher,
-      Container container, SliderFileSystem fileSystem, String clusterName)
-      throws SliderException {
-    try {
-      // localize server cert
-      Path certsDir = fileSystem.buildClusterSecurityDirPath(clusterName);
-      LocalResource certResource = fileSystem.createAmResource(
-          new Path(certsDir, CRT_FILE_NAME),
-          LocalResourceType.FILE);
-      launcher.addLocalResource(CERT_FILE_LOCALIZATION_PATH, certResource);
-
-      // generate and localize agent cert
-      CertificateManager certMgr = new CertificateManager();
-      String hostname = container.getNodeId().getHost();
-      String containerId = container.getId().toString();
-      certMgr.generateContainerCertificate(hostname, containerId);
-      LocalResource agentCertResource = fileSystem.createAmResource(
-          uploadSecurityResource(
-              CertificateManager.getAgentCertficateFilePath(containerId),
-              fileSystem, clusterName), LocalResourceType.FILE);
-      // still using hostname as file name on the agent side, but the files
-      // do end up under the specific container's file space
-      launcher.addLocalResource(INFRA_RUN_SECURITY_DIR + hostname +
-          ".crt", agentCertResource);
-      LocalResource agentKeyResource = fileSystem.createAmResource(
-          uploadSecurityResource(
-              CertificateManager.getAgentKeyFilePath(containerId), fileSystem,
-              clusterName),
-          LocalResourceType.FILE);
-      launcher.addLocalResource(INFRA_RUN_SECURITY_DIR + hostname +
-          ".key", agentKeyResource);
-
-    } catch (Exception e) {
-      throw new SliderException(SliderExitCodes.EXIT_DEPLOYMENT_FAILED, e,
-          "Unable to localize certificates.  Two-way SSL cannot be enabled");
-    }
-  }
 
   /**
    * Upload a local file to the cluster security dir in HDFS. If the file
@@ -704,87 +644,6 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
       launcher.addLocalResource(APP_CONF_DIR + "/" + fileName,
           configResource);
     }
-  }
-
-  /**
-   * Generate and localize security stores requested by the app. Also perform
-   * last-minute substitution of cluster name into credentials strings.
-   * @param launcher container launcher
-   * @param container allocated container information
-   * @param role component name
-   * @param fileSystem file system
-   * @param instanceDefinition app specification
-   * @param compOps component specification
-   * @param clusterName app name
-   * @throws SliderException stores cannot be generated/uploaded
-   * @throws IOException stores cannot be generated/uploaded
-   */
-  public void localizeContainerSecurityStores(ContainerLauncher launcher,
-      Container container,
-      String role,
-      SliderFileSystem fileSystem,
-      AggregateConf instanceDefinition,
-      MapOperations compOps,
-      String clusterName)
-      throws SliderException, IOException {
-    // substitute CLUSTER_NAME into credentials
-    Map<String,List<String>> newcred = new HashMap<>();
-    for (Entry<String,List<String>> entry :
-        instanceDefinition.getAppConf().credentials.entrySet()) {
-      List<String> resultList = new ArrayList<>();
-      for (String v : entry.getValue()) {
-        resultList.add(v.replaceAll(Pattern.quote("${CLUSTER_NAME}"),
-            clusterName).replaceAll(Pattern.quote("${CLUSTER}"),
-            clusterName));
-      }
-      newcred.put(entry.getKey().replaceAll(Pattern.quote("${CLUSTER_NAME}"),
-          clusterName).replaceAll(Pattern.quote("${CLUSTER}"),
-          clusterName),
-          resultList);
-    }
-    instanceDefinition.getAppConf().credentials = newcred;
-
-    // generate and localize security stores
-    SecurityStore[] stores = generateSecurityStores(container, role,
-        instanceDefinition, compOps);
-    for (SecurityStore store : stores) {
-      LocalResource keystoreResource = fileSystem.createAmResource(
-          uploadSecurityResource(store.getFile(), fileSystem, clusterName),
-          LocalResourceType.FILE);
-      launcher.addLocalResource(String.format("secstores/%s-%s.p12",
-          store.getType(), role),
-          keystoreResource);
-    }
-  }
-
-  /**
-   * Generate security stores requested by the app.
-   * @param container allocated container information
-   * @param role component name
-   * @param instanceDefinition app specification
-   * @param compOps component specification
-   * @return security stores
-   * @throws SliderException stores cannot be generated
-   * @throws IOException stores cannot be generated
-   */
-  private SecurityStore[] generateSecurityStores(Container container,
-      String role,
-      AggregateConf instanceDefinition,
-      MapOperations compOps)
-      throws SliderException, IOException {
-    return StoresGenerator.generateSecurityStores(
-        container.getNodeId().getHost(), container.getId().toString(),
-        role, instanceDefinition, compOps);
-  }
-
-  /**
-   * Return whether security stores are requested by the app.
-   * @param compOps component specification
-   * @return true if stores are requested
-   */
-  public boolean areStoresRequested(MapOperations compOps) {
-    return compOps != null ? compOps.
-        getOptionBool(COMP_STORES_REQUIRED_KEY, false) : false;
   }
 
   /**

@@ -165,11 +165,6 @@ public class DockerProviderService extends AbstractProviderService implements
           fileSystem, getClusterName());
     }
 
-    if (providerUtils.areStoresRequested(appComponent)) {
-      providerUtils.localizeContainerSecurityStores(launcher, container,
-          roleName, fileSystem, instanceDefinition, appComponent, getClusterName());
-    }
-
     if (appComponent.getOptionBool(AM_CONFIG_GENERATION, false)) {
       // build and localize configuration files
       Map<String, Map<String, String>> configurations =
