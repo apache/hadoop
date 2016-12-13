@@ -26,8 +26,6 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.http.HttpConfig;
@@ -155,7 +153,6 @@ import org.apache.slider.server.appmaster.web.rest.InsecureAmFilterInitializer;
 import org.apache.slider.server.appmaster.web.rest.RestPaths;
 import org.apache.slider.server.appmaster.web.rest.application.ApplicationResouceContentCacheFactory;
 import org.apache.slider.server.appmaster.web.rest.application.resources.ContentCache;
-import org.apache.slider.server.services.security.CertificateManager;
 import org.apache.slider.server.services.utility.AbstractSliderLaunchedService;
 import org.apache.slider.server.services.utility.WebAppService;
 import org.apache.slider.server.services.workflow.ServiceThreadFactory;
@@ -373,7 +370,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
   @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized")
   private InetSocketAddress rpcServiceAddress;
   private SliderAMProviderService sliderAMProvider;
-  private CertificateManager certificateManager;
 
   /**
    * Executor.
@@ -732,8 +728,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
         }
       }
 
-      certificateManager = new CertificateManager();
-
       //bring up the Slider RPC service
       buildPortScanner(instanceDefinition);
       startSliderRPCServer(instanceDefinition);
@@ -757,18 +751,12 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       // Start up the WebApp and track the URL for it
       MapOperations component = instanceDefinition.getAppConfOperations()
           .getComponent(SliderKeys.COMPONENT_AM);
-      certificateManager.initialize(component, appMasterHostname,
-                                    appMasterContainerID.toString(),
-                                    clustername);
-      certificateManager.setPassphrase(instanceDefinition.getPassphrase());
 
       // Web service endpoints: initialize
       WebAppApiImpl webAppApi =
           new WebAppApiImpl(
               stateForProviders,
-              providerService,
-              certificateManager,
-              registryOperations,
+              providerService, registryOperations,
               metricsAndMonitoring,
               actionQueues,
               this,
@@ -1551,9 +1539,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
     verifyIPCAccess();
 
     sliderIPCService = new SliderIPCService(
-        this,
-        certificateManager,
-        stateForProviders,
+        this, stateForProviders,
         actionQueues,
         metricsAndMonitoring,
         contentCache);

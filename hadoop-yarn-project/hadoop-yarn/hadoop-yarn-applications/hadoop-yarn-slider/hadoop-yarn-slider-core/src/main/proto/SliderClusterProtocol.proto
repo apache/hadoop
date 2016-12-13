@@ -175,10 +175,4 @@ service SliderClusterProtocolPB {
     // ConfTree getLiveResources
   rpc getLiveResources(EmptyPayloadProto) 
     returns(WrappedJsonProto);
-
-  rpc getClientCertificateStore(GetCertificateStoreRequestProto)
-    returns(GetCertificateStoreResponseProto);
-
-  
-  
 }

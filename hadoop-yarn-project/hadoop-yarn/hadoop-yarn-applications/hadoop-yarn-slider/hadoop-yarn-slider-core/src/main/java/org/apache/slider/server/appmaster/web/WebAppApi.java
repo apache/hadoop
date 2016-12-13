@@ -18,16 +18,11 @@ package org.apache.slider.server.appmaster.web;
 
 import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.slider.providers.ProviderService;
-import org.apache.slider.server.appmaster.AppMasterActionOperations;
 import org.apache.slider.server.appmaster.actions.QueueAccess;
 import org.apache.slider.server.appmaster.management.MetricsAndMonitoring;
 import org.apache.slider.server.appmaster.state.AppState;
-import org.apache.slider.server.appmaster.state.RoleStatus;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
 import org.apache.slider.server.appmaster.web.rest.application.resources.ContentCache;
-import org.apache.slider.server.services.security.CertificateManager;
-
-import java.util.Map;
 
 /**
  * Interface to pass information from the Slider AppMaster to the WebApp
@@ -43,18 +38,6 @@ public interface WebAppApi {
    * The {@link ProviderService} for the current cluster
    */
   ProviderService getProviderService();
-
-
-  /**
-   * The {@link CertificateManager} for the current cluster
-   */
-  CertificateManager getCertificateManager();
-
-  /**
-   * Generate a mapping from role name to its {@link RoleStatus}. Be aware that this
-   * is a computed value and not just a getter
-   */
-  Map<String, RoleStatus> getRoleStatusByName();
   
   /**
    * Registry operations accessor
@@ -73,12 +56,6 @@ public interface WebAppApi {
    * @return the immediate and scheduled queues
    */
   QueueAccess getQueues();
-
-  /**
-   * API for AM operations
-   * @return current operations implementation
-   */
-  AppMasterActionOperations getAMOperations();
 
   /**
    * Local cache of content

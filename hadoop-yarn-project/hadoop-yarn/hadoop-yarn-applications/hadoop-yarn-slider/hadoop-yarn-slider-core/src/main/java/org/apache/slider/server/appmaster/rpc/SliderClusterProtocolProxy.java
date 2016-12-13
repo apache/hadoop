@@ -88,10 +88,9 @@ public class SliderClusterProtocolProxy implements SliderClusterProtocol {
     return ioe;
   }
   
-  @Override
-  public Messages.StopClusterResponseProto stopCluster(Messages.StopClusterRequestProto request) throws
-                                                                                                 IOException,
-                                                                                                 YarnException {
+  @Override public Messages.StopClusterResponseProto stopCluster(
+      Messages.StopClusterRequestProto request)
+      throws IOException, YarnException {
     try {
       return endpoint.stopCluster(NULL_CONTROLLER, request);
     } catch (ServiceException e) {
@@ -340,17 +339,6 @@ public class SliderClusterProtocolProxy implements SliderClusterProtocol {
   public Messages.WrappedJsonProto getLiveResources(Messages.EmptyPayloadProto request) throws IOException {
     try {
       return endpoint.getLiveResources(NULL_CONTROLLER, request);
-    } catch (ServiceException e) {
-      throw convert(e);
-    }
-
-  }
-
-  @Override
-  public Messages.GetCertificateStoreResponseProto getClientCertificateStore(Messages.GetCertificateStoreRequestProto request) throws
-      IOException {
-    try {
-      return endpoint.getClientCertificateStore(NULL_CONTROLLER, request);
     } catch (ServiceException e) {
       throw convert(e);
     }
