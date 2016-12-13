@@ -72,7 +72,7 @@ import com.google.common.base.Charsets;
 class JobSubmitter {
   protected static final Log LOG = LogFactory.getLog(JobSubmitter.class);
   private static final ObjectReader READER =
-      new ObjectMapper().reader(Map.class);
+      new ObjectMapper().readerFor(Map.class);
   private static final String SHUFFLE_KEYGEN_ALGORITHM = "HmacSHA1";
   private static final int SHUFFLE_KEY_LENGTH = 64;
   private FileSystem jtFs;
