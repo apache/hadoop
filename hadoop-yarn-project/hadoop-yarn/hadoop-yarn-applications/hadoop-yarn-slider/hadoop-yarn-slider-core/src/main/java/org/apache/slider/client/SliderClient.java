@@ -168,7 +168,6 @@ import org.apache.slider.providers.docker.DockerClientProvider;
 import org.apache.slider.providers.slideram.SliderAMClientProvider;
 import org.apache.slider.server.appmaster.SliderAppMaster;
 import org.apache.slider.server.appmaster.rpc.RpcBinder;
-import org.apache.slider.server.services.security.SecurityStore;
 import org.apache.slider.server.services.utility.AbstractSliderLaunchedService;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -1223,91 +1222,12 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
       IOException {
     if (clientInfo.install) {
       return doClientInstall(clientInfo);
-    } else if (clientInfo.getCertStore) {
-      return doCertificateStoreRetrieval(clientInfo);
     } else {
       throw new BadCommandArgumentsException(
           "Only install, keystore, and truststore commands are supported for the client.\n"
           + CommonArgs.usage(serviceArgs, ACTION_CLIENT));
 
     }
-  }
-
-  private int doCertificateStoreRetrieval(ActionClientArgs clientInfo)
-      throws YarnException, IOException {
-    if (clientInfo.keystore != null && clientInfo.truststore != null) {
-      throw new BadCommandArgumentsException(
-          "Only one of either keystore or truststore can be retrieved at one time.  "
-          + "Retrieval of both should be done separately\n"
-          + CommonArgs.usage(serviceArgs, ACTION_CLIENT));
-    }
-
-    requireArgumentSet(Arguments.ARG_NAME, clientInfo.name);
-
-    File storeFile = null;
-    SecurityStore.StoreType type;
-    if (clientInfo.keystore != null) {
-      storeFile = clientInfo.keystore;
-      type = SecurityStore.StoreType.keystore;
-    } else {
-      storeFile = clientInfo.truststore;
-      type = SecurityStore.StoreType.truststore;
-    }
-
-    require (!storeFile.exists(),
-        "File %s already exists.  Please remove that file or select a different file name.",
-         storeFile.getAbsolutePath());
-    String hostname = null;
-    if (type == SecurityStore.StoreType.keystore) {
-      hostname = clientInfo.hostname;
-      if (hostname == null) {
-        hostname = InetAddress.getLocalHost().getCanonicalHostName();
-        log.info("No hostname specified via command line. Using {}", hostname);
-      }
-    }
-
-    String password = clientInfo.password;
-    if (password == null) {
-      String provider = clientInfo.provider;
-      String alias = clientInfo.alias;
-      if (provider != null && alias != null) {
-        Configuration conf = new Configuration(getConfig());
-        conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, provider);
-        char[] chars = conf.getPassword(alias);
-        if (chars == null) {
-          CredentialProvider credentialProvider =
-              CredentialProviderFactory.getProviders(conf).get(0);
-          chars = readOnePassword(alias);
-          credentialProvider.createCredentialEntry(alias, chars);
-          credentialProvider.flush();
-        }
-        password = String.valueOf(chars);
-        Arrays.fill(chars, ' ');
-      } else {
-        log.info("No password and no provider/alias pair were provided, " +
-            "prompting for password");
-        // get a password
-        password = String.valueOf(readOnePassword(type.name()));
-      }
-    }
-
-    byte[] keystore = createClusterOperations(clientInfo.name)
-        .getClientCertificateStore(hostname, "client", password, type.name());
-    // persist to file
-    FileOutputStream storeFileOutputStream = null;
-    try {
-      storeFileOutputStream = new FileOutputStream(storeFile);
-      IOUtils.write(keystore, storeFileOutputStream);
-    } catch (Exception e) {
-      log.error("Unable to persist to file {}", storeFile);
-      throw e;
-    } finally {
-      if (storeFileOutputStream != null) {
-        storeFileOutputStream.close();
-      }
-    }
-
-    return EXIT_SUCCESS;
   }
 
   private int doClientInstall(ActionClientArgs clientInfo)

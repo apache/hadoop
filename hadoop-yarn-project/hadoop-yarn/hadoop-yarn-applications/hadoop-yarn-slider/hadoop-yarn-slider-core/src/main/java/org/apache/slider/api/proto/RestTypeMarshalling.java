@@ -18,8 +18,6 @@
 
 package org.apache.slider.api.proto;
 
-import com.google.protobuf.ByteString;
-import org.apache.commons.io.IOUtils;
 import org.apache.slider.api.types.ApplicationLivenessInformation;
 import org.apache.slider.api.types.ComponentInformation;
 import org.apache.slider.api.types.ContainerInformation;
@@ -30,15 +28,10 @@ import org.apache.slider.core.conf.ConfTree;
 import org.apache.slider.core.conf.ConfTreeOperations;
 import org.apache.slider.core.persist.AggregateConfSerDeser;
 import org.apache.slider.core.persist.ConfTreeSerDeser;
-import org.apache.slider.server.services.security.SecurityStore;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -95,35 +88,6 @@ public class RestTypeMarshalling {
     }
     return info;
   }
-
-  public static Messages.GetCertificateStoreResponseProto marshall(
-      SecurityStore securityStore) throws IOException {
-    Messages.GetCertificateStoreResponseProto.Builder builder =
-        Messages.GetCertificateStoreResponseProto.newBuilder();
-    builder.setStore(ByteString.copyFrom(getStoreBytes(securityStore)));
-
-    return builder.build();
-  }
-
-  private static byte[] getStoreBytes(SecurityStore securityStore)
-      throws IOException {
-    InputStream is = null;
-    byte[] storeBytes;
-    try {
-      is = new FileInputStream(securityStore.getFile());
-      storeBytes = IOUtils.toByteArray(is);
-    } finally {
-      if (is != null) {
-        is.close();
-      }
-    }
-    return storeBytes;
-  }
-
-  public static byte[] unmarshall(Messages.GetCertificateStoreResponseProto response) {
-    return response.getStore().toByteArray();
-  }
-
   public static Messages.ComponentInformationProto marshall(ComponentInformation info) {
 
     Messages.ComponentInformationProto.Builder builder =

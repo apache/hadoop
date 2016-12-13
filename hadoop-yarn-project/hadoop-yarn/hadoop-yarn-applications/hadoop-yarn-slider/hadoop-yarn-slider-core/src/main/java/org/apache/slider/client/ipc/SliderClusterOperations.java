@@ -19,17 +19,12 @@
 package org.apache.slider.client.ipc;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.yarn.api.records.NodeReport;
-import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.slider.api.ClusterDescription;
 import org.apache.slider.api.ClusterNode;
 import org.apache.slider.api.SliderClusterProtocol;
 import org.apache.slider.api.StateValues;
 import org.apache.slider.api.proto.Messages;
-
-import static org.apache.slider.api.proto.RestTypeMarshalling.*;
 import org.apache.slider.api.types.ApplicationLivenessInformation;
 import org.apache.slider.api.types.ComponentInformation;
 import org.apache.slider.api.types.ContainerInformation;
@@ -37,7 +32,6 @@ import org.apache.slider.api.types.NodeInformation;
 import org.apache.slider.api.types.NodeInformationList;
 import org.apache.slider.api.types.PingInformation;
 import org.apache.slider.common.tools.Duration;
-import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.core.conf.AggregateConf;
 import org.apache.slider.core.conf.ConfTree;
 import org.apache.slider.core.conf.ConfTreeOperations;
@@ -45,8 +39,6 @@ import org.apache.slider.core.exceptions.NoSuchNodeException;
 import org.apache.slider.core.exceptions.SliderException;
 import org.apache.slider.core.exceptions.WaitTimeoutException;
 import org.apache.slider.core.persist.ConfTreeSerDeser;
-import org.apache.slider.server.services.security.SecurityStore;
-import org.apache.slider.server.services.security.SignCertResponse;
 import org.codehaus.jackson.JsonParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +50,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.apache.slider.api.proto.RestTypeMarshalling.*;
 
 /**
  * Cluster operations at a slightly higher level than the RPC code
@@ -507,23 +501,5 @@ public class SliderClusterOperations {
             Messages.GetApplicationLivenessRequestProto.newBuilder().build()
         );
     return unmarshall(proto);
-  }
-
-  public byte[] getClientCertificateStore(String hostname, String clientId,
-      String password, String type) throws IOException {
-    Messages.GetCertificateStoreRequestProto.Builder
-        builder = Messages.GetCertificateStoreRequestProto.newBuilder();
-    if (hostname != null) {
-      builder.setHostname(hostname);
-    }
-    Messages.GetCertificateStoreRequestProto requestProto =
-        builder.setRequesterId(clientId)
-               .setPassword(password)
-               .setType(type)
-               .build();
-    Messages.GetCertificateStoreResponseProto response =
-        appMaster.getClientCertificateStore(requestProto);
-
-    return unmarshall(response);
   }
 }
