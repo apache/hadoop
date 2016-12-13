@@ -152,7 +152,7 @@ public class WebHdfsFileSystem extends FileSystem
   private String restCsrfCustomHeader;
   private Set<String> restCsrfMethodsToIgnore;
   private static final ObjectReader READER =
-      new ObjectMapper().reader(Map.class);
+      new ObjectMapper().readerFor(Map.class);
 
   private DFSOpsCountStatistics storageStatistics;
 
