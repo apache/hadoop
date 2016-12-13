@@ -37,7 +37,7 @@ import java.io.IOException;
 public class DiskBalancerWorkItem {
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final ObjectReader READER =
-      new ObjectMapper().reader(DiskBalancerWorkItem.class);
+      new ObjectMapper().readerFor(DiskBalancerWorkItem.class);
 
   private  long startTime;
   private long secondsElapsed;

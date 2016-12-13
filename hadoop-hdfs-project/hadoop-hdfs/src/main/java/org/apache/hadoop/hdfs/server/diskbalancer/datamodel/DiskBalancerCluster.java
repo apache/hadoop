@@ -73,7 +73,7 @@ public class DiskBalancerCluster {
   private static final Logger LOG =
       LoggerFactory.getLogger(DiskBalancerCluster.class);
   private static final ObjectReader READER =
-      new ObjectMapper().reader(DiskBalancerCluster.class);
+      new ObjectMapper().readerFor(DiskBalancerCluster.class);
   private final Set<String> exclusionList;
   private final Set<String> inclusionList;
   private ClusterConnector clusterConnector;
