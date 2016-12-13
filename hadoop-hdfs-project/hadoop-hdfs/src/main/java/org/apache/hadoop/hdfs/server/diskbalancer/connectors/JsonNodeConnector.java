@@ -38,7 +38,7 @@ public class JsonNodeConnector implements ClusterConnector {
   private static final Logger LOG =
       LoggerFactory.getLogger(JsonNodeConnector.class);
   private static final ObjectReader READER =
-      new ObjectMapper().reader(DiskBalancerCluster.class);
+      new ObjectMapper().readerFor(DiskBalancerCluster.class);
   private final URL clusterURI;
 
   /**
