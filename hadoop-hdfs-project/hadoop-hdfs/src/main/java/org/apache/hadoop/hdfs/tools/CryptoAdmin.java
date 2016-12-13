@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.tools.TableListing;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * This class implements crypto command-line operations.
@@ -54,6 +55,7 @@ public class CryptoAdmin extends Configured implements Tool {
   public int run(String[] args) throws IOException {
     if (args.length == 0) {
       AdminHelper.printUsage(false, "crypto", COMMANDS);
+      ToolRunner.printGenericCommandUsage(System.err);
       return 1;
     }
     final AdminHelper.Command command = AdminHelper.determineCommand(args[0],
@@ -64,6 +66,7 @@ public class CryptoAdmin extends Configured implements Tool {
         System.err.println("Command names must start with dashes.");
       }
       AdminHelper.printUsage(false, "crypto", COMMANDS);
+      ToolRunner.printGenericCommandUsage(System.err);
       return 1;
     }
     final List<String> argsList = new LinkedList<String>();
@@ -78,9 +81,10 @@ public class CryptoAdmin extends Configured implements Tool {
     }
   }
 
-  public static void main(String[] argsArray) throws IOException {
+  public static void main(String[] argsArray) throws Exception {
     final CryptoAdmin cryptoAdmin = new CryptoAdmin(new Configuration());
-    System.exit(cryptoAdmin.run(argsArray));
+    int res = ToolRunner.run(cryptoAdmin, argsArray);
+    System.exit(res);
   }
 
   /**
