@@ -96,7 +96,7 @@ public class TestDatasetVolumeCheckerFailures {
     // be referenced.
     verify(volumes.get(0), times(0)).check(anyObject());
   }
-  
+
   @Test(timeout=60000)
   public void testMinGapIsEnforcedForSyncChecks() throws Exception {
     final List<FsVolumeSpi> volumes =
@@ -109,7 +109,7 @@ public class TestDatasetVolumeCheckerFailures {
     conf.setTimeDuration(DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY,
         minGapMs, TimeUnit.MILLISECONDS);
     final DatasetVolumeChecker checker = new DatasetVolumeChecker(conf, timer);
-    
+
     checker.checkAllVolumes(dataset);
     assertThat(checker.getNumSyncDatasetChecks(), is(1L));
 

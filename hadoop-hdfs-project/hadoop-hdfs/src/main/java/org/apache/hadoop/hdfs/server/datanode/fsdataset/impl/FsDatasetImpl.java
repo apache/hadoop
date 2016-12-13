@@ -2071,7 +2071,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    */
   @Override // FsDatasetSpi
   public void handleVolumeFailures(Set<FsVolumeSpi> failedVolumes) {
-   volumes.handleVolumeFailures(failedVolumes);
+    volumes.handleVolumeFailures(failedVolumes);
   }
     
 

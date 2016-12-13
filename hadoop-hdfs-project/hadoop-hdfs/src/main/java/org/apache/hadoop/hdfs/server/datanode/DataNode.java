@@ -385,7 +385,7 @@ public class DataNode extends ReconfigurableBase
 
   @Nullable
   private final StorageLocationChecker storageLocationChecker;
-  
+
   private final DatasetVolumeChecker volumeChecker;
 
   private final SocketFactory socketFactory;
@@ -1934,7 +1934,7 @@ public class DataNode extends ReconfigurableBase
         LOG.warn("Exception shutting down DataNode HttpServer", e);
       }
     }
-    
+
     volumeChecker.shutdownAndWait(1, TimeUnit.SECONDS);
 
     if (storageLocationChecker != null) {
@@ -2049,7 +2049,7 @@ public class DataNode extends ReconfigurableBase
           LOG.info("checkDiskErrorAsync callback got {} failed volumes: {}",
               failedVolumes.size(), failedVolumes);
           lastDiskErrorCheck = Time.monotonicNow();
-          handleVolumeFailures(failedVolumes);  
+          handleVolumeFailures(failedVolumes);
         });
   }
   

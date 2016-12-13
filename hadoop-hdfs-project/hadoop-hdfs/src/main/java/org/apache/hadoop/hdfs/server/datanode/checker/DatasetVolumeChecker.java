@@ -169,7 +169,8 @@ public class DatasetVolumeChecker {
       numSkippedChecks.incrementAndGet();
       LOG.trace(
           "Skipped checking all volumes, time since last check {} is less " +
-          "than the minimum gap between checks ({} ms).", gap, minDiskCheckGapMs);
+          "than the minimum gap between checks ({} ms).",
+          gap, minDiskCheckGapMs);
       return Collections.emptySet();
     }
 
@@ -246,13 +247,14 @@ public class DatasetVolumeChecker {
       numSkippedChecks.incrementAndGet();
       LOG.trace(
           "Skipped checking all volumes, time since last check {} is less " +
-              "than the minimum gap between checks ({} ms).", gap, minDiskCheckGapMs);
+              "than the minimum gap between checks ({} ms).",
+          gap, minDiskCheckGapMs);
       return false;
     }
 
     final FsDatasetSpi.FsVolumeReferences references =
         dataset.getFsVolumeReferences();
-    
+
     if (references.size() == 0) {
       LOG.warn("checkAllVolumesAsync - no volumes can be referenced");
       return false;
@@ -335,7 +337,7 @@ public class DatasetVolumeChecker {
     private final Callback callback;
 
     /**
-     * 
+     *
      * @param reference FsVolumeReference to be released when the check is
      *                  complete.
      * @param healthyVolumes set of healthy volumes. If the disk check is
