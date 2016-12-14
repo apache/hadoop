@@ -39,7 +39,7 @@ public class OverwriteParam extends BooleanParam {
    * @param str a string representation of the parameter value.
    */
   public OverwriteParam(final String str) {
-    this(DOMAIN.parse(str));
+    super(DOMAIN, DOMAIN.parse(str == null ? DEFAULT : str));
   }
 
   @Override
