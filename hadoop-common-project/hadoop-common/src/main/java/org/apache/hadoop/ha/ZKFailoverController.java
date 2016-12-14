@@ -83,8 +83,11 @@ public abstract class ZKFailoverController {
     ZK_AUTH_KEY
   };
   
-  protected static final String USAGE = 
-      "Usage: hdfs zkfc [ -formatZK [-force] [-nonInteractive] ]";
+  protected static final String USAGE =
+      "Usage: hdfs zkfc [ -formatZK [-force] [-nonInteractive] ]\n"
+      + "\t-force: formats the znode if the znode exists.\n"
+      + "\t-nonInteractive: formats the znode aborts if the znode exists,\n"
+      + "\tunless -force option is specified.";
 
   /** Unable to format the parent znode in ZK */
   static final int ERR_CODE_FORMAT_DENIED = 2;

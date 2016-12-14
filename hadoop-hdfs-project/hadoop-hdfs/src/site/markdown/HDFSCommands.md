@@ -549,7 +549,7 @@ Usage: `hdfs zkfc [-formatZK [-force] [-nonInteractive]]`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-| `-formatZK` | Format the Zookeeper instance |
+| `-formatZK` | Format the Zookeeper instance. -force: formats the znode if the znode exists. -nonInteractive: formats the znode aborts if the znode exists, unless -force option is specified. |
 | `-h` | Display help |
 
 This comamnd starts a Zookeeper Failover Controller process for use with [HDFS HA with QJM](./HDFSHighAvailabilityWithQJM.html#Administrative_commands).
