@@ -187,6 +187,7 @@ class StripedBlockReader {
         break;
       }
       n += nread;
+      stripedReader.getReconstructor().incrBytesRead(nread);
     }
   }
 
