@@ -905,6 +905,11 @@ public class TestDirectoryScanner {
       return null;
     }
 
+    @Override
+    public FileIoProvider getFileIoProvider() {
+      return null;
+    }
+
 
     @Override
     public VolumeCheckResult check(VolumeCheckContext context)

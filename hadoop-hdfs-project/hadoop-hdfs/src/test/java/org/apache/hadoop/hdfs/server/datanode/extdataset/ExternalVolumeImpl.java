@@ -26,6 +26,7 @@ import java.util.LinkedList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ReportCompiler;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
@@ -111,6 +112,11 @@ public class ExternalVolumeImpl implements FsVolumeSpi {
   public LinkedList<ScanInfo> compileReport(String bpid,
       LinkedList<ScanInfo> report, ReportCompiler reportCompiler)
       throws InterruptedException, IOException {
+    return null;
+  }
+
+  @Override
+  public FileIoProvider getFileIoProvider() {
     return null;
   }
 
