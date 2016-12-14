@@ -193,14 +193,6 @@ public class FSDirAttrOp {
   static void satisfyStoragePolicy(FSDirectory fsd, BlockManager bm,
       String src) throws IOException {
 
-    // make sure storage policy is enabled, otherwise
-    // there is no need to satisfy storage policy.
-    if (!fsd.isStoragePolicyEnabled()) {
-      throw new IOException(String.format(
-          "Failed to satisfy storage policy since %s is set to false.",
-          DFS_STORAGE_POLICY_ENABLED_KEY));
-    }
-
     FSPermissionChecker pc = fsd.getPermissionChecker();
     INodesInPath iip;
     fsd.writeLock();

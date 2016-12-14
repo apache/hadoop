@@ -89,7 +89,9 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT;
+
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
@@ -2237,6 +2239,22 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot satisfy storage policy for " + src);
+      // make sure storage policy is enabled, otherwise
+      // there is no need to satisfy storage policy.
+      if (!dir.isStoragePolicyEnabled()) {
+        throw new IOException(String.format(
+            "Failed to satisfy storage policy since %s is set to false.",
+            DFS_STORAGE_POLICY_ENABLED_KEY));
+      }
+
+      if (blockManager.getStoragePolicySatisfier() == null
+          || !blockManager.getStoragePolicySatisfier().isRunning()) {
+        throw new UnsupportedActionException(
+            "Cannot request to satisfy storage policy "
+                + "when storage policy satisfier feature has been deactivated"
+                + " by admin. Seek for an admin help to activate it "
+                + "or use Mover tool.");
+      }
       // TODO: need to update editlog for persistence.
       FSDirAttrOp.satisfyStoragePolicy(dir, blockManager, src);
     } finally {
@@ -3895,11 +3913,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         blockReportLeaseId =  blockManager.requestBlockReportLeaseId(nodeReg);
       }
 
-      // TODO: Handle blocks movement results send by the coordinator datanode.
-      // This has to be revisited as part of HDFS-11029.
-      if (blockManager.getStoragePolicySatisfier() != null) {
-        blockManager.getStoragePolicySatisfier()
-            .handleBlocksStorageMovementResults(blksMovementResults);
+      // Handle blocks movement results sent by the coordinator datanode.
+      StoragePolicySatisfier sps = blockManager.getStoragePolicySatisfier();
+      if (sps != null) {
+        if (!sps.isRunning()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(
+                "Storage policy satisfier is not running. So, ignoring block "
+                    + "storage movement results sent by co-ordinator datanode");
+          }
+        } else {
+          sps.handleBlocksStorageMovementResults(blksMovementResults);
+        }
       }
 
       //create ha status

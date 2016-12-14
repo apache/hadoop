@@ -91,7 +91,9 @@ public class StoragePolicySatisfier implements Runnable {
    * Start storage policy satisfier demon thread. Also start block storage
    * movements monitor for retry the attempts if needed.
    */
-  public void start() {
+  public synchronized void start() {
+    isRunning = true;
+    LOG.info("Starting StoragePolicySatisfier.");
     storagePolicySatisfierThread = new Daemon(this);
     storagePolicySatisfierThread.setName("StoragePolicySatisfier");
     storagePolicySatisfierThread.start();
@@ -101,8 +103,9 @@ public class StoragePolicySatisfier implements Runnable {
   /**
    * Stop storage policy satisfier demon thread.
    */
-  public void stop() {
+  public synchronized void stop() {
     isRunning = false;
+    LOG.info("Stopping StoragePolicySatisfier.");
     if (storagePolicySatisfierThread == null) {
       return;
     }
@@ -112,6 +115,7 @@ public class StoragePolicySatisfier implements Runnable {
     } catch (InterruptedException ie) {
     }
     this.storageMovementsMonitor.stop();
+    this.clearQueues();
   }
 
   /**
@@ -141,14 +145,20 @@ public class StoragePolicySatisfier implements Runnable {
 
   @Override
   public void run() {
-    isRunning = !checkIfMoverRunning();
-    if (!isRunning) {
-      LOG.error("StoragePolicySatisfier thread stopped "
-          + "as Mover ID file " + HdfsServerConstants.MOVER_ID_PATH.toString()
-          + " exists");
-      return;
+    boolean isMoverRunning = !checkIfMoverRunning();
+    synchronized (this) {
+      isRunning = isMoverRunning;
+      if (!isRunning) {
+        // Stopping monitor thread and clearing queues as well
+        this.clearQueues();
+        this.storageMovementsMonitor.stop();
+        LOG.error(
+            "Stopping StoragePolicySatisfier thread " + "as Mover ID file "
+                + HdfsServerConstants.MOVER_ID_PATH.toString() + " exists");
+        return;
+      }
     }
-    while (namesystem.isRunning()) {
+    while (namesystem.isRunning() && isRunning) {
       try {
         Long blockCollectionID = storageMovementNeeded.get();
         if (blockCollectionID != null) {
@@ -159,7 +169,12 @@ public class StoragePolicySatisfier implements Runnable {
         // we want to check block movements.
         Thread.sleep(3000);
       } catch (Throwable t) {
-        isRunning = false;
+        synchronized (this) {
+          isRunning = false;
+          // Stopping monitor thread and clearing queues as well
+          this.clearQueues();
+          this.storageMovementsMonitor.stop();
+        }
         if (!namesystem.isRunning()) {
           LOG.info("Stopping StoragePolicySatisfier.");
           if (!(t instanceof InterruptedException)) {
@@ -487,5 +502,15 @@ public class StoragePolicySatisfier implements Runnable {
   @VisibleForTesting
   BlockStorageMovementAttemptedItems getAttemptedItemsMonitor() {
     return storageMovementsMonitor;
+  }
+
+  /**
+   * Clear the queues from to be storage movement needed lists and items tracked
+   * in storage movement monitor.
+   */
+  public void clearQueues() {
+    LOG.warn("Clearing all the queues from StoragePolicySatisfier. So, "
+        + "user requests on satisfying block storages would be discarded.");
+    storageMovementNeeded.clearAll();
   }
 }

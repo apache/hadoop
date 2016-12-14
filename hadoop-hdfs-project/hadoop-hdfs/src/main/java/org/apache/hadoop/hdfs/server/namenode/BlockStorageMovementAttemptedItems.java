@@ -49,7 +49,7 @@ public class BlockStorageMovementAttemptedItems {
   // processing and sent to DNs.
   private final Map<Long, Long> storageMovementAttemptedItems;
   private final List<BlocksStorageMovementResult> storageMovementAttemptedResults;
-  private volatile boolean spsRunning = true;
+  private volatile boolean monitorRunning = true;
   private Daemon timerThread = null;
   //
   // It might take anywhere between 30 to 60 minutes before
@@ -109,7 +109,8 @@ public class BlockStorageMovementAttemptedItems {
   /**
    * Starts the monitor thread.
    */
-  void start() {
+  public synchronized void start() {
+    monitorRunning = true;
     timerThread = new Daemon(new BlocksStorageMovementAttemptResultMonitor());
     timerThread.setName("BlocksStorageMovementAttemptResultMonitor");
     timerThread.start();
@@ -118,8 +119,14 @@ public class BlockStorageMovementAttemptedItems {
   /**
    * Stops the monitor thread.
    */
-  public void stop() {
-    spsRunning = false;
+  public synchronized void stop() {
+    monitorRunning = false;
+    timerThread.interrupt();
+    try {
+      timerThread.join(3000);
+    } catch (InterruptedException ie) {
+    }
+    this.clearQueues();
   }
 
   /**
@@ -129,13 +136,13 @@ public class BlockStorageMovementAttemptedItems {
   private class BlocksStorageMovementAttemptResultMonitor implements Runnable {
     @Override
     public void run() {
-      while (spsRunning) {
+      while (monitorRunning) {
         try {
           blockStorageMovementResultCheck();
           blocksStorageMovementUnReportedItemsCheck();
           Thread.sleep(checkTimeout);
         } catch (InterruptedException ie) {
-          LOG.debug("BlocksStorageMovementAttemptResultMonitor thread "
+          LOG.info("BlocksStorageMovementAttemptResultMonitor thread "
               + "is interrupted.", ie);
         }
       }
@@ -221,5 +228,10 @@ public class BlockStorageMovementAttemptedItems {
   @VisibleForTesting
   public int getAttemptedItemsCount() {
     return storageMovementAttemptedItems.size();
+  }
+
+  public void clearQueues() {
+    storageMovementAttemptedResults.clear();
+    storageMovementAttemptedItems.clear();
   }
 }

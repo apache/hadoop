@@ -50,4 +50,8 @@ public class BlockStorageMovementNeeded {
   public synchronized Long get() {
     return storageMovementNeeded.poll();
   }
+
+  public synchronized void clearAll() {
+    storageMovementNeeded.clear();
+  }
 }

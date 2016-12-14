@@ -5026,7 +5026,52 @@ public class BlockManager implements BlockStatsMXBean {
     }
   }
 
+  /**
+   * Gets the storage policy satisfier instance.
+   *
+   * @return sps
+   */
   public StoragePolicySatisfier getStoragePolicySatisfier() {
     return sps;
+  }
+
+  /**
+   * Activate the storage policy satisfier by starting its service.
+   */
+  public void activateSPS() {
+    if (sps == null) {
+      LOG.info("Storage policy satisfier is not initialized.");
+      return;
+    } else if (sps.isRunning()) {
+      LOG.info("Storage policy satisfier is already running.");
+      return;
+    }
+    sps.start();
+  }
+
+  /**
+   * Deactivate the storage policy satisfier by stopping its services.
+   */
+  public void deactivateSPS() {
+    if (sps == null) {
+      LOG.info("Storage policy satisfier is not initialized.");
+      return;
+    } else if (!sps.isRunning()) {
+      LOG.info("Storage policy satisfier is already stopped.");
+      return;
+    }
+    sps.stop();
+    // TODO: add command to DNs for stop in-progress processing SPS commands?
+    // to avoid confusions in cluster, I think sending commands from centralized
+    // place would be better to drop pending queues at DN. Anyway in progress
+    // work will be finished in a while, but this command can void starting
+    // fresh movements at DN.
+  }
+
+  /**
+   * @return True if storage policy satisfier running.
+   */
+  public boolean isStoragePolicySatisfierRunning() {
+    return sps == null ? false : sps.isRunning();
   }
 }
