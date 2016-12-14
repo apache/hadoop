@@ -196,6 +196,7 @@ class StripedBlockWriter {
       packet.writeTo(targetOutputStream);
 
       blockOffset4Target += toWrite;
+      stripedWriter.getReconstructor().incrBytesWritten(toWrite);
     }
   }
 

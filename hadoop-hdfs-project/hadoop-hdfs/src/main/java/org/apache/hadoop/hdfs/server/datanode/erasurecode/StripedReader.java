@@ -435,6 +435,10 @@ class StripedReader {
     }
   }
 
+  StripedReconstructor getReconstructor() {
+    return reconstructor;
+  }
+
   StripedBlockReader getReader(int i) {
     return readers.get(i);
   }
