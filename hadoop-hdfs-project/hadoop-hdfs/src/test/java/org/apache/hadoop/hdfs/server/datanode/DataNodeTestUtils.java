@@ -25,10 +25,17 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doAnswer;
 
 /**
  * Utility class for accessing package-private DataNode information during tests.
@@ -174,5 +181,26 @@ public class DataNodeTestUtils {
     if (directoryScanner != null) {
       dn.getDirectoryScanner().reconcile();
     }
+  }
+
+  /**
+   * This method is used to mock the data node block pinning API.
+   *
+   * @param dn datanode
+   * @param pinned true if the block is pinned, false otherwise
+   * @throws IOException
+   */
+  public static void mockDatanodeBlkPinning(final DataNode dn,
+      final boolean pinned) throws IOException {
+    final FsDatasetSpi<? extends FsVolumeSpi> data = dn.data;
+    dn.data = Mockito.spy(data);
+
+    doAnswer(new Answer<Object>() {
+      public Object answer(InvocationOnMock invocation) throws IOException {
+        // Bypass the argument to FsDatasetImpl#getPinning to show that
+        // the block is pinned.
+        return pinned;
+      }
+    }).when(dn.data).getPinning(any(ExtendedBlock.class));
   }
 }
