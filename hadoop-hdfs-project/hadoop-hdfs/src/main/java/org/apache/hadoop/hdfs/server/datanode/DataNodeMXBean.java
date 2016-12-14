@@ -120,4 +120,9 @@ public interface DataNodeMXBean {
    * @return  DiskBalancer Status
    */
   String getDiskBalancerStatus();
+
+  /**
+   * Gets the {@link FileIoProvider} statistics.
+   */
+  String getFileIoProviderStatistics();
 }
