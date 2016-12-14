@@ -24,11 +24,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BaseHeaderProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ChecksumProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientOperationHeaderProto;
-import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpWriteBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferTraceInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpWriteBlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ChecksumTypeProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
@@ -107,6 +107,11 @@ public abstract class DataTransferProtoUtil {
   public static void checkBlockOpStatus(
           BlockOpResponseProto response,
           String logInfo) throws IOException {
+    checkBlockOpStatus(response, logInfo, false);
+  }
+
+  public static void checkBlockOpStatus(BlockOpResponseProto response,
+      String logInfo, boolean checkBlockPinningErr) throws IOException {
     if (response.getStatus() != Status.SUCCESS) {
       if (response.getStatus() == Status.ERROR_ACCESS_TOKEN) {
         throw new InvalidBlockTokenException(
@@ -114,6 +119,14 @@ public abstract class DataTransferProtoUtil {
           + ", status message " + response.getMessage()
           + ", " + logInfo
         );
+      } else if (checkBlockPinningErr
+          && response.getStatus() == Status.ERROR_BLOCK_PINNED) {
+        throw new BlockPinningException(
+            "Got error"
+            + ", status=" + response.getStatus().name()
+            + ", status message " + response.getMessage()
+            + ", " + logInfo
+          );
       } else {
         throw new IOException(
           "Got error"
