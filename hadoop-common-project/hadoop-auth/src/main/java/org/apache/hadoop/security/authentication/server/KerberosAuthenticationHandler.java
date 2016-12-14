@@ -73,7 +73,7 @@ import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
  * </ul>
  */
 public class KerberosAuthenticationHandler implements AuthenticationHandler {
-  private static final Logger LOG = LoggerFactory.getLogger(
+  public static final Logger LOG = LoggerFactory.getLogger(
       KerberosAuthenticationHandler.class);
 
   /**
@@ -274,14 +274,14 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
         loginContexts.add(loginContext);
         KerberosName kerbName = new KerberosName(spnegoPrincipal);
         if (kerbName.getHostName() != null
-            && kerbName.getRealm() != null
             && kerbName.getServiceName() != null
             && kerbName.getServiceName().equals("HTTP")) {
-          LOG.trace("Map server: {} to principal: {}", kerbName.getHostName(),
+          boolean added = serverPrincipalMap.put(kerbName.getHostName(),
               spnegoPrincipal);
-          serverPrincipalMap.put(kerbName.getHostName(), spnegoPrincipal);
+          LOG.info("Map server: {} to principal: [{}], added = {}",
+              kerbName.getHostName(), spnegoPrincipal, added);
         } else {
-          LOG.warn("HTTP principal: {} is invalid for SPNEGO!",
+          LOG.warn("HTTP principal: [{}] is invalid for SPNEGO!",
               spnegoPrincipal);
         }
       }
@@ -419,8 +419,8 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
               @Override
               public AuthenticationToken run() throws Exception {
                 if (LOG.isTraceEnabled()) {
-                  LOG.trace("SPNEGO with principals: {}",
-                      serverPrincipals.toString());
+                  LOG.trace("SPNEGO with server principals: {} for {}",
+                      serverPrincipals.toString(), serverName);
                 }
                 AuthenticationToken token = null;
                 Exception lastException = null;
@@ -464,7 +464,7 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
     GSSCredential gssCreds = null;
     AuthenticationToken token = null;
     try {
-      LOG.trace("SPNEGO initiated with principal {}", serverPrincipal);
+      LOG.trace("SPNEGO initiated with server principal [{}]", serverPrincipal);
       gssCreds = this.gssManager.createCredential(
           this.gssManager.createName(serverPrincipal,
               KerberosUtil.getOidInstance("NT_GSS_KRB5_PRINCIPAL")),
@@ -491,7 +491,8 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
         String userName = kerberosName.getShortName();
         token = new AuthenticationToken(userName, clientPrincipal, getType());
         response.setStatus(HttpServletResponse.SC_OK);
-        LOG.trace("SPNEGO completed for principal [{}]", clientPrincipal);
+        LOG.trace("SPNEGO completed for client principal [{}]",
+            clientPrincipal);
       }
     } finally {
       if (gssContext != null) {
