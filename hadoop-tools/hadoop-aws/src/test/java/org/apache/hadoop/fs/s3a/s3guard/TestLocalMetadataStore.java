@@ -22,6 +22,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
+
 import org.junit.Test;
 
 import java.io.IOException;
@@ -35,18 +37,14 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
 
   private static final String MAX_ENTRIES_STR = "16";
 
-  private static class LocalMSContract extends AbstractMSContract {
+  private final static class LocalMSContract extends AbstractMSContract {
 
     private FileSystem fs;
 
-    public LocalMSContract() {
+    private LocalMSContract() throws IOException {
       Configuration config = new Configuration();
       config.set(LocalMetadataStore.CONF_MAX_RECORDS, MAX_ENTRIES_STR);
-      try {
-        fs = FileSystem.getLocal(config);
-      } catch (IOException e) {
-        fail("Error creating LocalFileSystem");
-      }
+      fs = FileSystem.getLocal(config);
     }
 
     @Override
@@ -62,7 +60,7 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
   }
 
   @Override
-  public AbstractMSContract createContract() {
+  public AbstractMSContract createContract() throws IOException {
     return new LocalMSContract();
   }
 
@@ -103,25 +101,15 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
 
   @Override
   protected void verifyFileStatus(FileStatus status, long size) {
-    super.verifyFileStatus(status, size);
-
-    assertEquals("Replication value", REPLICATION, status.getReplication());
-    assertEquals("Access time", getAccessTime(), status.getAccessTime());
-    assertEquals("Owner", OWNER, status.getOwner());
-    assertEquals("Group", GROUP, status.getGroup());
-    assertEquals("Permission", PERMISSION, status.getPermission());
+    S3ATestUtils.verifyFileStatus(status, size, REPLICATION, getModTime(),
+        getAccessTime(),
+        BLOCK_SIZE, OWNER, GROUP, PERMISSION);
   }
 
   @Override
   protected void verifyDirStatus(FileStatus status) {
-    super.verifyDirStatus(status);
-
-    assertEquals("Mod time", getModTime(), status.getModificationTime());
-    assertEquals("Replication value", REPLICATION, status.getReplication());
-    assertEquals("Access time", getAccessTime(), status.getAccessTime());
-    assertEquals("Owner", OWNER, status.getOwner());
-    assertEquals("Group", GROUP, status.getGroup());
-    assertEquals("Permission", PERMISSION, status.getPermission());
+    S3ATestUtils.verifyDirStatus(status, REPLICATION, getModTime(),
+        getAccessTime(), OWNER, GROUP, PERMISSION);
   }
 
 }

@@ -19,13 +19,13 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.regions.Region;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.document.BatchWriteItemOutcome;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
@@ -55,12 +55,13 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ClientFactory;
 import org.apache.hadoop.util.ReflectionUtils;
 
+import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
+import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
 
@@ -70,7 +71,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*
  *
  * The current implementation uses a schema consisting of a single table.  The
  * name of the table can be configured by config key
- * {@link S3Guard#S3GUARD_DDB_TABLE_NAME_KEY}.
+ * {@link org.apache.hadoop.fs.s3a.Constants#S3GUARD_DDB_TABLE_NAME_KEY}.
  * By default, it matches the name of the S3 bucket.  Each item in the table
  * represents a single directory or file.  Its path is split into separate table
  * attributes:
@@ -163,29 +164,30 @@ public class DynamoDBMetadataStore implements MetadataStore {
     Preconditions.checkArgument(fs instanceof S3AFileSystem,
         "DynamoDBMetadataStore only supports S3A filesystem.");
     s3afs = (S3AFileSystem) fs;
-    final String bucket = s3afs.getUri().getAuthority();
+    final String bucket = s3afs.getBucket();
     try {
       region = s3afs.getAmazonS3Client().getBucketLocation(bucket);
     } catch (AmazonClientException e) {
-      throw new IOException("Can not find location for bucket " + bucket, e);
+      throw translateException("Determining bucket location",
+          fs.getUri().toString(), e);
     }
 
     username = s3afs.getUsername();
 
     final Configuration conf = s3afs.getConf();
     Class<? extends DynamoDBClientFactory> cls = conf.getClass(
-        S3Guard.S3GUARD_DDB_CLIENT_FACTORY_IMPL,
-        S3Guard.S3GUARD_DDB_CLIENT_FACTORY_IMPL_DEFAULT,
+        S3GUARD_DDB_CLIENT_FACTORY_IMPL,
+        S3GUARD_DDB_CLIENT_FACTORY_IMPL_DEFAULT,
         DynamoDBClientFactory.class);
     AmazonDynamoDBClient dynamoDBClient = ReflectionUtils.newInstance(cls, conf)
         .createDynamoDBClient(s3afs.getUri(), region);
     dynamoDB = new DynamoDB(dynamoDBClient);
 
     // use the bucket as the DynamoDB table name if not specified in config
-    tableName = conf.getTrimmed(S3Guard.S3GUARD_DDB_TABLE_NAME_KEY, bucket);
+    tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY, bucket);
 
     // create the table unless it's explicitly told not to do so
-    if (conf.getBoolean(S3Guard.S3GUARD_DDB_TABLE_CREATE_KEY, true)) {
+    if (conf.getBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, true)) {
       createTable();
     }
   }
@@ -209,12 +211,12 @@ public class DynamoDBMetadataStore implements MetadataStore {
     s3afs = (S3AFileSystem) defautFs;
 
     // use the bucket as the DynamoDB table name if not specified in config
-    tableName = conf.getTrimmed(S3Guard.S3GUARD_DDB_TABLE_NAME_KEY);
+    tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY);
     Preconditions.checkNotNull(tableName, "No DynamoDB table name configured!");
 
     final Class<? extends S3ClientFactory> clsS3 = conf.getClass(
-        Constants.S3_CLIENT_FACTORY_IMPL,
-        Constants.DEFAULT_S3_CLIENT_FACTORY_IMPL,
+        S3_CLIENT_FACTORY_IMPL,
+        DEFAULT_S3_CLIENT_FACTORY_IMPL,
         S3ClientFactory.class);
     final S3ClientFactory factory = ReflectionUtils.newInstance(clsS3, conf);
     AmazonS3 s3 = factory.createS3Client(s3afs.getUri(), s3afs.getUri());
@@ -225,9 +227,10 @@ public class DynamoDBMetadataStore implements MetadataStore {
     }
 
     Class<? extends DynamoDBClientFactory> clsDdb = conf.getClass(
-        S3Guard.S3GUARD_DDB_CLIENT_FACTORY_IMPL,
-        S3Guard.S3GUARD_DDB_CLIENT_FACTORY_IMPL_DEFAULT,
+        S3GUARD_DDB_CLIENT_FACTORY_IMPL,
+        S3GUARD_DDB_CLIENT_FACTORY_IMPL_DEFAULT,
         DynamoDBClientFactory.class);
+    LOG.debug("Creating dynamo DB client {}", clsDdb);
     AmazonDynamoDBClient dynamoDBClient =
         ReflectionUtils.newInstance(clsDdb, conf)
             .createDynamoDBClient(s3afs.getUri(), region);
@@ -406,9 +409,9 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void close() {
+  public synchronized void close() {
     if (dynamoDB != null) {
-      LOG.info("Shutting down {}", this);
+      LOG.debug("Shutting down {}", this);
       dynamoDB.shutdown();
       dynamoDB = null;
     }
@@ -416,7 +419,12 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
   @Override
   public void destroy() throws IOException {
+    if (table == null) {
+      LOG.debug("In destroy(): no table to delete");
+      return;
+    }
     LOG.info("Deleting DynamoDB table {} in region {}", tableName, region);
+    Preconditions.checkNotNull(dynamoDB, "Not connected to Dynamo");
     try {
       table.delete();
       table.waitForDelete();
@@ -429,8 +437,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
       Thread.currentThread().interrupt();
       LOG.warn("Interrupted while waiting for DynamoDB table {} being deleted",
           tableName, ie);
-      throw new IOException("Table " + tableName + " in region " + region
-          + " has not been deleted");
+      throw new InterruptedIOException("Table " + tableName
+          + " in region " + region + " has not been deleted");
     } catch (AmazonClientException e) {
       throw translateException("destroy", (String) null, e);
     }
@@ -445,7 +453,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   /**
-   * Get the existing table and wait for it to become active.
+   * Create a table if it does not exist and wait for it to become active.
    *
    * If a table with the intended name already exists, then it logs the
    * {@link ResourceInUseException} and uses that table. The DynamoDB table
@@ -454,13 +462,14 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * synchronous, and the table is guaranteed to exist after this method
    * returns successfully.
    */
+  @VisibleForTesting
   void createTable() throws IOException {
     final Configuration conf = s3afs.getConf();
     final ProvisionedThroughput capacity = new ProvisionedThroughput(
-        conf.getLong(S3Guard.S3GUARD_DDB_TABLE_CAPACITY_READ_KEY,
-            S3Guard.S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT),
-        conf.getLong(S3Guard.S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY,
-            S3Guard.S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT));
+        conf.getLong(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY,
+            S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT),
+        conf.getLong(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY,
+            S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT));
 
     try {
       LOG.info("Creating DynamoDB table {} in region {}", tableName, region);
@@ -483,8 +492,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
       LOG.warn("Interrupted while waiting for DynamoDB table {} active",
           tableName, e);
       Thread.currentThread().interrupt();
-      throw new IOException("DynamoDB table '" + tableName + "' is not active "
-          + "yet in region " + region);
+      throw new InterruptedIOException("DynamoDB table '" + tableName + "'" +
+          " is not active yet in region " + region);
     } catch (AmazonClientException e) {
       throw translateException("createTable", (String) null, e);
     }

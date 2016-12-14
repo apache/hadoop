@@ -148,7 +148,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
       // setting config for creating a DynamoDBClient against local server
       conf.set(Constants.ACCESS_KEY, "dummy-access-key");
       conf.set(Constants.SECRET_KEY, "dummy-secret-key");
-      conf.set(S3Guard.S3GUARD_DDB_ENDPOINT_KEY, ddbEndpoint);
+      conf.set(Constants.S3GUARD_DDB_ENDPOINT_KEY, ddbEndpoint);
 
       // always create new file system object for a test contract
       s3afs = (S3AFileSystem) FileSystem.newInstance(conf);
@@ -189,7 +189,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final String tableName = "testInitializeWithFileSystem";
     final S3AFileSystem s3afs = createContract().getFileSystem();
     final Configuration conf = s3afs.getConf();
-    conf.set(S3Guard.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
+    conf.set(Constants.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
       ddbms.initialize(s3afs);
       verifyTableInitialized(tableName);
@@ -209,7 +209,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   public void testInitializeWithConfiguration() throws IOException {
     final String tableName = "testInitializeWithConfiguration";
     final Configuration conf = createContract().getFileSystem().getConf();
-    conf.set(S3Guard.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
+    conf.set(Constants.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
       ddbms.initialize(conf);
       verifyTableInitialized(tableName);
@@ -274,7 +274,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final String tableName = "testDeleteTable";
     final S3AFileSystem s3afs = createContract().getFileSystem();
     final Configuration conf = s3afs.getConf();
-    conf.set(S3Guard.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
+    conf.set(Constants.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
       ddbms.initialize(s3afs);
       // we can list the empty table

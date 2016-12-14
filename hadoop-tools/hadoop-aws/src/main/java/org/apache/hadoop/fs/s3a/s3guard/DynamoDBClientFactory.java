@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.DefaultS3ClientFactory;
 
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_ENDPOINT_KEY;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet;
 
 /**
@@ -73,7 +74,7 @@ interface DynamoDBClientFactory extends Configurable {
         LOG.error(msg);
         throw new IllegalArgumentException(msg, e);
       }
-      LOG.info("Creating DynamoDBClient for fsUri {} in region {}",
+      LOG.debug("Creating DynamoDBClient for fsUri {} in region {}",
           fsUri, region);
 
       final Configuration conf = getConf();
@@ -84,10 +85,10 @@ interface DynamoDBClientFactory extends Configurable {
       AmazonDynamoDBClient ddb = new AmazonDynamoDBClient(credentials, awsConf);
 
       ddb.withRegion(region.toAWSRegion());
-      final String endPoint = conf.get(S3Guard.S3GUARD_DDB_ENDPOINT_KEY);
+      final String endPoint = conf.getTrimmed(S3GUARD_DDB_ENDPOINT_KEY);
       if (StringUtils.isNotEmpty(endPoint)) {
         try {
-          ddb.withEndpoint(conf.get(S3Guard.S3GUARD_DDB_ENDPOINT_KEY));
+          ddb.withEndpoint(endPoint);
         } catch (IllegalArgumentException e) {
           final String msg = "Incorrect DynamoDB endpoint: "  + endPoint;
           LOG.error(msg, e);

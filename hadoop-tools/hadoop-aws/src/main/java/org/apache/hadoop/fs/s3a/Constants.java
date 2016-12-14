@@ -287,4 +287,72 @@ public final class Constants {
    */
   @InterfaceAudience.Private
   public static final int MAX_MULTIPART_COUNT = 10000;
+
+  /**
+   * Classname of the S3A-specific output committer factory. This
+   * is what must be declared when attempting to use
+   */
+  @InterfaceStability.Unstable
+  public static final String S3A_OUTPUT_COMMITTER_FACTORY =
+      "org.apache.hadoop.fs.s3a.commit.S3AOutputCommitterFactory";
+
+  /* Constants. */
+  public static final String S3_METADATA_STORE_IMPL =
+      "fs.s3a.metadatastore.impl";
+  /**
+   * The endpoint of the DynamoDB service.
+   *
+   * This config has no default value. If the user does not set this, the AWS
+   * SDK will find the endpoint automatically by the Region.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_ENDPOINT_KEY =
+      "fs.s3a.s3guard.ddb.endpoint";
+  /**
+   * The DynamoDB table name to use.
+   *
+   * This config has no default value. If the user does not set this, the
+   * S3Guard implementation will use the respective S3 bucket name.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TABLE_NAME_KEY =
+      "fs.s3a.s3guard.ddb.table";
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TABLE_CAPACITY_READ_KEY =
+      "fs.s3a.s3guard.ddb.table.capacity.read";
+  public static final long S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT = 500;
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY =
+      "fs.s3a.s3guard.ddb.table.capacity.write";
+  public static final long S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT = 100;
+
+  /**
+   * V1 committer.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3A_OUTPUT_COMMITTER_MRV1 =
+      "org.apache.hadoop.fs.s3a.commit.S3OutputCommitterMRv1";
+
+  /**
+   * The default "Null" metadata store: {@value}.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_METASTORE_NULL
+      = "org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore";
+
+  /**
+   * Use Local memory for the metadata: {@value}.
+   * This is not coherent across processes and must be used for testing only.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_METASTORE_LOCAL
+      = "org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore";
+
+  /**
+   * Use DynamoDB for the metadata: {@value}.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_METASTORE_DYNAMO
+      = "org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore";
+
 }

@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.io.IOUtils;
 
 import com.google.common.collect.Sets;
 import org.junit.After;
@@ -94,7 +96,12 @@ public abstract class MetadataStoreTestBase extends Assert {
   public void tearDown() throws Exception {
     LOG.debug("== Tear down. ==");
     if (ms != null) {
-      ms.destroy();
+      try {
+        ms.destroy();
+      } catch (Exception e) {
+        LOG.warn("Failed to destroy tables in teardown", e);
+      }
+      IOUtils.closeStream(ms);
       ms = null;
     }
   }
@@ -579,10 +586,7 @@ public abstract class MetadataStoreTestBase extends Assert {
   }
 
   void verifyFileStatus(FileStatus status, long size) {
-    assertFalse("Not a dir", status.isDirectory());
-    assertEquals("Mod time", modTime, status.getModificationTime());
-    assertEquals("File size", size, status.getLen());
-    assertEquals("Block size", BLOCK_SIZE, status.getBlockSize());
+    S3ATestUtils.verifyFileStatus(status, size, BLOCK_SIZE, getModTime());
   }
 
   private FileStatus makeDirStatus(String pathStr) throws IOException {

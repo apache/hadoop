@@ -21,7 +21,9 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.scale.S3AScaleTestBase;
 import org.junit.Assert;
 import org.junit.internal.AssumptionViolatedException;
@@ -34,6 +36,7 @@ import java.util.List;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.junit.Assert.*;
 
 /**
  * Utilities for the S3A tests.
@@ -527,5 +530,63 @@ public final class S3ATestUtils {
    * This class should not be instantiated.
    */
   private S3ATestUtils() {
+  }
+
+  public static void verifyFileStatus(FileStatus status, long size,
+      long blockSize, long modTime) {
+    verifyFileStatus(status, size, 0, modTime, 0, blockSize, null, null, null);
+  }
+
+  public static void verifyFileStatus(FileStatus status, long size,
+      int replication,
+      long modTime,
+      long accessTime,
+      long blockSize,
+      String owner,
+      String group,
+      FsPermission permission) {
+    String details = status.toString();
+    assertFalse("Not a dir: " + details, status.isDirectory());
+    assertEquals("Mod time: " + details, modTime, status.getModificationTime());
+    assertEquals("File size: " + details, size, status.getLen());
+    assertEquals("Block size: " + details, blockSize, status.getBlockSize());
+    if (replication > 0) {
+      assertEquals("Replication value: " + details, replication,
+          status.getReplication());
+    }
+    if (accessTime != 0) {
+      assertEquals("Access time: " + details, accessTime,
+          status.getAccessTime());
+    }
+    if (owner != null) {
+      assertEquals("Owner: " + details, owner, status.getOwner());
+    }
+    if (group != null) {
+      assertEquals("Group: " + details, group, status.getGroup());
+    }
+    if (permission != null) {
+      assertEquals("Permission: " + details, permission,
+          status.getPermission());
+    }
+  }
+
+  public static void verifyDirStatus(FileStatus status,
+      int replication,
+      long modTime,
+      long accessTime,
+      String owner,
+      String group,
+      FsPermission permission) {
+    String details = status.toString();
+    assertTrue("Is a dir: " + details, status.isDirectory());
+    assertEquals("zero length: " + details, 0, status.getLen());
+
+    assertEquals("Mod time: " + details, modTime, status.getModificationTime());
+    assertEquals("Replication value: " + details, replication,
+        status.getReplication());
+    assertEquals("Access time: " + details, accessTime, status.getAccessTime());
+    assertEquals("Owner: " + details, owner, status.getOwner());
+    assertEquals("Group: " + details, group, status.getGroup());
+    assertEquals("Permission: " + details, permission, status.getPermission());
   }
 }

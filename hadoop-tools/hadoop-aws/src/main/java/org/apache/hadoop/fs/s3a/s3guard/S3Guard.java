@@ -38,15 +38,15 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import static org.apache.hadoop.fs.s3a.Constants.*;
+
 /**
  * Logic for integrating MetadataStore with S3A.
  */
-final public class S3Guard {
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+public final class S3Guard {
   private static final Logger LOG = LoggerFactory.getLogger(S3Guard.class);
-
-  /* Constants. */
-  public static final String S3_METADATA_STORE_IMPL =
-      "fs.s3a.metadatastore.impl";
 
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
@@ -58,26 +58,6 @@ final public class S3Guard {
       DynamoDBClientFactory.DefaultDynamoDBClientFactory.class;
 
   /**
-   * The endpoint of the DynamoDB service.
-   *
-   * This config has not default value. If the user does not set this, the AWS
-   * SDK will find the endpoint automatically by the Region.
-   */
-  @InterfaceStability.Unstable
-  static final String S3GUARD_DDB_ENDPOINT_KEY =
-      "fs.s3a.s3guard.ddb.endpoint";
-
-  /**
-   * The DynamoDB table name to use.
-   *
-   * This config has no default value. If the user does not set this, the
-   * S3Guard implementation will use the respective S3 bucket name.
-   */
-  @InterfaceStability.Unstable
-  static final String S3GUARD_DDB_TABLE_NAME_KEY =
-      "fs.s3a.s3guard.ddb.table";
-
-  /**
    * Whether to create the table.
    *
    * This is for internal usage and users should not set this one directly.
@@ -86,18 +66,6 @@ final public class S3Guard {
   @InterfaceStability.Unstable
   static final String S3GUARD_DDB_TABLE_CREATE_KEY =
       "fs.s3a.s3guard.ddb.table.create";
-
-  @InterfaceStability.Unstable
-  static final String S3GUARD_DDB_TABLE_CAPACITY_READ_KEY =
-      "fs.s3a.s3guard.ddb.table.capacity.read";
-
-  static final long S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT = 500;
-
-  @InterfaceStability.Unstable
-  static final String S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY =
-      "fs.s3a.s3guard.ddb.table.capacity.write";
-
-  static final long S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT = 100;
 
   // Utility class.  All static functions.
   private S3Guard() { }
@@ -118,8 +86,10 @@ final public class S3Guard {
    * @param fs  FileSystem whose Configuration specifies which
    *            implementation to use.
    * @return Reference to new MetadataStore.
+   * @throws IOException if the metadata store cannot be instantiated
    */
-  public static MetadataStore getMetadataStore(FileSystem fs) {
+  public static MetadataStore getMetadataStore(FileSystem fs)
+      throws IOException {
     Preconditions.checkNotNull(fs);
     Configuration conf = fs.getConf();
     Preconditions.checkNotNull(conf);
@@ -129,26 +99,27 @@ final public class S3Guard {
       msInstance = ReflectionUtils.newInstance(msClass, conf);
       LOG.debug("Using {} metadata store for {} filesystem",
           msClass.getSimpleName(), fs.getScheme());
-    } catch (RuntimeException e) {
-      LOG.error("Failed to instantiate {}, using NullMetadataStore:",
-          conf.get(S3_METADATA_STORE_IMPL), e);
-      msInstance = new NullMetadataStore();
-    }
-    try {
       msInstance.initialize(fs);
-    } catch (IOException ioe) {
-      LOG.error("Exception initializing MetadataStore, falling back to " +
-          "NullMetadataStore: ", ioe);
-      msInstance = new NullMetadataStore();
-      // no init needed for NullMetadataStore
+      return msInstance;
+    } catch (RuntimeException | IOException e) {
+      String message = "Failed to instantiate metadata store " +
+          conf.get(S3_METADATA_STORE_IMPL)
+          + " defined in " + S3_METADATA_STORE_IMPL
+          + ": " + e;
+      LOG.error(message, e);
+      if (e instanceof IOException) {
+        throw e;
+      } else {
+        throw new IOException(message, e);
+      }
     }
-    return msInstance;
   }
 
   /**
+   * Predicate to check whether or not the metadata store is the null one.
    * @param conf Configuration
    * @return true if NullMetadataStore is configured for s3a, or if the
-   * configuration is mising.
+   * configuration is missing.
    */
   public static boolean isNullMetadataStoreConfigured(Configuration conf) {
     Class<? extends MetadataStore> msClass = getMetadataStoreClass(conf);
@@ -379,9 +350,9 @@ final public class S3Guard {
     URI uri = p.toUri();
     // Paths must include bucket in case MetadataStore is shared between
     // multiple S3AFileSystem instances
-    Preconditions.checkNotNull(uri.getHost());
+    Preconditions.checkNotNull(uri.getHost(), "Null host in " + uri);
 
     // I believe this should never fail, since there is a host?
-    Preconditions.checkNotNull(uri.getScheme());
+    Preconditions.checkNotNull(uri.getScheme(), "Null scheme in " + uri);
   }
 }
