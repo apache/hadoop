@@ -219,7 +219,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
      need to update the literal here as well as TestDFSConfigKeys.
    */
   public static final String  DFS_WEBHDFS_AUTHENTICATION_FILTER_DEFAULT =
-      "org.apache.hadoop.hdfs.web.AuthFilter".toString();
+      "org.apache.hadoop.hdfs.web.AuthFilter";
   @Deprecated
   public static final String  DFS_WEBHDFS_USER_PATTERN_KEY =
       HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY;
