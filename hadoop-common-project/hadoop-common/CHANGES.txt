@@ -37,6 +37,9 @@ Release 2.7.6 - UNRELEASED
     HADOOP-13375. o.a.h.security.TestGroupsCaching.testBackgroundRefreshCounters
     seems flaky. (Weiwei Yang via Mingliang Liu, shv)
 
+    HADOOP-13508. FsPermission string constructor does not recognize
+    sticky bit. (Atul Sikaria via Wei-Chiu Chuang, shv)
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES
