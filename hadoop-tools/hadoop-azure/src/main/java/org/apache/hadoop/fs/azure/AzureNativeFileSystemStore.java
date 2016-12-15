@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
@@ -2511,8 +2512,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       try {
         dstBlob.startCopyFromBlob(srcBlob, null, getInstrumentedContext());
       } catch (StorageException se) {
-        if (se.getErrorCode().equals(
-          StorageErrorCode.SERVER_BUSY.toString())) {
+        if (se.getHttpStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
           int copyBlobMinBackoff = sessionConfiguration.getInt(
             KEY_COPYBLOB_MIN_BACKOFF_INTERVAL,
 			DEFAULT_COPYBLOB_MIN_BACKOFF_INTERVAL);
@@ -2541,8 +2541,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       waitForCopyToComplete(dstBlob, getInstrumentedContext());
       safeDelete(srcBlob, lease);
     } catch (StorageException e) {
-      if (e.getErrorCode().equals(
-        StorageErrorCode.SERVER_BUSY.toString())) {
+      if (e.getHttpStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
         LOG.warn("Rename: CopyBlob: StorageException: ServerBusy: Retry complete, will attempt client side copy for page blob");
         InputStream ipStream = null;
         OutputStream opStream = null;
