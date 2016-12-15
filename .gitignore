@@ -15,6 +15,7 @@
 .settings
 target
 build
+dependency-reduced-pom.xml
 
 # External tool builders
 */.externalToolBuilders
