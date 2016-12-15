@@ -305,8 +305,16 @@ class BPOfferService {
    * verifies that this namespace matches (eg to prevent a misconfiguration
    * where a StandbyNode from a different cluster is specified)
    */
-  void verifyAndSetNamespaceInfo(NamespaceInfo nsInfo) throws IOException {
+  void verifyAndSetNamespaceInfo(BPServiceActor actor, NamespaceInfo nsInfo)
+    throws IOException {
     writeLock();
+
+    if(nsInfo.getState() == HAServiceState.ACTIVE
+        && bpServiceToActive == null) {
+      LOG.info("Acknowledging ACTIVE Namenode during handshake" + actor);
+      bpServiceToActive = actor;
+    }
+
     try {
       if (this.bpNSInfo == null) {
         this.bpNSInfo = nsInfo;

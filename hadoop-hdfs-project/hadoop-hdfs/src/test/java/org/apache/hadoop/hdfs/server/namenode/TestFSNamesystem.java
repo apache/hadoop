@@ -33,6 +33,7 @@ import java.util.Collection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.junit.After;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -153,6 +155,25 @@ public class TestFSNamesystem {
     assertTrue("FSNamesystem didn't enter safemode", fsn.isInSafeMode());
     assertTrue("Replication queues weren't being populated after entering "
       + "safemode 2nd time", bm.isPopulatingReplQueues());
+  }
+
+  @Test
+  public void testHAStateInNamespaceInfo() throws IOException {
+    Configuration conf = new Configuration();
+
+    FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
+    FSImage fsImage = Mockito.mock(FSImage.class);
+    Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
+    NNStorage nnStorage = Mockito.mock(NNStorage.class);
+    Mockito.when(fsImage.getStorage()).thenReturn(nnStorage);
+
+    FSNamesystem fsNamesystem = new FSNamesystem(conf, fsImage);
+    FSNamesystem fsn = Mockito.spy(fsNamesystem);
+    Mockito.when(fsn.getState()).thenReturn(
+        HAServiceProtocol.HAServiceState.ACTIVE);
+
+    NamespaceInfo nsInfo = fsn.unprotectedGetNamespaceInfo();
+    assertNotNull(nsInfo.getState());
   }
 
   @Test
