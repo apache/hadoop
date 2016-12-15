@@ -26,9 +26,11 @@ import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -48,6 +50,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class Shell {
+  private static final Map <Process, Object> CHILD_PROCESSES =
+      Collections.synchronizedMap(new WeakHashMap<Process, Object>());
   public static final Logger LOG = LoggerFactory.getLogger(Shell.class);
 
   /**
@@ -916,6 +920,7 @@ public abstract class Shell {
     } else {
       process = builder.start();
     }
+    CHILD_PROCESSES.put(process, null);
 
     if (timeOutInterval > 0) {
       timeOutTimer = new Timer("Shell command timeout");
@@ -1012,6 +1017,7 @@ public abstract class Shell {
         LOG.warn("Error while closing the error stream", ioe);
       }
       process.destroy();
+      CHILD_PROCESSES.remove(process);
       lastTime = Time.monotonicNow();
     }
   }
@@ -1308,6 +1314,24 @@ public abstract class Shell {
           p.destroy();
         }
       }
+    }
+  }
+
+  /**
+   * Static method to destroy all running <code>Shell</code> processes
+   * Iterates through a list of all currently running <code>Shell</code>
+   * processes and destroys them one by one. This method is thread safe and
+   * is intended to be used in a shutdown hook.
+   */
+  public static void destroyAllProcesses() {
+    synchronized (CHILD_PROCESSES) {
+      for (Process key : CHILD_PROCESSES.keySet()) {
+        Process process = key;
+        if (key != null) {
+          process.destroy();
+        }
+      }
+      CHILD_PROCESSES.clear();
     }
   }
 }
