@@ -317,6 +317,14 @@ public final class Constants {
   @InterfaceStability.Unstable
   public static final String S3GUARD_DDB_TABLE_NAME_KEY =
       "fs.s3a.s3guard.ddb.table";
+
+  /**
+   * Whether to create the DynamoDB table if the table does not exist.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TABLE_CREATE_KEY =
+      "fs.s3a.s3guard.ddb.table.create";
+
   @InterfaceStability.Unstable
   public static final String S3GUARD_DDB_TABLE_CAPACITY_READ_KEY =
       "fs.s3a.s3guard.ddb.table.capacity.read";

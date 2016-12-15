@@ -149,6 +149,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
       conf.set(Constants.ACCESS_KEY, "dummy-access-key");
       conf.set(Constants.SECRET_KEY, "dummy-secret-key");
       conf.set(Constants.S3GUARD_DDB_ENDPOINT_KEY, ddbEndpoint);
+      conf.setBoolean(Constants.S3GUARD_DDB_TABLE_CREATE_KEY, true);
 
       // always create new file system object for a test contract
       s3afs = (S3AFileSystem) FileSystem.newInstance(conf);

@@ -57,16 +57,6 @@ public final class S3Guard {
       S3GUARD_DDB_CLIENT_FACTORY_IMPL_DEFAULT =
       DynamoDBClientFactory.DefaultDynamoDBClientFactory.class;
 
-  /**
-   * Whether to create the table.
-   *
-   * This is for internal usage and users should not set this one directly.
-   */
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
-  static final String S3GUARD_DDB_TABLE_CREATE_KEY =
-      "fs.s3a.s3guard.ddb.table.create";
-
   // Utility class.  All static functions.
   private S3Guard() { }
 

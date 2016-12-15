@@ -1261,6 +1261,14 @@
 </property>
 
 <property>
+  <name>fs.s3a.s3guard.ddb.table.create</name>
+  <value>false</value>
+  <description>
+    If true, the S3A client will create the table if it does not already exist.
+  </description>
+</property>
+
+<property>
   <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
   <value>500</value>
   <description>

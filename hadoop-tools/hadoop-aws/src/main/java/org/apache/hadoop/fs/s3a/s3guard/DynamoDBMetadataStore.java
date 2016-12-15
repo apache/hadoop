@@ -187,7 +187,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY, bucket);
 
     // create the table unless it's explicitly told not to do so
-    if (conf.getBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, true)) {
+    if (conf.getBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, false)) {
       createTable();
     }
   }
