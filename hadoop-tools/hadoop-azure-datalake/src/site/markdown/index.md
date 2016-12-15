@@ -111,9 +111,10 @@ Application require to set Client id and OAuth2 refresh token from Azure Active 
 7. Note down the properties you will need to auth:
     -  The client ID
     -  The key you just generated above
-    -  The token endpoint (select "View endpoints" at the bottom of the page and copy/paste the OAuth2 .0 Token Endpoint value)
+    -  Your TenantID, which can be found using the Azure CLI
+    -  The token endpoint https://login.microsoftonline.com/<TENANT-ID>/oauth2/token
     -  Resource: Always https://management.core.windows.net/ , for all customers
-
+    -  
 #### Adding the service principal to your ADL Account
 1.  Go to the portal again, and open your ADL account
 2.  Select Users under Settings
@@ -138,6 +139,10 @@ Add the following properties to your core-site.xml
       <value>PASSWORD FROM STEP 7 ABOVE</value>
     </property>
 
+    <property>
+     <name>dfs.adls.oauth2.access.token.provider.type</name>
+     <value>ClientCredential</value>
+    </property>
 
 
 ## <a name="Enabling_ADL" />Enabling ADL Filesystem
