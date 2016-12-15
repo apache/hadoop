@@ -42,7 +42,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeComm
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.FinalizeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.KeyUpdateCommandProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.NNHAStatusHeartbeatProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDeletedBlockInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailureSummaryProto;
@@ -66,6 +65,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamenodeCommandPro
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamenodeRegistrationProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamenodeRegistrationProto.NamenodeRoleProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamespaceInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NNHAStatusHeartbeatProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.RecoveringBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.RemoteEditLogManifestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.RemoteEditLogProto;
@@ -337,7 +337,8 @@ public class PBHelper {
     StorageInfoProto storage = info.getStorageInfo();
     return new NamespaceInfo(storage.getNamespceID(), storage.getClusterID(),
         info.getBlockPoolID(), storage.getCTime(), info.getBuildVersion(),
-        info.getSoftwareVersion(), info.getCapabilities());
+        info.getSoftwareVersion(), info.getCapabilities(),
+        convert(info.getState()));
   }
 
   public static NamenodeCommand convert(NamenodeCommandProto cmd) {
@@ -743,43 +744,64 @@ public class PBHelper {
   }
   
   public static NamespaceInfoProto convert(NamespaceInfo info) {
-    return NamespaceInfoProto.newBuilder()
-        .setBlockPoolID(info.getBlockPoolID())
+    NamespaceInfoProto.Builder builder = NamespaceInfoProto.newBuilder();
+    builder.setBlockPoolID(info.getBlockPoolID())
         .setBuildVersion(info.getBuildVersion())
         .setUnused(0)
         .setStorageInfo(PBHelper.convert((StorageInfo)info))
         .setSoftwareVersion(info.getSoftwareVersion())
-        .setCapabilities(info.getCapabilities())
-        .build();
+        .setCapabilities(info.getCapabilities());
+    HAServiceState state = info.getState();
+    if(state != null) {
+      builder.setState(convert(info.getState()));
+    }
+    return builder.build();
+  }
+
+  public static HAServiceState convert(NNHAStatusHeartbeatProto.State s) {
+    if (s == null) {
+      return null;
+    }
+    switch (s) {
+    case ACTIVE:
+      return HAServiceState.ACTIVE;
+    case STANDBY:
+      return HAServiceState.STANDBY;
+    default:
+      throw new IllegalArgumentException("Unexpected HAServiceStateProto:"
+          + s);
+    }
+  }
+
+  public static NNHAStatusHeartbeatProto.State convert(HAServiceState s) {
+    if (s == null) {
+      return null;
+    }
+    switch (s) {
+    case ACTIVE:
+      return NNHAStatusHeartbeatProto.State.ACTIVE;
+    case STANDBY:
+      return NNHAStatusHeartbeatProto.State.STANDBY;
+    default:
+      throw new IllegalArgumentException("Unexpected HAServiceState:"
+          + s);
+    }
   }
 
   public static NNHAStatusHeartbeat convert(NNHAStatusHeartbeatProto s) {
-    if (s == null) return null;
-    switch (s.getState()) {
-    case ACTIVE:
-      return new NNHAStatusHeartbeat(HAServiceState.ACTIVE, s.getTxid());
-    case STANDBY:
-      return new NNHAStatusHeartbeat(HAServiceState.STANDBY, s.getTxid());
-    default:
-      throw new IllegalArgumentException("Unexpected NNHAStatusHeartbeat.State:" + s.getState());
+    if (s == null) {
+      return null;
     }
+    return new NNHAStatusHeartbeat(convert(s.getState()), s.getTxid());
   }
 
   public static NNHAStatusHeartbeatProto convert(NNHAStatusHeartbeat hb) {
-    if (hb == null) return null;
-    NNHAStatusHeartbeatProto.Builder builder =
-      NNHAStatusHeartbeatProto.newBuilder();
-    switch (hb.getState()) {
-      case ACTIVE:
-        builder.setState(NNHAStatusHeartbeatProto.State.ACTIVE);
-        break;
-      case STANDBY:
-        builder.setState(NNHAStatusHeartbeatProto.State.STANDBY);
-        break;
-      default:
-        throw new IllegalArgumentException("Unexpected NNHAStatusHeartbeat.State:" +
-            hb.getState());
+    if (hb == null) {
+      return null;
     }
+    NNHAStatusHeartbeatProto.Builder builder =
+        NNHAStatusHeartbeatProto.newBuilder();
+    builder.setState(convert(hb.getState()));
     builder.setTxid(hb.getTxId());
     return builder.build();
   }

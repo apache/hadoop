@@ -269,11 +269,11 @@ class BPServiceActor implements Runnable {
     // First phase of the handshake with NN - get the namespace
     // info.
     NamespaceInfo nsInfo = retrieveNamespaceInfo();
-    
+
     // Verify that this matches the other NN in this HA pair.
     // This also initializes our block pool in the DN if we are
     // the first NN connection for this BP.
-    bpos.verifyAndSetNamespaceInfo(nsInfo);
+    bpos.verifyAndSetNamespaceInfo(this, nsInfo);
     
     // Second phase of the handshake with the NN.
     register(nsInfo);
