@@ -407,6 +407,8 @@ class BlockSender implements java.io.Closeable {
           blockIn, checksumIn, volumeRef, fileIoProvider);
     } catch (IOException ioe) {
       IOUtils.closeStream(this);
+      org.apache.commons.io.IOUtils.closeQuietly(blockIn);
+      org.apache.commons.io.IOUtils.closeQuietly(checksumIn);
       throw ioe;
     }
   }
