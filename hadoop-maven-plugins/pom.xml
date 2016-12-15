@@ -54,6 +54,28 @@
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-shade-plugin</artifactId>
+      <version>${maven-shade-plugin.version}</version>
+      <scope>provided</scope>
+      <exclusions>
+        <!-- shade conflicts with itself and our other maven internals
+             by including a combination of 3.x and 2.x
+          -->
+        <exclusion>
+          <groupId>org.apache.maven.shared</groupId>
+          <artifactId>maven-dependency-tree</artifactId>
+        </exclusion>
+        <!-- again, shade conflicts with itself on the transitives of this
+             dependency
+          -->
+        <exclusion>
+          <groupId>org.vafer</groupId>
+          <artifactId>jdependency</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
