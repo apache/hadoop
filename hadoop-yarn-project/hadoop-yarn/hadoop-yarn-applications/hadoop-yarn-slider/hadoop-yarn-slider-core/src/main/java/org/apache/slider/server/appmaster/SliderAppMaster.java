@@ -1937,12 +1937,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
 
   @Override //AMRMClientAsync
   public void onError(Throwable e) {
-    //callback says it's time to finish
-    LOG_YARN.error("AMRMClientAsync.onError() received {}", e, e);
-    signalAMComplete(new ActionStopSlider("stop",
-        EXIT_EXCEPTION_THROWN,
-        FinalApplicationStatus.FAILED,
-        "AMRMClientAsync.onError() received " + e));
+    LOG_YARN.info("Ignoring AMRMClientAsync.onError() received {}", e);
   }
   
 /* =================================================================== */
