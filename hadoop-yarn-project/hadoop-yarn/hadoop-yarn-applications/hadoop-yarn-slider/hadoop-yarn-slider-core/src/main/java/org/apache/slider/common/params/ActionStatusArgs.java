@@ -35,6 +35,10 @@ public class ActionStatusArgs extends AbstractActionArgs {
              description = "Output file for the status information")
   public String output;
 
+  @Parameter(names = {ARG_LIFETIME},
+      description = "Lifetime of the application from the time of request")
+  public boolean lifetime;
+
   public String getOutput() {
     return output;
   }

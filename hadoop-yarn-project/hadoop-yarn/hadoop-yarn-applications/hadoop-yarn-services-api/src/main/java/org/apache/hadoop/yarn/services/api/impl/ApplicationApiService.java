@@ -52,6 +52,8 @@ import org.apache.commons.lang.SerializationUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.services.api.ApplicationApi;
@@ -771,7 +773,7 @@ public class ApplicationApiService implements ApplicationApi {
 
     // Get all applications in a specific state - lighter projection. For full
     // detail, call getApplication on a specific app.
-    Set<String> applications;
+    Set<ApplicationReport> applications;
     try {
       if (StringUtils.isNotEmpty(state)) {
         ApplicationStatus appStatus = new ApplicationStatus();
@@ -793,13 +795,12 @@ public class ApplicationApiService implements ApplicationApi {
     Set<Application> apps = new HashSet<Application>();
     if (applications.size() > 0) {
       try {
-        for (String app : applications) {
+        for (ApplicationReport app : applications) {
           Application application = new Application();
-          // TODO: Need to get lifetime, launch-time and privileged container
-          // status from YARN
-          application.setLifetime(null);
-          application.setLaunchTime(new Date());
-          application.setName(app);
+          application.setLifetime(app.getApplicationTimeouts().get(
+              ApplicationTimeoutType.LIFETIME).getRemainingTime());
+          application.setLaunchTime(new Date(app.getStartTime()));
+          application.setName(app.getName());
           // Containers not required, setting to null to avoid empty list
           application.setContainers(null);
           apps.add(application);
@@ -930,9 +931,7 @@ public class ApplicationApiService implements ApplicationApi {
     app.setLaunchTime(appStatus.get("createTime") == null ? null
         : new Date(appStatus.get("createTime").getAsLong()));
 
-    // lifetime - set it to unlimited for now
-    // TODO: Once YARN-3813 and YARN-4205 are available - get it from YARN
-    app.setLifetime(DEFAULT_UNLIMITED_LIFETIME);
+    app.setLifetime(queryLifetime(appName));
 
     // Quicklinks
     Map<String, String> appQuicklinks = new HashMap<>();
@@ -1062,6 +1061,24 @@ public class ApplicationApiService implements ApplicationApi {
     return object.get(key) == null ? null : object.get(key).getAsJsonObject();
   }
 
+  private long queryLifetime(String appName) {
+    try {
+      return invokeSliderClientRunnable(
+          new SliderClientContextRunnable<Long>() {
+            @Override
+            public Long run(SliderClient sliderClient)
+                throws YarnException, IOException, InterruptedException {
+              ApplicationReport report = sliderClient.findInstance(appName);
+              return report.getApplicationTimeouts()
+                  .get(ApplicationTimeoutType.LIFETIME).getRemainingTime();
+            }
+          });
+    } catch (Exception e) {
+      logger.error("Error when querying lifetime for " + appName, e);
+      return DEFAULT_UNLIMITED_LIFETIME;
+    }
+  }
+
   private JsonObject getSliderApplicationStatus(final String appName)
       throws IOException, YarnException, InterruptedException {
 
@@ -1142,36 +1159,37 @@ public class ApplicationApiService implements ApplicationApi {
     });
   }
 
-  private Set<String> getSliderApplications(final String state)
+  private Set<ApplicationReport> getSliderApplications(final String state)
       throws IOException, YarnException, InterruptedException {
     return getSliderApplications(false, state);
   }
 
-  private Set<String> getSliderApplications(final boolean liveOnly)
+  private Set<ApplicationReport> getSliderApplications(final boolean liveOnly)
       throws IOException, YarnException, InterruptedException {
     return getSliderApplications(liveOnly, null);
   }
 
-  private Set<String> getSliderApplications(final boolean liveOnly,
-      final String state) throws IOException, YarnException,
-      InterruptedException {
-    return invokeSliderClientRunnable(new SliderClientContextRunnable<Set<String>>() {
-      @Override
-      public Set<String> run(SliderClient sliderClient) throws YarnException,
-          IOException, InterruptedException {
-        Set<String> apps;
-        ActionListArgs listArgs = new ActionListArgs();
-        if (liveOnly) {
-          apps = sliderClient.getApplicationList(null);
-        } else if (StringUtils.isNotEmpty(state)) {
-          listArgs.state = state;
-          apps = sliderClient.getApplicationList(null, listArgs);
-        } else {
-          apps = sliderClient.getApplicationList(null, listArgs);
-        }
-        return apps;
-      }
-    });
+  private Set<ApplicationReport> getSliderApplications(final boolean liveOnly,
+      final String state)
+      throws IOException, YarnException, InterruptedException {
+    return invokeSliderClientRunnable(
+        new SliderClientContextRunnable<Set<ApplicationReport>>() {
+          @Override
+          public Set<ApplicationReport> run(SliderClient sliderClient)
+              throws YarnException, IOException, InterruptedException {
+            Set<ApplicationReport> apps;
+            ActionListArgs listArgs = new ActionListArgs();
+            if (liveOnly) {
+              apps = sliderClient.getApplicationList(null);
+            } else if (StringUtils.isNotEmpty(state)) {
+              listArgs.state = state;
+              apps = sliderClient.getApplicationList(null, listArgs);
+            } else {
+              apps = sliderClient.getApplicationList(null, listArgs);
+            }
+            return apps;
+          }
+        });
   }
 
   @DELETE
