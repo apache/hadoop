@@ -130,7 +130,7 @@
     <aws-java-sdk.version>1.11.45</aws-java-sdk.version>
     <!-- the version of Hadoop declared in the version resources; can be overridden
     so that Hadoop 3.x can declare itself a 2.x artifact. -->
-    <declared.hadoop.version>${pom.version}</declared.hadoop.version>
+    <declared.hadoop.version>${project.version}</declared.hadoop.version>
   </properties>
 
   <dependencyManagement>
