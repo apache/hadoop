@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeout;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -178,6 +179,7 @@ import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.Console;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -185,6 +187,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -2706,11 +2709,12 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   @Override
   public int actionList(String clustername, ActionListArgs args)
       throws IOException, YarnException {
-    Set<String> appInstances = getApplicationList(clustername, args);
-    // getApplicationList never returns null
-    return !appInstances.isEmpty() ? EXIT_SUCCESS
-        : ((appInstances.isEmpty() && isUnset(clustername)) ? EXIT_SUCCESS
-               : EXIT_FALSE);
+    Set<ApplicationReport> appInstances = getApplicationList(clustername, args);
+    if (!appInstances.isEmpty()) {
+      return EXIT_SUCCESS;
+    } else {
+      return EXIT_FALSE;
+    }
   }
 
   /**
@@ -2723,8 +2727,8 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
    * @throws IOException
    * @throws YarnException
    */
-  public Set<String> getApplicationList(String clustername) throws IOException,
-      YarnException {
+  public Set<ApplicationReport> getApplicationList(String clustername)
+      throws IOException, YarnException {
     ActionListArgs args = new ActionListArgs();
     args.live = true;
     return getApplicationList(clustername, args);
@@ -2743,8 +2747,8 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
    * @throws UnknownApplicationInstanceException
    *           if a specific instance was named but it was not found
    */
-  public Set<String> getApplicationList(String clustername, ActionListArgs args)
-      throws IOException, YarnException {
+  public Set<ApplicationReport> getApplicationList(String clustername,
+      ActionListArgs args) throws IOException, YarnException {
     if (args.help) {
       actionHelp(ACTION_LIST);
       // the above call throws an exception so the return is not really required
@@ -2830,13 +2834,13 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     }
     
     // at this point there is either the entire list or a stripped down instance
-    Set<String> listedInstances = new HashSet<String>();
+    Set<ApplicationReport> listedInstances = new HashSet<ApplicationReport>();
     for (String name : persistentInstances.keySet()) {
       ApplicationReport report = reportMap.get(name);
       if (!listOnlyInState || report != null) {
         // list the details if all were requested, or the filtering contained
         // a report
-        listedInstances.add(name);
+        listedInstances.add(report);
         // containers will be non-null when only one instance is requested
         String details = instanceDetailsToString(name, report,
             containers, version, components, verbose);
@@ -3055,7 +3059,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
    * @throws YarnException YARN issues
    * @throws IOException IO problems
    */
-  private ApplicationReport findInstance(String appname)
+  public ApplicationReport findInstance(String appname)
       throws YarnException, IOException {
     return yarnAppListClient.findInstance(appname);
   }
@@ -3106,6 +3110,11 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   @VisibleForTesting
   public int actionStatus(String clustername, ActionStatusArgs statusArgs)
       throws YarnException, IOException {
+    if (statusArgs.lifetime) {
+      queryAndPrintLifetime(clustername);
+      return EXIT_SUCCESS;
+    }
+
     ClusterDescription status = verifyAndGetClusterDescription(clustername);
     String outfile = statusArgs.getOutput();
     if (outfile == null) {
@@ -3120,6 +3129,32 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   public String actionStatus(String clustername)
       throws YarnException, IOException {
     return verifyAndGetClusterDescription(clustername).toJsonString();
+  }
+
+  private void queryAndPrintLifetime(String appName)
+      throws YarnException, IOException {
+    ApplicationReport appReport = findInstance(appName);
+    if (appReport == null) {
+      throw new YarnException("No application found for " + appName);
+    }
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter timeoutStr =
+        new PrintWriter(new OutputStreamWriter(baos, Charset.forName("UTF-8")));
+    try {
+      ApplicationTimeout lifetime = appReport.getApplicationTimeouts()
+          .get(ApplicationTimeoutType.LIFETIME);
+      if (lifetime.getRemainingTime() == -1L) {
+        timeoutStr.append(appName + " has no lifetime configured.");
+      } else {
+        timeoutStr.append("\t" + ApplicationTimeoutType.LIFETIME);
+        timeoutStr.print(" expires at : " + lifetime.getExpiryTime());
+        timeoutStr.println(
+            ".\tRemaining Time : " + lifetime.getRemainingTime() + " seconds");
+      }
+      System.out.println(baos.toString("UTF-8"));
+    } finally {
+      timeoutStr.close();
+    }
   }
 
   private ClusterDescription verifyAndGetClusterDescription(String clustername)
@@ -3547,7 +3582,8 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
    * @throws IOException
    */
   @VisibleForTesting
-  public List<ApplicationReport> getApplications() throws YarnException, IOException {
+  public List<ApplicationReport> getApplications()
+      throws YarnException, IOException {
     return yarnClient.getApplications();
   }
 
