@@ -321,7 +321,7 @@ public class NodeManager extends CompositeService
 
     boolean isDistSchedulingEnabled =
         conf.getBoolean(YarnConfiguration.DIST_SCHEDULING_ENABLED,
-            YarnConfiguration.DIST_SCHEDULING_ENABLED_DEFAULT);
+            YarnConfiguration.DEFAULT_DIST_SCHEDULING_ENABLED);
 
     this.context = createNMContext(containerTokenSecretManager,
         nmTokenSecretManager, nmStore, isDistSchedulingEnabled, conf);

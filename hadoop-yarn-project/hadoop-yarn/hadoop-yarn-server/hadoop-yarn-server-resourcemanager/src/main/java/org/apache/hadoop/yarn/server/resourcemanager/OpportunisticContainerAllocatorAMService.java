@@ -112,11 +112,11 @@ public class OpportunisticContainerAllocatorAMService
         rmContext.getContainerTokenSecretManager());
     this.k = rmContext.getYarnConfiguration().getInt(
         YarnConfiguration.OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED,
-        YarnConfiguration.OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED_DEFAULT);
+        YarnConfiguration.DEFAULT_OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED);
     long nodeSortInterval = rmContext.getYarnConfiguration().getLong(
         YarnConfiguration.NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS,
         YarnConfiguration.
-            NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS_DEFAULT);
+            DEFAULT_NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS);
     this.cacheRefreshInterval = nodeSortInterval;
     this.lastCacheUpdateTime = System.currentTimeMillis();
     NodeQueueLoadMonitor.LoadComparator comparator =
@@ -124,14 +124,14 @@ public class OpportunisticContainerAllocatorAMService
             rmContext.getYarnConfiguration().get(
                 YarnConfiguration.NM_CONTAINER_QUEUING_LOAD_COMPARATOR,
                 YarnConfiguration.
-                    NM_CONTAINER_QUEUING_LOAD_COMPARATOR_DEFAULT));
+                    DEFAULT_NM_CONTAINER_QUEUING_LOAD_COMPARATOR));
 
     NodeQueueLoadMonitor topKSelector =
         new NodeQueueLoadMonitor(nodeSortInterval, comparator);
 
     float sigma = rmContext.getYarnConfiguration()
         .getFloat(YarnConfiguration.NM_CONTAINER_QUEUING_LIMIT_STDEV,
-            YarnConfiguration.NM_CONTAINER_QUEUING_LIMIT_STDEV_DEFAULT);
+            YarnConfiguration.DEFAULT_NM_CONTAINER_QUEUING_LIMIT_STDEV);
 
     int limitMin, limitMax;
 
@@ -139,22 +139,22 @@ public class OpportunisticContainerAllocatorAMService
       limitMin = rmContext.getYarnConfiguration()
           .getInt(YarnConfiguration.NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH,
               YarnConfiguration.
-                  NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH_DEFAULT);
+                  DEFAULT_NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH);
       limitMax = rmContext.getYarnConfiguration()
           .getInt(YarnConfiguration.NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH,
               YarnConfiguration.
-                  NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH_DEFAULT);
+                  DEFAULT_NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH);
     } else {
       limitMin = rmContext.getYarnConfiguration()
           .getInt(
               YarnConfiguration.NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS,
               YarnConfiguration.
-                  NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS_DEFAULT);
+                  DEFAULT_NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS);
       limitMax = rmContext.getYarnConfiguration()
           .getInt(
               YarnConfiguration.NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS,
               YarnConfiguration.
-                  NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS_DEFAULT);
+                  DEFAULT_NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS);
     }
 
     topKSelector.initThresholdCalculator(sigma, limitMin, limitMax);

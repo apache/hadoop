@@ -297,69 +297,65 @@ public class YarnConfiguration extends Configuration {
   /** ACL used in case none is found. Allows nothing. */
   public static final String DEFAULT_YARN_APP_ACL = " ";
 
-  /** Setting that controls whether distributed scheduling is enabled or not. */
-  public static final String DIST_SCHEDULING_ENABLED =
-      YARN_PREFIX + "distributed-scheduling.enabled";
-  public static final boolean DIST_SCHEDULING_ENABLED_DEFAULT = false;
-
   /** Setting that controls whether opportunistic container allocation
    *  is enabled or not. */
   public static final String OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED =
-      YARN_PREFIX + "opportunistic-container-allocation.enabled";
+      RM_PREFIX + "opportunistic-container-allocation.enabled";
   public static final boolean
-      OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED_DEFAULT = false;
+      DEFAULT_OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED = false;
 
   /** Number of nodes to be used by the Opportunistic Container allocator for
    * dispatching containers during container allocation. */
   public static final String OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED =
-      YARN_PREFIX + "opportunistic-container-allocation.nodes-used";
-  public static final int OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED_DEFAULT =
+      RM_PREFIX + "opportunistic-container-allocation.nodes-used";
+  public static final int DEFAULT_OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED =
       10;
 
   /** Frequency for computing least loaded NMs. */
   public static final String NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS =
-      YARN_PREFIX + "nm-container-queuing.sorting-nodes-interval-ms";
+      RM_PREFIX + "nm-container-queuing.sorting-nodes-interval-ms";
   public static final long
-      NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS_DEFAULT = 1000;
+      DEFAULT_NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS = 1000;
 
-  /** Comparator for determining node load for Distributed Scheduling. */
+  /** Comparator for determining node load for scheduling of opportunistic
+   * containers. */
   public static final String NM_CONTAINER_QUEUING_LOAD_COMPARATOR =
-      YARN_PREFIX + "nm-container-queuing.load-comparator";
-  public static final String NM_CONTAINER_QUEUING_LOAD_COMPARATOR_DEFAULT =
+      RM_PREFIX + "nm-container-queuing.load-comparator";
+  public static final String DEFAULT_NM_CONTAINER_QUEUING_LOAD_COMPARATOR =
       "QUEUE_LENGTH";
 
   /** Value of standard deviation used for calculation of queue limit
    * thresholds. */
   public static final String NM_CONTAINER_QUEUING_LIMIT_STDEV =
-      YARN_PREFIX + "nm-container-queuing.queue-limit-stdev";
-  public static final float NM_CONTAINER_QUEUING_LIMIT_STDEV_DEFAULT =
+      RM_PREFIX + "nm-container-queuing.queue-limit-stdev";
+  public static final float DEFAULT_NM_CONTAINER_QUEUING_LIMIT_STDEV =
       1.0f;
 
   /** Min length of container queue at NodeManager. This is a cluster-wide
    * configuration that acts as the lower-bound of optimal queue length
    * calculated by the NodeQueueLoadMonitor */
   public static final String NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH =
-      YARN_PREFIX + "nm-container-queuing.min-queue-length";
-  public static final int NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH_DEFAULT = 1;
+      RM_PREFIX + "nm-container-queuing.min-queue-length";
+  public static final int DEFAULT_NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH = 5;
 
   /** Max length of container queue at NodeManager. This is a cluster-wide
    * configuration that acts as the upper-bound of optimal queue length
    * calculated by the NodeQueueLoadMonitor */
   public static final String NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH =
-      YARN_PREFIX + "nm-container-queuing.max-queue-length";
-  public static final int NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH_DEFAULT = 10;
+      RM_PREFIX + "nm-container-queuing.max-queue-length";
+  public static final int DEFAULT_NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH = 15;
 
   /** Min queue wait time for a container at a NodeManager. */
   public static final String NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS =
-      YARN_PREFIX + "nm-container-queuing.min-queue-wait-time-ms";
-  public static final int NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS_DEFAULT =
-      1;
+      RM_PREFIX + "nm-container-queuing.min-queue-wait-time-ms";
+  public static final int DEFAULT_NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS =
+      10;
 
   /** Max queue wait time for a container queue at a NodeManager. */
   public static final String NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS =
-      YARN_PREFIX + "nm-container-queuing.max-queue-wait-time-ms";
-  public static final int NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS_DEFAULT =
-      10;
+      RM_PREFIX + "nm-container-queuing.max-queue-wait-time-ms";
+  public static final int DEFAULT_NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS =
+      100;
 
   /**
    * Enable/disable intermediate-data encryption at YARN level. For now, this
@@ -768,8 +764,13 @@ public class YarnConfiguration extends Configuration {
   /** Max Queue length of <code>OPPORTUNISTIC</code> containers on the NM. */
   public static final String NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH =
       NM_PREFIX + "opportunistic-containers-max-queue-length";
-  public static final int NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH_DEFAULT =
+  public static final int DEFAULT_NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH =
       0;
+
+  /** Setting that controls whether distributed scheduling is enabled or not. */
+  public static final String DIST_SCHEDULING_ENABLED =
+      NM_PREFIX + "distributed-scheduling.enabled";
+  public static final boolean DEFAULT_DIST_SCHEDULING_ENABLED = false;
 
   /** Environment variables that will be sent to containers.*/
   public static final String NM_ADMIN_USER_ENV = NM_PREFIX + "admin-env";
@@ -2744,14 +2745,14 @@ public class YarnConfiguration extends Configuration {
 
   public static boolean isDistSchedulingEnabled(Configuration conf) {
     return conf.getBoolean(YarnConfiguration.DIST_SCHEDULING_ENABLED,
-        YarnConfiguration.DIST_SCHEDULING_ENABLED_DEFAULT);
+        YarnConfiguration.DEFAULT_DIST_SCHEDULING_ENABLED);
   }
 
   public static boolean isOpportunisticContainerAllocationEnabled(
       Configuration conf) {
     return conf.getBoolean(
         YarnConfiguration.OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED,
-        YarnConfiguration.OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED_DEFAULT);
+        YarnConfiguration.DEFAULT_OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED);
   }
 
   /* For debugging. mp configurations to system output as XML format. */

@@ -106,7 +106,7 @@ public class ContainerScheduler extends AbstractService implements
     this(context, dispatcher, metrics, context.getConf().getInt(
         YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH,
         YarnConfiguration.
-            NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH_DEFAULT));
+            DEFAULT_NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH));
   }
 
   @VisibleForTesting
