@@ -207,6 +207,9 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-11229. HDFS-11056 failed to close meta file. (Wei-Chiu Chuang)
 
+    HDFS-11160. VolumeScanner reports write-in-progress replicas as corrupt
+    incorrectly. Contributed by Wei-Chiu Chuang and Yongjun Zhang.
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES

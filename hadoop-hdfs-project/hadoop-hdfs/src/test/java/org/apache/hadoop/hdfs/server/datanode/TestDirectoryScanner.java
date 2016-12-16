@@ -613,6 +613,12 @@ public class TestDirectoryScanner {
     public FsDatasetSpi getDataset() {
       throw new UnsupportedOperationException();
     }
+
+    @Override
+    public byte[] loadLastPartialChunkChecksum(
+        File blockFile, File metaFile) throws IOException {
+      return null;
+    }
   }
 
   private final static TestFsVolumeSpi TEST_VOLUME = new TestFsVolumeSpi();
