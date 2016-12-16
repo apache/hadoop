@@ -1027,7 +1027,7 @@ class BPServiceActor implements Runnable {
     volatile long nextHeartbeatTime = monotonicNow();
 
     @VisibleForTesting
-    volatile long nextLifelineTime = monotonicNow();
+    volatile long nextLifelineTime;
 
     @VisibleForTesting
     volatile long lastBlockReportTime = monotonicNow();
@@ -1050,6 +1050,7 @@ class BPServiceActor implements Runnable {
       this.heartbeatIntervalMs = heartbeatIntervalMs;
       this.lifelineIntervalMs = lifelineIntervalMs;
       this.blockReportIntervalMs = blockReportIntervalMs;
+      scheduleNextLifeline(nextHeartbeatTime);
     }
 
     // This is useful to make sure NN gets Heartbeat before Blockreport
