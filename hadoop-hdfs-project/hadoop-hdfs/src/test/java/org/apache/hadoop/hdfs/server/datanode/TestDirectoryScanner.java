@@ -899,6 +899,12 @@ public class TestDirectoryScanner {
     }
 
     @Override
+    public byte[] loadLastPartialChunkChecksum(
+        File blockFile, File metaFile) throws IOException {
+      return null;
+    }
+
+    @Override
     public LinkedList<ScanInfo> compileReport(String bpid,
         LinkedList<ScanInfo> report, ReportCompiler reportCompiler)
         throws InterruptedException, IOException {
