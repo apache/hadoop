@@ -23,6 +23,7 @@ import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.RandomAccessFile;
 import java.nio.channels.ClosedChannelException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -58,6 +60,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.CloseableReferenceCount;
+import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -1016,6 +1019,42 @@ public class FsVolumeImpl implements FsVolumeSpi {
   
   DatanodeStorage toDatanodeStorage() {
     return new DatanodeStorage(storageID, DatanodeStorage.State.NORMAL, storageType);
+  }
+
+
+  @Override
+  public byte[] loadLastPartialChunkChecksum(
+      File blockFile, File metaFile) throws IOException {
+    // readHeader closes the temporary FileInputStream.
+    DataChecksum dcs = BlockMetadataHeader
+        .readHeader(metaFile).getChecksum();
+    final int checksumSize = dcs.getChecksumSize();
+    final long onDiskLen = blockFile.length();
+    final int bytesPerChecksum = dcs.getBytesPerChecksum();
+
+    if (onDiskLen % bytesPerChecksum == 0) {
+      // the last chunk is a complete one. No need to preserve its checksum
+      // because it will not be modified.
+      return null;
+    }
+
+    long offsetInChecksum = BlockMetadataHeader.getHeaderSize() +
+        (onDiskLen / bytesPerChecksum) * checksumSize;
+    byte[] lastChecksum = new byte[checksumSize];
+    try (RandomAccessFile raf = new RandomAccessFile(metaFile, "r")) {
+      raf.seek(offsetInChecksum);
+      int readBytes = raf.read(lastChecksum, 0, checksumSize);
+      if (readBytes == -1) {
+        throw new IOException("Expected to read " + checksumSize +
+            " bytes from offset " + offsetInChecksum +
+            " but reached end of file.");
+      } else if (readBytes != checksumSize) {
+        throw new IOException("Expected to read " + checksumSize +
+            " bytes from offset " + offsetInChecksum + " but read " +
+            readBytes + " bytes.");
+      }
+    }
+    return lastChecksum;
   }
 }
 

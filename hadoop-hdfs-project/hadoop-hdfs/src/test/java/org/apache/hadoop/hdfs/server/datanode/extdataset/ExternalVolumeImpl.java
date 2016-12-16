@@ -92,6 +92,12 @@ public class ExternalVolumeImpl implements FsVolumeSpi {
   }
 
   @Override
+  public byte[] loadLastPartialChunkChecksum(
+      File blockFile, File metaFile) throws IOException {
+    return null;
+  }
+
+  @Override
   public BlockIterator loadBlockIterator(String bpid, String name)
       throws IOException {
     return null;

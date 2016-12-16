@@ -1169,30 +1169,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
-
-  private byte[] loadLastPartialChunkChecksum(
-      File blockFile, File metaFile) throws IOException {
-    DataChecksum dcs = BlockMetadataHeader.readHeader(metaFile).getChecksum();
-    final int checksumSize = dcs.getChecksumSize();
-    final long onDiskLen = blockFile.length();
-    final int bytesPerChecksum = dcs.getBytesPerChecksum();
-
-    if (onDiskLen % bytesPerChecksum == 0) {
-      // the last chunk is a complete one. No need to preserve its checksum
-      // because it will not be modified.
-      return null;
-    }
-
-    int offsetInChecksum = BlockMetadataHeader.getHeaderSize() +
-        (int)(onDiskLen / bytesPerChecksum * checksumSize);
-    byte[] lastChecksum = new byte[checksumSize];
-    try (RandomAccessFile raf = new RandomAccessFile(metaFile, "r")) {
-      raf.seek(offsetInChecksum);
-      raf.read(lastChecksum, 0, checksumSize);
-    }
-    return lastChecksum;
-  }
-
   /** Append to a finalized replica
    * Change a finalized replica to be a RBW replica and 
    * bump its generation stamp to be the newGS
@@ -1231,7 +1207,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           v, newBlkFile.getParentFile(), Thread.currentThread(), bytesReserved);
 
       // load last checksum and datalen
-      byte[] lastChunkChecksum = loadLastPartialChunkChecksum(
+      byte[] lastChunkChecksum = v.loadLastPartialChunkChecksum(
           replicaInfo.getBlockFile(), replicaInfo.getMetaFile());
       newReplicaInfo.setLastChecksumAndDataLen(
           replicaInfo.getNumBytes(), lastChunkChecksum);
@@ -1619,7 +1595,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       // load last checksum and datalen
       final File destMeta = FsDatasetUtil.getMetaFile(dest,
           b.getGenerationStamp());
-      byte[] lastChunkChecksum = loadLastPartialChunkChecksum(dest, destMeta);
+      byte[] lastChunkChecksum = v.loadLastPartialChunkChecksum(dest, destMeta);
       rbw.setLastChecksumAndDataLen(numBytes, lastChunkChecksum);
       // overwrite the RBW in the volume map
       volumeMap.add(b.getBlockPoolId(), rbw);
