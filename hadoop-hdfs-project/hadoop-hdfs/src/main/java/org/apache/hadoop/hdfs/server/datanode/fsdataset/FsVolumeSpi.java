@@ -402,6 +402,17 @@ public interface FsVolumeSpi
   }
 
   /**
+   * Load last partial chunk checksum from checksum file.
+   * Need to be called with FsDataset lock acquired.
+   * @param blockFile
+   * @param metaFile
+   * @return the last partial checksum
+   * @throws IOException
+   */
+  byte[] loadLastPartialChunkChecksum(File blockFile, File metaFile)
+      throws IOException;
+
+  /**
    * Compile a list of {@link ScanInfo} for the blocks in
    * the block pool with id {@code bpid}.
    *

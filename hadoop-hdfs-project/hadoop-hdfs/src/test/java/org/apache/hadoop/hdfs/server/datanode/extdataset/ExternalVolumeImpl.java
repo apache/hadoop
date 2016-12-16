@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.extdataset;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
@@ -105,6 +106,12 @@ public class ExternalVolumeImpl implements FsVolumeSpi {
 
   @Override
   public DF getUsageStats(Configuration conf) {
+    return null;
+  }
+
+  @Override
+  public byte[] loadLastPartialChunkChecksum(
+      File blockFile, File metaFile) throws IOException {
     return null;
   }
 

@@ -1119,7 +1119,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
 
-  private byte[] loadLastPartialChunkChecksum(
+  @Override
+  public byte[] loadLastPartialChunkChecksum(
       File blockFile, File metaFile) throws IOException {
     // readHeader closes the temporary FileInputStream.
     DataChecksum dcs = BlockMetadataHeader
@@ -1135,13 +1136,22 @@ public class FsVolumeImpl implements FsVolumeSpi {
       return null;
     }
 
-    int offsetInChecksum = BlockMetadataHeader.getHeaderSize() +
-        (int)(onDiskLen / bytesPerChecksum * checksumSize);
+    long offsetInChecksum = BlockMetadataHeader.getHeaderSize() +
+        (onDiskLen / bytesPerChecksum) * checksumSize;
     byte[] lastChecksum = new byte[checksumSize];
     try (RandomAccessFile raf = fileIoProvider.getRandomAccessFile(
         this, metaFile, "r")) {
       raf.seek(offsetInChecksum);
-      raf.read(lastChecksum, 0, checksumSize);
+      int readBytes = raf.read(lastChecksum, 0, checksumSize);
+      if (readBytes == -1) {
+        throw new IOException("Expected to read " + checksumSize +
+            " bytes from offset " + offsetInChecksum +
+            " but reached end of file.");
+      } else if (readBytes != checksumSize) {
+        throw new IOException("Expected to read " + checksumSize +
+            " bytes from offset " + offsetInChecksum + " but read " +
+            readBytes + " bytes.");
+      }
     }
     return lastChecksum;
   }
