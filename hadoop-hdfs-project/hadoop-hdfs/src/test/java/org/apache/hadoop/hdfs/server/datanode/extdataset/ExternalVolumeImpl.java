@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.extdataset;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
@@ -26,6 +27,7 @@ import java.util.LinkedList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ReportCompiler;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
@@ -108,9 +110,20 @@ public class ExternalVolumeImpl implements FsVolumeSpi {
   }
 
   @Override
+  public byte[] loadLastPartialChunkChecksum(
+      File blockFile, File metaFile) throws IOException {
+    return null;
+  }
+
+  @Override
   public LinkedList<ScanInfo> compileReport(String bpid,
       LinkedList<ScanInfo> report, ReportCompiler reportCompiler)
       throws InterruptedException, IOException {
+    return null;
+  }
+
+  @Override
+  public FileIoProvider getFileIoProvider() {
     return null;
   }
 

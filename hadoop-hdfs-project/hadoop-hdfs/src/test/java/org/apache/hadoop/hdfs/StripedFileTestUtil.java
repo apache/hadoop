@@ -527,6 +527,30 @@ public class StripedFileTestUtil {
   }
 
   /**
+   * Wait for the reconstruction to be finished when the file has
+   * corrupted blocks. The function can take care file with any length.
+   */
+  public static void waitForAllReconstructionFinished(Path file,
+      DistributedFileSystem fs, long expectedBlocks) throws Exception {
+    LOG.info("Waiting for reconstruction to be finished for the file:" + file
+        + ", expectedBlocks:" + expectedBlocks);
+    final int attempts = 60;
+    for (int i = 0; i < attempts; i++) {
+      int totalBlocks = 0;
+      LocatedBlocks locatedBlocks = getLocatedBlocks(file, fs);
+      for (LocatedBlock locatedBlock: locatedBlocks.getLocatedBlocks()) {
+        DatanodeInfo[] storageInfos = locatedBlock.getLocations();
+        totalBlocks += storageInfos.length;
+      }
+      if (totalBlocks >= expectedBlocks) {
+        return;
+      }
+      Thread.sleep(1000);
+    }
+    throw new IOException("Time out waiting for EC block reconstruction.");
+  }
+
+  /**
    * Get the located blocks of a file.
    */
   public static LocatedBlocks getLocatedBlocks(Path file,

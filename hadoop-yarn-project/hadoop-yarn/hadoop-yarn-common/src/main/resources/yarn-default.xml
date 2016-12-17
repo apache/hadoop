@@ -2751,7 +2751,7 @@
     <description>
     Setting that controls whether distributed scheduling is enabled.
     </description>
-    <name>yarn.distributed-scheduling.enabled</name>
+    <name>yarn.nodemanager.distributed-scheduling.enabled</name>
     <value>false</value>
   </property>
 
@@ -2760,7 +2760,7 @@
       Setting that controls whether opportunistic container allocation
       is enabled.
     </description>
-    <name>yarn.opportunistic-container-allocation.enabled</name>
+    <name>yarn.resourcemanager.opportunistic-container-allocation.enabled</name>
     <value>false</value>
   </property>
 
@@ -2769,7 +2769,7 @@
     Number of nodes to be used by the Opportunistic Container Allocator for
     dispatching containers during container allocation.
     </description>
-    <name>yarn.opportunistic-container-allocation.nodes-used</name>
+    <name>yarn.resourcemanager.opportunistic-container-allocation.nodes-used</name>
     <value>10</value>
   </property>
 
@@ -2777,7 +2777,7 @@
     <description>
     Frequency for computing least loaded NMs.
     </description>
-    <name>yarn.nm-container-queuing.sorting-nodes-interval-ms</name>
+    <name>yarn.resourcemanager.nm-container-queuing.sorting-nodes-interval-ms</name>
     <value>1000</value>
   </property>
 
@@ -2785,7 +2785,7 @@
     <description>
     Comparator for determining node load for Distributed Scheduling.
     </description>
-    <name>yarn.nm-container-queuing.load-comparator</name>
+    <name>yarn.resourcemanager.nm-container-queuing.load-comparator</name>
     <value>QUEUE_LENGTH</value>
   </property>
 
@@ -2793,7 +2793,7 @@
     <description>
     Value of standard deviation used for calculation of queue limit thresholds.
     </description>
-    <name>yarn.nm-container-queuing.queue-limit-stdev</name>
+    <name>yarn.resourcemanager.nm-container-queuing.queue-limit-stdev</name>
     <value>1.0f</value>
   </property>
 
@@ -2801,32 +2801,32 @@
     <description>
     Min length of container queue at NodeManager.
     </description>
-    <name>yarn.nm-container-queuing.min-queue-length</name>
-    <value>1</value>
+    <name>yarn.resourcemanager.nm-container-queuing.min-queue-length</name>
+    <value>5</value>
   </property>
 
   <property>
     <description>
     Max length of container queue at NodeManager.
     </description>
-    <name>yarn.nm-container-queuing.max-queue-length</name>
-    <value>10</value>
+    <name>yarn.resourcemanager.nm-container-queuing.max-queue-length</name>
+    <value>15</value>
   </property>
 
   <property>
     <description>
     Min queue wait time for a container at a NodeManager.
     </description>
-    <name>yarn.nm-container-queuing.min-queue-wait-time-ms</name>
-    <value>1</value>
+    <name>yarn.resourcemanager.nm-container-queuing.min-queue-wait-time-ms</name>
+    <value>10</value>
   </property>
 
   <property>
     <description>
     Max queue wait time for a container queue at a NodeManager.
     </description>
-    <name>yarn.nm-container-queuing.max-queue-wait-time-ms</name>
-    <value>10</value>
+    <name>yarn.resourcemanager.nm-container-queuing.max-queue-wait-time-ms</name>
+    <value>100</value>
   </property>
 
   <property>

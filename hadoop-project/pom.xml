@@ -27,6 +27,7 @@
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
+  <inceptionYear>2008</inceptionYear>
 
   <properties>
     <!-- Set the Release year during release -->
@@ -114,6 +115,7 @@
     <maven-compiler-plugin.version>3.1</maven-compiler-plugin.version>
     <maven-install-plugin.version>2.5.1</maven-install-plugin.version>
     <maven-resources-plugin.version>2.6</maven-resources-plugin.version>
+    <maven-shade-plugin.version>2.4.3</maven-shade-plugin.version>
     <maven-jar-plugin.version>2.5</maven-jar-plugin.version>
     <maven-war-plugin.version>2.4</maven-war-plugin.version>
     <maven-source-plugin.version>2.3</maven-source-plugin.version>
@@ -128,7 +130,7 @@
     <aws-java-sdk.version>1.11.45</aws-java-sdk.version>
     <!-- the version of Hadoop declared in the version resources; can be overridden
     so that Hadoop 3.x can declare itself a 2.x artifact. -->
-    <declared.hadoop.version>${pom.version}</declared.hadoop.version>
+    <declared.hadoop.version>${project.version}</declared.hadoop.version>
   </properties>
 
   <dependencyManagement>
@@ -146,6 +148,44 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-annotations</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-client-modules</artifactId>
+        <version>${project.version}</version>
+        <type>pom</type>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-client-api</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-client-check-invariants</artifactId>
+        <version>${project.version}</version>
+        <type>pom</type>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-client-check-test-invariants</artifactId>
+        <version>${project.version}</version>
+        <type>pom</type>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-client-integration-tests</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-client-runtime</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-client-minicluster</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -1245,6 +1285,40 @@
     <pluginManagement>
       <plugins>
         <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>build-helper-maven-plugin</artifactId>
+          <version>${build-helper-maven-plugin.version}</version>
+        </plugin>
+        <!-- We include the configuration for license-maven-plugin to correct
+             maven-shade-plugin generated poms because it's always the same. We
+             can't simply configure the plugin because we must ensure execution
+             happens in the package phase after the shade plugin runs.
+          -->
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>license-maven-plugin</artifactId>
+          <version>1.10</version>
+          <configuration>
+            <canUpdateCopyright>false</canUpdateCopyright>
+            <roots><root>${project.basedir}</root></roots>
+          </configuration>
+          <executions>
+            <execution>
+              <id>update-pom-license</id>
+              <goals>
+                <goal>update-file-header</goal>
+              </goals>
+              <phase>package</phase>
+              <configuration>
+                <licenseName>apache_v2</licenseName>
+                <includes>
+                  <include>dependency-reduced-pom.xml</include>
+                </includes>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
           <artifactId>maven-clean-plugin</artifactId>
           <version>${maven-clean-plugin.version}</version>
         </plugin>
@@ -1260,13 +1334,8 @@
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-dependency-plugin</artifactId>
-          <version>2.2</version>
-        </plugin>
-        <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>build-helper-maven-plugin</artifactId>
-          <version>${build-helper-maven-plugin.version}</version>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>${maven-shade-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -1355,6 +1424,19 @@
     </pluginManagement>
 
     <plugins>
+      <plugin>
+        <artifactId>maven-clean-plugin</artifactId>
+        <configuration>
+          <filesets>
+            <fileset>
+              <directory>${project.basedir}</directory>
+              <includes>
+                <include>dependency-reduced-pom.xml</include>
+              </includes>
+            </fileset>
+          </filesets>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
