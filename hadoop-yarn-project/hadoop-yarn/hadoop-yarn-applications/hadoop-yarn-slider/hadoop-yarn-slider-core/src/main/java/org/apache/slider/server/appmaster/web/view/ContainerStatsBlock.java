@@ -32,6 +32,7 @@ import org.apache.slider.api.types.ComponentInformation;
 import org.apache.slider.server.appmaster.state.RoleInstance;
 import org.apache.slider.server.appmaster.web.WebAppApi;
 
+import javax.annotation.Nonnull;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -163,7 +164,7 @@ public class ContainerStatsBlock extends SliderHamletBlock {
   protected static <T> Function<Entry<String,T>,Entry<TableContent,T>> toTableContentFunction() {
     return new Function<Entry<String,T>,Entry<TableContent,T>>() {
       @Override
-      public Entry<TableContent,T> apply(Entry<String,T> input) {
+      public Entry<TableContent,T> apply(@Nonnull Entry<String,T> input) {
         return Maps.immutableEntry(new TableContent(input.getKey()), input.getValue());
       }
     };

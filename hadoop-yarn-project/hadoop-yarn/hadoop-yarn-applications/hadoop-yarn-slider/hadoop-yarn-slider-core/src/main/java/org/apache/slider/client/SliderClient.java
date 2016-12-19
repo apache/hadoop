@@ -192,10 +192,10 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -1322,9 +1322,9 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   }
 
   private void initializeOutputStream(String outFile)
-      throws FileNotFoundException {
+      throws IOException {
     if (outFile != null) {
-      clientOutputStream = new PrintStream(new FileOutputStream(outFile));
+      clientOutputStream = new PrintStream(outFile, "UTF-8");
     } else {
       clientOutputStream = System.out;
     }
@@ -3299,7 +3299,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
           int updateCount = Integer.parseInt(updateCountStr);
           // if component was specified before, get the current count
           if (component.get(COMPONENT_INSTANCES) != null) {
-            currentCount = Integer.valueOf(component.get(COMPONENT_INSTANCES));
+            currentCount = Integer.parseInt(component.get(COMPONENT_INSTANCES));
             if (currentCount + updateCount < 0) {
               throw new BadCommandArgumentsException("The requested count " +
                   "of \"%s\" for role %s makes the total number of " +
@@ -3610,15 +3610,15 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     // as this is an API entry point, validate
     // the arguments
     args.validate();
-    RegistryOperations operations = getRegistryOperations();
     String path = SliderRegistryUtils.resolvePath(args.path);
     ServiceRecordMarshal serviceRecordMarshal = new ServiceRecordMarshal();
     try {
       if (args.list) {
         File destDir = args.destdir;
-        if (destDir != null) {
-          destDir.mkdirs();
+        if (destDir != null && !destDir.exists() && !destDir.mkdirs()) {
+          throw new IOException("Failed to create directory: " + destDir);
         }
+
 
         Map<String, ServiceRecord> recordMap;
         Map<String, RegistryPathStatus> znodes;
@@ -3656,9 +3656,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
           } else {
             String filename = RegistryPathUtils.lastPathEntry(name) + ".json";
             File jsonFile = new File(destDir, filename);
-            write(jsonFile,
-                serviceRecordMarshal.toBytes(instance),
-                true);
+            write(jsonFile, serviceRecordMarshal.toBytes(instance));
           }
         }
       } else  {
@@ -3669,7 +3667,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
           outFile = new File(args.destdir, RegistryPathUtils.lastPathEntry(path));
         }
         if (outFile != null) {
-          write(outFile, serviceRecordMarshal.toBytes(instance), true);
+          write(outFile, serviceRecordMarshal.toBytes(instance));
         } else {
           println(serviceRecordMarshal.toJson(instance));
         }
@@ -4062,11 +4060,13 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
   private int actionKDiag(ActionKDiagArgs args)
     throws Exception {
-    PrintWriter out = new PrintWriter(System.err);
+    PrintStream out;
     boolean closeStream = false;
     if (args.out != null) {
-      out = new PrintWriter(new FileOutputStream(args.out));
+      out = new PrintStream(args.out, "UTF-8");
       closeStream = true;
+    } else {
+      out = System.err;
     }
     try {
       KerberosDiags kdiags = new KerberosDiags(getConfig(),
@@ -4137,7 +4137,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     PrintStream out = null;
     try {
       if (registryArgs.out != null) {
-        out = new PrintStream(new FileOutputStream(registryArgs.out));
+        out = new PrintStream(registryArgs.out, "UTF-8");
       } else {
         out = System.out;
       }
@@ -4145,11 +4145,8 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
         if (!registryArgs.verbose) {
           out.println(configName);
         } else {
-          PublishedConfiguration published =
-              configurations.get(configName);
-          out.printf("%s: %s\n",
-              configName,
-              published.description);
+          PublishedConfiguration published = configurations.get(configName);
+          out.printf("%s: %s%n", configName, published.description);
         }
       }
     } finally {
@@ -4178,7 +4175,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     boolean streaming = false;
     try {
       if (registryArgs.out != null) {
-        out = new PrintStream(new FileOutputStream(registryArgs.out));
+        out = new PrintStream(registryArgs.out, "UTF-8");
         streaming = true;
         log.debug("Saving output to {}", registryArgs.out);
       } else {
@@ -4193,9 +4190,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
           out.println(exportName);
         } else {
           PublishedExports published = exports.get(exportName);
-          out.printf("%s: %s\n",
-              exportName,
-              published.description);
+          out.printf("%s: %s%n", exportName, published.description);
         }
       }
     } finally {
@@ -4401,9 +4396,8 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
    * Output to standard out/stderr (implementation specific detail)
    * @param src source
    */
-  @SuppressWarnings("UseOfSystemOutOrSystemErr")
   private static void print(CharSequence src) {
-    clientOutputStream.append(src);
+    clientOutputStream.print(src);
   }
 
   /**
@@ -4411,8 +4405,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
    * @param message message
    */
   private static void println(String message) {
-    print(message);
-    print("\n");
+    clientOutputStream.println(message);
   }
   /**
    * Output to standard out/stderr with a newline after, formatted
@@ -4420,8 +4413,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
    * @param args arguments for string formatting
    */
   private static void println(String message, Object ... args) {
-    print(String.format(message, args));
-    print("\n");
+    clientOutputStream.println(String.format(message, args));
   }
 
   /**
@@ -4495,12 +4487,6 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
 
   private int actionHelp(String actionName) throws YarnException, IOException {
     throw new UsageException(CommonArgs.usage(serviceArgs, actionName));
-  }
-
-  private int actionHelp(String errMsg, String actionName)
-      throws YarnException, IOException {
-    throw new UsageException("%s %s", errMsg, CommonArgs.usage(serviceArgs,
-        actionName));
   }
 
   /**

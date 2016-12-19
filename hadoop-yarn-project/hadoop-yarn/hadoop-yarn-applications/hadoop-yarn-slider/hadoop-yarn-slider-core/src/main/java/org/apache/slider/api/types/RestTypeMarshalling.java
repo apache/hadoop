@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.slider.api.proto;
+package org.apache.slider.api.types;
 
+import org.apache.slider.api.proto.Messages;
 import org.apache.slider.api.types.ApplicationLivenessInformation;
 import org.apache.slider.api.types.ComponentInformation;
 import org.apache.slider.api.types.ContainerInformation;
@@ -66,7 +67,7 @@ public class RestTypeMarshalling {
     info.name = wire.getName();
     info.priority = wire.getPriority();
     info.placementPolicy = wire.getPlacementPolicy();
-    
+
     info.actual = wire.getActual();
     info.completed = wire.getCompleted();
     info.desired = wire.getDesired();
@@ -95,7 +96,7 @@ public class RestTypeMarshalling {
     builder.setName(info.name);
     builder.setPriority(info.priority);
     builder.setPlacementPolicy(info.placementPolicy);
-    
+
     builder.setActual(info.actual);
     builder.setCompleted(info.completed);
     builder.setDesired(info.desired);
@@ -269,7 +270,7 @@ public class RestTypeMarshalling {
       IOException {
     return new ConfTreeSerDeser().fromJson(wire.getJson());
   }
-  
+
   public static ConfTreeOperations unmarshallToCTO(Messages.WrappedJsonProto wire) throws
       IOException {
     return new ConfTreeOperations(new ConfTreeSerDeser().fromJson(wire.getJson()));

@@ -47,21 +47,6 @@ public class BoolMetric implements Metric, Gauge<Integer> {
     return value.get() ? 1 : 0;
   }
 
-  /**
-   * Evaluate from a string. Returns true if the string is considered to match 'true',
-   * false otherwise.
-   * @param s source
-   * @return true if the input parses to an integer other than 0. False if it doesn't parse
-   * or parses to 0.
-   */
-  public static boolean fromString(String s) {
-    try {
-      return Integer.valueOf(s) != 0;
-    } catch (NumberFormatException e) {
-      return false;
-    }
-  }
-
   @Override
   public String toString() {
     return value.toString();

@@ -142,7 +142,6 @@ public class InstanceBuilder {
     md.put(StatusKeys.INFO_CREATE_TIME_HUMAN, SliderUtils.toGMTString(time));
     md.put(StatusKeys.INFO_CREATE_TIME_MILLIS, Long.toString(time));
 
-    MapOperations globalOptions = internalOps.getGlobalOptions();
     BuildHelper.addBuildMetadata(md, "create");
     SliderUtils.setInfoTime(md,
         StatusKeys.INFO_CREATE_TIME_HUMAN,

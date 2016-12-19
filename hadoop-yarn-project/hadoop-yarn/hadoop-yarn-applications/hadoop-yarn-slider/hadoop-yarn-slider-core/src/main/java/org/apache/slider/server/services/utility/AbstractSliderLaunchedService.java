@@ -41,7 +41,6 @@ public abstract class AbstractSliderLaunchedService extends
   protected AbstractSliderLaunchedService(String name) {
     super(name);
     // make sure all the yarn configs get loaded
-    YarnConfiguration conf = new YarnConfiguration();
     ConfigHelper.registerDeprecatedConfigItems();
   }
 
@@ -74,7 +73,6 @@ public abstract class AbstractSliderLaunchedService extends
       throws BadConfigException {
 
     // push back the slider registry entry if needed
-    String quorum = lookupZKQuorum();
     RegistryOperations registryWriterService =
         createRegistryOperationsInstance();
     deployChildService(registryWriterService);

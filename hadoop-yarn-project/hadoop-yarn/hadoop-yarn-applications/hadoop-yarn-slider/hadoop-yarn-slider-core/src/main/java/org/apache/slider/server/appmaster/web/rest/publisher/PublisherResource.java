@@ -48,6 +48,7 @@ import java.net.URLClassLoader;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -122,9 +123,9 @@ public class PublisherResource extends AbstractSliderResource {
   @GET
   @Path(CLASSPATH)
   @Produces({MediaType.APPLICATION_JSON})
-  public Set<URL> getAMClassPath() {
+  public List<URL> getAMClassPath() {
     URL[] urls = ((URLClassLoader) getClass().getClassLoader()).getURLs();
-    return new LinkedHashSet<URL>(Arrays.asList(urls));
+    return Arrays.asList(urls);
   }
 
   @GET

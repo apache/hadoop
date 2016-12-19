@@ -147,7 +147,9 @@ public class AppDefinitionPersister {
 
       File tempDir = Files.createTempDir();
       File pkgSrcDir = new File(tempDir, "default");
-      pkgSrcDir.mkdirs();
+      if (!pkgSrcDir.exists() && !pkgSrcDir.mkdirs()) {
+        throw new IOException("Failed to create directory: " + pkgSrcDir);
+      }
       File destMetaInfo = new File(pkgSrcDir, "metainfo.json");
       if (isFileUsed) {
         if (buildInfo.appMetaInfo.getName().endsWith(".xml")) {
@@ -194,12 +196,13 @@ public class AppDefinitionPersister {
 
       List<String> addons = new ArrayList<String>();
       Map<String, String> addonMap = buildInfo.addonDelegate.getAddonMap();
-      for (String key : addonMap.keySet()) {
-        File defPath = new File(addonMap.get(key));
-        if (SliderUtils.isUnset(addonMap.get(key))) {
+      for (Map.Entry<String, String > entry : addonMap.entrySet()) {
+        String key = entry.getKey();
+        String value = entry.getValue();
+        if (SliderUtils.isUnset(value)) {
           throw new BadConfigException("Invalid path for addon package " + key);
         }
-
+        File defPath = new File(value);
         if (!defPath.exists()) {
           throw new BadConfigException("addon folder or package path is not valid.");
         }
@@ -234,7 +237,7 @@ public class AppDefinitionPersister {
   }
 
   // Helper class to hold details for the app and addon packages
-  public class AppDefinition {
+  static class AppDefinition {
     // The target folder where the package will be stored
     public Path targetFolderInFs;
     // The on disk location of the app def package or folder

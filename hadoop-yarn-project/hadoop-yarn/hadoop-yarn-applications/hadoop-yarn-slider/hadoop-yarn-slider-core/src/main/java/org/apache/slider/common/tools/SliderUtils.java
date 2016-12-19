@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.GlobFilter;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
@@ -310,10 +309,6 @@ public final class SliderUtils {
     }
     String class_file = my_class.getName().replaceAll("\\.", "/") + ".class";
     Enumeration<URL> urlEnumeration = loader.getResources(class_file);
-    if (urlEnumeration == null) {
-      throw new IOException("Unable to find resources for class " + my_class);
-    }
-
     for (; urlEnumeration.hasMoreElements(); ) {
       URL url = urlEnumeration.nextElement();
       if ("jar".equals(url.getProtocol())) {
@@ -756,10 +751,10 @@ public final class SliderUtils {
   public static String containersToString(
       List<ContainerInformation> containers, String version,
       Set<String> components) {
-    String containerf = "  %-28s  %30s  %45s  %s\n";
+    String containerf = "  %-28s  %30s  %45s  %s%n";
     StringBuilder builder = new StringBuilder(512);
-    builder.append("Containers:\n");
-    builder.append(String.format("  %-28s  %30s  %45s  %s\n", "Component Name",
+    builder.append("Containers:%n");
+    builder.append(String.format("  %-28s  %30s  %45s  %s%n", "Component Name",
         "App Version", "Container Id", "Container Info/Logs"));
     for (ContainerInformation container : containers) {
       if (filter(container.appVersion, version)
@@ -969,7 +964,7 @@ public final class SliderUtils {
    */
   public static Map<String, String> mergeMapsIgnoreDuplicateKeysAndPrefixes(
       Map<String, String> first, Map<String, String> second,
-      String... prefixes) {
+      List<String> prefixes) {
     Preconditions.checkArgument(first != null, "Null 'first' value");
     Preconditions.checkArgument(second != null, "Null 'second' value");
     Preconditions.checkArgument(prefixes != null, "Null 'prefixes' value");
@@ -2119,15 +2114,16 @@ public final class SliderUtils {
             is = new ByteArrayInputStream(content);
           } else {
             log.debug("Size unknown. Reading {}", zipEntry.getName());
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            while (true) {
-              int byteRead = zis.read();
-              if (byteRead == -1) {
-                break;
+            try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+              while (true) {
+                int byteRead = zis.read();
+                if (byteRead == -1) {
+                  break;
+                }
+                baos.write(byteRead);
               }
-              baos.write(byteRead);
+              is = new ByteArrayInputStream(baos.toByteArray());
             }
-            is = new ByteArrayInputStream(baos.toByteArray());
           }
           done = true;
         }
@@ -2205,90 +2201,26 @@ public final class SliderUtils {
   }
 
   /**
-   * Look for the windows executable and check it has the right headers.
-   * <code>File.canRead()</code> doesn't work on windows, so the reading
-   * is mandatory.
-   *
-   * @param program program name for errors
-   * @param exe executable
-   * @throws IOException IOE
-   */
-  public static void verifyWindowsExe(String program, File exe)
-      throws IOException {
-    verifyIsFile(program, exe);
-
-    verifyFileSize(program, exe, 0x100);
-
-    // now read two bytes and verify the header.
-    try(FileReader reader = new FileReader(exe)) {
-      int[] header = new int[2];
-      header[0] = reader.read();
-      header[1] = reader.read();
-      if ((header[0] != 'M' || header[1] != 'Z')) {
-        throw new FileNotFoundException(program
-                                        + " at " + exe
-                                        + " is not a windows executable file");
-      }
-    }
-  }
-
-  /**
-   * Verify that a Unix exe works
-   * @param program program name for errors
-   * @param exe executable
-   * @throws IOException IOE
-
-   */
-  public static void verifyUnixExe(String program, File exe)
-      throws IOException {
-    verifyIsFile(program, exe);
-
-    // read flag
-    if (!exe.canRead()) {
-      throw new IOException("Cannot read " + program + " at " + exe);
-    }
-    // exe flag
-    if (!exe.canExecute()) {
-      throw new IOException("Cannot execute " + program + " at " + exe);
-    }
-  }
-
-  /**
-   * Validate an executable
-   * @param program program name for errors
-   * @param exe program to look at
-   * @throws IOException
-   */
-  public static void validateExe(String program, File exe) throws IOException {
-    if (!Shell.WINDOWS) {
-      verifyWindowsExe(program, exe);
-    } else {
-      verifyUnixExe(program, exe);
-    }
-  }
-
-  /**
    * Write bytes to a file
    * @param outfile output file
    * @param data data to write
-   * @param createParent flag to indicate that the parent dir should
-   * be created
    * @throws IOException on any IO problem
    */
-  public static void write(File outfile, byte[] data, boolean createParent)
+  public static void write(File outfile, byte[] data)
       throws IOException {
     File parentDir = outfile.getCanonicalFile().getParentFile();
     if (parentDir == null) {
       throw new IOException(outfile.getPath() + " has no parent dir");
     }
-    if (createParent) {
-      parentDir.mkdirs();
+    if (!parentDir.exists()) {
+      if(!parentDir.mkdirs()) {
+        throw new IOException("Failed to create parent directory " + parentDir);
+      }
     }
     SliderUtils.verifyIsDir(parentDir, log);
     try(FileOutputStream out = new FileOutputStream(outfile)) {
       out.write(data);
     }
-
   }
 
   /**

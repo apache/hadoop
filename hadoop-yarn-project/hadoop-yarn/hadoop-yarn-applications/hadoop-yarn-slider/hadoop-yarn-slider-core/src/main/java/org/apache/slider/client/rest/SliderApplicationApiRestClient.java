@@ -297,20 +297,6 @@ public class SliderApplicationApiRestClient extends BaseRestClient
         .type(MediaType.APPLICATION_JSON_TYPE)
         .post(PingInformation.class, f);
   }
-  
-  /**
-   * Ping as a POST
-   * @param text text to include
-   * @return the response
-   * @throws IOException on any failure
-   */
-  public PingInformation pingPut(String text) throws IOException {
-    WebResource pingResource = applicationResource(ACTION_PING);
-    Form f = new Form();
-    return pingResource
-        .type(MediaType.TEXT_PLAIN)
-        .put(PingInformation.class, text);
-  }
 
   @Override
   public void stop(String text) throws IOException {

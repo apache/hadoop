@@ -321,10 +321,6 @@ public final class RoleStatus implements Cloneable, MetricSet {
     return completed.get();
   }
 
-  public synchronized void setCompleted(int completed) {
-    this.completed.set(completed);
-  }
-
   public long incCompleted() {
     return completed.incrementAndGet();
   }

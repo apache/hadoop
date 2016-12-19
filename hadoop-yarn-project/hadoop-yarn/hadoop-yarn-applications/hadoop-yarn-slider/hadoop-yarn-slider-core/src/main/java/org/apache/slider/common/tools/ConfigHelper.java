@@ -194,7 +194,7 @@ public class ConfigHelper {
     byte[] data = loadBytes(fs, path);
     //this is here to track down a parse issue
     //related to configurations
-    String s = new String(data, 0, data.length);
+    String s = new String(data, 0, data.length, "UTF-8");
     log.debug("XML resource {} is \"{}\"", path, s);
 /* JDK7
     try (ByteArrayInputStream in = new ByteArrayInputStream(data)) {

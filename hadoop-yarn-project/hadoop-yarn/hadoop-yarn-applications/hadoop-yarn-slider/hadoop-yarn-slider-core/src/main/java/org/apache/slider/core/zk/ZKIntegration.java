@@ -43,14 +43,14 @@ public class ZKIntegration implements Watcher, Closeable {
 /**
  * Base path for services
  */
-  public static String ZK_SERVICES = "services";
+  public static final String ZK_SERVICES = "services";
   /**
    * Base path for all Slider references
    */
-  public static String ZK_SLIDER = "slider";
-  public static String ZK_USERS = "users";
-  public static String SVC_SLIDER = "/" + ZK_SERVICES + "/" + ZK_SLIDER;
-  public static String SVC_SLIDER_USERS = SVC_SLIDER + "/" + ZK_USERS;
+  public static final String ZK_SLIDER = "slider";
+  public static final String ZK_USERS = "users";
+  public static final String SVC_SLIDER = "/" + ZK_SERVICES + "/" + ZK_SLIDER;
+  public static final String SVC_SLIDER_USERS = SVC_SLIDER + "/" + ZK_USERS;
 
   public static final List<String> ZK_USERS_PATH_LIST = new ArrayList<String>();
   static {
@@ -59,7 +59,7 @@ public class ZKIntegration implements Watcher, Closeable {
     ZK_USERS_PATH_LIST.add(ZK_USERS);
   }
 
-  public static int SESSION_TIMEOUT = 30000;
+  public static final int SESSION_TIMEOUT = 30000;
   protected static final Logger log =
     LoggerFactory.getLogger(ZKIntegration.class);
   private ZooKeeper zookeeper;
@@ -277,14 +277,6 @@ public class ZKIntegration implements Watcher, Closeable {
       createPath(history, entry, acl, createMode);
       history = history + entry + "/";
     }
-  }
-
-/**
- * Blocking enum of users
- * @return an unordered list of clusters under a user
- */
-  public List<String> getClusters() throws KeeperException, InterruptedException {
-    return zookeeper.getChildren(userPath, null);
   }
 
   /**

@@ -62,59 +62,8 @@ public class AMWebClient {
     restClient = new BaseRestClient(binding.createJerseyClient());
 
   }
-
-
-  private static URLConnectionClientHandler getUrlConnectionClientHandler() {
-    return new URLConnectionClientHandler(new HttpURLConnectionFactory() {
-      @Override
-      public HttpURLConnection getHttpURLConnection(URL url)
-          throws IOException {
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        if (connection.getResponseCode() == HttpURLConnection.HTTP_MOVED_TEMP) {
-          // is a redirect - are we changing schemes?
-          String redirectLocation = connection.getHeaderField(HttpHeaders.LOCATION);
-          String originalScheme = url.getProtocol();
-          String redirectScheme = URI.create(redirectLocation).getScheme();
-          if (!originalScheme.equals(redirectScheme)) {
-            // need to fake it out by doing redirect ourselves
-            log.info("Protocol change during redirect. Redirecting {} to URL {}",
-                     url, redirectLocation);
-            URL redirectURL = new URL(redirectLocation);
-            connection = (HttpURLConnection) redirectURL.openConnection();
-          }
-        }
-        if (connection instanceof HttpsURLConnection) {
-          log.debug("Attempting to configure HTTPS connection using client "
-                    + "configuration");
-          final SSLFactory factory;
-          final SSLSocketFactory sf;
-          final HostnameVerifier hv;
-
-          try {
-            HttpsURLConnection c = (HttpsURLConnection) connection;
-            factory = new SSLFactory(SSLFactory.Mode.CLIENT, new Configuration());
-            factory.init();
-            sf = factory.createSSLSocketFactory();
-            hv = factory.getHostnameVerifier();
-            c.setSSLSocketFactory(sf);
-            c.setHostnameVerifier(hv);
-          } catch (Exception e) {
-            log.info("Unable to configure HTTPS connection from "
-                     + "configuration.  Using JDK properties.");
-          }
-
-        }
-        return connection;
-      }
-    });
-  }
-
   public WebResource resource(String url) {
     return restClient.resource(url);
-  }
-
-  public BaseRestClient getRestClient() {
-    return restClient;
   }
 
   /**
