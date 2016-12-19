@@ -46,6 +46,12 @@
 
     <div class="col-md-10 container-fluid">
       <div class="row">
+        <div class="col-md-12">
+          {{app-timeout-bar app=model.app}}
+        </div>
+      </div>
+
+      <div class="row">
         <div class="col-md-12 container-fluid">
           <div class="panel panel-default">
             <div class="panel-heading">Basic Info</div>
@@ -116,10 +122,10 @@
               </div>
             {{else}}
               <div class="panel panel-default">
-                <div class="panel-body">
+                <div class="panel-heading">
                   Diagnostics
                 </div>
-                <div class="panel-footer">{{model.app.diagnostics}}</div>
+                <div class="panel-body">{{model.app.diagnostics}}</div>
               </div>
             {{/if}}
           </div>

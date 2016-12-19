@@ -50,6 +50,8 @@ export default DS.Model.extend({
   clusterUsagePercentage: DS.attr('number'),
   queueUsagePercentage: DS.attr('number'),
   currentAppAttemptId: DS.attr('string'),
+  remainingTimeoutInSeconds: DS.attr('number'),
+  applicationExpiryTime: DS.attr('string'),
 
   isFailed: function() {
     return this.get('finalStatus') == "FAILED"
