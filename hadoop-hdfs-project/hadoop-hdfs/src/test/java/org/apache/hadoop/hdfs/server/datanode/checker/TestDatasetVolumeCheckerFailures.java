@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.*;
 import org.apache.hadoop.util.FakeTimer;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -46,6 +47,20 @@ import static org.mockito.Mockito.*;
 public class TestDatasetVolumeCheckerFailures {
   public static final Logger LOG =LoggerFactory.getLogger(
       TestDatasetVolumeCheckerFailures.class);
+  
+  private FakeTimer timer;
+  private Configuration conf;
+  
+  private static final long MIN_DISK_CHECK_GAP_MS = 1000; // 1 second.
+  
+  @Before
+  public void commonInit() {
+    timer = new FakeTimer();
+    conf = new HdfsConfiguration();
+    conf.setTimeDuration(DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY,
+        MIN_DISK_CHECK_GAP_MS, TimeUnit.MILLISECONDS);
+   
+  }
 
   /**
    * Test timeout in {@link DatasetVolumeChecker#checkAllVolumes}.
@@ -86,8 +101,7 @@ public class TestDatasetVolumeCheckerFailures {
     final FsDatasetSpi<FsVolumeSpi> dataset =
         TestDatasetVolumeChecker.makeDataset(volumes);
 
-    DatasetVolumeChecker checker =
-        new DatasetVolumeChecker(new HdfsConfiguration(), new FakeTimer());
+    DatasetVolumeChecker checker = new DatasetVolumeChecker(conf, timer);
     Set<FsVolumeSpi> failedVolumes = checker.checkAllVolumes(dataset);
     assertThat(failedVolumes.size(), is(0));
     assertThat(checker.getNumSyncDatasetChecks(), is(0L));
@@ -103,11 +117,6 @@ public class TestDatasetVolumeCheckerFailures {
         TestDatasetVolumeChecker.makeVolumes(1, VolumeCheckResult.HEALTHY);
     final FsDatasetSpi<FsVolumeSpi> dataset =
         TestDatasetVolumeChecker.makeDataset(volumes);
-    final FakeTimer timer = new FakeTimer();
-    final Configuration conf = new HdfsConfiguration();
-    final long minGapMs = 100;
-    conf.setTimeDuration(DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY,
-        minGapMs, TimeUnit.MILLISECONDS);
     final DatasetVolumeChecker checker = new DatasetVolumeChecker(conf, timer);
 
     checker.checkAllVolumes(dataset);
@@ -119,7 +128,7 @@ public class TestDatasetVolumeCheckerFailures {
     assertThat(checker.getNumSkippedChecks(), is(1L));
 
     // Re-check after advancing the timer. Ensure the check is performed.
-    timer.advance(minGapMs);
+    timer.advance(MIN_DISK_CHECK_GAP_MS);
     checker.checkAllVolumes(dataset);
     assertThat(checker.getNumSyncDatasetChecks(), is(2L));
     assertThat(checker.getNumSkippedChecks(), is(1L));
@@ -131,11 +140,6 @@ public class TestDatasetVolumeCheckerFailures {
         TestDatasetVolumeChecker.makeVolumes(1, VolumeCheckResult.HEALTHY);
     final FsDatasetSpi<FsVolumeSpi> dataset =
         TestDatasetVolumeChecker.makeDataset(volumes);
-    final FakeTimer timer = new FakeTimer();
-    final Configuration conf = new HdfsConfiguration();
-    final long minGapMs = 100;
-    conf.setTimeDuration(DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY,
-        minGapMs, TimeUnit.MILLISECONDS);
     final DatasetVolumeChecker checker = new DatasetVolumeChecker(conf, timer);
 
     checker.checkAllVolumesAsync(dataset, null);
@@ -147,7 +151,7 @@ public class TestDatasetVolumeCheckerFailures {
     assertThat(checker.getNumSkippedChecks(), is(1L));
 
     // Re-check after advancing the timer. Ensure the check is performed.
-    timer.advance(minGapMs);
+    timer.advance(MIN_DISK_CHECK_GAP_MS);
     checker.checkAllVolumesAsync(dataset, null);
     assertThat(checker.getNumAsyncDatasetChecks(), is(2L));
     assertThat(checker.getNumSkippedChecks(), is(1L));

@@ -187,7 +187,7 @@ public class DatasetVolumeChecker {
     final Set<FsVolumeSpi> failedVolumes = new HashSet<>();
     final Set<FsVolumeSpi> allVolumes = new HashSet<>();
 
-    final Semaphore semaphore = new Semaphore(-references.size() + 1);
+    final AtomicLong numVolumes = new AtomicLong(references.size());
     final CountDownLatch latch = new CountDownLatch(1);
 
     for (int i = 0; i < references.size(); ++i) {
@@ -197,7 +197,7 @@ public class DatasetVolumeChecker {
           delegateChecker.schedule(reference.getVolume(), IGNORED_CONTEXT);
       LOG.info("Scheduled health check for volume {}", reference.getVolume());
       Futures.addCallback(future, new ResultHandler(
-          reference, healthyVolumes, failedVolumes, semaphore, new Callback() {
+          reference, healthyVolumes, failedVolumes, numVolumes, new Callback() {
         @Override
         public void call(Set<FsVolumeSpi> ignored1,
                          Set<FsVolumeSpi> ignored2) {
@@ -263,7 +263,7 @@ public class DatasetVolumeChecker {
     lastAllVolumesCheck = timer.monotonicNow();
     final Set<FsVolumeSpi> healthyVolumes = new HashSet<>();
     final Set<FsVolumeSpi> failedVolumes = new HashSet<>();
-    final Semaphore semaphore = new Semaphore(-references.size() + 1);
+    final AtomicLong numVolumes = new AtomicLong(references.size());
 
     LOG.info("Checking {} volumes", references.size());
     for (int i = 0; i < references.size(); ++i) {
@@ -272,7 +272,7 @@ public class DatasetVolumeChecker {
       ListenableFuture<VolumeCheckResult> future =
           delegateChecker.schedule(reference.getVolume(), IGNORED_CONTEXT);
       Futures.addCallback(future, new ResultHandler(
-          reference, healthyVolumes, failedVolumes, semaphore, callback));
+          reference, healthyVolumes, failedVolumes, numVolumes, callback));
     }
     numAsyncDatasetChecks.incrementAndGet();
     return true;
@@ -319,7 +319,7 @@ public class DatasetVolumeChecker {
     numVolumeChecks.incrementAndGet();
     Futures.addCallback(future, new ResultHandler(
         volumeReference, new HashSet<>(), new HashSet<>(),
-        new Semaphore(0), callback));
+        new AtomicLong(1), callback));
     return true;
   }
 
@@ -331,7 +331,7 @@ public class DatasetVolumeChecker {
     private final FsVolumeReference reference;
     private final Set<FsVolumeSpi> failedVolumes;
     private final Set<FsVolumeSpi> healthyVolumes;
-    private final Semaphore semaphore;
+    private final AtomicLong volumeCounter;
 
     @Nullable
     private final Callback callback;
@@ -350,13 +350,13 @@ public class DatasetVolumeChecker {
     ResultHandler(FsVolumeReference reference,
                   Set<FsVolumeSpi> healthyVolumes,
                   Set<FsVolumeSpi> failedVolumes,
-                  Semaphore semaphore,
+                  AtomicLong volumeCounter,
                   @Nullable Callback callback) {
       Preconditions.checkState(reference != null);
       this.reference = reference;
       this.healthyVolumes = healthyVolumes;
       this.failedVolumes = failedVolumes;
-      this.semaphore = semaphore;
+      this.volumeCounter = volumeCounter;
       this.callback = callback;
     }
 
@@ -411,8 +411,8 @@ public class DatasetVolumeChecker {
 
     private void invokeCallback() {
       try {
-        semaphore.release();
-        if (callback != null && semaphore.tryAcquire()) {
+        final long remaining = volumeCounter.decrementAndGet();
+        if (callback != null && remaining == 0) {
           callback.call(healthyVolumes, failedVolumes);
         }
       } catch(Exception e) {
