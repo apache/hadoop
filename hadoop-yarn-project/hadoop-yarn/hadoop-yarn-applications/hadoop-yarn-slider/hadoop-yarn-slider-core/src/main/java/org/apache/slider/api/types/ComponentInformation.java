@@ -31,7 +31,7 @@ import java.util.Map;
  * Serializable version of component data.
  * <p>
  * This is sent in REST calls as a JSON object —but is also marshalled into
- * a protobuf structure. Look at {@link org.apache.slider.api.proto.RestTypeMarshalling}
+ * a protobuf structure. Look at {@link RestTypeMarshalling}
  * for the specifics there.
  * <p>
  * This means that if any fields are added here. they must be added to

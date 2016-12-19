@@ -735,11 +735,11 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
       Map<String, Map<String, String>> configurations) {
     Map<String, String> allConfigs = new HashMap<>();
     String lookupFormat = "${@//site/%s/%s}";
-    for (String configType : configurations.keySet()) {
-      Map<String, String> configBucket = configurations.get(configType);
-      for (String configName : configBucket.keySet()) {
-        allConfigs.put(String.format(lookupFormat, configType, configName),
-            configBucket.get(configName));
+    for (Map.Entry<String, Map<String, String>> entry : configurations.entrySet()) {
+      Map<String, String> configBucket = entry.getValue();
+      for(Map.Entry<String, String> config: configBucket.entrySet()) {
+        allConfigs.put(String.format(lookupFormat, entry.getKey(), config.getKey()),
+            config.getValue());
       }
     }
 
@@ -758,15 +758,15 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
             configValue = configValue.replace(lookUpKey, lookUpValue);
           }
         }
-        if (!configValue.equals(entry.getValue())) {
+        if (configValue != null && !configValue.equals(entry.getValue())) {
           finished = false;
           allConfigs.put(entry.getKey(), configValue);
         }
       }
     }
-
-    for (String configType : configurations.keySet()) {
-      Map<String, String> configBucket = configurations.get(configType);
+    for (Map.Entry<String, Map<String, String>> configEntry : configurations
+        .entrySet()) {
+      Map<String, String> configBucket = configEntry.getValue();
       for (Map.Entry<String, String> entry: configBucket.entrySet()) {
         String configName = entry.getKey();
         String configValue = entry.getValue();
@@ -817,7 +817,8 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
    */
   private void addConfsToList(Map<String, String> confMap,
       Set<String> confList, String prefix, String suffix) {
-    for (String key : confMap.keySet()) {
+    for (Entry<String, String> entry : confMap.entrySet()) {
+      String key = entry.getKey();
       if (key.startsWith(prefix) && key.endsWith(suffix)) {
         String confName = key.substring(prefix.length(),
             key.length() - suffix.length());

@@ -163,7 +163,7 @@ public final class AggregateConf {
   public String getPassphrase() {
     if (passphrase == null) {
       passphrase = RandomStringUtils.randomAlphanumeric(
-          Integer.valueOf(SliderKeys.PASS_LEN));
+          Integer.parseInt(SliderKeys.PASS_LEN));
     }
 
     return passphrase;

@@ -153,7 +153,7 @@ public class TestSliderUtils {
   @Test
   public void testWrite() throws IOException {
     File testWriteFile = folder.newFile("testWrite");
-    SliderUtils.write(testWriteFile, "test".getBytes("UTF-8"), true);
+    SliderUtils.write(testWriteFile, "test".getBytes("UTF-8"));
     Assert.assertTrue(FileUtils.readFileToString(testWriteFile, "UTF-8").equals("test"));
   }
 }

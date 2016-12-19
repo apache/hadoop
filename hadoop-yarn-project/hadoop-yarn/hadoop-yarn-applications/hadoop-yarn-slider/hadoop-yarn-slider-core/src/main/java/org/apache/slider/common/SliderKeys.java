@@ -18,6 +18,9 @@
 
 package org.apache.slider.common;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Keys and various constants for Slider
@@ -79,8 +82,9 @@ public interface SliderKeys extends SliderXmlConfKeys {
    */
   String COMPONENT_TYPE_EXTERNAL_APP = "external_app";
   String COMPONENT_SEPARATOR = "-";
-  String[] COMPONENT_KEYS_TO_SKIP = {"zookeeper.", "env.MALLOC_ARENA_MAX",
-      "site.fs.", "site.dfs."};
+  List<String> COMPONENT_KEYS_TO_SKIP = Collections.unmodifiableList(Arrays
+      .asList("zookeeper.", "env.MALLOC_ARENA_MAX", "site.fs.", "site.dfs."));
+
   /**
    * A component type for a client component
    */

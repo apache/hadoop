@@ -75,11 +75,10 @@ public class TokensOperation {
       }
       saveTokens(output, credentials);
       String filename = output.getCanonicalPath();
-      footnote = String.format("%d tokens saved to %s\n" +
-              "To use these in the environment:\n" +
-              "export %s=%s",
-          credentials.numberOfTokens(),
-          filename, UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION, filename);
+      footnote = String.format(
+          "%d tokens saved to %s%n" + "To use these in the environment:%n"
+              + "export %s=%s", credentials.numberOfTokens(), filename,
+          UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION, filename);
     } else if (args.source != null) {
       File source = args.source;
       log.info("Reading credentials from file {}", source);

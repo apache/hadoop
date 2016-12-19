@@ -214,7 +214,6 @@ public abstract class AbstractClusterBuildingActionArgs extends
   protected ConfTree buildConfTree(Map<String, String> optionsMap) throws
       BadCommandArgumentsException {
     ConfTree confTree = new ConfTree();
-    ConfTreeOperations ops = new ConfTreeOperations(confTree);
     confTree.global.putAll(optionsMap);
     return confTree;
   }

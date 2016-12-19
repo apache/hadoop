@@ -35,6 +35,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
@@ -82,7 +83,7 @@ public class KerberosDiags implements Closeable {
 
   private final Configuration conf;
   private final List<String> services;
-  private final PrintWriter out;
+  private final PrintStream out;
   private final File keytab;
   private final String principal;
   private final long minKeyLength;
@@ -97,7 +98,7 @@ public class KerberosDiags implements Closeable {
 
   @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
   public KerberosDiags(Configuration conf,
-      PrintWriter out,
+      PrintStream out,
       List<String> services,
       File keytab,
       String principal,

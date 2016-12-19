@@ -257,19 +257,20 @@ public class DockerProviderService extends AbstractProviderService implements
             .getInternalsSnapshot(), null, getClusterName(), clientName,
             clientName, getAmState());
 
-    for (String configFileDN : configurations.keySet()) {
+    for (Map.Entry<String, Map<String, String>>  entry : configurations.entrySet()) {
+      String configFileDN = entry.getKey();
       String configFileName = appConf.getComponentOpt(clientName,
           OptionKeys.CONF_FILE_PREFIX + configFileDN + OptionKeys
               .NAME_SUFFIX, null);
       String configFileType = appConf.getComponentOpt(clientName,
           OptionKeys.CONF_FILE_PREFIX + configFileDN + OptionKeys
               .TYPE_SUFFIX, null);
-      if (configFileName == null && configFileType == null) {
+      if (configFileName == null || configFileType == null) {
         continue;
       }
       ConfigFormat configFormat = ConfigFormat.resolve(configFileType);
 
-      Map<String, String> config = configurations.get(configFileDN);
+      Map<String, String> config = entry.getValue();
       ConfigUtils.prepConfigForTemplateOutputter(configFormat, config,
           fileSystem, getClusterName(),
           new File(configFileName).getName());
@@ -365,9 +366,10 @@ public class DockerProviderService extends AbstractProviderService implements
     for (Entry<String, String> export : exports.entrySet()) {
       String value = export.getValue();
       // replace host names and site properties
-      for (String token : replaceTokens.keySet()) {
+      for (Map.Entry<String, String>  entry : replaceTokens.entrySet()) {
+        String token = entry.getKey();
         if (value.contains(token)) {
-          value = value.replaceAll(Pattern.quote(token), replaceTokens.get(token));
+          value = value.replaceAll(Pattern.quote(token), entry.getValue());
         }
       }
       ExportEntry entry = new ExportEntry();

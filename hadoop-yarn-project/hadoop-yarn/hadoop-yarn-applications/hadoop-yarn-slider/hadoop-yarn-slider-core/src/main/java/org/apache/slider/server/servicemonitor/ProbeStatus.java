@@ -25,6 +25,7 @@ import java.util.Date;
  * Had better be unserializable at the far end if that is to work.
  */
 public final class ProbeStatus implements Serializable {
+  private static final long serialVersionUID = 165468L;
 
   private long timestamp;
   private String timestampText;
