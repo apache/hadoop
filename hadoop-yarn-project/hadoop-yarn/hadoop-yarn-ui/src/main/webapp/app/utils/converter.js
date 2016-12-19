@@ -91,6 +91,9 @@ export default {
       return ts;
     }
   },
+  isoDateToDate: function(isoDate) {
+    return moment(isoDate).format("YYYY/MM/DD HH:mm:ss");
+  },
   splitForContainerLogs: function(id) {
     if (id) {
       var splits = id.split(Constants.PARAM_SEPARATOR);
