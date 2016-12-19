@@ -142,11 +142,12 @@ public abstract class AbstractActionArgs extends ArgOps implements Arguments {
       
       log.error(message);
       int index = 1;
+      StringBuilder buf = new StringBuilder(message);
       for (String actionArg : parameters) {
         log.error("[{}] \"{}\"", index++, actionArg);
-        message += " \"" + actionArg + "\" ";
+        buf.append(" \"" + actionArg + "\" ");
       }
-      throw new BadCommandArgumentsException(message);
+      throw new BadCommandArgumentsException(buf.toString());
     }
   }
 

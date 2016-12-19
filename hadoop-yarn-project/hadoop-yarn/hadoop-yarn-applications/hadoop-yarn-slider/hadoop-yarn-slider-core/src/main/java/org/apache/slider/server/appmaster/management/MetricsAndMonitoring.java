@@ -58,11 +58,6 @@ public class MetricsAndMonitoring extends CompositeService {
 
   private final List<MetricSet> metricSets = new ArrayList<>();
 
-  /**
-   * List of recorded events
-   */
-  private final List<RecordedEvent> eventHistory = new ArrayList<>(100);
-
   public static final int EVENT_LIMIT = 1000;
 
   public MetricRegistry getMetrics() {
@@ -137,26 +132,6 @@ public class MetricsAndMonitoring extends CompositeService {
   public <T extends Metric> T register(Class<?> klass, T metric, String... names)
       throws IllegalArgumentException {
     return register(MetricRegistry.name(klass, names), metric);
-  }
-
-
-  /**
-   * Add an event (synchronized)
-   * @param event event
-   */
-  public synchronized void noteEvent(RecordedEvent event) {
-    if (eventHistory.size() > EVENT_LIMIT) {
-      eventHistory.remove(0);
-    }
-    eventHistory.add(event);
-  }
-
-  /**
-   * Clone the event history; blocks for the duration of the copy operation.
-   * @return a new list
-   */
-  public synchronized List<RecordedEvent> cloneEventHistory() {
-    return new ArrayList<>(eventHistory);
   }
 
   /**

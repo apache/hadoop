@@ -29,24 +29,17 @@ public class Comparators {
   public static class LongComparator implements Comparator<Long>, Serializable {
     @Override
     public int compare(Long o1, Long o2) {
-      long result = o1 - o2;
-      // need to comparisons with a diff greater than integer size
-      if (result < 0 ) {
-        return -1;
-      } else if (result > 0) {
-        return 1;
-      }
-      return 0;
-    }
-  }
-public static class InvertedLongComparator implements Comparator<Long>, Serializable {
-  private static final LongComparator inner = new LongComparator();
-    @Override
-    public int compare(Long o1, Long o2) {
-      return -inner.compare(o1, o2);
+      return o1.compareTo(o2);
     }
   }
 
+  public static class InvertedLongComparator
+      implements Comparator<Long>, Serializable {
+    @Override
+    public int compare(Long o1, Long o2) {
+      return o2.compareTo(o1);
+    }
+  }
 
   /**
    * Little template class to reverse any comparitor

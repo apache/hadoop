@@ -27,6 +27,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -527,9 +528,9 @@ public class LongLivedProcess implements Runnable {
       StringBuilder errorLine = new StringBuilder(LINE_LENGTH);
       try {
         errReader = new BufferedReader(
-            new InputStreamReader(process.getErrorStream()));
+            new InputStreamReader(process.getErrorStream(), "UTF-8"));
         outReader = new BufferedReader(
-            new InputStreamReader(process.getInputStream()));
+            new InputStreamReader(process.getInputStream(), "UTF-8"));
         while (!finished.get()) {
           boolean processed = false;
           if (readAnyLine(errReader, errorLine, LINE_LENGTH)) {

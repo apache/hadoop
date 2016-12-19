@@ -253,7 +253,7 @@ public class NodeInstance {
       new StringBuilder(toString());
     sb.append("{ ");
     for (NodeEntry entry : nodeEntries) {
-      sb.append(String.format("\n  [%02d]  ", entry.rolePriority));
+      sb.append(String.format("%n  [%02d]  ", entry.rolePriority));
         sb.append(entry.toString());
     }
     sb.append("} ");

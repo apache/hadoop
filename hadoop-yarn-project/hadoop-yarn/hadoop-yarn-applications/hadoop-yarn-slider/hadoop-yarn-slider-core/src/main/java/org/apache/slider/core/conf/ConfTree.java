@@ -79,17 +79,6 @@ public final class ConfTree {
   public Map<String, Map<String, String>> components =
     new HashMap<>(INITAL_MAP_CAPACITY);
 
-
-  /**
-   * Shallow clone
-   * @return a shallow clone
-   * @throws CloneNotSupportedException
-   */
-  @Override
-  public Object clone() throws CloneNotSupportedException {
-    return super.clone();
-  }
-
   @Override
   public String toString() {
     try {
@@ -105,9 +94,7 @@ public final class ConfTree {
    * @return a JSON string description
    * @throws IOException Problems mapping/writing the object
    */
-  public String toJson() throws IOException,
-                                JsonGenerationException,
-                                JsonMappingException {
+  public String toJson() throws IOException {
     return ConfTreeSerDeser.toString(this);
   }
 

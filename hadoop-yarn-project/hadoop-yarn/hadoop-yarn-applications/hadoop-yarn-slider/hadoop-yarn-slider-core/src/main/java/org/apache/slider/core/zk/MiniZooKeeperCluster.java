@@ -137,8 +137,6 @@ public class MiniZooKeeperCluster extends AbstractService {
   }
 
   /**
-   * @param baseDir
-   * @param numZooKeeperServers
    * @return ClientPort server bound to, -1 if there was a
    *         binding problem and we couldn't pick another port.
    * @throws IOException
@@ -227,17 +225,6 @@ public class MiniZooKeeperCluster extends AbstractService {
     } catch (SecurityException e) {
       throw new IOException("creating dir: " + dir, e);
     }
-  }
-
-  /**
-   * Delete the basedir
-   */
-  private void deleteBaseDir() {
-    if (baseDir != null) {
-      baseDir.delete();
-      baseDir = null;
-    }
-
   }
 
   @Override
@@ -359,7 +346,7 @@ public class MiniZooKeeperCluster extends AbstractService {
         try {
           sock = new Socket("localhost", port);
           OutputStream outstream = sock.getOutputStream();
-          outstream.write("stat".getBytes());
+          outstream.write("stat".getBytes("UTF-8"));
           outstream.flush();
         } finally {
           IOUtils.closeSocket(sock);
@@ -387,10 +374,10 @@ public class MiniZooKeeperCluster extends AbstractService {
         BufferedReader reader = null;
         try {
           OutputStream outstream = sock.getOutputStream();
-          outstream.write("stat".getBytes());
+          outstream.write("stat".getBytes("UTF-8"));
           outstream.flush();
 
-          Reader isr = new InputStreamReader(sock.getInputStream());
+          Reader isr = new InputStreamReader(sock.getInputStream(), "UTF-8");
           reader = new BufferedReader(isr);
           String line = reader.readLine();
           if (line != null && line.startsWith("Zookeeper version:")) {
@@ -411,13 +398,5 @@ public class MiniZooKeeperCluster extends AbstractService {
       Thread.sleep(250);
     }
     return false;
-  }
-
-  public int getClientPort() {
-    return clientPort;
-  }
-
-  public String getZkQuorum() {
-    return zkQuorum;
   }
 }

@@ -154,12 +154,12 @@ public abstract class CommonArgs extends ArgOps implements SliderActions,
   public void parse() throws SliderException {
     addActionArguments();
     try {
-      commander.parse(getArgs());
+      commander.parse(args);
     } catch (ParameterException e) {
       throw new BadCommandArgumentsException(e, "%s in %s",
                                              e.toString(),
-                                             (getArgs() != null
-                                              ? (SliderUtils.join(getArgs(),
+                                             (args != null
+                                              ? (SliderUtils.join(args,
                                                  " ", false))
                                               : "[]"));
     }
@@ -297,7 +297,4 @@ public abstract class CommonArgs extends ArgOps implements SliderActions,
     return coreAction.parameters;
   }
 
-  public String[] getArgs() {
-    return args;
-  }
 }

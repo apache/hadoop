@@ -69,7 +69,6 @@ public class InsecureAmFilter extends AmIpFilter {
       FilterChain chain) throws IOException, ServletException {
     rejectNonHttpRequests(req);
     HttpServletRequest httpReq = (HttpServletRequest) req;
-    HttpServletResponse httpResp = (HttpServletResponse) resp;
 
 
     String requestURI = httpReq.getRequestURI();

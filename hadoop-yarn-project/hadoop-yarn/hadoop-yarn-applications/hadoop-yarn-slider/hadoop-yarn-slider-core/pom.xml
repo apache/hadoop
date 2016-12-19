@@ -26,6 +26,11 @@
   <packaging>jar</packaging>
   <name>Apache Hadoop YARN Slider Core</name>
 
+  <properties>
+    <!-- Needed for generating FindBugs warnings using parent pom -->
+    <yarn.basedir>${project.parent.basedir}</yarn.basedir>
+  </properties>
+
   <build>
     <!-- resources are filtered for dynamic updates. This gets build info in-->
     <resources>

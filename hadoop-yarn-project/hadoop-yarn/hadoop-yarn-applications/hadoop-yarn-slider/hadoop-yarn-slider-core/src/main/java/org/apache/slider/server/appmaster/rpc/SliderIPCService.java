@@ -59,7 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.slider.api.proto.RestTypeMarshalling.marshall;
+import static org.apache.slider.api.types.RestTypeMarshalling.marshall;
 import static org.apache.slider.server.appmaster.web.rest.RestPaths.*;
 
 /**

@@ -51,7 +51,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.slider.api.proto.RestTypeMarshalling.*;
+import static org.apache.slider.api.types.RestTypeMarshalling.*;
 
 /**
  * Cluster operations at a slightly higher level than the RPC code

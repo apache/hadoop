@@ -232,7 +232,7 @@ public class OutstandingRequestTracker {
    * the most recent one is picked first. This operation <i>does not</i>
    * change the role history, though it queries it.
    */
-  static class newerThan implements Comparator<Container>, Serializable {
+  static class newerThan implements Comparator<Container> {
     private RoleHistory rh;
     
     public newerThan(RoleHistory rh) {
