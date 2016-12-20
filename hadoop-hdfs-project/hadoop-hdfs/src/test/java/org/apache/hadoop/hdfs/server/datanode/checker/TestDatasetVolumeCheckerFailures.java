@@ -76,7 +76,6 @@ public class TestDatasetVolumeCheckerFailures {
         TestDatasetVolumeChecker.makeDataset(volumes);
 
     // Create a disk checker with a very low timeout.
-    final HdfsConfiguration conf = new HdfsConfiguration();
     conf.setTimeDuration(DFSConfigKeys.DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY,
         1, TimeUnit.SECONDS);
     final DatasetVolumeChecker checker =
