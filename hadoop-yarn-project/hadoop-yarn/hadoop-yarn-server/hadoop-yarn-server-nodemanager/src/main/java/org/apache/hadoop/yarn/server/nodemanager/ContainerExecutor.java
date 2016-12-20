@@ -44,7 +44,6 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -320,11 +319,11 @@ public abstract class ContainerExecutor implements Configurable {
         ContainerLaunch.ShellScriptBuilder.create();
     Set<String> whitelist = new HashSet<>();
 
-    whitelist.add(ApplicationConstants.Environment.HADOOP_YARN_HOME.name());
-    whitelist.add(ApplicationConstants.Environment.HADOOP_COMMON_HOME.name());
-    whitelist.add(ApplicationConstants.Environment.HADOOP_HDFS_HOME.name());
-    whitelist.add(ApplicationConstants.Environment.HADOOP_CONF_DIR.name());
-    whitelist.add(ApplicationConstants.Environment.JAVA_HOME.name());
+    String[] nmWhiteList = conf.get(YarnConfiguration.NM_ENV_WHITELIST,
+        YarnConfiguration.DEFAULT_NM_ENV_WHITELIST).split(",");
+    for (String param : nmWhiteList) {
+      whitelist.add(param);
+    }
 
     if (environment != null) {
       for (Map.Entry<String, String> env : environment.entrySet()) {
