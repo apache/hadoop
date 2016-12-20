@@ -52,7 +52,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -84,8 +83,15 @@ public class TestFSImage {
   public void testCompression() throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, true);
-    conf.set(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY,
-        "org.apache.hadoop.io.compress.GzipCodec");
+    setCompressCodec(conf, "org.apache.hadoop.io.compress.DefaultCodec");
+    setCompressCodec(conf, "org.apache.hadoop.io.compress.GzipCodec");
+    setCompressCodec(conf, "org.apache.hadoop.io.compress.BZip2Codec");
+    setCompressCodec(conf, "org.apache.hadoop.io.compress.Lz4Codec");
+  }
+
+  private void setCompressCodec(Configuration conf, String compressCodec)
+      throws IOException {
+    conf.set(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY, compressCodec);
     testPersistHelper(conf);
   }
 
