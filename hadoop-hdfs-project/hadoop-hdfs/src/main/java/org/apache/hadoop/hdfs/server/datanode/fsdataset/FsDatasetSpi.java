@@ -494,8 +494,9 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
     /**
      * Check if all the data directories are healthy
      * @return A set of unhealthy data directories.
+     * @param failedVolumes
      */
-  Set<StorageLocation> checkDataDir();
+  void handleVolumeFailures(Set<FsVolumeSpi> failedVolumes);
 
   /**
    * Shutdown the FSDataset
