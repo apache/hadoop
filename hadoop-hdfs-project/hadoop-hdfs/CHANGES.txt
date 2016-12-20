@@ -210,6 +210,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-11160. VolumeScanner reports write-in-progress replicas as corrupt
     incorrectly. Contributed by Wei-Chiu Chuang and Yongjun Zhang.
 
+    HDFS-11263. ClassCastException when we use Bzipcodec for Fsimage
+    compression. (Brahma Reddy Battula)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
