@@ -125,6 +125,21 @@ public class TestLogsCLI {
     assertTrue("Should return an error code", exitCode != 0);
   }
 
+  @Test(timeout = 1000l)
+  public void testInvalidOpts() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    YarnClient mockYarnClient = createMockYarnClient(
+        YarnApplicationState.FINISHED,
+        UserGroupInformation.getCurrentUser().getShortUserName());
+    LogsCLI cli = new LogsCLIForTest(mockYarnClient);
+    cli.setConf(conf);
+
+    int exitCode = cli.run( new String[] { "-InvalidOpts"});
+    assertTrue(exitCode == -1);
+    assertTrue(sysErrStream.toString().contains(
+        "options parsing failed: Unrecognized option: -InvalidOpts"));
+  }
+
   @Test(timeout = 5000l)
   public void testInvalidApplicationId() throws Exception {
     Configuration conf = new YarnConfiguration();
