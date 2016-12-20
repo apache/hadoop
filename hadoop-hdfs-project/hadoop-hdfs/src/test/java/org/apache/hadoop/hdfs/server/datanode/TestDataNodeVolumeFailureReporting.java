@@ -20,12 +20,10 @@ package org.apache.hadoop.hdfs.server.datanode;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -36,7 +34,6 @@ import java.util.ArrayList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -61,7 +58,8 @@ import org.junit.Test;
  */
 public class TestDataNodeVolumeFailureReporting {
 
-  private static final Log LOG = LogFactory.getLog(TestDataNodeVolumeFailureReporting.class);
+  private static final Log LOG =
+      LogFactory.getLog(TestDataNodeVolumeFailureReporting.class);
   {
     GenericTestUtils.setLogLevel(TestDataNodeVolumeFailureReporting.LOG,
         Level.ALL);
@@ -389,8 +387,8 @@ public class TestDataNodeVolumeFailureReporting {
     checkFailuresAtNameNode(dm, dns.get(1), true, dn2Vol1.getAbsolutePath());
 
     // Reconfigure again to try to add back the failed volumes.
-    reconfigureDataNode(dns.get(0), dn1Vol1, dn1Vol2);
-    reconfigureDataNode(dns.get(1), dn2Vol1, dn2Vol2);
+    DataNodeTestUtils.reconfigureDataNode(dns.get(0), dn1Vol1, dn1Vol2);
+    DataNodeTestUtils.reconfigureDataNode(dns.get(1), dn2Vol1, dn2Vol2);
 
     DataNodeTestUtils.triggerHeartbeat(dns.get(0));
     DataNodeTestUtils.triggerHeartbeat(dns.get(1));
@@ -410,8 +408,8 @@ public class TestDataNodeVolumeFailureReporting {
 
     // Reconfigure a third time with the failed volumes.  Afterwards, we expect
     // the same volume failures to be reported.  (No double-counting.)
-    reconfigureDataNode(dns.get(0), dn1Vol1, dn1Vol2);
-    reconfigureDataNode(dns.get(1), dn2Vol1, dn2Vol2);
+    DataNodeTestUtils.reconfigureDataNode(dns.get(0), dn1Vol1, dn1Vol2);
+    DataNodeTestUtils.reconfigureDataNode(dns.get(1), dn2Vol1, dn2Vol2);
 
     DataNodeTestUtils.triggerHeartbeat(dns.get(0));
     DataNodeTestUtils.triggerHeartbeat(dns.get(1));
@@ -432,8 +430,8 @@ public class TestDataNodeVolumeFailureReporting {
     // Replace failed volume with healthy volume and run reconfigure DataNode.
     // The failed volume information should be cleared.
     DataNodeTestUtils.restoreDataDirFromFailure(dn1Vol1, dn2Vol1);
-    reconfigureDataNode(dns.get(0), dn1Vol1, dn1Vol2);
-    reconfigureDataNode(dns.get(1), dn2Vol1, dn2Vol2);
+    DataNodeTestUtils.reconfigureDataNode(dns.get(0), dn1Vol1, dn1Vol2);
+    DataNodeTestUtils.reconfigureDataNode(dns.get(1), dn2Vol1, dn2Vol2);
 
     DataNodeTestUtils.triggerHeartbeat(dns.get(0));
     DataNodeTestUtils.triggerHeartbeat(dns.get(1));
@@ -669,35 +667,5 @@ public class TestDataNodeVolumeFailureReporting {
     long dnCapacity = DFSTestUtil.getDatanodeCapacity(
         cluster.getNamesystem().getBlockManager().getDatanodeManager(), 0);
     volumeCapacity = dnCapacity / cluster.getStoragesPerDatanode();
-  }
-
-  /**
-   * Reconfigure a DataNode by setting a new list of volumes.
-   *
-   * @param dn DataNode to reconfigure
-   * @param newVols new volumes to configure
-   * @throws Exception if there is any failure
-   */
-  private static void reconfigureDataNode(DataNode dn, File... newVols)
-      throws Exception {
-    StringBuilder dnNewDataDirs = new StringBuilder();
-    for (File newVol: newVols) {
-      if (dnNewDataDirs.length() > 0) {
-        dnNewDataDirs.append(',');
-      }
-      dnNewDataDirs.append(newVol.getAbsolutePath());
-    }
-    try {
-      assertThat(
-          dn.reconfigurePropertyImpl(
-              DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
-              dnNewDataDirs.toString()),
-          is(dn.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY)));
-    } catch (ReconfigurationException e) {
-      // This can be thrown if reconfiguration tries to use a failed volume.
-      // We need to swallow the exception, because some of our tests want to
-      // cover this case.
-      LOG.warn("Could not reconfigure DataNode.", e);
-    }
   }
 }
