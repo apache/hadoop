@@ -30,6 +30,7 @@ import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -659,6 +660,8 @@ public class TestDataNodeVolumeFailureReporting {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
     conf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY,
         failedVolumesTolerated);
+    conf.setTimeDuration(DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY,
+        0, TimeUnit.MILLISECONDS);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes)
         .storagesPerDatanode(storagesPerDatanode).build();
     cluster.waitActive();
