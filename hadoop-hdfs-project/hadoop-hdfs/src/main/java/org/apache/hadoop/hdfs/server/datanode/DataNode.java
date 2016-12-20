@@ -2046,13 +2046,17 @@ public class DataNode extends ReconfigurableBase
   public void checkDiskErrorAsync() {
     volumeChecker.checkAllVolumesAsync(
         data, (healthyVolumes, failedVolumes) -> {
-          LOG.info("checkDiskErrorAsync callback got {} failed volumes: {}",
-              failedVolumes.size(), failedVolumes);
+          if (failedVolumes.size() > 0) {
+            LOG.warn("checkDiskErrorAsync callback got {} failed volumes: {}",
+                failedVolumes.size(), failedVolumes);
+          } else {
+            LOG.debug("checkDiskErrorAsync: no volume failures detected");
+          }
           lastDiskErrorCheck = Time.monotonicNow();
           handleVolumeFailures(failedVolumes);
         });
   }
-  
+
   private void handleDiskError(String errMsgr) {
     final boolean hasEnoughResources = data.hasEnoughResource();
     LOG.warn("DataNode.handleDiskError: Keep Running: " + hasEnoughResources);
@@ -3207,14 +3211,19 @@ public class DataNode extends ReconfigurableBase
     Set<FsVolumeSpi> unhealthyVolumes;
     try {
       unhealthyVolumes = volumeChecker.checkAllVolumes(data);
-      LOG.info("checkDiskError got {} failed volumes - {}",
-          unhealthyVolumes.size(), unhealthyVolumes);
       lastDiskErrorCheck = Time.monotonicNow();
     } catch (InterruptedException e) {
       LOG.error("Interruped while running disk check", e);
       throw new IOException("Interrupted while running disk check", e);
     }
-    handleVolumeFailures(unhealthyVolumes);
+
+    if (unhealthyVolumes.size() > 0) {
+      LOG.warn("checkDiskError got {} failed volumes - {}",
+          unhealthyVolumes.size(), unhealthyVolumes);
+      handleVolumeFailures(unhealthyVolumes);
+    } else {
+      LOG.debug("checkDiskError encountered no failures");
+    }
   }
 
   private void handleVolumeFailures(Set<FsVolumeSpi> unhealthyVolumes) {
