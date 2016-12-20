@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -63,7 +64,6 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.io.compress.CompressorStream;
 import org.apache.hadoop.util.LimitInputStream;
 import org.apache.hadoop.util.Time;
 
@@ -413,7 +413,7 @@ public final class FSImageFormatProtobuf {
 
     private void flushSectionOutputStream() throws IOException {
       if (codec != null) {
-        ((CompressorStream) sectionOutputStream).finish();
+        ((CompressionOutputStream) sectionOutputStream).finish();
       }
       sectionOutputStream.flush();
     }
