@@ -50,7 +50,30 @@ public class DataNodeFaultInjector {
     return false;
   }
 
-  public void stopSendingPacketDownstream() throws IOException {}
+  public void stopSendingPacketDownstream(final String mirrAddr)
+      throws IOException {
+  }
+
+  /**
+   * Used as a hook to intercept the latency of sending packet.
+   */
+  public void logDelaySendingPacketDownstream(
+      final String mirrAddr,
+      final long delayMs) throws IOException {
+  }
+
+  public void delaySendingAckToUpstream(final String upstreamAddr)
+      throws IOException {
+  }
+
+  /**
+   * Used as a hook to intercept the latency of sending ack.
+   */
+  public void logDelaySendingAckToUpstream(
+      final String upstreamAddr,
+      final long delayMs)
+      throws IOException {
+  }
 
   public void noRegistration() throws IOException { }
 
