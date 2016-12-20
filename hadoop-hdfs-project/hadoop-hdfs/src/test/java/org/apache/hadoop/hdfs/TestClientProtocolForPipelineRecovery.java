@@ -453,7 +453,8 @@ public class TestClientProtocolForPipelineRecovery {
     DataNodeFaultInjector dnFaultInjector = new DataNodeFaultInjector() {
       int tries = 1;
       @Override
-      public void stopSendingPacketDownstream() throws IOException {
+      public void stopSendingPacketDownstream(final String mirrAddr)
+          throws IOException {
         if (tries > 0) {
           tries--;
           try {
