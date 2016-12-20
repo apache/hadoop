@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -33,6 +34,9 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -172,10 +176,11 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         commands.add("/bin/sh ./\\\"" + badSymlink + "\\\"");
       }
 
-      new DefaultContainerExecutor()
-          .writeLaunchEnv(fos, env, resources, commands,
-              new Path(localLogDir.getAbsolutePath()), "user",
-              tempFile.getName());
+      DefaultContainerExecutor defaultContainerExecutor =
+          new DefaultContainerExecutor();
+      defaultContainerExecutor.setConf(new YarnConfiguration());
+      defaultContainerExecutor.writeLaunchEnv(fos, env, resources, commands,
+          new Path(localLogDir.getAbsolutePath()), "user", tempFile.getName());
       fos.flush();
       fos.close();
       FileUtil.setExecutable(tempFile, true);
@@ -242,9 +247,11 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       } else {
         commands.add("/bin/sh ./\\\"" + symLink + "\\\"");
       }
-      new DefaultContainerExecutor()
-          .writeLaunchEnv(fos, env, resources, commands,
-              new Path(localLogDir.getAbsolutePath()), "user");
+      DefaultContainerExecutor defaultContainerExecutor =
+          new DefaultContainerExecutor();
+      defaultContainerExecutor.setConf(new YarnConfiguration());
+      defaultContainerExecutor.writeLaunchEnv(fos, env, resources, commands,
+          new Path(localLogDir.getAbsolutePath()), "user");
       fos.flush();
       fos.close();
       FileUtil.setExecutable(tempFile, true);
@@ -279,6 +286,39 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     }
   }
 
+  @Test(timeout = 20000)
+  public void testWriteEnvExport() throws Exception {
+    // Valid only for unix
+    assumeNotWindows();
+    File shellFile = Shell.appendScriptExtension(tmpDir, "hello");
+    Map<String, String> env = new HashMap<String, String>();
+    env.put("HADOOP_COMMON_HOME", "/opt/hadoopcommon");
+    env.put("HADOOP_MAPRED_HOME", "/opt/hadoopbuild");
+    Map<Path, List<String>> resources = new HashMap<Path, List<String>>();
+    FileOutputStream fos = new FileOutputStream(shellFile);
+    List<String> commands = new ArrayList<String>();
+    DefaultContainerExecutor defaultContainerExecutor =
+        new DefaultContainerExecutor();
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.NM_ENV_WHITELIST,
+        "HADOOP_MAPRED_HOME,HADOOP_YARN_HOME");
+    defaultContainerExecutor.setConf(conf);
+    defaultContainerExecutor.writeLaunchEnv(fos, env, resources, commands,
+        new Path(localLogDir.getAbsolutePath()), "user");
+    String shellContent =
+        new String(Files.readAllBytes(Paths.get(shellFile.getAbsolutePath())),
+            StandardCharsets.UTF_8);
+    Assert.assertTrue(shellContent
+        .contains("export HADOOP_COMMON_HOME=\"/opt/hadoopcommon\""));
+    // Not available in env and whitelist
+    Assert.assertTrue(shellContent.contains("export HADOOP_MAPRED_HOME="
+        + "${HADOOP_MAPRED_HOME:-\"/opt/hadoopbuild\"}"));
+    // Not available in env but in whitelist
+    Assert.assertFalse(shellContent.contains("HADOOP_YARN_HOME"));
+    fos.flush();
+    fos.close();
+  }
+
   @Test (timeout = 20000)
   public void testInvalidEnvSyntaxDiagnostics() throws IOException  {
 
@@ -297,9 +337,11 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           "\"workflowName\":\"\n\ninsert table " +
           "\npartition (cd_education_status)\nselect cd_demo_sk, cd_gender, " );
       List<String> commands = new ArrayList<String>();
-      new DefaultContainerExecutor()
-          .writeLaunchEnv(fos, env, resources, commands,
-              new Path(localLogDir.getAbsolutePath()), "user");
+      DefaultContainerExecutor defaultContainerExecutor =
+          new DefaultContainerExecutor();
+      defaultContainerExecutor.setConf(new YarnConfiguration());
+      defaultContainerExecutor.writeLaunchEnv(fos, env, resources, commands,
+          new Path(localLogDir.getAbsolutePath()), "user");
       fos.flush();
       fos.close();
 
@@ -377,6 +419,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       List<String> commands = new ArrayList<String>();
       commands.add(command);
       ContainerExecutor exec = new DefaultContainerExecutor();
+      exec.setConf(new YarnConfiguration());
       exec.writeLaunchEnv(fos, env, resources, commands,
           new Path(localLogDir.getAbsolutePath()), "user");
       fos.flush();
