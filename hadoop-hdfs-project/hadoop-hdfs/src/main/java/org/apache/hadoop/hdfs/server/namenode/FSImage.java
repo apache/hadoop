@@ -97,7 +97,6 @@ public class FSImage implements Closeable {
   final private Configuration conf;
 
   protected NNStorageRetentionManager archivalManager;
-  private int quotaInitThreads;
 
   /* Used to make sure there are no concurrent checkpoints for a given txid
    * The checkpoint here could be one of the following operations.
@@ -666,7 +665,6 @@ public class FSImage implements Closeable {
       LOG.info("No edit log streams selected.");
     }
     
-    Exception le = null;
     FSImageFile imageFile = null;
     for (int i = 0; i < imageFiles.size(); i++) {
       try {
@@ -677,7 +675,6 @@ public class FSImage implements Closeable {
         throw new IOException("Failed to load image from " + imageFile,
             ie);
       } catch (Exception e) {
-        le = e;
         LOG.error("Failed to load image from " + imageFile, e);
         target.clear();
         imageFile = null;
