@@ -71,6 +71,23 @@
         <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD" />
     </Match>
     <Match>
+        <Class name="org.apache.slider.server.appmaster.web.rest.registry.PathEntryResource" />
+        <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD" />
+    </Match>
+    <Match>
+        <Class name="org.apache.slider.server.appmaster.web.rest.application.actions.StopResponse" />
+        <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD" />
+    </Match>
+    <Match>
+        <Class name="org.apache.slider.server.appmaster.state.ContainerAllocationResults" />
+        <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD" />
+    </Match>
+    <Match>
+        <Class name="org.apache.slider.core.persist.JsonSerDeser" />
+        <Method name="save" />
+        <Bug pattern="OBL_UNSATISFIED_OBLIGATION" />
+    </Match>
+    <Match>
         <Class name="org.apache.slider.server.services.workflow.ForkedProcessService" />
         <Bug pattern="JLM_JSR166_UTILCONCURRENT_MONITORENTER" />
     </Match>
