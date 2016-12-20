@@ -16,5 +16,7 @@
    limitations under the License.
 -->
 <FindBugsFilter>
-
+    <Match>
+        <Package name="org.apache.hadoop.yarn.services.resource" />
+    </Match>
 </FindBugsFilter>
