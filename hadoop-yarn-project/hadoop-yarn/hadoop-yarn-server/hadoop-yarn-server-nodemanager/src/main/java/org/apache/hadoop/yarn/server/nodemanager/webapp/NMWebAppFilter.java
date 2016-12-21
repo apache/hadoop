@@ -79,6 +79,10 @@ public class NMWebAppFilter extends GuiceContainer{
       String[] parts = uri.split("/");
       String containerIdStr = parts[3];
       String appOwner = parts[4];
+      String logType = null;
+      if (parts.length > 5) {
+        logType = parts[5];
+      }
       if (containerIdStr != null && !containerIdStr.isEmpty()) {
         ContainerId containerId = null;
         try {
@@ -106,6 +110,10 @@ public class NMWebAppFilter extends GuiceContainer{
             sb.append(containerIdStr);
             sb.append("/");
             sb.append(appOwner);
+            if (logType != null && !logType.isEmpty()) {
+              sb.append("/");
+              sb.append(logType);
+            }
             redirectPath =
                 WebAppUtils.appendQueryParams(request, sb.toString());
           } else {
