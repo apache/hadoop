@@ -171,6 +171,10 @@ Each metrics record contains tags such as ProcessName, SessionId, and Hostname a
 | `PutImageAvgTime` | Average fsimage upload time in milliseconds |
 | `NNStarted`| Deprecated: Use NNStartedTimeInMillis instead  |
 | `NNStartedTimeInMillis`| NameNode start time in milliseconds |
+| `GenerateEDEKTimeNumOps` | Total number of generating EDEK |
+| `GenerateEDEKTimeAvgTime` | Average time of generating EDEK in milliseconds |
+| `WarmUpEDEKTimeNumOps` | Total number of warming up EDEK |
+| `WarmUpEDEKTimeAvgTime` | Average time of warming up EDEK in milliseconds |
 
 FSNamesystem
 ------------
@@ -220,6 +224,8 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `TotalSyncTimes` | Total number of milliseconds spent by various edit logs in sync operation|
 | `NameDirSize` | NameNode name directories size in bytes |
 | `NumTimedOutPendingReplications` | The number of timed out replications. Not the number of unique blocks that timed out. Note: The metric name will be changed to `NumTimedOutPendingReconstructions` in Hadoop 3 release. |
+| `FSN(Read|Write)Lock`*OperationName*`NumOps` | Total number of acquiring lock by operations |
+| `FSN(Read|Write)Lock`*OperationName*`AvgTime` | Average time of holding the lock by operations in milliseconds |
 
 JournalNode
 -----------
