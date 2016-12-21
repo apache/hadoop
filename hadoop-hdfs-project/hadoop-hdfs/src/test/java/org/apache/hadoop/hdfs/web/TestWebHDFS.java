@@ -1181,4 +1181,43 @@ public class TestWebHDFS {
       cluster.shutdown();
     }
   }
+
+  @Test
+  public void testWebHdfsAppend() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final int dnNumber = 3;
+    try {
+
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(dnNumber).build();
+
+      final WebHdfsFileSystem webFS = WebHdfsTestUtil.getWebHdfsFileSystem(
+          conf, WebHdfsConstants.WEBHDFS_SCHEME);
+
+      final DistributedFileSystem fs = cluster.getFileSystem();
+
+      final Path appendFile = new Path("/testAppend.txt");
+      final String content = "hello world";
+      DFSTestUtil.writeFile(fs, appendFile, content);
+
+      for (int index = 0; index < dnNumber - 1; index++){
+        cluster.shutdownDataNode(index);
+      }
+      cluster.restartNameNodes();
+      cluster.waitActive();
+
+      try {
+        DFSTestUtil.appendFile(webFS, appendFile, content);
+        fail("Should fail to append file since "
+            + "datanode number is 1 and replication is 3");
+      } catch (IOException ignored) {
+        String resultContent = DFSTestUtil.readFile(fs, appendFile);
+        assertTrue(resultContent.equals(content));
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown(true);
+      }
+    }
+  }
 }

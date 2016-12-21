@@ -22,7 +22,11 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.ReconfigurationException;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -34,6 +38,9 @@ import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doAnswer;
 
@@ -43,6 +50,8 @@ import static org.mockito.Mockito.doAnswer;
  * dependencies to {@link MiniDFSCluster}.
  */
 public class DataNodeTestUtils {
+  private static final Log LOG =
+      LogFactory.getLog(DataNodeTestUtils.class);
   private static final String DIR_FAILURE_SUFFIX = ".origin";
 
   public final static String TEST_CLUSTER_ID = "testClusterID";
@@ -202,5 +211,35 @@ public class DataNodeTestUtils {
         return pinned;
       }
     }).when(dn.data).getPinning(any(ExtendedBlock.class));
+  }
+
+  /**
+   * Reconfigure a DataNode by setting a new list of volumes.
+   *
+   * @param dn DataNode to reconfigure
+   * @param newVols new volumes to configure
+   * @throws Exception if there is any failure
+   */
+  public static void reconfigureDataNode(DataNode dn, File... newVols)
+      throws Exception {
+    StringBuilder dnNewDataDirs = new StringBuilder();
+    for (File newVol: newVols) {
+      if (dnNewDataDirs.length() > 0) {
+        dnNewDataDirs.append(',');
+      }
+      dnNewDataDirs.append(newVol.getAbsolutePath());
+    }
+    try {
+      assertThat(
+          dn.reconfigurePropertyImpl(
+              DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
+              dnNewDataDirs.toString()),
+          is(dn.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY)));
+    } catch (ReconfigurationException e) {
+      // This can be thrown if reconfiguration tries to use a failed volume.
+      // We need to swallow the exception, because some of our tests want to
+      // cover this case.
+      LOG.warn("Could not reconfigure DataNode.", e);
+    }
   }
 }

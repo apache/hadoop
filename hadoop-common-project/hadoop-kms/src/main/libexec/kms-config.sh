@@ -44,11 +44,6 @@ function hadoop_subproject_init
 
   export HADOOP_CATALINA_SSL_KEYSTORE_FILE="${KMS_SSL_KEYSTORE_FILE:-${HOME}/.keystore}"
 
-  # this is undocumented, but older versions would rip the TRUSTSTORE_PASS out of the
-  # CATALINA_OPTS
-  # shellcheck disable=SC2086
-  export KMS_SSL_TRUSTSTORE_PASS=${KMS_SSL_TRUSTSTORE_PASS:-"$(echo ${CATALINA_OPTS} | grep -o 'trustStorePassword=[^ ]*' | cut -f2 -d= )"}
-
   export CATALINA_BASE="${CATALINA_BASE:-${HADOOP_HOME}/share/hadoop/kms/tomcat}"
   export HADOOP_CATALINA_HOME="${KMS_CATALINA_HOME:-${CATALINA_BASE}}"
 

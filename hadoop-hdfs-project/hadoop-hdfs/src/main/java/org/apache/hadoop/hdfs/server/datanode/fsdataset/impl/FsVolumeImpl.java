@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -130,6 +131,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   // query from the filesystem.
   protected volatile long configuredCapacity;
   private final FileIoProvider fileIoProvider;
+  private final DataNodeVolumeMetrics metrics;
 
   /**
    * Per-volume worker pool that processes new blocks to cache.
@@ -163,6 +165,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
     this.conf = conf;
     this.fileIoProvider = fileIoProvider;
     cacheExecutor = initializeCacheExecutor(parent);
+    this.metrics = DataNodeVolumeMetrics.create(conf, getBaseURI().getPath());
   }
 
   protected ThreadPoolExecutor initializeCacheExecutor(File parent) {
@@ -956,13 +959,6 @@ public class FsVolumeImpl implements FsVolumeSpi {
     return cacheExecutor;
   }
 
-  void checkDirs() throws DiskErrorException {
-    // TODO:FEDERATION valid synchronization
-    for(BlockPoolSlice s : bpSlices.values()) {
-      s.checkDirs();
-    }
-  }
-
   @Override
   public VolumeCheckResult check(VolumeCheckContext ignored)
       throws DiskErrorException {
@@ -1007,6 +1003,9 @@ public class FsVolumeImpl implements FsVolumeSpi {
     Set<Entry<String, BlockPoolSlice>> set = bpSlices.entrySet();
     for (Entry<String, BlockPoolSlice> entry : set) {
       entry.getValue().shutdown(null);
+    }
+    if (metrics != null) {
+      metrics.unRegister();
     }
   }
 
@@ -1303,6 +1302,11 @@ public class FsVolumeImpl implements FsVolumeSpi {
   @Override
   public FileIoProvider getFileIoProvider() {
     return fileIoProvider;
+  }
+
+  @Override
+  public DataNodeVolumeMetrics getMetrics() {
+    return metrics;
   }
 
   private LinkedList<ScanInfo> compileReport(File bpFinalizedDir,

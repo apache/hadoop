@@ -47,11 +47,6 @@
 #
 # export KMS_SSL_KEYSTORE_PASS=password
 
-#
-# The password of the truststore
-#
-# export KMS_SSL_TRUSTSTORE_PASS=
-
 
 ##
 ## Tomcat specific settings

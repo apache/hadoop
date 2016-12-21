@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ReportCompiler;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -476,16 +477,29 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   static class SimulatedVolume implements FsVolumeSpi {
     private final SimulatedStorage storage;
     private final FileIoProvider fileIoProvider;
+    private final DataNodeVolumeMetrics metrics;
 
     SimulatedVolume(final SimulatedStorage storage,
-                    final FileIoProvider fileIoProvider) {
+                    final FileIoProvider fileIoProvider,
+                    final DataNodeVolumeMetrics metrics) {
       this.storage = storage;
       this.fileIoProvider = fileIoProvider;
+      this.metrics = metrics;
     }
 
     @Override
     public FsVolumeReference obtainReference() throws ClosedChannelException {
-      return null;
+      return new FsVolumeReference() {
+        @Override
+        public void close() throws IOException {
+          // no-op.
+        }
+
+        @Override
+        public FsVolumeSpi getVolume() {
+          return SimulatedVolume.this;
+        }
+      };
     }
 
     @Override
@@ -575,6 +589,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     }
 
     @Override
+    public DataNodeVolumeMetrics getMetrics() {
+      return metrics;
+    }
+
+    @Override
     public VolumeCheckResult check(VolumeCheckContext context)
         throws Exception {
       return VolumeCheckResult.HEALTHY;
@@ -609,7 +628,12 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     this.storage = new SimulatedStorage(
         conf.getLong(CONFIG_PROPERTY_CAPACITY, DEFAULT_CAPACITY),
         conf.getEnum(CONFIG_PROPERTY_STATE, DEFAULT_STATE));
-    this.volume = new SimulatedVolume(this.storage, this.fileIoProvider);
+
+    // TODO: per volume id or path
+    DataNodeVolumeMetrics volumeMetrics = DataNodeVolumeMetrics.create(conf,
+        datanodeUuid);
+    this.volume = new SimulatedVolume(this.storage, this.fileIoProvider,
+        volumeMetrics);
     this.datasetLock = new AutoCloseableLock();
   }
 
@@ -1064,9 +1088,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
-  public Set<StorageLocation> checkDataDir() {
-    // nothing to check for simulated data set
-    return null;
+  public void handleVolumeFailures(Set<FsVolumeSpi> failedVolumes) {
   }
 
   @Override // FsDatasetSpi
@@ -1335,7 +1357,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public FsVolumeReferences getFsVolumeReferences() {
-    throw new UnsupportedOperationException();
+    return new FsVolumeReferences(Collections.singletonList(volume));
   }
 
   @Override

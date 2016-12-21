@@ -23,9 +23,18 @@ export default DS.JSONAPISerializer.extend({
     internalNormalizeSingleResponse(store, primaryModelClass, payload, id,
       requestType) {
       if (payload.app) {
-        payload = payload.app;  
+        payload = payload.app;
       }
-      
+
+      var timeoutInSecs = -1;
+      var appExpiryTime = Converter.timeStampToDate(payload.finishedTime);
+      if (payload.timeouts && payload.timeouts.timeout && payload.timeouts.timeout[0]) {
+        timeoutInSecs = payload.timeouts.timeout[0].remainingTimeInSeconds;
+        if (timeoutInSecs > -1) {
+          appExpiryTime = Converter.isoDateToDate(payload.timeouts.timeout[0].expiryTime);
+        }
+      }
+
       var fixedPayload = {
         id: id,
         type: primaryModelClass.modelName, // yarn-app
@@ -58,7 +67,9 @@ export default DS.JSONAPISerializer.extend({
           numAMContainerPreempted: payload.numAMContainerPreempted,
           clusterUsagePercentage: payload.clusterUsagePercentage,
           queueUsagePercentage: payload.queueUsagePercentage,
-          currentAppAttemptId: payload.currentAppAttemptId
+          currentAppAttemptId: payload.currentAppAttemptId,
+          remainingTimeoutInSeconds: timeoutInSecs,
+          applicationExpiryTime: appExpiryTime
         }
       };
 
@@ -67,7 +78,7 @@ export default DS.JSONAPISerializer.extend({
 
     normalizeSingleResponse(store, primaryModelClass, payload, id,
       requestType) {
-      var p = this.internalNormalizeSingleResponse(store, 
+      var p = this.internalNormalizeSingleResponse(store,
         primaryModelClass, payload, id, requestType);
       return { data: p };
     },
