@@ -59,7 +59,6 @@ public final class TimelineSchemaCreator {
 
   final static String NAME = TimelineSchemaCreator.class.getSimpleName();
   private static final Log LOG = LogFactory.getLog(TimelineSchemaCreator.class);
-  private static final String PHOENIX_OPTION_SHORT = "p";
   private static final String SKIP_EXISTING_TABLE_OPTION_SHORT = "s";
   private static final String APP_TABLE_NAME_SHORT = "a";
   private static final String APP_TO_FLOW_TABLE_NAME_SHORT = "a2f";
@@ -117,22 +116,6 @@ public final class TimelineSchemaCreator {
       exceptions.add(e);
     }
 
-    // Create Phoenix data schema if needed
-    if (commandLine.hasOption(PHOENIX_OPTION_SHORT)) {
-      Configuration phoenixConf = new Configuration();
-      try {
-        PhoenixOfflineAggregationWriterImpl phoenixWriter =
-            new PhoenixOfflineAggregationWriterImpl();
-        phoenixWriter.init(phoenixConf);
-        phoenixWriter.start();
-        phoenixWriter.createPhoenixTables();
-        phoenixWriter.stop();
-        LOG.info("Successfully created Phoenix offline aggregation schema. ");
-      } catch (IOException e) {
-        LOG.error("Error in creating phoenix tables: " + e.getMessage());
-        exceptions.add(e);
-      }
-    }
     if (exceptions.size() > 0) {
       LOG.warn("Schema creation finished with the following exceptions");
       for (Exception e : exceptions) {
@@ -182,11 +165,6 @@ public final class TimelineSchemaCreator {
 
     // Options without an argument
     // No need to set arg name since we do not need an argument here
-    o = new Option(PHOENIX_OPTION_SHORT, "usePhoenix", false,
-        "create Phoenix offline aggregation tables");
-    o.setRequired(false);
-    options.addOption(o);
-
     o = new Option(SKIP_EXISTING_TABLE_OPTION_SHORT, "skipExistingTable",
         false, "skip existing Hbase tables and continue to create new tables");
     o.setRequired(false);
