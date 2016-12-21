@@ -51,11 +51,7 @@ fi
 # it is used in Tomcat's server.xml configuration file
 #
 
-# Mask the trustStorePassword
-# shellcheck disable=SC2086
-CATALINA_OPTS_DISP="$(echo ${CATALINA_OPTS} | sed -e 's/trustStorePassword=[^ ]*/trustStorePassword=***/')"
-
-hadoop_debug "Using   CATALINA_OPTS:       ${CATALINA_OPTS_DISP}"
+hadoop_debug "Using   CATALINA_OPTS:       ${CATALINA_OPTS}"
 
 # We're using hadoop-common, so set up some stuff it might need:
 hadoop_finalize
@@ -94,14 +90,11 @@ fi
 # if custom, use provided password
 #
 if [[ -f "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml.conf" ]]; then
-  if [[ -n "${KMS_SSL_KEYSTORE_PASS+x}" ]] || [[ -n "${KMS_SSL_TRUSTSTORE_PASS}" ]]; then
+  if [[ -n "${KMS_SSL_KEYSTORE_PASS+x}" ]]; then
       export KMS_SSL_KEYSTORE_PASS=${KMS_SSL_KEYSTORE_PASS:-password}
       KMS_SSL_KEYSTORE_PASS_ESCAPED=$(hadoop_xml_escape \
         "$(hadoop_sed_escape "$KMS_SSL_KEYSTORE_PASS")")
-      KMS_SSL_TRUSTSTORE_PASS_ESCAPED=$(hadoop_xml_escape \
-        "$(hadoop_sed_escape "$KMS_SSL_TRUSTSTORE_PASS")")
       sed -e 's/"_kms_ssl_keystore_pass_"/'"\"${KMS_SSL_KEYSTORE_PASS_ESCAPED}\""'/g' \
-          -e 's/"_kms_ssl_truststore_pass_"/'"\"${KMS_SSL_TRUSTSTORE_PASS_ESCAPED}\""'/g' \
         "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml.conf" \
         > "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml"
       chmod 700 "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml" >/dev/null 2>&1
