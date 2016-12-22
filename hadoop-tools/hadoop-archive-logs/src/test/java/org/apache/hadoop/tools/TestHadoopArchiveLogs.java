@@ -165,13 +165,11 @@ public class TestHadoopArchiveLogs {
 
   @Test(timeout = 30000)
   public void testFilterAppsByAggregatedStatus() throws Exception {
-    MiniYARNCluster yarnCluster = null;
-    try {
+    try (MiniYARNCluster yarnCluster =
+        new MiniYARNCluster(TestHadoopArchiveLogs.class.getSimpleName(),
+            1, 1, 1, 1)) {
       Configuration conf = new Configuration();
       conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
-      yarnCluster =
-          new MiniYARNCluster(TestHadoopArchiveLogs.class.getSimpleName(), 1,
-              1, 1, 1);
       yarnCluster.init(conf);
       yarnCluster.start();
       conf = yarnCluster.getConfig();
@@ -237,10 +235,6 @@ public class TestHadoopArchiveLogs {
       Assert.assertTrue(hal.eligibleApplications.contains(app4));
       Assert.assertTrue(hal.eligibleApplications.contains(app7));
       Assert.assertTrue(hal.eligibleApplications.contains(app8));
-    } finally {
-      if (yarnCluster != null) {
-        yarnCluster.stop();
-      }
     }
   }
 

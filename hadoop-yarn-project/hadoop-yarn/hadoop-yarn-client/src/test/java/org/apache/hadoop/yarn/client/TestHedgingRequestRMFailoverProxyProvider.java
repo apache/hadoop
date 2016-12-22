@@ -35,8 +35,6 @@ public class TestHedgingRequestRMFailoverProxyProvider {
 
   @Test
   public void testHedgingRequestProxyProvider() throws Exception {
-    final MiniYARNCluster cluster =
-        new MiniYARNCluster("testHedgingRequestProxyProvider", 5, 0, 1, 1);
     Configuration conf = new YarnConfiguration();
 
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
@@ -49,41 +47,44 @@ public class TestHedgingRequestRMFailoverProxyProvider {
     conf.setLong(YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS,
         2000);
 
-    HATestUtil.setRpcAddressForRM("rm1", 10000, conf);
-    HATestUtil.setRpcAddressForRM("rm2", 20000, conf);
-    HATestUtil.setRpcAddressForRM("rm3", 30000, conf);
-    HATestUtil.setRpcAddressForRM("rm4", 40000, conf);
-    HATestUtil.setRpcAddressForRM("rm5", 50000, conf);
-    conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS, true);
+    try (MiniYARNCluster cluster =
+        new MiniYARNCluster("testHedgingRequestProxyProvider", 5, 0, 1, 1)) {
 
-    cluster.init(conf);
-    cluster.start();
+      HATestUtil.setRpcAddressForRM("rm1", 10000, conf);
+      HATestUtil.setRpcAddressForRM("rm2", 20000, conf);
+      HATestUtil.setRpcAddressForRM("rm3", 30000, conf);
+      HATestUtil.setRpcAddressForRM("rm4", 40000, conf);
+      HATestUtil.setRpcAddressForRM("rm5", 50000, conf);
+      conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS, true);
 
-    final YarnClient client = YarnClient.createYarnClient();
-    client.init(conf);
-    client.start();
+      cluster.init(conf);
+      cluster.start();
 
-    // Transition rm5 to active;
-    long start = System.currentTimeMillis();
-    makeRMActive(cluster, 4);
+      final YarnClient client = YarnClient.createYarnClient();
+      client.init(conf);
+      client.start();
 
-    validateActiveRM(client);
+      // Transition rm5 to active;
+      long start = System.currentTimeMillis();
+      makeRMActive(cluster, 4);
 
-    long end = System.currentTimeMillis();
-    System.out.println("Client call succeeded at " + end);
-    // should return the response fast
-    Assert.assertTrue(end - start <= 10000);
+      validateActiveRM(client);
 
-    // transition rm5 to standby
-    cluster.getResourceManager(4).getRMContext().getRMAdminService()
-        .transitionToStandby(new HAServiceProtocol.StateChangeRequestInfo(
-            HAServiceProtocol.RequestSource.REQUEST_BY_USER));
+      long end = System.currentTimeMillis();
+      System.out.println("Client call succeeded at " + end);
+      // should return the response fast
+      Assert.assertTrue(end - start <= 10000);
 
-    makeRMActive(cluster, 2);
+      // transition rm5 to standby
+      cluster.getResourceManager(4).getRMContext().getRMAdminService()
+          .transitionToStandby(new HAServiceProtocol.StateChangeRequestInfo(
+              HAServiceProtocol.RequestSource.REQUEST_BY_USER));
 
-    validateActiveRM(client);
+      makeRMActive(cluster, 2);
 
-    cluster.stop();
+      validateActiveRM(client);
+
+    }
   }
 
   private void validateActiveRM(YarnClient client) throws IOException {
