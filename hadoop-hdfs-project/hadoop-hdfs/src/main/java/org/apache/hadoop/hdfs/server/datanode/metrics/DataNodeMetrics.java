@@ -140,6 +140,8 @@ public class DataNodeMetrics {
   MutableCounterLong ecReconstructionBytesRead;
   @Metric("Bytes written by erasure coding worker")
   MutableCounterLong ecReconstructionBytesWritten;
+  @Metric("Bytes remote read by erasure coding worker")
+  MutableCounterLong ecReconstructionRemoteBytesRead;
 
   final MetricsRegistry registry = new MetricsRegistry("datanode");
   final String name;
@@ -457,6 +459,10 @@ public class DataNodeMetrics {
 
   public void incrECReconstructionBytesRead(long bytes) {
     ecReconstructionBytesRead.incr(bytes);
+  }
+
+  public void incrECReconstructionRemoteBytesRead(long bytes) {
+    ecReconstructionRemoteBytesRead.incr(bytes);
   }
 
   public void incrECReconstructionBytesWritten(long bytes) {

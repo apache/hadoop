@@ -70,6 +70,7 @@ class StripedBlockReconstructor extends StripedReconstructor
       final DataNodeMetrics metrics = getDatanode().getMetrics();
       metrics.incrECReconstructionTasks();
       metrics.incrECReconstructionBytesRead(getBytesRead());
+      metrics.incrECReconstructionRemoteBytesRead(getRemoteBytesRead());
       metrics.incrECReconstructionBytesWritten(getBytesWritten());
       getStripedReader().close();
       stripedWriter.close();
