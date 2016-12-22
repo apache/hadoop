@@ -27,8 +27,6 @@ import org.mockito.Mockito;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.when;
 
 /**
@@ -45,12 +43,11 @@ public class TestFSDirAttrOp {
 
     when(fsd.getAccessTimePrecision()).thenReturn(precision);
     when(fsd.hasWriteLock()).thenReturn(Boolean.TRUE);
-    when(fsd.getINodesInPath(anyString(), anyBoolean())).thenReturn(iip);
     when(iip.getLastINode()).thenReturn(inode);
     when(iip.getLatestSnapshotId()).thenReturn(Mockito.anyInt());
     when(inode.getAccessTime()).thenReturn(atime0);
 
-    return FSDirAttrOp.unprotectedSetTimes(fsd, "", mtime, atime, force);
+    return FSDirAttrOp.unprotectedSetTimes(fsd, iip, mtime, atime, force);
   }
 
   @Test
