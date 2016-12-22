@@ -559,11 +559,9 @@ public class TestJobHistoryEventHandler {
     TestParams t = new TestParams(false);
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
-    MiniYARNCluster yarnCluster = null;
     long currentTime = System.currentTimeMillis();
-    try {
-      yarnCluster = new MiniYARNCluster(
-            TestJobHistoryEventHandler.class.getSimpleName(), 1, 1, 1, 1);
+    try (MiniYARNCluster yarnCluster = new MiniYARNCluster(
+        TestJobHistoryEventHandler.class.getSimpleName(), 1, 1, 1, 1)) {
       yarnCluster.init(conf);
       yarnCluster.start();
       Configuration confJHEH = new YarnConfiguration(conf);
@@ -716,10 +714,6 @@ public class TestJobHistoryEventHandler {
               tEntity.getEvents().get(0).getEventInfo().get("TASK_TYPE"));
       Assert.assertEquals(TaskType.MAP.toString(),
               tEntity.getEvents().get(1).getEventInfo().get("TASK_TYPE"));
-    } finally {
-      if (yarnCluster != null) {
-        yarnCluster.stop();
-      }
     }
   }
 

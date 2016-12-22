@@ -1542,15 +1542,13 @@ public class TestYarnCLI {
     conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
     conf.setBoolean(
         "yarn.scheduler.capacity.root.a.a1.disable_preemption", true);
-    MiniYARNCluster cluster =
-        new MiniYARNCluster("testReservationAPIs", 2, 1, 1);
 
-    YarnClient yarnClient = null;
-    try {
+    try (MiniYARNCluster cluster =
+        new MiniYARNCluster("testReservationAPIs", 2, 1, 1);
+         YarnClient yarnClient = YarnClient.createYarnClient()) {
       cluster.init(conf);
       cluster.start();
       final Configuration yarnConf = cluster.getConfig();
-      yarnClient = YarnClient.createYarnClient();
       yarnClient.init(yarnConf);
       yarnClient.start();
 
@@ -1563,13 +1561,6 @@ public class TestYarnCLI {
       assertEquals(0, result);
       Assert.assertTrue(sysOutStream.toString()
           .contains("Preemption : disabled"));
-    } finally {
-      // clean-up
-      if (yarnClient != null) {
-        yarnClient.stop();
-      }
-      cluster.stop();
-      cluster.close();
     }
   }
   

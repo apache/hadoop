@@ -52,16 +52,14 @@ public class TestHadoopArchiveLogsRunner {
 
   @Test(timeout = 50000)
   public void testHadoopArchiveLogs() throws Exception {
-    MiniYARNCluster yarnCluster = null;
     MiniDFSCluster dfsCluster = null;
     FileSystem fs = null;
-    try {
+    try (MiniYARNCluster yarnCluster =
+        new MiniYARNCluster(TestHadoopArchiveLogsRunner.class.getSimpleName(),
+            1, 2, 1, 1)) {
       Configuration conf = new YarnConfiguration();
       conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
       conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS, true);
-      yarnCluster =
-          new MiniYARNCluster(TestHadoopArchiveLogsRunner.class.getSimpleName(),
-              1, 2, 1, 1);
       yarnCluster.init(conf);
       yarnCluster.start();
       conf = yarnCluster.getConfig();
@@ -133,9 +131,6 @@ public class TestHadoopArchiveLogsRunner {
           harLogs[2].getOwner());
       Assert.assertEquals(0, fs.listStatus(workingDir).length);
     } finally {
-      if (yarnCluster != null) {
-        yarnCluster.stop();
-      }
       if (fs != null) {
         fs.close();
       }
