@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -368,6 +369,133 @@ public class TestDatanodeManager {
       is(DatanodeInfo.AdminStates.DECOMMISSIONED));
     assertThat(sortedLocs[sortedLocs.length - 2].getAdminState(),
       is(DatanodeInfo.AdminStates.DECOMMISSIONED));
+  }
+
+  /**
+   * Execute a functional link cost script and make sure that helper
+   * function works correctly
+   *
+   * @throws IOException
+   * @throws URISyntaxException
+   */
+  @Test
+  public void testGoodLinkCostScript() throws IOException, URISyntaxException {
+    LinkCostHelperFunction("/" + Shell.appendScriptExtension("link-script"),
+                           false);
+  }
+
+
+  /**
+   * Run a broken link cost script and verify that helper function is able to
+   * ignore the broken script and work correctly
+   *
+   * @throws IOException
+   * @throws URISyntaxException
+   */
+  @Test
+  public void testBadLinkCostScript() throws IOException, URISyntaxException {
+    LinkCostHelperFunction("/"+ Shell.appendScriptExtension("link-broken-script"),
+                           true);
+  }
+  /**
+   * Helper function that tests the DatanodeManagers updateRackCosts function
+   * we invoke this function with and without topology scripts
+   *
+   * @param scriptFileName - Script Name or null
+   *
+   * @throws URISyntaxException
+   * @throws IOException
+   */
+  public void LinkCostHelperFunction(String linkScriptFileName,
+                                     Boolean brokenScript) 
+    throws URISyntaxException, IOException {
+    // create the DatanodeManager which will be tested
+    Configuration conf = new Configuration();
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+
+    // Setup topology script so that DM can distinguish between racks
+    String topoScriptFileName = "/"+ Shell.appendScriptExtension("topology-script");
+    assertEquals(true, topoScriptFileName != null && !topoScriptFileName.isEmpty());
+    URL shellScript = getClass().getResource(topoScriptFileName);
+    Path resourcePath = Paths.get(shellScript.toURI());
+    FileUtil.setExecutable(resourcePath.toFile(), true);
+    conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY,
+      resourcePath.toString());
+
+    // Setup link cost script so that DM can set link costs between racks
+    assertEquals(true, linkScriptFileName != null && !linkScriptFileName.isEmpty());
+    shellScript = getClass().getResource(linkScriptFileName);
+    resourcePath = Paths.get(shellScript.toURI());
+    FileUtil.setExecutable(resourcePath.toFile(), true);
+    conf.set(DFSConfigKeys.NET_LINK_SCRIPT_FILE_NAME_KEY,
+      resourcePath.toString());
+
+    // Start DatanodeManager
+    DatanodeManager dm = mockDatanodeManager(fsn, conf);
+
+    // Register 5 datanodes each in a different rack
+    for (int i = 0; i < 5; i++) {
+      // register new datanode
+      String uuid = "KUUID-" + i;
+      String ip = "KIP-" + i;
+      DatanodeRegistration dr = Mockito.mock(DatanodeRegistration.class);
+      Mockito.when(dr.getDatanodeUuid()).thenReturn(uuid);
+      Mockito.when(dr.getIpAddr()).thenReturn(ip);
+      Mockito.when(dr.getXferAddr()).thenReturn(ip + ":9000");
+      Mockito.when(dr.getXferPort()).thenReturn(9000);
+      Mockito.when(dr.getSoftwareVersion()).thenReturn("version1");
+      dm.registerDatanode(dr);
+    }
+
+    // Verify that we store the correct number of rack names
+    Set<String> racks = dm.getNetworkTopology().getRackNames();
+    Assert.assertEquals(5, racks.size());
+
+    // Verify that rack costs have been updated as expected
+    // We have written the working script such that it returns a value of 10
+    // everytime. If the script doesn't work, we assume a default value of 1.
+    int expectedCost = brokenScript ? 1 : 10;
+    for (String rack : racks) {
+      for (String otherRack : racks) {
+        if (!brokenScript && rack.equals(otherRack)) {
+          // Cost between a rack and itself must be zero.
+          assertEquals(0, dm.getNetworkTopology().getRackCost(rack, otherRack));
+        } else {
+          assertEquals(expectedCost,
+                       dm.getNetworkTopology().getRackCost(rack, otherRack));
+        }
+      }
+    }
+
+    // Remove the last datanode.
+    String uuid = "KUUID-4";
+    String ip = "KIP-4";
+    DatanodeRegistration dr = Mockito.mock(DatanodeRegistration.class);
+    Mockito.when(dr.getDatanodeUuid()).thenReturn(uuid);
+    Mockito.when(dr.getIpAddr()).thenReturn(ip);
+    Mockito.when(dr.getXferAddr()).thenReturn(ip + ":9000");
+    Mockito.when(dr.getXferPort()).thenReturn(9000);
+    Mockito.when(dr.getSoftwareVersion()).thenReturn("version1");
+    dm.removeDatanode(dr);
+
+    // Verify that the rack lists are updated
+    racks = dm.getNetworkTopology().getRackNames();
+    Assert.assertEquals(4, racks.size());
+
+    // Verify that rack costs have also been updated
+    expectedCost = brokenScript ? 1 : 10;
+    for (String rack : racks) {
+      for (String otherRack : racks) {
+        if (!brokenScript && rack.equals(otherRack)) {
+          // Cost between a rack and itself must be zero.
+          assertEquals(0, dm.getNetworkTopology().getRackCost(rack, otherRack));
+        } else {
+          assertEquals(expectedCost,
+                       dm.getNetworkTopology().getRackCost(rack, otherRack));
+        }
+      }
+    }
   }
 
   /**

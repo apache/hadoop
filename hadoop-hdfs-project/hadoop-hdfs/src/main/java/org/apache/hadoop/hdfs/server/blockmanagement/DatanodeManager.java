@@ -26,6 +26,7 @@ import com.google.common.net.InetAddresses;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -50,7 +51,10 @@ import org.apache.hadoop.net.*;
 import org.apache.hadoop.net.NetworkTopology.InvalidTopologyException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
@@ -65,6 +69,16 @@ import java.util.concurrent.ThreadLocalRandom;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DatanodeManager {
+
+  /**
+   * Default number of arguments: {@value}
+   */
+  static final int DEFAULT_ARG_COUNT = 
+                     CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_DEFAULT;
+
+  private final String netLinkScriptName;
+  private final int defaultLinkCost;
+
   static final Log LOG = LogFactory.getLog(DatanodeManager.class);
 
   private final Namesystem namesystem;
@@ -277,6 +291,10 @@ public class DatanodeManager {
     this.blocksPerPostponedMisreplicatedBlocksRescan = conf.getLong(
         DFSConfigKeys.DFS_NAMENODE_BLOCKS_PER_POSTPONEDBLOCKS_RESCAN_KEY,
         DFSConfigKeys.DFS_NAMENODE_BLOCKS_PER_POSTPONEDBLOCKS_RESCAN_KEY_DEFAULT);
+    this.netLinkScriptName = conf.get(DFSConfigKeys.NET_LINK_SCRIPT_FILE_NAME_KEY);
+    this.defaultLinkCost = conf.getInt(
+        DFSConfigKeys.NET_LINK_DEFAULT_COST_KEY,
+        DFSConfigKeys.NET_LINK_DEFAULT_COST_DEFAULT);
   }
 
   private static long getStaleIntervalFromConf(Configuration conf,
@@ -635,6 +653,7 @@ public class DatanodeManager {
     heartbeatManager.removeDatanode(nodeInfo);
     blockManager.removeBlocksAssociatedTo(nodeInfo);
     networktopology.remove(nodeInfo);
+    removeRackCosts(nodeInfo);
     decrementVersionCount(nodeInfo.getSoftwareVersion());
     blockManager.getBlockReportLeaseManager().unregister(nodeInfo);
 
@@ -1012,6 +1031,7 @@ public class DatanodeManager {
                 getNetworkDependenciesWithDefault(nodeS));
           }
           getNetworkTopology().add(nodeS);
+          addRackCosts(nodeS);
           resolveUpgradeDomain(nodeS);
 
           // also treat the registration message as a heartbeat
@@ -1044,6 +1064,7 @@ public class DatanodeManager {
               getNetworkDependenciesWithDefault(nodeDescr));
         }
         networktopology.add(nodeDescr);
+        addRackCosts(nodeDescr);
         nodeDescr.setSoftwareVersion(nodeReg.getSoftwareVersion());
         resolveUpgradeDomain(nodeDescr);
 
@@ -1076,6 +1097,76 @@ public class DatanodeManager {
       invalidNodeNames.add(nodeReg.getPeerHostName());
       dnsToSwitchMapping.reloadCachedMappings(invalidNodeNames);
       throw e;
+    }
+  }
+  /**
+   * Build and execute the resolution command. The command is
+   * executed in the directory specified by the system property
+   * "user.dir" if set; otherwise the current working directory is used
+   * @param args a list of arguments
+   * @return null if the number of arguments is out of range,
+   * or the output of the command.
+   */
+  protected int runLinkCostCommand(List<String> cmdList) {
+    if (cmdList.size() == 0) {
+      return defaultLinkCost;
+    }
+    File dir = null;
+    String userDir;
+    if ((userDir = System.getProperty("user.dir")) != null) {
+      dir = new File(userDir);
+    }
+    ShellCommandExecutor s = new ShellCommandExecutor(
+      cmdList.toArray(new String[cmdList.size()]), dir);
+    try {
+      s.execute();
+      String output = StringUtils.strip(s.getOutput(), "\n");
+      return Integer.parseInt(output);
+    } catch (Exception e) {
+      LOG.warn("Exception running link cost command " + e);
+      return defaultLinkCost;
+    }
+  }
+
+  protected int getLinkCost(String rack1, String rack2) {
+    if (netLinkScriptName == null) {
+      LOG.warn("Could not find link cost script");
+      return defaultLinkCost;
+    }
+    List<String> m = new ArrayList<String>(3);
+    m.add(netLinkScriptName);
+    m.add(rack1);
+    m.add(rack2);
+    return runLinkCostCommand(m);
+  }
+
+  protected void addRackCosts(Node node) {
+    Set<String> rackNames = getNetworkTopology().getRackNames();
+    String thisRack = node.getNetworkLocation();
+    LOG.debug("Add rack costs for " + thisRack);
+
+    for (String otherRack : rackNames) {
+      LOG.debug("Check cost between " + thisRack + " and " + otherRack);
+      int cost = getLinkCost(thisRack, otherRack);
+      getNetworkTopology().setRackCost(thisRack, otherRack, cost);
+      getNetworkTopology().setRackCost(otherRack, thisRack, cost);
+    }
+  }
+
+  protected void removeRackCosts(Node node) {
+    String thisRack = node.getNetworkLocation();
+    Set<String> rackNames = getNetworkTopology().getRackNames();
+    if (rackNames.contains(thisRack)) {
+      // The node may have been deleted, but it seems like the rack contains
+      // other nodes. So no need to remove the link costs associated with this
+      // rack just yet.
+      return;
+    }
+    LOG.debug("Delete rack costs for " + thisRack);
+
+    for (String otherRack : rackNames) {
+      getNetworkTopology().deleteRackCost(thisRack, otherRack);
+      getNetworkTopology().deleteRackCost(otherRack, thisRack);
     }
   }
 

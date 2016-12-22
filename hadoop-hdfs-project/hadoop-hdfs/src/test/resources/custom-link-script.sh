@@ -16,5 +16,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-echo $1 | awk -F'-' '{printf("/rackID-%s",$2)}'
+# Empty link script. We expect the test to overwrite this and then use it
+exit 1
