@@ -282,6 +282,54 @@ To enable 20 threads for Rename operation. Set configuration value to 0 or 1 to 
       <value>20</value>
     </property>
 
+### <a name="WASB_SECURE_MODE" />WASB Secure mode and configuration
+
+WASB can operate in secure mode where the Storage access keys required to communicate with Azure storage does not have to
+be in the same address space as the process using WASB. In this mode all interactions with Azure storage is performed using
+SAS uris. There are two sub modes within the Secure mode, one is remote SAS key mode where the SAS keys are generated from
+a remote process and local mode where SAS keys are generated within WASB. By default the SAS Key mode is expected to run in
+Romote mode, however for testing purposes the local mode can be enabled to generate SAS keys in the same process as WASB.
+
+To enable Secure mode following property needs to be set to true.
+
+```
+    <property>
+      <name>fs.azure.secure.mode</name>
+      <value>true</value>
+    </property>
+```
+
+To enable SAS key generation locally following property needs to be set to true.
+
+```
+    <property>
+      <name>fs.azure.local.sas.key.mode</name>
+      <value>true</value>
+    </property>
+```
+To use the remote SAS key generation mode, an external REST service is expected to provided required SAS keys.
+Following property can used to provide the end point to use for remote SAS Key generation:
+
+```
+    <property>
+      <name>fs.azure.cred.service.url</name>
+      <value>{URL}</value>
+    </property>
+```
+The remote service is expected to provide support for two REST calls ```{URL}/GET_CONTAINER_SAS``` and ```{URL}/GET_RELATIVE_BLOB_SAS```, for generating
+container and relative blob sas keys. An example requests
+
+```{URL}/GET_CONTAINER_SAS?storage_account=<account_name>&container=<container>&sas_expiry=<expiry period>&delegation_token=<delegation token>```
+```{URL}/GET_CONTAINER_SAS?storage_account=<account_name>&container=<container>&relative_path=<relative path>&sas_expiry=<expiry period>&delegation_token=<delegation token>```
+
+The service is expected to return a response in JSON format:
+```
+{
+  "responseCode" : 0 or non-zero <int>,
+  "responseMessage" : relavant message on failure <String>,
+  "sasKey" : Requested SAS Key <String>
+}
+```
 ## <a name="Testing_the_hadoop-azure_Module" />Testing the hadoop-azure Module
 
 The hadoop-azure module includes a full suite of unit tests.  Most of the tests

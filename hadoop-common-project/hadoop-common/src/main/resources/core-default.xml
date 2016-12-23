@@ -1219,6 +1219,38 @@
   <description>The implementation class of the S3A AbstractFileSystem.</description>
 </property>
 
+<!-- Azure file system properties -->
+<property>
+  <name>fs.azure.secure.mode</name>
+  <value>false</value>
+  <description>
+    Config flag to identify the mode in which fs.azure.NativeAzureFileSystem needs
+    to run under. Setting it "true" would make fs.azure.NativeAzureFileSystem use
+    SAS keys to communicate with Azure storage.
+  </description>
+</property>
+<property>
+  <name>fs.azure.local.sas.key.mode</name>
+  <value>false</value>
+  <description>
+    Works in conjuction with fs.azure.secure.mode. Setting this config to true
+    results in fs.azure.NativeAzureFileSystem using the local SAS key generation
+    where the SAS keys are generating in the same process as fs.azure.NativeAzureFileSystem.
+    If fs.azure.secure.mode flag is set to false, this flag has no effect.
+  </description>
+</property>
+<property>
+  <name>fs.azure.sas.expiry.period</name>
+  <value>90d</value>
+  <description>
+    The default value to be used for expiration period for SAS keys generated.
+    Can use the following suffix (case insensitive):
+    ms(millis), s(sec), m(min), h(hour), d(day)
+    to specify the time (such as 2s, 2m, 1h, etc.).
+  </description>
+</property>
+
+
 <property>
   <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>
@@ -2441,5 +2473,4 @@
       in audit logs.
     </description>
   </property>
-
 </configuration>
