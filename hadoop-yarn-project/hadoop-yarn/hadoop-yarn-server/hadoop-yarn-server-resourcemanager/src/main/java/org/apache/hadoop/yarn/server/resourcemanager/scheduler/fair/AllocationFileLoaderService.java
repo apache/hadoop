@@ -639,7 +639,7 @@ public class AllocationFileLoaderService extends AbstractService {
     return defaultPermissions;
   }
 
-  interface Listener {
+  public interface Listener {
     void onReload(AllocationConfiguration info) throws IOException;
   }
 }
