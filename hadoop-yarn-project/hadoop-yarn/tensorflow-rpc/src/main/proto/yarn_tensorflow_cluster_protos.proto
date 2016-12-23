@@ -1,0 +1,10 @@
+import "yarn_protos.proto"
+import "yarn_server_common_protos.proto"
+
+message GetClusterSpecRequestProto {
+
+}
+
+message GetClusterSpecResponseProto {
+  required string cluster_spec = 1;
+}

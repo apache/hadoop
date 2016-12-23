@@ -1,0 +1,9 @@
+option java_package = "org.apache.hadoop.yarn.tensorflow.proto";
+option java_outer_classname = "TensorflowCluster";
+option java_generic_services = true;
+option java_generate_equal_and_hash = true;
+import "yarn_server_common_service_protos.proto"
+
+service TensorflowCluster {
+  rpc getClusterSpec(GetClusterSpecRequestProto) returns (GetClusterSpecResponseProto);
+}
