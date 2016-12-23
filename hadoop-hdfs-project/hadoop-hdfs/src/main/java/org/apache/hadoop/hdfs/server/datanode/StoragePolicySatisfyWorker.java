@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.datatransfer.BlockPinningException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
@@ -251,6 +252,12 @@ public class StoragePolicySatisfyWorker {
                 + " satisfying storageType:{}",
             block, source, target, targetStorageType);
         return BlockMovementStatus.DN_BLK_STORAGE_MOVEMENT_SUCCESS;
+      } catch (BlockPinningException e) {
+        // Pinned block won't be able to move to a different node. So, its not
+        // required to do retries, just marked as SUCCESS.
+        LOG.debug("Pinned block can't be moved, so skipping block:{}", block,
+            e);
+        return BlockMovementStatus.DN_BLK_STORAGE_MOVEMENT_SUCCESS;
       } catch (IOException e) {
         // TODO: handle failure retries
         LOG.warn(
@@ -282,7 +289,7 @@ public class StoragePolicySatisfyWorker {
         response = BlockOpResponseProto.parseFrom(vintPrefixed(in));
       }
       String logInfo = "reportedBlock move is failed";
-      DataTransferProtoUtil.checkBlockOpStatus(response, logInfo);
+      DataTransferProtoUtil.checkBlockOpStatus(response, logInfo, true);
     }
   }
 
