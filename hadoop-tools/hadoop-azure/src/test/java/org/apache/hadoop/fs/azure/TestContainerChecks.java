@@ -30,6 +30,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.CreateOptions;
 import org.junit.After;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 
 import com.microsoft.azure.storage.blob.BlobOutputStream;
@@ -41,13 +43,19 @@ import com.microsoft.azure.storage.blob.CloudBlockBlob;
  */
 public class TestContainerChecks {
   private AzureBlobStorageTestAccount testAccount;
-
+  private boolean runningInSASMode = false;
   @After
   public void tearDown() throws Exception {
     if (testAccount != null) {
       testAccount.cleanup();
       testAccount = null;
     }
+  }
+
+  @Before
+  public void setMode() {
+    runningInSASMode = AzureBlobStorageTestAccount.createTestConfiguration().
+        getBoolean(AzureNativeFileSystemStore.KEY_USE_SECURE_MODE, false);
   }
 
   @Test
@@ -155,6 +163,8 @@ public class TestContainerChecks {
 
   @Test
   public void testContainerChecksWithSas() throws Exception {
+
+    Assume.assumeFalse(runningInSASMode);
     testAccount = AzureBlobStorageTestAccount.create("",
         EnumSet.of(CreateOptions.UseSas));
     assumeNotNull(testAccount);

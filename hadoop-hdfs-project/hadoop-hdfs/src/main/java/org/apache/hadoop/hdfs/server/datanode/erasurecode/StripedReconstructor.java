@@ -118,6 +118,7 @@ abstract class StripedReconstructor {
   // metrics
   private AtomicLong bytesRead = new AtomicLong(0);
   private AtomicLong bytesWritten = new AtomicLong(0);
+  private AtomicLong remoteBytesRead = new AtomicLong(0);
 
   StripedReconstructor(ErasureCodingWorker worker,
       StripedReconstructionInfo stripedReconInfo) {
@@ -138,8 +139,13 @@ abstract class StripedReconstructor {
     positionInBlock = 0L;
   }
 
-  public void incrBytesRead(long delta) {
-    bytesRead.addAndGet(delta);
+  public void incrBytesRead(boolean local, long delta) {
+    if (local) {
+      bytesRead.addAndGet(delta);
+    } else {
+      bytesRead.addAndGet(delta);
+      remoteBytesRead.addAndGet(delta);
+    }
   }
 
   public void incrBytesWritten(long delta) {
@@ -148,6 +154,10 @@ abstract class StripedReconstructor {
 
   public long getBytesRead() {
     return bytesRead.get();
+  }
+
+  public long getRemoteBytesRead() {
+    return remoteBytesRead.get();
   }
 
   public long getBytesWritten() {

@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getLongCounterWithoutCheck;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -98,6 +99,8 @@ public class TestDataNodeErasureCodingMetrics {
         blockGroupSize, getLongMetric("EcReconstructionBytesRead"));
     Assert.assertEquals("EcReconstructionBytesWritten should be ",
         blockSize, getLongMetric("EcReconstructionBytesWritten"));
+    Assert.assertEquals("EcReconstructionRemoteBytesRead should be ",
+        0, getLongMetricWithoutCheck("EcReconstructionRemoteBytesRead"));
   }
 
   // A partial block, reconstruct the partial block
@@ -110,6 +113,8 @@ public class TestDataNodeErasureCodingMetrics {
         fileLen,  getLongMetric("EcReconstructionBytesRead"));
     Assert.assertEquals("EcReconstructionBytesWritten should be ",
         fileLen, getLongMetric("EcReconstructionBytesWritten"));
+    Assert.assertEquals("EcReconstructionRemoteBytesRead should be ",
+        0, getLongMetricWithoutCheck("EcReconstructionRemoteBytesRead"));
   }
 
   // 1 full block + 5 partial block, reconstruct the full block
@@ -121,8 +126,10 @@ public class TestDataNodeErasureCodingMetrics {
     Assert.assertEquals("ecReconstructionBytesRead should be ",
         cellSize * dataBlocks + cellSize + cellSize / 10,
         getLongMetric("EcReconstructionBytesRead"));
-    Assert.assertEquals("ecReconstructionBytesWritten should be ",
+    Assert.assertEquals("EcReconstructionBytesWritten should be ",
         blockSize, getLongMetric("EcReconstructionBytesWritten"));
+    Assert.assertEquals("EcReconstructionRemoteBytesRead should be ",
+        0, getLongMetricWithoutCheck("EcReconstructionRemoteBytesRead"));
   }
 
   // 1 full block + 5 partial block, reconstruct the partial block
@@ -137,6 +144,8 @@ public class TestDataNodeErasureCodingMetrics {
     Assert.assertEquals("ecReconstructionBytesWritten should be ",
         cellSize + cellSize / 10,
         getLongMetric("EcReconstructionBytesWritten"));
+    Assert.assertEquals("EcReconstructionRemoteBytesRead should be ",
+        0, getLongMetricWithoutCheck("EcReconstructionRemoteBytesRead"));
   }
 
   private long getLongMetric(String metricName) {
@@ -145,6 +154,16 @@ public class TestDataNodeErasureCodingMetrics {
     for (DataNode dn : cluster.getDataNodes()) {
       MetricsRecordBuilder rb = getMetrics(dn.getMetrics().name());
       metricValue += getLongCounter(metricName, rb);
+    }
+    return metricValue;
+  }
+
+  private long getLongMetricWithoutCheck(String metricName) {
+    long metricValue = 0;
+    // Add all reconstruction metric value from all data nodes
+    for (DataNode dn : cluster.getDataNodes()) {
+      MetricsRecordBuilder rb = getMetrics(dn.getMetrics().name());
+      metricValue += getLongCounterWithoutCheck(metricName, rb);
     }
     return metricValue;
   }

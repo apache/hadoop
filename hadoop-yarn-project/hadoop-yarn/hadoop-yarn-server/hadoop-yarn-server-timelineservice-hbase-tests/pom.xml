@@ -55,10 +55,6 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
         </exclusion>
-        <exclusion>
-          <groupId>org.apache.phoenix</groupId>
-          <artifactId>phoenix-core</artifactId>
-        </exclusion>
       </exclusions>
     </dependency>
 
@@ -79,6 +75,8 @@
       </exclusions>
     </dependency>
 
+    <!-- 'mvn dependency:analyze' fails to detect use of this direct
+         dependency -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-auth</artifactId>
@@ -118,18 +116,6 @@
          dependency -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-server-common</artifactId>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-applicationhistoryservice</artifactId>
       <scope>test</scope>
       <exclusions>
@@ -148,14 +134,14 @@
 
     <dependency>
       <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-core</artifactId>
+      <artifactId>jersey-client</artifactId>
       <scope>test</scope>
     </dependency>
 
     <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-client</artifactId>
-      <scope>test</scope>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>jsr311-api</artifactId>
+      <version>1.1.1</version>
     </dependency>
 
     <dependency>
@@ -228,23 +214,6 @@
 
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-common</artifactId>
-      <classifier>tests</classifier>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-server</artifactId>
       <classifier>tests</classifier>
       <scope>test</scope>
@@ -279,99 +248,6 @@
     <!-- 'mvn dependency:analyze' fails to detect use of this direct
          dependency -->
     <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-it</artifactId>
-      <scope>test</scope>
-      <classifier>tests</classifier>
-      <exclusions>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-auth</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdfs</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-client</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.phoenix</groupId>
-      <artifactId>phoenix-core</artifactId>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-auth</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdfs</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>net.sourceforge.findbugs</groupId>
-          <artifactId>annotations</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.phoenix</groupId>
-      <artifactId>phoenix-core</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-auth</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdfs</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>net.sourceforge.findbugs</groupId>
-          <artifactId>annotations</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-
-    <!-- for runtime dependencies -->
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
       <version>${hbase-compatible-hadoop.version}</version>
@@ -385,6 +261,8 @@
       </exclusions>
     </dependency>
 
+    <!-- 'mvn dependency:analyze' fails to detect use of this direct
+         dependency -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
@@ -392,6 +270,8 @@
       <scope>test</scope>
     </dependency>
 
+    <!-- 'mvn dependency:analyze' fails to detect use of this direct
+         dependency -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
@@ -429,6 +309,8 @@
       </exclusions>
     </dependency>
 
+    <!-- 'mvn dependency:analyze' fails to detect use of this direct
+         dependency -->
     <!-- Jetty 9 is needed by the ATS code -->
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
