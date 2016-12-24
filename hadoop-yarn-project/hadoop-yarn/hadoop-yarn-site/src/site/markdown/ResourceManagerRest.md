@@ -2286,7 +2286,7 @@ The *maximum-resource-capabilites* object contains the following elements:
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| memory | int | The maxiumim memory available for a container |
+| memory | int | The maximum memory available for a container |
 | vCores | int | The maximum number of cores available for a container |
 
 ### Response Examples
