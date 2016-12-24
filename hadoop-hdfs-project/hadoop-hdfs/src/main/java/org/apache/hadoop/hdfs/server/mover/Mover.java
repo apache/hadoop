@@ -46,7 +46,6 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.SecurityUtil;
@@ -117,10 +116,12 @@ public class Mover {
   private final List<Path> targetPaths;
   private final int retryMaxAttempts;
   private final AtomicInteger retryCount;
+  private final Map<Long, Set<DatanodeInfo>> excludedPinnedBlocks;
 
   private final BlockStoragePolicy[] blockStoragePolicies;
 
-  Mover(NameNodeConnector nnc, Configuration conf, AtomicInteger retryCount) {
+  Mover(NameNodeConnector nnc, Configuration conf, AtomicInteger retryCount,
+      Map<Long, Set<DatanodeInfo>> excludedPinnedBlocks) {
     final long movedWinWidth = conf.getLong(
         DFSConfigKeys.DFS_MOVER_MOVEDWINWIDTH_KEY,
         DFSConfigKeys.DFS_MOVER_MOVEDWINWIDTH_DEFAULT);
@@ -144,6 +145,7 @@ public class Mover {
     this.targetPaths = nnc.getTargetPaths();
     this.blockStoragePolicies = new BlockStoragePolicy[1 <<
         BlockStoragePolicySuite.ID_BIT_LENGTH];
+    this.excludedPinnedBlocks = excludedPinnedBlocks;
   }
 
   void init() throws IOException {
@@ -292,6 +294,8 @@ public class Mover {
       // wait for pending move to finish and retry the failed migration
       boolean hasFailed = Dispatcher.waitForMoveCompletion(storages.targets
           .values());
+      Dispatcher.checkForBlockPinningFailures(excludedPinnedBlocks,
+          storages.targets.values());
       boolean hasSuccess = Dispatcher.checkForSuccess(storages.targets
           .values());
       if (hasFailed && !hasSuccess) {
@@ -461,6 +465,19 @@ public class Mover {
         return true;
       }
 
+      // Check the given block is pinned in the source datanode. A pinned block
+      // can't be moved to a different datanode. So we can skip adding these
+      // blocks to different nodes.
+      long blockId = db.getBlock().getBlockId();
+      if (excludedPinnedBlocks.containsKey(blockId)) {
+        Set<DatanodeInfo> locs = excludedPinnedBlocks.get(blockId);
+        for (DatanodeInfo dn : locs) {
+          if (source.getDatanodeInfo().equals(dn)) {
+            return false;
+          }
+        }
+      }
+
       if (dispatcher.getCluster().isNodeGroupAware()) {
         if (chooseTarget(db, source, targetTypes, Matcher.SAME_NODE_GROUP)) {
           return true;
@@ -614,6 +631,8 @@ public class Mover {
             DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_DEFAULT,
             TimeUnit.SECONDS) * 1000;
     AtomicInteger retryCount = new AtomicInteger(0);
+    // TODO: Need to limit the size of the pinned blocks to limit memory usage
+    Map<Long, Set<DatanodeInfo>> excludedPinnedBlocks = new HashMap<>();
     LOG.info("namenodes = " + namenodes);
 
     checkKeytabAndInit(conf);
@@ -628,7 +647,8 @@ public class Mover {
         Iterator<NameNodeConnector> iter = connectors.iterator();
         while (iter.hasNext()) {
           NameNodeConnector nnc = iter.next();
-          final Mover m = new Mover(nnc, conf, retryCount);
+          final Mover m = new Mover(nnc, conf, retryCount,
+              excludedPinnedBlocks);
           final ExitStatus r = m.run();
 
           if (r == ExitStatus.SUCCESS) {

@@ -31,7 +31,6 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 package hadoop.hdfs.datanode;
 
-import "HAServiceProtocol.proto";
 import "hdfs.proto";
 import "erasurecoding.proto";
 import "HdfsServer.proto";
@@ -207,15 +206,6 @@ message HeartbeatRequestProto {
   optional uint64 cacheUsed = 7 [default = 0 ];
   optional VolumeFailureSummaryProto volumeFailureSummary = 8;
   optional bool requestFullBlockReportLease = 9 [ default = false ];
-}
-
-/**
- * state - State the NN is in when returning response to the DN
- * txid - Highest transaction ID this NN has seen
- */
-message NNHAStatusHeartbeatProto {
-  required hadoop.common.HAServiceStateProto state = 1;
-  required uint64 txid = 2;
 }
 
 /**

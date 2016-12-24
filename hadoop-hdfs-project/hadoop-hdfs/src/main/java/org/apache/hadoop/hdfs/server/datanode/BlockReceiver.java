@@ -93,6 +93,7 @@ class BlockReceiver implements Closeable {
   protected final String inAddr;
   protected final String myAddr;
   private String mirrorAddr;
+  private String bracketedMirrorAddr;
   private DataOutputStream mirrorOut;
   private Daemon responder = null;
   private DataTransferThrottler throttler;
@@ -119,6 +120,7 @@ class BlockReceiver implements Closeable {
   /** pipeline stage */
   private final BlockConstructionStage stage;
   private final boolean isTransfer;
+  private boolean isPenultimateNode = false;
 
   private boolean syncOnClose;
   private long restartBudget;
@@ -244,8 +246,7 @@ class BlockReceiver implements Closeable {
       
       final boolean isCreate = isDatanode || isTransfer 
           || stage == BlockConstructionStage.PIPELINE_SETUP_CREATE;
-      streams = replicaInfo.createStreams(isCreate, requestedChecksum,
-          datanodeSlowLogThresholdMs);
+      streams = replicaInfo.createStreams(isCreate, requestedChecksum);
       assert streams != null : "null streams!";
 
       // read checksum meta information
@@ -400,9 +401,8 @@ class BlockReceiver implements Closeable {
       checksumOut.flush();
       long flushEndNanos = System.nanoTime();
       if (isSync) {
-        long fsyncStartNanos = flushEndNanos;
         streams.syncChecksumOut();
-        datanode.metrics.addFsyncNanos(System.nanoTime() - fsyncStartNanos);
+        datanode.metrics.addFsyncNanos(System.nanoTime() - flushEndNanos);
       }
       flushTotalNanos += flushEndNanos - flushStartNanos;
     }
@@ -568,12 +568,16 @@ class BlockReceiver implements Closeable {
       try {
         long begin = Time.monotonicNow();
         // For testing. Normally no-op.
-        DataNodeFaultInjector.get().stopSendingPacketDownstream();
+        DataNodeFaultInjector.get().stopSendingPacketDownstream(mirrorAddr);
         packetReceiver.mirrorPacketTo(mirrorOut);
         mirrorOut.flush();
         long now = Time.monotonicNow();
         setLastSentTime(now);
         long duration = now - begin;
+        DataNodeFaultInjector.get().logDelaySendingPacketDownstream(
+            mirrorAddr,
+            duration);
+        trackSendPacketToLastNodeInPipeline(duration);
         if (duration > datanodeSlowLogThresholdMs) {
           LOG.warn("Slow BlockReceiver write packet to mirror took " + duration
               + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms)");
@@ -703,8 +707,10 @@ class BlockReceiver implements Closeable {
           int numBytesToDisk = (int)(offsetInBlock-onDiskLen);
           
           // Write data to disk.
-          long duration = streams.writeToDisk(dataBuf.array(),
+          long begin = Time.monotonicNow();
+          streams.writeDataToDisk(dataBuf.array(),
               startByteToDisk, numBytesToDisk);
+          long duration = Time.monotonicNow() - begin;
 
           if (duration > maxWriteToDiskMs) {
             maxWriteToDiskMs = duration;
@@ -819,6 +825,33 @@ class BlockReceiver implements Closeable {
     return lastPacketInBlock?-1:len;
   }
 
+  /**
+   * Only tracks the latency of sending packet to the last node in pipeline.
+   * This is a conscious design choice.
+   * <p>
+   * In the case of pipeline [dn0, dn1, dn2], 5ms latency from dn0 to dn1, 100ms
+   * from dn1 to dn2, NameNode claims dn2 is slow since it sees 100ms latency to
+   * dn2. Note that NameNode is not ware of pipeline structure in this context
+   * and only sees latency between two DataNodes.
+   * </p>
+   * <p>
+   * In another case of the same pipeline, 100ms latency from dn0 to dn1, 5ms
+   * from dn1 to dn2, NameNode will miss detecting dn1 being slow since it's not
+   * the last node. However the assumption is that in a busy enough cluster
+   * there are many other pipelines where dn1 is the last node, e.g. [dn3, dn4,
+   * dn1]. Also our tracking interval is relatively long enough (at least an
+   * hour) to improve the chances of the bad DataNodes being the last nodes in
+   * multiple pipelines.
+   * </p>
+   */
+  private void trackSendPacketToLastNodeInPipeline(final long elapsedMs) {
+    if (isPenultimateNode && mirrorAddr != null) {
+      datanode.getPeerMetrics().addSendPacketDownstream(
+          bracketedMirrorAddr,
+          elapsedMs);
+    }
+  }
+
   private static byte[] copyLastChunkChecksum(byte[] array, int size, int end) {
     return Arrays.copyOfRange(array, end - size, end);
   }
@@ -883,7 +916,7 @@ class BlockReceiver implements Closeable {
     ((PacketResponder) responder.getRunnable()).sendOOBResponse(PipelineAck
         .getRestartOOBStatus());
   }
-  
+
   void receiveBlock(
       DataOutputStream mirrOut, // output to next datanode
       DataInputStream mirrIn,   // input from next datanode
@@ -892,14 +925,16 @@ class BlockReceiver implements Closeable {
       DatanodeInfo[] downstreams,
       boolean isReplaceBlock) throws IOException {
 
-      syncOnClose = datanode.getDnConf().syncOnClose;
-      boolean responderClosed = false;
-      mirrorOut = mirrOut;
-      mirrorAddr = mirrAddr;
-      throttler = throttlerArg;
+    syncOnClose = datanode.getDnConf().syncOnClose;
+    boolean responderClosed = false;
+    mirrorOut = mirrOut;
+    mirrorAddr = mirrAddr;
+    bracketedMirrorAddr = "[" + mirrAddr + "]";
+    isPenultimateNode = ((downstreams != null) && (downstreams.length == 1));
+    throttler = throttlerArg;
 
-      this.replyOut = replyOut;
-      this.isReplaceBlock = isReplaceBlock;
+    this.replyOut = replyOut;
+    this.isReplaceBlock = isReplaceBlock;
 
     try {
       if (isClient && !isTransfer) {
@@ -1029,9 +1064,7 @@ class BlockReceiver implements Closeable {
    * will be overwritten.
    */
   private void adjustCrcFilePosition() throws IOException {
-    if (streams.getDataOut() != null) {
-      streams.flushDataOut();
-    }
+    streams.flushDataOut();
     if (checksumOut != null) {
       checksumOut.flush();
     }
@@ -1536,9 +1569,14 @@ class BlockReceiver implements Closeable {
       }
       // send my ack back to upstream datanode
       long begin = Time.monotonicNow();
+      /* for test only, no-op in production system */
+      DataNodeFaultInjector.get().delaySendingAckToUpstream(inAddr);
       replyAck.write(upstreamOut);
       upstreamOut.flush();
       long duration = Time.monotonicNow() - begin;
+      DataNodeFaultInjector.get().logDelaySendingAckToUpstream(
+          inAddr,
+          duration);
       if (duration > datanodeSlowLogThresholdMs) {
         LOG.warn("Slow PacketResponder send ack to upstream took " + duration
             + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms), " + myString

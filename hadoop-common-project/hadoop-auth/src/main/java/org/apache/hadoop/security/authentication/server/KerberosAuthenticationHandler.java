@@ -18,6 +18,7 @@ import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
+import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSManager;
@@ -48,25 +49,32 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import com.google.common.collect.HashMultimap;
+
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 /**
- * The {@link KerberosAuthenticationHandler} implements the Kerberos SPNEGO authentication mechanism for HTTP.
+ * The {@link KerberosAuthenticationHandler} implements the Kerberos SPNEGO
+ * authentication mechanism for HTTP.
  * <p>
  * The supported configuration properties are:
  * <ul>
- * <li>kerberos.principal: the Kerberos principal to used by the server. As stated by the Kerberos SPNEGO
- * specification, it should be <code>HTTP/${HOSTNAME}@{REALM}</code>. The realm can be omitted from the
- * principal as the JDK GSS libraries will use the realm name of the configured default realm.
+ * <li>kerberos.principal: the Kerberos principal to used by the server. As
+ * stated by the Kerberos SPNEGO specification, it should be
+ * <code>HTTP/${HOSTNAME}@{REALM}</code>. The realm can be omitted from the
+ * principal as the JDK GSS libraries will use the realm name of the configured
+ * default realm.
  * It does not have a default value.</li>
- * <li>kerberos.keytab: the keytab file containing the credentials for the Kerberos principal.
+ * <li>kerberos.keytab: the keytab file containing the credentials for the
+ * Kerberos principal.
  * It does not have a default value.</li>
- * <li>kerberos.name.rules: kerberos names rules to resolve principal names, see 
+ * <li>kerberos.name.rules: kerberos names rules to resolve principal names, see
  * {@link KerberosName#setRules(String)}</li>
  * </ul>
  */
 public class KerberosAuthenticationHandler implements AuthenticationHandler {
-  private static Logger LOG = LoggerFactory.getLogger(KerberosAuthenticationHandler.class);
+  public static final Logger LOG = LoggerFactory.getLogger(
+      KerberosAuthenticationHandler.class);
 
   /**
    * Kerberos context configuration for the JDK GSS library.
@@ -117,8 +125,8 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
 
       return new AppConfigurationEntry[]{
           new AppConfigurationEntry(KerberosUtil.getKrb5LoginModuleName(),
-                                  AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
-                                  options),};
+              AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
+              options), };
     }
   }
 
@@ -128,12 +136,14 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
   public static final String TYPE = "kerberos";
 
   /**
-   * Constant for the configuration property that indicates the kerberos principal.
+   * Constant for the configuration property that indicates the kerberos
+   * principal.
    */
   public static final String PRINCIPAL = TYPE + ".principal";
 
   /**
-   * Constant for the configuration property that indicates the keytab file path.
+   * Constant for the configuration property that indicates the keytab
+   * file path.
    */
   public static final String KEYTAB = TYPE + ".keytab";
 
@@ -148,6 +158,42 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
   private GSSManager gssManager;
   private Subject serverSubject = new Subject();
   private List<LoginContext> loginContexts = new ArrayList<LoginContext>();
+  /**
+   * HADOOP-10158 added support of running HTTP with multiple SPNs
+   * but implicit requirements is that they must come from the SAME local realm.
+   *
+   * This is a regression for use cases where HTTP service needs to run with
+   * with SPN from foreign realm, which is not supported after HADOOP-10158.
+   *
+   * HADOOP-13565 brings back support of SPNs from foreign realms
+   * without dependency on specific Kerberos domain_realm mapping mechanism.
+   *
+   * There are several reasons for not using native Kerberos domain_realm
+   * mapping:
+   * 1. As commented in KerberosUtil#getDomainRealm(), JDK's
+   * domain_realm mapping routines are private to the security.krb5
+   * package. As a result, KerberosUtil#getDomainRealm() always return local
+   * realm.
+   *
+   * 2. Server krb5.conf is not the only place that contains the domain_realm
+   * mapping in real deployment. Based on MIT KDC document here:
+   * https://web.mit.edu/kerberos/krb5-1.13/doc/admin/realm_config.html, the
+   * Kerberos domain_realm mapping can be implemented in one of the three
+   * mechanisms:
+   * 1) Server host-based krb5.conf on HTTP server
+   * 2) KDC-based krb5.conf on KDC server
+   * 3) DNS-based with TXT record with _kerberos prefix to the hostname.
+   *
+   * We choose to maintain domain_realm mapping based on HTTP principals
+   * from keytab. The mapping is built at login time with HTTP principals
+   * key-ed by server name and is used later to
+   * looked up SPNs based on server name from request for authentication.
+   * The multi-map implementation allows SPNs of same server from
+   * different realms.
+   *
+   */
+  private HashMultimap<String, String> serverPrincipalMap =
+      HashMultimap.create();
 
   /**
    * Creates a Kerberos SPNEGO authentication handler with the default
@@ -170,7 +216,8 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
   /**
    * Initializes the authentication handler instance.
    * <p>
-   * It creates a Kerberos context using the principal and keytab specified in the configuration.
+   * It creates a Kerberos context using the principal and keytab specified in
+   * the configuration.
    * <p>
    * This method is invoked by the {@link AuthenticationFilter#init} method.
    *
@@ -225,15 +272,27 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
           throw new AuthenticationException(le);          
         }
         loginContexts.add(loginContext);
+        KerberosName kerbName = new KerberosName(spnegoPrincipal);
+        if (kerbName.getHostName() != null
+            && kerbName.getServiceName() != null
+            && kerbName.getServiceName().equals("HTTP")) {
+          boolean added = serverPrincipalMap.put(kerbName.getHostName(),
+              spnegoPrincipal);
+          LOG.info("Map server: {} to principal: [{}], added = {}",
+              kerbName.getHostName(), spnegoPrincipal, added);
+        } else {
+          LOG.warn("HTTP principal: [{}] is invalid for SPNEGO!",
+              spnegoPrincipal);
+        }
       }
       try {
-        gssManager = Subject.doAs(serverSubject, new PrivilegedExceptionAction<GSSManager>() {
-
-          @Override
-          public GSSManager run() throws Exception {
-            return GSSManager.getInstance();
-          }
-        });
+        gssManager = Subject.doAs(serverSubject,
+            new PrivilegedExceptionAction<GSSManager>() {
+              @Override
+              public GSSManager run() throws Exception {
+                return GSSManager.getInstance();
+              }
+            });
       } catch (PrivilegedActionException ex) {
         throw ex.getException();
       }
@@ -312,91 +371,84 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
   }
 
   /**
-   * It enforces the the Kerberos SPNEGO authentication sequence returning an {@link AuthenticationToken} only
-   * after the Kerberos SPNEGO sequence has completed successfully.
+   * It enforces the the Kerberos SPNEGO authentication sequence returning an
+   * {@link AuthenticationToken} only after the Kerberos SPNEGO sequence has
+   * completed successfully.
    *
    * @param request the HTTP client request.
    * @param response the HTTP client response.
    *
-   * @return an authentication token if the Kerberos SPNEGO sequence is complete and valid,
-   *         <code>null</code> if it is in progress (in this case the handler handles the response to the client).
+   * @return an authentication token if the Kerberos SPNEGO sequence is complete
+   * and valid, <code>null</code> if it is in progress (in this case the handler
+   * handles the response to the client).
    *
    * @throws IOException thrown if an IO error occurred.
    * @throws AuthenticationException thrown if Kerberos SPNEGO sequence failed.
    */
   @Override
-  public AuthenticationToken authenticate(HttpServletRequest request, final HttpServletResponse response)
-    throws IOException, AuthenticationException {
+  public AuthenticationToken authenticate(HttpServletRequest request,
+      final HttpServletResponse response)
+      throws IOException, AuthenticationException {
     AuthenticationToken token = null;
-    String authorization = request.getHeader(KerberosAuthenticator.AUTHORIZATION);
+    String authorization = request.getHeader(
+        KerberosAuthenticator.AUTHORIZATION);
 
-    if (authorization == null || !authorization.startsWith(KerberosAuthenticator.NEGOTIATE)) {
+    if (authorization == null
+        || !authorization.startsWith(KerberosAuthenticator.NEGOTIATE)) {
       response.setHeader(WWW_AUTHENTICATE, KerberosAuthenticator.NEGOTIATE);
       response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
       if (authorization == null) {
-        LOG.trace("SPNEGO starting");
+        LOG.trace("SPNEGO starting for url: {}", request.getRequestURL());
       } else {
-        LOG.warn("'" + KerberosAuthenticator.AUTHORIZATION + "' does not start with '" +
+        LOG.warn("'" + KerberosAuthenticator.AUTHORIZATION +
+            "' does not start with '" +
             KerberosAuthenticator.NEGOTIATE + "' :  {}", authorization);
       }
     } else {
-      authorization = authorization.substring(KerberosAuthenticator.NEGOTIATE.length()).trim();
+      authorization = authorization.substring(
+          KerberosAuthenticator.NEGOTIATE.length()).trim();
       final Base64 base64 = new Base64(0);
       final byte[] clientToken = base64.decode(authorization);
       final String serverName = InetAddress.getByName(request.getServerName())
                                            .getCanonicalHostName();
       try {
-        token = Subject.doAs(serverSubject, new PrivilegedExceptionAction<AuthenticationToken>() {
-
-          @Override
-          public AuthenticationToken run() throws Exception {
-            AuthenticationToken token = null;
-            GSSContext gssContext = null;
-            GSSCredential gssCreds = null;
-            try {
-              gssCreds = gssManager.createCredential(
-                  gssManager.createName(
-                      KerberosUtil.getServicePrincipal("HTTP", serverName),
-                      KerberosUtil.getOidInstance("NT_GSS_KRB5_PRINCIPAL")),
-                  GSSCredential.INDEFINITE_LIFETIME,
-                  new Oid[]{
-                    KerberosUtil.getOidInstance("GSS_SPNEGO_MECH_OID"),
-                    KerberosUtil.getOidInstance("GSS_KRB5_MECH_OID")},
-                  GSSCredential.ACCEPT_ONLY);
-              gssContext = gssManager.createContext(gssCreds);
-              byte[] serverToken = gssContext.acceptSecContext(clientToken, 0, clientToken.length);
-              if (serverToken != null && serverToken.length > 0) {
-                String authenticate = base64.encodeToString(serverToken);
-                response.setHeader(KerberosAuthenticator.WWW_AUTHENTICATE,
-                                   KerberosAuthenticator.NEGOTIATE + " " + authenticate);
+        token = Subject.doAs(serverSubject,
+            new PrivilegedExceptionAction<AuthenticationToken>() {
+              private Set<String> serverPrincipals =
+                  serverPrincipalMap.get(serverName);
+              @Override
+              public AuthenticationToken run() throws Exception {
+                if (LOG.isTraceEnabled()) {
+                  LOG.trace("SPNEGO with server principals: {} for {}",
+                      serverPrincipals.toString(), serverName);
+                }
+                AuthenticationToken token = null;
+                Exception lastException = null;
+                for (String serverPrincipal : serverPrincipals) {
+                  try {
+                    token = runWithPrincipal(serverPrincipal, clientToken,
+                        base64, response);
+                  } catch (Exception ex) {
+                    lastException = ex;
+                    LOG.trace("Auth {} failed with {}", serverPrincipal, ex);
+                  } finally {
+                      if (token != null) {
+                        LOG.trace("Auth {} successfully", serverPrincipal);
+                        break;
+                    }
+                  }
+                }
+                if (token != null) {
+                  return token;
+                } else {
+                  throw new AuthenticationException(lastException);
+                }
               }
-              if (!gssContext.isEstablished()) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                LOG.trace("SPNEGO in progress");
-              } else {
-                String clientPrincipal = gssContext.getSrcName().toString();
-                KerberosName kerberosName = new KerberosName(clientPrincipal);
-                String userName = kerberosName.getShortName();
-                token = new AuthenticationToken(userName, clientPrincipal, getType());
-                response.setStatus(HttpServletResponse.SC_OK);
-                LOG.trace("SPNEGO completed for principal [{}]", clientPrincipal);
-              }
-            } finally {
-              if (gssContext != null) {
-                gssContext.dispose();
-              }
-              if (gssCreds != null) {
-                gssCreds.dispose();
-              }
-            }
-            return token;
-          }
-        });
+            });
       } catch (PrivilegedActionException ex) {
         if (ex.getException() instanceof IOException) {
           throw (IOException) ex.getException();
-        }
-        else {
+        } else {
           throw new AuthenticationException(ex.getException());
         }
       }
@@ -404,4 +456,52 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
     return token;
   }
 
+  private AuthenticationToken runWithPrincipal(String serverPrincipal,
+      byte[] clientToken, Base64 base64, HttpServletResponse response) throws
+      IOException, AuthenticationException, ClassNotFoundException,
+      GSSException, IllegalAccessException, NoSuchFieldException {
+    GSSContext gssContext = null;
+    GSSCredential gssCreds = null;
+    AuthenticationToken token = null;
+    try {
+      LOG.trace("SPNEGO initiated with server principal [{}]", serverPrincipal);
+      gssCreds = this.gssManager.createCredential(
+          this.gssManager.createName(serverPrincipal,
+              KerberosUtil.getOidInstance("NT_GSS_KRB5_PRINCIPAL")),
+          GSSCredential.INDEFINITE_LIFETIME,
+          new Oid[]{
+              KerberosUtil.getOidInstance("GSS_SPNEGO_MECH_OID"),
+              KerberosUtil.getOidInstance("GSS_KRB5_MECH_OID")},
+          GSSCredential.ACCEPT_ONLY);
+      gssContext = this.gssManager.createContext(gssCreds);
+      byte[] serverToken = gssContext.acceptSecContext(clientToken, 0,
+          clientToken.length);
+      if (serverToken != null && serverToken.length > 0) {
+        String authenticate = base64.encodeToString(serverToken);
+        response.setHeader(KerberosAuthenticator.WWW_AUTHENTICATE,
+                           KerberosAuthenticator.NEGOTIATE + " " +
+                           authenticate);
+      }
+      if (!gssContext.isEstablished()) {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        LOG.trace("SPNEGO in progress");
+      } else {
+        String clientPrincipal = gssContext.getSrcName().toString();
+        KerberosName kerberosName = new KerberosName(clientPrincipal);
+        String userName = kerberosName.getShortName();
+        token = new AuthenticationToken(userName, clientPrincipal, getType());
+        response.setStatus(HttpServletResponse.SC_OK);
+        LOG.trace("SPNEGO completed for client principal [{}]",
+            clientPrincipal);
+      }
+    } finally {
+      if (gssContext != null) {
+        gssContext.dispose();
+      }
+      if (gssCreds != null) {
+        gssCreds.dispose();
+      }
+    }
+    return token;
+  }
 }

@@ -102,7 +102,7 @@ message NamespaceInfoProto {
   required StorageInfoProto storageInfo = 4;// Node information
   required string softwareVersion = 5;      // Software version number (e.g. 2.0.0)
   optional uint64 capabilities = 6 [default = 0]; // feature flags
-  optional hadoop.common.HAServiceStateProto state = 7;
+  optional NNHAStatusHeartbeatProto.State state = 7;
 }
 
 /**
@@ -202,4 +202,17 @@ message NamenodeRegistrationProto {
   }
   required StorageInfoProto storageInfo = 3;  // Node information
   optional NamenodeRoleProto role = 4 [default = NAMENODE];        // Namenode role
+}
+
+/**
+ * state - State the NN is in when returning response to the DN
+ * txid - Highest transaction ID this NN has seen
+ */
+message NNHAStatusHeartbeatProto {
+  enum State {
+    ACTIVE = 0;
+    STANDBY = 1;
+  }
+  required State state = 1;
+  required uint64 txid = 2;
 }

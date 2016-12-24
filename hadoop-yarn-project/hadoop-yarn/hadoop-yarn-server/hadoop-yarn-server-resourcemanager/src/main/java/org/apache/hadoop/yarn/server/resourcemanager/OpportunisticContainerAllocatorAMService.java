@@ -43,7 +43,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRespons
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -113,11 +112,11 @@ public class OpportunisticContainerAllocatorAMService
         rmContext.getContainerTokenSecretManager());
     this.k = rmContext.getYarnConfiguration().getInt(
         YarnConfiguration.OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED,
-        YarnConfiguration.OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED_DEFAULT);
+        YarnConfiguration.DEFAULT_OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED);
     long nodeSortInterval = rmContext.getYarnConfiguration().getLong(
         YarnConfiguration.NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS,
         YarnConfiguration.
-            NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS_DEFAULT);
+            DEFAULT_NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS);
     this.cacheRefreshInterval = nodeSortInterval;
     this.lastCacheUpdateTime = System.currentTimeMillis();
     NodeQueueLoadMonitor.LoadComparator comparator =
@@ -125,14 +124,14 @@ public class OpportunisticContainerAllocatorAMService
             rmContext.getYarnConfiguration().get(
                 YarnConfiguration.NM_CONTAINER_QUEUING_LOAD_COMPARATOR,
                 YarnConfiguration.
-                    NM_CONTAINER_QUEUING_LOAD_COMPARATOR_DEFAULT));
+                    DEFAULT_NM_CONTAINER_QUEUING_LOAD_COMPARATOR));
 
     NodeQueueLoadMonitor topKSelector =
         new NodeQueueLoadMonitor(nodeSortInterval, comparator);
 
     float sigma = rmContext.getYarnConfiguration()
         .getFloat(YarnConfiguration.NM_CONTAINER_QUEUING_LIMIT_STDEV,
-            YarnConfiguration.NM_CONTAINER_QUEUING_LIMIT_STDEV_DEFAULT);
+            YarnConfiguration.DEFAULT_NM_CONTAINER_QUEUING_LIMIT_STDEV);
 
     int limitMin, limitMax;
 
@@ -140,22 +139,22 @@ public class OpportunisticContainerAllocatorAMService
       limitMin = rmContext.getYarnConfiguration()
           .getInt(YarnConfiguration.NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH,
               YarnConfiguration.
-                  NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH_DEFAULT);
+                  DEFAULT_NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH);
       limitMax = rmContext.getYarnConfiguration()
           .getInt(YarnConfiguration.NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH,
               YarnConfiguration.
-                  NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH_DEFAULT);
+                  DEFAULT_NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH);
     } else {
       limitMin = rmContext.getYarnConfiguration()
           .getInt(
               YarnConfiguration.NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS,
               YarnConfiguration.
-                  NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS_DEFAULT);
+                  DEFAULT_NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS);
       limitMax = rmContext.getYarnConfiguration()
           .getInt(
               YarnConfiguration.NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS,
               YarnConfiguration.
-                  NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS_DEFAULT);
+                  DEFAULT_NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS);
     }
 
     topKSelector.initThresholdCalculator(sigma, limitMin, limitMax);
@@ -199,11 +198,12 @@ public class OpportunisticContainerAllocatorAMService
         }
       });
       int tokenExpiryInterval = getConfig()
-          .getInt(YarnConfiguration.OPPORTUNISTIC_CONTAINERS_TOKEN_EXPIRY_MS,
-              YarnConfiguration.
-                  OPPORTUNISTIC_CONTAINERS_TOKEN_EXPIRY_MS_DEFAULT);
-      opCtx.updateAllocationParams(createMinContainerResource(),
-          createMaxContainerResource(), createIncrContainerResource(),
+          .getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
+              YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS);
+      opCtx.updateAllocationParams(
+          rmContext.getScheduler().getMinimumResourceCapability(),
+          rmContext.getScheduler().getMaximumResourceCapability(),
+          rmContext.getScheduler().getMinimumResourceCapability(),
           tokenExpiryInterval);
       appAttempt.setOpportunisticContainerContext(opCtx);
     }
@@ -273,14 +273,14 @@ public class OpportunisticContainerAllocatorAMService
     RegisterDistributedSchedulingAMResponse dsResp = recordFactory
         .newRecordInstance(RegisterDistributedSchedulingAMResponse.class);
     dsResp.setRegisterResponse(response);
-    dsResp.setMinContainerResource(createMinContainerResource());
-    dsResp.setMaxContainerResource(createMaxContainerResource());
-    dsResp.setIncrContainerResource(createIncrContainerResource());
+    dsResp.setMinContainerResource(
+        rmContext.getScheduler().getMinimumResourceCapability());
+    dsResp.setMaxContainerResource(
+        rmContext.getScheduler().getMaximumResourceCapability());
     dsResp.setContainerTokenExpiryInterval(
         getConfig().getInt(
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_TOKEN_EXPIRY_MS,
-            YarnConfiguration.
-                OPPORTUNISTIC_CONTAINERS_TOKEN_EXPIRY_MS_DEFAULT));
+            YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS));
     dsResp.setContainerIdStart(
         this.rmContext.getEpoch() << ResourceManager.EPOCH_BIT_SHIFT);
 
@@ -384,18 +384,6 @@ public class OpportunisticContainerAllocatorAMService
     return nodeMonitor.getThresholdCalculator();
   }
 
-  private Resource createIncrContainerResource() {
-    return Resource.newInstance(
-        getConfig().getInt(
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_INCR_MEMORY_MB,
-            YarnConfiguration.
-                OPPORTUNISTIC_CONTAINERS_INCR_MEMORY_MB_DEFAULT),
-        getConfig().getInt(
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_INCR_VCORES,
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_INCR_VCORES_DEFAULT)
-    );
-  }
-
   private synchronized List<RemoteNode> getLeastLoadedNodes() {
     long currTime = System.currentTimeMillis();
     if ((currTime - lastCacheUpdateTime > cacheRefreshInterval)
@@ -423,30 +411,6 @@ public class OpportunisticContainerAllocatorAMService
         ((AbstractYarnScheduler) rmContext.getScheduler()).getNode(nodeId);
     return node != null ? RemoteNode.newInstance(nodeId, node.getHttpAddress())
         : null;
-  }
-
-  private Resource createMaxContainerResource() {
-    return Resource.newInstance(
-        getConfig().getInt(
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MAX_MEMORY_MB,
-            YarnConfiguration
-                .OPPORTUNISTIC_CONTAINERS_MAX_MEMORY_MB_DEFAULT),
-        getConfig().getInt(
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MAX_VCORES,
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MAX_VCORES_DEFAULT)
-    );
-  }
-
-  private Resource createMinContainerResource() {
-    return Resource.newInstance(
-        getConfig().getInt(
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MIN_MEMORY_MB,
-            YarnConfiguration.
-                OPPORTUNISTIC_CONTAINERS_MIN_MEMORY_MB_DEFAULT),
-        getConfig().getInt(
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MIN_VCORES,
-            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MIN_VCORES_DEFAULT)
-    );
   }
 
   private static ApplicationAttemptId getAppAttemptId() throws YarnException {

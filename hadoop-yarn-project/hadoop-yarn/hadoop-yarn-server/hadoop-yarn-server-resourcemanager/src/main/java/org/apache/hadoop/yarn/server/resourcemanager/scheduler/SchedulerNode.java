@@ -149,10 +149,10 @@ public abstract class SchedulerNode {
    */
   public synchronized void allocateContainer(RMContainer rmContainer) {
     Container container = rmContainer.getContainer();
-    if (rmContainer.getExecutionType() != ExecutionType.OPPORTUNISTIC) {
+    if (rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
       deductUnallocatedResource(container.getResource());
+      ++numContainers;
     }
-    ++numContainers;
 
     launchedContainers.put(container.getId(), rmContainer);
 
@@ -251,8 +251,8 @@ public abstract class SchedulerNode {
       Container container) {
     if (container.getExecutionType() == ExecutionType.GUARANTEED) {
       addUnallocatedResource(container.getResource());
+      --numContainers;
     }
-    --numContainers;
   }
 
   /**

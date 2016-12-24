@@ -145,13 +145,15 @@ public interface RMContext {
   
   void setQueuePlacementManager(PlacementManager placementMgr);
 
-  void setLeaderElectorService(LeaderElectorService elector);
+  void setLeaderElectorService(EmbeddedElector elector);
 
-  LeaderElectorService getLeaderElectorService();
+  EmbeddedElector getLeaderElectorService();
 
   QueueLimitCalculator getNodeManagerQueueLimitCalculator();
 
   void setRMAppLifetimeMonitor(RMAppLifetimeMonitor rmAppLifetimeMonitor);
 
   RMAppLifetimeMonitor getRMAppLifetimeMonitor();
+
+  String getHAZookeeperConnectionState();
 }

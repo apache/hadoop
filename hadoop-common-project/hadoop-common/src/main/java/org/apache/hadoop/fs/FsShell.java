@@ -328,7 +328,12 @@ public class FsShell extends Configured implements Tool {
           scope.close();
         }
       } catch (IllegalArgumentException e) {
-        displayError(cmd, e.getLocalizedMessage());
+        if (e.getMessage() == null) {
+          displayError(cmd, "Null exception message");
+          e.printStackTrace(System.err);
+        } else {
+          displayError(cmd, e.getLocalizedMessage());
+        }
         printUsage(System.err);
         if (instance != null) {
           printInstanceUsage(System.err, instance);

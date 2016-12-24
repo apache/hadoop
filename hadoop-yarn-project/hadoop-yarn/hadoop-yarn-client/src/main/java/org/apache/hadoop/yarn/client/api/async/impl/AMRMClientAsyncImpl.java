@@ -61,7 +61,7 @@ extends AMRMClientAsync<T> {
   private final HeartbeatThread heartbeatThread;
   private final CallbackHandlerThread handlerThread;
 
-  private final BlockingQueue<AllocateResponse> responseQueue;
+  private final BlockingQueue<Object> responseQueue;
   
   private final Object unregisterHeartbeatLock = new Object();
   
@@ -69,8 +69,6 @@ extends AMRMClientAsync<T> {
   private volatile float progress;
   
   private volatile String collectorAddr;
-
-  private volatile Throwable savedException;
 
   /**
    *
@@ -90,7 +88,6 @@ extends AMRMClientAsync<T> {
     handlerThread = new CallbackHandlerThread();
     responseQueue = new LinkedBlockingQueue<>();
     keepRunning = true;
-    savedException = null;
   }
 
   /**
@@ -111,9 +108,8 @@ extends AMRMClientAsync<T> {
     super(client, intervalMs, callbackHandler);
     heartbeatThread = new HeartbeatThread();
     handlerThread = new CallbackHandlerThread();
-    responseQueue = new LinkedBlockingQueue<AllocateResponse>();
+    responseQueue = new LinkedBlockingQueue<Object>();
     keepRunning = true;
-    savedException = null;
   }
 
   @Override
@@ -265,7 +261,7 @@ extends AMRMClientAsync<T> {
     
     public void run() {
       while (true) {
-        AllocateResponse response = null;
+        Object response = null;
         // synchronization ensures we don't send heartbeats after unregistering
         synchronized (unregisterHeartbeatLock) {
           if (!keepRunning) {
@@ -280,10 +276,7 @@ extends AMRMClientAsync<T> {
             return;
           } catch (Throwable ex) {
             LOG.error("Exception on heartbeat", ex);
-            savedException = ex;
-            // interrupt handler thread in case it waiting on the queue
-            handlerThread.interrupt();
-            return;
+            response = ex;
           }
           if (response != null) {
             while (true) {
@@ -316,19 +309,20 @@ extends AMRMClientAsync<T> {
           return;
         }
         try {
-          AllocateResponse response;
-          if(savedException != null) {
-            LOG.error("Stopping callback due to: ", savedException);
-            handler.onError(savedException);
-            return;
-          }
+          Object object;
           try {
-            response = responseQueue.take();
+            object = responseQueue.take();
           } catch (InterruptedException ex) {
             LOG.info("Interrupted while waiting for queue", ex);
             continue;
           }
+          if (object instanceof Throwable) {
+            progress = handler.getProgress();
+            handler.onError((Throwable) object);
+            continue;
+          }
 
+          AllocateResponse response = (AllocateResponse) object;
           String collectorAddress = response.getCollectorAddr();
           TimelineClient timelineClient = client.getRegisteredTimelineClient();
           if (timelineClient != null && collectorAddress != null

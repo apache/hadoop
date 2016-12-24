@@ -89,9 +89,9 @@ public class DrainDispatcher extends AsyncDispatcher {
 
   @SuppressWarnings("unchecked")
   @Override
-  public EventHandler getEventHandler() {
-    final EventHandler actual = super.getEventHandler();
-    return new EventHandler() {
+  public EventHandler<Event> getEventHandler() {
+    final EventHandler<Event> actual = super.getEventHandler();
+    return new EventHandler<Event>() {
       @Override
       public void handle(Event event) {
         synchronized (mutex) {

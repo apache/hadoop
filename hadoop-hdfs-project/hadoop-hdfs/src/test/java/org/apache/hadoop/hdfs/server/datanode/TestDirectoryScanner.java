@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -899,9 +900,25 @@ public class TestDirectoryScanner {
     }
 
     @Override
+    public byte[] loadLastPartialChunkChecksum(
+        File blockFile, File metaFile) throws IOException {
+      return null;
+    }
+
+    @Override
     public LinkedList<ScanInfo> compileReport(String bpid,
         LinkedList<ScanInfo> report, ReportCompiler reportCompiler)
         throws InterruptedException, IOException {
+      return null;
+    }
+
+    @Override
+    public FileIoProvider getFileIoProvider() {
+      return null;
+    }
+
+    @Override
+    public DataNodeVolumeMetrics getMetrics() {
       return null;
     }
 

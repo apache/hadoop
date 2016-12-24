@@ -43,9 +43,9 @@ public class DiskBalancerWorkStatus {
   private static final ObjectMapper MAPPER_WITH_INDENT_OUTPUT =
       new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
   private static final ObjectReader READER_WORKSTATUS =
-      new ObjectMapper().reader(DiskBalancerWorkStatus.class);
+      new ObjectMapper().readerFor(DiskBalancerWorkStatus.class);
   private static final ObjectReader READER_WORKENTRY = new ObjectMapper()
-      .reader(defaultInstance().constructCollectionType(List.class,
+      .readerFor(defaultInstance().constructCollectionType(List.class,
           DiskBalancerWorkEntry.class));
 
   private final List<DiskBalancerWorkEntry> currentState;

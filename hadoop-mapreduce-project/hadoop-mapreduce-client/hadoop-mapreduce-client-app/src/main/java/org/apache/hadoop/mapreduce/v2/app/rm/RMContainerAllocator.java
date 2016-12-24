@@ -238,8 +238,8 @@ public class RMContainerAllocator extends RMContainerRequestor
     // first attempt to contact RM.
     retrystartTime = System.currentTimeMillis();
     this.scheduledRequests.setNumOpportunisticMapsPer100(
-        conf.getInt(MRJobConfig.MR_NUM_OPPORTUNISTIC_MAPS_PER_100,
-            MRJobConfig.DEFAULT_MR_NUM_OPPORTUNISTIC_MAPS_PER_100));
+        conf.getInt(MRJobConfig.MR_NUM_OPPORTUNISTIC_MAPS_PERCENTAGE,
+            MRJobConfig.DEFAULT_MR_NUM_OPPORTUNISTIC_MAPS_PERCENTAGE));
     LOG.info(this.scheduledRequests.getNumOpportunisticMapsPer100() +
         "% of the mappers will be scheduled using OPPORTUNISTIC containers");
   }

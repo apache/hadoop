@@ -65,6 +65,7 @@ class StripedBlockReader {
   private final DatanodeInfo source;
   private BlockReader blockReader;
   private ByteBuffer buffer;
+  private boolean isLocal;
 
   StripedBlockReader(StripedReader stripedReader, DataNode datanode,
                      Configuration conf, short index, ExtendedBlock block,
@@ -76,6 +77,7 @@ class StripedBlockReader {
     this.index = index;
     this.source = source;
     this.block = block;
+    this.isLocal = false;
 
     BlockReader tmpBlockReader = createBlockReader(offsetInBlock);
     if (tmpBlockReader != null) {
@@ -116,10 +118,13 @@ class StripedBlockReader {
          *
          * TODO: add proper tracer
          */
+      Peer peer = newConnectedPeer(block, dnAddr, blockToken, source);
+      if (peer.isLocal()) {
+        this.isLocal = true;
+      }
       return BlockReaderRemote.newBlockReader(
           "dummy", block, blockToken, offsetInBlock,
-          block.getNumBytes() - offsetInBlock, true,
-          "", newConnectedPeer(block, dnAddr, blockToken, source), source,
+          block.getNumBytes() - offsetInBlock, true, "", peer, source,
           null, stripedReader.getCachingStrategy(), datanode.getTracer(), -1);
     } catch (IOException e) {
       LOG.info("Exception while creating remote block reader, datanode {}",
@@ -187,6 +192,7 @@ class StripedBlockReader {
         break;
       }
       n += nread;
+      stripedReader.getReconstructor().incrBytesRead(isLocal, nread);
     }
   }
 

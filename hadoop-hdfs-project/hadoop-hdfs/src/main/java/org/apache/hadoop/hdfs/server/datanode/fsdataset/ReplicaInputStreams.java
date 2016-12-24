@@ -24,8 +24,8 @@ import java.io.InputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIOException;
 import org.slf4j.Logger;
 
@@ -38,12 +38,15 @@ public class ReplicaInputStreams implements Closeable {
   private InputStream dataIn;
   private InputStream checksumIn;
   private FsVolumeReference volumeRef;
+  private final FileIoProvider fileIoProvider;
   private FileDescriptor dataInFd = null;
 
   /** Create an object with a data input stream and a checksum input stream. */
-  public ReplicaInputStreams(InputStream dataStream,
-      InputStream checksumStream, FsVolumeReference volumeRef) {
+  public ReplicaInputStreams(
+      InputStream dataStream, InputStream checksumStream,
+      FsVolumeReference volumeRef, FileIoProvider fileIoProvider) {
     this.volumeRef = volumeRef;
+    this.fileIoProvider = fileIoProvider;
     this.dataIn = dataStream;
     this.checksumIn = checksumStream;
     if (dataIn instanceof FileInputStream) {
@@ -103,7 +106,7 @@ public class ReplicaInputStreams implements Closeable {
   public void dropCacheBehindReads(String identifier, long offset, long len,
       int flags) throws NativeIOException {
     assert this.dataInFd != null : "null dataInFd!";
-    NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(
+    fileIoProvider.posixFadvise(getVolumeRef().getVolume(),
         identifier, dataInFd, offset, len, flags);
   }
 

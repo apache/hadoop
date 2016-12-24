@@ -67,6 +67,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import com.google.common.collect.Sets;
+import org.apache.hadoop.yarn.event.Event;
 
 public class TestUtils {
   private static final Log LOG = LogFactory.getLog(TestUtils.class);
@@ -90,7 +91,7 @@ public class TestUtils {
           EventHandler handler) {
       }
       @Override
-      public EventHandler getEventHandler() {
+      public EventHandler<Event> getEventHandler() {
         return handler; 
       }
     };

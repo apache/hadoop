@@ -259,8 +259,12 @@ public class AppInfo {
           timeout.setTimeoutType(entry.getKey());
           long timeoutInMillis = entry.getValue().longValue();
           timeout.setExpiryTime(Times.formatISO8601(timeoutInMillis));
-          timeout.setRemainingTime(Math
-              .max((timeoutInMillis - System.currentTimeMillis()) / 1000, 0));
+          if (app.isAppInCompletedStates()) {
+            timeout.setRemainingTime(0);
+          } else {
+            timeout.setRemainingTime(Math
+                .max((timeoutInMillis - System.currentTimeMillis()) / 1000, 0));
+          }
           timeouts.add(timeout);
         }
       }

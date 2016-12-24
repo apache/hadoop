@@ -54,8 +54,8 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimestampGenerator;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -417,8 +417,8 @@ public class TestHBaseStorageFlowRunCompaction {
     tags.add(t);
     byte[] tagByteArray = Tag.fromList(tags);
     // create a cell with a VERY old timestamp and attribute SUM_FINAL
-    Cell c1 = TimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
-        cell1Ts, Bytes.toBytes(cellValue1), tagByteArray);
+    Cell c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily,
+        aQualifier, cell1Ts, Bytes.toBytes(cellValue1), tagByteArray);
     currentColumnCells.add(c1);
 
     tags = new ArrayList<>();
@@ -427,8 +427,8 @@ public class TestHBaseStorageFlowRunCompaction {
     tags.add(t);
     tagByteArray = Tag.fromList(tags);
     // create a cell with a recent timestamp and attribute SUM_FINAL
-    Cell c2 = TimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
-        cell2Ts, Bytes.toBytes(cellValue2), tagByteArray);
+    Cell c2 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily,
+        aQualifier, cell2Ts, Bytes.toBytes(cellValue2), tagByteArray);
     currentColumnCells.add(c2);
 
     tags = new ArrayList<>();
@@ -437,8 +437,8 @@ public class TestHBaseStorageFlowRunCompaction {
     tags.add(t);
     tagByteArray = Tag.fromList(tags);
     // create a cell with a VERY old timestamp but has attribute SUM
-    Cell c3 = TimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
-        cell3Ts, Bytes.toBytes(cellValue3), tagByteArray);
+    Cell c3 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily,
+        aQualifier, cell3Ts, Bytes.toBytes(cellValue3), tagByteArray);
     currentColumnCells.add(c3);
 
     tags = new ArrayList<>();
@@ -447,8 +447,8 @@ public class TestHBaseStorageFlowRunCompaction {
     tags.add(t);
     tagByteArray = Tag.fromList(tags);
     // create a cell with a VERY old timestamp but has attribute SUM
-    Cell c4 = TimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
-        cell4Ts, Bytes.toBytes(cellValue4), tagByteArray);
+    Cell c4 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily,
+        aQualifier, cell4Ts, Bytes.toBytes(cellValue4), tagByteArray);
     currentColumnCells.add(c4);
 
     List<Cell> cells =
@@ -517,7 +517,7 @@ public class TestHBaseStorageFlowRunCompaction {
       tags.add(t);
       byte[] tagByteArray = Tag.fromList(tags);
       // create a cell with a VERY old timestamp and attribute SUM_FINAL
-      c1 = TimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
+      c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
           cellTsFinal, Bytes.toBytes(cellValueFinal), tagByteArray);
       currentColumnCells.add(c1);
       cellTsFinal++;
@@ -531,7 +531,7 @@ public class TestHBaseStorageFlowRunCompaction {
       tags.add(t);
       byte[] tagByteArray = Tag.fromList(tags);
       // create a cell with attribute SUM
-      c1 = TimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
+      c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
           cellTsNotFinal, Bytes.toBytes(cellValueNotFinal), tagByteArray);
       currentColumnCells.add(c1);
       cellTsNotFinal++;
@@ -608,7 +608,7 @@ public class TestHBaseStorageFlowRunCompaction {
       tags.add(t);
       byte[] tagByteArray = Tag.fromList(tags);
       // create a cell with a VERY old timestamp and attribute SUM_FINAL
-      c1 = TimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
+      c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
           cellTsFinal, Bytes.toBytes(cellValueFinal), tagByteArray);
       currentColumnCells.add(c1);
       cellTsFinal++;
@@ -622,7 +622,7 @@ public class TestHBaseStorageFlowRunCompaction {
       tags.add(t);
       byte[] tagByteArray = Tag.fromList(tags);
       // create a cell with a VERY old timestamp and attribute SUM_FINAL
-      c1 = TimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
+      c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
           cellTsFinalNotExpire, Bytes.toBytes(cellValueFinal), tagByteArray);
       currentColumnCells.add(c1);
       cellTsFinalNotExpire++;
@@ -636,7 +636,7 @@ public class TestHBaseStorageFlowRunCompaction {
       tags.add(t);
       byte[] tagByteArray = Tag.fromList(tags);
       // create a cell with attribute SUM
-      c1 = TimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
+      c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
           cellTsNotFinal, Bytes.toBytes(cellValueNotFinal), tagByteArray);
       currentColumnCells.add(c1);
       cellTsNotFinal++;
@@ -693,8 +693,8 @@ public class TestHBaseStorageFlowRunCompaction {
     SortedSet<Cell> currentColumnCells = new TreeSet<Cell>(KeyValue.COMPARATOR);
 
     // create a cell with a VERY old timestamp and attribute SUM_FINAL
-    Cell c1 = TimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
-        120L, Bytes.toBytes(cellValue1), tagByteArray);
+    Cell c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily,
+        aQualifier, 120L, Bytes.toBytes(cellValue1), tagByteArray);
     currentColumnCells.add(c1);
 
     tags = new ArrayList<>();
@@ -704,8 +704,8 @@ public class TestHBaseStorageFlowRunCompaction {
     tagByteArray = Tag.fromList(tags);
 
     // create a cell with a VERY old timestamp but has attribute SUM
-    Cell c2 = TimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
-        130L, Bytes.toBytes(cellValue2), tagByteArray);
+    Cell c2 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily,
+        aQualifier, 130L, Bytes.toBytes(cellValue2), tagByteArray);
     currentColumnCells.add(c2);
     List<Cell> cells = fs.processSummationMajorCompaction(currentColumnCells,
         new LongConverter(), currentTimestamp);
@@ -751,8 +751,8 @@ public class TestHBaseStorageFlowRunCompaction {
     SortedSet<Cell> currentColumnCells = new TreeSet<Cell>(KeyValue.COMPARATOR);
 
     // create a cell with a VERY old timestamp
-    Cell c1 = TimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
-        120L, Bytes.toBytes(1110L), tagByteArray);
+    Cell c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily,
+        aQualifier, 120L, Bytes.toBytes(1110L), tagByteArray);
     currentColumnCells.add(c1);
 
     List<Cell> cells = fs.processSummationMajorCompaction(currentColumnCells,
@@ -789,8 +789,8 @@ public class TestHBaseStorageFlowRunCompaction {
 
     SortedSet<Cell> currentColumnCells = new TreeSet<Cell>(KeyValue.COMPARATOR);
 
-    Cell c1 = TimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
-        currentTimestamp, Bytes.toBytes(1110L), tagByteArray);
+    Cell c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily,
+        aQualifier, currentTimestamp, Bytes.toBytes(1110L), tagByteArray);
     currentColumnCells.add(c1);
     List<Cell> cells = fs.processSummationMajorCompaction(currentColumnCells,
         new LongConverter(), currentTimestamp);
