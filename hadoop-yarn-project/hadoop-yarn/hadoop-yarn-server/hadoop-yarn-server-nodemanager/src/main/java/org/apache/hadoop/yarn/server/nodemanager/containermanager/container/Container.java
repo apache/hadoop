@@ -96,4 +96,6 @@ public interface Container extends EventHandler<ContainerEvent> {
   void sendKillEvent(int exitStatus, String description);
 
   boolean isRecovering();
+
+  void sendPauseEvent(String description);
 }

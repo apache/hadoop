@@ -239,4 +239,9 @@ public class MockContainer implements Container {
   public long getContainerStartTime() {
     return 0;
   }
+
+  @Override
+  public void sendPauseEvent(String description) {
+
+  }
 }

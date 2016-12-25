@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -49,6 +51,7 @@ import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
@@ -124,17 +127,37 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
   @Override
   protected ContainerExecutor createContainerExecutor() {
     DefaultContainerExecutor exec = new DefaultContainerExecutor() {
+      ConcurrentMap<String, Boolean> oversleepMap =
+          new ConcurrentHashMap<String, Boolean>();
       @Override
       public int launchContainer(ContainerStartContext ctx)
           throws IOException, ConfigurationException {
+        oversleepMap.put(ctx.getContainer().getContainerId().toString(), false);
         if (delayContainers) {
           try {
             Thread.sleep(10000);
+            if(oversleepMap.get(ctx.getContainer().getContainerId().toString())
+                == true) {
+              Thread.sleep(10000);
+            }
           } catch (InterruptedException e) {
             // Nothing..
           }
         }
         return super.launchContainer(ctx);
+      }
+
+      @Override
+      public void pauseContainer(Container container) {
+        // To mimic pausing we force the container to be in the PAUSED state
+        // a little longer by oversleeping.
+        oversleepMap.put(container.getContainerId().toString(), true);
+        LOG.info("Container was paused");
+      }
+
+      @Override
+      public void resumeContainer(Container container) {
+        LOG.info("Container was resumed");
       }
     };
     exec.setConf(conf);
@@ -503,6 +526,86 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
     Assert.assertEquals(
         org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
         contStatus1.getState());
+  }
+
+  /**
+   * Submit two OPPORTUNISTIC and one GUARANTEED containers. The resources
+   * requests by each container as such that only one can run in parallel.
+   * Thus, the OPPORTUNISTIC container that started running, will be
+   * paused for the GUARANTEED container to start.
+   * Once the GUARANTEED container finishes its execution, the remaining
+   * OPPORTUNISTIC container will be executed.
+   * @throws Exception
+   */
+  @Test
+  public void testPauseOpportunisticForGuaranteedContainer() throws Exception {
+    containerManager.start();
+    containerManager.getContainerScheduler().
+        setUsePauseEventForPreemption(true);
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+
+    List<StartContainerRequest> list = new ArrayList<>();
+    list.add(StartContainerRequest.newInstance(
+        containerLaunchContext,
+        createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, BuilderUtils.newResource(2048, 1),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.OPPORTUNISTIC)));
+
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+    containerManager.startContainers(allRequests);
+
+    BaseContainerManagerTest.waitForNMContainerState(containerManager,
+        createContainerId(0), ContainerState.RUNNING, 40);
+
+    list = new ArrayList<>();
+    list.add(StartContainerRequest.newInstance(
+        containerLaunchContext,
+        createContainerToken(createContainerId(1), DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, BuilderUtils.newResource(2048, 1),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.GUARANTEED)));
+    allRequests =
+        StartContainersRequest.newInstance(list);
+
+    containerManager.startContainers(allRequests);
+
+    BaseContainerManagerTest.waitForNMContainerState(containerManager,
+        createContainerId(1), ContainerState.RUNNING, 40);
+
+    // Get container statuses. Container 0 should be paused, container 1
+    // should be running.
+    List<ContainerId> statList = new ArrayList<ContainerId>();
+    for (int i = 0; i < 2; i++) {
+      statList.add(createContainerId(i));
+    }
+    GetContainerStatusesRequest statRequest =
+        GetContainerStatusesRequest.newInstance(statList);
+    List<ContainerStatus> containerStatuses = containerManager
+        .getContainerStatuses(statRequest).getContainerStatuses();
+    for (ContainerStatus status : containerStatuses) {
+      if (status.getContainerId().equals(createContainerId(0))) {
+        Assert.assertTrue(status.getDiagnostics().contains(
+            "Container Paused to make room for Guaranteed Container"));
+      } else if (status.getContainerId().equals(createContainerId(1))) {
+        Assert.assertEquals(
+            org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
+            status.getState());
+      }
+      System.out.println("\nStatus : [" + status + "]\n");
+    }
+
+    // Make sure that the GUARANTEED container completes
+    BaseContainerManagerTest.waitForNMContainerState(containerManager,
+        createContainerId(1), ContainerState.DONE, 40);
+    // Make sure that the PAUSED opportunistic container resumes and
+    // starts running
+    BaseContainerManagerTest.waitForNMContainerState(containerManager,
+        createContainerId(0), ContainerState.DONE, 40);
   }
 
   /**
