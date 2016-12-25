@@ -103,4 +103,6 @@ public interface Container extends EventHandler<ContainerEvent> {
    * @return Resource Mappings of the container
    */
   ResourceMappings getResourceMappings();
+
+  void sendPauseEvent(String description);
 }
