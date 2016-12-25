@@ -793,15 +793,22 @@ public class ContainerImpl implements Container {
   @SuppressWarnings("unchecked") // dispatcher not typed
   @Override
   public void sendLaunchEvent() {
-    ContainersLauncherEventType launcherEvent =
-        ContainersLauncherEventType.LAUNCH_CONTAINER;
-    if (recoveredStatus == RecoveredContainerStatus.LAUNCHED) {
-      // try to recover a container that was previously launched
-      launcherEvent = ContainersLauncherEventType.RECOVER_CONTAINER;
+    if (ContainerState.PAUSED == getContainerState()) {
+      dispatcher.getEventHandler().handle(
+          new ContainerResumeEvent(containerId,
+              "Container Resumed as some resources freed up"));
+    } else {
+      ContainersLauncherEventType launcherEvent =
+          ContainersLauncherEventType.LAUNCH_CONTAINER;
+      if (recoveredStatus == RecoveredContainerStatus.LAUNCHED) {
+        // try to recover a container that was previously launched
+        launcherEvent = ContainersLauncherEventType.RECOVER_CONTAINER;
+      }
+      containerLaunchStartTime = clock.getTime();
+      dispatcher.getEventHandler().handle(
+          new ContainersLauncherEvent(this, launcherEvent));
     }
-    containerLaunchStartTime = clock.getTime();
-    dispatcher.getEventHandler().handle(
-        new ContainersLauncherEvent(this, launcherEvent));
+
   }
 
   @SuppressWarnings("unchecked") // dispatcher not typed
@@ -818,6 +825,13 @@ public class ContainerImpl implements Container {
     this.isMarkeForKilling = true;
     dispatcher.getEventHandler().handle(
         new ContainerKillEvent(containerId, exitStatus, description));
+  }
+
+  @SuppressWarnings("unchecked") // dispatcher not typed
+  @Override
+  public void sendPauseEvent(String description) {
+    dispatcher.getEventHandler().handle(
+        new ContainerPauseEvent(containerId, description));
   }
 
   @SuppressWarnings("unchecked") // dispatcher not typed
@@ -1775,7 +1789,7 @@ public class ContainerImpl implements Container {
 
   /**
    * Transitions upon receiving PAUSE_CONTAINER.
-   * - RUNNING -> PAUSED
+   * - RUNNING -> PAUSING
    */
   @SuppressWarnings("unchecked") // dispatcher not typed
   static class PauseContainerTransition implements

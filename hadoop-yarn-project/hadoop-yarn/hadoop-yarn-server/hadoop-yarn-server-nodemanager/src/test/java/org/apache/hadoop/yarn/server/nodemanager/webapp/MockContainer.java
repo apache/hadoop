@@ -229,4 +229,9 @@ public class MockContainer implements Container {
   public boolean isRecovering() {
     return false;
   }
+
+  @Override
+  public void sendPauseEvent(String description) {
+
+  }
 }

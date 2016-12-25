@@ -2838,6 +2838,15 @@
 
   <property>
     <description>
+    Use container pause as the preemption policy over kill in the container
+    queue at a NodeManager.
+    </description>
+    <name>yarn.nodemanager.opportunistic-containers-use-pause-for-preemption</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
     Error filename pattern, to identify the file in the container's
     Log directory which contain the container's error log. As error file
     redirection is done by client/AM and yarn will not be aware of the error
