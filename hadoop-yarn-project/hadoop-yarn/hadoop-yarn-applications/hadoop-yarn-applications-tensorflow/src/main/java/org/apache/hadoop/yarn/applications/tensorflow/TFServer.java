@@ -127,7 +127,7 @@ public class TFServer implements Runnable {
     private int port;
 
     public void startTFServer() {
-        org.tensorflow.bridge.TFServer server = new org.tensorflow.bridge.TFServer(cluster, jobName, taskIndex);
-        server.start();
+/*        org.tensorflow.bridge.TFServer server = new org.tensorflow.bridge.TFServer(cluster, jobName, taskIndex);
+        server.start();*/
     }
 }
