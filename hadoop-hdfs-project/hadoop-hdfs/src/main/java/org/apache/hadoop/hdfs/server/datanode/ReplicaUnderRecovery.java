@@ -73,7 +73,7 @@ public class ReplicaUnderRecovery extends ReplicaInfo {
     if (recoveryId > this.recoveryId) {
       this.recoveryId = recoveryId;
     } else {
-      throw new IllegalArgumentException("The new rcovery id: " + recoveryId
+      throw new IllegalArgumentException("The new recovery id: " + recoveryId
           + " must be greater than the current one: " + this.recoveryId);
     }
   }
