@@ -26,7 +26,7 @@ import java.util.Vector;
  */
 public class TFAmContainer {
     private static final Log LOG = LogFactory.getLog(TFAmContainer.class);
-
+    public static final String APPMASTER_JAR_PATH = "AppMaster.jar";
     private Client client;
     public TFAmContainer(Client client) {
         this.client = client;
@@ -51,6 +51,8 @@ public class TFAmContainer {
         } else {
             fs.copyFromLocalFile(new Path(fileSrcPath), dst);
         }
+
+        LOG.info("copy: " + fileSrcPath + " ===> " + dst.toString());
         FileStatus scFileStatus = fs.getFileStatus(dst);
         LocalResource scRsrc =
                 LocalResource.newInstance(
@@ -107,8 +109,8 @@ public class TFAmContainer {
         vargs.add("--container_memory " + String.valueOf(containerMemory));
         vargs.add("--container_vcores " + String.valueOf(containerVirtualCores));
         vargs.add("--num_containers " + String.valueOf(numContainers));
-        vargs.add("--" + Client.OPT_TF_CLIENT + " " + String.valueOf(tfClientPy));
-        vargs.add("--" + Client. OPT_TF_SERVER_JAR + " " + String.valueOf(tfConatinerJar));
+        vargs.add("--" + TFApplication.OPT_TF_CLIENT + " " + String.valueOf(tfClientPy));
+        vargs.add("--" + TFApplication.OPT_TF_SERVER_JAR + " " + String.valueOf(tfConatinerJar));
         if (debugFlag) {
             vargs.add("--debug");
         }

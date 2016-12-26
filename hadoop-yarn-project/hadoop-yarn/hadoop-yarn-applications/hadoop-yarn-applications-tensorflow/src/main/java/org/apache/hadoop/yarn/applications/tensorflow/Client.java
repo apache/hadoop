@@ -19,24 +19,17 @@
 package org.apache.hadoop.yarn.applications.tensorflow;
 
 import org.apache.commons.cli.*;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.records.*;
@@ -111,6 +104,8 @@ public class Client {
   private String appMasterJar = "";
 
   private String tfConatinerJar = "";
+
+  private String tfServerPy = "";
   // Main class to invoke application master
   private final String appMasterMainClass;
 
@@ -132,9 +127,6 @@ public class Client {
   private final long clientStartTime = System.currentTimeMillis();
   // Timeout threshold for client. Kill app after time interval expires.
   private long clientTimeout = 600000;
-
-  // flag to indicate whether to keep containers across application attempts.
-  private boolean keepContainers = false;
 
   private long attemptFailuresValidityInterval = -1;
 
@@ -170,8 +162,8 @@ public class Client {
 
   public static final String SCRIPT_PATH = "ExecScript";
 
-  public static final String OPT_TF_CLIENT = "tf_client";
-  public static final String OPT_TF_SERVER_JAR = "tf_serverjar";
+  //public static final String OPT_TF_CLIENT = "tf_client";
+  //public static final String OPT_TF_SERVER_JAR = "tf_serverjar";
 
   /**
    * @param args Command line arguments
@@ -230,11 +222,6 @@ public class Client {
     opts.addOption("container_vcores", true, "Amount of virtual cores to be requested to run a tensorflow worker");
     opts.addOption("num_containers", true, "No. of containers on which tensorflow workers to run");
     opts.addOption("log_properties", true, "log4j.properties file");
-    opts.addOption("keep_containers_across_application_attempts", false,
-      "Flag to indicate whether to keep containers across application attempts." +
-      " If the flag is true, running containers will not be killed when" +
-      " application attempt fails and these containers will be retrieved by" +
-      " the new application attempt ");
     opts.addOption("attempt_failures_validity_interval", true,
       "when attempt_failures_validity_interval in milliseconds is set to > 0," +
       "the failure number will not take failures which happen out of " +
@@ -275,10 +262,12 @@ public class Client {
         "If container could retry, it specifies max retires");
     opts.addOption("container_retry_interval", true,
         "Interval between each retry, unit is milliseconds");
-    opts.addOption(OPT_TF_CLIENT, true,
+    opts.addOption(TFApplication.OPT_TF_CLIENT, true,
             "Provide client python of tensorflow");
-    opts.addOption(OPT_TF_SERVER_JAR, true,
+    opts.addOption(TFApplication.OPT_TF_SERVER_JAR, true,
             "Provide server jar of tensorflow");
+    opts.addOption(TFApplication.OPT_TF_SERVER_PY, true,
+            "Provide server pyscript of tensorflow");
   }
 
   /**
@@ -327,18 +316,14 @@ public class Client {
 
     }
 
-    if (cliParser.hasOption("keep_containers_across_application_attempts")) {
-      LOG.info("keep_containers_across_application_attempts");
-      keepContainers = true;
-    }
-
     appName = cliParser.getOptionValue("appname", "tensorflow");
     amPriority = Integer.parseInt(cliParser.getOptionValue("priority", "0"));
     amQueue = cliParser.getOptionValue("queue", "default");
     amMemory = Integer.parseInt(cliParser.getOptionValue("master_memory", "100"));
     amVCores = Integer.parseInt(cliParser.getOptionValue("master_vcores", "1"));
-    tfClientPy = cliParser.getOptionValue(OPT_TF_CLIENT, TFClient.DEFAULT_TF_CLIENT_PY);
-    tfConatinerJar = cliParser.getOptionValue(OPT_TF_SERVER_JAR);
+    tfClientPy = cliParser.getOptionValue(TFApplication.OPT_TF_CLIENT, TFClient.TF_CLIENT_PY);
+    tfConatinerJar = cliParser.getOptionValue(TFApplication.OPT_TF_SERVER_JAR, TFAmContainer.APPMASTER_JAR_PATH);
+    tfServerPy = cliParser.getOptionValue(TFApplication.OPT_TF_SERVER_PY, TFContainer.SERVER_PY_PATH);
 
     if (amMemory < 0) {
       throw new IllegalArgumentException("Invalid memory specified for application master, exiting."
@@ -357,11 +342,11 @@ public class Client {
 
 
 
-    if (!cliParser.hasOption(OPT_TF_CLIENT)) {
+    if (!cliParser.hasOption(TFApplication.OPT_TF_CLIENT)) {
       throw new IllegalArgumentException(
           "No tensorflow client specified to be executed by application master");
     } else {
-        tfClientPy = cliParser.getOptionValue(OPT_TF_CLIENT);
+        tfClientPy = cliParser.getOptionValue(TFApplication.OPT_TF_CLIENT);
     }
 
     containerMemory = Integer.parseInt(cliParser.getOptionValue("container_memory", "256"));
@@ -514,7 +499,6 @@ public class Client {
     ApplicationSubmissionContext appContext = app.getApplicationSubmissionContext();
     ApplicationId appId = appContext.getApplicationId();
 
-    appContext.setKeepContainersAcrossApplicationAttempts(keepContainers);
     appContext.setApplicationName(appName);
 
     if (attemptFailuresValidityInterval >= 0) {
@@ -545,7 +529,12 @@ public class Client {
     // Copy the application master jar to the filesystem
     // Create a local resource to point to the destination jar path
     FileSystem fs = FileSystem.get(conf);
-    tfAmContainer.addToLocalResources(fs, appMasterJar, appMasterJarPath, appId.toString(),
+    tfAmContainer.addToLocalResources(fs, appMasterJar, TFAmContainer.APPMASTER_JAR_PATH, appId.toString(),
+            localResources, null);
+
+    tfAmContainer.addToLocalResources(fs, tfServerPy, TFContainer.SERVER_PY_PATH, appId.toString(),
+            localResources, null);
+    tfAmContainer.addToLocalResources(fs, tfClientPy, TFClient.TF_CLIENT_PY, appId.toString(),
             localResources, null);
 
     // Set the log4j properties if needed
@@ -631,6 +620,10 @@ public class Client {
     LOG.info("Submitting application to ASM");
 
     yarnClient.submitApplication(appContext);
+
+    // run tensorflow client python script
+    TFClient tfClient = new TFClient(tfClientPy);
+    tfClient.startTensorflowClient();
 
     // TODO
     // Try submitting the same request again

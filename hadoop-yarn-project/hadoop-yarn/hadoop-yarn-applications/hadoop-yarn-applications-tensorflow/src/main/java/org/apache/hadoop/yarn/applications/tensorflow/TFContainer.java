@@ -28,6 +28,7 @@ public class TFContainer {
     private String appName = DSConstants.APP_NAME;
     private ApplicationMaster appMaster;
     public static final String SERVER_PY_PATH = "tf_server.py";
+    public static final String SERVER_JAR_PATH = "TFServer.jar";
 
     public TFContainer(ApplicationMaster am) {
         appMaster = am;
@@ -41,7 +42,6 @@ public class TFContainer {
                 appName + "/" + appId + "/" + fileDstPath;
         Path dst =
                 new Path(fs.getHomeDirectory(), suffix);
-        LOG.info( fileSrcPath + " ==>  " + dst.toString());
         if (fileSrcPath == null) {
             FSDataOutputStream ostream = null;
             try {
@@ -54,6 +54,7 @@ public class TFContainer {
         } else {
             fs.copyFromLocalFile(new Path(fileSrcPath), dst);
         }
+        LOG.info("copy: " + fileSrcPath + " ===> " + dst.toString());
         FileStatus scFileStatus = fs.getFileStatus(dst);
         LocalResource scRsrc =
                 LocalResource.newInstance(
@@ -90,13 +91,16 @@ public class TFContainer {
         return env;
     }
 
-    public StringBuilder makeCommands(long containerMemory) {
+    public StringBuilder makeCommands(long containerMemory, String clusterSpec, String jobName, int taskIndex) {
         // Set the necessary command to execute on the allocated container
         Vector<CharSequence> vargs = new Vector<CharSequence>(5);
         vargs.add(ApplicationConstants.Environment.JAVA_HOME.$$() + "/bin/java");
         vargs.add("-Xmx" + containerMemory + "m");
         String containerClassName = TFServer.class.getName();
         vargs.add(containerClassName);
+        vargs.add("--" + TFServer.OPT_CS + " " + clusterSpec);
+        vargs.add("--" + TFServer.OPT_JN + " " + jobName);
+        vargs.add("--" + TFServer.OPT_TI + " " + taskIndex);
         vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/TFServer." + ApplicationConstants.STDOUT);
         vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/TFServer." + ApplicationConstants.STDERR);
 
