@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.tensorflow.api;
 
+import org.apache.hadoop.ipc.ProtocolInfo;
+import org.apache.hadoop.yarn.proto.TensorflowCluster.TensorflowClusterService;
 
-option java_package = "org.apache.hadoop.yarn.proto";
-option java_outer_classname = "TensorflowCluster";
-option java_generic_services = true;
-option java_generate_equals_and_hash = true;
-import "yarn_tensorflow_cluster_protos.proto";
-
-service TensorflowClusterService {
-  rpc getClusterSpec(GetClusterSpecRequestProto) returns (GetClusterSpecResponseProto);
+@ProtocolInfo(
+  protocolName = "org.apache.hadoop.yarn.server.api.ResourceTrackerPB",
+  protocolVersion = 1)
+public interface TensorflowClusterPB extends TensorflowClusterService.BlockingInterface {
 }

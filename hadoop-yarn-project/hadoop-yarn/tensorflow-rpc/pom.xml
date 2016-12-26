@@ -22,9 +22,9 @@
         <version>3.0.0-alpha2-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>hadoop-yarn-tfrpc</artifactId>
+    <artifactId>tensorflow-rpc</artifactId>
     <version>3.0.0-alpha2-SNAPSHOT</version>
-    <name>Apache Hadoop YARN Common</name>
+    <name>Apache Hadoop YARN TFRPC</name>
 
     <properties>
         <!-- Needed for generating FindBugs warnings using parent pom -->
@@ -34,6 +34,12 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-yarn-common</artifactId>
@@ -57,13 +63,14 @@
                             <imports>
                                 <param>${basedir}/../../../hadoop-common-project/hadoop-common/src/main/proto</param>
                                 <param>${basedir}/../../../hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/proto</param>
+                                <param>${basedir}/../hadoop-yarn-api/src/main/proto</param>
                                 <param>${basedir}/src/main/proto</param>
                             </imports>
                             <source>
                                 <directory>${basedir}/src/main/proto</directory>
                                 <includes>
-                                    <include>TensorflowCluster.proto</include>
                                     <include>yarn_tensorflow_cluster_protos.proto</include>
+                                    <include>TensorflowCluster.proto</include>
                                 </includes>
                             </source>
                         </configuration>

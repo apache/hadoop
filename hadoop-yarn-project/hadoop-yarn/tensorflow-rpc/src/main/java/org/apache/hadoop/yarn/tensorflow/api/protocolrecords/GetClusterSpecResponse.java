@@ -15,14 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.tensorflow.api.protocolrecords;
 
+public abstract class GetClusterSpecResponse {
+  public abstract String getClusterSpec();
 
-option java_package = "org.apache.hadoop.yarn.proto";
-option java_outer_classname = "TensorflowCluster";
-option java_generic_services = true;
-option java_generate_equals_and_hash = true;
-import "yarn_tensorflow_cluster_protos.proto";
-
-service TensorflowClusterService {
-  rpc getClusterSpec(GetClusterSpecRequestProto) returns (GetClusterSpecResponseProto);
+  public abstract void setClusterSpec(String clusterSpec);
 }
