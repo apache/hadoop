@@ -15,18 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.tensorflow.api.impl.pb.service;
+package org.apache.hadoop.yarn.applications.tensorflow.api.impl.pb.service;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.tensorflow.api.TensorflowCluster;
-import org.apache.hadoop.yarn.tensorflow.api.TensorflowClusterPB;
-import org.apache.hadoop.yarn.tensorflow.api.protocolrecords.GetClusterSpecResponse;
-import org.apache.hadoop.yarn.tensorflow.api.protocolrecords.impl.pb.GetClusterSpecResponsePBImpl;
-import org.apache.hadoop.yarn.tensorflow.api.protocolrecords.impl.pb.GetClusterSpecRequestPBImpl;
 import org.apache.hadoop.yarn.proto.YarnTensorflowClusterProtos.GetClusterSpecRequestProto;
 import org.apache.hadoop.yarn.proto.YarnTensorflowClusterProtos.GetClusterSpecResponseProto;
+import org.apache.hadoop.yarn.applications.tensorflow.api.TensorflowCluster;
+import org.apache.hadoop.yarn.applications.tensorflow.api.TensorflowClusterPB;
+import org.apache.hadoop.yarn.applications.tensorflow.api.protocolrecords.GetClusterSpecResponse;
+import org.apache.hadoop.yarn.applications.tensorflow.api.protocolrecords.impl.pb.GetClusterSpecRequestPBImpl;
+import org.apache.hadoop.yarn.applications.tensorflow.api.protocolrecords.impl.pb.GetClusterSpecResponsePBImpl;
 
 import java.io.IOException;
 

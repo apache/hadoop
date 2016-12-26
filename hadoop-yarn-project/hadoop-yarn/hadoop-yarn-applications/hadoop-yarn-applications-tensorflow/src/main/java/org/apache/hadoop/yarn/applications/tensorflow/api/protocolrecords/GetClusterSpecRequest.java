@@ -15,10 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.tensorflow.api.protocolrecords;
+package org.apache.hadoop.yarn.applications.tensorflow.api.protocolrecords;
 
-public abstract class GetClusterSpecResponse {
-  public abstract String getClusterSpec();
+import org.apache.hadoop.yarn.util.Records;
 
-  public abstract void setClusterSpec(String clusterSpec);
+public abstract class GetClusterSpecRequest {
+
+  public static GetClusterSpecRequest newInstance() {
+    GetClusterSpecRequest request = Records.newRecord(GetClusterSpecRequest.class);
+    return request;
+  }
 }

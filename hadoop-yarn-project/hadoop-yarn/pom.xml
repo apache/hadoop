@@ -237,6 +237,5 @@
     <module>hadoop-yarn-client</module>
     <module>hadoop-yarn-registry</module>
     <module>hadoop-yarn-ui</module>
-    <module>tensorflow-rpc</module>
   </modules>
 </project>

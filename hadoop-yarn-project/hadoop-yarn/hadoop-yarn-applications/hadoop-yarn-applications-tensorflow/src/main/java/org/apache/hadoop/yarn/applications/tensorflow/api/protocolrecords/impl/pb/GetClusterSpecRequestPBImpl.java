@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.tensorflow.api.protocolrecords.impl.pb;
+package org.apache.hadoop.yarn.applications.tensorflow.api.protocolrecords.impl.pb;
 
-import org.apache.hadoop.yarn.tensorflow.api.protocolrecords.GetClusterSpecRequest;
 import org.apache.hadoop.yarn.proto.YarnTensorflowClusterProtos.GetClusterSpecRequestProto;
+import org.apache.hadoop.yarn.applications.tensorflow.api.protocolrecords.GetClusterSpecRequest;
 
 public class GetClusterSpecRequestPBImpl extends GetClusterSpecRequest {
   private GetClusterSpecRequestProto proto =

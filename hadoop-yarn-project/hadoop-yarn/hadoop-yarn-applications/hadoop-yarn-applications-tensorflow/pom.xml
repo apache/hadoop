@@ -22,7 +22,6 @@
     <version>3.0.0-alpha2-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-applications-tensorflow</artifactId>
   <version>3.0.0-alpha2-SNAPSHOT</version>
   <name>Apache Hadoop YARN tensorflow</name>
@@ -36,8 +35,6 @@
   </repositories>
 
   <properties>
-    <!-- Needed for generating FindBugs warnings using parent pom -->
-    <yarn.basedir>${project.parent.parent.basedir}</yarn.basedir>
     <!-- jackson versions -->
     <jackson.version>1.9.13</jackson.version>
   </properties>
@@ -56,14 +53,11 @@
       <scope>test</scope>
     </dependency>
 
-
-
     <dependency>
-    <groupId>org.tensorflow</groupId>
-    <artifactId>java-bridge</artifactId>
-    <version>0.1.0</version>
+      <groupId>org.tensorflow</groupId>
+      <artifactId>java-bridge</artifactId>
+      <version>0.1.0</version>
     </dependency>
-
 
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
@@ -215,11 +209,11 @@
           </execution>
         </executions>
         <configuration>
-           <archive>
-             <manifest>
-               <mainClass>org.apache.hadoop.yarn.applications.tensorflow.Client</mainClass>
-             </manifest>
-           </archive>
+          <archive>
+            <manifest>
+              <mainClass>org.apache.hadoop.yarn.applications.tensorflow.Client</mainClass>
+            </manifest>
+          </archive>
         </configuration>
       </plugin>
       <plugin>
@@ -230,6 +224,35 @@
             <JAVA_HOME>${java.home}</JAVA_HOME>
           </environmentVariables>
        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-maven-plugins</artifactId>
+        <executions>
+          <execution>
+            <id>compile-protoc</id>
+            <goals>
+              <goal>protoc</goal>
+            </goals>
+            <configuration>
+              <protocVersion>${protobuf.version}</protocVersion>
+              <protocCommand>${protoc.path}</protocCommand>
+              <imports>
+                <param>${basedir}/../../../../hadoop-common-project/hadoop-common/src/main/proto</param>
+                <param>${basedir}/../../../../hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/proto</param>
+                <param>${basedir}/../../hadoop-yarn-api/src/main/proto</param>
+                <param>${basedir}/src/main/proto</param>
+              </imports>
+              <source>
+                <directory>${basedir}/src/main/proto</directory>
+                <includes>
+                  <include>yarn_tensorflow_cluster_protos.proto</include>
+                  <include>TensorflowCluster.proto</include>
+                </includes>
+              </source>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

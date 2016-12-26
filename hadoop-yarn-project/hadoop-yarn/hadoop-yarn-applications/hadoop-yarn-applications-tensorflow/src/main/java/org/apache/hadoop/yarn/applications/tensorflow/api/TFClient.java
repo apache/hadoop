@@ -15,17 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.tensorflow.api;
+package org.apache.hadoop.yarn.applications.tensorflow.api;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.yarn.applications.tensorflow.api.protocolrecords.GetClusterSpecRequest;
+import org.apache.hadoop.yarn.applications.tensorflow.api.protocolrecords.GetClusterSpecResponse;
 import org.apache.hadoop.yarn.client.RMProxy;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.tensorflow.api.protocolrecords.GetClusterSpecRequest;
-import org.apache.hadoop.yarn.tensorflow.api.protocolrecords.GetClusterSpecResponse;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

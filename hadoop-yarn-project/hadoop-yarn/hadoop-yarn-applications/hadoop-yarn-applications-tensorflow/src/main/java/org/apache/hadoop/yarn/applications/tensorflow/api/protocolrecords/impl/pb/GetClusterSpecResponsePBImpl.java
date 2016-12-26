@@ -15,11 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.tensorflow.api.protocolrecords.impl.pb;
+package org.apache.hadoop.yarn.applications.tensorflow.api.protocolrecords.impl.pb;
 
-import org.apache.hadoop.yarn.tensorflow.api.protocolrecords.GetClusterSpecResponse;
 import org.apache.hadoop.yarn.proto.YarnTensorflowClusterProtos.GetClusterSpecResponseProto;
 import org.apache.hadoop.yarn.proto.YarnTensorflowClusterProtos.GetClusterSpecResponseProtoOrBuilder;
+import org.apache.hadoop.yarn.applications.tensorflow.api.protocolrecords.GetClusterSpecResponse;
 
 public class GetClusterSpecResponsePBImpl extends GetClusterSpecResponse {
   GetClusterSpecResponseProto proto = GetClusterSpecResponseProto.getDefaultInstance();
