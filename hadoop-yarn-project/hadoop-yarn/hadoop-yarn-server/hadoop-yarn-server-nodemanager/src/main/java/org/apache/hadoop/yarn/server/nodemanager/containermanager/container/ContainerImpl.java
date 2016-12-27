@@ -1680,7 +1680,7 @@ public class ContainerImpl implements Container {
             + oldState + "], eventType: [" + event.getType() + "]," +
             " container: [" + containerID + "]", e);
       }
-      if (oldState != newState) {
+      if (newState != null && oldState != newState) {
         LOG.info("Container " + containerID + " transitioned from "
             + oldState
             + " to " + newState);
