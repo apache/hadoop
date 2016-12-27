@@ -368,7 +368,7 @@ class CapacitySchedulerPage extends RmView {
           .append(" }).fail(function(data){")
           .append(
               " alert(\"Scheduler log generation failed. Please check the"
-                  + " ResourceManager log for more informtion.\");")
+                  + " ResourceManager log for more information.\");")
           .append(" console.log(data);").append(" });").append(" }")
           .append("}");
 
