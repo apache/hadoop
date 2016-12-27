@@ -719,7 +719,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       metrics.decrDecommissioningNMs();
       break;
     default :
-      LOG.warn("Unexpcted initial state");
+      LOG.warn("Unexpected initial state");
     }
 
     switch (finalState) {

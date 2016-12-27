@@ -330,7 +330,7 @@ public class FifoScheduler extends
     FifoAppAttempt application = getApplicationAttempt(applicationAttemptId);
     if (application == null) {
       LOG.error("Calling allocate on removed " +
-          "or non existant application " + applicationAttemptId);
+          "or non-existent application " + applicationAttemptId);
       return EMPTY_ALLOCATION;
     }
 

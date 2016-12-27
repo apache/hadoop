@@ -199,7 +199,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
           LOG.debug("Skip app_attempt=" + application.getApplicationAttemptId()
               + " priority=" + schedulerKey.getPriority()
               + " because missed-non-partitioned-resource-request"
-              + " opportunity under requred:" + " Now="
+              + " opportunity under required:" + " Now="
               + missedNonPartitionedRequestSchedulingOpportunity + " required="
               + rmContext.getScheduler().getNumClusterNodes());
         }
