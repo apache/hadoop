@@ -75,6 +75,11 @@ public class ClusterSpec {
         this.paramServers.put(containerId, server);
     }
 
+    public TFServerAddress getMasterNode() {
+        return tfMasterNode;
+    }
+
+
     public String getMasterNodeAddress() {
         if (tfMasterNode == null) {
             return  null;

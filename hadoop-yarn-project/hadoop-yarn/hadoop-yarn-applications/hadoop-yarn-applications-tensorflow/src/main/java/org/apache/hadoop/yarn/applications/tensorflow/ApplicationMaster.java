@@ -24,9 +24,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.StringReader;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.nio.ByteBuffer;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -57,27 +55,21 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.SysInfo;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.*;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
-import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
-import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.impl.NMClientAsyncImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.log4j.LogManager;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.sun.jersey.api.client.ClientHandlerException;
 
 
 @InterfaceAudience.Public
@@ -218,6 +210,8 @@ public class ApplicationMaster {
 
   private int yarnShellIdCounter = 1;
   private String tfClientPy;
+
+  private  ClusterSpec clusterSpec;
 
   private String appName;
   public String getAppName() {return appName;}
@@ -442,6 +436,8 @@ public class ApplicationMaster {
       tfServerJar = cliParser.getOptionValue(TFApplication.OPT_TF_SERVER_JAR);
     }
 
+    clusterSpec = ClusterSpec.makeClusterSpec();
+
     return true;
   }
 
@@ -453,6 +449,21 @@ public class ApplicationMaster {
   private void printUsage(Options opts) {
     new HelpFormatter().printHelp("ApplicationMaster", opts);
   }
+
+  private final class RpcForClient implements TFApplicationRpc {
+
+    @Override
+    public String getClusterSpec() throws IOException, YarnException {
+      if (clusterSpec != null && clusterSpec.getMasterNode() != null) {
+        TFServerAddress server = clusterSpec.getMasterNode();
+        String master = server.getAddress() + ":" + server.getPort();
+        return master;
+      }
+
+      return "";
+    }
+  }
+
 
   /**
    * Main run function for the application master
@@ -506,9 +517,15 @@ public class ApplicationMaster {
     // TODO use the rpc port info to register with the RM for the client to
     // send requests to this app master
 
+    appMasterHostname = System.getenv(Environment.NM_HOST.name());
+    LOG.info("rpc server address <" + appMasterHostname + ">");
+    TFApplicationRpcServer rpcServer = new TFApplicationRpcServer(appMasterHostname, new RpcForClient());
+    appMasterRpcPort = rpcServer.getRpcPort();
+    rpcServer.startRpcServiceThread();
+
     // Register self with ResourceManager
     // This will start heartbeating to the RM
-    appMasterHostname = NetUtils.getHostname();
+
     RegisterApplicationMasterResponse response = amRMClient
             .registerApplicationMaster(appMasterHostname, appMasterRpcPort,
                     appMasterTrackingUrl);
@@ -559,20 +576,6 @@ public class ApplicationMaster {
     }
     numRequestedContainers.set(numTotalContainers);
 
-    //createTFClientThread();
-  }
-
-  private void createTFClientThread() {
-
-    Thread thread = new Thread(new Runnable() {
-      @Override
-      public void run() {
-        LOG.info("tensorflow client will be run!");
-        TFClient tfClient = new TFClient(TFClient.TF_CLIENT_PY);
-        tfClient.run();
-      }
-    });
-    thread.start();
   }
 
   @VisibleForTesting
@@ -642,7 +645,7 @@ public class ApplicationMaster {
   public boolean startAllContainers() throws Exception {
     if (numAllocatedContainers.get() == numTotalContainers) {
 
-      ClusterSpec clusterSpec = ClusterSpec.makeClusterSpec();
+
       int numWorkerContainers = 0;
       int numPsContainers = 0;
       if (this.allocatedContainers.size() < numTotalWokerContainers + numTotalParamServerContainer) {

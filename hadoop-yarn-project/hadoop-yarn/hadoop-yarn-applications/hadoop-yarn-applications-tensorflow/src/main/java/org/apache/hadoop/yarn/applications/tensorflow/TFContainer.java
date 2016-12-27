@@ -25,7 +25,7 @@ import java.util.*;
 public class TFContainer {
   private static final Log LOG = LogFactory.getLog(TFContainer.class);
 
-    private String appName = DSConstants.APP_NAME;
+    private String appName = TFYarnConstants.APP_NAME;
     private ApplicationMaster appMaster;
     public static final String SERVER_PY_PATH = "tf_server.py";
     public static final String SERVER_JAR_PATH = "TFServer.jar";

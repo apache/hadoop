@@ -6,7 +6,6 @@ import org.apache.commons.logging.LogFactory;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.Vector;
 
 /**
  * Created by muzhongz on 16-11-30.
@@ -17,7 +16,7 @@ public class TFClient implements Runnable {
     public static final String TF_CLIENT_PY = "tf_client.py";
     private String tfClientPy;
     private String tfMasterAddress;
-    private int tfMasterPort = DSConstants.INVALID_TCP_PORT;
+    private int tfMasterPort = TFYarnConstants.INVALID_TCP_PORT;
     private String currentDirectory;
     private static final String OPT_MASTER_ADDRESS = "ma";
     private static final String OPT_MASTER_PORT = "mp";
@@ -85,7 +84,7 @@ public class TFClient implements Runnable {
     public void run() {
         execCmd("ls -l");
 
-        if (tfMasterAddress == null || tfMasterPort == DSConstants.INVALID_TCP_PORT) {
+        if (tfMasterAddress == null || tfMasterPort == TFYarnConstants.INVALID_TCP_PORT) {
             LOG.fatal("invalid master address!");
             execCmd("python " + tfClientPy);
         } else {
@@ -96,6 +95,22 @@ public class TFClient implements Runnable {
     public void startTensorflowClient() {
         Thread thread = new Thread(this);
         thread.start();
+    }
+
+    public void startTensorflowClient(String masterNode) {
+        if (masterNode == null || masterNode.equals("")) {
+            return;
+        }
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String cmd = "python " + tfClientPy + " " + masterNode;
+                LOG.info("TF client command is [" + cmd + "]");
+                execCmd(cmd);
+            }
+        });
+        thread.start();
+
     }
 
     public void tensorflowServersReady(boolean ready, String masterAddress, int port) {

@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public class DSConstants {
+public class TFYarnConstants {
 
   /**
    * Environment key name pointing to the shell script's location

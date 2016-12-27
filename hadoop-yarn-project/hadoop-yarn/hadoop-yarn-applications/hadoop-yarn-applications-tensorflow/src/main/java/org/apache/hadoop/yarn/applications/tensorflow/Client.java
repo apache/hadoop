@@ -140,6 +140,8 @@ public class Client {
   private String flowVersion = null;
   private long flowRunId = 0L;
 
+  private String masterAddress;
+
   // Command line options
   private Options opts;
 
@@ -153,6 +155,8 @@ public class Client {
 
   //public static final String OPT_TF_CLIENT = "tf_client";
   //public static final String OPT_TF_SERVER_JAR = "tf_serverjar";
+
+  private TFApplicationRpc appRpc = null;
 
   /**
    * @param args Command line arguments
@@ -588,9 +592,7 @@ public class Client {
 
     yarnClient.submitApplication(appContext);
 
-    // run tensorflow client python script
-    TFClient tfClient = new TFClient(tfClientPy);
-    tfClient.startTensorflowClient();
+
 
     // TODO
     // Try submitting the same request again
@@ -599,6 +601,22 @@ public class Client {
     // Monitor the application
     return monitorApplication(appId);
 
+  }
+
+  private void tensorflowServersReady() {
+    while (true) {
+
+
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+  }
+
+  private boolean isEmptyString(String s) {
+    return s == null || s.equals("");
   }
 
   /**
@@ -638,6 +656,25 @@ public class Client {
 
       YarnApplicationState state = report.getYarnApplicationState();
       FinalApplicationStatus tfStatus = report.getFinalApplicationStatus();
+
+      if (YarnApplicationState.RUNNING == state) {
+        if (appRpc == null) {
+          String hostname = report.getHost();
+          int port = report.getRpcPort();
+          LOG.info("application master rpc host: " + hostname + "; port: " + port);
+          appRpc = new TFApplicationRpcClient(hostname, port).getRpc();
+        }
+
+        if (appRpc != null && isEmptyString(masterAddress)) {
+          masterAddress = appRpc.getClusterSpec();
+          LOG.info("master node address is " + masterAddress);
+          if (!isEmptyString(masterAddress)) {
+            TFClient tfClient = new TFClient(tfClientPy);
+            tfClient.startTensorflowClient(masterAddress);
+          }
+        }
+      }
+
       if (YarnApplicationState.FINISHED == state) {
         if (FinalApplicationStatus.SUCCEEDED == tfStatus) {
           LOG.info("Application has completed successfully. Breaking monitoring loop");

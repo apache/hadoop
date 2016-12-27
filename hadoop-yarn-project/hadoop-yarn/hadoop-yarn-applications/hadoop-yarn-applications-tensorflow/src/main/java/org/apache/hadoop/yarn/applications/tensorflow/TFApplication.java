@@ -13,4 +13,12 @@ public class TFApplication {
     public static String makeOption(String opt, String val) {
         return "--" + opt + " " + val;
     }
+
+    public static TFApplicationRpc getRpc() {
+        return null;
+    }
+
+    public static boolean startRpcService() {
+        return true;
+    }
 }
