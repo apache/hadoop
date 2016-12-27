@@ -136,8 +136,14 @@ public class BootstrapStandby implements Tool, Configurable {
   }
 
   private void printUsage() {
-    System.err.println("Usage: " + this.getClass().getSimpleName() +
-        " [-force] [-nonInteractive] [-skipSharedEditsCheck]");
+    System.out.println("Usage: " + this.getClass().getSimpleName() +
+        " [-force] [-nonInteractive] [-skipSharedEditsCheck]\n"
+        + "\t-force: formats if the name directory exists.\n"
+        + "\t-nonInteractive: formats aborts if the name directory exists,\n"
+        + "\tunless -force option is specified.\n"
+        + "\t-skipSharedEditsCheck: skips edits check which ensures that\n"
+        + "\twe have enough edits already in the shared directory to start\n"
+        + "\tup from the last checkpoint on the active.");
   }
 
   private NamenodeProtocol createNNProtocolProxy(InetSocketAddress otherIpcAddr)
