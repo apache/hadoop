@@ -352,7 +352,7 @@ After creating the timeline client, user also needs to set the timeline collecto
 
     amRMClient.registerTimelineClient(timelineClient);
 
-Else address needs to be retreived from the AM allocate response and need to be set in timeline client explicitly.
+Else address needs to be retrieved from the AM allocate response and need to be set in timeline client explicitly.
 
     timelineClient.setTimelineServiceAddress(response.getCollectorAddr());
 
