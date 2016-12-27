@@ -159,6 +159,17 @@ public abstract class UpdateContainerRequest extends AbstractResourceRequest {
   }
 
   @Override
+  public String toString() {
+    return "UpdateReq{" +
+        "containerId=" + getContainerId() + ", " +
+        "containerVersion=" + getContainerVersion() + ", " +
+        "targetExecType=" + getExecutionType() + ", " +
+        "targetCapability=" + getCapability() + ", " +
+        "updateType=" + getContainerUpdateType() + ", " +
+        "}";
+  }
+
+  @Override
   public boolean equals(Object obj) {
     if (this == obj) {
       return true;
