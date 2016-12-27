@@ -140,6 +140,12 @@ Prints the version.
 
 Usage: `mapred version`
 
+### `envvars`
+
+Usage: `mapred envvars`
+
+Display computed Hadoop environment variables.
+
 Administration Commands
 -----------------------
 

@@ -223,6 +223,12 @@ Usage: `hadoop CLASSNAME`
 
 Runs the class named `CLASSNAME`. The class must be part of a package.
 
+### `envvars`
+
+Usage: `hadoop envvars`
+
+Display computed Hadoop environment variables.
+
 Administration Commands
 -----------------------
 
