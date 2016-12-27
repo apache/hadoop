@@ -19,7 +19,6 @@ package org.apache.hadoop.yarn.applications.tensorflow.api;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -31,19 +30,15 @@ import org.apache.hadoop.yarn.applications.tensorflow.api.protocolrecords.GetClu
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-public class TensorflowClusterImpl extends AbstractService implements TensorflowCluster {
+public class TensorflowClusterImpl implements TensorflowCluster {
   private Server server;
   private static final RecordFactory recordFactory =
     RecordFactoryProvider.getRecordFactory(null);
 
-  public TensorflowClusterImpl() {
-    super(TensorflowClusterImpl.class.getName());
-  }
+  public TensorflowClusterImpl() {}
 
-  @Override
-  protected void serviceStart() throws Exception {
-    super.serviceStart();
-    Configuration conf = getConfig();
+  public void start() throws Exception {
+    Configuration conf = new Configuration();
     YarnRPC rpc = YarnRPC.create(conf);
     InetSocketAddress address = new InetSocketAddress("localhost", 9001);
     this.server = rpc.getServer(
@@ -61,17 +56,14 @@ public class TensorflowClusterImpl extends AbstractService implements Tensorflow
     return response;
   }
 
-  @Override
-  protected void serviceStop() throws Exception {
+  public void stop() throws Exception {
     if (this.server != null) {
       this.server.stop();
     }
-    super.serviceStop();
   }
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws Exception {
     TensorflowClusterImpl server = new TensorflowClusterImpl();
-    server.init(new Configuration());
     server.start();
   }
 }
