@@ -25,7 +25,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -177,11 +177,15 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
         offSwitchRequest.getCapability());
   }
 
-  private ResourceRequest cloneResourceRequest(ResourceRequest request) {
-    ResourceRequest newRequest =
-        ResourceRequest.newInstance(request.getPriority(),
-            request.getResourceName(), request.getCapability(), 1,
-            request.getRelaxLocality(), request.getNodeLabelExpression());
+  public ResourceRequest cloneResourceRequest(ResourceRequest request) {
+    ResourceRequest newRequest = ResourceRequest.newBuilder()
+        .priority(request.getPriority())
+        .allocationRequestId(request.getAllocationRequestId())
+        .resourceName(request.getResourceName())
+        .capability(request.getCapability())
+        .numContainers(1)
+        .relaxLocality(request.getRelaxLocality())
+        .nodeLabelExpression(request.getNodeLabelExpression()).build();
     return newRequest;
   }
 
