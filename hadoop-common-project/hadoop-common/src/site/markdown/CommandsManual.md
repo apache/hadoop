@@ -158,6 +158,12 @@ Usage: `hadoop CLASSNAME`
 
 Runs the class named `CLASSNAME`.
 
+### `envvars`
+
+Usage: `hadoop envvars`
+
+Display computed Hadoop environment variables.
+
 Administration Commands
 -----------------------
 

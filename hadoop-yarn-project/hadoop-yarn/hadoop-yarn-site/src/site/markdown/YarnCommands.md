@@ -162,6 +162,12 @@ Usage: `yarn version`
 
 Prints the Hadoop version.
 
+### `envvars`
+
+Usage: `yarn envvars`
+
+Display computed Hadoop environment variables.
+
 Administration Commands
 -----------------------
 
