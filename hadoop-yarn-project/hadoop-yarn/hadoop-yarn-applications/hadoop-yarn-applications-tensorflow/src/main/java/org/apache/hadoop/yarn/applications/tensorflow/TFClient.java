@@ -6,6 +6,7 @@ import org.apache.commons.logging.LogFactory;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Vector;
 
 /**
  * Created by muzhongz on 16-11-30.
@@ -16,7 +17,13 @@ public class TFClient implements Runnable {
     public static final String TF_CLIENT_PY = "tf_client.py";
     private String tfClientPy;
     private String tfMasterAddress;
-    private int tfMasterPort;
+    private int tfMasterPort = DSConstants.INVALID_TCP_PORT;
+    private String currentDirectory;
+    private static final String OPT_MASTER_ADDRESS = "ma";
+    private static final String OPT_MASTER_PORT = "mp";
+
+
+
 
     private void execCmd(String cmd) {
         Process process = null;
@@ -54,10 +61,31 @@ public class TFClient implements Runnable {
         this.tfClientPy = tfClientPy;
     }
 
+    private String makeOption(String opt, String val) {
+
+        if (opt == null || opt.equals("")) {
+            return "";
+        }
+
+        String lead = "--";
+
+        if (val == null) {
+            lead += opt;
+            return lead;
+        }
+
+        lead += opt;
+        lead += " ";
+        lead += val;
+        return lead;
+    }
+
+
     @Override
     public void run() {
         execCmd("ls -l");
-        if (tfMasterAddress == null || tfMasterPort == 0) {
+
+        if (tfMasterAddress == null || tfMasterPort == DSConstants.INVALID_TCP_PORT) {
             LOG.fatal("invalid master address!");
             execCmd("python " + tfClientPy);
         } else {

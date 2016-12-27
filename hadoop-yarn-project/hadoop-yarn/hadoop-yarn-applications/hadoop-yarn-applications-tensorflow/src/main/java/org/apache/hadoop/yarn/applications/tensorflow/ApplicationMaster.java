@@ -410,6 +410,7 @@ public class ApplicationMaster {
       throw new IllegalArgumentException(
               "Cannot run distributed shell with no containers");
     }
+    numTotalWokerContainers = numTotalContainers;
     requestPriority = Integer.parseInt(cliParser
             .getOptionValue("priority", "0"));
 

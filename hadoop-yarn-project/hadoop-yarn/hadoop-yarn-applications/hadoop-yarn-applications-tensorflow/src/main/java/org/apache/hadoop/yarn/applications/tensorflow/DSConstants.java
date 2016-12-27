@@ -51,4 +51,6 @@ public class DSConstants {
   public static final String DISTRIBUTEDSHELLTIMELINEDOMAIN = "DISTRIBUTEDSHELLTIMELINEDOMAIN";
 
   public static final String APP_NAME = "tenseoflow";
+
+  public static final int INVALID_TCP_PORT = -1;
 }

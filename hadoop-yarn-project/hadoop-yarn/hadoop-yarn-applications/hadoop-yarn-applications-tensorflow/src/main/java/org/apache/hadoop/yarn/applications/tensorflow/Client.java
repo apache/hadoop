@@ -603,7 +603,6 @@ public class Client {
 
   /**
    * Monitor the submitted application for completion.
-   * Kill application if time expires.
    * @param appId Application Id of application to be monitored
    * @return true if application completed successfully
    * @throws YarnException
@@ -659,11 +658,11 @@ public class Client {
         return false;
       }
 
-      if (System.currentTimeMillis() > (clientStartTime + clientTimeout)) {
+/*      if (System.currentTimeMillis() > (clientStartTime + clientTimeout)) {
         LOG.info("Reached client specified timeout for application. Killing application");
         forceKillApplication(appId);
         return false;
-      }
+      }*/
     }
 
   }

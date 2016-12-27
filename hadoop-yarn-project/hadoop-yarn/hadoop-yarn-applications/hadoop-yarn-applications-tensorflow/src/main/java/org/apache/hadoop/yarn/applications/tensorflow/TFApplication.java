@@ -8,4 +8,9 @@ public class TFApplication {
     public static final String OPT_TF_CLIENT_PY = "tf_clientpy";
     public static final String OPT_TF_SERVER_JAR = "tf_serverjar";
     public static final String OPT_TF_SERVER_PY = "tf_serverpy";
+
+
+    public static String makeOption(String opt, String val) {
+        return "--" + opt + " " + val;
+    }
 }
