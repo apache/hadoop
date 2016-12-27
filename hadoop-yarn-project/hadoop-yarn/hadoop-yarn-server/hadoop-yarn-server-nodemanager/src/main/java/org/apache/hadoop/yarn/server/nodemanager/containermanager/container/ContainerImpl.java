@@ -1643,7 +1643,7 @@ public class ContainerImpl implements Container {
         LOG.warn("Can't handle this event at current state: Current: ["
             + oldState + "], eventType: [" + event.getType() + "]", e);
       }
-      if (oldState != newState) {
+      if (newState != null && oldState != newState) {
         LOG.info("Container " + containerID + " transitioned from "
             + oldState
             + " to " + newState);

@@ -1051,6 +1051,7 @@ public class ResourceLocalizationService extends CompositeService
           LOG.error(
               "Got exception in parsing URL of LocalResource:"
                   + rsrc.getResource(), e);
+          continue;
         }
         LocalizerResourceRequestEvent assoc = scheduled.get(req);
         if (assoc == null) {

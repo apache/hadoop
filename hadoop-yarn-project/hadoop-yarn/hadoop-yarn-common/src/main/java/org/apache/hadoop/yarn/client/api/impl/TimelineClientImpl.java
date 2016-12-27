@@ -603,7 +603,7 @@ public class TimelineClientImpl extends TimelineClient {
                 error.getErrorCode());
           }
         }
-      } else if (type.equals(DOMAIN_DATA_TYPE)) {
+      } else if (type.equals(DOMAIN_DATA_TYPE) && domains != null) {
         boolean hasError = false;
         for (TimelineDomain domain : domains.getDomains()) {
           try {
