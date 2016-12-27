@@ -441,7 +441,7 @@
   <property>
     <description>Host:Port of the ZooKeeper server to be used by the RM. This
       must be supplied when using the ZooKeeper based implementation of the
-      RM state store and/or embedded automatic failover in a HA setting.
+      RM state store and/or embedded automatic failover in an HA setting.
     </description>
     <name>yarn.resourcemanager.zk-address</name>
     <!--value>127.0.0.1:2181</value-->
@@ -490,7 +490,7 @@
 
   <property>
     <description>
-      ACLs to be used for the root znode when using ZKRMStateStore in a HA
+      ACLs to be used for the root znode when using ZKRMStateStore in an HA
       scenario for fencing.
 
       ZKRMStateStore supports implicit fencing to allow a single
@@ -606,7 +606,7 @@
   </property>
 
   <property>
-    <description>Name of the cluster. In a HA setting,
+    <description>Name of the cluster. In an HA setting,
       this is used to ensure the RM participates in leader
       election for this cluster and ensures it does not affect
       other clusters</description>
@@ -2188,7 +2188,7 @@
   <property>
     <name>yarn.timeline-service.client.fd-retain-secs</name>
     <description>
-      How long the ATS v1.5 writer will keep a FSStream open.
+      How long the ATS v1.5 writer will keep an FSStream open.
       If this fsstream does not write anything for this configured time,
       it will be close.
     </description>
