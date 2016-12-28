@@ -23,13 +23,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 /**
  * <p>
- * In addition to {@link PlacementSet}, this also maintains
+ * Comparing to {@link PlacementSet}, this also maintains
  * pending ResourceRequests:
  * - When new ResourceRequest(s) added to scheduler, or,
  * - Or new container allocated, scheduler can notify corresponding
@@ -42,8 +43,7 @@ import java.util.Map;
  * can have different ways to order nodes depends on requests.
  * </p>
  */
-public interface SchedulingPlacementSet<N extends SchedulerNode>
-    extends PlacementSet<N> {
+public interface SchedulingPlacementSet<N extends SchedulerNode> {
   /**
    * Get iterator of preferred node depends on requirement and/or availability
    * @param clusterPlacementSet input cluster PlacementSet
@@ -60,7 +60,7 @@ public interface SchedulingPlacementSet<N extends SchedulerNode>
    * @return true if total pending resource changed
    */
   ResourceRequestUpdateResult updateResourceRequests(
-      List<ResourceRequest> requests,
+      Collection<ResourceRequest> requests,
       boolean recoverPreemptedRequestForAContainer);
 
   /**
@@ -72,19 +72,25 @@ public interface SchedulingPlacementSet<N extends SchedulerNode>
   /**
    * Get ResourceRequest by given schedulerKey and resourceName
    * @param resourceName resourceName
-   * @param schedulerRequestKey schedulerRequestKey
    * @return ResourceRequest
    */
-  ResourceRequest getResourceRequest(String resourceName,
-      SchedulerRequestKey schedulerRequestKey);
+  ResourceRequest getResourceRequest(String resourceName);
 
   /**
    * Notify container allocated.
    * @param type Type of the allocation
    * @param node Which node this container allocated on
-   * @param request resource request
+   * @param request Which resource request to allocate
    * @return list of ResourceRequests deducted
    */
   List<ResourceRequest> allocate(NodeType type, SchedulerNode node,
       ResourceRequest request);
+
+  /**
+   * We can still have pending requirement for a given NodeType and node
+   * @param type Locality Type
+   * @param node which node we will allocate on
+   * @return true if we has pending requirement
+   */
+  boolean canAllocate(NodeType type, SchedulerNode node);
 }
