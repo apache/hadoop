@@ -25,7 +25,6 @@ import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.UL;
 import org.apache.slider.api.ClusterDescription;
 import org.apache.slider.api.StatusKeys;
 import org.apache.slider.api.types.ApplicationLivenessInformation;
-import org.apache.slider.api.types.RoleStatistics;
 import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.core.registry.docstore.ExportEntry;
 import org.apache.slider.core.registry.docstore.PublishedExports;
@@ -42,6 +41,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import static org.apache.slider.server.appmaster.web.rest.RestPaths.LIVE_COMPONENTS;
 
@@ -291,12 +291,15 @@ public class IndexBlock extends SliderHamletBlock {
       LI<UL<Hamlet>> item = ul.li();
       item.span().$class("bold")._(export.description)._();
       UL sublist = item.ul();
-      for (Entry<String, List<ExportEntry>> entry : export.entries.entrySet()) {
-        LI sublistItem = sublist.li()._(entry.getKey());
-        for (ExportEntry exportEntry : entry.getValue()) {
-          sublistItem._(exportEntry.getValue());
+      for (Entry<String, Set<ExportEntry>> entry : export.sortedEntries()
+          .entrySet()) {
+        if (SliderUtils.isNotEmpty(entry.getValue())) {
+          LI sublistItem = sublist.li()._(entry.getKey());
+          for (ExportEntry exportEntry : entry.getValue()) {
+            sublistItem._(exportEntry.getValue());
+          }
+          sublistItem._();
         }
-        sublistItem._();
       }
       sublist._();
       item._();

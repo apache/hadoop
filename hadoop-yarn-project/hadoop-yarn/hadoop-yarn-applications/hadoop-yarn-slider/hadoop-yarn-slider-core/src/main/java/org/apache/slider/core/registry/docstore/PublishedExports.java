@@ -26,8 +26,10 @@ import org.codehaus.jackson.map.annotate.JsonSerialize;
 import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * JSON-serializable description of a published key-val configuration.
@@ -41,7 +43,7 @@ public class PublishedExports {
   public String description;
   public long updated;
   public String updatedTime;
-  public Map<String, List<ExportEntry>> entries = new HashMap<>();
+  public Map<String, Set<ExportEntry>> entries = new HashMap<>();
 
   public PublishedExports() {
   }
@@ -62,7 +64,7 @@ public class PublishedExports {
    * @param entries     entries to put
    */
   public PublishedExports(String description,
-                          Iterable<Map.Entry<String, List<ExportEntry>>> entries) {
+                          Iterable<Entry<String, Set<ExportEntry>>> entries) {
     this.description = description;
     putValues(entries);
   }
@@ -87,15 +89,22 @@ public class PublishedExports {
     this.updatedTime = new Date(updated).toString();
   }
 
+
+  public Map<String, Set<ExportEntry>> sortedEntries() {
+    Map<String, Set<ExportEntry>> sortedEntries = new TreeMap<>();
+    sortedEntries.putAll(entries);
+    return sortedEntries;
+  }
+
   /**
    * Set the values from an iterable (this includes a Hadoop Configuration and Java properties
    * object). Any existing value set is discarded
    *
-   * @param entries entries to put
+   * @param values values to put
    */
-  public void putValues(Iterable<Map.Entry<String, List<ExportEntry>>> entries) {
-    this.entries = new HashMap<String, List<ExportEntry>>();
-    for (Map.Entry<String, List<ExportEntry>> entry : entries) {
+  public void putValues(Iterable<Map.Entry<String, Set<ExportEntry>>> values) {
+    this.entries = new HashMap<>();
+    for (Map.Entry<String, Set<ExportEntry>> entry : values) {
       this.entries.put(entry.getKey(), entry.getValue());
     }
   }
