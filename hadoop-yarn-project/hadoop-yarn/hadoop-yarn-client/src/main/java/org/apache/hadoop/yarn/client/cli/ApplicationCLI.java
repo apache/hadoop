@@ -88,6 +88,7 @@ public class ApplicationCLI extends YarnCLI {
   public static final String APP_ID = "appId";
   public static final String UPDATE_PRIORITY = "updatePriority";
   public static final String UPDATE_LIFETIME = "updateLifetime";
+  public static final String CHANGE_APPLICATION_QUEUE = "changeQueue";
 
   private boolean allAppStates;
 
@@ -114,7 +115,7 @@ public class ApplicationCLI extends YarnCLI {
           + "based on application state and -appTags to filter applications "
           + "based on application tag.");
       opts.addOption(MOVE_TO_QUEUE_CMD, true, "Moves the application to a "
-          + "different queue.");
+          + "different queue. Deprecated command. Use 'changeQueue' instead.");
       opts.addOption(QUEUE_CMD, true, "Works with the movetoqueue command to"
           + " specify which queue to move an application to.");
       opts.addOption(HELP_CMD, false, "Displays help for all commands.");
@@ -146,6 +147,11 @@ public class ApplicationCLI extends YarnCLI {
       opts.addOption(UPDATE_LIFETIME, true,
           "update timeout of an application from NOW. ApplicationId can be"
               + " passed using 'appId' option. Timeout value is in seconds.");
+      opts.addOption(CHANGE_APPLICATION_QUEUE, true,
+          "Moves application to a new queue. ApplicationId can be"
+              + " passed using 'appId' option. 'movetoqueue' command is"
+              + " deprecated, this new command 'changeQueue' performs same"
+              + " functionality.");
       Option killOpt = new Option(KILL_CMD, true, "Kills the application. "
           + "Set of applications can be provided separated with space");
       killOpt.setValueSeparator(' ');
@@ -158,6 +164,7 @@ public class ApplicationCLI extends YarnCLI {
       opts.getOption(APP_ID).setArgName("Application ID");
       opts.getOption(UPDATE_PRIORITY).setArgName("Priority");
       opts.getOption(UPDATE_LIFETIME).setArgName("Timeout");
+      opts.getOption(CHANGE_APPLICATION_QUEUE).setArgName("Queue Name");
     } else if (args.length > 0 && args[0].equalsIgnoreCase(APPLICATION_ATTEMPT)) {
       title = APPLICATION_ATTEMPT;
       opts.addOption(STATUS_CMD, true,
@@ -315,6 +322,13 @@ public class ApplicationCLI extends YarnCLI {
 
       updateApplicationTimeout(cliParser.getOptionValue(APP_ID),
           ApplicationTimeoutType.LIFETIME, timeoutInSec);
+    } else if (cliParser.hasOption(CHANGE_APPLICATION_QUEUE)) {
+      if (!cliParser.hasOption(APP_ID)) {
+        printUsage(title, opts);
+        return exitCode;
+      }
+      moveApplicationAcrossQueues(cliParser.getOptionValue(APP_ID),
+          cliParser.getOptionValue(CHANGE_APPLICATION_QUEUE));
     } else if (cliParser.hasOption(SIGNAL_CMD)) {
       if (args.length < 3 || args.length > 4) {
         printUsage(title, opts);
