@@ -78,20 +78,6 @@ public class ApplicationMaster {
 
   private static final Log LOG = LogFactory.getLog(ApplicationMaster.class);
 
-  @VisibleForTesting
-  @Private
-  public static enum DSEvent {
-    DS_APP_ATTEMPT_START, DS_APP_ATTEMPT_END, DS_CONTAINER_START, DS_CONTAINER_END
-  }
-
-  @VisibleForTesting
-  @Private
-  public static enum DSEntity {
-    DS_APP_ATTEMPT, DS_CONTAINER
-  }
-
-  private static final String YARN_SHELL_ID = "YARN_SHELL_ID";
-
   // Configuration
   private Configuration conf;
 
@@ -132,10 +118,6 @@ public class ApplicationMaster {
   // Tracking url to which app master publishes info for clients to monitor
   private String appMasterTrackingUrl = "";
 
-/*  private boolean timelineServiceV2 = false;*/
-
-  // App Master configuration
-  // No. of containers to run shell command on
   @VisibleForTesting
   protected int numTotalContainers = 1;
   // Memory to request for the container on which the shell command will run
@@ -170,23 +152,11 @@ public class ApplicationMaster {
   private int containerMaxRetries = 0;
   private int containrRetryInterval = 0;
 
-  // Timeline domain ID
-  private String domainId = null;
-
   // TF server jar file
   private String tfServerJar = "";
 
-  // Hardcoded path to shell script in launch container's local env
-  private static final String EXEC_SHELL_STRING_PATH = Client.SCRIPT_PATH
-          + ".sh";
-  private static final String EXEC_BAT_SCRIPT_STRING_PATH = Client.SCRIPT_PATH
-          + ".bat";
-
   // Hardcoded path to custom log_properties
   private static final String log4jPath = "log4j.properties";
-
-  private static final String shellCommandPath = "shellCommands";
-  private static final String shellArgsPath = "shellArgs";
 
   private volatile boolean done;
 
@@ -198,23 +168,9 @@ public class ApplicationMaster {
   // Launch threads
   private List<Thread> launchThreads = new ArrayList<Thread>();
 
-  // Timeline Client
-/*  @VisibleForTesting
-  TimelineClient timelineClient;
-  static final String CONTAINER_ENTITY_GROUP_ID = "CONTAINERS";
-  static final String APPID_TIMELINE_FILTER_NAME = "appId";
-  static final String USER_TIMELINE_FILTER_NAME = "user";*/
-
-  private final String linux_bash_command = "bash";
-  private final String windows_command = "cmd /c";
-
   private int yarnShellIdCounter = 1;
-  private String tfClientPy;
 
   private  ClusterSpec clusterSpec;
-
-  private String appName;
-  public String getAppName() {return appName;}
 
   @VisibleForTesting
   protected final Set<ContainerId> launchedContainers =
@@ -302,8 +258,6 @@ public class ApplicationMaster {
             "Amount of memory in MB to be requested to run the shell command");
     opts.addOption("container_vcores", true,
             "Amount of virtual cores to be requested to run the shell command");
-    opts.addOption("num_containers", true,
-            "No. of containers on which the shell command needs to be executed");
     opts.addOption("priority", true, "Application Priority. Default 0");
     opts.addOption("container_retry_policy", true,
             "Retry policy when container fails to run, "
@@ -317,13 +271,11 @@ public class ApplicationMaster {
             "If container could retry, it specifies max retires");
     opts.addOption("container_retry_interval", true,
             "Interval between each retry, unit is milliseconds");
-    opts.addOption("debug", false, "Dump out debug information");
-
-    opts.addOption("help", false, "Print usage");
 
     opts.addOption("jar", true, "Jar file containing the tensorflow server");
-    opts.addOption(TFApplication.OPT_TF_CLIENT, true, "Provide client python of tensorflow");
     opts.addOption(TFApplication.OPT_TF_SERVER_JAR, true, "Provide container jar of tensorflow");
+    opts.addOption(TFApplication.OPT_TF_WORKER_NUM, true, "Provide worker server number of tensorflow");
+    opts.addOption(TFApplication.OPT_TF_PS_NUM, true, "Provide ps server number of tensorflow");
     LOG.info("print args");
     for (String arg : args) {
       LOG.info(arg);
@@ -345,15 +297,6 @@ public class ApplicationMaster {
       } catch (Exception e) {
         LOG.warn("Can not set up custom log4j properties. " + e);
       }
-    }
-
-    if (cliParser.hasOption("help")) {
-      printUsage(opts);
-      return false;
-    }
-
-    if (cliParser.hasOption("debug")) {
-      dumpOutDebugInfo();
     }
 
     Map<String, String> envs = System.getenv();
@@ -398,13 +341,23 @@ public class ApplicationMaster {
             "container_memory", "10"));
     containerVirtualCores = Integer.parseInt(cliParser.getOptionValue(
             "container_vcores", "1"));
-    numTotalContainers = Integer.parseInt(cliParser.getOptionValue(
-            "num_containers", "1"));
+
+
+    numTotalWokerContainers = Integer.parseInt(cliParser.getOptionValue(
+            TFApplication.OPT_TF_WORKER_NUM, "1"));
+    if (numTotalWokerContainers == 0) {
+      throw new IllegalArgumentException(
+              "Cannot run tensroflow application with no worker containers");
+    }
+
+    numTotalParamServerContainer = Integer.parseInt(cliParser.getOptionValue(
+            TFApplication.OPT_TF_PS_NUM, "0"));
+    numTotalContainers = numTotalWokerContainers + numTotalParamServerContainer;
     if (numTotalContainers == 0) {
       throw new IllegalArgumentException(
               "Cannot run distributed shell with no containers");
     }
-    numTotalWokerContainers = numTotalContainers;
+
     requestPriority = Integer.parseInt(cliParser
             .getOptionValue("priority", "0"));
 
@@ -423,20 +376,11 @@ public class ApplicationMaster {
     containrRetryInterval = Integer.parseInt(cliParser.getOptionValue(
             "container_retry_interval", "0"));
 
-    if (cliParser.hasOption(TFApplication.OPT_TF_CLIENT)) {
-
-      tfClientPy = cliParser.getOptionValue(TFApplication.OPT_TF_CLIENT);
-      if (null == tfClientPy) {
-        LOG.error("tf_client is empty!");
-        tfClientPy = TFClient.TF_CLIENT_PY;
-      }
-    }
-
     if (cliParser.hasOption(TFApplication.OPT_TF_SERVER_JAR)) {
       tfServerJar = cliParser.getOptionValue(TFApplication.OPT_TF_SERVER_JAR);
     }
 
-    clusterSpec = ClusterSpec.makeClusterSpec();
+    clusterSpec = ClusterSpec.makeClusterSpec(numTotalWokerContainers, numTotalParamServerContainer);
 
     return true;
   }
@@ -463,7 +407,6 @@ public class ApplicationMaster {
       return "";
     }
   }
-
 
   /**
    * Main run function for the application master
@@ -511,14 +454,7 @@ public class ApplicationMaster {
     nmClientAsync.init(conf);
     nmClientAsync.start();
 
-    // Setup local RPC Server to accept status requests directly from clients
-    // TODO need to setup a protocol for client to be able to communicate to
-    // the RPC server
-    // TODO use the rpc port info to register with the RM for the client to
-    // send requests to this app master
-
     appMasterHostname = System.getenv(Environment.NM_HOST.name());
-    LOG.info("rpc server address <" + appMasterHostname + ">");
     TFApplicationRpcServer rpcServer = new TFApplicationRpcServer(appMasterHostname, new RpcForClient());
     appMasterRpcPort = rpcServer.getRpcPort();
     rpcServer.startRpcServiceThread();
@@ -616,7 +552,6 @@ public class ApplicationMaster {
     FinalApplicationStatus appStatus;
     String appMessage = null;
     boolean success = true;
-    LOG.info(">>>>>>>>>>>>>>>>>>>>>numCompletedContainers: " + numCompletedContainers.get() + "numFailedContainers: " + numFailedContainers.get() + "total " + numTotalContainers);
     if (numCompletedContainers.get() - numFailedContainers.get()
             >= numTotalContainers) {
       appStatus = FinalApplicationStatus.SUCCEEDED;
@@ -671,11 +606,8 @@ public class ApplicationMaster {
 
       for (Container allocatedContainer : this.allocatedContainers) {
 
-        String yarnShellId = Integer.toString(yarnShellIdCounter);
-        yarnShellIdCounter++;
-        LOG.info("Launching shell command on a new container."
+        LOG.info("Launching a new container."
                 + ", containerId=" + allocatedContainer.getId()
-                + ", yarnShellId=" + yarnShellId
                 + ", containerNode=" + allocatedContainer.getNodeId().getHost()
                 + ":" + allocatedContainer.getNodeId().getPort()
                 + ", containerNodeURI=" + allocatedContainer.getNodeHttpAddress()
@@ -688,7 +620,6 @@ public class ApplicationMaster {
 
         LOG.info("server cid: " + allocatedContainer.getId().toString());
         LaunchContainerThread runnable = new LaunchContainerThread(allocatedContainer,
-                yarnShellId,
                 tfServerJar,
                 containerMemory,
                 containerRetryPolicy,
@@ -898,8 +829,6 @@ public class ApplicationMaster {
 
   }
 
-
-
   /**
    * Setup the request that will be sent to the RM for the container ask.
    *
@@ -919,7 +848,7 @@ public class ApplicationMaster {
 
     ContainerRequest request = new ContainerRequest(capability, null, null,
             pri);
-    LOG.info("Requested container ask: " + request.toString());
+    //LOG.info("Requested container ask: " + request.toString());
     return request;
   }
 

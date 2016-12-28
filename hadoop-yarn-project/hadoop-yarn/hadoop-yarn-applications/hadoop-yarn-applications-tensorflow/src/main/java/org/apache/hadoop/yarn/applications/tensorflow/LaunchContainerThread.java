@@ -18,7 +18,6 @@ public class LaunchContainerThread implements Runnable {
 
     // Allocated container
     private Container container;
-    private String shellId;
     private String tfServerJar;
     // Memory to request for the container on which the shell command will run
     private long containerMemory = 10;
@@ -35,12 +34,11 @@ public class LaunchContainerThread implements Runnable {
     private ApplicationMaster.NMCallbackHandler containerListener;
     private TFServerAddress serverAddress = null;
 
-    private LaunchContainerThread(Container container, String shellId, String tfServerJar, long containerMemory,
+    private LaunchContainerThread(Container container, String tfServerJar, long containerMemory,
                                  ContainerRetryPolicy containerRetryPolicy, Set<Integer> containerRetryErrorCodes,
                                  int containerMaxRetries, int containrRetryInterval, ApplicationMaster appMaster,
                                  ApplicationMaster.NMCallbackHandler containerListener) {
         this.container = container;
-        this.shellId = shellId;
         this.tfServerJar = tfServerJar;
         this.containerMemory = containerMemory;
         this.containerRetryPolicy = containerRetryPolicy;
@@ -51,12 +49,11 @@ public class LaunchContainerThread implements Runnable {
         this.containerListener = containerListener;
     }
 
-    public LaunchContainerThread(Container container, String shellId, String tfServerJar, long containerMemory,
+    public LaunchContainerThread(Container container, String tfServerJar, long containerMemory,
                                  ContainerRetryPolicy containerRetryPolicy, Set<Integer> containerRetryErrorCodes,
                                  int containerMaxRetries, int containrRetryInterval, ApplicationMaster appMaster,
                                  ApplicationMaster.NMCallbackHandler containerListener, TFServerAddress serverAddress) {
         this(container,
-                shellId,
                 tfServerJar,
                 containerMemory,
                 containerRetryPolicy,
@@ -79,10 +76,7 @@ public class LaunchContainerThread implements Runnable {
      */
     public void run() {
         LOG.info("Setting up container launch container for containerid="
-                + container.getId() + " with shellid=" + shellId);
-
-        // Set the env variables to be setup in the env where the tf servers will be run
-        LOG.info("Set the environment for the tf servers");
+                + container.getId());
 
         FileSystem fs = null;
         try {
@@ -100,13 +94,6 @@ public class LaunchContainerThread implements Runnable {
         Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
 
         ApplicationId appId = appMaster.getAppAttempId().getApplicationId();
-        String tfServerPy = TFContainer.SERVER_PY_PATH;
-        try {
-            tfContainer.addToLocalResources(fs, tfServerPy, TFContainer.SERVER_PY_PATH, appId.toString(),
-                    localResources, null);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
         try {
             tfContainer.addToLocalResources(fs, tfServerJar, TFContainer.SERVER_JAR_PATH, appId.toString(),
@@ -129,6 +116,8 @@ public class LaunchContainerThread implements Runnable {
         } catch (JsonProcessingException e) {
             LOG.info("cluster spec cannot convert into base64 json string!");
             e.printStackTrace();
+        } catch (ClusterSpecException e) {
+            e.printStackTrace();
         }
 
         List<String> commands = new ArrayList<String>();
@@ -137,16 +126,6 @@ public class LaunchContainerThread implements Runnable {
         if (serverAddress != null) {
             LOG.info(serverAddress.getJobName() + " : " + serverAddress.getAddress() + ":" + serverAddress.getPort());
         }
-
-        // Set up ContainerLaunchContext, setting local resource, environment,
-        // command and token for constructor.
-
-        // Note for tokens: Set up tokens for the container too. Today, for normal
-        // shell commands, the container in distribute-shell doesn't need any
-        // tokens. We are populating them mainly for NodeManagers to be able to
-        // download anyfiles in the distributed file-system. The tokens are
-        // otherwise also useful in cases, for e.g., when one is running a
-        // "hadoop dfs" command inside the distributed shell.
 
         ContainerRetryContext containerRetryContext =
                 ContainerRetryContext.newInstance(

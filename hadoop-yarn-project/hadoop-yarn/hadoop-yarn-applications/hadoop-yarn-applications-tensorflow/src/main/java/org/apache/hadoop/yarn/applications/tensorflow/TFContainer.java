@@ -32,7 +32,6 @@ public class TFContainer {
 
     public TFContainer(ApplicationMaster am) {
         appMaster = am;
-        appName = appMaster.getAppName();
     }
 
     public void addToLocalResources(FileSystem fs, String fileSrcPath,

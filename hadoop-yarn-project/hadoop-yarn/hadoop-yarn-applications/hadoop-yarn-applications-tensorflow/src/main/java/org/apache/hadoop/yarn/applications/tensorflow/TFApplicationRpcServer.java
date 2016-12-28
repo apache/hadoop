@@ -4,7 +4,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.util.ThreadUtil;
 import org.apache.hadoop.yarn.applications.tensorflow.api.TensorflowCluster;
-import org.apache.hadoop.yarn.applications.tensorflow.api.TensorflowClusterImpl;
 import org.apache.hadoop.yarn.applications.tensorflow.api.protocolrecords.GetClusterSpecRequest;
 import org.apache.hadoop.yarn.applications.tensorflow.api.protocolrecords.GetClusterSpecResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;

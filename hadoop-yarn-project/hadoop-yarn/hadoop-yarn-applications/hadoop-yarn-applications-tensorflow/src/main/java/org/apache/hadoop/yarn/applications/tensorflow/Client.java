@@ -44,37 +44,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
 
-/**
- * Client for Distributed Shell application submission to YARN.
- *
- * <p> The distributed shell client allows an application master to be launched that in turn would run 
- * the provided shell command on a set of containers. </p>
- *
- * <p>This client is meant to act as an example on how to write yarn-based applications. </p>
- *
- * <p> To submit an application, a client first needs to connect to the <code>ResourceManager</code> 
- * aka ApplicationsManager or ASM via the {@link ApplicationClientProtocol}. The {@link ApplicationClientProtocol}
- * provides a way for the client to get access to cluster information and to request for a
- * new {@link ApplicationId}. <p>
- *
- * <p> For the actual job submission, the client first has to create an {@link ApplicationSubmissionContext}. 
- * The {@link ApplicationSubmissionContext} defines the application details such as {@link ApplicationId}
- * and application name, the priority assigned to the application and the queue
- * to which this application needs to be assigned. In addition to this, the {@link ApplicationSubmissionContext}
- * also defines the {@link ContainerLaunchContext} which describes the <code>Container</code> with which 
- * the {@link ApplicationMaster} is launched. </p>
- *
- * <p> The {@link ContainerLaunchContext} in this scenario defines the resources to be allocated for the 
- * {@link ApplicationMaster}'s container, the local resources (jars, configuration files) to be made available 
- * and the environment to be set for the {@link ApplicationMaster} and the commands to be executed to run the 
- * {@link ApplicationMaster}. <p>
- *
- * <p> Using the {@link ApplicationSubmissionContext}, the client submits the application to the 
- * <code>ResourceManager</code> and then monitors the application by requesting the <code>ResourceManager</code> 
- * for an {@link ApplicationReport} at regular time intervals. In case of the application taking too long, the client 
- * kills the application by submitting a {@link KillApplicationRequest} to the <code>ResourceManager</code>. </p>
- *
- */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class Client {
@@ -85,7 +54,7 @@ public class Client {
   private Configuration conf;
   private YarnClient yarnClient;
   // Application master specific info to register a new Application with RM/ASM
-  private String appName = "";
+  private String appName = TFYarnConstants.APP_NAME;
   public String getAppName() {
     return  appName;
   }
@@ -113,48 +82,27 @@ public class Client {
   private int containerMemory = 10;
   // Amt. of virtual cores to request for container in which shell script will be executed
   private int containerVirtualCores = 1;
-  // No. of containers in which the shell script needs to be executed
-  private int numContainers = 1;
+
   private String nodeLabelExpression = null;
 
   // log4j.properties file
   // if available, add to local resources and set into classpath
   private String log4jPropFile = "";
 
-  // Start time for client
-  private final long clientStartTime = System.currentTimeMillis();
-  // Timeout threshold for client. Kill app after time interval expires.
-  private long clientTimeout = 600000;
-
   private long attemptFailuresValidityInterval = -1;
 
   private Vector<CharSequence> containerRetryOptions = new Vector<>(5);
-
-  // Debug flag
-  boolean debugFlag = false;
-
-  // Flag to indicate whether to create the domain of the given ID
-  private boolean toCreateDomain = false;
-
-  private String flowName = null;
-  private String flowVersion = null;
-  private long flowRunId = 0L;
 
   private String masterAddress;
 
   // Command line options
   private Options opts;
 
-  private static final String shellCommandPath = "shellCommands";
-  private static final String shellArgsPath = "shellArgs";
-  private static final String appMasterJarPath = "AppMaster.jar";
   // Hardcoded path to custom log_properties
   private static final String log4jPath = "log4j.properties";
 
-  public static final String SCRIPT_PATH = "ExecScript";
-
-  //public static final String OPT_TF_CLIENT = "tf_client";
-  //public static final String OPT_TF_SERVER_JAR = "tf_serverjar";
+  private int workerNum;
+  private int psNum;
 
   private TFApplicationRpc appRpc = null;
 
@@ -174,7 +122,6 @@ public class Client {
         }
       } catch (IllegalArgumentException e) {
         System.err.println(e.getLocalizedMessage());
-        client.printUsage();
         System.exit(-1);
       }
       result = client.run();
@@ -207,13 +154,11 @@ public class Client {
     opts.addOption("appname", true, "Application Name. Default value - tensorflow");
     opts.addOption("priority", true, "Application Priority. Default 0");
     opts.addOption("queue", true, "RM Queue in which this application is to be submitted");
-    opts.addOption("timeout", true, "Application timeout in milliseconds");
+    opts.addOption("jar", true, "Jar file containing the application master");
     opts.addOption("master_memory", true, "Amount of memory in MB to be requested to run the application master");
     opts.addOption("master_vcores", true, "Amount of virtual cores to be requested to run the application master");
-    opts.addOption("jar", true, "Jar file containing the application master");
     opts.addOption("container_memory", true, "Amount of memory in MB to be requested to run a tensorflow worker");
     opts.addOption("container_vcores", true, "Amount of virtual cores to be requested to run a tensorflow worker");
-    opts.addOption("num_containers", true, "No. of containers on which tensorflow workers to run");
     opts.addOption("log_properties", true, "log4j.properties file");
     opts.addOption("attempt_failures_validity_interval", true,
       "when attempt_failures_validity_interval in milliseconds is set to > 0," +
@@ -221,16 +166,6 @@ public class Client {
       "the validityInterval into failure count. " +
       "If failure count reaches to maxAppAttempts, " +
       "the application will be failed.");
-    opts.addOption("debug", false, "Dump out debug information");
-    opts.addOption("create", false, "Flag to indicate whether to create the "
-        + "domain specified with -domain.");
-    opts.addOption("flow_name", true, "Flow name which the distributed shell "
-        + "app belongs to");
-    opts.addOption("flow_version", true, "Flow version which the distributed "
-        + "shell app belongs to");
-    opts.addOption("flow_run_id", true, "Flow run ID which the distributed "
-        + "shell app belongs to");
-    opts.addOption("help", false, "Print usage");
     opts.addOption("node_label_expression", true,
         "Node label expression to determine the nodes"
             + " where all the containers of this application"
@@ -255,19 +190,16 @@ public class Client {
             "Provide server jar of tensorflow");
     opts.addOption(TFApplication.OPT_TF_SERVER_PY, true,
             "Provide server pyscript of tensorflow");
+    opts.addOption(TFApplication.OPT_TF_WORKER_NUM, true,
+            "worker quantity of tensorflow");
+    opts.addOption(TFApplication.OPT_TF_PS_NUM, true,
+            "ps quantity of tensorflow");
   }
 
   /**
    */
   public Client() throws Exception  {
     this(new YarnConfiguration());
-  }
-
-  /**
-   * Helper function to print out usage
-   */
-  private void printUsage() {
-    new HelpFormatter().printHelp("Client", opts);
   }
 
   /**
@@ -293,16 +225,6 @@ public class Client {
       }
     }
 
-    if (cliParser.hasOption("help")) {
-      printUsage();
-      return false;
-    }
-
-    if (cliParser.hasOption("debug")) {
-      debugFlag = true;
-
-    }
-
     appName = cliParser.getOptionValue("appname", "tensorflow");
     amPriority = Integer.parseInt(cliParser.getOptionValue("priority", "0"));
     amQueue = cliParser.getOptionValue("queue", "default");
@@ -310,7 +232,8 @@ public class Client {
     amVCores = Integer.parseInt(cliParser.getOptionValue("master_vcores", "1"));
     tfClientPy = cliParser.getOptionValue(TFApplication.OPT_TF_CLIENT, TFClient.TF_CLIENT_PY);
     tfConatinerJar = cliParser.getOptionValue(TFApplication.OPT_TF_SERVER_JAR, TFAmContainer.APPMASTER_JAR_PATH);
-    tfServerPy = cliParser.getOptionValue(TFApplication.OPT_TF_SERVER_PY, TFContainer.SERVER_PY_PATH);
+    workerNum = Integer.parseInt(cliParser.getOptionValue(TFApplication.OPT_TF_WORKER_NUM, "1"));
+    psNum = Integer.parseInt(cliParser.getOptionValue(TFApplication.OPT_TF_PS_NUM, "0"));
 
     if (amMemory < 0) {
       throw new IllegalArgumentException("Invalid memory specified for application master, exiting."
@@ -338,20 +261,18 @@ public class Client {
 
     containerMemory = Integer.parseInt(cliParser.getOptionValue("container_memory", "256"));
     containerVirtualCores = Integer.parseInt(cliParser.getOptionValue("container_vcores", "1"));
-    numContainers = Integer.parseInt(cliParser.getOptionValue("num_containers", "1"));
 
 
-    if (containerMemory < 0 || containerVirtualCores < 0 || numContainers < 1) {
+    if (containerMemory < 0 || containerVirtualCores < 0 || workerNum < 1 || psNum < 0) {
       throw new IllegalArgumentException("Invalid no. of containers or container memory/vcores specified,"
           + " exiting."
           + " Specified containerMemory=" + containerMemory
           + ", containerVirtualCores=" + containerVirtualCores
-          + ", numContainer=" + numContainers);
+          + ", workers=" + workerNum
+          + ", ps=" + psNum);
     }
 
     nodeLabelExpression = cliParser.getOptionValue("node_label_expression", null);
-
-    clientTimeout = Integer.parseInt(cliParser.getOptionValue("timeout", "600000"));
 
     attemptFailuresValidityInterval =
         Long.parseLong(cliParser.getOptionValue(
@@ -377,20 +298,6 @@ public class Client {
           + cliParser.getOptionValue("container_retry_interval"));
     }
 
-    if (cliParser.hasOption("flow_name")) {
-      flowName = cliParser.getOptionValue("flow_name");
-    }
-    if (cliParser.hasOption("flow_version")) {
-      flowVersion = cliParser.getOptionValue("flow_version");
-    }
-    if (cliParser.hasOption("flow_run_id")) {
-      try {
-        flowRunId = Long.parseLong(cliParser.getOptionValue("flow_run_id"));
-      } catch (NumberFormatException e) {
-        throw new IllegalArgumentException(
-            "Flow run is not a valid long value", e);
-      }
-    }
     return true;
   }
 
@@ -402,7 +309,6 @@ public class Client {
    */
   public boolean run() throws IOException, YarnException {
 
-    LOG.info("Running Client");
     yarnClient.start();
 
     YarnClusterMetrics clusterMetrics = yarnClient.getYarnClusterMetrics();
@@ -441,14 +347,10 @@ public class Client {
     YarnClientApplication app = yarnClient.createApplication();
     GetNewApplicationResponse appResponse = app.getNewApplicationResponse();
     // TODO get min/max resource capabilities from RM and change memory ask if needed
-    // If we do not have min/max, we may not be able to correctly request
-    // the required resources from the RM for the app master
-    // Memory ask has to be a multiple of min and less than max.
-    // Dump out information about cluster capability as seen by the resource manager
+
     long maxMem = appResponse.getMaximumResourceCapability().getMemorySize();
     LOG.info("Max mem capability of resources in this cluster " + maxMem);
 
-    // A resource ask cannot exceed the max.
     if (amMemory > maxMem) {
       LOG.info("AM memory specified above max threshold of cluster. Using max value."
           + ", specified=" + amMemory
@@ -466,7 +368,6 @@ public class Client {
       amVCores = maxVCores;
     }
 
-    // set the application name
     ApplicationSubmissionContext appContext = app.getApplicationSubmissionContext();
     ApplicationId appId = appContext.getApplicationId();
 
@@ -478,15 +379,6 @@ public class Client {
     }
 
     Set<String> tags = new HashSet<String>();
-    if (flowName != null) {
-      tags.add(TimelineUtils.generateFlowNameTag(flowName));
-    }
-    if (flowVersion != null) {
-      tags.add(TimelineUtils.generateFlowVersionTag(flowVersion));
-    }
-    if (flowRunId != 0) {
-      tags.add(TimelineUtils.generateFlowRunIdTag(flowRunId));
-    }
     appContext.setApplicationTags(tags);
 
     // set local resources for the application master
@@ -503,11 +395,6 @@ public class Client {
     tfAmContainer.addToLocalResources(fs, appMasterJar, TFAmContainer.APPMASTER_JAR_PATH, appId.toString(),
             localResources, null);
 
-    tfAmContainer.addToLocalResources(fs, tfServerPy, TFContainer.SERVER_PY_PATH, appId.toString(),
-            localResources, null);
-    tfAmContainer.addToLocalResources(fs, tfClientPy, TFClient.TF_CLIENT_PY, appId.toString(),
-            localResources, null);
-
     // Set the log4j properties if needed
     if (!log4jPropFile.isEmpty()) {
       tfAmContainer.addToLocalResources(fs, log4jPropFile, log4jPath, appId.toString(),
@@ -517,8 +404,6 @@ public class Client {
     // Set the necessary security tokens as needed
     //amContainer.setContainerTokens(containerToken);
 
-    // Set the env variables to be setup in the env where the application master will be run
-    LOG.info("Set the environment for the application master");
     Map<String, String> env = tfAmContainer.setJavaEnv(conf);
 
     // Set the necessary command to execute the application master
@@ -527,10 +412,8 @@ public class Client {
       appContext.setNodeLabelExpression(nodeLabelExpression);
     }
 
-
-    // Get final commmand
     StringBuilder command = tfAmContainer.makeCommands(amMemory, appMasterMainClass, containerMemory, containerVirtualCores,
-    numContainers, tfClientPy, tfConatinerJar, debugFlag, containerRetryOptions);
+    workerNum, psNum, tfConatinerJar, containerRetryOptions);
 
     LOG.info("Completed setting up app master command " + command.toString());
     List<String> commands = new ArrayList<String>();
@@ -581,24 +464,12 @@ public class Client {
     Priority pri = Priority.newInstance(amPriority);
     appContext.setPriority(pri);
 
-    // Set the queue to which this application is to be submitted in the RM
     appContext.setQueue(amQueue);
 
-    // Submit the application to the applications manager
-    // SubmitApplicationResponse submitResp = applicationsManager.submitApplication(appRequest);
-    // Ignore the response as either a valid response object is returned on success
-    // or an exception thrown to denote some form of a failure
     LOG.info("Submitting application to ASM");
 
     yarnClient.submitApplication(appContext);
 
-
-
-    // TODO
-    // Try submitting the same request again
-    // app submission failure?
-
-    // Monitor the application
     return monitorApplication(appId);
 
   }

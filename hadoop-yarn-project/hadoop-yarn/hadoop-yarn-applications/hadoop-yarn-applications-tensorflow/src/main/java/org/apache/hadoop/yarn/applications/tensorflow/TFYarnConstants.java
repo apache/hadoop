@@ -28,28 +28,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 public class TFYarnConstants {
 
-  /**
-   * Environment key name pointing to the shell script's location
-   */
-  public static final String DISTRIBUTEDSHELLSCRIPTLOCATION = "DISTRIBUTEDSHELLSCRIPTLOCATION";
-
-  /**
-   * Environment key name denoting the file timestamp for the shell script. 
-   * Used to validate the local resource. 
-   */
-  public static final String DISTRIBUTEDSHELLSCRIPTTIMESTAMP = "DISTRIBUTEDSHELLSCRIPTTIMESTAMP";
-
-  /**
-   * Environment key name denoting the file content length for the shell script. 
-   * Used to validate the local resource. 
-   */
-  public static final String DISTRIBUTEDSHELLSCRIPTLEN = "DISTRIBUTEDSHELLSCRIPTLEN";
-
-  /**
-   * Environment key name denoting the timeline domain ID.
-   */
-  public static final String DISTRIBUTEDSHELLTIMELINEDOMAIN = "DISTRIBUTEDSHELLTIMELINEDOMAIN";
-
   public static final String APP_NAME = "tenseoflow";
 
   public static final int INVALID_TCP_PORT = -1;

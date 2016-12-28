@@ -23,11 +23,24 @@ public class ClusterSpec {
     public static final String WORKER = "worker";
     public static final String PS = "ps";
 
-    public static ClusterSpec makeClusterSpec() {
-        return new ClusterSpec();
+    private int numTotalWorkerServers = 0;
+    private int numTotalParameterServers = 0;
+
+    public void setNumTotalWorkerServers(int numTotalWorkerServers) {
+        this.numTotalWorkerServers = numTotalWorkerServers;
     }
 
-    private ClusterSpec() {
+    public void setNumTotalParameterServers(int numTotalParameterServers) {
+        this.numTotalParameterServers = numTotalParameterServers;
+    }
+
+    public static ClusterSpec makeClusterSpec(int workerServers, int psServers) {
+        return new ClusterSpec(workerServers, psServers);
+    }
+
+    private ClusterSpec(int workerServers, int psServers) {
+        this.setNumTotalParameterServers(psServers);
+        this.setNumTotalWorkerServers(workerServers);
         workers = new HashMap<>();
         paramServers = new HashMap<>();
         serverPortNext = PORT_FLOOR + ((int)(Math.random() * (PORT_CEILING - PORT_FLOOR)) + 1);
@@ -112,6 +125,11 @@ public class ClusterSpec {
         return server;
     }
 
+    private boolean checkAllocationCompleted() {
+        return this.workers.size() == this.numTotalWorkerServers
+                && this.paramServers.size() == this.numTotalParameterServers;
+    }
+
     @Override
     public String toString() {
         String worker_array = "";
@@ -135,7 +153,10 @@ public class ClusterSpec {
     }
 
 
-    public String getJsonString() throws JsonProcessingException {
+    public String getJsonString() throws JsonProcessingException, ClusterSpecException {
+        if (!checkAllocationCompleted()) {
+            throw new ClusterSpecException("not allocation completed");
+        }
         Map<String, List<String>> cluster = new HashMap<>();
 
         if (!this.workers.isEmpty()) {
@@ -161,7 +182,7 @@ public class ClusterSpec {
         return json;
     }
 
-    public String getBase64EncodedJsonString() throws JsonProcessingException {
+    public String getBase64EncodedJsonString() throws JsonProcessingException, ClusterSpecException {
         byte[] data = getJsonString().getBytes();
         Base64 encoder = new Base64(0, null, true);
         return encoder.encodeToString(data);
@@ -188,10 +209,14 @@ public class ClusterSpec {
             LOG.info("clusterspec JsonString: " + this.getJsonString());
         } catch (JsonProcessingException e) {
             e.printStackTrace();
+        } catch (ClusterSpecException e) {
+            e.printStackTrace();
         }
         try {
             LOG.info("clusterspec encodeJsonString: " + this.getBase64EncodedJsonString());
         } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        } catch (ClusterSpecException e) {
             e.printStackTrace();
         }
         String base64DecodedString = null;
@@ -203,8 +228,9 @@ public class ClusterSpec {
             }
         } catch (JsonProcessingException e) {
             e.printStackTrace();
+        } catch (ClusterSpecException e) {
+            e.printStackTrace();
         }
-
 
         try {
             Map<String, List<String>> cs = ClusterSpec.toClusterMap(base64DecodedString);

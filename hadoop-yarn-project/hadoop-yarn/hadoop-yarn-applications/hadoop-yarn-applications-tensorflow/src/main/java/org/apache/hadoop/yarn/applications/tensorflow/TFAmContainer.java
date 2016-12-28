@@ -94,7 +94,7 @@ public class TFAmContainer {
 
 
     public StringBuilder makeCommands(long amMemory, String appMasterMainClass, int containerMemory, int containerVirtualCores,
-                                      int numContainers, String tfClientPy, String tfConatinerJar, boolean debugFlag, Vector<CharSequence> containerRetryOptions) {
+                                      int workerNumContainers, int psNumContainers, String tfConatinerJar, Vector<CharSequence> containerRetryOptions) {
         // Set the necessary command to execute the application master
         Vector<CharSequence> vargs = new Vector<CharSequence>(30);
 
@@ -108,12 +108,9 @@ public class TFAmContainer {
         // Set params for Application Master
         vargs.add("--container_memory " + String.valueOf(containerMemory));
         vargs.add("--container_vcores " + String.valueOf(containerVirtualCores));
-        vargs.add("--num_containers " + String.valueOf(numContainers));
-        vargs.add("--" + TFApplication.OPT_TF_CLIENT + " " + String.valueOf(tfClientPy));
+        vargs.add(TFApplication.makeOption(TFApplication.OPT_TF_WORKER_NUM, String.valueOf(workerNumContainers)));
+        vargs.add(TFApplication.makeOption(TFApplication.OPT_TF_PS_NUM, String.valueOf(psNumContainers)));
         vargs.add("--" + TFApplication.OPT_TF_SERVER_JAR + " " + String.valueOf(tfConatinerJar));
-        if (debugFlag) {
-            vargs.add("--debug");
-        }
 
         vargs.addAll(containerRetryOptions);
 
