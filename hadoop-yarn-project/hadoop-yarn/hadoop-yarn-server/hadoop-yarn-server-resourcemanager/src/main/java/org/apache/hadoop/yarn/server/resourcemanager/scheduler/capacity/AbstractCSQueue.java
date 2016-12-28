@@ -473,7 +473,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
           // when total-used-without-reserved-resource < currentLimit, we still
           // have chance to allocate on this node by unreserving some containers
-          if (Resources.lessThan(resourceCalculator, clusterResource,
+          if (Resources.lessThanOrEqual(resourceCalculator, clusterResource,
               newTotalWithoutReservedResource, currentLimitResource)) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("try to use reserved: " + getQueueName()
