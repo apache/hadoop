@@ -83,4 +83,6 @@ public interface CapacitySchedulerContext {
   ResourceUsage getClusterResourceUsage();
 
   ActivitiesManager getActivitiesManager();
+
+  CapacitySchedulerQueueManager getCapacitySchedulerQueueManager();
 }

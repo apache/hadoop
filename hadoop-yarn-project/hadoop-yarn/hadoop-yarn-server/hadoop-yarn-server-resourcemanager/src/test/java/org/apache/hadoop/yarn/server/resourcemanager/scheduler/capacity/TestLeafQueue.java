@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -73,6 +74,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManage
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueStateManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
@@ -953,6 +955,7 @@ public class TestLeafQueue {
 
   }
 
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   @Test
   public void testComputeUserLimitAndSetHeadroom() throws IOException {
     LeafQueue qb = stubLeafQueue((LeafQueue)queues.get(B));
@@ -973,6 +976,14 @@ public class TestLeafQueue {
     final int numNodes = 2;
     Resource clusterResource = Resources.createResource(numNodes * (8*GB), 1);
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+
+    CapacitySchedulerQueueManager mockCapacitySchedulerQueueManager
+        = mock(CapacitySchedulerQueueManager.class);
+    QueueStateManager mockQueueStateManager = mock(QueueStateManager.class);
+    when(mockCapacitySchedulerQueueManager.getQueueStateManager()).thenReturn(
+        mockQueueStateManager);
+    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(
+        mockCapacitySchedulerQueueManager);
 
     //our test plan contains three cases
     //1. single user dominate the queue, we test the headroom
