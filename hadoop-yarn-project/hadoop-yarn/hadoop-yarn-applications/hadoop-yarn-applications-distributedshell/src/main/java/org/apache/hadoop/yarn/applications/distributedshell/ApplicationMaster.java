@@ -82,6 +82,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.URL;
@@ -812,6 +813,9 @@ public class ApplicationMaster {
     public void onShutdownRequest() {
       done = true;
     }
+
+    @Override
+    public void onPreemptionMessage(PreemptionMessage message) {}
 
     @Override
     public void onNodesUpdated(List<NodeReport> updatedNodes) {}

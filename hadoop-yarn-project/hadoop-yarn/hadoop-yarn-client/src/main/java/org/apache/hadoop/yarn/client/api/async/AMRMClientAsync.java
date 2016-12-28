@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.impl.AMRMClientAsyncImpl;
@@ -280,6 +281,14 @@ extends AbstractService {
      */
     public void onContainersAllocated(List<Container> containers);
     
+    /**
+     * Called when the ResourceManager responds to a heartbeat with preemption
+     * message. The message is a snapshot of the resources the RM wants back from the AM.
+     * These messages are advisory, and the AM may elect to ignore them. Resources
+     * requested consistently over some duration may be forcibly killed by the RM.
+     */
+    public void onPreemptionMessage(PreemptionMessage message);
+
     /**
      * Called when the ResourceManager wants the ApplicationMaster to shutdown
      * for being out of sync etc. The ApplicationMaster should not unregister
