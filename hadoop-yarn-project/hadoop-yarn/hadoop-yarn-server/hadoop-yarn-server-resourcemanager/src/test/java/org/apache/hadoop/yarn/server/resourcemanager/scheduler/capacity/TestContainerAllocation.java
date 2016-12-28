@@ -641,4 +641,54 @@ public class TestContainerAllocation {
 
     rm1.close();
   }
+
+  @Test(timeout = 60000)
+  public void testContinuousReservationLookingWhenUsedEqualsMax() throws Exception {
+    CapacitySchedulerConfiguration newConf =
+        (CapacitySchedulerConfiguration) TestUtils
+            .getConfigurationWithMultipleQueues(conf);
+    // Set maximum capacity of A to 10
+    newConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + ".a", 10);
+    MockRM rm1 = new MockRM(newConf);
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 10 * GB);
+    MockNM nm2 = rm1.registerNode("h2:1234", 90 * GB);
+
+    // launch an app to queue A, AM container should be launched in nm1
+    RMApp app1 = rm1.submitApp(2 * GB, "app", "user", null, "a");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    // launch 2nd app to queue B, AM container should be launched in nm1
+    // Now usage of nm1 is 3G (2G + 1G)
+    RMApp app2 = rm1.submitApp(1 * GB, "app", "user", null, "b");
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
+
+    am1.allocate("*", 4 * GB, 2, null);
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+    RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
+
+    // Do node heartbeats twice, we expect one container allocated on nm1 and
+    // one container reserved on nm1.
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+
+    FiCaSchedulerApp schedulerApp1 =
+        cs.getApplicationAttempt(am1.getApplicationAttemptId());
+
+    // App1 will get 2 container allocated (plus AM container)
+    Assert.assertEquals(2, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp1.getReservedContainers().size());
+
+    // Do node heartbeats on nm2, we expect one container allocated on nm2 and
+    // one unreserved on nm1
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
+    Assert.assertEquals(3, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(0, schedulerApp1.getReservedContainers().size());
+
+    rm1.close();
+  }
 }
