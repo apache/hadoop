@@ -680,13 +680,7 @@ public class TestFileTruncate {
     int toTruncateLength = 1;
     int newLength = startingFileSize - toTruncateLength;
     cluster.getDataNodes().get(dn).shutdown();
-    try {
-      boolean isReady = fs.truncate(p, newLength);
-      assertFalse(isReady);
-    } finally {
-      cluster.restartDataNode(dn, true, true);
-      cluster.waitActive();
-    }
+    truncateAndRestartDN(p, dn, newLength);
     checkBlockRecovery(p);
 
     LocatedBlock newBlock = getLocatedBlocks(p).getLastLocatedBlock();
@@ -739,13 +733,7 @@ public class TestFileTruncate {
     int toTruncateLength = 1;
     int newLength = startingFileSize - toTruncateLength;
     cluster.getDataNodes().get(dn).shutdown();
-    try {
-      boolean isReady = fs.truncate(p, newLength);
-      assertFalse(isReady);
-    } finally {
-      cluster.restartDataNode(dn, true, true);
-      cluster.waitActive();
-    }
+    truncateAndRestartDN(p, dn, newLength);
     checkBlockRecovery(p);
 
     LocatedBlock newBlock = getLocatedBlocks(p).getLastLocatedBlock();
@@ -799,8 +787,8 @@ public class TestFileTruncate {
     boolean isReady = fs.truncate(p, newLength);
     assertFalse(isReady);
 
-    cluster.restartDataNode(dn0, true, true);
-    cluster.restartDataNode(dn1, true, true);
+    cluster.restartDataNode(dn0, false, true);
+    cluster.restartDataNode(dn1, false, true);
     cluster.waitActive();
     checkBlockRecovery(p);
 
@@ -1239,5 +1227,16 @@ public class TestFileTruncate {
         .dnStartupOption(o!=StartupOption.ROLLBACK ? StartupOption.REGULAR : o)
         .build();
     fs = cluster.getFileSystem();
+  }
+
+  private void truncateAndRestartDN(Path p, int dn, int newLength)
+      throws IOException {
+    try {
+      boolean isReady = fs.truncate(p, newLength);
+      assertFalse(isReady);
+    } finally {
+      cluster.restartDataNode(dn, false, true);
+      cluster.waitActive();
+    }
   }
 }
