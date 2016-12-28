@@ -75,6 +75,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 /**
@@ -1054,32 +1055,6 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
   }
 
   /**
-   * Return a list of hostnames based on current ClusterNodes.
-   * @param values cluster nodes
-   * @return list of hosts
-   */
-  public Iterable<String> getHostNamesList(Collection<ClusterNode> values) {
-    List<String> hosts = new ArrayList<>();
-    for (ClusterNode cn : values) {
-      hosts.add(cn.hostname);
-    }
-    return hosts;
-  }
-
-  /**
-   * Return a list of IPs based on current ClusterNodes.
-   * @param values cluster nodes
-   * @return list of hosts
-   */
-  public Iterable<String> getIPsList(Collection<ClusterNode> values) {
-    List<String> hosts = new ArrayList<>();
-    for (ClusterNode cn : values) {
-      hosts.add(cn.ip);
-    }
-    return hosts;
-  }
-
-  /**
    * Update ServiceRecord in Registry with IP and hostname.
    * @param amState access to AM state
    * @param yarnRegistry acces to YARN registry
@@ -1148,27 +1123,30 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
    * Publish an export group.
    * @param exportGroup export groups
    * @param amState access to AM state
-   * @param roleGroup component group
+   * @param groupName export group name
    */
-  public void publishExportGroup(Map<String, List<ExportEntry>> exportGroup,
-      StateAccessForProviders amState, String roleGroup) {
+  public void publishExportGroup(
+      Map<String, Set<ExportEntry>> exportGroup,
+      StateAccessForProviders amState, String groupName) {
     // Publish in old format for the time being
     Map<String, String> simpleEntries = new HashMap<>();
-    for (Entry<String, List<ExportEntry>> entry : exportGroup.entrySet()) {
-      List<ExportEntry> exports = entry.getValue();
+    for (Entry<String, Set<ExportEntry>> entry : exportGroup.entrySet()) {
+      Set<ExportEntry> exports = entry.getValue();
       if (SliderUtils.isNotEmpty(exports)) {
-        // there is no support for multiple exports per name, so extract only
-        // the first one
-        simpleEntries.put(entry.getKey(), entry.getValue().get(0).getValue());
+        Set<String> values = new TreeSet<>();
+        for (ExportEntry export : exports) {
+          values.add(export.getValue());
+        }
+        simpleEntries.put(entry.getKey(), StringUtils.join(",", values));
       }
     }
-    publishApplicationInstanceData(roleGroup, roleGroup,
+    publishApplicationInstanceData(groupName, groupName,
         simpleEntries.entrySet(), amState);
 
-    PublishedExports exports = new PublishedExports(roleGroup);
+    PublishedExports exports = new PublishedExports(groupName);
     exports.setUpdated(new Date().getTime());
     exports.putValues(exportGroup.entrySet());
-    amState.getPublishedExportsSet().put(roleGroup, exports);
+    amState.getPublishedExportsSet().put(groupName, exports);
   }
 
   public Map<String, String> getExports(ConfTreeOperations appConf,
@@ -1179,75 +1157,26 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
     return exports;
   }
 
-  private static final String COMPONENT_TAG = "component";
-  private static final String HOST_FOLDER_FORMAT = "%s:%s";
-  private static final String CONTAINER_LOGS_TAG = "container_log_dirs";
-  private static final String CONTAINER_PWDS_TAG = "container_work_dirs";
-
-  /**
-   * Format the folder locations and publish in the registry service.
-   * @param folders folder information
-   * @param containerId container ID
-   * @param hostFqdn host FQDN
-   * @param componentName component name
-   */
-  public void publishFolderPaths(Map<String, String> folders,
-      String containerId, String componentName, String hostFqdn,
-      StateAccessForProviders amState,
-      Map<String, ExportEntry> logFolderExports,
-      Map<String, ExportEntry> workFolderExports) {
-    Date now = new Date();
-    for (Map.Entry<String, String> entry : folders.entrySet()) {
-      ExportEntry exportEntry = new ExportEntry();
-      exportEntry.setValue(String.format(HOST_FOLDER_FORMAT, hostFqdn,
-          entry.getValue()));
-      exportEntry.setContainerId(containerId);
-      exportEntry.setLevel(COMPONENT_TAG);
-      exportEntry.setTag(componentName);
-      exportEntry.setUpdatedTime(now.toString());
-      if (entry.getKey().equals("AGENT_LOG_ROOT") ||
-          entry.getKey().equals("LOG_DIR")) {
-        synchronized (logFolderExports) {
-          logFolderExports.put(containerId, exportEntry);
-        }
-      } else {
-        synchronized (workFolderExports) {
-          workFolderExports.put(containerId, exportEntry);
-        }
-      }
-      log.info("Updating log and pwd folders for container {}", containerId);
-    }
-
-    PublishedExports exports = new PublishedExports(CONTAINER_LOGS_TAG);
-    exports.setUpdated(now.getTime());
-    synchronized (logFolderExports) {
-      updateExportsFromList(exports, logFolderExports);
-    }
-    amState.getPublishedExportsSet().put(CONTAINER_LOGS_TAG, exports);
-
-    exports = new PublishedExports(CONTAINER_PWDS_TAG);
-    exports.setUpdated(now.getTime());
-    synchronized (workFolderExports) {
-      updateExportsFromList(exports, workFolderExports);
-    }
-    amState.getPublishedExportsSet().put(CONTAINER_PWDS_TAG, exports);
+  public String getGroupKey(String roleGroup, ConfTreeOperations appConf) {
+    String rolePrefix = appConf.getComponentOpt(roleGroup, ROLE_PREFIX, "");
+    return getNameOrGroupKey(rolePrefix, roleGroup);
   }
 
-  /**
-   * Update the export data from the map.
-   * @param exports published exports
-   * @param folderExports folder exports
-   */
-  private void updateExportsFromList(PublishedExports exports,
-      Map<String, ExportEntry> folderExports) {
-    Map<String, List<ExportEntry>> perComponentList = new HashMap<>();
-    for(Map.Entry<String, ExportEntry> logEntry : folderExports.entrySet()) {
-      String componentName = logEntry.getValue().getTag();
-      if (!perComponentList.containsKey(componentName)) {
-        perComponentList.put(componentName, new ArrayList<ExportEntry>());
+  public String getNameKey(String roleName, String roleGroup,
+      ConfTreeOperations appConf) {
+    String rolePrefix = appConf.getComponentOpt(roleGroup, ROLE_PREFIX, "");
+    return getNameOrGroupKey(rolePrefix, roleName);
+  }
+
+  public String getNameOrGroupKey(String rolePrefix, String roleNameOrGroup) {
+    if (!rolePrefix.isEmpty()) {
+      if (!roleNameOrGroup.startsWith(rolePrefix)) {
+        log.warn("Something went wrong, {} doesn't start with {}",
+            roleNameOrGroup, rolePrefix);
+        return null;
       }
-      perComponentList.get(componentName).add(logEntry.getValue());
+      roleNameOrGroup = roleNameOrGroup.substring(rolePrefix.length());
     }
-    exports.putValues(perComponentList.entrySet());
+    return roleNameOrGroup.toUpperCase(Locale.ENGLISH);
   }
 }

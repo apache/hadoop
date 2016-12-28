@@ -107,6 +107,26 @@ public class ExportEntry {
   }
 
   @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    ExportEntry that = (ExportEntry) o;
+
+    if (value != null ? !value.equals(that.value) : that.value != null)
+      return false;
+    return containerId != null ? containerId.equals(that.containerId) :
+        that.containerId == null;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = value != null ? value.hashCode() : 0;
+    result = 31 * result + (containerId != null ? containerId.hashCode() : 0);
+    return result;
+  }
+
+  @Override
   public String toString() {
     return new StringBuilder("ExportEntry{").
         append("value='").append(value).append("',").
