@@ -127,6 +127,10 @@ public class RMAppImpl implements RMApp, Recoverable {
   private static final EnumSet<RMAppState> COMPLETED_APP_STATES =
       EnumSet.of(RMAppState.FINISHED, RMAppState.FINISHING, RMAppState.FAILED,
           RMAppState.KILLED, RMAppState.FINAL_SAVING, RMAppState.KILLING);
+  private static final String STATE_CHANGE_MESSAGE =
+      "%s State change from %s to %s on event = %s";
+  private static final String RECOVERY_MESSAGE =
+      "Recovering app: %s with %d attempts and final state = %s";
 
   // Immutable fields
   private final ApplicationId applicationId;
@@ -838,9 +842,16 @@ public class RMAppImpl implements RMApp, Recoverable {
         /* TODO fail the application on the failed transition */
       }
 
-      if (oldState != getState()) {
-        LOG.info(appID + " State change from " + oldState + " to "
-            + getState() + " on event=" + event.getType());
+      // Log at INFO if we're not recovering or not in a terminal state.
+      // Log at DEBUG otherwise.
+      if ((oldState != getState()) &&
+          (((recoveredFinalState == null)) ||
+            (event.getType() != RMAppEventType.RECOVER))) {
+        LOG.info(String.format(STATE_CHANGE_MESSAGE, appID, oldState,
+            getState(), event.getType()));
+      } else if ((oldState != getState()) && LOG.isDebugEnabled()) {
+        LOG.debug(String.format(STATE_CHANGE_MESSAGE, appID, oldState,
+            getState(), event.getType()));
       }
     } finally {
       this.writeLock.unlock();
@@ -852,9 +863,15 @@ public class RMAppImpl implements RMApp, Recoverable {
     ApplicationStateData appState =
         state.getApplicationState().get(getApplicationId());
     this.recoveredFinalState = appState.getState();
-    LOG.info("Recovering app: " + getApplicationId() + " with " + 
-        + appState.getAttemptCount() + " attempts and final state = "
-        + this.recoveredFinalState );
+
+    if (recoveredFinalState == null) {
+      LOG.info(String.format(RECOVERY_MESSAGE, getApplicationId(),
+          appState.getAttemptCount(), "NONE"));
+    } else if (LOG.isDebugEnabled()) {
+      LOG.debug(String.format(RECOVERY_MESSAGE, getApplicationId(),
+          appState.getAttemptCount(), recoveredFinalState));
+    }
+
     this.diagnostics.append(null == appState.getDiagnostics() ? "" : appState
         .getDiagnostics());
     this.storedFinishTime = appState.getFinishTime();

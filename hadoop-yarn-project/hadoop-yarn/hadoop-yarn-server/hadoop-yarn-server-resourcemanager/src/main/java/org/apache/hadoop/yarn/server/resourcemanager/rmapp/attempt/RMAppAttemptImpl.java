@@ -114,6 +114,10 @@ import com.google.common.annotations.VisibleForTesting;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
+  private static final String STATE_CHANGE_MESSAGE =
+      "%s State change from %s to %s on event = %s";
+  private static final String RECOVERY_MESSAGE =
+      "Recovering attempt: %s with final state = %s";
 
   private static final Log LOG = LogFactory.getLog(RMAppAttemptImpl.class);
 
@@ -868,9 +872,16 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         /* TODO fail the application on the failed transition */
       }
 
-      if (oldState != getAppAttemptState()) {
-        LOG.info(appAttemptID + " State change from " + oldState + " to "
-            + getAppAttemptState());
+      // Log at INFO if we're not recovering or not in a terminal state.
+      // Log at DEBUG otherwise.
+      if ((oldState != getAppAttemptState()) &&
+          ((recoveredFinalState == null) ||
+            (event.getType() != RMAppAttemptEventType.RECOVER))) {
+        LOG.info(String.format(STATE_CHANGE_MESSAGE, appAttemptID, oldState,
+            getAppAttemptState(), event.getType()));
+      } else if ((oldState != getAppAttemptState()) && LOG.isDebugEnabled()) {
+        LOG.debug(String.format(STATE_CHANGE_MESSAGE, appAttemptID, oldState,
+            getAppAttemptState(), event.getType()));
       }
     } finally {
       this.writeLock.unlock();
@@ -907,8 +918,14 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     ApplicationAttemptStateData attemptState =
         appState.getAttempt(getAppAttemptId());
     assert attemptState != null;
-    LOG.info("Recovering attempt: " + getAppAttemptId() + " with final state: "
-        + attemptState.getState());
+
+    if (attemptState.getState() == null) {
+      LOG.info(String.format(RECOVERY_MESSAGE, getAppAttemptId(), "NONE"));
+    } else if (LOG.isDebugEnabled()) {
+      LOG.debug(String.format(RECOVERY_MESSAGE, getAppAttemptId(),
+          attemptState.getState()));
+    }
+
     diagnostics.append("Attempt recovered after RM restart");
     diagnostics.append(attemptState.getDiagnostics());
     this.amContainerExitStatus = attemptState.getAMContainerExitStatus();
