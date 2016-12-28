@@ -133,7 +133,7 @@ public class ParentQueue extends AbstractCSQueue {
           + ", absoluteCapacity=" + this.queueCapacities.getAbsoluteCapacity()
           + ", maxCapacity=" + this.queueCapacities.getMaximumCapacity()
           + ", absoluteMaxCapacity=" + this.queueCapacities
-          .getAbsoluteMaximumCapacity() + ", state=" + state + ", acls="
+          .getAbsoluteMaximumCapacity() + ", state=" + getState() + ", acls="
           + aclsString + ", labels=" + labelStrBuilder.toString() + "\n"
           + ", reservationsContinueLooking=" + reservationsContinueLooking);
     } finally {
@@ -369,7 +369,7 @@ public class ParentQueue extends AbstractCSQueue {
             "Cannot submit application " + "to non-leaf queue: " + queueName);
       }
 
-      if (state != QueueState.RUNNING) {
+      if (getState() != QueueState.RUNNING) {
         throw new AccessControlException("Queue " + getQueuePath()
             + " is STOPPED. Cannot accept submission of application: "
             + applicationId);
@@ -411,7 +411,9 @@ public class ParentQueue extends AbstractCSQueue {
   public void finishApplication(ApplicationId application, String user) {
 
     removeApplication(application, user);
-    
+
+    appFinished();
+
     // Inform the parent queue
     if (parent != null) {
       parent.finishApplication(application, user);
@@ -1047,6 +1049,25 @@ public class ParentQueue extends AbstractCSQueue {
 
     if (parent != null) {
       parent.apply(cluster, request);
+    }
+  }
+
+  @Override
+  public void stopQueue() {
+    try {
+      this.writeLock.lock();
+      if (getNumApplications() > 0) {
+        updateQueueState(QueueState.DRAINING);
+      } else {
+        updateQueueState(QueueState.STOPPED);
+      }
+      if (getChildQueues() != null) {
+        for(CSQueue child : getChildQueues()) {
+          child.stopQueue();
+        }
+      }
+    } finally {
+      this.writeLock.unlock();
     }
   }
 }

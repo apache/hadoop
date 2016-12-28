@@ -2474,4 +2474,9 @@ public class CapacityScheduler extends
     }
     return 0;
   }
+
+  @Override
+  public CapacitySchedulerQueueManager getCapacitySchedulerQueueManager() {
+    return this.queueManager;
+  }
 }
