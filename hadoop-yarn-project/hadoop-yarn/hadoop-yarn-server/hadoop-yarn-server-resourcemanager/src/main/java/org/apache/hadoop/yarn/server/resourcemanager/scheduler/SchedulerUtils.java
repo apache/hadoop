@@ -265,7 +265,7 @@ public class SchedulerUtils {
     // we don't allow specify label expression with more than one node labels now
     if (labelExp != null && labelExp.contains("&&")) {
       throw new InvalidLabelResourceRequestException(
-          "Invailid resource request, queue=" + queueInfo.getQueueName()
+          "Invalid resource request, queue=" + queueInfo.getQueueName()
               + " specified more than one node label "
               + "in a node label expression, node label expression = "
               + labelExp);

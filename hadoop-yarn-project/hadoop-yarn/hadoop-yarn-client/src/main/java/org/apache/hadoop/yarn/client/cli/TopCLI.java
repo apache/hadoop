@@ -774,13 +774,14 @@ public class TopCLI extends YarnCLI {
 
   private JSONObject getJSONObject(URLConnection conn)
       throws IOException, JSONException {
-    InputStream in = conn.getInputStream();
-    String encoding = conn.getContentEncoding();
-    encoding = encoding == null ? "UTF-8" : encoding;
-    String body = IOUtils.toString(in, encoding);
-    JSONObject obj = new JSONObject(body);
-    JSONObject clusterInfo = obj.getJSONObject("clusterInfo");
-    return clusterInfo;
+    try(InputStream in = conn.getInputStream()) {
+      String encoding = conn.getContentEncoding();
+      encoding = encoding == null ? "UTF-8" : encoding;
+      String body = IOUtils.toString(in, encoding);
+      JSONObject obj = new JSONObject(body);
+      JSONObject clusterInfo = obj.getJSONObject("clusterInfo");
+      return clusterInfo;
+    }
   }
 
   private URL getClusterUrl() throws Exception {

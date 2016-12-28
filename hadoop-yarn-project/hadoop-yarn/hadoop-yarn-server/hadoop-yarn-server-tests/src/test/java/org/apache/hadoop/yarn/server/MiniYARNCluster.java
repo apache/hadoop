@@ -385,7 +385,7 @@ public class MiniYARNCluster extends CompositeService {
   }
 
   /**
-   * In a HA cluster, go through all the RMs and find the Active RM. In a
+   * In an HA cluster, go through all the RMs and find the Active RM. In a
    * non-HA cluster, return the index of the only RM.
    *
    * @return index of the active RM or -1 if none of them turn active

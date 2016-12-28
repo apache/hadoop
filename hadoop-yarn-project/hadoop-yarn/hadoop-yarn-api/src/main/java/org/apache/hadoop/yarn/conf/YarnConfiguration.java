@@ -2767,7 +2767,7 @@ public class YarnConfiguration extends Configuration {
 
   /**
    * Get the socket address for <code>name</code> property as a
-   * <code>InetSocketAddress</code>. On a HA cluster,
+   * <code>InetSocketAddress</code>. On an HA cluster,
    * this fetches the address corresponding to the RM identified by
    * {@link #RM_HA_ID}.
    * @param name property name.

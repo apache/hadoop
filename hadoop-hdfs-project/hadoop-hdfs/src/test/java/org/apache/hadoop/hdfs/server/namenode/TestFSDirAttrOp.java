@@ -52,25 +52,25 @@ public class TestFSDirAttrOp {
   @Test
   public void testUnprotectedSetTimes() throws Exception {
     // atime < access time + precision
-    assertFalse("SetTimes should not update access time"
+    assertFalse("SetTimes should not update access time "
           + "because it's within the last precision interval",
         unprotectedSetTimes(100, 0, 1000, -1, false));
 
     // atime = access time + precision
-    assertFalse("SetTimes should not update access time"
+    assertFalse("SetTimes should not update access time "
           + "because it's within the last precision interval",
         unprotectedSetTimes(1000, 0, 1000, -1, false));
 
     // atime > access time + precision
-    assertTrue("SetTimes should store access time",
+    assertTrue("SetTimes should update access time",
         unprotectedSetTimes(1011, 10, 1000, -1, false));
 
     // atime < access time + precision, but force is set
-    assertTrue("SetTimes should store access time",
+    assertTrue("SetTimes should update access time",
         unprotectedSetTimes(100, 0, 1000, -1, true));
 
     // atime < access time + precision, but mtime is set
-    assertTrue("SetTimes should store access time",
+    assertTrue("SetTimes should update access time",
         unprotectedSetTimes(100, 0, 1000, 1, false));
   }
 }

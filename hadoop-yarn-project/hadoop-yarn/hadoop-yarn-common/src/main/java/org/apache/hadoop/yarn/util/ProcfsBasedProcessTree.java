@@ -803,7 +803,10 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
             if (LOG.isDebugEnabled()) {
               LOG.debug("MemInfo : " + key + " : Value  : " + value);
             }
-            memoryMappingInfo.setMemInfo(key, value);
+
+            if (memoryMappingInfo != null) {
+              memoryMappingInfo.setMemInfo(key, value);
+            }
           }
         } catch (Throwable t) {
           LOG

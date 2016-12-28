@@ -54,6 +54,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerStat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.ResourceRequestUpdateResult;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SchedulingPlacementSet;
+
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -965,6 +967,7 @@ public class AppSchedulingInfo {
   public ResourceRequest cloneResourceRequest(ResourceRequest request) {
     ResourceRequest newRequest = ResourceRequest.newBuilder()
         .priority(request.getPriority())
+        .allocationRequestId(request.getAllocationRequestId())
         .resourceName(request.getResourceName())
         .capability(request.getCapability())
         .numContainers(1)

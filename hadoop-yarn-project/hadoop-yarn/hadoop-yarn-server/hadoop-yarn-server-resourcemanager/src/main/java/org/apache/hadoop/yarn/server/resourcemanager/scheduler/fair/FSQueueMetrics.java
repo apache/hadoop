@@ -200,7 +200,7 @@ public class FSQueueMetrics extends QueueMetrics {
    * @param parent parent queue
    * @param enableUserMetrics  if user metrics is needed
    * @param conf configuration
-   * @return a FSQueueMetrics object
+   * @return an FSQueueMetrics object
    */
   @VisibleForTesting
   public synchronized

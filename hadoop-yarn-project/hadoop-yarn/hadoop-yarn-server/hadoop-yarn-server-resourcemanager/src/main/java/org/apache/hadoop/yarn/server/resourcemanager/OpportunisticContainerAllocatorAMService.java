@@ -101,8 +101,8 @@ public class OpportunisticContainerAllocatorAMService
   private final int k;
 
   private final long cacheRefreshInterval;
-  private List<RemoteNode> cachedNodes;
-  private long lastCacheUpdateTime;
+  private volatile List<RemoteNode> cachedNodes;
+  private volatile long lastCacheUpdateTime;
 
   public OpportunisticContainerAllocatorAMService(RMContext rmContext,
       YarnScheduler scheduler) {
@@ -218,8 +218,9 @@ public class OpportunisticContainerAllocatorAMService
   }
 
   @Override
-  public AllocateResponse allocate(AllocateRequest request) throws
-      YarnException, IOException {
+  protected void allocateInternal(ApplicationAttemptId appAttemptId,
+      AllocateRequest request, AllocateResponse allocateResponse)
+      throws YarnException {
 
     // Partition requests to GUARANTEED and OPPORTUNISTIC.
     OpportunisticContainerAllocator.PartitionedResourceRequests
@@ -227,40 +228,30 @@ public class OpportunisticContainerAllocatorAMService
         oppContainerAllocator.partitionAskList(request.getAskList());
 
     // Allocate OPPORTUNISTIC containers.
-    request.setAskList(partitionedAsks.getOpportunistic());
-    final ApplicationAttemptId appAttemptId = getAppAttemptId();
-    SchedulerApplicationAttempt appAttempt = ((AbstractYarnScheduler)
-        rmContext.getScheduler()).getApplicationAttempt(appAttemptId);
+    SchedulerApplicationAttempt appAttempt =
+        ((AbstractYarnScheduler)rmContext.getScheduler())
+            .getApplicationAttempt(appAttemptId);
 
     OpportunisticContainerContext oppCtx =
         appAttempt.getOpportunisticContainerContext();
     oppCtx.updateNodeList(getLeastLoadedNodes());
 
     List<Container> oppContainers =
-        oppContainerAllocator.allocateContainers(request, appAttemptId, oppCtx,
-        ResourceManager.getClusterTimeStamp(), appAttempt.getUser());
+        oppContainerAllocator.allocateContainers(
+            request.getResourceBlacklistRequest(),
+            partitionedAsks.getOpportunistic(), appAttemptId, oppCtx,
+            ResourceManager.getClusterTimeStamp(), appAttempt.getUser());
 
     // Create RMContainers and update the NMTokens.
     if (!oppContainers.isEmpty()) {
       handleNewContainers(oppContainers, false);
       appAttempt.updateNMTokens(oppContainers);
+      addToAllocatedContainers(allocateResponse, oppContainers);
     }
 
     // Allocate GUARANTEED containers.
     request.setAskList(partitionedAsks.getGuaranteed());
-    AllocateResponse allocateResp = super.allocate(request);
-
-    // Add allocated OPPORTUNISTIC containers to the AllocateResponse.
-    if (!oppContainers.isEmpty()) {
-      allocateResp.getAllocatedContainers().addAll(oppContainers);
-    }
-
-    // Update opportunistic container context with the allocated GUARANTEED
-    // containers.
-    oppCtx.updateCompletedContainers(allocateResp);
-
-    // Add all opportunistic containers
-    return allocateResp;
+    super.allocateInternal(appAttemptId, request, allocateResponse);
   }
 
   @Override
@@ -304,7 +295,7 @@ public class OpportunisticContainerAllocatorAMService
   }
 
   private void handleNewContainers(List<Container> allocContainers,
-                                   boolean isRemotelyAllocated) {
+      boolean isRemotelyAllocated) {
     for (Container container : allocContainers) {
       // Create RMContainer
       SchedulerApplicationAttempt appAttempt =
@@ -387,10 +378,12 @@ public class OpportunisticContainerAllocatorAMService
   private synchronized List<RemoteNode> getLeastLoadedNodes() {
     long currTime = System.currentTimeMillis();
     if ((currTime - lastCacheUpdateTime > cacheRefreshInterval)
-        || cachedNodes == null) {
+        || (cachedNodes == null)) {
       cachedNodes = convertToRemoteNodes(
           this.nodeMonitor.selectLeastLoadedNodes(this.k));
-      lastCacheUpdateTime = currTime;
+      if (cachedNodes.size() > 0) {
+        lastCacheUpdateTime = currTime;
+      }
     }
     return cachedNodes;
   }

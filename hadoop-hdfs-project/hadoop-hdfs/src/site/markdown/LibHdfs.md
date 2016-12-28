@@ -76,7 +76,7 @@ libdhfs is thread safe.
 
 *   Concurrency and Hadoop FS "handles"
 
-    The Hadoop FS implementation includes a FS handle cache which
+    The Hadoop FS implementation includes an FS handle cache which
     caches based on the URI of the namenode along with the user
     connecting. So, all calls to `hdfsConnect` will return the same
     handle but calls to `hdfsConnectAsUser` with different users will

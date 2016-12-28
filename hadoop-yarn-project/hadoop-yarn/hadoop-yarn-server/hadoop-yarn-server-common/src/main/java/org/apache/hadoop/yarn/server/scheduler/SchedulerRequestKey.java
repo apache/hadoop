@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
+package org.apache.hadoop.yarn.server.scheduler;
 
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -53,7 +53,7 @@ public final class SchedulerRequestKey implements
         container.getAllocationRequestId());
   }
 
-  private SchedulerRequestKey(Priority priority, long allocationRequestId) {
+  SchedulerRequestKey(Priority priority, long allocationRequestId) {
     this.priority = priority;
     this.allocationRequestId = allocationRequestId;
   }
@@ -118,5 +118,13 @@ public final class SchedulerRequestKey implements
     result = 31 * result + (int) (getAllocationRequestId() ^ (
         getAllocationRequestId() >>> 32));
     return result;
+  }
+
+  @Override
+  public String toString() {
+    return "SchedulerRequestKey{" +
+        "priority=" + priority +
+        ", allocationRequestId=" + allocationRequestId +
+        '}';
   }
 }
