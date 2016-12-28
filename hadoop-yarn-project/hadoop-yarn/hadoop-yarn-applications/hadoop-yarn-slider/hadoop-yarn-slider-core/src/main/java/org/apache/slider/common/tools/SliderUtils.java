@@ -183,17 +183,17 @@ public final class SliderUtils {
     return !isUnset(s);
   }
 
-  public static boolean isEmpty(List l) {
+  public static boolean isEmpty(Collection l) {
     return l == null || l.isEmpty();
   }
 
   /**
-   * Probe for a list existing and not being empty
-   * @param l list
+   * Probe for a collection existing and not being empty
+   * @param l collection
    * @return true if the reference is valid and it contains entries
    */
 
-  public static boolean isNotEmpty(List l) {
+  public static boolean isNotEmpty(Collection l) {
     return l != null && !l.isEmpty();
   }
 
