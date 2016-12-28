@@ -282,7 +282,7 @@ public class LeafQueue extends AbstractCSQueue {
               + "maximumAllocationMemory ]" + "\n" + "maximumAllocation = "
               + maximumAllocation + " [= configuredMaxAllocation ]" + "\n"
               + "numContainers = " + numContainers
-              + " [= currentNumContainers ]" + "\n" + "state = " + state
+              + " [= currentNumContainers ]" + "\n" + "state = " + getState()
               + " [= configuredState ]" + "\n" + "acls = " + aclsString
               + " [= configuredAcls ]" + "\n" + "nodeLocalityDelay = "
               + nodeLocalityDelay + "\n" + "labels=" + labelStrBuilder
@@ -888,6 +888,9 @@ public class LeafQueue extends AbstractCSQueue {
   public void finishApplication(ApplicationId application, String user) {
     // Inform the activeUsersManager
     activeUsersManager.deactivateApplication(user, application);
+
+    appFinished();
+
     // Inform the parent queue
     getParent().finishApplication(application, user);
   }
@@ -2432,6 +2435,20 @@ public class LeafQueue extends AbstractCSQueue {
     
     public Resource getClusterResource() {
       return clusterResource;
+    }
+  }
+
+  @Override
+  public void stopQueue() {
+    try {
+      writeLock.lock();
+      if (getNumApplications() > 0) {
+        updateQueueState(QueueState.DRAINING);
+      } else {
+        updateQueueState(QueueState.STOPPED);
+      }
+    } finally {
+      writeLock.unlock();
     }
   }
 }

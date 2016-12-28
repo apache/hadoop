@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManage
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -56,8 +57,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimpleP
  */
 @Stable
 @Private
-public interface CSQueue 
-extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
+public interface CSQueue extends SchedulerQueue<CSQueue> {
   /**
    * Get the parent <code>Queue</code>.
    * @return the parent queue

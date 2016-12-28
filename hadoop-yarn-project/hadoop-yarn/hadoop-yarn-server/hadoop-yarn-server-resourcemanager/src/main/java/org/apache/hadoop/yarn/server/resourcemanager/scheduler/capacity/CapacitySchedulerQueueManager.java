@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.security.Permission;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueStateManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerQueueManager;
 
@@ -86,6 +87,9 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
   private CSQueue root;
   private final RMNodeLabelsManager labelManager;
 
+  private QueueStateManager<CSQueue, CapacitySchedulerConfiguration>
+      queueStateManager;
+
   /**
    * Construct the service.
    * @param conf the configuration
@@ -95,6 +99,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       RMNodeLabelsManager labelManager) {
     this.authorizer = YarnAuthorizationProvider.getInstance(conf);
     this.labelManager = labelManager;
+    this.queueStateManager = new QueueStateManager<>();
   }
 
   @Override
@@ -142,6 +147,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         CapacitySchedulerConfiguration.ROOT, queues, queues, NOOP);
     setQueueAcls(authorizer, queues);
     labelManager.reinitializeQueueLabels(getQueueToLabels());
+    this.queueStateManager.initialize(this);
     LOG.info("Initialized root queue " + root);
   }
 
@@ -170,6 +176,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         clusterResource));
 
     labelManager.reinitializeQueueLabels(getQueueToLabels());
+    this.queueStateManager.initialize(this);
   }
 
   /**
@@ -357,5 +364,11 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       queueToLabels.put(queue.getQueueName(), queue.getAccessibleNodeLabels());
     }
     return queueToLabels;
+  }
+
+  @Private
+  public QueueStateManager<CSQueue, CapacitySchedulerConfiguration>
+      getQueueStateManager() {
+    return this.queueStateManager;
   }
 }
