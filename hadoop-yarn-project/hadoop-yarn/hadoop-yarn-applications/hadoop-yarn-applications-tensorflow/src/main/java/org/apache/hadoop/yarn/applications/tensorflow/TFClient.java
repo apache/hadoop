@@ -24,6 +24,9 @@ import org.apache.commons.logging.LogFactory;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Created by muzhongz on 16-11-30.
@@ -40,7 +43,11 @@ public class TFClient implements Runnable {
     private static final String OPT_MASTER_PORT = "mp";
 
 
+    private static final String TF_PY_OPT_WORKERS = "wk";
+    private static final String TF_PY_OPT_PSES = "ps";
 
+    private String workers = null;
+    private String pses = null;
 
     private void execCmd(String cmd) {
         Process process = null;
@@ -115,14 +122,63 @@ public class TFClient implements Runnable {
         thread.start();
     }
 
-    public void startTensorflowClient(String masterNode) {
-        if (masterNode == null || masterNode.equals("")) {
+    public void startTensorflowClient(String clusterSpecJsonString) {
+        if (clusterSpecJsonString == null || clusterSpecJsonString.equals("")) {
             return;
         }
+
+        Map<String, List<String>> clusterSpec = null;
+
+        try {
+            clusterSpec = ClusterSpec.toClusterMapFromJsonString(clusterSpecJsonString);
+        } catch (IOException e) {
+            LOG.error("cluster spec is invalid!");
+            e.printStackTrace();
+            return;
+        }
+
+        List<String> workerArray = clusterSpec.get(ClusterSpec.WORKER);
+        if (workerArray != null) {
+            Iterator<String> it = workerArray.iterator();
+            String w = it.next();
+            if (w != null) {
+                workers = w;
+            }
+
+            while (it.hasNext()) {
+                workers += "," + it.next();
+            }
+        }
+
+        List<String> psArray = clusterSpec.get(ClusterSpec.PS);
+        if (psArray != null) {
+            Iterator<String> it = psArray.iterator();
+            String p = it.next();
+            if (p != null) {
+                pses = p;
+            }
+
+            while (it.hasNext()) {
+                pses += "," + it.next();
+            }
+        }
+
+        LOG.info("workers: <" + workers + ">;" + "pses: <" + pses + ">");
+
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                String cmd = "python " + tfClientPy + " " + masterNode;
+
+                String cmd = "python " + tfClientPy;
+
+                if (workers != null) {
+                    cmd +=  " " + TFApplication.makeOption(TF_PY_OPT_WORKERS, "\"" + workers + "\"");
+                }
+
+                if (pses != null) {
+                    cmd += " " + TFApplication.makeOption(TF_PY_OPT_PSES, "\"" + pses + "\"");
+                }
+
                 LOG.info("TF client command is [" + cmd + "]");
                 execCmd(cmd);
             }

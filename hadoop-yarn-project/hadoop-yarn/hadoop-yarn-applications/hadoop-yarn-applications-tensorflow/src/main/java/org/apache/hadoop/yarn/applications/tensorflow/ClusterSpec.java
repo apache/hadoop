@@ -213,7 +213,7 @@ public class ClusterSpec {
     }
 
 
-    public static Map<String, List<String>> toClusterMap(String clusterString) throws IOException {
+    public static Map<String, List<String>> toClusterMapFromJsonString(String clusterString) throws IOException {
         ObjectMapper objectMapper = new ObjectMapper();
         Map<String, List<String>> cluster = null;
         cluster = objectMapper.readValue(clusterString, Map.class);
@@ -251,7 +251,7 @@ public class ClusterSpec {
         }
 
         try {
-            Map<String, List<String>> cs = ClusterSpec.toClusterMap(base64DecodedString);
+            Map<String, List<String>> cs = ClusterSpec.toClusterMapFromJsonString(base64DecodedString);
             if (cs.containsKey(WORKER)) {
                 for (String s : cs.get(WORKER)) {
                     LOG.info(s);

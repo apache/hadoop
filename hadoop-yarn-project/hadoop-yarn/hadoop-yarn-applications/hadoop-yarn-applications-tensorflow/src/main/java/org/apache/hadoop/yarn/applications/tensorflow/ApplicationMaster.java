@@ -396,13 +396,19 @@ public class ApplicationMaster {
 
     @Override
     public String getClusterSpec() throws IOException, YarnException {
-      if (clusterSpec != null && clusterSpec.getMasterNode() != null) {
-        TFServerAddress server = clusterSpec.getMasterNode();
-        String master = server.getAddress() + ":" + server.getPort();
-        return master;
+      String cs = "";
+      if (clusterSpec != null) {
+
+        try {
+          cs = clusterSpec.getJsonString();
+        } catch (ClusterSpecException e) {
+          cs = "";
+          LOG.info("Cluster spec is not prepared yet when getting cluster spec!");
+          e.printStackTrace();
+        }
       }
 
-      return "";
+      return cs;
     }
   }
 

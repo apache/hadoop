@@ -25,7 +25,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -96,7 +95,7 @@ public class TFServer implements Runnable {
         jobName = cliParser.getOptionValue(OPT_JN);
         taskIndex = Integer.parseInt(cliParser.getOptionValue(OPT_TI));
         LOG.info("cs: " + clusterSpecString + "; + jn: " + jobName + "; ti: " + taskIndex);
-        cluster = ClusterSpec.toClusterMap(clusterSpecString);
+        cluster = ClusterSpec.toClusterMapFromJsonString(clusterSpecString);
         return true;
     }
 

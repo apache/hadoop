@@ -95,6 +95,8 @@ public class Client {
 
   private String masterAddress;
 
+  private String clusterSpecJsonString = null;
+
   // Command line options
   private Options opts;
 
@@ -524,12 +526,12 @@ public class Client {
           appRpc = new TFApplicationRpcClient(hostname, port).getRpc();
         }
 
-        if (appRpc != null && isEmptyString(masterAddress)) {
-          masterAddress = appRpc.getClusterSpec();
-          LOG.info("master node address is " + masterAddress);
-          if (!isEmptyString(masterAddress)) {
+        if (appRpc != null && isEmptyString(clusterSpecJsonString)) {
+          clusterSpecJsonString = appRpc.getClusterSpec();
+          LOG.info("cluster spec is " + clusterSpecJsonString);
+          if (!isEmptyString(clusterSpecJsonString)) {
             TFClient tfClient = new TFClient(tfClientPy);
-            tfClient.startTensorflowClient(masterAddress);
+            tfClient.startTensorflowClient(clusterSpecJsonString);
           }
         }
       }
