@@ -295,7 +295,7 @@ public class BlockPoolSliceStorage extends Storage {
   void remove(File absPathToRemove) {
     Preconditions.checkArgument(absPathToRemove.isAbsolute());
     LOG.info("Removing block level storage: " + absPathToRemove);
-    for (Iterator<StorageDirectory> it = this.storageDirs.iterator();
+    for (Iterator<StorageDirectory> it = getStorageDirs().iterator();
          it.hasNext(); ) {
       StorageDirectory sd = it.next();
       if (sd.getRoot().getAbsoluteFile().equals(absPathToRemove)) {
@@ -788,7 +788,7 @@ public class BlockPoolSliceStorage extends Storage {
    */
   public void clearTrash() {
     final List<File> trashRoots = new ArrayList<>();
-    for (StorageDirectory sd : storageDirs) {
+    for (StorageDirectory sd : getStorageDirs()) {
       File trashRoot = getTrashRootDir(sd);
       if (trashRoot.exists() && sd.getPreviousDir().exists()) {
         LOG.error("Trash and PreviousDir shouldn't both exist for storage "
@@ -826,7 +826,7 @@ public class BlockPoolSliceStorage extends Storage {
   /** trash is enabled if at least one storage directory contains trash root */
   @VisibleForTesting
   public boolean trashEnabled() {
-    for (StorageDirectory sd : storageDirs) {
+    for (StorageDirectory sd : getStorageDirs()) {
       if (getTrashRootDir(sd).exists()) {
         return true;
       }
