@@ -26,9 +26,8 @@ import java.io.IOException;
  */
 public class IpcException extends IOException {
   private static final long serialVersionUID = 1L;
-  
-  final String errMsg;
+
   public IpcException(final String err) {
-    errMsg = err; 
+    super(err);
   }
 }
