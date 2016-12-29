@@ -33,13 +33,13 @@ public class TestBlockStorageMovementAttemptedItems {
 
   private BlockStorageMovementAttemptedItems bsmAttemptedItems = null;
   private BlockStorageMovementNeeded unsatisfiedStorageMovementFiles = null;
+  private final int selfRetryTimeout = 500;
 
   @Before
   public void setup() {
     unsatisfiedStorageMovementFiles = new BlockStorageMovementNeeded();
-    bsmAttemptedItems = new BlockStorageMovementAttemptedItems(100, 500,
-        unsatisfiedStorageMovementFiles);
-    bsmAttemptedItems.start();
+    bsmAttemptedItems = new BlockStorageMovementAttemptedItems(100,
+        selfRetryTimeout, unsatisfiedStorageMovementFiles);
   }
 
   @After
@@ -72,8 +72,9 @@ public class TestBlockStorageMovementAttemptedItems {
 
   @Test(timeout = 30000)
   public void testAddResultWithFailureResult() throws Exception {
+    bsmAttemptedItems.start(); // start block movement result monitor thread
     Long item = new Long(1234);
-    bsmAttemptedItems.add(item);
+    bsmAttemptedItems.add(item, true);
     bsmAttemptedItems.addResults(
         new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
             item.longValue(), BlocksStorageMovementResult.Status.FAILURE)});
@@ -82,8 +83,9 @@ public class TestBlockStorageMovementAttemptedItems {
 
   @Test(timeout = 30000)
   public void testAddResultWithSucessResult() throws Exception {
+    bsmAttemptedItems.start(); // start block movement result monitor thread
     Long item = new Long(1234);
-    bsmAttemptedItems.add(item);
+    bsmAttemptedItems.add(item, true);
     bsmAttemptedItems.addResults(
         new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
             item.longValue(), BlocksStorageMovementResult.Status.SUCCESS)});
@@ -92,10 +94,93 @@ public class TestBlockStorageMovementAttemptedItems {
 
   @Test(timeout = 30000)
   public void testNoResultAdded() throws Exception {
+    bsmAttemptedItems.start(); // start block movement result monitor thread
     Long item = new Long(1234);
-    bsmAttemptedItems.add(item);
-    // After selfretry timeout, it should be added back for retry
-    assertTrue(checkItemMovedForRetry(item, 600));
+    bsmAttemptedItems.add(item, true);
+    // After self retry timeout, it should be added back for retry
+    assertTrue("Failed to add to the retry list",
+        checkItemMovedForRetry(item, 600));
+    assertEquals("Failed to remove from the attempted list", 0,
+        bsmAttemptedItems.getAttemptedItemsCount());
   }
 
+  /**
+   * Partial block movement with BlocksStorageMovementResult#SUCCESS. Here,
+   * first occurrence is #blockStorageMovementResultCheck() and then
+   * #blocksStorageMovementUnReportedItemsCheck().
+   */
+  @Test(timeout = 30000)
+  public void testPartialBlockMovementShouldBeRetried1() throws Exception {
+    Long item = new Long(1234);
+    bsmAttemptedItems.add(item, false);
+    bsmAttemptedItems.addResults(
+        new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
+            item.longValue(), BlocksStorageMovementResult.Status.SUCCESS)});
+
+    // start block movement result monitor thread
+    bsmAttemptedItems.start();
+    assertTrue("Failed to add to the retry list",
+        checkItemMovedForRetry(item, 5000));
+    assertEquals("Failed to remove from the attempted list", 0,
+        bsmAttemptedItems.getAttemptedItemsCount());
+  }
+
+  /**
+   * Partial block movement with BlocksStorageMovementResult#SUCCESS. Here,
+   * first occurrence is #blocksStorageMovementUnReportedItemsCheck() and then
+   * #blockStorageMovementResultCheck().
+   */
+  @Test(timeout = 30000)
+  public void testPartialBlockMovementShouldBeRetried2() throws Exception {
+    Long item = new Long(1234);
+    bsmAttemptedItems.add(item, false);
+    bsmAttemptedItems.addResults(
+        new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
+            item.longValue(), BlocksStorageMovementResult.Status.SUCCESS)});
+
+    Thread.sleep(selfRetryTimeout * 2); // Waiting to get timed out
+
+    bsmAttemptedItems.blocksStorageMovementUnReportedItemsCheck();
+    bsmAttemptedItems.blockStorageMovementResultCheck();
+
+    assertTrue("Failed to add to the retry list",
+        checkItemMovedForRetry(item, 5000));
+    assertEquals("Failed to remove from the attempted list", 0,
+        bsmAttemptedItems.getAttemptedItemsCount());
+  }
+
+  /**
+   * Partial block movement with only BlocksStorageMovementResult#FAILURE result
+   * and storageMovementAttemptedItems list is empty.
+   */
+  @Test(timeout = 30000)
+  public void testPartialBlockMovementShouldBeRetried3() throws Exception {
+    Long item = new Long(1234);
+    bsmAttemptedItems.addResults(
+        new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
+            item.longValue(), BlocksStorageMovementResult.Status.FAILURE)});
+    bsmAttemptedItems.blockStorageMovementResultCheck();
+    assertTrue("Failed to add to the retry list",
+        checkItemMovedForRetry(item, 5000));
+    assertEquals("Failed to remove from the attempted list", 0,
+        bsmAttemptedItems.getAttemptedItemsCount());
+  }
+
+  /**
+   * Partial block movement with BlocksStorageMovementResult#FAILURE result and
+   * storageMovementAttemptedItems.
+   */
+  @Test(timeout = 30000)
+  public void testPartialBlockMovementShouldBeRetried4() throws Exception {
+    Long item = new Long(1234);
+    bsmAttemptedItems.add(item, false);
+    bsmAttemptedItems.addResults(
+        new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
+            item.longValue(), BlocksStorageMovementResult.Status.FAILURE)});
+    bsmAttemptedItems.blockStorageMovementResultCheck();
+    assertTrue("Failed to add to the retry list",
+        checkItemMovedForRetry(item, 5000));
+    assertEquals("Failed to remove from the attempted list", 0,
+        bsmAttemptedItems.getAttemptedItemsCount());
+  }
 }

@@ -154,18 +154,9 @@ public class StoragePolicySatisfyWorker {
       Collection<BlockMovingInfo> blockMovingInfos) {
     LOG.debug("Received BlockMovingTasks {}", blockMovingInfos);
     for (BlockMovingInfo blkMovingInfo : blockMovingInfos) {
-      // Iterating backwards. This is to ensure that all the block src location
-      // which doesn't have a target node will be marked as failure before
-      // scheduling the block movement to valid target nodes.
-      for (int i = blkMovingInfo.getSources().length - 1; i >= 0; i--) {
-        if (i >= blkMovingInfo.getTargets().length) {
-          // Since there is no target selected for scheduling the block,
-          // just mark this block storage movement as failure. Later, namenode
-          // can take action on this.
-          movementTracker.markBlockMovementFailure(trackID,
-              blkMovingInfo.getBlock().getBlockId());
-          continue;
-        }
+      assert blkMovingInfo.getSources().length == blkMovingInfo
+          .getTargets().length;
+      for (int i = 0; i < blkMovingInfo.getSources().length; i++) {
         DatanodeInfo target = blkMovingInfo.getTargets()[i];
         BlockMovingTask blockMovingTask = new BlockMovingTask(
             trackID, blockPoolID, blkMovingInfo.getBlock(),

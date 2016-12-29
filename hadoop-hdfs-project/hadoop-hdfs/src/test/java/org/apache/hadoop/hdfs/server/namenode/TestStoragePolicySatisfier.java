@@ -527,6 +527,59 @@ public class TestStoragePolicySatisfier {
     waitExpectedStorageType(file1, StorageType.DISK, 2, 30000);
   }
 
+  /**
+   * Tests to verify that for the given path, only few of the blocks or block
+   * src locations(src nodes) under the given path will be scheduled for block
+   * movement.
+   *
+   * For example, there are two block for a file:
+   *
+   * File1 => two blocks and default storage policy(HOT).
+   * blk_1[locations=A(DISK),B(DISK),C(DISK),D(DISK),E(DISK)],
+   * blk_2[locations=A(DISK),B(DISK),C(DISK),D(DISK),E(DISK)].
+   *
+   * Now, set storage policy to COLD.
+   * Only two Dns are available with expected storage type ARCHIVE, say A, E.
+   *
+   * SPS will schedule block movement to the coordinator node with the details,
+   * blk_1[move A(DISK) -> A(ARCHIVE), move E(DISK) -> E(ARCHIVE)],
+   * blk_2[move A(DISK) -> A(ARCHIVE), move E(DISK) -> E(ARCHIVE)].
+   */
+  @Test(timeout = 300000)
+  public void testWhenOnlyFewSourceNodesHaveMatchingTargetNodes()
+      throws Exception {
+    try {
+      int numOfDns = 5;
+      config.setLong("dfs.block.size", 1024);
+      allDiskTypes =
+          new StorageType[][]{{StorageType.DISK, StorageType.ARCHIVE},
+              {StorageType.DISK, StorageType.DISK},
+              {StorageType.DISK, StorageType.DISK},
+              {StorageType.DISK, StorageType.DISK},
+              {StorageType.DISK, StorageType.ARCHIVE}};
+      hdfsCluster = startCluster(config, allDiskTypes, numOfDns,
+          storagesPerDatanode, capacity);
+      dfs = hdfsCluster.getFileSystem();
+      writeContent(file, (short) 5);
+
+      // Change policy to COLD
+      dfs.setStoragePolicy(new Path(file), "COLD");
+      FSNamesystem namesystem = hdfsCluster.getNamesystem();
+      INode inode = namesystem.getFSDirectory().getINode(file);
+
+      namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+      hdfsCluster.triggerHeartbeats();
+      // Wait till StorgePolicySatisfier identified that block to move to
+      // ARCHIVE area.
+      waitExpectedStorageType(file, StorageType.ARCHIVE, 2, 30000);
+      waitExpectedStorageType(file, StorageType.DISK, 3, 30000);
+
+      waitForBlocksMovementResult(1, 30000);
+    } finally {
+      shutdownCluster();
+    }
+  }
+
   private String createFileAndSimulateFavoredNodes(int favoredNodesCount)
       throws IOException {
     ArrayList<DataNode> dns = hdfsCluster.getDataNodes();
@@ -561,7 +614,7 @@ public class TestStoragePolicySatisfier {
       DataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
       favoredNodesCount--;
       if (favoredNodesCount <= 0) {
-        break;// marked favoredNodesCount number of pinned block location
+        break; // marked favoredNodesCount number of pinned block location
       }
     }
     return file1;
@@ -600,8 +653,14 @@ public class TestStoragePolicySatisfier {
   }
 
   private void writeContent(final String fileName) throws IOException {
+    writeContent(fileName, (short) 3);
+  }
+
+  private void writeContent(final String fileName, short replicatonFactor)
+      throws IOException {
     // write to DISK
-    final FSDataOutputStream out = dfs.create(new Path(fileName));
+    final FSDataOutputStream out = dfs.create(new Path(fileName),
+        replicatonFactor);
     for (int i = 0; i < 1000; i++) {
       out.writeChars("t");
     }

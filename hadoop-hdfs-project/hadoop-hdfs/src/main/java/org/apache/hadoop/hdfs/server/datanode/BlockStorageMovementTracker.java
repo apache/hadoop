@@ -28,7 +28,6 @@ import java.util.concurrent.Future;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.datanode.StoragePolicySatisfyWorker.BlockMovementResult;
-import org.apache.hadoop.hdfs.server.datanode.StoragePolicySatisfyWorker.BlockMovementStatus;
 import org.apache.hadoop.hdfs.server.datanode.StoragePolicySatisfyWorker.BlocksMovementsCompletionHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,20 +106,6 @@ public class BlockStorageMovementTracker implements Runnable {
             e);
       }
     }
-  }
-
-  /**
-   * Mark as block movement failure for the given trackId and blockId.
-   *
-   * @param trackId tracking id
-   * @param blockId block id
-   */
-  void markBlockMovementFailure(long trackId, long blockId) {
-    LOG.debug("Mark as block movement failure for the given "
-        + "trackId:{} and blockId:{}", trackId, blockId);
-    BlockMovementResult result = new BlockMovementResult(trackId, blockId, null,
-        BlockMovementStatus.DN_BLK_STORAGE_MOVEMENT_FAILURE);
-    addMovementResultToTrackIdList(result);
   }
 
   private List<BlockMovementResult> addMovementResultToTrackIdList(

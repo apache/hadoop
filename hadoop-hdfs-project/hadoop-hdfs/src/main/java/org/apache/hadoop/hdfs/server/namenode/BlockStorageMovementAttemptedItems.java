@@ -43,11 +43,14 @@ import com.google.common.annotations.VisibleForTesting;
  * automatically after timeout. The default timeout would be 30mins.
  */
 public class BlockStorageMovementAttemptedItems {
-  public static final Logger LOG =
+  private static final Logger LOG =
       LoggerFactory.getLogger(BlockStorageMovementAttemptedItems.class);
-  // A map holds the items which are already taken for blocks movements
-  // processing and sent to DNs.
-  private final Map<Long, Long> storageMovementAttemptedItems;
+
+  /**
+   * A map holds the items which are already taken for blocks movements
+   * processing and sent to DNs.
+   */
+  private final Map<Long, ItemInfo> storageMovementAttemptedItems;
   private final List<BlocksStorageMovementResult> storageMovementAttemptedResults;
   private volatile boolean monitorRunning = true;
   private Daemon timerThread = null;
@@ -83,10 +86,16 @@ public class BlockStorageMovementAttemptedItems {
    *
    * @param blockCollectionID
    *          - tracking id / block collection id
+   * @param allBlockLocsAttemptedToSatisfy
+   *          - failed to find matching target nodes to satisfy storage type for
+   *          all the block locations of the given blockCollectionID
    */
-  public void add(Long blockCollectionID) {
+  public void add(Long blockCollectionID,
+      boolean allBlockLocsAttemptedToSatisfy) {
     synchronized (storageMovementAttemptedItems) {
-      storageMovementAttemptedItems.put(blockCollectionID, monotonicNow());
+      ItemInfo itemInfo = new ItemInfo(monotonicNow(),
+          allBlockLocsAttemptedToSatisfy);
+      storageMovementAttemptedItems.put(blockCollectionID, itemInfo);
     }
   }
 
@@ -121,12 +130,59 @@ public class BlockStorageMovementAttemptedItems {
    */
   public synchronized void stop() {
     monitorRunning = false;
-    timerThread.interrupt();
-    try {
-      timerThread.join(3000);
-    } catch (InterruptedException ie) {
+    if (timerThread != null) {
+      timerThread.interrupt();
+      try {
+        timerThread.join(3000);
+      } catch (InterruptedException ie) {
+      }
     }
     this.clearQueues();
+  }
+
+  /**
+   * This class contains information of an attempted trackID. Information such
+   * as, (a)last attempted time stamp, (b)whether all the blocks in the trackID
+   * were attempted and blocks movement has been scheduled to satisfy storage
+   * policy. This is used by
+   * {@link BlockStorageMovementAttemptedItems#storageMovementAttemptedItems}.
+   */
+  private final static class ItemInfo {
+    private final long lastAttemptedTimeStamp;
+    private final boolean allBlockLocsAttemptedToSatisfy;
+
+    /**
+     * ItemInfo constructor.
+     *
+     * @param lastAttemptedTimeStamp
+     *          last attempted time stamp
+     * @param allBlockLocsAttemptedToSatisfy
+     *          whether all the blocks in the trackID were attempted and blocks
+     *          movement has been scheduled to satisfy storage policy
+     */
+    private ItemInfo(long lastAttemptedTimeStamp,
+        boolean allBlockLocsAttemptedToSatisfy) {
+      this.lastAttemptedTimeStamp = lastAttemptedTimeStamp;
+      this.allBlockLocsAttemptedToSatisfy = allBlockLocsAttemptedToSatisfy;
+    }
+
+    /**
+     * @return last attempted time stamp.
+     */
+    private long getLastAttemptedTimeStamp() {
+      return lastAttemptedTimeStamp;
+    }
+
+    /**
+     * @return true/false. True value represents that, all the block locations
+     *         under the trackID has found matching target nodes to satisfy
+     *         storage policy. False value represents that, trackID needed
+     *         retries to satisfy the storage policy for some of the block
+     *         locations.
+     */
+    private boolean isAllBlockLocsAttemptedToSatisfy() {
+      return allBlockLocsAttemptedToSatisfy;
+    }
   }
 
   /**
@@ -147,76 +203,108 @@ public class BlockStorageMovementAttemptedItems {
         }
       }
     }
+  }
 
-    private void blocksStorageMovementUnReportedItemsCheck() {
-      synchronized (storageMovementAttemptedItems) {
-        Iterator<Entry<Long, Long>> iter =
-            storageMovementAttemptedItems.entrySet().iterator();
-        long now = monotonicNow();
-        while (iter.hasNext()) {
-          Entry<Long, Long> entry = iter.next();
-          if (now > entry.getValue() + selfRetryTimeout) {
-            Long blockCollectionID = entry.getKey();
-            synchronized (storageMovementAttemptedResults) {
-              boolean exist = isExistInResult(blockCollectionID);
-              if (!exist) {
-                blockStorageMovementNeeded.add(blockCollectionID);
-              } else {
-                LOG.info("Blocks storage movement results for the"
-                    + " tracking id : " + blockCollectionID
-                    + " is reported from one of the co-ordinating datanode."
-                    + " So, the result will be processed soon.");
-              }
+  @VisibleForTesting
+  void blocksStorageMovementUnReportedItemsCheck() {
+    synchronized (storageMovementAttemptedItems) {
+      Iterator<Entry<Long, ItemInfo>> iter = storageMovementAttemptedItems
+          .entrySet().iterator();
+      long now = monotonicNow();
+      while (iter.hasNext()) {
+        Entry<Long, ItemInfo> entry = iter.next();
+        ItemInfo itemInfo = entry.getValue();
+        if (now > itemInfo.getLastAttemptedTimeStamp() + selfRetryTimeout) {
+          Long blockCollectionID = entry.getKey();
+          synchronized (storageMovementAttemptedResults) {
+            if (!isExistInResult(blockCollectionID)) {
+              blockStorageMovementNeeded.add(blockCollectionID);
               iter.remove();
+              LOG.info("TrackID: {} becomes timed out and moved to needed "
+                  + "retries queue for next iteration.", blockCollectionID);
+            } else {
+              LOG.info("Blocks storage movement results for the"
+                  + " tracking id : " + blockCollectionID
+                  + " is reported from one of the co-ordinating datanode."
+                  + " So, the result will be processed soon.");
             }
           }
         }
+      }
 
+    }
+  }
+
+  private boolean isExistInResult(Long blockCollectionID) {
+    Iterator<BlocksStorageMovementResult> iter = storageMovementAttemptedResults
+        .iterator();
+    while (iter.hasNext()) {
+      BlocksStorageMovementResult storageMovementAttemptedResult = iter.next();
+      if (storageMovementAttemptedResult.getTrackId() == blockCollectionID) {
+        return true;
       }
     }
+    return false;
+  }
 
-    private boolean isExistInResult(Long blockCollectionID) {
-      Iterator<BlocksStorageMovementResult> iter =
+  @VisibleForTesting
+  void blockStorageMovementResultCheck() {
+    synchronized (storageMovementAttemptedResults) {
+      Iterator<BlocksStorageMovementResult> resultsIter =
           storageMovementAttemptedResults.iterator();
-      while (iter.hasNext()) {
-        BlocksStorageMovementResult storageMovementAttemptedResult =
-            iter.next();
-        if (storageMovementAttemptedResult.getTrackId() == blockCollectionID) {
-          return true;
-        }
-      }
-      return false;
-    }
-
-    private void blockStorageMovementResultCheck() {
-      synchronized (storageMovementAttemptedResults) {
-        Iterator<BlocksStorageMovementResult> iter =
-            storageMovementAttemptedResults.iterator();
-        while (iter.hasNext()) {
-          BlocksStorageMovementResult storageMovementAttemptedResult =
-              iter.next();
+      while (resultsIter.hasNext()) {
+        // TrackID need to be retried in the following cases:
+        // 1) All or few scheduled block(s) movement has been failed.
+        // 2) All the scheduled block(s) movement has been succeeded but there
+        // are unscheduled block(s) movement in this trackID. Say, some of
+        // the blocks in the trackID couldn't finding any matching target node
+        // for scheduling block movement in previous SPS iteration.
+        BlocksStorageMovementResult storageMovementAttemptedResult = resultsIter
+            .next();
+        synchronized (storageMovementAttemptedItems) {
           if (storageMovementAttemptedResult
               .getStatus() == BlocksStorageMovementResult.Status.FAILURE) {
             blockStorageMovementNeeded
                 .add(storageMovementAttemptedResult.getTrackId());
-            LOG.warn("Blocks storage movement results for the tracking id : "
-                + storageMovementAttemptedResult.getTrackId()
+            LOG.warn("Blocks storage movement results for the tracking id: {}"
                 + " is reported from co-ordinating datanode, but result"
-                + " status is FAILURE. So, added for retry");
+                + " status is FAILURE. So, added for retry",
+                storageMovementAttemptedResult.getTrackId());
           } else {
-            synchronized (storageMovementAttemptedItems) {
-              storageMovementAttemptedItems
-                  .remove(storageMovementAttemptedResult.getTrackId());
-            }
-            LOG.info("Blocks storage movement results for the tracking id : "
-                + storageMovementAttemptedResult.getTrackId()
-                + " is reported from co-ordinating datanode. "
-                + "The result status is SUCCESS.");
-          }
-          iter.remove(); // remove from results as processed above
-        }
-      }
+            ItemInfo itemInfo = storageMovementAttemptedItems
+                .get(storageMovementAttemptedResult.getTrackId());
 
+            // ItemInfo could be null. One case is, before the blocks movements
+            // result arrives the attempted trackID became timed out and then
+            // removed the trackID from the storageMovementAttemptedItems list.
+            // TODO: Need to ensure that trackID is added to the
+            // 'blockStorageMovementNeeded' queue for retries to handle the
+            // following condition. If all the block locations under the trackID
+            // are attempted and failed to find matching target nodes to satisfy
+            // storage policy in previous SPS iteration.
+            if (itemInfo != null
+                && !itemInfo.isAllBlockLocsAttemptedToSatisfy()) {
+              blockStorageMovementNeeded
+                  .add(storageMovementAttemptedResult.getTrackId());
+              LOG.warn("Blocks storage movement is SUCCESS for the track id: {}"
+                  + " reported from co-ordinating datanode. But adding trackID"
+                  + " back to retry queue as some of the blocks couldn't find"
+                  + " matching target nodes in previous SPS iteration.",
+                  storageMovementAttemptedResult.getTrackId());
+            } else {
+              LOG.info("Blocks storage movement is SUCCESS for the track id: {}"
+                  + " reported from co-ordinating datanode. But the trackID "
+                  + "doesn't exists in storageMovementAttemptedItems list",
+                  storageMovementAttemptedResult.getTrackId());
+            }
+          }
+          // Remove trackID from the attempted list, if any.
+          storageMovementAttemptedItems
+              .remove(storageMovementAttemptedResult.getTrackId());
+        }
+        // Remove trackID from results as processed above.
+        resultsIter.remove();
+      }
     }
   }
 
