@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.yarn.applications.tensorflow;
 
 import org.apache.commons.io.IOUtils;
@@ -23,7 +41,7 @@ import java.util.*;
  * Created by muzhongz on 16-12-14.
  */
 public class TFContainer {
-  private static final Log LOG = LogFactory.getLog(TFContainer.class);
+    private static final Log LOG = LogFactory.getLog(TFContainer.class);
 
     private String appName = TFYarnConstants.APP_NAME;
     private ApplicationMaster appMaster;
@@ -35,12 +53,10 @@ public class TFContainer {
     }
 
     public void addToLocalResources(FileSystem fs, String fileSrcPath,
-                                     String fileDstPath, String appId, Map<String, LocalResource> localResources,
-                                     String resources) throws IOException {
-        String suffix =
-                appName + "/" + appId + "/" + fileDstPath;
-        Path dst =
-                new Path(fs.getHomeDirectory(), suffix);
+                                    String fileDstPath, String appId, Map<String, LocalResource> localResources,
+                                    String resources) throws IOException {
+        String suffix = appName + "/" + appId + "/" + fileDstPath;
+        Path dst = new Path(fs.getHomeDirectory(), suffix);
         if (fileSrcPath == null) {
             FSDataOutputStream ostream = null;
             try {
@@ -66,8 +82,12 @@ public class TFContainer {
     public Map<String, String> setJavaEnv(Configuration conf, String tfServerJar) {
         // Set the java environment
         Map<String, String> env = new HashMap<String, String>();
+
+        // Add TFServer.jar location to classpath
         StringBuilder classPathEnv = new StringBuilder(ApplicationConstants.Environment.CLASSPATH.$$())
                 .append(ApplicationConstants.CLASS_PATH_SEPARATOR).append("./*");
+
+        // Add hadoop's jar location to classpath
         for (String c : conf.getStrings(
                 YarnConfiguration.YARN_APPLICATION_CLASSPATH,
                 YarnConfiguration.DEFAULT_YARN_CROSS_PLATFORM_APPLICATION_CLASSPATH)) {

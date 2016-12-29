@@ -474,18 +474,6 @@ public class Client {
 
   }
 
-  private void tensorflowServersReady() {
-    while (true) {
-
-
-      try {
-        Thread.sleep(100);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
-    }
-  }
-
   private boolean isEmptyString(String s) {
     return s == null || s.equals("");
   }

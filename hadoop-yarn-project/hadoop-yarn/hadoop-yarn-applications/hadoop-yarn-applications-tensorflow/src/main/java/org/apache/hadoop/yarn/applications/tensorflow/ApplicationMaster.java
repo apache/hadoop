@@ -376,9 +376,7 @@ public class ApplicationMaster {
     containrRetryInterval = Integer.parseInt(cliParser.getOptionValue(
             "container_retry_interval", "0"));
 
-    if (cliParser.hasOption(TFApplication.OPT_TF_SERVER_JAR)) {
-      tfServerJar = cliParser.getOptionValue(TFApplication.OPT_TF_SERVER_JAR);
-    }
+    tfServerJar = cliParser.getOptionValue(TFApplication.OPT_TF_SERVER_JAR, TFAmContainer.APPMASTER_JAR_PATH);
 
     clusterSpec = ClusterSpec.makeClusterSpec(numTotalWokerContainers, numTotalParamServerContainer);
 
@@ -619,16 +617,15 @@ public class ApplicationMaster {
         // +allocatedContainer.getContainerToken().getIdentifier().toString());
 
         LOG.info("server cid: " + allocatedContainer.getId().toString());
-        LaunchContainerThread runnable = new LaunchContainerThread(allocatedContainer,
-                tfServerJar,
-                containerMemory,
-                containerRetryPolicy,
-                containerRetryErrorCodes,
-                containerMaxRetries,
-                containrRetryInterval,
-                this,
-                containerListener, clusterSpec.getServerAddress(allocatedContainer.getId().toString()));
-        Thread launchThread = new Thread(runnable);
+        LaunchContainerThread launchDelegator = new LaunchContainerThread(allocatedContainer,
+                this, clusterSpec.getServerAddress(allocatedContainer.getId().toString()));
+        launchDelegator.setTfServerJar(tfServerJar);
+        launchDelegator.setContainerMemory(containerMemory);
+        launchDelegator.setContainerRetryPolicy(containerRetryPolicy);
+        launchDelegator.setContainerRetryErrorCodes(containerRetryErrorCodes);
+        launchDelegator.setContainerMaxRetries(containerMaxRetries);
+        launchDelegator.setContainrRetryInterval(containrRetryInterval);
+        Thread launchThread = new Thread(launchDelegator);
 
         // launch and start the container on a separate thread to keep
         // the main thread unblocked
@@ -636,12 +633,11 @@ public class ApplicationMaster {
         launchThreads.add(launchThread);
         launchedContainers.add(allocatedContainer.getId());
         launchThread.start();
-        return true;
       }
     } else {
       throw  new Exception("containers are not allocated!");
     }
-    return false;
+    return true;
   }
 
   @VisibleForTesting
@@ -751,6 +747,12 @@ public class ApplicationMaster {
       LOG.error("Error in RMCallbackHandler: ", e);
       done = true;
       amRMClient.stop();
+    }
+  }
+
+  public void addContainer(Container container) {
+    if (containerListener != null && container != null) {
+      containerListener.addContainer(container.getId(), container);
     }
   }
 

@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.yarn.applications.tensorflow;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -31,37 +49,63 @@ public class LaunchContainerThread implements Runnable {
 
     private ApplicationMaster appMaster;
 
-    private ApplicationMaster.NMCallbackHandler containerListener;
     private TFServerAddress serverAddress = null;
 
-    private LaunchContainerThread(Container container, String tfServerJar, long containerMemory,
-                                 ContainerRetryPolicy containerRetryPolicy, Set<Integer> containerRetryErrorCodes,
-                                 int containerMaxRetries, int containrRetryInterval, ApplicationMaster appMaster,
-                                 ApplicationMaster.NMCallbackHandler containerListener) {
-        this.container = container;
-        this.tfServerJar = tfServerJar;
-        this.containerMemory = containerMemory;
-        this.containerRetryPolicy = containerRetryPolicy;
-        this.containerRetryErrorCodes = containerRetryErrorCodes;
-        this.containerMaxRetries = containerMaxRetries;
-        this.containrRetryInterval = containrRetryInterval;
-        this.appMaster = appMaster;
-        this.containerListener = containerListener;
+    public String getTfServerJar() {
+        return tfServerJar;
     }
 
-    public LaunchContainerThread(Container container, String tfServerJar, long containerMemory,
-                                 ContainerRetryPolicy containerRetryPolicy, Set<Integer> containerRetryErrorCodes,
-                                 int containerMaxRetries, int containrRetryInterval, ApplicationMaster appMaster,
-                                 ApplicationMaster.NMCallbackHandler containerListener, TFServerAddress serverAddress) {
-        this(container,
-                tfServerJar,
-                containerMemory,
-                containerRetryPolicy,
-                containerRetryErrorCodes,
-                containerMaxRetries,
-                containrRetryInterval,
-                appMaster,
-                containerListener);
+    public void setTfServerJar(String tfServerJar) {
+        this.tfServerJar = tfServerJar;
+    }
+
+    public long getContainerMemory() {
+        return containerMemory;
+    }
+
+    public void setContainerMemory(long containerMemory) {
+        this.containerMemory = containerMemory;
+    }
+
+    public ContainerRetryPolicy getContainerRetryPolicy() {
+        return containerRetryPolicy;
+    }
+
+    public void setContainerRetryPolicy(ContainerRetryPolicy containerRetryPolicy) {
+        this.containerRetryPolicy = containerRetryPolicy;
+    }
+
+    public Set<Integer> getContainerRetryErrorCodes() {
+        return containerRetryErrorCodes;
+    }
+
+    public void setContainerRetryErrorCodes(Set<Integer> containerRetryErrorCodes) {
+        this.containerRetryErrorCodes = containerRetryErrorCodes;
+    }
+
+    public int getContainerMaxRetries() {
+        return containerMaxRetries;
+    }
+
+    public void setContainerMaxRetries(int containerMaxRetries) {
+        this.containerMaxRetries = containerMaxRetries;
+    }
+
+    public int getContainrRetryInterval() {
+        return containrRetryInterval;
+    }
+
+    public void setContainrRetryInterval(int containrRetryInterval) {
+        this.containrRetryInterval = containrRetryInterval;
+    }
+
+    private LaunchContainerThread(Container container, ApplicationMaster appMaster) {
+        this.container = container;
+        this.appMaster = appMaster;
+    }
+
+    public LaunchContainerThread(Container container, ApplicationMaster appMaster, TFServerAddress serverAddress) {
+        this(container, appMaster);
         this.serverAddress = serverAddress;
         if (this.serverAddress == null) {
             LOG.info("server address is null");
@@ -137,7 +181,7 @@ public class LaunchContainerThread implements Runnable {
         ContainerLaunchContext ctx = ContainerLaunchContext.newInstance(
                 localResources, env, commands, null, appMaster.getAllTokens().duplicate(),
                 null, containerRetryContext);
-        containerListener.addContainer(container.getId(), container);
+        appMaster.addContainer(container);
         appMaster.getNMClientAsync().startContainerAsync(container, ctx);
     }
 
