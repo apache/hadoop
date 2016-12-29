@@ -47,6 +47,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
@@ -404,7 +408,7 @@ public class ApplicationMaster {
         } catch (ClusterSpecException e) {
           cs = "";
           LOG.info("Cluster spec is not prepared yet when getting cluster spec!");
-          e.printStackTrace();
+          //e.printStackTrace();
         }
       }
 
@@ -608,6 +612,19 @@ public class ApplicationMaster {
 
       }
 
+      FileSystem fs = null;
+      try {
+        fs = FileSystem.get(this.getConfiguration());
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+
+      String suffix = TFYarnConstants.APP_NAME + "/" + getAppAttempId().getApplicationId() + "/" + TFContainer.SERVER_JAR_PATH;
+      Path dst = new Path(fs.getHomeDirectory(), suffix);
+      if (tfServerJar != null) {
+        fs.copyFromLocalFile(new Path(tfServerJar), dst);
+      }
+
       for (Container allocatedContainer : this.allocatedContainers) {
 
         LOG.info("Launching a new container."
@@ -625,6 +642,7 @@ public class ApplicationMaster {
         LOG.info("server cid: " + allocatedContainer.getId().toString());
         LaunchContainerThread launchDelegator = new LaunchContainerThread(allocatedContainer,
                 this, clusterSpec.getServerAddress(allocatedContainer.getId().toString()));
+        launchDelegator.setDst(dst);
         launchDelegator.setTfServerJar(tfServerJar);
         launchDelegator.setContainerMemory(containerMemory);
         launchDelegator.setContainerRetryPolicy(containerRetryPolicy);

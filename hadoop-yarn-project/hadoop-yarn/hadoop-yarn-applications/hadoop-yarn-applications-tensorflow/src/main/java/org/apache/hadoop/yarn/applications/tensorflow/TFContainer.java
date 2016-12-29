@@ -34,7 +34,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.*;
 
 /**
@@ -52,11 +54,57 @@ public class TFContainer {
         appMaster = am;
     }
 
+    private void execCmd(String cmd) {
+        Process process = null;
+        try {
+            LOG.info("cmd is " + cmd);
+            process = Runtime.getRuntime().exec(cmd);
+        } catch (IOException e) {
+            LOG.fatal("cmd running failed", e);
+            e.printStackTrace();
+        }
+
+        try {
+            LOG.info("cmd log--->");
+            BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            while ((line = in.readLine()) != null) {
+
+                LOG.info(line);
+                System.out.println(line);
+            }
+            in.close();
+            LOG.info("<---cmd log end");
+            process.waitFor();
+        } catch (InterruptedException e) {
+            LOG.fatal("waiting error ", e);
+            e.printStackTrace();
+        } catch (IOException e) {
+            LOG.info("io exception");
+            e.printStackTrace();
+        }
+    }
+
+    public void addToLocalResources(FileSystem fs, Path dst, String fileDstPath, Map<String, LocalResource> localResources) throws IOException {
+        FileStatus scFileStatus = fs.getFileStatus(dst);
+        LocalResource scRsrc =
+                LocalResource.newInstance(
+                        URL.fromURI(dst.toUri()),
+                        LocalResourceType.FILE, LocalResourceVisibility.APPLICATION,
+                        scFileStatus.getLen(), scFileStatus.getModificationTime());
+        localResources.put(fileDstPath, scRsrc);
+    }
+
+
     public void addToLocalResources(FileSystem fs, String fileSrcPath,
                                     String fileDstPath, String appId, Map<String, LocalResource> localResources,
                                     String resources) throws IOException {
+
+        execCmd("pwd");
+        execCmd("ls -l");
         String suffix = appName + "/" + appId + "/" + fileDstPath;
         Path dst = new Path(fs.getHomeDirectory(), suffix);
+        LOG.info("copy: " + fileSrcPath + " ===> " + dst.toString());
         if (fileSrcPath == null) {
             FSDataOutputStream ostream = null;
             try {
@@ -69,7 +117,7 @@ public class TFContainer {
         } else {
             fs.copyFromLocalFile(new Path(fileSrcPath), dst);
         }
-        LOG.info("copy: " + fileSrcPath + " ===> " + dst.toString());
+
         FileStatus scFileStatus = fs.getFileStatus(dst);
         LocalResource scRsrc =
                 LocalResource.newInstance(

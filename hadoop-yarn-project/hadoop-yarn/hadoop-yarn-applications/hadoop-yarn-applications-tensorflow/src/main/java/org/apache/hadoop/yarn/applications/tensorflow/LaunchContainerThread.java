@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.*;
 
 import java.io.IOException;
@@ -112,6 +113,16 @@ public class LaunchContainerThread implements Runnable {
         }
     }
 
+    private Path dst;
+
+    public Path getDst() {
+        return dst;
+    }
+
+    public void setDst(Path dst) {
+        this.dst = dst;
+    }
+
     @Override
     /**
      * Connects to CM, sets up container launch context
@@ -140,8 +151,9 @@ public class LaunchContainerThread implements Runnable {
         ApplicationId appId = appMaster.getAppAttempId().getApplicationId();
 
         try {
-            tfContainer.addToLocalResources(fs, tfServerJar, TFContainer.SERVER_JAR_PATH, appId.toString(),
-                    localResources, null);
+            tfContainer.addToLocalResources(fs, dst, TFContainer.SERVER_JAR_PATH, localResources);
+/*            tfContainer.addToLocalResources(fs, tfServerJar, TFContainer.SERVER_JAR_PATH, appId.toString(),
+                    localResources, null);*/
         } catch (IOException e) {
             e.printStackTrace();
         }
