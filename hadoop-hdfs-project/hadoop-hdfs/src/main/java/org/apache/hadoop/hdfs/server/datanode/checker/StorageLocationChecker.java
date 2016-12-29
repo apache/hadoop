@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode.checker;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -158,8 +159,11 @@ public class StorageLocationChecker {
     // Start parallel disk check operations on all StorageLocations.
     for (StorageLocation location : dataDirs) {
       goodLocations.put(location, true);
-      futures.put(location,
-          delegateChecker.schedule(location, context));
+      Optional<ListenableFuture<VolumeCheckResult>> olf =
+          delegateChecker.schedule(location, context);
+      if (olf.isPresent()) {
+        futures.put(location, olf.get());
+      }
     }
 
     if (maxVolumeFailuresTolerated >= dataDirs.size()) {

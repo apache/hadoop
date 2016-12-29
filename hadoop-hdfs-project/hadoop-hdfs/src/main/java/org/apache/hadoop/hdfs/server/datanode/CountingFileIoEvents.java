@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class CountingFileIoEvents implements FileIoEvents {
+public class CountingFileIoEvents extends FileIoEvents {
   private final Map<OPERATION, Counts> counts;
 
   private static class Counts {
@@ -90,7 +90,6 @@ public class CountingFileIoEvents implements FileIoEvents {
   public void onFailure(
       @Nullable FsVolumeSpi volume, OPERATION op, Exception e, long begin) {
     counts.get(op).failures.incrementAndGet();
-
   }
 
   @Override

@@ -372,6 +372,7 @@ public class DataNode extends ReconfigurableBase
   SaslDataTransferClient saslClient;
   SaslDataTransferServer saslServer;
   private ObjectName dataNodeInfoBeanName;
+  // Test verification only
   private volatile long lastDiskErrorCheck;
   private String supergroup;
   private boolean isPermissionEnabled;
@@ -412,7 +413,7 @@ public class DataNode extends ReconfigurableBase
     this.tracer = createTracer(conf);
     this.tracerConfigurationManager =
         new TracerConfigurationManager(DATANODE_HTRACE_PREFIX, conf);
-    this.fileIoProvider = new FileIoProvider(conf);
+    this.fileIoProvider = new FileIoProvider(conf, this);
     this.fileDescriptorPassingDisabledReason = null;
     this.maxNumberOfBlocksToLog = 0;
     this.confVersion = null;
@@ -438,7 +439,7 @@ public class DataNode extends ReconfigurableBase
     this.tracer = createTracer(conf);
     this.tracerConfigurationManager =
         new TracerConfigurationManager(DATANODE_HTRACE_PREFIX, conf);
-    this.fileIoProvider = new FileIoProvider(conf);
+    this.fileIoProvider = new FileIoProvider(conf, this);
     this.blockScanner = new BlockScanner(this);
     this.lastDiskErrorCheck = 0;
     this.maxNumberOfBlocksToLog = conf.getLong(DFS_MAX_NUM_BLOCKS_TO_LOG_KEY,
@@ -786,7 +787,7 @@ public class DataNode extends ReconfigurableBase
 
   /**
    * Remove volumes from DataNode.
-   * See {@link #removeVolumes(Set, boolean)} for details.
+   * See {@link #removeVolumes(Collection, boolean)} for details.
    *
    * @param locations the StorageLocations of the volumes to be removed.
    * @throws IOException
@@ -809,7 +810,7 @@ public class DataNode extends ReconfigurableBase
    *   <ul>Reset configuration DATA_DIR and {@link #dataDirs} to represent
    *   active volumes.</ul>
    * </li>
-   * @param absoluteVolumePaths the absolute path of volumes.
+   * @param storageLocations the absolute path of volumes.
    * @param clearFailure if true, clears the failure information related to the
    *                     volumes.
    * @throws IOException
@@ -1293,7 +1294,7 @@ public class DataNode extends ReconfigurableBase
    * If conf's CONFIG_PROPERTY_SIMULATED property is set
    * then a simulated storage based data node is created.
    * 
-   * @param dataDirs - only for a non-simulated storage data node
+   * @param dataDirectories - only for a non-simulated storage data node
    * @throws IOException
    */
   void startDataNode(List<StorageLocation> dataDirectories,
@@ -2045,14 +2046,33 @@ public class DataNode extends ReconfigurableBase
     }
     tracer.close();
   }
-  
-  
+
   /**
-   * Check if there is a disk failure asynchronously and if so, handle the error
+   * Check if there is a disk failure asynchronously
+   * and if so, handle the error.
    */
+  @VisibleForTesting
   public void checkDiskErrorAsync() {
     volumeChecker.checkAllVolumesAsync(
         data, (healthyVolumes, failedVolumes) -> {
+        if (failedVolumes.size() > 0) {
+          LOG.warn("checkDiskErrorAsync callback got {} failed volumes: {}",
+              failedVolumes.size(), failedVolumes);
+        } else {
+          LOG.debug("checkDiskErrorAsync: no volume failures detected");
+        }
+        lastDiskErrorCheck = Time.monotonicNow();
+        handleVolumeFailures(failedVolumes);
+      });
+  }
+
+  /**
+   * Check if there is a disk failure asynchronously
+   * and if so, handle the error.
+   */
+  public void checkDiskErrorAsync(FsVolumeSpi volume) {
+    volumeChecker.checkVolume(
+        volume, (healthyVolumes, failedVolumes) -> {
           if (failedVolumes.size() > 0) {
             LOG.warn("checkDiskErrorAsync callback got {} failed volumes: {}",
                 failedVolumes.size(), failedVolumes);
@@ -2064,9 +2084,10 @@ public class DataNode extends ReconfigurableBase
         });
   }
 
-  private void handleDiskError(String errMsgr) {
+  private void handleDiskError(String failedVolumes) {
     final boolean hasEnoughResources = data.hasEnoughResource();
-    LOG.warn("DataNode.handleDiskError: Keep Running: " + hasEnoughResources);
+    LOG.warn("DataNode.handleDiskError on : [" + failedVolumes +
+        "] Keep Running: " + hasEnoughResources);
     
     // If we have enough active valid volumes then we do not want to 
     // shutdown the DN completely.
@@ -2076,7 +2097,7 @@ public class DataNode extends ReconfigurableBase
 
     //inform NameNodes
     for(BPOfferService bpos: blockPoolManager.getAllNamenodeThreads()) {
-      bpos.trySendErrorReport(dpError, errMsgr);
+      bpos.trySendErrorReport(dpError, failedVolumes);
     }
     
     if(hasEnoughResources) {
@@ -2084,7 +2105,8 @@ public class DataNode extends ReconfigurableBase
       return; // do not shutdown
     }
     
-    LOG.warn("DataNode is shutting down: " + errMsgr);
+    LOG.warn("DataNode is shutting down due to failed volumes: ["
+        + failedVolumes + "]");
     shouldRun = false;
   }
     
@@ -2447,8 +2469,11 @@ public class DataNode extends ReconfigurableBase
         }
         LOG.warn(bpReg + ":Failed to transfer " + b + " to " +
             targets[0] + " got ", ie);
-        // check if there are any disk problem
-        checkDiskErrorAsync();
+        // disk check moved to FileIoProvider
+        IOException cause = DatanodeUtil.getCauseIfDiskError(ie);
+        if (cause != null) { // possible disk error
+          LOG.warn("IOException in DataTransfer#run(). Cause is ", cause);
+        }
       } finally {
         decrementXmitsInProgress();
         IOUtils.closeStream(blockSender);
@@ -3234,29 +3259,37 @@ public class DataNode extends ReconfigurableBase
   }
 
   private void handleVolumeFailures(Set<FsVolumeSpi> unhealthyVolumes) {
+    if (unhealthyVolumes.isEmpty()) {
+      LOG.debug("handleVolumeFailures done with empty " +
+          "unhealthyVolumes");
+      return;
+    }
+
     data.handleVolumeFailures(unhealthyVolumes);
     Set<StorageLocation> unhealthyLocations = new HashSet<>(
         unhealthyVolumes.size());
 
-    if (!unhealthyVolumes.isEmpty()) {
-      StringBuilder sb = new StringBuilder("DataNode failed volumes:");
-      for (FsVolumeSpi vol : unhealthyVolumes) {
-        unhealthyLocations.add(vol.getStorageLocation());
-        sb.append(vol.getStorageLocation()).append(";");
-      }
-
-      try {
-        // Remove all unhealthy volumes from DataNode.
-        removeVolumes(unhealthyLocations, false);
-      } catch (IOException e) {
-        LOG.warn("Error occurred when removing unhealthy storage dirs: "
-            + e.getMessage(), e);
-      }
-      LOG.info(sb.toString());
-      handleDiskError(sb.toString());
+    StringBuilder sb = new StringBuilder("DataNode failed volumes:");
+    for (FsVolumeSpi vol : unhealthyVolumes) {
+      unhealthyLocations.add(vol.getStorageLocation());
+      sb.append(vol.getStorageLocation()).append(";");
     }
+
+    try {
+      // Remove all unhealthy volumes from DataNode.
+      removeVolumes(unhealthyLocations, false);
+    } catch (IOException e) {
+      LOG.warn("Error occurred when removing unhealthy storage dirs: "
+          + e.getMessage(), e);
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(sb.toString());
+    }
+      // send blockreport regarding volume failure
+    handleDiskError(sb.toString());
   }
 
+  @VisibleForTesting
   public long getLastDiskErrorCheck() {
     return lastDiskErrorCheck;
   }

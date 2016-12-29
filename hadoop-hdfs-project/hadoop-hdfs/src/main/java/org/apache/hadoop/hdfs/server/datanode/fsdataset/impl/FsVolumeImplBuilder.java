@@ -69,7 +69,7 @@ public class FsVolumeImplBuilder {
   FsVolumeImpl build() throws IOException {
     return new FsVolumeImpl(
         dataset, storageID, sd,
-        fileIoProvider != null ? fileIoProvider : new FileIoProvider(null),
-        conf);
+        fileIoProvider != null ? fileIoProvider :
+            new FileIoProvider(null, null), conf);
   }
 }

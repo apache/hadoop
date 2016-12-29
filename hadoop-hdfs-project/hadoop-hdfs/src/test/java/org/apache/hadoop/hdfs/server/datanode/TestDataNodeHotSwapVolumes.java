@@ -807,7 +807,7 @@ public class TestDataNodeHotSwapVolumes {
     DataNodeTestUtils.injectDataDirFailure(dirToFail);
     // Call and wait DataNode to detect disk failure.
     long lastDiskErrorCheck = dn.getLastDiskErrorCheck();
-    dn.checkDiskErrorAsync();
+    dn.checkDiskErrorAsync(failedVolume);
     while (dn.getLastDiskErrorCheck() == lastDiskErrorCheck) {
       Thread.sleep(100);
     }

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertArrayEquals;
@@ -319,6 +319,12 @@ public class TestDataNodeVolumeFailureReporting {
     DFSTestUtil.createFile(fs, file1, 1024, (short)3, 1L);
     DFSTestUtil.waitReplication(fs, file1, (short)3);
 
+    // Create additional file to trigger failure based volume check on dn1Vol2
+    // and dn2Vol2.
+    Path file2 = new Path("/test2");
+    DFSTestUtil.createFile(fs, file2, 1024, (short)3, 1L);
+    DFSTestUtil.waitReplication(fs, file2, (short)3);
+
     ArrayList<DataNode> dns = cluster.getDataNodes();
     assertTrue("DN1 should be up", dns.get(0).isDatanodeUp());
     assertTrue("DN2 should be up", dns.get(1).isDatanodeUp());
@@ -538,8 +544,6 @@ public class TestDataNodeVolumeFailureReporting {
   private void checkFailuresAtDataNode(DataNode dn,
       long expectedVolumeFailuresCounter, boolean expectCapacityKnown,
       String... expectedFailedVolumes) throws Exception {
-    assertCounter("VolumeFailures", expectedVolumeFailuresCounter,
-        getMetrics(dn.getMetrics().name()));
     FsDatasetSpi<?> fsd = dn.getFSDataset();
     StringBuilder strBuilder = new StringBuilder();
     strBuilder.append("expectedFailedVolumes is ");
@@ -551,6 +555,11 @@ public class TestDataNodeVolumeFailureReporting {
       strBuilder.append(expected + ",");
     }
     LOG.info(strBuilder.toString());
+    final long actualVolumeFailures =
+        getLongCounter("VolumeFailures", getMetrics(dn.getMetrics().name()));
+    assertTrue("Actual async detected volume failures should be greater or " +
+        "equal than " + expectedFailedVolumes,
+        actualVolumeFailures >= expectedVolumeFailuresCounter);
     assertEquals(expectedFailedVolumes.length, fsd.getNumFailedVolumes());
     assertArrayEquals(expectedFailedVolumes,
         convertToAbsolutePaths(fsd.getFailedStorageLocations()));
