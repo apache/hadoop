@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.mapreduce.jobhistory;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.Format;
@@ -44,7 +43,6 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.mapreduce.counters.Limits;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.util.HostUtil;
@@ -87,17 +85,6 @@ public class HistoryViewer {
         // NOT a valid name
         System.err.println("Ignore unrecognized file: " + jobFile.getName());
         throw new IOException(errorMsg);
-      }
-      final Path jobConfPath = new Path(jobFile.getParent(),  jobDetails[0]
-          + "_" + jobDetails[1] + "_" + jobDetails[2] + "_conf.xml");
-      final Configuration jobConf = new Configuration(conf);
-      try {
-        jobConf.addResource(fs.open(jobConfPath), jobConfPath.toString());
-        Limits.reset(conf);
-      } catch (FileNotFoundException fnf) {
-        if (LOG.isWarnEnabled()) {
-          LOG.warn("Missing job conf in history", fnf);
-        }
       }
       JobHistoryParser parser = new JobHistoryParser(fs, jobFile);
       job = parser.parse();

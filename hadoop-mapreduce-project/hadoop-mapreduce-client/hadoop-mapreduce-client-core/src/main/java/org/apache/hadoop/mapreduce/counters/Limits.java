@@ -123,9 +123,4 @@ public class Limits {
   public synchronized LimitExceededException violation() {
     return firstViolation;
   }
-
-  public static synchronized void reset(Configuration conf) {
-    isInited = false;
-    init(conf);
-  }
 }
