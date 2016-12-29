@@ -27,13 +27,16 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerResourceIncreaseRequest;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerResourceIncreaseRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceBlacklistRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.UpdateContainerRequestPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceBlacklistRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
@@ -54,6 +57,10 @@ public class AllocateRequestPBImpl extends AllocateRequest {
   private List<ContainerId> release = null;
   private List<UpdateContainerRequest> updateRequests = null;
   private ResourceBlacklistRequest blacklistRequest = null;
+
+  // This is deprecated, leave it here only to make unit test not break
+  @Deprecated
+  private List<ContainerResourceIncreaseRequest> deprecatedIncreaseReqs = null;
   
   public AllocateRequestPBImpl() {
     builder = AllocateRequestProto.newBuilder();
@@ -103,6 +110,9 @@ public class AllocateRequestPBImpl extends AllocateRequest {
     }
     if (this.blacklistRequest != null) {
       builder.setBlacklistRequest(convertToProtoFormat(this.blacklistRequest));
+    }
+    if (this.deprecatedIncreaseReqs != null) {
+      addIncreaseRequestsToProto();
     }
   }
 
@@ -297,6 +307,56 @@ public class AllocateRequestPBImpl extends AllocateRequest {
     builder.addAllUpdateRequests(iterable);
   }
 
+  private void initIncreaseRequests() {
+    if (this.deprecatedIncreaseReqs != null) {
+      return;
+    }
+    AllocateRequestProtoOrBuilder p = viaProto ? proto : builder;
+    List<YarnProtos.ContainerResourceIncreaseRequestProto> list =
+        p.getIncreaseRequestList();
+    this.deprecatedIncreaseReqs = new ArrayList<>();
+
+    for (YarnProtos.ContainerResourceIncreaseRequestProto c : list) {
+      this.deprecatedIncreaseReqs.add(convertFromProtoFormat(c));
+    }
+  }
+
+  private void addIncreaseRequestsToProto() {
+    maybeInitBuilder();
+    builder.clearIncreaseRequest();
+    if (deprecatedIncreaseReqs == null) {
+      return;
+    }
+    Iterable<YarnProtos.ContainerResourceIncreaseRequestProto> iterable =
+        new Iterable<YarnProtos.ContainerResourceIncreaseRequestProto>() {
+          @Override
+          public Iterator<YarnProtos.ContainerResourceIncreaseRequestProto> iterator() {
+            return new Iterator<YarnProtos.ContainerResourceIncreaseRequestProto>() {
+
+              private Iterator<ContainerResourceIncreaseRequest> iter =
+                  deprecatedIncreaseReqs.iterator();
+
+              @Override
+              public boolean hasNext() {
+                return iter.hasNext();
+              }
+
+              @Override
+              public YarnProtos.ContainerResourceIncreaseRequestProto next() {
+                return convertToProtoFormat(iter.next());
+              }
+
+              @Override
+              public void remove() {
+                throw new UnsupportedOperationException();
+              }
+            };
+
+          }
+        };
+    builder.addAllIncreaseRequest(iterable);
+  }
+
   @Override
   public List<ContainerId> getReleaseList() {
     initReleases();
@@ -391,5 +451,36 @@ public class AllocateRequestPBImpl extends AllocateRequest {
 
   private ResourceBlacklistRequestProto convertToProtoFormat(ResourceBlacklistRequest t) {
     return ((ResourceBlacklistRequestPBImpl)t).getProto();
+  }
+
+  @Deprecated
+  @Override
+  public List<ContainerResourceIncreaseRequest> getIncreaseRequests() {
+    initIncreaseRequests();
+    return this.deprecatedIncreaseReqs;
+  }
+
+  @Deprecated
+  @Override
+  public void setIncreaseRequests(
+      List<ContainerResourceIncreaseRequest> increaseRequests) {
+    if (increaseRequests == null) {
+      return;
+    }
+    initIncreaseRequests();
+    this.deprecatedIncreaseReqs.clear();
+    this.deprecatedIncreaseReqs.addAll(increaseRequests);
+  }
+
+  private ContainerResourceIncreaseRequestPBImpl convertFromProtoFormat(
+      YarnProtos.ContainerResourceIncreaseRequestProto p) {
+    return new ContainerResourceIncreaseRequestPBImpl(p);
+
+  }
+
+  private YarnProtos.ContainerResourceIncreaseRequestProto convertToProtoFormat(
+      ContainerResourceIncreaseRequest t) {
+    return ((ContainerResourceIncreaseRequestPBImpl) t).getProto();
+
   }
 }  
