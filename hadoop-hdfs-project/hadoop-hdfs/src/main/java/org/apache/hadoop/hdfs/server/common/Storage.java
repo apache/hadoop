@@ -124,7 +124,7 @@ public abstract class Storage extends StorageInfo {
   }
 
   protected List<StorageDirectory> storageDirs =
-      new CopyOnWriteArrayList<StorageDirectory>();
+      new CopyOnWriteArrayList<>();
   
   private class DirIterator implements Iterator<StorageDirectory> {
     final StorageDirType dirType;
@@ -879,7 +879,11 @@ public abstract class Storage extends StorageInfo {
   public int getNumStorageDirs() {
     return storageDirs.size();
   }
-  
+
+  public List<StorageDirectory> getStorageDirs() {
+    return storageDirs;
+  }
+
   public StorageDirectory getStorageDir(int idx) {
     return storageDirs.get(idx);
   }

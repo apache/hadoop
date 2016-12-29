@@ -188,11 +188,11 @@ public class DataStorage extends Storage {
   }
 
   public void setRollingUpgradeMarker(String bpid) throws IOException {
-    getBPStorage(bpid).setRollingUpgradeMarkers(storageDirs);
+    getBPStorage(bpid).setRollingUpgradeMarkers(getStorageDirs());
   }
 
   public void clearRollingUpgradeMarker(String bpid) throws IOException {
-    getBPStorage(bpid).clearRollingUpgradeMarkers(storageDirs);
+    getBPStorage(bpid).clearRollingUpgradeMarkers(getStorageDirs());
   }
 
   /**
@@ -505,7 +505,7 @@ public class DataStorage extends Storage {
     }
 
     StringBuilder errorMsgBuilder = new StringBuilder();
-    for (Iterator<StorageDirectory> it = this.storageDirs.iterator();
+    for (Iterator<StorageDirectory> it = getStorageDirs().iterator();
          it.hasNext(); ) {
       StorageDirectory sd = it.next();
       if (dirsToRemove.contains(sd.getRoot())) {
@@ -1027,7 +1027,7 @@ public class DataStorage extends Storage {
     // To handle finalizing a snapshot taken at datanode level while
     // upgrading to federation, if datanode level snapshot previous exists, 
     // then finalize it. Else finalize the corresponding BP.
-    for (StorageDirectory sd : storageDirs) {
+    for (StorageDirectory sd : getStorageDirs()) {
       File prevDir = sd.getPreviousDir();
       if (prevDir.exists()) {
         // data node level storage finalize

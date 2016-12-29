@@ -49,7 +49,7 @@ public class TestBlockPoolSliceStorage {
                               String clusterId) {
       super(namespaceID, bpID, cTime, clusterId);
       addStorageDir(new StorageDirectory(new File("/tmp/dontcare/" + bpID)));
-      assertThat(storageDirs.size(), is(1));
+      assertThat(getStorageDirs().size(), is(1));
     }
   }
 
