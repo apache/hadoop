@@ -18,15 +18,14 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.FakeTimer;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,10 +37,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.core.Is.isA;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -52,9 +48,6 @@ public class TestThrottledAsyncChecker {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestThrottledAsyncChecker.class);
   private static final long MIN_ERROR_CHECK_GAP = 1000;
-
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   /**
    * Test various scheduling combinations to ensure scheduling and
@@ -70,34 +63,34 @@ public class TestThrottledAsyncChecker {
                                     getExecutorService());
 
     // check target1 and ensure we get back the expected result.
-    assertTrue(checker.schedule(target1, true).get());
-    assertThat(target1.numChecks.get(), is(1L));
+    assertTrue(checker.schedule(target1, true).isPresent());
+    waitTestCheckableCheckCount(target1, 1L);
 
     // Check target1 again without advancing the timer. target1 should not
-    // be checked again and the cached result should be returned.
-    assertTrue(checker.schedule(target1, true).get());
-    assertThat(target1.numChecks.get(), is(1L));
+    // be checked again.
+    assertFalse(checker.schedule(target1, true).isPresent());
+    waitTestCheckableCheckCount(target1, 1L);
 
     // Schedule target2 scheduled without advancing the timer.
     // target2 should be checked as it has never been checked before.
-    assertTrue(checker.schedule(target2, true).get());
-    assertThat(target2.numChecks.get(), is(1L));
+    assertTrue(checker.schedule(target2, true).isPresent());
+    waitTestCheckableCheckCount(target2, 1L);
 
     // Advance the timer but just short of the min gap.
     // Neither target1 nor target2 should be checked again.
     timer.advance(MIN_ERROR_CHECK_GAP - 1);
-    assertTrue(checker.schedule(target1, true).get());
-    assertThat(target1.numChecks.get(), is(1L));
-    assertTrue(checker.schedule(target2, true).get());
-    assertThat(target2.numChecks.get(), is(1L));
+    assertFalse(checker.schedule(target1, true).isPresent());
+    waitTestCheckableCheckCount(target1, 1L);
+    assertFalse(checker.schedule(target2, true).isPresent());
+    waitTestCheckableCheckCount(target2, 1L);
 
     // Advance the timer again.
     // Both targets should be checked now.
     timer.advance(MIN_ERROR_CHECK_GAP);
-    assertTrue(checker.schedule(target1, true).get());
-    assertThat(target1.numChecks.get(), is(2L));
-    assertTrue(checker.schedule(target2, true).get());
-    assertThat(target1.numChecks.get(), is(2L));
+    assertTrue(checker.schedule(target1, true).isPresent());
+    waitTestCheckableCheckCount(target1, 2L);
+    assertTrue(checker.schedule(target2, true).isPresent());
+    waitTestCheckableCheckCount(target2, 2L);
   }
 
   @Test (timeout=60000)
@@ -109,13 +102,16 @@ public class TestThrottledAsyncChecker {
         new ThrottledAsyncChecker<>(timer, MIN_ERROR_CHECK_GAP,
                                     getExecutorService());
 
-    ListenableFuture<Boolean> lf = checker.schedule(target, true);
-    Futures.addCallback(lf, callback);
+    Optional<ListenableFuture<Boolean>> olf =
+        checker.schedule(target, true);
+    if (olf.isPresent()) {
+      Futures.addCallback(olf.get(), callback);
+    }
 
     // Request immediate cancellation.
     checker.shutdownAndWait(0, TimeUnit.MILLISECONDS);
     try {
-      assertFalse(lf.get());
+      assertFalse(olf.get().get());
       fail("Failed to get expected InterruptedException");
     } catch (ExecutionException ee) {
       assertTrue(ee.getCause() instanceof InterruptedException);
@@ -130,27 +126,33 @@ public class TestThrottledAsyncChecker {
     final ThrottledAsyncChecker<Boolean, Boolean> checker =
         new ThrottledAsyncChecker<>(timer, MIN_ERROR_CHECK_GAP,
                                     getExecutorService());
-    final ListenableFuture<Boolean> lf1 = checker.schedule(target, true);
-    final ListenableFuture<Boolean> lf2 = checker.schedule(target, true);
+    final Optional<ListenableFuture<Boolean>> olf1 =
+        checker.schedule(target, true);
 
-    // Ensure that concurrent requests return the same future object.
-    assertTrue(lf1 == lf2);
+    final Optional<ListenableFuture<Boolean>> olf2 =
+        checker.schedule(target, true);
+
+    // Ensure that concurrent requests return the future object
+    // for the first caller.
+    assertTrue(olf1.isPresent());
+    assertFalse(olf2.isPresent());
 
     // Unblock the latch and wait for it to finish execution.
     target.latch.countDown();
-    lf1.get();
+    olf1.get().get();
 
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        // We should not get back the same future as before.
+        // We should get an absent Optional.
         // This can take a short while until the internal callback in
         // ThrottledAsyncChecker is scheduled for execution.
         // Also this should not trigger a new check operation as the timer
         // was not advanced. If it does trigger a new check then the test
         // will fail with a timeout.
-        final ListenableFuture<Boolean> lf3 = checker.schedule(target, true);
-        return lf3 != lf2;
+        final Optional<ListenableFuture<Boolean>> olf3 =
+            checker.schedule(target, true);
+        return !olf3.isPresent();
       }
     }, 100, 10000);
   }
@@ -168,15 +170,30 @@ public class TestThrottledAsyncChecker {
         new ThrottledAsyncChecker<>(timer, MIN_ERROR_CHECK_GAP,
             getExecutorService());
 
-    assertTrue(checker.schedule(target1, true).get());
-    assertThat(target1.numChecks.get(), is(1L));
+    assertTrue(checker.schedule(target1, true).isPresent());
+    waitTestCheckableCheckCount(target1, 1L);
     timer.advance(MIN_ERROR_CHECK_GAP + 1);
-    assertFalse(checker.schedule(target1, false).get());
-    assertThat(target1.numChecks.get(), is(2L));
+    assertTrue(checker.schedule(target1, false).isPresent());
+    waitTestCheckableCheckCount(target1, 2L);
+
   }
 
+  private void waitTestCheckableCheckCount(
+      final TestCheckableBase target,
+      final long expectedChecks) throws Exception {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        // This can take a short while until the internal callback in
+        // ThrottledAsyncChecker is scheduled for execution.
+        // If it does trigger a new check then the test
+        // will fail with a timeout.
+        return target.getTotalChecks() == expectedChecks;
+      }
+    }, 100, 10000);
+  }
   /**
-   * Ensure that the exeption from a failed check is cached
+   * Ensure that the exception from a failed check is cached
    * and returned without re-running the check when the minimum
    * gap has not elapsed.
    *
@@ -190,13 +207,11 @@ public class TestThrottledAsyncChecker {
         new ThrottledAsyncChecker<>(timer, MIN_ERROR_CHECK_GAP,
             getExecutorService());
 
-    thrown.expectCause(isA(DummyException.class));
-    checker.schedule(target1, true).get();
-    assertThat(target1.numChecks.get(), is(1L));
+    assertTrue(checker.schedule(target1, true).isPresent());
+    waitTestCheckableCheckCount(target1, 1L);
 
-    thrown.expectCause(isA(DummyException.class));
-    checker.schedule(target1, true).get();
-    assertThat(target1.numChecks.get(), is(2L));
+    assertFalse(checker.schedule(target1, true).isPresent());
+    waitTestCheckableCheckCount(target1, 1L);
   }
 
   /**
@@ -206,28 +221,38 @@ public class TestThrottledAsyncChecker {
     return new ScheduledThreadPoolExecutor(1);
   }
 
+  private abstract static class TestCheckableBase
+      implements Checkable<Boolean, Boolean> {
+    protected final AtomicLong numChecks = new AtomicLong(0);
+
+    public long getTotalChecks() {
+      return numChecks.get();
+    }
+
+    public void incrTotalChecks() {
+      numChecks.incrementAndGet();
+    }
+  }
+
   /**
    * A Checkable that just returns its input.
    */
   private static class NoOpCheckable
-      implements Checkable<Boolean, Boolean> {
-    private final AtomicLong numChecks = new AtomicLong(0);
+      extends TestCheckableBase {
     @Override
     public Boolean check(Boolean context) {
-      numChecks.incrementAndGet();
+      incrTotalChecks();
       return context;
     }
   }
 
   private static class ThrowingCheckable
-      implements Checkable<Boolean, Boolean> {
-    private final AtomicLong numChecks = new AtomicLong(0);
+      extends TestCheckableBase {
     @Override
     public Boolean check(Boolean context) throws DummyException {
-      numChecks.incrementAndGet();
+      incrTotalChecks();
       throw new DummyException();
     }
-
   }
 
   private static class DummyException extends Exception {

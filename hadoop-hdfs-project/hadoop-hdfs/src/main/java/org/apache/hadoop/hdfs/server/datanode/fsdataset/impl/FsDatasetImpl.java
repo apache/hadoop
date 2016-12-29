@@ -1974,17 +1974,22 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    */
   File validateBlockFile(String bpid, long blockId) {
     //Should we check for metadata file too?
-    final File f;
+    File f = null;
+    ReplicaInfo info;
     try(AutoCloseableLock lock = datasetLock.acquire()) {
-      f = getFile(bpid, blockId, false);
+      info = volumeMap.get(bpid, blockId);
+      if (info != null) {
+        f = info.getBlockFile();
+      }
     }
 
     if(f != null ) {
-      if(f.exists())
+      if(f.exists()) {
         return f;
+      }
 
       // if file is not null, but doesn't exist - possibly disk failed
-      datanode.checkDiskErrorAsync();
+      datanode.checkDiskErrorAsync(info.getVolume());
     }
 
     if (LOG.isDebugEnabled()) {

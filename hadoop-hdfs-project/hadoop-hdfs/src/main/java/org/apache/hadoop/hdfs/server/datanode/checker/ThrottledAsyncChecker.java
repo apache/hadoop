@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
+import com.google.common.base.Optional;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -101,13 +102,11 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
    * will receive the same Future.
    */
   @Override
-  public synchronized ListenableFuture<V> schedule(
-      final Checkable<K, V> target,
-      final K context) {
-    LOG.debug("Scheduling a check of {}", target);
-
+  public Optional<ListenableFuture<V>> schedule(
+      final Checkable<K, V> target, final K context) {
+    LOG.info("Scheduling a check for {}", target);
     if (checksInProgress.containsKey(target)) {
-      return checksInProgress.get(target);
+      return Optional.absent();
     }
 
     if (completedChecks.containsKey(target)) {
@@ -115,11 +114,9 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
       final long msSinceLastCheck = timer.monotonicNow() - result.completedAt;
       if (msSinceLastCheck < minMsBetweenChecks) {
         LOG.debug("Skipped checking {}. Time since last check {}ms " +
-            "is less than the min gap {}ms.",
+                "is less than the min gap {}ms.",
             target, msSinceLastCheck, minMsBetweenChecks);
-        return result.result != null ?
-            Futures.immediateFuture(result.result) :
-            Futures.<V>immediateFailedFuture(result.exception);
+        return Optional.absent();
       }
     }
 
@@ -132,7 +129,7 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
         });
     checksInProgress.put(target, lf);
     addResultCachingCallback(target, lf);
-    return lf;
+    return Optional.of(lf);
   }
 
   /**

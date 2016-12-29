@@ -64,7 +64,7 @@ abstract public class ReplicaInfo extends Block
 
   /** This is used by some tests and FsDatasetUtil#computeChecksum. */
   private static final FileIoProvider DEFAULT_FILE_IO_PROVIDER =
-      new FileIoProvider(null);
+      new FileIoProvider(null, null);
 
   /**
    * Constructor

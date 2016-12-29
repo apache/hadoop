@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertArrayEquals;
@@ -76,7 +76,7 @@ public class TestDataNodeVolumeFailureReporting {
   final int WAIT_FOR_HEARTBEATS = 3000;
 
   // Wait at least (2 * re-check + 10 * heartbeat) seconds for
-  // a datanode to be considered dead by the namenode.  
+  // a datanode to be considered dead by the namenode.
   final int WAIT_FOR_DEATH = 15000;
 
   @Before
@@ -158,7 +158,7 @@ public class TestDataNodeVolumeFailureReporting {
     assert (WAIT_FOR_HEARTBEATS * 10) > WAIT_FOR_DEATH;
 
     // Eventually the NN should report two volume failures
-    DFSTestUtil.waitForDatanodeStatus(dm, 3, 0, 2, 
+    DFSTestUtil.waitForDatanodeStatus(dm, 3, 0, 2,
         origCapacity - (1*dnCapacity), WAIT_FOR_HEARTBEATS);
     checkAggregateFailuresAtNameNode(true, 2);
     checkFailuresAtNameNode(dm, dns.get(0), true, dn1Vol1.getAbsolutePath());
@@ -185,7 +185,7 @@ public class TestDataNodeVolumeFailureReporting {
      * did not grow or shrink the data volume while the test was running).
      */
     dnCapacity = DFSTestUtil.getDatanodeCapacity(dm, 0);
-    DFSTestUtil.waitForDatanodeStatus(dm, 3, 0, 3, 
+    DFSTestUtil.waitForDatanodeStatus(dm, 3, 0, 3,
         origCapacity - (3*dnCapacity), WAIT_FOR_HEARTBEATS);
     checkAggregateFailuresAtNameNode(true, 3);
     checkFailuresAtNameNode(dm, dns.get(0), true, dn1Vol1.getAbsolutePath());
@@ -211,7 +211,7 @@ public class TestDataNodeVolumeFailureReporting {
         dn3Vol2.getAbsolutePath());
 
     // The NN considers the DN dead
-    DFSTestUtil.waitForDatanodeStatus(dm, 2, 1, 2, 
+    DFSTestUtil.waitForDatanodeStatus(dm, 2, 1, 2,
         origCapacity - (4*dnCapacity), WAIT_FOR_HEARTBEATS);
     checkAggregateFailuresAtNameNode(true, 2);
     checkFailuresAtNameNode(dm, dns.get(0), true, dn1Vol1.getAbsolutePath());
@@ -236,7 +236,7 @@ public class TestDataNodeVolumeFailureReporting {
      * and that the volume failure count should be reported as zero by
      * both the metrics and the NN.
      */
-    DFSTestUtil.waitForDatanodeStatus(dm, 3, 0, 0, origCapacity, 
+    DFSTestUtil.waitForDatanodeStatus(dm, 3, 0, 0, origCapacity,
         WAIT_FOR_HEARTBEATS);
     checkAggregateFailuresAtNameNode(true, 0);
     dns = cluster.getDataNodes();
@@ -259,8 +259,8 @@ public class TestDataNodeVolumeFailureReporting {
     long origCapacity = DFSTestUtil.getLiveDatanodeCapacity(dm);
     long dnCapacity = DFSTestUtil.getDatanodeCapacity(dm, 0);
 
-    // Fail the first volume on both datanodes (we have to keep the 
-    // third healthy so one node in the pipeline will not fail). 
+    // Fail the first volume on both datanodes (we have to keep the
+    // third healthy so one node in the pipeline will not fail).
     File dn1Vol1 = new File(dataDir, "data"+(2*0+1));
     File dn2Vol1 = new File(dataDir, "data"+(2*1+1));
     DataNodeTestUtils.injectDataDirFailure(dn1Vol1, dn2Vol1);
@@ -271,7 +271,7 @@ public class TestDataNodeVolumeFailureReporting {
     ArrayList<DataNode> dns = cluster.getDataNodes();
 
     // The NN reports two volumes failures
-    DFSTestUtil.waitForDatanodeStatus(dm, 3, 0, 2, 
+    DFSTestUtil.waitForDatanodeStatus(dm, 3, 0, 2,
         origCapacity - (1*dnCapacity), WAIT_FOR_HEARTBEATS);
     checkAggregateFailuresAtNameNode(true, 2);
     checkFailuresAtNameNode(dm, dns.get(0), true, dn1Vol1.getAbsolutePath());
@@ -317,6 +317,12 @@ public class TestDataNodeVolumeFailureReporting {
     Path file1 = new Path("/test1");
     DFSTestUtil.createFile(fs, file1, 1024, (short)3, 1L);
     DFSTestUtil.waitReplication(fs, file1, (short)3);
+
+    // Create additional file to trigger failure based volume check on dn1Vol2
+    // and dn2Vol2.
+    Path file2 = new Path("/test2");
+    DFSTestUtil.createFile(fs, file2, 1024, (short)3, 1L);
+    DFSTestUtil.waitReplication(fs, file2, (short)3);
 
     ArrayList<DataNode> dns = cluster.getDataNodes();
     assertTrue("DN1 should be up", dns.get(0).isDatanodeUp());
@@ -536,8 +542,6 @@ public class TestDataNodeVolumeFailureReporting {
   private void checkFailuresAtDataNode(DataNode dn,
       long expectedVolumeFailuresCounter, boolean expectCapacityKnown,
       String... expectedFailedVolumes) throws Exception {
-    assertCounter("VolumeFailures", expectedVolumeFailuresCounter,
-        getMetrics(dn.getMetrics().name()));
     FsDatasetSpi<?> fsd = dn.getFSDataset();
     assertEquals(expectedFailedVolumes.length, fsd.getNumFailedVolumes());
     assertArrayEquals(expectedFailedVolumes, fsd.getFailedStorageLocations());

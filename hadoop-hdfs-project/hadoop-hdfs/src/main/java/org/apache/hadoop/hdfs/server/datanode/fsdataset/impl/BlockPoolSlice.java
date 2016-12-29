@@ -277,7 +277,10 @@ class BlockPoolSlice {
           fileIoProvider.getFileOutputStream(volume, outFile), "UTF-8")) {
         // mtime is written last, so that truncated writes won't be valid.
         out.write(Long.toString(used) + " " + Long.toString(timer.now()));
-        fileIoProvider.flush(volume, out);
+        // This is only called as part of the volume shutdown.
+        // We explicitly avoid calling flush with fileIoProvider which triggers
+        // volume check upon io exception to avoid cyclic volume checks.
+        out.flush();
       }
     } catch (IOException ioe) {
       // If write failed, the volume might be bad. Since the cache file is

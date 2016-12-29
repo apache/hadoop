@@ -159,7 +159,7 @@ public class TestFsDatasetImpl {
     this.conf = new Configuration();
     this.conf.setLong(DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, 0);
 
-    final FileIoProvider fileIoProvider = new FileIoProvider(conf);
+    final FileIoProvider fileIoProvider = new FileIoProvider(conf, null);
     when(datanode.getFileIoProvider()).thenReturn(fileIoProvider);
     when(datanode.getConf()).thenReturn(conf);
     final DNConf dnConf = new DNConf(datanode);

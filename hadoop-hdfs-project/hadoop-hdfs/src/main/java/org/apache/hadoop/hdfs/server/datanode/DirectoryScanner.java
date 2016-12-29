@@ -855,7 +855,7 @@ public class DirectoryScanner implements Runnable {
       } catch (IOException ioe) {
         LOG.warn("Exception occured while compiling report: ", ioe);
         // Initiate a check on disk failure.
-        datanode.checkDiskErrorAsync();
+        datanode.checkDiskErrorAsync(volume);
         // Ignore this directory and proceed.
         return report;
       }

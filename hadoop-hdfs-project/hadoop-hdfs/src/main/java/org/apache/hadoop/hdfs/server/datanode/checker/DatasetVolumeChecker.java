@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
@@ -191,18 +192,26 @@ public class DatasetVolumeChecker {
 
     for (int i = 0; i < references.size(); ++i) {
       final FsVolumeReference reference = references.getReference(i);
-      allVolumes.add(reference.getVolume());
-      ListenableFuture<VolumeCheckResult> future =
+      Optional<ListenableFuture<VolumeCheckResult>> olf =
           delegateChecker.schedule(reference.getVolume(), IGNORED_CONTEXT);
       LOG.info("Scheduled health check for volume {}", reference.getVolume());
-      Futures.addCallback(future, new ResultHandler(
-          reference, healthyVolumes, failedVolumes, numVolumes, new Callback() {
-        @Override
-        public void call(Set<FsVolumeSpi> ignored1,
-                         Set<FsVolumeSpi> ignored2) {
+      if (olf.isPresent()) {
+        allVolumes.add(reference.getVolume());
+        Futures.addCallback(olf.get(),
+            new ResultHandler(reference, healthyVolumes, failedVolumes,
+                numVolumes, new Callback() {
+              @Override
+              public void call(Set<FsVolumeSpi> ignored1,
+                               Set<FsVolumeSpi> ignored2) {
+                latch.countDown();
+              }
+            }));
+      } else {
+        IOUtils.cleanup(null, reference);
+        if (numVolumes.decrementAndGet() == 0) {
           latch.countDown();
         }
-      }));
+      }
     }
 
     // Wait until our timeout elapses, after which we give up on
@@ -263,18 +272,26 @@ public class DatasetVolumeChecker {
     final Set<FsVolumeSpi> healthyVolumes = new HashSet<>();
     final Set<FsVolumeSpi> failedVolumes = new HashSet<>();
     final AtomicLong numVolumes = new AtomicLong(references.size());
+    boolean added = false;
 
     LOG.info("Checking {} volumes", references.size());
     for (int i = 0; i < references.size(); ++i) {
       final FsVolumeReference reference = references.getReference(i);
       // The context parameter is currently ignored.
-      ListenableFuture<VolumeCheckResult> future =
+      Optional<ListenableFuture<VolumeCheckResult>> olf =
           delegateChecker.schedule(reference.getVolume(), IGNORED_CONTEXT);
-      Futures.addCallback(future, new ResultHandler(
-          reference, healthyVolumes, failedVolumes, numVolumes, callback));
+      if (olf.isPresent()) {
+        added = true;
+        Futures.addCallback(olf.get(),
+            new ResultHandler(reference, healthyVolumes, failedVolumes,
+                numVolumes, callback));
+      } else {
+        IOUtils.cleanup(null, reference);
+        numVolumes.decrementAndGet();
+      }
     }
     numAsyncDatasetChecks.incrementAndGet();
-    return true;
+    return added;
   }
 
   /**
@@ -291,7 +308,7 @@ public class DatasetVolumeChecker {
   }
 
   /**
-   * Check a single volume, returning a {@link ListenableFuture}
+   * Check a single volume asynchronously, returning a {@link ListenableFuture}
    * that can be used to retrieve the final result.
    *
    * If the volume cannot be referenced then it is already closed and
@@ -305,21 +322,32 @@ public class DatasetVolumeChecker {
   public boolean checkVolume(
       final FsVolumeSpi volume,
       Callback callback) {
+    if (volume == null) {
+      LOG.debug("Cannot schedule check on null volume");
+      return false;
+    }
+
     FsVolumeReference volumeReference;
     try {
       volumeReference = volume.obtainReference();
     } catch (ClosedChannelException e) {
       // The volume has already been closed.
-      callback.call(new HashSet<FsVolumeSpi>(), new HashSet<FsVolumeSpi>());
       return false;
     }
-    ListenableFuture<VolumeCheckResult> future =
+
+    Optional<ListenableFuture<VolumeCheckResult>> olf =
         delegateChecker.schedule(volume, IGNORED_CONTEXT);
-    numVolumeChecks.incrementAndGet();
-    Futures.addCallback(future, new ResultHandler(
-        volumeReference, new HashSet<FsVolumeSpi>(), new HashSet<FsVolumeSpi>(),
-        new AtomicLong(1), callback));
-    return true;
+    if (olf.isPresent()) {
+      numVolumeChecks.incrementAndGet();
+      Futures.addCallback(olf.get(),
+          new ResultHandler(volumeReference, new HashSet<FsVolumeSpi>(),
+          new HashSet<FsVolumeSpi>(),
+          new AtomicLong(1), callback));
+      return true;
+    } else {
+      IOUtils.cleanup(null, volumeReference);
+    }
+    return false;
   }
 
   /**
@@ -343,8 +371,8 @@ public class DatasetVolumeChecker {
      *                       successful, add the volume here.
      * @param failedVolumes set of failed volumes. If the disk check fails,
      *                      add the volume here.
-     * @param semaphore semaphore used to trigger callback invocation.
-     * @param callback invoked when the semaphore can be successfully acquired.
+     * @param volumeCounter volumeCounter used to trigger callback invocation.
+     * @param callback invoked when the volumeCounter reaches 0.
      */
     ResultHandler(FsVolumeReference reference,
                   Set<FsVolumeSpi> healthyVolumes,
