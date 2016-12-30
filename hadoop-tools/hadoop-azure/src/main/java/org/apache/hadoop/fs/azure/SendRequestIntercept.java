@@ -94,7 +94,8 @@ public final class SendRequestIntercept extends StorageEvent<SendingRequestEvent
    * Binds a new lister to the operation context so the WASB file system can
    * appropriately intercept sends. By allowing concurrent OOB I/Os, we bypass
    * the blob immutability check when reading streams.
-   * 
+   *
+   * @param storageCreds The credential of blob storage.
    * @param opContext
    *          The operation context to bind to listener.
    * 

@@ -488,8 +488,17 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     Map<ApplicationId, ApplicationStateData> appStates =
         state.getApplicationState();
     LOG.info("Recovering " + appStates.size() + " applications");
-    for (ApplicationStateData appState : appStates.values()) {
-      recoverApplication(appState, state);
+
+    int count = 0;
+
+    try {
+      for (ApplicationStateData appState : appStates.values()) {
+        recoverApplication(appState, state);
+        count += 1;
+      }
+    } finally {
+      LOG.info("Successfully recovered " + count  + " out of "
+          + appStates.size() + " applications");
     }
   }
 

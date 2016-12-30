@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public final class DefaultFileIoEvents implements FileIoEvents {
+public final class DefaultFileIoEvents extends FileIoEvents {
   @Override
   public long beforeMetadataOp(
       @Nullable FsVolumeSpi volume, OPERATION op) {

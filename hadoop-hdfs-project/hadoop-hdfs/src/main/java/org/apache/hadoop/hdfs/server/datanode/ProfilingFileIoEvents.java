@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
  * related operations on datanode volumes.
  */
 @InterfaceAudience.Private
-class ProfilingFileIoEvents implements FileIoEvents {
+class ProfilingFileIoEvents extends FileIoEvents {
 
   @Override
   public long beforeMetadataOp(@Nullable FsVolumeSpi volume,

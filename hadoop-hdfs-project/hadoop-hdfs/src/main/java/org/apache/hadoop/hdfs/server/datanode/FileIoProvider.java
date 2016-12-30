@@ -79,12 +79,16 @@ public class FileIoProvider {
       FileIoProvider.class);
 
   private final FileIoEvents eventHooks;
+  private final DataNode datanode;
 
   /**
    * @param conf  Configuration object. May be null. When null,
    *              the event handlers are no-ops.
+   * @param datanode datanode that owns this FileIoProvider. Used for
+   *               IO error based volume checker callback
    */
-  public FileIoProvider(@Nullable Configuration conf) {
+  public FileIoProvider(@Nullable Configuration conf,
+                        final DataNode datanode) {
     if (conf != null) {
       final Class<? extends FileIoEvents> clazz = conf.getClass(
           DFSConfigKeys.DFS_DATANODE_FILE_IO_EVENTS_CLASS_KEY,
@@ -94,6 +98,7 @@ public class FileIoProvider {
     } else {
       eventHooks = new DefaultFileIoEvents();
     }
+    this.datanode = datanode;
   }
 
   /**
@@ -139,7 +144,7 @@ public class FileIoProvider {
       f.flush();
       eventHooks.afterFileIo(volume, FLUSH, begin, 0);
     } catch (Exception e) {
-      eventHooks.onFailure(volume, FLUSH, e, begin);
+      eventHooks.onFailure(datanode, volume, FLUSH, e, begin);
       throw e;
     }
   }
@@ -157,7 +162,7 @@ public class FileIoProvider {
       fos.getChannel().force(true);
       eventHooks.afterFileIo(volume, SYNC, begin, 0);
     } catch (Exception e) {
-      eventHooks.onFailure(volume, SYNC, e, begin);
+      eventHooks.onFailure(datanode, volume, SYNC, e, begin);
       throw e;
     }
   }
@@ -176,7 +181,7 @@ public class FileIoProvider {
       NativeIO.POSIX.syncFileRangeIfPossible(outFd, offset, numBytes, flags);
       eventHooks.afterFileIo(volume, SYNC, begin, 0);
     } catch (Exception e) {
-      eventHooks.onFailure(volume, SYNC, e, begin);
+      eventHooks.onFailure(datanode, volume, SYNC, e, begin);
       throw e;
     }
   }
@@ -196,7 +201,7 @@ public class FileIoProvider {
           identifier, outFd, offset, length, flags);
       eventHooks.afterMetadataOp(volume, FADVISE, begin);
     } catch (Exception e) {
-      eventHooks.onFailure(volume, FADVISE, e, begin);
+      eventHooks.onFailure(datanode, volume, FADVISE, e, begin);
       throw e;
     }
   }
@@ -214,7 +219,7 @@ public class FileIoProvider {
       eventHooks.afterMetadataOp(volume, DELETE, begin);
       return deleted;
     } catch (Exception e) {
-      eventHooks.onFailure(volume, DELETE, e, begin);
+      eventHooks.onFailure(datanode, volume, DELETE, e, begin);
       throw e;
     }
   }
@@ -236,7 +241,7 @@ public class FileIoProvider {
       }
       return deleted;
     } catch (Exception e) {
-      eventHooks.onFailure(volume, DELETE, e, begin);
+      eventHooks.onFailure(datanode, volume, DELETE, e, begin);
       throw e;
     }
   }
@@ -264,7 +269,7 @@ public class FileIoProvider {
           waitTime, transferTime);
       eventHooks.afterFileIo(volume, TRANSFER, begin, count);
     } catch (Exception e) {
-      eventHooks.onFailure(volume, TRANSFER, e, begin);
+      eventHooks.onFailure(datanode, volume, TRANSFER, e, begin);
       throw e;
     }
   }
@@ -285,7 +290,7 @@ public class FileIoProvider {
       eventHooks.afterMetadataOp(volume, OPEN, begin);
       return created;
     } catch (Exception e) {
-      eventHooks.onFailure(volume, OPEN, e, begin);
+      eventHooks.onFailure(datanode, volume, OPEN, e, begin);
       throw e;
     }
   }
@@ -312,7 +317,7 @@ public class FileIoProvider {
       return fis;
     } catch(Exception e) {
       org.apache.commons.io.IOUtils.closeQuietly(fis);
-      eventHooks.onFailure(volume, OPEN, e, begin);
+      eventHooks.onFailure(datanode, volume, OPEN, e, begin);
       throw e;
     }
   }
@@ -328,7 +333,7 @@ public class FileIoProvider {
    * @param f  File object.
    * @param append  if true, then bytes will be written to the end of the
    *                file rather than the beginning.
-   * @param  FileOutputStream to the given file object.
+   * @return  FileOutputStream to the given file object.
    * @throws FileNotFoundException
    */
   public FileOutputStream getFileOutputStream(
@@ -342,7 +347,7 @@ public class FileIoProvider {
       return fos;
     } catch(Exception e) {
       org.apache.commons.io.IOUtils.closeQuietly(fos);
-      eventHooks.onFailure(volume, OPEN, e, begin);
+      eventHooks.onFailure(datanode, volume, OPEN, e, begin);
       throw e;
     }
   }
@@ -372,7 +377,7 @@ public class FileIoProvider {
    * before delegating to the wrapped stream.
    *
    * @param volume  target volume. null if unavailable.
-   * @param f  File object.
+   * @param fd  File descriptor object.
    * @return  FileOutputStream to the given file object.
    * @throws  FileNotFoundException
    */
@@ -407,7 +412,7 @@ public class FileIoProvider {
       return fis;
     } catch(Exception e) {
       org.apache.commons.io.IOUtils.closeQuietly(fis);
-      eventHooks.onFailure(volume, OPEN, e, begin);
+      eventHooks.onFailure(datanode, volume, OPEN, e, begin);
       throw e;
     }
   }
@@ -438,7 +443,7 @@ public class FileIoProvider {
       return fis;
     } catch(Exception e) {
       org.apache.commons.io.IOUtils.closeQuietly(fis);
-      eventHooks.onFailure(volume, OPEN, e, begin);
+      eventHooks.onFailure(datanode, volume, OPEN, e, begin);
       throw e;
     }
   }
@@ -468,7 +473,7 @@ public class FileIoProvider {
       return raf;
     } catch(Exception e) {
       org.apache.commons.io.IOUtils.closeQuietly(raf);
-      eventHooks.onFailure(volume, OPEN, e, begin);
+      eventHooks.onFailure(datanode, volume, OPEN, e, begin);
       throw e;
     }
   }
@@ -487,7 +492,7 @@ public class FileIoProvider {
       eventHooks.afterMetadataOp(volume, DELETE, begin);
       return deleted;
     } catch(Exception e) {
-      eventHooks.onFailure(volume, DELETE, e, begin);
+      eventHooks.onFailure(datanode, volume, DELETE, e, begin);
       throw e;
     }
   }
@@ -508,7 +513,7 @@ public class FileIoProvider {
       FileUtil.replaceFile(src, target);
       eventHooks.afterMetadataOp(volume, MOVE, begin);
     } catch(Exception e) {
-      eventHooks.onFailure(volume, MOVE, e, begin);
+      eventHooks.onFailure(datanode, volume, MOVE, e, begin);
       throw e;
     }
   }
@@ -530,7 +535,7 @@ public class FileIoProvider {
       Storage.rename(src, target);
       eventHooks.afterMetadataOp(volume, MOVE, begin);
     } catch(Exception e) {
-      eventHooks.onFailure(volume, MOVE, e, begin);
+      eventHooks.onFailure(datanode, volume, MOVE, e, begin);
       throw e;
     }
   }
@@ -552,7 +557,7 @@ public class FileIoProvider {
       FileUtils.moveFile(src, target);
       eventHooks.afterMetadataOp(volume, MOVE, begin);
     } catch(Exception e) {
-      eventHooks.onFailure(volume, MOVE, e, begin);
+      eventHooks.onFailure(datanode, volume, MOVE, e, begin);
       throw e;
     }
   }
@@ -576,7 +581,7 @@ public class FileIoProvider {
       Files.move(src, target, options);
       eventHooks.afterMetadataOp(volume, MOVE, begin);
     } catch(Exception e) {
-      eventHooks.onFailure(volume, MOVE, e, begin);
+      eventHooks.onFailure(datanode, volume, MOVE, e, begin);
       throw e;
     }
   }
@@ -600,7 +605,7 @@ public class FileIoProvider {
       Storage.nativeCopyFileUnbuffered(src, target, preserveFileDate);
       eventHooks.afterFileIo(volume, NATIVE_COPY, begin, length);
     } catch(Exception e) {
-      eventHooks.onFailure(volume, NATIVE_COPY, e, begin);
+      eventHooks.onFailure(datanode, volume, NATIVE_COPY, e, begin);
       throw e;
     }
   }
@@ -625,7 +630,7 @@ public class FileIoProvider {
       isDirectory = !created && dir.isDirectory();
       eventHooks.afterMetadataOp(volume, MKDIRS, begin);
     } catch(Exception e) {
-      eventHooks.onFailure(volume, MKDIRS, e, begin);
+      eventHooks.onFailure(datanode, volume, MKDIRS, e, begin);
       throw e;
     }
 
@@ -651,7 +656,7 @@ public class FileIoProvider {
       succeeded = dir.isDirectory() || dir.mkdirs();
       eventHooks.afterMetadataOp(volume, MKDIRS, begin);
     } catch(Exception e) {
-      eventHooks.onFailure(volume, MKDIRS, e, begin);
+      eventHooks.onFailure(datanode, volume, MKDIRS, e, begin);
       throw e;
     }
 
@@ -677,7 +682,7 @@ public class FileIoProvider {
       eventHooks.afterMetadataOp(volume, LIST, begin);
       return children;
     } catch(Exception e) {
-      eventHooks.onFailure(volume, LIST, e, begin);
+      eventHooks.onFailure(datanode, volume, LIST, e, begin);
       throw e;
     }
   }
@@ -687,7 +692,7 @@ public class FileIoProvider {
    * {@link FileUtil#listFiles(File)}.
    *
    * @param volume  target volume. null if unavailable.
-   * @param   Driectory to be listed.
+   * @param   dir directory to be listed.
    * @return  array of strings representing the directory entries.
    * @throws IOException
    */
@@ -699,7 +704,7 @@ public class FileIoProvider {
       eventHooks.afterMetadataOp(volume, LIST, begin);
       return children;
     } catch(Exception e) {
-      eventHooks.onFailure(volume, LIST, e, begin);
+      eventHooks.onFailure(datanode, volume, LIST, e, begin);
       throw e;
     }
   }
@@ -722,7 +727,7 @@ public class FileIoProvider {
       eventHooks.afterMetadataOp(volume, LIST, begin);
       return children;
     } catch(Exception e) {
-      eventHooks.onFailure(volume, LIST, e, begin);
+      eventHooks.onFailure(datanode, volume, LIST, e, begin);
       throw e;
     }
   }
@@ -744,7 +749,7 @@ public class FileIoProvider {
       eventHooks.afterMetadataOp(volume, LIST, begin);
       return count;
     } catch(Exception e) {
-      eventHooks.onFailure(volume, LIST, e, begin);
+      eventHooks.onFailure(datanode, volume, LIST, e, begin);
       throw e;
     }
   }
@@ -763,7 +768,7 @@ public class FileIoProvider {
       eventHooks.afterMetadataOp(volume, EXISTS, begin);
       return exists;
     } catch(Exception e) {
-      eventHooks.onFailure(volume, EXISTS, e, begin);
+      eventHooks.onFailure(datanode, volume, EXISTS, e, begin);
       throw e;
     }
   }
@@ -804,7 +809,7 @@ public class FileIoProvider {
         eventHooks.afterFileIo(volume, READ, begin, 1);
         return b;
       } catch(Exception e) {
-        eventHooks.onFailure(volume, READ, e, begin);
+        eventHooks.onFailure(datanode, volume, READ, e, begin);
         throw e;
       }
     }
@@ -820,7 +825,7 @@ public class FileIoProvider {
         eventHooks.afterFileIo(volume, READ, begin, numBytesRead);
         return numBytesRead;
       } catch(Exception e) {
-        eventHooks.onFailure(volume, READ, e, begin);
+        eventHooks.onFailure(datanode, volume, READ, e, begin);
         throw e;
       }
     }
@@ -836,7 +841,7 @@ public class FileIoProvider {
         eventHooks.afterFileIo(volume, READ, begin, numBytesRead);
         return numBytesRead;
       } catch(Exception e) {
-        eventHooks.onFailure(volume, READ, e, begin);
+        eventHooks.onFailure(datanode, volume, READ, e, begin);
         throw e;
       }
     }
@@ -878,7 +883,7 @@ public class FileIoProvider {
         super.write(b);
         eventHooks.afterFileIo(volume, WRITE, begin, 1);
       } catch(Exception e) {
-        eventHooks.onFailure(volume, WRITE, e, begin);
+        eventHooks.onFailure(datanode, volume, WRITE, e, begin);
         throw e;
       }
     }
@@ -893,7 +898,7 @@ public class FileIoProvider {
         super.write(b);
         eventHooks.afterFileIo(volume, WRITE, begin, b.length);
       } catch(Exception e) {
-        eventHooks.onFailure(volume, WRITE, e, begin);
+        eventHooks.onFailure(datanode, volume, WRITE, e, begin);
         throw e;
       }
     }
@@ -908,7 +913,7 @@ public class FileIoProvider {
         super.write(b, off, len);
         eventHooks.afterFileIo(volume, WRITE, begin, len);
       } catch(Exception e) {
-        eventHooks.onFailure(volume, WRITE, e, begin);
+        eventHooks.onFailure(datanode, volume, WRITE, e, begin);
         throw e;
       }
     }
@@ -936,7 +941,7 @@ public class FileIoProvider {
         eventHooks.afterFileIo(volume, READ, begin, 1);
         return b;
       } catch(Exception e) {
-        eventHooks.onFailure(volume, READ, e, begin);
+        eventHooks.onFailure(datanode, volume, READ, e, begin);
         throw e;
       }
     }
@@ -949,7 +954,7 @@ public class FileIoProvider {
         eventHooks.afterFileIo(volume, READ, begin, numBytesRead);
         return numBytesRead;
       } catch(Exception e) {
-        eventHooks.onFailure(volume, READ, e, begin);
+        eventHooks.onFailure(datanode, volume, READ, e, begin);
         throw e;
       }
     }
@@ -962,7 +967,7 @@ public class FileIoProvider {
         eventHooks.afterFileIo(volume, READ, begin, numBytesRead);
         return numBytesRead;
       } catch(Exception e) {
-        eventHooks.onFailure(volume, READ, e, begin);
+        eventHooks.onFailure(datanode, volume, READ, e, begin);
         throw e;
       }
     }
@@ -974,7 +979,7 @@ public class FileIoProvider {
         super.write(b);
         eventHooks.afterFileIo(volume, WRITE, begin, 1);
       } catch(Exception e) {
-        eventHooks.onFailure(volume, WRITE, e, begin);
+        eventHooks.onFailure(datanode, volume, WRITE, e, begin);
         throw e;
       }
     }
@@ -986,7 +991,7 @@ public class FileIoProvider {
         super.write(b);
         eventHooks.afterFileIo(volume, WRITE, begin, b.length);
       } catch(Exception e) {
-        eventHooks.onFailure(volume, WRITE, e, begin);
+        eventHooks.onFailure(datanode, volume, WRITE, e, begin);
         throw e;
       }
     }
@@ -998,7 +1003,7 @@ public class FileIoProvider {
         super.write(b, off, len);
         eventHooks.afterFileIo(volume, WRITE, begin, len);
       } catch(Exception e) {
-        eventHooks.onFailure(volume, WRITE, e, begin);
+        eventHooks.onFailure(datanode, volume, WRITE, e, begin);
         throw e;
       }
     }

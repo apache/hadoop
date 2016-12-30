@@ -26,6 +26,22 @@ include(HadoopCommon)
 string(REGEX MATCH . HCD_ONE "${HADOOP_CONF_DIR}")
 string(COMPARE EQUAL ${HCD_ONE} / HADOOP_CONF_DIR_IS_ABS)
 
+if (CMAKE_VERSION VERSION_LESS "3.1")
+  # subset of CMAKE_<LANG>_COMPILER_ID
+  # https://cmake.org/cmake/help/v3.0/variable/CMAKE_LANG_COMPILER_ID.html
+  if (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR
+      CMAKE_C_COMPILER_ID STREQUAL "Clang" OR
+      CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
+    set (CMAKE_C_FLAGS "-std=c99 -Wall -pedantic-errors ${CMAKE_C_FLAGS}")
+  elseif (CMAKE_C_COMPILER_ID STREQUAL "Intel")
+    set (CMAKE_C_FLAGS "-std=c99 -Wall ${CMAKE_C_FLAGS}")
+  elseif (CMAKE_C_COMPILER_ID STREQUAL "SunPro")
+    set (CMAKE_C_FLAGS "-xc99 ${CMAKE_C_FLAGS}")
+  endif ()
+else ()
+  set (CMAKE_C_STANDARD 99)
+endif ()
+
 # Note: can't use -D_FILE_OFFSET_BITS=64, see MAPREDUCE-4258
 string(REPLACE "-D_FILE_OFFSET_BITS=64" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 string(REPLACE "-D_FILE_OFFSET_BITS=64" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")

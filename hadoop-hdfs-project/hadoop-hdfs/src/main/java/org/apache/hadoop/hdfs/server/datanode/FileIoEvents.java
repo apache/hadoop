@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public interface FileIoEvents {
+public abstract class FileIoEvents {
 
   /**
    * Invoked before a filesystem metadata operation.
@@ -42,7 +42,7 @@ public interface FileIoEvents {
    * @return  timestamp at which the operation was started. 0 if
    *          unavailable.
    */
-  long beforeMetadataOp(@Nullable FsVolumeSpi volume, OPERATION op);
+  abstract long beforeMetadataOp(@Nullable FsVolumeSpi volume, OPERATION op);
 
   /**
    * Invoked after a filesystem metadata operation has completed.
@@ -52,7 +52,8 @@ public interface FileIoEvents {
    * @param begin  timestamp at which the operation was started. 0
    *               if unavailable.
    */
-  void afterMetadataOp(@Nullable FsVolumeSpi volume, OPERATION op, long begin);
+  abstract void afterMetadataOp(@Nullable FsVolumeSpi volume, OPERATION op,
+                                long begin);
 
   /**
    * Invoked before a read/write/flush/channel transfer operation.
@@ -63,7 +64,8 @@ public interface FileIoEvents {
    * @return  timestamp at which the operation was started. 0 if
    *          unavailable.
    */
-  long beforeFileIo(@Nullable FsVolumeSpi volume, OPERATION op, long len);
+  abstract long beforeFileIo(@Nullable FsVolumeSpi volume, OPERATION op,
+                             long len);
 
 
   /**
@@ -76,22 +78,38 @@ public interface FileIoEvents {
    * @return  timestamp at which the operation was started. 0 if
    *          unavailable.
    */
-  void afterFileIo(@Nullable FsVolumeSpi volume, OPERATION op,
-                   long begin, long len);
+  abstract void afterFileIo(@Nullable FsVolumeSpi volume, OPERATION op,
+                            long begin, long len);
 
   /**
    * Invoked if an operation fails with an exception.
-   *  @param volume  target volume for the operation. Null if unavailable.
+   * @param volume  target volume for the operation. Null if unavailable.
    * @param op  type of operation.
    * @param e  Exception encountered during the operation.
    * @param begin  time at which the operation was started.
    */
-  void onFailure(
+  abstract void onFailure(
       @Nullable FsVolumeSpi volume, OPERATION op, Exception e, long begin);
+
+  /**
+   * Invoked by FileIoProvider if an operation fails with an exception.
+   * @param datanode datanode that runs volume check upon volume io failure
+   * @param volume  target volume for the operation. Null if unavailable.
+   * @param op  type of operation.
+   * @param e  Exception encountered during the operation.
+   * @param begin  time at which the operation was started.
+   */
+  void onFailure(DataNode datanode,
+      @Nullable FsVolumeSpi volume, OPERATION op, Exception e, long begin) {
+    onFailure(volume, op, e, begin);
+    if (datanode != null && volume != null) {
+      datanode.checkDiskErrorAsync(volume);
+    }
+  }
 
   /**
    * Return statistics as a JSON string.
    * @return
    */
-  @Nullable String getStatistics();
+  @Nullable abstract String getStatistics();
 }

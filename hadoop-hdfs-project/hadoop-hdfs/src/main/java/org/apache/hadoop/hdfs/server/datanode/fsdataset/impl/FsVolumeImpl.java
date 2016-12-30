@@ -1321,8 +1321,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
           this, dir, BlockDirFilter.INSTANCE);
     } catch (IOException ioe) {
       LOG.warn("Exception occured while compiling report: ", ioe);
-      // Initiate a check on disk failure.
-      dataset.datanode.checkDiskErrorAsync();
+      // Volume error check moved to FileIoProvider.
       // Ignore this directory and proceed.
       return report;
     }
