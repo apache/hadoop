@@ -341,8 +341,8 @@ public class ApplicationMaster {
             + appAttemptID.getApplicationId().getClusterTimestamp()
             + ", attemptId=" + appAttemptID.getAttemptId());
 
-    containerMemory = Integer.parseInt(cliParser.getOptionValue(
-            "container_memory", "10"));
+    containerMemory = 4096;
+    //Integer.parseInt(cliParser.getOptionValue("container_memory", "2048"));
     containerVirtualCores = Integer.parseInt(cliParser.getOptionValue(
             "container_vcores", "1"));
 

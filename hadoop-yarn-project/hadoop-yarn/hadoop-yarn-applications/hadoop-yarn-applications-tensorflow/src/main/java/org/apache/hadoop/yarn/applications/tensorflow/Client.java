@@ -261,7 +261,7 @@ public class Client {
         tfClientPy = cliParser.getOptionValue(TFApplication.OPT_TF_CLIENT);
     }
 
-    containerMemory = Integer.parseInt(cliParser.getOptionValue("container_memory", "256"));
+    containerMemory = 4096;//Integer.parseInt(cliParser.getOptionValue("container_memory", "4096"));
     containerVirtualCores = Integer.parseInt(cliParser.getOptionValue("container_vcores", "1"));
 
 

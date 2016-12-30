@@ -162,6 +162,7 @@ public class TFContainer {
         // Set the necessary command to execute on the allocated container
         Vector<CharSequence> vargs = new Vector<CharSequence>(5);
         vargs.add(ApplicationConstants.Environment.JAVA_HOME.$$() + "/bin/java");
+        //vargs.add("-Xmx" + containerMemory + "m");
         vargs.add("-Xmx" + containerMemory + "m");
         String containerClassName = TFServer.class.getName();
         vargs.add(containerClassName);
