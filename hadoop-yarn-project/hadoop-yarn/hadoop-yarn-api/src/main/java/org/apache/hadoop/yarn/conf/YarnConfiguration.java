@@ -1512,7 +1512,7 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "application-timeouts.monitor.interval-ms";
 
   public static final long DEFAULT_RM_APPLICATION_MONITOR_INTERVAL_MS =
-      60000;
+      3000;
 
   /**
    * Interval of time the linux container executor should try cleaning up
