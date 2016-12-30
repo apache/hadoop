@@ -145,7 +145,7 @@ public class TestMROpportunisticMaps {
     job.setNumReduceTasks(numReducers);
 
     // All OPPORTUNISTIC
-    job.setInt(MRJobConfig.MR_NUM_OPPORTUNISTIC_MAPS_PERCENTAGE, percent);
+    job.setInt(MRJobConfig.MR_NUM_OPPORTUNISTIC_MAPS_PERCENT, percent);
     job.setInt("mapreduce.map.maxattempts", 1);
     job.setInt("mapreduce.reduce.maxattempts", 1);
     job.setInt("mapred.test.num_lines", numLines);

@@ -230,10 +230,10 @@ public class RMContainerAllocator extends RMContainerRequestor
     // Init startTime to current time. If all goes well, it will be reset after
     // first attempt to contact RM.
     retrystartTime = System.currentTimeMillis();
-    this.scheduledRequests.setNumOpportunisticMapsPer100(
-        conf.getInt(MRJobConfig.MR_NUM_OPPORTUNISTIC_MAPS_PERCENTAGE,
-            MRJobConfig.DEFAULT_MR_NUM_OPPORTUNISTIC_MAPS_PERCENTAGE));
-    LOG.info(this.scheduledRequests.getNumOpportunisticMapsPer100() +
+    this.scheduledRequests.setNumOpportunisticMapsPercent(
+        conf.getInt(MRJobConfig.MR_NUM_OPPORTUNISTIC_MAPS_PERCENT,
+            MRJobConfig.DEFAULT_MR_NUM_OPPORTUNISTIC_MAPS_PERCENT));
+    LOG.info(this.scheduledRequests.getNumOpportunisticMapsPercent() +
         "% of the mappers will be scheduled using OPPORTUNISTIC containers");
   }
 
@@ -1026,14 +1026,14 @@ public class RMContainerAllocator extends RMContainerRequestor
     final Map<TaskAttemptId, ContainerRequest> maps =
       new LinkedHashMap<TaskAttemptId, ContainerRequest>();
     int mapsMod100 = 0;
-    int numOpportunisticMapsPer100 = 0;
+    int numOpportunisticMapsPercent = 0;
 
-    void setNumOpportunisticMapsPer100(int numMaps) {
-      this.numOpportunisticMapsPer100 = numMaps;
+    void setNumOpportunisticMapsPercent(int numMaps) {
+      this.numOpportunisticMapsPercent = numMaps;
     }
 
-    int getNumOpportunisticMapsPer100() {
-      return this.numOpportunisticMapsPer100;
+    int getNumOpportunisticMapsPercent() {
+      return this.numOpportunisticMapsPercent;
     }
 
     @VisibleForTesting
@@ -1080,7 +1080,7 @@ public class RMContainerAllocator extends RMContainerRequestor
         maps.put(event.getAttemptID(), request);
         addContainerReq(request);
       } else {
-        if (mapsMod100 < numOpportunisticMapsPer100) {
+        if (mapsMod100 < numOpportunisticMapsPercent) {
           request =
               new ContainerRequest(event, PRIORITY_OPPORTUNISTIC_MAP,
                   mapNodeLabelExpression);
