@@ -1058,7 +1058,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
   /**
    * Helper method to create and init {@link #activeServices}. This creates an
    * instance of {@link RMActiveServices} and initializes it.
-   * @throws Exception
    */
   protected void createAndInitActiveServices() {
     activeServices = new RMActiveServices(this);
