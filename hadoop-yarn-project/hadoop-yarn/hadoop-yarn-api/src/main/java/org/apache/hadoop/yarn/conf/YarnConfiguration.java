@@ -314,6 +314,7 @@ public class YarnConfiguration extends Configuration {
 
   /** Setting that controls whether opportunistic container allocation
    *  is enabled or not. */
+  @Unstable
   public static final String OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED =
       RM_PREFIX + "opportunistic-container-allocation.enabled";
   public static final boolean
@@ -321,12 +322,14 @@ public class YarnConfiguration extends Configuration {
 
   /** Number of nodes to be used by the Opportunistic Container allocator for
    * dispatching containers during container allocation. */
+  @Unstable
   public static final String OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED =
       RM_PREFIX + "opportunistic-container-allocation.nodes-used";
   public static final int DEFAULT_OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED =
       10;
 
   /** Frequency for computing least loaded NMs. */
+  @Unstable
   public static final String NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS =
       RM_PREFIX + "nm-container-queuing.sorting-nodes-interval-ms";
   public static final long
@@ -334,6 +337,7 @@ public class YarnConfiguration extends Configuration {
 
   /** Comparator for determining node load for scheduling of opportunistic
    * containers. */
+  @Unstable
   public static final String NM_CONTAINER_QUEUING_LOAD_COMPARATOR =
       RM_PREFIX + "nm-container-queuing.load-comparator";
   public static final String DEFAULT_NM_CONTAINER_QUEUING_LOAD_COMPARATOR =
@@ -341,6 +345,7 @@ public class YarnConfiguration extends Configuration {
 
   /** Value of standard deviation used for calculation of queue limit
    * thresholds. */
+  @Unstable
   public static final String NM_CONTAINER_QUEUING_LIMIT_STDEV =
       RM_PREFIX + "nm-container-queuing.queue-limit-stdev";
   public static final float DEFAULT_NM_CONTAINER_QUEUING_LIMIT_STDEV =
@@ -349,6 +354,7 @@ public class YarnConfiguration extends Configuration {
   /** Min length of container queue at NodeManager. This is a cluster-wide
    * configuration that acts as the lower-bound of optimal queue length
    * calculated by the NodeQueueLoadMonitor */
+  @Unstable
   public static final String NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH =
       RM_PREFIX + "nm-container-queuing.min-queue-length";
   public static final int DEFAULT_NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH = 5;
@@ -356,17 +362,20 @@ public class YarnConfiguration extends Configuration {
   /** Max length of container queue at NodeManager. This is a cluster-wide
    * configuration that acts as the upper-bound of optimal queue length
    * calculated by the NodeQueueLoadMonitor */
+  @Unstable
   public static final String NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH =
       RM_PREFIX + "nm-container-queuing.max-queue-length";
   public static final int DEFAULT_NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH = 15;
 
   /** Min queue wait time for a container at a NodeManager. */
+  @Unstable
   public static final String NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS =
       RM_PREFIX + "nm-container-queuing.min-queue-wait-time-ms";
   public static final int DEFAULT_NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS =
       10;
 
   /** Max queue wait time for a container queue at a NodeManager. */
+  @Unstable
   public static final String NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS =
       RM_PREFIX + "nm-container-queuing.max-queue-wait-time-ms";
   public static final int DEFAULT_NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS =

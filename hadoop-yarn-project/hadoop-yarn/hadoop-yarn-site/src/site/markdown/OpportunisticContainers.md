@@ -72,10 +72,10 @@ By default, allocation of opportunistic containers is performed centrally throug
 
 The following command can be used to run a sample pi map-reduce job, executing 40% of mappers using opportunistic containers (substitute `3.0.0-alpha2-SNAPSHOT` below with the version of Hadoop you are using):
 ```
-$ hadoop jar hadoop-3.0.0-alpha2-SNAPSHOT/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.0.0-alpha2-SNAPSHOT.jar pi -Dmapreduce.job.num-opportunistic-maps-percentage="40" 50 100
+$ hadoop jar hadoop-3.0.0-alpha2-SNAPSHOT/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.0.0-alpha2-SNAPSHOT.jar pi -Dmapreduce.job.num-opportunistic-maps-percent="40" 50 100
 ```
 
-By changing the value of `mapreduce.job.num-opportunistic-maps-percentage` in the above command, we can specify the percentage of mappers that can be executed through opportunistic containers.
+By changing the value of `mapreduce.job.num-opportunistic-maps-percent` in the above command, we can specify the percentage of mappers that can be executed through opportunistic containers.
 
 
 ###<a name="Opportunistic_Containers_in_Web_UI"></a>Opportunistic Containers in Web UI
