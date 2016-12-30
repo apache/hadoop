@@ -72,7 +72,8 @@ abstract class StorageInterface {
    * property, so that all subsequent requests made via the service client will
    * use the new timeout interval. You can also change this value for an
    * individual request, by setting the
-   * {@link RequestOptions#timeoutIntervalInMs} property.
+   * {@link com.microsoft.azure.storage.RequestOptions#timeoutIntervalInMs}
+   * property.
    * 
    * If you are downloading a large blob, you should increase the value of the
    * timeout beyond the default value.
@@ -94,7 +95,8 @@ abstract class StorageInterface {
 
   /**
    * Creates a new Blob service client.
-   * 
+   *
+   * @param account cloud storage account.
    */
   public abstract void createBlobClient(CloudStorageAccount account);
 
@@ -149,8 +151,9 @@ abstract class StorageInterface {
       throws URISyntaxException, StorageException;
 
   /**
-   * A thin wrapper over the {@link CloudBlobDirectory} class that simply
-   * redirects calls to the real object except in unit tests.
+   * A thin wrapper over the
+   * {@link com.microsoft.azure.storage.blob.CloudBlobDirectory} class
+   * that simply redirects calls to the real object except in unit tests.
    */
   @InterfaceAudience.Private
   public abstract static class CloudBlobDirectoryWrapper implements
@@ -184,7 +187,7 @@ abstract class StorageInterface {
      *          A {@link BlobRequestOptions} object that specifies any
      *          additional options for the request. Specifying <code>null</code>
      *          will use the default request options from the associated service
-     *          client ( {@link CloudBlobClient}).
+     *          client ({@link com.microsoft.azure.storage.blob.CloudBlobClient}).
      * @param opContext
      *          An {@link OperationContext} object that represents the context
      *          for the current operation. This object is used to track requests
@@ -207,8 +210,9 @@ abstract class StorageInterface {
   }
 
   /**
-   * A thin wrapper over the {@link CloudBlobContainer} class that simply
-   * redirects calls to the real object except in unit tests.
+   * A thin wrapper over the
+   * {@link com.microsoft.azure.storage.blob.CloudBlobContainer} class
+   * that simply redirects calls to the real object except in unit tests.
    */
   @InterfaceAudience.Private
   public abstract static class CloudBlobContainerWrapper {
@@ -608,8 +612,9 @@ abstract class StorageInterface {
   }
 
   /**
-   * A thin wrapper over the {@link CloudBlockBlob} class that simply redirects calls
-   * to the real object except in unit tests.
+   * A thin wrapper over the
+   * {@link com.microsoft.azure.storage.blob.CloudBlockBlob} class
+   * that simply redirects calls to the real object except in unit tests.
    */
   public abstract interface CloudBlockBlobWrapper
       extends CloudBlobWrapper {
@@ -690,8 +695,9 @@ abstract class StorageInterface {
   }
 
   /**
-   * A thin wrapper over the {@link CloudPageBlob} class that simply redirects calls
-   * to the real object except in unit tests.
+   * A thin wrapper over the
+   * {@link com.microsoft.azure.storage.blob.CloudPageBlob}
+   * class that simply redirects calls to the real object except in unit tests.
    */
   public abstract interface CloudPageBlobWrapper
       extends CloudBlobWrapper {
