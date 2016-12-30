@@ -24,6 +24,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.service.AbstractService;
@@ -32,10 +34,15 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import java.io.IOException;
 
-
-public class LeaderElectorService extends AbstractService implements
-    LeaderLatchListener {
-  public static final Log LOG = LogFactory.getLog(LeaderElectorService.class);
+/**
+ * Leader election implementation that uses Curator.
+ */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+public class CuratorBasedElectorService extends AbstractService
+    implements EmbeddedElector, LeaderLatchListener {
+  public static final Log LOG =
+      LogFactory.getLog(CuratorBasedElectorService.class);
   private LeaderLatch leaderLatch;
   private CuratorFramework curator;
   private RMContext rmContext;
@@ -43,8 +50,8 @@ public class LeaderElectorService extends AbstractService implements
   private String rmId;
   private ResourceManager rm;
 
-  public LeaderElectorService(RMContext rmContext, ResourceManager rm) {
-    super(LeaderElectorService.class.getName());
+  public CuratorBasedElectorService(RMContext rmContext, ResourceManager rm) {
+    super(CuratorBasedElectorService.class.getName());
     this.rmContext = rmContext;
     this.rm = rm;
   }
@@ -74,10 +81,22 @@ public class LeaderElectorService extends AbstractService implements
     super.serviceStop();
   }
 
-  public boolean hasLeaderShip() {
-    return leaderLatch.hasLeadership();
+  @Override
+  public void rejoinElection() {
+    try {
+      closeLeaderLatch();
+      Thread.sleep(1000);
+      initAndStartLeaderLatch();
+    } catch (Exception e) {
+      LOG.info("Fail to re-join election.", e);
+    }
   }
 
+  @Override
+  public String getZookeeperConnectionState() {
+    return "Connected to zookeeper : " +
+        curator.getZookeeperClient().isConnected();
+  }
 
   @Override
   public void isLeader() {
@@ -90,17 +109,7 @@ public class LeaderElectorService extends AbstractService implements
       LOG.info(rmId + " failed to transition to active, giving up leadership",
           e);
       notLeader();
-      reJoinElection();
-    }
-  }
-
-  public void reJoinElection() {
-    try {
-      closeLeaderLatch();
-      Thread.sleep(1000);
-      initAndStartLeaderLatch();
-    } catch (Exception e) {
-      LOG.info("Fail to re-join election.", e);
+      rejoinElection();
     }
   }
 
@@ -109,6 +118,7 @@ public class LeaderElectorService extends AbstractService implements
       leaderLatch.close();
     }
   }
+
   @Override
   public void notLeader() {
     LOG.info(rmId + " relinquish leadership");
