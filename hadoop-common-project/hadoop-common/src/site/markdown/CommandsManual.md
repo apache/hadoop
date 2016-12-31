@@ -39,11 +39,11 @@ Many subcommands honor a common set of configuration options to alter their beha
 
 | GENERIC\_OPTION | Description |
 |:---- |:---- |
-| `-fs <local> or <namenode:port>` | Specify a NameNode. |
 | `-archives <comma separated list of archives> ` | Specify comma separated archives to be unarchived on the compute machines. Applies only to job. |
 | `-conf <configuration file> ` | Specify an application configuration file. |
 | `-D <property>=<value> ` | Use value for given property. |
 | `-files <comma separated list of files> ` | Specify comma separated files to be copied to the map reduce cluster. Applies only to job. |
+| `-fs <file:///> or <hdfs://namenode:port>` | Specify default filesystem URL to use. Overrides 'fs.defaultFS' property from configurations. |
 | `-jt <local> or <resourcemanager:port>` | Specify a ResourceManager. Applies only to job. |
 | `-libjars <comma seperated list of jars> ` | Specify comma separated jar files to include in the classpath. Applies only to job. |
 
