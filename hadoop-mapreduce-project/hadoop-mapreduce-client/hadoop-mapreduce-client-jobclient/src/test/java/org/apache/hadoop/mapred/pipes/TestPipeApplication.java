@@ -306,7 +306,9 @@ public class TestPipeApplication {
       assertTrue(out.toString().contains(
               "-D <property=value>            use value for given property"));
       assertTrue(out.toString().contains(
-              "-fs <local|namenode:port>      specify a namenode"));
+          "-fs <file:///|hdfs://namenode:port> "
+          + "specify default filesystem URL to use, overrides "
+          + "'fs.defaultFS' property from configurations."));
       assertTrue(out.toString().contains(
               "-jt <local|resourcemanager:port>    specify a ResourceManager"));
       assertTrue(out
