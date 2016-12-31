@@ -667,7 +667,9 @@ public class WebHdfsFileSystem extends FileSystem
           url = new URL(conn.getHeaderField("Location"));
           redirectHost = url.getHost() + ":" + url.getPort();
         } finally {
-          conn.disconnect();
+          // Don't call conn.disconnect() to allow connection reuse
+          // See http://tinyurl.com/java7-http-keepalive
+          conn.getInputStream().close();
         }
       }
       try {
@@ -899,7 +901,9 @@ public class WebHdfsFileSystem extends FileSystem
         LOG.debug("Response decoding failure.", e);
         throw ioe;
       } finally {
-        conn.disconnect();
+        // Don't call conn.disconnect() to allow connection reuse
+        // See http://tinyurl.com/java7-http-keepalive
+        conn.getInputStream().close();
       }
     }
 
@@ -946,6 +950,9 @@ public class WebHdfsFileSystem extends FileSystem
             try {
               validateResponse(op, conn, true);
             } finally {
+              // This is a connection to DataNode.  Let's disconnect since
+              // there is little chance that the connection will be reused
+              // any time soonl
               conn.disconnect();
             }
           }
