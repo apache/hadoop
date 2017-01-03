@@ -23,7 +23,6 @@
 </parent>
   <artifactId>hadoop-client</artifactId>
   <version>3.0.0-alpha2-SNAPSHOT</version>
-  <packaging>pom</packaging>
 
   <description>Apache Hadoop Client aggregation pom with dependencies exposed</description>
   <name>Apache Hadoop Client Aggregator</name>
