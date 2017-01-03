@@ -392,36 +392,3 @@ Object stores with these characteristics, can not be used as a direct replacemen
 for HDFS. In terms of this specification, their implementations of the
 specified operations do not match those required. They are considered supported
 by the Hadoop development community, but not to the same extent as HDFS.
-
-#### Timestamps
-
-The HDFS filesystem does not update the modification time while it is being written to.
-
-Specifically
-
-* `FileSystem.create()` creation: a zero-byte file is listed; creation and modification time is
-  set to the current time as seen on the NameNode.
-* Writes to a file via the output stream returned in the `create()` call: the modification
-  time *does not change*.
-* When `OutputStream.close()` is called, all remaining data is written, the file closed and
-  the NameNode updated with the final size of the file. The modification time is set to
-  the time the file was closed.
-* Opening a file for appends via an `append()` operation does not change the modification
-  time of the file until the `close()` call is made on the output stream.
-* `FileSystem.setTimes()` can be used to explicitly set the time on a file.
-* The rarely used operations:  `FileSystem.concat()`, `createSnapshot()`, `createSymlink()` and
-  `truncate()` all update the modification time.
-
-Other filesystems may have different behaviors.
-
-Object stores have a significantly simpler view of time:
-
- * The file only becomes visible at the end of the write operation; this also sets
-   the creation time of the file.
- * The timestamp is likely to be in UTC or the TZ of the object store. If the
-   client is in a different timezone, the timestamp may be ahead or behind that
-   of the client.
- * A file's modification time is always the same as its creation time.
- * The `FileSystem.setTimes()` operation to set file timestamps will generally be ignored.
- * If `FileSystem.append()` is supported, the changes and modification time
- are likely to only become visible after the output stream is closed.
