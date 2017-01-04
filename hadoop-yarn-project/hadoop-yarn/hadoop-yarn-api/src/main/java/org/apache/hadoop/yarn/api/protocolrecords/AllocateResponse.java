@@ -29,6 +29,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerResourceDecrease;
+import org.apache.hadoop.yarn.api.records.ContainerResourceIncrease;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -95,6 +97,35 @@ public abstract class AllocateResponse {
     response.setPreemptionMessage(preempt);
     response.setNMTokens(nmTokens);
     return response;
+  }
+
+  /**
+   * Use {@link AllocateResponse#newInstance(int, List, List, List, Resource,
+   * AMCommand, int, PreemptionMessage, List, Token, List)} instead
+   * @param responseId responseId
+   * @param completedContainers completedContainers
+   * @param allocatedContainers allocatedContainers
+   * @param updatedNodes updatedNodes
+   * @param availResources availResources
+   * @param command command
+   * @param numClusterNodes numClusterNodes
+   * @param preempt preempt
+   * @param nmTokens nmTokens
+   * @param increasedContainers increasedContainers
+   * @param decreasedContainers decreasedContainers
+   * @return AllocateResponse
+   */
+  @Deprecated
+  public static AllocateResponse newInstance(int responseId,
+      List<ContainerStatus> completedContainers,
+      List<Container> allocatedContainers, List<NodeReport> updatedNodes,
+      Resource availResources, AMCommand command, int numClusterNodes,
+      PreemptionMessage preempt, List<NMToken> nmTokens,
+      List<ContainerResourceIncrease> increasedContainers,
+      List<ContainerResourceDecrease> decreasedContainers) {
+    return newInstance(responseId, completedContainers, allocatedContainers,
+        updatedNodes, availResources, command, numClusterNodes, preempt,
+        nmTokens);
   }
 
   @Public
@@ -338,4 +369,18 @@ public abstract class AllocateResponse {
   @Unstable
   public void setUpdateErrors(List<UpdateContainerError> updateErrors) {
   }
+
+  /**
+   * Use {@link AllocateResponse#getUpdatedContainers()} instead
+   * @return null
+   */
+  @Deprecated
+  public abstract List<ContainerResourceIncrease> getIncreasedContainers();
+
+  /**
+   * Use {@link AllocateResponse#getUpdatedContainers()} instead
+   * @return null
+   */
+  @Deprecated
+  public abstract List<ContainerResourceDecrease> getDecreasedContainers();
 }
