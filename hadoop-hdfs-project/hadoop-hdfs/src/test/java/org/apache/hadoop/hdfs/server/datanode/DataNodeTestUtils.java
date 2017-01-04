@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.mockito.Mockito;
@@ -241,5 +242,19 @@ public class DataNodeTestUtils {
       // cover this case.
       LOG.warn("Could not reconfigure DataNode.", e);
     }
+  }
+
+  /** Get the FsVolume on the given basePath. */
+  public static FsVolumeImpl getVolume(DataNode dn, File basePath) throws
+      IOException {
+    try (FsDatasetSpi.FsVolumeReferences volumes = dn.getFSDataset()
+        .getFsVolumeReferences()) {
+      for (FsVolumeSpi vol : volumes) {
+        if (vol.getBaseURI().equals(basePath.toURI())) {
+          return (FsVolumeImpl) vol;
+        }
+      }
+    }
+    return null;
   }
 }
