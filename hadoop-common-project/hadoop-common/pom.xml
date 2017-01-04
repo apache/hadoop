@@ -514,6 +514,10 @@
         <snappy.lib></snappy.lib>
         <snappy.include></snappy.include>
         <require.snappy>false</require.snappy>
+        <zstd.prefix></zstd.prefix>
+        <zstd.lib></zstd.lib>
+        <zstd.include></zstd.include>
+        <require.zstd>false</require.zstd>
         <openssl.prefix></openssl.prefix>
         <openssl.lib></openssl.lib>
         <openssl.include></openssl.include>
@@ -568,6 +572,8 @@
                     <javahClassName>org.apache.hadoop.security.JniBasedUnixGroupsNetgroupMapping</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.snappy.SnappyCompressor</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.snappy.SnappyDecompressor</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.compress.zstd.ZStandardCompressor</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.compress.zstd.ZStandardDecompressor</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.lz4.Lz4Compressor</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.lz4.Lz4Decompressor</javahClassName>
                     <javahClassName>org.apache.hadoop.crypto.OpensslCipher</javahClassName>
@@ -599,6 +605,10 @@
                     <CUSTOM_SNAPPY_PREFIX>${snappy.prefix}</CUSTOM_SNAPPY_PREFIX>
                     <CUSTOM_SNAPPY_LIB>${snappy.lib} </CUSTOM_SNAPPY_LIB>
                     <CUSTOM_SNAPPY_INCLUDE>${snappy.include} </CUSTOM_SNAPPY_INCLUDE>
+                    <REQUIRE_ZSTD>${require.zstd}</REQUIRE_ZSTD>
+                    <CUSTOM_ZSTD_PREFIX>${zstd.prefix}</CUSTOM_ZSTD_PREFIX>
+                    <CUSTOM_ZSTD_LIB>${zstd.lib}</CUSTOM_ZSTD_LIB>
+                    <CUSTOM_ZSTD_INCLUDE>${zstd.include}</CUSTOM_ZSTD_INCLUDE>
                     <REQUIRE_OPENSSL>${require.openssl} </REQUIRE_OPENSSL>
                     <CUSTOM_OPENSSL_PREFIX>${openssl.prefix} </CUSTOM_OPENSSL_PREFIX>
                     <CUSTOM_OPENSSL_LIB>${openssl.lib} </CUSTOM_OPENSSL_LIB>
@@ -636,6 +646,11 @@
         <snappy.include></snappy.include>
         <require.snappy>false</require.snappy>
         <bundle.snappy.in.bin>true</bundle.snappy.in.bin>
+        <zstd.prefix></zstd.prefix>
+        <zstd.lib></zstd.lib>
+        <zstd.include></zstd.include>
+        <require.ztsd>false</require.ztsd>
+        <bundle.zstd.in.bin>true</bundle.zstd.in.bin>
         <openssl.prefix></openssl.prefix>
         <openssl.lib></openssl.lib>
         <openssl.include></openssl.include>
@@ -685,6 +700,8 @@
                     <javahClassName>org.apache.hadoop.security.JniBasedUnixGroupsNetgroupMapping</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.snappy.SnappyCompressor</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.snappy.SnappyDecompressor</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.compress.zstd.ZStandardCompressor</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.compress.zstd.ZStandardDecompressor</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.lz4.Lz4Compressor</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.lz4.Lz4Decompressor</javahClassName>
                     <javahClassName>org.apache.hadoop.crypto.OpensslCipher</javahClassName>
@@ -736,6 +753,10 @@
                     <argument>/p:CustomSnappyLib=${snappy.lib}</argument>
                     <argument>/p:CustomSnappyInclude=${snappy.include}</argument>
                     <argument>/p:RequireSnappy=${require.snappy}</argument>
+                    <argument>/p:CustomZstdPrefix=${zstd.prefix}</argument>
+                    <argument>/p:CustomZstdLib=${zstd.lib}</argument>
+                    <argument>/p:CustomZstdInclude=${zstd.include}</argument>
+                    <argument>/p:RequireZstd=${require.ztsd}</argument>
                     <argument>/p:CustomOpensslPrefix=${openssl.prefix}</argument>
                     <argument>/p:CustomOpensslLib=${openssl.lib}</argument>
                     <argument>/p:CustomOpensslInclude=${openssl.include}</argument>

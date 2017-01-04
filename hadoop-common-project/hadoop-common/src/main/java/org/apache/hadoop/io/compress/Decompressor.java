@@ -95,7 +95,7 @@ public interface Decompressor {
    * @param b Buffer for the compressed data
    * @param off Start offset of the data
    * @param len Size of the buffer
-   * @return The actual number of bytes of compressed data.
+   * @return The actual number of bytes of uncompressed data.
    * @throws IOException
    */
   public int decompress(byte[] b, int off, int len) throws IOException;

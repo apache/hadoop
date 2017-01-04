@@ -94,6 +94,31 @@ else()
     endif()
 endif()
 
+# Require Zstandard
+SET(STORED_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+hadoop_set_find_shared_library_version("1")
+find_library(ZSTD_LIBRARY
+        NAMES zstd
+        PATHS ${CUSTOM_ZSTD_PREFIX} ${CUSTOM_ZSTD_PREFIX}/lib
+        ${CUSTOM_ZSTD_PREFIX}/lib64 ${CUSTOM_ZSTD_LIB})
+SET(CMAKE_FIND_LIBRARY_SUFFIXES ${STORED_CMAKE_FIND_LIBRARY_SUFFIXES})
+find_path(ZSTD_INCLUDE_DIR
+        NAMES zstd.h
+        PATHS ${CUSTOM_ZSTD_PREFIX} ${CUSTOM_ZSTD_PREFIX}/include
+        ${CUSTOM_ZSTD_INCLUDE})
+if (ZSTD_LIBRARY AND ZSTD_INCLUDE_DIR)
+    GET_FILENAME_COMPONENT(HADOOP_ZSTD_LIBRARY ${ZSTD_LIBRARY} NAME)
+    set(ZSTD_SOURCE_FILES
+            "${SRC}/io/compress/zstd/ZStandardCompressor.c"
+            "${SRC}/io/compress/zstd/ZStandardDecompressor.c")
+else (ZSTD_LIBRARY AND ZSTD_INCLUDE_DIR)
+    set(ZSTD_INCLUDE_DIR "")
+    set(ZSTD_SOURCE_FILES "")
+    IF(REQUIRE_ZSTD)
+        MESSAGE(FATAL_ERROR "Required zstandard library could not be found.  ZSTD_LIBRARY=${ZSTD_LIBRARY}, ZSTD_INCLUDE_DIR=${ZSTD_INCLUDE_DIR}, CUSTOM_ZSTD_INCLUDE_DIR=${CUSTOM_ZSTD_INCLUDE_DIR}, CUSTOM_ZSTD_PREFIX=${CUSTOM_ZSTD_PREFIX}, CUSTOM_ZSTD_INCLUDE=${CUSTOM_ZSTD_INCLUDE}")
+    ENDIF(REQUIRE_ZSTD)
+endif (ZSTD_LIBRARY AND ZSTD_INCLUDE_DIR)
+
 # Build hardware CRC32 acceleration, if supported on the platform.
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^i.86$" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "amd64")
   set(BULK_CRC_ARCH_SOURCE_FIlE "${SRC}/util/bulk_crc32_x86.c")
@@ -169,6 +194,7 @@ include_directories(
     ${ZLIB_INCLUDE_DIRS}
     ${BZIP2_INCLUDE_DIR}
     ${SNAPPY_INCLUDE_DIR}
+    ${ZSTD_INCLUDE_DIR}
     ${OPENSSL_INCLUDE_DIR}
     ${SRC}/util
 )
@@ -182,6 +208,7 @@ hadoop_add_dual_library(hadoop
     ${SRC}/io/compress/lz4/lz4.c
     ${SRC}/io/compress/lz4/lz4hc.c
     ${SNAPPY_SOURCE_FILES}
+    ${ZSTD_SOURCE_FILES}
     ${OPENSSL_SOURCE_FILES}
     ${SRC}/io/compress/zlib/ZlibCompressor.c
     ${SRC}/io/compress/zlib/ZlibDecompressor.c
