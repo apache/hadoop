@@ -41,6 +41,9 @@
     <snappy.lib></snappy.lib>
     <bundle.snappy>false</bundle.snappy>
     <bundle.snappy.in.bin>false</bundle.snappy.in.bin>
+    <zstd.lib></zstd.lib>
+    <bundle.zstd>false</bundle.zstd>
+    <bundle.zstd.in.bin>false</bundle.zstd.in.bin>
     <isal.lib></isal.lib>
     <bundle.isal>false</bundle.isal>
     <openssl.lib></openssl.lib>
@@ -363,6 +366,9 @@
                     <argument>--snappybinbundle=${bundle.snappy.in.bin}</argument>
                     <argument>--snappylib=${snappy.lib}</argument>
                     <argument>--snappylibbundle=${bundle.snappy}</argument>
+                    <argument>--zstdbinbundle=${bundle.zstd.in.bin}</argument>
+                    <argument>--zstdlib=${zstd.lib}</argument>
+                    <argument>--zstdlibbundle=${bundle.zstd}</argument>
                   </arguments>
                 </configuration>
               </execution>

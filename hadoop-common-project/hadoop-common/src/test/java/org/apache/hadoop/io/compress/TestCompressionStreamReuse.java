@@ -37,6 +37,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 import org.junit.Test;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 public class TestCompressionStreamReuse {
   private static final Log LOG = LogFactory
@@ -56,6 +57,13 @@ public class TestCompressionStreamReuse {
   public void testGzipCompressStreamReuse() throws IOException {
     resetStateTest(conf, seed, count,
         "org.apache.hadoop.io.compress.GzipCodec");
+  }
+
+  @Test
+  public void testZStandardCompressStreamReuse() throws IOException {
+    assumeTrue(ZStandardCodec.isNativeCodeLoaded());
+    resetStateTest(conf, seed, count,
+        "org.apache.hadoop.io.compress.ZStandardCodec");
   }
 
   @Test
