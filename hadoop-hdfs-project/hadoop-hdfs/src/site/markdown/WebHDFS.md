@@ -200,6 +200,11 @@ In the REST API, the prefix "`/webhdfs/v1`" is inserted in the path and a query 
 
       http://<HOST>:<HTTP_PORT>/webhdfs/v1/<PATH>?op=...
 
+**Note** that if WebHDFS is secured with SSL, then the scheme should be "`swebhdfs://`".
+
+      swebhdfs://<HOST>:<HTTP_PORT>/<PATH>
+
+
 ### HDFS Configuration Options
 
 Below are the HDFS configuration options for WebHDFS.
