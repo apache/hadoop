@@ -412,7 +412,7 @@
             <executions>
               <execution>
                 <id>dist</id>
-                <phase>prepare-package</phase>
+                <phase>package</phase>
                 <goals>
                   <goal>single</goal>
                 </goals>
