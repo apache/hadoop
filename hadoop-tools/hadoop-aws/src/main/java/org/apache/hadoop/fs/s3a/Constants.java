@@ -335,6 +335,13 @@ public final class Constants {
   public static final long S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT = 100;
 
   /**
+   * The maximum put or delete requests per BatchWriteItem request.
+   *
+   * Refer to Amazon API reference for this limit.
+   */
+  public static final int S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT = 25;
+
+  /**
    * V1 committer.
    */
   @InterfaceStability.Unstable

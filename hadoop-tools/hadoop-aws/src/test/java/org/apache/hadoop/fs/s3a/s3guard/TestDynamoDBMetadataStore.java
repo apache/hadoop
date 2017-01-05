@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collection;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
@@ -30,6 +32,7 @@ import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -54,8 +57,8 @@ import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import static org.apache.hadoop.fs.s3a.Constants.S3_CLIENT_FACTORY_IMPL;
-import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.keySchema;
+import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
 
 /**
  * Test that {@link DynamoDBMetadataStore} implements {@link MetadataStore}.
@@ -75,6 +78,8 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestDynamoDBMetadataStore.class);
   private static final String BUCKET = "TestDynamoDBMetadataStore";
+  private static final String S3URI =
+      URI.create(Constants.FS_S3A + "://" + BUCKET).toString();
 
   /** The DynamoDBLocal dynamoDBLocalServer instance for testing. */
   private static DynamoDBProxyServer dynamoDBLocalServer;
@@ -143,8 +148,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
       // using mocked S3 clients
       conf.setClass(S3_CLIENT_FACTORY_IMPL, MockS3ClientFactory.class,
           S3ClientFactory.class);
-      conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
-          URI.create(Constants.FS_S3A + "://" + BUCKET).toString());
+      conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, S3URI);
       // setting config for creating a DynamoDBClient against local server
       conf.set(Constants.ACCESS_KEY, "dummy-access-key");
       conf.set(Constants.SECRET_KEY, "dummy-secret-key");
@@ -177,7 +181,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
       throws IOException {
     String owner = UserGroupInformation.getCurrentUser().getShortUserName();
     return isDir
-        ? new S3AFileStatus(false, path, owner)
+        ? new S3AFileStatus(true, path, owner)
         : new S3AFileStatus(size, getModTime(), path, BLOCK_SIZE, owner);
   }
 
@@ -219,6 +223,72 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
       assertEquals("Unexpected key schema found!",
           keySchema(),
           ddbms.getTable().describe().getKeySchema());
+    }
+  }
+
+  /**
+   * Test that for a large batch write request, the limit is handled correctly.
+   */
+  @Test
+  public void testBatchWrite() throws IOException {
+    final int[] numMetasToDeleteOrPut = {
+        -1, // null
+        0, // empty collection
+        1, // one path
+        S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT, // exact limit of a batch request
+        S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT + 1 // limit + 1
+    };
+    for (int numOldMetas : numMetasToDeleteOrPut) {
+      for (int numNewMetas : numMetasToDeleteOrPut) {
+        doTestBatchWrite(numOldMetas, numNewMetas);
+      }
+    }
+  }
+
+  private void doTestBatchWrite(int numDelete, int numPut) throws IOException {
+    final String root = S3URI + "/testBatchWrite_" + numDelete + '_' + numPut;
+    final Path oldDir = new Path(root, "oldDir");
+    final Path newDir = new Path(root, "newDir");
+    LOG.info("doTestBatchWrite: oldDir={}, newDir={}", oldDir, newDir);
+
+    try (DynamoDBMetadataStore ms = createContract().getMetadataStore()) {
+      ms.put(new PathMetadata(basicFileStatus(oldDir, 0, true)));
+      ms.put(new PathMetadata(basicFileStatus(newDir, 0, true)));
+
+      final Collection<PathMetadata> oldMetas =
+          numDelete < 0 ? null : new ArrayList<>(numDelete);
+      for (int i = 0; i < numDelete; i++) {
+        oldMetas.add(new PathMetadata(
+            basicFileStatus(new Path(oldDir, "child" + i), i, true)));
+      }
+      final Collection<PathMetadata> newMetas =
+          numPut < 0 ? null : new ArrayList<>(numPut);
+      for (int i = 0; i < numPut; i++) {
+        newMetas.add(new PathMetadata(
+            basicFileStatus(new Path(newDir, "child" + i), i, false)));
+      }
+
+      Collection<Path> pathsToDelete = null;
+      if (oldMetas != null) {
+        // put all metadata of old paths and verify
+        ms.put(new DirListingMetadata(oldDir, oldMetas, false));
+        assertEquals(0, ms.listChildren(newDir).numEntries());
+        assertTrue(CollectionUtils.isEqualCollection(oldMetas,
+            ms.listChildren(oldDir).getListing()));
+
+        pathsToDelete = new ArrayList<>(oldMetas.size());
+        for (PathMetadata meta : oldMetas) {
+          pathsToDelete.add(meta.getFileStatus().getPath());
+        }
+      }
+
+      // move the old paths to new paths and verify
+      ms.move(pathsToDelete, newMetas);
+      assertEquals(0, ms.listChildren(oldDir).numEntries());
+      if (newMetas != null) {
+        assertTrue(CollectionUtils.isEqualCollection(newMetas,
+            ms.listChildren(newDir).getListing()));
+      }
     }
   }
 

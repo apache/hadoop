@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ import com.amazonaws.services.dynamodbv2.document.BatchWriteItemOutcome;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.ItemCollection;
+import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
 import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.TableWriteItems;
@@ -344,20 +346,68 @@ public class DynamoDBMetadataStore implements MetadataStore {
   @Override
   public void move(Collection<Path> pathsToDelete,
       Collection<PathMetadata> pathsToCreate) throws IOException {
-    final TableWriteItems writeItems = new TableWriteItems(tableName)
-        .withItemsToPut(pathMetadataToItem(pathsToCreate))
-        .withPrimaryKeysToDelete(pathToKey(pathsToDelete));
-    try {
-      BatchWriteItemOutcome res = dynamoDB.batchWriteItem(writeItems);
+    if (pathsToDelete == null && pathsToCreate == null) {
+      return;
+    }
 
+    LOG.debug("Moving paths of table {} in region {}: {} paths to delete and {}"
+        + " paths to create", tableName, region,
+        pathsToDelete == null ? 0 : pathsToDelete.size(),
+        pathsToCreate == null ? 0 : pathsToCreate.size());
+    LOG.trace("move: pathsToDelete = {}, pathsToCreate = {}",
+        pathsToDelete, pathsToCreate);
+    try {
+      processBatchWriteRequest(pathToKey(pathsToDelete),
+          pathMetadataToItem(pathsToCreate));
+    } catch (AmazonClientException e) {
+      throw translateException("move", (String) null, e);
+    }
+  }
+
+  /**
+   * Helper method to issue a batch write request to DynamoDB.
+   *
+   * Callers of this method should catch the {@link AmazonClientException} and
+   * translate it for better error report and easier debugging.
+   * @param keysToDelete primary keys to be deleted; can be null
+   * @param itemsToPut new items to be put; can be null
+   */
+  private void processBatchWriteRequest(PrimaryKey[] keysToDelete,
+      Item[] itemsToPut) {
+    final int totalToDelete = (keysToDelete == null ? 0 : keysToDelete.length);
+    final int totalToPut = (itemsToPut == null ? 0 : itemsToPut.length);
+    int count = 0;
+    while (count < totalToDelete + totalToPut) {
+      final TableWriteItems writeItems = new TableWriteItems(tableName);
+      int numToDelete = 0;
+      if (keysToDelete != null
+          && count < totalToDelete) {
+        numToDelete = Math.min(S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT,
+            totalToDelete - count);
+        writeItems.withPrimaryKeysToDelete(
+            Arrays.copyOfRange(keysToDelete, count, count + numToDelete));
+        count += numToDelete;
+      }
+
+      if (numToDelete < S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT
+          && itemsToPut != null
+          && count < totalToDelete + totalToPut) {
+        final int numToPut = Math.min(
+            S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT - numToDelete,
+            totalToDelete + totalToPut - count);
+        final int index = count - totalToDelete;
+        writeItems.withItemsToPut(
+            Arrays.copyOfRange(itemsToPut, index, index + numToPut));
+        count += numToPut;
+      }
+
+      BatchWriteItemOutcome res = dynamoDB.batchWriteItem(writeItems);
       // Check for unprocessed keys in case of exceeding provisioned throughput
       Map<String, List<WriteRequest>> unprocessed = res.getUnprocessedItems();
       while (unprocessed.size() > 0) {
         res = dynamoDB.batchWriteItemUnprocessed(unprocessed);
         unprocessed = res.getUnprocessedItems();
       }
-    } catch (AmazonClientException e) {
-      throw translateException("createTable", (String) null, e);
     }
   }
 

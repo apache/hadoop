@@ -20,10 +20,8 @@ package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.KeyAttribute;
@@ -145,10 +143,15 @@ final class PathMetadataDynamoDBTranslation {
    *
    * @see #pathMetadataToItem(PathMetadata)
    */
-  static Collection<Item> pathMetadataToItem(Collection<PathMetadata> metas) {
-    final List<Item> items = new ArrayList<>(metas.size());
+  static Item[] pathMetadataToItem(Collection<PathMetadata> metas) {
+    if (metas == null) {
+      return null;
+    }
+
+    final Item[] items = new Item[metas.size()];
+    int i = 0;
     for (PathMetadata meta : metas) {
-      items.add(pathMetadataToItem(meta));
+      items[i++] = pathMetadataToItem(meta);
     }
     return items;
   }
@@ -186,7 +189,10 @@ final class PathMetadataDynamoDBTranslation {
    * @see #pathToKey(Path)
    */
   static PrimaryKey[] pathToKey(Collection<Path> paths) {
-    Preconditions.checkNotNull(paths);
+    if (paths == null) {
+      return null;
+    }
+
     final PrimaryKey[] keys = new PrimaryKey[paths.size()];
     int i = 0;
     for (Path p : paths) {
