@@ -107,6 +107,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-11859. PseudoAuthenticationHandler fails with httpcomponents v4.4.
     (Eugene Koifman via jitendra)
 
+    HADOOP-13839. Fix outdated tracing documentation.
+    (Elek, Marton via iwasakims)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
