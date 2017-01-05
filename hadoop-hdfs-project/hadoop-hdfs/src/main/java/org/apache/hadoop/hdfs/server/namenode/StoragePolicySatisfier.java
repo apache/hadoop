@@ -36,6 +36,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.balancer.Matcher;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped.StorageAndBlockIndex;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
@@ -43,6 +45,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -226,8 +229,26 @@ public class StoragePolicySatisfier implements Runnable {
 
     for (int i = 0; i < blocks.length; i++) {
       BlockInfo blockInfo = blocks[i];
-      List<StorageType> expectedStorageTypes = existingStoragePolicy
+      List<StorageType> expectedStorageTypes;
+      if (blockInfo.isStriped()) {
+        if (ErasureCodingPolicyManager
+            .checkStoragePolicySuitableForECStripedMode(
+                existingStoragePolicyID)) {
+          expectedStorageTypes = existingStoragePolicy
+              .chooseStorageTypes((short) blockInfo.getCapacity());
+        } else {
+          // Currently we support only limited policies (HOT, COLD, ALLSSD)
+          // for EC striped mode files. SPS will ignore to move the blocks if
+          // the storage policy is not in EC Striped mode supported policies
+          LOG.warn("The storage policy " + existingStoragePolicy.getName()
+              + " is not suitable for Striped EC files. "
+              + "So, ignoring to move the blocks");
+          return false;
+        }
+      } else {
+        expectedStorageTypes = existingStoragePolicy
             .chooseStorageTypes(blockInfo.getReplication());
+      }
       foundMatchingTargetNodesForAllBlocks |= computeBlockMovingInfos(
           blockMovingInfos, blockInfo, expectedStorageTypes);
     }
@@ -439,12 +460,18 @@ public class StoragePolicySatisfier implements Runnable {
     if (sourceNodes.size() <= 0) {
       return blkMovingInfos;
     }
-    buildBlockMovingInfos(blockInfo, sourceNodes, sourceStorageTypes,
-        targetNodes, targetStorageTypes, blkMovingInfos);
+
+    if (blockInfo.isStriped()) {
+      buildStripedBlockMovingInfos(blockInfo, sourceNodes, sourceStorageTypes,
+          targetNodes, targetStorageTypes, blkMovingInfos);
+    } else {
+      buildContinuousBlockMovingInfos(blockInfo, sourceNodes,
+          sourceStorageTypes, targetNodes, targetStorageTypes, blkMovingInfos);
+    }
     return blkMovingInfos;
   }
 
-  private void buildBlockMovingInfos(BlockInfo blockInfo,
+  private void buildContinuousBlockMovingInfos(BlockInfo blockInfo,
       List<DatanodeInfo> sourceNodes, List<StorageType> sourceStorageTypes,
       List<DatanodeInfo> targetNodes, List<StorageType> targetStorageTypes,
       List<BlockMovingInfo> blkMovingInfos) {
@@ -456,6 +483,47 @@ public class StoragePolicySatisfier implements Runnable {
         sourceStorageTypes.toArray(new StorageType[sourceStorageTypes.size()]),
         targetStorageTypes.toArray(new StorageType[targetStorageTypes.size()]));
     blkMovingInfos.add(blkMovingInfo);
+  }
+
+  private void buildStripedBlockMovingInfos(BlockInfo blockInfo,
+      List<DatanodeInfo> sourceNodes, List<StorageType> sourceStorageTypes,
+      List<DatanodeInfo> targetNodes, List<StorageType> targetStorageTypes,
+      List<BlockMovingInfo> blkMovingInfos) {
+    // For a striped block, it needs to construct internal block at the given
+    // index of a block group. Here it is iterating over all the block indices
+    // and construct internal blocks which can be then considered for block
+    // movement.
+    BlockInfoStriped sBlockInfo = (BlockInfoStriped) blockInfo;
+    for (StorageAndBlockIndex si : sBlockInfo.getStorageAndIndexInfos()) {
+      if (si.getBlockIndex() >= 0) {
+        DatanodeDescriptor dn = si.getStorage().getDatanodeDescriptor();
+        DatanodeInfo[] srcNode = new DatanodeInfo[1];
+        StorageType[] srcStorageType = new StorageType[1];
+        DatanodeInfo[] targetNode = new DatanodeInfo[1];
+        StorageType[] targetStorageType = new StorageType[1];
+        for (int i = 0; i < sourceNodes.size(); i++) {
+          DatanodeInfo node = sourceNodes.get(i);
+          if (node.equals(dn)) {
+            srcNode[0] = node;
+            srcStorageType[0] = sourceStorageTypes.get(i);
+            targetNode[0] = targetNodes.get(i);
+            targetStorageType[0] = targetStorageTypes.get(i);
+
+            // construct internal block
+            long blockId = blockInfo.getBlockId() + si.getBlockIndex();
+            long numBytes = StripedBlockUtil.getInternalBlockLength(
+                sBlockInfo.getNumBytes(), sBlockInfo.getCellSize(),
+                sBlockInfo.getDataBlockNum(), si.getBlockIndex());
+            Block blk = new Block(blockId, numBytes,
+                blockInfo.getGenerationStamp());
+            BlockMovingInfo blkMovingInfo = new BlockMovingInfo(blk, srcNode,
+                targetNode, srcStorageType, targetStorageType);
+            blkMovingInfos.add(blkMovingInfo);
+            break; // found matching source-target nodes
+          }
+        }
+      }
+    }
   }
 
   /**
