@@ -20,38 +20,6 @@
         </dependency>
     </dependencies>
 
-    <!--<build>-->
-        <!--<plugins>-->
-            <!--<plugin>-->
-                <!--<groupId>org.apache.maven.plugins</groupId>-->
-                <!--<artifactId>maven-compiler-plugin</artifactId>-->
-                <!--<configuration>-->
-                    <!--<source>1.6</source>-->
-                    <!--<target>1.6</target>-->
-                <!--</configuration>-->
-            <!--</plugin>-->
-            <!--<plugin>-->
-                <!--<groupId>org.xolstice.maven.plugins</groupId>-->
-                <!--<artifactId>protobuf-maven-plugin</artifactId>-->
-                <!--<version>0.5.0</version>-->
-                <!--<configuration>-->
-                    <!--<protoSourceRoot>../tensorflow/core/protobuf/</protoSourceRoot>-->
-                    <!--<additionalProtoPathElements>../tensorflow/core/framework/</additionalProtoPathElements>-->
-                    <!--<protocExecutable>/usr/local/bin/protoc</protocExecutable>-->
-                <!--</configuration>-->
-                <!--<executions>-->
-                    <!--<execution>-->
-                        <!--<phase>generate-sources</phase>-->
-                        <!--<goals>-->
-                            <!--<goal>compile</goal>-->
-                            <!--<goal>test-compile</goal>-->
-                        <!--</goals>-->
-                    <!--</execution>-->
-                <!--</executions>-->
-            <!--</plugin>-->
-        <!--</plugins>-->
-    <!--</build>-->
-
     <build>
         <plugins>
             <plugin>
@@ -71,6 +39,31 @@
                                     <shadedPattern>org.shaded.google.protobuf</shadedPattern>
                                 </relocation>
                             </relocations>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-maven-plugins</artifactId>
+                <executions>
+                    <execution>
+                        <id>compile-protoc</id>
+                        <goals>
+                            <goal>protoc</goal>
+                        </goals>
+                        <configuration>
+                            <protocVersion>${protobuf.version}</protocVersion>
+                            <protocCommand>${protoc.path}</protocCommand>
+                            <imports>
+                                <param>${basedir}/src/main/proto</param>
+                            </imports>
+                            <source>
+                                <directory>${basedir}/src/main/proto</directory>
+                                <includes>
+                                    <include>**/*.proto</include>
+                                </includes>
+                            </source>
                         </configuration>
                     </execution>
                 </executions>
@@ -105,5 +98,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>
