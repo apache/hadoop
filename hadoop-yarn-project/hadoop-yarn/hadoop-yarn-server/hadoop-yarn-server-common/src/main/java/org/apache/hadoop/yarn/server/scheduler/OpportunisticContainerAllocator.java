@@ -321,13 +321,21 @@ public class OpportunisticContainerAllocator {
     // before accepting an ask)
     Resource capability = normalizeCapability(appParams, rr);
 
+    return createContainer(
+        rmIdentifier, appParams.getContainerTokenExpiryInterval(),
+        SchedulerRequestKey.create(rr), userName, node, cId, capability);
+  }
+
+  private Container createContainer(long rmIdentifier, long tokenExpiry,
+      SchedulerRequestKey schedulerKey, String userName, RemoteNode node,
+      ContainerId cId, Resource capability) {
     long currTime = System.currentTimeMillis();
     ContainerTokenIdentifier containerTokenIdentifier =
         new ContainerTokenIdentifier(
             cId, 0, node.getNodeId().toString(), userName,
-            capability, currTime + appParams.containerTokenExpiryInterval,
+            capability, currTime + tokenExpiry,
             tokenSecretManager.getCurrentKey().getKeyId(), rmIdentifier,
-            rr.getPriority(), currTime,
+            schedulerKey.getPriority(), currTime,
             null, CommonNodeLabelsManager.NO_LABEL, ContainerType.TASK,
             ExecutionType.OPPORTUNISTIC);
     byte[] pwd =
@@ -336,9 +344,9 @@ public class OpportunisticContainerAllocator {
         containerTokenIdentifier);
     Container container = BuilderUtils.newContainer(
         cId, node.getNodeId(), node.getHttpAddress(),
-        capability, rr.getPriority(), containerToken,
+        capability, schedulerKey.getPriority(), containerToken,
         containerTokenIdentifier.getExecutionType(),
-        rr.getAllocationRequestId());
+        schedulerKey.getAllocationRequestId());
     return container;
   }
 

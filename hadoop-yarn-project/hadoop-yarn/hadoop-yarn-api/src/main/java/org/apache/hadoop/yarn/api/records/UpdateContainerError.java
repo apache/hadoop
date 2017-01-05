@@ -87,6 +87,12 @@ public abstract class UpdateContainerError {
   }
 
   @Override
+  public String toString() {
+    return "UpdateContainerError{reason=" + getReason() + ", "
+        + "req=" + getUpdateContainerRequest() + "}";
+  }
+
+  @Override
   public boolean equals(Object obj) {
     if (this == obj) {
       return true;

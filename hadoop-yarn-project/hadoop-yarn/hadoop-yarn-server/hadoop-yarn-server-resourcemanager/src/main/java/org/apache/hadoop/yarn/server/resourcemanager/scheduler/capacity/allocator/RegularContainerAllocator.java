@@ -746,7 +746,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       // When reserving container
       RMContainer updatedContainer = reservedContainer;
       if (updatedContainer == null) {
-        updatedContainer = new RMContainerImpl(container,
+        updatedContainer = new RMContainerImpl(container, schedulerKey,
             application.getApplicationAttemptId(), node.getNodeID(),
             application.getAppSchedulingInfo().getUser(), rmContext);
       }

@@ -63,7 +63,8 @@ message FinishApplicationMasterResponseProto {
 enum ContainerUpdateTypeProto {
   INCREASE_RESOURCE = 0;
   DECREASE_RESOURCE = 1;
-  UPDATE_EXECUTION_TYPE = 2;
+  PROMOTE_EXECUTION_TYPE = 2;
+  DEMOTE_EXECUTION_TYPE = 3;
 }
 
 message UpdateContainerRequestProto {

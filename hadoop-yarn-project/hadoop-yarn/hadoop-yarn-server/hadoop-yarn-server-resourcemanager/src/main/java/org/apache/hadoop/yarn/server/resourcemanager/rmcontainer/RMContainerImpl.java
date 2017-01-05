@@ -108,6 +108,8 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
     // Transitions from ACQUIRED state
     .addTransition(RMContainerState.ACQUIRED, RMContainerState.RUNNING,
         RMContainerEventType.LAUNCHED)
+    .addTransition(RMContainerState.ACQUIRED, RMContainerState.ACQUIRED,
+        RMContainerEventType.ACQUIRED)
     .addTransition(RMContainerState.ACQUIRED, RMContainerState.COMPLETED,
         RMContainerEventType.FINISHED, new FinishedTransition())
     .addTransition(RMContainerState.ACQUIRED, RMContainerState.RELEASED,
@@ -124,6 +126,8 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
         RMContainerEventType.KILL, new KillTransition())
     .addTransition(RMContainerState.RUNNING, RMContainerState.RELEASED,
         RMContainerEventType.RELEASED, new KillTransition())
+    .addTransition(RMContainerState.RUNNING, RMContainerState.RUNNING,
+        RMContainerEventType.ACQUIRED)
     .addTransition(RMContainerState.RUNNING, RMContainerState.RUNNING,
         RMContainerEventType.RESERVED, new ContainerReservedTransition())
     .addTransition(RMContainerState.RUNNING, RMContainerState.RUNNING,
@@ -163,13 +167,13 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
   private final WriteLock writeLock;
   private final ApplicationAttemptId appAttemptId;
   private final NodeId nodeId;
-  private final Container container;
   private final RMContext rmContext;
   private final EventHandler eventHandler;
   private final ContainerAllocationExpirer containerAllocationExpirer;
   private final String user;
   private final String nodeLabelExpression;
 
+  private volatile Container container;
   private Resource reservedResource;
   private NodeId reservedNode;
   private SchedulerRequestKey reservedSchedulerKey;
@@ -188,44 +192,44 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
   private boolean isExternallyAllocated;
   private SchedulerRequestKey allocatedSchedulerKey;
 
-  public RMContainerImpl(Container container,
+  public RMContainerImpl(Container container, SchedulerRequestKey schedulerKey,
       ApplicationAttemptId appAttemptId, NodeId nodeId, String user,
       RMContext rmContext) {
-    this(container, appAttemptId, nodeId, user, rmContext, System
+    this(container, schedulerKey, appAttemptId, nodeId, user, rmContext, System
         .currentTimeMillis(), "");
   }
 
-  public RMContainerImpl(Container container,
+  public RMContainerImpl(Container container, SchedulerRequestKey schedulerKey,
       ApplicationAttemptId appAttemptId, NodeId nodeId, String user,
       RMContext rmContext, boolean isExternallyAllocated) {
-    this(container, appAttemptId, nodeId, user, rmContext, System
+    this(container, schedulerKey, appAttemptId, nodeId, user, rmContext, System
         .currentTimeMillis(), "", isExternallyAllocated);
   }
 
   private boolean saveNonAMContainerMetaInfo;
 
-  public RMContainerImpl(Container container,
+  public RMContainerImpl(Container container, SchedulerRequestKey schedulerKey,
       ApplicationAttemptId appAttemptId, NodeId nodeId, String user,
       RMContext rmContext, String nodeLabelExpression) {
-    this(container, appAttemptId, nodeId, user, rmContext, System
+    this(container, schedulerKey, appAttemptId, nodeId, user, rmContext, System
       .currentTimeMillis(), nodeLabelExpression);
   }
 
-  public RMContainerImpl(Container container,
+  public RMContainerImpl(Container container, SchedulerRequestKey schedulerKey,
       ApplicationAttemptId appAttemptId, NodeId nodeId, String user,
       RMContext rmContext, long creationTime, String nodeLabelExpression) {
-    this(container, appAttemptId, nodeId, user, rmContext, creationTime,
-        nodeLabelExpression, false);
+    this(container, schedulerKey, appAttemptId, nodeId, user, rmContext,
+        creationTime, nodeLabelExpression, false);
   }
 
-  public RMContainerImpl(Container container,
+  public RMContainerImpl(Container container, SchedulerRequestKey schedulerKey,
       ApplicationAttemptId appAttemptId, NodeId nodeId, String user,
       RMContext rmContext, long creationTime, String nodeLabelExpression,
       boolean isExternallyAllocated) {
     this.stateMachine = stateMachineFactory.make(this);
     this.nodeId = nodeId;
     this.container = container;
-    this.allocatedSchedulerKey = SchedulerRequestKey.extractFrom(container);
+    this.allocatedSchedulerKey = schedulerKey;
     this.appAttemptId = appAttemptId;
     this.user = user;
     this.creationTime = creationTime;
@@ -274,6 +278,10 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
   @Override
   public Container getContainer() {
     return this.container;
+  }
+
+  public void setContainer(Container container) {
+    this.container = container;
   }
 
   @Override

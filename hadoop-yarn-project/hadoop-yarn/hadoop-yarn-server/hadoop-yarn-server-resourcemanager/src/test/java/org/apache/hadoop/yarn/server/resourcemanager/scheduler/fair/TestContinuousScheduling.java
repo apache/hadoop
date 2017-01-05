@@ -119,7 +119,8 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     List<ResourceRequest> ask = new ArrayList<>();
     ask.add(createResourceRequest(1024, 1, ResourceRequest.ANY, 1, 1, true));
     scheduler.allocate(
-        appAttemptId, ask, new ArrayList<ContainerId>(), null, null, null, null);
+        appAttemptId, ask, new ArrayList<ContainerId>(),
+        null, null, NULL_UPDATE_REQUESTS);
     FSAppAttempt app = scheduler.getSchedulerApp(appAttemptId);
 
     triggerSchedulingAttempt();
@@ -157,7 +158,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
         createResourceRequest(1024, 1, ResourceRequest.ANY, 1, 1, true);
     ask.add(request);
     scheduler.allocate(appAttemptId, ask,
-        new ArrayList<ContainerId>(), null, null, null, null);
+        new ArrayList<ContainerId>(), null, null, NULL_UPDATE_REQUESTS);
     triggerSchedulingAttempt();
 
     FSAppAttempt app = scheduler.getSchedulerApp(appAttemptId);
@@ -169,7 +170,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     ask.clear();
     ask.add(request);
     scheduler.allocate(appAttemptId, ask,
-        new ArrayList<ContainerId>(), null, null, null, null);
+        new ArrayList<ContainerId>(), null, null, NULL_UPDATE_REQUESTS);
     triggerSchedulingAttempt();
 
     checkAppConsumption(app, Resources.createResource(2048,2));
@@ -335,7 +336,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     ask1.add(request1);
     ask1.add(request2);
     scheduler.allocate(id11, ask1, new ArrayList<ContainerId>(), null, null,
-        null, null);
+        NULL_UPDATE_REQUESTS);
 
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);

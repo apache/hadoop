@@ -19,8 +19,10 @@
 package org.apache.hadoop.yarn.server.scheduler;
 
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 
 /**
  * Composite key for outstanding scheduler requests for any schedulable entity.
@@ -31,6 +33,7 @@ public final class SchedulerRequestKey implements
 
   private final Priority priority;
   private final long allocationRequestId;
+  private final ContainerId containerToUpdate;
 
   /**
    * Factory method to generate a SchedulerRequestKey from a ResourceRequest.
@@ -39,7 +42,13 @@ public final class SchedulerRequestKey implements
    */
   public static SchedulerRequestKey create(ResourceRequest req) {
     return new SchedulerRequestKey(req.getPriority(),
-        req.getAllocationRequestId());
+        req.getAllocationRequestId(), null);
+  }
+
+  public static SchedulerRequestKey create(UpdateContainerRequest req,
+      SchedulerRequestKey schedulerRequestKey) {
+    return new SchedulerRequestKey(schedulerRequestKey.getPriority(),
+        schedulerRequestKey.getAllocationRequestId(), req.getContainerId());
   }
 
   /**
@@ -50,12 +59,16 @@ public final class SchedulerRequestKey implements
    */
   public static SchedulerRequestKey extractFrom(Container container) {
     return new SchedulerRequestKey(container.getPriority(),
-        container.getAllocationRequestId());
+        container.getAllocationRequestId(), null);
   }
 
-  SchedulerRequestKey(Priority priority, long allocationRequestId) {
+
+
+  public SchedulerRequestKey(Priority priority, long allocationRequestId,
+      ContainerId containerToUpdate) {
     this.priority = priority;
     this.allocationRequestId = allocationRequestId;
+    this.containerToUpdate = containerToUpdate;
   }
 
   /**
@@ -76,6 +89,10 @@ public final class SchedulerRequestKey implements
     return allocationRequestId;
   }
 
+  public ContainerId getContainerToUpdate() {
+    return containerToUpdate;
+  }
+
   @Override
   public int compareTo(SchedulerRequestKey o) {
     if (o == null) {
@@ -85,6 +102,15 @@ public final class SchedulerRequestKey implements
         return 1;
       }
     }
+
+    // Ensure updates are ranked higher
+    if (this.containerToUpdate == null && o.containerToUpdate != null) {
+      return -1;
+    }
+    if (this.containerToUpdate != null && o.containerToUpdate == null) {
+      return 1;
+    }
+
     int priorityCompare = o.getPriority().compareTo(priority);
     // we first sort by priority and then by allocationRequestId
     if (priorityCompare != 0) {
@@ -107,16 +133,21 @@ public final class SchedulerRequestKey implements
     if (getAllocationRequestId() != that.getAllocationRequestId()) {
       return false;
     }
-    return getPriority() != null ?
-        getPriority().equals(that.getPriority()) :
-        that.getPriority() == null;
+    if (!getPriority().equals(that.getPriority())) {
+      return false;
+    }
+    return containerToUpdate != null ?
+        containerToUpdate.equals(that.containerToUpdate) :
+        that.containerToUpdate == null;
   }
 
   @Override
   public int hashCode() {
-    int result = getPriority() != null ? getPriority().hashCode() : 0;
-    result = 31 * result + (int) (getAllocationRequestId() ^ (
-        getAllocationRequestId() >>> 32));
+    int result = priority != null ? priority.hashCode() : 0;
+    result = 31 * result + (int) (allocationRequestId ^ (allocationRequestId
+        >>> 32));
+    result = 31 * result + (containerToUpdate != null ? containerToUpdate
+        .hashCode() : 0);
     return result;
   }
 
@@ -125,6 +156,7 @@ public final class SchedulerRequestKey implements
     return "SchedulerRequestKey{" +
         "priority=" + priority +
         ", allocationRequestId=" + allocationRequestId +
+        ", containerToUpdate=" + containerToUpdate +
         '}';
   }
 }

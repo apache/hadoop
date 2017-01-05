@@ -97,6 +97,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
@@ -158,7 +159,9 @@ import static org.mockito.Mockito.when;
 public class TestCapacityScheduler {
   private static final Log LOG = LogFactory.getLog(TestCapacityScheduler.class);
   private final int GB = 1024;
-  
+  private final static ContainerUpdates NULL_UPDATE_REQUESTS =
+      new ContainerUpdates();
+
   private static final String A = CapacitySchedulerConfiguration.ROOT + ".a";
   private static final String B = CapacitySchedulerConfiguration.ROOT + ".b";
   private static final String A1 = A + ".a1";
@@ -807,12 +810,12 @@ public class TestCapacityScheduler {
     // Verify the blacklist can be updated independent of requesting containers
     cs.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(),
         Collections.<ContainerId>emptyList(),
-        Collections.singletonList(host), null, null, null);
+        Collections.singletonList(host), null, NULL_UPDATE_REQUESTS);
     Assert.assertTrue(cs.getApplicationAttempt(appAttemptId)
         .isPlaceBlacklisted(host));
     cs.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(),
         Collections.<ContainerId>emptyList(), null,
-        Collections.singletonList(host), null, null);
+        Collections.singletonList(host), NULL_UPDATE_REQUESTS);
     Assert.assertFalse(cs.getApplicationAttempt(appAttemptId)
         .isPlaceBlacklisted(host));
     rm.stop();
@@ -908,7 +911,7 @@ public class TestCapacityScheduler {
     cs.allocate(appAttemptId1,
         Collections.<ResourceRequest>singletonList(r1),
         Collections.<ContainerId>emptyList(),
-        null, null, null, null);
+        null, null, NULL_UPDATE_REQUESTS);
 
     //And this will result in container assignment for app1
     CapacityScheduler.schedule(cs);
@@ -925,7 +928,7 @@ public class TestCapacityScheduler {
     cs.allocate(appAttemptId2,
         Collections.<ResourceRequest>singletonList(r2),
         Collections.<ContainerId>emptyList(),
-        null, null, null, null);
+        null, null, NULL_UPDATE_REQUESTS);
 
     //In this case we do not perform container assignment because we want to
     //verify re-ordering based on the allocation alone
@@ -3050,7 +3053,8 @@ public class TestCapacityScheduler {
 
     Allocation allocate =
         cs.allocate(appAttemptId, Collections.<ResourceRequest> emptyList(),
-            Collections.<ContainerId> emptyList(), null, null, null, null);
+            Collections.<ContainerId> emptyList(), null, null,
+            NULL_UPDATE_REQUESTS);
 
     Assert.assertNotNull(attempt);
 
@@ -3066,7 +3070,8 @@ public class TestCapacityScheduler {
 
     allocate =
         cs.allocate(appAttemptId, Collections.<ResourceRequest> emptyList(),
-            Collections.<ContainerId> emptyList(), null, null, null, null);
+            Collections.<ContainerId> emptyList(), null, null,
+            NULL_UPDATE_REQUESTS);
 
     // All resources should be sent as headroom
     Assert.assertEquals(newResource, allocate.getResourceLimit());
@@ -3573,7 +3578,7 @@ public class TestCapacityScheduler {
       cs.allocate(appAttemptId3,
           Collections.<ResourceRequest>singletonList(y1Req),
           Collections.<ContainerId>emptyList(),
-          null, null, null, null);
+          null, null, NULL_UPDATE_REQUESTS);
       CapacityScheduler.schedule(cs);
     }
     assertEquals("Y1 Used Resource should be 4 GB", 4 * GB,
@@ -3587,7 +3592,7 @@ public class TestCapacityScheduler {
       cs.allocate(appAttemptId1,
           Collections.<ResourceRequest>singletonList(x1Req),
           Collections.<ContainerId>emptyList(),
-          null, null, null, null);
+          null, null, NULL_UPDATE_REQUESTS);
       CapacityScheduler.schedule(cs);
     }
     assertEquals("X1 Used Resource should be 7 GB", 7 * GB,
@@ -3600,7 +3605,7 @@ public class TestCapacityScheduler {
     cs.allocate(appAttemptId2,
         Collections.<ResourceRequest>singletonList(x2Req),
         Collections.<ContainerId>emptyList(),
-        null, null, null, null);
+        null, null, NULL_UPDATE_REQUESTS);
     CapacityScheduler.schedule(cs);
     assertEquals("X2 Used Resource should be 0", 0,
         cs.getQueue("x2").getUsedResources().getMemorySize());
@@ -3612,7 +3617,7 @@ public class TestCapacityScheduler {
     cs.allocate(appAttemptId1,
         Collections.<ResourceRequest>singletonList(x1Req),
         Collections.<ContainerId>emptyList(),
-        null, null, null, null);
+        null, null, NULL_UPDATE_REQUESTS);
     CapacityScheduler.schedule(cs);
     assertEquals("X1 Used Resource should be 7 GB", 7 * GB,
         cs.getQueue("x1").getUsedResources().getMemorySize());
@@ -3626,7 +3631,7 @@ public class TestCapacityScheduler {
       cs.allocate(appAttemptId3,
           Collections.<ResourceRequest>singletonList(y1Req),
           Collections.<ContainerId>emptyList(),
-          null, null, null, null);
+          null, null, NULL_UPDATE_REQUESTS);
       CapacityScheduler.schedule(cs);
     }
     assertEquals("P2 Used Resource should be 8 GB", 8 * GB,
@@ -3685,7 +3690,7 @@ public class TestCapacityScheduler {
     //This will allocate for app1
     cs.allocate(appAttemptId1, Collections.<ResourceRequest>singletonList(r1),
         Collections.<ContainerId>emptyList(),
-        null, null, null, null).getContainers().size();
+        null, null, NULL_UPDATE_REQUESTS).getContainers().size();
     CapacityScheduler.schedule(cs);
     ResourceRequest r2 = null;
     for (int i =0; i < 13; i++) {
@@ -3694,7 +3699,7 @@ public class TestCapacityScheduler {
       cs.allocate(appAttemptId2,
           Collections.<ResourceRequest>singletonList(r2),
           Collections.<ContainerId>emptyList(),
-          null, null, null, null);
+          null, null, NULL_UPDATE_REQUESTS);
       CapacityScheduler.schedule(cs);
     }
     assertEquals("A Used Resource should be 2 GB", 2 * GB,
@@ -3707,11 +3712,11 @@ public class TestCapacityScheduler {
         ResourceRequest.ANY, 1 * GB, 1, true, priority, recordFactory);
     cs.allocate(appAttemptId1, Collections.<ResourceRequest>singletonList(r1),
         Collections.<ContainerId>emptyList(),
-        null, null, null, null).getContainers().size();
+        null, null, NULL_UPDATE_REQUESTS).getContainers().size();
     CapacityScheduler.schedule(cs);
 
     cs.allocate(appAttemptId2, Collections.<ResourceRequest>singletonList(r2),
-        Collections.<ContainerId>emptyList(), null, null, null, null);
+        Collections.<ContainerId>emptyList(), null, null, NULL_UPDATE_REQUESTS);
     CapacityScheduler.schedule(cs);
     //Check blocked Resource
     assertEquals("A Used Resource should be 2 GB", 2 * GB,

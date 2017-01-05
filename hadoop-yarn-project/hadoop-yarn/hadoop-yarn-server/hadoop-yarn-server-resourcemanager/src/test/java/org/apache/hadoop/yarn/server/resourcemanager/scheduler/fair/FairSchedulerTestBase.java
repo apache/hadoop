@@ -42,6 +42,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
+
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
@@ -72,6 +75,8 @@ public class FairSchedulerTestBase {
   public static final float TEST_RESERVATION_THRESHOLD = 0.09f;
   private static final int SLEEP_DURATION = 10;
   private static final int SLEEP_RETRIES = 1000;
+  final static ContainerUpdates NULL_UPDATE_REQUESTS =
+      new ContainerUpdates();
 
   /**
    * The list of nodes added to the cluster using the {@link #addNode} method.
@@ -183,7 +188,8 @@ public class FairSchedulerTestBase {
     resourceManager.getRMContext().getRMApps()
         .put(id.getApplicationId(), rmApp);
 
-    scheduler.allocate(id, ask, new ArrayList<ContainerId>(), null, null, null, null);
+    scheduler.allocate(id, ask, new ArrayList<ContainerId>(),
+        null, null, NULL_UPDATE_REQUESTS);
     return id;
   }
   
@@ -209,7 +215,8 @@ public class FairSchedulerTestBase {
     resourceManager.getRMContext().getRMApps()
         .put(id.getApplicationId(), rmApp);
 
-    scheduler.allocate(id, ask, new ArrayList<ContainerId>(), null, null, null, null);
+    scheduler.allocate(id, ask, new ArrayList<ContainerId>(),
+        null, null, NULL_UPDATE_REQUESTS);
     return id;
   }
 
@@ -231,7 +238,8 @@ public class FairSchedulerTestBase {
       ResourceRequest request, ApplicationAttemptId attId) {
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
     ask.add(request);
-    scheduler.allocate(attId, ask,  new ArrayList<ContainerId>(), null, null, null, null);
+    scheduler.allocate(attId, ask,  new ArrayList<ContainerId>(),
+        null, null, NULL_UPDATE_REQUESTS);
   }
 
   protected void createApplicationWithAMResource(ApplicationAttemptId attId,

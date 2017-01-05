@@ -150,8 +150,9 @@ public class OpportunisticContainerContext {
             resourceRequest.getNumContainers() + request.getNumContainers());
       }
       if (ResourceRequest.isAnyLocation(request.getResourceName())) {
-        LOG.info("# of outstandingOpReqs in ANY (at" +
-            "priority = "+ schedulerKey.getPriority()
+        LOG.info("# of outstandingOpReqs in ANY (at "
+            + "priority = " + schedulerKey.getPriority()
+            + ", allocationReqId = " + schedulerKey.getAllocationRequestId()
             + ", with capability = " + request.getCapability() + " ) : "
             + resourceRequest.getNumContainers());
       }
@@ -167,7 +168,8 @@ public class OpportunisticContainerContext {
   public void matchAllocationToOutstandingRequest(Resource capability,
       List<Container> allocatedContainers) {
     for (Container c : allocatedContainers) {
-      SchedulerRequestKey schedulerKey = SchedulerRequestKey.extractFrom(c);
+      SchedulerRequestKey schedulerKey =
+          SchedulerRequestKey.extractFrom(c);
       Map<Resource, ResourceRequest> asks =
           outstandingOpReqs.get(schedulerKey);
 
