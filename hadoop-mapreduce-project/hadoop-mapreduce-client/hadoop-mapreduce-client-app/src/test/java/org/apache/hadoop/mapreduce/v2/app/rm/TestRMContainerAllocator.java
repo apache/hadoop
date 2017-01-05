@@ -110,7 +110,6 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
@@ -132,6 +131,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
@@ -1707,8 +1707,7 @@ public class TestRMContainerAllocator {
         ApplicationAttemptId applicationAttemptId, List<ResourceRequest> ask,
         List<ContainerId> release, List<String> blacklistAdditions,
         List<String> blacklistRemovals,
-        List<UpdateContainerRequest> increaseRequests,
-        List<UpdateContainerRequest> decreaseRequests) {
+        ContainerUpdates updateRequests) {
       List<ResourceRequest> askCopy = new ArrayList<ResourceRequest>();
       for (ResourceRequest req : ask) {
         ResourceRequest reqCopy = ResourceRequest.newInstance(req
@@ -1723,7 +1722,7 @@ public class TestRMContainerAllocator {
       lastBlacklistRemovals = blacklistRemovals;
       Allocation allocation = super.allocate(
           applicationAttemptId, askCopy, release, blacklistAdditions,
-          blacklistRemovals, increaseRequests, decreaseRequests);
+          blacklistRemovals, updateRequests);
       if (forceResourceLimit != null) {
         // Test wants to force the non-default resource limit
         allocation.setResourceLimit(forceResourceLimit);
@@ -1754,8 +1753,7 @@ public class TestRMContainerAllocator {
         ApplicationAttemptId applicationAttemptId, List<ResourceRequest> ask,
         List<ContainerId> release, List<String> blacklistAdditions,
         List<String> blacklistRemovals,
-        List<UpdateContainerRequest> increaseRequest,
-        List<UpdateContainerRequest> decreaseRequests) {
+        ContainerUpdates updateRequests) {
       List<ResourceRequest> askCopy = new ArrayList<ResourceRequest>();
       for (ResourceRequest req : ask) {
         ResourceRequest reqCopy = ResourceRequest.newInstance(req
@@ -1766,7 +1764,7 @@ public class TestRMContainerAllocator {
       SecurityUtil.setTokenServiceUseIp(false);
       Allocation normalAlloc = super.allocate(
           applicationAttemptId, askCopy, release,
-          blacklistAdditions, blacklistRemovals, null, null);
+          blacklistAdditions, blacklistRemovals, updateRequests);
       List<Container> containers = normalAlloc.getContainers();
       if(containers.size() > 0) {
         // allocate excess container

@@ -78,13 +78,14 @@ public interface SchedulingPlacementSet<N extends SchedulerNode> {
 
   /**
    * Notify container allocated.
+   * @param schedulerKey SchedulerRequestKey for this ResourceRequest
    * @param type Type of the allocation
    * @param node Which node this container allocated on
    * @param request Which resource request to allocate
    * @return list of ResourceRequests deducted
    */
-  List<ResourceRequest> allocate(NodeType type, SchedulerNode node,
-      ResourceRequest request);
+  List<ResourceRequest> allocate(SchedulerRequestKey schedulerKey,
+      NodeType type, SchedulerNode node, ResourceRequest request);
 
   /**
    * We can still have pending requirement for a given NodeType and node

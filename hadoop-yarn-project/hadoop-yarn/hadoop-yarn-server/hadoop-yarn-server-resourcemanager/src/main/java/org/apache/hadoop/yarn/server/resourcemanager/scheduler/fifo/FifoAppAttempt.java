@@ -68,7 +68,7 @@ public class FifoAppAttempt extends FiCaSchedulerApp {
 
       // Create RMContainer
       RMContainer rmContainer = new RMContainerImpl(container,
-          this.getApplicationAttemptId(), node.getNodeID(),
+          schedulerKey, this.getApplicationAttemptId(), node.getNodeID(),
           appSchedulingInfo.getUser(), this.rmContext,
           request.getNodeLabelExpression());
       ((RMContainerImpl) rmContainer).setQueueName(this.getQueueName());
@@ -76,7 +76,7 @@ public class FifoAppAttempt extends FiCaSchedulerApp {
       updateAMContainerDiagnostics(AMState.ASSIGNED, null);
 
       // Add it to allContainers list.
-      newlyAllocatedContainers.add(rmContainer);
+      addToNewlyAllocatedContainers(node, rmContainer);
 
       ContainerId containerId = container.getId();
       liveContainers.put(containerId, rmContainer);

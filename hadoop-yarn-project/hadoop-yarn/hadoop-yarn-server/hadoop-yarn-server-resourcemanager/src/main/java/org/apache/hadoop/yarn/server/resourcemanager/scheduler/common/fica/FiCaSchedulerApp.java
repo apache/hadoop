@@ -222,7 +222,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       }
 
       // Create RMContainer
-      RMContainer rmContainer = new RMContainerImpl(container,
+      RMContainer rmContainer = new RMContainerImpl(container, schedulerKey,
           this.getApplicationAttemptId(), node.getNodeID(),
           appSchedulingInfo.getUser(), this.rmContext,
           request.getNodeLabelExpression());
@@ -554,12 +554,14 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
           // Update this application for the allocated container
           if (!allocation.isIncreasedAllocation()) {
             // Allocate a new container
-            newlyAllocatedContainers.add(rmContainer);
+            addToNewlyAllocatedContainers(
+                schedulerContainer.getSchedulerNode(), rmContainer);
             liveContainers.put(containerId, rmContainer);
 
             // Deduct pending resource requests
             List<ResourceRequest> requests = appSchedulingInfo.allocate(
-                allocation.getAllocationLocalityType(), schedulerContainer.getSchedulerNode(),
+                allocation.getAllocationLocalityType(),
+                schedulerContainer.getSchedulerNode(),
                 schedulerContainer.getSchedulerRequestKey(),
                 schedulerContainer.getRmContainer().getContainer());
             ((RMContainerImpl) rmContainer).setResourceRequests(requests);
@@ -751,12 +753,15 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       List<Container> newlyAllocatedContainers = pullNewlyAllocatedContainers();
       List<Container> newlyIncreasedContainers = pullNewlyIncreasedContainers();
       List<Container> newlyDecreasedContainers = pullNewlyDecreasedContainers();
+      List<Container> newlyPromotedContainers = pullNewlyPromotedContainers();
+      List<Container> newlyDemotedContainers = pullNewlyDemotedContainers();
       List<NMToken> updatedNMTokens = pullUpdatedNMTokens();
       Resource headroom = getHeadroom();
       setApplicationHeadroomForMetrics(headroom);
       return new Allocation(newlyAllocatedContainers, headroom, null,
           currentContPreemption, Collections.singletonList(rr), updatedNMTokens,
-          newlyIncreasedContainers, newlyDecreasedContainers);
+          newlyIncreasedContainers, newlyDecreasedContainers,
+          newlyPromotedContainers, newlyDemotedContainers);
     } finally {
       writeLock.unlock();
     }

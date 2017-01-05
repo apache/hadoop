@@ -90,6 +90,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeDecreaseContai
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
+
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
@@ -921,22 +924,27 @@ public class CapacityScheduler extends
   public Allocation allocate(ApplicationAttemptId applicationAttemptId,
       List<ResourceRequest> ask, List<ContainerId> release,
       List<String> blacklistAdditions, List<String> blacklistRemovals,
-      List<UpdateContainerRequest> increaseRequests,
-      List<UpdateContainerRequest> decreaseRequests) {
+      ContainerUpdates updateRequests) {
     FiCaSchedulerApp application = getApplicationAttempt(applicationAttemptId);
     if (application == null) {
       return EMPTY_ALLOCATION;
     }
 
+    // Handle promotions and demotions
+    handleExecutionTypeUpdates(
+        application, updateRequests.getPromotionRequests(),
+        updateRequests.getDemotionRequests());
+
     // Release containers
     releaseContainers(release, application);
 
     // update increase requests
-    LeafQueue updateDemandForQueue = updateIncreaseRequests(increaseRequests,
+    LeafQueue updateDemandForQueue =
+        updateIncreaseRequests(updateRequests.getIncreaseRequests(),
         application);
 
     // Decrease containers
-    decreaseContainers(decreaseRequests, application);
+    decreaseContainers(updateRequests.getDecreaseRequests(), application);
 
     // Sanity check for new allocation requests
     normalizeRequests(ask);

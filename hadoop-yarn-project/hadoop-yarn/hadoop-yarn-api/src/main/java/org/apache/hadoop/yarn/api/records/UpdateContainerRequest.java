@@ -150,11 +150,13 @@ public abstract class UpdateContainerRequest extends AbstractResourceRequest {
     ContainerId cId = getContainerId();
     ExecutionType execType = getExecutionType();
     Resource capability = getCapability();
+    ContainerUpdateType updateType = getContainerUpdateType();
     result =
         prime * result + ((capability == null) ? 0 : capability.hashCode());
     result = prime * result + ((cId == null) ? 0 : cId.hashCode());
     result = prime * result + getContainerVersion();
     result = prime * result + ((execType == null) ? 0 : execType.hashCode());
+    result = prime * result + ((updateType== null) ? 0 : updateType.hashCode());
     return result;
   }
 
@@ -206,6 +208,14 @@ public abstract class UpdateContainerRequest extends AbstractResourceRequest {
         return false;
       }
     } else if (!execType.equals(other.getExecutionType())) {
+      return false;
+    }
+    ContainerUpdateType updateType = getContainerUpdateType();
+    if (updateType == null) {
+      if (other.getContainerUpdateType() != null) {
+        return false;
+      }
+    } else if (!updateType.equals(other.getContainerUpdateType())) {
       return false;
     }
     return true;

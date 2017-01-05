@@ -157,7 +157,8 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
     return resourceRequestMap.get(resourceName);
   }
 
-  private void decrementOutstanding(ResourceRequest offSwitchRequest) {
+  private void decrementOutstanding(SchedulerRequestKey schedulerRequestKey,
+      ResourceRequest offSwitchRequest) {
     int numOffSwitchContainers = offSwitchRequest.getNumContainers() - 1;
 
     // Do not remove ANY
@@ -166,8 +167,6 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
     // Do we have any outstanding requests?
     // If there is nothing, we need to deactivate this application
     if (numOffSwitchContainers == 0) {
-      SchedulerRequestKey schedulerRequestKey = SchedulerRequestKey.create(
-          offSwitchRequest);
       appSchedulingInfo.decrementSchedulerKeyReference(schedulerRequestKey);
       appSchedulingInfo.checkForDeactivation();
     }
@@ -177,11 +176,15 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
         offSwitchRequest.getCapability());
   }
 
-  private ResourceRequest cloneResourceRequest(ResourceRequest request) {
-    ResourceRequest newRequest =
-        ResourceRequest.newInstance(request.getPriority(),
-            request.getResourceName(), request.getCapability(), 1,
-            request.getRelaxLocality(), request.getNodeLabelExpression());
+  public ResourceRequest cloneResourceRequest(ResourceRequest request) {
+    ResourceRequest newRequest = ResourceRequest.newBuilder()
+        .priority(request.getPriority())
+        .allocationRequestId(request.getAllocationRequestId())
+        .resourceName(request.getResourceName())
+        .capability(request.getCapability())
+        .numContainers(1)
+        .relaxLocality(request.getRelaxLocality())
+        .nodeLabelExpression(request.getNodeLabelExpression()).build();
     return newRequest;
   }
 
@@ -189,15 +192,15 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
    * The {@link ResourceScheduler} is allocating data-local resources to the
    * application.
    */
-  private void allocateRackLocal(SchedulerNode node,
-      ResourceRequest rackLocalRequest,
+  private void allocateRackLocal(SchedulerRequestKey schedulerKey,
+      SchedulerNode node, ResourceRequest rackLocalRequest,
       List<ResourceRequest> resourceRequests) {
     // Update future requirements
     decResourceRequest(node.getRackName(), rackLocalRequest);
 
     ResourceRequest offRackRequest = resourceRequestMap.get(
         ResourceRequest.ANY);
-    decrementOutstanding(offRackRequest);
+    decrementOutstanding(schedulerKey, offRackRequest);
 
     // Update cloned RackLocal and OffRack requests for recovery
     resourceRequests.add(cloneResourceRequest(rackLocalRequest));
@@ -208,10 +211,11 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
    * The {@link ResourceScheduler} is allocating data-local resources to the
    * application.
    */
-  private void allocateOffSwitch(ResourceRequest offSwitchRequest,
+  private void allocateOffSwitch(SchedulerRequestKey schedulerKey,
+      ResourceRequest offSwitchRequest,
       List<ResourceRequest> resourceRequests) {
     // Update future requirements
-    decrementOutstanding(offSwitchRequest);
+    decrementOutstanding(schedulerKey, offSwitchRequest);
     // Update cloned OffRack requests for recovery
     resourceRequests.add(cloneResourceRequest(offSwitchRequest));
   }
@@ -221,8 +225,8 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
    * The {@link ResourceScheduler} is allocating data-local resources to the
    * application.
    */
-  private void allocateNodeLocal(SchedulerNode node,
-      ResourceRequest nodeLocalRequest,
+  private void allocateNodeLocal(SchedulerRequestKey schedulerKey,
+      SchedulerNode node, ResourceRequest nodeLocalRequest,
       List<ResourceRequest> resourceRequests) {
     // Update future requirements
     decResourceRequest(node.getNodeName(), nodeLocalRequest);
@@ -233,7 +237,7 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
 
     ResourceRequest offRackRequest = resourceRequestMap.get(
         ResourceRequest.ANY);
-    decrementOutstanding(offRackRequest);
+    decrementOutstanding(schedulerKey, offRackRequest);
 
     // Update cloned NodeLocal, RackLocal and OffRack requests for recovery
     resourceRequests.add(cloneResourceRequest(nodeLocalRequest));
@@ -278,8 +282,8 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
   }
 
   @Override
-  public List<ResourceRequest> allocate(NodeType type, SchedulerNode node,
-      ResourceRequest request) {
+  public List<ResourceRequest> allocate(SchedulerRequestKey schedulerKey,
+      NodeType type, SchedulerNode node, ResourceRequest request) {
     try {
       writeLock.lock();
 
@@ -296,11 +300,11 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
       }
 
       if (type == NodeType.NODE_LOCAL) {
-        allocateNodeLocal(node, request, resourceRequests);
+        allocateNodeLocal(schedulerKey, node, request, resourceRequests);
       } else if (type == NodeType.RACK_LOCAL) {
-        allocateRackLocal(node, request, resourceRequests);
+        allocateRackLocal(schedulerKey, node, request, resourceRequests);
       } else{
-        allocateOffSwitch(request, resourceRequests);
+        allocateOffSwitch(schedulerKey, request, resourceRequests);
       }
 
       return resourceRequests;

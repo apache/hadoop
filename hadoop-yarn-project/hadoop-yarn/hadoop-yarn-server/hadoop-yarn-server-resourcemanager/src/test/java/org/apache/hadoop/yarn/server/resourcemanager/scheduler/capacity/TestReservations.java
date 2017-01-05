@@ -923,13 +923,15 @@ public class TestReservations {
     Container container = TestUtils.getMockContainer(containerId,
         node_1.getNodeID(), Resources.createResource(2*GB),
         priorityMap.getPriority());
-    RMContainer rmContainer = new RMContainerImpl(container, appAttemptId,
+    RMContainer rmContainer = new RMContainerImpl(container,
+        SchedulerRequestKey.extractFrom(container), appAttemptId,
         node_1.getNodeID(), "user", rmContext);
 
     Container container_1 = TestUtils.getMockContainer(containerId,
         node_0.getNodeID(), Resources.createResource(1*GB),
         priorityMap.getPriority());
-    RMContainer rmContainer_1 = new RMContainerImpl(container_1, appAttemptId,
+    RMContainer rmContainer_1 = new RMContainerImpl(container_1,
+        SchedulerRequestKey.extractFrom(container_1), appAttemptId,
         node_0.getNodeID(), "user", rmContext);
 
     // no reserved containers
@@ -996,7 +998,8 @@ public class TestReservations {
     Container container = TestUtils.getMockContainer(containerId,
         node_1.getNodeID(), Resources.createResource(2*GB),
         priorityMap.getPriority());
-    RMContainer rmContainer = new RMContainerImpl(container, appAttemptId,
+    RMContainer rmContainer = new RMContainerImpl(container,
+        SchedulerRequestKey.extractFrom(container), appAttemptId,
         node_1.getNodeID(), "user", rmContext);
 
     // nothing reserved

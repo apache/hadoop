@@ -24,6 +24,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -41,7 +42,10 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -57,6 +61,9 @@ public class SchedulerUtils {
 
   public static final String RELEASED_CONTAINER = 
       "Container released by application";
+
+  public static final String UPDATED_CONTAINER =
+      "Temporary container killed by application for ExeutionType update";
   
   public static final String LOST_CONTAINER = 
       "Container released on a *lost* node";
@@ -375,5 +382,20 @@ public class SchedulerUtils {
       partitionToLookAt = RMNodeLabelsManager.NO_LABEL;
     }
     return hasPendingResourceRequest(rc, usage, partitionToLookAt, cluster);
+  }
+
+  public static RMContainer createOpportunisticRmContainer(RMContext rmContext,
+      Container container, boolean isRemotelyAllocated) {
+    SchedulerApplicationAttempt appAttempt =
+        ((AbstractYarnScheduler) rmContext.getScheduler())
+            .getCurrentAttemptForContainer(container.getId());
+    RMContainer rmContainer = new RMContainerImpl(container,
+        SchedulerRequestKey.extractFrom(container),
+        appAttempt.getApplicationAttemptId(), container.getNodeId(),
+        appAttempt.getUser(), rmContext, isRemotelyAllocated);
+    appAttempt.addRMContainer(container.getId(), rmContainer);
+    ((AbstractYarnScheduler) rmContext.getScheduler()).getNode(
+        container.getNodeId()).allocateContainer(rmContainer);
+    return rmContainer;
   }
 }
