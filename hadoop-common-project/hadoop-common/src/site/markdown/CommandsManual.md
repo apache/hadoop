@@ -207,6 +207,12 @@ NOTE: Some KeyProviders (e.g. org.apache.hadoop.crypto.key.JavaKeyStoreProvider)
 
 NOTE: Some KeyProviders do not directly execute a key deletion (e.g. performs a soft-delete instead, or delay the actual deletion, to prevent mistake). In these cases, one may encounter errors when creating/deleting a key with the same name after deleting it. Please check the underlying KeyProvider for details.
 
+### `kms`
+
+Usage: `hadoop kms`
+
+Run KMS, the Key Management Server.
+
 ### `trace`
 
 View and modify Hadoop tracing settings. See the [Tracing Guide](./Tracing.html).
@@ -266,8 +272,6 @@ This command works by sending a HTTP/HTTPS request to the daemon's internal Jett
     * resource manager
     * node manager
     * Timeline server
-
-However, the command does not support KMS server, because its web interface is based on Tomcat, which does not support the servlet.
 
 
 Files
