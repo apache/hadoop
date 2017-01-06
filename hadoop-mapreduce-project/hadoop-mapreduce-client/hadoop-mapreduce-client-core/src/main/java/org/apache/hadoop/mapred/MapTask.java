@@ -411,8 +411,14 @@ public class MapTask extends Task {
         LOG.warn(msg, e);
       }
     }
-    throw new IOException("Initialization of all the collectors failed. " +
-      "Error in last collector was :" + lastException.getMessage(), lastException);
+
+    if (lastException != null) {
+      throw new IOException("Initialization of all the collectors failed. " +
+          "Error in last collector was:" + lastException.toString(),
+          lastException);
+    } else {
+      throw new IOException("Initialization of all the collectors failed.");
+    }
   }
 
   @SuppressWarnings("unchecked")
