@@ -74,6 +74,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
@@ -588,12 +589,14 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       // The core part of this test
       // The killed containers' ResourceRequests are recovered back to the
       // original app-attempt, not the new one
-      for (ResourceRequest request : firstSchedulerAppAttempt
-        .getAppSchedulingInfo().getAllResourceRequests()) {
-        if (request.getPriority().getPriority() == 0) {
-          Assert.assertEquals(0, request.getNumContainers());
-        } else if (request.getPriority().getPriority() == ALLOCATED_CONTAINER_PRIORITY) {
-          Assert.assertEquals(1, request.getNumContainers());
+      for (SchedulerRequestKey key : firstSchedulerAppAttempt.getSchedulerKeys()) {
+        if (key.getPriority().getPriority() == 0) {
+          Assert.assertEquals(0,
+              firstSchedulerAppAttempt.getOutstandingAsksCount(key));
+        } else if (key.getPriority().getPriority() ==
+            ALLOCATED_CONTAINER_PRIORITY) {
+          Assert.assertEquals(1,
+              firstSchedulerAppAttempt.getOutstandingAsksCount(key));
         }
       }
 

@@ -19,12 +19,16 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
 import org.apache.commons.collections.IteratorUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 
 import java.util.ArrayList;
@@ -37,9 +41,14 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
     implements SchedulingPlacementSet<N> {
+  private static final Log LOG =
+      LogFactory.getLog(LocalitySchedulingPlacementSet.class);
+
   private final Map<String, ResourceRequest> resourceRequestMap =
       new ConcurrentHashMap<>();
   private AppSchedulingInfo appSchedulingInfo;
+  private volatile String primaryRequestedPartition =
+      RMNodeLabelsManager.NO_LABEL;
 
   private final ReentrantReadWriteLock.ReadLock readLock;
   private final ReentrantReadWriteLock.WriteLock writeLock;
@@ -132,11 +141,14 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
         resourceRequestMap.put(resourceName, request);
 
         if (resourceName.equals(ResourceRequest.ANY)) {
+          String partition = request.getNodeLabelExpression() == null ?
+              RMNodeLabelsManager.NO_LABEL :
+              request.getNodeLabelExpression();
+
+          this.primaryRequestedPartition = partition;
+
           //update the applications requested labels set
-          appSchedulingInfo.addRequestedPartition(
-              request.getNodeLabelExpression() == null ?
-                  RMNodeLabelsManager.NO_LABEL :
-                  request.getNodeLabelExpression());
+          appSchedulingInfo.addRequestedPartition(partition);
 
           updateResult = new ResourceRequestUpdateResult(lastRequest, request);
         }
@@ -152,9 +164,41 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
     return resourceRequestMap;
   }
 
-  @Override
-  public ResourceRequest getResourceRequest(String resourceName) {
+  private ResourceRequest getResourceRequest(String resourceName) {
     return resourceRequestMap.get(resourceName);
+  }
+
+  @Override
+  public PendingAsk getPendingAsk(String resourceName) {
+    try {
+      readLock.lock();
+      ResourceRequest request = getResourceRequest(resourceName);
+      if (null == request) {
+        return PendingAsk.ZERO;
+      } else{
+        return new PendingAsk(request.getCapability(),
+            request.getNumContainers());
+      }
+    } finally {
+      readLock.unlock();
+    }
+
+  }
+
+  @Override
+  public int getOutstandingAsksCount(String resourceName) {
+    try {
+      readLock.lock();
+      ResourceRequest request = getResourceRequest(resourceName);
+      if (null == request) {
+        return 0;
+      } else{
+        return request.getNumContainers();
+      }
+    } finally {
+      readLock.unlock();
+    }
+
   }
 
   private void decrementOutstanding(SchedulerRequestKey schedulerRequestKey,
@@ -282,21 +326,66 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
   }
 
   @Override
+  public boolean canDelayTo(String resourceName) {
+    try {
+      readLock.lock();
+      ResourceRequest request = getResourceRequest(resourceName);
+      return request == null || request.getRelaxLocality();
+    } finally {
+      readLock.unlock();
+    }
+
+  }
+
+  @Override
+  public boolean acceptNodePartition(String nodePartition,
+      SchedulingMode schedulingMode) {
+    // We will only look at node label = nodeLabelToLookAt according to
+    // schedulingMode and partition of node.
+    String nodePartitionToLookAt;
+    if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY) {
+      nodePartitionToLookAt = nodePartition;
+    } else {
+      nodePartitionToLookAt = RMNodeLabelsManager.NO_LABEL;
+    }
+
+    return primaryRequestedPartition.equals(nodePartitionToLookAt);
+  }
+
+  @Override
+  public String getPrimaryRequestedNodePartition() {
+    return primaryRequestedPartition;
+  }
+
+  @Override
+  public int getUniqueLocationAsks() {
+    return resourceRequestMap.size();
+  }
+
+  @Override
+  public void showRequests() {
+    for (ResourceRequest request : resourceRequestMap.values()) {
+      if (request.getNumContainers() > 0) {
+        LOG.debug("\tRequest=" + request);
+      }
+    }
+  }
+
+  @Override
   public List<ResourceRequest> allocate(SchedulerRequestKey schedulerKey,
-      NodeType type, SchedulerNode node, ResourceRequest request) {
+      NodeType type, SchedulerNode node) {
     try {
       writeLock.lock();
 
       List<ResourceRequest> resourceRequests = new ArrayList<>();
 
-      if (null == request) {
-        if (type == NodeType.NODE_LOCAL) {
-          request = resourceRequestMap.get(node.getNodeName());
-        } else if (type == NodeType.RACK_LOCAL) {
-          request = resourceRequestMap.get(node.getRackName());
-        } else{
-          request = resourceRequestMap.get(ResourceRequest.ANY);
-        }
+      ResourceRequest request;
+      if (type == NodeType.NODE_LOCAL) {
+        request = resourceRequestMap.get(node.getNodeName());
+      } else if (type == NodeType.RACK_LOCAL) {
+        request = resourceRequestMap.get(node.getRackName());
+      } else{
+        request = resourceRequestMap.get(ResourceRequest.ANY);
       }
 
       if (type == NodeType.NODE_LOCAL) {
@@ -310,6 +399,16 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
       return resourceRequests;
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  @Override
+  public Iterator<String> getAcceptedResouceNames() {
+    try {
+      readLock.lock();
+      return resourceRequestMap.keySet().iterator();
+    } finally {
+      readLock.unlock();
     }
   }
 }
