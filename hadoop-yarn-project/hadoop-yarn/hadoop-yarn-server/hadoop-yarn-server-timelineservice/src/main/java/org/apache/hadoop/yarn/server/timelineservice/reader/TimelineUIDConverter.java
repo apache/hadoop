@@ -155,12 +155,14 @@ enum TimelineUIDConverter {
         // Flow information exists.
         String[] entityTupleArr = {context.getClusterId(), context.getUserId(),
             context.getFlowName(), context.getFlowRunId().toString(),
-            context.getAppId(), context.getEntityType(), context.getEntityId()};
+            context.getAppId(), context.getEntityType(),
+            context.getEntityIdPrefix().toString(), context.getEntityId() };
         return joinAndEscapeUIDParts(entityTupleArr);
       } else {
         // Only entity and app information exists. Flow info does not exist.
         String[] entityTupleArr = {context.getClusterId(), context.getAppId(),
-            context.getEntityType(), context.getEntityId()};
+            context.getEntityType(), context.getEntityIdPrefix().toString(),
+            context.getEntityId() };
         return joinAndEscapeUIDParts(entityTupleArr);
       }
     }
@@ -171,20 +173,21 @@ enum TimelineUIDConverter {
         return null;
       }
       List<String> entityTupleList = splitUID(uId);
-      // Should have 7 parts i.e. cluster, user, flow name, flowrun id, app id,
-      // entity type and entity id OR should have 4 parts i.e. cluster, app id,
+      // Should have 8 parts i.e. cluster, user, flow name, flowrun id, app id,
+      // entity type and entity id OR should have 5 parts i.e. cluster, app id,
       // entity type and entity id.
-      if (entityTupleList.size() == 7) {
+      if (entityTupleList.size() == 8) {
         // Flow information exists.
         return new TimelineReaderContext(entityTupleList.get(0),
             entityTupleList.get(1), entityTupleList.get(2),
             Long.parseLong(entityTupleList.get(3)), entityTupleList.get(4),
-            entityTupleList.get(5), entityTupleList.get(6));
-      } else if (entityTupleList.size() == 4) {
+            entityTupleList.get(5), Long.parseLong(entityTupleList.get(6)),
+            entityTupleList.get(7));
+      } else if (entityTupleList.size() == 5) {
         // Flow information does not exist.
         return new TimelineReaderContext(entityTupleList.get(0), null, null,
             null, entityTupleList.get(1), entityTupleList.get(2),
-            entityTupleList.get(3));
+            Long.parseLong(entityTupleList.get(3)), entityTupleList.get(4));
       } else {
         return null;
       }
