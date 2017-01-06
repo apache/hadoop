@@ -413,9 +413,27 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
   @Override
   public void put(PathMetadata meta) throws IOException {
-    checkPathMetadata(meta);
+    // For a deeply nested path, this method will automatically create the full
+    // ancestry and save respective item in DynamoDB table.
+    // So after put operation, we maintain the invariant that if a path exists,
+    // all its ancestors will also exist in the table.
+    // For performance purpose, we generate the full paths to put and use batch
+    // write item request to save the items.
     LOG.debug("Saving to table {} in region {}: {}", tableName, region, meta);
-    innerPut(meta);
+    processBatchWriteRequest(null, pathMetadataToItem(fullPathsToPut(meta)));
+  }
+
+  /**
+   * Helper method to get full path of ancestors that are nonexistent in table.
+   */
+  private Collection<PathMetadata> fullPathsToPut(PathMetadata meta)
+      throws IOException {
+    checkPathMetadata(meta);
+    final Collection<PathMetadata> metasToPut = new ArrayList<>();
+    // root path is not persisted
+    if (!meta.getFileStatus().getPath().isRoot()) {
+      metasToPut.add(meta);
+    }
 
     // put all its ancestors if not present; as an optimization we return at its
     // first existent ancestor
@@ -427,34 +445,29 @@ public class DynamoDBMetadataStore implements MetadataStore {
       final Item item = table.getItem(spec);
       if (item == null) {
         final S3AFileStatus status = new S3AFileStatus(false, path, username);
-        innerPut(new PathMetadata(status));
+        metasToPut.add(new PathMetadata(status));
         path = path.getParent();
       } else {
         break;
       }
     }
-  }
-
-  private void innerPut(PathMetadata meta) throws IOException {
-    final Path path = meta.getFileStatus().getPath();
-    if (path.isRoot()) {
-      LOG.debug("Root path / is not persisted");
-      return;
-    }
-
-    try {
-      table.putItem(pathMetadataToItem(meta));
-    } catch (AmazonClientException e) {
-      throw translateException("put", path, e);
-    }
+    return metasToPut;
   }
 
   @Override
   public void put(DirListingMetadata meta) throws IOException {
     LOG.debug("Saving to table {} in region {}: {}", tableName, region, meta);
 
-    for (PathMetadata pathMetadata : meta.getListing()) {
-      put(pathMetadata);
+    // directory path
+    final Collection<PathMetadata> metasToPut = fullPathsToPut(
+        new PathMetadata(new S3AFileStatus(false, meta.getPath(), username)));
+    // all children of the directory
+    metasToPut.addAll(meta.getListing());
+
+    try {
+      processBatchWriteRequest(null, pathMetadataToItem(metasToPut));
+    } catch (AmazonClientException e) {
+      throw translateException("put", (String) null, e);
     }
   }
 

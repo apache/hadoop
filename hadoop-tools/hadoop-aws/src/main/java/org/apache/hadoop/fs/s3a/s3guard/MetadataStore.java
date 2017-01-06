@@ -113,10 +113,9 @@ public interface MetadataStore extends Closeable {
       pathsToCreate) throws IOException;
 
   /**
-   * Saves metadata for exactly one path.  For a deeply nested path, this method
-   * will not automatically create the full ancestry.  Callers need to ensure
-   * saving the full path ancestry.
+   * Saves metadata for exactly one path.
    *
+   * Implementations may pre-create all the path's ancestors automatically.
    * Implementations must update any {@code DirListingMetadata} objects which
    * track the immediate parent of this file.
    *
