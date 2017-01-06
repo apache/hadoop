@@ -60,7 +60,7 @@ class FlowActivityEntityReader extends TimelineEntityReader {
 
   public FlowActivityEntityReader(TimelineReaderContext ctxt,
       TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve) {
-    super(ctxt, entityFilters, toRetrieve, true);
+    super(ctxt, entityFilters, toRetrieve);
   }
 
   public FlowActivityEntityReader(TimelineReaderContext ctxt,
