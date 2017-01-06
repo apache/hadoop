@@ -433,25 +433,29 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
 
 
   public synchronized MapHost getHost() throws InterruptedException {
-      while(pendingHosts.isEmpty()) {
-        wait();
-      }
+    while(pendingHosts.isEmpty()) {
+      wait();
+    }
 
-      MapHost host = null;
-      Iterator<MapHost> iter = pendingHosts.iterator();
-      int numToPick = random.nextInt(pendingHosts.size());
-      for (int i=0; i <= numToPick; ++i) {
-        host = iter.next();
-      }
+    Iterator<MapHost> iter = pendingHosts.iterator();
+    // Safe to take one because we know pendingHosts isn't empty
+    MapHost host = iter.next();
+    int numToPick = random.nextInt(pendingHosts.size());
+    for (int i = 0; i < numToPick; ++i) {
+      host = iter.next();
+    }
 
-      pendingHosts.remove(host);
-      host.markBusy();
+    pendingHosts.remove(host);
+    host.markBusy();
 
-      LOG.debug("Assigning " + host + " with " + host.getNumKnownMapOutputs() +
-               " to " + Thread.currentThread().getName());
-      SHUFFLE_START.set(Time.monotonicNow());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+          "Assigning " + host + " with " + host.getNumKnownMapOutputs() + " to "
+              + Thread.currentThread().getName());
+    }
+    SHUFFLE_START.set(Time.monotonicNow());
 
-      return host;
+    return host;
   }
 
   public synchronized List<TaskAttemptID> getMapsForHost(MapHost host) {
@@ -477,8 +481,10 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
         host.addKnownMap(id);
       }
     }
-    LOG.debug("assigned " + includedMaps + " of " + totalSize + " to " +
-             host + " to " + Thread.currentThread().getName());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("assigned " + includedMaps + " of " + totalSize + " to " + host
+          + " to " + Thread.currentThread().getName());
+    }
     return result;
   }
 
