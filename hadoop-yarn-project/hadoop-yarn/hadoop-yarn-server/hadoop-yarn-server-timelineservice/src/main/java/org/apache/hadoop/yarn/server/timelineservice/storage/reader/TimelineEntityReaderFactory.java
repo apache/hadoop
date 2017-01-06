@@ -83,7 +83,7 @@ public final class TimelineEntityReaderFactory {
       return new FlowRunEntityReader(context, filters, dataToRetrieve);
     } else {
       // assume we're dealing with a generic entity read
-      return new GenericEntityReader(context, filters, dataToRetrieve, false);
+      return new GenericEntityReader(context, filters, dataToRetrieve);
     }
   }
 

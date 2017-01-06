@@ -214,7 +214,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     entity4.addMetrics(metrics);
     te4.addEntity(entity4);
 
-    TimelineEntities te5 = new TimelineEntities();
+    TimelineEntities userEntities = new TimelineEntities();
     TimelineEntity entity5 = new TimelineEntity();
     entity5.setId("entity1");
     entity5.setType("type1");
@@ -270,7 +270,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     relatesTo1.put("type3",
         Sets.newHashSet("entity31", "entity35", "entity32", "entity33"));
     entity5.addRelatesToEntities(relatesTo1);
-    te5.addEntity(entity5);
+    userEntities.addEntity(entity5);
 
     TimelineEntity entity6 = new TimelineEntity();
     entity6.setId("entity2");
@@ -329,7 +329,16 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     relatesTo2.put("type6", Sets.newHashSet("entity61", "entity66"));
     relatesTo2.put("type3", Sets.newHashSet("entity31"));
     entity6.addRelatesToEntities(relatesTo2);
-    te5.addEntity(entity6);
+    userEntities.addEntity(entity6);
+
+    for (long i = 1; i <= 10; i++) {
+      TimelineEntity userEntity = new TimelineEntity();
+      userEntity.setType("entitytype");
+      userEntity.setId("entityid-" + i);
+      userEntity.setIdPrefix(11 - i);
+      userEntity.setCreatedTime(System.currentTimeMillis());
+      userEntities.addEntity(userEntity);
+    }
 
     HBaseTimelineWriterImpl hbi = null;
     Configuration c1 = util.getConfiguration();
@@ -342,7 +351,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       hbi.write(cluster, user, flow2,
           flowVersion2, runid2, entity3.getId(), te3);
       hbi.write(cluster, user, flow, flowVersion, runid,
-          "application_1111111111_1111", te5);
+          "application_1111111111_1111", userEntities);
       hbi.flush();
     } finally {
       if (hbi != null) {
@@ -784,7 +793,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
           assertEquals(TimelineUIDConverter.GENERIC_ENTITY_UID.encodeUID(
               new TimelineReaderContext(context.getClusterId(),
               context.getUserId(), context.getFlowName(),
-              context.getFlowRunId(), context.getAppId(), "type1",
+                  context.getFlowRunId(), context.getAppId(), "type1",
+                  entity.getIdPrefix(),
               entity.getId())), entityUID);
         }
       }
@@ -860,8 +870,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         String uid =
             (String) entity.getInfo().get(TimelineReaderManager.UID_KEY);
         assertNotNull(uid);
-        assertTrue(uid.equals(appUIDWithFlowInfo + "!type1!entity1") ||
-            uid.equals(appUIDWithFlowInfo + "!type1!entity2"));
+        assertTrue(uid.equals(appUIDWithFlowInfo + "!type1!0!entity1")
+            || uid.equals(appUIDWithFlowInfo + "!type1!0!entity2"));
       }
 
       String appUIDWithoutFlowInfo = "cluster1!application_1111111111_1111";
@@ -887,11 +897,11 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         String uid =
             (String) entity.getInfo().get(TimelineReaderManager.UID_KEY);
         assertNotNull(uid);
-        assertTrue(uid.equals(appUIDWithoutFlowInfo + "!type1!entity1") ||
-            uid.equals(appUIDWithoutFlowInfo + "!type1!entity2"));
+        assertTrue(uid.equals(appUIDWithoutFlowInfo + "!type1!0!entity1")
+            || uid.equals(appUIDWithoutFlowInfo + "!type1!0!entity2"));
       }
 
-      String entityUIDWithFlowInfo = appUIDWithFlowInfo + "!type1!entity1";
+      String entityUIDWithFlowInfo = appUIDWithFlowInfo + "!type1!0!entity1";
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/"+
           "entity-uid/" + entityUIDWithFlowInfo);
       resp = getResponse(client, uri);
@@ -901,7 +911,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       assertEquals("entity1", singleEntity1.getId());
 
       String entityUIDWithoutFlowInfo =
-          appUIDWithoutFlowInfo + "!type1!entity1";
+          appUIDWithoutFlowInfo + "!type1!0!entity1";
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/"+
           "entity-uid/" + entityUIDWithoutFlowInfo);
       resp = getResponse(client, uri);
@@ -2161,5 +2171,75 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       server.stop();
       server = null;
     }
+  }
+
+  @Test
+  public void testGenericEntitiesForPagination() throws Exception {
+    Client client = createClient();
+    try {
+      int limit = 10;
+      String queryParam = "?limit=" + limit;
+      String resourceUri = "http://localhost:" + serverPort + "/ws/v2/"
+          + "timeline/clusters/cluster1/apps/application_1111111111_1111/"
+          + "entities/entitytype";
+      URI uri = URI.create(resourceUri + queryParam);
+
+      ClientResponse resp = getResponse(client, uri);
+      List<TimelineEntity> entities =
+          resp.getEntity(new GenericType<List<TimelineEntity>>() {
+          });
+      // verify for entity-10 to entity-1 in descending order.
+      verifyPaginatedEntites(entities, limit, limit);
+
+      limit = 4;
+      queryParam = "?limit=" + limit;
+      uri = URI.create(resourceUri + queryParam);
+      resp = getResponse(client, uri);
+      entities = resp.getEntity(new GenericType<List<TimelineEntity>>() {
+      });
+      // verify for entity-10 to entity-7 in descending order.
+      TimelineEntity entity = verifyPaginatedEntites(entities, limit, 10);
+
+      queryParam = "?limit=" + limit + "&&fromidprefix=" + entity.getIdPrefix()
+          + "&&fromid=" + entity.getId();
+      uri = URI.create(resourceUri + queryParam);
+      resp = getResponse(client, uri);
+      entities = resp.getEntity(new GenericType<List<TimelineEntity>>() {
+      });
+      // verify for entity-7 to entity-4 in descending order.
+      entity = verifyPaginatedEntites(entities, limit, 7);
+
+      queryParam = "?limit=" + limit + "&&fromidprefix=" + entity.getIdPrefix();
+      uri = URI.create(resourceUri + queryParam);
+      resp = getResponse(client, uri);
+      entities = resp.getEntity(new GenericType<List<TimelineEntity>>() {
+      });
+      // verify for entity-4 to entity-1 in descending order.
+      entity = verifyPaginatedEntites(entities, limit, 4);
+
+      queryParam = "?limit=" + limit + "&&fromidprefix=" + entity.getIdPrefix();
+      uri = URI.create(resourceUri + queryParam);
+      resp = getResponse(client, uri);
+      entities = resp.getEntity(new GenericType<List<TimelineEntity>>() {
+      });
+      // always entity-1 will be retrieved
+      entity = verifyPaginatedEntites(entities, 1, 1);
+    } finally {
+      client.destroy();
+    }
+  }
+
+  private TimelineEntity verifyPaginatedEntites(List<TimelineEntity> entities,
+      int limit, int startFrom) {
+    assertNotNull(entities);
+    assertEquals(limit, entities.size());
+    TimelineEntity entity = null;
+    for (TimelineEntity timelineEntity : entities) {
+      assertEquals("entitytype", timelineEntity.getType());
+      assertEquals("entityid-" + startFrom, timelineEntity.getId());
+      assertEquals(11 - startFrom--, timelineEntity.getIdPrefix());
+      entity = timelineEntity;
+    }
+    return entity;
   }
 }

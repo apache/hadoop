@@ -549,20 +549,10 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
   public int compareTo(TimelineEntity other) {
     int comparison = getType().compareTo(other.getType());
     if (comparison == 0) {
-      if (getCreatedTime() == null) {
-        if (other.getCreatedTime() == null) {
-          return getId().compareTo(other.getId());
-        } else {
-          return 1;
-        }
-      }
-      if (other.getCreatedTime() == null) {
+      if (getIdPrefix() > other.getIdPrefix()) {
+        // Descending order by entity id prefix
         return -1;
-      }
-      if (getCreatedTime() > other.getCreatedTime()) {
-        // Order by created time desc
-        return -1;
-      } else if (getCreatedTime() < other.getCreatedTime()) {
+      } else if (getIdPrefix() < other.getIdPrefix()) {
         return 1;
       } else {
         return getId().compareTo(other.getId());

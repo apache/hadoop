@@ -64,7 +64,7 @@ class ApplicationEntityReader extends GenericEntityReader {
 
   public ApplicationEntityReader(TimelineReaderContext ctxt,
       TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve) {
-    super(ctxt, entityFilters, toRetrieve, true);
+    super(ctxt, entityFilters, toRetrieve);
   }
 
   public ApplicationEntityReader(TimelineReaderContext ctxt,

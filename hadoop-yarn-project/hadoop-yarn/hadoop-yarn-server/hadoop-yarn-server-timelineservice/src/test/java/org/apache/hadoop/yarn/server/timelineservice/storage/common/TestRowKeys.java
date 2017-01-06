@@ -139,6 +139,7 @@ public class TestRowKeys {
     TimelineEntity entity = new TimelineEntity();
     entity.setId("!ent!ity!!id!");
     entity.setType("entity!Type");
+    entity.setIdPrefix(54321);
 
     byte[] byteRowKey =
         new EntityRowKey(CLUSTER, USER, FLOW_NAME, FLOW_RUN_ID, APPLICATION_ID,
@@ -151,11 +152,13 @@ public class TestRowKeys {
     assertEquals(FLOW_RUN_ID, rowKey.getFlowRunId());
     assertEquals(APPLICATION_ID, rowKey.getAppId());
     assertEquals(entity.getType(), rowKey.getEntityType());
+    assertEquals(entity.getIdPrefix(), rowKey.getEntityIdPrefix().longValue());
     assertEquals(entity.getId(), rowKey.getEntityId());
 
     byte[] byteRowKeyPrefix =
         new EntityRowKeyPrefix(CLUSTER, USER, FLOW_NAME, FLOW_RUN_ID,
-            APPLICATION_ID, entity.getType()).getRowKeyPrefix();
+            APPLICATION_ID, entity.getType(), null, null)
+                .getRowKeyPrefix();
     byte[][] splits =
         Separator.QUALIFIERS.split(
             byteRowKeyPrefix,
@@ -163,8 +166,7 @@ public class TestRowKeys {
                 Separator.VARIABLE_SIZE, Bytes.SIZEOF_LONG,
                 AppIdKeyConverter.getKeySize(), Separator.VARIABLE_SIZE,
                 Bytes.SIZEOF_LONG, Separator.VARIABLE_SIZE });
-    assertEquals(8, splits.length);
-    assertEquals(entity.getIdPrefix(), splits[7].length);
+    assertEquals(7, splits.length);
     assertEquals(APPLICATION_ID, new AppIdKeyConverter().decode(splits[4]));
     assertEquals(entity.getType(),
         Separator.QUALIFIERS.decode(Bytes.toString(splits[5])));

@@ -31,18 +31,20 @@ public class EntityRowKeyPrefix extends EntityRowKey implements
    * Creates a prefix which generates the following rowKeyPrefixes for the
    * entity table:
    * {@code userName!clusterId!flowName!flowRunId!AppId!entityType!}.
-   *
    * @param clusterId identifying the cluster
    * @param userId identifying the user
    * @param flowName identifying the flow
    * @param flowRunId identifying the individual run of this flow
    * @param appId identifying the application
    * @param entityType which entity type
+   * @param entityIdPrefix for entityId
+   * @param entityId for an entity
    */
   public EntityRowKeyPrefix(String clusterId, String userId, String flowName,
-      Long flowRunId, String appId, String entityType) {
-    // TODO YARN-5585, change prefix id from 0L
-    super(clusterId, userId, flowName, flowRunId, appId, entityType, 0L, null);
+      Long flowRunId, String appId, String entityType, Long entityIdPrefix,
+      String entityId) {
+    super(clusterId, userId, flowName, flowRunId, appId, entityType,
+        entityIdPrefix, entityId);
   }
 
   /**
@@ -58,8 +60,7 @@ public class EntityRowKeyPrefix extends EntityRowKey implements
    */
   public EntityRowKeyPrefix(String clusterId, String userId, String flowName,
       Long flowRunId, String appId) {
-    // TODO YARN-5585, change prefix id from 0L
-    super(clusterId, userId, flowName, flowRunId, appId, null, 0L, null);
+    this(clusterId, userId, flowName, flowRunId, appId, null, null, null);
   }
 
   /*
