@@ -23,6 +23,7 @@ import java.util.EnumSet;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
@@ -49,10 +50,10 @@ final class TimelineReaderWebServicesUtils {
    */
   static TimelineReaderContext createTimelineReaderContext(String clusterId,
       String userId, String flowName, String flowRunId, String appId,
-      String entityType, String entityId) {
+      String entityType, String entityIdPrefix, String entityId) {
     return new TimelineReaderContext(parseStr(clusterId), parseStr(userId),
         parseStr(flowName), parseLongStr(flowRunId), parseStr(appId),
-        parseStr(entityType), parseStr(entityId));
+        parseStr(entityType), parseLongStr(entityIdPrefix), parseStr(entityId));
   }
 
   /**
@@ -73,12 +74,14 @@ final class TimelineReaderWebServicesUtils {
   static TimelineEntityFilters createTimelineEntityFilters(String limit,
       String createdTimeStart, String createdTimeEnd, String relatesTo,
       String isRelatedTo, String infofilters, String conffilters,
-      String metricfilters, String eventfilters) throws TimelineParseException {
+      String metricfilters, String eventfilters, String fromidprefix,
+      String fromid) throws TimelineParseException {
     return new TimelineEntityFilters(parseLongStr(limit),
         parseLongStr(createdTimeStart), parseLongStr(createdTimeEnd),
         parseRelationFilters(relatesTo), parseRelationFilters(isRelatedTo),
         parseKVFilters(infofilters, false), parseKVFilters(conffilters, true),
-        parseMetricFilters(metricfilters), parseEventFilters(eventfilters));
+        parseMetricFilters(metricfilters), parseEventFilters(eventfilters),
+        parseLongStr(fromidprefix), parseStr(fromid));
   }
 
   /**
@@ -207,7 +210,7 @@ final class TimelineReaderWebServicesUtils {
    * @return trimmed string if string is not null, null otherwise.
    */
   static String parseStr(String str) {
-    return str == null ? null : str.trim();
+    return StringUtils.trimToNull(str);
   }
 
   /**

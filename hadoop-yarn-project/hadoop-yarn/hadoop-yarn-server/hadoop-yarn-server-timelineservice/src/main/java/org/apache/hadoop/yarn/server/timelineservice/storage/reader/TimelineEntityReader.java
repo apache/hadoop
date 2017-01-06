@@ -21,11 +21,10 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.NavigableSet;
 import java.util.Set;
-import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -75,14 +74,6 @@ public abstract class TimelineEntityReader extends
   private BaseTable<?> table;
 
   /**
-   * Specifies whether keys for this table are sorted in a manner where entities
-   * can be retrieved by created time. If true, it will be sufficient to collect
-   * the first results as specified by the limit. Otherwise all matched entities
-   * will be fetched and then limit applied.
-   */
-  private boolean sortedKeys = false;
-
-  /**
    * Used to convert strings key components to and from storage format.
    */
   private final KeyConverter<String> stringKeyConverter =
@@ -95,15 +86,11 @@ public abstract class TimelineEntityReader extends
    *     made.
    * @param entityFilters Filters which limit the entities returned.
    * @param toRetrieve Data to retrieve for each entity.
-   * @param sortedKeys Specifies whether key for this table are sorted or not.
-   *     If sorted, entities can be retrieved by created time.
    */
   protected TimelineEntityReader(TimelineReaderContext ctxt,
-      TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve,
-      boolean sortedKeys) {
+      TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve) {
     super(ctxt);
     this.singleEntityRead = false;
-    this.sortedKeys = sortedKeys;
     this.dataToRetrieve = toRetrieve;
     this.filters = entityFilters;
 
@@ -245,7 +232,7 @@ public abstract class TimelineEntityReader extends
     validateParams();
     augmentParams(hbaseConf, conn);
 
-    NavigableSet<TimelineEntity> entities = new TreeSet<>();
+    Set<TimelineEntity> entities = new LinkedHashSet<>();
     FilterList filterList = createFilterList();
     if (LOG.isDebugEnabled() && filterList != null) {
       LOG.debug("FilterList created for scan is - " + filterList);
@@ -258,14 +245,8 @@ public abstract class TimelineEntityReader extends
           continue;
         }
         entities.add(entity);
-        if (!sortedKeys) {
-          if (entities.size() > filters.getLimit()) {
-            entities.pollLast();
-          }
-        } else {
-          if (entities.size() == filters.getLimit()) {
-            break;
-          }
+        if (entities.size() == filters.getLimit()) {
+          break;
         }
       }
       return entities;
