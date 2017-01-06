@@ -113,6 +113,7 @@ public class TimelineReaderManager extends AbstractService {
       }
     }
     context.setEntityType(entity.getType());
+    context.setEntityIdPrefix(entity.getIdPrefix());
     context.setEntityId(entity.getId());
     entity.setUID(UID_KEY,
         TimelineUIDConverter.GENERIC_ENTITY_UID.encodeUID(context));

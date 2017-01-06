@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.reader;
 
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FamilyFilter;
 import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
@@ -43,6 +45,7 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilte
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.RowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.StringKeyConverter;
@@ -70,9 +73,8 @@ class GenericEntityReader extends TimelineEntityReader {
       new StringKeyConverter();
 
   public GenericEntityReader(TimelineReaderContext ctxt,
-      TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve,
-      boolean sortedKeys) {
-    super(ctxt, entityFilters, toRetrieve, sortedKeys);
+      TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve) {
+    super(ctxt, entityFilters, toRetrieve);
   }
 
   public GenericEntityReader(TimelineReaderContext ctxt,
@@ -424,18 +426,44 @@ class GenericEntityReader extends TimelineEntityReader {
   protected Result getResult(Configuration hbaseConf, Connection conn,
       FilterList filterList) throws IOException {
     TimelineReaderContext context = getContext();
-    byte[] rowKey =
-        new EntityRowKey(context.getClusterId(), context.getUserId(),
-            context.getFlowName(), context.getFlowRunId(), context.getAppId(),
-            // TODO YARN-5585, change prefix id from 0L
-            context.getEntityType(), 0L, context.getEntityId()).getRowKey();
+    Result result = null;
+    if (context.getEntityIdPrefix() != null) {
+      byte[] rowKey = new EntityRowKey(context.getClusterId(),
+          context.getUserId(), context.getFlowName(), context.getFlowRunId(),
+          context.getAppId(), context.getEntityType(),
+          context.getEntityIdPrefix(), context.getEntityId()).getRowKey();
 
-    Get get = new Get(rowKey);
-    get.setMaxVersions(getDataToRetrieve().getMetricsLimit());
-    if (filterList != null && !filterList.getFilters().isEmpty()) {
-      get.setFilter(filterList);
+      Get get = new Get(rowKey);
+      get.setMaxVersions(getDataToRetrieve().getMetricsLimit());
+      if (filterList != null && !filterList.getFilters().isEmpty()) {
+        get.setFilter(filterList);
+      }
+      result = getTable().getResult(hbaseConf, conn, get);
+
+    } else {
+      // Prepare for range scan
+      // create single SingleColumnValueFilter and add to existing filters.
+      FilterList filter = new FilterList(Operator.MUST_PASS_ALL);
+      if (filterList != null && !filterList.getFilters().isEmpty()) {
+        filter.addFilter(filterList);
+      }
+      FilterList newFilter = new FilterList();
+      newFilter.addFilter(TimelineFilterUtils.createHBaseSingleColValueFilter(
+          EntityColumn.ID, context.getEntityId(), CompareOp.EQUAL));
+      newFilter.addFilter(new PageFilter(1));
+      filter.addFilter(newFilter);
+
+      ResultScanner results = getResults(hbaseConf, conn, filter);
+      try {
+        Iterator<Result> iterator = results.iterator();
+        if (iterator.hasNext()) {
+          result = iterator.next();
+        }
+      } finally {
+        results.close();
+      }
     }
-    return getTable().getResult(hbaseConf, conn, get);
+    return result;
   }
 
   @Override
@@ -445,11 +473,36 @@ class GenericEntityReader extends TimelineEntityReader {
     // and one type
     Scan scan = new Scan();
     TimelineReaderContext context = getContext();
-    RowKeyPrefix<EntityRowKey> entityRowKeyPrefix =
-        new EntityRowKeyPrefix(context.getClusterId(), context.getUserId(),
-            context.getFlowName(), context.getFlowRunId(), context.getAppId(),
-            context.getEntityType());
-    scan.setRowPrefixFilter(entityRowKeyPrefix.getRowKeyPrefix());
+    RowKeyPrefix<EntityRowKey> entityRowKeyPrefix = null;
+    // default mode, will always scans from beginning of entity type.
+    if (getFilters() == null || getFilters().getFromIdPrefix() == null) {
+      entityRowKeyPrefix = new EntityRowKeyPrefix(context.getClusterId(),
+          context.getUserId(), context.getFlowName(), context.getFlowRunId(),
+          context.getAppId(), context.getEntityType(), null, null);
+      scan.setRowPrefixFilter(entityRowKeyPrefix.getRowKeyPrefix());
+    } else { // pagination mode, will scan from given entityIdPrefix!enitityId
+      entityRowKeyPrefix = new EntityRowKeyPrefix(context.getClusterId(),
+          context.getUserId(), context.getFlowName(), context.getFlowRunId(),
+          context.getAppId(), context.getEntityType(),
+          getFilters().getFromIdPrefix(), getFilters().getFromId());
+
+      // set start row
+      scan.setStartRow(entityRowKeyPrefix.getRowKeyPrefix());
+
+      // get the bytes for stop row
+      entityRowKeyPrefix = new EntityRowKeyPrefix(context.getClusterId(),
+          context.getUserId(), context.getFlowName(), context.getFlowRunId(),
+          context.getAppId(), context.getEntityType(), null, null);
+
+      // set stop row
+      scan.setStopRow(
+          HBaseTimelineStorageUtils.calculateTheClosestNextRowKeyForPrefix(
+              entityRowKeyPrefix.getRowKeyPrefix()));
+
+      // set page filter to limit. This filter has to set only in pagination
+      // mode.
+      filterList.addFilter(new PageFilter(getFilters().getLimit()));
+    }
     scan.setMaxVersions(getDataToRetrieve().getMetricsLimit());
     if (filterList != null && !filterList.getFilters().isEmpty()) {
       scan.setFilter(filterList);
@@ -463,10 +516,10 @@ class GenericEntityReader extends TimelineEntityReader {
       return null;
     }
     TimelineEntity entity = new TimelineEntity();
-    String entityType = EntityColumn.TYPE.readResult(result).toString();
-    entity.setType(entityType);
-    String entityId = EntityColumn.ID.readResult(result).toString();
-    entity.setId(entityId);
+    EntityRowKey parseRowKey = EntityRowKey.parseRowKey(result.getRow());
+    entity.setType(parseRowKey.getEntityType());
+    entity.setId(parseRowKey.getEntityId());
+    entity.setIdPrefix(parseRowKey.getEntityIdPrefix().longValue());
 
     TimelineEntityFilters filters = getFilters();
     // fetch created time

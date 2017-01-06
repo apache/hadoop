@@ -33,13 +33,13 @@ public class EntityRowKey {
   private final Long flowRunId;
   private final String appId;
   private final String entityType;
-  private final long entityIdPrefix;
+  private final Long entityIdPrefix;
   private final String entityId;
   private final KeyConverter<EntityRowKey> entityRowKeyConverter =
       new EntityRowKeyConverter();
 
   public EntityRowKey(String clusterId, String userId, String flowName,
-      Long flowRunId, String appId, String entityType, long entityIdPrefix,
+      Long flowRunId, String appId, String entityType, Long entityIdPrefix,
       String entityId) {
     this.clusterId = clusterId;
     this.userId = userId;
@@ -79,7 +79,7 @@ public class EntityRowKey {
     return entityId;
   }
 
-  public long getEntityIdPrefix() {
+  public Long getEntityIdPrefix() {
     return entityIdPrefix;
   }
 
@@ -180,14 +180,24 @@ public class EntityRowKey {
           Separator.encode(rowKey.getEntityType(), Separator.SPACE,
               Separator.TAB, Separator.QUALIFIERS);
 
+      if (rowKey.getEntityIdPrefix() == null) {
+        return Separator.QUALIFIERS.join(first, second, third, entityType,
+            Separator.EMPTY_BYTES);
+      }
+
       byte[] enitityIdPrefix = Bytes.toBytes(rowKey.getEntityIdPrefix());
 
-      byte[] entityId =
-          rowKey.getEntityId() == null ? Separator.EMPTY_BYTES : Separator
-              .encode(rowKey.getEntityId(), Separator.SPACE, Separator.TAB,
-                  Separator.QUALIFIERS);
+      if (rowKey.getEntityId() == null) {
+        return Separator.QUALIFIERS.join(first, second, third, entityType,
+            enitityIdPrefix, Separator.EMPTY_BYTES);
+      }
+
+      byte[] entityId = Separator.encode(rowKey.getEntityId(), Separator.SPACE,
+          Separator.TAB, Separator.QUALIFIERS);
+
       byte[] fourth =
           Separator.QUALIFIERS.join(entityType, enitityIdPrefix, entityId);
+
       return Separator.QUALIFIERS.join(first, second, third, fourth);
     }
 
@@ -227,7 +237,7 @@ public class EntityRowKey {
           Separator.decode(Bytes.toString(rowKeyComponents[5]),
               Separator.QUALIFIERS, Separator.TAB, Separator.SPACE);
 
-      long entityPrefixId = Bytes.toLong(rowKeyComponents[6]);
+      Long entityPrefixId = Bytes.toLong(rowKeyComponents[6]);
 
       String entityId =
           Separator.decode(Bytes.toString(rowKeyComponents[7]),
