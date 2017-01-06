@@ -35,10 +35,10 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyVa
  * <li><b>limit</b> - A limit on the number of entities to return. If null or
  * {@literal < 0}, defaults to {@link #DEFAULT_LIMIT}. The maximum possible
  * value for limit can be {@link Long#MAX_VALUE}.</li>
- * <li><b>createdTimeBegin</b> - Matched entities should not be created
- * before this timestamp. If null or {@literal <=0}, defaults to 0.</li>
- * <li><b>createdTimeEnd</b> - Matched entities should not be created after
- * this timestamp. If null or {@literal <=0}, defaults to
+ * <li><b>createdTimeBegin</b> - Matched entities should not be created before
+ * this timestamp. If null or {@literal <=0}, defaults to 0.</li>
+ * <li><b>createdTimeEnd</b> - Matched entities should not be created after this
+ * timestamp. If null or {@literal <=0}, defaults to
  * {@link Long#MAX_VALUE}.</li>
  * <li><b>relatesTo</b> - Matched entities should or should not relate to given
  * entities depending on what's specified in the filter. The entities in
@@ -99,6 +99,19 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyVa
  * filter list, event filters can be evaluated with logical AND/OR and we can
  * create a hierarchy of these {@link TimelineExistsFilter} objects. If null or
  * empty, the filter is not applied.</li>
+ * <li><b>fromIdPrefix</b> - If specified, retrieve entities with an id prefix
+ * greater than or equal to the specified fromIdPrefix. If fromIdPrefix is same
+ * for all entities of a given entity type, then the user must provide fromId as
+ * a filter to denote the start entity from which further entities will be
+ * fetched. fromIdPrefix is mandatory even in the case the entity id prefix is
+ * not used and should be set to 0.</li>
+ * <li><b>fromId</b> - If specified along with fromIdPrefix, retrieve entities
+ * with an id prefix greater than or equal to specified id prefix in
+ * fromIdPrefix and entity id lexicographically greater than or equal to entity
+ * id specified in fromId. Please note than fromIdPrefix is mandatory if fromId
+ * is specified, otherwise, the filter will be ignored. It is recommended to
+ * provide both fromIdPrefix and fromId filters for more accurate results as id
+ * prefix may not be unique for an entity.</li>
  * </ul>
  */
 @Private
@@ -113,8 +126,11 @@ public class TimelineEntityFilters {
   private TimelineFilterList configFilters;
   private TimelineFilterList metricFilters;
   private TimelineFilterList eventFilters;
+  private Long fromIdPrefix;
+  private String fromId;
   private static final long DEFAULT_BEGIN_TIME = 0L;
   private static final long DEFAULT_END_TIME = Long.MAX_VALUE;
+
 
   /**
    * Default limit of number of entities to return for getEntities API.
@@ -123,6 +139,19 @@ public class TimelineEntityFilters {
 
   public TimelineEntityFilters() {
     this(null, null, null, null, null, null, null, null, null);
+  }
+
+  public TimelineEntityFilters(Long entityLimit, Long timeBegin, Long timeEnd,
+      TimelineFilterList entityRelatesTo, TimelineFilterList entityIsRelatedTo,
+      TimelineFilterList entityInfoFilters,
+      TimelineFilterList entityConfigFilters,
+      TimelineFilterList entityMetricFilters,
+      TimelineFilterList entityEventFilters, Long fromidprefix, String fromid) {
+    this(entityLimit, timeBegin, timeEnd, entityRelatesTo, entityIsRelatedTo,
+        entityInfoFilters, entityConfigFilters, entityMetricFilters,
+        entityEventFilters);
+    this.fromIdPrefix = fromidprefix;
+    this.fromId = fromid;
   }
 
   public TimelineEntityFilters(
@@ -238,5 +267,21 @@ public class TimelineEntityFilters {
 
   public void setEventFilters(TimelineFilterList filters) {
     this.eventFilters = filters;
+  }
+
+  public String getFromId() {
+    return fromId;
+  }
+
+  public void setFromId(String fromId) {
+    this.fromId = fromId;
+  }
+
+  public Long getFromIdPrefix() {
+    return fromIdPrefix;
+  }
+
+  public void setFromIdPrefix(Long fromIdPrefix) {
+    this.fromIdPrefix = fromIdPrefix;
   }
 }
