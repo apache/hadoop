@@ -414,7 +414,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected Dispatcher createDispatcher() {
-    return new AsyncDispatcher();
+    return new AsyncDispatcher("RM Event dispatcher");
   }
 
   protected ResourceScheduler createScheduler() {
