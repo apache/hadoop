@@ -30,7 +30,6 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.records.AbstractResourceRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -381,7 +380,8 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   /**
    * Normalize a resource request.
    *
-   * @param request the resource request to be normalized
+   * @param requestedResource the resource to be normalized
+   * @return the normalized resource
    */
-  void normalizeRequest(AbstractResourceRequest request);
+  Resource getNormalizedResource(Resource requestedResource);
 }

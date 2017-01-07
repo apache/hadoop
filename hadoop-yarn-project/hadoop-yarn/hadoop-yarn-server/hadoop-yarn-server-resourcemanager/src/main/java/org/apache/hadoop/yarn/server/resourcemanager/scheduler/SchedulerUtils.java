@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import java.io.IOException;
 import java.util.Set;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -33,7 +34,6 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.AbstractResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidLabelResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
@@ -134,29 +134,33 @@ public class SchedulerUtils {
    * Utility method to normalize a resource request, by insuring that the
    * requested memory is a multiple of minMemory and is not zero.
    */
+  @VisibleForTesting
   public static void normalizeRequest(
     ResourceRequest ask,
     ResourceCalculator resourceCalculator,
     Resource minimumResource,
     Resource maximumResource) {
-    normalizeRequest(ask, resourceCalculator,
-        minimumResource, maximumResource, minimumResource);
+    ask.setCapability(
+        getNormalizedResource(ask.getCapability(), resourceCalculator,
+            minimumResource, maximumResource, minimumResource));
   }
 
   /**
    * Utility method to normalize a resource request, by insuring that the
    * requested memory is a multiple of increment resource and is not zero.
+   *
+   * @return normalized resource
    */
-  public static void normalizeRequest(
-      AbstractResourceRequest ask,
+  public static Resource getNormalizedResource(
+      Resource ask,
       ResourceCalculator resourceCalculator,
       Resource minimumResource,
       Resource maximumResource,
       Resource incrementResource) {
     Resource normalized = Resources.normalize(
-        resourceCalculator, ask.getCapability(), minimumResource,
+        resourceCalculator, ask, minimumResource,
         maximumResource, incrementResource);
-    ask.setCapability(normalized);
+    return normalized;
   }
 
   private static void normalizeNodeLabelExpressionInRequest(
