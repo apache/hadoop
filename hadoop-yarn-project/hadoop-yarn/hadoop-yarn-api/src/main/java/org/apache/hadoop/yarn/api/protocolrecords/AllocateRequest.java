@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -26,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerResourceIncreaseRequest;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
@@ -71,20 +73,47 @@ public abstract class AllocateRequest {
         .releaseList(containersToBeReleased)
         .resourceBlacklistRequest(resourceBlacklistRequest).build();
   }
+
+  /**
+   * Use {@link AllocateRequest#newInstance(int, float, List, List,
+   * ResourceBlacklistRequest, List)} instead
+   * @param responseID responseId
+   * @param appProgress appProgress
+   * @param resourceAsk resourceAsk
+   * @param containersToBeReleased containersToBeReleased
+   * @param resourceBlacklistRequest resourceBlacklistRequest
+   * @param increaseRequests increaseRequests
+   * @return AllocateRequest
+   */
+  @Deprecated
+  public static AllocateRequest newInstance(int responseID, float appProgress,
+      List<ResourceRequest> resourceAsk,
+      List<ContainerId> containersToBeReleased,
+      ResourceBlacklistRequest resourceBlacklistRequest,
+      List<ContainerResourceIncreaseRequest> increaseRequests) {
+    AllocateRequest allocateRequest = Records.newRecord(AllocateRequest.class);
+    allocateRequest.setResponseId(responseID);
+    allocateRequest.setProgress(appProgress);
+    allocateRequest.setAskList(resourceAsk);
+    allocateRequest.setReleaseList(containersToBeReleased);
+    allocateRequest.setResourceBlacklistRequest(resourceBlacklistRequest);
+    allocateRequest.setIncreaseRequests(increaseRequests);
+    return allocateRequest;
+  }
   
   @Public
   @Unstable
   public static AllocateRequest newInstance(int responseID, float appProgress,
       List<ResourceRequest> resourceAsk,
       List<ContainerId> containersToBeReleased,
-      ResourceBlacklistRequest resourceBlacklistRequest,
-      List<UpdateContainerRequest> updateRequests) {
-    return AllocateRequest.newBuilder().responseId(responseID)
-        .progress(appProgress).askList(resourceAsk)
-        .releaseList(containersToBeReleased)
-        .resourceBlacklistRequest(resourceBlacklistRequest)
-        .updateRequests(updateRequests)
-        .build();
+      List<UpdateContainerRequest> updateRequests,
+      ResourceBlacklistRequest resourceBlacklistRequest) {
+      return AllocateRequest.newBuilder().responseId(responseID)
+          .progress(appProgress).askList(resourceAsk)
+          .releaseList(containersToBeReleased)
+          .resourceBlacklistRequest(resourceBlacklistRequest)
+          .updateRequests(updateRequests)
+          .build();
   }
   
   /**
@@ -188,6 +217,21 @@ public abstract class AllocateRequest {
   @Stable
   public abstract void setResourceBlacklistRequest(
       ResourceBlacklistRequest resourceBlacklistRequest);
+
+  /**
+   * Use {@link AllocateRequest#getUpdateRequests()} instead
+   * @return ContainerResourceIncreaseRequests
+   */
+  @Deprecated
+  public abstract List<ContainerResourceIncreaseRequest> getIncreaseRequests();
+
+  /**
+   * Use {@link AllocateRequest#setUpdateRequests(List)} instead
+   * @param increaseRequests increaseRequests
+   */
+  @Deprecated
+  public abstract void setIncreaseRequests(
+      List<ContainerResourceIncreaseRequest> increaseRequests);
   
   /**
    * Get the list of container update requests being sent by the

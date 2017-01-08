@@ -29,6 +29,8 @@ import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerResourceDecrease;
+import org.apache.hadoop.yarn.api.records.ContainerResourceIncrease;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -269,6 +271,16 @@ public class AllocateResponsePBImpl extends AllocateResponse {
     this.updateErrors = new ArrayList<>(
         updateErrors.size());
     this.updateErrors.addAll(updateErrors);
+  }
+
+  @Override
+  public List<ContainerResourceIncrease> getIncreasedContainers() {
+    return null;
+  }
+
+  @Override
+  public List<ContainerResourceDecrease> getDecreasedContainers() {
+    return null;
   }
 
   @Override

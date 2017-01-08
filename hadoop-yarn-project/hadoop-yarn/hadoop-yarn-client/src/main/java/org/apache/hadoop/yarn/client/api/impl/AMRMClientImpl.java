@@ -284,6 +284,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
             .responseId(lastResponseId).progress(progressIndicator)
             .askList(askList).resourceBlacklistRequest(blacklistRequest)
             .releaseList(releaseList).updateRequests(updateList).build();
+
         // clear blacklistAdditions and blacklistRemovals before
         // unsynchronized part
         blacklistAdditions.clear();
