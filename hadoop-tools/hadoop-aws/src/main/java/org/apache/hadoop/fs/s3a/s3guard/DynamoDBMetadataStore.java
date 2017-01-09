@@ -190,10 +190,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     // use the bucket as the DynamoDB table name if not specified in config
     tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY, bucket);
 
-    // create the table unless it's explicitly told not to do so
-    if (conf.getBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, false)) {
-      createTable();
-    }
+    initTable();
   }
 
   /**
@@ -230,7 +227,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     dynamoDB = new DynamoDB(dynamoDBClient);
     region = dynamoDBClient.getEndpointPrefix();
 
-    createTable();
+    initTable();
   }
 
   @Override
@@ -510,46 +507,64 @@ public class DynamoDBMetadataStore implements MetadataStore {
   /**
    * Create a table if it does not exist and wait for it to become active.
    *
-   * If a table with the intended name already exists, then it logs the
-   * {@link ResourceInUseException} and uses that table. The DynamoDB table
-   * creation API is asynchronous.  This method wait for the table to become
-   * active after sending the creation request, so overall, this method is
-   * synchronous, and the table is guaranteed to exist after this method
-   * returns successfully.
+   * If a table with the intended name already exists, then it uses that table.
+   * Otherwise, it will automatically create the table if the config
+   * {@link org.apache.hadoop.fs.s3a.Constants#S3GUARD_DDB_TABLE_CREATE_KEY} is
+   * enabled. The DynamoDB table creation API is asynchronous.  This method wait
+   * for the table to become active after sending the creation request, so
+   * overall, this method is synchronous, and the table is guaranteed to exist
+   * after this method returns successfully.
+   *
+   * @throws IOException if table does not exist and auto-creation is disabled;
+   * or any other I/O exception occurred.
    */
   @VisibleForTesting
-  void createTable() throws IOException {
+  void initTable() throws IOException {
     final ProvisionedThroughput capacity = new ProvisionedThroughput(
         conf.getLong(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY,
             S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT),
         conf.getLong(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY,
             S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT));
 
+    table = dynamoDB.getTable(tableName);
     try {
-      LOG.info("Creating DynamoDB table {} in region {}", tableName, region);
-      table = dynamoDB.createTable(new CreateTableRequest()
-          .withTableName(tableName)
-          .withKeySchema(keySchema())
-          .withAttributeDefinitions(attributeDefinitions())
-          .withProvisionedThroughput(capacity));
-    } catch (ResourceInUseException e) {
-      LOG.info("ResourceInUseException while creating DynamoDB table {} in "
-              + "region {}.  This may indicate that the table was created by "
-              + "another concurrent thread or process.",
-          tableName, region);
-      table = dynamoDB.getTable(tableName);
-    }
+      try {
+        table.describe();
+        LOG.debug("Using existing DynamoDB table {} in region {}",
+            tableName, region);
+      } catch (ResourceNotFoundException rnfe) {
+        if (conf.getBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, false)) {
+          try {
+            LOG.info("Creating non-existent DynamoDB table {} in region {}",
+                tableName, region);
+            dynamoDB.createTable(new CreateTableRequest()
+                .withTableName(tableName)
+                .withKeySchema(keySchema())
+                .withAttributeDefinitions(attributeDefinitions())
+                .withProvisionedThroughput(capacity));
+          } catch (ResourceInUseException e) {
+            LOG.debug("ResourceInUseException while creating DynamoDB table {} "
+                    + "in region {}.  This may indicate that the table was "
+                    + "created by another concurrent thread or process.",
+                tableName, region);
+          }
+        } else {
+          throw new IOException("DynamoDB table '" + tableName + "' does not "
+              + "exist in region " + region + "; auto-creation is turned off");
+        }
+      }
 
-    try {
-      table.waitForActive();
-    } catch (InterruptedException e) {
-      LOG.warn("Interrupted while waiting for DynamoDB table {} active",
-          tableName, e);
-      Thread.currentThread().interrupt();
-      throw new InterruptedIOException("DynamoDB table '" + tableName + "'" +
-          " is not active yet in region " + region);
+      try {
+        table.waitForActive();
+      } catch (InterruptedException e) {
+        LOG.warn("Interrupted while waiting for DynamoDB table {} active",
+            tableName, e);
+        Thread.currentThread().interrupt();
+        throw new InterruptedIOException("DynamoDB table '" + tableName + "'" +
+            " is not active yet in region " + region);
+      }
     } catch (AmazonClientException e) {
-      throw translateException("createTable", (String) null, e);
+      throw translateException("initTable", (String) null, e);
     }
   }
 

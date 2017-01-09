@@ -214,7 +214,6 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   public void testInitializeWithConfiguration() throws IOException {
     final String tableName = "testInitializeWithConfiguration";
     final Configuration conf = new Configuration();
-    String a = conf.get(Constants.S3GUARD_DDB_ENDPOINT_KEY);
     try {
       DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
       ddbms.initialize(conf);
@@ -234,6 +233,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     // config credentials
     conf.set(Constants.ACCESS_KEY, "dummy-access-key");
     conf.set(Constants.SECRET_KEY, "dummy-secret-key");
+    conf.setBoolean(Constants.S3GUARD_DDB_TABLE_CREATE_KEY, true);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
       ddbms.initialize(conf);
       verifyTableInitialized(tableName);
@@ -312,12 +312,33 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   }
 
   @Test
-  public void testCreateExistingTable() throws IOException {
+  public void testInitExistingTable() throws IOException {
     final DynamoDBMetadataStore ddbms = createContract().getMetadataStore();
     verifyTableInitialized(BUCKET);
     // create existing table
-    ddbms.createTable();
+    ddbms.initTable();
     verifyTableInitialized(BUCKET);
+  }
+
+  /**
+   * Test that initTable fails with IOException when table does not exist and
+   * table auto-creation is disabled.
+   */
+  @Test
+  public void testFailNonexistentTable() throws IOException {
+    final String tableName = "testFailNonexistentTable";
+    final DynamoDBMSContract contract = createContract();
+    final S3AFileSystem s3afs = contract.getFileSystem();
+    final Configuration conf = s3afs.getConf();
+    conf.set(Constants.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
+    conf.unset(Constants.S3GUARD_DDB_TABLE_CREATE_KEY);
+    try {
+      final DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
+      ddbms.initialize(s3afs);
+      fail("Should have failed as table does not exist and table auto-creation "
+          + "is disabled");
+    } catch (IOException ignored) {
+    }
   }
 
   /**
