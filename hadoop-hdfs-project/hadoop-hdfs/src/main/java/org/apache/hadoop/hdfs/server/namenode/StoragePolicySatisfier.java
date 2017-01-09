@@ -298,9 +298,25 @@ public class StoragePolicySatisfier implements Runnable {
           new ArrayList<StorageTypeNodePair>();
       List<DatanodeStorageInfo> existingBlockStorages =
           new ArrayList<DatanodeStorageInfo>(Arrays.asList(storages));
+      // if expected type exists in source node already, local movement would be
+      // possible, so lets find such sources first.
+      Iterator<DatanodeStorageInfo> iterator = existingBlockStorages.iterator();
+      while (iterator.hasNext()) {
+        DatanodeStorageInfo datanodeStorageInfo = iterator.next();
+        if (checkSourceAndTargetTypeExists(
+            datanodeStorageInfo.getDatanodeDescriptor(), existing,
+            expectedStorageTypes)) {
+          sourceWithStorageMap
+              .add(new StorageTypeNodePair(datanodeStorageInfo.getStorageType(),
+                  datanodeStorageInfo.getDatanodeDescriptor()));
+          iterator.remove();
+          existing.remove(datanodeStorageInfo.getStorageType());
+        }
+      }
+
+      // Let's find sources for existing types left.
       for (StorageType existingType : existing) {
-        Iterator<DatanodeStorageInfo> iterator =
-            existingBlockStorages.iterator();
+        iterator = existingBlockStorages.iterator();
         while (iterator.hasNext()) {
           DatanodeStorageInfo datanodeStorageInfo = iterator.next();
           StorageType storageType = datanodeStorageInfo.getStorageType();
@@ -317,7 +333,7 @@ public class StoragePolicySatisfier implements Runnable {
           findTargetsForExpectedStorageTypes(expectedStorageTypes);
 
       foundMatchingTargetNodesForBlock |= findSourceAndTargetToMove(
-          blockMovingInfos, blockInfo, existing, sourceWithStorageMap,
+          blockMovingInfos, blockInfo, sourceWithStorageMap,
           expectedStorageTypes, locsForExpectedStorageTypes);
     }
     return foundMatchingTargetNodesForBlock;
@@ -366,8 +382,6 @@ public class StoragePolicySatisfier implements Runnable {
    *          - list of block source and target node pair
    * @param blockInfo
    *          - Block
-   * @param existing
-   *          - Existing storage types of block
    * @param sourceWithStorageList
    *          - Source Datanode with storages list
    * @param expected
@@ -379,7 +393,6 @@ public class StoragePolicySatisfier implements Runnable {
    */
   private boolean findSourceAndTargetToMove(
       List<BlockMovingInfo> blockMovingInfos, BlockInfo blockInfo,
-      List<StorageType> existing,
       List<StorageTypeNodePair> sourceWithStorageList,
       List<StorageType> expected,
       StorageTypeNodeMap locsForExpectedStorageTypes) {
@@ -403,6 +416,7 @@ public class StoragePolicySatisfier implements Runnable {
         targetNodes.add(chosenTarget.dn);
         targetStorageTypes.add(chosenTarget.storageType);
         chosenNodes.add(chosenTarget.dn);
+        expected.remove(chosenTarget.storageType);
         // TODO: We can increment scheduled block count for this node?
       }
     }
@@ -442,14 +456,18 @@ public class StoragePolicySatisfier implements Runnable {
         targetNodes.add(chosenTarget.dn);
         targetStorageTypes.add(chosenTarget.storageType);
         chosenNodes.add(chosenTarget.dn);
+        expected.remove(chosenTarget.storageType);
         // TODO: We can increment scheduled block count for this node?
       } else {
         LOG.warn(
             "Failed to choose target datanode for the required"
                 + " storage types {}, block:{}, existing storage type:{}",
             expected, blockInfo, existingTypeNodePair.storageType);
-        foundMatchingTargetNodesForBlock = false;
       }
+    }
+
+    if (expected.size() > 0) {
+      foundMatchingTargetNodesForBlock = false;
     }
 
     blockMovingInfos.addAll(getBlockMovingInfos(blockInfo, sourceNodes,
@@ -614,6 +632,23 @@ public class StoragePolicySatisfier implements Runnable {
       }
     }
     return max;
+  }
+
+  private boolean checkSourceAndTargetTypeExists(DatanodeDescriptor dn,
+      List<StorageType> existing, List<StorageType> expectedStorageTypes) {
+    DatanodeStorageInfo[] allDNStorageInfos = dn.getStorageInfos();
+    boolean isExpectedTypeAvailable = false;
+    boolean isExistingTypeAvailable = false;
+    for (DatanodeStorageInfo dnInfo : allDNStorageInfos) {
+      StorageType storageType = dnInfo.getStorageType();
+      if (existing.contains(storageType)) {
+        isExistingTypeAvailable = true;
+      }
+      if (expectedStorageTypes.contains(storageType)) {
+        isExpectedTypeAvailable = true;
+      }
+    }
+    return isExistingTypeAvailable && isExpectedTypeAvailable;
   }
 
   private static class StorageTypeNodeMap {

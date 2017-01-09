@@ -580,6 +580,77 @@ public class TestStoragePolicySatisfier {
     }
   }
 
+  /**
+   * Tests that moving block storage with in the same datanode. Let's say we
+   * have DN1[DISK,ARCHIVE], DN2[DISK, SSD], DN3[DISK,RAM_DISK] when
+   * storagepolicy set to ONE_SSD and request satisfyStoragePolicy, then block
+   * should move to DN2[SSD] successfully.
+   */
+  @Test(timeout = 300000)
+  public void testBlockMoveInSameDatanodeWithONESSD() throws Exception {
+    StorageType[][] diskTypes =
+        new StorageType[][]{{StorageType.DISK, StorageType.ARCHIVE},
+            {StorageType.DISK, StorageType.SSD},
+            {StorageType.DISK, StorageType.RAM_DISK}};
+    config.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    try {
+      hdfsCluster = startCluster(config, diskTypes, numOfDatanodes,
+          storagesPerDatanode, capacity);
+      dfs = hdfsCluster.getFileSystem();
+      writeContent(file);
+
+      // Change policy to ONE_SSD
+      dfs.setStoragePolicy(new Path(file), "ONE_SSD");
+      FSNamesystem namesystem = hdfsCluster.getNamesystem();
+      INode inode = namesystem.getFSDirectory().getINode(file);
+
+      namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+      hdfsCluster.triggerHeartbeats();
+      waitExpectedStorageType(file, StorageType.SSD, 1, 30000);
+      waitExpectedStorageType(file, StorageType.DISK, 2, 30000);
+
+    } finally {
+      shutdownCluster();
+    }
+  }
+
+  /**
+   * Tests that moving block storage with in the same datanode and remote node.
+   * Let's say we have DN1[DISK,ARCHIVE], DN2[ARCHIVE, SSD], DN3[DISK,DISK],
+   * DN4[DISK,DISK] when storagepolicy set to WARM and request
+   * satisfyStoragePolicy, then block should move to DN1[ARCHIVE] and
+   * DN2[ARCHIVE] successfully.
+   */
+  @Test(timeout = 300000)
+  public void testBlockMoveInSameAndRemoteDatanodesWithWARM() throws Exception {
+    StorageType[][] diskTypes =
+        new StorageType[][]{{StorageType.DISK, StorageType.ARCHIVE},
+            {StorageType.ARCHIVE, StorageType.SSD},
+            {StorageType.DISK, StorageType.DISK},
+            {StorageType.DISK, StorageType.DISK}};
+
+    config.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    try {
+      hdfsCluster = startCluster(config, diskTypes, diskTypes.length,
+          storagesPerDatanode, capacity);
+      dfs = hdfsCluster.getFileSystem();
+      writeContent(file);
+
+      // Change policy to WARM
+      dfs.setStoragePolicy(new Path(file), "WARM");
+      FSNamesystem namesystem = hdfsCluster.getNamesystem();
+      INode inode = namesystem.getFSDirectory().getINode(file);
+
+      namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+      hdfsCluster.triggerHeartbeats();
+
+      waitExpectedStorageType(file, StorageType.DISK, 1, 30000);
+      waitExpectedStorageType(file, StorageType.ARCHIVE, 2, 30000);
+    } finally {
+      shutdownCluster();
+    }
+  }
+
   private String createFileAndSimulateFavoredNodes(int favoredNodesCount)
       throws IOException {
     ArrayList<DataNode> dns = hdfsCluster.getDataNodes();
