@@ -311,7 +311,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * Verify whether a submitted application priority is valid as per configured
    * Queue
    *
-   * @param priorityFromContext
+   * @param priorityRequestedByApp
    *          Submitted Application priority.
    * @param user
    *          User who submitted the Application
@@ -321,8 +321,8 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    *          Application ID
    * @return Updated Priority from scheduler
    */
-  public Priority checkAndGetApplicationPriority(Priority priorityFromContext,
-      String user, String queueName, ApplicationId applicationId)
+  public Priority checkAndGetApplicationPriority(Priority priorityRequestedByApp,
+      UserGroupInformation user, String queueName, ApplicationId applicationId)
       throws YarnException;
 
   /**
@@ -334,12 +334,13 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @param applicationId Application ID
    *
    * @param future Sets any type of exception happened from StateStore
+   * @param user who submitted the application
    *
    * @return updated priority
    */
   public Priority updateApplicationPriority(Priority newPriority,
-      ApplicationId applicationId, SettableFuture<Object> future)
-      throws YarnException;
+      ApplicationId applicationId, SettableFuture<Object> future,
+      UserGroupInformation user) throws YarnException;
 
   /**
    *

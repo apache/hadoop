@@ -965,7 +965,7 @@ public class ResourceSchedulerWrapper
 
   @Override
   public Priority checkAndGetApplicationPriority(Priority priority,
-      String user, String queueName, ApplicationId applicationId)
+      UserGroupInformation user, String queueName, ApplicationId applicationId)
       throws YarnException {
     // TODO Dummy implementation.
     return Priority.newInstance(0);
