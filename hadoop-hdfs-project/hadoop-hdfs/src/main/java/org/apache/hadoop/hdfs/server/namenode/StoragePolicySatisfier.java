@@ -27,7 +27,9 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -79,15 +81,18 @@ public class StoragePolicySatisfier implements Runnable {
 
   public StoragePolicySatisfier(final Namesystem namesystem,
       final BlockStorageMovementNeeded storageMovementNeeded,
-      final BlockManager blkManager) {
+      final BlockManager blkManager, Configuration conf) {
     this.namesystem = namesystem;
     this.storageMovementNeeded = storageMovementNeeded;
     this.blockManager = blkManager;
-    // TODO: below selfRetryTimeout and checkTimeout can be configurable later
-    // Now, the default values of selfRetryTimeout and checkTimeout are 30mins
-    // and 5mins respectively
     this.storageMovementsMonitor = new BlockStorageMovementAttemptedItems(
-        5 * 60 * 1000, 30 * 60 * 1000, storageMovementNeeded);
+        conf.getLong(
+            DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
+            DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_DEFAULT),
+        conf.getLong(
+            DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_KEY,
+            DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_DEFAULT),
+        storageMovementNeeded);
   }
 
   /**

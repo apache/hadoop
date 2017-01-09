@@ -64,14 +64,14 @@ public class BlockStorageMovementAttemptedItems {
   // It might take anywhere between 5 to 10 minutes before
   // a request is timed out.
   //
-  private long checkTimeout = 5 * 60 * 1000; // minimum value
+  private long minCheckTimeout = 5 * 60 * 1000; // minimum value
   private BlockStorageMovementNeeded blockStorageMovementNeeded;
 
-  public BlockStorageMovementAttemptedItems(long timeoutPeriod,
+  public BlockStorageMovementAttemptedItems(long recheckTimeout,
       long selfRetryTimeout,
       BlockStorageMovementNeeded unsatisfiedStorageMovementFiles) {
-    if (timeoutPeriod > 0) {
-      this.checkTimeout = Math.min(checkTimeout, timeoutPeriod);
+    if (recheckTimeout > 0) {
+      this.minCheckTimeout = Math.min(minCheckTimeout, recheckTimeout);
     }
 
     this.selfRetryTimeout = selfRetryTimeout;
@@ -196,7 +196,7 @@ public class BlockStorageMovementAttemptedItems {
         try {
           blockStorageMovementResultCheck();
           blocksStorageMovementUnReportedItemsCheck();
-          Thread.sleep(checkTimeout);
+          Thread.sleep(minCheckTimeout);
         } catch (InterruptedException ie) {
           LOG.info("BlocksStorageMovementAttemptResultMonitor thread "
               + "is interrupted.", ie);

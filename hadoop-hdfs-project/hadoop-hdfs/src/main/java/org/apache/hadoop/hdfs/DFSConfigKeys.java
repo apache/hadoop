@@ -613,10 +613,19 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_MOVER_MAX_NO_MOVE_INTERVAL_KEY = "dfs.mover.max-no-move-interval";
   public static final int    DFS_MOVER_MAX_NO_MOVE_INTERVAL_DEFAULT = 60*1000; // One minute
 
+  // SPS related configurations
   public static final String  DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY =
       "dfs.storage.policy.satisfier.activate";
   public static final boolean DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_DEFAULT =
       true;
+  public static final String DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY =
+      "dfs.storage.policy.satisfier.recheck.timeout.millis";
+  public static final int DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_DEFAULT =
+      5 * 60 * 1000;
+  public static final String DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_KEY =
+      "dfs.storage.policy.satisfier.self.retry.timeout.millis";
+  public static final int DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_DEFAULT =
+      30 * 60 * 1000;
 
   public static final String  DFS_DATANODE_ADDRESS_KEY = "dfs.datanode.address";
   public static final int     DFS_DATANODE_DEFAULT_PORT = 9866;

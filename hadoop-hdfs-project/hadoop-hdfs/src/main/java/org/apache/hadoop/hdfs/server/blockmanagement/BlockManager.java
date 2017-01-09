@@ -479,8 +479,8 @@ public class BlockManager implements BlockStatsMXBean {
             DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY,
             DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_DEFAULT);
     if (storagePolicyEnabled && spsEnabled) {
-      sps = new StoragePolicySatisfier(namesystem,
-          storageMovementNeeded, this);
+      sps = new StoragePolicySatisfier(namesystem, storageMovementNeeded, this,
+          conf);
     } else {
       sps = null;
       LOG.warn(
