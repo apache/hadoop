@@ -353,19 +353,19 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       RMServerUtils.validateApplicationTimeouts(
           submissionContext.getApplicationTimeouts());
     }
-    
+
     ApplicationId applicationId = submissionContext.getApplicationId();
     ResourceRequest amReq =
         validateAndCreateResourceRequest(submissionContext, isRecovery);
 
     // Verify and get the update application priority and set back to
     // submissionContext
+    UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(user);
     Priority appPriority = scheduler.checkAndGetApplicationPriority(
-        submissionContext.getPriority(), user, submissionContext.getQueue(),
+        submissionContext.getPriority(), userUgi, submissionContext.getQueue(),
         applicationId);
     submissionContext.setPriority(appPriority);
 
-    UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(user);
     // Since FairScheduler queue mapping is done inside scheduler,
     // if FairScheduler is used and the queue doesn't exist, we should not
     // fail here because queue will be created inside FS. Ideally, FS queue
@@ -569,12 +569,14 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   /**
    * updateApplicationPriority will invoke scheduler api to update the
    * new priority to RM and StateStore.
+   * @param callerUGI user
    * @param applicationId Application Id
    * @param newAppPriority proposed new application priority
    * @throws YarnException Handle exceptions
    */
-  public void updateApplicationPriority(ApplicationId applicationId,
-      Priority newAppPriority) throws YarnException {
+  public void updateApplicationPriority(UserGroupInformation callerUGI,
+      ApplicationId applicationId, Priority newAppPriority)
+      throws YarnException {
     RMApp app = this.rmContext.getRMApps().get(applicationId);
 
     synchronized (applicationId) {
@@ -587,8 +589,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
       // Invoke scheduler api to update priority in scheduler and to
       // State Store.
-      Priority appPriority = rmContext.getScheduler()
-          .updateApplicationPriority(newAppPriority, applicationId, future);
+      Priority appPriority = rmContext.getScheduler().updateApplicationPriority(
+          newAppPriority, applicationId, future, callerUGI);
 
       if (app.getApplicationPriority().equals(appPriority)) {
         return;

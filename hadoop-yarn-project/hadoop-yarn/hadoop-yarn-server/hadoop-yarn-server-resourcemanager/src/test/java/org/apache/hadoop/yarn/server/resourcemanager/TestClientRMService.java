@@ -1123,7 +1123,7 @@ public class TestClientRMService {
     when(yarnScheduler.getResourceCalculator()).thenReturn(rs);
 
     when(yarnScheduler.checkAndGetApplicationPriority(any(Priority.class),
-        anyString(), anyString(), any(ApplicationId.class)))
+        any(UserGroupInformation.class), anyString(), any(ApplicationId.class)))
             .thenReturn(Priority.newInstance(0));
     return yarnScheduler;
   }

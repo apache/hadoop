@@ -137,6 +137,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSetUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimplePlacementSet;
+import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
@@ -227,6 +228,7 @@ public class CapacityScheduler extends
   private List<AsyncScheduleThread> asyncSchedulerThreads;
   private ResourceCommitterService resourceCommitterService;
   private RMNodeLabelsManager labelManager;
+  private AppPriorityACLsManager appPriorityACLManager;
 
   /**
    * EXPERT
@@ -308,8 +310,9 @@ public class CapacityScheduler extends
       this.usePortForNodeName = this.conf.getUsePortForNodeName();
       this.applications = new ConcurrentHashMap<>();
       this.labelManager = rmContext.getNodeLabelManager();
+      this.appPriorityACLManager = new AppPriorityACLsManager(conf);
       this.queueManager = new CapacitySchedulerQueueManager(yarnConf,
-          this.labelManager);
+          this.labelManager, this.appPriorityACLManager);
       this.queueManager.setCapacitySchedulerContext(this);
 
       this.activitiesManager = new ActivitiesManager(rmContext);
@@ -2188,86 +2191,110 @@ public class CapacityScheduler extends
   }
 
   @Override
-  public Priority checkAndGetApplicationPriority(Priority priorityFromContext,
-      String user, String queueName, ApplicationId applicationId)
-      throws YarnException {
-    Priority appPriority = null;
+  public Priority checkAndGetApplicationPriority(
+      Priority priorityRequestedByApp, UserGroupInformation user,
+      String queueName, ApplicationId applicationId) throws YarnException {
+    try {
+      readLock.lock();
+      Priority appPriority = priorityRequestedByApp;
 
-    // ToDo: Verify against priority ACLs
+      // Verify the scenario where priority is null from submissionContext.
+      if (null == appPriority) {
+        // Verify whether submitted user has any default priority set. If so,
+        // user's default priority will get precedence over queue default.
+        // for updateApplicationPriority call flow, this check is done in
+        // CientRMService itself.
+        appPriority = this.appPriorityACLManager.getDefaultPriority(queueName,
+            user);
 
-    // Verify the scenario where priority is null from submissionContext.
-    if (null == priorityFromContext) {
-      // Get the default priority for the Queue. If Queue is non-existent, then
-      // use default priority
-      priorityFromContext = this.queueManager.getDefaultPriorityForQueue(
-          queueName);
+        // Get the default priority for the Queue. If Queue is non-existent,
+        // then
+        // use default priority. Do it only if user doesnt have any default.
+        if (null == appPriority) {
+          appPriority = this.queueManager.getDefaultPriorityForQueue(queueName);
+        }
 
-      LOG.info("Application '" + applicationId
-          + "' is submitted without priority "
-          + "hence considering default queue/cluster priority: "
-          + priorityFromContext.getPriority());
+        LOG.info(
+            "Application '" + applicationId + "' is submitted without priority "
+                + "hence considering default queue/cluster priority: "
+                + appPriority.getPriority());
+      }
+
+      // Verify whether submitted priority is lesser than max priority
+      // in the cluster. If it is out of found, defining a max cap.
+      if (appPriority.getPriority() > getMaxClusterLevelAppPriority()
+          .getPriority()) {
+        appPriority = Priority
+            .newInstance(getMaxClusterLevelAppPriority().getPriority());
+      }
+
+      // Lets check for ACLs here.
+      if (!appPriorityACLManager.checkAccess(user, queueName, appPriority)) {
+        throw new YarnException(new AccessControlException(
+            "User " + user + " does not have permission to submit/update "
+                + applicationId + " for " + appPriority));
+      }
+
+      LOG.info("Priority '" + appPriority.getPriority()
+          + "' is acceptable in queue : " + queueName + " for application: "
+          + applicationId);
+
+      return appPriority;
+    } finally {
+      readLock.unlock();
     }
-
-    // Verify whether submitted priority is lesser than max priority
-    // in the cluster. If it is out of found, defining a max cap.
-    if (priorityFromContext.compareTo(getMaxClusterLevelAppPriority()) < 0) {
-      priorityFromContext = Priority
-          .newInstance(getMaxClusterLevelAppPriority().getPriority());
-    }
-
-    appPriority = priorityFromContext;
-
-    LOG.info("Priority '" + appPriority.getPriority()
-        + "' is acceptable in queue : " + queueName + " for application: "
-        + applicationId + " for the user: " + user);
-
-    return appPriority;
   }
 
   @Override
   public Priority updateApplicationPriority(Priority newPriority,
-      ApplicationId applicationId, SettableFuture<Object> future)
+      ApplicationId applicationId, SettableFuture<Object> future,
+      UserGroupInformation user)
       throws YarnException {
-    Priority appPriority = null;
-    SchedulerApplication<FiCaSchedulerApp> application = applications
-        .get(applicationId);
+    try {
+      writeLock.lock();
+      Priority appPriority = null;
+      SchedulerApplication<FiCaSchedulerApp> application = applications
+          .get(applicationId);
 
-    if (application == null) {
-      throw new YarnException("Application '" + applicationId
-          + "' is not present, hence could not change priority.");
-    }
+      if (application == null) {
+        throw new YarnException("Application '" + applicationId
+            + "' is not present, hence could not change priority.");
+      }
 
-    RMApp rmApp = rmContext.getRMApps().get(applicationId);
+      RMApp rmApp = rmContext.getRMApps().get(applicationId);
 
-    appPriority = checkAndGetApplicationPriority(newPriority, rmApp.getUser(),
-        rmApp.getQueue(), applicationId);
+      appPriority = checkAndGetApplicationPriority(newPriority, user,
+          rmApp.getQueue(), applicationId);
 
-    if (application.getPriority().equals(appPriority)) {
-      future.set(null);
+      if (application.getPriority().equals(appPriority)) {
+        future.set(null);
+        return appPriority;
+      }
+
+      // Update new priority in Submission Context to update to StateStore.
+      rmApp.getApplicationSubmissionContext().setPriority(appPriority);
+
+      // Update to state store
+      ApplicationStateData appState = ApplicationStateData.newInstance(
+          rmApp.getSubmitTime(), rmApp.getStartTime(),
+          rmApp.getApplicationSubmissionContext(), rmApp.getUser(),
+          rmApp.getCallerContext());
+      appState.setApplicationTimeouts(rmApp.getApplicationTimeouts());
+      rmContext.getStateStore().updateApplicationStateSynchronously(appState,
+          false, future);
+
+      // As we use iterator over a TreeSet for OrderingPolicy, once we change
+      // priority then reinsert back to make order correct.
+      LeafQueue queue = (LeafQueue) getQueue(rmApp.getQueue());
+      queue.updateApplicationPriority(application, appPriority);
+
+      LOG.info("Priority '" + appPriority + "' is updated in queue :"
+          + rmApp.getQueue() + " for application: " + applicationId
+          + " for the user: " + rmApp.getUser());
       return appPriority;
+    } finally {
+      writeLock.unlock();
     }
-
-    // Update new priority in Submission Context to update to StateStore.
-    rmApp.getApplicationSubmissionContext().setPriority(appPriority);
-
-    // Update to state store
-    ApplicationStateData appState = ApplicationStateData.newInstance(
-        rmApp.getSubmitTime(), rmApp.getStartTime(),
-        rmApp.getApplicationSubmissionContext(), rmApp.getUser(),
-        rmApp.getCallerContext());
-    appState.setApplicationTimeouts(rmApp.getApplicationTimeouts());
-    rmContext.getStateStore().updateApplicationStateSynchronously(appState,
-        false, future);
-
-    // As we use iterator over a TreeSet for OrderingPolicy, once we change
-    // priority then reinsert back to make order correct.
-    LeafQueue queue = (LeafQueue) getQueue(rmApp.getQueue());
-    queue.updateApplicationPriority(application, appPriority);
-
-    LOG.info("Priority '" + appPriority + "' is updated in queue :"
-        + rmApp.getQueue() + " for application: " + applicationId
-        + " for the user: " + rmApp.getUser());
-    return appPriority;
   }
 
   @Override

@@ -29,6 +29,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
@@ -463,7 +464,9 @@ public class TestApplicationMasterService {
 
     // Change the priority of App1 to 8
     Priority appPriority2 = Priority.newInstance(8);
-    rm.getRMAppManager().updateApplicationPriority(app1.getApplicationId(),
+    UserGroupInformation ugi = UserGroupInformation
+        .createRemoteUser(app1.getUser());
+    rm.getRMAppManager().updateApplicationPriority(ugi, app1.getApplicationId(),
         appPriority2);
 
     AllocateResponse response2 = am1.allocate(allocateRequest);

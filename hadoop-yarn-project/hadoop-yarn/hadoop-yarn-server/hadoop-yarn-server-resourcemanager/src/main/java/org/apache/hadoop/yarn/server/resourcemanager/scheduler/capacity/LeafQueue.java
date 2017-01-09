@@ -140,6 +140,9 @@ public class LeafQueue extends AbstractCSQueue {
   private Map<String, TreeSet<RMContainer>> ignorePartitionExclusivityRMContainers =
       new ConcurrentHashMap<>();
 
+  List<AppPriorityACLGroup> priorityAcls =
+      new ArrayList<AppPriorityACLGroup>();
+
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public LeafQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
@@ -204,6 +207,9 @@ public class LeafQueue extends AbstractCSQueue {
       maxAMResourcePerQueuePercent =
           conf.getMaximumApplicationMasterResourcePerQueuePercent(
               getQueuePath());
+
+      priorityAcls = conf.getPriorityAcls(getQueuePath(),
+          scheduler.getMaxClusterLevelAppPriority());
 
       if (!SchedulerUtils.checkQueueLabelExpression(this.accessibleLabels,
           this.defaultLabelExpression, null)) {
@@ -492,6 +498,16 @@ public class LeafQueue extends AbstractCSQueue {
                 user.getResourceUsage()));
       }
       return usersToReturn;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Private
+  public List<AppPriorityACLGroup> getPriorityACLs() {
+    try {
+      readLock.lock();
+      return new ArrayList<>(priorityAcls);
     } finally {
       readLock.unlock();
     }
