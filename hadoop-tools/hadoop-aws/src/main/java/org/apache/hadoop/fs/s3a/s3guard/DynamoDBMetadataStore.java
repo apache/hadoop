@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -45,10 +46,10 @@ import com.amazonaws.services.dynamodbv2.model.ResourceInUseException;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 
 import com.amazonaws.services.dynamodbv2.model.WriteRequest;
-import com.amazonaws.services.s3.AmazonS3;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +60,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3ClientFactory;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
@@ -158,14 +159,15 @@ public class DynamoDBMetadataStore implements MetadataStore {
   private String region;
   private Table table;
   private String tableName;
-  private S3AFileSystem s3afs;
+  private Configuration conf;
+  private URI s3Uri;
   private String username;
 
   @Override
   public void initialize(FileSystem fs) throws IOException {
     Preconditions.checkArgument(fs instanceof S3AFileSystem,
         "DynamoDBMetadataStore only supports S3A filesystem.");
-    s3afs = (S3AFileSystem) fs;
+    final S3AFileSystem s3afs = (S3AFileSystem) fs;
     final String bucket = s3afs.getBucket();
     try {
       region = s3afs.getAmazonS3Client().getBucketLocation(bucket);
@@ -175,8 +177,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
     }
 
     username = s3afs.getUsername();
-
-    final Configuration conf = s3afs.getConf();
+    conf = s3afs.getConf();
+    s3Uri = s3afs.getUri();
     Class<? extends DynamoDBClientFactory> cls = conf.getClass(
         S3GUARD_DDB_CLIENT_FACTORY_IMPL,
         S3GUARD_DDB_CLIENT_FACTORY_IMPL_DEFAULT,
@@ -197,36 +199,25 @@ public class DynamoDBMetadataStore implements MetadataStore {
   /**
    * Performs one-time initialization of the metadata store via configuration.
    *
-   * This initialization depends on the configuration object to get DEFAULT
-   * S3AFileSystem URI, AWS credentials, S3ClientFactory implementation class,
-   * DynamoDBFactor implementation class, DynamoDB endpoints, metadata table
-   * names etc. Generally you should use {@link #initialize(FileSystem)} instead
-   * given an initialized S3 file system.
+   * This initialization depends on the configuration object to get AWS
+   * credentials, DynamoDBFactory implementation class, DynamoDB endpoints,
+   * DynamoDB table names etc. After initialization, this metadata store does
+   * not explicitly relate to any S3 bucket, which be nonexistent.
+   *
+   * This is used to operate the metadata store directly beyond the scope of the
+   * S3AFileSystem integration, e.g. command line tools. Generally you should
+   * use {@link #initialize(FileSystem)} if given an initialized S3 file system.
    *
    * @see #initialize(FileSystem)
    * @throws IOException if there is an error
    */
-  void initialize(Configuration conf) throws IOException {
-    final FileSystem defautFs = FileSystem.get(conf);
-    Preconditions.checkArgument(defautFs instanceof S3AFileSystem,
-        "DynamoDBMetadataStore only supports S3A filesystem.");
-    s3afs = (S3AFileSystem) defautFs;
-
+  void initialize(Configuration config) throws IOException {
+    conf = config;
     // use the bucket as the DynamoDB table name if not specified in config
     tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY);
-    Preconditions.checkNotNull(tableName, "No DynamoDB table name configured!");
-
-    final Class<? extends S3ClientFactory> clsS3 = conf.getClass(
-        S3_CLIENT_FACTORY_IMPL,
-        DEFAULT_S3_CLIENT_FACTORY_IMPL,
-        S3ClientFactory.class);
-    final S3ClientFactory factory = ReflectionUtils.newInstance(clsS3, conf);
-    AmazonS3 s3 = factory.createS3Client(s3afs.getUri(), s3afs.getUri());
-    try {
-      region = s3.getBucketLocation(tableName);
-    } catch (AmazonClientException e) {
-      throw new IOException("Can not find location for bucket " + tableName, e);
-    }
+    Preconditions.checkArgument(!StringUtils.isEmpty(tableName),
+        "No DynamoDB table name configured!");
+    username = UserGroupInformation.getCurrentUser().getShortUserName();
 
     Class<? extends DynamoDBClientFactory> clsDdb = conf.getClass(
         S3GUARD_DDB_CLIENT_FACTORY_IMPL,
@@ -235,8 +226,9 @@ public class DynamoDBMetadataStore implements MetadataStore {
     LOG.debug("Creating dynamo DB client {}", clsDdb);
     AmazonDynamoDBClient dynamoDBClient =
         ReflectionUtils.newInstance(clsDdb, conf)
-            .createDynamoDBClient(s3afs.getUri(), region);
+            .createDynamoDBClient(conf);
     dynamoDB = new DynamoDB(dynamoDBClient);
+    region = dynamoDBClient.getEndpointPrefix();
 
     createTable();
   }
@@ -293,7 +285,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
             .withPrimaryKey(pathToKey(path))
             .withConsistentRead(true); // strictly consistent read
         final Item item = table.getItem(spec);
-        meta = itemToPathMetadata(s3afs.getUri(), item, username);
+        meta = itemToPathMetadata(s3Uri, item, username);
         LOG.debug("Get from table {} in region {} returning for {}: {}",
             tableName, region, path, meta);
       }
@@ -330,7 +322,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
       final List<PathMetadata> metas = new ArrayList<>();
       for (Item item : items) {
-        metas.add(itemToPathMetadata(s3afs.getUri(), item, username));
+        metas.add(itemToPathMetadata(s3Uri, item, username));
       }
       LOG.trace("Listing table {} in region {} for {} returning {}",
           tableName, region, path, metas);
@@ -527,7 +519,6 @@ public class DynamoDBMetadataStore implements MetadataStore {
    */
   @VisibleForTesting
   void createTable() throws IOException {
-    final Configuration conf = s3afs.getConf();
     final ProvisionedThroughput capacity = new ProvisionedThroughput(
         conf.getLong(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY,
             S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT),
@@ -602,7 +593,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     Preconditions.checkNotNull(path);
     Preconditions.checkArgument(path.isAbsolute(),
         "Path '" + path + "' is not absolute!");
-    return path.makeQualified(s3afs.getUri(), null);
+    return s3Uri == null ? path : path.makeQualified(s3Uri, null);
   }
 
   /**

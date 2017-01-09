@@ -213,8 +213,27 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Test
   public void testInitializeWithConfiguration() throws IOException {
     final String tableName = "testInitializeWithConfiguration";
-    final Configuration conf = createContract().getFileSystem().getConf();
+    final Configuration conf = new Configuration();
+    String a = conf.get(Constants.S3GUARD_DDB_ENDPOINT_KEY);
+    try {
+      DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
+      ddbms.initialize(conf);
+      fail("Should have failed because the table name is not set!");
+    } catch (IllegalArgumentException ignored) {
+    }
+    // config table name
     conf.set(Constants.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
+    try {
+      DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
+      ddbms.initialize(conf);
+      fail("Should have failed because as the endpoint is not set!");
+    } catch (IllegalArgumentException ignored) {
+    }
+    // config endpoint
+    conf.set(Constants.S3GUARD_DDB_ENDPOINT_KEY, ddbEndpoint);
+    // config credentials
+    conf.set(Constants.ACCESS_KEY, "dummy-access-key");
+    conf.set(Constants.SECRET_KEY, "dummy-secret-key");
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
       ddbms.initialize(conf);
       verifyTableInitialized(tableName);

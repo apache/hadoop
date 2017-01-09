@@ -98,6 +98,10 @@ public final class S3xLoginHelper {
    * @return a login tuple, possibly empty.
    */
   public static Login extractLoginDetails(URI name) {
+    if (name == null) {
+      return Login.EMPTY;
+    }
+
     try {
       String authority = name.getAuthority();
       if (authority == null) {

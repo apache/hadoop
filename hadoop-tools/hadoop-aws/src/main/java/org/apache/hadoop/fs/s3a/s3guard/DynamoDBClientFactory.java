@@ -57,6 +57,18 @@ interface DynamoDBClientFactory extends Configurable {
       throws IOException;
 
   /**
+   * To create a DynamoDB client against the given endpoint in config.
+   *
+   * This DynamoDB client does not relate to any S3 buckets so the region is
+   * determined implicitly by the endpoint.
+   *
+   * @return a new DynamoDB client
+   * @throws IOException if any IO error happens
+   */
+  AmazonDynamoDBClient createDynamoDBClient(Configuration conf)
+      throws IOException;
+
+  /**
    * The default implementation for creating an AmazonDynamoDBClient.
    */
   class DefaultDynamoDBClientFactory extends Configured
@@ -87,15 +99,36 @@ interface DynamoDBClientFactory extends Configurable {
       ddb.withRegion(region.toAWSRegion());
       final String endPoint = conf.getTrimmed(S3GUARD_DDB_ENDPOINT_KEY);
       if (StringUtils.isNotEmpty(endPoint)) {
-        try {
-          ddb.withEndpoint(endPoint);
-        } catch (IllegalArgumentException e) {
-          final String msg = "Incorrect DynamoDB endpoint: "  + endPoint;
-          LOG.error(msg, e);
-          throw new IllegalArgumentException(msg, e);
-        }
+        setEndPoint(ddb, endPoint);
       }
       return ddb;
+    }
+
+    @Override
+    public AmazonDynamoDBClient createDynamoDBClient(Configuration conf)
+        throws IOException {
+      final AWSCredentialsProvider credentials =
+          createAWSCredentialProviderSet(null, conf, null);
+      final ClientConfiguration awsConf =
+          DefaultS3ClientFactory.createAwsConf(conf);
+      AmazonDynamoDBClient ddb = new AmazonDynamoDBClient(credentials, awsConf);
+      setEndPoint(ddb, conf.getTrimmed(S3GUARD_DDB_ENDPOINT_KEY));
+
+      return ddb;
+    }
+
+    /**
+     * Helper method to set the endpoint for an AmazonDynamoDBClient.
+     */
+    private static void setEndPoint(AmazonDynamoDBClient ddb, String endPoint) {
+      assert ddb != null;
+      try {
+        ddb.withEndpoint(endPoint);
+      } catch (IllegalArgumentException e) {
+        final String msg = "Incorrect DynamoDB endpoint: " + endPoint;
+        LOG.error(msg, e);
+        throw new IllegalArgumentException(msg, e);
+      }
     }
   }
 
