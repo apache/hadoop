@@ -498,8 +498,8 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
           + appId, e);
       doAppLogAggregationPostCleanUp();
     } finally {
-      if (!this.appAggregationFinished.get()) {
-        LOG.warn("Aggregation did not complete for application " + appId);
+      if (!this.appAggregationFinished.get() && !this.aborted.get()) {
+        LOG.warn("Log aggregation did not complete for application " + appId);
         this.dispatcher.getEventHandler().handle(
             new ApplicationEvent(this.appId,
                 ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED));
