@@ -225,6 +225,12 @@ void FileHandleImpl::AsyncPreadSome(
 
   DatanodeInfoProto &chosen_dn = *it;
 
+  std::string dnIpAddr = chosen_dn.id().ipaddr();
+  std::string dnHostName = chosen_dn.id().hostname();
+  LOG_DEBUG(kFileHandle, << "FileHandleImpl::AsyncPreadSome("
+            << FMT_THIS_ADDR << "), ...) Datanode hostname=" << dnHostName << ", IP Address=" << dnIpAddr
+            << ", file path=\"" << path_ << "\", offset=" << offset);
+
   uint64_t offset_within_block = offset - block->offset();
   uint64_t size_within_block = std::min<uint64_t>(
       block->b().numbytes() - offset_within_block, asio::buffer_size(buffers));
