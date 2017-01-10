@@ -42,6 +42,14 @@ else
   exit 1
 fi
 
+# stop nodemanager
+echo "Stopping nodemanagers"
+"${HADOOP_YARN_HOME}/bin/yarn" \
+    --config "${HADOOP_CONF_DIR}" \
+    --workers \
+    --daemon stop \
+    nodemanager
+
 # stop resourceManager
 HARM=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey yarn.resourcemanager.ha.enabled 2>&-)
 if [[ ${HARM} = "false" ]]; then
@@ -66,14 +74,6 @@ else
       --hostnames "${RMHOSTS}" \
       resourcemanager
 fi
-
-# stop nodemanager
-echo "Stopping nodemanagers"
-"${HADOOP_YARN_HOME}/bin/yarn" \
-    --config "${HADOOP_CONF_DIR}" \
-    --workers \
-    --daemon stop \
-    nodemanager
 
 # stop proxyserver
 PROXYSERVER=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey  yarn.web-proxy.address 2>&- | cut -f1 -d:)
