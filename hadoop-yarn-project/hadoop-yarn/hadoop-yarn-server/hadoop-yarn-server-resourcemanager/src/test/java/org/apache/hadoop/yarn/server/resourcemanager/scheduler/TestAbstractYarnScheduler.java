@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
@@ -421,6 +422,119 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       if (rm1 != null) {
         rm1.stop();
       }
+    }
+  }
+
+  @Test(timeout=60000)
+  public void testContainerReleasedByNode() throws Exception {
+    System.out.println("Starting testContainerReleasedByNode");
+    configureScheduler();
+    YarnConfiguration conf = getConf();
+    MockRM rm1 = new MockRM(conf);
+    try {
+      rm1.start();
+      RMApp app1 =
+          rm1.submitApp(200, "name", "user",
+              new HashMap<ApplicationAccessType, String>(), false, "default",
+              -1, null, "Test", false, true);
+      MockNM nm1 =
+          new MockNM("127.0.0.1:1234", 10240, rm1.getResourceTrackerService());
+      nm1.registerNode();
+
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+      // allocate a container that fills more than half the node
+      am1.allocate("127.0.0.1", 8192, 1, new ArrayList<ContainerId>());
+      nm1.nodeHeartbeat(true);
+
+      // wait for containers to be allocated.
+      List<Container> containers =
+          am1.allocate(new ArrayList<ResourceRequest>(),
+              new ArrayList<ContainerId>()).getAllocatedContainers();
+      while (containers.isEmpty()) {
+        Thread.sleep(10);
+        nm1.nodeHeartbeat(true);
+        containers = am1.allocate(new ArrayList<ResourceRequest>(),
+            new ArrayList<ContainerId>()).getAllocatedContainers();
+      }
+
+      // release the container from the AM
+      ContainerId cid = containers.get(0).getId();
+      List<ContainerId> releasedContainers = new ArrayList<>(1);
+      releasedContainers.add(cid);
+      List<ContainerStatus> completedContainers = am1.allocate(
+          new ArrayList<ResourceRequest>(), releasedContainers)
+          .getCompletedContainersStatuses();
+      while (completedContainers.isEmpty()) {
+        Thread.sleep(10);
+        completedContainers = am1.allocate(
+          new ArrayList<ResourceRequest>(), releasedContainers)
+          .getCompletedContainersStatuses();
+      }
+
+      // verify new container can be allocated immediately because container
+      // never launched on the node
+      containers = am1.allocate("127.0.0.1", 8192, 1,
+          new ArrayList<ContainerId>()).getAllocatedContainers();
+      nm1.nodeHeartbeat(true);
+      while (containers.isEmpty()) {
+        Thread.sleep(10);
+        nm1.nodeHeartbeat(true);
+        containers = am1.allocate(new ArrayList<ResourceRequest>(),
+            new ArrayList<ContainerId>()).getAllocatedContainers();
+      }
+
+      // launch the container on the node
+      cid = containers.get(0).getId();
+      nm1.nodeHeartbeat(cid.getApplicationAttemptId(), cid.getContainerId(),
+          ContainerState.RUNNING);
+      rm1.waitForState(nm1, cid, RMContainerState.RUNNING);
+
+      // release the container from the AM
+      releasedContainers.clear();
+      releasedContainers.add(cid);
+      completedContainers = am1.allocate(
+          new ArrayList<ResourceRequest>(), releasedContainers)
+          .getCompletedContainersStatuses();
+      while (completedContainers.isEmpty()) {
+        Thread.sleep(10);
+        completedContainers = am1.allocate(
+          new ArrayList<ResourceRequest>(), releasedContainers)
+          .getCompletedContainersStatuses();
+      }
+
+      // verify new container cannot be allocated immediately because container
+      // has not been released by the node
+      containers = am1.allocate("127.0.0.1", 8192, 1,
+          new ArrayList<ContainerId>()).getAllocatedContainers();
+      nm1.nodeHeartbeat(true);
+      Assert.assertTrue("new container allocated before node freed old",
+          containers.isEmpty());
+      for (int i = 0; i < 10; ++i) {
+        Thread.sleep(10);
+        containers = am1.allocate(new ArrayList<ResourceRequest>(),
+            new ArrayList<ContainerId>()).getAllocatedContainers();
+        nm1.nodeHeartbeat(true);
+        Assert.assertTrue("new container allocated before node freed old",
+            containers.isEmpty());
+      }
+
+      // free the old container from the node
+      nm1.nodeHeartbeat(cid.getApplicationAttemptId(), cid.getContainerId(),
+          ContainerState.COMPLETE);
+
+      // verify new container is now allocated
+      containers = am1.allocate(new ArrayList<ResourceRequest>(),
+          new ArrayList<ContainerId>()).getAllocatedContainers();
+      while (containers.isEmpty()) {
+        Thread.sleep(10);
+        nm1.nodeHeartbeat(true);
+        containers = am1.allocate(new ArrayList<ResourceRequest>(),
+            new ArrayList<ContainerId>()).getAllocatedContainers();
+      }
+    } finally {
+      rm1.stop();
+      System.out.println("Stopping testContainerReleasedByNode");
     }
   }
 

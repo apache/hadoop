@@ -66,7 +66,7 @@ public abstract class SchedulerNode {
       ResourceUtilization.newInstance(0, 0, 0f);
 
   /* set of containers that are allocated containers */
-  protected final Map<ContainerId, RMContainer> launchedContainers =
+  private final Map<ContainerId, ContainerInfo> launchedContainers =
       new HashMap<>();
 
   private final RMNode rmNode;
@@ -148,14 +148,26 @@ public abstract class SchedulerNode {
    * application.
    * @param rmContainer Allocated container
    */
-  public synchronized void allocateContainer(RMContainer rmContainer) {
+  public void allocateContainer(RMContainer rmContainer) {
+    allocateContainer(rmContainer, false);
+  }
+
+  /**
+   * The Scheduler has allocated containers on this node to the given
+   * application.
+   * @param rmContainer Allocated container
+   * @param launchedOnNode True if the container has been launched
+   */
+  private synchronized void allocateContainer(RMContainer rmContainer,
+      boolean launchedOnNode) {
     Container container = rmContainer.getContainer();
     if (rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
       deductUnallocatedResource(container.getResource());
       ++numContainers;
     }
 
-    launchedContainers.put(container.getId(), rmContainer);
+    launchedContainers.put(container.getId(),
+        new ContainerInfo(rmContainer, launchedOnNode));
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Assigned container " + container.getId() + " of capacity "
@@ -258,18 +270,24 @@ public abstract class SchedulerNode {
 
   /**
    * Release an allocated container on this node.
-   * @param container Container to be released.
+   * @param containerId ID of container to be released.
+   * @param releasedByNode whether the release originates from a node update.
    */
-  public synchronized void releaseContainer(Container container) {
-    if (!isValidContainer(container.getId())) {
-      LOG.error("Invalid container released " + container);
+  public synchronized void releaseContainer(ContainerId containerId,
+      boolean releasedByNode) {
+    ContainerInfo info = launchedContainers.get(containerId);
+    if (info == null) {
       return;
     }
 
-    // Remove the containers from the nodemanger
-    if (null != launchedContainers.remove(container.getId())) {
-      updateResourceForReleasedContainer(container);
+    if (!releasedByNode && info.launchedOnNode) {
+      // wait until node reports container has completed
+      return;
     }
+
+    launchedContainers.remove(containerId);
+    Container container = info.container.getContainer();
+    updateResourceForReleasedContainer(container);
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Released container " + container.getId() + " of capacity "
@@ -277,6 +295,17 @@ public abstract class SchedulerNode {
               + ", which currently has " + numContainers + " containers, "
               + getAllocatedResource() + " used and " + getUnallocatedResource()
               + " available" + ", release resources=" + true);
+    }
+  }
+
+  /**
+   * Inform the node that a container has launched.
+   * @param containerId ID of the launched container
+   */
+  public synchronized void containerStarted(ContainerId containerId) {
+    ContainerInfo info = launchedContainers.get(containerId);
+    if (info != null) {
+      info.launchedOnNode = true;
     }
   }
 
@@ -345,7 +374,25 @@ public abstract class SchedulerNode {
    * @return List of running containers in the node.
    */
   public synchronized List<RMContainer> getCopiedListOfRunningContainers() {
-    return new ArrayList<RMContainer>(launchedContainers.values());
+    List<RMContainer> result = new ArrayList<>(launchedContainers.size());
+    for (ContainerInfo info : launchedContainers.values()) {
+      result.add(info.container);
+    }
+    return result;
+  }
+
+  /**
+   * Get the container for the specified container ID.
+   * @param containerId The container ID
+   * @return The container for the specified container ID
+   */
+  protected synchronized RMContainer getContainer(ContainerId containerId) {
+    RMContainer container = null;
+    ContainerInfo info = launchedContainers.get(containerId);
+    if (info != null) {
+      container = info.container;
+    }
+    return container;
   }
 
   /**
@@ -373,7 +420,7 @@ public abstract class SchedulerNode {
     if (rmContainer.getState().equals(RMContainerState.COMPLETED)) {
       return;
     }
-    allocateContainer(rmContainer);
+    allocateContainer(rmContainer, true);
   }
 
   /**
@@ -437,5 +484,16 @@ public abstract class SchedulerNode {
    */
   public ResourceUtilization getNodeUtilization() {
     return this.nodeUtilization;
+  }
+
+
+  private static class ContainerInfo {
+    private final RMContainer container;
+    private boolean launchedOnNode;
+
+    public ContainerInfo(RMContainer container, boolean launchedOnNode) {
+      this.container = container;
+      this.launchedOnNode = launchedOnNode;
+    }
   }
 }

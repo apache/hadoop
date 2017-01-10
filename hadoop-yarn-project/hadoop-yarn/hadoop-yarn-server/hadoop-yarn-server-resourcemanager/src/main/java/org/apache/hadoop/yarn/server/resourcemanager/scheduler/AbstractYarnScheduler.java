@@ -280,6 +280,7 @@ public abstract class AbstractYarnScheduler
       }
 
       application.containerLaunchedOnNode(containerId, node.getNodeID());
+      node.containerStarted(containerId);
     } finally {
       readLock.unlock();
     }
@@ -607,7 +608,7 @@ public abstract class AbstractYarnScheduler
             " in state: " + rmContainer.getState() + " event:" + event);
       }
       getSchedulerNode(rmContainer.getNodeId()).releaseContainer(
-          rmContainer.getContainer());
+          rmContainer.getContainerId(), false);
     }
 
     // If the container is getting killed in ACQUIRED state, the requester (AM
@@ -941,6 +942,7 @@ public abstract class AbstractYarnScheduler
   protected int updateCompletedContainers(List<ContainerStatus>
       completedContainers, Resource releasedResources, NodeId nodeId) {
     int releasedContainers = 0;
+    SchedulerNode node = getNode(nodeId);
     List<ContainerId> untrackedContainerIdList = new ArrayList<ContainerId>();
     for (ContainerStatus completedContainer : completedContainers) {
       ContainerId containerId = completedContainer.getContainerId();
@@ -948,6 +950,10 @@ public abstract class AbstractYarnScheduler
       RMContainer container = getRMContainer(containerId);
       completedContainer(container,
           completedContainer, RMContainerEventType.FINISHED);
+      if (node != null) {
+        node.releaseContainer(containerId, true);
+      }
+
       if (container != null) {
         releasedContainers++;
         Resource ars = container.getAllocatedResource();
