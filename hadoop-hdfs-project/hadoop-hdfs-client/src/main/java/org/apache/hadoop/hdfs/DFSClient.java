@@ -2620,7 +2620,21 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
           SafeModeException.class,
-          UnresolvedPathException.class);
+          UnresolvedPathException.class,
+          FileNotFoundException.class);
+    }
+  }
+
+  public void unsetErasureCodingPolicy(String src) throws IOException {
+    checkOpen();
+    try (TraceScope ignored =
+             newPathTraceScope("unsetErasureCodingPolicy", src)) {
+      namenode.unsetErasureCodingPolicy(src);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+          SafeModeException.class,
+          UnresolvedPathException.class,
+          FileNotFoundException.class);
     }
   }
 

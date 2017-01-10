@@ -496,6 +496,16 @@ public class HdfsAdmin {
     return dfs.getClient().getErasureCodingPolicies();
   }
 
+  /**
+   * Unset erasure coding policy from the directory.
+   *
+   * @param path The source path referring to a directory.
+   * @throws IOException
+   */
+  public void unsetErasureCodingPolicy(final Path path) throws IOException {
+    dfs.unsetErasureCodingPolicy(path);
+  }
+
   private void provisionEZTrash(Path path) throws IOException {
     // make sure the path is an EZ
     EncryptionZone ez = dfs.getEZForPath(path);

@@ -6775,6 +6775,42 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
+   * Unset an erasure coding policy from the given path.
+   * @param srcArg  The path of the target directory.
+   * @throws AccessControlException  if the caller is not the superuser.
+   * @throws UnresolvedLinkException if the path can't be resolved.
+   * @throws SafeModeException       if the Namenode is in safe mode.
+   */
+  void unsetErasureCodingPolicy(final String srcArg,
+      final boolean logRetryCache) throws IOException,
+      UnresolvedLinkException, SafeModeException, AccessControlException {
+    final String operationName = "unsetErasureCodingPolicy";
+    checkSuperuserPrivilege();
+    checkOperation(OperationCategory.WRITE);
+    HdfsFileStatus resultingStat = null;
+    boolean success = false;
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("Cannot unset erasure coding policy on " + srcArg);
+      resultingStat = FSDirErasureCodingOp.unsetErasureCodingPolicy(this,
+          srcArg, logRetryCache);
+      success = true;
+    } catch (AccessControlException ace) {
+      logAuditEvent(success, operationName, srcArg, null,
+          resultingStat);
+      throw ace;
+    } finally {
+      writeUnlock(operationName);
+      if (success) {
+        getEditLog().logSync();
+      }
+    }
+    logAuditEvent(success, operationName, srcArg, null,
+        resultingStat);
+  }
+
+  /**
    * Get the erasure coding policy information for specified path
    */
   ErasureCodingPolicy getErasureCodingPolicy(String src)

@@ -151,7 +151,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Directory /ecdir already has an erasure coding policy</expected-output>
+          <expected-output>EC policy set successfully at NAMENODE/ecdir</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -170,6 +170,68 @@
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>ErasureCodingPolicy=[Name=</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>unsetPolicy : unset policy and get</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -unsetPolicy /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getPolicy /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>is not erasure coded.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>setPolicy : change different policy and get</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -p RS-DEFAULT-3-2-64k
+          /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getPolicy /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>ErasureCodingPolicy=[Name=RS-DEFAULT-3-2-64k</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>unsetPolicy : unset inherited EC policy, has no effect</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <command>-fs NAMENODE -mkdir /ecdir/child</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -unsetPolicy /ecdir/child</ec-admin-command>
+        <command>-fs NAMENODE -touchz /ecdir/child/ecfile</command>
+        <ec-admin-command>-fs NAMENODE -getPolicy /ecdir/child/ecfile</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm /ecdir/child/ecfile</command>
+        <command>-fs NAMENODE -rmdir /ecdir/child</command>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>ErasureCodingPolicy=[Name=RS-DEFAULT-6-3-64k</expected-output>
         </comparator>
       </comparators>
     </test>
