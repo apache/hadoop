@@ -60,27 +60,61 @@ public class SSLFactory implements ConnectionConfigurator {
   @InterfaceAudience.Private
   public static enum Mode { CLIENT, SERVER }
 
-  public static final String SSL_REQUIRE_CLIENT_CERT_KEY =
-    "hadoop.ssl.require.client.cert";
-  public static final String SSL_HOSTNAME_VERIFIER_KEY =
-    "hadoop.ssl.hostname.verifier";
-  public static final String SSL_CLIENT_CONF_KEY =
-    "hadoop.ssl.client.conf";
-  public static final String SSL_SERVER_CONF_KEY =
-    "hadoop.ssl.server.conf";
-  public static final String SSLCERTIFICATE = IBM_JAVA?"ibmX509":"SunX509";
+  public static final String SSL_CLIENT_CONF_KEY = "hadoop.ssl.client.conf";
+  public static final String SSL_CLIENT_CONF_DEFAULT = "ssl-client.xml";
+  public static final String SSL_SERVER_CONF_KEY = "hadoop.ssl.server.conf";
+  public static final String SSL_SERVER_CONF_DEFAULT = "ssl-server.xml";
 
-  public static final boolean DEFAULT_SSL_REQUIRE_CLIENT_CERT = false;
+  public static final String SSL_REQUIRE_CLIENT_CERT_KEY =
+      "hadoop.ssl.require.client.cert";
+  public static final boolean SSL_REQUIRE_CLIENT_CERT_DEFAULT = false;
+  public static final String SSL_HOSTNAME_VERIFIER_KEY =
+      "hadoop.ssl.hostname.verifier";
+  public static final String SSL_ENABLED_PROTOCOLS_KEY =
+      "hadoop.ssl.enabled.protocols";
+  public static final String SSL_ENABLED_PROTOCOLS_DEFAULT =
+      "TLSv1,SSLv2Hello,TLSv1.1,TLSv1.2";
+
+  public static final String SSL_SERVER_NEED_CLIENT_AUTH =
+      "ssl.server.need.client.auth";
+  public static final boolean SSL_SERVER_NEED_CLIENT_AUTH_DEFAULT = false;
+
+  public static final String SSL_SERVER_KEYSTORE_LOCATION =
+      "ssl.server.keystore.location";
+  public static final String SSL_SERVER_KEYSTORE_PASSWORD =
+      "ssl.server.keystore.password";
+  public static final String SSL_SERVER_KEYSTORE_TYPE =
+      "ssl.server.keystore.type";
+  public static final String SSL_SERVER_KEYSTORE_TYPE_DEFAULT = "jks";
+  public static final String SSL_SERVER_KEYSTORE_KEYPASSWORD =
+      "ssl.server.keystore.keypassword";
+
+  public static final String SSL_SERVER_TRUSTSTORE_LOCATION =
+      "ssl.server.truststore.location";
+  public static final String SSL_SERVER_TRUSTSTORE_PASSWORD =
+      "ssl.server.truststore.password";
+  public static final String SSL_SERVER_TRUSTSTORE_TYPE =
+      "ssl.server.truststore.type";
+  public static final String SSL_SERVER_TRUSTSTORE_TYPE_DEFAULT = "jks";
+
+  public static final String SSL_SERVER_EXCLUDE_CIPHER_LIST =
+      "ssl.server.exclude.cipher.list";
+
+  @Deprecated
+  public static final boolean DEFAULT_SSL_REQUIRE_CLIENT_CERT =
+      SSL_REQUIRE_CLIENT_CERT_DEFAULT;
+
+  public static final String SSLCERTIFICATE = IBM_JAVA?"ibmX509":"SunX509";
 
   public static final String KEYSTORES_FACTORY_CLASS_KEY =
     "hadoop.ssl.keystores.factory.class";
 
+  @Deprecated
   public static final String SSL_ENABLED_PROTOCOLS =
-      "hadoop.ssl.enabled.protocols";
+      SSL_ENABLED_PROTOCOLS_KEY;
+  @Deprecated
   public static final String DEFAULT_SSL_ENABLED_PROTOCOLS =
-      "TLSv1,SSLv2Hello,TLSv1.1,TLSv1.2";
-  public static final String SSL_SERVER_EXCLUDE_CIPHER_LIST =
-      "ssl.server.exclude.cipher.list";
+      SSL_ENABLED_PROTOCOLS_DEFAULT;
 
   private Configuration conf;
   private Mode mode;
@@ -131,9 +165,11 @@ public class SSLFactory implements ConnectionConfigurator {
     sslConf.setBoolean(SSL_REQUIRE_CLIENT_CERT_KEY, requireClientCert);
     String sslConfResource;
     if (mode == Mode.CLIENT) {
-      sslConfResource = conf.get(SSL_CLIENT_CONF_KEY, "ssl-client.xml");
+      sslConfResource = conf.get(SSL_CLIENT_CONF_KEY,
+          SSL_CLIENT_CONF_DEFAULT);
     } else {
-      sslConfResource = conf.get(SSL_SERVER_CONF_KEY, "ssl-server.xml");
+      sslConfResource = conf.get(SSL_SERVER_CONF_KEY,
+          SSL_SERVER_CONF_DEFAULT);
     }
     sslConf.addResource(sslConfResource);
     return sslConf;

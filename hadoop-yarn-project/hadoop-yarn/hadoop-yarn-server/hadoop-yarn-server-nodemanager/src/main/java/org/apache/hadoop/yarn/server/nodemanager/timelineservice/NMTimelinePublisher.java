@@ -86,7 +86,7 @@ public class NMTimelinePublisher extends CompositeService {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    dispatcher = new AsyncDispatcher();
+    dispatcher = new AsyncDispatcher("NM Timeline dispatcher");
     dispatcher.register(NMTimelineEventType.class,
         new ForwardingEventHandler());
     addIfService(dispatcher);

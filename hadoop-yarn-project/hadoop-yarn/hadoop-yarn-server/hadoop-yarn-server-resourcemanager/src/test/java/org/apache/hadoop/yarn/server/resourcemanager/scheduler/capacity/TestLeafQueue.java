@@ -23,7 +23,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -1056,9 +1055,13 @@ public class TestLeafQueue {
     //test case 3
     qb.finishApplication(app_0.getApplicationId(), user_0);
     qb.finishApplication(app_2.getApplicationId(), user_1);
-    qb.releaseResource(clusterResource, app_0, app_0.getResource(u0SchedKey),
+    qb.releaseResource(clusterResource, app_0,
+        app_0.getAppSchedulingInfo().getPendingAsk(u0SchedKey)
+            .getPerAllocationResource(),
         null, null, false);
-    qb.releaseResource(clusterResource, app_2, app_2.getResource(u1SchedKey),
+    qb.releaseResource(clusterResource, app_2,
+        app_2.getAppSchedulingInfo().getPendingAsk(u1SchedKey)
+            .getPerAllocationResource(),
         null, null, false);
 
     qb.setUserLimit(50);
@@ -1956,7 +1959,7 @@ public class TestLeafQueue {
     applyCSAssignment(clusterResource, assignment, a, nodes, apps);
     verifyNoContainerAllocated(assignment);
     assertEquals(1, app_0.getSchedulingOpportunities(schedulerKey));
-    assertEquals(3, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(3, app_0.getOutstandingAsksCount(schedulerKey));
     assertEquals(NodeType.NODE_LOCAL, assignment.getType()); // None->NODE_LOCAL
 
     // Another off switch, shouldn't allocate due to delay scheduling
@@ -1965,7 +1968,7 @@ public class TestLeafQueue {
     applyCSAssignment(clusterResource, assignment, a, nodes, apps);
     verifyNoContainerAllocated(assignment);
     assertEquals(2, app_0.getSchedulingOpportunities(schedulerKey));
-    assertEquals(3, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(3, app_0.getOutstandingAsksCount(schedulerKey));
     assertEquals(NodeType.NODE_LOCAL, assignment.getType()); // None->NODE_LOCAL
     
     // Another off switch, shouldn't allocate due to delay scheduling
@@ -1974,7 +1977,7 @@ public class TestLeafQueue {
     applyCSAssignment(clusterResource, assignment, a, nodes, apps);
     verifyNoContainerAllocated(assignment);
     assertEquals(3, app_0.getSchedulingOpportunities(schedulerKey));
-    assertEquals(3, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(3, app_0.getOutstandingAsksCount(schedulerKey));
     assertEquals(NodeType.NODE_LOCAL, assignment.getType()); // None->NODE_LOCAL
     
     // Another off switch, now we should allocate 
@@ -1985,7 +1988,7 @@ public class TestLeafQueue {
     verifyContainerAllocated(assignment, NodeType.OFF_SWITCH);
     // should NOT reset
     assertEquals(4, app_0.getSchedulingOpportunities(schedulerKey));
-    assertEquals(2, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(2, app_0.getOutstandingAsksCount(schedulerKey));
     
     // NODE_LOCAL - node_0
     assignment = a.assignContainers(clusterResource, node_0,
@@ -1994,7 +1997,7 @@ public class TestLeafQueue {
     verifyContainerAllocated(assignment, NodeType.NODE_LOCAL);
     // should reset
     assertEquals(0, app_0.getSchedulingOpportunities(schedulerKey));
-    assertEquals(1, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(1, app_0.getOutstandingAsksCount(schedulerKey));
     
     // NODE_LOCAL - node_1
     assignment = a.assignContainers(clusterResource, node_1,
@@ -2003,7 +2006,7 @@ public class TestLeafQueue {
     verifyContainerAllocated(assignment, NodeType.NODE_LOCAL);
     // should reset
     assertEquals(0, app_0.getSchedulingOpportunities(schedulerKey));
-    assertEquals(0, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(0, app_0.getOutstandingAsksCount(schedulerKey));
     assertEquals(NodeType.NODE_LOCAL, assignment.getType());
     
     // Add 1 more request to check for RACK_LOCAL
@@ -2018,7 +2021,7 @@ public class TestLeafQueue {
         TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 4, // one extra
             true, priority, recordFactory));
     app_0.updateResourceRequests(app_0_requests_0);
-    assertEquals(4, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(4, app_0.getOutstandingAsksCount(schedulerKey));
     
     // Rack-delay
     doReturn(true).when(a).getRackLocalityFullReset();
@@ -2029,7 +2032,7 @@ public class TestLeafQueue {
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     applyCSAssignment(clusterResource, assignment, a, nodes, apps);
     assertEquals(1, app_0.getSchedulingOpportunities(schedulerKey));
-    assertEquals(4, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(4, app_0.getOutstandingAsksCount(schedulerKey));
 
     // Should assign RACK_LOCAL now
     assignment = a.assignContainers(clusterResource, node_3,
@@ -2038,14 +2041,14 @@ public class TestLeafQueue {
     verifyContainerAllocated(assignment, NodeType.RACK_LOCAL);
     // should reset
     assertEquals(0, app_0.getSchedulingOpportunities(schedulerKey));
-    assertEquals(3, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(3, app_0.getOutstandingAsksCount(schedulerKey));
     
     // Shouldn't assign RACK_LOCAL because schedulingOpportunities should have gotten reset.
     assignment = a.assignContainers(clusterResource, node_3,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     applyCSAssignment(clusterResource, assignment, a, nodes, apps);
     assertEquals(1, app_0.getSchedulingOpportunities(schedulerKey));
-    assertEquals(3, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(3, app_0.getOutstandingAsksCount(schedulerKey));
 
     // Next time we schedule RACK_LOCAL, don't reset
     doReturn(false).when(a).getRackLocalityFullReset();
@@ -2057,7 +2060,7 @@ public class TestLeafQueue {
     verifyContainerAllocated(assignment, NodeType.RACK_LOCAL);
     // should NOT reset
     assertEquals(2, app_0.getSchedulingOpportunities(schedulerKey));
-    assertEquals(2, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(2, app_0.getOutstandingAsksCount(schedulerKey));
 
     // Another RACK_LOCAL since schedulingOpportunities not reset
     assignment = a.assignContainers(clusterResource, node_3,
@@ -2066,7 +2069,7 @@ public class TestLeafQueue {
     verifyContainerAllocated(assignment, NodeType.RACK_LOCAL);
     // should NOT reset
     assertEquals(3, app_0.getSchedulingOpportunities(schedulerKey));
-    assertEquals(1, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(1, app_0.getOutstandingAsksCount(schedulerKey));
     
     // Add a request larger than cluster size to verify
     // OFF_SWITCH delay is capped by cluster size
@@ -2185,9 +2188,9 @@ public class TestLeafQueue {
     applyCSAssignment(clusterResource, assignment, a, nodes, apps);
     verifyNoContainerAllocated(assignment);
     assertEquals(1, app_0.getSchedulingOpportunities(schedulerKey1));
-    assertEquals(2, app_0.getTotalRequiredResources(schedulerKey1));
+    assertEquals(2, app_0.getOutstandingAsksCount(schedulerKey1));
     assertEquals(0, app_0.getSchedulingOpportunities(schedulerKey2));
-    assertEquals(1, app_0.getTotalRequiredResources(schedulerKey2));
+    assertEquals(1, app_0.getOutstandingAsksCount(schedulerKey2));
 
     // Another off-switch, shouldn't allocate P1 due to delay scheduling
     // thus, no P2 either!
@@ -2196,9 +2199,9 @@ public class TestLeafQueue {
     applyCSAssignment(clusterResource, assignment, a, nodes, apps);
     verifyNoContainerAllocated(assignment);
     assertEquals(2, app_0.getSchedulingOpportunities(schedulerKey1));
-    assertEquals(2, app_0.getTotalRequiredResources(schedulerKey1));
+    assertEquals(2, app_0.getOutstandingAsksCount(schedulerKey1));
     assertEquals(0, app_0.getSchedulingOpportunities(schedulerKey2));
-    assertEquals(1, app_0.getTotalRequiredResources(schedulerKey2));
+    assertEquals(1, app_0.getOutstandingAsksCount(schedulerKey2));
 
     // Another off-switch, shouldn't allocate OFF_SWITCH P1
     assignment = a.assignContainers(clusterResource, node_2,
@@ -2206,9 +2209,9 @@ public class TestLeafQueue {
     applyCSAssignment(clusterResource, assignment, a, nodes, apps);
     verifyContainerAllocated(assignment, NodeType.OFF_SWITCH);
     assertEquals(3, app_0.getSchedulingOpportunities(schedulerKey1));
-    assertEquals(1, app_0.getTotalRequiredResources(schedulerKey1));
+    assertEquals(1, app_0.getOutstandingAsksCount(schedulerKey1));
     assertEquals(0, app_0.getSchedulingOpportunities(schedulerKey2));
-    assertEquals(1, app_0.getTotalRequiredResources(schedulerKey2));
+    assertEquals(1, app_0.getOutstandingAsksCount(schedulerKey2));
 
     // Now, DATA_LOCAL for P1
     assignment = a.assignContainers(clusterResource, node_0,
@@ -2216,9 +2219,9 @@ public class TestLeafQueue {
     applyCSAssignment(clusterResource, assignment, a, nodes, apps);
     verifyContainerAllocated(assignment, NodeType.NODE_LOCAL);
     assertEquals(0, app_0.getSchedulingOpportunities(schedulerKey1));
-    assertEquals(0, app_0.getTotalRequiredResources(schedulerKey1));
+    assertEquals(0, app_0.getOutstandingAsksCount(schedulerKey1));
     assertEquals(0, app_0.getSchedulingOpportunities(schedulerKey2));
-    assertEquals(1, app_0.getTotalRequiredResources(schedulerKey2));
+    assertEquals(1, app_0.getOutstandingAsksCount(schedulerKey2));
 
     // Now, OFF_SWITCH for P2
     assignment = a.assignContainers(clusterResource, node_1,
@@ -2226,9 +2229,9 @@ public class TestLeafQueue {
     applyCSAssignment(clusterResource, assignment, a, nodes, apps);
     verifyContainerAllocated(assignment, NodeType.OFF_SWITCH);
     assertEquals(0, app_0.getSchedulingOpportunities(schedulerKey1));
-    assertEquals(0, app_0.getTotalRequiredResources(schedulerKey1));
+    assertEquals(0, app_0.getOutstandingAsksCount(schedulerKey1));
     assertEquals(1, app_0.getSchedulingOpportunities(schedulerKey2));
-    assertEquals(0, app_0.getTotalRequiredResources(schedulerKey2));
+    assertEquals(0, app_0.getOutstandingAsksCount(schedulerKey2));
 
   }
   
@@ -2309,7 +2312,7 @@ public class TestLeafQueue {
     verifyContainerAllocated(assignment, NodeType.NODE_LOCAL);
     assertEquals(0, app_0.getSchedulingOpportunities(schedulerKey));
     // should reset
-    assertEquals(0, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(0, app_0.getOutstandingAsksCount(schedulerKey));
 
     // No allocation on node_1_0 even though it's node/rack local since
     // required(ANY) == 0
@@ -2320,7 +2323,7 @@ public class TestLeafQueue {
     // Still zero
     // since #req=0
     assertEquals(0, app_0.getSchedulingOpportunities(schedulerKey));
-    assertEquals(0, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(0, app_0.getOutstandingAsksCount(schedulerKey));
     
     // Add one request
     app_0_requests_0.clear();
@@ -2336,7 +2339,7 @@ public class TestLeafQueue {
     applyCSAssignment(clusterResource, assignment, a, nodes, apps);
     verifyNoContainerAllocated(assignment);
     assertEquals(1, app_0.getSchedulingOpportunities(schedulerKey));
-    assertEquals(1, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(1, app_0.getOutstandingAsksCount(schedulerKey));
     
     // NODE_LOCAL - node_1
     assignment = a.assignContainers(clusterResource, node_1_0,
@@ -2345,7 +2348,7 @@ public class TestLeafQueue {
     verifyContainerAllocated(assignment, NodeType.NODE_LOCAL);
     // should reset
     assertEquals(0, app_0.getSchedulingOpportunities(schedulerKey));
-    assertEquals(0, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(0, app_0.getOutstandingAsksCount(schedulerKey));
   }
 
   @Test (timeout = 30000)
@@ -2721,7 +2724,7 @@ public class TestLeafQueue {
     applyCSAssignment(clusterResource, assignment, a, nodes, apps);
     verifyNoContainerAllocated(assignment);
     assertEquals(0, app_0.getSchedulingOpportunities(schedulerKey));
-    assertEquals(1, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(1, app_0.getOutstandingAsksCount(schedulerKey));
 
     // Now sanity-check node_local
     app_0_requests_0.add(
@@ -2752,7 +2755,7 @@ public class TestLeafQueue {
     applyCSAssignment(clusterResource, assignment, a, nodes, apps);
     verifyContainerAllocated(assignment, NodeType.NODE_LOCAL);
     assertEquals(0, app_0.getSchedulingOpportunities(schedulerKey));
-    assertEquals(0, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(0, app_0.getOutstandingAsksCount(schedulerKey));
 
   }
   
@@ -3205,7 +3208,7 @@ public class TestLeafQueue {
     applyCSAssignment(clusterResource, assignment, a, nodes, apps);
     verifyContainerAllocated(assignment, NodeType.NODE_LOCAL);
     assertEquals(1, app_0.getSchedulingOpportunities(schedulerKey));
-    assertEquals(3, app_0.getTotalRequiredResources(schedulerKey));
+    assertEquals(3, app_0.getOutstandingAsksCount(schedulerKey));
     assertEquals(0, app_0.getLiveContainers().size());
     assertEquals(1, app_1.getLiveContainers().size());
   }

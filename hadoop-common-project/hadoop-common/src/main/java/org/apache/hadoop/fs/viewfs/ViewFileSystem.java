@@ -876,6 +876,17 @@ public class ViewFileSystem extends FileSystem {
     }
   }
 
+  @Override
+  public Path getLinkTarget(Path path) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res;
+    try {
+      res = fsState.resolve(getUriPath(path), true);
+    } catch (FileNotFoundException e) {
+      throw new NotInMountpointException(path, "getLinkTarget");
+    }
+    return res.targetFileSystem.getLinkTarget(res.remainingPath);
+  }
+
   /**
    * An instance of this class represents an internal dir of the viewFs
    * that is internal dir of the mount table.

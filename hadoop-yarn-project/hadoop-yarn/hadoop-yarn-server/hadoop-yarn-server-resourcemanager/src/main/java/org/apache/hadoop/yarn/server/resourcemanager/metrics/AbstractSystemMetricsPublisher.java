@@ -111,7 +111,7 @@ public abstract class AbstractSystemMetricsPublisher extends CompositeService
     }
 
     protected AsyncDispatcher createDispatcher() {
-      return new AsyncDispatcher();
+      return new AsyncDispatcher("RM Timeline dispatcher");
     }
   }
 

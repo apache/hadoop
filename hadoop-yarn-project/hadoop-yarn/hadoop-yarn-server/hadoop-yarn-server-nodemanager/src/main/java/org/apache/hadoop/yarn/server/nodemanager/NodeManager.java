@@ -319,7 +319,7 @@ public class NodeManager extends CompositeService
     addService(del);
 
     // NodeManager level dispatcher
-    this.dispatcher = new AsyncDispatcher();
+    this.dispatcher = new AsyncDispatcher("NM Event dispatcher");
 
     dirsHandler = new LocalDirsHandlerService(metrics);
     nodeHealthChecker =

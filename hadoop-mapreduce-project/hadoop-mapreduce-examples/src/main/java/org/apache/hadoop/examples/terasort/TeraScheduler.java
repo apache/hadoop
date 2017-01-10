@@ -73,14 +73,14 @@ class TeraScheduler {
 
   List<String> readFile(String filename) throws IOException {
     List<String> result = new ArrayList<String>(10000);
-    BufferedReader in = new BufferedReader(
-        new InputStreamReader(new FileInputStream(filename), Charsets.UTF_8));
-    String line = in.readLine();
-    while (line != null) {
-      result.add(line);
-      line = in.readLine();
+    try (BufferedReader in = new BufferedReader(
+        new InputStreamReader(new FileInputStream(filename), Charsets.UTF_8))) {
+      String line = in.readLine();
+      while (line != null) {
+        result.add(line);
+        line = in.readLine();
+      }
     }
-    in.close();
     return result;
   }
 

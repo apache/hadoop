@@ -162,53 +162,6 @@ public class TestDatasetVolumeChecker {
   }
 
   /**
-   * Unit test for {@link DatasetVolumeChecker#checkAllVolumesAsync}.
-   *
-   * @throws Exception
-   */
-  @Test(timeout=10000)
-  public void testCheckAllVolumesAsync() throws Exception {
-    LOG.info("Executing {}", testName.getMethodName());
-
-    final List<FsVolumeSpi> volumes = makeVolumes(
-        NUM_VOLUMES, expectedVolumeHealth);
-    final FsDatasetSpi<FsVolumeSpi> dataset = makeDataset(volumes);
-    final DatasetVolumeChecker checker =
-        new DatasetVolumeChecker(new HdfsConfiguration(), new FakeTimer());
-    checker.setDelegateChecker(new DummyChecker());
-    final AtomicLong numCallbackInvocations = new AtomicLong(0);
-
-    boolean result = checker.checkAllVolumesAsync(
-        dataset, new DatasetVolumeChecker.Callback() {
-          @Override
-          public void call(
-              Set<FsVolumeSpi> healthyVolumes,
-              Set<FsVolumeSpi> failedVolumes) {
-            LOG.info("Got back {} failed volumes", failedVolumes.size());
-            if (expectedVolumeHealth == null ||
-                expectedVolumeHealth == FAILED) {
-              assertThat(healthyVolumes.size(), is(0));
-              assertThat(failedVolumes.size(), is(NUM_VOLUMES));
-            } else {
-              assertThat(healthyVolumes.size(), is(NUM_VOLUMES));
-              assertThat(failedVolumes.size(), is(0));
-            }
-            numCallbackInvocations.incrementAndGet();
-          }
-        });
-
-    // The callback should be invoked exactly once.
-    if (result) {
-      assertThat(numCallbackInvocations.get(), is(1L));
-    }
-
-    // Ensure each volume's check() method was called exactly once.
-    for (FsVolumeSpi volume : volumes) {
-      verify(volume, times(1)).check(anyObject());
-    }
-  }
-
-  /**
    * A checker to wraps the result of {@link FsVolumeSpi#check} in
    * an ImmediateFuture.
    */

@@ -51,8 +51,7 @@ public class FifoAppAttempt extends FiCaSchedulerApp {
   }
 
   public RMContainer allocate(NodeType type, FiCaSchedulerNode node,
-      SchedulerRequestKey schedulerKey, ResourceRequest request,
-      Container container) {
+      SchedulerRequestKey schedulerKey, Container container) {
     try {
       writeLock.lock();
 
@@ -62,28 +61,27 @@ public class FifoAppAttempt extends FiCaSchedulerApp {
 
       // Required sanity check - AM can call 'allocate' to update resource
       // request without locking the scheduler, hence we need to check
-      if (getTotalRequiredResources(schedulerKey) <= 0) {
+      if (getOutstandingAsksCount(schedulerKey) <= 0) {
         return null;
       }
 
       // Create RMContainer
       RMContainer rmContainer = new RMContainerImpl(container,
-          this.getApplicationAttemptId(), node.getNodeID(),
-          appSchedulingInfo.getUser(), this.rmContext,
-          request.getNodeLabelExpression());
+          schedulerKey, this.getApplicationAttemptId(), node.getNodeID(),
+          appSchedulingInfo.getUser(), this.rmContext, node.getPartition());
       ((RMContainerImpl) rmContainer).setQueueName(this.getQueueName());
 
       updateAMContainerDiagnostics(AMState.ASSIGNED, null);
 
       // Add it to allContainers list.
-      newlyAllocatedContainers.add(rmContainer);
+      addToNewlyAllocatedContainers(node, rmContainer);
 
       ContainerId containerId = container.getId();
       liveContainers.put(containerId, rmContainer);
 
       // Update consumption and track allocations
       List<ResourceRequest> resourceRequestList = appSchedulingInfo.allocate(
-          type, node, schedulerKey, request, container);
+          type, node, schedulerKey, container);
 
       attemptResourceUsage.incUsed(node.getPartition(),
           container.getResource());

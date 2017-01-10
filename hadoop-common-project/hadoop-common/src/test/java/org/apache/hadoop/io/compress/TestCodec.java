@@ -505,6 +505,18 @@ public class TestCodec {
   }
 
   @Test(timeout=20000)
+  public void testSequenceFileZStandardCodec() throws Exception {
+    assumeTrue(ZStandardCodec.isNativeCodeLoaded());
+    Configuration conf = new Configuration();
+    sequenceFileCodecTest(conf, 0,
+        "org.apache.hadoop.io.compress.ZStandardCodec", 100);
+    sequenceFileCodecTest(conf, 100,
+        "org.apache.hadoop.io.compress.ZStandardCodec", 100);
+    sequenceFileCodecTest(conf, 200000,
+        "org.apache.hadoop.io.compress.ZStandardCodec", 1000000);
+  }
+
+  @Test(timeout=20000)
   public void testSequenceFileBZip2NativeCodec() throws IOException, 
                         ClassNotFoundException, InstantiationException, 
                         IllegalAccessException {

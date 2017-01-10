@@ -1614,7 +1614,8 @@ public class ClientRMService extends AbstractService implements
     }
 
     try {
-      rmAppManager.updateApplicationPriority(applicationId, newAppPriority);
+      rmAppManager.updateApplicationPriority(callerUGI, applicationId,
+          newAppPriority);
     } catch (YarnException ex) {
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
           AuditConstants.UPDATE_APP_PRIORITY, "UNKNOWN", "ClientRMService",

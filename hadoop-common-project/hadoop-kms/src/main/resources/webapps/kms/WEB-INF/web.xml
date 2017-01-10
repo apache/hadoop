@@ -40,19 +40,9 @@
     <load-on-startup>1</load-on-startup>
   </servlet>
 
-  <servlet>
-    <servlet-name>jmx-servlet</servlet-name>
-    <servlet-class>org.apache.hadoop.crypto.key.kms.server.KMSJMXServlet</servlet-class>
-  </servlet>
-
   <servlet-mapping>
     <servlet-name>webservices-driver</servlet-name>
-    <url-pattern>/*</url-pattern>
-  </servlet-mapping>
-
-  <servlet-mapping>
-    <servlet-name>jmx-servlet</servlet-name>
-    <url-pattern>/jmx</url-pattern>
+    <url-pattern>/kms/*</url-pattern>
   </servlet-mapping>
 
   <filter>

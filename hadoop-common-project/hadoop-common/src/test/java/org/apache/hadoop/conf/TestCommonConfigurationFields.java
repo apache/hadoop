@@ -89,6 +89,8 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     // Lots of properties not in the above classes
     xmlPropsToSkipCompare.add("fs.ftp.password.localhost");
     xmlPropsToSkipCompare.add("fs.ftp.user.localhost");
+    xmlPropsToSkipCompare.add("fs.ftp.data.connection.mode");
+    xmlPropsToSkipCompare.add("fs.ftp.transfer.mode");
     xmlPropsToSkipCompare.add("hadoop.tmp.dir");
     xmlPropsToSkipCompare.add("nfs3.mountd.port");
     xmlPropsToSkipCompare.add("nfs3.server.port");
@@ -124,8 +126,6 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     configurationPropsToSkipCompare.add("dr.who");
 
     // XML deprecated properties.
-    xmlPropsToSkipCompare.add("io.seqfile.lazydecompress");
-    xmlPropsToSkipCompare.add("io.seqfile.sorter.recordlimit");
     // - org.apache.hadoop.hdfs.client.HdfsClientConfigKeys
     xmlPropsToSkipCompare
         .add("io.bytes.per.checksum");

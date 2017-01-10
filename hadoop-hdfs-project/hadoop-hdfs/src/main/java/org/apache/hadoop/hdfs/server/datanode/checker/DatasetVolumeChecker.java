@@ -233,68 +233,6 @@ public class DatasetVolumeChecker {
   }
 
   /**
-   * Start checks against all volumes of a dataset, invoking the
-   * given callback when the operation has completed. The function
-   * does not wait for the checks to complete.
-   *
-   * If a volume cannot be referenced then it is already closed and
-   * cannot be checked. No error is propagated to the callback for that
-   * volume.
-   *
-   * @param dataset - FsDatasetSpi to be checked.
-   * @param callback - Callback to be invoked when the checks are complete.
-   * @return true if the check was scheduled and the callback will be invoked.
-   *         false if the check was not scheduled and the callback will not be
-   *         invoked.
-   */
-  public boolean checkAllVolumesAsync(
-      final FsDatasetSpi<? extends FsVolumeSpi> dataset,
-      Callback callback) {
-    final long gap = timer.monotonicNow() - lastAllVolumesCheck;
-    if (gap < minDiskCheckGapMs) {
-      numSkippedChecks.incrementAndGet();
-      LOG.trace(
-          "Skipped checking all volumes, time since last check {} is less " +
-              "than the minimum gap between checks ({} ms).",
-          gap, minDiskCheckGapMs);
-      return false;
-    }
-
-    final FsDatasetSpi.FsVolumeReferences references =
-        dataset.getFsVolumeReferences();
-
-    if (references.size() == 0) {
-      LOG.warn("checkAllVolumesAsync - no volumes can be referenced");
-      return false;
-    }
-
-    lastAllVolumesCheck = timer.monotonicNow();
-    final Set<FsVolumeSpi> healthyVolumes = new HashSet<>();
-    final Set<FsVolumeSpi> failedVolumes = new HashSet<>();
-    final AtomicLong numVolumes = new AtomicLong(references.size());
-    boolean added = false;
-
-    LOG.info("Checking {} volumes", references.size());
-    for (int i = 0; i < references.size(); ++i) {
-      final FsVolumeReference reference = references.getReference(i);
-      // The context parameter is currently ignored.
-      Optional<ListenableFuture<VolumeCheckResult>> olf =
-          delegateChecker.schedule(reference.getVolume(), IGNORED_CONTEXT);
-      if (olf.isPresent()) {
-        added = true;
-        Futures.addCallback(olf.get(),
-            new ResultHandler(reference, healthyVolumes, failedVolumes,
-                numVolumes, callback));
-      } else {
-        IOUtils.cleanup(null, reference);
-        numVolumes.decrementAndGet();
-      }
-    }
-    numAsyncDatasetChecks.incrementAndGet();
-    return added;
-  }
-
-  /**
    * A callback interface that is supplied the result of running an
    * async disk check on multiple volumes.
    */
@@ -486,13 +424,6 @@ public class DatasetVolumeChecker {
    */
   public long getNumSyncDatasetChecks() {
     return numSyncDatasetChecks.get();
-  }
-
-  /**
-   * Return the number of {@link #checkAllVolumesAsync} invocations.
-   */
-  public long getNumAsyncDatasetChecks() {
-    return numAsyncDatasetChecks.get();
   }
 
   /**

@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.ReservationACL;
@@ -49,6 +50,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AppPriorityACLConfigurationParser.AppPriorityACLKeyType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
@@ -63,7 +65,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   private static final Log LOG = 
     LogFactory.getLog(CapacitySchedulerConfiguration.class);
-  
+
   private static final String CS_CONFIGURATION_FILE = "capacity-scheduler.xml";
   
   @Private
@@ -273,6 +275,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   @Private
   public static final boolean DEFAULT_LAZY_PREEMPTION_ENABLED = false;
+
+  AppPriorityACLConfigurationParser priorityACLConfig = new AppPriorityACLConfigurationParser();
 
   public CapacitySchedulerConfiguration() {
     this(new Configuration());
@@ -602,6 +606,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return "acl_" + StringUtils.toLowerCase(acl.toString());
   }
 
+  private static String getAclKey(AccessType acl) {
+    return "acl_" + StringUtils.toLowerCase(acl.toString());
+  }
+
   @Override
   public Map<ReservationACL, AccessControlList> getReservationAcls(String
         queue) {
@@ -627,6 +635,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     set(queuePrefix + getAclKey(acl), aclString);
   }
 
+  private void setAcl(String queue, AccessType acl, String aclString) {
+    String queuePrefix = getQueuePrefix(queue);
+    set(queuePrefix + getAclKey(acl), aclString);
+  }
+
   public Map<AccessType, AccessControlList> getAcls(String queue) {
     Map<AccessType, AccessControlList> acls =
       new HashMap<AccessType, AccessControlList>();
@@ -648,6 +661,35 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     for (Map.Entry<ReservationACL, AccessControlList> e : acls.entrySet()) {
       setAcl(queue, e.getKey(), e.getValue().getAclString());
     }
+  }
+
+  @VisibleForTesting
+  public void setPriorityAcls(String queue, Priority priority,
+      Priority defaultPriority, String[] acls) {
+    StringBuilder aclString = new StringBuilder();
+
+    StringBuilder userAndGroup = new StringBuilder();
+    for (int i = 0; i < acls.length; i++) {
+      userAndGroup.append(AppPriorityACLKeyType.values()[i] + "=" + acls[i].trim())
+          .append(" ");
+    }
+
+    aclString.append("[" + userAndGroup.toString().trim() + " "
+        + "max_priority=" + priority.getPriority() + " " + "default_priority="
+        + defaultPriority.getPriority() + "]");
+
+    setAcl(queue, AccessType.APPLICATION_MAX_PRIORITY, aclString.toString());
+  }
+
+  public List<AppPriorityACLGroup> getPriorityAcls(String queue,
+      Priority clusterMaxPriority) {
+    String queuePrefix = getQueuePrefix(queue);
+    String defaultAcl = ALL_ACL;
+    String aclString = get(
+        queuePrefix + getAclKey(AccessType.APPLICATION_MAX_PRIORITY),
+        defaultAcl);
+
+    return priorityACLConfig.getPriorityAcl(clusterMaxPriority, aclString);
   }
 
   public String[] getQueues(String queue) {

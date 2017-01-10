@@ -15,22 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.crypto.key.kms.server;
+package org.apache.hadoop.hdfs.server.common;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.jmx.JMXJsonServlet;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 
 @InterfaceAudience.Private
-public class KMSJMXServlet extends JMXJsonServlet {
+public class HttpPutFailedException extends IOException {
+  private static final long serialVersionUID = 1L;
+  private final int responseCode;
 
-  @Override
-  protected boolean isInstrumentationAccessAllowed(HttpServletRequest request,
-      HttpServletResponse response) throws IOException {
-    return true;
+  public HttpPutFailedException(String msg, int responseCode) throws IOException {
+    super(msg);
+    this.responseCode = responseCode;
+  }
+
+  public int getResponseCode() {
+    return responseCode;
   }
 }

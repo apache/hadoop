@@ -2996,7 +2996,7 @@
     The RMAppLifetimeMonitor Service uses this value as monitor interval
     </description>
     <name>yarn.resourcemanager.application-timeouts.monitor.interval-ms</name>
-    <value>60000</value>
+    <value>3000</value>
   </property>
 
 </configuration>

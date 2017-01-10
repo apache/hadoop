@@ -1001,7 +1001,7 @@ public class ApplicationMaster {
 
     @Override
     public void onStartContainerError(ContainerId containerId, Throwable t) {
-      LOG.error("Failed to start Container " + containerId);
+      LOG.error("Failed to start Container " + containerId, t);
       containers.remove(containerId);
       applicationMaster.numCompletedContainers.incrementAndGet();
       applicationMaster.numFailedContainers.incrementAndGet();

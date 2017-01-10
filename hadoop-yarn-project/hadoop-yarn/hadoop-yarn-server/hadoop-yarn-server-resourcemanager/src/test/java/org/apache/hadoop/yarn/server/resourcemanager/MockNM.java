@@ -195,6 +195,12 @@ public class MockNM {
         isHealthy, resId);
   }
 
+  public NodeHeartbeatResponse nodeHeartbeat(
+      List<ContainerStatus> updatedStats, boolean isHealthy) throws Exception {
+    return nodeHeartbeat(updatedStats, Collections.<Container>emptyList(),
+        isHealthy, ++responseId);
+  }
+
   public NodeHeartbeatResponse nodeHeartbeat(List<ContainerStatus> updatedStats,
       List<Container> increasedConts, boolean isHealthy, int resId)
           throws Exception {

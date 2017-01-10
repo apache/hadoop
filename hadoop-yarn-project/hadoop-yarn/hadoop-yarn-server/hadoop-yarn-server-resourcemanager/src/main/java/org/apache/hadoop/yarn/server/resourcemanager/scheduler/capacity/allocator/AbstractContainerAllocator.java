@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
@@ -46,6 +47,7 @@ public abstract class AbstractContainerAllocator {
   private static final Log LOG = LogFactory.getLog(AbstractContainerAllocator.class);
 
   FiCaSchedulerApp application;
+  AppSchedulingInfo appInfo;
   final ResourceCalculator rc;
   final RMContext rmContext;
   ActivitiesManager activitiesManager;
@@ -59,6 +61,8 @@ public abstract class AbstractContainerAllocator {
       ResourceCalculator rc, RMContext rmContext,
       ActivitiesManager activitiesManager) {
     this.application = application;
+    this.appInfo =
+        application == null ? null : application.getAppSchedulingInfo();
     this.rc = rc;
     this.rmContext = rmContext;
     this.activitiesManager = activitiesManager;

@@ -19,12 +19,16 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
 import org.apache.commons.collections.IteratorUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 
 import java.util.ArrayList;
@@ -37,9 +41,14 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
     implements SchedulingPlacementSet<N> {
+  private static final Log LOG =
+      LogFactory.getLog(LocalitySchedulingPlacementSet.class);
+
   private final Map<String, ResourceRequest> resourceRequestMap =
       new ConcurrentHashMap<>();
   private AppSchedulingInfo appSchedulingInfo;
+  private volatile String primaryRequestedPartition =
+      RMNodeLabelsManager.NO_LABEL;
 
   private final ReentrantReadWriteLock.ReadLock readLock;
   private final ReentrantReadWriteLock.WriteLock writeLock;
@@ -132,11 +141,14 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
         resourceRequestMap.put(resourceName, request);
 
         if (resourceName.equals(ResourceRequest.ANY)) {
+          String partition = request.getNodeLabelExpression() == null ?
+              RMNodeLabelsManager.NO_LABEL :
+              request.getNodeLabelExpression();
+
+          this.primaryRequestedPartition = partition;
+
           //update the applications requested labels set
-          appSchedulingInfo.addRequestedPartition(
-              request.getNodeLabelExpression() == null ?
-                  RMNodeLabelsManager.NO_LABEL :
-                  request.getNodeLabelExpression());
+          appSchedulingInfo.addRequestedPartition(partition);
 
           updateResult = new ResourceRequestUpdateResult(lastRequest, request);
         }
@@ -152,12 +164,45 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
     return resourceRequestMap;
   }
 
-  @Override
-  public ResourceRequest getResourceRequest(String resourceName) {
+  private ResourceRequest getResourceRequest(String resourceName) {
     return resourceRequestMap.get(resourceName);
   }
 
-  private void decrementOutstanding(ResourceRequest offSwitchRequest) {
+  @Override
+  public PendingAsk getPendingAsk(String resourceName) {
+    try {
+      readLock.lock();
+      ResourceRequest request = getResourceRequest(resourceName);
+      if (null == request) {
+        return PendingAsk.ZERO;
+      } else{
+        return new PendingAsk(request.getCapability(),
+            request.getNumContainers());
+      }
+    } finally {
+      readLock.unlock();
+    }
+
+  }
+
+  @Override
+  public int getOutstandingAsksCount(String resourceName) {
+    try {
+      readLock.lock();
+      ResourceRequest request = getResourceRequest(resourceName);
+      if (null == request) {
+        return 0;
+      } else{
+        return request.getNumContainers();
+      }
+    } finally {
+      readLock.unlock();
+    }
+
+  }
+
+  private void decrementOutstanding(SchedulerRequestKey schedulerRequestKey,
+      ResourceRequest offSwitchRequest) {
     int numOffSwitchContainers = offSwitchRequest.getNumContainers() - 1;
 
     // Do not remove ANY
@@ -166,8 +211,6 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
     // Do we have any outstanding requests?
     // If there is nothing, we need to deactivate this application
     if (numOffSwitchContainers == 0) {
-      SchedulerRequestKey schedulerRequestKey = SchedulerRequestKey.create(
-          offSwitchRequest);
       appSchedulingInfo.decrementSchedulerKeyReference(schedulerRequestKey);
       appSchedulingInfo.checkForDeactivation();
     }
@@ -177,11 +220,15 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
         offSwitchRequest.getCapability());
   }
 
-  private ResourceRequest cloneResourceRequest(ResourceRequest request) {
-    ResourceRequest newRequest =
-        ResourceRequest.newInstance(request.getPriority(),
-            request.getResourceName(), request.getCapability(), 1,
-            request.getRelaxLocality(), request.getNodeLabelExpression());
+  public ResourceRequest cloneResourceRequest(ResourceRequest request) {
+    ResourceRequest newRequest = ResourceRequest.newBuilder()
+        .priority(request.getPriority())
+        .allocationRequestId(request.getAllocationRequestId())
+        .resourceName(request.getResourceName())
+        .capability(request.getCapability())
+        .numContainers(1)
+        .relaxLocality(request.getRelaxLocality())
+        .nodeLabelExpression(request.getNodeLabelExpression()).build();
     return newRequest;
   }
 
@@ -189,15 +236,15 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
    * The {@link ResourceScheduler} is allocating data-local resources to the
    * application.
    */
-  private void allocateRackLocal(SchedulerNode node,
-      ResourceRequest rackLocalRequest,
+  private void allocateRackLocal(SchedulerRequestKey schedulerKey,
+      SchedulerNode node, ResourceRequest rackLocalRequest,
       List<ResourceRequest> resourceRequests) {
     // Update future requirements
     decResourceRequest(node.getRackName(), rackLocalRequest);
 
     ResourceRequest offRackRequest = resourceRequestMap.get(
         ResourceRequest.ANY);
-    decrementOutstanding(offRackRequest);
+    decrementOutstanding(schedulerKey, offRackRequest);
 
     // Update cloned RackLocal and OffRack requests for recovery
     resourceRequests.add(cloneResourceRequest(rackLocalRequest));
@@ -208,10 +255,11 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
    * The {@link ResourceScheduler} is allocating data-local resources to the
    * application.
    */
-  private void allocateOffSwitch(ResourceRequest offSwitchRequest,
+  private void allocateOffSwitch(SchedulerRequestKey schedulerKey,
+      ResourceRequest offSwitchRequest,
       List<ResourceRequest> resourceRequests) {
     // Update future requirements
-    decrementOutstanding(offSwitchRequest);
+    decrementOutstanding(schedulerKey, offSwitchRequest);
     // Update cloned OffRack requests for recovery
     resourceRequests.add(cloneResourceRequest(offSwitchRequest));
   }
@@ -221,8 +269,8 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
    * The {@link ResourceScheduler} is allocating data-local resources to the
    * application.
    */
-  private void allocateNodeLocal(SchedulerNode node,
-      ResourceRequest nodeLocalRequest,
+  private void allocateNodeLocal(SchedulerRequestKey schedulerKey,
+      SchedulerNode node, ResourceRequest nodeLocalRequest,
       List<ResourceRequest> resourceRequests) {
     // Update future requirements
     decResourceRequest(node.getNodeName(), nodeLocalRequest);
@@ -233,7 +281,7 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
 
     ResourceRequest offRackRequest = resourceRequestMap.get(
         ResourceRequest.ANY);
-    decrementOutstanding(offRackRequest);
+    decrementOutstanding(schedulerKey, offRackRequest);
 
     // Update cloned NodeLocal, RackLocal and OffRack requests for recovery
     resourceRequests.add(cloneResourceRequest(nodeLocalRequest));
@@ -278,34 +326,89 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
   }
 
   @Override
-  public List<ResourceRequest> allocate(NodeType type, SchedulerNode node,
-      ResourceRequest request) {
+  public boolean canDelayTo(String resourceName) {
+    try {
+      readLock.lock();
+      ResourceRequest request = getResourceRequest(resourceName);
+      return request == null || request.getRelaxLocality();
+    } finally {
+      readLock.unlock();
+    }
+
+  }
+
+  @Override
+  public boolean acceptNodePartition(String nodePartition,
+      SchedulingMode schedulingMode) {
+    // We will only look at node label = nodeLabelToLookAt according to
+    // schedulingMode and partition of node.
+    String nodePartitionToLookAt;
+    if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY) {
+      nodePartitionToLookAt = nodePartition;
+    } else {
+      nodePartitionToLookAt = RMNodeLabelsManager.NO_LABEL;
+    }
+
+    return primaryRequestedPartition.equals(nodePartitionToLookAt);
+  }
+
+  @Override
+  public String getPrimaryRequestedNodePartition() {
+    return primaryRequestedPartition;
+  }
+
+  @Override
+  public int getUniqueLocationAsks() {
+    return resourceRequestMap.size();
+  }
+
+  @Override
+  public void showRequests() {
+    for (ResourceRequest request : resourceRequestMap.values()) {
+      if (request.getNumContainers() > 0) {
+        LOG.debug("\tRequest=" + request);
+      }
+    }
+  }
+
+  @Override
+  public List<ResourceRequest> allocate(SchedulerRequestKey schedulerKey,
+      NodeType type, SchedulerNode node) {
     try {
       writeLock.lock();
 
       List<ResourceRequest> resourceRequests = new ArrayList<>();
 
-      if (null == request) {
-        if (type == NodeType.NODE_LOCAL) {
-          request = resourceRequestMap.get(node.getNodeName());
-        } else if (type == NodeType.RACK_LOCAL) {
-          request = resourceRequestMap.get(node.getRackName());
-        } else{
-          request = resourceRequestMap.get(ResourceRequest.ANY);
-        }
+      ResourceRequest request;
+      if (type == NodeType.NODE_LOCAL) {
+        request = resourceRequestMap.get(node.getNodeName());
+      } else if (type == NodeType.RACK_LOCAL) {
+        request = resourceRequestMap.get(node.getRackName());
+      } else{
+        request = resourceRequestMap.get(ResourceRequest.ANY);
       }
 
       if (type == NodeType.NODE_LOCAL) {
-        allocateNodeLocal(node, request, resourceRequests);
+        allocateNodeLocal(schedulerKey, node, request, resourceRequests);
       } else if (type == NodeType.RACK_LOCAL) {
-        allocateRackLocal(node, request, resourceRequests);
+        allocateRackLocal(schedulerKey, node, request, resourceRequests);
       } else{
-        allocateOffSwitch(request, resourceRequests);
+        allocateOffSwitch(schedulerKey, request, resourceRequests);
       }
 
       return resourceRequests;
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  @Override
+  public Iterator<String> getAcceptedResouceNames() {
+    try {
+      readLock.lock();
+      return resourceRequestMap.keySet().iterator();
+    } finally {
+      readLock.unlock();
     }
   }
 }

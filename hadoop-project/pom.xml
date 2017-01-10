@@ -31,7 +31,7 @@
 
   <properties>
     <!-- Set the Release year during release -->
-    <release-year>2016</release-year>
+    <release-year>2017</release-year>
 
     <failIfNoTests>false</failIfNoTests>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
@@ -1596,6 +1596,7 @@
         <!-- attempt to open a file at this path. -->
         <java.security.egd>file:/dev/urandom</java.security.egd>
         <bundle.snappy.in.bin>true</bundle.snappy.in.bin>
+        <bundle.zstd.in.bin>true</bundle.zstd.in.bin>
         <bundle.openssl.in.bin>true</bundle.openssl.in.bin>
       </properties>
       <build>
@@ -1607,6 +1608,7 @@
               <environmentVariables>
                 <!-- Specify where to look for the native DLL on Windows -->
                 <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${snappy.lib}</PATH>
+                <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${zstd.lib}</PATH>
                 <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${openssl.lib}</PATH>
                 <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${isal.lib}</PATH>
               </environmentVariables>

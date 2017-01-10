@@ -68,7 +68,6 @@ import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
 import org.apache.hadoop.yarn.api.records.UpdateContainerError;
-import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
@@ -93,7 +92,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
 
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler
+    .AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security
@@ -559,12 +561,10 @@ public class ApplicationMasterService extends AbstractService implements
     // Split Update Resource Requests into increase and decrease.
     // No Exceptions are thrown here. All update errors are aggregated
     // and returned to the AM.
-    List<UpdateContainerRequest> increaseResourceReqs = new ArrayList<>();
-    List<UpdateContainerRequest> decreaseResourceReqs = new ArrayList<>();
-    List<UpdateContainerError> updateContainerErrors =
+    List<UpdateContainerError> updateErrors = new ArrayList<>();
+    ContainerUpdates containerUpdateRequests =
         RMServerUtils.validateAndSplitUpdateResourceRequests(
-            rmContext, request, maximumCapacity,
-            increaseResourceReqs, decreaseResourceReqs);
+        rmContext, request, maximumCapacity, updateErrors);
 
     // Send new requests to appAttempt.
     Allocation allocation;
@@ -580,7 +580,7 @@ public class ApplicationMasterService extends AbstractService implements
       allocation =
           this.rScheduler.allocate(appAttemptId, ask, release,
               blacklistAdditions, blacklistRemovals,
-              increaseResourceReqs, decreaseResourceReqs);
+              containerUpdateRequests);
     }
 
     if (!blacklistAdditions.isEmpty() || !blacklistRemovals.isEmpty()) {
@@ -596,7 +596,7 @@ public class ApplicationMasterService extends AbstractService implements
     }
 
     // Notify the AM of container update errors
-    addToUpdateContainerErrors(allocateResponse, updateContainerErrors);
+    addToUpdateContainerErrors(allocateResponse, updateErrors);
 
     // update the response with the deltas of node status changes
     List<RMNode> updatedNodes = new ArrayList<RMNode>();
@@ -630,15 +630,7 @@ public class ApplicationMasterService extends AbstractService implements
         .pullJustFinishedContainers());
     allocateResponse.setAvailableResources(allocation.getResourceLimit());
 
-    // Handling increased containers
-    addToUpdatedContainers(
-        allocateResponse, ContainerUpdateType.INCREASE_RESOURCE,
-        allocation.getIncreasedContainers());
-
-    // Handling decreased containers
-    addToUpdatedContainers(
-        allocateResponse, ContainerUpdateType.DECREASE_RESOURCE,
-        allocation.getDecreasedContainers());
+    addToContainerUpdates(appAttemptId, allocateResponse, allocation);
 
     allocateResponse.setNumClusterNodes(this.rScheduler.getNumClusterNodes());
 
@@ -656,6 +648,33 @@ public class ApplicationMasterService extends AbstractService implements
     // Set application priority
     allocateResponse.setApplicationPriority(app
         .getApplicationPriority());
+  }
+
+  private void addToContainerUpdates(ApplicationAttemptId appAttemptId,
+      AllocateResponse allocateResponse, Allocation allocation) {
+    // Handling increased containers
+    addToUpdatedContainers(
+        allocateResponse, ContainerUpdateType.INCREASE_RESOURCE,
+        allocation.getIncreasedContainers());
+
+    // Handling decreased containers
+    addToUpdatedContainers(
+        allocateResponse, ContainerUpdateType.DECREASE_RESOURCE,
+        allocation.getDecreasedContainers());
+
+    // Handling promoted containers
+    addToUpdatedContainers(
+        allocateResponse, ContainerUpdateType.PROMOTE_EXECUTION_TYPE,
+        allocation.getPromotedContainers());
+
+    // Handling demoted containers
+    addToUpdatedContainers(
+        allocateResponse, ContainerUpdateType.DEMOTE_EXECUTION_TYPE,
+        allocation.getDemotedContainers());
+
+    addToUpdateContainerErrors(allocateResponse,
+        ((AbstractYarnScheduler)rScheduler)
+            .getApplicationAttempt(appAttemptId).pullUpdateContainerErrors());
   }
 
   protected void addToUpdateContainerErrors(AllocateResponse allocateResponse,

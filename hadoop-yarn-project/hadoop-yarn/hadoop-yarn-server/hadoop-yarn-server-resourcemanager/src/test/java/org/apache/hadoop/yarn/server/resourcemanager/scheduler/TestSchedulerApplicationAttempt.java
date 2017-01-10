@@ -93,8 +93,7 @@ public class TestSchedulerApplicationAttempt {
     app.liveContainers.put(container1.getContainerId(), container1);
     SchedulerNode node = createNode();
     app.appSchedulingInfo.allocate(NodeType.OFF_SWITCH, node,
-        toSchedulerKey(requestedPriority),
-        request, container1.getContainer());
+        toSchedulerKey(requestedPriority), container1.getContainer());
     
     // Reserved container
     Priority prio1 = Priority.newInstance(1);

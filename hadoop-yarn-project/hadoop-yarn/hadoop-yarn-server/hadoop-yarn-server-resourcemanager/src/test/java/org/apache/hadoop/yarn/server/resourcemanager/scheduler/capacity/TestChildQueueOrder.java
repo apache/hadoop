@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
@@ -55,6 +56,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preempti
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSet;
+
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -162,7 +165,8 @@ public class TestChildQueueOrder {
     }).
     when(queue).assignContainers(eq(clusterResource), any(PlacementSet.class),
         any(ResourceLimits.class), any(SchedulingMode.class));
-    doNothing().when(node).releaseContainer(any(Container.class));
+    doNothing().when(node).releaseContainer(any(ContainerId.class),
+        anyBoolean());
   }
 
 
@@ -234,7 +238,8 @@ public class TestChildQueueOrder {
 
     FiCaSchedulerNode node_0 = 
       TestUtils.getMockNode("host_0", DEFAULT_RACK, 0, memoryPerNode*GB);
-    doNothing().when(node_0).releaseContainer(any(Container.class));
+    doNothing().when(node_0).releaseContainer(any(ContainerId.class),
+        anyBoolean());
     
     final Resource clusterResource = 
       Resources.createResource(numNodes * (memoryPerNode*GB), 
@@ -280,7 +285,8 @@ public class TestChildQueueOrder {
     ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 1);
     Container container=TestUtils.getMockContainer(containerId, 
         node_0.getNodeID(), Resources.createResource(1*GB), priority);
-    RMContainer rmContainer = new RMContainerImpl(container, appAttemptId,
+    RMContainer rmContainer = new RMContainerImpl(container,
+        SchedulerRequestKey.extractFrom(container), appAttemptId,
         node_0.getNodeID(), "user", rmContext);
 
     // Assign {1,2,3,4} 1GB containers respectively to queues

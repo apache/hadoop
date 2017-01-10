@@ -770,20 +770,7 @@ public class TestRMAdminService {
       YarnException {
     StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(
         HAServiceProtocol.RequestSource.REQUEST_BY_USER);
-    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
-        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
-    configuration.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
-    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
-    configuration.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2");
-    int base = 100;
-    for (String confKey : YarnConfiguration
-        .getServiceAddressConfKeys(configuration)) {
-      configuration.set(HAUtil.addSuffix(confKey, "rm1"), "0.0.0.0:"
-          + (base + 20));
-      configuration.set(HAUtil.addSuffix(confKey, "rm2"), "0.0.0.0:"
-          + (base + 40));
-      base = base * 2;
-    }
+    updateConfigurationForRMHA();
     Configuration conf1 = new Configuration(configuration);
     conf1.set(YarnConfiguration.RM_HA_ID, "rm1");
     Configuration conf2 = new Configuration(configuration);
@@ -1340,4 +1327,45 @@ public class TestRMAdminService {
     }
   }
 
+  @Test
+  public void testSecureRMBecomeActive() throws IOException,
+      YarnException {
+    StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(
+        HAServiceProtocol.RequestSource.REQUEST_BY_USER);
+    updateConfigurationForRMHA();
+    configuration.setBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, true);
+    configuration.set(YarnConfiguration.RM_HA_ID, "rm1");
+    // upload default configurations
+    uploadDefaultConfiguration();
+
+    ResourceManager resourceManager = new ResourceManager();
+    try {
+      resourceManager.init(configuration);
+      resourceManager.start();
+      Assert.assertTrue(resourceManager.getRMContext().getHAServiceState()
+          == HAServiceState.STANDBY);
+      resourceManager.adminService.transitionToActive(requestInfo);
+    } finally {
+        resourceManager.close();
+    }
+  }
+
+  private void updateConfigurationForRMHA() {
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+    configuration.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    configuration.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2");
+
+    int base = 1500;
+    for (String confKey : YarnConfiguration
+        .getServiceAddressConfKeys(configuration)) {
+      configuration.set(HAUtil.addSuffix(confKey, "rm1"),
+          "0.0.0.0:" + (base + 20));
+      configuration.set(HAUtil.addSuffix(confKey, "rm2"),
+          "0.0.0.1:" + (base + 40));
+      base = base * 2;
+    }
+  }
 }

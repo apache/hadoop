@@ -19,15 +19,67 @@ package org.apache.hadoop.fs.ftp;
 
 import org.apache.commons.net.ftp.FTP;
 
-import org.junit.Assert;
+import org.apache.commons.net.ftp.FTPClient;
+import org.apache.hadoop.conf.Configuration;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
+import static org.junit.Assert.assertEquals;
+
+/**
+ * Test basic @{link FTPFileSystem} class methods. Contract tests are in
+ * TestFTPContractXXXX.
+ */
 public class TestFTPFileSystem {
+
+  @Rule
+  public Timeout testTimeout = new Timeout(180000);
 
   @Test
   public void testFTPDefaultPort() throws Exception {
     FTPFileSystem ftp = new FTPFileSystem();
-    Assert.assertEquals(FTP.DEFAULT_PORT, ftp.getDefaultPort());
+    assertEquals(FTP.DEFAULT_PORT, ftp.getDefaultPort());
   }
 
+  @Test
+  public void testFTPTransferMode() throws Exception {
+    Configuration conf = new Configuration();
+    FTPFileSystem ftp = new FTPFileSystem();
+    assertEquals(FTP.BLOCK_TRANSFER_MODE, ftp.getTransferMode(conf));
+
+    conf.set(FTPFileSystem.FS_FTP_TRANSFER_MODE, "STREAM_TRANSFER_MODE");
+    assertEquals(FTP.STREAM_TRANSFER_MODE, ftp.getTransferMode(conf));
+
+    conf.set(FTPFileSystem.FS_FTP_TRANSFER_MODE, "COMPRESSED_TRANSFER_MODE");
+    assertEquals(FTP.COMPRESSED_TRANSFER_MODE, ftp.getTransferMode(conf));
+
+    conf.set(FTPFileSystem.FS_FTP_TRANSFER_MODE, "invalid");
+    assertEquals(FTPClient.BLOCK_TRANSFER_MODE, ftp.getTransferMode(conf));
+  }
+
+  @Test
+  public void testFTPDataConnectionMode() throws Exception {
+    Configuration conf = new Configuration();
+    FTPClient client = new FTPClient();
+    FTPFileSystem ftp = new FTPFileSystem();
+    assertEquals(FTPClient.ACTIVE_LOCAL_DATA_CONNECTION_MODE,
+        client.getDataConnectionMode());
+
+    ftp.setDataConnectionMode(client, conf);
+    assertEquals(FTPClient.ACTIVE_LOCAL_DATA_CONNECTION_MODE,
+        client.getDataConnectionMode());
+
+    conf.set(FTPFileSystem.FS_FTP_DATA_CONNECTION_MODE, "invalid");
+    ftp.setDataConnectionMode(client, conf);
+    assertEquals(FTPClient.ACTIVE_LOCAL_DATA_CONNECTION_MODE,
+        client.getDataConnectionMode());
+
+    conf.set(FTPFileSystem.FS_FTP_DATA_CONNECTION_MODE,
+        "PASSIVE_LOCAL_DATA_CONNECTION_MODE");
+    ftp.setDataConnectionMode(client, conf);
+    assertEquals(FTPClient.PASSIVE_LOCAL_DATA_CONNECTION_MODE,
+        client.getDataConnectionMode());
+
+  }
 }

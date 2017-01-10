@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.SchedulerC
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSet;
+import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -856,7 +857,10 @@ public class TestParentQueue {
             TestUtils.spyHook);
     YarnAuthorizationProvider authorizer =
         YarnAuthorizationProvider.getInstance(conf);
-    CapacitySchedulerQueueManager.setQueueAcls(authorizer, queues);
+    AppPriorityACLsManager appPriorityACLManager = new AppPriorityACLsManager(
+        conf);
+    CapacitySchedulerQueueManager.setQueueAcls(authorizer,
+        appPriorityACLManager, queues);
 
     UserGroupInformation user = UserGroupInformation.getCurrentUser();
     // Setup queue configs
