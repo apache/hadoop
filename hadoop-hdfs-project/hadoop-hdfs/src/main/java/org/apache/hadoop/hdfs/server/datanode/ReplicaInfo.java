@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.LightWeightResizableGSet;
@@ -230,7 +233,7 @@ abstract public class ReplicaInfo extends Block
       try {
         FileOutputStream out = new FileOutputStream(tmpFile);
         try {
-          IOUtils.copyBytes(in, out, 16 * 1024);
+          copyBytes(in, out, 16 * 1024);
         } finally {
           out.close();
         }
@@ -242,7 +245,7 @@ abstract public class ReplicaInfo extends Block
                               " into file " + tmpFile +
                               " resulted in a size of " + tmpFile.length());
       }
-      FileUtil.replaceFile(tmpFile, file);
+      replaceFile(tmpFile, file);
     } catch (IOException e) {
       boolean done = tmpFile.delete();
       if (!done) {
@@ -277,13 +280,13 @@ abstract public class ReplicaInfo extends Block
     }
     File meta = getMetaFile();
 
-    int linkCount = HardLink.getLinkCount(file);
+    int linkCount = getHardLinkCount(file);
     if (linkCount > 1) {
       DataNode.LOG.info("Breaking hardlink for " + linkCount + "x-linked " +
           "block " + this);
       breakHardlinks(file, this);
     }
-    if (HardLink.getLinkCount(meta) > 1) {
+    if (getHardLinkCount(meta) > 1) {
       breakHardlinks(meta, this);
     }
     return true;
@@ -314,5 +317,28 @@ abstract public class ReplicaInfo extends Block
   @Override
   public void setNext(LightWeightResizableGSet.LinkedElement next) {
     this.next = next;
+  }
+
+  public static boolean fullyDelete(final File dir) {
+    boolean result = DataStorage.fullyDelete(dir);
+    return result;
+  }
+
+  public static int getHardLinkCount(File fileName) throws IOException {
+    int linkCount = HardLink.getLinkCount(fileName);
+    return linkCount;
+  }
+
+  public static void rename(File from, File to) throws IOException {
+    Storage.rename(from, to);
+  }
+
+  private void copyBytes(InputStream in, OutputStream out, int
+    buffSize) throws IOException{
+    IOUtils.copyBytes(in, out, buffSize);
+  }
+
+  private void replaceFile(File src, File target) throws IOException {
+    FileUtil.replaceFile(src, target);
   }
 }
