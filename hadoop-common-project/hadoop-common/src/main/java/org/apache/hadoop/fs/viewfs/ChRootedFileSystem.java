@@ -234,6 +234,11 @@ class ChRootedFileSystem extends FilterFileSystem {
   }
 
   @Override
+  public Path getLinkTarget(Path f) throws IOException {
+    return super.getLinkTarget(fullPath(f));
+  }
+
+  @Override
   public void access(Path path, FsAction mode) throws AccessControlException,
       FileNotFoundException, IOException {
     super.access(fullPath(path), mode);

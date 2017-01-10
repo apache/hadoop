@@ -51,6 +51,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
@@ -1136,5 +1137,77 @@ abstract public class ViewFileSystemBaseTest {
     assertEquals("Space used not matching between ViewFileSystem and " +
         "the mounted FileSystem!",
         usedSpaceByPathViaTargetFs, usedSpaceByPathViaViewFs);
+  }
+
+  @Test
+  public void testLinkTarget() throws Exception {
+
+    Assume.assumeTrue(fsTarget.supportsSymlinks() &&
+        fsTarget.areSymlinksEnabled());
+
+    // Symbolic link
+    final String targetFileName = "debug.log";
+    final String linkFileName = "debug.link";
+    final Path targetFile = new Path(targetTestRoot, targetFileName);
+    final Path symLink = new Path(targetTestRoot, linkFileName);
+
+    FileSystemTestHelper.createFile(fsTarget, targetFile);
+    fsTarget.createSymlink(targetFile, symLink, false);
+
+    final Path mountTargetRootPath = new Path("/targetRoot");
+    final Path mountTargetSymLinkPath = new Path(mountTargetRootPath,
+        linkFileName);
+    final Path expectedMountLinkTarget = fsTarget.makeQualified(
+        new Path(targetTestRoot, targetFileName));
+    final Path actualMountLinkTarget = fsView.getLinkTarget(
+        mountTargetSymLinkPath);
+
+    assertEquals("Resolved link target path not matching!",
+        expectedMountLinkTarget, actualMountLinkTarget);
+
+    // Relative symbolic link
+    final String relativeFileName = "dir2/../" + targetFileName;
+    final String link2FileName = "dir2/rel.link";
+    final Path relTargetFile = new Path(targetTestRoot, relativeFileName);
+    final Path relativeSymLink = new Path(targetTestRoot, link2FileName);
+    fsTarget.createSymlink(relTargetFile, relativeSymLink, true);
+
+    final Path mountTargetRelativeSymLinkPath = new Path(mountTargetRootPath,
+        link2FileName);
+    final Path expectedMountRelLinkTarget = fsTarget.makeQualified(
+        new Path(targetTestRoot, relativeFileName));
+    final Path actualMountRelLinkTarget = fsView.getLinkTarget(
+        mountTargetRelativeSymLinkPath);
+
+    assertEquals("Resolved relative link target path not matching!",
+        expectedMountRelLinkTarget, actualMountRelLinkTarget);
+
+    try {
+      fsView.getLinkTarget(new Path("/linkToAFile"));
+      fail("Resolving link target for a ViewFs mount link should fail!");
+    } catch (Exception e) {
+      LOG.info("Expected exception: " + e);
+      assertThat(e.getMessage(),
+          containsString("not a symbolic link"));
+    }
+
+    try {
+      fsView.getLinkTarget(fsView.makeQualified(
+          new Path(mountTargetRootPath, targetFileName)));
+      fail("Resolving link target for a non sym link should fail!");
+    } catch (Exception e) {
+      LOG.info("Expected exception: " + e);
+      assertThat(e.getMessage(),
+          containsString("not a symbolic link"));
+    }
+
+    try {
+      fsView.getLinkTarget(new Path("/targetRoot/non-existing-file"));
+      fail("Resolving link target for a non existing link should fail!");
+    } catch (Exception e) {
+      LOG.info("Expected exception: " + e);
+      assertThat(e.getMessage(),
+          containsString("File does not exist:"));
+    }
   }
 }
