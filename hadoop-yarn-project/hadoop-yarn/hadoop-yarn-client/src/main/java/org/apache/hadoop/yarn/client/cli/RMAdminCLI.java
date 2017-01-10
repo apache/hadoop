@@ -685,7 +685,7 @@ public class RMAdminCLI extends HAAdmin {
       }
       
       int nLabels = map.get(nodeId).size();
-      Preconditions.checkArgument(nLabels <= 1, "%d labels specified on host=%s"
+      Preconditions.checkArgument(nLabels <= 1, "%s labels specified on host=%s"
           + ", please note that we do not support specifying multiple"
           + " labels on a single host for now.", nLabels, nodeIdStr);
     }
