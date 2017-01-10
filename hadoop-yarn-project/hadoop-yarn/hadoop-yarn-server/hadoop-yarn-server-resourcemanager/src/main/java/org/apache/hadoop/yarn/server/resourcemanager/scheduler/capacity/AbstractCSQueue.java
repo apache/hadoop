@@ -632,30 +632,41 @@ public abstract class AbstractCSQueue implements CSQueue {
           if (Resources.lessThan(resourceCalculator, clusterResource,
               newTotalWithoutReservedResource, currentLimitResource)) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug(
-                  "try to use reserved: " + getQueueName() + " usedResources: "
-                      + queueUsage.getUsed() + ", clusterResources: "
-                      + clusterResource + ", reservedResources: "
-                      + resourceCouldBeUnreserved
-                      + ", capacity-without-reserved: "
-                      + newTotalWithoutReservedResource + ", maxLimitCapacity: "
-                      + currentLimitResource);
+              LOG.debug("try to use reserved: " + getQueueName()
+                  + " usedResources: " + queueUsage.getUsed()
+                  + ", clusterResources: " + clusterResource
+                  + ", reservedResources: " + resourceCouldBeUnreserved
+                  + ", capacity-without-reserved: "
+                  + newTotalWithoutReservedResource
+                  + ", maxLimitCapacity: " + currentLimitResource);
             }
             return true;
           }
         }
+
+        // Can not assign to this queue
         if (LOG.isDebugEnabled()) {
-          LOG.debug(getQueueName() + "Check assign to queue, nodePartition="
-              + nodePartition + " usedResources: " + queueUsage
-              .getUsed(nodePartition) + " clusterResources: " + clusterResource
-              + " currentUsedCapacity " + Resources
-              .divide(resourceCalculator, clusterResource,
-                  queueUsage.getUsed(nodePartition), labelManager
-                      .getResourceByLabel(nodePartition, clusterResource))
-              + " max-capacity: " + queueCapacities
-              .getAbsoluteMaximumCapacity(nodePartition) + ")");
+          LOG.debug("Failed to assign to queue: " + getQueueName()
+              + " nodePatrition: " + nodePartition
+              + ", usedResources: " + queueUsage.getUsed(nodePartition)
+              + ", clusterResources: " + clusterResource
+              + ", reservedResources: " + resourceCouldBeUnreserved
+              + ", maxLimitCapacity: " + currentLimitResource
+              + ", currTotalUsed:" + usedExceptKillable);
         }
         return false;
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Check assign to queue: " + getQueueName()
+            + " nodePartition: " + nodePartition
+            + ", usedResources: " + queueUsage.getUsed(nodePartition)
+            + ", clusterResources: " + clusterResource
+            + ", currentUsedCapacity: " + Resources
+            .divide(resourceCalculator, clusterResource,
+                queueUsage.getUsed(nodePartition), labelManager
+                    .getResourceByLabel(nodePartition, clusterResource))
+            + ", max-capacity: " + queueCapacities
+            .getAbsoluteMaximumCapacity(nodePartition));
       }
       return true;
     } finally {
