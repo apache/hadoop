@@ -326,7 +326,7 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 FsVolume
 --------
 
-Per-volume metrics contain Datanode Volume IO related statistics. Per-volume metrics are off by default. They can be enbabled by setting `dfs.datanode.fileio.events.class` to **org.apache.hadoop.hdfs.server.datanode.ProfilingFileIoEvents**, but enabling per-volume metrics may have a performance impact. Each metrics record contains tags such as Hostname as additional information along with metrics.
+Per-volume metrics contain Datanode Volume IO related statistics. Per-volume metrics are off by default. They can be enbabled by setting `dfs.datanode.enable.fileio.profiling` to **true**, but enabling per-volume metrics may have a performance impact. Each metrics record contains tags such as Hostname as additional information along with metrics.
 
 | Name | Description |
 |:---- |:---- |

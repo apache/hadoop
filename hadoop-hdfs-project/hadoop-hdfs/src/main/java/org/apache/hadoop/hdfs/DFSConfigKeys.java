@@ -698,8 +698,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_DATANODE_PLUGINS_KEY = "dfs.datanode.plugins";
   public static final String  DFS_DATANODE_FSDATASET_FACTORY_KEY = "dfs.datanode.fsdataset.factory";
   public static final String  DFS_DATANODE_FSDATASET_VOLUME_CHOOSING_POLICY_KEY = "dfs.datanode.fsdataset.volume.choosing.policy";
-  public static final String DFS_DATANODE_FILE_IO_EVENTS_CLASS_KEY =
-      "dfs.datanode.fileio.events.class";
+  public static final String DFS_DATANODE_ENABLE_FILEIO_PROFILING_KEY =
+      "dfs.datanode.enable.fileio.profiling";
+  public static final boolean DFS_DATANODE_ENABLE_FILEIO_PROFILING_DEFAULT =
+      false;
+  public static final String DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_KEY =
+      "dfs.datanode.enable.fileio.fault.injection";
+  public static final boolean
+      DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_DEFAULT = false;
   public static final String  DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_KEY = "dfs.datanode.available-space-volume-choosing-policy.balanced-space-threshold";
   public static final long    DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_DEFAULT = 1024L * 1024L * 1024L * 10L; // 10 GB
   public static final String  DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY = "dfs.datanode.available-space-volume-choosing-policy.balanced-space-preference-fraction";

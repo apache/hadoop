@@ -122,11 +122,6 @@ public interface DataNodeMXBean {
   String getDiskBalancerStatus();
 
   /**
-   * Gets the {@link FileIoProvider} statistics.
-   */
-  String getFileIoProviderStatistics();
-
-  /**
    * Gets the average info (e.g. time) of SendPacketDownstream when the DataNode
    * acts as the penultimate (2nd to the last) node in pipeline.
    * <p>
