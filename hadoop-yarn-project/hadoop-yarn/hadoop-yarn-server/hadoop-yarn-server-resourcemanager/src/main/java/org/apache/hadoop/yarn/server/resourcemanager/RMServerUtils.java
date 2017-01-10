@@ -303,7 +303,7 @@ public class RMServerUtils {
       return false;
     }
     ResourceScheduler scheduler = rmContext.getScheduler();
-    scheduler.normalizeRequest(request);
+    request.setCapability(scheduler.getNormalizedResource(request.getCapability()));
     return true;
   }
 

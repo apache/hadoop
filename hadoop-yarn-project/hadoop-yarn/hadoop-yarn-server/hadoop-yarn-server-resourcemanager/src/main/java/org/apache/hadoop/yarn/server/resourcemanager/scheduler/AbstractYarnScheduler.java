@@ -37,7 +37,6 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.api.records.AbstractResourceRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -1043,8 +1042,8 @@ public abstract class AbstractYarnScheduler
   }
 
   @Override
-  public void normalizeRequest(AbstractResourceRequest ask) {
-    SchedulerUtils.normalizeRequest(ask,
+  public Resource getNormalizedResource(Resource requestedResource) {
+    return SchedulerUtils.getNormalizedResource(requestedResource,
         getResourceCalculator(),
         getMinimumResourceCapability(),
         getMaximumResourceCapability(),
@@ -1058,7 +1057,7 @@ public abstract class AbstractYarnScheduler
    */
   protected void normalizeRequests(List<ResourceRequest> asks) {
     for (ResourceRequest ask: asks) {
-      normalizeRequest(ask);
+      ask.setCapability(getNormalizedResource(ask.getCapability()));
     }
   }
 }

@@ -451,7 +451,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         throw e;
       }
 
-      scheduler.normalizeRequest(amReq);
+      amReq.setCapability(scheduler.getNormalizedResource(amReq.getCapability()));
       return amReq;
     }
     
