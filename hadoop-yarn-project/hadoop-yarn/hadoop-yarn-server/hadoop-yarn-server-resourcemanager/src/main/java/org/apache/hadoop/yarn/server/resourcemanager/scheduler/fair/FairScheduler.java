@@ -907,7 +907,7 @@ public class FairScheduler extends
         application.unreserve(rmContainer.getReservedSchedulerKey(), node);
       } else{
         application.containerCompleted(rmContainer, containerStatus, event);
-        node.releaseContainer(container);
+        node.releaseContainer(rmContainer.getContainerId(), false);
         updateRootQueueMetrics();
       }
 

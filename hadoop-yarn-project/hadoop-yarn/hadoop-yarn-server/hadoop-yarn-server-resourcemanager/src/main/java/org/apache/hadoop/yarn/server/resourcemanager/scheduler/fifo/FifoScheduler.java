@@ -854,7 +854,7 @@ public class FifoScheduler extends
         RMNodeLabelsManager.NO_LABEL);
 
     // Inform the node
-    node.releaseContainer(container);
+    node.releaseContainer(rmContainer.getContainerId(), false);
     
     // Update total usage
     Resources.subtractFrom(usedResource, container.getResource());

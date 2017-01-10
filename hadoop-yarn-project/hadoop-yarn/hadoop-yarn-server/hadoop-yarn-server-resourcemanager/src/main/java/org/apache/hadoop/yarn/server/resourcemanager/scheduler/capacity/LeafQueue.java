@@ -1712,7 +1712,7 @@ public class LeafQueue extends AbstractCSQueue {
           removed = application.containerCompleted(rmContainer, containerStatus,
               event, node.getPartition());
 
-          node.releaseContainer(container);
+          node.releaseContainer(rmContainer.getContainerId(), false);
         }
 
         // Book-keeping

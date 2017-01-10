@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
@@ -162,7 +163,8 @@ public class TestChildQueueOrder {
     }).
     when(queue).assignContainers(eq(clusterResource), any(PlacementSet.class),
         any(ResourceLimits.class), any(SchedulingMode.class));
-    doNothing().when(node).releaseContainer(any(Container.class));
+    doNothing().when(node).releaseContainer(any(ContainerId.class),
+        anyBoolean());
   }
 
 
@@ -234,7 +236,8 @@ public class TestChildQueueOrder {
 
     FiCaSchedulerNode node_0 = 
       TestUtils.getMockNode("host_0", DEFAULT_RACK, 0, memoryPerNode*GB);
-    doNothing().when(node_0).releaseContainer(any(Container.class));
+    doNothing().when(node_0).releaseContainer(any(ContainerId.class),
+        anyBoolean());
     
     final Resource clusterResource = 
       Resources.createResource(numNodes * (memoryPerNode*GB), 
