@@ -74,6 +74,11 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   protected final Map<Class<? extends Enum>, EventHandler> eventDispatchers;
   private boolean exitOnDispatchException;
 
+  /**
+   * The thread name for dispatcher.
+   */
+  private String dispatcherThreadName = "AsyncDispatcher event handler";
+
   public AsyncDispatcher() {
     this(new LinkedBlockingQueue<Event>());
   }
@@ -82,6 +87,15 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     super("Dispatcher");
     this.eventQueue = eventQueue;
     this.eventDispatchers = new HashMap<Class<? extends Enum>, EventHandler>();
+  }
+
+  /**
+   * Set a name for this dispatcher thread.
+   * @param dispatcherName name of the dispatcher thread
+   */
+  public AsyncDispatcher(String dispatcherName) {
+    this();
+    dispatcherThreadName = dispatcherName;
   }
 
   Runnable createThread() {
@@ -130,7 +144,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     //start all the components
     super.serviceStart();
     eventHandlingThread = new Thread(createThread());
-    eventHandlingThread.setName("AsyncDispatcher event handler");
+    eventHandlingThread.setName(dispatcherThreadName);
     eventHandlingThread.start();
   }
 
