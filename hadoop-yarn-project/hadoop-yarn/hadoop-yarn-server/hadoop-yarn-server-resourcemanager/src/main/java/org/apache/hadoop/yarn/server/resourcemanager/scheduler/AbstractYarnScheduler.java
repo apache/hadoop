@@ -257,6 +257,7 @@ public abstract class AbstractYarnScheduler
     }
 
     application.containerLaunchedOnNode(containerId, node.getNodeID());
+    node.containerStarted(containerId);
   }
   
   protected void containerIncreasedOnNode(ContainerId containerId,

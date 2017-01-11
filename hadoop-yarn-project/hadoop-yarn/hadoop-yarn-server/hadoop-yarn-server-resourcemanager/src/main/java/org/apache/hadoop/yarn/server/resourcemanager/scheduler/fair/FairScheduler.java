@@ -871,7 +871,7 @@ public class FairScheduler extends
       application.unreserve(rmContainer.getReservedPriority(), node);
     } else {
       application.containerCompleted(rmContainer, containerStatus, event);
-      node.releaseContainer(container);
+      node.releaseContainer(rmContainer.getContainerId(), false);
       updateRootQueueMetrics();
     }
 
@@ -1053,6 +1053,7 @@ public class FairScheduler extends
       LOG.debug("Container FINISHED: " + containerId);
       super.completedContainer(getRMContainer(containerId),
           completedContainer, RMContainerEventType.FINISHED);
+      node.releaseContainer(containerId, true);
     }
 
     // If the node is decommissioning, send an update to have the total

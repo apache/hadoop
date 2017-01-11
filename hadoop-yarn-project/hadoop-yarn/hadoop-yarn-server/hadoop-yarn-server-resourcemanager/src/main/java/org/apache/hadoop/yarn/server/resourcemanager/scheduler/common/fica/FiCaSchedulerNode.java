@@ -125,7 +125,7 @@ public class FiCaSchedulerNode extends SchedulerNode {
 
   // According to decisions from preemption policy, mark the container to killable
   public synchronized void markContainerToKillable(ContainerId containerId) {
-    RMContainer c = launchedContainers.get(containerId);
+    RMContainer c = getContainer(containerId);
     if (c != null && !killableContainers.containsKey(containerId)) {
       killableContainers.put(containerId, c);
       Resources.addTo(totalKillableResources, c.getAllocatedResource());
@@ -135,7 +135,7 @@ public class FiCaSchedulerNode extends SchedulerNode {
   // According to decisions from preemption policy, mark the container to
   // non-killable
   public synchronized void markContainerToNonKillable(ContainerId containerId) {
-    RMContainer c = launchedContainers.get(containerId);
+    RMContainer c = getContainer(containerId);
     if (c != null && killableContainers.containsKey(containerId)) {
       killableContainers.remove(containerId);
       Resources.subtractFrom(totalKillableResources, c.getAllocatedResource());
