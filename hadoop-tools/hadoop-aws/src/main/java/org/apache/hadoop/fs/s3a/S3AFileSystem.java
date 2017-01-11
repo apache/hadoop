@@ -152,21 +152,28 @@ public class S3AFileSystem extends FileSystem {
   /** Called after a new FileSystem instance is constructed.
    * @param name a uri whose authority section names the host, port, etc.
    *   for this FileSystem
-   * @param conf the configuration
+   * @param originalConf the configuration to use for the FS. The
+   * bucket-specific options are patched over the base ones before any use is
+   * made of the config.
    */
-  public void initialize(URI name, Configuration conf) throws IOException {
+  public void initialize(URI name, Configuration originalConf)
+      throws IOException {
+    uri = S3xLoginHelper.buildFSURI(name);
+    // get the host; this is guaranteed to be non-null, non-empty
+    bucket = name.getHost();
+    // clone the configuration into one with propagated bucket options
+    Configuration conf = propagateBucketOptions(originalConf, bucket);
+    patchSecurityCredentialProviders(conf);
     super.initialize(name, conf);
     setConf(conf);
     try {
       instrumentation = new S3AInstrumentation(name);
 
-      uri = S3xLoginHelper.buildFSURI(name);
       // Username is the current user at the time the FS was instantiated.
       username = UserGroupInformation.getCurrentUser().getShortUserName();
       workingDir = new Path("/user", username)
           .makeQualified(this.uri, this.getWorkingDirectory());
 
-      bucket = name.getHost();
 
       Class<? extends S3ClientFactory> s3ClientFactoryClass = conf.getClass(
           S3_CLIENT_FACTORY_IMPL, DEFAULT_S3_CLIENT_FACTORY_IMPL,
