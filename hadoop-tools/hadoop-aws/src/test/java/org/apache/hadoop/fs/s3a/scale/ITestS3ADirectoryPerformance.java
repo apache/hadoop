@@ -113,7 +113,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
           listContinueRequests,
           listStatusCalls,
           getFileStatusCalls);
-      if (!fs.isMetadataStoreConfigured()) {
+      if (!fs.hasMetadataStore()) {
         assertEquals(listRequests.toString(), 2, listRequests.diff());
       }
       reset(metadataRequests,

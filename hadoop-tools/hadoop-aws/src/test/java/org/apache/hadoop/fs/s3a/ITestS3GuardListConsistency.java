@@ -51,7 +51,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
 
     // This test will fail if NullMetadataStore (the default) is configured:
     // skip it.
-    Assume.assumeTrue(fs.isMetadataStoreConfigured());
+    Assume.assumeTrue(fs.hasMetadataStore());
 
     // Any S3 keys that contain DELAY_KEY_SUBSTRING will be delayed
     // in listObjects() results via InconsistentS3Client

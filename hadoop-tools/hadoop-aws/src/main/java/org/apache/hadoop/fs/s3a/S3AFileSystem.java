@@ -765,7 +765,7 @@ public class S3AFileSystem extends FileSystem {
     // If we have a MetadataStore, track deletions/creations.
     List<Path> srcPaths = null;
     List<PathMetadata> dstMetas = null;
-    if (!S3Guard.isNullMetadataStore(metadataStore)) {
+    if (hasMetadataStore()) {
       srcPaths = new ArrayList<>();
       dstMetas = new ArrayList<>();
     }
@@ -834,7 +834,7 @@ public class S3AFileSystem extends FileSystem {
               dstKey + summary.getKey().substring(srcKey.length());
           copyFile(summary.getKey(), newDstKey, length);
 
-          if (!S3Guard.isNullMetadataStore(metadataStore)) {
+          if (hasMetadataStore()) {
             Path srcPath = keyToQualifiedPath(summary.getKey());
             Path dstPath = keyToQualifiedPath(newDstKey);
             if (objectRepresentsDirectory(summary.getKey(), length)) {
@@ -885,8 +885,11 @@ public class S3AFileSystem extends FileSystem {
     return getObjectMetadata(pathToKey(path));
   }
 
-  @VisibleForTesting
-  public boolean isMetadataStoreConfigured() {
+  /**
+   * Does this Filesystem have a metadata store?
+   * @return true if the FS has been instantiated with a metadata store
+   */
+  public boolean hasMetadataStore() {
     return !S3Guard.isNullMetadataStore(metadataStore);
   }
 
@@ -1549,7 +1552,7 @@ public class S3AFileSystem extends FileSystem {
     incrementStatistic(INVOCATION_MKDIRS);
     FileStatus fileStatus;
     List<Path> metadataStoreDirs = null;
-    if (!S3Guard.isNullMetadataStore(metadataStore)) {
+    if (hasMetadataStore()) {
       metadataStoreDirs = new ArrayList<>();
     }
 
@@ -1896,7 +1899,7 @@ public class S3AFileSystem extends FileSystem {
 
     // See note about failure semantics in s3guard.md doc.
     try {
-      if (!S3Guard.isNullMetadataStore(metadataStore)) {
+      if (hasMetadataStore()) {
         S3AFileStatus status = createUploadFileStatus(p,
             S3AUtils.objectRepresentsDirectory(key, length), length,
             getDefaultBlockSize(p), username);

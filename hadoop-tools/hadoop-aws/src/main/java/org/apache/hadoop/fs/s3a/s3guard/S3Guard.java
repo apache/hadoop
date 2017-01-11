@@ -105,17 +105,6 @@ public final class S3Guard {
     }
   }
 
-  /**
-   * Predicate to check whether or not the metadata store is the null one.
-   * @param conf Configuration
-   * @return true if NullMetadataStore is configured for s3a, or if the
-   * configuration is missing.
-   */
-  public static boolean isNullMetadataStoreConfigured(Configuration conf) {
-    Class<? extends MetadataStore> msClass = getMetadataStoreClass(conf);
-    return msClass.equals(NullMetadataStore.class);
-  }
-
   private static Class<? extends MetadataStore> getMetadataStoreClass(
       Configuration conf) {
     if (conf == null) {

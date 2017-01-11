@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.s3a.scale.S3AScaleTestBase;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.internal.AssumptionViolatedException;

@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +64,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     resetMetricDiffs();
     S3AFileStatus status = fs.getFileStatus(simpleFile);
     assertTrue("not a file: " + status, status.isFile());
-    if (S3Guard.isNullMetadataStoreConfigured(fs.getConf())) {
+    if (!fs.hasMetadataStore()) {
       metadataRequests.assertDiffEquals(1);
     }
     listRequests.assertDiffEquals(0);
@@ -85,7 +84,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     S3AFileStatus status = fs.getFileStatus(dir);
     assertTrue("not empty: " + status, status.isEmptyDirectory());
 
-    if (S3Guard.isNullMetadataStoreConfigured(fs.getConf())) {
+    if (!fs.hasMetadataStore()) {
       metadataRequests.assertDiffEquals(2);
     }
     listRequests.assertDiffEquals(0);
@@ -140,7 +139,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
           + "\n" + ContractTestUtils.ls(fs, dir)
           + "\n" + fsState);
     }
-    if (S3Guard.isNullMetadataStoreConfigured(fs.getConf())) {
+    if (!fs.hasMetadataStore()) {
       metadataRequests.assertDiffEquals(2);
       listRequests.assertDiffEquals(1);
     }
@@ -200,7 +199,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     // operations, it depends on side effects happening internally. With
     // metadata store enabled, it is brittle to change. We disable this test
     // before the internal behavior w/ or w/o metadata store.
-    assumeFalse(fs.isMetadataStoreConfigured());
+    assumeFalse(fs.hasMetadataStore());
 
     Path srcBaseDir = path("src");
     mkdirs(srcBaseDir);
