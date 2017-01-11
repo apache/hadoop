@@ -39,7 +39,7 @@ public class CreateParentParam extends BooleanParam {
    * @param str a string representation of the parameter value.
    */
   public CreateParentParam(final String str) {
-    this(DOMAIN.parse(str));
+    this(DOMAIN.parse(str == null ? DEFAULT : str));
   }
 
   @Override

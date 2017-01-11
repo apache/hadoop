@@ -76,6 +76,7 @@ Usage: `yarn application [options] `
 | -movetoqueue \<Application Id\> | Moves the application to a different queue. |
 | -queue \<Queue Name\> | Works with the movetoqueue command to specify which queue to move an application to. |
 | -status \<ApplicationId\> | Prints the status of the application. |
+| -updateLifetime \<Timeout\> | Update application timeout (from the time of request) in seconds. ApplicationId can be specified using 'appId' option. |
 | -updatePriority \<Priority\> | Update priority of an application. ApplicationId can be passed using 'appId' option. |
 
 Prints application(s) report/kill application
@@ -165,6 +166,12 @@ Prints queue information
 Usage: `yarn version`
 
 Prints the Hadoop version.
+
+### `envvars`
+
+Usage: `yarn envvars`
+
+Display computed Hadoop environment variables.
 
 Administration Commands
 -----------------------

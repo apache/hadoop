@@ -24,9 +24,11 @@ import java.util.Map;
 
 /**
  * 
- * This is the JMX management interface for data node information
+ * This is the JMX management interface for data node information.
+ * End users shouldn't be implementing these interfaces, and instead
+ * access this information through the JMX APIs.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Stable
 public interface DataNodeMXBean {
   
@@ -118,4 +120,16 @@ public interface DataNodeMXBean {
    * @return  DiskBalancer Status
    */
   String getDiskBalancerStatus();
+
+  /**
+   * Gets the average info (e.g. time) of SendPacketDownstream when the DataNode
+   * acts as the penultimate (2nd to the last) node in pipeline.
+   * <p>
+   * Example Json:
+   * {"[185.164.159.81:9801]RollingAvgTime":504.867,
+   *  "[49.236.149.246:9801]RollingAvgTime":504.463,
+   *  "[84.125.113.65:9801]RollingAvgTime":497.954}
+   * </p>
+   */
+  String getSendPacketDownstreamAvgInfo();
 }

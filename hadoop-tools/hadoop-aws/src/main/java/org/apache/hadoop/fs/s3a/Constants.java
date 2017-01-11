@@ -48,6 +48,14 @@ public final class Constants {
   public static final String AWS_CREDENTIALS_PROVIDER =
       "fs.s3a.aws.credentials.provider";
 
+  /**
+   * Extra set of security credentials which will be prepended to that
+   * set in {@code "hadoop.security.credential.provider.path"}.
+   * This extra option allows for per-bucket overrides.
+   */
+  public static final String S3A_SECURITY_CREDENTIAL_PROVIDER_PATH =
+      "fs.s3a.security.credential.provider.path";
+
   // session token for when using TemporaryAWSCredentialsProvider
   public static final String SESSION_TOKEN = "fs.s3a.session.token";
 
@@ -225,6 +233,12 @@ public final class Constants {
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
   public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
   public static final String FS_S3A = "s3a";
+
+  /** Prefix for all S3A properties: {@value}. */
+  public static final String FS_S3A_PREFIX = "fs.s3a.";
+
+  /** Prefix for S3A bucket-specific properties: {@value}. */
+  public static final String FS_S3A_BUCKET_PREFIX = "fs.s3a.bucket.";
 
   public static final int S3A_DEFAULT_PORT = -1;
 

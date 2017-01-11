@@ -166,7 +166,7 @@ public class NodePlan {
   public String toJson() throws IOException {
     ObjectMapper mapper = new ObjectMapper();
     JavaType planType = mapper.constructType(NodePlan.class);
-    return mapper.writerWithType(planType)
+    return mapper.writerFor(planType)
         .writeValueAsString(this);
   }
 

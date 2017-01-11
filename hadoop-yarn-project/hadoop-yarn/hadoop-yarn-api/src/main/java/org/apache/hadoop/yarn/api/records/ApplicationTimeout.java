@@ -28,8 +28,18 @@ import org.apache.hadoop.yarn.util.Records;
  * <ul>
  * <li>{@link ApplicationTimeoutType} of the timeout type.</li>
  * <li>Expiry time in ISO8601 standard with format
- * <b>yyyy-MM-dd'T'HH:mm:ss.SSSZ</b>.</li>
+ * <b>yyyy-MM-dd'T'HH:mm:ss.SSSZ</b> or "UNLIMITED".</li>
  * <li>Remaining time in seconds.</li>
+ * </ul>
+ * The possible values for {ExpiryTime, RemainingTimeInSeconds} are
+ * <ul>
+ * <li>{UNLIMITED,-1} : Timeout is not configured for given timeout type
+ * (LIFETIME).</li>
+ * <li>{ISO8601 date string, 0} : Timeout is configured and application has
+ * completed.</li>
+ * <li>{ISO8601 date string, greater than zero} : Timeout is configured and
+ * application is RUNNING. Application will be timed out after configured
+ * value.</li>
  * </ul>
  */
 @Public

@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AbstractEvent;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -561,7 +562,7 @@ public class TestRM extends ParameterizedSchedulerTestBase {
 
     final Dispatcher dispatcher = new DrainDispatcher() {
       @Override
-      public EventHandler getEventHandler() {
+      public EventHandler<Event> getEventHandler() {
 
         class EventArgMatcher extends ArgumentMatcher<AbstractEvent> {
           @Override
@@ -642,7 +643,7 @@ public class TestRM extends ParameterizedSchedulerTestBase {
     // this dispatcher ignores RMAppAttemptEventType.KILL event
     final Dispatcher dispatcher = new DrainDispatcher() {
       @Override
-      public EventHandler getEventHandler() {
+      public EventHandler<Event> getEventHandler() {
 
         class EventArgMatcher extends ArgumentMatcher<AbstractEvent> {
           @Override
@@ -696,7 +697,7 @@ public class TestRM extends ParameterizedSchedulerTestBase {
     // this dispatcher ignores RMAppAttemptEventType.KILL event
     final Dispatcher dispatcher = new DrainDispatcher() {
       @Override
-      public EventHandler getEventHandler() {
+      public EventHandler<Event> getEventHandler() {
 
         class EventArgMatcher extends ArgumentMatcher<AbstractEvent> {
           @Override

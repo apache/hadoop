@@ -26,8 +26,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.scale.S3AScaleTestBase;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.internal.AssumptionViolatedException;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -42,6 +44,8 @@ import static org.junit.Assert.*;
  * Utilities for the S3A tests.
  */
 public final class S3ATestUtils {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      S3ATestUtils.class);
 
   /**
    * Value to set a system property to (in maven) to declare that
@@ -137,20 +141,6 @@ public final class S3ATestUtils {
     }
     FileContext fc = FileContext.getFileContext(testURI, conf);
     return fc;
-  }
-
-  /**
-   * patch the endpoint option so that irrespective of where other tests
-   * are working, the IO performance tests can work with the landsat
-   * images.
-   * @param conf configuration to patch
-   */
-  public static void useCSVDataEndpoint(Configuration conf) {
-    String endpoint = conf.getTrimmed(S3AScaleTestBase.KEY_CSVTEST_ENDPOINT,
-        S3AScaleTestBase.DEFAULT_CSVTEST_ENDPOINT);
-    if (!endpoint.isEmpty()) {
-      conf.set(ENDPOINT, endpoint);
-    }
   }
 
   /**
@@ -588,5 +578,48 @@ public final class S3ATestUtils {
     assertEquals("Owner: " + details, owner, status.getOwner());
     assertEquals("Group: " + details, group, status.getGroup());
     assertEquals("Permission: " + details, permission, status.getPermission());
+  }
+
+  /**
+   * Set a bucket specific property to a particular value.
+   * If the generic key passed in has an {@code fs.s3a. prefix},
+   * that's stripped off, so that when the the bucket properties are propagated
+   * down to the generic values, that value gets copied down.
+   * @param conf configuration to set
+   * @param bucket bucket name
+   * @param genericKey key; can start with "fs.s3a."
+   * @param value value to set
+   */
+  public static void setBucketOption(Configuration conf, String bucket,
+      String genericKey, String value) {
+    final String baseKey = genericKey.startsWith(FS_S3A_PREFIX) ?
+        genericKey.substring(FS_S3A_PREFIX.length())
+        : genericKey;
+    conf.set(FS_S3A_BUCKET_PREFIX + bucket + '.' + baseKey, value);
+  }
+
+  /**
+   * Assert that a configuration option matches the expected value.
+   * @param conf configuration
+   * @param key option key
+   * @param expected expected value
+   */
+  public static void assertOptionEquals(Configuration conf,
+      String key,
+      String expected) {
+    assertEquals("Value of " + key, expected, conf.get(key));
+  }
+
+  /**
+   * Assume that a condition is met. If not: log at WARN and
+   * then throw an {@link AssumptionViolatedException}.
+   * @param message
+   * @param condition
+   */
+  public static void assume(String message, boolean condition) {
+    if (!condition) {
+      LOG.warn(message);
+    }
+    Assume.assumeTrue(message, condition);
   }
 }

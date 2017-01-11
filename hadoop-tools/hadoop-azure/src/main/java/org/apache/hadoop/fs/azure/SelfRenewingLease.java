@@ -111,7 +111,7 @@ public class SelfRenewingLease {
 
   /**
    * Free the lease and stop the keep-alive thread.
-   * @throws StorageException
+   * @throws StorageException Thrown when fail to free the lease.
    */
   public void free() throws StorageException {
     AccessCondition accessCondition = AccessCondition.generateEmptyCondition();

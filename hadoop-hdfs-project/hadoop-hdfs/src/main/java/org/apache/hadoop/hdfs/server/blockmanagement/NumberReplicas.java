@@ -77,7 +77,7 @@ public class NumberReplicas extends EnumCounters<NumberReplicas.StoredReplicaSta
    * @return decommissioned and decommissioning replicas
    */
   public int decommissionedAndDecommissioning() {
-    return (int) (get(DECOMMISSIONED) + get(DECOMMISSIONING));
+    return decommissioned() + decommissioning();
   }
 
   /**

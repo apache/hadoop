@@ -678,7 +678,7 @@ public abstract class RMStateStore extends AbstractService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception{
     // create async handler
-    dispatcher = new AsyncDispatcher();
+    dispatcher = new AsyncDispatcher("RM StateStore dispatcher");
     dispatcher.init(conf);
     rmStateStoreEventHandler = new ForwardingEventHandler();
     dispatcher.register(RMStateStoreEventType.class, 

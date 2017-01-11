@@ -236,6 +236,13 @@ public class MetricsAsserts {
     return captor.getValue();
   }
 
+  public static long getLongCounterWithoutCheck(String name,
+    MetricsRecordBuilder rb) {
+    ArgumentCaptor<Long> captor = ArgumentCaptor.forClass(Long.class);
+    verify(rb, atLeast(0)).addCounter(eqName(info(name, "")), captor.capture());
+    return captor.getValue();
+  }
+
   public static String getStringMetric(String name, MetricsRecordBuilder rb) {
     ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
     verify(rb, atLeast(0)).tag(eqName(info(name, "")), captor.capture());

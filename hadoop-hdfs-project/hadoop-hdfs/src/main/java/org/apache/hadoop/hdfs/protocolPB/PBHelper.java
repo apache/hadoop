@@ -26,7 +26,6 @@ import com.google.protobuf.ByteString;
 
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
-import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceStateProto;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -43,7 +42,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeComm
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.FinalizeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.KeyUpdateCommandProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.NNHAStatusHeartbeatProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDeletedBlockInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailureSummaryProto;
@@ -67,6 +65,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamenodeCommandPro
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamenodeRegistrationProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamenodeRegistrationProto.NamenodeRoleProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamespaceInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NNHAStatusHeartbeatProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.RecoveringBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.RemoteEditLogManifestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.RemoteEditLogProto;
@@ -759,13 +758,11 @@ public class PBHelper {
     return builder.build();
   }
 
-  public static HAServiceState convert(HAServiceStateProto s) {
+  public static HAServiceState convert(NNHAStatusHeartbeatProto.State s) {
     if (s == null) {
       return null;
     }
     switch (s) {
-    case INITIALIZING:
-      return HAServiceState.INITIALIZING;
     case ACTIVE:
       return HAServiceState.ACTIVE;
     case STANDBY:
@@ -776,17 +773,15 @@ public class PBHelper {
     }
   }
 
-  public static HAServiceStateProto convert(HAServiceState s) {
+  public static NNHAStatusHeartbeatProto.State convert(HAServiceState s) {
     if (s == null) {
       return null;
     }
     switch (s) {
-    case INITIALIZING:
-      return HAServiceStateProto.INITIALIZING;
     case ACTIVE:
-      return HAServiceStateProto.ACTIVE;
+      return NNHAStatusHeartbeatProto.State.ACTIVE;
     case STANDBY:
-      return HAServiceStateProto.STANDBY;
+      return NNHAStatusHeartbeatProto.State.STANDBY;
     default:
       throw new IllegalArgumentException("Unexpected HAServiceState:"
           + s);

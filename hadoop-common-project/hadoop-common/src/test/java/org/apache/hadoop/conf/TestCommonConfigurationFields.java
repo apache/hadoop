@@ -89,6 +89,8 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     // Lots of properties not in the above classes
     xmlPropsToSkipCompare.add("fs.ftp.password.localhost");
     xmlPropsToSkipCompare.add("fs.ftp.user.localhost");
+    xmlPropsToSkipCompare.add("fs.ftp.data.connection.mode");
+    xmlPropsToSkipCompare.add("fs.ftp.transfer.mode");
     xmlPropsToSkipCompare.add("hadoop.tmp.dir");
     xmlPropsToSkipCompare.add("nfs3.mountd.port");
     xmlPropsToSkipCompare.add("nfs3.server.port");
@@ -106,6 +108,13 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.adl.impl");
     xmlPropsToSkipCompare.add("fs.AbstractFileSystem.adl.impl");
 
+    // Azure properties are in a different class
+    // - org.apache.hadoop.fs.azure.AzureNativeFileSystemStore
+    // - org.apache.hadoop.fs.azure.SASKeyGeneratorImpl
+    xmlPropsToSkipCompare.add("fs.azure.sas.expiry.period");
+    xmlPropsToSkipCompare.add("fs.azure.local.sas.key.mode");
+    xmlPropsToSkipCompare.add("fs.azure.secure.mode");
+
     // Deprecated properties.  These should eventually be removed from the
     // class.
     configurationPropsToSkipCompare
@@ -117,8 +126,6 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     configurationPropsToSkipCompare.add("dr.who");
 
     // XML deprecated properties.
-    xmlPropsToSkipCompare.add("io.seqfile.lazydecompress");
-    xmlPropsToSkipCompare.add("io.seqfile.sorter.recordlimit");
     // - org.apache.hadoop.hdfs.client.HdfsClientConfigKeys
     xmlPropsToSkipCompare
         .add("io.bytes.per.checksum");

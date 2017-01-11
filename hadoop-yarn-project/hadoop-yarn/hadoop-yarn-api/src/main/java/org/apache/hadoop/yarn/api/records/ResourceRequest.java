@@ -58,8 +58,7 @@ import org.apache.hadoop.yarn.util.Records;
  */
 @Public
 @Stable
-public abstract class ResourceRequest extends AbstractResourceRequest
-    implements Comparable<ResourceRequest>{
+public abstract class ResourceRequest implements Comparable<ResourceRequest> {
 
   @Public
   @Stable
@@ -506,6 +505,22 @@ public abstract class ResourceRequest extends AbstractResourceRequest
   public void setAllocationRequestId(long allocationRequestID) {
     throw new UnsupportedOperationException();
   }
+
+  /**
+   * Set the <code>Resource</code> capability of the request.
+   * @param capability <code>Resource</code> capability of the request
+   */
+  @Public
+  @Stable
+  public abstract void setCapability(Resource capability);
+
+  /**
+   * Get the <code>Resource</code> capability of the request.
+   * @return <code>Resource</code> capability of the request
+   */
+  @Public
+  @Stable
+  public abstract Resource getCapability();
   
   @Override
   public int hashCode() {

@@ -32,13 +32,11 @@ import java.util.Iterator;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CachingGetSpaceUsed;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.GetSpaceUsed;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
@@ -46,10 +44,10 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportReplica;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
-import org.apache.hadoop.hdfs.server.datanode.LocalReplica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaBuilder;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.RamDiskReplicaTracker.RamDiskReplica;
@@ -64,7 +62,6 @@ import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.Timer;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.io.Files;
 
 /**
  * A block pool slice represents a portion of a block pool stored on a volume.
@@ -96,6 +93,7 @@ class BlockPoolSlice {
   private final long cachedDfsUsedCheckTime;
   private final Timer timer;
   private final int maxDataLength;
+  private final FileIoProvider fileIoProvider;
 
   // TODO:FEDERATION scalability issue - a thread per DU is needed
   private final GetSpaceUsed dfsUsage;
@@ -113,6 +111,7 @@ class BlockPoolSlice {
       Configuration conf, Timer timer) throws IOException {
     this.bpid = bpid;
     this.volume = volume;
+    this.fileIoProvider = volume.getFileIoProvider();
     this.currentDir = new File(bpDir, DataStorage.STORAGE_DIR_CURRENT);
     this.finalizedDir = new File(
         currentDir, DataStorage.STORAGE_DIR_FINALIZED);
@@ -147,19 +146,14 @@ class BlockPoolSlice {
     //
     this.tmpDir = new File(bpDir, DataStorage.STORAGE_DIR_TMP);
     if (tmpDir.exists()) {
-      DataStorage.fullyDelete(tmpDir);
+      fileIoProvider.fullyDelete(volume, tmpDir);
     }
     this.rbwDir = new File(currentDir, DataStorage.STORAGE_DIR_RBW);
-    if (!rbwDir.mkdirs()) {  // create rbw directory if not exist
-      if (!rbwDir.isDirectory()) {
-        throw new IOException("Mkdirs failed to create " + rbwDir.toString());
-      }
-    }
-    if (!tmpDir.mkdirs()) {
-      if (!tmpDir.isDirectory()) {
-        throw new IOException("Mkdirs failed to create " + tmpDir.toString());
-      }
-    }
+
+    // create the rbw and tmp directories if they don't exist.
+    fileIoProvider.mkdirs(volume, rbwDir);
+    fileIoProvider.mkdirs(volume, tmpDir);
+
     // Use cached value initially if available. Or the following call will
     // block until the initial du command completes.
     this.dfsUsage = new CachingGetSpaceUsed.Builder().setPath(bpDir)
@@ -266,7 +260,7 @@ class BlockPoolSlice {
    */
   void saveDfsUsed() {
     File outFile = new File(currentDir, DU_CACHE_FILE);
-    if (outFile.exists() && !outFile.delete()) {
+    if (!fileIoProvider.deleteWithExistsCheck(volume, outFile)) {
       FsDatasetImpl.LOG.warn("Failed to delete old dfsUsed file in " +
         outFile.getParent());
     }
@@ -277,6 +271,9 @@ class BlockPoolSlice {
           new FileOutputStream(outFile), "UTF-8")) {
         // mtime is written last, so that truncated writes won't be valid.
         out.write(Long.toString(used) + " " + Long.toString(timer.now()));
+        // This is only called as part of the volume shutdown.
+        // We explicitly avoid calling flush with fileIoProvider which triggers
+        // volume check upon io exception to avoid cyclic volume checks.
         out.flush();
       }
     } catch (IOException ioe) {
@@ -292,7 +289,8 @@ class BlockPoolSlice {
    */
   File createTmpFile(Block b) throws IOException {
     File f = new File(tmpDir, b.getBlockName());
-    File tmpFile = DatanodeUtil.createTmpFile(b, f);
+    File tmpFile = DatanodeUtil.createFileWithExistsCheck(
+        volume, b, f, fileIoProvider);
     // If any exception during creation, its expected that counter will not be
     // incremented, So no need to decrement
     incrNumBlocks();
@@ -305,7 +303,8 @@ class BlockPoolSlice {
    */
   File createRbwFile(Block b) throws IOException {
     File f = new File(rbwDir, b.getBlockName());
-    File rbwFile = DatanodeUtil.createTmpFile(b, f);
+    File rbwFile = DatanodeUtil.createFileWithExistsCheck(
+        volume, b, f, fileIoProvider);
     // If any exception during creation, its expected that counter will not be
     // incremented, So no need to decrement
     incrNumBlocks();
@@ -314,11 +313,7 @@ class BlockPoolSlice {
 
   File addFinalizedBlock(Block b, ReplicaInfo replicaInfo) throws IOException {
     File blockDir = DatanodeUtil.idToBlockDir(finalizedDir, b.getBlockId());
-    if (!blockDir.exists()) {
-      if (!blockDir.mkdirs()) {
-        throw new IOException("Failed to mkdirs " + blockDir);
-      }
-    }
+    fileIoProvider.mkdirsWithExistsCheck(volume, blockDir);
     File blockFile = FsDatasetImpl.moveBlockFiles(b, replicaInfo, blockDir);
     File metaFile = FsDatasetUtil.getMetaFile(blockFile, b.getGenerationStamp());
     if (dfsUsage instanceof CachingGetSpaceUsed) {
@@ -340,9 +335,9 @@ class BlockPoolSlice {
     final File blockDir = DatanodeUtil.idToBlockDir(finalizedDir, blockId);
     final File targetBlockFile = new File(blockDir, blockFile.getName());
     final File targetMetaFile = new File(blockDir, metaFile.getName());
-    FileUtils.moveFile(blockFile, targetBlockFile);
+    fileIoProvider.moveFile(volume, blockFile, targetBlockFile);
     FsDatasetImpl.LOG.info("Moved " + blockFile + " to " + targetBlockFile);
-    FileUtils.moveFile(metaFile, targetMetaFile);
+    fileIoProvider.moveFile(volume, metaFile, targetMetaFile);
     FsDatasetImpl.LOG.info("Moved " + metaFile + " to " + targetMetaFile);
 
     ReplicaInfo newReplicaInfo =
@@ -394,16 +389,13 @@ class BlockPoolSlice {
     File blockFile = FsDatasetUtil.getOrigFile(unlinkedTmp);
     if (blockFile.exists()) {
       // If the original block file still exists, then no recovery is needed.
-      if (!unlinkedTmp.delete()) {
+      if (!fileIoProvider.delete(volume, unlinkedTmp)) {
         throw new IOException("Unable to cleanup unlinked tmp file " +
             unlinkedTmp);
       }
       return null;
     } else {
-      if (!unlinkedTmp.renameTo(blockFile)) {
-        throw new IOException("Unable to rename unlinked tmp file " +
-            unlinkedTmp);
-      }
+      fileIoProvider.rename(volume, unlinkedTmp, blockFile);
       return blockFile;
     }
   }
@@ -416,7 +408,7 @@ class BlockPoolSlice {
    */
   private int moveLazyPersistReplicasToFinalized(File source)
       throws IOException {
-    File files[] = FileUtil.listFiles(source);
+    File[] files = fileIoProvider.listFiles(volume, source);
     int numRecovered = 0;
     for (File file : files) {
       if (file.isDirectory()) {
@@ -431,24 +423,25 @@ class BlockPoolSlice {
 
         if (blockFile.exists()) {
 
-          if (!targetDir.exists() && !targetDir.mkdirs()) {
+          try {
+            fileIoProvider.mkdirsWithExistsCheck(volume, targetDir);
+          } catch(IOException ioe) {
             LOG.warn("Failed to mkdirs " + targetDir);
             continue;
           }
 
           final File targetMetaFile = new File(targetDir, metaFile.getName());
           try {
-            LocalReplica.rename(metaFile, targetMetaFile);
+            fileIoProvider.rename(volume, metaFile, targetMetaFile);
           } catch (IOException e) {
             LOG.warn("Failed to move meta file from "
                 + metaFile + " to " + targetMetaFile, e);
             continue;
-
           }
 
           final File targetBlockFile = new File(targetDir, blockFile.getName());
           try {
-            LocalReplica.rename(blockFile, targetBlockFile);
+            fileIoProvider.rename(volume, blockFile, targetBlockFile);
           } catch (IOException e) {
             LOG.warn("Failed to move block file from "
                 + blockFile + " to " + targetBlockFile, e);
@@ -465,7 +458,7 @@ class BlockPoolSlice {
       }
     }
 
-    FileUtil.fullyDelete(source);
+    fileIoProvider.fullyDelete(volume, source);
     return numRecovered;
   }
 
@@ -508,7 +501,7 @@ class BlockPoolSlice {
           loadRwr = false;
         }
         sc.close();
-        if (!restartMeta.delete()) {
+        if (!fileIoProvider.delete(volume, restartMeta)) {
           FsDatasetImpl.LOG.warn("Failed to delete restart meta file: " +
               restartMeta.getPath());
         }
@@ -568,7 +561,7 @@ class BlockPoolSlice {
                         final RamDiskReplicaTracker lazyWriteReplicaMap,
                         boolean isFinalized)
       throws IOException {
-    File files[] = FileUtil.listFiles(dir);
+    File[] files = fileIoProvider.listFiles(volume, dir);
     for (File file : files) {
       if (file.isDirectory()) {
         addToReplicasMap(volumeMap, file, lazyWriteReplicaMap, isFinalized);
@@ -581,8 +574,9 @@ class BlockPoolSlice {
           continue;
         }
       }
-      if (!Block.isBlockFilename(file))
+      if (!Block.isBlockFilename(file)) {
         continue;
+      }
 
       long genStamp = FsDatasetUtil.getGenerationStampFromFile(
           files, file);
@@ -700,7 +694,8 @@ class BlockPoolSlice {
         return 0;
       }
       try (DataInputStream checksumIn = new DataInputStream(
-          new BufferedInputStream(new FileInputStream(metaFile),
+          new BufferedInputStream(
+              fileIoProvider.getFileInputStream(volume, metaFile),
               ioFileBufferSize))) {
         // read and handle the common header here. For now just a version
         final DataChecksum checksum = BlockMetadataHeader.readDataChecksum(
@@ -713,9 +708,10 @@ class BlockPoolSlice {
         if (numChunks == 0) {
           return 0;
         }
-        try (InputStream blockIn = new FileInputStream(blockFile);
+        try (InputStream blockIn = fileIoProvider.getFileInputStream(
+                 volume, blockFile);
              ReplicaInputStreams ris = new ReplicaInputStreams(blockIn,
-                 checksumIn, volume.obtainReference())) {
+                 checksumIn, volume.obtainReference(), fileIoProvider)) {
           ris.skipChecksumFully((numChunks - 1) * checksumSize);
           long lastChunkStartPos = (numChunks - 1) * bytesPerChecksum;
           ris.skipDataFully(lastChunkStartPos);
@@ -734,7 +730,8 @@ class BlockPoolSlice {
           // truncate if extra bytes are present without CRC
           if (blockFile.length() > validFileLength) {
             try (RandomAccessFile blockRAF =
-                     new RandomAccessFile(blockFile, "rw")) {
+                     fileIoProvider.getRandomAccessFile(
+                         volume, blockFile, "rw")) {
               // truncate blockFile
               blockRAF.setLength(validFileLength);
             }
@@ -786,12 +783,14 @@ class BlockPoolSlice {
     }
     FileInputStream inputStream = null;
     try {
-      inputStream = new FileInputStream(replicaFile);
+      inputStream = fileIoProvider.getFileInputStream(volume, replicaFile);
       BlockListAsLongs blocksList =
           BlockListAsLongs.readFrom(inputStream, maxDataLength);
-      Iterator<BlockReportReplica> iterator = blocksList.iterator();
-      while (iterator.hasNext()) {
-        BlockReportReplica replica = iterator.next();
+      if (blocksList == null) {
+        return false;
+      }
+
+      for (BlockReportReplica replica : blocksList) {
         switch (replica.getState()) {
         case FINALIZED:
           addReplicaToReplicasMap(replica, tmpReplicaMap, lazyWriteReplicaMap, true);
@@ -828,7 +827,7 @@ class BlockPoolSlice {
       return false;
     }
     finally {
-      if (!replicaFile.delete()) {
+      if (!fileIoProvider.delete(volume, replicaFile)) {
         LOG.info("Failed to delete replica cache file: " +
             replicaFile.getPath());
       }
@@ -842,41 +841,29 @@ class BlockPoolSlice {
         blocksListToPersist.getNumberOfBlocks()== 0) {
       return;
     }
-    File tmpFile = new File(currentDir, REPLICA_CACHE_FILE + ".tmp");
-    if (tmpFile.exists() && !tmpFile.delete()) {
-      LOG.warn("Failed to delete tmp replicas file in " +
-        tmpFile.getPath());
-      return;
-    }
-    File replicaCacheFile = new File(currentDir, REPLICA_CACHE_FILE);
-    if (replicaCacheFile.exists() && !replicaCacheFile.delete()) {
-      LOG.warn("Failed to delete replicas file in " +
-          replicaCacheFile.getPath());
+    final File tmpFile = new File(currentDir, REPLICA_CACHE_FILE + ".tmp");
+    final File replicaCacheFile = new File(currentDir, REPLICA_CACHE_FILE);
+    if (!fileIoProvider.deleteWithExistsCheck(volume, tmpFile) ||
+        !fileIoProvider.deleteWithExistsCheck(volume, replicaCacheFile)) {
       return;
     }
 
     FileOutputStream out = null;
     try {
-      out = new FileOutputStream(tmpFile);
+      out = fileIoProvider.getFileOutputStream(volume, tmpFile);
       blocksListToPersist.writeTo(out);
       out.close();
       // Renaming the tmp file to replicas
-      Files.move(tmpFile, replicaCacheFile);
+      fileIoProvider.moveFile(volume, tmpFile, replicaCacheFile);
     } catch (Exception e) {
       // If write failed, the volume might be bad. Since the cache file is
       // not critical, log the error, delete both the files (tmp and cache)
       // and continue.
       LOG.warn("Failed to write replicas to cache ", e);
-      if (replicaCacheFile.exists() && !replicaCacheFile.delete()) {
-        LOG.warn("Failed to delete replicas file: " +
-            replicaCacheFile.getPath());
-      }
+      fileIoProvider.deleteWithExistsCheck(volume, replicaCacheFile);
     } finally {
       IOUtils.closeStream(out);
-      if (tmpFile.exists() && !tmpFile.delete()) {
-        LOG.warn("Failed to delete tmp file in " +
-            tmpFile.getPath());
-      }
+      fileIoProvider.deleteWithExistsCheck(volume, tmpFile);
     }
   }
 

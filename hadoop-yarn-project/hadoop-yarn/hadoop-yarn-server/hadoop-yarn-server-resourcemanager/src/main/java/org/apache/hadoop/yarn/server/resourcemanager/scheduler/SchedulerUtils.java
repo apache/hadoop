@@ -20,10 +20,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import java.io.IOException;
 import java.util.Set;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -32,7 +34,6 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.AbstractResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidLabelResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
@@ -41,7 +42,10 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -57,6 +61,9 @@ public class SchedulerUtils {
 
   public static final String RELEASED_CONTAINER = 
       "Container released by application";
+
+  public static final String UPDATED_CONTAINER =
+      "Temporary container killed by application for ExeutionType update";
   
   public static final String LOST_CONTAINER = 
       "Container released on a *lost* node";
@@ -127,29 +134,33 @@ public class SchedulerUtils {
    * Utility method to normalize a resource request, by insuring that the
    * requested memory is a multiple of minMemory and is not zero.
    */
+  @VisibleForTesting
   public static void normalizeRequest(
     ResourceRequest ask,
     ResourceCalculator resourceCalculator,
     Resource minimumResource,
     Resource maximumResource) {
-    normalizeRequest(ask, resourceCalculator,
-        minimumResource, maximumResource, minimumResource);
+    ask.setCapability(
+        getNormalizedResource(ask.getCapability(), resourceCalculator,
+            minimumResource, maximumResource, minimumResource));
   }
 
   /**
    * Utility method to normalize a resource request, by insuring that the
    * requested memory is a multiple of increment resource and is not zero.
+   *
+   * @return normalized resource
    */
-  public static void normalizeRequest(
-      AbstractResourceRequest ask,
+  public static Resource getNormalizedResource(
+      Resource ask,
       ResourceCalculator resourceCalculator,
       Resource minimumResource,
       Resource maximumResource,
       Resource incrementResource) {
     Resource normalized = Resources.normalize(
-        resourceCalculator, ask.getCapability(), minimumResource,
+        resourceCalculator, ask, minimumResource,
         maximumResource, incrementResource);
-    ask.setCapability(normalized);
+    return normalized;
   }
 
   private static void normalizeNodeLabelExpressionInRequest(
@@ -265,7 +276,7 @@ public class SchedulerUtils {
     // we don't allow specify label expression with more than one node labels now
     if (labelExp != null && labelExp.contains("&&")) {
       throw new InvalidLabelResourceRequestException(
-          "Invailid resource request, queue=" + queueInfo.getQueueName()
+          "Invalid resource request, queue=" + queueInfo.getQueueName()
               + " specified more than one node label "
               + "in a node label expression, node label expression = "
               + labelExp);
@@ -375,5 +386,20 @@ public class SchedulerUtils {
       partitionToLookAt = RMNodeLabelsManager.NO_LABEL;
     }
     return hasPendingResourceRequest(rc, usage, partitionToLookAt, cluster);
+  }
+
+  public static RMContainer createOpportunisticRmContainer(RMContext rmContext,
+      Container container, boolean isRemotelyAllocated) {
+    SchedulerApplicationAttempt appAttempt =
+        ((AbstractYarnScheduler) rmContext.getScheduler())
+            .getCurrentAttemptForContainer(container.getId());
+    RMContainer rmContainer = new RMContainerImpl(container,
+        SchedulerRequestKey.extractFrom(container),
+        appAttempt.getApplicationAttemptId(), container.getNodeId(),
+        appAttempt.getUser(), rmContext, isRemotelyAllocated);
+    appAttempt.addRMContainer(container.getId(), rmContainer);
+    ((AbstractYarnScheduler) rmContext.getScheduler()).getNode(
+        container.getNodeId()).allocateContainer(rmContainer);
+    return rmContainer;
   }
 }

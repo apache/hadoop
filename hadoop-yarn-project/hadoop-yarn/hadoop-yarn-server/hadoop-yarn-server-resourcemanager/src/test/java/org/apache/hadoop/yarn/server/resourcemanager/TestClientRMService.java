@@ -142,6 +142,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
+
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Clock;
@@ -892,8 +894,7 @@ public class TestClientRMService {
     final CyclicBarrier startBarrier = new CyclicBarrier(2);
     final CyclicBarrier endBarrier = new CyclicBarrier(2);
 
-    @SuppressWarnings("rawtypes")
-    EventHandler eventHandler = new EventHandler() {
+    EventHandler<Event> eventHandler = new EventHandler<Event>() {
       @Override
       public void handle(Event rawEvent) {
         if (rawEvent instanceof RMAppEvent) {
@@ -980,7 +981,8 @@ public class TestClientRMService {
       throws IOException {
     Dispatcher dispatcher = mock(Dispatcher.class);
     when(rmContext.getDispatcher()).thenReturn(dispatcher);
-    EventHandler eventHandler = mock(EventHandler.class);
+    @SuppressWarnings("unchecked")
+    EventHandler<Event> eventHandler = mock(EventHandler.class);
     when(dispatcher.getEventHandler()).thenReturn(eventHandler);
     QueueInfo queInfo = recordFactory.newRecordInstance(QueueInfo.class);
     queInfo.setQueueName("testqueue");
@@ -1072,7 +1074,8 @@ public class TestClientRMService {
     Container container = Container.newInstance(
         ContainerId.newContainerId(attemptId, 1), null, "", null, null, null);
     RMContainerImpl containerimpl = spy(new RMContainerImpl(container,
-        attemptId, null, "", rmContext));
+        SchedulerRequestKey.extractFrom(container), attemptId, null, "",
+        rmContext));
     Map<ApplicationAttemptId, RMAppAttempt> attempts = 
       new HashMap<ApplicationAttemptId, RMAppAttempt>();
     attempts.put(attemptId, rmAppAttemptImpl);
@@ -1120,7 +1123,7 @@ public class TestClientRMService {
     when(yarnScheduler.getResourceCalculator()).thenReturn(rs);
 
     when(yarnScheduler.checkAndGetApplicationPriority(any(Priority.class),
-        anyString(), anyString(), any(ApplicationId.class)))
+        any(UserGroupInformation.class), anyString(), any(ApplicationId.class)))
             .thenReturn(Priority.newInstance(0));
     return yarnScheduler;
   }

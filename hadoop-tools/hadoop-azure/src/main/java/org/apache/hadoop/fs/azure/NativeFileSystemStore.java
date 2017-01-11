@@ -93,7 +93,8 @@ interface NativeFileSystemStore {
   /**
    * Delete all keys with the given prefix. Used for testing.
    *
-   * @throws IOException
+   * @param prefix prefix of objects to be deleted.
+   * @throws IOException Exception encountered while deleting keys.
    */
   @VisibleForTesting
   void purge(String prefix) throws IOException;
@@ -101,7 +102,7 @@ interface NativeFileSystemStore {
   /**
    * Diagnostic method to dump state to the console.
    *
-   * @throws IOException
+   * @throws IOException Exception encountered while dumping to console.
    */
   void dump() throws IOException;
 

@@ -245,10 +245,9 @@ public class LocalReplicaInPipeline extends LocalReplica
 
   @Override // ReplicaInPipeline
   public ReplicaOutputStreams createStreams(boolean isCreate,
-      DataChecksum requestedChecksum, long slowLogThresholdMs)
-      throws IOException {
-    File blockFile = getBlockFile();
-    File metaFile = getMetaFile();
+      DataChecksum requestedChecksum) throws IOException {
+    final File blockFile = getBlockFile();
+    final File metaFile = getMetaFile();
     if (DataNode.LOG.isDebugEnabled()) {
       DataNode.LOG.debug("writeTo blockfile is " + blockFile +
                          " of size " + blockFile.length());
@@ -262,14 +261,16 @@ public class LocalReplicaInPipeline extends LocalReplica
     // may differ from requestedChecksum for appends.
     final DataChecksum checksum;
 
-    RandomAccessFile metaRAF = new RandomAccessFile(metaFile, "rw");
+    final RandomAccessFile metaRAF =
+        getFileIoProvider().getRandomAccessFile(getVolume(), metaFile, "rw");
 
     if (!isCreate) {
       // For append or recovery, we must enforce the existing checksum.
       // Also, verify that the file has correct lengths, etc.
       boolean checkedMeta = false;
       try {
-        BlockMetadataHeader header = BlockMetadataHeader.readHeader(metaRAF);
+        BlockMetadataHeader header =
+            BlockMetadataHeader.readHeader(metaRAF);
         checksum = header.getChecksum();
 
         if (checksum.getBytesPerChecksum() !=
@@ -302,20 +303,22 @@ public class LocalReplicaInPipeline extends LocalReplica
       checksum = requestedChecksum;
     }
 
+    final FileIoProvider fileIoProvider = getFileIoProvider();
     FileOutputStream blockOut = null;
     FileOutputStream crcOut = null;
     try {
-      blockOut = new FileOutputStream(
-          new RandomAccessFile(blockFile, "rw").getFD());
-      crcOut = new FileOutputStream(metaRAF.getFD());
+      blockOut = fileIoProvider.getFileOutputStream(
+          getVolume(), new RandomAccessFile(blockFile, "rw").getFD());
+      crcOut = fileIoProvider.getFileOutputStream(getVolume(), metaRAF.getFD());
       if (!isCreate) {
         blockOut.getChannel().position(blockDiskSize);
         crcOut.getChannel().position(crcDiskSize);
       }
       return new ReplicaOutputStreams(blockOut, crcOut, checksum,
-          getVolume().isTransientStorage(), slowLogThresholdMs);
+          getVolume(), fileIoProvider);
     } catch (IOException e) {
       IOUtils.closeStream(blockOut);
+      IOUtils.closeStream(crcOut);
       IOUtils.closeStream(metaRAF);
       throw e;
     }
@@ -326,11 +329,11 @@ public class LocalReplicaInPipeline extends LocalReplica
     File blockFile = getBlockFile();
     File restartMeta = new File(blockFile.getParent()  +
         File.pathSeparator + "." + blockFile.getName() + ".restart");
-    if (restartMeta.exists() && !restartMeta.delete()) {
+    if (!getFileIoProvider().deleteWithExistsCheck(getVolume(), restartMeta)) {
       DataNode.LOG.warn("Failed to delete restart meta file: " +
           restartMeta.getPath());
     }
-    return new FileOutputStream(restartMeta);
+    return getFileIoProvider().getFileOutputStream(getVolume(), restartMeta);
   }
 
   @Override
@@ -373,12 +376,14 @@ public class LocalReplicaInPipeline extends LocalReplica
           + " should be derived from LocalReplica");
     }
 
-    LocalReplica oldReplica = (LocalReplica) oldReplicaInfo;
-    File oldmeta = oldReplica.getMetaFile();
-    File newmeta = getMetaFile();
+    final LocalReplica oldReplica = (LocalReplica) oldReplicaInfo;
+    final File oldBlockFile = oldReplica.getBlockFile();
+    final File oldmeta = oldReplica.getMetaFile();
+    final File newmeta = getMetaFile();
+    final FileIoProvider fileIoProvider = getFileIoProvider();
 
     try {
-      oldReplica.renameMeta(newmeta);
+      fileIoProvider.rename(getVolume(), oldmeta, newmeta);
     } catch (IOException e) {
       throw new IOException("Block " + oldReplicaInfo + " reopen failed. " +
                             " Unable to move meta file  " + oldmeta +
@@ -386,10 +391,10 @@ public class LocalReplicaInPipeline extends LocalReplica
     }
 
     try {
-      oldReplica.renameBlock(newBlkFile);
+      fileIoProvider.rename(getVolume(), oldBlockFile, newBlkFile);
     } catch (IOException e) {
       try {
-        renameMeta(oldmeta);
+        fileIoProvider.rename(getVolume(), newmeta, oldmeta);
       } catch (IOException ex) {
         LOG.warn("Cannot move meta file " + newmeta +
             "back to the finalized directory " + oldmeta, ex);

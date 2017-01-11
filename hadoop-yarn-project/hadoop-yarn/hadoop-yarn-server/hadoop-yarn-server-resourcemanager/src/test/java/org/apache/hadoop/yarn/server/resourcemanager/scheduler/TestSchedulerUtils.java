@@ -75,8 +75,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
@@ -777,9 +775,11 @@ public class TestSchedulerUtils {
     }
   }
 
-  public static void waitSchedulerApplicationAttemptStopped(CapacityScheduler cs,
+  public static void waitSchedulerApplicationAttemptStopped(
+      AbstractYarnScheduler ys,
       ApplicationAttemptId attemptId) throws InterruptedException {
-    FiCaSchedulerApp schedulerApp = cs.getApplicationAttempt(attemptId);
+    SchedulerApplicationAttempt schedulerApp =
+        ys.getApplicationAttempt(attemptId);
     if (null == schedulerApp) {
       return;
     }

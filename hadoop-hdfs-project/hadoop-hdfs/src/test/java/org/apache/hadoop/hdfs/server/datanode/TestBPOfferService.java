@@ -807,6 +807,7 @@ public class TestBPOfferService {
   @Test
   public void testNNHAStateUpdateFromVersionRequest() throws Exception {
     final BPOfferService bpos = setupBPOSForNNs(mockNN1, mockNN2);
+    Mockito.doReturn(true).when(mockDn).areHeartbeatsDisabledForTests();
     BPServiceActor actor = bpos.getBPServiceActors().get(0);
     bpos.start();
     waitForInitialization(bpos);

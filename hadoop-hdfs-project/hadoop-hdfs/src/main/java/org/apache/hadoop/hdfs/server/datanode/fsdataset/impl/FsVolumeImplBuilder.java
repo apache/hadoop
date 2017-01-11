@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 
 /**
  * This class is to be used as a builder for {@link FsVolumeImpl} objects.
@@ -31,6 +32,7 @@ public class FsVolumeImplBuilder {
   private String storageID;
   private StorageDirectory sd;
   private Configuration conf;
+  private FileIoProvider fileIoProvider;
 
   public FsVolumeImplBuilder() {
     dataset = null;
@@ -59,7 +61,15 @@ public class FsVolumeImplBuilder {
     return this;
   }
 
+  FsVolumeImplBuilder setFileIoProvider(FileIoProvider fileIoProvider) {
+    this.fileIoProvider = fileIoProvider;
+    return this;
+  }
+
   FsVolumeImpl build() throws IOException {
-    return new FsVolumeImpl(dataset, storageID, sd, conf);
+    return new FsVolumeImpl(
+        dataset, storageID, sd,
+        fileIoProvider != null ? fileIoProvider :
+            new FileIoProvider(null, null), conf);
   }
 }

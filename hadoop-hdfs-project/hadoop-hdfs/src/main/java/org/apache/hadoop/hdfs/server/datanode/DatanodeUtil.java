@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 
 /** Provide utility methods for Datanode. */
@@ -55,15 +56,17 @@ public class DatanodeUtil {
    * @throws IOException 
    * if the file already exists or if the file cannot be created.
    */
-  public static File createTmpFile(Block b, File f) throws IOException {
-    if (f.exists()) {
+  public static File createFileWithExistsCheck(
+      FsVolumeSpi volume, Block b, File f,
+      FileIoProvider fileIoProvider) throws IOException {
+    if (fileIoProvider.exists(volume, f)) {
       throw new IOException("Failed to create temporary file for " + b
           + ".  File " + f + " should not be present, but is.");
     }
     // Create the zero-length temp file
     final boolean fileCreated;
     try {
-      fileCreated = f.createNewFile();
+      fileCreated = fileIoProvider.createFile(volume, f);
     } catch (IOException ioe) {
       throw new IOException(DISK_ERROR + "Failed to create " + f, ioe);
     }
@@ -92,13 +95,17 @@ public class DatanodeUtil {
    * @return true if there are no files
    * @throws IOException if unable to list subdirectories
    */
-  public static boolean dirNoFilesRecursive(File dir) throws IOException {
-    File[] contents = dir.listFiles();
+  public static boolean dirNoFilesRecursive(
+      FsVolumeSpi volume, File dir,
+      FileIoProvider fileIoProvider) throws IOException {
+    File[] contents = fileIoProvider.listFiles(volume, dir);
     if (contents == null) {
       throw new IOException("Cannot list contents of " + dir);
     }
     for (File f : contents) {
-      if (!f.isDirectory() || (f.isDirectory() && !dirNoFilesRecursive(f))) {
+      if (!f.isDirectory() ||
+          (f.isDirectory() && !dirNoFilesRecursive(
+              volume, f, fileIoProvider))) {
         return false;
       }
     }

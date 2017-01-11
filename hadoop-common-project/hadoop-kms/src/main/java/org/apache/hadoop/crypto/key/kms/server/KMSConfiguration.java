@@ -32,6 +32,7 @@ import java.net.URL;
 public class KMSConfiguration {
 
   public static final String KMS_CONFIG_DIR = "kms.config.dir";
+  public static final String KMS_DEFAULT_XML = "kms-default.xml";
   public static final String KMS_SITE_XML = "kms-site.xml";
   public static final String KMS_ACLS_XML = "kms-acls.xml";
 
@@ -41,6 +42,16 @@ public class KMSConfiguration {
   public static final String KEY_ACL_PREFIX_REGEX = "^key\\.acl\\..+";
   public static final String DEFAULT_KEY_ACL_PREFIX = "default.key.acl.";
   public static final String WHITELIST_KEY_ACL_PREFIX = "whitelist.key.acl.";
+
+  // HTTP properties
+  public static final String HTTP_PORT_KEY = "hadoop.kms.http.port";
+  public static final int HTTP_PORT_DEFAULT = 9600;
+  public static final String HTTP_HOST_KEY = "hadoop.kms.http.host";
+  public static final String HTTP_HOST_DEFAULT = "0.0.0.0";
+
+  // SSL properties
+  public static final String SSL_ENABLED_KEY = "hadoop.kms.ssl.enabled";
+  public static final boolean SSL_ENABLED_DEFAULT = false;
 
   // Property to set the backing KeyProvider
   public static final String KEY_PROVIDER_URI = CONFIG_PREFIX +
@@ -76,6 +87,11 @@ public class KMSConfiguration {
       "key.authorization.enable"; 
 
   public static final boolean KEY_AUTHORIZATION_ENABLE_DEFAULT = true;
+
+  static {
+    Configuration.addDefaultResource(KMS_DEFAULT_XML);
+    Configuration.addDefaultResource(KMS_SITE_XML);
+  }
 
   static Configuration getConfiguration(boolean loadHadoopDefaults,
       String ... resources) {

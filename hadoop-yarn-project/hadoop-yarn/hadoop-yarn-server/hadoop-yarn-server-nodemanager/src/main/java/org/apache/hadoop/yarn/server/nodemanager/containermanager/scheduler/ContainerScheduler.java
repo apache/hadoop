@@ -106,7 +106,7 @@ public class ContainerScheduler extends AbstractService implements
     this(context, dispatcher, metrics, context.getConf().getInt(
         YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH,
         YarnConfiguration.
-            NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH_DEFAULT));
+            DEFAULT_NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH));
   }
 
   @VisibleForTesting
@@ -170,11 +170,11 @@ public class ContainerScheduler extends AbstractService implements
     this.opportunisticContainersStatus.setWaitQueueLength(
         getNumQueuedContainers());
     this.opportunisticContainersStatus.setOpportMemoryUsed(
-        metrics.getOpportMemoryUsed());
+        metrics.getAllocatedOpportunisticGB());
     this.opportunisticContainersStatus.setOpportCoresUsed(
-        metrics.getOpportCoresUsed());
+        metrics.getAllocatedOpportunisticVCores());
     this.opportunisticContainersStatus.setRunningOpportContainers(
-        metrics.getRunningOpportContainers());
+        metrics.getRunningOpportunisticContainers());
     return this.opportunisticContainersStatus;
   }
 
@@ -196,7 +196,7 @@ public class ContainerScheduler extends AbstractService implements
       this.utilizationTracker.subtractContainerResource(container);
       if (container.getContainerTokenIdentifier().getExecutionType() ==
           ExecutionType.OPPORTUNISTIC) {
-        this.metrics.opportunisticContainerCompleted(container);
+        this.metrics.completeOpportunisticContainer(container.getResource());
       }
       startPendingContainers();
     }
@@ -298,7 +298,7 @@ public class ContainerScheduler extends AbstractService implements
     this.utilizationTracker.addContainerResources(container);
     if (container.getContainerTokenIdentifier().getExecutionType() ==
         ExecutionType.OPPORTUNISTIC) {
-      this.metrics.opportunisticContainerStarted(container);
+      this.metrics.startOpportunisticContainer(container.getResource());
     }
     container.sendLaunchEvent();
   }

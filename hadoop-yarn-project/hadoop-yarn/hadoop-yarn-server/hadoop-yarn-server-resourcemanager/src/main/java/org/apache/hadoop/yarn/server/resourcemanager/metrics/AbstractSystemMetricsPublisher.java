@@ -79,7 +79,7 @@ public abstract class AbstractSystemMetricsPublisher extends CompositeService
     }
 
     @Override
-    public EventHandler getEventHandler() {
+    public EventHandler<Event> getEventHandler() {
       return new CompositEventHandler();
     }
 
@@ -111,7 +111,7 @@ public abstract class AbstractSystemMetricsPublisher extends CompositeService
     }
 
     protected AsyncDispatcher createDispatcher() {
-      return new AsyncDispatcher();
+      return new AsyncDispatcher("RM Timeline dispatcher");
     }
   }
 

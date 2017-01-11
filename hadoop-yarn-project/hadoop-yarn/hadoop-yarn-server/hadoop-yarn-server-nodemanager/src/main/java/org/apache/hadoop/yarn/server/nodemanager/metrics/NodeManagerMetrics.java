@@ -29,8 +29,6 @@ import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.yarn.api.records.Resource;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container
-    .Container;
 
 @Metrics(about="Metrics for node manager", context="yarn")
 public class NodeManagerMetrics {
@@ -64,12 +62,12 @@ public class NodeManagerMetrics {
   @Metric("Disk utilization % on good log dirs")
       MutableGaugeInt goodLogDirsDiskUtilizationPerc;
 
-  @Metric("Memory used by Opportunistic Containers in MB")
-      MutableGaugeLong opportMemoryUsed;
-  @Metric("# of Virtual Cores used by opportunistic containers")
-      MutableGaugeInt opportCoresUsed;
+  @Metric("Current allocated memory by opportunistic containers in GB")
+      MutableGaugeLong allocatedOpportunisticGB;
+  @Metric("Current allocated Virtual Cores by opportunistic containers")
+      MutableGaugeInt allocatedOpportunisticVCores;
   @Metric("# of running opportunistic containers")
-      MutableGaugeInt runningOpportContainers;
+      MutableGaugeInt runningOpportunisticContainers;
 
   // CHECKSTYLE:ON:VisibilityModifier
 
@@ -77,6 +75,7 @@ public class NodeManagerMetrics {
 
   private long allocatedMB;
   private long availableMB;
+  private long allocatedOpportunisticMB;
 
   public NodeManagerMetrics(JvmMetrics jvmMetrics) {
     this.jvmMetrics = jvmMetrics;
@@ -141,30 +140,6 @@ public class NodeManagerMetrics {
     containersReIniting.decr();
   }
 
-  public long getOpportMemoryUsed() {
-    return opportMemoryUsed.value();
-  }
-
-  public int getOpportCoresUsed() {
-    return opportCoresUsed.value();
-  }
-
-  public int getRunningOpportContainers() {
-    return runningOpportContainers.value();
-  }
-
-  public void opportunisticContainerCompleted(Container container) {
-    opportMemoryUsed.decr(container.getResource().getMemorySize());
-    opportCoresUsed.decr(container.getResource().getVirtualCores());
-    runningOpportContainers.decr();
-  }
-
-  public void opportunisticContainerStarted(Container container) {
-    opportMemoryUsed.incr(container.getResource().getMemorySize());
-    opportCoresUsed.incr(container.getResource().getVirtualCores());
-    runningOpportContainers.incr();
-  }
-
   public void allocateContainer(Resource res) {
     allocatedContainers.incr();
     allocatedMB = allocatedMB + res.getMemorySize();
@@ -194,6 +169,22 @@ public class NodeManagerMetrics {
     availableGB.set((int)Math.floor(availableMB/1024d));
     allocatedVCores.incr(deltaVCores);
     availableVCores.decr(deltaVCores);
+  }
+
+  public void startOpportunisticContainer(Resource res) {
+    runningOpportunisticContainers.incr();
+    allocatedOpportunisticMB = allocatedOpportunisticMB + res.getMemorySize();
+    allocatedOpportunisticGB
+        .set((int) Math.ceil(allocatedOpportunisticMB / 1024d));
+    allocatedOpportunisticVCores.incr(res.getVirtualCores());
+  }
+
+  public void completeOpportunisticContainer(Resource res) {
+    runningOpportunisticContainers.decr();
+    allocatedOpportunisticMB = allocatedOpportunisticMB - res.getMemorySize();
+    allocatedOpportunisticGB
+        .set((int) Math.ceil(allocatedOpportunisticMB / 1024d));
+    allocatedOpportunisticVCores.decr(res.getVirtualCores());
   }
 
   public void addResource(Resource res) {
@@ -271,5 +262,17 @@ public class NodeManagerMetrics {
   @VisibleForTesting
   public int getContainersRolledbackOnFailure() {
     return containersRolledBackOnFailure.value();
+  }
+
+  public long getAllocatedOpportunisticGB() {
+    return allocatedOpportunisticGB.value();
+  }
+
+  public int getAllocatedOpportunisticVCores() {
+    return allocatedOpportunisticVCores.value();
+  }
+
+  public int getRunningOpportunisticContainers() {
+    return runningOpportunisticContainers.value();
   }
 }

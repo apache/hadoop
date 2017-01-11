@@ -38,6 +38,9 @@ ResourceManager REST API's.
 * [Cluster Reservation API Submit](#Cluster_Reservation_API_Submit)
 * [Cluster Reservation API Update](#Cluster_Reservation_API_Update)
 * [Cluster Reservation API Delete](#Cluster_Reservation_API_Delete)
+* [Cluster Application Timeouts API](#Cluster_Application_Timeouts_API)
+* [Cluster Application Timeout API](#Cluster_Application_Timeout_API)
+* [Cluster Application Timeout Update API](#Cluster_Application_Timeout_Update_API)
 
 Overview
 --------
@@ -2286,7 +2289,7 @@ The *maximum-resource-capabilites* object contains the following elements:
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| memory | int | The maxiumim memory available for a container |
+| memory | int | The maximum memory available for a container |
 | vCores | int | The maximum number of cores available for a container |
 
 ### Response Examples
@@ -4031,3 +4034,250 @@ Server:  Jetty(6.1.26)
 Response Body:
 
       No response body
+
+Cluster Application Timeouts API
+--------------------------------
+
+Cluster Application Timeouts API can be used to get all configured timeouts of an application. When you run a GET operation on this resource, a collection of timeout objects is returned. Each timeout object is composed of a timeout type, expiry-time and remaining time in seconds.
+
+
+### URI
+
+      * http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeouts
+
+### HTTP Operations Supported
+
+      * GET
+
+### Elements of the *timeouts* (Application Timeouts) object
+
+When you make a request for the list of application timeouts, the information will be returned as a collection of timeout objects. See also [Cluster Application Timeout API](#Cluster_Application_Timeout_API) for syntax of the timeout object.
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| timeout | array of timeout objects(JSON)/zero or more application objects(XML) | The collection of application timeout objects |
+
+**JSON response**
+
+HTTP Request:
+
+      Accept: application/json
+      GET http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeouts
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```json
+{
+  "timeouts":
+  {
+    "timeout":
+    [
+      {
+        "type": "LIFETIME",
+        "expiryTime": "2016-12-05T22:51:00.104+0530",
+        "remainingTimeInSeconds": 27
+      }
+    ]
+  }
+}
+```
+
+**XML response**
+
+HTTP Request:
+
+      Accept: application/xml
+      GET http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeouts
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Content-Length: 712
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<timeouts>
+    <timeout>
+       <type>LIFETIME</type>
+       <expiryTime>2016-12-05T22:51:00.104+0530</expiryTime>
+       <remainingTimeInSeconds>27</remainingTimeInSeconds>
+    </timeout>
+</timeouts>
+```
+
+Cluster Application Timeout API
+--------------------------------
+
+The Cluster Application Timeout resource contains information about timeout.
+
+
+### URI
+
+      * http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeouts/{type}
+
+### HTTP Operations Supported
+
+      * GET
+
+### Elements of the *timeout* (Application Timeout) object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| type | string | Timeout type. Valid values are the members of the ApplicationTimeoutType enum. LIFETIME is currently the only valid value. |
+| expiryTime | string | Time at which the application will expire in ISO8601 yyyy-MM-dd'T'HH:mm:ss.SSSZ format. If UNLIMITED, then application will run forever.  |
+| remainingTimeInSeconds | long | Remaining time for configured application timeout. -1 indicates that application is not configured with timeout. Zero(0) indicates that application has expired with configured timeout type. |
+
+**JSON response**
+
+HTTP Request:
+
+      Accept: application/json
+      GET http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeouts/LIFETIME
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```json
+{
+"timeout":
+   {
+     "type": "LIFETIME",
+     "expiryTime": "2016-12-05T22:51:00.104+0530",
+     "remainingTimeInSeconds": 27
+   }
+}
+```
+
+**XML response**
+
+HTTP Request:
+
+      Accept: application/xml
+      GET http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeouts/LIFETIME
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Content-Length: 712
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<timeout>
+    <type>LIFETIME</type>
+    <expiryTime>2016-12-05T22:51:00.104+0530</expiryTime>
+    <remainingTimeInSeconds>27</remainingTimeInSeconds>
+</timeout>
+```
+
+Cluster Application Timeout Update API
+--------------------------------
+
+Update timeout of an application for given timeout type.
+
+
+### URI
+
+      * http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeout
+
+### HTTP Operations Supported
+
+      * PUT
+
+### Elements of the *timeout* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| type | string | Timeout type. Valid values are the members of the ApplicationTimeoutType enum. LIFETIME is currently the only valid value. |
+| expiryTime | string | Time at which the application will expire in ISO8601 yyyy-MM-dd'T'HH:mm:ss.SSSZ format.  |
+
+**JSON response**
+
+HTTP Request:
+
+```json
+      Accept: application/json
+      GET http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeout
+      Content-Type: application/json
+        {
+        "timeout":
+                   {
+                     "type": "LIFETIME",
+                     "expiryTime": "2016-11-27T09:36:16.678+05:30"
+                   }
+        }
+```
+
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```json
+{
+"timeout":
+   {
+     "type": "LIFETIME",
+     "expiryTime": "2016-11-27T09:36:16.678+05:30",
+     "remainingTimeInSeconds": 90
+   }
+}
+```
+
+**XML response**
+
+HTTP Request:
+
+```xml
+      Accept: application/xml
+      GET http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeout
+      Content-Type: application/xml
+        <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <timeout>
+            <type>LIFETIME</type>
+            <expiryTime>2016-11-27T09:36:16.678+05:30</expiryTime>
+        </timeout>
+```
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Content-Length: 712
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<timeout>
+    <type>LIFETIME</type>
+    <expiryTime>2016-11-27T09:36:16.678+05:30</expiryTime>
+    <remainingTimeInSeconds>90</remainingTimeInSeconds>
+</timeout>
+```

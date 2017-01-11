@@ -83,6 +83,8 @@ Optional packages:
   $ sudo apt-get install libjansson-dev
 * Linux FUSE
   $ sudo apt-get install fuse libfuse-dev
+* ZStandard compression
+    $ sudo apt-get install zstd
 
 ----------------------------------------------------------------------------------
 Maven main modules:
@@ -153,6 +155,29 @@ Maven build goals:
   * Use -Dbundle.snappy to copy the contents of the snappy.lib directory into
     the final tar file. This option requires that -Dsnappy.lib is also given,
     and it ignores the -Dsnappy.prefix option. If -Dsnappy.lib isn't given, the
+    bundling and building will fail.
+
+
+ ZStandard build options:
+
+   ZStandard is a compression library that can be utilized by the native code.
+   It is currently an optional component, meaning that Hadoop can be built with
+   or without this dependency.
+
+  * Use -Drequire.zstd to fail the build if libzstd.so is not found.
+    If this option is not specified and the zstd library is missing.
+
+  * Use -Dzstd.prefix to specify a nonstandard location for the libzstd
+    header files and library files. You do not need this option if you have
+    installed zstandard using a package manager.
+
+  * Use -Dzstd.lib to specify a nonstandard location for the libzstd library
+    files.  Similarly to zstd.prefix, you do not need this option if you have
+    installed using a package manager.
+
+  * Use -Dbundle.zstd to copy the contents of the zstd.lib directory into
+    the final tar file. This option requires that -Dzstd.lib is also given,
+    and it ignores the -Dzstd.prefix option. If -Dzstd.lib isn't given, the
     bundling and building will fail.
 
  OpenSSL build options:

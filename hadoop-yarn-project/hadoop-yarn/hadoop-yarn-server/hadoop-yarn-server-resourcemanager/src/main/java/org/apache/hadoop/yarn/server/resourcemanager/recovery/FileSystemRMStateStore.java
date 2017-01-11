@@ -740,7 +740,7 @@ public class FileSystemRMStateStore extends RMStateStore {
         try {
           return run();
         } catch (IOException e) {
-          LOG.info("Exception while executing a FS operation.", e);
+          LOG.info("Exception while executing an FS operation.", e);
           if (++retry > fsNumRetries) {
             LOG.info("Maxed out FS retries. Giving up!");
             throw e;

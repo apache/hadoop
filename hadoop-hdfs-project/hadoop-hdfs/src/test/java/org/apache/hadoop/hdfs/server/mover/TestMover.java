@@ -37,11 +37,13 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSF
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +66,7 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -72,6 +75,8 @@ import org.apache.hadoop.hdfs.server.balancer.Dispatcher.DBlock;
 import org.apache.hadoop.hdfs.server.balancer.ExitStatus;
 import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.mover.Mover.MLocation;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
@@ -121,7 +126,7 @@ public class TestMover {
     final List<NameNodeConnector> nncs = NameNodeConnector.newNameNodeConnectors(
         nnMap, Mover.class.getSimpleName(), Mover.MOVER_ID_PATH, conf,
         NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
-    return new Mover(nncs.get(0), conf, new AtomicInteger(0));
+    return new Mover(nncs.get(0), conf, new AtomicInteger(0), new HashMap<>());
   }
 
   @Test
@@ -704,5 +709,161 @@ public class TestMover {
       UserGroupInformation.reset();
       UserGroupInformation.setConfiguration(new Configuration());
     }
+  }
+
+  /**
+   * Test to verify that mover can't move pinned blocks.
+   */
+  @Test(timeout = 90000)
+  public void testMoverWithPinnedBlocks() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+
+    // Sets bigger retry max attempts value so that test case will timed out if
+    // block pinning errors are not handled properly during block movement.
+    conf.setInt(DFSConfigKeys.DFS_MOVER_RETRY_MAX_ATTEMPTS_KEY, 10000);
+
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3)
+        .build();
+    try {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final String file = "/testMoverWithPinnedBlocks/file";
+      Path dir = new Path("/testMoverWithPinnedBlocks");
+      dfs.mkdirs(dir);
+
+      // write to DISK
+      dfs.setStoragePolicy(dir, "HOT");
+      final FSDataOutputStream out = dfs.create(new Path(file));
+      byte[] fileData = StripedFileTestUtil
+          .generateBytes(DEFAULT_BLOCK_SIZE * 3);
+      out.write(fileData);
+      out.close();
+
+      // verify before movement
+      LocatedBlock lb = dfs.getClient().getLocatedBlocks(file, 0).get(0);
+      StorageType[] storageTypes = lb.getStorageTypes();
+      for (StorageType storageType : storageTypes) {
+        Assert.assertTrue(StorageType.DISK == storageType);
+      }
+
+      // Adding one SSD based data node to the cluster.
+      StorageType[][] newtypes = new StorageType[][] {{StorageType.SSD}};
+      startAdditionalDNs(conf, 1, newtypes, cluster);
+
+      // Mock FsDatasetSpi#getPinning to show that the block is pinned.
+      for (int i = 0; i < cluster.getDataNodes().size(); i++) {
+        DataNode dn = cluster.getDataNodes().get(i);
+        LOG.info("Simulate block pinning in datanode {}", dn);
+        DataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
+      }
+
+      // move file blocks to ONE_SSD policy
+      dfs.setStoragePolicy(dir, "ONE_SSD");
+      int rc = ToolRunner.run(conf, new Mover.Cli(),
+          new String[] {"-p", dir.toString()});
+
+      int exitcode = ExitStatus.NO_MOVE_BLOCK.getExitCode();
+      Assert.assertEquals("Movement should fail", exitcode, rc);
+
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Test to verify that mover should work well with pinned blocks as well as
+   * failed blocks. Mover should continue retrying the failed blocks only.
+   */
+  @Test(timeout = 90000)
+  public void testMoverFailedRetryWithPinnedBlocks() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+    conf.set(DFSConfigKeys.DFS_MOVER_RETRY_MAX_ATTEMPTS_KEY, "2");
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(2)
+        .storageTypes(
+            new StorageType[][] {{StorageType.DISK, StorageType.ARCHIVE},
+                {StorageType.DISK, StorageType.ARCHIVE}}).build();
+    try {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final String parenDir = "/parent";
+      dfs.mkdirs(new Path(parenDir));
+      final String file1 = "/parent/testMoverFailedRetryWithPinnedBlocks1";
+      // write to DISK
+      final FSDataOutputStream out = dfs.create(new Path(file1), (short) 2);
+      byte[] fileData = StripedFileTestUtil
+          .generateBytes(DEFAULT_BLOCK_SIZE * 2);
+      out.write(fileData);
+      out.close();
+
+      // Adding pinned blocks.
+      createFileWithFavoredDatanodes(conf, cluster, dfs);
+
+      // Delete block file so, block move will fail with FileNotFoundException
+      LocatedBlocks locatedBlocks = dfs.getClient().getLocatedBlocks(file1, 0);
+      Assert.assertEquals("Wrong block count", 2,
+          locatedBlocks.locatedBlockCount());
+      LocatedBlock lb = locatedBlocks.get(0);
+      cluster.corruptBlockOnDataNodesByDeletingBlockFile(lb.getBlock());
+
+      // move to ARCHIVE
+      dfs.setStoragePolicy(new Path(parenDir), "COLD");
+      int rc = ToolRunner.run(conf, new Mover.Cli(),
+          new String[] {"-p", parenDir.toString()});
+      Assert.assertEquals("Movement should fail after some retry",
+          ExitStatus.NO_MOVE_PROGRESS.getExitCode(), rc);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  private void createFileWithFavoredDatanodes(final Configuration conf,
+      final MiniDFSCluster cluster, final DistributedFileSystem dfs)
+          throws IOException {
+    // Adding two DISK based data node to the cluster.
+    // Also, ensure that blocks are pinned in these new data nodes.
+    StorageType[][] newtypes =
+        new StorageType[][] {{StorageType.DISK}, {StorageType.DISK}};
+    startAdditionalDNs(conf, 2, newtypes, cluster);
+    ArrayList<DataNode> dataNodes = cluster.getDataNodes();
+    InetSocketAddress[] favoredNodes = new InetSocketAddress[2];
+    int j = 0;
+    for (int i = dataNodes.size() - 1; i >= 2; i--) {
+      favoredNodes[j++] = dataNodes.get(i).getXferAddress();
+    }
+    final String file = "/parent/testMoverFailedRetryWithPinnedBlocks2";
+    final FSDataOutputStream out = dfs.create(new Path(file),
+        FsPermission.getDefault(), true, DEFAULT_BLOCK_SIZE, (short) 2,
+        DEFAULT_BLOCK_SIZE, null, favoredNodes);
+    byte[] fileData = StripedFileTestUtil.generateBytes(DEFAULT_BLOCK_SIZE * 2);
+    out.write(fileData);
+    out.close();
+
+    // Mock FsDatasetSpi#getPinning to show that the block is pinned.
+    LocatedBlocks locatedBlocks = dfs.getClient().getLocatedBlocks(file, 0);
+    Assert.assertEquals("Wrong block count", 2,
+        locatedBlocks.locatedBlockCount());
+    LocatedBlock lb = locatedBlocks.get(0);
+    DatanodeInfo datanodeInfo = lb.getLocations()[0];
+    for (DataNode dn : cluster.getDataNodes()) {
+      if (dn.getDatanodeId().getDatanodeUuid()
+          .equals(datanodeInfo.getDatanodeUuid())) {
+        LOG.info("Simulate block pinning in datanode {}", datanodeInfo);
+        DataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
+        break;
+      }
+    }
+  }
+
+  private void startAdditionalDNs(final Configuration conf,
+      int newNodesRequired, StorageType[][] newTypes,
+      final MiniDFSCluster cluster) throws IOException {
+
+    cluster.startDataNodes(conf, newNodesRequired, newTypes, true, null, null,
+        null, null, null, false, false, false, null);
+    cluster.triggerHeartbeats();
   }
 }

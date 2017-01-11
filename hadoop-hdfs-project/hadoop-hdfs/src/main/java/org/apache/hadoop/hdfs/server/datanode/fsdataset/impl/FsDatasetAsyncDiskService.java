@@ -272,8 +272,10 @@ class FsDatasetAsyncDiskService {
       }
 
       File trashDirFile = new File(trashDirectory);
-      if (!trashDirFile.exists() && !trashDirFile.mkdirs()) {
-        LOG.error("Failed to create trash directory " + trashDirectory);
+      try {
+        volume.getFileIoProvider().mkdirsWithExistsCheck(
+            volume, trashDirFile);
+      } catch (IOException e) {
         return false;
       }
 

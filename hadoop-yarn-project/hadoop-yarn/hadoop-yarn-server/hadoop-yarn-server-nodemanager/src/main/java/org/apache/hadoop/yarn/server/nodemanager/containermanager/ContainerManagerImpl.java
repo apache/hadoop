@@ -223,7 +223,7 @@ public class ContainerManagerImpl extends CompositeService implements
     this.dirsHandler = dirsHandler;
 
     // ContainerManager level dispatcher.
-    dispatcher = new AsyncDispatcher();
+    dispatcher = new AsyncDispatcher("NM ContainerManager dispatcher");
     this.deletionService = deletionContext;
     this.metrics = metrics;
 
@@ -305,7 +305,9 @@ public class ContainerManagerImpl extends CompositeService implements
   protected void createAMRMProxyService(Configuration conf) {
     this.amrmProxyEnabled =
         conf.getBoolean(YarnConfiguration.AMRM_PROXY_ENABLED,
-            YarnConfiguration.DEFAULT_AMRM_PROXY_ENABLED);
+            YarnConfiguration.DEFAULT_AMRM_PROXY_ENABLED) ||
+            conf.getBoolean(YarnConfiguration.DIST_SCHEDULING_ENABLED,
+                YarnConfiguration.DEFAULT_DIST_SCHEDULING_ENABLED);
 
     if (amrmProxyEnabled) {
       LOG.info("AMRMProxyService is enabled. "

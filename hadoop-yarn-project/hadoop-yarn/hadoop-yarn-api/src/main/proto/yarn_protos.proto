@@ -427,6 +427,7 @@ message YarnClusterMetricsProto {
 enum QueueStateProto {
   Q_STOPPED = 1;
   Q_RUNNING = 2;
+  Q_DRAINING = 3;
 }
 
 message QueueStatisticsProto {

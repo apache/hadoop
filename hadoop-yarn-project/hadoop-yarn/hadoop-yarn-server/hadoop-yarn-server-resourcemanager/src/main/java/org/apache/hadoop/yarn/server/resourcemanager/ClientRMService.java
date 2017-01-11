@@ -410,7 +410,7 @@ public class ClientRMService extends AbstractService implements
       response = GetApplicationAttemptReportResponse.newInstance(attemptReport);
     }else{
       throw new YarnException("User " + callerUGI.getShortUserName()
-          + " does not have privilage to see this attempt " + appAttemptId);
+          + " does not have privilege to see this attempt " + appAttemptId);
     }
     return response;
   }
@@ -450,7 +450,7 @@ public class ClientRMService extends AbstractService implements
       response = GetApplicationAttemptsResponse.newInstance(listAttempts);
     } else {
       throw new YarnException("User " + callerUGI.getShortUserName()
-          + " does not have privilage to see this application " + appId);
+          + " does not have privilege to see this application " + appId);
     }
     return response;
   }
@@ -501,7 +501,7 @@ public class ClientRMService extends AbstractService implements
           .createContainerReport());
     } else {
       throw new YarnException("User " + callerUGI.getShortUserName()
-          + " does not have privilage to see this application " + appId);
+          + " does not have privilege to see this application " + appId);
     }
     return response;
   }
@@ -554,7 +554,7 @@ public class ClientRMService extends AbstractService implements
       response = GetContainersResponse.newInstance(listContainers);
     } else {
       throw new YarnException("User " + callerUGI.getShortUserName()
-          + " does not have privilage to see this application " + appId);
+          + " does not have privilege to see this application " + appId);
     }
     return response;
   }
@@ -1238,7 +1238,7 @@ public class ClientRMService extends AbstractService implements
           .contains(UserGroupInformation.getCurrentUser()
                   .getRealAuthenticationMethod());
     } else {
-      return false;
+      return true;
     }
   }
 
@@ -1614,7 +1614,8 @@ public class ClientRMService extends AbstractService implements
     }
 
     try {
-      rmAppManager.updateApplicationPriority(applicationId, newAppPriority);
+      rmAppManager.updateApplicationPriority(callerUGI, applicationId,
+          newAppPriority);
     } catch (YarnException ex) {
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
           AuditConstants.UPDATE_APP_PRIORITY, "UNKNOWN", "ClientRMService",

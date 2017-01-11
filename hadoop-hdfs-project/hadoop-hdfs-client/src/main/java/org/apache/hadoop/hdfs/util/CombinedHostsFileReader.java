@@ -48,7 +48,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
 @InterfaceStability.Unstable
 public final class CombinedHostsFileReader {
   private static final ObjectReader READER =
-      new ObjectMapper().reader(DatanodeAdminProperties.class);
+      new ObjectMapper().readerFor(DatanodeAdminProperties.class);
   private static final JsonFactory JSON_FACTORY = new JsonFactory();
 
   private CombinedHostsFileReader() {

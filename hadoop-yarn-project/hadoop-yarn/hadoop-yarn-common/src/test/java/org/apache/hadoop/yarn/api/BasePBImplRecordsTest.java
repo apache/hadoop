@@ -222,7 +222,7 @@ public class BasePBImplRecordsTest {
       GetSetPair gsp = cur.getValue();
       if ((gsp.getMethod == null) ||
           (gsp.setMethod == null)) {
-        LOG.info(String.format("Exclude protential property: %s\n", gsp.propertyName));
+        LOG.info(String.format("Exclude potential property: %s\n", gsp.propertyName));
         itr.remove();
       } else {
         LOG.info(String.format("New property: %s type: %s", gsp.toString(), gsp.type));

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 
 /**
  * StripedBlockReconstructor reconstruct one or more missed striped block in
@@ -66,7 +67,11 @@ class StripedBlockReconstructor extends StripedReconstructor
       getDatanode().getMetrics().incrECFailedReconstructionTasks();
     } finally {
       getDatanode().decrementXmitsInProgress();
-      getDatanode().getMetrics().incrECReconstructionTasks();
+      final DataNodeMetrics metrics = getDatanode().getMetrics();
+      metrics.incrECReconstructionTasks();
+      metrics.incrECReconstructionBytesRead(getBytesRead());
+      metrics.incrECReconstructionRemoteBytesRead(getRemoteBytesRead());
+      metrics.incrECReconstructionBytesWritten(getBytesWritten());
       getStripedReader().close();
       stripedWriter.close();
     }

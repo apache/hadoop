@@ -138,7 +138,7 @@ public class LogsCLI extends Configured implements Tool {
     String localDir = null;
     long bytes = Long.MAX_VALUE;
     try {
-      CommandLine commandLine = parser.parse(opts, args, true);
+      CommandLine commandLine = parser.parse(opts, args, false);
       appIdStr = commandLine.getOptionValue(APPLICATION_ID_OPTION);
       containerIdStr = commandLine.getOptionValue(CONTAINER_ID_OPTION);
       nodeAddress = commandLine.getOptionValue(NODE_ADDRESS_OPTION);

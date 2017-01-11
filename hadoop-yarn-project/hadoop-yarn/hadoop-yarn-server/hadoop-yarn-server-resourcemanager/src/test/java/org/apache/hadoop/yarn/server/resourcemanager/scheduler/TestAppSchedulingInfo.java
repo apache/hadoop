@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -140,7 +141,7 @@ public class TestAppSchedulingInfo {
 
     // iterate to verify no ConcurrentModificationException
     for (SchedulerRequestKey schedulerKey : info.getSchedulerKeys()) {
-      info.allocate(NodeType.OFF_SWITCH, null, schedulerKey, req1, null);
+      info.allocate(NodeType.OFF_SWITCH, null, schedulerKey, null);
     }
     Assert.assertEquals(1, info.getSchedulerKeys().size());
     Assert.assertEquals(SchedulerRequestKey.create(req2),
@@ -152,7 +153,7 @@ public class TestAppSchedulingInfo {
     reqs.add(req2);
     info.updateResourceRequests(reqs, false);
     info.allocate(NodeType.OFF_SWITCH, null, SchedulerRequestKey.create(req2),
-        req2, null);
+        null);
     Assert.assertEquals(0, info.getSchedulerKeys().size());
 
     req1 = ResourceRequest.newInstance(pri1,

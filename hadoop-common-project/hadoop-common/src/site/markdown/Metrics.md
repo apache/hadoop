@@ -171,6 +171,10 @@ Each metrics record contains tags such as ProcessName, SessionId, and Hostname a
 | `PutImageAvgTime` | Average fsimage upload time in milliseconds |
 | `TotalFileOps`| Total number of file operations performed |
 | `NNStartedTimeInMillis`| NameNode start time in milliseconds |
+| `GenerateEDEKTimeNumOps` | Total number of generating EDEK |
+| `GenerateEDEKTimeAvgTime` | Average time of generating EDEK in milliseconds |
+| `WarmUpEDEKTimeNumOps` | Total number of warming up EDEK |
+| `WarmUpEDEKTimeAvgTime` | Average time of warming up EDEK in milliseconds |
 
 FSNamesystem
 ------------
@@ -219,6 +223,8 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `TotalSyncTimes` | Total number of milliseconds spent by various edit logs in sync operation|
 | `NameDirSize` | NameNode name directories size in bytes |
 | `NumTimedOutPendingReconstructions` | The number of timed out reconstructions. Not the number of unique blocks that timed out. |
+| `FSN(Read|Write)Lock`*OperationName*`NumOps` | Total number of acquiring lock by operations |
+| `FSN(Read|Write)Lock`*OperationName*`AvgTime` | Average time of holding the lock by operations in milliseconds |
 
 JournalNode
 -----------
@@ -316,6 +322,37 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `RemoteBytesRead` | Number of bytes read by remote clients |
 | `RemoteBytesWritten` | Number of bytes written by remote clients |
 | `BPServiceActorInfo` | The information about a block pool service actor |
+
+FsVolume
+--------
+
+Per-volume metrics contain Datanode Volume IO related statistics. Per-volume metrics are off by default. They can be enbabled by setting `dfs.datanode.enable.fileio.profiling` to **true**, but enabling per-volume metrics may have a performance impact. Each metrics record contains tags such as Hostname as additional information along with metrics.
+
+| Name | Description |
+|:---- |:---- |
+| `TotalMetadataOperations` | Total number (monotonically increasing) of metadata operations. Metadata operations include stat, list, mkdir, delete, move, open and posix_fadvise. |
+| `MetadataOperationRateNumOps` | The number of metadata operations within an interval time of metric |
+| `MetadataOperationRateAvgTime` | Mean time of metadata operations in milliseconds |
+| `MetadataOperationLatency`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of metadata operations latency in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `TotalDataFileIos` | Total number (monotonically increasing) of data file io operations |
+| `DataFileIoRateNumOps` | The number of data file io operations within an interval time of metric |
+| `DataFileIoRateAvgTime` | Mean time of data file io operations in milliseconds |
+| `DataFileIoLatency`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of data file io operations latency in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `FlushIoRateNumOps` | The number of file flush io operations within an interval time of metric |
+| `FlushIoRateAvgTime` | Mean time of file flush io operations in milliseconds |
+| `FlushIoLatency`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of file flush io operations latency in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `SyncIoRateNumOps` | The number of file sync io operations within an interval time of metric |
+| `SyncIoRateAvgTime` | Mean time of file sync io operations in milliseconds |
+| `SyncIoLatency`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of file sync io operations latency in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `ReadIoRateNumOps` | The number of file read io operations within an interval time of metric |
+| `ReadIoRateAvgTime` | Mean time of file read io operations in milliseconds |
+| `ReadIoLatency`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of file read io operations latency in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `WriteIoRateNumOps` | The number of file write io operations within an interval time of metric |
+| `WriteIoRateAvgTime` | Mean time of file write io operations in milliseconds |
+| `WriteIoLatency`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of file write io operations latency in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `TotalFileIoErrors` | Total number (monotonically increasing) of file io error operations |
+| `FileIoErrorRateNumOps` | The number of file io error operations within an interval time of metric |
+| `FileIoErrorRateAvgTime` | It measures the mean time in milliseconds from the start of an operation to hitting a failure |
 
 yarn context
 ============

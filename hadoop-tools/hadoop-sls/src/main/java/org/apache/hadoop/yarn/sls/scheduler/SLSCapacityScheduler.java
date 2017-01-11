@@ -51,13 +51,15 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -84,6 +86,7 @@ import com.codahale.metrics.Timer;
 public class SLSCapacityScheduler extends CapacityScheduler implements
         SchedulerWrapper,Configurable {
   private static final String EOL = System.getProperty("line.separator");
+  private static final String QUEUE_COUNTER_PREFIX = "counter.queue.";
   private static final int SAMPLING_SIZE = 60;
   private ScheduledExecutorService pool;
   // counters for scheduler allocate/handle operations
@@ -179,15 +182,14 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
   public Allocation allocate(ApplicationAttemptId attemptId,
       List<ResourceRequest> resourceRequests, List<ContainerId> containerIds,
       List<String> strings, List<String> strings2,
-      List<UpdateContainerRequest> increaseRequests,
-      List<UpdateContainerRequest> decreaseRequests) {
+      ContainerUpdates updateRequests) {
     if (metricsON) {
       final Timer.Context context = schedulerAllocateTimer.time();
       Allocation allocation = null;
       try {
         allocation = super
             .allocate(attemptId, resourceRequests, containerIds, strings,
-                strings2, increaseRequests, decreaseRequests);
+                strings2, updateRequests);
         return allocation;
       } finally {
         context.stop();
@@ -201,7 +203,7 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
       }
     } else {
       return super.allocate(attemptId, resourceRequests, containerIds, strings,
-          strings2, increaseRequests, decreaseRequests);
+          strings2, updateRequests);
     }
   }
 
@@ -745,6 +747,47 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
       }
       counterMap.get(name).inc(-releasedVCores);
     }
+  }
+
+  private void initQueueMetrics(CSQueue queue) {
+    if (queue instanceof LeafQueue) {
+      SortedMap<String, Counter> counterMap = metrics.getCounters();
+      String queueName = queue.getQueueName();
+      String[] names = new String[]{
+          QUEUE_COUNTER_PREFIX + queueName + ".pending.memory",
+          QUEUE_COUNTER_PREFIX + queueName + ".pending.cores",
+          QUEUE_COUNTER_PREFIX + queueName + ".allocated.memory",
+          QUEUE_COUNTER_PREFIX + queueName + ".allocated.cores" };
+
+      for (int i = names.length - 1; i >= 0; i--) {
+        if (!counterMap.containsKey(names[i])) {
+          metrics.counter(names[i]);
+          counterMap = metrics.getCounters();
+        }
+      }
+
+      queueLock.lock();
+      try {
+        if (!schedulerMetrics.isTracked(queueName)) {
+          schedulerMetrics.trackQueue(queueName);
+        }
+      } finally {
+        queueLock.unlock();
+      }
+
+      return;
+    }
+
+    for (CSQueue child : queue.getChildQueues()) {
+      initQueueMetrics(child);
+    }
+  }
+
+  @Override
+  public void serviceInit(Configuration configuration) throws Exception {
+    super.serviceInit(configuration);
+
+    initQueueMetrics(getRootQueue());
   }
 
   public void setQueueSet(Set<String> queues) {

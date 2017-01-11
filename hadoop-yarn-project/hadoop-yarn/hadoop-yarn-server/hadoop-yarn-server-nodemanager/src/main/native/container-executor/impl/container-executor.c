@@ -722,14 +722,18 @@ static int create_container_directories(const char* user, const char *app_id,
  * Load the user information for a given user name.
  */
 static struct passwd* get_user_info(const char* user) {
-  int string_size = sysconf(_SC_GETPW_R_SIZE_MAX);
+  size_t string_size = sysconf(_SC_GETPW_R_SIZE_MAX);
   struct passwd *result = NULL;
   if(string_size < 1024) {
     string_size = 1024;
   }
-  void* buffer = malloc(string_size + sizeof(struct passwd));
-  if (getpwnam_r(user, buffer, buffer + sizeof(struct passwd), string_size,
-		 &result) != 0) {
+  struct passwd* buffer = malloc(sizeof(struct passwd) + string_size);
+  if (NULL == buffer) {
+    fprintf(LOGFILE, "Failed malloc in get_user_info");
+    return NULL;
+  }
+  if (getpwnam_r(user, buffer, ((char*)buffer) + sizeof(struct passwd),
+        string_size, &result) != 0) {
     free(buffer);
     fprintf(LOGFILE, "Can't get user information %s - %s\n", user,
 	    strerror(errno));

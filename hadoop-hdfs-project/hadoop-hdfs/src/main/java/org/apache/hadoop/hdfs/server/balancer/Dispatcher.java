@@ -36,6 +36,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.datatransfer.BlockPinningException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
@@ -224,6 +226,10 @@ public class Dispatcher {
       this.target = target;
     }
 
+    public DatanodeInfo getSource() {
+      return source.getDatanodeInfo();
+    }
+
     @Override
     public String toString() {
       final Block b = reportedBlock != null ? reportedBlock.getBlock() : null;
@@ -367,6 +373,15 @@ public class Dispatcher {
       } catch (IOException e) {
         LOG.warn("Failed to move " + this, e);
         target.getDDatanode().setHasFailure();
+        // Check that the failure is due to block pinning errors.
+        if (e instanceof BlockPinningException) {
+          // Pinned block can't be moved. Add this block into failure list.
+          // Later in the next iteration mover will exclude these blocks from
+          // pending moves.
+          target.getDDatanode().addBlockPinningFailures(this);
+          return;
+        }
+
         // Proxy or target may have some issues, delay before using these nodes
         // further in order to avoid a potential storm of "threads quota
         // exceeded" warnings when the dispatcher gets out of sync with work
@@ -419,7 +434,7 @@ public class Dispatcher {
         }
       }
       String logInfo = "reportedBlock move is failed";
-      DataTransferProtoUtil.checkBlockOpStatus(response, logInfo);
+      DataTransferProtoUtil.checkBlockOpStatus(response, logInfo, true);
     }
 
     /** reset the object */
@@ -600,6 +615,7 @@ public class Dispatcher {
     /** blocks being moved but not confirmed yet */
     private final List<PendingMove> pendings;
     private volatile boolean hasFailure = false;
+    private Map<Long, Set<DatanodeInfo>> blockPinningFailures = new HashMap<>();
     private volatile boolean hasSuccess = false;
     private ExecutorService moveExecutor;
 
@@ -683,6 +699,22 @@ public class Dispatcher {
 
     void setHasFailure() {
       this.hasFailure = true;
+    }
+
+    void addBlockPinningFailures(PendingMove pendingBlock) {
+      synchronized (blockPinningFailures) {
+        long blockId = pendingBlock.reportedBlock.getBlock().getBlockId();
+        Set<DatanodeInfo> pinnedLocations = blockPinningFailures.get(blockId);
+        if (pinnedLocations == null) {
+          pinnedLocations = new HashSet<>();
+          blockPinningFailures.put(blockId, pinnedLocations);
+        }
+        pinnedLocations.add(pendingBlock.getSource());
+      }
+    }
+
+    Map<Long, Set<DatanodeInfo>> getBlockPinningFailureList() {
+      return blockPinningFailures;
     }
 
     void setHasSuccess() {
@@ -1150,6 +1182,34 @@ public class Dispatcher {
       try {
         Thread.sleep(1000);
       } catch (InterruptedException ignored) {
+      }
+    }
+  }
+
+  /**
+   * Check any of the block movements are failed due to block pinning errors. If
+   * yes, add the failed blockId and its respective source node location to the
+   * excluded list.
+   */
+  public static void checkForBlockPinningFailures(
+      Map<Long, Set<DatanodeInfo>> excludedPinnedBlocks,
+      Iterable<? extends StorageGroup> targets) {
+    for (StorageGroup t : targets) {
+      Map<Long, Set<DatanodeInfo>> blockPinningFailureList = t.getDDatanode()
+          .getBlockPinningFailureList();
+      Set<Entry<Long, Set<DatanodeInfo>>> entrySet = blockPinningFailureList
+          .entrySet();
+      for (Entry<Long, Set<DatanodeInfo>> entry : entrySet) {
+        Long blockId = entry.getKey();
+        Set<DatanodeInfo> locs = excludedPinnedBlocks.get(blockId);
+        if (locs == null) {
+          // blockId doesn't exists in the excluded list.
+          locs = entry.getValue();
+          excludedPinnedBlocks.put(blockId, locs);
+        } else {
+          // blockId already exists in the excluded list, add the pinned node.
+          locs.addAll(entry.getValue());
+        }
       }
     }
   }

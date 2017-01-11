@@ -40,8 +40,10 @@ import org.apache.hadoop.yarn.security.Permission;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueStateManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerQueueManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 
 /**
  *
@@ -85,16 +87,24 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
   private final Map<String, CSQueue> queues = new ConcurrentHashMap<>();
   private CSQueue root;
   private final RMNodeLabelsManager labelManager;
+  private AppPriorityACLsManager appPriorityACLManager;
+
+  private QueueStateManager<CSQueue, CapacitySchedulerConfiguration>
+      queueStateManager;
 
   /**
    * Construct the service.
    * @param conf the configuration
    * @param labelManager the labelManager
+   * @param appPriorityACLManager App priority ACL manager
    */
   public CapacitySchedulerQueueManager(Configuration conf,
-      RMNodeLabelsManager labelManager) {
+      RMNodeLabelsManager labelManager,
+      AppPriorityACLsManager appPriorityACLManager) {
     this.authorizer = YarnAuthorizationProvider.getInstance(conf);
     this.labelManager = labelManager;
+    this.queueStateManager = new QueueStateManager<>();
+    this.appPriorityACLManager = appPriorityACLManager;
   }
 
   @Override
@@ -140,8 +150,9 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       throws IOException {
     root = parseQueue(this.csContext, conf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues, NOOP);
-    setQueueAcls(authorizer, queues);
+    setQueueAcls(authorizer, appPriorityACLManager, queues);
     labelManager.reinitializeQueueLabels(getQueueToLabels());
+    this.queueStateManager.initialize(this);
     LOG.info("Initialized root queue " + root);
   }
 
@@ -162,7 +173,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     // Re-configure queues
     root.reinitialize(newRoot, this.csContext.getClusterResource());
 
-    setQueueAcls(authorizer, queues);
+    setQueueAcls(authorizer, appPriorityACLManager, queues);
 
     // Re-calculate headroom for active applications
     Resource clusterResource = this.csContext.getClusterResource();
@@ -170,6 +181,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         clusterResource));
 
     labelManager.reinitializeQueueLabels(getQueueToLabels());
+    this.queueStateManager.initialize(this);
   }
 
   /**
@@ -298,12 +310,22 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
    * @throws IOException if fails to set queue acls
    */
   public static void setQueueAcls(YarnAuthorizationProvider authorizer,
-      Map<String, CSQueue> queues) throws IOException {
+      AppPriorityACLsManager appPriorityACLManager, Map<String, CSQueue> queues)
+      throws IOException {
     List<Permission> permissions = new ArrayList<>();
     for (CSQueue queue : queues.values()) {
       AbstractCSQueue csQueue = (AbstractCSQueue) queue;
       permissions.add(
           new Permission(csQueue.getPrivilegedEntity(), csQueue.getACLs()));
+
+      if (queue instanceof LeafQueue) {
+        LeafQueue lQueue = (LeafQueue) queue;
+
+        // Clear Priority ACLs first since reinitialize also call same.
+        appPriorityACLManager.clearPriorityACLs(lQueue.getQueueName());
+        appPriorityACLManager.addPrioirityACLs(lQueue.getPriorityACLs(),
+            lQueue.getQueueName());
+      }
     }
     authorizer.setPermission(permissions,
         UserGroupInformation.getCurrentUser());
@@ -357,5 +379,11 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       queueToLabels.put(queue.getQueueName(), queue.getAccessibleNodeLabels());
     }
     return queueToLabels;
+  }
+
+  @Private
+  public QueueStateManager<CSQueue, CapacitySchedulerConfiguration>
+      getQueueStateManager() {
+    return this.queueStateManager;
   }
 }

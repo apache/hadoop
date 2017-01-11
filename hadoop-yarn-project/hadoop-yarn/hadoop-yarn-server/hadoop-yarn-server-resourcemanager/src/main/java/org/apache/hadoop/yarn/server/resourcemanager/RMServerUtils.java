@@ -39,6 +39,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -63,6 +65,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt
     .RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
@@ -80,7 +83,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  */
 public class RMServerUtils {
 
-  private static final String UPDATE_OUTSTANDING_ERROR =
+  public static final String UPDATE_OUTSTANDING_ERROR =
       "UPDATE_OUTSTANDING_ERROR";
   private static final String INCORRECT_CONTAINER_VERSION_ERROR =
       "INCORRECT_CONTAINER_VERSION_ERROR";
@@ -124,74 +127,105 @@ public class RMServerUtils {
 
   /**
    * Check if we have:
-   * - Request for same containerId and different target resource
-   * - If targetResources violates maximum/minimumAllocation
-   * @param rmContext RM context
-   * @param request Allocate Request
-   * @param maximumAllocation Maximum Allocation
-   * @param increaseResourceReqs Increase Resource Request
-   * @param decreaseResourceReqs Decrease Resource Request
-   * @return List of container Errors
+   * - Request for same containerId and different target resource.
+   * - If targetResources violates maximum/minimumAllocation.
+   * @param rmContext RM context.
+   * @param request Allocate Request.
+   * @param maximumAllocation Maximum Allocation.
+   * @param updateErrors Container update errors.
+   * @return ContainerUpdateRequests.
    */
-  public static List<UpdateContainerError>
+  public static ContainerUpdates
       validateAndSplitUpdateResourceRequests(RMContext rmContext,
       AllocateRequest request, Resource maximumAllocation,
-      List<UpdateContainerRequest> increaseResourceReqs,
-      List<UpdateContainerRequest> decreaseResourceReqs) {
-    List<UpdateContainerError> errors = new ArrayList<>();
+      List<UpdateContainerError> updateErrors) {
+    ContainerUpdates updateRequests =
+        new ContainerUpdates();
     Set<ContainerId> outstandingUpdate = new HashSet<>();
     for (UpdateContainerRequest updateReq : request.getUpdateRequests()) {
       RMContainer rmContainer = rmContext.getScheduler().getRMContainer(
           updateReq.getContainerId());
-      String msg = null;
-      if (rmContainer == null) {
-        msg = INVALID_CONTAINER_ID;
-      }
-      // Only allow updates if the requested version matches the current
-      // version
-      if (msg == null && updateReq.getContainerVersion() !=
-          rmContainer.getContainer().getVersion()) {
-        msg = INCORRECT_CONTAINER_VERSION_ERROR + "|"
-            + updateReq.getContainerVersion() + "|"
-            + rmContainer.getContainer().getVersion();
-      }
-      // No more than 1 container update per request.
-      if (msg == null &&
-          outstandingUpdate.contains(updateReq.getContainerId())) {
-        msg = UPDATE_OUTSTANDING_ERROR;
-      }
+      String msg = validateContainerIdAndVersion(outstandingUpdate,
+          updateReq, rmContainer);
+      ContainerUpdateType updateType = updateReq.getContainerUpdateType();
       if (msg == null) {
-        Resource original = rmContainer.getContainer().getResource();
-        Resource target = updateReq.getCapability();
-        if (Resources.fitsIn(target, original)) {
-          // This is a decrease request
-          if (validateIncreaseDecreaseRequest(rmContext, updateReq,
-              maximumAllocation, false)) {
-            decreaseResourceReqs.add(updateReq);
-            outstandingUpdate.add(updateReq.getContainerId());
+        if ((updateType != ContainerUpdateType.PROMOTE_EXECUTION_TYPE) &&
+            (updateType !=ContainerUpdateType.DEMOTE_EXECUTION_TYPE)) {
+          Resource original = rmContainer.getContainer().getResource();
+          Resource target = updateReq.getCapability();
+          if (Resources.fitsIn(target, original)) {
+            // This is a decrease request
+            if (validateIncreaseDecreaseRequest(rmContext, updateReq,
+                maximumAllocation, false)) {
+              updateRequests.getDecreaseRequests().add(updateReq);
+              outstandingUpdate.add(updateReq.getContainerId());
+            } else {
+              msg = RESOURCE_OUTSIDE_ALLOWED_RANGE;
+            }
           } else {
-            msg = RESOURCE_OUTSIDE_ALLOWED_RANGE;
+            // This is an increase request
+            if (validateIncreaseDecreaseRequest(rmContext, updateReq,
+                maximumAllocation, true)) {
+              updateRequests.getIncreaseRequests().add(updateReq);
+              outstandingUpdate.add(updateReq.getContainerId());
+            } else {
+              msg = RESOURCE_OUTSIDE_ALLOWED_RANGE;
+            }
           }
         } else {
-          // This is an increase request
-          if (validateIncreaseDecreaseRequest(rmContext, updateReq,
-              maximumAllocation, true)) {
-            increaseResourceReqs.add(updateReq);
-            outstandingUpdate.add(updateReq.getContainerId());
-          } else {
-            msg = RESOURCE_OUTSIDE_ALLOWED_RANGE;
+          ExecutionType original = rmContainer.getExecutionType();
+          ExecutionType target = updateReq.getExecutionType();
+          if (target != original) {
+            if (target == ExecutionType.GUARANTEED &&
+                original == ExecutionType.OPPORTUNISTIC) {
+              updateRequests.getPromotionRequests().add(updateReq);
+              outstandingUpdate.add(updateReq.getContainerId());
+            } else if (target == ExecutionType.OPPORTUNISTIC &&
+                original == ExecutionType.GUARANTEED) {
+              updateRequests.getDemotionRequests().add(updateReq);
+              outstandingUpdate.add(updateReq.getContainerId());
+            }
           }
         }
       }
-      if (msg != null) {
-        UpdateContainerError updateError = RECORD_FACTORY
-            .newRecordInstance(UpdateContainerError.class);
-        updateError.setReason(msg);
-        updateError.setUpdateContainerRequest(updateReq);
-        errors.add(updateError);
-      }
+      checkAndcreateUpdateError(updateErrors, updateReq, msg);
     }
-    return errors;
+    return updateRequests;
+  }
+
+  private static void checkAndcreateUpdateError(
+      List<UpdateContainerError> errors, UpdateContainerRequest updateReq,
+      String msg) {
+    if (msg != null) {
+      UpdateContainerError updateError = RECORD_FACTORY
+          .newRecordInstance(UpdateContainerError.class);
+      updateError.setReason(msg);
+      updateError.setUpdateContainerRequest(updateReq);
+      errors.add(updateError);
+    }
+  }
+
+  private static String validateContainerIdAndVersion(
+      Set<ContainerId> outstandingUpdate, UpdateContainerRequest updateReq,
+      RMContainer rmContainer) {
+    String msg = null;
+    if (rmContainer == null) {
+      msg = INVALID_CONTAINER_ID;
+    }
+    // Only allow updates if the requested version matches the current
+    // version
+    if (msg == null && updateReq.getContainerVersion() !=
+        rmContainer.getContainer().getVersion()) {
+      msg = INCORRECT_CONTAINER_VERSION_ERROR + "|"
+          + updateReq.getContainerVersion() + "|"
+          + rmContainer.getContainer().getVersion();
+    }
+    // No more than 1 container update per request.
+    if (msg == null &&
+        outstandingUpdate.contains(updateReq.getContainerId())) {
+      msg = UPDATE_OUTSTANDING_ERROR;
+    }
+    return msg;
   }
 
   /**
@@ -303,7 +337,7 @@ public class RMServerUtils {
       return false;
     }
     ResourceScheduler scheduler = rmContext.getScheduler();
-    scheduler.normalizeRequest(request);
+    request.setCapability(scheduler.getNormalizedResource(request.getCapability()));
     return true;
   }
 

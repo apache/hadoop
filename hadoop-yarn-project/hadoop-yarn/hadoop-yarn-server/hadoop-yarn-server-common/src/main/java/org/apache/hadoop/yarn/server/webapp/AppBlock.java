@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
@@ -206,6 +207,14 @@ public class AppBlock extends HtmlBlock {
       } else {
         overviewTable._("Log Aggregation Status:",
             root_url("logaggregationstatus", app.getAppId()), status.name());
+      }
+      long timeout = appReport.getApplicationTimeouts()
+          .get(ApplicationTimeoutType.LIFETIME).getRemainingTime();
+      if (timeout < 0) {
+        overviewTable._("Application Timeout (Remaining Time):", "Unlimited");
+      } else {
+        overviewTable._("Application Timeout (Remaining Time):",
+            String.format("%d seconds", timeout));
       }
     }
     overviewTable._("Diagnostics:",

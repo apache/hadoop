@@ -262,6 +262,39 @@ function hadoop_deprecate_envvar
   fi
 }
 
+## @description  Declare `var` being used and print its value.
+## @audience     public
+## @stability    stable
+## @replaceable  yes
+## @param        var
+function hadoop_using_envvar
+{
+  local var=$1
+  local val=${!var}
+
+  if [[ -n "${val}" ]]; then
+    hadoop_debug "${var} = ${val}"
+  fi
+}
+
+## @description  Create the directory 'dir'.
+## @audience     public
+## @stability    stable
+## @replaceable  yes
+## @param        dir
+function hadoop_mkdir
+{
+  local dir=$1
+
+  if [[ ! -w "${dir}" ]] && [[ ! -d "${dir}" ]]; then
+    hadoop_error "WARNING: ${dir} does not exist. Creating."
+    if ! mkdir -p "${dir}"; then
+      hadoop_error "ERROR: Unable to create ${dir}. Aborting."
+      exit 1
+    fi
+  fi
+}
+
 ## @description  Bootstraps the Hadoop shell environment
 ## @audience     private
 ## @stability    evolving
@@ -1396,14 +1429,7 @@ function hadoop_verify_piddir
     hadoop_error "No pid directory defined."
     exit 1
   fi
-  if [[ ! -w "${HADOOP_PID_DIR}" ]] && [[ ! -d "${HADOOP_PID_DIR}" ]]; then
-    hadoop_error "WARNING: ${HADOOP_PID_DIR} does not exist. Creating."
-    mkdir -p "${HADOOP_PID_DIR}" > /dev/null 2>&1
-    if [[ $? -gt 0 ]]; then
-      hadoop_error "ERROR: Unable to create ${HADOOP_PID_DIR}. Aborting."
-      exit 1
-    fi
-  fi
+  hadoop_mkdir "${HADOOP_PID_DIR}"
   touch "${HADOOP_PID_DIR}/$$" >/dev/null 2>&1
   if [[ $? -gt 0 ]]; then
     hadoop_error "ERROR: Unable to write in ${HADOOP_PID_DIR}. Aborting."
@@ -1421,14 +1447,7 @@ function hadoop_verify_logdir
     hadoop_error "No log directory defined."
     exit 1
   fi
-  if [[ ! -w "${HADOOP_LOG_DIR}" ]] && [[ ! -d "${HADOOP_LOG_DIR}" ]]; then
-    hadoop_error "WARNING: ${HADOOP_LOG_DIR} does not exist. Creating."
-    mkdir -p "${HADOOP_LOG_DIR}" > /dev/null 2>&1
-    if [[ $? -gt 0 ]]; then
-      hadoop_error "ERROR: Unable to create ${HADOOP_LOG_DIR}. Aborting."
-      exit 1
-    fi
-  fi
+  hadoop_mkdir "${HADOOP_LOG_DIR}"
   touch "${HADOOP_LOG_DIR}/$$" >/dev/null 2>&1
   if [[ $? -gt 0 ]]; then
     hadoop_error "ERROR: Unable to write in ${HADOOP_LOG_DIR}. Aborting."

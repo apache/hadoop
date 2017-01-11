@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -344,7 +345,10 @@ public class TestApplicationPriority {
 
     // Change the priority of App1 to 8
     Priority appPriority2 = Priority.newInstance(8);
-    cs.updateApplicationPriority(appPriority2, app1.getApplicationId(), null);
+    UserGroupInformation ugi = UserGroupInformation
+        .createRemoteUser(app1.getUser());
+    cs.updateApplicationPriority(appPriority2, app1.getApplicationId(), null,
+        ugi);
 
     // get scheduler app
     FiCaSchedulerApp schedulerAppAttempt = cs.getSchedulerApplications()
@@ -378,7 +382,10 @@ public class TestApplicationPriority {
 
     // Change the priority of App1 to 15
     Priority appPriority2 = Priority.newInstance(15);
-    cs.updateApplicationPriority(appPriority2, app1.getApplicationId(), null);
+    UserGroupInformation ugi = UserGroupInformation
+        .createRemoteUser(app1.getUser());
+    cs.updateApplicationPriority(appPriority2, app1.getApplicationId(), null,
+        ugi);
 
     // get scheduler app
     FiCaSchedulerApp schedulerAppAttempt = cs.getSchedulerApplications()
@@ -428,7 +435,10 @@ public class TestApplicationPriority {
 
     // Change the priority of App1 to 8
     Priority appPriority2 = Priority.newInstance(8);
-    cs.updateApplicationPriority(appPriority2, app1.getApplicationId(), null);
+    UserGroupInformation ugi = UserGroupInformation
+        .createRemoteUser(app1.getUser());
+    cs.updateApplicationPriority(appPriority2, app1.getApplicationId(), null,
+        ugi);
 
     // let things settle down
     Thread.sleep(1000);
@@ -557,7 +567,10 @@ public class TestApplicationPriority {
 
     // Change the priority of App1 to 3 (lowest)
     Priority appPriority3 = Priority.newInstance(3);
-    cs.updateApplicationPriority(appPriority3, app2.getApplicationId(), null);
+    UserGroupInformation ugi = UserGroupInformation
+        .createRemoteUser(app2.getUser());
+    cs.updateApplicationPriority(appPriority3, app2.getApplicationId(), null,
+        ugi);
 
     // add request for containers App2
     am2.allocate("127.0.0.1", 2 * GB, 3, new ArrayList<ContainerId>());
@@ -788,8 +801,10 @@ public class TestApplicationPriority {
       int appsPendingExpected, int activeAppsExpected, RMApp app)
       throws YarnException {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    UserGroupInformation ugi = UserGroupInformation
+        .createRemoteUser(app.getUser());
     cs.updateApplicationPriority(Priority.newInstance(2),
-        app.getApplicationId(), null);
+        app.getApplicationId(), null, ugi);
     SchedulerEvent removeAttempt;
     removeAttempt = new AppAttemptRemovedSchedulerEvent(
         app.getCurrentAppAttempt().getAppAttemptId(), RMAppAttemptState.KILLED,

@@ -42,8 +42,6 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
-import org.apache.hadoop.yarn.api.records.AbstractResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -137,8 +135,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @param release
    * @param blacklistAdditions 
    * @param blacklistRemovals 
-   * @param increaseRequests
-   * @param decreaseRequests
+   * @param updateRequests
    * @return the {@link Allocation} for the application
    */
   @Public
@@ -146,8 +143,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   Allocation allocate(ApplicationAttemptId appAttemptId,
       List<ResourceRequest> ask, List<ContainerId> release,
       List<String> blacklistAdditions, List<String> blacklistRemovals,
-      List<UpdateContainerRequest> increaseRequests,
-      List<UpdateContainerRequest> decreaseRequests);
+      ContainerUpdates updateRequests);
 
   /**
    * Get node resource usage report.
@@ -311,7 +307,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * Verify whether a submitted application priority is valid as per configured
    * Queue
    *
-   * @param priorityFromContext
+   * @param priorityRequestedByApp
    *          Submitted Application priority.
    * @param user
    *          User who submitted the Application
@@ -321,8 +317,8 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    *          Application ID
    * @return Updated Priority from scheduler
    */
-  public Priority checkAndGetApplicationPriority(Priority priorityFromContext,
-      String user, String queueName, ApplicationId applicationId)
+  public Priority checkAndGetApplicationPriority(Priority priorityRequestedByApp,
+      UserGroupInformation user, String queueName, ApplicationId applicationId)
       throws YarnException;
 
   /**
@@ -334,12 +330,13 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @param applicationId Application ID
    *
    * @param future Sets any type of exception happened from StateStore
+   * @param user who submitted the application
    *
    * @return updated priority
    */
   public Priority updateApplicationPriority(Priority newPriority,
-      ApplicationId applicationId, SettableFuture<Object> future)
-      throws YarnException;
+      ApplicationId applicationId, SettableFuture<Object> future,
+      UserGroupInformation user) throws YarnException;
 
   /**
    *
@@ -384,7 +381,8 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   /**
    * Normalize a resource request.
    *
-   * @param request the resource request to be normalized
+   * @param requestedResource the resource to be normalized
+   * @return the normalized resource
    */
-  void normalizeRequest(AbstractResourceRequest request);
+  Resource getNormalizedResource(Resource requestedResource);
 }

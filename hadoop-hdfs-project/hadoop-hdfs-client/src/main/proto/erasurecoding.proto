@@ -46,6 +46,13 @@ message GetErasureCodingPolicyResponseProto {
   optional ErasureCodingPolicyProto ecPolicy = 1;
 }
 
+message UnsetErasureCodingPolicyRequestProto {
+  required string src = 1;
+}
+
+message UnsetErasureCodingPolicyResponseProto {
+}
+
 /**
  * Block erasure coding reconstruction info
  */

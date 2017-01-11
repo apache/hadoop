@@ -54,7 +54,7 @@ public class KerberosName {
    * A pattern that matches a Kerberos name with at most 2 components.
    */
   private static final Pattern nameParser =
-    Pattern.compile("([^/@]*)(/([^/@]*))?@([^/@]*)");
+      Pattern.compile("([^/@]+)(/([^/@]+))?(@([^/@]+))?");
 
   /**
    * A pattern that matches a string with out '$' and then a single
@@ -109,7 +109,7 @@ public class KerberosName {
     } else {
       serviceName = match.group(1);
       hostName = match.group(3);
-      realm = match.group(4);
+      realm = match.group(5);
     }
   }
 

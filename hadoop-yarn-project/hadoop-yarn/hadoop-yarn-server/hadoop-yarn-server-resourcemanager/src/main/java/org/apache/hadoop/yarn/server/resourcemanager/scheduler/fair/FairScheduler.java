@@ -18,18 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
@@ -50,8 +40,6 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
-import org.apache.hadoop.yarn.api.records.AbstractResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -80,6 +68,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
@@ -102,8 +91,17 @@ import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A scheduler that schedules resources between a set of queues. The scheduler
@@ -721,7 +719,7 @@ public class FairScheduler extends
         application.unreserve(rmContainer.getReservedSchedulerKey(), node);
       } else{
         application.containerCompleted(rmContainer, containerStatus, event);
-        node.releaseContainer(container);
+        node.releaseContainer(rmContainer.getContainerId(), false);
         updateRootQueueMetrics();
       }
 
@@ -800,8 +798,8 @@ public class FairScheduler extends
   }
 
   @Override
-  public void normalizeRequest(AbstractResourceRequest ask) {
-    SchedulerUtils.normalizeRequest(ask,
+  public Resource getNormalizedResource(Resource requestedResource) {
+    return SchedulerUtils.getNormalizedResource(requestedResource,
         DOMINANT_RESOURCE_CALCULATOR,
         minimumAllocation,
         getMaximumResourceCapability(),
@@ -812,8 +810,7 @@ public class FairScheduler extends
   public Allocation allocate(ApplicationAttemptId appAttemptId,
       List<ResourceRequest> ask, List<ContainerId> release,
       List<String> blacklistAdditions, List<String> blacklistRemovals,
-      List<UpdateContainerRequest> increaseRequests,
-      List<UpdateContainerRequest> decreaseRequests) {
+      ContainerUpdates updateRequests) {
 
     // Make sure this application exists
     FSAppAttempt application = getSchedulerApp(appAttemptId);
@@ -822,6 +819,11 @@ public class FairScheduler extends
           "or non existent application " + appAttemptId);
       return EMPTY_ALLOCATION;
     }
+
+    // Handle promotions and demotions
+    handleExecutionTypeUpdates(
+        application, updateRequests.getPromotionRequests(),
+        updateRequests.getDemotionRequests());
 
     // Sanity check
     normalizeRequests(ask);
@@ -879,11 +881,13 @@ public class FairScheduler extends
     application.setApplicationHeadroomForMetrics(headroom);
     return new Allocation(newlyAllocatedContainers, headroom,
         preemptionContainerIds, null, null,
-        application.pullUpdatedNMTokens());
+        application.pullUpdatedNMTokens(), null, null,
+        application.pullNewlyPromotedContainers(),
+        application.pullNewlyDemotedContainers());
   }
 
   @Override
-  protected synchronized void nodeUpdate(RMNode nm) {
+  protected void nodeUpdate(RMNode nm) {
     try {
       writeLock.lock();
       long start = getClock().getTime();

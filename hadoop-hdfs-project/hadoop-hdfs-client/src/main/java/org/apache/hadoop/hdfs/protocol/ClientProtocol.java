@@ -1535,6 +1535,13 @@ public interface ClientProtocol {
   ErasureCodingPolicy getErasureCodingPolicy(String src) throws IOException;
 
   /**
+   * Unset erasure coding policy from a specified path.
+   * @param src The path to unset policy.
+   */
+  @AtMostOnce
+  void unsetErasureCodingPolicy(String src) throws IOException;
+
+  /**
    * Get {@link QuotaUsage} rooted at the specified directory.
    * @param path The string representation of the path
    *

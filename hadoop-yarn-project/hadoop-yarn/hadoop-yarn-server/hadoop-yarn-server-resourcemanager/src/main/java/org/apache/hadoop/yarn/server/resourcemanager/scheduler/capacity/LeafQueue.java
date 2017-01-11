@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -139,6 +140,9 @@ public class LeafQueue extends AbstractCSQueue {
   private Map<String, TreeSet<RMContainer>> ignorePartitionExclusivityRMContainers =
       new ConcurrentHashMap<>();
 
+  List<AppPriorityACLGroup> priorityAcls =
+      new ArrayList<AppPriorityACLGroup>();
+
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public LeafQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
@@ -203,6 +207,9 @@ public class LeafQueue extends AbstractCSQueue {
       maxAMResourcePerQueuePercent =
           conf.getMaximumApplicationMasterResourcePerQueuePercent(
               getQueuePath());
+
+      priorityAcls = conf.getPriorityAcls(getQueuePath(),
+          scheduler.getMaxClusterLevelAppPriority());
 
       if (!SchedulerUtils.checkQueueLabelExpression(this.accessibleLabels,
           this.defaultLabelExpression, null)) {
@@ -273,7 +280,7 @@ public class LeafQueue extends AbstractCSQueue {
               + "maximumAllocationMemory ]" + "\n" + "maximumAllocation = "
               + maximumAllocation + " [= configuredMaxAllocation ]" + "\n"
               + "numContainers = " + numContainers
-              + " [= currentNumContainers ]" + "\n" + "state = " + state
+              + " [= currentNumContainers ]" + "\n" + "state = " + getState()
               + " [= configuredState ]" + "\n" + "acls = " + aclsString
               + " [= configuredAcls ]" + "\n" + "nodeLocalityDelay = "
               + nodeLocalityDelay + "\n" + "labels=" + labelStrBuilder
@@ -491,6 +498,16 @@ public class LeafQueue extends AbstractCSQueue {
                 user.getResourceUsage()));
       }
       return usersToReturn;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Private
+  public List<AppPriorityACLGroup> getPriorityACLs() {
+    try {
+      readLock.lock();
+      return new ArrayList<>(priorityAcls);
     } finally {
       readLock.unlock();
     }
@@ -879,6 +896,9 @@ public class LeafQueue extends AbstractCSQueue {
   public void finishApplication(ApplicationId application, String user) {
     // Inform the activeUsersManager
     activeUsersManager.deactivateApplication(user, application);
+
+    appFinished();
+
     // Inform the parent queue
     getParent().finishApplication(application, user);
   }
@@ -1683,7 +1703,7 @@ public class LeafQueue extends AbstractCSQueue {
           removed = application.containerCompleted(rmContainer, containerStatus,
               event, node.getPartition());
 
-          node.releaseContainer(container);
+          node.releaseContainer(rmContainer.getContainerId(), false);
         }
 
         // Book-keeping
@@ -2204,7 +2224,8 @@ public class LeafQueue extends AbstractCSQueue {
   @Override
   public void attachContainer(Resource clusterResource,
       FiCaSchedulerApp application, RMContainer rmContainer) {
-    if (application != null) {
+    if (application != null && rmContainer != null
+        && rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
       FiCaSchedulerNode node =
           scheduler.getNode(rmContainer.getContainer().getNodeId());
       allocateResource(clusterResource, application, rmContainer.getContainer()
@@ -2222,7 +2243,8 @@ public class LeafQueue extends AbstractCSQueue {
   @Override
   public void detachContainer(Resource clusterResource,
       FiCaSchedulerApp application, RMContainer rmContainer) {
-    if (application != null) {
+    if (application != null && rmContainer != null
+          && rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
       FiCaSchedulerNode node =
           scheduler.getNode(rmContainer.getContainer().getNodeId());
       releaseResource(clusterResource, application, rmContainer.getContainer()
@@ -2423,6 +2445,20 @@ public class LeafQueue extends AbstractCSQueue {
     
     public Resource getClusterResource() {
       return clusterResource;
+    }
+  }
+
+  @Override
+  public void stopQueue() {
+    try {
+      writeLock.lock();
+      if (getNumApplications() > 0) {
+        updateQueueState(QueueState.DRAINING);
+      } else {
+        updateQueueState(QueueState.STOPPED);
+      }
+    } finally {
+      writeLock.unlock();
     }
   }
 }

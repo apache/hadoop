@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
+import com.google.common.base.Optional;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -43,10 +44,10 @@ public interface AsyncChecker<K, V> {
    * @param context the interpretation of the context depends on the
    *                target.
    *
-   * @return returns a {@link ListenableFuture} that can be used to
+   * @return returns a {@link Optional of ListenableFuture} that can be used to
    *         retrieve the result of the asynchronous check.
    */
-  ListenableFuture<V> schedule(Checkable<K, V> target, K context);
+  Optional<ListenableFuture<V>> schedule(Checkable<K, V> target, K context);
 
   /**
    * Cancel all executing checks and wait for them to complete.

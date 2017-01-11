@@ -129,7 +129,6 @@ public class ITestS3AAWSCredentialsProvider {
         AnonymousAWSCredentialsProvider.class.getName());
     Path testFile = new Path(
         conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE));
-    S3ATestUtils.useCSVDataEndpoint(conf);
     FileSystem fs = FileSystem.newInstance(testFile.toUri(), conf);
     assertNotNull(fs);
     assertTrue(fs instanceof S3AFileSystem);

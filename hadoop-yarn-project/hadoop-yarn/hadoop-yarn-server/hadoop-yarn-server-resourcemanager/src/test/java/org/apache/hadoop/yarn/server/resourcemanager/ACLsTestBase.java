@@ -43,6 +43,8 @@ public abstract class ACLsTestBase {
   protected static final String COMMON_USER = "common_user";
   protected static final String QUEUE_A_USER = "queueA_user";
   protected static final String QUEUE_B_USER = "queueB_user";
+  protected static final String QUEUE_A_GROUP = "queueA_group";
+  protected static final String QUEUE_B_GROUP = "queueB_group";
   protected static final String ROOT_ADMIN = "root_admin";
   protected static final String QUEUE_A_ADMIN = "queueA_admin";
   protected static final String QUEUE_B_ADMIN = "queueB_admin";
@@ -53,7 +55,7 @@ public abstract class ACLsTestBase {
 
   protected static final Log LOG = LogFactory.getLog(TestApplicationACLs.class);
 
-  MockRM resourceManager;
+  protected MockRM resourceManager;
   Configuration conf;
   YarnRPC rpc;
   InetSocketAddress rmAddress;
@@ -68,6 +70,7 @@ public abstract class ACLsTestBase {
 
     AccessControlList adminACL = new AccessControlList("");
     conf.set(YarnConfiguration.YARN_ADMIN_ACL, adminACL.getAclString());
+    conf.setInt(YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY, 10);
 
     resourceManager = new MockRM(conf) {
       protected ClientRMService createClientRMService() {
