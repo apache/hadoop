@@ -827,6 +827,15 @@
 </property>
 
 <property>
+  <name>fs.s3a.security.credential.provider.path</name>
+  <value />
+  <description>
+    Optional comma separated list of credential providers, a list
+    which is prepended to that set in hadoop.security.credential.provider.path
+  </description>
+</property>
+
+<property>
   <name>fs.s3a.connection.maximum</name>
   <value>15</value>
   <description>Controls the maximum number of simultaneous connections to S3.</description>
