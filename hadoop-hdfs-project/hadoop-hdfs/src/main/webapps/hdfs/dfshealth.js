@@ -223,17 +223,23 @@
           if (n.adminState === "In Service") {
             n.state = "alive";
           } else if (nodes[i].adminState === "Decommission In Progress") {
-            n.state = "decommisioning";
+            n.state = "decommissioning";
           } else if (nodes[i].adminState === "Decommissioned") {
             n.state = "decommissioned";
+          } else if (nodes[i].adminState === "Entering Maintenance") {
+            n.state = "entering-maintenance";
+          } else if (nodes[i].adminState === "In Maintenance") {
+            n.state = "in-maintenance";
           }
         }
       }
 
       function augment_dead_nodes(nodes) {
         for (var i = 0, e = nodes.length; i < e; ++i) {
-          if (nodes[i].decommissioned) {
+          if (nodes[i].adminState === "Decommissioned") {
             nodes[i].state = "down-decommissioned";
+          } else if (nodes[i].adminState === "In Maintenance") {
+            nodes[i].state = "down-maintenance";
           } else {
             nodes[i].state = "down";
           }
@@ -245,6 +251,7 @@
       r.DeadNodes = node_map_to_array(JSON.parse(r.DeadNodes));
       augment_dead_nodes(r.DeadNodes);
       r.DecomNodes = node_map_to_array(JSON.parse(r.DecomNodes));
+      r.EnteringMaintenanceNodes = node_map_to_array(JSON.parse(r.EnteringMaintenanceNodes));
       return r;
     }
 
