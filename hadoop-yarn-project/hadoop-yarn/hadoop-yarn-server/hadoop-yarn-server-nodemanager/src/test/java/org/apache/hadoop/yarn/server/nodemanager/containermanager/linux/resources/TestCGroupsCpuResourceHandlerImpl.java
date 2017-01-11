@@ -62,7 +62,7 @@ public class TestCGroupsCpuResourceHandlerImpl {
     List<PrivilegedOperation> ret =
         cGroupsCpuResourceHandler.bootstrap(plugin, conf);
     verify(mockCGroupsHandler, times(1))
-        .mountCGroupController(CGroupsHandler.CGroupController.CPU);
+        .initializeCGroupController(CGroupsHandler.CGroupController.CPU);
     verify(mockCGroupsHandler, times(0))
         .updateCGroupParam(CGroupsHandler.CGroupController.CPU, "",
             CGroupsHandler.CGROUP_CPU_PERIOD_US, "");
@@ -84,7 +84,7 @@ public class TestCGroupsCpuResourceHandlerImpl {
     List<PrivilegedOperation> ret =
         cGroupsCpuResourceHandler.bootstrap(plugin, conf);
     verify(mockCGroupsHandler, times(1))
-        .mountCGroupController(CGroupsHandler.CGroupController.CPU);
+        .initializeCGroupController(CGroupsHandler.CGroupController.CPU);
     verify(mockCGroupsHandler, times(1))
         .updateCGroupParam(CGroupsHandler.CGroupController.CPU, "",
             CGroupsHandler.CGROUP_CPU_PERIOD_US, String.valueOf(period));
@@ -109,7 +109,7 @@ public class TestCGroupsCpuResourceHandlerImpl {
       List<PrivilegedOperation> ret =
           cGroupsCpuResourceHandler.bootstrap(plugin, conf);
       verify(mockCGroupsHandler, times(1))
-          .mountCGroupController(CGroupsHandler.CGroupController.CPU);
+          .initializeCGroupController(CGroupsHandler.CGroupController.CPU);
       verify(mockCGroupsHandler, times(1))
           .updateCGroupParam(CGroupsHandler.CGroupController.CPU, "",
               CGroupsHandler.CGROUP_CPU_QUOTA_US, "-1");

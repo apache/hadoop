@@ -120,7 +120,7 @@ public class CGroupsBlkioResourceHandlerImpl implements DiskResourceHandler {
     // if bootstrap is called on this class, disk is already enabled
     // so no need to check again
     this.cGroupsHandler
-      .mountCGroupController(CGroupsHandler.CGroupController.BLKIO);
+      .initializeCGroupController(CGroupsHandler.CGroupController.BLKIO);
     return null;
   }
 

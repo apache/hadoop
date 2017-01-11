@@ -1458,9 +1458,11 @@
 
   <property>
     <description>The cgroups hierarchy under which to place YARN proccesses (cannot contain commas).
-    If yarn.nodemanager.linux-container-executor.cgroups.mount is false (that is, if cgroups have
-    been pre-configured), then this cgroups hierarchy must already exist and be writable by the
-    NodeManager user, otherwise the NodeManager may fail.
+    If yarn.nodemanager.linux-container-executor.cgroups.mount is false
+    (that is, if cgroups have been pre-configured) and the Yarn user has write
+    access to the parent directory, then the directory will be created.
+    If the directory already exists, the administrator has to give Yarn
+    write permissions to it recursively.
     Only used when the LCE resources handler is set to the CgroupsLCEResourcesHandler.</description>
     <name>yarn.nodemanager.linux-container-executor.cgroups.hierarchy</name>
     <value>/hadoop-yarn</value>
