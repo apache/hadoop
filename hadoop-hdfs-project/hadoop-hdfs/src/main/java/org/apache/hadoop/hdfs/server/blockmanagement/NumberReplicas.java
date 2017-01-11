@@ -90,7 +90,7 @@ public class NumberReplicas {
    * @return decommissioned and decommissioning replicas
    */
   public int decommissionedAndDecommissioning() {
-    return decommissioned + decommissioning;
+    return decommissioned() + decommissioning();
   }
 
   /**

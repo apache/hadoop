@@ -660,7 +660,9 @@ public class DecommissionManager {
         boolean pruneSufficientlyReplicated) {
       boolean firstReplicationLog = true;
       int underReplicatedBlocks = 0;
+      // All maintenance and decommission replicas.
       int outOfServiceOnlyReplicas = 0;
+      // Low redundancy in UC Blocks only
       int underReplicatedInOpenFiles = 0;
       while (it.hasNext()) {
         if (insufficientlyReplicated == null

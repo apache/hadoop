@@ -689,7 +689,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     // Super implementation is sufficient
     return super.hashCode();
   }
-  
+
   @Override
   public boolean equals(Object obj) {
     // Sufficient to use super equality as datanodes are uniquely identified
@@ -704,14 +704,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
     private int underReplicatedInOpenFiles;
     private long startTime;
     
-    synchronized void set(int underRep,
-        int onlyRep, int underConstruction) {
+    synchronized void set(int underRepBlocks,
+        int outOfServiceOnlyRep, int underRepInOpenFiles) {
       if (!isDecommissionInProgress() && !isEnteringMaintenance()) {
         return;
       }
-      underReplicatedBlocks = underRep;
-      outOfServiceOnlyReplicas = onlyRep;
-      underReplicatedInOpenFiles = underConstruction;
+      underReplicatedBlocks = underRepBlocks;
+      outOfServiceOnlyReplicas = outOfServiceOnlyRep;
+      underReplicatedInOpenFiles = underRepInOpenFiles;
     }
 
     /** @return the number of under-replicated blocks */
