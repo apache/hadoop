@@ -91,7 +91,7 @@ Status make_status(int rc) {
   if (rc != SASL_OK &&
       rc != SASL_CONTINUE &&
       rc != SASL_INTERACT) {
-     return Status::Error(errStr(rc).c_str());
+     return Status::AuthenticationFailed(errStr(rc).c_str());
   }
   return Status::OK();
 }
