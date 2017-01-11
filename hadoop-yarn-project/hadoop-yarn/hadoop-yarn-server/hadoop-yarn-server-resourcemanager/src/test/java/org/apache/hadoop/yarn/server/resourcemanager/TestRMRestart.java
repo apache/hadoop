@@ -107,6 +107,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -509,10 +510,12 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     // start RM
     final MockRM rm1 = createMockRM(conf, memStore);
     rm1.start();
+    AbstractYarnScheduler ys =
+        (AbstractYarnScheduler)rm1.getResourceScheduler();
     MockNM nm1 =
         new MockNM("127.0.0.1:1234" , 16382, rm1.getResourceTrackerService());
     nm1.registerNode();
-     
+
     // submitting app
     RMApp app1 = rm1.submitApp(200);
     rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
@@ -520,10 +523,11 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
     // Fail first AM.
     rm1.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
-    
+    TestSchedulerUtils.waitSchedulerApplicationAttemptStopped(ys,
+        am1.getApplicationAttemptId());
     // launch another AM.
     MockAM am2 = launchAM(app1, rm1, nm1);
-    
+
     Assert.assertEquals(1, rmAppState.size());
     Assert.assertEquals(app1.getState(), RMAppState.RUNNING);
     Assert.assertEquals(app1.getAppAttempts()
@@ -561,6 +565,10 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
             am2.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
     nm1.registerNode(Arrays.asList(status), null);
     rm2.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+    ys = (AbstractYarnScheduler) rm2.getResourceScheduler();
+    TestSchedulerUtils.waitSchedulerApplicationAttemptStopped(ys,
+        am2.getApplicationAttemptId());
+
     launchAM(rmApp, rm2, nm1);
     Assert.assertEquals(3, rmApp.getAppAttempts().size());
     rm2.waitForState(rmApp.getCurrentAppAttempt().getAppAttemptId(),
