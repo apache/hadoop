@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
-import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -36,7 +35,6 @@ import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.util.LineReader;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -47,6 +45,7 @@ import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 
 /**
  * Look at the performance of S3a operations.
@@ -79,10 +78,11 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     String testFile =  conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE);
     if (testFile.isEmpty()) {
       assumptionMessage = "Empty test property: " + KEY_CSVTEST_FILE;
+      LOG.warn(assumptionMessage);
       testDataAvailable = false;
     } else {
-      S3ATestUtils.useCSVDataEndpoint(conf);
       testData = new Path(testFile);
+      LOG.info("Using {} as input stream source", testData);
       Path path = this.testData;
       bindS3aFS(path);
       try {
@@ -113,7 +113,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
    * Declare that the test requires the CSV test dataset.
    */
   private void requireCSVTestData() {
-    Assume.assumeTrue(assumptionMessage, testDataAvailable);
+    assume(assumptionMessage, testDataAvailable);
   }
 
   /**
@@ -146,7 +146,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
 
   /**
    * Open a test file with the read buffer specified in the setting
-   * {@link #KEY_READ_BUFFER_SIZE}.
+   * {@link org.apache.hadoop.fs.s3a.S3ATestConstants#KEY_READ_BUFFER_SIZE}.
    *
    * @param path path to open
    * @param inputPolicy input policy to use
