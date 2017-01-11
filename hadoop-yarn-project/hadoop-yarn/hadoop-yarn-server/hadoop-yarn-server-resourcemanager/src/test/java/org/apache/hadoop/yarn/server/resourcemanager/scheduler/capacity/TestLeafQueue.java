@@ -828,7 +828,7 @@ public class TestLeafQueue {
     assertTrue("Verify user_1 got resources ", queueUser1.getUsed()
         .getMemorySize() > 0);
     assertTrue(
-        "Exepected AbsoluteUsedCapacity > 0.95, got: "
+        "Expected AbsoluteUsedCapacity > 0.95, got: "
             + b.getAbsoluteUsedCapacity(), b.getAbsoluteUsedCapacity() > 0.95);
 
     // Verify consumedRatio is based on dominant resources

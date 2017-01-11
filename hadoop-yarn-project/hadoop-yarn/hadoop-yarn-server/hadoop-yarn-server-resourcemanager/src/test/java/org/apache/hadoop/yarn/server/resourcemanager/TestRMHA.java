@@ -622,7 +622,7 @@ public class TestRMHA {
             HAServiceProtocol.RequestSource.REQUEST_BY_USER);
     FailFastDispatcher dispatcher =
         ((FailFastDispatcher) rm.rmContext.getDispatcher());
-    // Verify transistion to transitionToStandby
+    // Verify transition to transitionToStandby
     rm.adminService.transitionToStandby(requestInfo);
     assertEquals("Fatal Event should be 0", 0, dispatcher.getEventCount());
     assertEquals("HA state should be in standBy State", HAServiceState.STANDBY,
@@ -630,7 +630,7 @@ public class TestRMHA {
     try {
       // Verify refreshAll call failure and check fail Event is dispatched
       rm.adminService.transitionToActive(requestInfo);
-      Assert.fail("Transistion to Active should have failed for refreshAll()");
+      Assert.fail("Transition to Active should have failed for refreshAll()");
     } catch (Exception e) {
       assertTrue("Service fail Exception expected",
           e instanceof ServiceFailedException);
