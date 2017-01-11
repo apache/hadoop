@@ -104,7 +104,7 @@ public class FairSchedulerTestBase {
       int memory, int vcores, int GPUs, String host, int priority, int numContainers,
       boolean relaxLocality) {
     ResourceRequest request = recordFactory.newRecordInstance(ResourceRequest.class);
-    request.setCapability(BuilderUtils.newResource(memory, vcores, GPUs));
+    request.setCapability(BuilderUtils.newResource(memory, vcores, GPUs, 0));
     request.setResourceName(host);
     request.setNumContainers(numContainers);
     Priority prio = recordFactory.newRecordInstance(Priority.class);

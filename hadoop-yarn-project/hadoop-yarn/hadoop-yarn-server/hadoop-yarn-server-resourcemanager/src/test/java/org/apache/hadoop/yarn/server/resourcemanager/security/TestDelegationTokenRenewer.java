@@ -844,7 +844,7 @@ public class TestDelegationTokenRenewer {
         ApplicationSubmissionContext.newInstance(
             ApplicationId.newInstance(1234121, 0),
             "BOGUS", "default", Priority.UNDEFINED, amContainer, false,
-            true, 1, Resource.newInstance(1024, 1, 1), "BOGUS");
+            true, 1, Resource.newInstance(1024, 1, 1, 1), "BOGUS");
     SubmitApplicationRequest request =
         SubmitApplicationRequest.newInstance(appSubContext);
     try {

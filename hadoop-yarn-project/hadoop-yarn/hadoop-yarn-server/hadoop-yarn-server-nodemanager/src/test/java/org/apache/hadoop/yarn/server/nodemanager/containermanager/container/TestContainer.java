@@ -773,7 +773,7 @@ public class TestContainer {
       cId = BuilderUtils.newContainerId(appId, 1, timestamp, id);
       when(mockContainer.getId()).thenReturn(cId);
 
-      Resource resource = BuilderUtils.newResource(1024, 1, 1);
+      Resource resource = BuilderUtils.newResource(1024, 1, 1, 1);
       when(mockContainer.getResource()).thenReturn(resource);
       String host = "127.0.0.1";
       int port = 1234;

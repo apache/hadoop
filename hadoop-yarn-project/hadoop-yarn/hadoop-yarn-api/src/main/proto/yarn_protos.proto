@@ -57,6 +57,7 @@ message ResourceProto {
   optional int32 memory = 1;
   optional int32 virtual_cores = 2;
   optional int32 GPUs = 3;
+  optional int32 GpuBitVec = 4;
 }
 
 message ResourceOptionProto {
@@ -173,6 +174,7 @@ message ApplicationResourceUsageReportProto {
   optional int64 memory_seconds = 6;
   optional int64 vcore_seconds = 7;
   optional int64 GPU_seconds = 8;
+  optional int64 GpuBitVec_seconds = 9;
 }
 
 message ApplicationReportProto {

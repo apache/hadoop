@@ -67,7 +67,7 @@ public class MockContainer implements Container {
     this.containerTokenIdentifier =
         BuilderUtils.newContainerTokenIdentifier(BuilderUtils
           .newContainerToken(id, "127.0.0.1", 1234, user,
-            BuilderUtils.newResource(1024, 1, 1), currentTime + 10000, 123,
+            BuilderUtils.newResource(1024, 1, 1, 1), currentTime + 10000, 123,
             "password".getBytes(), currentTime));
     this.state = ContainerState.NEW;
   }

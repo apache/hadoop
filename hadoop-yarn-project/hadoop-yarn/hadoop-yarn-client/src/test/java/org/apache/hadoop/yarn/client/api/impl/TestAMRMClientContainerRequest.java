@@ -46,7 +46,7 @@ public class TestAMRMClientContainerRequest {
         MyResolver.class, DNSToSwitchMapping.class);
     client.init(conf);
  
-    Resource capability = Resource.newInstance(1024, 1, 1);
+    Resource capability = Resource.newInstance(1024, 1, 1, 1);
     ContainerRequest request =
         new ContainerRequest(capability, new String[] {"host1", "host2"},
             new String[] {"/rack2"}, Priority.newInstance(1));
@@ -68,7 +68,7 @@ public class TestAMRMClientContainerRequest {
         MyResolver.class, DNSToSwitchMapping.class);
     client.init(conf);
     
-    Resource capability = Resource.newInstance(1024, 1, 1);
+    Resource capability = Resource.newInstance(1024, 1, 1, 1);
     ContainerRequest nodeLevelRequest =
         new ContainerRequest(capability, new String[] {"host1", "host2"},
             null, Priority.newInstance(1), false);
@@ -135,7 +135,7 @@ public class TestAMRMClientContainerRequest {
         MyResolver.class, DNSToSwitchMapping.class);
     client.init(conf);
     
-    Resource capability = Resource.newInstance(1024, 1, 1);
+    Resource capability = Resource.newInstance(1024, 1, 1, 1);
     ContainerRequest request1 =
         new ContainerRequest(capability, new String[] {"host1", "host2"},
             null, Priority.newInstance(1), false);
@@ -156,7 +156,7 @@ public class TestAMRMClientContainerRequest {
         MyResolver.class, DNSToSwitchMapping.class);
     client.init(conf);
     
-    Resource capability = Resource.newInstance(1024, 1, 1);
+    Resource capability = Resource.newInstance(1024, 1, 1, 1);
     ContainerRequest request1 =
         new ContainerRequest(capability, new String[] {"host1", "host2"},
             null, Priority.newInstance(1), false);
@@ -195,7 +195,7 @@ public class TestAMRMClientContainerRequest {
         MyResolver.class, DNSToSwitchMapping.class);
     client.init(conf);
     
-    Resource capability = Resource.newInstance(1024, 1, 1);
+    Resource capability = Resource.newInstance(1024, 1, 1, 1);
     ContainerRequest request1 =
         new ContainerRequest(capability, new String[] {"host1", "host2"},
             null, Priority.newInstance(1), false);

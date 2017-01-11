@@ -455,18 +455,18 @@ public class MockRM extends ResourceManager {
     return nm;
   }
 
-  public MockNM registerNode(String nodeIdStr, int memory, int vCores, int GPUs)
+  public MockNM registerNode(String nodeIdStr, int memory, int vCores, int GPUs, int GpuBitVec)
       throws Exception {
     MockNM nm =
-        new MockNM(nodeIdStr, memory, vCores, GPUs, getResourceTrackerService());
+        new MockNM(nodeIdStr, memory, vCores, GPUs, GpuBitVec, getResourceTrackerService());
     nm.registerNode();
     return nm;
   }
   
-  public MockNM registerNode(String nodeIdStr, int memory, int vCores, int GPUs,
+  public MockNM registerNode(String nodeIdStr, int memory, int vCores, int GPUs, int GpuBitVec,
       List<ApplicationId> runningApplications) throws Exception {
     MockNM nm =
-        new MockNM(nodeIdStr, memory, vCores, GPUs, getResourceTrackerService(),
+        new MockNM(nodeIdStr, memory, vCores, GPUs, GpuBitVec, getResourceTrackerService(),
             YarnVersionInfo.getVersion());
     nm.registerNode(runningApplications);
     return nm;

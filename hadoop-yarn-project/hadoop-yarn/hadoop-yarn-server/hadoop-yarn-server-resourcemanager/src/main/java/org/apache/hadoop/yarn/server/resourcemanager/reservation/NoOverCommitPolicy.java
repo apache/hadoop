@@ -59,7 +59,7 @@ public class NoOverCommitPolicy implements SharingPolicy {
     for (long t = startTime; t < endTime; t += step) {
       Resource currExistingAllocTot = plan.getTotalCommittedResources(t);
       Resource currNewAlloc = reservation.getResourcesAtTime(t);
-      Resource currOldAlloc = Resource.newInstance(0, 0, 0);
+      Resource currOldAlloc = Resource.newInstance(0, 0, 0, 0);
       if (oldReservation != null) {
         oldReservation.getResourcesAtTime(t);
       }

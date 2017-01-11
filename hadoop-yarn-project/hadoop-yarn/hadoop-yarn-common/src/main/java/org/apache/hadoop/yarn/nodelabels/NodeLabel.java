@@ -32,7 +32,7 @@ public class NodeLabel implements Comparable<NodeLabel> {
   private Set<NodeId> nodeIds;
 
   public NodeLabel(String labelName) {
-    this(labelName, Resource.newInstance(0, 0, 0), 0);
+    this(labelName, Resource.newInstance(0, 0, 0, 0), 0);
   }
   
   protected NodeLabel(String labelName, Resource res, int activeNMs) {

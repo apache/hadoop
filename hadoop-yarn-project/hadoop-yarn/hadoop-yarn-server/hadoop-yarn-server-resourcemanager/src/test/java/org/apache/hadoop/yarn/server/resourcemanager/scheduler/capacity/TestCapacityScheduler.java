@@ -257,13 +257,13 @@ public class TestCapacityScheduler {
     String host_0 = "host_0";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm_0 = 
       registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
-          Resources.createResource(4 * GB, 1, 1));
+          Resources.createResource(4 * GB, 1, 1, 1));
     
     // Register node2
     String host_1 = "host_1";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm_1 = 
       registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
-          Resources.createResource(2 * GB, 1, 1));
+          Resources.createResource(2 * GB, 1, 1, 1));
 
     // ResourceRequest priorities
     Priority priority_0 = 
@@ -278,10 +278,10 @@ public class TestCapacityScheduler {
     application_0.addNodeManager(host_0, 1234, nm_0);
     application_0.addNodeManager(host_1, 1234, nm_1);
 
-    Resource capability_0_0 = Resources.createResource(1 * GB, 1, 1);
+    Resource capability_0_0 = Resources.createResource(1 * GB, 1, 1, 1);
     application_0.addResourceRequestSpec(priority_1, capability_0_0);
     
-    Resource capability_0_1 = Resources.createResource(2 * GB, 1, 1);
+    Resource capability_0_1 = Resources.createResource(2 * GB, 1, 1, 1);
     application_0.addResourceRequestSpec(priority_0, capability_0_1);
 
     Task task_0_0 = new Task(application_0, priority_1, 
@@ -295,10 +295,10 @@ public class TestCapacityScheduler {
     application_1.addNodeManager(host_0, 1234, nm_0);
     application_1.addNodeManager(host_1, 1234, nm_1);
     
-    Resource capability_1_0 = Resources.createResource(3 * GB, 1, 1);
+    Resource capability_1_0 = Resources.createResource(3 * GB, 1, 1, 1);
     application_1.addResourceRequestSpec(priority_1, capability_1_0);
     
-    Resource capability_1_1 = Resources.createResource(2 * GB, 1, 1);
+    Resource capability_1_1 = Resources.createResource(2 * GB, 1, 1, 1);
     application_1.addResourceRequestSpec(priority_0, capability_1_1);
 
     Task task_1_0 = new Task(application_1, priority_1, 
@@ -732,7 +732,7 @@ public class TestCapacityScheduler {
     Map<NodeId, ResourceOption> nodeResourceMap = 
         new HashMap<NodeId, ResourceOption>();
     nodeResourceMap.put(nm1.getNodeId(), 
-        ResourceOption.newInstance(Resource.newInstance(2 * GB, 1, 1), -1));
+        ResourceOption.newInstance(Resource.newInstance(2 * GB, 1, 1, 1), -1));
     UpdateNodeResourceRequest request = 
         UpdateNodeResourceRequest.newInstance(nodeResourceMap);
     AdminService as = ((MockRM)rm).getAdminService();
@@ -1070,8 +1070,8 @@ public class TestCapacityScheduler {
 
     // check values
     waitForAppPreemptionInfo(app0,
-        Resource.newInstance(CONTAINER_MEMORY * 3, 3, 3), 0, 3,
-        Resource.newInstance(CONTAINER_MEMORY * 3, 3, 3), false, 3);
+        Resource.newInstance(CONTAINER_MEMORY * 3, 3, 3, 7), 0, 3,
+        Resource.newInstance(CONTAINER_MEMORY * 3, 3, 3, 7), false, 3);
 
     // kill app0-attempt0 AM container
     cs.killContainer(schedulerAppAttempt.getRMContainer(app0
@@ -1082,8 +1082,8 @@ public class TestCapacityScheduler {
 
     // check values
     waitForAppPreemptionInfo(app0,
-        Resource.newInstance(CONTAINER_MEMORY * 4, 4, 4), 1, 3,
-        Resource.newInstance(0, 0, 0), false, 0);
+        Resource.newInstance(CONTAINER_MEMORY * 4, 4, 4, 15), 1, 3,
+        Resource.newInstance(0, 0, 0, 0), false, 0);
 
     // launch app0-attempt1
     MockAM am1 = launchAM(app0, rm1, nm1);
@@ -1100,8 +1100,8 @@ public class TestCapacityScheduler {
 
     // check values
     waitForAppPreemptionInfo(app0,
-        Resource.newInstance(CONTAINER_MEMORY * 7, 7, 7), 1, 6,
-        Resource.newInstance(CONTAINER_MEMORY * 3, 3, 3), false, 3);
+        Resource.newInstance(CONTAINER_MEMORY * 7, 7, 7, (1 << 7) - 1), 1, 6,
+        Resource.newInstance(CONTAINER_MEMORY * 3, 3, 3, (1 << 3) - 1), false, 3);
 
     rm1.stop();
   }
@@ -1311,13 +1311,13 @@ public class TestCapacityScheduler {
     String host_0 = "host_0";
     NodeManager nm_0 =
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(4 * GB, 1, 1));
+            Resources.createResource(4 * GB, 1, 1, 1));
 
     // Register node2
     String host_1 = "host_1";
     NodeManager nm_1 =
         registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(2 * GB, 1, 1));
+            Resources.createResource(2 * GB, 1, 1, 1));
 
     // ResourceRequest priorities
     Priority priority_0 =
@@ -1335,10 +1335,10 @@ public class TestCapacityScheduler {
     application_0.addNodeManager(host_0, 1234, nm_0);
     application_0.addNodeManager(host_1, 1234, nm_1);
 
-    Resource capability_0_0 = Resources.createResource(1 * GB, 1, 1);
+    Resource capability_0_0 = Resources.createResource(1 * GB, 1, 1, 1);
     application_0.addResourceRequestSpec(priority_1, capability_0_0);
 
-    Resource capability_0_1 = Resources.createResource(2 * GB, 1, 1);
+    Resource capability_0_1 = Resources.createResource(2 * GB, 1, 1, 1);
     application_0.addResourceRequestSpec(priority_0, capability_0_1);
 
     Task task_0_0 =
@@ -1353,10 +1353,10 @@ public class TestCapacityScheduler {
     application_1.addNodeManager(host_0, 1234, nm_0);
     application_1.addNodeManager(host_1, 1234, nm_1);
 
-    Resource capability_1_0 = Resources.createResource(1 * GB, 1, 1);
+    Resource capability_1_0 = Resources.createResource(1 * GB, 1, 1, 1);
     application_1.addResourceRequestSpec(priority_1, capability_1_0);
 
-    Resource capability_1_1 = Resources.createResource(2 * GB, 1, 1);
+    Resource capability_1_1 = Resources.createResource(2 * GB, 1, 1, 1);
     application_1.addResourceRequestSpec(priority_0, capability_1_1);
 
     Task task_1_0 =
@@ -1431,13 +1431,13 @@ public class TestCapacityScheduler {
     String host_0 = "host_0";
     NodeManager nm_0 =
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(5 * GB, 1, 1));
+            Resources.createResource(5 * GB, 1, 1, 1));
 
     // Register node2
     String host_1 = "host_1";
     NodeManager nm_1 =
         registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(5 * GB, 1, 1));
+            Resources.createResource(5 * GB, 1, 1, 1));
 
     // ResourceRequest priorities
     Priority priority_0 =
@@ -1455,10 +1455,10 @@ public class TestCapacityScheduler {
     application_0.addNodeManager(host_0, 1234, nm_0);
     application_0.addNodeManager(host_1, 1234, nm_1);
 
-    Resource capability_0_0 = Resources.createResource(3 * GB, 1, 1);
+    Resource capability_0_0 = Resources.createResource(3 * GB, 1, 1, 1);
     application_0.addResourceRequestSpec(priority_1, capability_0_0);
 
-    Resource capability_0_1 = Resources.createResource(2 * GB, 1, 1);
+    Resource capability_0_1 = Resources.createResource(2 * GB, 1, 1, 1);
     application_0.addResourceRequestSpec(priority_0, capability_0_1);
 
     Task task_0_0 =
@@ -1473,10 +1473,10 @@ public class TestCapacityScheduler {
     application_1.addNodeManager(host_0, 1234, nm_0);
     application_1.addNodeManager(host_1, 1234, nm_1);
 
-    Resource capability_1_0 = Resources.createResource(1 * GB, 1, 1);
+    Resource capability_1_0 = Resources.createResource(1 * GB, 1, 1, 1);
     application_1.addResourceRequestSpec(priority_1, capability_1_0);
 
-    Resource capability_1_1 = Resources.createResource(2 * GB, 1, 1);
+    Resource capability_1_1 = Resources.createResource(2 * GB, 1, 1, 1);
     application_1.addResourceRequestSpec(priority_0, capability_1_1);
 
     Task task_1_0 =
@@ -1557,7 +1557,7 @@ public class TestCapacityScheduler {
     String host_0 = "host_0";
     NodeManager nm_0 =
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(6 * GB, 1, 1));
+            Resources.createResource(6 * GB, 1, 1, 1));
 
     // ResourceRequest priorities
     Priority priority_0 =
@@ -1574,10 +1574,10 @@ public class TestCapacityScheduler {
 
     application_0.addNodeManager(host_0, 1234, nm_0);
 
-    Resource capability_0_0 = Resources.createResource(3 * GB, 1, 1);
+    Resource capability_0_0 = Resources.createResource(3 * GB, 1, 1, 1);
     application_0.addResourceRequestSpec(priority_1, capability_0_0);
 
-    Resource capability_0_1 = Resources.createResource(2 * GB, 1, 1);
+    Resource capability_0_1 = Resources.createResource(2 * GB, 1, 1, 1);
     application_0.addResourceRequestSpec(priority_0, capability_0_1);
 
     Task task_0_0 =
@@ -1609,13 +1609,13 @@ public class TestCapacityScheduler {
     String host_0 = "host_0";
     NodeManager nm_0 =
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(5 * GB, 1, 1));
+            Resources.createResource(5 * GB, 1, 1, 1));
 
     // Register node2
     String host_1 = "host_1";
     NodeManager nm_1 =
         registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(5 * GB, 1, 1));
+            Resources.createResource(5 * GB, 1, 1, 1));
 
     // ResourceRequest priorities
     Priority priority_0 =
@@ -1633,10 +1633,10 @@ public class TestCapacityScheduler {
     application_0.addNodeManager(host_0, 1234, nm_0);
     application_0.addNodeManager(host_1, 1234, nm_1);
 
-    Resource capability_0_0 = Resources.createResource(3 * GB, 1, 1);
+    Resource capability_0_0 = Resources.createResource(3 * GB, 1, 1, 1);
     application_0.addResourceRequestSpec(priority_1, capability_0_0);
 
-    Resource capability_0_1 = Resources.createResource(2 * GB, 1, 1);
+    Resource capability_0_1 = Resources.createResource(2 * GB, 1, 1, 1);
     application_0.addResourceRequestSpec(priority_0, capability_0_1);
 
     Task task_0_0 =
@@ -1651,10 +1651,10 @@ public class TestCapacityScheduler {
     application_1.addNodeManager(host_0, 1234, nm_0);
     application_1.addNodeManager(host_1, 1234, nm_1);
 
-    Resource capability_1_0 = Resources.createResource(1 * GB, 1, 1);
+    Resource capability_1_0 = Resources.createResource(1 * GB, 1, 1, 1);
     application_1.addResourceRequestSpec(priority_1, capability_1_0);
 
-    Resource capability_1_1 = Resources.createResource(2 * GB, 1, 1);
+    Resource capability_1_1 = Resources.createResource(2 * GB, 1, 1, 1);
     application_1.addResourceRequestSpec(priority_0, capability_1_1);
 
     Task task_1_0 =
@@ -2065,11 +2065,11 @@ public class TestCapacityScheduler {
     MockRM rm = new MockRM(conf);
     rm.start();
 
-    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10 * GB, 1, 1);
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10 * GB, 1, 1, 1);
 
     // register extra nodes to bump up cluster resource
-    MockNM nm2 = rm.registerNode("127.0.0.1:1235", 10 * GB, 4, 4);
-    rm.registerNode("127.0.0.1:1236", 10 * GB, 4, 4);
+    MockNM nm2 = rm.registerNode("127.0.0.1:1235", 10 * GB, 4, 4, 15);
+    rm.registerNode("127.0.0.1:1236", 10 * GB, 4, 4, 15);
 
     RMApp app1 = rm.submitApp(1024);
     // kick the scheduling
@@ -2616,12 +2616,12 @@ public class TestCapacityScheduler {
     Assert.assertNotNull(attempt);
 
     Assert
-        .assertEquals(Resource.newInstance(0, 0, 0), allocate.getResourceLimit());
-    Assert.assertEquals(Resource.newInstance(0, 0, 0),
+        .assertEquals(Resource.newInstance(0, 0, 0, 0), allocate.getResourceLimit());
+    Assert.assertEquals(Resource.newInstance(0, 0, 0, 0),
         attemptMetric.getApplicationAttemptHeadroom());
 
     // Add a node to cluster
-    Resource newResource = Resource.newInstance(4 * GB, 1, 1);
+    Resource newResource = Resource.newInstance(4 * GB, 1, 1, 1);
     RMNode node = MockNodes.newNodeInfo(0, newResource, 1, "127.0.0.1");
     cs.handle(new NodeAddedSchedulerEvent(node));
 
@@ -2709,11 +2709,11 @@ public class TestCapacityScheduler {
     cs.handle(addAttemptEvent);
 
     // add nodes  to cluster, so cluster have 20GB and 20 vcores
-    Resource newResource = Resource.newInstance(10 * GB, 10, 10);
+    Resource newResource = Resource.newInstance(10 * GB, 10, 10, (1 << 10) - 1);
     RMNode node = MockNodes.newNodeInfo(0, newResource, 1, "127.0.0.1");
     cs.handle(new NodeAddedSchedulerEvent(node));
 
-    Resource newResource2 = Resource.newInstance(10 * GB, 10, 10);
+    Resource newResource2 = Resource.newInstance(10 * GB, 10, 10, (1 << 10) - 1);
     RMNode node2 = MockNodes.newNodeInfo(0, newResource2, 1, "127.0.0.2");
     cs.handle(new NodeAddedSchedulerEvent(node2));
 
@@ -2797,7 +2797,7 @@ public class TestCapacityScheduler {
 
     Resource amResource =
         Resource.newInstance(amResourceLimit.getMemory() + 1,
-            amResourceLimit.getVirtualCores() + 1, amResourceLimit.getGPUs() + 1);
+            amResourceLimit.getVirtualCores() + 1, amResourceLimit.getGPUs() + 1, (1 << (amResourceLimit.getGPUs() + 1)) - 1);
 
     rm.submitApp(amResource.getMemory(), "app-1", userName, null, queueName);
 
@@ -2913,7 +2913,7 @@ public class TestCapacityScheduler {
 
     // Register node1
     String hostname1 = "localhost1";
-    Resource capability = BuilderUtils.newResource(4096, 4, 4);
+    Resource capability = BuilderUtils.newResource(4096, 4, 4, (1 << 4) - 1);
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
     RegisterNodeManagerRequest request1 =
@@ -2928,7 +2928,7 @@ public class TestCapacityScheduler {
     Assert.assertEquals("Initial cluster resources don't match", capability,
         clusterResource);
 
-    Resource newCapability = BuilderUtils.newResource(1024, 1, 1);
+    Resource newCapability = BuilderUtils.newResource(1024, 1, 1, 1);
     RegisterNodeManagerRequest request2 =
         recordFactory.newRecordInstance(RegisterNodeManagerRequest.class);
     request2.setNodeId(nodeId1);

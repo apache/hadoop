@@ -46,7 +46,7 @@ class InMemoryPlan implements Plan {
 
   private static final Logger LOG = LoggerFactory.getLogger(InMemoryPlan.class);
 
-  private static final Resource ZERO_RESOURCE = Resource.newInstance(0, 0, 0);
+  private static final Resource ZERO_RESOURCE = Resource.newInstance(0, 0, 0, 0);
 
   private TreeMap<ReservationInterval, Set<InMemoryReservationAllocation>> currentReservations =
       new TreeMap<ReservationInterval, Set<InMemoryReservationAllocation>>();

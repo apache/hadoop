@@ -174,6 +174,9 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS =
       YARN_PREFIX + "scheduler.minimum-allocation-gpus";
   public static final int DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS = 1;
+  public static final String RM_SCHEDULER_MINIMUM_ALLOCATION_GPUBITVEC =
+          YARN_PREFIX + "scheduler.minimum-allocation-gpu-bit-vec";
+  public static final int DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_GPUBITVEC = 0;
 
   /** Maximum request grant-able by the RM scheduler. */
   public static final String RM_SCHEDULER_MAXIMUM_ALLOCATION_MB =
@@ -185,6 +188,9 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS =
       YARN_PREFIX + "scheduler.maximum-allocation-gpus";
   public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS = 4;
+  public static final String RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUBITVEC =
+          YARN_PREFIX + "scheduler.maximum-allocation-gpu-bit-vec";
+  public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUBITVEC = 15;
 
   /** Number of threads to handle scheduler interface.*/
   public static final String RM_SCHEDULER_CLIENT_THREAD_COUNT =
@@ -854,6 +860,10 @@ public class YarnConfiguration extends Configuration {
   /** Number of GPUs which can be allocated for containers.*/
   public static final String NM_GPUS = NM_PREFIX + "resource.GPUs";
   public static final int DEFAULT_NM_GPUS = 8;
+
+  /** Number of GpuBitVec which can be allocated for containers.*/
+  public static final String NM_GPUBITVEC = NM_PREFIX + "resource.GpuBitVec";
+  public static final int DEFAULT_NM_GPUBITVEC = 8;
 
   /** Percentage of overall GPU which can be allocated for containers. */
   public static final String NM_RESOURCE_PERCENTAGE_PHYSICAL_GPU_LIMIT =

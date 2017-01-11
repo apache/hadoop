@@ -122,7 +122,7 @@ public class TestNMContainerTokenSecretManager {
     long rmid = cid.getApplicationAttemptId().getApplicationId()
         .getClusterTimestamp();
     ContainerTokenIdentifier ctid = new ContainerTokenIdentifier(cid,
-        nodeId.toString(), user, BuilderUtils.newResource(1024, 1, 1),
+        nodeId.toString(), user, BuilderUtils.newResource(1024, 1, 1, 1),
         System.currentTimeMillis() + 100000L,
         secretMgr.getCurrentKey().getKeyId(), rmid,
         Priority.newInstance(0), 0);

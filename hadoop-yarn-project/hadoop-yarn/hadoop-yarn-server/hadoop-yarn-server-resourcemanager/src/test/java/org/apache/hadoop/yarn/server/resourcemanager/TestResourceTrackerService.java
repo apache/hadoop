@@ -299,7 +299,7 @@ public class TestResourceTrackerService {
     RegisterNodeManagerRequest req = Records.newRecord(
         RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1, 1);
+    Resource capability = BuilderUtils.newResource(1024, 1, 1, 1);
     req.setResource(capability);
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
@@ -324,7 +324,7 @@ public class TestResourceTrackerService {
     RegisterNodeManagerRequest req = Records.newRecord(
         RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1, 1);
+    Resource capability = BuilderUtils.newResource(1024, 1, 1, 1);
     req.setResource(capability);
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
@@ -394,7 +394,7 @@ public class TestResourceTrackerService {
     NodeId nodeId = BuilderUtils.newNodeId("host", 1234);
     req.setNodeId(nodeId);
 
-    Resource capability = BuilderUtils.newResource(1024, 1, 1);
+    Resource capability = BuilderUtils.newResource(1024, 1, 1, 1);
     req.setResource(capability);
     RegisterNodeManagerResponse response1 =
         resourceTrackerService.registerNodeManager(req);
@@ -517,7 +517,7 @@ public class TestResourceTrackerService {
         NMContainerStatus.newInstance(
           ContainerId.newContainerId(
             ApplicationAttemptId.newInstance(app.getApplicationId(), 2), 1),
-          ContainerState.COMPLETE, Resource.newInstance(1024, 1, 1),
+          ContainerState.COMPLETE, Resource.newInstance(1024, 1, 1, 1),
           "Dummy Completed", 0, Priority.newInstance(10), 1234);
     rm.getResourceTrackerService().handleNMContainerStatus(report, null);
     verify(handler, never()).handle((Event) any());
@@ -528,7 +528,7 @@ public class TestResourceTrackerService {
     currentAttempt.setMasterContainer(null);
     report = NMContainerStatus.newInstance(
           ContainerId.newContainerId(currentAttempt.getAppAttemptId(), 0),
-          ContainerState.COMPLETE, Resource.newInstance(1024, 1, 1),
+          ContainerState.COMPLETE, Resource.newInstance(1024, 1, 1, 1),
           "Dummy Completed", 0, Priority.newInstance(10), 1234);
     rm.getResourceTrackerService().handleNMContainerStatus(report, null);
     verify(handler, never()).handle((Event)any());
@@ -540,7 +540,7 @@ public class TestResourceTrackerService {
     report = NMContainerStatus.newInstance(
           ContainerId.newContainerId(
             ApplicationAttemptId.newInstance(app.getApplicationId(), 2), 1),
-          ContainerState.COMPLETE, Resource.newInstance(1024, 1, 1),
+          ContainerState.COMPLETE, Resource.newInstance(1024, 1, 1, 1),
           "Dummy Completed", 0, Priority.newInstance(10), 1234);
     try {
       rm.getResourceTrackerService().handleNMContainerStatus(report, null);
@@ -555,7 +555,7 @@ public class TestResourceTrackerService {
     currentAttempt.setMasterContainer(null);
     report = NMContainerStatus.newInstance(
       ContainerId.newContainerId(currentAttempt.getAppAttemptId(), 0),
-      ContainerState.COMPLETE, Resource.newInstance(1024, 1, 1),
+      ContainerState.COMPLETE, Resource.newInstance(1024, 1, 1, 1),
       "Dummy Completed", 0, Priority.newInstance(10), 1234);
     try {
       rm.getResourceTrackerService().handleNMContainerStatus(report, null);
@@ -632,7 +632,7 @@ public class TestResourceTrackerService {
     // reconnect of node with changed capability and running applications
     List<ApplicationId> runningApps = new ArrayList<ApplicationId>();
     runningApps.add(ApplicationId.newInstance(1, 0));
-    nm1 = rm.registerNode("host2:5678", 15360, 2, 2, runningApps);
+    nm1 = rm.registerNode("host2:5678", 15360, 2, 2, 3, runningApps);
     dispatcher.await();
     response = nm1.nodeHeartbeat(true);
     dispatcher.await();

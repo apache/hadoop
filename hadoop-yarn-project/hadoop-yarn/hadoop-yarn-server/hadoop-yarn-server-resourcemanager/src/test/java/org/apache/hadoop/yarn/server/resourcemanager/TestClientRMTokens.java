@@ -501,9 +501,9 @@ public class TestClientRMTokens {
 
   private static ResourceScheduler createMockScheduler(Configuration conf) {
     ResourceScheduler mockSched = mock(ResourceScheduler.class);
-    doReturn(BuilderUtils.newResource(512, 0, 0)).when(mockSched)
+    doReturn(BuilderUtils.newResource(512, 0, 0, 0)).when(mockSched)
         .getMinimumResourceCapability();
-    doReturn(BuilderUtils.newResource(5120, 0, 0)).when(mockSched)
+    doReturn(BuilderUtils.newResource(5120, 0, 0, 0)).when(mockSched)
         .getMaximumResourceCapability();
     return mockSched;
   }

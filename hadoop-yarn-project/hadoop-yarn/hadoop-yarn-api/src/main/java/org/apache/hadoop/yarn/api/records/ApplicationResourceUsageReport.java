@@ -36,7 +36,7 @@ public abstract class ApplicationResourceUsageReport {
   public static ApplicationResourceUsageReport newInstance(
       int numUsedContainers, int numReservedContainers, Resource usedResources,
       Resource reservedResources, Resource neededResources, long memorySeconds,
-      long vcoreSeconds, long GPUSeconds) {
+      long vcoreSeconds, long GPUSeconds, long GpuBitVecSeconds) {
     ApplicationResourceUsageReport report =
         Records.newRecord(ApplicationResourceUsageReport.class);
     report.setNumUsedContainers(numUsedContainers);
@@ -47,6 +47,7 @@ public abstract class ApplicationResourceUsageReport {
     report.setMemorySeconds(memorySeconds);
     report.setVcoreSeconds(vcoreSeconds);
     report.setGPUSeconds(GPUSeconds);
+    report.setGpuBitVecSeconds(GpuBitVecSeconds);
     return report;
   }
 
@@ -171,4 +172,23 @@ public abstract class ApplicationResourceUsageReport {
   @Public
   @Unstable
   public abstract long getGPUSeconds();
+
+  /**
+   * Set the Gpu bit vector that the application has allocated
+   * times the number of seconds the application has been running.
+   * @param GpuBitVec_seconds the gpu bit vector seconds
+   */
+
+  @Private
+  @Unstable
+  public abstract void setGpuBitVecSeconds(long GpuBitVec_seconds);
+
+  /**
+   * Get the Gpu bit vector that the application has allocated
+   * times the number of seconds the application has been running.
+   * @return the gpu bit vector seconds
+   */
+  @Public
+  @Unstable
+  public abstract long getGpuBitVecSeconds();
 }

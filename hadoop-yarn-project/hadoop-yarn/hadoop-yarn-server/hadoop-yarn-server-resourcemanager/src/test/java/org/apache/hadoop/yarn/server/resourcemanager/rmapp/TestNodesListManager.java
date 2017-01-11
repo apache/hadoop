@@ -68,7 +68,7 @@ public class TestNodesListManager {
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 28000);
     NodesListManager nodesListManager = rm.getNodesListManager();
-    Resource clusterResource = Resource.newInstance(28000, 8, 8);
+    Resource clusterResource = Resource.newInstance(28000, 8, 8, (1 << 8) - 1);
     RMNode rmnode = MockNodes.newNodeInfo(1, clusterResource);
 
     // Create killing APP

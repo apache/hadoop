@@ -41,8 +41,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 @Private
 @Unstable
 public abstract class FSQueue implements Queue, Schedulable {
-  private Resource fairShare = Resources.createResource(0, 0, 0);
-  private Resource steadyFairShare = Resources.createResource(0, 0, 0);
+  private Resource fairShare = Resources.createResource(0, 0, 0, 0);
+  private Resource steadyFairShare = Resources.createResource(0, 0, 0, 0);
   private final String name;
   protected final FairScheduler scheduler;
   private final FSQueueMetrics metrics;

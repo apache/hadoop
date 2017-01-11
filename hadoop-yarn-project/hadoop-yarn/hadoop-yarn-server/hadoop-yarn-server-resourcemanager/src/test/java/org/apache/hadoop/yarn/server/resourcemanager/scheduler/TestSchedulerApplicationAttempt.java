@@ -72,7 +72,7 @@ public class TestSchedulerApplicationAttempt {
     assertEquals(0x30000000001L, app.getNewContainerId());
     
     // Resource request
-    Resource requestedResource = Resource.newInstance(1536, 2, 2);
+    Resource requestedResource = Resource.newInstance(1536, 2, 2, 3);
     Priority requestedPriority = Priority.newInstance(2);
     ResourceRequest request = ResourceRequest.newInstance(requestedPriority,
         ResourceRequest.ANY, requestedResource, 3);
@@ -87,7 +87,7 @@ public class TestSchedulerApplicationAttempt {
     
     // Reserved container
     Priority prio1 = Priority.newInstance(1);
-    Resource reservedResource = Resource.newInstance(2048, 3, 3);
+    Resource reservedResource = Resource.newInstance(2048, 3, 3, 7);
     RMContainer container2 = createReservedRMContainer(appAttId, 1, reservedResource,
         node.getNodeID(), prio1);
     Map<NodeId, RMContainer> reservations = new HashMap<NodeId, RMContainer>();

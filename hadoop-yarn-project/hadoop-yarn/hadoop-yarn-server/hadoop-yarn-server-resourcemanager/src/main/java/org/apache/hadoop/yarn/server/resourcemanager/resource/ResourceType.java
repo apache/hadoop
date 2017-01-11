@@ -24,5 +24,5 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 @Private
 @Evolving
 public enum ResourceType {
-  MEMORY, CPU, GPU
+  MEMORY, CPU, GPU, GPUBITVEC
 }

@@ -378,7 +378,7 @@ public class ParentQueue extends AbstractCSQueue {
   public synchronized CSAssignment assignContainers(Resource clusterResource,
       FiCaSchedulerNode node, ResourceLimits resourceLimits) {
     CSAssignment assignment = 
-        new CSAssignment(Resources.createResource(0, 0, 0), NodeType.NODE_LOCAL);
+        new CSAssignment(Resources.createResource(0, 0, 0, 0), NodeType.NODE_LOCAL);
     Set<String> nodeLabels = node.getLabels();
     
     // if our queue cannot access this node, just return
@@ -398,7 +398,7 @@ public class ParentQueue extends AbstractCSQueue {
       if (!super.canAssignToThisQueue(clusterResource, nodeLabels, resourceLimits,
           minimumAllocation, Resources.createResource(getMetrics()
               .getReservedMB(), getMetrics().getReservedVirtualCores(), getMetrics()
-              .getReservedGPUs()))) {
+              .getReservedGPUs(), 0))) {
         break;
       }
       
@@ -492,7 +492,7 @@ public class ParentQueue extends AbstractCSQueue {
   private synchronized CSAssignment assignContainersToChildQueues(
       Resource cluster, FiCaSchedulerNode node, ResourceLimits limits) {
     CSAssignment assignment = 
-        new CSAssignment(Resources.createResource(0, 0, 0), NodeType.NODE_LOCAL);
+        new CSAssignment(Resources.createResource(0, 0, 0, 0), NodeType.NODE_LOCAL);
     
     printChildQueues();
 

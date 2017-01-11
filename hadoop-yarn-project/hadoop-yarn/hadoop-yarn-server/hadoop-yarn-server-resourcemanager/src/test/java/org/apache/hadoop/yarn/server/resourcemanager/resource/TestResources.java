@@ -24,20 +24,20 @@ import org.junit.Test;
 public class TestResources {
   @Test(timeout=1000)
   public void testFitsIn() {
-    assertTrue(fitsIn(createResource(1, 1, 1), createResource(2, 2, 2)));
-    assertTrue(fitsIn(createResource(2, 2, 2), createResource(2, 2, 2)));
-    assertFalse(fitsIn(createResource(2, 2, 2), createResource(1, 1, 1)));
-    assertFalse(fitsIn(createResource(1, 2, 1), createResource(2, 1, 2)));
-    assertFalse(fitsIn(createResource(2, 1, 1), createResource(1, 2, 2)));
+    assertTrue(fitsIn(createResource(1, 1, 1, 1), createResource(2, 2, 2, 3)));
+    assertTrue(fitsIn(createResource(2, 2, 2, 3), createResource(2, 2, 2, 3)));
+    assertFalse(fitsIn(createResource(2, 2, 2, 3), createResource(1, 1, 1, 1)));
+    assertFalse(fitsIn(createResource(1, 2, 1, 1), createResource(2, 1, 2, 3)));
+    assertFalse(fitsIn(createResource(2, 1, 1, 1), createResource(1, 2, 2, 3)));
   }
   
   @Test(timeout=1000)
   public void testComponentwiseMin() {
-    assertEquals(createResource(1, 1, 1),
-        componentwiseMin(createResource(1, 1, 1), createResource(2, 2, 2)));
-    assertEquals(createResource(1, 1, 1),
-        componentwiseMin(createResource(2, 2, 2), createResource(1, 1, 1)));
-    assertEquals(createResource(1, 1, 1),
-        componentwiseMin(createResource(1, 2, 1), createResource(2, 1, 2)));
+    assertEquals(createResource(1, 1, 1, 1),
+        componentwiseMin(createResource(1, 1, 1, 1), createResource(2, 2, 2, 3)));
+    assertEquals(createResource(1, 1, 1, 1),
+        componentwiseMin(createResource(2, 2, 2, 3), createResource(1, 1, 1, 1)));
+    assertEquals(createResource(1, 1, 1, 1),
+        componentwiseMin(createResource(1, 2, 1, 1), createResource(2, 1, 2, 3)));
   }
 }

@@ -92,6 +92,18 @@ public class ResourcePBImpl extends Resource {
   }
 
   @Override
+  public int getGpuBitVec() {
+    ResourceProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getGpuBitVec());
+  }
+
+  @Override
+  public void setGpuBitVec(int GpuBitVec) {
+    maybeInitBuilder();
+    builder.setGpuBitVec((GpuBitVec));
+  }
+
+  @Override
   public int compareTo(Resource other) {
     int diff = this.getMemory() - other.getMemory();
     if (diff == 0) {

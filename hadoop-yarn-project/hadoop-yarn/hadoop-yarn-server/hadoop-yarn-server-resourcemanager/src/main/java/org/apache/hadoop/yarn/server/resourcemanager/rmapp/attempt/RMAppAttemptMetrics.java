@@ -40,9 +40,9 @@ public class RMAppAttemptMetrics {
 
   private ApplicationAttemptId attemptId = null;
   // preemption info
-  private Resource resourcePreempted = Resource.newInstance(0, 0, 0);
+  private Resource resourcePreempted = Resource.newInstance(0, 0, 0, 0);
   // application headroom
-  private volatile Resource applicationHeadroom = Resource.newInstance(0, 0, 0);
+  private volatile Resource applicationHeadroom = Resource.newInstance(0, 0, 0, 0);
   private AtomicInteger numNonAMContainersPreempted = new AtomicInteger(0);
   private AtomicBoolean isPreempted = new AtomicBoolean(false);
   
@@ -51,6 +51,7 @@ public class RMAppAttemptMetrics {
   private AtomicLong finishedMemorySeconds = new AtomicLong(0);
   private AtomicLong finishedVcoreSeconds = new AtomicLong(0);
   private AtomicLong finishedGPUSeconds = new AtomicLong(0);
+  private AtomicLong finishedGpuBitVecSeconds = new AtomicLong(0);
   private RMContext rmContext;
 
   private int[][] localityStatistics =
@@ -115,6 +116,7 @@ public class RMAppAttemptMetrics {
     long memorySeconds = finishedMemorySeconds.get();
     long vcoreSeconds = finishedVcoreSeconds.get();
     long GPUSeconds = finishedGPUSeconds.get();
+    long GpuBitVecSeconds = finishedGpuBitVecSeconds.get();
 
     // Only add in the running containers if this is the active attempt.
     RMAppAttempt currentAttempt = rmContext.getRMApps()
@@ -126,17 +128,20 @@ public class RMAppAttemptMetrics {
         memorySeconds += appResUsageReport.getMemorySeconds();
         vcoreSeconds += appResUsageReport.getVcoreSeconds();
         GPUSeconds += appResUsageReport.getGPUSeconds();
+        GpuBitVecSeconds += appResUsageReport.getGpuBitVecSeconds();
       }
     }
-    return new AggregateAppResourceUsage(memorySeconds, vcoreSeconds, GPUSeconds);
+    return new AggregateAppResourceUsage(memorySeconds, vcoreSeconds, GPUSeconds, GpuBitVecSeconds);
   }
 
   public void updateAggregateAppResourceUsage(long finishedMemorySeconds,
                                               long finishedVcoreSeconds,
-                                              long finishedGPUSeconds) {
+                                              long finishedGPUSeconds,
+                                              long finishedGpuBitVecSeconds) {
     this.finishedMemorySeconds.addAndGet(finishedMemorySeconds);
     this.finishedVcoreSeconds.addAndGet(finishedVcoreSeconds);
     this.finishedGPUSeconds.addAndGet(finishedGPUSeconds);
+    this.finishedGpuBitVecSeconds.addAndGet(finishedGpuBitVecSeconds);
   }
 
   public void incNumAllocatedContainers(NodeType containerType,

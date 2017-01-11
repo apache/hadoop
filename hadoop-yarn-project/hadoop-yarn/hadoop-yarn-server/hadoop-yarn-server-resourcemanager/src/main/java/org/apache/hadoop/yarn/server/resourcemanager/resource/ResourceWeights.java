@@ -29,10 +29,11 @@ public class ResourceWeights {
 
   private float[] weights = new float[ResourceType.values().length];
 
-  public ResourceWeights(float memoryWeight, float cpuWeight, float gpuWeight) {
+  public ResourceWeights(float memoryWeight, float cpuWeight, float gpuWeight, float gpuBitVecWeight) {
     weights[ResourceType.MEMORY.ordinal()] = memoryWeight;
     weights[ResourceType.CPU.ordinal()] = cpuWeight;
     weights[ResourceType.GPU.ordinal()] = gpuWeight;
+    weights[ResourceType.GPUBITVEC.ordinal()] = gpuBitVecWeight;
   }
 
   public ResourceWeights(float weight) {

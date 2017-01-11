@@ -53,11 +53,12 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Public
   @Stable
-  public static Resource newInstance(int memory, int vCores, int GPUs) {
+  public static Resource newInstance(int memory, int vCores, int GPUs, int GpuBitVec ) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     resource.setVirtualCores(vCores);
     resource.setGPUs(GPUs);
+    resource.setGpuBitVec(GpuBitVec);
     return resource;
   }
 
@@ -134,6 +135,32 @@ public abstract class Resource implements Comparable<Resource> {
   @Evolving
   public abstract void setGPUs(int GPUs);
 
+  /**
+   * Get <em> Gpu Bit Vector </em> of the resource.
+   *
+   * GpuBitVec is a unit for representing GPU information with locality awareness.
+   * Bit being set 1 means the related GPU is requested/occupied. The sum of 1 bits should equal to #GPUs.
+   * Bit being set 0 means the related GPU is idle/not exist.
+   *
+   * @return <em>Gpu Bit Vector</em> of the resource
+   */
+  @Public
+  @Evolving
+  public abstract int getGpuBitVec();
+
+  /**
+   * Set <em>Gpu Bit Vector</em> of the resource.
+   *
+   * GpuBitVec is a unit for representing GPU information with locality awareness.
+   * Bit being set 1 means the related GPU is requested/occupied. The sum of 1 bits should equal to #GPUs.
+   * Bit being set 0 means the related GPU is idle/not exist.
+   *
+   * @param GpuBitVec <em>Gpu Bit Vector</em> of the resource
+   */
+  @Public
+  @Evolving
+  public abstract void setGpuBitVec(int GpuBitVec);
+
   @Override
   public int hashCode() {
     final int prime = 263167;
@@ -141,6 +168,7 @@ public abstract class Resource implements Comparable<Resource> {
     result = 939769357 + getMemory(); // prime * result = 939769357 initially
     result = prime * result + getVirtualCores();
     result = prime * result + getGPUs();
+    result = prime * result + getGpuBitVec();
     return result;
   }
 
@@ -155,7 +183,8 @@ public abstract class Resource implements Comparable<Resource> {
     Resource other = (Resource) obj;
     if (getMemory() != other.getMemory() ||
         getVirtualCores() != other.getVirtualCores() ||
-        getGPUs() != other.getGPUs()) {
+        getGPUs() != other.getGPUs() ||
+        getGpuBitVec() != other.getGpuBitVec()) {
       return false;
     }
     return true;
@@ -163,6 +192,6 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Override
   public String toString() {
-    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores() + ", GPUs:" + getGPUs() + ">";
+    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores() + ", GPUs:" + getGPUs() + ", GpuBitVec:" + getGpuBitVec() + ">";
   }
 }

@@ -57,7 +57,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
     conf = null;
   }
 
-  private void createClusterWithQueuesAndOneNode(int mem, int vCores, int GPUs,
+  private void createClusterWithQueuesAndOneNode(int mem, int vCores, int GPUs, int GpuBitVec,
       String policy) throws IOException {
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -86,7 +86,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
     scheduler = (FairScheduler) resourceManager.getResourceScheduler();
 
     RMNode node1 = MockNodes.newNodeInfo(1,
-        Resources.createResource(mem, vCores, GPUs), 1, "127.0.0.1");
+        Resources.createResource(mem, vCores, GPUs, GpuBitVec), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
   }
@@ -94,7 +94,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
   @Test
   public void testFairShareNoAppsRunning() throws IOException {
     int nodeCapacity = 16;
-    createClusterWithQueuesAndOneNode(nodeCapacity * 1024, nodeCapacity, nodeCapacity, "fair");
+    createClusterWithQueuesAndOneNode(nodeCapacity * 1024, nodeCapacity, nodeCapacity, (1 << nodeCapacity) - 1, "fair");
 
     scheduler.update();
     // No apps are running in the cluster,verify if fair share is zero
@@ -118,7 +118,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
   @Test
   public void testFairShareOneAppRunning() throws IOException {
     int nodeCapacity = 16;
-    createClusterWithQueuesAndOneNode(nodeCapacity * 1024, nodeCapacity, nodeCapacity, "fair");
+    createClusterWithQueuesAndOneNode(nodeCapacity * 1024, nodeCapacity, nodeCapacity, (1 << nodeCapacity) - 1, "fair");
 
     // Run a app in a childA1. Verify whether fair share is 100% in childA1,
     // since it is the only active queue.
@@ -147,7 +147,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
   public void testFairShareMultipleActiveQueuesUnderSameParent()
       throws IOException {
     int nodeCapacity = 16;
-    createClusterWithQueuesAndOneNode(nodeCapacity * 1024, nodeCapacity, nodeCapacity, "fair");
+    createClusterWithQueuesAndOneNode(nodeCapacity * 1024, nodeCapacity, nodeCapacity, (1 << nodeCapacity) - 1, "fair");
 
     // Run apps in childA1,childA2,childA3
     createSchedulingRequest(2 * 1024, 2, 2, "root.parentA.childA1", "user1");
@@ -176,7 +176,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
   public void testFairShareMultipleActiveQueuesUnderDifferentParent()
       throws IOException {
     int nodeCapacity = 16;
-    createClusterWithQueuesAndOneNode(nodeCapacity * 1024, nodeCapacity, nodeCapacity, "fair");
+    createClusterWithQueuesAndOneNode(nodeCapacity * 1024, nodeCapacity, nodeCapacity, (1 << nodeCapacity) - 1, "fair");
 
     // Run apps in childA1,childA2 which are under parentA
     createSchedulingRequest(2 * 1024, 2, 2, "root.parentA.childA1", "user1");
@@ -227,7 +227,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
   @Test
   public void testFairShareResetsToZeroWhenAppsComplete() throws IOException {
     int nodeCapacity = 16;
-    createClusterWithQueuesAndOneNode(nodeCapacity * 1024, nodeCapacity, nodeCapacity, "fair");
+    createClusterWithQueuesAndOneNode(nodeCapacity * 1024, nodeCapacity, nodeCapacity, (1 << nodeCapacity) - 1, "fair");
 
     // Run apps in childA1,childA2 which are under parentA
     ApplicationAttemptId app1 = createSchedulingRequest(2 * 1024, 2, 2,
@@ -280,7 +280,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
     int nodeMem = 16 * 1024;
     int nodeVCores = 10;
     int nodeGPUs = 10;
-    createClusterWithQueuesAndOneNode(nodeMem, nodeVCores, nodeGPUs, "drf");
+    createClusterWithQueuesAndOneNode(nodeMem, nodeVCores, nodeGPUs, (1 << nodeGPUs) - 1, "drf");
 
     // Run apps in childA1,childA2 which are under parentA
     createSchedulingRequest(2 * 1024, "root.parentA.childA1", "user1");

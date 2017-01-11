@@ -72,7 +72,7 @@ public class ApplicationHistoryStoreTestUtils {
   protected void writeContainerStartData(ContainerId containerId)
       throws IOException {
     store.containerStarted(ContainerStartData.newInstance(containerId,
-      Resource.newInstance(0, 0, 0), NodeId.newInstance("localhost", 0),
+      Resource.newInstance(0, 0, 0, 0), NodeId.newInstance("localhost", 0),
       Priority.newInstance(containerId.getId()), 0));
   }
 

@@ -53,7 +53,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
     protected Queue() {
       acccessibleNodeLabels =
           Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
-      resource = Resource.newInstance(0, 0, 0);
+      resource = Resource.newInstance(0, 0, 0, 0);
     }
   }
 
@@ -243,7 +243,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
         } else {
           // set nm is not running, and its resource = 0
           nm.running = false;
-          nm.resource = Resource.newInstance(0, 0, 0);
+          nm.resource = Resource.newInstance(0, 0, 0, 0);
         }
       }
       

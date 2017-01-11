@@ -82,7 +82,7 @@ public abstract class AbstractYarnScheduler
   protected Map<NodeId, N> nodes = new ConcurrentHashMap<NodeId, N>();
 
   // Whole capacity of the cluster
-  protected Resource clusterResource = Resource.newInstance(0, 0, 0);
+  protected Resource clusterResource = Resource.newInstance(0, 0, 0, 0);
 
   protected Resource minimumAllocation;
   private Resource maximumAllocation;
@@ -693,7 +693,8 @@ public abstract class AbstractYarnScheduler
       if (maxNodeGPUs != -1) {
         maxGPUs = Math.min(maxGPUs, maxNodeGPUs);
       }
-      maximumAllocation = Resources.createResource(maxMemory, maxVcores, maxGPUs);
+
+      maximumAllocation = Resources.createResource(maxMemory, maxVcores, maxGPUs, 0);
     } finally {
       maxAllocWriteLock.unlock();
     }

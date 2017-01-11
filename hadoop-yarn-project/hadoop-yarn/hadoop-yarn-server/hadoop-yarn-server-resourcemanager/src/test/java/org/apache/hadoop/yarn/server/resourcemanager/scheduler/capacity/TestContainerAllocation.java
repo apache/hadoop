@@ -92,8 +92,8 @@ public class TestContainerAllocation {
     rm.start();
 
     // Register node1
-    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 2 * GB, 4, 4);
-    MockNM nm2 = rm.registerNode("127.0.0.1:2234", 3 * GB, 4, 4);
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 2 * GB, 4, 4, 15);
+    MockNM nm2 = rm.registerNode("127.0.0.1:2234", 3 * GB, 4, 4, 15);
 
     nm1.nodeHeartbeat(true);
     nm2.nodeHeartbeat(true);

@@ -61,9 +61,9 @@ public class TestInMemoryPlan {
   @Before
   public void setUp() throws PlanningException {
     resCalc = new DefaultResourceCalculator();
-    minAlloc = Resource.newInstance(1024, 1, 1);
-    maxAlloc = Resource.newInstance(64 * 1024, 20, 20);
-    totalCapacity = Resource.newInstance(100 * 1024, 100, 100);
+    minAlloc = Resource.newInstance(1024, 1, 1, 1);
+    maxAlloc = Resource.newInstance(64 * 1024, 20, 20, (1 << 20) - 1);
+    totalCapacity = Resource.newInstance(100 * 1024, 100, 100, 0);
 
     clock = mock(Clock.class);
     queueMetrics = mock(QueueMetrics.class);
@@ -111,9 +111,9 @@ public class TestInMemoryPlan {
     }
     doAssertions(plan, rAllocation);
     for (int i = 0; i < alloc.length; i++) {
-      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i]), (alloc[i])),
+      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i]), (alloc[i]), 0),
           plan.getTotalCommittedResources(start + i));
-      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i]), (alloc[i])),
+      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i]), (alloc[i]), 0),
           plan.getConsumptionForUser(user, start + i));
     }
   }
@@ -169,9 +169,9 @@ public class TestInMemoryPlan {
     }
     doAssertions(plan, rAllocation);
     for (int i = 0; i < alloc.length; i++) {
-      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i]), (alloc[i])),
+      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i]), (alloc[i]), 0),
           plan.getTotalCommittedResources(start + i));
-      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i]), (alloc[i])),
+      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i]), (alloc[i]), 0),
           plan.getConsumptionForUser(user, start + i));
     }
 
@@ -213,9 +213,9 @@ public class TestInMemoryPlan {
     }
     doAssertions(plan, rAllocation);
     for (int i = 0; i < alloc.length; i++) {
-      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i]), (alloc[i])),
+      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i]), (alloc[i]), 0),
           plan.getTotalCommittedResources(start + i));
-      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i]), (alloc[i])),
+      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i]), (alloc[i]), 0),
           plan.getConsumptionForUser(user, start + i));
     }
 
@@ -238,10 +238,10 @@ public class TestInMemoryPlan {
     for (int i = 0; i < updatedAlloc.length; i++) {
       Assert.assertEquals(
           Resource.newInstance(1024 * (updatedAlloc[i] + i), updatedAlloc[i]
-              + i, updatedAlloc[i] + i), plan.getTotalCommittedResources(start + i));
+              + i, updatedAlloc[i] + i, 0), plan.getTotalCommittedResources(start + i));
       Assert.assertEquals(
           Resource.newInstance(1024 * (updatedAlloc[i] + i), updatedAlloc[i]
-              + i, updatedAlloc[i] + i), plan.getConsumptionForUser(user, start + i));
+              + i, updatedAlloc[i] + i, 0), plan.getConsumptionForUser(user, start + i));
     }
   }
 
@@ -302,10 +302,10 @@ public class TestInMemoryPlan {
     doAssertions(plan, rAllocation);
     for (int i = 0; i < alloc.length; i++) {
       Assert.assertEquals(
-          Resource.newInstance(1024 * (alloc[i] + i), (alloc[i] + i), (alloc[i] + i)),
+          Resource.newInstance(1024 * (alloc[i] + i), (alloc[i] + i), (alloc[i] + i), 0),
           plan.getTotalCommittedResources(start + i));
       Assert.assertEquals(
-          Resource.newInstance(1024 * (alloc[i] + i), (alloc[i] + i), (alloc[i] + i)),
+          Resource.newInstance(1024 * (alloc[i] + i), (alloc[i] + i), (alloc[i] + i), 0),
           plan.getConsumptionForUser(user, start + i));
     }
 
@@ -317,9 +317,9 @@ public class TestInMemoryPlan {
     }
     Assert.assertNull(plan.getReservationById(reservationID));
     for (int i = 0; i < alloc.length; i++) {
-      Assert.assertEquals(Resource.newInstance(0, 0, 0),
+      Assert.assertEquals(Resource.newInstance(0, 0, 0, 0),
           plan.getTotalCommittedResources(start + i));
-      Assert.assertEquals(Resource.newInstance(0, 0, 0),
+      Assert.assertEquals(Resource.newInstance(0, 0, 0, 0),
           plan.getConsumptionForUser(user, start + i));
     }
   }
@@ -372,10 +372,10 @@ public class TestInMemoryPlan {
     doAssertions(plan, rAllocation);
     for (int i = 0; i < alloc1.length; i++) {
       Assert.assertEquals(
-          Resource.newInstance(1024 * (alloc1[i]), (alloc1[i]), (alloc1[i])),
+          Resource.newInstance(1024 * (alloc1[i]), (alloc1[i]), (alloc1[i]), 0),
           plan.getTotalCommittedResources(start + i));
       Assert.assertEquals(
-          Resource.newInstance(1024 * (alloc1[i]), (alloc1[i]), (alloc1[i])),
+          Resource.newInstance(1024 * (alloc1[i]), (alloc1[i]), (alloc1[i]), 0),
           plan.getConsumptionForUser(user, start + i));
     }
 
@@ -402,10 +402,10 @@ public class TestInMemoryPlan {
     for (int i = 0; i < alloc2.length; i++) {
       Assert.assertEquals(
           Resource.newInstance(1024 * (alloc1[i] + alloc2[i] + i), alloc1[i]
-              + alloc2[i] + i, alloc1[i] + alloc2[i] + i), plan.getTotalCommittedResources(start + i));
+              + alloc2[i] + i, alloc1[i] + alloc2[i] + i, 0), plan.getTotalCommittedResources(start + i));
       Assert.assertEquals(
           Resource.newInstance(1024 * (alloc1[i] + alloc2[i] + i), alloc1[i]
-              + alloc2[i] + i, alloc1[i] + alloc2[i] + i), plan.getConsumptionForUser(user, start + i));
+              + alloc2[i] + i, alloc1[i] + alloc2[i] + i, 0), plan.getConsumptionForUser(user, start + i));
     }
 
     // Now archive completed reservations
@@ -422,10 +422,10 @@ public class TestInMemoryPlan {
     Assert.assertNull(plan.getReservationById(reservationID2));
     for (int i = 0; i < alloc1.length; i++) {
       Assert.assertEquals(
-          Resource.newInstance(1024 * (alloc1[i]), (alloc1[i]), (alloc1[i])),
+          Resource.newInstance(1024 * (alloc1[i]), (alloc1[i]), (alloc1[i]), 0),
           plan.getTotalCommittedResources(start + i));
       Assert.assertEquals(
-          Resource.newInstance(1024 * (alloc1[i]), (alloc1[i]), (alloc1[i])),
+          Resource.newInstance(1024 * (alloc1[i]), (alloc1[i]), (alloc1[i]), 0),
           plan.getConsumptionForUser(user, start + i));
     }
     when(clock.getTime()).thenReturn(107L);
@@ -438,9 +438,9 @@ public class TestInMemoryPlan {
     }
     Assert.assertNull(plan.getReservationById(reservationID1));
     for (int i = 0; i < alloc1.length; i++) {
-      Assert.assertEquals(Resource.newInstance(0, 0, 0),
+      Assert.assertEquals(Resource.newInstance(0, 0, 0, 0),
           plan.getTotalCommittedResources(start + i));
-      Assert.assertEquals(Resource.newInstance(0, 0, 0),
+      Assert.assertEquals(Resource.newInstance(0, 0, 0, 0),
           plan.getConsumptionForUser(user, start + i));
     }
   }
@@ -484,7 +484,7 @@ public class TestInMemoryPlan {
         numContainers = alloc[i];
       }
       ReservationRequest rr =
-          ReservationRequest.newInstance(Resource.newInstance(1024, 1, 1),
+          ReservationRequest.newInstance(Resource.newInstance(1024, 1, 1, 1),
               (numContainers));
       req.put(new ReservationInterval(startTime + i, startTime + i + 1), rr);
     }

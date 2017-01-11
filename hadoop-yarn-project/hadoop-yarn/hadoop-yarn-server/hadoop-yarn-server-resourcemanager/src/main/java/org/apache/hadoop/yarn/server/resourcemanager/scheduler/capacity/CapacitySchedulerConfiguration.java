@@ -124,6 +124,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       "maximum-allocation-GPUs";
 
   @Private
+  public static final String MAXIMUM_ALLOCATION_GPUBITVEC =
+          "maximum-allocation-GpuBitVec";
+
+  @Private
   public static final int DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS = 10000;
   
   @Private
@@ -565,7 +569,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     int minimumGPUs = getInt(
         YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS);
-    return Resources.createResource(minimumMemory, minimumCores, minimumGPUs);
+    int minimumGpuBitVec = getInt(
+            YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_GPUBITVEC,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_GPUBITVEC);
+    return Resources.createResource(minimumMemory, minimumCores, minimumGPUs, minimumGpuBitVec);
   }
 
   public Resource getMaximumAllocation() {
@@ -578,7 +585,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     int maximumGPUs = getInt(
         YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS);
-    return Resources.createResource(maximumMemory, maximumCores, maximumGPUs);
+    int maximumGpuBitVec = getInt(
+            YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUBITVEC,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUBITVEC);
+    return Resources.createResource(maximumMemory, maximumCores, maximumGPUs, maximumGpuBitVec);
   }
 
   /**
@@ -597,6 +607,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         queuePrefix + MAXIMUM_ALLOCATION_VCORES, (int)UNDEFINED);
     int maxAllocationGPUsPerQueue = getInt(
             queuePrefix + MAXIMUM_ALLOCATION_GPUS, (int)UNDEFINED);
+    int maxAllocationGpuBitVecPerQueue = getInt(
+            queuePrefix + MAXIMUM_ALLOCATION_GPUBITVEC, (int)UNDEFINED);
     if (LOG.isDebugEnabled()) {
       LOG.debug("max alloc mb per queue for " + queue + " is "
           + maxAllocationMbPerQueue);
@@ -618,8 +630,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       LOG.info("max alloc GPU per queue for " + queue + " is undefined");
       maxAllocationGPUsPerQueue = clusterMax.getGPUs();
     }
+    if (maxAllocationGpuBitVecPerQueue == (int)UNDEFINED) {
+      LOG.info("max alloc GpuBitVec per queue for " + queue + " is undefined");
+      maxAllocationGpuBitVecPerQueue = clusterMax.getGpuBitVec();
+    }
     Resource result = Resources.createResource(maxAllocationMbPerQueue,
-        maxAllocationVcoresPerQueue, maxAllocationGPUsPerQueue);
+        maxAllocationVcoresPerQueue, maxAllocationGPUsPerQueue, maxAllocationGpuBitVecPerQueue);
     if (maxAllocationMbPerQueue > clusterMax.getMemory()
         || maxAllocationVcoresPerQueue > clusterMax.getVirtualCores()
         || maxAllocationGPUsPerQueue > clusterMax.getGPUs()) {

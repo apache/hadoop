@@ -705,7 +705,8 @@ public abstract class RMStateStore extends AbstractService {
             credentials, appAttempt.getStartTime(),
             resUsage.getMemorySeconds(),
             resUsage.getVcoreSeconds(),
-            resUsage.getGPUSeconds());
+            resUsage.getGPUSeconds(),
+            resUsage.getGpuBitVecSeconds());
 
     dispatcher.getEventHandler().handle(
       new RMStateStoreAppAttemptEvent(attemptState));

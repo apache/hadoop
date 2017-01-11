@@ -338,7 +338,7 @@ public class FairScheduler extends
             "  Availability: " + Resource.newInstance(
             rootMetrics.getAvailableMB(),
             rootMetrics.getAvailableVirtualCores(),
-            rootMetrics.getAvailableGPUs()) +
+            rootMetrics.getAvailableGPUs(), 0) +
             "  Demand: " + rootQueue.getDemand());
       }
     }

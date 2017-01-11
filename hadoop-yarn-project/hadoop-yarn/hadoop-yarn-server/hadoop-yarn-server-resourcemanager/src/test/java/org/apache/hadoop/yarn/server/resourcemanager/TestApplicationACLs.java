@@ -199,7 +199,7 @@ public class TestApplicationACLs {
 
     ContainerLaunchContext amContainer = recordFactory
         .newRecordInstance(ContainerLaunchContext.class);
-    Resource resource = BuilderUtils.newResource(1024, 1, 1);
+    Resource resource = BuilderUtils.newResource(1024, 1, 1, 1);
     context.setResource(resource);
     amContainer.setApplicationACLs(acls);
     context.setAMContainerSpec(amContainer);

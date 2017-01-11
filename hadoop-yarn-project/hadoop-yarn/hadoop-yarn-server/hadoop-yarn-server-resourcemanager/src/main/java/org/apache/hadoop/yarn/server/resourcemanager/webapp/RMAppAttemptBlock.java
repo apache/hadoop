@@ -110,7 +110,7 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
   }
 
   private Resource getTotalResource(List<ResourceRequest> requests) {
-    Resource totalResource = Resource.newInstance(0, 0, 0);
+    Resource totalResource = Resource.newInstance(0, 0, 0, 0);
     if (requests == null) {
       return totalResource;
     }

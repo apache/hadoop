@@ -331,6 +331,7 @@ public class TestClientRMService {
       Assert.assertEquals(10, usageReport.getMemorySeconds());
       Assert.assertEquals(3, usageReport.getVcoreSeconds());
       Assert.assertEquals(3, usageReport.getGPUSeconds());
+      Assert.assertEquals(3, usageReport.getGpuBitVecSeconds());
     } finally {
       rmService.close();
     }
@@ -1229,7 +1230,7 @@ public class TestClientRMService {
             System.currentTimeMillis(), "YARN", null,
             BuilderUtils.newResourceRequest(
                 RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
-                Resource.newInstance(1024, 1, 1), 1)){
+                Resource.newInstance(1024, 1, 1, 1), 1)){
                   @Override
                   public ApplicationReport createAndGetApplicationReport(
                       String clientUserName, boolean allowAccess) {
@@ -1311,7 +1312,7 @@ public class TestClientRMService {
     rm.start();
     MockNM nm;
     try {
-      nm = rm.registerNode("127.0.0.1:1", 102400, 100, 100);
+      nm = rm.registerNode("127.0.0.1:1", 102400, 100, 100, 0);
       // allow plan follower to synchronize
       Thread.sleep(1050);
     } catch (Exception e) {
@@ -1383,7 +1384,7 @@ public class TestClientRMService {
       int numContainers, long arrival, long deadline, long duration) {
     // create a request with a single atomic ask
     ReservationRequest r =
-        ReservationRequest.newInstance(Resource.newInstance(1024, 1, 1),
+        ReservationRequest.newInstance(Resource.newInstance(1024, 1, 1, 1),
             numContainers, 1, duration);
     ReservationRequests reqs =
         ReservationRequests.newInstance(Collections.singletonList(r),

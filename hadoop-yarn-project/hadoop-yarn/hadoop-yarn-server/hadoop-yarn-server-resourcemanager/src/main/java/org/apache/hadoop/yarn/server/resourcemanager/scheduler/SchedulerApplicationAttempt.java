@@ -78,6 +78,7 @@ public class SchedulerApplicationAttempt {
   private long lastMemorySeconds = 0;
   private long lastVcoreSeconds = 0;
   private long lastGPUSeconds = 0;
+  private long lastGpuBitVecSeconds = 0;
 
   protected final AppSchedulingInfo appSchedulingInfo;
   protected ApplicationAttemptId attemptId;
@@ -88,9 +89,9 @@ public class SchedulerApplicationAttempt {
 
   private final Multiset<Priority> reReservations = HashMultiset.create();
   
-  protected final Resource currentReservation = Resource.newInstance(0, 0, 0);
-  private Resource resourceLimit = Resource.newInstance(0, 0, 0);
-  protected Resource currentConsumption = Resource.newInstance(0, 0, 0);
+  protected final Resource currentReservation = Resource.newInstance(0, 0, 0, 0);
+  private Resource resourceLimit = Resource.newInstance(0, 0, 0, 0);
+  protected Resource currentConsumption = Resource.newInstance(0, 0, 0, 0);
   private Resource amResource = Resources.none();
   private boolean unmanagedAM = true;
   private boolean amRunning = false;
@@ -533,6 +534,7 @@ public class SchedulerApplicationAttempt {
       long memorySeconds = 0;
       long vcoreSeconds = 0;
       long GPUSeconds = 0;
+      long GpuBitVecSeconds = 0;
       for (RMContainer rmContainer : this.liveContainers.values()) {
         long usedMillis = currentTimeMillis - rmContainer.getCreationTime();
         Resource resource = rmContainer.getContainer().getResource();
@@ -542,14 +544,17 @@ public class SchedulerApplicationAttempt {
             DateUtils.MILLIS_PER_SECOND;
         GPUSeconds += resource.getGPUs() * usedMillis /
             DateUtils.MILLIS_PER_SECOND;
+        GpuBitVecSeconds += resource.getGpuBitVec() * usedMillis /
+                DateUtils.MILLIS_PER_SECOND;
       }
 
       lastMemoryAggregateAllocationUpdateTime = currentTimeMillis;
       lastMemorySeconds = memorySeconds;
       lastVcoreSeconds = vcoreSeconds;
       lastGPUSeconds = GPUSeconds;
+      lastGpuBitVecSeconds = GpuBitVecSeconds;
     }
-    return new AggregateAppResourceUsage(lastMemorySeconds, lastVcoreSeconds, lastGPUSeconds);
+    return new AggregateAppResourceUsage(lastMemorySeconds, lastVcoreSeconds, lastGPUSeconds, lastGpuBitVecSeconds);
   }
 
   public synchronized ApplicationResourceUsageReport getResourceUsageReport() {
@@ -558,7 +563,7 @@ public class SchedulerApplicationAttempt {
                reservedContainers.size(), Resources.clone(currentConsumption),
                Resources.clone(currentReservation),
                Resources.add(currentConsumption, currentReservation),
-               resUsage.getMemorySeconds(), resUsage.getVcoreSeconds(), resUsage.getGPUSeconds());
+               resUsage.getMemorySeconds(), resUsage.getVcoreSeconds(), resUsage.getGPUSeconds(), resUsage.getGpuBitVecSeconds());
   }
 
   public synchronized Map<ContainerId, RMContainer> getLiveContainersMap() {

@@ -293,8 +293,10 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
                 ApplicationMetricsConstants.APP_MEM_METRICS).toString());
         long GPUSeconds=Long.parseLong(entityInfo.get(
                 ApplicationMetricsConstants.APP_GPU_METRICS).toString());
+        long GpuBitVecSeconds=Long.parseLong(entityInfo.get(
+                ApplicationMetricsConstants.APP_GPUBITVEC_METRICS).toString());
         appResources=ApplicationResourceUsageReport
-            .newInstance(0, 0, null, null, null, memorySeconds, vcoreSeconds, GPUSeconds);
+            .newInstance(0, 0, null, null, null, memorySeconds, vcoreSeconds, GPUSeconds, GpuBitVecSeconds);
       }
     }
     List<TimelineEvent> events = entity.getEvents();
@@ -434,6 +436,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     int allocatedMem = 0;
     int allocatedVcore = 0;
     int allocatedGPU = 0;
+    int allocatedGpuBitVec = 0;
     String allocatedHost = null;
     int allocatedPort = -1;
     int allocatedPriority = 0;
@@ -529,7 +532,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         user);
     return ContainerReport.newInstance(
         ConverterUtils.toContainerId(entity.getEntityId()),
-        Resource.newInstance(allocatedMem, allocatedVcore, allocatedGPU),
+        Resource.newInstance(allocatedMem, allocatedVcore, allocatedGPU, allocatedGpuBitVec),
         NodeId.newInstance(allocatedHost, allocatedPort),
         Priority.newInstance(allocatedPriority),
         createdTime, finishedTime, diagnosticsInfo, logUrl, exitStatus, state,

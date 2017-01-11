@@ -92,7 +92,7 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     Set<ReservationAllocation> currentReservations =
         plan.getReservationsAtTime(now);
     Set<String> curReservationNames = new HashSet<String>();
-    Resource reservedResources = Resource.newInstance(0, 0, 0);
+    Resource reservedResources = Resource.newInstance(0, 0, 0, 0);
     int numRes = getReservedResources(now, currentReservations,
         curReservationNames, reservedResources);
 

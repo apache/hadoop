@@ -146,8 +146,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
     return Resources.createResource(
         divideAndCeil(numerator.getMemory(), denominator),
         divideAndCeil(numerator.getVirtualCores(), denominator),
-        divideAndCeil(numerator.getGPUs(), denominator)
-        );
+        divideAndCeil(numerator.getGPUs(), denominator),
+        divideAndCeil(numerator.getGpuBitVec(), denominator));
   }
 
   @Override
@@ -168,8 +168,13 @@ public class DominantResourceCalculator extends ResourceCalculator {
         Math.max(r.getGPUs(), minimumResource.getGPUs()),
         stepFactor.getGPUs()),
       maximumResource.getGPUs());
+    int normalizedGpuBitVec = Math.min(
+      roundUp(
+        Math.max(r.getGpuBitVec(), minimumResource.getGpuBitVec()),
+        stepFactor.getGpuBitVec()),
+      maximumResource.getGpuBitVec());
     return Resources.createResource(normalizedMemory,
-      normalizedCores, normalizedGPUs);
+      normalizedCores, normalizedGPUs, normalizedGpuBitVec);
   }
 
   @Override
@@ -177,8 +182,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
     return Resources.createResource(
         roundUp(r.getMemory(), stepFactor.getMemory()), 
         roundUp(r.getVirtualCores(), stepFactor.getVirtualCores()),
-        roundUp(r.getGPUs(), stepFactor.getGPUs())
-        );
+        roundUp(r.getGPUs(), stepFactor.getGPUs()),
+        roundUp(r.getGpuBitVec(), stepFactor.getGpuBitVec()));
   }
 
   @Override
@@ -186,8 +191,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
     return Resources.createResource(
         roundDown(r.getMemory(), stepFactor.getMemory()),
         roundDown(r.getVirtualCores(), stepFactor.getVirtualCores()),
-        roundDown(r.getGPUs(), stepFactor.getGPUs())
-        );
+        roundDown(r.getGPUs(), stepFactor.getGPUs()),
+        roundDown(r.getGpuBitVec(), stepFactor.getGpuBitVec()));
   }
 
   @Override
@@ -201,8 +206,10 @@ public class DominantResourceCalculator extends ResourceCalculator {
             stepFactor.getVirtualCores()),
         roundUp(
             (int)Math.ceil(r.getGPUs() * by),
-            stepFactor.getGPUs())
-        );
+            stepFactor.getGPUs()),
+        roundUp(
+            (int)Math.ceil(r.getGpuBitVec() * by),
+            stepFactor.getGpuBitVec()));
   }
 
   @Override
@@ -220,8 +227,11 @@ public class DominantResourceCalculator extends ResourceCalculator {
         roundDown(
             (int)(r.getGPUs() * by),
             stepFactor.getGPUs()
-            )
-        );
+            ),
+        roundDown(
+            (int)(r.getGpuBitVec() * by),
+            stepFactor.getGpuBitVec()
+            ));
   }
 
 }

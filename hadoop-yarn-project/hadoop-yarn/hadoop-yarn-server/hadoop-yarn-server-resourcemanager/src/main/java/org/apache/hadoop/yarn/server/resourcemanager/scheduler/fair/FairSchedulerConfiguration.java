@@ -150,7 +150,7 @@ public class FairSchedulerConfiguration extends Configuration {
     int gpu = getInt(
         YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS);
-    return Resources.createResource(mem, cpu, gpu);
+    return Resources.createResource(mem, cpu, gpu, 0);
   }
 
   public Resource getMaximumAllocation() {
@@ -163,7 +163,7 @@ public class FairSchedulerConfiguration extends Configuration {
     int gpu = getInt(
         YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS);
-    return Resources.createResource(mem, cpu, gpu);
+    return Resources.createResource(mem, cpu, gpu, 0);
   }
 
   public Resource getIncrementAllocation() {
@@ -176,7 +176,7 @@ public class FairSchedulerConfiguration extends Configuration {
     int incrementGPUs = getInt(
       RM_SCHEDULER_INCREMENT_ALLOCATION_GPUS,
       DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_GPUS);
-    return Resources.createResource(incrementMemory, incrementCores, incrementGPUs);
+    return Resources.createResource(incrementMemory, incrementCores, incrementGPUs, 0);
   }
   
   public float getLocalityThresholdNode() {
@@ -258,7 +258,7 @@ public class FairSchedulerConfiguration extends Configuration {
       int memory = findResource(val, "mb");
       int vcores = findResource(val, "vcores");
       int GPUs = findResource(val, "gpus");
-      return BuilderUtils.newResource(memory, vcores, GPUs);
+      return BuilderUtils.newResource(memory, vcores, GPUs, 0);
     } catch (AllocationConfigurationException ex) {
       throw ex;
     } catch (Exception ex) {

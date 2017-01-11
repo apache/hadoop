@@ -299,6 +299,7 @@ public class TestRMAppAttemptTransitions {
     when(appResUsgRpt.getMemorySeconds()).thenReturn(0L);
     when(appResUsgRpt.getVcoreSeconds()).thenReturn(0L);
     when(appResUsgRpt.getGPUSeconds()).thenReturn(0L);
+    when(appResUsgRpt.getGpuBitVecSeconds()).thenReturn(0L);
     when(resourceScheduler
         .getAppResourceUsageReport((ApplicationAttemptId)Matchers.any()))
      .thenReturn(appResUsgRpt);
@@ -310,7 +311,7 @@ public class TestRMAppAttemptTransitions {
     final String queue = MockApps.newQueue();
     submissionContext = mock(ApplicationSubmissionContext.class);
     when(submissionContext.getQueue()).thenReturn(queue);
-    Resource resource = BuilderUtils.newResource(1536, 1, 1);
+    Resource resource = BuilderUtils.newResource(1536, 1, 1, 1);
     ContainerLaunchContext amContainerSpec =
         BuilderUtils.newContainerLaunchContext(null, null,
             null, null, null, null);
@@ -640,7 +641,7 @@ public class TestRMAppAttemptTransitions {
     
     // Mock the allocation of AM container 
     Container container = mock(Container.class);
-    Resource resource = BuilderUtils.newResource(2048, 1, 1);
+    Resource resource = BuilderUtils.newResource(2048, 1, 1, 1);
     when(container.getId()).thenReturn(
         BuilderUtils.newContainerId(applicationAttempt.getAppAttemptId(), 1));
     when(container.getResource()).thenReturn(resource);
@@ -760,6 +761,7 @@ public class TestRMAppAttemptTransitions {
     when(appResUsgRpt.getMemorySeconds()).thenReturn(123456L);
     when(appResUsgRpt.getVcoreSeconds()).thenReturn(55544L);
     when(appResUsgRpt.getGPUSeconds()).thenReturn(55544L);
+    when(appResUsgRpt.getGpuBitVecSeconds()).thenReturn(55544L);
     when(scheduler.getAppResourceUsageReport(any(ApplicationAttemptId.class)))
     .thenReturn(appResUsgRpt);
 
@@ -776,11 +778,13 @@ public class TestRMAppAttemptTransitions {
     Assert.assertEquals(123456L, report.getMemorySeconds());
     Assert.assertEquals(55544L, report.getVcoreSeconds());
     Assert.assertEquals(55544L, report.getGPUSeconds());
+    Assert.assertEquals(55544L, report.getGpuBitVecSeconds());
 
     // finish app attempt and remove it from scheduler 
     when(appResUsgRpt.getMemorySeconds()).thenReturn(223456L);
     when(appResUsgRpt.getVcoreSeconds()).thenReturn(75544L);
     when(appResUsgRpt.getGPUSeconds()).thenReturn(75544L);
+    when(appResUsgRpt.getGpuBitVecSeconds()).thenReturn(75544L);
     sendAttemptUpdateSavedEvent(applicationAttempt);
     NodeId anyNodeId = NodeId.newInstance("host", 1234);
     applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
@@ -794,6 +798,7 @@ public class TestRMAppAttemptTransitions {
     Assert.assertEquals(223456, report.getMemorySeconds());
     Assert.assertEquals(75544, report.getVcoreSeconds());
     Assert.assertEquals(75544, report.getGPUSeconds());
+    Assert.assertEquals(75544, report.getGpuBitVecSeconds());
   }
 
   @Test
@@ -1528,7 +1533,7 @@ public class TestRMAppAttemptTransitions {
                 (ResourceRequest) ((List) invocation.getArguments()[1]).get(0);
             
             // capacity shouldn't changed
-            assertEquals(Resource.newInstance(3333, 1, 1), rr.getCapability());
+            assertEquals(Resource.newInstance(3333, 1, 1, 1), rr.getCapability());
             assertEquals("label-expression", rr.getNodeLabelExpression());
             
             // priority, #container, relax-locality will be changed
@@ -1548,7 +1553,7 @@ public class TestRMAppAttemptTransitions {
         new RMAppAttemptImpl(applicationAttempt.getAppAttemptId(),
             spyRMContext, scheduler, masterService, submissionContext,
             new Configuration(), true, ResourceRequest.newInstance(
-                Priority.UNDEFINED, "host1", Resource.newInstance(3333, 1, 1), 3,
+                Priority.UNDEFINED, "host1", Resource.newInstance(3333, 1, 1, 1), 3,
                 false, "label-expression"));
     new RMAppAttemptImpl.ScheduleTransition().transition(
         (RMAppAttemptImpl) applicationAttempt, null);

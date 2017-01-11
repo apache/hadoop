@@ -257,6 +257,12 @@ public class ApplicationAttemptStateDataPBImpl extends
   }
 
   @Override
+  public long getGpuBitVecSeconds() {
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getGpuBitVecSeconds();
+  }
+
+  @Override
   public void setMemorySeconds(long memorySeconds) {
     maybeInitBuilder();
     builder.setMemorySeconds(memorySeconds);
@@ -272,6 +278,12 @@ public class ApplicationAttemptStateDataPBImpl extends
   public void setGPUSeconds(long GPUSeconds) {
     maybeInitBuilder();
     builder.setGPUSeconds(GPUSeconds);
+  }
+
+  @Override
+  public void setGpuBitVecSeconds(long GpuBitVecSeconds) {
+    maybeInitBuilder();
+    builder.setGpuBitVecSeconds(GpuBitVecSeconds);
   }
 
   @Override

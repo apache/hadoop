@@ -1310,7 +1310,7 @@ public class RMWebServices {
     }
     Resource r =
         Resource.newInstance(newApp.getResource().getMemory(), newApp
-          .getResource().getvCores(), newApp.getResource().getGPUs());
+          .getResource().getvCores(), newApp.getResource().getGPUs(), 0);
     return r;
   }
 

@@ -49,7 +49,7 @@ public class TestInMemoryReservationAllocation {
   @Before
   public void setUp() {
     resCalc = new DefaultResourceCalculator();
-    minAlloc = Resource.newInstance(1, 1, 1);
+    minAlloc = Resource.newInstance(1, 1, 1, 1);
   }
 
   @After
@@ -77,7 +77,7 @@ public class TestInMemoryReservationAllocation {
     doAssertions(rAllocation, reservationID, rDef, allocations, start, alloc);
     Assert.assertFalse(rAllocation.containsGangs());
     for (int i = 0; i < alloc.length; i++) {
-      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i]), (alloc[i])),
+      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i]), (alloc[i]), 0),
           rAllocation.getResourcesAtTime(start + i));
     }
   }
@@ -100,7 +100,7 @@ public class TestInMemoryReservationAllocation {
     Assert.assertFalse(rAllocation.containsGangs());
     for (int i = 0; i < alloc.length; i++) {
       Assert.assertEquals(
-          Resource.newInstance(1024 * (alloc[i] + i), (alloc[i] + i), (alloc[i] + i)),
+          Resource.newInstance(1024 * (alloc[i] + i), (alloc[i] + i), (alloc[i] + i), 0),
           rAllocation.getResourcesAtTime(start + i));
     }
   }
@@ -123,7 +123,7 @@ public class TestInMemoryReservationAllocation {
     Assert.assertFalse(rAllocation.containsGangs());
     for (int i = 0; i < alloc.length; i++) {
       Assert.assertEquals(
-          Resource.newInstance(1024 * (alloc[i] + i), (alloc[i] + i), (alloc[i] + i)),
+          Resource.newInstance(1024 * (alloc[i] + i), (alloc[i] + i), (alloc[i] + i), 0),
           rAllocation.getResourcesAtTime(start + i));
     }
   }
@@ -164,7 +164,7 @@ public class TestInMemoryReservationAllocation {
     doAssertions(rAllocation, reservationID, rDef, allocations, start, alloc);
     Assert.assertTrue(rAllocation.containsGangs());
     for (int i = 0; i < alloc.length; i++) {
-      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i]), (alloc[i])),
+      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i]), (alloc[i]), 0),
           rAllocation.getResourcesAtTime(start + i));
     }
   }
@@ -186,7 +186,7 @@ public class TestInMemoryReservationAllocation {
       long deadline, long duration) {
     // create a request with a single atomic ask
     ReservationRequest r =
-        ReservationRequest.newInstance(Resource.newInstance(1024, 1, 1), 1, 1,
+        ReservationRequest.newInstance(Resource.newInstance(1024, 1, 1, 1), 1, 1,
             duration);
     ReservationDefinition rDef = new ReservationDefinitionPBImpl();
     ReservationRequests reqs = new ReservationRequestsPBImpl();
@@ -210,7 +210,7 @@ public class TestInMemoryReservationAllocation {
         numContainers = alloc[i];
       }
       ReservationRequest rr =
-          ReservationRequest.newInstance(Resource.newInstance(1024, 1, 1),
+          ReservationRequest.newInstance(Resource.newInstance(1024, 1, 1, 1),
               (numContainers));
       if (isGang) {
         rr.setConcurrency(numContainers);

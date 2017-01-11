@@ -131,6 +131,8 @@ public class Client {
   private int amVCores = 1;
   // Amt. of GPU resource to request for to run the App Master
   private int amGPUs = 1;
+  // Amt. of GPU location information to request for to run the App Master
+  private int amGpuBitVec = 1;
 
   // Application master jar file
   private String appMasterJar = ""; 
@@ -682,7 +684,7 @@ public class Client {
     // Set up resource type requirements
     // For now, memory, vcores, and GPUs are supported, so we set memory,
     // vcores, and GPUs requirements
-    Resource capability = Resource.newInstance(amMemory, amVCores, amGPUs);
+    Resource capability = Resource.newInstance(amMemory, amVCores, amGPUs, amGpuBitVec);
     appContext.setResource(capability);
 
     // Service data is a binary blob that can be passed to the application

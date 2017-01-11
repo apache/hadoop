@@ -115,7 +115,7 @@ public class FifoPolicy extends SchedulingPolicy {
     Resource headroom = Resources.createResource(
         maxAvailable.getMemory(),
         maxAvailable.getVirtualCores(),
-        Math.min(maxAvailable.getGPUs(), queueAvailableGPU));
+        Math.min(maxAvailable.getGPUs(), queueAvailableGPU), 0);
     return headroom;
   }
 

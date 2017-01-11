@@ -51,6 +51,7 @@ public class MockNM {
   private final int memory;
   private final int vCores;
   private final int GPUs;
+  private final int GpuBitVec;
   private ResourceTrackerService resourceTracker;
   private int httpPort = 2;
   private MasterKey currentContainerTokenMasterKey;
@@ -64,19 +65,22 @@ public class MockNM {
             YarnConfiguration.DEFAULT_NM_PMEM_MB),
         Math.max(1, (memory * YarnConfiguration.DEFAULT_NM_GPUS) /
             YarnConfiguration.DEFAULT_NM_PMEM_MB),
+        Math.max(1, (memory * YarnConfiguration.DEFAULT_NM_GPUBITVEC) /
+            YarnConfiguration.DEFAULT_NM_PMEM_MB),
         resourceTracker);
   }
 
-  public MockNM(String nodeIdStr, int memory, int vcores, int GPUs,
+  public MockNM(String nodeIdStr, int memory, int vcores, int GPUs, int GpuBitVec,
       ResourceTrackerService resourceTracker) {
-    this(nodeIdStr, memory, vcores, GPUs, resourceTracker, YarnVersionInfo.getVersion());
+    this(nodeIdStr, memory, vcores, GPUs, GpuBitVec, resourceTracker, YarnVersionInfo.getVersion());
   }
 
-  public MockNM(String nodeIdStr, int memory, int vcores, int GPUs,
+  public MockNM(String nodeIdStr, int memory, int vcores, int GPUs, int GpuBitVec,
       ResourceTrackerService resourceTracker, String version) {
     this.memory = memory;
     this.vCores = vcores;
     this.GPUs = GPUs;
+    this.GpuBitVec = GpuBitVec;
     this.resourceTracker = resourceTracker;
     this.version = version;
     String[] splits = nodeIdStr.split(":");
@@ -123,7 +127,7 @@ public class MockNM {
         RegisterNodeManagerRequest.class);
     req.setNodeId(nodeId);
     req.setHttpPort(httpPort);
-    Resource resource = BuilderUtils.newResource(memory, vCores, GPUs);
+    Resource resource = BuilderUtils.newResource(memory, vCores, GPUs, GpuBitVec);
     req.setResource(resource);
     req.setContainerStatuses(containerReports);
     req.setNMVersion(version);
@@ -209,5 +213,9 @@ public class MockNM {
 
   public int getGPUs() {
     return GPUs;
+  }
+
+  public int getGpuBitVec() {
+    return GpuBitVec;
   }
 }

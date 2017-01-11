@@ -1288,7 +1288,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   
   @Override
   public RMAppMetrics getRMAppMetrics() {
-    Resource resourcePreempted = Resource.newInstance(0, 0, 0);
+    Resource resourcePreempted = Resource.newInstance(0, 0, 0, 0);
     int numAMContainerPreempted = 0;
     int numNonAMContainerPreempted = 0;
     long memorySeconds = 0;

@@ -378,7 +378,7 @@ public class TestSystemMetricsPublisher {
     when(container.getAllocatedNode()).thenReturn(
         NodeId.newInstance("test host", -100));
     when(container.getAllocatedResource()).thenReturn(
-        Resource.newInstance(-1, -1, -1));
+        Resource.newInstance(-1, -1, -1, -1));
     when(container.getAllocatedPriority()).thenReturn(Priority.UNDEFINED);
     when(container.getCreationTime()).thenReturn(Integer.MAX_VALUE + 1L);
     when(container.getFinishTime()).thenReturn(Integer.MAX_VALUE + 2L);

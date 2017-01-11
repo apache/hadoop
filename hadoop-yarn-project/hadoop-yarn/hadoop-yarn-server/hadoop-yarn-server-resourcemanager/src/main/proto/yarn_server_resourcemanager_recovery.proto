@@ -82,7 +82,8 @@ message ApplicationAttemptStateDataProto {
     optional int64 memory_seconds = 10;
     optional int64 vcore_seconds = 11;
     optional int64 GPU_seconds = 12;
-    optional int64 finish_time = 13;
+    optional int64 GpuBitVec_seconds = 13;
+    optional int64 finish_time = 14;
 }
 
 message EpochProto {

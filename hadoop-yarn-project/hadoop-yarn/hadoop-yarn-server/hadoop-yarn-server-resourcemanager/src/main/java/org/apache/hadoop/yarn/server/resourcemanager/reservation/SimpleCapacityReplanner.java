@@ -48,7 +48,7 @@ public class SimpleCapacityReplanner implements Planner {
   private static final Log LOG = LogFactory
       .getLog(SimpleCapacityReplanner.class);
 
-  private static final Resource ZERO_RESOURCE = Resource.newInstance(0, 0, 0);
+  private static final Resource ZERO_RESOURCE = Resource.newInstance(0, 0, 0, 0);
 
   private final Clock clock;
 

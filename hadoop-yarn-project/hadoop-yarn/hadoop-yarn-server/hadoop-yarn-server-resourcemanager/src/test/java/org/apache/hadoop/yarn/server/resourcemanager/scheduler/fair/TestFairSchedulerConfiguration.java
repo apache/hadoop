@@ -31,19 +31,19 @@ import org.junit.Test;
 public class TestFairSchedulerConfiguration {
   @Test
   public void testParseResourceConfigValue() throws Exception {
-    assertEquals(BuilderUtils.newResource(1024, 2, 2),
+    assertEquals(BuilderUtils.newResource(1024, 2, 2, 3),
         parseResourceConfigValue("2 vcores, 2 GPUs, 1024 mb"));
-    assertEquals(BuilderUtils.newResource(1024, 2, 2),
+    assertEquals(BuilderUtils.newResource(1024, 2, 2, 3),
         parseResourceConfigValue("1024 mb, 2 vcores, 2 GPUs"));
-    assertEquals(BuilderUtils.newResource(1024, 2, 2),
+    assertEquals(BuilderUtils.newResource(1024, 2, 2, 3),
         parseResourceConfigValue("2vcores,2GPUs,1024mb"));
-    assertEquals(BuilderUtils.newResource(1024, 2, 2),
+    assertEquals(BuilderUtils.newResource(1024, 2, 2, 3),
         parseResourceConfigValue("1024mb,2vcores,2GPUs"));
-    assertEquals(BuilderUtils.newResource(1024, 2, 2),
+    assertEquals(BuilderUtils.newResource(1024, 2, 2, 3),
         parseResourceConfigValue("1024   mb, 2    vcores, 2    GPUs"));
-    assertEquals(BuilderUtils.newResource(1024, 2, 2),
+    assertEquals(BuilderUtils.newResource(1024, 2, 2, 3),
         parseResourceConfigValue("1024 Mb, 2 vCores, 2 Gpus"));
-    assertEquals(BuilderUtils.newResource(1024, 2, 2),
+    assertEquals(BuilderUtils.newResource(1024, 2, 2, 3),
         parseResourceConfigValue("  1024 mb, 2 vcores  , 2 GPUs  "));
   }
   

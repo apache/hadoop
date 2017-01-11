@@ -25,11 +25,13 @@ public class AggregateAppResourceUsage {
   long memorySeconds;
   long vcoreSeconds;
   long GPUSeconds;
+  long GpuBitVecSeconds;
 
-  public AggregateAppResourceUsage(long memorySeconds, long vcoreSeconds, long GPUSeconds) {
+  public AggregateAppResourceUsage(long memorySeconds, long vcoreSeconds, long GPUSeconds, long GpuBitVecSeconds) {
     this.memorySeconds = memorySeconds;
     this.vcoreSeconds = vcoreSeconds;
     this.GPUSeconds = GPUSeconds;
+    this.GpuBitVecSeconds = GpuBitVecSeconds;
   }
 
   /**
@@ -72,5 +74,19 @@ public class AggregateAppResourceUsage {
    */
   public void setGPUSeconds(long GPUSeconds) {
     this.GPUSeconds = GPUSeconds;
+  }
+
+  /**
+   * @return the GpuBitVecSeconds
+   */
+  public long getGpuBitVecSeconds() {
+    return GpuBitVecSeconds;
+  }
+
+  /**
+   * @param GpuBitVecSeconds the GpuBitVecSeconds to set
+   */
+  public void setGpuBitVecSeconds(long GpuBitVecSeconds) {
+    this.GpuBitVecSeconds = GpuBitVecSeconds;
   }
 }

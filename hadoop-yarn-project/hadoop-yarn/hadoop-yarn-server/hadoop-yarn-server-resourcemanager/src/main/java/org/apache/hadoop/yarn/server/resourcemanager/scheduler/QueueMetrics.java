@@ -62,6 +62,7 @@ public class QueueMetrics implements MetricsSource {
   @Metric("Allocated memory in MB") MutableGaugeInt allocatedMB;
   @Metric("Allocated CPU in virtual cores") MutableGaugeInt allocatedVCores;
   @Metric("Allocated GPU in number of GPUs") MutableGaugeInt allocatedGPUs;
+  @Metric("Allocated GPU in bit vector") MutableGaugeInt allocatedGpuBitVec;
   @Metric("# of allocated containers") MutableGaugeInt allocatedContainers;
   @Metric("Aggregate # of allocated containers") MutableCounterLong aggregateContainersAllocated;
   @Metric("Aggregate # of released containers") MutableCounterLong aggregateContainersReleased;
@@ -499,7 +500,7 @@ public class QueueMetrics implements MetricsSource {
   }
   
   public Resource getAllocatedResources() {
-    return BuilderUtils.newResource(allocatedMB.value(), allocatedVCores.value(), allocatedGPUs.value());
+    return BuilderUtils.newResource(allocatedMB.value(), allocatedVCores.value(), allocatedGPUs.value(), allocatedGpuBitVec.value());
   }
 
   public int getAllocatedMB() {

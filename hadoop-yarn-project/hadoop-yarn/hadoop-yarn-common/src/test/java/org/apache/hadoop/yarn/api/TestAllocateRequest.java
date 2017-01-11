@@ -37,7 +37,7 @@ public class TestAllocateRequest {
         new ArrayList<ContainerResourceIncreaseRequest>();
     for (int i = 0; i < 3; i++) {
       incRequests.add(ContainerResourceIncreaseRequest.newInstance(null,
-          Resource.newInstance(0, i, i)));
+          Resource.newInstance(0, i, i, (1 << i) - 1 )));
     }
     AllocateRequest r =
         AllocateRequest.newInstance(123, 0f, null, null, null, incRequests);

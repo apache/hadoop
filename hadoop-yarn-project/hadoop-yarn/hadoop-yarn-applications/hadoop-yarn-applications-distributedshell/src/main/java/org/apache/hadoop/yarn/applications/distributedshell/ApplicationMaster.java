@@ -219,6 +219,8 @@ public class ApplicationMaster {
   private int containerVirtualCores = 1;
   // GPUs to request for the container on which the shell command will run
   private int containerGPUs = 1;
+  // GPU location to request for the container on which the shell command will run
+  private int containerGpuBitVec = 1;
   // Priority of the request
   private int requestPriority;
 
@@ -1074,7 +1076,7 @@ public class ApplicationMaster {
     // Set up resource type requirements
     // For now, memory and CPU are supported so we set memory and cpu requirements
     Resource capability = Resource.newInstance(containerMemory,
-      containerVirtualCores, containerGPUs);
+      containerVirtualCores, containerGPUs, containerGpuBitVec);
 
     ContainerRequest request = new ContainerRequest(capability, null, null,
         pri);

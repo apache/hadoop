@@ -94,7 +94,7 @@ public class TestRMNMRPCResponseId {
   @Test
   public void testRPCResponseId() throws IOException, YarnException {
     String node = "localhost";
-    Resource capability = BuilderUtils.newResource(1024, 1, 1);
+    Resource capability = BuilderUtils.newResource(1024, 1, 1, 1);
     RegisterNodeManagerRequest request = recordFactory.newRecordInstance(RegisterNodeManagerRequest.class);
     nodeId = NodeId.newInstance(node, 1234);
     request.setNodeId(nodeId);

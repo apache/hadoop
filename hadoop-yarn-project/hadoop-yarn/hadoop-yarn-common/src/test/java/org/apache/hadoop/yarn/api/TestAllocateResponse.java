@@ -61,11 +61,11 @@ public class TestAllocateResponse {
         new ArrayList<ContainerResourceDecrease>();
     for (int i = 0; i < 3; i++) {
       incContainers.add(ContainerResourceIncrease.newInstance(null,
-          Resource.newInstance(1024, i, i), null));
+          Resource.newInstance(1024, i, i, (1 << i) - 1), null));
     }
     for (int i = 0; i < 5; i++) {
       decContainers.add(ContainerResourceDecrease.newInstance(null,
-          Resource.newInstance(1024, i, i)));
+          Resource.newInstance(1024, i, i, (1 << i) - 1)));
     }
 
     AllocateResponse r =
