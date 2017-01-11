@@ -74,7 +74,7 @@ public class CGroupsMemoryResourceHandlerImpl implements MemoryResourceHandler {
           + YarnConfiguration.NM_VMEM_CHECK_ENABLED + " to false.";
       throw new ResourceHandlerException(msg);
     }
-    this.cGroupsHandler.mountCGroupController(MEMORY);
+    this.cGroupsHandler.initializeCGroupController(MEMORY);
     swappiness = conf
         .getInt(YarnConfiguration.NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS,
             YarnConfiguration.DEFAULT_NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS);
