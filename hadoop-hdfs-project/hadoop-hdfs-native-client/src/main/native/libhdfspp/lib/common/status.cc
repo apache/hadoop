@@ -131,7 +131,16 @@ Status Status::Error(const char *error_message) {
 }
 
 Status Status::AuthenticationFailed() {
-  return Status(kAuthenticationFailed, "Authentication failed");
+  return Status::AuthenticationFailed(nullptr);
+}
+
+Status Status::AuthenticationFailed(const char *msg) {
+  std::string formatted = "AuthenticationFailed";
+  if(msg) {
+    formatted += ": ";
+    formatted += msg;
+  }
+  return Status(kAuthenticationFailed, formatted.c_str());
 }
 
 Status Status::Canceled() {

@@ -43,6 +43,7 @@ class Status {
   static Status Exception(const char *exception_class_name, const char *exception_details);
   static Status Error(const char *error_message);
   static Status AuthenticationFailed();
+  static Status AuthenticationFailed(const char *msg);
   static Status Canceled();
   static Status PathNotFound(const char *msg);
   static Status InvalidOffset(const char *msg);
