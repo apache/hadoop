@@ -195,8 +195,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-kms</artifactId>
-      <classifier>classes</classifier>
-      <type>jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>

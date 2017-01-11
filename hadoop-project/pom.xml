@@ -492,8 +492,6 @@
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-kms</artifactId>
         <version>${project.version}</version>
-        <classifier>classes</classifier>
-        <type>jar</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
