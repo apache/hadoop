@@ -66,7 +66,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
   private int defaultStripeBlockSize;
 
   private ErasureCodingPolicy getEcPolicy() {
-    return ErasureCodingPolicyManager.getSystemDefaultPolicy();
+    return StripedFileTestUtil.getDefaultECPolicy();
   }
 
   /**
@@ -99,6 +99,8 @@ public class TestStoragePolicySatisfierWithStripedFile {
     }
 
     final Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     initConfWithStripe(conf, defaultStripeBlockSize);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
@@ -128,7 +130,8 @@ public class TestStoragePolicySatisfierWithStripedFile {
       client.mkdirs(barDir, new FsPermission((short) 777), true);
       client.setStoragePolicy(barDir, HdfsConstants.HOT_STORAGE_POLICY_NAME);
       // set an EC policy on "/bar" directory
-      client.setErasureCodingPolicy(barDir, null);
+      client.setErasureCodingPolicy(barDir,
+          StripedFileTestUtil.getDefaultECPolicy().getName());
 
       // write file to barDir
       final String fooFile = "/bar/foo";
@@ -206,6 +209,8 @@ public class TestStoragePolicySatisfierWithStripedFile {
     }
 
     final Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     initConfWithStripe(conf, defaultStripeBlockSize);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
@@ -235,7 +240,8 @@ public class TestStoragePolicySatisfierWithStripedFile {
       client.mkdirs(barDir, new FsPermission((short) 777), true);
       client.setStoragePolicy(barDir, HdfsConstants.HOT_STORAGE_POLICY_NAME);
       // set an EC policy on "/bar" directory
-      client.setErasureCodingPolicy(barDir, null);
+      client.setErasureCodingPolicy(barDir,
+          StripedFileTestUtil.getDefaultECPolicy().getName());
 
       // write file to barDir
       final String fooFile = "/bar/foo";
@@ -314,6 +320,8 @@ public class TestStoragePolicySatisfierWithStripedFile {
     }
 
     final Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     initConfWithStripe(conf, defaultStripeBlockSize);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
@@ -343,7 +351,8 @@ public class TestStoragePolicySatisfierWithStripedFile {
       client.mkdirs(barDir, new FsPermission((short) 777), true);
       client.setStoragePolicy(barDir, HdfsConstants.HOT_STORAGE_POLICY_NAME);
       // set an EC policy on "/bar" directory
-      client.setErasureCodingPolicy(barDir, null);
+      client.setErasureCodingPolicy(barDir,
+          StripedFileTestUtil.getDefaultECPolicy().getName());
 
       // write file to barDir
       final String fooFile = "/bar/foo";

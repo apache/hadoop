@@ -2419,4 +2419,41 @@ public class DFSTestUtil {
       }
     }
   }
+
+  /**
+   * Check whether the Block movement has been successfully
+   * completed to satisfy the storage policy for the given file.
+   * @param fileName file name.
+   * @param expectedStorageType storage type.
+   * @param expectedStorageCount expected storage type.
+   * @param timeout timeout.
+   * @param fs distributedFileSystem.
+   * @throws Exception
+   */
+  public static void waitExpectedStorageType(String fileName,
+      final StorageType expectedStorageType, int expectedStorageCount,
+      int timeout, DistributedFileSystem fs) throws Exception {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        final LocatedBlock lb;
+        try {
+          lb = fs.getClient().getLocatedBlocks(fileName, 0).get(0);
+        } catch (IOException e) {
+          LOG.error("Exception while getting located blocks", e);
+          return false;
+        }
+        int actualStorageCount = 0;
+        for(StorageType type : lb.getStorageTypes()) {
+          if (expectedStorageType == type) {
+            actualStorageCount++;
+          }
+        }
+        LOG.info(
+            expectedStorageType + " replica count, expected="
+                + expectedStorageCount + " and actual=" + actualStorageCount);
+        return expectedStorageCount == actualStorageCount;
+      }
+    }, 1000, timeout);
+  }
 }

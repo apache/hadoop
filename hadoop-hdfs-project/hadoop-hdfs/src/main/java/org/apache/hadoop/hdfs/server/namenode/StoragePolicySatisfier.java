@@ -168,16 +168,18 @@ public class StoragePolicySatisfier implements Runnable {
     }
     while (namesystem.isRunning() && isRunning) {
       try {
-        Long blockCollectionID = storageMovementNeeded.get();
-        if (blockCollectionID != null) {
-          BlockCollection blockCollection =
-              namesystem.getBlockCollection(blockCollectionID);
-          // Check blockCollectionId existence.
-          if (blockCollection != null) {
-            boolean allBlockLocsAttemptedToSatisfy =
-                computeAndAssignStorageMismatchedBlocksToDNs(blockCollection);
-            this.storageMovementsMonitor.add(blockCollectionID,
-                allBlockLocsAttemptedToSatisfy);
+        if (!namesystem.isInSafeMode()) {
+          Long blockCollectionID = storageMovementNeeded.get();
+          if (blockCollectionID != null) {
+            BlockCollection blockCollection =
+                namesystem.getBlockCollection(blockCollectionID);
+            // Check blockCollectionId existence.
+            if (blockCollection != null) {
+              boolean allBlockLocsAttemptedToSatisfy =
+                  computeAndAssignStorageMismatchedBlocksToDNs(blockCollection);
+              this.storageMovementsMonitor
+                  .add(blockCollectionID, allBlockLocsAttemptedToSatisfy);
+            }
           }
         }
         // TODO: We can think to make this as configurable later, how frequently

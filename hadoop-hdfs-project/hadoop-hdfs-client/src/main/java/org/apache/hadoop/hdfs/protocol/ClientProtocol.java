@@ -1754,7 +1754,7 @@ public interface ClientProtocol {
    * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException append not
    *           allowed in safemode.
    */
-  @Idempotent
+  @AtMostOnce
   void satisfyStoragePolicy(String path) throws IOException;
 
   /**

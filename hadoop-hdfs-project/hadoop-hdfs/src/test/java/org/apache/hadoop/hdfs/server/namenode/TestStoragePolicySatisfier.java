@@ -108,7 +108,8 @@ public class TestStoragePolicySatisfier {
 
       hdfsCluster.triggerHeartbeats();
       // Wait till namenode notified about the block location details
-      waitExpectedStorageType(file, StorageType.ARCHIVE, 3, 30000);
+      DFSTestUtil.waitExpectedStorageType(
+          file, StorageType.ARCHIVE, 3, 30000, dfs);
     } finally {
       shutdownCluster();
     }
@@ -137,7 +138,8 @@ public class TestStoragePolicySatisfier {
       hdfsCluster.triggerHeartbeats();
       // Wait till StorgePolicySatisfier Identified that block to move to SSD
       // areas
-      waitExpectedStorageType(file, StorageType.SSD, 3, 30000);
+      DFSTestUtil.waitExpectedStorageType(
+          file, StorageType.SSD, 3, 30000, dfs);
     } finally {
       shutdownCluster();
     }
@@ -164,8 +166,10 @@ public class TestStoragePolicySatisfier {
       hdfsCluster.triggerHeartbeats();
       // Wait till StorgePolicySatisfier Identified that block to move to SSD
       // areas
-      waitExpectedStorageType(file, StorageType.SSD, 1, 30000);
-      waitExpectedStorageType(file, StorageType.DISK, 2, 30000);
+      DFSTestUtil.waitExpectedStorageType(
+          file, StorageType.SSD, 1, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(
+          file, StorageType.DISK, 2, 30000, dfs);
     } finally {
       shutdownCluster();
     }
@@ -195,8 +199,10 @@ public class TestStoragePolicySatisfier {
       hdfsCluster.triggerHeartbeats();
 
       // Wait till the block is moved to SSD areas
-      waitExpectedStorageType(file, StorageType.SSD, 1, 30000);
-      waitExpectedStorageType(file, StorageType.DISK, 2, 30000);
+      DFSTestUtil.waitExpectedStorageType(
+          file, StorageType.SSD, 1, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(
+          file, StorageType.DISK, 2, 30000, dfs);
 
       waitForBlocksMovementResult(1, 30000);
     } finally {
@@ -245,8 +251,10 @@ public class TestStoragePolicySatisfier {
 
       for (String fileName : files) {
         // Wait till the block is moved to SSD areas
-        waitExpectedStorageType(fileName, StorageType.SSD, 1, 30000);
-        waitExpectedStorageType(fileName, StorageType.DISK, 2, 30000);
+        DFSTestUtil.waitExpectedStorageType(
+            fileName, StorageType.SSD, 1, 30000, dfs);
+        DFSTestUtil.waitExpectedStorageType(
+            fileName, StorageType.DISK, 2, 30000, dfs);
       }
 
       waitForBlocksMovementResult(blockCollectionIds.size(), 30000);
@@ -279,7 +287,8 @@ public class TestStoragePolicySatisfier {
 
       hdfsCluster.triggerHeartbeats();
       // Wait till namenode notified about the block location details
-      waitExpectedStorageType(file, StorageType.ARCHIVE, 3, 30000);
+      DFSTestUtil.waitExpectedStorageType(
+          file, StorageType.ARCHIVE, 3, 30000, dfs);
     } finally {
       shutdownCluster();
     }
@@ -317,11 +326,14 @@ public class TestStoragePolicySatisfier {
       hdfsCluster.triggerHeartbeats();
 
       // take effect for the file in the directory.
-      waitExpectedStorageType(subFile1, StorageType.SSD, 1, 30000);
-      waitExpectedStorageType(subFile1, StorageType.DISK, 2, 30000);
+      DFSTestUtil.waitExpectedStorageType(
+          subFile1, StorageType.SSD, 1, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(
+          subFile1, StorageType.DISK, 2, 30000, dfs);
 
       // take no effect for the sub-dir's file in the directory.
-      waitExpectedStorageType(subFile2, StorageType.DEFAULT, 3, 30000);
+      DFSTestUtil.waitExpectedStorageType(
+          subFile2, StorageType.DEFAULT, 3, 30000, dfs);
     } finally {
       shutdownCluster();
     }
@@ -367,6 +379,20 @@ public class TestStoragePolicySatisfier {
       } catch (FileNotFoundException e) {
 
       }
+
+      try {
+        hdfsAdmin.satisfyStoragePolicy(new Path(file));
+        hdfsAdmin.satisfyStoragePolicy(new Path(file));
+        Assert.fail(String.format(
+            "Should failed to satisfy storage policy "
+            + "for %s ,since it has been "
+            + "added to satisfy movement queue.", file));
+      } catch (IOException e) {
+        GenericTestUtils.assertExceptionContains(
+            String.format("Cannot request to call satisfy storage policy "
+                + "on path %s, as this file/dir was already called for "
+                + "satisfying storage policy.", file), e);
+      }
     } finally {
       shutdownCluster();
     }
@@ -407,8 +433,10 @@ public class TestStoragePolicySatisfier {
       hdfsCluster.triggerHeartbeats();
       // Wait till StorgePolicySatisfier identified that block to move to
       // ARCHIVE area.
-      waitExpectedStorageType(file, StorageType.ARCHIVE, 1, 30000);
-      waitExpectedStorageType(file, StorageType.DISK, 2, 30000);
+      DFSTestUtil.waitExpectedStorageType(
+          file, StorageType.ARCHIVE, 1, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(
+          file, StorageType.DISK, 2, 30000, dfs);
 
       waitForBlocksMovementResult(1, 30000);
     } finally {
@@ -451,7 +479,8 @@ public class TestStoragePolicySatisfier {
       // No block movement will be scheduled as there is no target node available
       // with the required storage type.
       waitForAttemptedItems(1, 30000);
-      waitExpectedStorageType(file, StorageType.DISK, 3, 30000);
+      DFSTestUtil.waitExpectedStorageType(
+          file, StorageType.DISK, 3, 30000, dfs);
       // Since there is no target node the item will get timed out and then
       // re-attempted.
       waitForAttemptedItems(1, 30000);
@@ -523,8 +552,10 @@ public class TestStoragePolicySatisfier {
     // with the required storage type.
     waitForAttemptedItems(1, 30000);
     waitForBlocksMovementResult(1, 30000);
-    waitExpectedStorageType(file1, StorageType.ARCHIVE, 1, 30000);
-    waitExpectedStorageType(file1, StorageType.DISK, 2, 30000);
+    DFSTestUtil.waitExpectedStorageType(
+        file1, StorageType.ARCHIVE, 1, 30000, dfs);
+    DFSTestUtil.waitExpectedStorageType(
+        file1, StorageType.DISK, 2, 30000, dfs);
   }
 
   /**
@@ -571,8 +602,10 @@ public class TestStoragePolicySatisfier {
       hdfsCluster.triggerHeartbeats();
       // Wait till StorgePolicySatisfier identified that block to move to
       // ARCHIVE area.
-      waitExpectedStorageType(file, StorageType.ARCHIVE, 2, 30000);
-      waitExpectedStorageType(file, StorageType.DISK, 3, 30000);
+      DFSTestUtil.waitExpectedStorageType(
+          file, StorageType.ARCHIVE, 2, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(
+          file, StorageType.DISK, 3, 30000, dfs);
 
       waitForBlocksMovementResult(1, 30000);
     } finally {
@@ -606,8 +639,10 @@ public class TestStoragePolicySatisfier {
 
       namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
       hdfsCluster.triggerHeartbeats();
-      waitExpectedStorageType(file, StorageType.SSD, 1, 30000);
-      waitExpectedStorageType(file, StorageType.DISK, 2, 30000);
+      DFSTestUtil.waitExpectedStorageType(
+          file, StorageType.SSD, 1, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(
+          file, StorageType.DISK, 2, 30000, dfs);
 
     } finally {
       shutdownCluster();
@@ -644,8 +679,10 @@ public class TestStoragePolicySatisfier {
       namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
       hdfsCluster.triggerHeartbeats();
 
-      waitExpectedStorageType(file, StorageType.DISK, 1, 30000);
-      waitExpectedStorageType(file, StorageType.ARCHIVE, 2, 30000);
+      DFSTestUtil.waitExpectedStorageType(
+          file, StorageType.DISK, 1, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(
+          file, StorageType.ARCHIVE, 2, 30000, dfs);
     } finally {
       shutdownCluster();
     }
@@ -770,34 +807,5 @@ public class TestStoragePolicySatisfier {
         .storageTypes(storageTypes).storageCapacities(capacities).build();
     cluster.waitActive();
     return cluster;
-  }
-
-  // Check whether the Block movement has been successfully completed to satisfy
-  // the storage policy for the given file.
-  private void waitExpectedStorageType(final String fileName,
-      final StorageType expectedStorageType, int expectedStorageCount,
-      int timeout) throws Exception {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        LocatedBlock lb = null;
-        try {
-          lb = dfs.getClient().getLocatedBlocks(fileName, 0).get(0);
-        } catch (IOException e) {
-          LOG.error("Exception while getting located blocks", e);
-          return false;
-        }
-        int actualStorageCount = 0;
-        for (StorageType storageType : lb.getStorageTypes()) {
-          if (expectedStorageType == storageType) {
-            actualStorageCount++;
-          }
-        }
-        LOG.info(
-            expectedStorageType + " replica count, expected={} and actual={}",
-            expectedStorageType, actualStorageCount);
-        return expectedStorageCount == actualStorageCount;
-      }
-    }, 100, timeout);
   }
 }

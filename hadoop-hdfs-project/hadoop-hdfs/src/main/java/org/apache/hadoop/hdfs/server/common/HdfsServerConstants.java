@@ -365,6 +365,9 @@ public interface HdfsServerConstants {
   String XATTR_ERASURECODING_POLICY =
       "system.hdfs.erasurecoding.policy";
 
+  String XATTR_SATISFY_STORAGE_POLICY =
+      "system.hdfs.satisfy.storage.policy";
+
   Path MOVER_ID_PATH = new Path("/system/mover.id");
 
   long BLOCK_GROUP_INDEX_MASK = 15;

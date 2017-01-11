@@ -42,6 +42,7 @@ import java.util.ListIterator;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
 
 class FSDirXAttrOp {
   private static final XAttr KEYID_XATTR =
@@ -292,6 +293,13 @@ class FSDirXAttrOp {
           fsd.ezManager.getReencryptionStatus()
               .updateZoneStatus(inode.getId(), iip.getPath(), reProto);
         }
+      }
+
+      // Add inode id to movement queue if xattrs contain satisfy xattr.
+      if (XATTR_SATISFY_STORAGE_POLICY.equals(xaName)) {
+        FSDirAttrOp.unprotectedSatisfyStoragePolicy(iip,
+            fsd.getBlockManager(), fsd);
+        continue;
       }
 
       if (!isFile && SECURITY_XATTR_UNREADABLE_BY_SUPERUSER.equals(xaName)) {
