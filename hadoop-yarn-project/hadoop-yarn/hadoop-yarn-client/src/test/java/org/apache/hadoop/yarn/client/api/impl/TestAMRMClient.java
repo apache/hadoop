@@ -247,7 +247,7 @@ public class TestAMRMClient {
     Resource testCapability1 = Resource.newInstance(1024,  2);
     List<? extends Collection<ContainerRequest>> matches =
         amClient.getMatchingRequests(priority, node, testCapability1);
-    assertEquals("Expected no macthing requests.", matches.size(), 0);
+    assertEquals("Expected no matching requests.", matches.size(), 0);
   }
   
   @Test (timeout=60000)
