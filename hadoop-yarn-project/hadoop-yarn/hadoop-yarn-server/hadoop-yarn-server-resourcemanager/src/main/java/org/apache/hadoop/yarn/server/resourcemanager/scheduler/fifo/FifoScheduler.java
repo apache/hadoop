@@ -746,6 +746,7 @@ public class FifoScheduler extends
       LOG.debug("Container FINISHED: " + containerId);
       super.completedContainer(getRMContainer(containerId),
           completedContainer, RMContainerEventType.FINISHED);
+      node.releaseContainer(containerId, true);
     }
 
     // Updating node resource utilization
@@ -917,7 +918,7 @@ public class FifoScheduler extends
         RMNodeLabelsManager.NO_LABEL);
 
     // Inform the node
-    node.releaseContainer(container);
+    node.releaseContainer(rmContainer.getContainerId(), false);
     
     // Update total usage
     Resources.subtractFrom(usedResource, container.getResource());

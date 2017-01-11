@@ -1074,6 +1074,7 @@ public class CapacityScheduler extends
       RMContainer container = getRMContainer(containerId);
       super.completedContainer(container, completedContainer,
         RMContainerEventType.FINISHED);
+      node.releaseContainer(containerId, true);
       if (container != null) {
         releasedContainers++;
         Resource rs = container.getAllocatedResource();
