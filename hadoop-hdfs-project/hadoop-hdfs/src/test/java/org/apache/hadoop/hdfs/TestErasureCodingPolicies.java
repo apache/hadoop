@@ -155,7 +155,7 @@ public class TestErasureCodingPolicies {
     INode newInode = namesystem.getFSDirectory().getINode(newFile.toString());
     assertTrue(newInode.asFile().isStriped());
 
-    /* Verify that nested EC policies not supported */
+    /* Verify that nested EC policies are supported */
     final Path dir1 = new Path("/dir1");
     final Path dir2 = new Path(dir1, "dir2");
     fs.mkdir(dir1, FsPermission.getDirDefault());
@@ -163,9 +163,8 @@ public class TestErasureCodingPolicies {
     fs.mkdir(dir2, FsPermission.getDirDefault());
     try {
       fs.getClient().setErasureCodingPolicy(dir2.toString(), null);
-      fail("Nested erasure coding policies");
     } catch (IOException e) {
-      assertExceptionContains("already has an erasure coding policy", e);
+      fail("Nested erasure coding policies are supported");
     }
 
     /* Verify that EC policy cannot be set on a file */

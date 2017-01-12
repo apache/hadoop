@@ -171,9 +171,10 @@
 {/nn}
 
 {#fs}
-  <tr><th><a href="#tab-datanode">Live Nodes</a></th><td>{NumLiveDataNodes} (Decommissioned: {NumDecomLiveDataNodes})</td></tr>
-  <tr><th><a href="#tab-datanode">Dead Nodes</a></th><td>{NumDeadDataNodes} (Decommissioned: {NumDecomDeadDataNodes})</td></tr>
+  <tr><th><a href="#tab-datanode">Live Nodes</a></th><td>{NumLiveDataNodes} (Decommissioned: {NumDecomLiveDataNodes}, In Maintenance: {NumInMaintenanceLiveDataNodes})</td></tr>
+  <tr><th><a href="#tab-datanode">Dead Nodes</a></th><td>{NumDeadDataNodes} (Decommissioned: {NumDecomDeadDataNodes}, In Maintenance: {NumInMaintenanceDeadDataNodes})</td></tr>
   <tr><th><a href="#tab-datanode">Decommissioning Nodes</a></th><td>{NumDecommissioningDataNodes}</td></tr>
+  <tr><th><a href="#tab-datanode">Entering Maintenance Nodes</a></th><td> {NumEnteringMaintenanceDataNodes}</td></tr>
   <tr><th><a href="#tab-datanode-volume-failures">Total Datanode Volume Failures</a></th><td>{VolumeFailuresTotal} ({EstimatedCapacityLostTotal|fmt_bytes})</td></tr>
   {@eq key=nnstat.State value="active"}
     <tr><th title="Excludes missing blocks.">Number of Under-Replicated Blocks</th><td>{UnderReplicatedBlocks}</td></tr>
@@ -295,6 +296,7 @@
     <li class="dfshealth-node-icon dfshealth-node-down">Down</li>
     <li class="dfshealth-node-icon dfshealth-node-decommissioned">Decommissioned</li>
     <li class="dfshealth-node-icon dfshealth-node-down-decommissioned">Decommissioned &amp; dead</li>
+    <li class="dfshealth-node-icon dfshealth-node-down-maintenance">In Maintenance &amp; dead</li>
   </ul>
 </div>
 <div class="page-header"><h1><small>In operation</small></h1></div>
@@ -342,6 +344,32 @@
   </tr>
   {/DeadNodes}
 </table>
+</small>
+
+<div class="page-header"><h1><small>Entering Maintenance</small></h1></div>
+<small>
+  {?EnteringMaintenanceNodes}
+  <table class="table">
+    <thead>
+    <tr>
+      <th>Node</th>
+      <th>Under replicated blocks</th>
+      <th>Blocks with no live replicas</th>
+      <th>Under Replicated Blocks <br/>In files under construction</th>
+    </tr>
+    </thead>
+    {#EnteringMaintenanceNodes}
+    <tr>
+      <td>{name} ({xferaddr})</td>
+      <td>{underReplicatedBlocks}</td>
+      <td>{maintenanceOnlyReplicas}</td>
+      <td>{underReplicateInOpenFiles}</td>
+    </tr>
+    {/EnteringMaintenanceNodes}
+  </table>
+  {:else}
+  No nodes are entering maintenance.
+  {/EnteringMaintenanceNodes}
 </small>
 
 <div class="page-header"><h1><small>Decommissioning</small></h1></div>

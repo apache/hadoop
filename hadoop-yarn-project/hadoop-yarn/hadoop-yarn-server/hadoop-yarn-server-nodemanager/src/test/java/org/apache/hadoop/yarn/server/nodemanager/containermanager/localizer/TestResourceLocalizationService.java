@@ -2102,7 +2102,7 @@ public class TestResourceLocalizationService {
             Assert.assertEquals(userCachePath, destinationDirectory.getParent()
               .toUri().toString());
           } else {
-            throw new Exception("Unexpected resource recevied.");
+            throw new Exception("Unexpected resource received.");
           }
         }
       }

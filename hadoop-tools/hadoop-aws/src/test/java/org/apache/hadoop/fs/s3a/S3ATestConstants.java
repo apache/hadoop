@@ -86,18 +86,6 @@ public interface S3ATestConstants {
   String DEFAULT_CSVTEST_FILE = "s3a://landsat-pds/scene_list.gz";
 
   /**
-   * Endpoint for the S3 CSV/scale tests. This defaults to
-   * being us-east.
-   */
-  String KEY_CSVTEST_ENDPOINT = S3A_SCALE_TEST + "csvfile.endpoint";
-
-  /**
-   * Endpoint for the S3 CSV/scale tests. This defaults to
-   * being us-east.
-   */
-  String DEFAULT_CSVTEST_ENDPOINT = "s3.amazonaws.com";
-
-  /**
    * Name of the property to define the timeout for scale tests: {@value}.
    * Measured in seconds.
    */

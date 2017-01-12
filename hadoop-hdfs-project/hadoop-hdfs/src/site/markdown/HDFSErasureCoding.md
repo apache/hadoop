@@ -129,6 +129,7 @@ Deployment
        hdfs erasurecode [generic options]
          [-setPolicy [-p <policyName>] <path>]
          [-getPolicy <path>]
+         [-unsetPolicy <path>]
          [-listPolicies]
          [-usage [cmd ...]]
          [-help [cmd ...]]
@@ -146,6 +147,10 @@ Below are the details about each command.
  *  `[-getPolicy <path>]`
 
      Get details of the ErasureCoding policy of a file or directory at the specified path.
+
+ *  `[-unsetPolicy <path>]`
+
+     Unset an ErasureCoding policy from a directory at the specified path when previously user sets the ErasureCoding policy on this directory via "setPolicy" command. If the directory inherits the ErasureCoding policy from its parent group, "unsetPolicy" command on this directory will not have any effect. Unset ErasureCoding policy on a directory which doesn't have ErasureCoding policy will not return an error.
 
  *  `[-listPolicies]`
 

@@ -91,7 +91,7 @@ public class CGroupsCpuResourceHandlerImpl implements CpuResourceHandler {
     this.strictResourceUsageMode = conf.getBoolean(
         YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE,
         YarnConfiguration.DEFAULT_NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE);
-    this.cGroupsHandler.mountCGroupController(CPU);
+    this.cGroupsHandler.initializeCGroupController(CPU);
     nodeVCores = NodeManagerHardwareUtils.getVCores(plugin, conf);
 
     // cap overall usage to the number of cores allocated to YARN

@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.kms.server.KMSACLs.Type;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -46,7 +47,7 @@ interface KMSAuditLogger {
    */
   class AuditEvent {
     private final AtomicLong accessCount = new AtomicLong(-1);
-    private final KMS.KMSOp op;
+    private final Object op;
     private final String keyName;
     private final String user;
     private final String impersonator;
@@ -55,7 +56,21 @@ interface KMSAuditLogger {
     private final long startTime = System.currentTimeMillis();
     private long endTime = startTime;
 
-    AuditEvent(KMS.KMSOp op, UserGroupInformation ugi, String keyName,
+    /**
+     * @param op
+     *          The operation being audited (either {@link KMS.KMSOp} or
+     *          {@link Type} N.B this is passed as an {@link Object} to allow
+     *          either enum to be passed in.
+     * @param ugi
+     *          The user's security context
+     * @param keyName
+     *          The String name of the key if applicable
+     * @param remoteHost
+     *          The hostname of the requesting service
+     * @param msg
+     *          Any extra details for auditing
+     */
+    AuditEvent(Object op, UserGroupInformation ugi, String keyName,
         String remoteHost, String msg) {
       this.keyName = keyName;
       if (ugi == null) {
@@ -79,7 +94,7 @@ interface KMSAuditLogger {
       return accessCount;
     }
 
-    public KMS.KMSOp getOp() {
+    public Object getOp() {
       return op;
     }
 

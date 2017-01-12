@@ -19,6 +19,8 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.util.Time;
@@ -26,84 +28,96 @@ import org.apache.hadoop.util.Time;
 import javax.annotation.Nullable;
 
 /**
- * {@link FileIoEvents} that profiles the performance of the metadata and data
- * related operations on datanode volumes.
+ * Profiles the performance of the metadata and data related operations on
+ * datanode volumes.
  */
 @InterfaceAudience.Private
-class ProfilingFileIoEvents extends FileIoEvents {
+class ProfilingFileIoEvents {
 
-  @Override
+  private final boolean isEnabled;
+
+  public ProfilingFileIoEvents(@Nullable Configuration conf) {
+    if (conf != null) {
+      isEnabled = conf.getBoolean(DFSConfigKeys
+          .DFS_DATANODE_ENABLE_FILEIO_PROFILING_KEY, DFSConfigKeys
+          .DFS_DATANODE_ENABLE_FILEIO_PROFILING_DEFAULT);
+    } else {
+      isEnabled = false;
+    }
+  }
+
   public long beforeMetadataOp(@Nullable FsVolumeSpi volume,
       FileIoProvider.OPERATION op) {
-    DataNodeVolumeMetrics metrics = getVolumeMetrics(volume);
-    if (metrics != null) {
-      return Time.monotonicNow();
+    if (isEnabled) {
+      DataNodeVolumeMetrics metrics = getVolumeMetrics(volume);
+      if (metrics != null) {
+        return Time.monotonicNow();
+      }
     }
     return 0;
   }
 
-  @Override
   public void afterMetadataOp(@Nullable FsVolumeSpi volume,
       FileIoProvider.OPERATION op, long begin) {
-    DataNodeVolumeMetrics metrics = getVolumeMetrics(volume);
-    if (metrics != null) {
-      metrics.addMetadastaOperationLatency(Time.monotonicNow() - begin);
-    }
-  }
-
-  @Override
-  public long beforeFileIo(@Nullable FsVolumeSpi volume,
-      FileIoProvider.OPERATION op, long len) {
-    DataNodeVolumeMetrics metrics = getVolumeMetrics(volume);
-    if (metrics != null) {
-      return Time.monotonicNow();
-    }
-    return 0;
-  }
-
-  @Override
-  public void afterFileIo(@Nullable FsVolumeSpi volume,
-      FileIoProvider.OPERATION op, long begin, long len) {
-    DataNodeVolumeMetrics metrics = getVolumeMetrics(volume);
-    if (metrics != null) {
-      long latency = Time.monotonicNow() - begin;
-      metrics.addDataFileIoLatency(latency);
-      switch (op) {
-      case SYNC:
-        metrics.addSyncIoLatency(latency);
-        break;
-      case FLUSH:
-        metrics.addFlushIoLatency(latency);
-        break;
-      case READ:
-        metrics.addReadIoLatency(latency);
-        break;
-      case WRITE:
-        metrics.addWriteIoLatency(latency);
-        break;
-      default:
+    if (isEnabled) {
+      DataNodeVolumeMetrics metrics = getVolumeMetrics(volume);
+      if (metrics != null) {
+        metrics.addMetadastaOperationLatency(Time.monotonicNow() - begin);
       }
     }
   }
 
-  @Override
-  public void onFailure(@Nullable FsVolumeSpi volume,
-      FileIoProvider.OPERATION op, Exception e, long begin) {
-    DataNodeVolumeMetrics metrics = getVolumeMetrics(volume);
-    if (metrics != null) {
-      metrics.addFileIoError(Time.monotonicNow() - begin);
+  public long beforeFileIo(@Nullable FsVolumeSpi volume,
+      FileIoProvider.OPERATION op, long len) {
+    if (isEnabled) {
+      DataNodeVolumeMetrics metrics = getVolumeMetrics(volume);
+      if (metrics != null) {
+        return Time.monotonicNow();
+      }
+    }
+    return 0;
+  }
+
+  public void afterFileIo(@Nullable FsVolumeSpi volume,
+      FileIoProvider.OPERATION op, long begin, long len) {
+    if (isEnabled) {
+      DataNodeVolumeMetrics metrics = getVolumeMetrics(volume);
+      if (metrics != null) {
+        long latency = Time.monotonicNow() - begin;
+        metrics.addDataFileIoLatency(latency);
+        switch (op) {
+        case SYNC:
+          metrics.addSyncIoLatency(latency);
+          break;
+        case FLUSH:
+          metrics.addFlushIoLatency(latency);
+          break;
+        case READ:
+          metrics.addReadIoLatency(latency);
+          break;
+        case WRITE:
+          metrics.addWriteIoLatency(latency);
+          break;
+        default:
+        }
+      }
     }
   }
 
-  @Nullable
-  @Override
-  public String getStatistics() {
-    return null;
+  public void onFailure(@Nullable FsVolumeSpi volume, long begin) {
+    if (isEnabled) {
+      DataNodeVolumeMetrics metrics = getVolumeMetrics(volume);
+      if (metrics != null) {
+        metrics.addFileIoError(Time.monotonicNow() - begin);
+      }
+    }
   }
 
   private DataNodeVolumeMetrics getVolumeMetrics(final FsVolumeSpi volume) {
-    if (volume != null) {
-      return volume.getMetrics();
+    if (isEnabled) {
+      if (volume != null) {
+        return volume.getMetrics();
+      }
     }
     return null;
   }

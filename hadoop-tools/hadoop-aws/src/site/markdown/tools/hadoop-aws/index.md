@@ -255,6 +255,7 @@ properties, the Hadoop key management store and IAM roles.
 * Test suites includes distcp and suites in downstream projects.
 * Available since Hadoop 2.6; considered production ready in Hadoop 2.7.
 * Actively maintained.
+* Supports per-bucket configuration.
 
 S3A is now the recommended client for working with S3 objects. It is also the
 one where patches for functionality and performance are very welcome.
@@ -609,6 +610,29 @@ in XML configuration files.
 Because this property only supplies the path to the secrets file, the configuration
 option itself is no longer a sensitive item.
 
+The property `hadoop.security.credential.provider.path` is global to all
+filesystems and secrets.
+There is another property, `fs.s3a.security.credential.provider.path`
+which only lists credential providers for S3A filesystems.
+The two properties are combined into one, with the list of providers in the
+`fs.s3a.` property taking precedence
+over that of the `hadoop.security` list (i.e. they are prepended to the common list).
+
+```xml
+<property>
+  <name>fs.s3a.security.credential.provider.path</name>
+  <value />
+  <description>
+    Optional comma separated list of credential providers, a list
+    which is prepended to that set in hadoop.security.credential.provider.path
+  </description>
+</property>
+```
+
+Supporting a separate list in an `fs.s3a.` prefix permits per-bucket configuration
+of credential files.
+
+
 ###### Using the credentials
 
 Once the provider is set in the Hadoop configuration, hadoop commands
@@ -631,7 +655,7 @@ hadoop distcp \
     hdfs://nn1.example.com:9001/user/backup/007020615 s3a://glacier1/
 
 hadoop fs \
-  -D hadoop.security.credential.provider.path=jceks://hdfs@nn1.example.com:9001/user/backup/s3.jceks \
+  -D fs.s3a.security.credential.provider.path=jceks://hdfs@nn1.example.com:9001/user/backup/s3.jceks \
   -ls s3a://glacier1/
 
 ```
@@ -869,6 +893,78 @@ from placing its declaration on the command line.
       any call to setReadahead() is made to an open stream.</description>
     </property>
 
+### Configurations different S3 buckets
+
+Different S3 buckets can be accessed with different S3A client configurations.
+This allows for different endpoints, data read and write strategies, as well
+as login details.
+
+1. All `fs.s3a` options other than a small set of unmodifiable values
+ (currently `fs.s3a.impl`) can be set on a per bucket basis.
+1. The bucket specific option is set by replacing the `fs.s3a.` prefix on an option
+with `fs.s3a.bucket.BUCKETNAME.`, where `BUCKETNAME` is the name of the bucket.
+1. When connecting to a bucket, all options explicitly set will override
+the base `fs.s3a.` values.
+
+As an example, a configuration could have a base configuration to use the IAM
+role information available when deployed in Amazon EC2.
+
+```xml
+<property>
+  <name>fs.s3a.aws.credentials.provider</name>
+  <value>org.apache.hadoop.fs.s3a.SharedInstanceProfileCredentialsProvider</value>
+</property>
+```
+
+This will be the default authentication mechanism for S3A buckets.
+
+A bucket `s3a://nightly/` used for nightly data uses a session key:
+
+```xml
+<property>
+  <name>fs.s3a.bucket.nightly.access.key</name>
+  <value>AKAACCESSKEY-2</value>
+</property>
+
+<property>
+  <name>fs.s3a.bucket.nightly.secret.key</name>
+  <value>SESSIONSECRETKEY</value>
+</property>
+
+<property>
+  <name>fs.s3a.bucket.nightly.session.token</name>
+  <value>Short-lived-session-token</value>
+</property>
+
+<property>
+  <name>fs.s3a.bucket.nightly.aws.credentials.provider</name>
+  <value>org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider</value>
+</property>
+```
+
+Finally, the public `s3a://landsat-pds/` bucket is accessed anonymously:
+
+```xml
+<property>
+  <name>fs.s3a.bucket.landsat-pds.aws.credentials.provider</name>
+  <value>org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider</value>
+</property>
+```
+
+**Customizing S3A secrets held in credential files**
+
+Although most properties are automatically propagated from their
+`fs.s3a.bucket.`-prefixed custom entry to that of the base `fs.s3a.` option
+supporting secrets kept in Hadoop credential files is slightly more complex.
+This is because the property values are kept in these files, and cannot be
+dynamically patched.
+
+Instead, callers need to create different configuration files for each
+bucket, setting the base secrets (`fs.s3a.bucket.nightly.access.key`, etc),
+then declare the path to the appropriate credential file in
+a bucket-specific version of the property `fs.s3a.security.credential.provider.path`.
+
+
 ### Working with buckets in different regions
 
 S3 Buckets are hosted in different regions, the default being US-East.
@@ -924,6 +1020,16 @@ If the wrong endpoint is used, the request may fail. This may be reported as a 3
 or as a 400 Bad Request.
 
 
+If you are trying to mix endpoints for different buckets, use a per-bucket endpoint
+declaration. For example:
+
+```xml
+<property>
+  <name>fs.s3a.bucket.landsat-pds.endpoint</name>
+  <value>s3.amazonaws.com</value>
+  <description>The endpoint for s3a://landsat-pds URLs</description>
+</property>
+```
 
 ### <a name="s3a_fast_upload"></a>Stabilizing: S3A Fast Upload
 
@@ -1603,15 +1709,15 @@ org.apache.hadoop.fs.s3a.AWSS3IOException: Received permanent redirect response
 1. If not using "V4" authentication (see above), the original S3 endpoint
 can be used:
 
-```
-    <property>
-      <name>fs.s3a.endpoint</name>
-      <value>s3.amazonaws.com</value>
-    </property>
+```xml
+<property>
+  <name>fs.s3a.endpoint</name>
+  <value>s3.amazonaws.com</value>
+</property>
 ```
 
-Using the explicit endpoint for the region is recommended for speed and the
-ability to use the V4 signing API.
+Using the explicit endpoint for the region is recommended for speed and
+to use the V4 signing API.
 
 
 ### "Timeout waiting for connection from pool" when writing to S3A
@@ -2163,7 +2269,22 @@ is hosted in Amazon's US-east datacenter.
 1. If the property is set to a different path, then that data must be readable
 and "sufficiently" large.
 
-To test on different S3 endpoints, or alternate infrastructures supporting
+(the reason the space or newline is needed is to add "an empty entry"; an empty
+`<value/>` would be considered undefined and pick up the default)
+
+Of using a test file in an S3 region requiring a different endpoint value
+set in `fs.s3a.endpoint`, a bucket-specific endpoint must be defined.
+For the default test dataset, hosted in the `landsat-pds` bucket, this is:
+
+```xml
+<property>
+  <name>fs.s3a.bucket.landsat-pds.endpoint</name>
+  <value>s3.amazonaws.com</value>
+  <description>The endpoint for s3a://landsat-pds URLs</description>
+</property>
+```
+
+To test on alternate infrastructures supporting
 the same APIs, the option `fs.s3a.scale.test.csvfile` must either be
 set to " ", or an object of at least 10MB is uploaded to the object store, and
 the `fs.s3a.scale.test.csvfile` option set to its path.
@@ -2175,20 +2296,6 @@ the `fs.s3a.scale.test.csvfile` option set to its path.
 </property>
 ```
 
-(the reason the space or newline is needed is to add "an empty entry"; an empty
-`<value/>` would be considered undefined and pick up the default)
-
-*Note:* if using a test file in an S3 region requiring a different endpoint value
-set in `fs.s3a.endpoint`, define it in `fs.s3a.scale.test.csvfile.endpoint`.
-If the default CSV file is used, the tests will automatically use the us-east
-endpoint:
-
-```xml
-<property>
-  <name>fs.s3a.scale.test.csvfile.endpoint</name>
-  <value>s3.amazonaws.com</value>
-</property>
-```
 ### Viewing Integration Test Reports
 
 

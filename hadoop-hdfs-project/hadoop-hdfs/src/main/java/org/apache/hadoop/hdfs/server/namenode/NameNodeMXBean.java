@@ -190,7 +190,14 @@ public interface NameNodeMXBean {
    * @return the decommissioning node information
    */
   public String getDecomNodes();
-  
+
+  /**
+   * Gets the information on nodes entering maintenance.
+   *
+   * @return the information on nodes entering maintenance
+   */
+  String getEnteringMaintenanceNodes();
+
   /**
    * Gets the cluster id.
    * 

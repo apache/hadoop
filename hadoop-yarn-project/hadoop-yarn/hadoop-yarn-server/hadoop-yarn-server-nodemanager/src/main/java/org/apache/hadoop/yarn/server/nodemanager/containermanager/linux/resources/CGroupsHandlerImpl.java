@@ -39,7 +39,6 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +59,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
   private static final String MTAB_FILE = "/proc/mounts";
   private static final String CGROUPS_FSTYPE = "cgroup";
 
+  private String mtabFile;
   private final String cGroupPrefix;
   private final boolean enableCGroupMount;
   private final String cGroupMountPath;
@@ -70,8 +70,17 @@ class CGroupsHandlerImpl implements CGroupsHandler {
   private final PrivilegedOperationExecutor privilegedOperationExecutor;
   private final Clock clock;
 
+  /**
+   * Create cgroup handler object.
+   * @param conf configuration
+   * @param privilegedOperationExecutor provides mechanisms to execute
+   *                                    PrivilegedContainerOperations
+   * @param mtab mount file location
+   * @throws ResourceHandlerException if initialization failed
+   */
   public CGroupsHandlerImpl(Configuration conf, PrivilegedOperationExecutor
-      privilegedOperationExecutor) throws ResourceHandlerException {
+      privilegedOperationExecutor, String mtab)
+      throws ResourceHandlerException {
     this.cGroupPrefix = conf.get(YarnConfiguration.
         NM_LINUX_CONTAINER_CGROUPS_HIERARCHY, "/hadoop-yarn")
         .replaceAll("^/", "").replaceAll("$/", "");
@@ -89,8 +98,20 @@ class CGroupsHandlerImpl implements CGroupsHandler {
     this.rwLock = new ReentrantReadWriteLock();
     this.privilegedOperationExecutor = privilegedOperationExecutor;
     this.clock = SystemClock.getInstance();
-
+    mtabFile = mtab;
     init();
+  }
+
+  /**
+   * Create cgroup handler object.
+   * @param conf configuration
+   * @param privilegedOperationExecutor provides mechanisms to execute
+   *                                    PrivilegedContainerOperations
+   * @throws ResourceHandlerException if initialization failed
+   */
+  public CGroupsHandlerImpl(Configuration conf, PrivilegedOperationExecutor
+      privilegedOperationExecutor) throws ResourceHandlerException {
+    this(conf, privilegedOperationExecutor, MTAB_FILE);
   }
 
   private void init() throws ResourceHandlerException {
@@ -117,7 +138,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
       // locations - we'll attempt to figure out mount points
 
       Map<CGroupController, String> cPaths =
-          initializeControllerPathsFromMtab(MTAB_FILE, this.cGroupPrefix);
+          initializeControllerPathsFromMtab(mtabFile, this.cGroupPrefix);
       // we want to do a bulk update without the paths changing concurrently
       try {
         rwLock.writeLock().lock();
@@ -136,26 +157,14 @@ class CGroupsHandlerImpl implements CGroupsHandler {
       Map<CGroupController, String> ret = new HashMap<>();
 
       for (CGroupController controller : CGroupController.values()) {
-        String name = controller.getName();
-        String controllerPath = findControllerInMtab(name, parsedMtab);
+        String subsystemName = controller.getName();
+        String controllerPath = findControllerInMtab(subsystemName, parsedMtab);
 
         if (controllerPath != null) {
-          File f = new File(controllerPath + "/" + cGroupPrefix);
-
-          if (FileUtil.canWrite(f)) {
-            ret.put(controller, controllerPath);
-          } else {
-            String error =
-                new StringBuffer("Mount point Based on mtab file: ")
-                    .append(mtab)
-                    .append(". Controller mount point not writable for: ")
-                    .append(name).toString();
-
-            LOG.error(error);
-            throw new ResourceHandlerException(error);
-          }
+          ret.put(controller, controllerPath);
         } else {
-          LOG.warn("Controller not mounted but automount disabled: " + name);
+          LOG.warn("Controller not mounted but automount disabled: " +
+              subsystemName);
         }
       }
       return ret;
@@ -214,25 +223,28 @@ class CGroupsHandlerImpl implements CGroupsHandler {
     return ret;
   }
 
+  /**
+   * Find the hierarchy of the subsystem.
+   * The kernel ensures that a subsystem can only be part of a single hierarchy.
+   * The subsystem can be part of multiple mount points, if they belong to the
+   * same hierarchy.
+   * @param controller subsystem like cpu, cpuset, etc...
+   * @param entries map of paths to mount options
+   * @return the first mount path that has the requested subsystem
+   */
   private static String findControllerInMtab(String controller,
       Map<String, List<String>> entries) {
     for (Map.Entry<String, List<String>> e : entries.entrySet()) {
-      if (e.getValue().contains(controller))
+      if (e.getValue().contains(controller)) {
         return e.getKey();
+      }
     }
 
     return null;
   }
 
-  @Override
-  public void mountCGroupController(CGroupController controller)
+  private void mountCGroupController(CGroupController controller)
       throws ResourceHandlerException {
-    if (!enableCGroupMount) {
-      LOG.warn("CGroup mounting is disabled - ignoring mount request for: " +
-          controller.getName());
-      return;
-    }
-
     String path = getControllerPath(controller);
 
     if (path == null) {
@@ -297,6 +309,105 @@ class CGroupsHandlerImpl implements CGroupsHandler {
     return new StringBuffer(getPathForCGroup(controller, cGroupId))
         .append('/').append(controller.getName()).append('.')
         .append(param).toString();
+  }
+
+  /**
+   * Mount cgroup or use existing mount point based on configuration.
+   * @param controller - the controller being initialized
+   * @throws ResourceHandlerException yarn hierarchy cannot be created or
+   *   accessed for any reason
+   */
+  @Override
+  public void initializeCGroupController(CGroupController controller) throws
+      ResourceHandlerException {
+    if (enableCGroupMount) {
+      // We have a controller that needs to be mounted
+      mountCGroupController(controller);
+    } else {
+      // We are working with a pre-mounted contoller
+      // Make sure that Yarn cgroup hierarchy path exists
+      initializePreMountedCGroupController(controller);
+    }
+  }
+
+  /**
+   * This function is called when the administrator opted
+   * to use a pre-mounted cgroup controller.
+   * There are two options.
+   * 1. Yarn hierarchy already exists. We verify, whether we have write access
+   * in this case.
+   * 2. Yarn hierarchy does not exist, yet. We create it in this case.
+   * @param controller the controller being initialized
+   * @throws ResourceHandlerException yarn hierarchy cannot be created or
+   *   accessed for any reason
+   */
+  public void initializePreMountedCGroupController(CGroupController controller)
+      throws ResourceHandlerException {
+    // Check permissions to cgroup hierarchy and
+    // create YARN cgroup if it does not exist, yet
+    File rootHierarchy = new File(getControllerPath(controller));
+    File yarnHierarchy = new File(rootHierarchy, cGroupPrefix);
+    String subsystemName = controller.getName();
+
+    LOG.info("Initializing mounted controller " + controller.getName() + " " +
+        "at " + yarnHierarchy);
+
+    if (!rootHierarchy.exists()) {
+      throw new ResourceHandlerException(getErrorWithDetails(
+              "Cgroups mount point does not exist or not accessible",
+              subsystemName,
+              rootHierarchy.getAbsolutePath()
+          ));
+    } else if (!yarnHierarchy.exists()) {
+      LOG.info("Yarn control group does not exist. Creating " +
+          yarnHierarchy.getAbsolutePath());
+      try {
+        if (!yarnHierarchy.mkdir()) {
+          // Unexpected: we just checked that it was missing
+          throw new ResourceHandlerException(getErrorWithDetails(
+                  "Unexpected: Cannot create yarn cgroup",
+                  subsystemName,
+                  yarnHierarchy.getAbsolutePath()
+              ));
+        }
+      } catch (SecurityException e) {
+        throw new ResourceHandlerException(getErrorWithDetails(
+                "No permissions to create yarn cgroup",
+                subsystemName,
+                yarnHierarchy.getAbsolutePath()
+            ), e);
+      }
+    } else if (!FileUtil.canWrite(yarnHierarchy)) {
+      throw new ResourceHandlerException(getErrorWithDetails(
+              "Yarn control group not writable",
+              subsystemName,
+              yarnHierarchy.getAbsolutePath()
+          ));
+    }
+  }
+
+  /**
+   * Creates an actionable error message for mtab parsing.
+   * @param errorMessage message to use
+   * @param subsystemName cgroup subsystem
+   * @param yarnCgroupPath cgroup path that failed
+   * @return a string builder that can be appended by the caller
+   */
+  private String getErrorWithDetails(
+      String errorMessage,
+      String subsystemName,
+      String yarnCgroupPath) {
+    return new StringBuilder()
+        .append(errorMessage)
+        .append(" Subsystem:")
+        .append(subsystemName)
+        .append(" Mount points:")
+        .append(mtabFile)
+        .append(" User:")
+        .append(System.getProperty("user.name"))
+        .append(" Path: ")
+        .append(yarnCgroupPath)
+        .toString();
   }
 
   @Override

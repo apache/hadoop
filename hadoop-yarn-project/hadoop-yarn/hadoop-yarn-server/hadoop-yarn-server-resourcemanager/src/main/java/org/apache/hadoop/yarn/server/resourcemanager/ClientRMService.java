@@ -1186,20 +1186,35 @@ public class ClientRMService extends AbstractService implements
           + callerUGI.getShortUserName() + " cannot perform operation "
           + ApplicationAccessType.MODIFY_APP.name() + " on " + applicationId));
     }
-    
+
+    String targetQueue = request.getTargetQueue();
+    if (!accessToTargetQueueAllowed(callerUGI, application, targetQueue)) {
+      RMAuditLogger.logFailure(callerUGI.getShortUserName(),
+          AuditConstants.MOVE_APP_REQUEST, "Target queue doesn't exist or user"
+              + " doesn't have permissions to submit to target queue: "
+              + targetQueue, "ClientRMService",
+          AuditConstants.UNAUTHORIZED_USER, applicationId);
+      throw RPCUtil.getRemoteException(new AccessControlException("User "
+          + callerUGI.getShortUserName() + " cannot submit applications to"
+          + " target queue or the target queue doesn't exist: "
+          + targetQueue + " while moving " + applicationId));
+    }
+
     // Moves only allowed when app is in a state that means it is tracked by
     // the scheduler. Introducing SUBMITTED state also to this list as there
     // could be a corner scenario that app may not be in Scheduler in SUBMITTED
     // state.
     if (!ACTIVE_APP_STATES.contains(application.getState())) {
-      String msg = "App in " + application.getState() + " state cannot be moved.";
+      String msg = "App in " + application.getState() +
+          " state cannot be moved.";
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
           AuditConstants.MOVE_APP_REQUEST, "UNKNOWN", "ClientRMService", msg);
       throw new YarnException(msg);
     }
 
     try {
-      this.rmAppManager.moveApplicationAcrossQueue(applicationId, request.getTargetQueue());
+      this.rmAppManager.moveApplicationAcrossQueue(applicationId,
+          request.getTargetQueue());
     } catch (YarnException ex) {
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
           AuditConstants.MOVE_APP_REQUEST, "UNKNOWN", "ClientRMService",
@@ -1212,6 +1227,24 @@ public class ClientRMService extends AbstractService implements
     MoveApplicationAcrossQueuesResponse response = recordFactory
         .newRecordInstance(MoveApplicationAcrossQueuesResponse.class);
     return response;
+  }
+
+  /**
+   * Check if the submission of an application to the target queue is allowed.
+   * @param callerUGI the caller UGI
+   * @param application the application to move
+   * @param targetQueue the queue to move the application to
+   * @return true if submission is allowed, false otherwise
+   */
+  private boolean accessToTargetQueueAllowed(UserGroupInformation callerUGI,
+      RMApp application, String targetQueue) {
+    return
+        queueACLsManager.checkAccess(callerUGI,
+            QueueACL.SUBMIT_APPLICATIONS, application,
+            Server.getRemoteAddress(), null, targetQueue) ||
+        queueACLsManager.checkAccess(callerUGI,
+            QueueACL.ADMINISTER_QUEUE, application,
+            Server.getRemoteAddress(), null, targetQueue);
   }
 
   private String getRenewerForToken(Token<RMDelegationTokenIdentifier> token)

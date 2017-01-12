@@ -47,6 +47,8 @@ public abstract class ECCommand extends Command {
     factory.addClass(SetECPolicyCommand.class, "-" + SetECPolicyCommand.NAME);
     factory.addClass(GetECPolicyCommand.class, "-"
         + GetECPolicyCommand.NAME);
+    factory.addClass(UnsetECPolicyCommand.class, "-"
+        + UnsetECPolicyCommand.NAME);
     factory.addClass(ListPolicies.class, "-" + ListPolicies.NAME);
   }
 
@@ -209,6 +211,38 @@ public abstract class ECCommand extends Command {
         }
       }
       out.println(sb.toString());
+    }
+  }
+
+  /**
+   * Unset the erasure coding policy from a directory.
+   */
+  static class UnsetECPolicyCommand extends ECCommand {
+    public static final String NAME = "unsetPolicy";
+    public static final String USAGE = "<path>";
+    public static final String DESCRIPTION =
+        "Unset erasure coding policy from a directory\n";
+
+    @Override
+    protected void processOptions(LinkedList<String> args) throws IOException {
+      if (args.isEmpty()) {
+        throw new HadoopIllegalArgumentException("<path> is missing");
+      }
+      if (args.size() > 1) {
+        throw new HadoopIllegalArgumentException("Too many arguments");
+      }
+    }
+
+    @Override
+    protected void processPath(PathData item) throws IOException {
+      super.processPath(item);
+      DistributedFileSystem dfs = (DistributedFileSystem) item.fs;
+      try {
+        dfs.unsetErasureCodingPolicy(item.path);
+      } catch (IOException e) {
+        throw new IOException("Unable to unset EC policy from directory "
+            + item.path + ". " + e.getMessage());
+      }
     }
   }
 }
