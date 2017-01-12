@@ -256,15 +256,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.rmContext.setHAEnabled(HAUtil.isHAEnabled(this.conf));
     if (this.rmContext.isHAEnabled()) {
       HAUtil.verifyAndSetConfiguration(this.conf);
-
-      // If the RM is configured to use an embedded leader elector,
-      // initialize the leader elector.
-      if (HAUtil.isAutomaticFailoverEnabled(conf) &&
-          HAUtil.isAutomaticFailoverEmbedded(conf)) {
-        EmbeddedElector elector = createEmbeddedElector();
-        addIfService(elector);
-        rmContext.setLeaderElectorService(elector);
-      }
     }
 
     // Set UGI and do login
@@ -282,9 +273,26 @@ public class ResourceManager extends CompositeService implements Recoverable {
     addIfService(rmDispatcher);
     rmContext.setDispatcher(rmDispatcher);
 
+    // The order of services below should not be changed as services will be
+    // started in same order
+    // As elector service needs admin service to be initialized and started,
+    // first we add admin service then elector service
+
     adminService = createAdminService();
     addService(adminService);
     rmContext.setRMAdminService(adminService);
+
+    // elector must be added post adminservice
+    if (this.rmContext.isHAEnabled()) {
+      // If the RM is configured to use an embedded leader elector,
+      // initialize the leader elector.
+      if (HAUtil.isAutomaticFailoverEnabled(conf)
+          && HAUtil.isAutomaticFailoverEmbedded(conf)) {
+        EmbeddedElector elector = createEmbeddedElector();
+        addIfService(elector);
+        rmContext.setLeaderElectorService(elector);
+      }
+    }
 
     rmContext.setYarnConfiguration(conf);
     
