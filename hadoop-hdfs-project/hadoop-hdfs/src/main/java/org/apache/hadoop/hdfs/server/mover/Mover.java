@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
@@ -661,9 +662,13 @@ public class Mover {
           try {
             spsRunning = nnc.getDistributedFileSystem().getClient()
                 .isStoragePolicySatisfierRunning();
-          } catch (StandbyException e) {
-            System.err.println("Skip Standby Namenode. " + nnc.toString());
-            continue;
+          } catch (RemoteException e) {
+            IOException cause = e.unwrapRemoteException();
+            if (cause instanceof StandbyException) {
+              System.err.println("Skip Standby Namenode. " + nnc.toString());
+              continue;
+            }
+            throw e;
           }
           if (spsRunning) {
             System.err.println("Mover failed due to StoragePolicySatisfier"

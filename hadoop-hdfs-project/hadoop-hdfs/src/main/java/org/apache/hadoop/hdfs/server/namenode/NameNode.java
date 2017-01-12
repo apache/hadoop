@@ -2137,6 +2137,13 @@ public class NameNode extends ReconfigurableBase implements
                   + "we must pass true/false only"));
     }
 
+    if (!isActiveState()) {
+      throw new ReconfigurationException(property, newVal,
+          getConf().get(property), new HadoopIllegalArgumentException(
+          "Activating or deactivating storage policy satisfier service on "
+              + state + " NameNode is not allowed"));
+    }
+
     boolean activateSPS = Boolean.parseBoolean(newVal);
     if (activateSPS) {
       namesystem.getBlockManager().activateSPS();
