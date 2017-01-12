@@ -25,20 +25,20 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.client.util.YarnClientUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+import sun.misc.Signal;
+import sun.misc.SignalHandler;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -67,20 +67,15 @@ public class Client {
   // Amt. of virtual core resource to request for to run the App Master
   private int amVCores = 1;
 
-  // Application master jar file
   private String appMasterJar = "";
 
-  private String tfConatinerJar = "";
-
-  private String tfServerPy = "";
-  // Main class to invoke application master
   private final String appMasterMainClass;
 
   private String tfClientPy;
 
-  // Amt of memory to request for container in which shell script will be executed
+  // Amt of memory to request for container where tensorflow server will run
   private int containerMemory = 10;
-  // Amt. of virtual cores to request for container in which shell script will be executed
+  // Amt. of virtual cores to request for container where tensorflow server will run
   private int containerVirtualCores = 1;
 
   private String nodeLabelExpression = null;
@@ -188,10 +183,8 @@ public class Client {
         "Interval between each retry, unit is milliseconds");
     opts.addOption(TFApplication.OPT_TF_CLIENT, true,
             "Provide client python of tensorflow");
-    opts.addOption(TFApplication.OPT_TF_SERVER_JAR, true,
-            "Provide server jar of tensorflow");
-    opts.addOption(TFApplication.OPT_TF_SERVER_PY, true,
-            "Provide server pyscript of tensorflow");
+/*    opts.addOption(TFApplication.OPT_TF_SERVER_JAR, true,
+            "Provide server jar of tensorflow");*/
     opts.addOption(TFApplication.OPT_TF_WORKER_NUM, true,
             "worker quantity of tensorflow");
     opts.addOption(TFApplication.OPT_TF_PS_NUM, true,
@@ -233,7 +226,7 @@ public class Client {
     amMemory = Integer.parseInt(cliParser.getOptionValue("master_memory", "100"));
     amVCores = Integer.parseInt(cliParser.getOptionValue("master_vcores", "1"));
     tfClientPy = cliParser.getOptionValue(TFApplication.OPT_TF_CLIENT, TFClient.TF_CLIENT_PY);
-    tfConatinerJar = cliParser.getOptionValue(TFApplication.OPT_TF_SERVER_JAR, TFAmContainer.APPMASTER_JAR_PATH);
+    //tfConatinerJar = cliParser.getOptionValue(TFApplication.OPT_TF_SERVER_JAR, TFAmContainer.APPMASTER_JAR_PATH);
     workerNum = Integer.parseInt(cliParser.getOptionValue(TFApplication.OPT_TF_WORKER_NUM, "1"));
     psNum = Integer.parseInt(cliParser.getOptionValue(TFApplication.OPT_TF_PS_NUM, "0"));
 
@@ -261,7 +254,7 @@ public class Client {
         tfClientPy = cliParser.getOptionValue(TFApplication.OPT_TF_CLIENT);
     }
 
-    containerMemory = 4096;//Integer.parseInt(cliParser.getOptionValue("container_memory", "4096"));
+    containerMemory = Integer.parseInt(cliParser.getOptionValue("container_memory", "4096"));
     containerVirtualCores = Integer.parseInt(cliParser.getOptionValue("container_vcores", "1"));
 
 
@@ -301,6 +294,15 @@ public class Client {
     }
 
     return true;
+  }
+
+  private String copyLocalFileToDfs(FileSystem fs, String appId, String srcFilePath, String dstFileName) throws IOException {
+    String suffix = TFYarnConstants.APP_NAME + "/" + appId + "/" + dstFileName;
+    Path dst = new Path(fs.getHomeDirectory(), suffix);
+    if (srcFilePath != null) {
+      fs.copyFromLocalFile(new Path(srcFilePath), dst);
+    }
+    return dst.toString();
   }
 
   /**
@@ -383,19 +385,14 @@ public class Client {
     Set<String> tags = new HashSet<String>();
     appContext.setApplicationTags(tags);
 
-    // set local resources for the application master
-    // local files or archives as needed
-    // In this scenario, the jar file for the application master is part of the local resources
     Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
 
     TFAmContainer tfAmContainer = new TFAmContainer(this);
 
-    LOG.info("Copy App Master jar from local filesystem and add to local environment");
-    // Copy the application master jar to the filesystem
-    // Create a local resource to point to the destination jar path
+    // Copy the application jar to the filesystem
     FileSystem fs = FileSystem.get(conf);
-    tfAmContainer.addToLocalResources(fs, appMasterJar, TFAmContainer.APPMASTER_JAR_PATH, appId.toString(),
-            localResources, null);
+    String dstJarPath = copyLocalFileToDfs(fs, appId.toString(), appMasterJar, TFContainer.SERVER_JAR_PATH);
+    tfAmContainer.addToLocalResources(fs, new Path(dstJarPath), TFAmContainer.APPMASTER_JAR_PATH, localResources);
 
     // Set the log4j properties if needed
     if (!log4jPropFile.isEmpty()) {
@@ -408,26 +405,20 @@ public class Client {
 
     Map<String, String> env = tfAmContainer.setJavaEnv(conf);
 
-    // Set the necessary command to execute the application master
-
     if (null != nodeLabelExpression) {
       appContext.setNodeLabelExpression(nodeLabelExpression);
     }
 
     StringBuilder command = tfAmContainer.makeCommands(amMemory, appMasterMainClass, containerMemory, containerVirtualCores,
-    workerNum, psNum, tfConatinerJar, containerRetryOptions);
+    workerNum, psNum, dstJarPath, containerRetryOptions);
 
-    LOG.info("Completed setting up app master command " + command.toString());
+    LOG.info("AppMaster command: " + command.toString());
     List<String> commands = new ArrayList<String>();
     commands.add(command.toString());
 
-    // Set up the container launch context for the application master
     ContainerLaunchContext amContainer = ContainerLaunchContext.newInstance(
       localResources, env, commands, null, null, null);
 
-    // Set up resource type requirements
-    // For now, both memory and vcores are supported, so we set memory and
-    // vcores requirements
     Resource capability = Resource.newInstance(amMemory, amVCores);
     appContext.setResource(capability);
 
@@ -471,7 +462,7 @@ public class Client {
     LOG.info("Submitting application to ASM");
 
     yarnClient.submitApplication(appContext);
-
+    handleSignal(appId);
     return monitorApplication(appId);
 
   }
@@ -563,6 +554,35 @@ public class Client {
       }*/
     }
 
+  }
+
+  private class ClientSignalHandler implements SignalHandler {
+
+    public static final String SIG_INT = "INT";
+    private ApplicationId appId = null;
+
+    public ClientSignalHandler(ApplicationId appId) {
+      this.appId = appId;
+    }
+
+    @Override
+    public void handle(Signal signal) {
+      if (signal.getName().equals(SIG_INT)) {
+        try {
+          forceKillApplication(appId);
+        } catch (YarnException e) {
+          e.printStackTrace();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+        System.exit(0);
+      }
+    }
+  }
+
+  private void handleSignal(ApplicationId appId) {
+    ClientSignalHandler sigHandler = new ClientSignalHandler(appId);
+    Signal.handle(new Signal(ClientSignalHandler.SIG_INT), sigHandler);
   }
 
   /**

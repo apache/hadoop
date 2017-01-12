@@ -151,7 +151,7 @@ public class LaunchContainerThread implements Runnable {
         ApplicationId appId = appMaster.getAppAttempId().getApplicationId();
 
         try {
-            tfContainer.addToLocalResources(fs, dst, TFContainer.SERVER_JAR_PATH, localResources);
+            tfContainer.addToLocalResources(fs, tfServerJar, TFContainer.SERVER_JAR_PATH, localResources);
 /*            tfContainer.addToLocalResources(fs, tfServerJar, TFContainer.SERVER_JAR_PATH, appId.toString(),
                     localResources, null);*/
         } catch (IOException e) {

@@ -80,6 +80,16 @@ public class TFAmContainer {
         localResources.put(fileDstPath, scRsrc);
     }
 
+    public void addToLocalResources(FileSystem fs, Path dst, String fileDstPath, Map<String, LocalResource> localResources) throws IOException {
+        FileStatus scFileStatus = fs.getFileStatus(dst);
+        LocalResource scRsrc =
+                LocalResource.newInstance(
+                        URL.fromURI(dst.toUri()),
+                        LocalResourceType.FILE, LocalResourceVisibility.APPLICATION,
+                        scFileStatus.getLen(), scFileStatus.getModificationTime());
+        localResources.put(fileDstPath, scRsrc);
+    }
+
     public Map<String, String> setJavaEnv(Configuration conf) {
         Map<String, String> env = new HashMap<String, String>();
 
@@ -112,7 +122,7 @@ public class TFAmContainer {
 
 
     public StringBuilder makeCommands(long amMemory, String appMasterMainClass, int containerMemory, int containerVirtualCores,
-                                      int workerNumContainers, int psNumContainers, String tfConatinerJar, Vector<CharSequence> containerRetryOptions) {
+                                      int workerNumContainers, int psNumContainers, String jarDfsPath, Vector<CharSequence> containerRetryOptions) {
         // Set the necessary command to execute the application master
         Vector<CharSequence> vargs = new Vector<CharSequence>(30);
 
@@ -128,7 +138,7 @@ public class TFAmContainer {
         vargs.add("--container_vcores " + String.valueOf(containerVirtualCores));
         vargs.add(TFApplication.makeOption(TFApplication.OPT_TF_WORKER_NUM, String.valueOf(workerNumContainers)));
         vargs.add(TFApplication.makeOption(TFApplication.OPT_TF_PS_NUM, String.valueOf(psNumContainers)));
-        vargs.add("--" + TFApplication.OPT_TF_SERVER_JAR + " " + String.valueOf(tfConatinerJar));
+        vargs.add("--" + TFApplication.OPT_TF_SERVER_JAR + " " + String.valueOf(jarDfsPath));
 
         vargs.addAll(containerRetryOptions);
 

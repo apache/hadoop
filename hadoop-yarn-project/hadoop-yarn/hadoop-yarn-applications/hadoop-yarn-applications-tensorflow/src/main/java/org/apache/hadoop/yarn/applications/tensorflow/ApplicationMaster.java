@@ -341,8 +341,7 @@ public class ApplicationMaster {
             + appAttemptID.getApplicationId().getClusterTimestamp()
             + ", attemptId=" + appAttemptID.getAttemptId());
 
-    containerMemory = 4096;
-    //Integer.parseInt(cliParser.getOptionValue("container_memory", "2048"));
+    containerMemory = Integer.parseInt(cliParser.getOptionValue("container_memory", "256"));
     containerVirtualCores = Integer.parseInt(cliParser.getOptionValue(
             "container_vcores", "1"));
 
@@ -612,7 +611,7 @@ public class ApplicationMaster {
 
       }
 
-      FileSystem fs = null;
+/*      FileSystem fs = null;
       try {
         fs = FileSystem.get(this.getConfiguration());
       } catch (IOException e) {
@@ -623,7 +622,9 @@ public class ApplicationMaster {
       Path dst = new Path(fs.getHomeDirectory(), suffix);
       if (tfServerJar != null) {
         fs.copyFromLocalFile(new Path(tfServerJar), dst);
-      }
+      }*/
+
+
 
       for (Container allocatedContainer : this.allocatedContainers) {
 
@@ -642,7 +643,7 @@ public class ApplicationMaster {
         LOG.info("server cid: " + allocatedContainer.getId().toString());
         LaunchContainerThread launchDelegator = new LaunchContainerThread(allocatedContainer,
                 this, clusterSpec.getServerAddress(allocatedContainer.getId().toString()));
-        launchDelegator.setDst(dst);
+        //launchDelegator.setDst(dst);
         launchDelegator.setTfServerJar(tfServerJar);
         launchDelegator.setContainerMemory(containerMemory);
         launchDelegator.setContainerRetryPolicy(containerRetryPolicy);

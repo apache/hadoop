@@ -95,6 +95,12 @@ public class TFContainer {
         localResources.put(fileDstPath, scRsrc);
     }
 
+    public void addToLocalResources(FileSystem fs, String srcFilePath, String fileDstPath, Map<String, LocalResource> localResources) throws IOException {
+
+        Path path = new Path(srcFilePath);
+        addToLocalResources(fs, path, fileDstPath, localResources);
+    }
+
 
     public void addToLocalResources(FileSystem fs, String fileSrcPath,
                                     String fileDstPath, String appId, Map<String, LocalResource> localResources,
