@@ -673,7 +673,7 @@ public class AdminService extends CompositeService implements
       }
       refreshClusterMaxPriority(RefreshClusterMaxPriorityRequest.newInstance());
     } catch (Exception ex) {
-      throw new ServiceFailedException(ex.getMessage());
+      throw new ServiceFailedException("RefreshAll operation failed", ex);
     }
   }
 
