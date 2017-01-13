@@ -165,18 +165,64 @@ New configuration parameters that are introduced with v.2 are marked bold.
 ### <a name="Enabling_Timeline_Service_v2"></a>Enabling Timeline Service v.2
 
 #### Preparing Apache HBase cluster for storage
+There are a few steps to be done for preparing the storage for Timeline Service v.2:
+
+Step 1) [Set up the HBase cluster](#Set_up_the_HBase_cluster)
+
+Step 2) [Enable the coprocessor](#Enable_the_coprocessor)
+
+Step 3) [Create the schema for Timeline Service v.2](#Create_schema)
+
+Each step is explained in more detail below.
+
+##### <a name="Set_up_the_HBase_cluster"> </a>Step 1) Set up the HBase cluster
 The first part is to set up or pick an Apache HBase cluster to use as the storage cluster. The
-version of Apache HBase that is supported with Timeline Service v.2 is 1.1.x. The 1.0.x versions
-do not work with Timeline Service v.2. The 1.2.x versions have not been tested.
+version of Apache HBase that is supported with Timeline Service v.2 is 1.2.4. The 1.0.x versions
+do not work with Timeline Service v.2. Later versions of HBase have not been tested with
+Timeline Service.
 
-Once you have an Apache HBase cluster ready to use for this purpose, perform the following steps.
+HBase has different deployment modes. Refer to the HBase book for understanding them and pick a
+mode that is suitable for your setup.
+(http://hbase.apache.org/book.html#standalone_dist)
 
-First, add the timeline service jar to the HBase classpath in all HBase machines in the cluster. It
+##### Simple deployment for HBase
+If you are intent on a simple deploy profile for the Apache HBase cluster
+where the data loading is light but the data needs to persist across node
+comings and goings, you could consider the "Standalone HBase over HDFS" deploy mode.
+
+This is a useful variation on the standalone HBase setup and has all HBase daemons running inside
+one JVM but rather than persisting to the local filesystem, it persists to an HDFS instance.
+Writing to HDFS where data is replicated ensures that data is persisted across node
+comings and goings. To configure this standalone variant, edit your `hbase-site.xml` setting
+the `hbase.rootdir` to point at a directory in your HDFS instance but then set
+`hbase.cluster.distributed` to false. For example:
+
+```
+<configuration>
+  <property>
+    <name>hbase.rootdir</name>
+    <value>hdfs://namenode.example.org:8020/hbase</value>
+  </property>
+  <property>
+    <name>hbase.cluster.distributed</name>
+    <value>false</value>
+  </property>
+</configuration>
+```
+
+For more details on this mode, refer to
+http://hbase.apache.org/book.html#standalone.over.hdfs .
+
+Once you have an Apache HBase cluster ready to use, perform the following steps.
+
+##### <a name="Enable_the_coprocessor"> </a>Step 2) Enable the coprocessor
+
+Step 2.1) Add the timeline service jar to the HBase classpath in all HBase machines in the cluster. It
 is needed for the coprocessor as well as the schema creator. For example,
 
     cp hadoop-yarn-server-timelineservice-3.0.0-alpha1-SNAPSHOT.jar /usr/hbase/lib/
 
-Then, enable the coprocessor that handles the aggregation. To enable it, add the following entry in
+Step 2.2) Enable the coprocessor that handles the aggregation. To enable it, add the following entry in
 region servers' `hbase-site.xml` file (generally located in the `conf` directory) as follows:
 
 ```
@@ -186,10 +232,11 @@ region servers' `hbase-site.xml` file (generally located in the `conf` directory
 </property>
 ```
 
-Restart the region servers and the master to pick up the timeline service jar as well as the config
-change. In this version, the coprocessor is loaded statically (i.e. system coprocessor) as opposed
-to a dynamically (table coprocessor).
+Step 2.3) Restart the region servers and the master to pick up the timeline service jar as well
+as the config change. In this version, the coprocessor is loaded statically
+(i.e. system coprocessor) as opposed to a dynamically (table coprocessor).
 
+##### <a name="Create_schema"> </a>Step 3) Create the timeline service schema
 Finally, run the schema creator tool to create the necessary tables:
 
     bin/hbase org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator
