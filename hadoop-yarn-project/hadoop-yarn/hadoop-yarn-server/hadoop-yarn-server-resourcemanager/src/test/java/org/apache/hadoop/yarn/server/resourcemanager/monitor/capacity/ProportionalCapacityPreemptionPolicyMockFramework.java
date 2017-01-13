@@ -600,19 +600,21 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
       qc.setUsedCapacity(partitionName, used);
       when(queue.getUsedCapacity()).thenReturn(used);
       ru.setPending(partitionName, pending);
-      if (!isParent(queueExprArray, idx)) {
-        LeafQueue lq = (LeafQueue) queue;
-        when(lq.getTotalPendingResourcesConsideringUserLimit(isA(Resource.class),
-            isA(String.class))).thenReturn(pending);
-      }
-      ru.setUsed(partitionName, parseResourceFromString(values[2].trim()));
-
       // Setup reserved resource if it contained by input config
       Resource reserved = Resources.none();
       if(values.length == 5) {
         reserved = parseResourceFromString(values[4].trim());
         ru.setReserved(partitionName, reserved);
       }
+      if (!isParent(queueExprArray, idx)) {
+        LeafQueue lq = (LeafQueue) queue;
+        when(lq.getTotalPendingResourcesConsideringUserLimit(isA(Resource.class),
+            isA(String.class), eq(false))).thenReturn(pending);
+        when(lq.getTotalPendingResourcesConsideringUserLimit(isA(Resource.class),
+            isA(String.class), eq(true))).thenReturn(
+            Resources.subtract(pending, reserved));
+      }
+      ru.setUsed(partitionName, parseResourceFromString(values[2].trim()));
 
       LOG.debug("Setup queue=" + queueName + " partition=" + partitionName
           + " [abs_guaranteed=" + absGuaranteed + ",abs_max=" + absMax

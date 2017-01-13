@@ -3280,8 +3280,9 @@ public class TestLeafQueue {
     // even though user_0's apps are still asking for a total of 4GB.
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemorySize());
-    assertEquals(0*GB, e.getTotalPendingResourcesConsideringUserLimit(
-                   clusterResource, RMNodeLabelsManager.NO_LABEL).getMemorySize());
+    assertEquals(0 * GB,
+        e.getTotalPendingResourcesConsideringUserLimit(clusterResource,
+            RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
 
     // Assign 2nd container of 1GB
     applyCSAssignment(clusterResource,
@@ -3295,7 +3296,7 @@ public class TestLeafQueue {
     assertEquals(2*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemorySize());
     assertEquals(0*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL).getMemorySize());
+        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
 
     // Can't allocate 3rd container due to user-limit. Headroom still 0.
     applyCSAssignment(clusterResource,
@@ -3305,7 +3306,7 @@ public class TestLeafQueue {
     assertEquals(2*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemorySize());
     assertEquals(0*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL).getMemorySize());
+        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
 
     // Increase user-limit-factor from 1GB to 10GB (1% * 10 * 100GB = 10GB).
     // Pending for both app_0 and app_1 are still 3GB, so user-limit-factor
@@ -3313,7 +3314,7 @@ public class TestLeafQueue {
     // getTotalPendingResourcesConsideringUserLimit()
     e.setUserLimitFactor(10.0f);
     assertEquals(3*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL).getMemorySize());
+        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
 
     applyCSAssignment(clusterResource,
         e.assignContainers(clusterResource, node_0,
@@ -3323,7 +3324,7 @@ public class TestLeafQueue {
     assertEquals(3*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemorySize());
     assertEquals(2*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL).getMemorySize());
+        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
 
     // Get the last 2 containers for app_1, no more pending requests.
     applyCSAssignment(clusterResource,
@@ -3337,7 +3338,7 @@ public class TestLeafQueue {
     assertEquals(3*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(2*GB, app_1.getCurrentConsumption().getMemorySize());
     assertEquals(0*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL).getMemorySize());
+        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
 
     // Release each container from app_0
     for (RMContainer rmContainer : app_0.getLiveContainers()) {
@@ -3446,7 +3447,7 @@ public class TestLeafQueue {
     // With queue capacity set at 1% of 100GB and user-limit-factor set to 1.0,
     // queue 'e' should be able to consume 1GB per user.
     assertEquals(2*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL).getMemorySize());
+        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
     // None of the apps have assigned resources
     // user_0's apps:
     assertEquals(0*GB, app_0.getCurrentConsumption().getMemorySize());
@@ -3463,7 +3464,7 @@ public class TestLeafQueue {
    // The first container was assigned to user_0's app_0. Queues total headroom
     // has 1GB left for user_1.
     assertEquals(1*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL).getMemorySize());
+        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
     // user_0's apps:
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemorySize());
@@ -3481,7 +3482,7 @@ public class TestLeafQueue {
     // this container went to user_0's app_1. so, headroom for queue 'e'e is
     // still 1GB for user_1
     assertEquals(1*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL).getMemorySize());
+        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
     // user_0's apps:
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(1*GB, app_1.getCurrentConsumption().getMemorySize());
@@ -3497,7 +3498,7 @@ public class TestLeafQueue {
     // Container was allocated to user_1's app_2 since user_1, Now, no headroom
     // is left.
     assertEquals(0*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL).getMemorySize());
+        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
     // user_0's apps:
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(1*GB, app_1.getCurrentConsumption().getMemorySize());
@@ -3513,7 +3514,7 @@ public class TestLeafQueue {
     // Allocated to user_1's app_2 since scheduler allocates 1 container
     // above user resource limit. Available headroom still 0.
     assertEquals(0*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL).getMemorySize());
+        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
     // user_0's apps:
     long app_0_consumption = app_0.getCurrentConsumption().getMemorySize();
     assertEquals(1*GB, app_0_consumption);
@@ -3533,7 +3534,7 @@ public class TestLeafQueue {
     // Cannot allocate 5th container because both users are above their allowed
     // user resource limit. Values should be the same as previously.
     assertEquals(0*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL).getMemorySize());
+        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
     // user_0's apps:
     assertEquals(app_0_consumption, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(app_1_consumption, app_1.getCurrentConsumption().getMemorySize());
@@ -3552,7 +3553,7 @@ public class TestLeafQueue {
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), e, nodes, apps);
     // Next container goes to user_0's app_1, since it still wanted 1GB.
     assertEquals(1*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL).getMemorySize());
+        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
     // user_0's apps:
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(2*GB, app_1.getCurrentConsumption().getMemorySize());
@@ -3567,7 +3568,7 @@ public class TestLeafQueue {
     // Last container goes to user_1's app_3, since it still wanted 1GB.
     // user_0's apps:
     assertEquals(0*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL).getMemorySize());
+        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(2*GB, app_1.getCurrentConsumption().getMemorySize());
     // user_1's apps:
