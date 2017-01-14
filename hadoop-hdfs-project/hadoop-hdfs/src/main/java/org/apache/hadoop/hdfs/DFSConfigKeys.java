@@ -1034,7 +1034,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String DFS_DISK_BALANCER_BLOCK_TOLERANCE =
       "dfs.disk.balancer.block.tolerance.percent";
-  public static final int DFS_DISK_BALANCER_BLOCK_TOLERANCE_DEFAULT = 5;
+  public static final int DFS_DISK_BALANCER_BLOCK_TOLERANCE_DEFAULT = 10;
 
   public static final String DFS_DISK_BALANCER_PLAN_THRESHOLD =
       "dfs.disk.balancer.plan.threshold.percent";
