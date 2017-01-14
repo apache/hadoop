@@ -85,7 +85,11 @@ public class LocalMetadataStore implements MetadataStore {
       uriHost = null;
     }
 
-    Configuration conf = fs.getConf();
+    initialize(fs.getConf());
+  }
+
+  @Override
+  public void initialize(Configuration conf) throws IOException {
     Preconditions.checkNotNull(conf);
     int maxRecords = conf.getInt(CONF_MAX_RECORDS, DEFAULT_MAX_RECORDS);
     if (maxRecords < 4) {

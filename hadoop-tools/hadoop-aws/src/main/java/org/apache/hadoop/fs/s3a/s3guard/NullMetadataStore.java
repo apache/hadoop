@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -34,6 +35,10 @@ public class NullMetadataStore implements MetadataStore {
   @Override
   public void initialize(FileSystem fs) throws IOException {
     return;
+  }
+
+  @Override
+  public void initialize(Configuration conf) throws IOException {
   }
 
   @Override

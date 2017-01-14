@@ -53,6 +53,15 @@ public final class S3ATestUtils {
   public static final String UNSET_PROPERTY = "unset";
 
   /**
+   * Get S3A FS name.
+   * @param conf configuration.
+   * @return S3A fs name.
+   */
+  public static String getFsName(Configuration conf) {
+    return conf.getTrimmed(TEST_FS_S3A_NAME, "");
+  }
+
+  /**
    * Create the test filesystem.
    *
    * If the test.fs.s3a.name property is not set, this will

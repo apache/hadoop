@@ -435,7 +435,8 @@ public class S3AFileSystem extends FileSystem {
    * @param path input path, may be relative to the working dir
    * @return a key excluding the leading "/", or, if it is the root path, ""
    */
-  private String pathToKey(Path path) {
+  @VisibleForTesting
+  public String pathToKey(Path path) {
     if (!path.isAbsolute()) {
       path = new Path(workingDir, path);
     }
@@ -486,7 +487,7 @@ public class S3AFileSystem extends FileSystem {
    * @param path path to qualify
    * @return a qualified path.
    */
-  Path qualify(Path path) {
+  public Path qualify(Path path) {
     return path.makeQualified(uri, workingDir);
   }
 

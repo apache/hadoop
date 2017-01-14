@@ -163,6 +163,45 @@ public class DynamoDBMetadataStore implements MetadataStore {
   private URI s3Uri;
   private String username;
 
+  /**
+   * A utility function to create DynamoDB instance.
+   * @param fs S3A file system.
+   * @return DynamoDB instance.
+   */
+  @VisibleForTesting
+  static DynamoDB createDynamoDB(S3AFileSystem fs) throws IOException {
+    Preconditions.checkNotNull(fs);
+    String region;
+    try {
+      region = fs.getAmazonS3Client().getBucketLocation(fs.getBucket());
+    } catch (AmazonClientException e) {
+      throw translateException("Determining bucket location",
+          fs.getUri().toString(), e);
+    }
+    return createDynamoDB(fs, region);
+  }
+
+  /**
+   * A utility function to create DynamoDB instance.
+   * @param fs S3A file system.
+   * @param region region of the S3A file system.
+   * @return DynamoDB instance.
+   */
+  private static DynamoDB createDynamoDB(S3AFileSystem fs, String region)
+      throws IOException {
+    Preconditions.checkNotNull(fs);
+    Preconditions.checkNotNull(region);
+    final Configuration conf = fs.getConf();
+    Class<? extends DynamoDBClientFactory> cls = conf.getClass(
+        S3GUARD_DDB_CLIENT_FACTORY_IMPL,
+        S3GUARD_DDB_CLIENT_FACTORY_IMPL_DEFAULT,
+        DynamoDBClientFactory.class);
+    LOG.debug("Creating dynamo DB client {}", cls);
+    AmazonDynamoDBClient dynamoDBClient = ReflectionUtils.newInstance(cls, conf)
+        .createDynamoDBClient(fs.getUri(), region);
+    return new DynamoDB(dynamoDBClient);
+  }
+
   @Override
   public void initialize(FileSystem fs) throws IOException {
     Preconditions.checkArgument(fs instanceof S3AFileSystem,
@@ -208,7 +247,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * @see #initialize(FileSystem)
    * @throws IOException if there is an error
    */
-  void initialize(Configuration config) throws IOException {
+  @Override
+  public void initialize(Configuration config) throws IOException {
     conf = config;
     // use the bucket as the DynamoDB table name if not specified in config
     tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY);
@@ -472,7 +512,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
   @Override
   public void destroy() throws IOException {
     if (table == null) {
-      LOG.debug("In destroy(): no table to delete");
+      LOG.info("In destroy(): no table to delete");
       return;
     }
     LOG.info("Deleting DynamoDB table {} in region {}", tableName, region);

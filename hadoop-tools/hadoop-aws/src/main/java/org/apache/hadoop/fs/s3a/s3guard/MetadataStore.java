@@ -24,6 +24,7 @@ import java.util.Collection;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -43,6 +44,15 @@ public interface MetadataStore extends Closeable {
    * @throws IOException if there is an error
    */
   void initialize(FileSystem fs) throws IOException;
+
+  /**
+   * Performs one-time initialization of the metadata store via configuration.
+   *
+   * @see #initialize(FileSystem)
+   * @param conf Configuration.
+   * @throws IOException if there is an error
+   */
+  void initialize(Configuration conf) throws IOException;
 
   /**
    * Deletes exactly one path.
