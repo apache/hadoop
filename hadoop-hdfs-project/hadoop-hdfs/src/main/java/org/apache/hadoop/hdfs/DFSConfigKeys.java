@@ -642,10 +642,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_IMAGE_TRANSFER_CHUNKSIZE_KEY = "dfs.image.transfer.chunksize";
   public static final int DFS_IMAGE_TRANSFER_CHUNKSIZE_DEFAULT = 64 * 1024;
 
-  //Keys with no defaults
-  public static final String  DFS_DATANODE_PLUGINS_KEY = "dfs.datanode.plugins";
-  public static final String  DFS_DATANODE_FSDATASET_FACTORY_KEY = "dfs.datanode.fsdataset.factory";
-  public static final String  DFS_DATANODE_FSDATASET_VOLUME_CHOOSING_POLICY_KEY = "dfs.datanode.fsdataset.volume.choosing.policy";
+  // Datanode File IO Stats
   public static final String DFS_DATANODE_ENABLE_FILEIO_PROFILING_KEY =
       "dfs.datanode.enable.fileio.profiling";
   public static final boolean DFS_DATANODE_ENABLE_FILEIO_PROFILING_DEFAULT =
@@ -654,6 +651,17 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.enable.fileio.fault.injection";
   public static final boolean
       DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_DEFAULT = false;
+  public static final String
+      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY =
+      "dfs.datanode.fileio.profiling.sampling.fraction";
+  public static final double
+      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEAFULT = 1.0;
+
+  //Keys with no defaults
+  public static final String  DFS_DATANODE_PLUGINS_KEY = "dfs.datanode.plugins";
+  public static final String  DFS_DATANODE_FSDATASET_FACTORY_KEY = "dfs.datanode.fsdataset.factory";
+  public static final String  DFS_DATANODE_FSDATASET_VOLUME_CHOOSING_POLICY_KEY = "dfs.datanode.fsdataset.volume.choosing.policy";
+
   public static final String  DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_KEY = "dfs.datanode.available-space-volume-choosing-policy.balanced-space-threshold";
   public static final long    DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_DEFAULT = 1024L * 1024L * 1024L * 10L; // 10 GB
   public static final String  DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY = "dfs.datanode.available-space-volume-choosing-policy.balanced-space-preference-fraction";
