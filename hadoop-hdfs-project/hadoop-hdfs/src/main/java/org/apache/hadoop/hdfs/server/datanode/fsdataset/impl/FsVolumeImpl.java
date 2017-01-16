@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -1122,9 +1123,11 @@ public class FsVolumeImpl implements FsVolumeSpi {
   public byte[] loadLastPartialChunkChecksum(
       File blockFile, File metaFile) throws IOException {
     // readHeader closes the temporary FileInputStream.
-    DataChecksum dcs = BlockMetadataHeader
-        .readHeader(fileIoProvider.getFileInputStream(this, metaFile))
-        .getChecksum();
+    DataChecksum dcs;
+    try (FileInputStream fis = fileIoProvider.getFileInputStream(
+        this, metaFile)) {
+      dcs = BlockMetadataHeader.readHeader(fis).getChecksum();
+    }
     final int checksumSize = dcs.getChecksumSize();
     final long onDiskLen = blockFile.length();
     final int bytesPerChecksum = dcs.getBytesPerChecksum();
