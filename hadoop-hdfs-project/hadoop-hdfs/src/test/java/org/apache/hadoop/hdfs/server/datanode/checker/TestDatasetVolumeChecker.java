@@ -21,7 +21,6 @@ package org.apache.hadoop.hdfs.server.datanode.checker;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.*;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.VolumeCheckContext;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -35,7 +34,10 @@ import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -229,6 +231,7 @@ public class TestDatasetVolumeChecker {
   static FsDatasetSpi<FsVolumeSpi> makeDataset(List<FsVolumeSpi> volumes)
       throws Exception {
     // Create dataset and init volume health.
+    @SuppressWarnings("unchecked") // The cast is safe.
     final FsDatasetSpi<FsVolumeSpi> dataset = mock(FsDatasetSpi.class);
     final FsDatasetSpi.FsVolumeReferences references = new
         FsDatasetSpi.FsVolumeReferences(volumes);
@@ -236,7 +239,7 @@ public class TestDatasetVolumeChecker {
     return dataset;
   }
 
-  private static List<FsVolumeSpi> makeVolumes(
+  static List<FsVolumeSpi> makeVolumes(
       int numVolumes, VolumeCheckResult health) throws Exception {
     final List<FsVolumeSpi> volumes = new ArrayList<>(numVolumes);
     for (int i = 0; i < numVolumes; ++i) {

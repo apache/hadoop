@@ -24,6 +24,7 @@ import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -144,6 +145,8 @@ public class TestDataNodeVolumeFailureToleration {
     // Bring up two additional datanodes that need both of their volumes
     // functioning in order to stay up.
     conf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 0);
+    conf.setTimeDuration(DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY,
+        0, TimeUnit.MILLISECONDS);
     cluster.startDataNodes(conf, 2, true, null, null);
     cluster.waitActive();
     final DatanodeManager dm = cluster.getNamesystem().getBlockManager(

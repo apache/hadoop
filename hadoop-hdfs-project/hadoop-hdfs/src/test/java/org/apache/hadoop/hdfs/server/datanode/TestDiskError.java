@@ -26,7 +26,9 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -49,8 +51,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -69,6 +71,9 @@ public class TestDiskError {
   public void setUp() throws Exception {
     conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512L);
+    conf.setTimeDuration(
+        DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY,
+        0, TimeUnit.MILLISECONDS);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
@@ -214,19 +219,22 @@ public class TestDiskError {
    * Before refactoring the code the above function was not getting called 
    * @throws IOException, InterruptedException
    */
-  @Test
-  public void testcheckDiskError() throws IOException, InterruptedException {
+  @Test(timeout=60000)
+  public void testcheckDiskError() throws Exception {
     if(cluster.getDataNodes().size() <= 0) {
       cluster.startDataNodes(conf, 1, true, null, null);
       cluster.waitActive();
     }
-    DataNode dataNode = cluster.getDataNodes().get(0);
-    long slackTime = dataNode.checkDiskErrorInterval/2;
+    final DataNode dataNode = cluster.getDataNodes().get(0);
     //checking for disk error
-    dataNode.checkDiskErrorAsync();
-    Thread.sleep(dataNode.checkDiskErrorInterval);
-    long lastDiskErrorCheck = dataNode.getLastDiskErrorCheck();
-    assertTrue("Disk Error check is not performed within  " + dataNode.checkDiskErrorInterval +  "  ms", ((Time.monotonicNow()-lastDiskErrorCheck) < (dataNode.checkDiskErrorInterval + slackTime)));
+    final long lastCheckTimestamp = dataNode.getLastDiskErrorCheck();
+    dataNode.checkDiskError();
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return dataNode.getLastDiskErrorCheck() > lastCheckTimestamp;
+      }
+    }, 100, 60000);
   }
 
   @Test

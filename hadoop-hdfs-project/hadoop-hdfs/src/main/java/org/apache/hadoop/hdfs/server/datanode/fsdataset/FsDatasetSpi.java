@@ -65,7 +65,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 /**
  * This is a service provider interface for the underlying storage that
  * stores replicas for a data node.
- * The default implementation stores replicas on local drives. 
+ * The default implementation stores replicas on local drives.
  */
 @InterfaceAudience.Private
 public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
@@ -273,7 +273,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   long getLength(ExtendedBlock b) throws IOException;
 
   /**
-   * Get reference to the replica meta info in the replicasMap. 
+   * Get reference to the replica meta info in the replicasMap.
    * To be called from methods that are synchronized on {@link FSDataset}
    * @return replica from the replicas map
    */
@@ -314,7 +314,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   /**
    * Creates a temporary replica and returns the meta information of the replica
    * .
-   * 
+   *
    * @param b block
    * @return the meta info of the replica which is being written to
    * @throws IOException if an error occurs
@@ -324,7 +324,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
 
   /**
    * Creates a RBW replica and returns the meta info of the replica
-   * 
+   *
    * @param b block
    * @return the meta info of the replica which is being written to
    * @throws IOException if an error occurs
@@ -334,7 +334,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
 
   /**
    * Recovers a RBW replica and returns the meta info of the replica.
-   * 
+   *
    * @param b block
    * @param newGS the new generation stamp for the replica
    * @param minBytesRcvd the minimum number of bytes that the replica could have
@@ -355,7 +355,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
 
   /**
    * Append to a finalized replica and returns the meta info of the replica.
-   * 
+   *
    * @param b block
    * @param newGS the new generation stamp for the replica
    * @param expectedBlockLen the number of bytes the replica is expected to have
@@ -368,7 +368,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   /**
    * Recover a failed append to a finalized replica and returns the meta
    * info of the replica.
-   * 
+   *
    * @param b block
    * @param newGS the new generation stamp for the replica
    * @param expectedBlockLen the number of bytes the replica is expected to have
@@ -377,11 +377,11 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    */
   ReplicaHandler recoverAppend(
       ExtendedBlock b, long newGS, long expectedBlockLen) throws IOException;
-  
+
   /**
    * Recover a failed pipeline close.
    * It bumps the replica's generation stamp and finalize it if RBW replica
-   * 
+   *
    * @param b block
    * @param newGS the new generation stamp for the replica
    * @param expectedBlockLen the number of bytes the replica is expected to have
@@ -390,7 +390,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    */
   Replica recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen
       ) throws IOException;
-  
+
   /**
    * Finalizes the block previously opened for writing using writeToBlock.
    * The block size is what is in the parameter b and it must match the amount
@@ -437,19 +437,19 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    *
    * @throws ReplicaNotFoundException          If the replica is not found
    *
-   * @throws UnexpectedReplicaStateException   If the replica is not in the 
+   * @throws UnexpectedReplicaStateException   If the replica is not in the
    *                                             expected state.
-   * @throws FileNotFoundException             If the block file is not found or there 
+   * @throws FileNotFoundException             If the block file is not found or there
    *                                              was an error locating it.
    * @throws EOFException                      If the replica length is too short.
-   * 
-   * @throws IOException                       May be thrown from the methods called. 
+   *
+   * @throws IOException                       May be thrown from the methods called.
    */
   void checkBlock(ExtendedBlock b, long minLength, ReplicaState state)
       throws ReplicaNotFoundException, UnexpectedReplicaStateException,
       FileNotFoundException, EOFException, IOException;
-      
-  
+
+
   /**
    * Is the block valid?
    * @return - true if the specified block is valid
@@ -493,10 +493,9 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   boolean isCached(String bpid, long blockId);
 
     /**
-     * Check if all the data directories are healthy
-     * @return A set of unhealthy data directories.
+     * Handle volume failures by removing the failed volumes.
      */
-  Set<File> checkDataDir();
+  void handleVolumeFailures(Set<FsVolumeSpi> failedVolumes);
 
   /**
    * Shutdown the FSDataset
@@ -516,7 +515,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
 
   /**
    * Checks how many valid storage volumes there are in the DataNode.
-   * @return true if more than the minimum number of valid volumes are left 
+   * @return true if more than the minimum number of valid volumes are left
    * in the FSDataSet.
    */
   boolean hasEnoughResource();
@@ -528,7 +527,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
 
   /**
    * Initialize a replica recovery.
-   * @return actual state of the replica on this data-node or 
+   * @return actual state of the replica on this data-node or
    * null if data-node does not have the replica.
    */
   ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock
@@ -555,13 +554,13 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   void shutdownBlockPool(String bpid) ;
 
   /**
-   * Deletes the block pool directories. If force is false, directories are 
-   * deleted only if no block files exist for the block pool. If force 
+   * Deletes the block pool directories. If force is false, directories are
+   * deleted only if no block files exist for the block pool. If force
    * is true entire directory for the blockpool is deleted along with its
    * contents.
    * @param bpid BlockPool Id to be deleted.
    * @param force If force is false, directories are deleted only if no
-   *        block files exist for the block pool, otherwise entire 
+   *        block files exist for the block pool, otherwise entire
    *        directory for the blockpool is deleted along with its contents.
    * @throws IOException
    */
@@ -574,9 +573,9 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
       ) throws IOException;
 
   /**
-   * Get a {@link HdfsBlocksMetadata} corresponding to the list of blocks in 
+   * Get a {@link HdfsBlocksMetadata} corresponding to the list of blocks in
    * <code>blocks</code>.
-   * 
+   *
    * @param bpid pool to query
    * @param blockIds List of block ids for which to return metadata
    * @return metadata Metadata for the list of blocks

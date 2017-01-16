@@ -238,8 +238,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public Set<File> checkDataDir() {
-    return null;
+  public void handleVolumeFailures(Set<FsVolumeSpi> failedVolumes) {
   }
 
   @Override
@@ -432,14 +431,14 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public void setPinning(ExtendedBlock block) throws IOException {    
+  public void setPinning(ExtendedBlock block) throws IOException {
   }
 
   @Override
   public boolean getPinning(ExtendedBlock block) throws IOException {
     return false;
   }
-  
+
   @Override
   public boolean isDeletingBlock(String bpid, long blockId) {
     return false;

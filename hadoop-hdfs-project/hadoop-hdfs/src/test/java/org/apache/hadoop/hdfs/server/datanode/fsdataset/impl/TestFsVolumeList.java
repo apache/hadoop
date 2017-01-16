@@ -102,38 +102,6 @@ public class TestFsVolumeList {
   }
 
   @Test(timeout=30000)
-  public void testCheckDirsWithClosedVolume() throws IOException {
-    FsVolumeList volumeList = new FsVolumeList(
-        Collections.<VolumeFailureInfo>emptyList(), blockScanner, blockChooser);
-    final List<FsVolumeImpl> volumes = new ArrayList<>();
-    for (int i = 0; i < 3; i++) {
-      File curDir = new File(baseDir, "volume-" + i);
-      curDir.mkdirs();
-      FsVolumeImpl volume = new FsVolumeImpl(dataset, "storage-id", curDir,
-          conf, StorageType.DEFAULT);
-      volumes.add(volume);
-      volumeList.addVolume(volume.obtainReference());
-    }
-
-    // Close the 2nd volume.
-    volumes.get(1).setClosed();
-    try {
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
-          return volumes.get(1).checkClosed();
-        }
-      }, 100, 3000);
-    } catch (TimeoutException e) {
-      fail("timed out while waiting for volume to be removed.");
-    } catch (InterruptedException ie) {
-      Thread.currentThread().interrupt();
-    }
-    // checkDirs() should ignore the 2nd volume since it is closed.
-    volumeList.checkDirs();
-  }
-
-  @Test(timeout=30000)
   public void testReleaseVolumeRefIfNoBlockScanner() throws IOException {
     FsVolumeList volumeList = new FsVolumeList(
         Collections.<VolumeFailureInfo>emptyList(), null, blockChooser);
