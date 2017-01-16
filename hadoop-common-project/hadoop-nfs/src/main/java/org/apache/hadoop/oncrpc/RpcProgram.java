@@ -22,6 +22,7 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply.AcceptState;
@@ -55,7 +56,18 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
    * system portmap daemon when registering this RPC server program.
    */
   private final DatagramSocket registrationSocket;
-  
+  /*
+   * Timeout value in millisecond for the rpc connection to portmap
+   */
+  private final int portmapUdpTimeoutMillis;
+
+  protected RpcProgram(String program, String host, int port, int progNumber,
+      int lowProgVersion, int highProgVersion,
+      DatagramSocket registrationSocket, boolean allowInsecurePorts) {
+    this(program, host, port, progNumber, lowProgVersion, highProgVersion,
+            registrationSocket, allowInsecurePorts, 500);
+  }
+
   /**
    * Constructor
    * 
@@ -69,10 +81,12 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
    *        with portmap daemon
    * @param allowInsecurePorts true to allow client connections from
    *        unprivileged ports, false otherwise
+   * @param  portmapUdpTimeoutMillis timeout in milliseconds for RPC connection
    */
   protected RpcProgram(String program, String host, int port, int progNumber,
       int lowProgVersion, int highProgVersion,
-      DatagramSocket registrationSocket, boolean allowInsecurePorts) {
+      DatagramSocket registrationSocket, boolean allowInsecurePorts,
+      int portmapUdpTimeoutMillis) {
     this.program = program;
     this.host = host;
     this.port = port;
@@ -81,6 +95,7 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
     this.highProgVersion = highProgVersion;
     this.registrationSocket = registrationSocket;
     this.allowInsecurePorts = allowInsecurePorts;
+    this.portmapUdpTimeoutMillis = portmapUdpTimeoutMillis;
     LOG.info("Will " + (allowInsecurePorts ? "" : "not ") + "accept client "
         + "connections from unprivileged ports");
   }
@@ -124,14 +139,14 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
   }
   
   /**
-   * Register the program with Portmap or Rpcbind
+   * Register the program with Portmap or Rpcbind.
    * @param mapEntry port map entries
    * @param set specifies registration or not
    */
   protected void register(PortmapMapping mapEntry, boolean set) {
     XDR mappingRequest = PortmapRequest.create(mapEntry, set);
     SimpleUdpClient registrationClient = new SimpleUdpClient(host, RPCB_PORT,
-        mappingRequest, registrationSocket);
+        mappingRequest, true, registrationSocket, portmapUdpTimeoutMillis);
     try {
       registrationClient.run();
     } catch (IOException e) {
@@ -237,5 +252,10 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
   
   public int getPort() {
     return port;
+  }
+
+  @VisibleForTesting
+  public int getPortmapUdpTimeoutMillis() {
+    return portmapUdpTimeoutMillis;
   }
 }
