@@ -234,7 +234,7 @@ public class ReplicaInPipeline extends ReplicaInfo
   
   @Override // ReplicaInPipelineInterface
   public ReplicaOutputStreams createStreams(boolean isCreate, 
-      DataChecksum requestedChecksum, long slowLogThresholdMs)
+      DataChecksum requestedChecksum)
       throws IOException {
     File blockFile = getBlockFile();
     File metaFile = getMetaFile();
@@ -251,7 +251,8 @@ public class ReplicaInPipeline extends ReplicaInfo
     // may differ from requestedChecksum for appends.
     final DataChecksum checksum;
 
-    RandomAccessFile metaRAF = new RandomAccessFile(metaFile, "rw");
+    RandomAccessFile metaRAF = getFileIoProvider().getRandomAccessFile(
+        getVolume(), metaFile, "rw");
 
     if (!isCreate) {
       // For append or recovery, we must enforce the existing checksum.
@@ -293,17 +294,19 @@ public class ReplicaInPipeline extends ReplicaInfo
     FileOutputStream blockOut = null;
     FileOutputStream crcOut = null;
     try {
-      blockOut = new FileOutputStream(
-          new RandomAccessFile( blockFile, "rw" ).getFD() );
-      crcOut = new FileOutputStream(metaRAF.getFD());
+      blockOut = getFileIoProvider().getFileOutputStream(
+          getVolume(), new RandomAccessFile(blockFile, "rw").getFD());
+      crcOut = getFileIoProvider().getFileOutputStream(
+          getVolume(), metaRAF.getFD());
       if (!isCreate) {
         blockOut.getChannel().position(blockDiskSize);
         crcOut.getChannel().position(crcDiskSize);
       }
       return new ReplicaOutputStreams(blockOut, crcOut, checksum,
-          getVolume().isTransientStorage(), slowLogThresholdMs);
+          getVolume(), getFileIoProvider());
     } catch (IOException e) {
       IOUtils.closeStream(blockOut);
+      IOUtils.closeStream(crcOut);
       IOUtils.closeStream(metaRAF);
       throw e;
     }
@@ -314,11 +317,11 @@ public class ReplicaInPipeline extends ReplicaInfo
     File blockFile = getBlockFile();
     File restartMeta = new File(blockFile.getParent()  +
         File.pathSeparator + "." + blockFile.getName() + ".restart");
-    if (restartMeta.exists() && !restartMeta.delete()) {
+    if (!getFileIoProvider().deleteWithExistsCheck(getVolume(), restartMeta)) {
       DataNode.LOG.warn("Failed to delete restart meta file: " +
           restartMeta.getPath());
     }
-    return new FileOutputStream(restartMeta);
+    return getFileIoProvider().getFileOutputStream(getVolume(), restartMeta);
   }
 
   @Override

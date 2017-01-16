@@ -1395,6 +1395,12 @@ public class DataStorage extends Storage {
     bpStorageMap.remove(bpId);
   }
 
+  /**
+   * Prefer FileIoProvider#fullydelete.
+   * @param dir
+   * @return
+   */
+  @Deprecated
   public static boolean fullyDelete(final File dir) {
     boolean result = FileUtil.fullyDelete(dir);
     return result;

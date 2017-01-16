@@ -69,12 +69,11 @@ public interface ReplicaInPipelineInterface extends Replica {
    * 
    * @param isCreate if it is for creation
    * @param requestedChecksum the checksum the writer would prefer to use
-   * @param slowLogThresholdMs threshold in ms to log slow io operation
    * @return output streams for writing
    * @throws IOException if any error occurs
    */
   public ReplicaOutputStreams createStreams(boolean isCreate,
-      DataChecksum requestedChecksum, long slowLogThresholdMs)
+      DataChecksum requestedChecksum)
       throws IOException;
 
   /**

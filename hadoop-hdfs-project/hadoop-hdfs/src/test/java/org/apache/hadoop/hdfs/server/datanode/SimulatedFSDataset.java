@@ -116,7 +116,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       DatanodeStorage.State.NORMAL;
 
   private final AutoCloseableLock datasetLock;
-  
+  private final FileIoProvider fileIoProvider;
+
   static final byte[] nullCrcFileData;
   static {
     DataChecksum checksum = DataChecksum.newDataChecksum(
@@ -254,8 +255,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     }
 
     @Override
-    synchronized public ReplicaOutputStreams createStreams(boolean isCreate, 
-        DataChecksum requestedChecksum, long slowLogThresholdMs)
+    synchronized public ReplicaOutputStreams createStreams(boolean isCreate,
+        DataChecksum requestedChecksum)
         throws IOException {
       if (finalized) {
         throw new IOException("Trying to write to a finalized replica "
@@ -263,7 +264,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       } else {
         SimulatedOutputStream crcStream = new SimulatedOutputStream();
         return new ReplicaOutputStreams(oStream, crcStream, requestedChecksum,
-            volume.isTransientStorage(), slowLogThresholdMs);
+            volume, fileIoProvider);
       }
     }
 
@@ -444,12 +445,15 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
           map.get(bpid).getUsed(), 0L);
     }
   }
-  
+
   static class SimulatedVolume implements FsVolumeSpi {
     private final SimulatedStorage storage;
+    private final FileIoProvider fileIoProvider;
 
-    SimulatedVolume(final SimulatedStorage storage) {
+    SimulatedVolume(final SimulatedStorage storage,
+                    final FileIoProvider fileIoProvider) {
       this.storage = storage;
+      this.fileIoProvider = fileIoProvider;
     }
 
     @Override
@@ -532,6 +536,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     }
 
     @Override
+    public FileIoProvider getFileIoProvider() {
+      return fileIoProvider;
+    }
+
+    @Override
     public VolumeCheckResult check(VolumeCheckContext context)
         throws Exception {
       return VolumeCheckResult.HEALTHY;
@@ -562,10 +571,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     }
 
     registerMBean(datanodeUuid);
+    this.fileIoProvider = new FileIoProvider(conf);
     this.storage = new SimulatedStorage(
         conf.getLong(CONFIG_PROPERTY_CAPACITY, DEFAULT_CAPACITY),
         conf.getEnum(CONFIG_PROPERTY_STATE, DEFAULT_STATE));
-    this.volume = new SimulatedVolume(this.storage);
+    this.volume = new SimulatedVolume(this.storage, this.fileIoProvider);
     this.datasetLock = new AutoCloseableLock();
   }
 

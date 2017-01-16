@@ -20,15 +20,15 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 import java.io.Closeable;
 import java.io.FileDescriptor;
 import java.io.FileOutputStream;
+import java.io.Flushable;
 import java.io.OutputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIOException;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 
 /**
@@ -43,21 +43,22 @@ public class ReplicaOutputStreams implements Closeable {
   /** Stream to checksum. */
   private final OutputStream checksumOut;
   private final DataChecksum checksum;
-  private final boolean isTransientStorage;
-  private final long slowLogThresholdMs;
+  private final FsVolumeSpi volume;
+  private final FileIoProvider fileIoProvider;
 
   /**
    * Create an object with a data output stream, a checksum output stream
    * and a checksum.
    */
-  public ReplicaOutputStreams(OutputStream dataOut,
-      OutputStream checksumOut, DataChecksum checksum,
-      boolean isTransientStorage, long slowLogThresholdMs) {
+  public ReplicaOutputStreams(
+      OutputStream dataOut, OutputStream checksumOut, DataChecksum checksum,
+      FsVolumeSpi volume, FileIoProvider fileIoProvider) {
+
     this.dataOut = dataOut;
     this.checksum = checksum;
-    this.slowLogThresholdMs = slowLogThresholdMs;
-    this.isTransientStorage = isTransientStorage;
     this.checksumOut = checksumOut;
+    this.volume = volume;
+    this.fileIoProvider = fileIoProvider;
 
     try {
       if (this.dataOut instanceof FileOutputStream) {
@@ -93,7 +94,7 @@ public class ReplicaOutputStreams implements Closeable {
 
   /** @return is writing to a transient storage? */
   public boolean isTransientStorage() {
-    return isTransientStorage;
+    return volume.isTransientStorage();
   }
 
   @Override
@@ -112,7 +113,7 @@ public class ReplicaOutputStreams implements Closeable {
    */
   public void syncDataOut() throws IOException {
     if (dataOut instanceof FileOutputStream) {
-      sync((FileOutputStream)dataOut);
+      fileIoProvider.sync(volume, (FileOutputStream) dataOut);
     }
   }
   
@@ -121,7 +122,7 @@ public class ReplicaOutputStreams implements Closeable {
    */
   public void syncChecksumOut() throws IOException {
     if (checksumOut instanceof FileOutputStream) {
-      sync((FileOutputStream)checksumOut);
+      fileIoProvider.sync(volume, (FileOutputStream) checksumOut);
     }
   }
 
@@ -129,60 +130,34 @@ public class ReplicaOutputStreams implements Closeable {
    * Flush the data stream if it supports it.
    */
   public void flushDataOut() throws IOException {
-    flush(dataOut);
+    if (dataOut != null) {
+      fileIoProvider.flush(volume, dataOut);
+    }
   }
 
   /**
    * Flush the checksum stream if it supports it.
    */
   public void flushChecksumOut() throws IOException {
-    flush(checksumOut);
-  }
-
-  private void flush(OutputStream dos) throws IOException {
-    long begin = Time.monotonicNow();
-    dos.flush();
-    long duration = Time.monotonicNow() - begin;
-    LOG.trace("ReplicaOutputStreams#flush takes {} ms.", duration);
-    if (duration > slowLogThresholdMs) {
-      LOG.warn("Slow flush took {} ms (threshold={} ms)", duration,
-          slowLogThresholdMs);
+    if (checksumOut != null) {
+      fileIoProvider.flush(volume, checksumOut);
     }
   }
 
-  private void sync(FileOutputStream fos) throws IOException {
-    long begin = Time.monotonicNow();
-    fos.getChannel().force(true);
-    long duration = Time.monotonicNow() - begin;
-    LOG.trace("ReplicaOutputStreams#sync takes {} ms.", duration);
-    if (duration > slowLogThresholdMs) {
-      LOG.warn("Slow fsync took {} ms (threshold={} ms)", duration,
-          slowLogThresholdMs);
-    }
-  }
-
-  public long writeToDisk(byte[] b, int off, int len) throws IOException {
-    long begin = Time.monotonicNow();
+  public void writeDataToDisk(byte[] b, int off, int len)
+      throws IOException {
     dataOut.write(b, off, len);
-    long duration = Time.monotonicNow() - begin;
-    LOG.trace("DatanodeIO#writeToDisk takes {} ms.", duration);
-    if (duration > slowLogThresholdMs) {
-      LOG.warn("Slow BlockReceiver write data to disk cost: {} ms " +
-          "(threshold={} ms)", duration, slowLogThresholdMs);
-    }
-    return duration;
   }
 
   public void syncFileRangeIfPossible(long offset, long nbytes,
       int flags) throws NativeIOException {
-    assert this.outFd != null : "null outFd!";
-    NativeIO.POSIX.syncFileRangeIfPossible(outFd, offset, nbytes, flags);
+    fileIoProvider.syncFileRange(
+        volume, outFd, offset, nbytes, flags);
   }
 
   public void dropCacheBehindWrites(String identifier,
       long offset, long len, int flags) throws NativeIOException {
-    assert this.outFd != null : "null outFd!";
-    NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(
-        identifier, outFd, offset, len, flags);
+    fileIoProvider.posixFadvise(
+        volume, identifier, outFd, offset, len, flags);
   }
 }

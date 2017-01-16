@@ -50,7 +50,6 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StopWatch;
@@ -847,10 +846,12 @@ public class DirectoryScanner implements Runnable {
         throws InterruptedException {
 
       throttle();
+      final FileIoProvider fileIoProvider = datanode.getFileIoProvider();
 
       List <String> fileNames;
       try {
-        fileNames = IOUtils.listDirectory(dir, BlockDirFilter.INSTANCE);
+        fileNames = fileIoProvider.listDirectory(
+            volume, dir, BlockDirFilter.INSTANCE);
       } catch (IOException ioe) {
         LOG.warn("Exception occured while compiling report: ", ioe);
         // Initiate a check on disk failure.

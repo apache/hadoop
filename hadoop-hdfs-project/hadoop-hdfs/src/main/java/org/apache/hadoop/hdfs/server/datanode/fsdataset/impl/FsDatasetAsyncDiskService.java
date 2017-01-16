@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -33,6 +34,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
@@ -232,6 +234,7 @@ class FsDatasetAsyncDiskService {
     final File metaFile;
     final ExtendedBlock block;
     final String trashDirectory;
+    private final FileIoProvider fileIoProvider;
     
     ReplicaFileDeleteTask(FsVolumeReference volumeRef, File blockFile,
         File metaFile, ExtendedBlock block, String trashDirectory) {
@@ -241,6 +244,7 @@ class FsDatasetAsyncDiskService {
       this.metaFile = metaFile;
       this.block = block;
       this.trashDirectory = trashDirectory;
+      this.fileIoProvider = volume.getFileIoProvider();
     }
 
     @Override
@@ -252,13 +256,17 @@ class FsDatasetAsyncDiskService {
     }
 
     private boolean deleteFiles() {
-      return blockFile.delete() && (metaFile.delete() || !metaFile.exists());
+      return fileIoProvider.delete(volume, blockFile) &&
+          (fileIoProvider.delete(volume, metaFile) ||
+           !fileIoProvider.exists(volume, metaFile));
     }
 
     private boolean moveFiles() {
       File trashDirFile = new File(trashDirectory);
-      if (!trashDirFile.exists() && !trashDirFile.mkdirs()) {
-        LOG.error("Failed to create trash directory " + trashDirectory);
+      try {
+        fileIoProvider.mkdirsWithExistsCheck(
+            volume, trashDirFile);
+      } catch (IOException e) {
         return false;
       }
 
@@ -269,8 +277,14 @@ class FsDatasetAsyncDiskService {
 
       File newBlockFile = new File(trashDirectory, blockFile.getName());
       File newMetaFile = new File(trashDirectory, metaFile.getName());
-      return (blockFile.renameTo(newBlockFile) &&
-              metaFile.renameTo(newMetaFile));
+
+      try {
+        fileIoProvider.renameTo(volume, blockFile, newBlockFile);
+        fileIoProvider.renameTo(volume, metaFile, newMetaFile);
+        return true;
+      } catch(IOException ioe) {
+        return false;
+      }
     }
 
     @Override
