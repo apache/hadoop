@@ -127,10 +127,8 @@ public class TestRowKeys {
    */
   @Test
   public void testAppToFlowRowKey() {
-    byte[] byteRowKey = new AppToFlowRowKey(CLUSTER,
-        APPLICATION_ID).getRowKey();
+    byte[] byteRowKey = new AppToFlowRowKey(APPLICATION_ID).getRowKey();
     AppToFlowRowKey rowKey = AppToFlowRowKey.parseRowKey(byteRowKey);
-    assertEquals(CLUSTER, rowKey.getClusterId());
     assertEquals(APPLICATION_ID, rowKey.getAppId());
   }
 
