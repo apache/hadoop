@@ -41,4 +41,5 @@ hadoop jar $JAR $CLIENT_MAIN_CLASS \
          --jar $JAR \
          --tf_client $JOB \
          --num_worker $WORKERS \
-         --num_ps $PSES
+         --num_ps $PSES \
+         --container_memory 4096

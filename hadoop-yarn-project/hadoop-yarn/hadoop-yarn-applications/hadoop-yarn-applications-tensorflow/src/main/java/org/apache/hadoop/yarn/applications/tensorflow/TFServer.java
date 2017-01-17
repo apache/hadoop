@@ -36,9 +36,8 @@ import java.util.Map;
 /**
  * Created by muzhongz on 16-11-29.
  */
-public class TFServer implements Runnable {
+public class TFServer {
     private static final Log LOG = LogFactory.getLog(TFServer.class);
-    private String tfServerPy;
 
     public static final String OPT_CS = "cs";
     public static final String OPT_TI = "ti";
@@ -131,22 +130,16 @@ public class TFServer implements Runnable {
         }
     }
 
-    @Override
-    public void run() {
-      execCmd("ls -l");
-      execCmd("pwd");
-      String command = tfServerPy;
-      execCmd(command);
-    }
-
-
-    private String address;
-    private int port;
-
     public void startTFServer() {
-        execCmd("ls -l");
+        LOG.info("Launch a new tensorflow " + jobName + taskIndex);
+ /*       try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }*/
         org.tensorflow.bridge.TFServer server = new org.tensorflow.bridge.TFServer(cluster, jobName, taskIndex);
         server.start();
         server.join();
+        LOG.info("Ternsorflow " + jobName + taskIndex + "stopped!");
     }
 }

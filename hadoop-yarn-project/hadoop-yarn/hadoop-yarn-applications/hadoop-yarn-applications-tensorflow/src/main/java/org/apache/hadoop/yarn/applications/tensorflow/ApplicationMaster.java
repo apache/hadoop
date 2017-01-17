@@ -82,30 +82,24 @@ public class ApplicationMaster {
 
   private static final Log LOG = LogFactory.getLog(ApplicationMaster.class);
 
-  // Configuration
   private Configuration conf;
 
   public Configuration getConfiguration() {
     return conf;
   }
 
-  // Handle to communicate with the Resource Manager
-  @SuppressWarnings("rawtypes")
   private AMRMClientAsync amRMClient;
 
   // In both secure and non-secure modes, this points to the job-submitter.
   @VisibleForTesting
   UserGroupInformation appSubmitterUgi;
 
-  // Handle to communicate with the Node Manager
   private NMClientAsync nmClientAsync;
   public NMClientAsync getNMClientAsync() {
     return nmClientAsync;
   }
-  // Listen to process the response from the Node Manager
   private NMCallbackHandler containerListener;
 
-  // Application Attempt Id ( combination of attemptId and fail count )
   @VisibleForTesting
   protected ApplicationAttemptId appAttemptID;
 
@@ -124,11 +118,8 @@ public class ApplicationMaster {
 
   @VisibleForTesting
   protected int numTotalContainers = 1;
-  // Memory to request for the container on which the shell command will run
   private long containerMemory = 10;
-  // VirtualCores to request for the container on which the shell command will run
   private int containerVirtualCores = 1;
-  // Priority of the request
   private int requestPriority;
 
   private int numTotalWokerContainers = 1;
@@ -156,7 +147,7 @@ public class ApplicationMaster {
   private int containerMaxRetries = 0;
   private int containrRetryInterval = 0;
 
-  // TF server jar file
+  // TF server jar file path on hdfs
   private String tfServerJar = "";
 
   // Hardcoded path to custom log_properties
@@ -211,38 +202,7 @@ public class ApplicationMaster {
     }
   }
 
-  /**
-   * Dump out contents of $CWD and the environment to stdout for debugging
-   */
-  private void dumpOutDebugInfo() {
-
-    LOG.info("Dump debug output");
-    Map<String, String> envs = System.getenv();
-    for (Map.Entry<String, String> env : envs.entrySet()) {
-      LOG.info("System env: key=" + env.getKey() + ", val=" + env.getValue());
-      System.out.println("System env: key=" + env.getKey() + ", val="
-              + env.getValue());
-    }
-
-    BufferedReader buf = null;
-    try {
-      String lines = Shell.WINDOWS ? Shell.execCommand("cmd", "/c", "dir") :
-              Shell.execCommand("ls", "-al");
-      buf = new BufferedReader(new StringReader(lines));
-      String line = "";
-      while ((line = buf.readLine()) != null) {
-        LOG.info("System CWD content: " + line);
-        System.out.println("System CWD content: " + line);
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
-    } finally {
-      IOUtils.cleanup(LOG, buf);
-    }
-  }
-
   public ApplicationMaster() {
-    // Set up the configuration
     conf = new YarnConfiguration();
   }
 
@@ -276,15 +236,10 @@ public class ApplicationMaster {
     opts.addOption("container_retry_interval", true,
             "Interval between each retry, unit is milliseconds");
 
-    opts.addOption("jar", true, "Jar file containing the tensorflow server");
     opts.addOption(TFApplication.OPT_TF_SERVER_JAR, true, "Provide container jar of tensorflow");
     opts.addOption(TFApplication.OPT_TF_WORKER_NUM, true, "Provide worker server number of tensorflow");
     opts.addOption(TFApplication.OPT_TF_PS_NUM, true, "Provide ps server number of tensorflow");
-    LOG.info("print args");
-    for (String arg : args) {
-      LOG.info(arg);
 
-    }
     CommandLine cliParser = new GnuParser().parse(opts, args);
 
     if (args.length == 0) {
@@ -293,7 +248,6 @@ public class ApplicationMaster {
               "No args specified for application master to initialize");
     }
 
-    //Check whether customer log4j.properties file exists
     if (fileExist(log4jPath)) {
       try {
         Log4jPropertyHelper.updateLog4jConfiguration(ApplicationMaster.class,
@@ -610,21 +564,6 @@ public class ApplicationMaster {
         }
 
       }
-
-/*      FileSystem fs = null;
-      try {
-        fs = FileSystem.get(this.getConfiguration());
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-
-      String suffix = TFYarnConstants.APP_NAME + "/" + getAppAttempId().getApplicationId() + "/" + TFContainer.SERVER_JAR_PATH;
-      Path dst = new Path(fs.getHomeDirectory(), suffix);
-      if (tfServerJar != null) {
-        fs.copyFromLocalFile(new Path(tfServerJar), dst);
-      }*/
-
-
 
       for (Container allocatedContainer : this.allocatedContainers) {
 

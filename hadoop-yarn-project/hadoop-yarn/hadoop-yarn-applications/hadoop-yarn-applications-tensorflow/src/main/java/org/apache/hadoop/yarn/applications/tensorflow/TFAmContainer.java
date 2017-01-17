@@ -50,7 +50,7 @@ public class TFAmContainer {
         this.client = client;
     }
 
-    public void addToLocalResources(FileSystem fs, String fileSrcPath,
+ /*   public void addToLocalResources(FileSystem fs, String fileSrcPath,
                                      String fileDstPath, String appId, Map<String, LocalResource> localResources,
                                      String resources) throws IOException {
         String suffix =
@@ -78,7 +78,7 @@ public class TFAmContainer {
                         LocalResourceType.FILE, LocalResourceVisibility.APPLICATION,
                         scFileStatus.getLen(), scFileStatus.getModificationTime());
         localResources.put(fileDstPath, scRsrc);
-    }
+    }*/
 
     public void addToLocalResources(FileSystem fs, Path dst, String fileDstPath, Map<String, LocalResource> localResources) throws IOException {
         FileStatus scFileStatus = fs.getFileStatus(dst);

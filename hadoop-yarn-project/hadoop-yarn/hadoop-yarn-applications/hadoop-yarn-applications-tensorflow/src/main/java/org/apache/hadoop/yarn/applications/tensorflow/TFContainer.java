@@ -87,6 +87,7 @@ public class TFContainer {
 
     public void addToLocalResources(FileSystem fs, Path dst, String fileDstPath, Map<String, LocalResource> localResources) throws IOException {
         FileStatus scFileStatus = fs.getFileStatus(dst);
+        LOG.info("Path " + dst.toString() + "->" + " " + fileDstPath);
         LocalResource scRsrc =
                 LocalResource.newInstance(
                         URL.fromURI(dst.toUri()),

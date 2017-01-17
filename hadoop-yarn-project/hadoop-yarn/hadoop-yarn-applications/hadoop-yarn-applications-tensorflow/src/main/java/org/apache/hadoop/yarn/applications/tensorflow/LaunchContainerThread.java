@@ -150,6 +150,7 @@ public class LaunchContainerThread implements Runnable {
 
         ApplicationId appId = appMaster.getAppAttempId().getApplicationId();
 
+        LOG.info("tfServer jar " + tfServerJar);
         try {
             tfContainer.addToLocalResources(fs, tfServerJar, TFContainer.SERVER_JAR_PATH, localResources);
 /*            tfContainer.addToLocalResources(fs, tfServerJar, TFContainer.SERVER_JAR_PATH, appId.toString(),
@@ -160,7 +161,7 @@ public class LaunchContainerThread implements Runnable {
 
 
         LOG.info("clusterspec: " + this.serverAddress.getClusterSpec().toString());
-        this.serverAddress.getClusterSpec().testClusterString();
+        //this.serverAddress.getClusterSpec().testClusterString();
         ClusterSpec cs = this.serverAddress.getClusterSpec();
 
         StringBuilder command = null;

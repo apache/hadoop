@@ -50,21 +50,15 @@ public class Client {
 
   private static final Log LOG = LogFactory.getLog(Client.class);
 
-  // Configuration
   private Configuration conf;
   private YarnClient yarnClient;
-  // Application master specific info to register a new Application with RM/ASM
   private String appName = TFYarnConstants.APP_NAME;
   public String getAppName() {
     return  appName;
   }
-  // App master priority
   private int amPriority = 0;
-  // Queue for App master
   private String amQueue = "";
-  // Amt. of memory resource to request for to run the App Master
   private long amMemory = 100;
-  // Amt. of virtual core resource to request for to run the App Master
   private int amVCores = 1;
 
   private String appMasterJar = "";
@@ -302,6 +296,7 @@ public class Client {
     if (srcFilePath != null) {
       fs.copyFromLocalFile(new Path(srcFilePath), dst);
     }
+    LOG.info("Copy " + srcFilePath + " to " + dst.toString());
     return dst.toString();
   }
 
@@ -395,10 +390,10 @@ public class Client {
     tfAmContainer.addToLocalResources(fs, new Path(dstJarPath), TFAmContainer.APPMASTER_JAR_PATH, localResources);
 
     // Set the log4j properties if needed
-    if (!log4jPropFile.isEmpty()) {
+/*    if (!log4jPropFile.isEmpty()) {
       tfAmContainer.addToLocalResources(fs, log4jPropFile, log4jPath, appId.toString(),
           localResources, null);
-    }
+    }*/
 
     // Set the necessary security tokens as needed
     //amContainer.setContainerTokens(containerToken);
@@ -483,14 +478,12 @@ public class Client {
 
     while (true) {
 
-      // Check app status every 1 second.
       try {
         Thread.sleep(1000);
       } catch (InterruptedException e) {
         LOG.debug("Thread sleep in monitoring loop interrupted");
       }
 
-      // Get application report for the appId we are interested in
       ApplicationReport report = yarnClient.getApplicationReport(appId);
 
       LOG.info("Got application report from ASM for"
@@ -547,11 +540,6 @@ public class Client {
         return false;
       }
 
-/*      if (System.currentTimeMillis() > (clientStartTime + clientTimeout)) {
-        LOG.info("Reached client specified timeout for application. Killing application");
-        forceKillApplication(appId);
-        return false;
-      }*/
     }
 
   }
