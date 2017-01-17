@@ -104,7 +104,9 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
     configurationPropsToSkipCompare
         .add(DFSConfigKeys.DFS_NAMENODE_STARTUP_KEY);
     configurationPropsToSkipCompare
-        .add(DFSConfigKeys.DFS_DATANODE_FILE_IO_EVENTS_CLASS_KEY);
+        .add(DFSConfigKeys.DFS_DATANODE_ENABLE_FILEIO_PROFILING_KEY);
+    configurationPropsToSkipCompare.add(DFSConfigKeys
+        .DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_KEY);
 
     // Allocate
     xmlPropsToSkipCompare = new HashSet<String>();

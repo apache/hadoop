@@ -20,48 +20,36 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 
 import javax.annotation.Nullable;
 
 /**
- * The default implementation of {@link FileIoEvents} that do nothing.
+ * Injects faults in the metadata and data related operations on datanode
+ * volumes.
  */
 @InterfaceAudience.Private
-@InterfaceStability.Unstable
-public final class DefaultFileIoEvents extends FileIoEvents {
-  @Override
-  public long beforeMetadataOp(
-      @Nullable FsVolumeSpi volume, OPERATION op) {
-    return 0;
+public class FaultInjectorFileIoEvents {
+
+  private final boolean isEnabled;
+
+  public FaultInjectorFileIoEvents(@Nullable Configuration conf) {
+    if (conf != null) {
+      isEnabled = conf.getBoolean(DFSConfigKeys
+          .DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_KEY, DFSConfigKeys
+          .DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_DEFAULT);
+    } else {
+      isEnabled = false;
+    }
   }
 
-  @Override
-  public void afterMetadataOp(
-      @Nullable FsVolumeSpi volume, OPERATION op, long begin) {
+  public void beforeMetadataOp(
+      @Nullable FsVolumeSpi volume, FileIoProvider.OPERATION op) {
   }
 
-  @Override
-  public long beforeFileIo(
-      @Nullable FsVolumeSpi volume, OPERATION op, long len) {
-    return 0;
-  }
-
-  @Override
-  public void afterFileIo(
-      @Nullable FsVolumeSpi volume, OPERATION op, long begin, long len) {
-  }
-
-  @Override
-  public void onFailure(
-      @Nullable FsVolumeSpi volume, OPERATION op, Exception e, long begin) {
-  }
-
-  @Override
-  public @Nullable String getStatistics() {
-    // null is valid JSON.
-    return null;
+  public void beforeFileIo(
+      @Nullable FsVolumeSpi volume, FileIoProvider.OPERATION op, long len) {
   }
 }
