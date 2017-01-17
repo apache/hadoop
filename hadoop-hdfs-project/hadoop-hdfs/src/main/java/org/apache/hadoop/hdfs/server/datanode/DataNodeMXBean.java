@@ -105,4 +105,16 @@ public interface DataNodeMXBean {
    * Gets the network error counts on a per-Datanode basis.
    */
   public Map<String, Map<String, Long>> getDatanodeNetworkCounts();
+
+  /**
+   * Gets the average info (e.g. time) of SendPacketDownstream when the
+   * DataNode acts as the penultimate (2nd to the last) node in pipeline.
+   * <p>
+   * Example Json: {
+   * "[185.164.159.81:9801]RollingAvgTime":504.867,
+   * "[49.236.149.246:9801]RollingAvgTime":504.463,
+   * "[84.125.113.65:9801]RollingAvgTime":497.954}
+   * </p>
+   */
+  String getSendPacketDownstreamAvgInfo();
 }

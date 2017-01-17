@@ -321,6 +321,7 @@ class DataXceiver extends Receiver implements Runnable {
         LOG.error(s, t);
       }
     } finally {
+      collectThreadLocalStates();
       if (LOG.isDebugEnabled()) {
         LOG.debug(datanode.getDisplayName() + ":Number of active connections is: "
             + datanode.getXceiverCount());
@@ -331,6 +332,14 @@ class DataXceiver extends Receiver implements Runnable {
         IOUtils.closeStream(in);
       }
     }
+  }
+
+  /**
+   * In this short living thread, any local states should be collected before
+   * the thread dies away.
+   */
+  private void collectThreadLocalStates() {
+    datanode.getPeerMetrics().collectThreadLocalStates();
   }
 
   @Override

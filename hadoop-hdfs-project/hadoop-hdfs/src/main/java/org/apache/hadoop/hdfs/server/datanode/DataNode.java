@@ -166,6 +166,7 @@ import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResour
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodePeerMetrics;
 import org.apache.hadoop.hdfs.server.datanode.web.DatanodeHttpServer;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -333,6 +334,7 @@ public class DataNode extends ReconfigurableBase
   private int infoSecurePort;
 
   DataNodeMetrics metrics;
+  private DataNodePeerMetrics peerMetrics;
   private InetSocketAddress streamingAddr;
 
   // See the note below in incrDatanodeNetworkErrors re: concurrency.
@@ -1328,6 +1330,7 @@ public class DataNode extends ReconfigurableBase
     initIpcServer();
 
     metrics = DataNodeMetrics.create(getConf(), getDisplayName());
+    peerMetrics = DataNodePeerMetrics.create(getConf(), getDisplayName());
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
 
     blockRecoveryWorker = new BlockRecoveryWorker(this);
@@ -1721,6 +1724,10 @@ public class DataNode extends ReconfigurableBase
 
   public DataNodeMetrics getMetrics() {
     return metrics;
+  }
+
+  public DataNodePeerMetrics getPeerMetrics() {
+    return peerMetrics;
   }
 
   /** Ensure the authentication method is kerberos */
@@ -3294,5 +3301,10 @@ public class DataNode extends ReconfigurableBase
   @VisibleForTesting
   void setBlockScanner(BlockScanner blockScanner) {
     this.blockScanner = blockScanner;
+  }
+
+  @Override // DataNodeMXBean
+  public String getSendPacketDownstreamAvgInfo() {
+    return peerMetrics.dumpSendPacketDownstreamAvgInfoAsJson();
   }
 }

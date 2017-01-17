@@ -1922,6 +1922,31 @@
 </property>
 
 <property>
+  <name>dfs.datanode.peer.stats.enabled</name>
+  <value>false</value>
+  <description>
+    A switch to turn on/off tracking DataNode peer statistics.
+  </description>
+</property>
+
+<property>
+  <name>dfs.metrics.rolling.average.window.size</name>
+  <value>3600</value>
+  <description>
+    The number of seconds of each window for which sub set of samples are gathered
+    to compute the rolling average, A.K.A. roll over interval.
+  </description>
+</property>
+
+<property>
+  <name>dfs.metrics.rolling.average.window.numbers</name>
+  <value>48</value>
+  <description>
+    The number of windows maintained to compute the rolling average.
+  </description>
+</property>
+
+<property>
   <name>hadoop.user.group.metrics.percentiles.intervals</name>
   <value></value>
   <description>
