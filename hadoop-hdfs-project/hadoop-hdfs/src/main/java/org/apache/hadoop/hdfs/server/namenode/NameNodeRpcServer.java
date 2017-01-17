@@ -1244,6 +1244,13 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     namesystem.checkSuperuserPrivilege();
     return namesystem.isUpgradeFinalized();
   }
+
+  @Override // NamenodeProtocol
+  public boolean isRollingUpgrade() throws IOException {
+    checkNNStartup();
+    namesystem.checkSuperuserPrivilege();
+    return namesystem.isRollingUpgrade();
+  }
     
   @Override // ClientProtocol
   public void finalizeUpgrade() throws IOException {
