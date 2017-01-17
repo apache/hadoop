@@ -342,8 +342,13 @@ public class AMRMProxyService extends AbstractService implements
     // check to see if the RM has issued a new AMRMToken & accordingly update
     // the real ARMRMToken in the current context
     if (allocateResponse.getAMRMToken() != null) {
+      LOG.info("RM rolled master-key for amrm-tokens");
+
       org.apache.hadoop.yarn.api.records.Token token =
           allocateResponse.getAMRMToken();
+
+      // Do not propagate this info back to AM
+      allocateResponse.setAMRMToken(null);
 
       org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> newTokenId =
           new org.apache.hadoop.security.token.Token<AMRMTokenIdentifier>(

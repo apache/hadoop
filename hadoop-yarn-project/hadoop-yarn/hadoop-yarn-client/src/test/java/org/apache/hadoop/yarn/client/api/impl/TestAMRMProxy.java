@@ -139,11 +139,11 @@ public class TestAMRMProxy extends BaseAMRMProxyE2ETest {
 
   /*
    * This test validates the token renewal from the AMRMPRoxy. The test verifies
-   * that the received token it is different from the previous one within 5
-   * requests.
+   * that the received token from AMRMProxy is different from the previous one
+   * within 5 requests.
    */
   @Test(timeout = 120000)
-  public void testE2ETokenRenewal() throws Exception {
+  public void testAMRMProxyTokenRenewal() throws Exception {
     ApplicationMasterProtocol client;
 
     try (MiniYARNCluster cluster =
@@ -176,7 +176,8 @@ public class TestAMRMProxy extends BaseAMRMProxyE2ETest {
       client.registerApplicationMaster(RegisterApplicationMasterRequest
           .newInstance(NetUtils.getHostname(), 1024, ""));
 
-      LOG.info("testAMRMPRoxy - Allocate Resources Application Master");
+      LOG.info(
+          "testAMRMProxyTokenRenewal - Allocate Resources Application Master");
 
       AllocateRequest request =
           createAllocateRequest(rmClient.getNodeReports(NodeState.RUNNING));
@@ -196,7 +197,7 @@ public class TestAMRMProxy extends BaseAMRMProxyE2ETest {
 
         lastToken = response.getAMRMToken();
 
-        // Time slot to be sure the RM renew the token
+        // Time slot to be sure the AMRMProxy renew the token
         Thread.sleep(1500);
 
       }
