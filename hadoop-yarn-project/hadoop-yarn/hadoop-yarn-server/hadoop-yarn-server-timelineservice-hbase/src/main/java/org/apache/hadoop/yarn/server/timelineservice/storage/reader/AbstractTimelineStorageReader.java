@@ -17,17 +17,17 @@
  */
 package org.apache.hadoop.yarn.server.timelineservice.storage.reader;
 
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
-import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowColumn;
+import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowTable;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
-
-import java.io.IOException;
 
 /**
  * The base class for reading timeline data from the HBase storage. This class
@@ -53,26 +53,38 @@ public abstract class AbstractTimelineStorageReader {
    * Looks up flow context from AppToFlow table.
    *
    * @param appToFlowRowKey to identify Cluster and App Ids.
+   * @param clusterId the cluster id.
    * @param hbaseConf HBase configuration.
    * @param conn HBase Connection.
    * @return flow context information.
    * @throws IOException if any problem occurs while fetching flow information.
    */
   protected FlowContext lookupFlowContext(AppToFlowRowKey appToFlowRowKey,
-      Configuration hbaseConf, Connection conn) throws IOException {
+      String clusterId, Configuration hbaseConf, Connection conn)
+      throws IOException {
     byte[] rowKey = appToFlowRowKey.getRowKey();
     Get get = new Get(rowKey);
     Result result = appToFlowTable.getResult(hbaseConf, conn, get);
     if (result != null && !result.isEmpty()) {
-      return new FlowContext(AppToFlowColumn.USER_ID.readResult(result)
-          .toString(), AppToFlowColumn.FLOW_ID.readResult(result).toString(),
-          ((Number) AppToFlowColumn.FLOW_RUN_ID.readResult(result))
-          .longValue());
+      Object flowName =
+          AppToFlowColumnPrefix.FLOW_NAME.readResult(result, clusterId);
+      Object flowRunId =
+          AppToFlowColumnPrefix.FLOW_RUN_ID.readResult(result, clusterId);
+      Object userId =
+          AppToFlowColumnPrefix.USER_ID.readResult(result, clusterId);
+      if (flowName == null || userId == null || flowRunId == null) {
+        throw new NotFoundException(
+            "Unable to find the context flow name, and flow run id, "
+            + "and user id for clusterId=" + clusterId
+            + ", appId=" + appToFlowRowKey.getAppId());
+      }
+      return new FlowContext((String)userId, (String)flowName,
+          ((Number)flowRunId).longValue());
     } else {
       throw new NotFoundException(
-          "Unable to find the context flow ID and flow run ID for clusterId="
-              + appToFlowRowKey.getClusterId() + ", appId="
-              + appToFlowRowKey.getAppId());
+          "Unable to find the context flow name, and flow run id, "
+          + "and user id for clusterId=" + clusterId
+          + ", appId=" + appToFlowRowKey.getAppId());
     }
   }
 
@@ -102,9 +114,10 @@ public abstract class AbstractTimelineStorageReader {
         || context.getUserId() == null) {
       // Get flow context information from AppToFlow table.
       AppToFlowRowKey appToFlowRowKey =
-          new AppToFlowRowKey(context.getClusterId(), context.getAppId());
+          new AppToFlowRowKey(context.getAppId());
       FlowContext flowContext =
-          lookupFlowContext(appToFlowRowKey, hbaseConf, conn);
+          lookupFlowContext(appToFlowRowKey, context.getClusterId(), hbaseConf,
+          conn);
       context.setFlowName(flowContext.flowName);
       context.setFlowRunId(flowContext.flowRunId);
       context.setUserId(flowContext.userId);
