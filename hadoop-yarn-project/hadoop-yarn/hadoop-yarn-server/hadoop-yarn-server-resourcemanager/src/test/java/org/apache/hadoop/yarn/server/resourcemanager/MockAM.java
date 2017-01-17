@@ -247,14 +247,14 @@ public class MockAM {
   public AllocateResponse sendContainerResizingRequest(
       List<UpdateContainerRequest> updateRequests) throws Exception {
     final AllocateRequest req = AllocateRequest.newInstance(0, 0F, null, null,
-        null, updateRequests);
+        updateRequests, null);
     return allocate(req);
   }
 
   public AllocateResponse sendContainerUpdateRequest(
       List<UpdateContainerRequest> updateRequests) throws Exception {
     final AllocateRequest req = AllocateRequest.newInstance(0, 0F, null, null,
-        null, updateRequests);
+        updateRequests, null);
     return allocate(req);
   }
 
