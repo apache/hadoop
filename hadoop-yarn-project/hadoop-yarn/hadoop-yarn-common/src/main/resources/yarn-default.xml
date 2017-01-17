@@ -305,32 +305,35 @@
   </property>
 
   <property>
-    <description>The minimum allocation for every container request at the RM,
-    in MBs. Memory requests lower than this will throw a
-    InvalidResourceRequestException.</description>
+    <description>The minimum allocation for every container request at the RM
+    in MBs. Memory requests lower than this will be set to the value of this
+    property. Additionally, a node manager that is configured to have less memory
+    than this value will be shut down by the resource manager.</description>
     <name>yarn.scheduler.minimum-allocation-mb</name>
     <value>1024</value>
   </property>
 
   <property>
-    <description>The maximum allocation for every container request at the RM,
-    in MBs. Memory requests higher than this will throw a
+    <description>The maximum allocation for every container request at the RM
+    in MBs. Memory requests higher than this will throw an
     InvalidResourceRequestException.</description>
     <name>yarn.scheduler.maximum-allocation-mb</name>
     <value>8192</value>
   </property>
 
   <property>
-    <description>The minimum allocation for every container request at the RM,
-    in terms of virtual CPU cores. Requests lower than this will throw a
-    InvalidResourceRequestException.</description>
+    <description>The minimum allocation for every container request at the RM
+    in terms of virtual CPU cores. Requests lower than this will be set to the
+    value of this property. Additionally, a node manager that is configured to
+    have fewer virtual cores than this value will be shut down by the resource
+    manager.</description>
     <name>yarn.scheduler.minimum-allocation-vcores</name>
     <value>1</value>
   </property>
 
   <property>
-    <description>The maximum allocation for every container request at the RM,
-    in terms of virtual CPU cores. Requests higher than this will throw a
+    <description>The maximum allocation for every container request at the RM
+    in terms of virtual CPU cores. Requests higher than this will throw an
     InvalidResourceRequestException.</description>
     <name>yarn.scheduler.maximum-allocation-vcores</name>
     <value>4</value>
