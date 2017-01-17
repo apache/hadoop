@@ -401,6 +401,9 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     AllocateResponse allocateResponse = allocate(appId, allocateRequest);
     Assert.assertNotNull("allocate() returned null response",
         allocateResponse);
+    Assert.assertNull(
+        "new AMRMToken from RM should have been nulled by AMRMProxyService",
+        allocateResponse.getAMRMToken());
 
     containers.addAll(allocateResponse.getAllocatedContainers());
 
@@ -412,6 +415,9 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
           allocate(appId, Records.newRecord(AllocateRequest.class));
       Assert.assertNotNull("allocate() returned null response",
           allocateResponse);
+      Assert.assertNull(
+          "new AMRMToken from RM should have been nulled by AMRMProxyService",
+          allocateResponse.getAMRMToken());
 
       containers.addAll(allocateResponse.getAllocatedContainers());
 
@@ -447,6 +453,9 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
 
     AllocateResponse allocateResponse = allocate(appId, allocateRequest);
     Assert.assertNotNull(allocateResponse);
+    Assert.assertNull(
+        "new AMRMToken from RM should have been nulled by AMRMProxyService",
+        allocateResponse.getAMRMToken());
 
     // The way the mock resource manager is setup, it will return the containers
     // that were released in the response. This is done because the UAMs run
@@ -467,6 +476,10 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
       allocateResponse =
           allocate(appId, Records.newRecord(AllocateRequest.class));
       Assert.assertNotNull(allocateResponse);
+      Assert.assertNull(
+          "new AMRMToken from RM should have been nulled by AMRMProxyService",
+          allocateResponse.getAMRMToken());
+
       containersForReleasedContainerIds.addAll(allocateResponse
           .getAllocatedContainers());
 
