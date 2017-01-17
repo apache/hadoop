@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.application.Applica
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
-import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowColumn;
+import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix;
@@ -172,9 +172,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
         FlowRunRowKey flowRunRowKey =
             new FlowRunRowKey(clusterId, userId, flowName, flowRunId);
         if (event != null) {
-          AppToFlowRowKey appToFlowRowKey =
-              new AppToFlowRowKey(clusterId, appId);
-          onApplicationCreated(flowRunRowKey, appToFlowRowKey, appId, userId,
+          onApplicationCreated(flowRunRowKey, clusterId, appId, userId,
               flowVersion, te, event.getTimestamp());
         }
         // if it's an application entity, store metrics
@@ -193,18 +191,22 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   }
 
   private void onApplicationCreated(FlowRunRowKey flowRunRowKey,
-      AppToFlowRowKey appToFlowRowKey, String appId, String userId,
-      String flowVersion, TimelineEntity te, long appCreatedTimeStamp)
+      String clusterId, String appId, String userId, String flowVersion,
+      TimelineEntity te, long appCreatedTimeStamp)
       throws IOException {
 
     String flowName = flowRunRowKey.getFlowName();
     Long flowRunId = flowRunRowKey.getFlowRunId();
 
     // store in App to flow table
+    AppToFlowRowKey appToFlowRowKey = new AppToFlowRowKey(appId);
     byte[] rowKey = appToFlowRowKey.getRowKey();
-    AppToFlowColumn.FLOW_ID.store(rowKey, appToFlowTable, null, flowName);
-    AppToFlowColumn.FLOW_RUN_ID.store(rowKey, appToFlowTable, null, flowRunId);
-    AppToFlowColumn.USER_ID.store(rowKey, appToFlowTable, null, userId);
+    AppToFlowColumnPrefix.FLOW_NAME.store(rowKey, appToFlowTable, clusterId,
+        null, flowName);
+    AppToFlowColumnPrefix.FLOW_RUN_ID.store(rowKey, appToFlowTable, clusterId,
+        null, flowRunId);
+    AppToFlowColumnPrefix.USER_ID.store(rowKey, appToFlowTable, clusterId, null,
+        userId);
 
     // store in flow run table
     storeAppCreatedInFlowRunTable(flowRunRowKey, appId, te);
