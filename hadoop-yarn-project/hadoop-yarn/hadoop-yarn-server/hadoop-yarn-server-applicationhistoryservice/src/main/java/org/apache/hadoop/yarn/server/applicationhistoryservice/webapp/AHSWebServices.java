@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
@@ -40,6 +42,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
+import org.apache.commons.math3.util.Pair;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -57,12 +60,14 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
+import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogReader;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
@@ -213,6 +218,115 @@ public class AHSWebServices extends WebServices {
     }
   }
 
+  // TODO: YARN-6080: Create WebServiceUtils to have common functions used in
+  //       RMWebService, NMWebService and AHSWebService.
+  /**
+   * Returns log file's name as well as current file size for a container.
+   *
+   * @param req
+   *    HttpServletRequest
+   * @param res
+   *    HttpServletResponse
+   * @param containerIdStr
+   *    The container ID
+   * @return
+   *    The log file's name and current file size
+   */
+  @GET
+  @Path("/containers/{containerid}/logs")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response getContainerLogsInfo(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("containerid") String containerIdStr) {
+    ContainerId containerId = null;
+    init(res);
+    try {
+      containerId = ContainerId.fromString(containerIdStr);
+    } catch (Exception e) {
+      throw new BadRequestException("invalid container id, " + containerIdStr);
+    }
+    ApplicationId appId = containerId.getApplicationAttemptId()
+        .getApplicationId();
+    AppInfo appInfo;
+    try {
+      appInfo = super.getApp(req, res, appId.toString());
+    } catch (Exception ex) {
+      // directly find logs from HDFS.
+      return getContainerLogMeta(appId, null, null, containerIdStr);
+    }
+    String appOwner = appInfo.getUser();
+    ContainerInfo containerInfo;
+    try {
+      containerInfo = super.getContainer(
+          req, res, appId.toString(),
+          containerId.getApplicationAttemptId().toString(),
+          containerId.toString());
+    } catch (Exception ex) {
+      if (isFinishedState(appInfo.getAppState())) {
+        // directly find logs from HDFS.
+        return getContainerLogMeta(appId, appOwner, null, containerIdStr);
+      }
+      return createBadResponse(Status.INTERNAL_SERVER_ERROR,
+          "Can not get ContainerInfo for the container: " + containerId);
+    }
+    String nodeId = containerInfo.getNodeId();
+    if (isRunningState(appInfo.getAppState())) {
+      String nodeHttpAddress = containerInfo.getNodeHttpAddress();
+      String uri = "/" + containerId.toString() + "/logs";
+      String resURI = JOINER.join(nodeHttpAddress, NM_DOWNLOAD_URI_STR, uri);
+      String query = req.getQueryString();
+      if (query != null && !query.isEmpty()) {
+        resURI += "?" + query;
+      }
+      ResponseBuilder response = Response.status(
+          HttpServletResponse.SC_TEMPORARY_REDIRECT);
+      response.header("Location", resURI);
+      return response.build();
+    } else if (isFinishedState(appInfo.getAppState())) {
+      return getContainerLogMeta(appId, appOwner, nodeId,
+              containerIdStr);
+    } else {
+      return createBadResponse(Status.NOT_FOUND,
+          "The application is not at Running or Finished State.");
+    }
+  }
+
+  /**
+   * Returns the contents of a container's log file in plain text.
+   *
+   * @param req
+   *    HttpServletRequest
+   * @param res
+   *    HttpServletResponse
+   * @param containerIdStr
+   *    The container ID
+   * @param filename
+   *    The name of the log file
+   * @param format
+   *    The content type
+   * @param size
+   *    the size of the log file
+   * @return
+   *    The contents of the container's log file
+   */
+  @GET
+  @Path("/containers/{containerid}/logs/{filename}")
+  @Produces({ MediaType.TEXT_PLAIN })
+  @Public
+  @Unstable
+  public Response getContainerLogFile(@Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("containerid") String containerIdStr,
+      @PathParam("filename") String filename,
+      @QueryParam("format") String format,
+      @QueryParam("size") String size) {
+    return getLogs(req, res, containerIdStr, filename, format, size);
+  }
+
+  //TODO: YARN-4993: Refactory ContainersLogsBlock, AggregatedLogsBlock and
+  //      container log webservice introduced in AHS to minimize
+  //      the duplication.
   @GET
   @Path("/containerlogs/{containerid}/{filename}")
   @Produces({ MediaType.TEXT_PLAIN + "; " + JettyUtils.UTF_8 })
@@ -485,5 +599,93 @@ public class AHSWebServices extends WebServices {
       return Long.MAX_VALUE;
     }
     return Long.parseLong(bytes);
+  }
+
+  private Response getContainerLogMeta(ApplicationId appId, String appOwner,
+      final String nodeId, final String containerIdStr) {
+    Map<String, String> containerLogMeta = new HashMap<>();
+    try {
+      String suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(conf);
+      org.apache.hadoop.fs.Path remoteRootLogDir =
+          new org.apache.hadoop.fs.Path(conf.get(
+              YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+              YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
+      org.apache.hadoop.fs.Path qualifiedRemoteRootLogDir =
+          FileContext.getFileContext(conf).makeQualified(remoteRootLogDir);
+      FileContext fc = FileContext.getFileContext(
+          qualifiedRemoteRootLogDir.toUri(), conf);
+      org.apache.hadoop.fs.Path remoteAppDir = null;
+      if (appOwner == null) {
+        org.apache.hadoop.fs.Path toMatch = LogAggregationUtils
+            .getRemoteAppLogDir(remoteRootLogDir, appId, "*", suffix);
+        FileStatus[] matching  = fc.util().globStatus(toMatch);
+        if (matching == null || matching.length != 1) {
+          return createBadResponse(Status.INTERNAL_SERVER_ERROR,
+              "Can not get log meta for container: " + containerIdStr);
+        }
+        remoteAppDir = matching[0].getPath();
+      } else {
+        remoteAppDir = LogAggregationUtils.getRemoteAppLogDir(
+            remoteRootLogDir, appId, appOwner, suffix);
+      }
+      final RemoteIterator<FileStatus> nodeFiles;
+      nodeFiles = fc.listStatus(remoteAppDir);
+      if (!nodeFiles.hasNext()) {
+        return createBadResponse(Status.INTERNAL_SERVER_ERROR,
+            "Can not get log meta for container: " + containerIdStr);
+      }
+      String nodeIdStr = (nodeId == null) ? null
+          : LogAggregationUtils.getNodeString(nodeId);
+      while (nodeFiles.hasNext()) {
+        FileStatus thisNodeFile = nodeFiles.next();
+        if (nodeIdStr != null) {
+          if (!thisNodeFile.getPath().getName().contains(nodeIdStr)) {
+            continue;
+          }
+        }
+        if (!thisNodeFile.getPath().getName().endsWith(
+            LogAggregationUtils.TMP_FILE_SUFFIX)) {
+          AggregatedLogFormat.LogReader reader =
+              new AggregatedLogFormat.LogReader(conf,
+                  thisNodeFile.getPath());
+          try {
+            DataInputStream valueStream;
+            LogKey key = new LogKey();
+            valueStream = reader.next(key);
+            while (valueStream != null) {
+              if (key.toString().equals(containerIdStr)) {
+                while (true) {
+                  try {
+                    Pair<String, String> logMeta =
+                        LogReader.readContainerMetaDataAndSkipData(
+                            valueStream, null);
+                    containerLogMeta.put(logMeta.getFirst(),
+                        logMeta.getSecond());
+                  } catch (EOFException eof) {
+                    break;
+                  }
+                }
+                break;
+              }
+              // Next container
+              key = new LogKey();
+              valueStream = reader.next(key);
+            }
+          } finally {
+            reader.close();
+          }
+        }
+      }
+      ResponseBuilder response = Response.ok(new ContainerLogsInfo(
+          containerLogMeta));
+      // Sending the X-Content-Type-Options response header with the value
+      // nosniff will prevent Internet Explorer from MIME-sniffing a response
+      // away from the declared content-type.
+      response.header("X-Content-Type-Options", "nosniff");
+      return response.build();
+    } catch (Exception ex) {
+      return createBadResponse(Status.INTERNAL_SERVER_ERROR,
+          ex.getMessage());
+    }
   }
 }

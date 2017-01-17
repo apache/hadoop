@@ -66,6 +66,7 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -563,12 +564,34 @@ public class TestAHSWebServices extends JerseyTestBase {
     String responseText = response.getEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId1));
 
+    // Do the same test with new API
+    r = resource();
+    response = r.path("ws").path("v1")
+        .path("applicationhistory").path("containers")
+        .path(containerId1.toString()).path("logs").path(fileName)
+        .queryParam("user.name", user)
+        .accept(MediaType.TEXT_PLAIN)
+        .get(ClientResponse.class);
+    responseText = response.getEntity(String.class);
+    assertTrue(responseText.contains("Hello." + containerId1));
+
     // test whether we can find container log from remote diretory if
     // the containerInfo for this container could not be fetched from AHS.
     r = resource();
     response = r.path("ws").path("v1")
         .path("applicationhistory").path("containerlogs")
         .path(containerId100.toString()).path(fileName)
+        .queryParam("user.name", user)
+        .accept(MediaType.TEXT_PLAIN)
+        .get(ClientResponse.class);
+    responseText = response.getEntity(String.class);
+    assertTrue(responseText.contains("Hello." + containerId100));
+
+    // Do the same test with new API
+    r = resource();
+    response = r.path("ws").path("v1")
+        .path("applicationhistory").path("containers")
+        .path(containerId100.toString()).path("logs").path(fileName)
         .queryParam("user.name", user)
         .accept(MediaType.TEXT_PLAIN)
         .get(ClientResponse.class);
@@ -723,6 +746,95 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertTrue(redirectURL.contains(containerId1.toString()));
     assertTrue(redirectURL.contains("/logs/" + fileName));
     assertTrue(redirectURL.contains("user.name=" + user));
+
+    // Test with new API
+    requestURI = r.path("ws").path("v1")
+        .path("applicationhistory").path("containers")
+        .path(containerId1.toString()).path("logs").path(fileName)
+        .queryParam("user.name", user).getURI();
+    redirectURL = getRedirectURL(requestURI.toString());
+    assertTrue(redirectURL != null);
+    assertTrue(redirectURL.contains("test:1234"));
+    assertTrue(redirectURL.contains("ws/v1/node/containers"));
+    assertTrue(redirectURL.contains(containerId1.toString()));
+    assertTrue(redirectURL.contains("/logs/" + fileName));
+    assertTrue(redirectURL.contains("user.name=" + user));
+  }
+
+  @Test(timeout = 10000)
+  public void testContainerLogsMetaForRunningApps() throws Exception {
+    String user = "user1";
+    ApplicationId appId = ApplicationId.newInstance(
+        1234, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1);
+    WebResource r = resource();
+    URI requestURI = r.path("ws").path("v1")
+        .path("applicationhistory").path("containers")
+        .path(containerId1.toString()).path("logs")
+        .queryParam("user.name", user).getURI();
+    String redirectURL = getRedirectURL(requestURI.toString());
+    assertTrue(redirectURL != null);
+    assertTrue(redirectURL.contains("test:1234"));
+    assertTrue(redirectURL.contains("ws/v1/node/containers"));
+    assertTrue(redirectURL.contains(containerId1.toString()));
+    assertTrue(redirectURL.contains("/logs"));
+  }
+
+  @Test(timeout = 10000)
+  public void testContainerLogsMetaForFinishedApps() throws Exception {
+    String fileName = "syslog";
+    String user = "user1";
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser("user1");
+    NodeId nodeId = NodeId.newInstance("test host", 100);
+    //prepare the logs for remote directory
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    // create local logs
+    List<String> rootLogDirList = new ArrayList<String>();
+    rootLogDirList.add(rootLogDir);
+    Path rootLogDirPath = new Path(rootLogDir);
+    if (fs.exists(rootLogDirPath)) {
+      fs.delete(rootLogDirPath, true);
+    }
+    assertTrue(fs.mkdirs(rootLogDirPath));
+    Path appLogsDir = new Path(rootLogDirPath, appId.toString());
+    if (fs.exists(appLogsDir)) {
+      fs.delete(appLogsDir, true);
+    }
+    assertTrue(fs.mkdirs(appLogsDir));
+
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1);
+    String content = "Hello." + containerId1;
+    createContainerLogInLocalDir(appLogsDir, containerId1, fs, fileName,
+        content);
+
+    // upload container logs to remote log dir
+    Path path = new Path(conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR) +
+        user + "/logs/" + appId.toString());
+    if (fs.exists(path)) {
+      fs.delete(path, true);
+    }
+    assertTrue(fs.mkdirs(path));
+    uploadContainerLogIntoRemoteDir(ugi, conf, rootLogDirList, nodeId,
+        containerId1, path, fs);
+
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1")
+        .path("applicationhistory").path("containers")
+        .path(containerId1.toString()).path("logs")
+        .queryParam("user.name", user)
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    ContainerLogsInfo responseText = response.getEntity(
+        ContainerLogsInfo.class);
+    assertEquals(responseText.getContainerLogsInfo().size(), 1);
+    assertEquals(responseText.getContainerLogsInfo().get(0).getFileName(),
+        fileName);
+    assertEquals(responseText.getContainerLogsInfo().get(0).getFileSize(),
+        String.valueOf(content.length()));
   }
 
   private static String getRedirectURL(String url) {
