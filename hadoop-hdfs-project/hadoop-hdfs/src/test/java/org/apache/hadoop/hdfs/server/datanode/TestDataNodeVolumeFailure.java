@@ -239,7 +239,7 @@ public class TestDataNodeVolumeFailure {
     File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
     DataNodeTestUtils.injectDataDirFailure(dn0Vol1);
     DataNode dn0 = cluster.getDataNodes().get(0);
-    checkDiskErrorSync(dn0);
+    checkDiskErrorSync(dn0, DataNodeTestUtils.getVolume(dn0, dn0Vol1));
 
     // Verify dn0Vol1 has been completely removed from DN0.
     // 1. dn0Vol1 is removed from DataStorage.
@@ -285,10 +285,10 @@ public class TestDataNodeVolumeFailure {
     assertFalse(dataDirStrs[0].contains(dn0Vol1.getAbsolutePath()));
   }
 
-  private static void checkDiskErrorSync(DataNode dn)
+  private static void checkDiskErrorSync(DataNode dn, FsVolumeSpi volume)
       throws InterruptedException {
     final long lastDiskErrorCheck = dn.getLastDiskErrorCheck();
-    dn.checkDiskErrorAsync();
+    dn.checkDiskErrorAsync(volume);
     // Wait 10 seconds for checkDiskError thread to finish and discover volume
     // failures.
     int count = 100;
@@ -312,7 +312,8 @@ public class TestDataNodeVolumeFailure {
     final File dn0Vol2 = new File(dataDir, "data" + (2 * 0 + 2));
     DataNodeTestUtils.injectDataDirFailure(dn0Vol1, dn0Vol2);
     DataNode dn0 = cluster.getDataNodes().get(0);
-    checkDiskErrorSync(dn0);
+    checkDiskErrorSync(dn0, DataNodeTestUtils.getVolume(dn0, dn0Vol1));
+    checkDiskErrorSync(dn0, DataNodeTestUtils.getVolume(dn0, dn0Vol2));
 
     // DN0 should stop after the number of failure disks exceed tolerated
     // value (1).
@@ -333,7 +334,7 @@ public class TestDataNodeVolumeFailure {
 
     // Fail dn0Vol1 first.
     DataNodeTestUtils.injectDataDirFailure(dn0Vol1);
-    checkDiskErrorSync(dn0);
+    checkDiskErrorSync(dn0, DataNodeTestUtils.getVolume(dn0, dn0Vol1));
 
     // Hot swap out the failure volume.
     String dataDirs = dn0Vol2.getPath();
@@ -352,7 +353,7 @@ public class TestDataNodeVolumeFailure {
     // Fail dn0Vol2. Now since dn0Vol1 has been fixed, DN0 has sufficient
     // resources, thus it should keep running.
     DataNodeTestUtils.injectDataDirFailure(dn0Vol2);
-    checkDiskErrorSync(dn0);
+    checkDiskErrorSync(dn0, DataNodeTestUtils.getVolume(dn0, dn0Vol2));
     assertTrue(dn0.shouldRun());
   }
 
@@ -379,12 +380,12 @@ public class TestDataNodeVolumeFailure {
 
     // Fail dn0Vol1 first and hot swap it.
     DataNodeTestUtils.injectDataDirFailure(dn0Vol1);
-    checkDiskErrorSync(dn0);
+    checkDiskErrorSync(dn0, DataNodeTestUtils.getVolume(dn0, dn0Vol1));
     assertTrue(dn0.shouldRun());
 
     // Fail dn0Vol2, now dn0 should stop, because we only tolerate 1 disk failure.
     DataNodeTestUtils.injectDataDirFailure(dn0Vol2);
-    checkDiskErrorSync(dn0);
+    checkDiskErrorSync(dn0, DataNodeTestUtils.getVolume(dn0, dn0Vol2));
     assertFalse(dn0.shouldRun());
   }
 

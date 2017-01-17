@@ -30,7 +30,9 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 
@@ -213,5 +215,17 @@ public class DataNodeTestUtils {
       // cover this case.
       LOG.warn("Could not reconfigure DataNode.", e);
     }
+  }
+
+  /** Get the FsVolume on the given basePath. */
+  public static FsVolumeImpl getVolume(DataNode dn, File basePath) throws
+      IOException {
+    try (FsDatasetSpi.FsVolumeReferences volumes = dn.getFSDataset()
+        .getFsVolumeReferences()) {
+      for (FsVolumeSpi vol : volumes) {
+        return (FsVolumeImpl) vol;
+      }
+    }
+    return null;
   }
 }

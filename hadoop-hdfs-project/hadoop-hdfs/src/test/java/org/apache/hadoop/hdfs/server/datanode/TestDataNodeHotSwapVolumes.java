@@ -900,20 +900,6 @@ public class TestDataNodeHotSwapVolumes {
         is(dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY)));
   }
 
-  /** Get the FsVolume on the given basePath */
-  private FsVolumeImpl getVolume(DataNode dn, File basePath)
-      throws IOException {
-    try (FsDatasetSpi.FsVolumeReferences volumes =
-      dn.getFSDataset().getFsVolumeReferences()) {
-      for (FsVolumeSpi vol : volumes) {
-        if (vol.getBasePath().equals(basePath.getPath())) {
-          return (FsVolumeImpl) vol;
-        }
-      }
-    }
-    return null;
-  }
-
   /**
    * Verify that {@link DataNode#checkDiskError()} removes all metadata in
    * DataNode upon a volume failure. Thus we can run reconfig on the same
@@ -934,7 +920,7 @@ public class TestDataNodeHotSwapVolumes {
     final String oldDataDir = dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY);
     File dirToFail = new File(cluster.getDataDirectory(), "data1");
 
-    FsVolumeImpl failedVolume = getVolume(dn, dirToFail);
+    FsVolumeImpl failedVolume = DataNodeTestUtils.getVolume(dn, dirToFail);
     assertTrue("No FsVolume was found for " + dirToFail,
         failedVolume != null);
     long used = failedVolume.getDfsUsed();
@@ -957,7 +943,7 @@ public class TestDataNodeHotSwapVolumes {
         is(dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY)));
 
     createFile(new Path("/test2"), 32, (short)2);
-    FsVolumeImpl restoredVolume = getVolume(dn, dirToFail);
+    FsVolumeImpl restoredVolume = DataNodeTestUtils.getVolume(dn, dirToFail);
     assertTrue(restoredVolume != null);
     assertTrue(restoredVolume != failedVolume);
     // More data has been written to this volume.

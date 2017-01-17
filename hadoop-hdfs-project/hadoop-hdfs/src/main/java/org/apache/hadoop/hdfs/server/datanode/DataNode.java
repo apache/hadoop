@@ -2025,29 +2025,6 @@ public class DataNode extends ReconfigurableBase
    * Check if there is a disk failure asynchronously
    * and if so, handle the error.
    */
-  @VisibleForTesting
-  public void checkDiskErrorAsync() {
-    volumeChecker.checkAllVolumesAsync(
-        data, new DatasetVolumeChecker.Callback() {
-          @Override
-          public void call(Set<FsVolumeSpi> healthyVolumes,
-                           Set<FsVolumeSpi> failedVolumes) {
-              if (failedVolumes.size() > 0) {
-               LOG.warn("checkDiskErrorAsync callback got {} failed volumes: {}",
-                   failedVolumes.size(), failedVolumes);
-              } else {
-               LOG.debug("checkDiskErrorAsync: no volume failures detected");
-              }
-              lastDiskErrorCheck = Time.monotonicNow();
-              handleVolumeFailures(failedVolumes);
-          }
-        });
-  }
-
-  /**
-   * Check if there is a disk failure asynchronously
-   * and if so, handle the error.
-   */
   public void checkDiskErrorAsync(FsVolumeSpi volume) {
     volumeChecker.checkVolume(
         volume, new DatasetVolumeChecker.Callback() {
