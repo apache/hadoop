@@ -216,24 +216,24 @@ public class ApplicationMaster {
    */
   public boolean init(String[] args) throws ParseException, IOException {
     Options opts = new Options();
-    opts.addOption("app_attempt_id", true,
+    opts.addOption(TFApplication.OPT_TF_APP_ATTEMPT_ID, true,
             "App Attempt ID. Not to be used unless for testing purposes");
-    opts.addOption("container_memory", true,
+    opts.addOption(TFApplication.OPT_TF_CONTAINER_MEMORY, true,
             "Amount of memory in MB to be requested to run the shell command");
-    opts.addOption("container_vcores", true,
+    opts.addOption(TFApplication.OPT_TF_CONTAINER_VCORES, true,
             "Amount of virtual cores to be requested to run the shell command");
-    opts.addOption("priority", true, "Application Priority. Default 0");
-    opts.addOption("container_retry_policy", true,
+    opts.addOption(TFApplication.OPT_TF_PRIORITY, true, "Application Priority. Default 0");
+    opts.addOption(TFApplication.OPT_TF_CONTAINER_RETRY_POLICY, true,
             "Retry policy when container fails to run, "
                     + "0: NEVER_RETRY, 1: RETRY_ON_ALL_ERRORS, "
                     + "2: RETRY_ON_SPECIFIC_ERROR_CODES");
-    opts.addOption("container_retry_error_codes", true,
+    opts.addOption(TFApplication.OPT_TF_CONTAINER_RETRY_ERROR_CODES, true,
             "When retry policy is set to RETRY_ON_SPECIFIC_ERROR_CODES, error "
                     + "codes is specified with this option, "
                     + "e.g. --container_retry_error_codes 1,2,3");
-    opts.addOption("container_max_retries", true,
+    opts.addOption(TFApplication.OPT_TF_CONTAINER_MAX_RETRIES, true,
             "If container could retry, it specifies max retires");
-    opts.addOption("container_retry_interval", true,
+    opts.addOption(TFApplication.OPT_TF_CONTAINER_RETRY_INTERVAL, true,
             "Interval between each retry, unit is milliseconds");
 
     opts.addOption(TFApplication.OPT_TF_SERVER_JAR, true, "Provide container jar of tensorflow");
@@ -260,8 +260,8 @@ public class ApplicationMaster {
     Map<String, String> envs = System.getenv();
 
     if (!envs.containsKey(Environment.CONTAINER_ID.name())) {
-      if (cliParser.hasOption("app_attempt_id")) {
-        String appIdStr = cliParser.getOptionValue("app_attempt_id", "");
+      if (cliParser.hasOption(TFApplication.OPT_TF_APP_ATTEMPT_ID)) {
+        String appIdStr = cliParser.getOptionValue(TFApplication.OPT_TF_APP_ATTEMPT_ID, "");
         appAttemptID = ApplicationAttemptId.fromString(appIdStr);
       } else {
         throw new IllegalArgumentException(
@@ -295,9 +295,9 @@ public class ApplicationMaster {
             + appAttemptID.getApplicationId().getClusterTimestamp()
             + ", attemptId=" + appAttemptID.getAttemptId());
 
-    containerMemory = Integer.parseInt(cliParser.getOptionValue("container_memory", "256"));
+    containerMemory = Integer.parseInt(cliParser.getOptionValue(TFApplication.OPT_TF_CONTAINER_MEMORY, "256"));
     containerVirtualCores = Integer.parseInt(cliParser.getOptionValue(
-            "container_vcores", "1"));
+            TFApplication.OPT_TF_CONTAINER_VCORES, "1"));
 
 
     numTotalWokerContainers = Integer.parseInt(cliParser.getOptionValue(
@@ -316,22 +316,22 @@ public class ApplicationMaster {
     }
 
     requestPriority = Integer.parseInt(cliParser
-            .getOptionValue("priority", "0"));
+            .getOptionValue(TFApplication.OPT_TF_PRIORITY, "0"));
 
     containerRetryPolicy = ContainerRetryPolicy.values()[
             Integer.parseInt(cliParser.getOptionValue(
-                    "container_retry_policy", "0"))];
-    if (cliParser.hasOption("container_retry_error_codes")) {
+                    TFApplication.OPT_TF_CONTAINER_RETRY_POLICY, "0"))];
+    if (cliParser.hasOption(TFApplication.OPT_TF_CONTAINER_RETRY_ERROR_CODES)) {
       containerRetryErrorCodes = new HashSet<>();
       for (String errorCode :
-              cliParser.getOptionValue("container_retry_error_codes").split(",")) {
+              cliParser.getOptionValue(TFApplication.OPT_TF_CONTAINER_RETRY_ERROR_CODES).split(",")) {
         containerRetryErrorCodes.add(Integer.parseInt(errorCode));
       }
     }
     containerMaxRetries = Integer.parseInt(
-            cliParser.getOptionValue("container_max_retries", "0"));
+            cliParser.getOptionValue(TFApplication.OPT_TF_CONTAINER_MAX_RETRIES, "0"));
     containrRetryInterval = Integer.parseInt(cliParser.getOptionValue(
-            "container_retry_interval", "0"));
+            TFApplication.OPT_TF_CONTAINER_RETRY_INTERVAL, "0"));
 
     tfServerJar = cliParser.getOptionValue(TFApplication.OPT_TF_SERVER_JAR, TFAmContainer.APPMASTER_JAR_PATH);
 
@@ -582,7 +582,6 @@ public class ApplicationMaster {
         LOG.info("server cid: " + allocatedContainer.getId().toString());
         LaunchContainerThread launchDelegator = new LaunchContainerThread(allocatedContainer,
                 this, clusterSpec.getServerAddress(allocatedContainer.getId().toString()));
-        //launchDelegator.setDst(dst);
         launchDelegator.setTfServerJar(tfServerJar);
         launchDelegator.setContainerMemory(containerMemory);
         launchDelegator.setContainerRetryPolicy(containerRetryPolicy);

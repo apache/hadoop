@@ -35,10 +35,8 @@ public class LaunchContainerThread implements Runnable {
 
     private static final Log LOG = LogFactory.getLog(LaunchContainerThread.class);
 
-    // Allocated container
     private Container container;
     private String tfServerJar;
-    // Memory to request for the container on which the shell command will run
     private long containerMemory = 10;
 
     // Container retry options
@@ -113,16 +111,6 @@ public class LaunchContainerThread implements Runnable {
         }
     }
 
-    private Path dst;
-
-    public Path getDst() {
-        return dst;
-    }
-
-    public void setDst(Path dst) {
-        this.dst = dst;
-    }
-
     @Override
     /**
      * Connects to CM, sets up container launch context
@@ -142,19 +130,14 @@ public class LaunchContainerThread implements Runnable {
 
         TFContainer tfContainer = new TFContainer(appMaster);
 
-        // Set the java environment
         Map<String, String> env = tfContainer.setJavaEnv(appMaster.getConfiguration(), null);
 
-        // Set the local resources
         Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
 
         ApplicationId appId = appMaster.getAppAttempId().getApplicationId();
 
-        LOG.info("tfServer jar " + tfServerJar);
         try {
             tfContainer.addToLocalResources(fs, tfServerJar, TFContainer.SERVER_JAR_PATH, localResources);
-/*            tfContainer.addToLocalResources(fs, tfServerJar, TFContainer.SERVER_JAR_PATH, appId.toString(),
-                    localResources, null);*/
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -179,7 +162,6 @@ public class LaunchContainerThread implements Runnable {
 
         List<String> commands = new ArrayList<String>();
          commands.add(command.toString());
-        //commands.add("/home/muzhongz/tfonyarn/tf_server.sh");
         if (serverAddress != null) {
             LOG.info(serverAddress.getJobName() + " : " + serverAddress.getAddress() + ":" + serverAddress.getPort());
         }
@@ -189,7 +171,7 @@ public class LaunchContainerThread implements Runnable {
                         containerRetryPolicy, containerRetryErrorCodes,
                         containerMaxRetries, containrRetryInterval);
         for (String cmd : commands) {
-            LOG.info("command: " + cmd.toString());
+            LOG.info("Container " + container.getId() + " command: " + cmd.toString());
         }
         ContainerLaunchContext ctx = ContainerLaunchContext.newInstance(
                 localResources, env, commands, null, appMaster.getAllTokens().duplicate(),

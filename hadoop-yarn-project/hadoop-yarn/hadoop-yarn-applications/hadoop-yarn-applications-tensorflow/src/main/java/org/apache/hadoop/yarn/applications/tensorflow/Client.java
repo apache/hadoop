@@ -142,43 +142,41 @@ public class Client {
     yarnClient = YarnClient.createYarnClient();
     yarnClient.init(conf);
     opts = new Options();
-    opts.addOption("appname", true, "Application Name. Default value - tensorflow");
-    opts.addOption("priority", true, "Application Priority. Default 0");
-    opts.addOption("queue", true, "RM Queue in which this application is to be submitted");
+    opts.addOption(TFApplication.OPT_TF_APPNAME, true, "Application Name. Default value - tensorflow");
+    opts.addOption(TFApplication.OPT_TF_PRIORITY, true, "Application Priority. Default 0");
+    opts.addOption(TFApplication.OPT_TF_QUEUE, true, "RM Queue in which this application is to be submitted");
     opts.addOption("jar", true, "Jar file containing the application master");
-    opts.addOption("master_memory", true, "Amount of memory in MB to be requested to run the application master");
-    opts.addOption("master_vcores", true, "Amount of virtual cores to be requested to run the application master");
-    opts.addOption("container_memory", true, "Amount of memory in MB to be requested to run a tensorflow worker");
-    opts.addOption("container_vcores", true, "Amount of virtual cores to be requested to run a tensorflow worker");
-    opts.addOption("log_properties", true, "log4j.properties file");
-    opts.addOption("attempt_failures_validity_interval", true,
+    opts.addOption(TFApplication.OPT_TF_MASTER_MEMORY, true, "Amount of memory in MB to be requested to run the application master");
+    opts.addOption(TFApplication.OPT_TF_MASTER_VCORES, true, "Amount of virtual cores to be requested to run the application master");
+    opts.addOption(TFApplication.OPT_TF_CONTAINER_MEMORY, true, "Amount of memory in MB to be requested to run a tensorflow worker");
+    opts.addOption(TFApplication.OPT_TF_CONTAINER_VCORES, true, "Amount of virtual cores to be requested to run a tensorflow worker");
+    opts.addOption(TFApplication.OPT_TF_LOG_PROPERTIES, true, "log4j.properties file");
+    opts.addOption(TFApplication.OPT_TF_ATTEMPT_FAILURES_VALIDITY_INTERVAL, true,
       "when attempt_failures_validity_interval in milliseconds is set to > 0," +
       "the failure number will not take failures which happen out of " +
       "the validityInterval into failure count. " +
       "If failure count reaches to maxAppAttempts, " +
       "the application will be failed.");
-    opts.addOption("node_label_expression", true,
+    opts.addOption(TFApplication.OPT_TF_NODE_LABEL_EXPRESSION, true,
         "Node label expression to determine the nodes"
             + " where all the containers of this application"
             + " will be allocated, \"\" means containers"
             + " can be allocated anywhere, if you don't specify the option,"
             + " default node_label_expression of queue will be used.");
-    opts.addOption("container_retry_policy", true,
+    opts.addOption(TFApplication.OPT_TF_CONTAINER_RETRY_POLICY, true,
         "Retry policy when container fails to run, "
             + "0: NEVER_RETRY, 1: RETRY_ON_ALL_ERRORS, "
             + "2: RETRY_ON_SPECIFIC_ERROR_CODES");
-    opts.addOption("container_retry_error_codes", true,
+    opts.addOption(TFApplication.OPT_TF_CONTAINER_RETRY_ERROR_CODES, true,
         "When retry policy is set to RETRY_ON_SPECIFIC_ERROR_CODES, error "
             + "codes is specified with this option, "
             + "e.g. --container_retry_error_codes 1,2,3");
-    opts.addOption("container_max_retries", true,
+    opts.addOption(TFApplication.OPT_TF_CONTAINER_MAX_RETRIES, true,
         "If container could retry, it specifies max retires");
-    opts.addOption("container_retry_interval", true,
+    opts.addOption(TFApplication.OPT_TF_CONTAINER_RETRY_INTERVAL, true,
         "Interval between each retry, unit is milliseconds");
     opts.addOption(TFApplication.OPT_TF_CLIENT, true,
             "Provide client python of tensorflow");
-/*    opts.addOption(TFApplication.OPT_TF_SERVER_JAR, true,
-            "Provide server jar of tensorflow");*/
     opts.addOption(TFApplication.OPT_TF_WORKER_NUM, true,
             "worker quantity of tensorflow");
     opts.addOption(TFApplication.OPT_TF_PS_NUM, true,
@@ -214,11 +212,11 @@ public class Client {
       }
     }
 
-    appName = cliParser.getOptionValue("appname", "tensorflow");
-    amPriority = Integer.parseInt(cliParser.getOptionValue("priority", "0"));
-    amQueue = cliParser.getOptionValue("queue", "default");
-    amMemory = Integer.parseInt(cliParser.getOptionValue("master_memory", "100"));
-    amVCores = Integer.parseInt(cliParser.getOptionValue("master_vcores", "1"));
+    appName = cliParser.getOptionValue(TFApplication.OPT_TF_APPNAME, "tensorflow");
+    amPriority = Integer.parseInt(cliParser.getOptionValue(TFApplication.OPT_TF_PRIORITY, "0"));
+    amQueue = cliParser.getOptionValue(TFApplication.OPT_TF_QUEUE, "default");
+    amMemory = Integer.parseInt(cliParser.getOptionValue(TFApplication.OPT_TF_MASTER_MEMORY, "100"));
+    amVCores = Integer.parseInt(cliParser.getOptionValue(TFApplication.OPT_TF_MASTER_VCORES, "1"));
     tfClientPy = cliParser.getOptionValue(TFApplication.OPT_TF_CLIENT, TFClient.TF_CLIENT_PY);
     //tfConatinerJar = cliParser.getOptionValue(TFApplication.OPT_TF_SERVER_JAR, TFAmContainer.APPMASTER_JAR_PATH);
     workerNum = Integer.parseInt(cliParser.getOptionValue(TFApplication.OPT_TF_WORKER_NUM, "1"));
@@ -248,8 +246,8 @@ public class Client {
         tfClientPy = cliParser.getOptionValue(TFApplication.OPT_TF_CLIENT);
     }
 
-    containerMemory = Integer.parseInt(cliParser.getOptionValue("container_memory", "4096"));
-    containerVirtualCores = Integer.parseInt(cliParser.getOptionValue("container_vcores", "1"));
+    containerMemory = Integer.parseInt(cliParser.getOptionValue(TFApplication.OPT_TF_CONTAINER_MEMORY, "4096"));
+    containerVirtualCores = Integer.parseInt(cliParser.getOptionValue(TFApplication.OPT_TF_CONTAINER_VCORES, "1"));
 
 
     if (containerMemory < 0 || containerVirtualCores < 0 || workerNum < 1 || psNum < 0) {
@@ -261,30 +259,30 @@ public class Client {
           + ", ps=" + psNum);
     }
 
-    nodeLabelExpression = cliParser.getOptionValue("node_label_expression", null);
+    nodeLabelExpression = cliParser.getOptionValue(TFApplication.OPT_TF_NODE_LABEL_EXPRESSION, null);
 
     attemptFailuresValidityInterval =
         Long.parseLong(cliParser.getOptionValue(
-          "attempt_failures_validity_interval", "-1"));
+                TFApplication.OPT_TF_ATTEMPT_FAILURES_VALIDITY_INTERVAL, "-1"));
 
-    log4jPropFile = cliParser.getOptionValue("log_properties", "");
+    log4jPropFile = cliParser.getOptionValue(TFApplication.OPT_TF_LOG_PROPERTIES, "");
 
     // Get container retry options
-    if (cliParser.hasOption("container_retry_policy")) {
-      containerRetryOptions.add("--container_retry_policy "
-          + cliParser.getOptionValue("container_retry_policy"));
+    if (cliParser.hasOption(TFApplication.OPT_TF_CONTAINER_RETRY_POLICY)) {
+      containerRetryOptions.add(TFApplication.makeOption(TFApplication.OPT_TF_CONTAINER_RETRY_POLICY,
+              cliParser.getOptionValue(TFApplication.OPT_TF_CONTAINER_RETRY_POLICY)));
     }
-    if (cliParser.hasOption("container_retry_error_codes")) {
-      containerRetryOptions.add("--container_retry_error_codes "
-          + cliParser.getOptionValue("container_retry_error_codes"));
+    if (cliParser.hasOption(TFApplication.OPT_TF_CONTAINER_RETRY_ERROR_CODES)) {
+      containerRetryOptions.add(TFApplication.makeOption(TFApplication.OPT_TF_CONTAINER_RETRY_ERROR_CODES,
+              cliParser.getOptionValue(TFApplication.OPT_TF_CONTAINER_RETRY_ERROR_CODES)));
     }
-    if (cliParser.hasOption("container_max_retries")) {
-      containerRetryOptions.add("--container_max_retries "
-          + cliParser.getOptionValue("container_max_retries"));
+    if (cliParser.hasOption(TFApplication.OPT_TF_CONTAINER_MAX_RETRIES)) {
+      containerRetryOptions.add(TFApplication.makeOption(TFApplication.OPT_TF_CONTAINER_MAX_RETRIES,
+              cliParser.getOptionValue(TFApplication.OPT_TF_CONTAINER_MAX_RETRIES)));
     }
-    if (cliParser.hasOption("container_retry_interval")) {
-      containerRetryOptions.add("--container_retry_interval "
-          + cliParser.getOptionValue("container_retry_interval"));
+    if (cliParser.hasOption(TFApplication.OPT_TF_CONTAINER_RETRY_INTERVAL)) {
+      containerRetryOptions.add(TFApplication.makeOption(TFApplication.OPT_TF_CONTAINER_RETRY_INTERVAL,
+              cliParser.getOptionValue(TFApplication.OPT_TF_CONTAINER_RETRY_INTERVAL)));
     }
 
     return true;

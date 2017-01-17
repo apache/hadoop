@@ -36,12 +36,6 @@ public class TFClient implements Runnable {
     private static final Log LOG = LogFactory.getLog(TFClient.class);
     public static final String TF_CLIENT_PY = "tf_client.py";
     private String tfClientPy;
-    private String tfMasterAddress;
-    private int tfMasterPort = TFYarnConstants.INVALID_TCP_PORT;
-    private String currentDirectory;
-    private static final String OPT_MASTER_ADDRESS = "ma";
-    private static final String OPT_MASTER_PORT = "mp";
-
 
     private static final String TF_PY_OPT_WORKERS = "wk";
     private static final String TF_PY_OPT_PSES = "ps";
@@ -81,45 +75,7 @@ public class TFClient implements Runnable {
     }
 
     public TFClient(String tfClientPy) {
-        LOG.info("tf client py script: " + tfClientPy);
         this.tfClientPy = tfClientPy;
-    }
-
-    private String makeOption(String opt, String val) {
-
-        if (opt == null || opt.equals("")) {
-            return "";
-        }
-
-        String lead = "--";
-
-        if (val == null) {
-            lead += opt;
-            return lead;
-        }
-
-        lead += opt;
-        lead += " ";
-        lead += val;
-        return lead;
-    }
-
-
-    @Override
-    public void run() {
-        execCmd("ls -l");
-
-        if (tfMasterAddress == null || tfMasterPort == TFYarnConstants.INVALID_TCP_PORT) {
-            LOG.fatal("invalid master address!");
-            execCmd("python " + tfClientPy);
-        } else {
-            execCmd("python " + tfClientPy + " \"" + tfMasterAddress + "\"" + " " + tfMasterPort);
-        }
-    }
-
-    public void startTensorflowClient() {
-        Thread thread = new Thread(this);
-        thread.start();
     }
 
     public void startTensorflowClient(String clusterSpecJsonString) {
@@ -165,26 +121,24 @@ public class TFClient implements Runnable {
 
         LOG.info("workers: <" + workers + ">;" + "pses: <" + pses + ">");
 
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-
-                String cmd = "python " + tfClientPy;
-
-                if (workers != null) {
-                    cmd +=  " " + TFApplication.makeOption(TF_PY_OPT_WORKERS, "\"" + workers + "\"");
-                }
-
-                if (pses != null) {
-                    cmd += " " + TFApplication.makeOption(TF_PY_OPT_PSES, "\"" + pses + "\"");
-                }
-
-                LOG.info("TF client command is [" + cmd + "]");
-                execCmd(cmd);
-            }
-        });
+        Thread thread = new Thread(this);
         thread.start();
 
     }
 
+    @Override
+    public void run() {
+        String cmd = "python " + tfClientPy;
+
+        if (workers != null) {
+            cmd +=  " " + TFApplication.makeOption(TF_PY_OPT_WORKERS, "\"" + workers + "\"");
+        }
+
+        if (pses != null) {
+            cmd += " " + TFApplication.makeOption(TF_PY_OPT_PSES, "\"" + pses + "\"");
+        }
+
+        LOG.info("TF client command is [" + cmd + "]");
+        execCmd(cmd);
+    }
 }
