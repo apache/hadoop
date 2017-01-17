@@ -226,6 +226,7 @@ Usage:
      -transitionToStandby <serviceId>
      -failover [--forcefence] [--forceactive] <serviceId> <serviceId>
      -getServiceState <serviceId>
+     -getAllServiceState
      -checkHealth <serviceId>
      -help [cmd]
 ```
@@ -250,6 +251,7 @@ Usage:
 | -transitionToStandby [--forcemanual] \<serviceId\> | Transitions the service into Standby state. This command can not be used if automatic failover is enabled. Though you can override this by --forcemanual option, you need caution. |
 | -failover [--forceactive] \<serviceId1\> \<serviceId2\> | Initiate a failover from serviceId1 to serviceId2. Try to failover to the target service even if it is not ready if the --forceactive option is used. This command can not be used if automatic failover is enabled. |
 | -getServiceState \<serviceId\> | Returns the state of the service. |
+| -getAllServiceState | Returns the state of all the services. |
 | -checkHealth \<serviceId\> | Requests that the service perform a health check. The RMAdmin tool will exit with a non-zero exit code if the check fails. |
 | -help [cmd] | Displays help for the given command or all commands if none is specified. |
 
