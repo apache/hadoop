@@ -96,7 +96,7 @@ public class DatanodeHttpServer implements Closeable {
     this.conf = conf;
 
     Configuration confForInfoServer = new Configuration(conf);
-    confForInfoServer.setInt(HttpServer2.HTTP_MAX_THREADS, 10);
+    confForInfoServer.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, 10);
     HttpServer2.Builder builder = new HttpServer2.Builder()
         .setName("datanode")
         .setConf(confForInfoServer)

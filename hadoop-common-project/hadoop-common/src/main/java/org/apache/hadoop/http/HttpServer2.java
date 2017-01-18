@@ -131,8 +131,6 @@ public final class HttpServer2 implements FilterContainer {
 
   static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";
-  @Deprecated
-  public static final String HTTP_MAX_THREADS = HTTP_MAX_THREADS_KEY;
 
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
@@ -507,7 +505,7 @@ public final class HttpServer2 implements FilterContainer {
 
     Preconditions.checkNotNull(webAppContext);
 
-    int maxThreads = conf.getInt(HTTP_MAX_THREADS, -1);
+    int maxThreads = conf.getInt(HTTP_MAX_THREADS_KEY, -1);
     // If HTTP_MAX_THREADS is not configured, QueueThreadPool() will use the
     // default value (currently 250).
 

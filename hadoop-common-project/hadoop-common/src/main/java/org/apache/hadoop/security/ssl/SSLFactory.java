@@ -100,21 +100,10 @@ public class SSLFactory implements ConnectionConfigurator {
   public static final String SSL_SERVER_EXCLUDE_CIPHER_LIST =
       "ssl.server.exclude.cipher.list";
 
-  @Deprecated
-  public static final boolean DEFAULT_SSL_REQUIRE_CLIENT_CERT =
-      SSL_REQUIRE_CLIENT_CERT_DEFAULT;
-
   public static final String SSLCERTIFICATE = IBM_JAVA?"ibmX509":"SunX509";
 
   public static final String KEYSTORES_FACTORY_CLASS_KEY =
     "hadoop.ssl.keystores.factory.class";
-
-  @Deprecated
-  public static final String SSL_ENABLED_PROTOCOLS =
-      SSL_ENABLED_PROTOCOLS_KEY;
-  @Deprecated
-  public static final String DEFAULT_SSL_ENABLED_PROTOCOLS =
-      SSL_ENABLED_PROTOCOLS_DEFAULT;
 
   private Configuration conf;
   private Mode mode;
@@ -140,7 +129,7 @@ public class SSLFactory implements ConnectionConfigurator {
     }
     this.mode = mode;
     requireClientCert = conf.getBoolean(SSL_REQUIRE_CLIENT_CERT_KEY,
-                                        DEFAULT_SSL_REQUIRE_CLIENT_CERT);
+        SSL_REQUIRE_CLIENT_CERT_DEFAULT);
     Configuration sslConf = readSSLConfiguration(mode);
 
     Class<? extends KeyStoresFactory> klass
@@ -148,8 +137,8 @@ public class SSLFactory implements ConnectionConfigurator {
                       FileBasedKeyStoresFactory.class, KeyStoresFactory.class);
     keystoresFactory = ReflectionUtils.newInstance(klass, sslConf);
 
-    enabledProtocols = conf.getStrings(SSL_ENABLED_PROTOCOLS,
-        DEFAULT_SSL_ENABLED_PROTOCOLS);
+    enabledProtocols = conf.getStrings(SSL_ENABLED_PROTOCOLS_KEY,
+        SSL_ENABLED_PROTOCOLS_DEFAULT);
     String excludeCiphersConf =
         sslConf.get(SSL_SERVER_EXCLUDE_CIPHER_LIST, "");
     if (excludeCiphersConf.isEmpty()) {
