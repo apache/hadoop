@@ -129,6 +129,16 @@
           </execution>
         </executions>
       </plugin>
+      <!-- Disable the sign plugin, since there isn't anything to sign -->
+      <plugin>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>sign-artifacts</id>
+            <phase>never</phase>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
