@@ -568,6 +568,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   }
 
   boolean canContainerBePreempted(RMContainer container) {
+    if (!isPreemptable()) {
+      return false;
+    }
+
     // Sanity check that the app owns this container
     if (!getLiveContainersMap().containsKey(container.getContainerId()) &&
         !newlyAllocatedContainers.contains(container)) {
@@ -579,17 +583,6 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     if (containersToPreempt.contains(container)) {
       // The container is already under consideration for preemption
       return false;
-    }
-
-    // Check if any of the parent queues are not preemptable
-    // TODO (YARN-5831): Propagate the "preemptable" flag all the way down to
-    // the app to avoid recursing up every time.
-    for (FSQueue q = getQueue();
-        !q.getQueueName().equals("root");
-        q = q.getParent()) {
-      if (!q.isPreemptable()) {
-        return false;
-      }
     }
 
     // Check if the app's allocation will be over its fairshare even
@@ -1240,5 +1233,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   @Override
   public boolean equals(Object o) {
     return super.equals(o);
+  }
+
+  @Override
+  public boolean isPreemptable() {
+    return getQueue().isPreemptable();
   }
 }

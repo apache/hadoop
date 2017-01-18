@@ -73,11 +73,12 @@ public class QueueManager {
   public void initialize(Configuration conf) throws IOException,
       SAXException, AllocationConfigurationException, ParserConfigurationException {
     rootQueue = new FSParentQueue("root", scheduler, null);
-    rootQueue.init();
     queues.put(rootQueue.getName(), rootQueue);
 
     // Create the default queue
     getLeafQueue(YarnConfiguration.DEFAULT_QUEUE_NAME, true);
+    // Recursively reinitialize to propagate queue properties
+    rootQueue.reinit(true);
   }
   
   /**
@@ -281,11 +282,9 @@ public class QueueManager {
         queue = newParent;
       }
 
-      queue.init();
       parent.addChildQueue(queue);
       setChildResourceLimits(parent, queue, queueConf);
       queues.put(queue.getName(), queue);
-      queue.updatePreemptionVariables();
 
       // If we just created a leaf node, the newParent is null, but that's OK
       // because we only create a leaf node in the very last iteration.
@@ -496,17 +495,11 @@ public class QueueManager {
         }
       }
     }
-    rootQueue.recomputeSteadyShares();
 
-    for (FSQueue queue : queues.values()) {
-      queue.init();
-    }
-
+    // Initialize all queues recursively
+    rootQueue.reinit(true);
     // Update steady fair shares for all queues
     rootQueue.recomputeSteadyShares();
-    // Update the fair share preemption timeouts and preemption for all queues
-    // recursively
-    rootQueue.updatePreemptionVariables();
   }
 
   /**

@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.junit.After;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
@@ -166,6 +167,14 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     // Create and add two nodes to the cluster
     addNode(NODE_CAPACITY_MULTIPLE * 1024, NODE_CAPACITY_MULTIPLE);
     addNode(NODE_CAPACITY_MULTIPLE * 1024, NODE_CAPACITY_MULTIPLE);
+
+    // Verify if child-1 and child-2 are preemptable
+    FSQueue child1 =
+        scheduler.getQueueManager().getQueue("nonpreemptable.child-1");
+    assertFalse(child1.isPreemptable());
+    FSQueue child2 =
+        scheduler.getQueueManager().getQueue("nonpreemptable.child-2");
+    assertFalse(child2.isPreemptable());
   }
 
   private void sendEnoughNodeUpdatesToAssignFully() {
@@ -197,6 +206,10 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     scheduler.update();
     sendEnoughNodeUpdatesToAssignFully();
     assertEquals(8, greedyApp.getLiveContainers().size());
+    // Verify preemptable for queue and app attempt
+    assertTrue(
+        scheduler.getQueueManager().getQueue(queue1).isPreemptable()
+        == greedyApp.isPreemptable());
 
     // Create an app that takes up all the resources on the cluster
     ApplicationAttemptId appAttemptId2

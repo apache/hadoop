@@ -109,21 +109,6 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
-  public void updatePreemptionVariables() {
-    super.updatePreemptionVariables();
-    // For child queues
-
-    readLock.lock();
-    try {
-      for (FSQueue childQueue : childQueues) {
-        childQueue.updatePreemptionVariables();
-      }
-    } finally {
-      readLock.unlock();
-    }
-  }
-
-  @Override
   public Resource getDemand() {
     readLock.lock();
     try {
