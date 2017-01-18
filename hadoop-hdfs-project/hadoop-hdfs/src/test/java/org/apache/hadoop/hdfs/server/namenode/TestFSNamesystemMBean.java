@@ -32,6 +32,8 @@ import javax.management.ObjectName;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.metrics2.impl.ConfigBuilder;
+import org.apache.hadoop.metrics2.impl.TestMetricsConfig;
 import org.junit.Test;
 import org.mortbay.util.ajax.JSON;
 
@@ -132,12 +134,16 @@ public class TestFSNamesystemMBean {
     MiniDFSCluster cluster = null;
     FSNamesystem fsn = null;
 
+    int jmxCachePeriod = 1;
+    new ConfigBuilder().add("namenode.period", jmxCachePeriod)
+        .save(TestMetricsConfig.getTestFilename("hadoop-metrics2-namenode"));
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
 
       fsn = cluster.getNameNode().namesystem;
       fsn.writeLock();
+      Thread.sleep(jmxCachePeriod * 1000);
 
       MBeanClient client = new MBeanClient();
       client.start();
@@ -160,11 +166,15 @@ public class TestFSNamesystemMBean {
   @Test
   public void testWithFSEditLogLock() throws Exception {
     Configuration conf = new Configuration();
+    int jmxCachePeriod = 1;
+    new ConfigBuilder().add("namenode.period", jmxCachePeriod)
+        .save(TestMetricsConfig.getTestFilename("hadoop-metrics2-namenode"));
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
       synchronized (cluster.getNameNode().getFSImage().getEditLog()) {
+        Thread.sleep(jmxCachePeriod * 1000);
         MBeanClient client = new MBeanClient();
         client.start();
         client.join(20000);
