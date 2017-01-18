@@ -213,6 +213,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-11263. ClassCastException when we use Bzipcodec for Fsimage
     compression. (Brahma Reddy Battula)
 
+    HDFS-11290. TestFSNameSystemMBean should wait until JMX cache is cleared.
+    (Eric Krogen via aajisaka)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
