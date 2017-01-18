@@ -80,6 +80,7 @@ public abstract class FSQueue implements Queue, Schedulable {
     this.scheduler = scheduler;
     this.metrics = FSQueueMetrics.forQueue(getName(), parent, true, scheduler.getConf());
     this.parent = parent;
+    reinit(false);
   }
 
   /**
@@ -87,10 +88,19 @@ public abstract class FSQueue implements Queue, Schedulable {
    * metrics.
    * This function is invoked when a new queue is created or reloading the
    * allocation configuration.
+   *
+   * @param recursive whether child queues should be reinitialized recursively
    */
-  public void init() {
+  public void reinit(boolean recursive) {
     AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
     allocConf.initFSQueue(this, scheduler);
+    updatePreemptionVariables();
+
+    if (recursive) {
+      for (FSQueue child : getChildQueues()) {
+        child.reinit(recursive);
+      }
+    }
   }
 
   public String getName() {
@@ -293,6 +303,7 @@ public abstract class FSQueue implements Queue, Schedulable {
     this.fairSharePreemptionThreshold = fairSharePreemptionThreshold;
   }
 
+  @Override
   public boolean isPreemptable() {
     return preemptable;
   }
@@ -315,7 +326,7 @@ public abstract class FSQueue implements Queue, Schedulable {
    * Update the min/fair share preemption timeouts, threshold and preemption
    * disabled flag for this queue.
    */
-  public void updatePreemptionVariables() {
+  private void updatePreemptionVariables() {
     // For min share timeout
     minSharePreemptionTimeout = scheduler.getAllocationConfiguration()
         .getMinSharePreemptionTimeout(getName());
@@ -334,9 +345,15 @@ public abstract class FSQueue implements Queue, Schedulable {
     if (fairSharePreemptionThreshold < 0 && parent != null) {
       fairSharePreemptionThreshold = parent.getFairSharePreemptionThreshold();
     }
-    // For option whether allow preemption from this queue
-    preemptable = scheduler.getAllocationConfiguration()
-        .isPreemptable(getName());
+    // For option whether allow preemption from this queue.
+    // If the parent is non-preemptable, this queue is non-preemptable as well,
+    // otherwise get the value from the allocation file.
+    if (parent != null && !parent.isPreemptable()) {
+      preemptable = false;
+    } else {
+      preemptable = scheduler.getAllocationConfiguration()
+          .isPreemptable(getName());
+    }
   }
 
   /**
