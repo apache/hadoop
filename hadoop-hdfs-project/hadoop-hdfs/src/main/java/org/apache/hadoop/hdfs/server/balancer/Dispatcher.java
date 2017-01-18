@@ -68,6 +68,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.balancer.Dispatcher.DDatanode.StorageGroup;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicies;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.StripedBlockWithLocations;
@@ -1274,7 +1275,7 @@ public class Dispatcher {
       }
       datanodeInfos.add(target.getDatanodeInfo());
     }
-    return placementPolicies.getPolicy(false).isMovable(
+    return placementPolicies.getPolicy(BlockType.CONTIGUOUS).isMovable(
         datanodeInfos, source.getDatanodeInfo(), target.getDatanodeInfo());
   }
 

@@ -33,9 +33,11 @@ import java.util.EnumSet;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.junit.Assert;
 
@@ -58,6 +60,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
@@ -160,7 +163,7 @@ public class TestFSImage {
     short replication = testECPolicy.getId();
     long preferredBlockSize = 128*1024*1024;
     INodeFile file = new INodeFile(id, name, permissionStatus, mtime, atime,
-        blks, replication, preferredBlockSize, (byte) 0, true);
+        blks, replication, preferredBlockSize, (byte) 0, BlockType.STRIPED);
     ByteArrayOutputStream bs = new ByteArrayOutputStream();
 
     //construct StripedBlocks for the INode
@@ -645,5 +648,15 @@ public class TestFSImage {
         cluster.shutdown();
       }
     }
+  }
+
+  @Test
+  public void testBlockTypeProtoDefaultsToContiguous() throws Exception {
+    INodeSection.INodeFile.Builder builder = INodeSection.INodeFile
+        .newBuilder();
+    INodeSection.INodeFile inodeFile = builder.build();
+    BlockType defaultBlockType = PBHelperClient.convert(inodeFile
+        .getBlockType());
+    assertEquals(defaultBlockType, BlockType.CONTIGUOUS);
   }
 }

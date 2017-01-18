@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -206,6 +207,11 @@ public class BlockInfoStriped extends BlockInfo {
   @Override
   public final boolean isStriped() {
     return true;
+  }
+
+  @Override
+  public BlockType getBlockType() {
+    return BlockType.STRIPED;
   }
 
   @Override

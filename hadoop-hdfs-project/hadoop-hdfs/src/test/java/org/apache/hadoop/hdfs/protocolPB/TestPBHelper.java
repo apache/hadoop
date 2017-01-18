@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecover
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeStorageProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
@@ -197,6 +199,19 @@ public class TestPBHelper {
     BlockProto bProto = PBHelperClient.convert(b);
     Block b2 = PBHelperClient.convert(bProto);
     assertEquals(b, b2);
+  }
+
+  @Test
+  public void testConvertBlockType() {
+    BlockType bContiguous = BlockType.CONTIGUOUS;
+    BlockTypeProto bContiguousProto = PBHelperClient.convert(bContiguous);
+    BlockType bContiguous2 = PBHelperClient.convert(bContiguousProto);
+    assertEquals(bContiguous, bContiguous2);
+
+    BlockType bStriped = BlockType.STRIPED;
+    BlockTypeProto bStripedProto = PBHelperClient.convert(bStriped);
+    BlockType bStriped2 = PBHelperClient.convert(bStripedProto);
+    assertEquals(bStriped, bStriped2);
   }
 
   private static BlockWithLocations getBlockWithLocations(

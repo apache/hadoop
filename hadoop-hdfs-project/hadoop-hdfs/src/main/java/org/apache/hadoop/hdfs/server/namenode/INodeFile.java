@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
+import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
+import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.NO_SNAPSHOT_ID;
 
@@ -43,6 +45,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
@@ -93,6 +96,10 @@ public class INodeFile extends INodeWithAdditionalFields
    * stores the EC policy ID, and in the future, we may further divide these
    * 11 bits to store both the EC policy ID and replication factor for erasure
    * coded blocks. The layout of this section is demonstrated as below.
+   *
+   * Another possible future extension is for future block types, in which case
+   * the 'Replica or EC' bit may be extended into the 11 bit field.
+   *
    * +---------------+-------------------------------+
    * |     1 bit     |             11 bit            |
    * +---------------+-------------------------------+
@@ -144,13 +151,29 @@ public class INodeFile extends INodeWithAdditionalFields
       return (byte)STORAGE_POLICY_ID.BITS.retrieve(header);
     }
 
+    // Union of all the block type masks. Currently there is only
+    // BLOCK_TYPE_MASK_STRIPED
+    static final long BLOCK_TYPE_MASK = 1 << 11;
+    // Mask to determine if the block type is striped.
+    static final long BLOCK_TYPE_MASK_STRIPED = 1 << 11;
+
     static boolean isStriped(long header) {
       long layoutRedundancy = BLOCK_LAYOUT_AND_REDUNDANCY.BITS.retrieve(header);
-      return (layoutRedundancy & (1 << 11)) != 0;
+      return (layoutRedundancy & BLOCK_TYPE_MASK) != 0;
+    }
+
+    static BlockType getBlockType(long header) {
+      long layoutRedundancy = BLOCK_LAYOUT_AND_REDUNDANCY.BITS.retrieve(header);
+      long blockType = layoutRedundancy & BLOCK_TYPE_MASK;
+      if (blockType == BLOCK_TYPE_MASK_STRIPED) {
+        return STRIPED;
+      } else {
+        return CONTIGUOUS;
+      }
     }
 
     static long toLong(long preferredBlockSize, short replication,
-        boolean isStriped, byte storagePolicyID) {
+        BlockType blockType, byte storagePolicyID) {
       Preconditions.checkArgument(replication >= 0 &&
           replication <= MAX_REDUNDANCY);
       long h = 0;
@@ -161,8 +184,8 @@ public class INodeFile extends INodeWithAdditionalFields
       // For erasure coded files, replication is used to store ec policy id
       // TODO: this is hacky. Add some utility to generate the layoutRedundancy
       long layoutRedundancy = 0;
-      if (isStriped) {
-        layoutRedundancy |= 1 << 11;
+      if (blockType == STRIPED) {
+        layoutRedundancy |= BLOCK_TYPE_MASK_STRIPED;
       }
       layoutRedundancy |= replication;
       h = BLOCK_LAYOUT_AND_REDUNDANCY.BITS.combine(layoutRedundancy, h);
@@ -180,18 +203,18 @@ public class INodeFile extends INodeWithAdditionalFields
             long atime, BlockInfo[] blklist, short replication,
             long preferredBlockSize) {
     this(id, name, permissions, mtime, atime, blklist, replication,
-        preferredBlockSize, (byte) 0, false);
+        preferredBlockSize, (byte) 0, CONTIGUOUS);
   }
 
   INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
       long atime, BlockInfo[] blklist, short replication,
-      long preferredBlockSize, byte storagePolicyID, boolean isStriped) {
+      long preferredBlockSize, byte storagePolicyID, BlockType blockType) {
     super(id, name, permissions, mtime, atime);
-    header = HeaderFormat.toLong(preferredBlockSize, replication, isStriped,
+    header = HeaderFormat.toLong(preferredBlockSize, replication, blockType,
         storagePolicyID);
     if (blklist != null && blklist.length > 0) {
       for (BlockInfo b : blklist) {
-        Preconditions.checkArgument(b.isStriped() == isStriped);
+        Preconditions.checkArgument(b.getBlockType() == blockType);
       }
     }
     setBlocks(blklist);
@@ -552,6 +575,15 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public boolean isStriped() {
     return HeaderFormat.isStriped(header);
+  }
+
+  /**
+   * @return The type of the INodeFile based on block id.
+   */
+  @VisibleForTesting
+  @Override
+  public BlockType getBlockType() {
+    return HeaderFormat.getBlockType(header);
   }
 
   @Override // INodeFileAttributes
