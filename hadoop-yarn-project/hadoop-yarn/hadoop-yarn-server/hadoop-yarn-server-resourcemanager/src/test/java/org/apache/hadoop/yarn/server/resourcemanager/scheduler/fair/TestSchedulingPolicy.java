@@ -345,6 +345,11 @@ public class TestSchedulingPolicy {
             ", weights:" + weights + ", demand:" + demand +
             ", minShare:" + minShare + "}";
       }
+
+      @Override
+      public boolean isPreemptable() {
+        return true;
+      }
     }
   }
 
