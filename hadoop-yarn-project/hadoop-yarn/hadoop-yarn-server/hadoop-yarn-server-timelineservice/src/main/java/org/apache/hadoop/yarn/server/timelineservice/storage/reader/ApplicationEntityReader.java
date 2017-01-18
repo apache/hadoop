@@ -48,7 +48,9 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.application.Applica
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.RowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 
@@ -359,13 +361,44 @@ class ApplicationEntityReader extends GenericEntityReader {
       Connection conn, FilterList filterList) throws IOException {
     Scan scan = new Scan();
     TimelineReaderContext context = getContext();
+    RowKeyPrefix<ApplicationRowKey> applicationRowKeyPrefix = null;
+
     // Whether or not flowRunID is null doesn't matter, the
     // ApplicationRowKeyPrefix will do the right thing.
-    RowKeyPrefix<ApplicationRowKey> applicationRowKeyPrefix =
-        new ApplicationRowKeyPrefix(context.getClusterId(),
-            context.getUserId(), context.getFlowName(),
-            context.getFlowRunId());
-    scan.setRowPrefixFilter(applicationRowKeyPrefix.getRowKeyPrefix());
+    // default mode, will always scans from beginning of entity type.
+    if (getFilters().getFromId() == null) {
+      applicationRowKeyPrefix = new ApplicationRowKeyPrefix(
+          context.getClusterId(), context.getUserId(), context.getFlowName(),
+          context.getFlowRunId());
+      scan.setRowPrefixFilter(applicationRowKeyPrefix.getRowKeyPrefix());
+    } else {
+      Long flowRunId = context.getFlowRunId();
+      if (flowRunId == null) {
+        AppToFlowRowKey appToFlowRowKey = new AppToFlowRowKey(
+            context.getClusterId(), getFilters().getFromId());
+        FlowContext flowContext =
+            lookupFlowContext(appToFlowRowKey, hbaseConf, conn);
+        flowRunId = flowContext.getFlowRunId();
+      }
+
+      ApplicationRowKey applicationRowKey =
+          new ApplicationRowKey(context.getClusterId(), context.getUserId(),
+              context.getFlowName(), flowRunId, getFilters().getFromId());
+
+      // set start row
+      scan.setStartRow(applicationRowKey.getRowKey());
+
+      // get the bytes for stop row
+      applicationRowKeyPrefix = new ApplicationRowKeyPrefix(
+          context.getClusterId(), context.getUserId(), context.getFlowName(),
+          context.getFlowRunId());
+
+      // set stop row
+      scan.setStopRow(
+          HBaseTimelineStorageUtils.calculateTheClosestNextRowKeyForPrefix(
+              applicationRowKeyPrefix.getRowKeyPrefix()));
+    }
+
     FilterList newList = new FilterList();
     newList.addFilter(new PageFilter(getFilters().getLimit()));
     if (filterList != null && !filterList.getFilters().isEmpty()) {
