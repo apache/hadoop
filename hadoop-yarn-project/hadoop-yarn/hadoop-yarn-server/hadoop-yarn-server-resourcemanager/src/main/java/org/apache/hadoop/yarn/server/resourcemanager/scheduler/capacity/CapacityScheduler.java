@@ -144,7 +144,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-
 @LimitedPrivate("yarn")
 @Evolving
 @SuppressWarnings("unchecked")
@@ -415,7 +414,7 @@ public class CapacityScheduler extends
       } catch (Throwable t) {
         this.conf = oldConf;
         refreshMaximumAllocation(this.conf.getMaximumAllocation());
-        throw new IOException("Failed to re-init queues", t);
+        throw new IOException("Failed to re-init queues : "+ t.getMessage(), t);
       }
 
       // update lazy preemption
