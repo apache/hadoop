@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -370,13 +371,29 @@ public abstract class SchedulerNode {
   }
 
   /**
-   * Get the running containers in the node.
-   * @return List of running containers in the node.
+   * Get the containers running on the node.
+   * @return A copy of containers running on the node.
    */
   public synchronized List<RMContainer> getCopiedListOfRunningContainers() {
     List<RMContainer> result = new ArrayList<>(launchedContainers.size());
     for (ContainerInfo info : launchedContainers.values()) {
       result.add(info.container);
+    }
+    return result;
+  }
+
+  /**
+   * Get the containers running on the node with AM containers at the end.
+   * @return A copy of running containers with AM containers at the end.
+   */
+  public synchronized List<RMContainer> getRunningContainersWithAMsAtTheEnd() {
+    LinkedList<RMContainer> result = new LinkedList<>();
+    for (ContainerInfo info : launchedContainers.values()) {
+      if(info.container.isAMContainer()) {
+        result.addLast(info.container);
+      } else {
+        result.addFirst(info.container);
+      }
     }
     return result;
   }
