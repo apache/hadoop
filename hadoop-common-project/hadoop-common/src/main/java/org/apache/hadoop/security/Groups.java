@@ -103,12 +103,11 @@ public class Groups {
   }
 
   public Groups(Configuration conf, final Timer timer) {
-    impl = 
-      ReflectionUtils.newInstance(
-          conf.getClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING, 
-                        ShellBasedUnixGroupsMapping.class, 
-                        GroupMappingServiceProvider.class), 
-          conf);
+    impl = ReflectionUtils.newInstance(
+        conf.getClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+            JniBasedUnixGroupsMappingWithFallback.class,
+            GroupMappingServiceProvider.class),
+        conf);
 
     cacheTimeout = 
       conf.getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS, 
