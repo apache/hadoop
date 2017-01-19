@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage.flow;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -41,8 +40,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
@@ -57,10 +56,10 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineCompa
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList.Operator;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelinePrefixFilter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.DataGeneratorForTest;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
-import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
@@ -84,11 +83,7 @@ public class TestHBaseStorageFlowRun {
     Configuration conf = util.getConfiguration();
     conf.setInt("hfile.format.version", 3);
     util.startMiniCluster();
-    createSchema();
-  }
-
-  private static void createSchema() throws IOException {
-    TimelineSchemaCreator.createAllTables(util.getConfiguration(), false);
+    DataGeneratorForTest.createSchema(util.getConfiguration());
   }
 
   @Test
@@ -106,12 +101,7 @@ public class TestHBaseStorageFlowRun {
       // check the regions.
       // check in flow run table
       util.waitUntilAllRegionsAssigned(table);
-      HRegionServer server = util.getRSForFirstRegionInTable(table);
-      List<Region> regions = server.getOnlineRegions(table);
-      for (Region region : regions) {
-        assertTrue(FlowRunTable.isFlowRunTable(region.getRegionInfo(),
-            hbaseConf));
-      }
+      checkCoprocessorExists(table, true);
     }
 
     table = BaseTable.getTableName(hbaseConf,
@@ -121,12 +111,7 @@ public class TestHBaseStorageFlowRun {
       // check the regions.
       // check in flow activity table
       util.waitUntilAllRegionsAssigned(table);
-      HRegionServer server = util.getRSForFirstRegionInTable(table);
-      List<Region> regions = server.getOnlineRegions(table);
-      for (Region region : regions) {
-        assertFalse(FlowRunTable.isFlowRunTable(region.getRegionInfo(),
-            hbaseConf));
-      }
+      checkCoprocessorExists(table, false);
     }
 
     table = BaseTable.getTableName(hbaseConf, EntityTable.TABLE_NAME_CONF_NAME,
@@ -135,12 +120,23 @@ public class TestHBaseStorageFlowRun {
       // check the regions.
       // check in entity run table
       util.waitUntilAllRegionsAssigned(table);
-      HRegionServer server = util.getRSForFirstRegionInTable(table);
-      List<Region> regions = server.getOnlineRegions(table);
-      for (Region region : regions) {
-        assertFalse(FlowRunTable.isFlowRunTable(region.getRegionInfo(),
-            hbaseConf));
+      checkCoprocessorExists(table, false);
+    }
+  }
+
+  private void checkCoprocessorExists(TableName table, boolean exists)
+      throws IOException, InterruptedException {
+    HRegionServer server = util.getRSForFirstRegionInTable(table);
+    List<Region> regions = server.getOnlineRegions(table);
+    for (Region region : regions) {
+      boolean found = false;
+      Set<String> coprocs = region.getCoprocessorHost().getCoprocessors();
+      for (String coprocName : coprocs) {
+        if (coprocName.contains("FlowRunCoprocessor")) {
+          found = true;
+        }
       }
+      assertEquals(found, exists);
     }
   }
 

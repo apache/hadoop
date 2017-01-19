@@ -52,8 +52,8 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric.Type;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
+import org.apache.hadoop.yarn.server.timelineservice.storage.DataGeneratorForTest;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
-import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
@@ -89,7 +89,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     Configuration conf = util.getConfiguration();
     conf.setInt("hfile.format.version", 3);
     util.startMiniCluster();
-    TimelineSchemaCreator.createAllTables(util.getConfiguration(), false);
+    DataGeneratorForTest.createSchema(conf);
     loadData();
   }
 

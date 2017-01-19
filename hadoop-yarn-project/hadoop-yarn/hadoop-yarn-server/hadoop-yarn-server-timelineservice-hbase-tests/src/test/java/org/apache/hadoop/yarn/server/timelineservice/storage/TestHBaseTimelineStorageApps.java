@@ -91,12 +91,8 @@ public class TestHBaseTimelineStorageApps {
   public static void setupBeforeClass() throws Exception {
     util = new HBaseTestingUtility();
     util.startMiniCluster();
-    createSchema();
+    DataGeneratorForTest.createSchema(util.getConfiguration());
     DataGeneratorForTest.loadApps(util);
-  }
-
-  private static void createSchema() throws IOException {
-    TimelineSchemaCreator.createAllTables(util.getConfiguration(), false);
   }
 
   @Before
