@@ -375,9 +375,9 @@ class ApplicationEntityReader extends GenericEntityReader {
       Long flowRunId = context.getFlowRunId();
       if (flowRunId == null) {
         AppToFlowRowKey appToFlowRowKey = new AppToFlowRowKey(
-            context.getClusterId(), getFilters().getFromId());
-        FlowContext flowContext =
-            lookupFlowContext(appToFlowRowKey, hbaseConf, conn);
+            getFilters().getFromId());
+        FlowContext flowContext = lookupFlowContext(appToFlowRowKey,
+            context.getClusterId(), hbaseConf, conn);
         flowRunId = flowContext.getFlowRunId();
       }
 
