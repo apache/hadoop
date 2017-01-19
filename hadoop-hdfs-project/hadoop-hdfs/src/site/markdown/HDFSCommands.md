@@ -112,7 +112,7 @@ Usage:
               [-move | -delete | -openforwrite]
               [-files [-blocks [-locations | -racks | -replicaDetails | -upgradedomains]]]
               [-includeSnapshots]
-              [-storagepolicies] [-blockId <blk_Id>]
+              [-storagepolicies] [-maintenance] [-blockId <blk_Id>]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -129,6 +129,7 @@ Usage:
 | `-move` | Move corrupted files to /lost+found. |
 | `-openforwrite` | Print out files opened for write. |
 | `-storagepolicies` | Print out storage policy summary for the blocks. |
+| `-maintenance` | Print out maintenance state node details. |
 | `-blockId` | Print out information about the block. |
 
 Runs the HDFS filesystem checking utility. See [fsck](./HdfsUserGuide.html#fsck) for more info.
