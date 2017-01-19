@@ -98,12 +98,8 @@ public class TestHBaseTimelineStorageEntities {
   public static void setupBeforeClass() throws Exception {
     util = new HBaseTestingUtility();
     util.startMiniCluster();
-    createSchema();
+    DataGeneratorForTest.createSchema(util.getConfiguration());
     DataGeneratorForTest.loadEntities(util);
-  }
-
-  private static void createSchema() throws IOException {
-    TimelineSchemaCreator.createAllTables(util.getConfiguration(), false);
   }
 
   @Before
