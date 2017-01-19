@@ -2237,6 +2237,18 @@ public class YarnConfiguration extends Configuration {
       + "hbase.coprocessor.app-final-value-retention-milliseconds";
 
   /**
+   * The name of the setting for the location of the coprocessor
+   * jar on hdfs.
+   */
+  public static final String FLOW_RUN_COPROCESSOR_JAR_HDFS_LOCATION =
+      TIMELINE_SERVICE_PREFIX
+      + "hbase.coprocessor.jar.hdfs.location";
+
+  /** default hdfs location for flowrun coprocessor jar. */
+  public static final String DEFAULT_HDFS_LOCATION_FLOW_RUN_COPROCESSOR_JAR =
+      "/hbase/coprocessor/hadoop-yarn-server-timelineservice.jar";
+
+    /**
    * The name for setting that points to an optional HBase configuration
    * (hbase-site.xml file) with settings that will override the ones found on
    * the classpath.

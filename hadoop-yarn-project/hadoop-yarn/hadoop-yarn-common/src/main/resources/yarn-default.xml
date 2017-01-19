@@ -2356,6 +2356,15 @@
 
   <property>
     <description>
+    The default hdfs location for flowrun coprocessor jar.
+    </description>
+    <name>yarn.timeline-service.hbase.coprocessor.jar.hdfs.location
+    </name>
+    <value>/hbase/coprocessor/hadoop-yarn-server-timelineservice.jar</value>
+  </property>
+
+  <property>
+    <description>
     The value of this parameter sets the prefix for all tables that are part of
     timeline service in the hbase storage schema. It can be set to "dev."
     or "staging." if it is to be used for development or staging instances.

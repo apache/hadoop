@@ -216,30 +216,32 @@ http://hbase.apache.org/book.html#standalone.over.hdfs .
 Once you have an Apache HBase cluster ready to use, perform the following steps.
 
 ##### <a name="Enable_the_coprocessor"> </a>Step 2) Enable the coprocessor
+In this version, the coprocessor is loaded dynamically (table coprocessor for the `flowrun` table).
 
-Step 2.1) Add the timeline service jar to the HBase classpath in all HBase machines in the cluster. It
-is needed for the coprocessor as well as the schema creator. For example,
+Copy the timeline service jar to HDFS from where HBase can load it. It
+is needed for the `flowrun` table creation in the schema creator. The default HDFS location is `/hbase/coprocessor`.
+For example,
 
-    cp hadoop-yarn-server-timelineservice-3.0.0-alpha1-SNAPSHOT.jar /usr/hbase/lib/
+    hadoop fs -mkdir /hbase/coprocessor
+    hadoop fs -put hadoop-yarn-server-timelineservice-3.0.0-alpha1-SNAPSHOT.jar
+           /hbase/coprocessor/hadoop-yarn-server-timelineservice.jar
 
-Step 2.2) Enable the coprocessor that handles the aggregation. To enable it, add the following entry in
-region servers' `hbase-site.xml` file (generally located in the `conf` directory) as follows:
+
+If you want to place the jar at a different location on hdfs, there also exists a yarn
+configuration setting called `yarn.timeline-service.hbase.coprocessor.jar.hdfs.location`.
+For example,
 
 ```
 <property>
-  <name>hbase.coprocessor.region.classes</name>
-  <value>org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunCoprocessor</value>
+  <name>yarn.timeline-service.hbase.coprocessor.jar.hdfs.location</name>
+  <value>/custom/hdfs/path/jarName</value>
 </property>
 ```
-
-Step 2.3) Restart the region servers and the master to pick up the timeline service jar as well
-as the config change. In this version, the coprocessor is loaded statically
-(i.e. system coprocessor) as opposed to a dynamically (table coprocessor).
 
 ##### <a name="Create_schema"> </a>Step 3) Create the timeline service schema
 Finally, run the schema creator tool to create the necessary tables:
 
-    bin/hbase org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator
+    bin/hadoop org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator
 
 The `TimelineSchemaCreator` tool supports a few options that may come handy especially when you
 are testing. For example, you can use `-skipExistingTable` (`-s` for short) to skip existing tables
