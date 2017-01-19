@@ -332,7 +332,9 @@ public final class FSImageFormatPBINode {
       short replication = (short) f.getReplication();
       BlockType blockType = PBHelperClient.convert(f.getBlockType());
       LoaderContext state = parent.getLoaderContext();
-      ErasureCodingPolicy ecPolicy = ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      ErasureCodingPolicy ecPolicy = (blockType == BlockType.STRIPED) ?
+          ErasureCodingPolicyManager.getPolicyByPolicyID((byte) replication) :
+          null;
 
       BlockInfo[] blocks = new BlockInfo[bp.size()];
       for (int i = 0; i < bp.size(); ++i) {
