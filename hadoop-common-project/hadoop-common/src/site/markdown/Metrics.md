@@ -446,6 +446,57 @@ NodeManagerMetrics shows the statistics of the containers in the node. Each metr
 | `goodLocalDirsDiskUtilizationPerc` | Current disk utilization percentage across all good local directories |
 | `goodLogDirsDiskUtilizationPerc` | Current disk utilization percentage across all good log directories |
 
+ContainerMetrics
+------------------
+
+ContainerMetrics shows the resource utilization statistics of a container. Each metrics record contains tags such as ContainerPid and Hostname as additional information along with metrics.
+
+| Name | Description |
+|:---- |:---- |
+| `pMemLimitMBs` | Physical memory limit of the container in MB |
+| `vMemLimitMBs` | Virtual memory limit of the container in MB |
+| `vCoreLimit` | CPU limit of the container in number of vcores |
+| `launchDurationMs` | Container launch duration in msec  |
+| `localizationDurationMs` | Container localization duration in msec |
+| `StartTime` | Time in msec when container starts |
+| `FinishTime` | Time in msec when container finishes |
+| `ExitCode` | Container's exit code |
+| `PMemUsageMBsNumUsage` | Total number of physical memory used metrics |
+| `PMemUsageMBsAvgMBs` | Average physical memory used in MB |
+| `PMemUsageMBsStdevMBs` | Standard deviation of the physical memory used in MB |
+| `PMemUsageMBsMinMBs` | Minimum physical memory used in MB |
+| `PMemUsageMBsMaxMBs` | Maximum physical memory used in MB |
+| `PMemUsageMBsIMinMBs` | Minimum physical memory used in MB of current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `PMemUsageMBsIMaxMBs` | Maximum physical memory used in MB of current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `PMemUsageMBsINumUsage` | Total number of physical memory used metrics in current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `PCpuUsagePercentNumUsage` | Total number of physical CPU cores percent used metrics |
+| `PCpuUsagePercentAvgPercents` | Average physical CPU cores percent used |
+| `PCpuUsagePercentStdevPercents` | Standard deviation of physical CPU cores percent used |
+| `PCpuUsagePercentMinPercents` | Minimum physical CPU cores percent used|
+| `PCpuUsagePercentMaxPercents` | Maximum physical CPU cores percent used |
+| `PCpuUsagePercentIMinPercents` | Minimum physical CPU cores percent used in current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `PCpuUsagePercentIMaxPercents` | Maximum physical CPU cores percent used in current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `PCpuUsagePercentINumUsage` | Total number of physical CPU cores used metrics in current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `MilliVcoreUsageNumUsage` | Total number of vcores used metrics |
+| `MilliVcoreUsageAvgMilliVcores` | 1000 times the average vcores used |
+| `MilliVcoreUsageStdevMilliVcores` | 1000 times the standard deviation of vcores used |
+| `MilliVcoreUsageMinMilliVcores` | 1000 times the minimum vcores used |
+| `MilliVcoreUsageMaxMilliVcores` | 1000 times the maximum vcores used |
+| `MilliVcoreUsageIMinMilliVcores` | 1000 times the average vcores used in current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `MilliVcoreUsageIMaxMilliVcores` | 1000 times the maximum vcores used in current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `MilliVcoreUsageINumUsage` | Total number of vcores used metrics in current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `PMemUsageMBHistogramNumUsage` | Total number of physical memory used metrics (1 second granularity) |
+| `PMemUsageMBHistogram50thPercentileMBs` | The 50th percentile of physical memory used in MB (1 second granularity) |
+| `PMemUsageMBHistogram75thPercentileMBs` | The 75th percentile of physical memory used in MB (1 second granularity) |
+| `PMemUsageMBHistogram90thPercentileMBs` | The 90th percentile of physical memory used in MB (1 second granularity) |
+| `PMemUsageMBHistogram95thPercentileMBs` | The 95th percentile of physical memory used in MB (1 second granularity) |
+| `PMemUsageMBHistogram99thPercentileMBs` | The 99th percentile of physical memory used in MB (1 second granularity) |
+| `PCpuUsagePercentHistogramNumUsage` | Total number of physical CPU cores used metrics (1 second granularity) |
+| `PCpuUsagePercentHistogram50thPercentilePercents` | The 50th percentile of physical CPU cores percent used (1 second granularity) |
+| `PCpuUsagePercentHistogram75thPercentilePercents` | The 75th percentile of physical CPU cores percent used (1 second granularity) |
+| `PCpuUsagePercentHistogram90thPercentilePercents` | The 90th percentile of physical CPU cores percent used (1 second granularity) |
+| `PCpuUsagePercentHistogram95thPercentilePercents` | The 95th percentile of physical CPU cores percent used (1 second granularity) |
+| `PCpuUsagePercentHistogram99thPercentilePercents` | The 99th percentile of physical CPU cores percent used (1 second granularity) |
 
 ugi context
 ===========
@@ -510,5 +561,3 @@ StartupProgress metrics shows the statistics of NameNode startup. Four metrics a
 | *phase*`ElapsedTime` | Total elapsed time in the phase in milliseconds |
 | *phase*`Total` | Total number of steps in the phase |
 | *phase*`PercentComplete` | Current rate completed in the phase  (The max value is not 100 but 1.0) |
-
-
