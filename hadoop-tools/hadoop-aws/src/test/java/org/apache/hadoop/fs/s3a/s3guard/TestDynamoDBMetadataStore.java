@@ -185,6 +185,14 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
         : new S3AFileStatus(size, getModTime(), path, BLOCK_SIZE, owner);
   }
 
+  private DynamoDBMetadataStore getDynamoMetadataStore() throws IOException {
+    return (DynamoDBMetadataStore) getContract().getMetadataStore();
+  }
+
+  private S3AFileSystem getFileSystem() {
+    return (S3AFileSystem) getContract().getFileSystem();
+  }
+
   /**
    * This tests that after initialize() using an S3AFileSystem object, the
    * instance should have been initialized successfully, and tables are ACTIVE.
@@ -192,7 +200,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Test
   public void testInitialize() throws IOException {
     final String tableName = "testInitializeWithFileSystem";
-    final S3AFileSystem s3afs = createContract().getFileSystem();
+    final S3AFileSystem s3afs = getFileSystem();
     final Configuration conf = s3afs.getConf();
     conf.set(Constants.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
@@ -213,7 +221,9 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Test
   public void testInitializeWithConfiguration() throws IOException {
     final String tableName = "testInitializeWithConfiguration";
-    final Configuration conf = new Configuration();
+    final Configuration conf = getFileSystem().getConf();
+    conf.unset(Constants.S3GUARD_DDB_TABLE_NAME_KEY);
+    conf.unset(Constants.S3GUARD_DDB_ENDPOINT_KEY);
     try {
       DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
       ddbms.initialize(conf);
@@ -270,54 +280,54 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final Path newDir = new Path(root, "newDir");
     LOG.info("doTestBatchWrite: oldDir={}, newDir={}", oldDir, newDir);
 
-    try (DynamoDBMetadataStore ms = createContract().getMetadataStore()) {
-      ms.put(new PathMetadata(basicFileStatus(oldDir, 0, true)));
-      ms.put(new PathMetadata(basicFileStatus(newDir, 0, true)));
+    DynamoDBMetadataStore ms = getDynamoMetadataStore();
+    ms.put(new PathMetadata(basicFileStatus(oldDir, 0, true)));
+    ms.put(new PathMetadata(basicFileStatus(newDir, 0, true)));
 
-      final Collection<PathMetadata> oldMetas =
-          numDelete < 0 ? null : new ArrayList<>(numDelete);
-      for (int i = 0; i < numDelete; i++) {
-        oldMetas.add(new PathMetadata(
-            basicFileStatus(new Path(oldDir, "child" + i), i, true)));
-      }
-      final Collection<PathMetadata> newMetas =
-          numPut < 0 ? null : new ArrayList<>(numPut);
-      for (int i = 0; i < numPut; i++) {
-        newMetas.add(new PathMetadata(
-            basicFileStatus(new Path(newDir, "child" + i), i, false)));
-      }
+    final Collection<PathMetadata> oldMetas =
+        numDelete < 0 ? null : new ArrayList<>(numDelete);
+    for (int i = 0; i < numDelete; i++) {
+      oldMetas.add(new PathMetadata(
+          basicFileStatus(new Path(oldDir, "child" + i), i, true)));
+    }
+    final Collection<PathMetadata> newMetas =
+        numPut < 0 ? null : new ArrayList<>(numPut);
+    for (int i = 0; i < numPut; i++) {
+      newMetas.add(new PathMetadata(
+          basicFileStatus(new Path(newDir, "child" + i), i, false)));
+    }
 
-      Collection<Path> pathsToDelete = null;
-      if (oldMetas != null) {
-        // put all metadata of old paths and verify
-        ms.put(new DirListingMetadata(oldDir, oldMetas, false));
-        assertEquals(0, ms.listChildren(newDir).numEntries());
-        assertTrue(CollectionUtils.isEqualCollection(oldMetas,
-            ms.listChildren(oldDir).getListing()));
+    Collection<Path> pathsToDelete = null;
+    if (oldMetas != null) {
+      // put all metadata of old paths and verify
+      ms.put(new DirListingMetadata(oldDir, oldMetas, false));
+      assertEquals(0, ms.listChildren(newDir).numEntries());
+      assertTrue(CollectionUtils.isEqualCollection(oldMetas,
+          ms.listChildren(oldDir).getListing()));
 
-        pathsToDelete = new ArrayList<>(oldMetas.size());
-        for (PathMetadata meta : oldMetas) {
-          pathsToDelete.add(meta.getFileStatus().getPath());
-        }
+      pathsToDelete = new ArrayList<>(oldMetas.size());
+      for (PathMetadata meta : oldMetas) {
+        pathsToDelete.add(meta.getFileStatus().getPath());
       }
+    }
 
-      // move the old paths to new paths and verify
-      ms.move(pathsToDelete, newMetas);
-      assertEquals(0, ms.listChildren(oldDir).numEntries());
-      if (newMetas != null) {
-        assertTrue(CollectionUtils.isEqualCollection(newMetas,
-            ms.listChildren(newDir).getListing()));
-      }
+    // move the old paths to new paths and verify
+    ms.move(pathsToDelete, newMetas);
+    assertEquals(0, ms.listChildren(oldDir).numEntries());
+    if (newMetas != null) {
+      assertTrue(CollectionUtils.isEqualCollection(newMetas,
+          ms.listChildren(newDir).getListing()));
     }
   }
 
   @Test
   public void testInitExistingTable() throws IOException {
-    final DynamoDBMetadataStore ddbms = createContract().getMetadataStore();
-    verifyTableInitialized(BUCKET);
+    final DynamoDBMetadataStore ddbms = getDynamoMetadataStore();
+    final String tableName = ddbms.getTable().getTableName();
+    verifyTableInitialized(tableName);
     // create existing table
     ddbms.initTable();
-    verifyTableInitialized(BUCKET);
+    verifyTableInitialized(tableName);
   }
 
   /**
@@ -327,8 +337,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Test
   public void testFailNonexistentTable() throws IOException {
     final String tableName = "testFailNonexistentTable";
-    final DynamoDBMSContract contract = createContract();
-    final S3AFileSystem s3afs = contract.getFileSystem();
+    final S3AFileSystem s3afs = getFileSystem();
     final Configuration conf = s3afs.getConf();
     conf.set(Constants.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     conf.unset(Constants.S3GUARD_DDB_TABLE_CREATE_KEY);
@@ -346,7 +355,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
    */
   @Test
   public void testRootDirectory() throws IOException {
-    final DynamoDBMetadataStore ddbms = createContract().getMetadataStore();
+    final DynamoDBMetadataStore ddbms = getDynamoMetadataStore();
     verifyRootDirectory(ddbms.get(new Path("/")), true);
 
     ddbms.put(new PathMetadata(new S3AFileStatus(true,
@@ -365,13 +374,14 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
   @Test
   public void testProvisionTable() throws IOException {
-    final DynamoDBMetadataStore ddbms = createContract().getMetadataStore();
+    final DynamoDBMetadataStore ddbms = getDynamoMetadataStore();
+    final String tableName = ddbms.getTable().getTableName();
     final ProvisionedThroughputDescription oldProvision =
-        dynamoDB.getTable(BUCKET).describe().getProvisionedThroughput();
+        dynamoDB.getTable(tableName).describe().getProvisionedThroughput();
     ddbms.provisionTable(oldProvision.getReadCapacityUnits() * 2,
         oldProvision.getWriteCapacityUnits() * 2);
     final ProvisionedThroughputDescription newProvision =
-        dynamoDB.getTable(BUCKET).describe().getProvisionedThroughput();
+        dynamoDB.getTable(tableName).describe().getProvisionedThroughput();
     LOG.info("Old provision = {}, new provision = {}",
         oldProvision, newProvision);
     assertEquals(oldProvision.getReadCapacityUnits() * 2,
@@ -383,7 +393,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Test
   public void testDeleteTable() throws IOException {
     final String tableName = "testDeleteTable";
-    final S3AFileSystem s3afs = createContract().getFileSystem();
+    final S3AFileSystem s3afs = getFileSystem();
     final Configuration conf = s3afs.getConf();
     conf.set(Constants.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {

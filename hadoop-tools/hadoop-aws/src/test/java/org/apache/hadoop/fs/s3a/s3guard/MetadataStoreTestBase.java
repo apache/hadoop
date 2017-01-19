@@ -82,6 +82,13 @@ public abstract class MetadataStoreTestBase extends Assert {
 
   private MetadataStore ms;
 
+  /**
+   * @return reference to the test contract.
+   */
+  protected AbstractMSContract getContract() {
+    return contract;
+  }
+
   @Before
   public void setUp() throws Exception {
     LOG.debug("== Setup. ==");
