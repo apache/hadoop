@@ -101,6 +101,16 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        "LocalMetadataStore{");
+    sb.append("isS3A=").append(isS3A);
+    sb.append(", uriHost='").append(uriHost).append('\'');
+    sb.append('}');
+    return sb.toString();
+  }
+
+  @Override
   public void delete(Path path) throws IOException {
     doDelete(path, false);
   }

@@ -23,6 +23,8 @@ import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
+
 /**
  * S3A contract tests covering getFileStatus.
  */
@@ -46,6 +48,8 @@ public class ITestS3AContractGetFileStatus
     S3ATestUtils.disableFilesystemCaching(conf);
     // aggressively low page size forces tests to go multipage
     conf.setInt(Constants.MAX_PAGING_KEYS, 2);
+    // patch in S3Guard options
+    maybeEnableS3Guard(conf);
     return conf;
   }
 }

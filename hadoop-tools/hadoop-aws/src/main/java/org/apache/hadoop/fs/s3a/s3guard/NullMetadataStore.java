@@ -86,4 +86,8 @@ public class NullMetadataStore implements MetadataStore {
   public void destroy() throws IOException {
   }
 
+  @Override
+  public String toString() {
+    return "NullMetadataStore";
+  }
 }

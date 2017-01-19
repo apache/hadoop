@@ -107,6 +107,8 @@ public final class S3ATestUtils {
       throw new AssumptionViolatedException(
           "No test filesystem in " + TEST_FS_S3A_NAME);
     }
+    // patch in S3Guard options
+    maybeEnableS3Guard(conf);
     S3AFileSystem fs1 = new S3AFileSystem();
     //enable purging in tests
     if (purge) {
@@ -147,6 +149,8 @@ public final class S3ATestUtils {
       throw new AssumptionViolatedException("No test filesystem in "
           + TEST_FS_S3A_NAME);
     }
+    // patch in S3Guard options
+    maybeEnableS3Guard(conf);
     FileContext fc = FileContext.getFileContext(testURI, conf);
     return fc;
   }
@@ -315,6 +319,42 @@ public final class S3ATestUtils {
         System.getProperty(S3ATestConstants.TEST_UNIQUE_FORK_ID);
     return testUniqueForkId == null ? defVal :
         new Path("/" + testUniqueForkId, "test");
+  }
+
+  /**
+   * Conditionally set the S3Guard options from test properties.
+   * @param conf configuration
+   */
+  public static void maybeEnableS3Guard(Configuration conf) {
+    if (getTestPropertyBool(conf, TEST_S3GUARD_ENABLED,
+        conf.getBoolean(TEST_S3GUARD_ENABLED, false))) {
+      // s3guard is enabled.
+      boolean authoritative = getTestPropertyBool(conf,
+          TEST_S3GUARD_AUTHORITATIVE,
+          conf.getBoolean(TEST_S3GUARD_AUTHORITATIVE, true));
+      String impl = getTestProperty(conf, TEST_S3GUARD_IMPLEMENTATION,
+          conf.get(TEST_S3GUARD_IMPLEMENTATION,
+              TEST_S3GUARD_IMPLEMENTATION_LOCAL));
+      String implClass = "";
+      switch (impl) {
+      case TEST_S3GUARD_IMPLEMENTATION_LOCAL:
+        implClass = S3GUARD_METASTORE_LOCAL;
+        break;
+      case TEST_S3GUARD_IMPLEMENTATION_DYNAMO:
+        implClass = S3GUARD_METASTORE_DYNAMO;
+        break;
+      case TEST_S3GUARD_IMPLEMENTATION_NONE:
+        implClass = S3GUARD_METASTORE_NULL;
+        break;
+      default:
+        fail("Unknown s3guard back end: \"" + impl + "\"");
+      }
+      LOG.debug("Enabling S3Guard, authoritative={}, implementation={}",
+          authoritative, implClass);
+      conf.setBoolean(METADATASTORE_AUTHORITATIVE, authoritative);
+      conf.set(S3_METADATA_STORE_IMPL, implClass);
+      conf.setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, true);
+    }
   }
 
   /**

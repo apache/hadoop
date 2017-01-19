@@ -243,8 +243,6 @@ logged.
 
 ## Testing S3Guard
 
-TODO: add maven profiles when we have them.
-
 The basic strategy for testing S3Guard correctness consists of:
 
 1. MetadataStore Contract tests.
@@ -277,6 +275,46 @@ The basic strategy for testing S3Guard correctness consists of:
 
     No charges are incurred for using this store, and its consistency
     guarantees are that of the underlying object store instance. <!-- :) -->
+
+## Testing S3 with S3Guard Enabled
+
+All the S3A tests which work with a private repository can be configured to
+run with S3Guard by using the `s3guard` profile. When set, this will run
+all the tests with a local dynamo DB instance set to "non-authoritative" mode.
+
+```bash
+mvn -T 1C verify -Dparallel-tests -DtestsThreadCount=6 -Ds3guard 
+```
+
+When the `s3guard` profile is enabled, are two other profiles which can be
+enabled
+ 
+* `dynamo` : use an AWS-hosted dynamo DB table, instead of a local table; creating
+the table if it does not exist.
+* `non-auth`: treat the s3guard metadata as authorative
+
+```bash
+mvn -T 1C verify -Dparallel-tests -DtestsThreadCount=6 -Ds3guard -Ddynamo -Dauth 
+```
+
+When experimenting with options, it is usually best to run a single test suite
+at a time until the operations appear to be working.
+
+```bash
+mvn -T 1C verify -Dtest=skip -Dit.test=ITestS3AMiscOperations -Ds3guard -Ddynamo
+```
+
+Notes
+
+1. If the `s3guard` profile is not set, then the s3guard properties are those
+of the test configuration set in `contract-test-options.xml` or `auth-keys.xml`
+
+If the `s3guard` profile *is* set, 
+1. The s3guard options from maven (the dynamo and authoritative flags)
+  overwrite any previously set. in the configuration files.
+1. Dynamo will be configured to create any missing tables.
+1. 
+
 
 ### Testing only: Local Metadata Store
 

@@ -44,6 +44,11 @@
     <fs.s3a.scale.test.huge.partitionsize>unset</fs.s3a.scale.test.huge.partitionsize>
     <!-- Timeout in seconds for scale tests.-->
     <fs.s3a.scale.test.timeout>3600</fs.s3a.scale.test.timeout>
+    <!-- are scale tests enabled ? -->
+    <fs.s3a.s3guard.test.enabled>false</fs.s3a.s3guard.test.enabled>
+    <fs.s3a.s3guard.test.authoritative>false</fs.s3a.s3guard.test.authoritative>
+    <fs.s3a.s3guard.test.implementation>local</fs.s3a.s3guard.test.implementation>
+
   </properties>
 
   <profiles>
@@ -164,6 +169,11 @@
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                     <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
+                    <!-- s3guard -->
+                    <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
+                    <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
+                    <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
+
                   </systemPropertyVariables>
                   <!-- Some tests cannot run in parallel.  Tests that cover -->
                   <!-- access to the root directory must run in isolation -->
@@ -203,6 +213,10 @@
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                     <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
+                    <!-- s3guard -->
+                    <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
+                    <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
+                    <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
                   </systemPropertyVariables>
                   <!-- Do a sequential run for tests that cannot handle -->
                   <!-- parallel execution. -->
@@ -243,6 +257,10 @@
                     <fs.s3a.scale.test.enabled>${fs.s3a.scale.test.enabled}</fs.s3a.scale.test.enabled>
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
+                    <!-- s3guard -->
+                    <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
+                    <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
+                    <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
                   </systemPropertyVariables>
                   <forkedProcessTimeoutInSeconds>${fs.s3a.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                 </configuration>
@@ -265,6 +283,47 @@
         <fs.s3a.scale.test.enabled>true</fs.s3a.scale.test.enabled>
       </properties>
     </profile>
+
+    <!-- Turn on s3guard tests-->
+    <profile>
+      <id>s3guard</id>
+      <activation>
+        <property>
+          <name>s3guard</name>
+        </property>
+      </activation>
+      <properties >
+        <fs.s3a.s3guard.test.enabled>true</fs.s3a.s3guard.test.enabled>
+      </properties>
+    </profile>
+
+    <!-- Switch to dynamo DB for s3guard. Has no effect unless s3guard is enabled -->
+    <profile>
+      <id>dynamo</id>
+      <activation>
+        <property>
+          <name>dynamo</name>
+        </property>
+      </activation>
+      <properties >
+        <fs.s3a.s3guard.test.implementation>dynamo</fs.s3a.s3guard.test.implementation>
+      </properties>
+    </profile>
+
+    <!-- Switch s3guard from Authoritative=false to true
+     Has no effect unless s3guard is enabled -->
+    <profile>
+      <id>non-auth</id>
+      <activation>
+        <property>
+          <name>auth</name>
+        </property>
+      </activation>
+      <properties >
+        <fs.s3a.s3guard.test.authoritative>true</fs.s3a.s3guard.test.authoritative>
+      </properties>
+    </profile>
+
   </profiles>
 
   <build>

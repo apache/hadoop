@@ -124,8 +124,8 @@ public class ITestS3ACredentialsInURL extends Assert {
     URI testURI = createUriWithEmbeddedSecrets(original, "user", "//");
 
     conf.set(TEST_FS_S3A_NAME, testURI.toString());
-    fs = S3ATestUtils.createTestFileSystem(conf);
     try {
+      fs = S3ATestUtils.createTestFileSystem(conf);
       S3AFileStatus status = fs.getFileStatus(new Path("/"));
       fail("Expected an AccessDeniedException, got " + status);
     } catch (AccessDeniedException e) {

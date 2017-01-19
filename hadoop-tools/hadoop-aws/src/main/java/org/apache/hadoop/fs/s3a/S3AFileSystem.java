@@ -2072,6 +2072,8 @@ public class S3AFileSystem extends FileSystem {
     if (blockFactory != null) {
       sb.append(", blockFactory=").append(blockFactory);
     }
+    sb.append(", metastore=").append(metadataStore);
+    sb.append(", authoritative=").append(allowAuthoritative);
     sb.append(", executor=").append(threadPoolExecutor);
     sb.append(", statistics {")
         .append(statistics)
