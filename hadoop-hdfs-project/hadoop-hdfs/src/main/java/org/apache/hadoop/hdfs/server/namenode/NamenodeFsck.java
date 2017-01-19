@@ -117,6 +117,9 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   public static final String HEALTHY_STATUS = "is HEALTHY";
   public static final String DECOMMISSIONING_STATUS = "is DECOMMISSIONING";
   public static final String DECOMMISSIONED_STATUS = "is DECOMMISSIONED";
+  public static final String ENTERING_MAINTENANCE_STATUS =
+      "is ENTERING MAINTENANCE";
+  public static final String IN_MAINTENANCE_STATUS = "is IN MAINTENANCE";
   public static final String NONEXISTENT_STATUS = "does not exist";
   public static final String FAILURE_STATUS = "FAILED";
   public static final String UNDEFINED = "undefined";
@@ -144,6 +147,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
 
   private boolean showReplicaDetails = false;
   private boolean showUpgradeDomains = false;
+  private boolean showMaintenanceState = false;
   private long staleInterval;
   private Tracer tracer;
 
@@ -227,6 +231,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         this.showReplicaDetails = true;
       } else if (key.equals("upgradedomains")) {
         this.showUpgradeDomains = true;
+      } else if (key.equals("maintenance")) {
+        this.showMaintenanceState = true;
       } else if (key.equals("storagepolicies")) {
         this.showStoragePolcies = true;
       } else if (key.equals("showprogress")) {
@@ -280,6 +286,12 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
           + numberReplicas.decommissioned());
       out.println("No. of decommissioning Replica: "
           + numberReplicas.decommissioning());
+      if (this.showMaintenanceState) {
+        out.println("No. of entering maintenance Replica: "
+            + numberReplicas.liveEnteringMaintenanceReplicas());
+        out.println("No. of in maintenance Replica: "
+            + numberReplicas.maintenanceNotForReadReplicas());
+      }
       out.println("No. of corrupted Replica: " +
           numberReplicas.corruptReplicas());
       //record datanodes that have corrupted block replica
@@ -300,6 +312,10 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
           out.print(DECOMMISSIONED_STATUS);
         } else if (dn.isDecommissionInProgress()) {
           out.print(DECOMMISSIONING_STATUS);
+        } else if (this.showMaintenanceState && dn.isEnteringMaintenance()) {
+          out.print(ENTERING_MAINTENANCE_STATUS);
+        } else if (this.showMaintenanceState && dn.isInMaintenance()) {
+          out.print(IN_MAINTENANCE_STATUS);
         } else {
           out.print(HEALTHY_STATUS);
         }
@@ -598,6 +614,12 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
           sb.append("DECOMMISSIONED)");
         } else if (dnDesc.isDecommissionInProgress()) {
           sb.append("DECOMMISSIONING)");
+        } else if (this.showMaintenanceState &&
+            dnDesc.isEnteringMaintenance()) {
+          sb.append("ENTERING MAINTENANCE)");
+        } else if (this.showMaintenanceState &&
+            dnDesc.isInMaintenance()) {
+          sb.append("IN MAINTENANCE)");
         } else if (corruptReplicas != null
             && corruptReplicas.contains(dnDesc)) {
           sb.append("CORRUPT)");
@@ -620,7 +642,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   }
 
   private void collectBlocksSummary(String parent, HdfsFileStatus file,
-                 Result res, LocatedBlocks blocks) throws IOException {
+      Result res, LocatedBlocks blocks) throws IOException {
     String path = file.getFullName(parent);
     boolean isOpen = blocks.isUnderConstruction();
     if (isOpen && !showOpenFiles) {
@@ -651,13 +673,21 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       NumberReplicas numberReplicas = blockManager.countNodes(storedBlock);
       int decommissionedReplicas = numberReplicas.decommissioned();
       int decommissioningReplicas = numberReplicas.decommissioning();
+      int enteringMaintenanceReplicas =
+          numberReplicas.liveEnteringMaintenanceReplicas();
+      int inMaintenanceReplicas =
+          numberReplicas.maintenanceNotForReadReplicas();
       res.decommissionedReplicas +=  decommissionedReplicas;
       res.decommissioningReplicas += decommissioningReplicas;
+      res.enteringMaintenanceReplicas += enteringMaintenanceReplicas;
+      res.inMaintenanceReplicas += inMaintenanceReplicas;
 
       // count total replicas
       int liveReplicas = numberReplicas.liveReplicas();
-      int totalReplicasPerBlock = liveReplicas + decommissionedReplicas +
-          decommissioningReplicas;
+      int totalReplicasPerBlock = liveReplicas + decommissionedReplicas
+          + decommissioningReplicas
+          + enteringMaintenanceReplicas
+          + inMaintenanceReplicas;
       res.totalReplicas += totalReplicasPerBlock;
 
       boolean isMissing;
@@ -711,12 +741,14 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         if (!showFiles) {
           out.print("\n" + path + ": ");
         }
-        out.println(" Under replicated " + block +
-                    ". Target Replicas is " +
-                    targetFileReplication + " but found " +
-                    liveReplicas + " live replica(s), " +
-                    decommissionedReplicas + " decommissioned replica(s) and " +
-                    decommissioningReplicas + " decommissioning replica(s).");
+        out.println(" Under replicated " + block + ". Target Replicas is "
+            + targetFileReplication + " but found "
+            + liveReplicas+ " live replica(s), "
+            + decommissionedReplicas + " decommissioned replica(s), "
+            + decommissioningReplicas + " decommissioning replica(s)"
+            + (this.showMaintenanceState ? (enteringMaintenanceReplicas
+            + ", entering maintenance replica(s) and " + inMaintenanceReplicas
+            + " in maintenance replica(s).") : "."));
       }
 
       // count mis replicated blocks
@@ -1095,6 +1127,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     long missingReplicas = 0L;
     long decommissionedReplicas = 0L;
     long decommissioningReplicas = 0L;
+    long enteringMaintenanceReplicas = 0L;
+    long inMaintenanceReplicas = 0L;
     long numUnderMinReplicatedBlocks = 0L;
     long numOverReplicatedBlocks = 0L;
     long numUnderReplicatedBlocks = 0L;
@@ -1243,6 +1277,14 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         res.append("\n DecommissioningReplicas:\t").append(
             decommissioningReplicas);
       }
+      if (enteringMaintenanceReplicas > 0) {
+        res.append("\n EnteringMaintenanceReplicas:\t").append(
+            enteringMaintenanceReplicas);
+      }
+      if (inMaintenanceReplicas > 0) {
+        res.append("\n InMaintenanceReplicas:\t").append(
+            inMaintenanceReplicas);
+      }
       return res.toString();
     }
   }
@@ -1348,6 +1390,14 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       if (decommissioningReplicas > 0) {
         res.append("\n Decommissioning internal blocks:\t").append(
             decommissioningReplicas);
+      }
+      if (enteringMaintenanceReplicas > 0) {
+        res.append("\n EnteringMaintenanceReplicas:\t").append(
+            enteringMaintenanceReplicas);
+      }
+      if (inMaintenanceReplicas > 0) {
+        res.append("\n InMaintenanceReplicas:\t").append(
+            inMaintenanceReplicas);
       }
       return res.toString();
     }
