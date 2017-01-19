@@ -519,7 +519,7 @@ public class DataStorage extends Storage {
           bpsStorage.remove(bpRoot.getAbsoluteFile());
         }
 
-        this.storageDirs.remove(sd);
+        getStorageDirs().remove(sd);
         try {
           sd.unlock();
         } catch (IOException e) {
