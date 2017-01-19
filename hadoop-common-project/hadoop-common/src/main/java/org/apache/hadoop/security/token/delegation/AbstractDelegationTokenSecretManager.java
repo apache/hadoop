@@ -21,7 +21,7 @@ package org.apache.hadoop.security.token.delegation;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.util.Arrays;
+import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -446,7 +446,7 @@ extends AbstractDelegationTokenIdentifier>
   public synchronized void verifyToken(TokenIdent identifier, byte[] password)
       throws InvalidToken {
     byte[] storedPassword = retrievePassword(identifier);
-    if (!Arrays.equals(password, storedPassword)) {
+    if (!MessageDigest.isEqual(password, storedPassword)) {
       throw new InvalidToken("token (" + identifier
           + ") is invalid, password doesn't match");
     }
@@ -489,7 +489,7 @@ extends AbstractDelegationTokenIdentifier>
           + " with sequenceNumber=" + id.getSequenceNumber());
     }
     byte[] password = createPassword(token.getIdentifier(), key.getKey());
-    if (!Arrays.equals(password, token.getPassword())) {
+    if (!MessageDigest.isEqual(password, token.getPassword())) {
       throw new AccessControlException(renewer +
           " is trying to renew a token with wrong password");
     }
