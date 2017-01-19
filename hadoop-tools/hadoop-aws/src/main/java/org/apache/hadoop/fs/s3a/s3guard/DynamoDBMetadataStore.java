@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
@@ -53,6 +54,8 @@ import com.google.common.base.Preconditions;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -173,12 +176,18 @@ public class DynamoDBMetadataStore implements MetadataStore {
   public static final String E_INCOMPATIBLE_VERSION
       = "Database table is from an incompatible S3Guard version.";
 
+  /** Initial delay for retries when batched operations get throttled by
+   * DynamoDB. Value is {@value} msec. */
+  public static final long MIN_RETRY_SLEEP_MSEC = 100;
+
   private DynamoDB dynamoDB;
   private String region;
   private Table table;
   private String tableName;
   private Configuration conf;
   private String username;
+
+  private RetryPolicy batchRetryPolicy;
 
   /**
    * A utility function to create DynamoDB instance.
@@ -244,6 +253,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
     // use the bucket as the DynamoDB table name if not specified in config
     tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY, bucket);
+    setMaxRetries(conf);
 
     initTable();
   }
@@ -282,8 +292,17 @@ public class DynamoDBMetadataStore implements MetadataStore {
             .createDynamoDBClient(conf);
     dynamoDB = new DynamoDB(dynamoDBClient);
     region = dynamoDBClient.getEndpointPrefix();
+    setMaxRetries(conf);
 
     initTable();
+  }
+
+  private void setMaxRetries(Configuration config) {
+    int maxRetries = config.getInt(S3GUARD_DDB_MAX_RETRIES,
+        S3GUARD_DDB_MAX_RETRIES_DEFAULT);
+    batchRetryPolicy = RetryPolicies
+        .exponentialBackoffRetry(maxRetries, MIN_RETRY_SLEEP_MSEC,
+            TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -418,7 +437,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * @param itemsToPut new items to be put; can be null
    */
   private void processBatchWriteRequest(PrimaryKey[] keysToDelete,
-      Item[] itemsToPut) {
+      Item[] itemsToPut) throws IOException {
     final int totalToDelete = (keysToDelete == null ? 0 : keysToDelete.length);
     final int totalToPut = (itemsToPut == null ? 0 : itemsToPut.length);
     int count = 0;
@@ -449,10 +468,37 @@ public class DynamoDBMetadataStore implements MetadataStore {
       BatchWriteItemOutcome res = dynamoDB.batchWriteItem(writeItems);
       // Check for unprocessed keys in case of exceeding provisioned throughput
       Map<String, List<WriteRequest>> unprocessed = res.getUnprocessedItems();
+      int retryCount = 0;
       while (unprocessed.size() > 0) {
+        retryBackoff(retryCount++);
         res = dynamoDB.batchWriteItemUnprocessed(unprocessed);
         unprocessed = res.getUnprocessedItems();
       }
+    }
+  }
+
+  /**
+   * Put the current thread to sleep to implement exponential backoff
+   * depending on retryCount.  If max retries are exceeded, throws an
+   * exception instead.
+   * @param retryCount number of retries so far
+   * @throws IOException when max retryCount is exceeded.
+   */
+  private void retryBackoff(int retryCount) throws IOException {
+    try {
+      // Our RetryPolicy ignores everything but retryCount here.
+      RetryPolicy.RetryAction action = batchRetryPolicy.shouldRetry(null,
+          retryCount, 0, true);
+      if (action.action == RetryPolicy.RetryAction.RetryDecision.FAIL) {
+        throw new IOException(
+            String.format("Max retries exceeded (%d) for DynamoDB",
+                retryCount));
+      } else {
+        LOG.debug("Sleeping {} msec before next retry", action.delayMillis);
+        Thread.sleep(action.delayMillis);
+      }
+    } catch (Exception e) {
+      throw new IOException("Unexpected exception", e);
     }
   }
 

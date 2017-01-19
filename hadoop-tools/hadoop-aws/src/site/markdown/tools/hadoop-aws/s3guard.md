@@ -451,6 +451,56 @@ If the `s3guard` profile *is* set,
 1. 
 
 
+### Scale Testing MetadataStore Directly
+
+We also have some scale tests that exercise MetadataStore implementations
+directly.  These allow us to ensure were are robust to things like DynamoDB
+throttling, and compare performance for different implementations. See the
+main [S3A documentation](./index.html) for more details on how to enable the
+S3A scale tests.
+
+The two scale tests here are `ITestDynamoDBMetadataStoreScale` and
+`ITestLocalMetadataStoreScale`.  To run the DynamoDB test, you will need to
+define your table name and endpoint in your test configuration.  For example,
+the following settings allow us to run `ITestDynamoDBMetadataStoreScale` with
+artificially low read and write capacity provisioned, so we can judge the
+effects of being throttled by the DynamoDB service:
+
+```
+<property>
+    <name>scale.test.operation.count</name>
+    <value>10</value>
+</property>
+<property>
+    <name>scale.test.directory.count</name>
+    <value>3</value>
+</property>
+<property>
+    <name>fs.s3a.scale.test.enabled</name>
+    <value>true</value>
+</property>
+<property>
+    <name>fs.s3a.s3guard.ddb.table</name>
+    <value>my-scale-test</value>
+</property>
+<property>
+    <name>fs.s3a.s3guard.ddb.endpoint</name>
+    <value>dynamodb.us-west-2.amazonaws.com</value>
+</property>
+<property>
+    <name>fs.s3a.s3guard.ddb.table.create</name>
+    <value>true</value>
+</property>
+<property>
+    <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
+    <value>10</value>
+</property>
+<property>
+    <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
+    <value>10</value>
+</property>
+```
+
 ### Testing only: Local Metadata Store
 
 There is an in-memory metadata store for testing.

@@ -206,17 +206,17 @@ public class DirListingMetadata {
     if (parentUri.getHost() != null) {
       URI childUri = childPath.toUri();
       Preconditions.checkNotNull(childUri.getHost(), "Expected non-null URI " +
-          "host");
+          "host: %s", childUri);
       Preconditions.checkArgument(
           childUri.getHost().equals(parentUri.getHost()),
-          "childUri '" + childUri + "' and parentUri '" + parentUri
-              + "' should have the same host");
+          "childUri %s and parentUri %s should have the same host",
+          childUri, parentUri);
       Preconditions.checkNotNull(childUri.getScheme());
     }
     Preconditions.checkArgument(!childPath.isRoot(),
         "childPath cannot be the root path");
     Preconditions.checkArgument(childPath.getParent().equals(path),
-        "childPath '" + childPath + "' must be a child of path '" + path + "'");
+        "childPath %s must be a child of %s", childPath, path);
   }
 
   /**
