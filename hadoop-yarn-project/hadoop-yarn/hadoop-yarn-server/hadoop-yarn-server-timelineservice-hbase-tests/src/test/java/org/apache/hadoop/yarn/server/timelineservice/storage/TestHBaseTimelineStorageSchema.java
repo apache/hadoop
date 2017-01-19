@@ -48,17 +48,15 @@ public class TestHBaseTimelineStorageSchema {
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     util = new HBaseTestingUtility();
+    Configuration conf = util.getConfiguration();
+    conf.setInt("hfile.format.version", 3);
     util.startMiniCluster();
-  }
-
-  private static void createSchema(Configuration conf) throws IOException {
-    TimelineSchemaCreator.createAllTables(conf, false);
   }
 
   @Test
   public void createWithDefaultPrefix() throws IOException {
     Configuration hbaseConf = util.getConfiguration();
-    createSchema(hbaseConf);
+    DataGeneratorForTest.createSchema(hbaseConf);
     Connection conn = null;
     conn = ConnectionFactory.createConnection(hbaseConf);
     Admin admin = conn.getAdmin();
@@ -88,7 +86,7 @@ public class TestHBaseTimelineStorageSchema {
     String prefix = "unit-test.";
     hbaseConf.set(YarnConfiguration.TIMELINE_SERVICE_HBASE_SCHEMA_PREFIX_NAME,
         prefix);
-    createSchema(hbaseConf);
+    DataGeneratorForTest.createSchema(hbaseConf);
     Connection conn = null;
     conn = ConnectionFactory.createConnection(hbaseConf);
     Admin admin = conn.getAdmin();
@@ -115,7 +113,7 @@ public class TestHBaseTimelineStorageSchema {
     prefix = "yet-another-unit-test.";
     hbaseConf.set(YarnConfiguration.TIMELINE_SERVICE_HBASE_SCHEMA_PREFIX_NAME,
         prefix);
-    createSchema(hbaseConf);
+    DataGeneratorForTest.createSchema(hbaseConf);
     entityTableName = BaseTable.getTableName(hbaseConf,
         EntityTable.TABLE_NAME_CONF_NAME, EntityTable.DEFAULT_TABLE_NAME);
     assertTrue(admin.tableExists(entityTableName));
