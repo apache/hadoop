@@ -299,7 +299,7 @@ public class BlockPoolSliceStorage extends Storage {
          it.hasNext(); ) {
       StorageDirectory sd = it.next();
       if (sd.getRoot().getAbsoluteFile().equals(absPathToRemove)) {
-        this.storageDirs.remove(sd);
+        getStorageDirs().remove(sd);
         break;
       }
     }
