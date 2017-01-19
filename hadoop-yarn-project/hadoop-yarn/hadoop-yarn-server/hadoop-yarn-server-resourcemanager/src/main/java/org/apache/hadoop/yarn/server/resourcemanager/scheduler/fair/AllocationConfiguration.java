@@ -408,9 +408,8 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
    * Initialize a {@link FSQueue} with queue-specific properties and its
    * metrics.
    * @param queue the FSQueue needed to be initialized
-   * @param scheduler the scheduler which the queue belonged to
    */
-  public void initFSQueue(FSQueue queue, FairScheduler scheduler){
+  public void initFSQueue(FSQueue queue){
     // Set queue-specific properties.
     String name = queue.getName();
     queue.setWeights(getQueueWeight(name));
@@ -419,14 +418,6 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     queue.setMaxRunningApps(getQueueMaxApps(name));
     queue.setMaxAMShare(getQueueMaxAMShare(name));
     queue.setMaxChildQueueResource(getMaxChildResources(name));
-    try {
-      SchedulingPolicy policy = getSchedulingPolicy(name);
-      policy.initialize(scheduler.getClusterResource());
-      queue.setPolicy(policy);
-    } catch (AllocationConfigurationException ex) {
-      LOG.warn("Failed to set the scheduling policy "
-          + getDefaultSchedulingPolicy(), ex);
-    }
 
     // Set queue metrics.
     queue.getMetrics().setMinShare(getMinResources(name));

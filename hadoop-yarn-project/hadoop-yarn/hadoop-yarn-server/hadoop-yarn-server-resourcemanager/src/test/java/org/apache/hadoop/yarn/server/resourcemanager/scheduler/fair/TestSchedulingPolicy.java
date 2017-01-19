@@ -79,66 +79,6 @@ public class TestSchedulingPolicy {
   }
 
   /**
-   * Trivial tests that make sure
-   * {@link SchedulingPolicy#isApplicableTo(SchedulingPolicy, byte)} works as
-   * expected for the possible values of depth
-   * 
-   * @throws AllocationConfigurationException
-   */
-  @Test(timeout = 1000)
-  public void testIsApplicableTo() throws AllocationConfigurationException {
-    final String ERR = "Broken SchedulingPolicy#isApplicableTo";
-    
-    // fifo
-    SchedulingPolicy policy = SchedulingPolicy.parse("fifo");
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_LEAF));
-    assertFalse(ERR, SchedulingPolicy.isApplicableTo(
-        SchedulingPolicy.parse("fifo"), SchedulingPolicy.DEPTH_INTERMEDIATE));
-    assertFalse(ERR, SchedulingPolicy.isApplicableTo(
-        SchedulingPolicy.parse("fifo"), SchedulingPolicy.DEPTH_ROOT));
-
-    
-    // fair
-    policy = SchedulingPolicy.parse("fair"); 
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_LEAF));
-    assertTrue(ERR, SchedulingPolicy.isApplicableTo(policy,
-        SchedulingPolicy.DEPTH_INTERMEDIATE));
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_ROOT));
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_PARENT));
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_ANY));
-    
-    // drf
-    policy = SchedulingPolicy.parse("drf"); 
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_LEAF));
-    assertTrue(ERR, SchedulingPolicy.isApplicableTo(policy,
-        SchedulingPolicy.DEPTH_INTERMEDIATE));
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_ROOT));
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_PARENT));
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_ANY));
-    
-    policy = Mockito.mock(SchedulingPolicy.class);
-    Mockito.when(policy.getApplicableDepth()).thenReturn(
-        SchedulingPolicy.DEPTH_PARENT);
-    assertTrue(ERR, SchedulingPolicy.isApplicableTo(policy,
-        SchedulingPolicy.DEPTH_INTERMEDIATE));
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_ROOT));
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_PARENT));
-    assertFalse(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_ANY));
-  }
-
-  /**
    * Test whether {@link FairSharePolicy.FairShareComparator} is transitive.
    */
   @Test

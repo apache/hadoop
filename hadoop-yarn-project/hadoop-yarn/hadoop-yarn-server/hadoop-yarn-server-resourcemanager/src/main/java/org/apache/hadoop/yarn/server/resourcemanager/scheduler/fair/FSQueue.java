@@ -91,12 +91,14 @@ public abstract class FSQueue implements Queue, Schedulable {
     this.queueEntity = new PrivilegedEntity(EntityType.QUEUE, name);
     this.metrics = FSQueueMetrics.forQueue(getName(), parent, true, scheduler.getConf());
     this.parent = parent;
+    setPolicy(scheduler.getAllocationConfiguration().getSchedulingPolicy(name));
     reinit(false);
   }
 
   /**
    * Initialize a queue by setting its queue-specific properties and its
-   * metrics.
+   * metrics. This function don't set the policy for queues since there is
+   * different logic to do that.
    * This function is invoked when a new queue is created or reloading the
    * allocation configuration.
    *
@@ -104,7 +106,7 @@ public abstract class FSQueue implements Queue, Schedulable {
    */
   public void reinit(boolean recursive) {
     AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
-    allocConf.initFSQueue(this, scheduler);
+    allocConf.initFSQueue(this);
     updatePreemptionVariables();
 
     if (recursive) {
@@ -131,14 +133,10 @@ public abstract class FSQueue implements Queue, Schedulable {
     return parent;
   }
 
-  protected void throwPolicyDoesnotApplyException(SchedulingPolicy policy)
-      throws AllocationConfigurationException {
-    throw new AllocationConfigurationException("SchedulingPolicy " + policy
-        + " does not apply to queue " + getName());
+  public void setPolicy(SchedulingPolicy policy) {
+    policy.initialize(scheduler.getClusterResource());
+    this.policy = policy;
   }
-
-  public abstract void setPolicy(SchedulingPolicy policy)
-      throws AllocationConfigurationException;
 
   public void setWeights(ResourceWeights weights){
     this.weights = weights;
@@ -461,6 +459,35 @@ public abstract class FSQueue implements Queue, Schedulable {
     if (parentQueue != null) {
       return parentQueue.fitsInMaxShare(additionalResource);
     }
+    return true;
+  }
+
+  /**
+   * Recursively check policies for queues in pre-order. Get queue policies
+   * from the allocation file instead of properties of {@link FSQueue} objects.
+   * Set the policy for current queue if there is no policy violation for its
+   * children.
+   *
+   * @param queueConf allocation configuration
+   * @return true if no policy violation and successfully set polices
+   *         for queues; false otherwise
+   */
+  public boolean verifyAndSetPolicyFromConf(AllocationConfiguration queueConf) {
+    SchedulingPolicy policy = queueConf.getSchedulingPolicy(getName());
+
+    for (FSQueue child : getChildQueues()) {
+      if (!policy.isChildPolicyAllowed(
+          queueConf.getSchedulingPolicy(child.getName()))) {
+        return false;
+      }
+      boolean success = child.verifyAndSetPolicyFromConf(queueConf);
+      if (!success) {
+        return false;
+      }
+    }
+
+    // Set the policy if no policy violation for all children
+    setPolicy(policy);
     return true;
   }
 }

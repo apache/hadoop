@@ -42,10 +42,10 @@ import com.google.common.annotations.VisibleForTesting;
 import java.util.Iterator;
 import java.util.Set;
 import org.apache.hadoop.yarn.api.records.Resource;
+
 /**
  * Maintains a list of queues as well as scheduling parameters for each queue,
  * such as guaranteed share allocations, from the fair scheduler config file.
- * 
  */
 @Private
 @Unstable
@@ -80,7 +80,7 @@ public class QueueManager {
     // Recursively reinitialize to propagate queue properties
     rootQueue.reinit(true);
   }
-  
+
   /**
    * Get a leaf queue by name, creating it if the create param is true and is necessary.
    * If the queue is not or can not be a leaf queue, i.e. it already exists as a
@@ -271,6 +271,14 @@ public class QueueManager {
     while (i.hasNext()) {
       FSParentQueue newParent = null;
       String queueName = i.next();
+
+      // Check if child policy is allowed
+      SchedulingPolicy childPolicy = scheduler.getAllocationConfiguration().
+          getSchedulingPolicy(queueName);
+      if (!parent.getPolicy().isChildPolicyAllowed(childPolicy)) {
+        LOG.error("Can't create queue '" + queueName + "'.");
+        return null;
+      }
 
       // Only create a leaf queue at the very end
       if (!i.hasNext() && (queueType != FSQueueType.PARENT)) {
@@ -479,6 +487,13 @@ public class QueueManager {
   public void updateAllocationConfiguration(AllocationConfiguration queueConf) {
     // Create leaf queues and the parent queues in a leaf's ancestry if they do not exist
     synchronized (queues) {
+      // Verify and set scheduling policies for existing queues before creating
+      // any queue, since we need parent policies to determine if we can create
+      // its children.
+      if (!rootQueue.verifyAndSetPolicyFromConf(queueConf)) {
+        LOG.error("Setting scheduling policies for existing queues failed!");
+      }
+
       for (String name : queueConf.getConfiguredQueues().get(
               FSQueueType.LEAF)) {
         if (removeEmptyIncompatibleQueues(name, FSQueueType.LEAF)) {

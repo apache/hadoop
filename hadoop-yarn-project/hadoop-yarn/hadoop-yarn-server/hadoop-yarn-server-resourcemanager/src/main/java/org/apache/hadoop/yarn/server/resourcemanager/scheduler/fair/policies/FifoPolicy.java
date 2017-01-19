@@ -21,9 +21,12 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.Comparator;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationConfigurationException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy;
@@ -38,6 +41,8 @@ import com.google.common.annotations.VisibleForTesting;
 @Private
 @Unstable
 public class FifoPolicy extends SchedulingPolicy {
+  private static final Log LOG = LogFactory.getLog(FifoPolicy.class);
+
   @VisibleForTesting
   public static final String NAME = "FIFO";
   private static final FifoComparator COMPARATOR = new FifoComparator();
@@ -127,9 +132,10 @@ public class FifoPolicy extends SchedulingPolicy {
     return headroom;
   }
 
-
   @Override
-  public byte getApplicableDepth() {
-    return SchedulingPolicy.DEPTH_LEAF;
+  public boolean isChildPolicyAllowed(SchedulingPolicy childPolicy) {
+    LOG.info(getName() + " policy is only for leaf queues. Please choose "
+        + "policies other than " + getName() + " for parent queues.");
+    return false;
   }
 }

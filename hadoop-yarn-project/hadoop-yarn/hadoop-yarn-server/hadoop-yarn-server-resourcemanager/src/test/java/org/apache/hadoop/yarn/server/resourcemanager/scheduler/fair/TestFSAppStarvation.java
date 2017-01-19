@@ -188,7 +188,7 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
     out.println("<fairSharePreemptionTimeout>0" +
         "</fairSharePreemptionTimeout>");
     out.println("<schedulingPolicy>fair</schedulingPolicy>");
-    addChildQueue(out);
+    addChildQueue(out, "fair");
     out.println("</queue>");
 
     // DRF queue with fairshare preemption enabled
@@ -198,9 +198,10 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
     out.println("<fairSharePreemptionTimeout>0" +
         "</fairSharePreemptionTimeout>");
     out.println("<schedulingPolicy>drf</schedulingPolicy>");
-    addChildQueue(out);
+    addChildQueue(out, "drf");
     out.println("</queue>");
-
+    out.println("<defaultQueueSchedulingPolicy>drf" +
+        "</defaultQueueSchedulingPolicy>");
     out.println("</allocations>");
     out.close();
 
@@ -227,13 +228,14 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
     assertEquals(8, scheduler.getSchedulerApp(app).getLiveContainers().size());
   }
 
-  private void addChildQueue(PrintWriter out) {
+  private void addChildQueue(PrintWriter out, String policy) {
     // Child queue under fairshare with same settings
     out.println("<queue name=\"child\">");
     out.println("<fairSharePreemptionThreshold>1" +
         "</fairSharePreemptionThreshold>");
     out.println("<fairSharePreemptionTimeout>0" +
         "</fairSharePreemptionTimeout>");
+    out.println("<schedulingPolicy>" + policy + "</schedulingPolicy>");
     out.println("</queue>");
   }
 

@@ -198,15 +198,6 @@ public class FSLeafQueue extends FSQueue {
   }
 
   @Override
-  public void setPolicy(SchedulingPolicy policy)
-      throws AllocationConfigurationException {
-    if (!SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_LEAF)) {
-      throwPolicyDoesnotApplyException(policy);
-    }
-    super.policy = policy;
-  }
-
-  @Override
   public void updateInternal(boolean checkStarvation) {
     readLock.lock();
     try {

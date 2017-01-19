@@ -42,12 +42,6 @@ public abstract class SchedulingPolicy {
   public static final SchedulingPolicy DEFAULT_POLICY =
       getInstance(FairSharePolicy.class);
   
-  public static final byte DEPTH_LEAF = (byte) 1;
-  public static final byte DEPTH_INTERMEDIATE = (byte) 2;
-  public static final byte DEPTH_ROOT = (byte) 4;
-  public static final byte DEPTH_PARENT = (byte) 6; // Root and Intermediate
-  public static final byte DEPTH_ANY = (byte) 7;
-
   /**
    * Returns a {@link SchedulingPolicy} instance corresponding to the passed clazz
    */
@@ -114,27 +108,6 @@ public abstract class SchedulingPolicy {
   public abstract String getName();
 
   /**
-   * Specifies the depths in the hierarchy, this {@link SchedulingPolicy}
-   * applies to
-   * 
-   * @return depth equal to one of fields {@link SchedulingPolicy}#DEPTH_*
-   */
-  public abstract byte getApplicableDepth();
-
-  /**
-   * Checks if the specified {@link SchedulingPolicy} can be used for a queue at
-   * the specified depth in the hierarchy
-   * 
-   * @param policy {@link SchedulingPolicy} we are checking the
-   *          depth-applicability for
-   * @param depth queue's depth in the hierarchy
-   * @return true if policy is applicable to passed depth, false otherwise
-   */
-  public static boolean isApplicableTo(SchedulingPolicy policy, byte depth) {
-    return ((policy.getApplicableDepth() & depth) == depth) ? true : false;
-  }
-
-  /**
    * The comparator returned by this method is to be used for sorting the
    * {@link Schedulable}s in that queue.
    * 
@@ -191,4 +164,12 @@ public abstract class SchedulingPolicy {
   public abstract Resource getHeadroom(Resource queueFairShare,
       Resource queueUsage, Resource maxAvailable);
 
+  /**
+   * Check whether the policy of a child queue are allowed.
+   *
+   * @param childPolicy the policy of child queue
+   */
+  public boolean isChildPolicyAllowed(SchedulingPolicy childPolicy) {
+    return true;
+  }
 }
