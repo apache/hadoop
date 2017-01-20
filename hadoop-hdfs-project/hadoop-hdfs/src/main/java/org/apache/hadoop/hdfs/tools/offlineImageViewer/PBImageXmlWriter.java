@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheD
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SectionName;
@@ -130,7 +131,7 @@ public final class PBImageXmlWriter {
   public static final String INODE_SECTION_XATTRS = "xattrs";
   public static final String INODE_SECTION_STORAGE_POLICY_ID =
       "storagePolicyId";
-  public static final String INODE_SECTION_IS_STRIPED = "isStriped";
+  public static final String INODE_SECTION_BLOCK_TYPE = "blockType";
   public static final String INODE_SECTION_NS_QUOTA = "nsquota";
   public static final String INODE_SECTION_DS_QUOTA = "dsquota";
   public static final String INODE_SECTION_TYPE_QUOTA = "typeQuota";
@@ -492,8 +493,10 @@ public final class PBImageXmlWriter {
     if (f.hasStoragePolicyID()) {
       o(INODE_SECTION_STORAGE_POLICY_ID, f.getStoragePolicyID());
     }
-    if (f.getIsStriped()) {
-      out.print("<" + INODE_SECTION_IS_STRIPED + "/>");
+    if (f.getBlockType() != BlockTypeProto.CONTIGUOUS) {
+      out.print("<" + INODE_SECTION_BLOCK_TYPE + ">");
+      o(SECTION_NAME, f.getBlockType().name());
+      out.print("</" + INODE_SECTION_BLOCK_TYPE + ">\n");
     }
 
     if (f.hasFileUC()) {

@@ -18,11 +18,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-alpha2-SNAPSHOT</version>
+    <version>3.0.0-alpha3-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-client-minicluster</artifactId>
-  <version>3.0.0-alpha2-SNAPSHOT</version>
+  <version>3.0.0-alpha3-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <description>Apache Hadoop Minicluster for Clients</description>
@@ -542,204 +542,234 @@
     <!-- skipping guice-servlet because it's above -->
     <!-- skipping io.netty:netty because it's in client -->
   </dependencies>
-  <build>
-    <plugins>
-      <!-- We contain no source -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-          <configuration>
-            <skipSource>true</skipSource>
-          </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-maven-plugins</artifactId>
-            <version>${project.version}</version>
-          </dependency>
-        </dependencies>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-            <configuration>
-              <createSourceJar>true</createSourceJar>
-              <artifactSet>
-                <excludes>
-                  <!-- Fine to expose our already-shaded deps as dependencies -->
-                  <exclude>org.apache.hadoop:hadoop-annotations</exclude>
-                  <exclude>org.apache.hadoop:hadoop-client-api</exclude>
-                  <exclude>org.apache.hadoop:hadoop-client-runtime</exclude>
-                  <!-- Fine to expose our purposefully not-shaded deps as dependencies -->
-                  <exclude>org.apache.htrace:htrace-core4</exclude>
-                  <exclude>org.slf4j:slf4j-api</exclude>
-                  <exclude>commons-logging:commons-logging</exclude>
-                  <exclude>junit:junit</exclude>
-                  <!-- Keep optional runtime deps out of the shading -->
-                  <exclude>org.apache.hadoop:hadoop-yarn-server-timelineservice</exclude>
-                  <exclude>log4j:log4j</exclude>
-                  <!-- We need a filter that matches just those things that are included in the above artiacts -->
-                </excludes>
-              </artifactSet>
-              <filters>
-                <!-- Some of our dependencies include source, so remove it. -->
-                <filter>
-                  <artifact>*:*</artifact>
-                  <excludes>
-                    <exclude>**/*.java</exclude>
-                  </excludes>
-                </filter>
-                <!-- We pull in several test jars; keep out the actual test classes -->
-                <filter>
-                  <artifact>*:*</artifact>
-                  <excludes>
-                    <exclude>**/Test*.class</exclude>
-                  </excludes>
-                </filter>
-                <!-- Since runtime has classes for these jars, we exclude them.
-                     We still want the java services api files, since those were excluded in runtime
-                  -->
-                <filter>
-                  <artifact>com.sun.jersey:jersey-client</artifact>
-                  <excludes>
-                    <exclude>**/*.class</exclude>
-                  </excludes>
-                </filter>
-                <filter>
-                  <artifact>com.sun.jersey:jersey-core</artifact>
-                  <excludes>
-                    <exclude>**/*.class</exclude>
-                  </excludes>
-                </filter>
-                <filter>
-                  <artifact>com.sun.jersey:jersey-servlet</artifact>
-                  <excludes>
-                    <exclude>**/*.class</exclude>
-                  </excludes>
-                </filter>
-              </filters>
-              <relocations>
-                <relocation>
-                  <pattern>org/</pattern>
-                  <shadedPattern>${shaded.dependency.prefix}.org.</shadedPattern>
-                  <excludes>
-                    <exclude>org/apache/hadoop/*</exclude>
-                    <exclude>org/apache/hadoop/**/*</exclude>
-                    <!-- Our non-shaded htrace and logging libraries -->
-                    <exclude>org/apache/htrace/*</exclude>
-                    <exclude>org/apache/htrace/**/*</exclude>
-                    <exclude>org/slf4j/*</exclude>
-                    <exclude>org/slf4j/**/*</exclude>
-                    <exclude>org/apache/commons/logging/*</exclude>
-                    <exclude>org/apache/commons/logging/**/*</exclude>
-                    <exclude>org/apache/log4j/*</exclude>
-                    <exclude>org/apache/log4j/**/*</exclude>
-                    <exclude>**/pom.xml</exclude>
-                    <!-- Our non-shaded JUnit library -->
-                    <exclude>org/junit/*</exclude>
-                    <exclude>org/junit/**/*</exclude>
-                    <!-- Not the org/ packages that are a part of the jdk -->
-                    <exclude>org/ietf/jgss/*</exclude>
-                    <exclude>org/omg/**/*</exclude>
-                    <exclude>org/w3c/dom/*</exclude>
-                    <exclude>org/w3c/dom/**/*</exclude>
-                    <exclude>org/xml/sax/*</exclude>
-                    <exclude>org/xml/sax/**/*</exclude>
-                  </excludes>
-                </relocation>
-                <relocation>
-                  <pattern>com/</pattern>
-                  <shadedPattern>${shaded.dependency.prefix}.com.</shadedPattern>
-                  <excludes>
-                    <exclude>**/pom.xml</exclude>
-                    <!-- Not the com/ packages that are a part of particular jdk implementations -->
-                    <exclude>com/sun/tools/*</exclude>
-                    <exclude>com/sun/javadoc/*</exclude>
-                    <exclude>com/sun/security/*</exclude>
-                    <exclude>com/sun/jndi/*</exclude>
-                    <exclude>com/sun/management/*</exclude>
-                    <exclude>com/sun/tools/**/*</exclude>
-                    <exclude>com/sun/javadoc/**/*</exclude>
-                    <exclude>com/sun/security/**/*</exclude>
-                    <exclude>com/sun/jndi/**/*</exclude>
-                    <exclude>com/sun/management/**/*</exclude>
-                  </excludes>
-                </relocation>
-                <relocation>
-                  <pattern>io/</pattern>
-                  <shadedPattern>${shaded.dependency.prefix}.io.</shadedPattern>
-                  <excludes>
-                    <exclude>**/pom.xml</exclude>
-                    <!-- Exclude config keys for Hadoop that look like package names -->
-                    <exclude>io/compression/*</exclude>
-                    <exclude>io/compression/**/*</exclude>
-                    <exclude>io/mapfile/*</exclude>
-                    <exclude>io/mapfile/**/*</exclude>
-                    <exclude>io/map/index/*</exclude>
-                    <exclude>io/seqfile/*</exclude>
-                    <exclude>io/seqfile/**/*</exclude>
-                    <exclude>io/file/buffer/size</exclude>
-                    <exclude>io/skip/checksum/errors</exclude>
-                    <exclude>io/sort/*</exclude>
-                    <exclude>io/serializations</exclude>
-                  </excludes>
-                </relocation>
-                <relocation>
-                  <pattern>javax/el/</pattern>
-                  <shadedPattern>${shaded.dependency.prefix}.javax.el.</shadedPattern>
-                  <excludes>
-                    <exclude>**/pom.xml</exclude>
-                  </excludes>
-                </relocation>
-                <relocation>
-                  <pattern>javax/inject/</pattern>
-                  <shadedPattern>${shaded.dependency.prefix}.javax.inject.</shadedPattern>
-                  <excludes>
-                    <exclude>**/pom.xml</exclude>
-                  </excludes>
-                </relocation>
-                <relocation>
-                  <pattern>javax/servlet/</pattern>
-                  <shadedPattern>${shaded.dependency.prefix}.javax.servlet.</shadedPattern>
-                  <excludes>
-                    <exclude>**/pom.xml</exclude>
-                  </excludes>
-                </relocation>
-                <relocation>
-                  <pattern>net/</pattern>
-                  <shadedPattern>${shaded.dependency.prefix}.net.</shadedPattern>
-                  <excludes>
-                    <exclude>**/pom.xml</exclude>
-                    <!-- Exclude config keys for Hadoop that look like package names -->
-                    <exclude>net/topology/*</exclude>
-                    <exclude>net/topology/**/*</exclude>
-                  </excludes>
-                </relocation>
-              </relocations>
-              <transformers>
-                <!-- Needed until MSHADE-182 -->
-                <transformer implementation="org.apache.hadoop.maven.plugin.shade.resource.ServicesResourceTransformer"/>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
-                  <addHeader>false</addHeader>
-                </transformer>
-              </transformers>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>license-maven-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
+  <profiles>
+    <profile>
+      <id>shade</id>
+      <activation>
+        <property><name>!skipShade</name></property>
+      </activation>
+      <build>
+        <plugins>
+          <!-- We contain no source -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+              <configuration>
+                <skipSource>true</skipSource>
+              </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <dependencies>
+              <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-maven-plugins</artifactId>
+                <version>${project.version}</version>
+              </dependency>
+            </dependencies>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>shade</goal>
+                </goals>
+                <configuration>
+                  <createSourceJar>true</createSourceJar>
+                  <artifactSet>
+                    <excludes>
+                      <!-- Fine to expose our already-shaded deps as dependencies -->
+                      <exclude>org.apache.hadoop:hadoop-annotations</exclude>
+                      <exclude>org.apache.hadoop:hadoop-client-api</exclude>
+                      <exclude>org.apache.hadoop:hadoop-client-runtime</exclude>
+                      <!-- Fine to expose our purposefully not-shaded deps as dependencies -->
+                      <exclude>org.apache.htrace:htrace-core4</exclude>
+                      <exclude>org.slf4j:slf4j-api</exclude>
+                      <exclude>commons-logging:commons-logging</exclude>
+                      <exclude>junit:junit</exclude>
+                      <!-- Keep optional runtime deps out of the shading -->
+                      <exclude>org.apache.hadoop:hadoop-yarn-server-timelineservice</exclude>
+                      <exclude>log4j:log4j</exclude>
+                      <!-- We need a filter that matches just those things that are included in the above artiacts -->
+                    </excludes>
+                  </artifactSet>
+                  <filters>
+                    <!-- Some of our dependencies include source, so remove it. -->
+                    <filter>
+                      <artifact>*:*</artifact>
+                      <excludes>
+                        <exclude>**/*.java</exclude>
+                      </excludes>
+                    </filter>
+                    <!-- We pull in several test jars; keep out the actual test classes -->
+                    <filter>
+                      <artifact>*:*</artifact>
+                      <excludes>
+                        <exclude>**/Test*.class</exclude>
+                      </excludes>
+                    </filter>
+                    <!-- Since runtime has classes for these jars, we exclude them.
+                         We still want the java services api files, since those were excluded in runtime
+                      -->
+                    <filter>
+                      <artifact>com.sun.jersey:jersey-client</artifact>
+                      <excludes>
+                        <exclude>**/*.class</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>com.sun.jersey:jersey-core</artifact>
+                      <excludes>
+                        <exclude>**/*.class</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>com.sun.jersey:jersey-servlet</artifact>
+                      <excludes>
+                        <exclude>**/*.class</exclude>
+                      </excludes>
+                    </filter>
+                  </filters>
+                  <relocations>
+                    <relocation>
+                      <pattern>org/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.org.</shadedPattern>
+                      <excludes>
+                        <exclude>org/apache/hadoop/*</exclude>
+                        <exclude>org/apache/hadoop/**/*</exclude>
+                        <!-- Our non-shaded htrace and logging libraries -->
+                        <exclude>org/apache/htrace/*</exclude>
+                        <exclude>org/apache/htrace/**/*</exclude>
+                        <exclude>org/slf4j/*</exclude>
+                        <exclude>org/slf4j/**/*</exclude>
+                        <exclude>org/apache/commons/logging/*</exclude>
+                        <exclude>org/apache/commons/logging/**/*</exclude>
+                        <exclude>org/apache/log4j/*</exclude>
+                        <exclude>org/apache/log4j/**/*</exclude>
+                        <exclude>**/pom.xml</exclude>
+                        <!-- Our non-shaded JUnit library -->
+                        <exclude>org/junit/*</exclude>
+                        <exclude>org/junit/**/*</exclude>
+                        <!-- Not the org/ packages that are a part of the jdk -->
+                        <exclude>org/ietf/jgss/*</exclude>
+                        <exclude>org/omg/**/*</exclude>
+                        <exclude>org/w3c/dom/*</exclude>
+                        <exclude>org/w3c/dom/**/*</exclude>
+                        <exclude>org/xml/sax/*</exclude>
+                        <exclude>org/xml/sax/**/*</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>com/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.com.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                        <!-- Not the com/ packages that are a part of particular jdk implementations -->
+                        <exclude>com/sun/tools/*</exclude>
+                        <exclude>com/sun/javadoc/*</exclude>
+                        <exclude>com/sun/security/*</exclude>
+                        <exclude>com/sun/jndi/*</exclude>
+                        <exclude>com/sun/management/*</exclude>
+                        <exclude>com/sun/tools/**/*</exclude>
+                        <exclude>com/sun/javadoc/**/*</exclude>
+                        <exclude>com/sun/security/**/*</exclude>
+                        <exclude>com/sun/jndi/**/*</exclude>
+                        <exclude>com/sun/management/**/*</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>io/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.io.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                        <!-- Exclude config keys for Hadoop that look like package names -->
+                        <exclude>io/compression/*</exclude>
+                        <exclude>io/compression/**/*</exclude>
+                        <exclude>io/mapfile/*</exclude>
+                        <exclude>io/mapfile/**/*</exclude>
+                        <exclude>io/map/index/*</exclude>
+                        <exclude>io/seqfile/*</exclude>
+                        <exclude>io/seqfile/**/*</exclude>
+                        <exclude>io/file/buffer/size</exclude>
+                        <exclude>io/skip/checksum/errors</exclude>
+                        <exclude>io/sort/*</exclude>
+                        <exclude>io/serializations</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>javax/el/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.el.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>javax/inject/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.inject.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>javax/servlet/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.servlet.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>net/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.net.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                        <!-- Exclude config keys for Hadoop that look like package names -->
+                        <exclude>net/topology/*</exclude>
+                        <exclude>net/topology/**/*</exclude>
+                      </excludes>
+                    </relocation>
+                  </relocations>
+                  <transformers>
+                    <!-- Needed until MSHADE-182 -->
+                    <transformer implementation="org.apache.hadoop.maven.plugin.shade.resource.ServicesResourceTransformer"/>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
+                      <addHeader>false</addHeader>
+                    </transformer>
+                  </transformers>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>license-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>noshade</id>
+      <activation>
+        <property><name>skipShade</name></property>
+      </activation>
+      <build>
+        <plugins>
+          <!-- We contain no source -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+              <configuration>
+                <skipSource>true</skipSource>
+              </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>license-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 </project>
 

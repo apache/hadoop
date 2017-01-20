@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 
 /**
  * Subclass of {@link BlockInfo}, used for a block with replication scheme.
@@ -90,6 +91,11 @@ public class BlockInfoContiguous extends BlockInfo {
   @Override
   public final boolean isStriped() {
     return false;
+  }
+
+  @Override
+  public BlockType getBlockType() {
+    return BlockType.CONTIGUOUS;
   }
 
   @Override

@@ -198,6 +198,14 @@ enum StorageTypeProto {
 }
 
 /**
+ * Types of recognized blocks.
+ */
+enum BlockTypeProto {
+  CONTIGUOUS = 0;
+  STRIPED = 1;
+}
+
+/**
  * A list of storage types. 
  */
 message StorageTypesProto {

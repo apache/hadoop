@@ -41,6 +41,42 @@ function hadoop_debug
   fi
 }
 
+## @description  Given a filename or dir, return the absolute version of it
+## @description  This works as an alternative to readlink, which isn't
+## @description  portable.
+## @audience     public
+## @stability    stable
+## @param        fsobj
+## @replaceable  no
+## @return       0 success
+## @return       1 failure
+## @return       stdout abspath
+function hadoop_abs
+{
+  declare obj=$1
+  declare dir
+  declare fn
+  declare dirret
+
+  if [[ ! -e ${obj} ]]; then
+    return 1
+  elif [[ -d ${obj} ]]; then
+    dir=${obj}
+  else
+    dir=$(dirname -- "${obj}")
+    fn=$(basename -- "${obj}")
+    fn="/${fn}"
+  fi
+
+  dir=$(cd -P -- "${dir}" >/dev/null 2>/dev/null && pwd -P)
+  dirret=$?
+  if [[ ${dirret} = 0 ]]; then
+    echo "${dir}${fn}"
+    return 0
+  fi
+  return 1
+}
+
 ## @description  Given variable $1 delete $2 from it
 ## @audience     public
 ## @stability    stable
@@ -77,6 +113,101 @@ function hadoop_verify_entry
   # so if this changes, be aware that unit tests effectively
   # do this function in them
   [[ ${!1} =~ \ ${2}\  ]]
+}
+
+## @description  Check if we are running with privilege
+## @description  by default, this implementation looks for
+## @description  EUID=0.  For OSes that have true privilege
+## @description  separation, this should be something more complex
+## @audience     private
+## @stability    evolving
+## @replaceable  yes
+## @return       1 = no priv
+## @return       0 = priv
+function hadoop_privilege_check
+{
+  [[ "${EUID}" = 0 ]]
+}
+
+## @description  Execute a command via su when running as root
+## @description  if the given user is found or exit with
+## @description  failure if not.
+## @description  otherwise just run it.  (This is intended to
+## @description  be used by the start-*/stop-* scripts.)
+## @audience     private
+## @stability    evolving
+## @replaceable  yes
+## @param        user
+## @param        commandstring
+## @return       exitstatus
+function hadoop_su
+{
+  declare user=$1
+  shift
+  declare idret
+
+  if hadoop_privilege_check; then
+    id -u "${user}" >/dev/null 2>&1
+    idret=$?
+    if [[ ${idret} != 0 ]]; then
+      hadoop_error "ERROR: Refusing to run as root: ${user} account is not found. Aborting."
+      return 1
+    else
+      su -l "${user}" -- "$@"
+    fi
+  else
+    "$@"
+  fi
+}
+
+## @description  Execute a command via su when running as root
+## @description  with extra support for commands that might
+## @description  legitimately start as root (e.g., datanode)
+## @description  (This is intended to
+## @description  be used by the start-*/stop-* scripts.)
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @param        user
+## @param        commandstring
+## @return       exitstatus
+function hadoop_uservar_su
+{
+
+  ## startup matrix:
+  #
+  # if $EUID != 0, then exec
+  # if $EUID =0 then
+  #    if hdfs_subcmd_user is defined, call hadoop_su to exec
+  #    if hdfs_subcmd_user is not defined, error
+  #
+  # For secure daemons, this means both the secure and insecure env vars need to be
+  # defined.  e.g., HDFS_DATANODE_USER=root HDFS_DATANODE_SECURE_USER=hdfs
+  # This function will pick up the "normal" var, switch to that user, then
+  # execute the command which will then pick up the "secure" version.
+  #
+
+  declare program=$1
+  declare command=$2
+  shift 2
+
+  declare uprogram
+  declare ucommand
+  declare uvar
+
+  if hadoop_privilege_check; then
+    uvar=$(hadoop_get_verify_uservar "${program}" "${command}")
+
+    if [[ -n "${!uvar}" ]]; then
+      hadoop_su "${!uvar}" "$@"
+    else
+      hadoop_error "ERROR: Attempting to launch ${program} ${command} as root"
+      hadoop_error "ERROR: but there is no ${uvar} defined. Aborting launch."
+      return 1
+    fi
+  else
+    "$@"
+  fi
 }
 
 ## @description  Add a subcommand to the usage output
@@ -342,6 +473,9 @@ function hadoop_bootstrap
   # by default, whatever we are about to run doesn't support
   # daemonization
   HADOOP_SUBCMD_SUPPORTDAEMONIZATION=false
+
+  # by default, we have not been self-re-execed
+  HADOOP_REEXECED_CMD=false
 
   # shellcheck disable=SC2034
   HADOOP_SUBCMD_SECURESERVICE=false
@@ -624,9 +758,10 @@ function hadoop_basic_init
   fi
 
   # if for some reason the shell doesn't have $USER defined
-  # let's define it as 'hadoop'
+  # (e.g., ssh'd in to execute a command)
+  # let's get the effective username and use that
+  USER=${USER:-$(id -nu)}
   HADOOP_IDENT_STRING=${HADOOP_IDENT_STRING:-$USER}
-  HADOOP_IDENT_STRING=${HADOOP_IDENT_STRING:-hadoop}
   HADOOP_LOG_DIR=${HADOOP_LOG_DIR:-"${HADOOP_HOME}/logs"}
   HADOOP_LOGFILE=${HADOOP_LOGFILE:-hadoop.log}
   HADOOP_LOGLEVEL=${HADOOP_LOGLEVEL:-INFO}
@@ -1400,8 +1535,7 @@ function hadoop_verify_secure_prereq
   # and you are using pfexec, you'll probably want to change
   # this.
 
-  # ${EUID} comes from the shell itself!
-  if [[ "${EUID}" -ne 0 ]] && [[ -z "${HADOOP_SECURE_COMMAND}" ]]; then
+  if ! hadoop_privilege_check && [[ -z "${HADOOP_SECURE_COMMAND}" ]]; then
     hadoop_error "ERROR: You must be a privileged user in order to run a secure service."
     exit 1
   else
@@ -1994,20 +2128,18 @@ function hadoop_secure_daemon_handler
   esac
 }
 
-## @description  Verify that ${USER} is allowed to execute the
-## @description  given subcommand.
+## @description  Get the environment variable used to validate users
 ## @audience     public
 ## @stability    stable
 ## @replaceable  yes
 ## @param        subcommand
-## @return       will exit on failure conditions
-function hadoop_verify_user
+## @return       string
+function hadoop_get_verify_uservar
 {
   declare program=$1
   declare command=$2
   declare uprogram
   declare ucommand
-  declare uvar
 
   if [[ -z "${BASH_VERSINFO[0]}" ]] \
      || [[ "${BASH_VERSINFO[0]}" -lt 4 ]]; then
@@ -2018,7 +2150,25 @@ function hadoop_verify_user
     ucommand=${command^^}
   fi
 
-  uvar="${uprogram}_${ucommand}_USER"
+  echo "${uprogram}_${ucommand}_USER"
+}
+
+## @description  Verify that ${USER} is allowed to execute the
+## @description  given subcommand.
+## @audience     public
+## @stability    stable
+## @replaceable  yes
+## @param        command
+## @param        subcommand
+## @return       return 0 on success
+## @return       exit 1 on failure
+function hadoop_verify_user
+{
+  declare program=$1
+  declare command=$2
+  declare uvar
+
+  uvar=$(hadoop_get_verify_uservar "${program}" "${command}")
 
   if [[ -n ${!uvar} ]]; then
     if [[ ${!uvar} !=  "${USER}" ]]; then
@@ -2026,6 +2176,42 @@ function hadoop_verify_user
       exit 1
     fi
   fi
+  return 0
+}
+
+## @description  Verify that ${USER} is allowed to execute the
+## @description  given subcommand.
+## @audience     public
+## @stability    stable
+## @replaceable  yes
+## @param        subcommand
+## @return       1 on no re-exec needed
+## @return       0 on need to re-exec
+function hadoop_need_reexec
+{
+  declare program=$1
+  declare command=$2
+  declare uvar
+
+  # we've already been re-execed, bail
+
+  if [[ "${HADOOP_REEXECED_CMD}" = true ]]; then
+    return 1
+  fi
+
+  # if we have privilege, and the _USER is defined, and _USER is
+  # set to someone who isn't us, then yes, we should re-exec.
+  # otherwise no, don't re-exec and let the system deal with it.
+
+  if hadoop_privilege_check; then
+    uvar=$(hadoop_get_verify_uservar "${program}" "${command}")
+    if [[ -n ${!uvar} ]]; then
+      if [[ ${!uvar} !=  "${USER}" ]]; then
+        return 0
+      fi
+    fi
+  fi
+  return 1
 }
 
 ## @description  Add custom (program)_(command)_OPTS to HADOOP_OPTS.
@@ -2227,6 +2413,15 @@ function hadoop_parse_args
         HADOOP_LOGLEVEL="$1"
         shift
         ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+2))
+      ;;
+      --reexec)
+        shift
+        if [[ "${HADOOP_REEXECED_CMD}" = true ]]; then
+          hadoop_error "ERROR: re-exec fork bomb prevention: --reexec already called"
+          exit 1
+        fi
+        HADOOP_REEXECED_CMD=true
+        ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+1))
       ;;
       --workers)
         shift

@@ -19,8 +19,8 @@ Opportunistic Containers
 * [Quick Guide](#Quick_Guide)
     * [Main Goal](#Main_Goal)
     * [Enabling Opportunistic Containers](#Enabling_Opportunistic_Containers)
-    * [Running a Sample Job](Running_a_Sample_Job)
-    * [Opportunistic Containers in Web UI](Opportunistic_Containers_in_Web_UI)
+    * [Running a Sample Job](#Running_a_Sample_Job)
+    * [Opportunistic Containers in Web UI](#Opportunistic_Containers_in_Web_UI)
 * [Overview](#Overview)
 * [Container Execution Types](#Container_Execution_Types)
 * [Execution of Opportunistic Containers](#Execution_of_Opportunistic_Containers)
@@ -71,6 +71,7 @@ By default, allocation of opportunistic containers is performed centrally throug
 ###<a name="Running_a_Sample_Job"></a>Running a Sample Job
 
 The following command can be used to run a sample pi map-reduce job, executing 40% of mappers using opportunistic containers (substitute `3.0.0-alpha2-SNAPSHOT` below with the version of Hadoop you are using):
+
 ```
 $ hadoop jar hadoop-3.0.0-alpha2-SNAPSHOT/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.0.0-alpha2-SNAPSHOT.jar pi -Dmapreduce.job.num-opportunistic-maps-percent="40" 50 100
 ```
@@ -81,6 +82,7 @@ By changing the value of `mapreduce.job.num-opportunistic-maps-percent` in the a
 ###<a name="Opportunistic_Containers_in_Web_UI"></a>Opportunistic Containers in Web UI
 
 When opportunistic container allocation is enabled, the following new columns can be observed in the Nodes page of the Web UI (`rm-address:8088/cluster/nodes`):
+
 * Running Containers (O): number of running opportunistic containers on each node;
 * Mem Used (O): Total memory used by opportunistic containers on each node;
 * VCores Used (O): Total CPU virtual cores used by opportunistic containers on each node;
