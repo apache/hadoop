@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockType;
@@ -114,6 +115,12 @@ public class BlockInfoStriped extends BlockInfo {
 
   @Override
   boolean addStorage(DatanodeStorageInfo storage, Block reportedBlock) {
+    Preconditions.checkArgument(BlockIdManager.isStripedBlockID(
+        reportedBlock.getBlockId()), "reportedBlock is not striped");
+    Preconditions.checkArgument(BlockIdManager.convertToStripedID(
+        reportedBlock.getBlockId()) == this.getBlockId(),
+        "reported blk_%s does not belong to the group of stored blk_%s",
+        reportedBlock.getBlockId(), this.getBlockId());
     int blockIndex = BlockIdManager.getBlockIndex(reportedBlock);
     int index = blockIndex;
     DatanodeStorageInfo old = getStorageInfo(index);
