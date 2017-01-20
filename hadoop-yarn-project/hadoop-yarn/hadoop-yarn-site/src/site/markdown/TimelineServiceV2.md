@@ -223,7 +223,7 @@ is needed for the `flowrun` table creation in the schema creator. The default HD
 For example,
 
     hadoop fs -mkdir /hbase/coprocessor
-    hadoop fs -put hadoop-yarn-server-timelineservice-3.0.0-alpha1-SNAPSHOT.jar
+    hadoop fs -put hadoop-yarn-server-timelineservice-hbase-3.0.0-alpha1-SNAPSHOT.jar
            /hbase/coprocessor/hadoop-yarn-server-timelineservice.jar
 
 
