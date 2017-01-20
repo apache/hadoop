@@ -359,7 +359,7 @@ public class TestNameNodeMXBean {
       // Add the 1st DataNode to Maintenance list
       Map<String, Long> maintenanceNodes = new HashMap<>();
       maintenanceNodes.put(cluster.getDataNodes().get(0).getDisplayName(),
-          Time.monotonicNow() + expirationInMs);
+          Time.now() + expirationInMs);
       hostsFileWriter.initOutOfServiceHosts(null, maintenanceNodes);
       fsn.getBlockManager().getDatanodeManager().refreshNodes(conf);
 

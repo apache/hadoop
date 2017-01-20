@@ -509,7 +509,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   }
 
   public static boolean maintenanceNotExpired(long maintenanceExpireTimeInMS) {
-    return Time.monotonicNow() < maintenanceExpireTimeInMS;
+    return Time.now() < maintenanceExpireTimeInMS;
   }
   /**
    * Returns true if the node is is entering_maintenance
