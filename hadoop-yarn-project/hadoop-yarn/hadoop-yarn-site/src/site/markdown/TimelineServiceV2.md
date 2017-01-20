@@ -172,7 +172,7 @@ Once you have an Apache HBase cluster ready to use for this purpose, perform the
 First, add the timeline service jar to the HBase classpath in all HBase machines in the cluster. It
 is needed for the coprocessor as well as the schema creator. For example,
 
-    cp hadoop-yarn-server-timelineservice-3.0.0-alpha1-SNAPSHOT.jar /usr/hbase/lib/
+    cp hadoop-yarn-server-timelineservice-hbase-3.0.0-alpha1-SNAPSHOT.jar /usr/hbase/lib/
 
 Then, enable the coprocessor that handles the aggregation. To enable it, add the following entry in
 region servers' `hbase-site.xml` file (generally located in the `conf` directory) as follows:
