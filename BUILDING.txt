@@ -133,6 +133,8 @@ Maven build goals:
   * Use -Dtar to create a TAR with the distribution (using -Pdist)
   * Use -Preleasedocs to include the changelog and release docs (requires Internet connectivity)
   * Use -Pyarn-ui to build YARN UI v2. (Requires Internet connectivity)
+  * Use -DskipShade to disable client jar shading to speed up build times (in
+    development environments only, not to build release artifacts)
 
  Snappy build options:
 
