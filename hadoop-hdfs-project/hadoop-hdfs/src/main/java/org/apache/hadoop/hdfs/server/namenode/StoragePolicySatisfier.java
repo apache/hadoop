@@ -403,24 +403,25 @@ public class StoragePolicySatisfier implements Runnable {
     List<StorageType> sourceStorageTypes = new ArrayList<>();
     List<DatanodeInfo> targetNodes = new ArrayList<>();
     List<StorageType> targetStorageTypes = new ArrayList<>();
-    List<DatanodeDescriptor> chosenNodes = new ArrayList<>();
+    List<DatanodeDescriptor> excludeNodes = new ArrayList<>();
 
     // Looping over all the source node locations and choose the target
     // storage within same node if possible. This is done separately to
     // avoid choosing a target which already has this block.
     for (int i = 0; i < sourceWithStorageList.size(); i++) {
       StorageTypeNodePair existingTypeNodePair = sourceWithStorageList.get(i);
-      StorageTypeNodePair chosenTarget = chooseTargetTypeInSameNode(
+      StorageTypeNodePair chosenTarget = chooseTargetTypeInSameNode(blockInfo,
           existingTypeNodePair.dn, expected);
       if (chosenTarget != null) {
         sourceNodes.add(existingTypeNodePair.dn);
         sourceStorageTypes.add(existingTypeNodePair.storageType);
         targetNodes.add(chosenTarget.dn);
         targetStorageTypes.add(chosenTarget.storageType);
-        chosenNodes.add(chosenTarget.dn);
         expected.remove(chosenTarget.storageType);
         // TODO: We can increment scheduled block count for this node?
       }
+      // To avoid choosing this excludeNodes as targets later
+      excludeNodes.add(existingTypeNodePair.dn);
     }
 
     // Looping over all the source node locations. Choose a remote target
@@ -437,28 +438,28 @@ public class StoragePolicySatisfier implements Runnable {
           .getNetworkTopology().isNodeGroupAware()) {
         chosenTarget = chooseTarget(blockInfo, existingTypeNodePair.dn,
             expected, Matcher.SAME_NODE_GROUP, locsForExpectedStorageTypes,
-            chosenNodes);
+            excludeNodes);
       }
 
       // Then, match nodes on the same rack
       if (chosenTarget == null) {
         chosenTarget =
             chooseTarget(blockInfo, existingTypeNodePair.dn, expected,
-                Matcher.SAME_RACK, locsForExpectedStorageTypes, chosenNodes);
+                Matcher.SAME_RACK, locsForExpectedStorageTypes, excludeNodes);
       }
 
       if (chosenTarget == null) {
         chosenTarget =
             chooseTarget(blockInfo, existingTypeNodePair.dn, expected,
-                Matcher.ANY_OTHER, locsForExpectedStorageTypes, chosenNodes);
+                Matcher.ANY_OTHER, locsForExpectedStorageTypes, excludeNodes);
       }
       if (null != chosenTarget) {
         sourceNodes.add(existingTypeNodePair.dn);
         sourceStorageTypes.add(existingTypeNodePair.storageType);
         targetNodes.add(chosenTarget.dn);
         targetStorageTypes.add(chosenTarget.storageType);
-        chosenNodes.add(chosenTarget.dn);
         expected.remove(chosenTarget.storageType);
+        excludeNodes.add(chosenTarget.dn);
         // TODO: We can increment scheduled block count for this node?
       } else {
         LOG.warn(
@@ -554,14 +555,18 @@ public class StoragePolicySatisfier implements Runnable {
   /**
    * Choose the target storage within same datanode if possible.
    *
-   * @param source source datanode
-   * @param targetTypes list of target storage types
+   * @param block
+   *          - block info
+   * @param source
+   *          - source datanode
+   * @param targetTypes
+   *          - list of target storage types
    */
-  private StorageTypeNodePair chooseTargetTypeInSameNode(
+  private StorageTypeNodePair chooseTargetTypeInSameNode(Block block,
       DatanodeDescriptor source, List<StorageType> targetTypes) {
     for (StorageType t : targetTypes) {
       DatanodeStorageInfo chooseStorage4Block =
-          source.chooseStorage4Block(t, 0);
+          source.chooseStorage4Block(t, block.getNumBytes());
       if (chooseStorage4Block != null) {
         return new StorageTypeNodePair(t, source);
       }
@@ -572,7 +577,7 @@ public class StoragePolicySatisfier implements Runnable {
   private StorageTypeNodePair chooseTarget(Block block,
       DatanodeDescriptor source, List<StorageType> targetTypes, Matcher matcher,
       StorageTypeNodeMap locsForExpectedStorageTypes,
-      List<DatanodeDescriptor> chosenNodes) {
+      List<DatanodeDescriptor> excludeNodes) {
     for (StorageType t : targetTypes) {
       List<DatanodeDescriptor> nodesWithStorages =
           locsForExpectedStorageTypes.getNodesWithStorages(t);
@@ -581,7 +586,7 @@ public class StoragePolicySatisfier implements Runnable {
       }
       Collections.shuffle(nodesWithStorages);
       for (DatanodeDescriptor target : nodesWithStorages) {
-        if (!chosenNodes.contains(target) && matcher.match(
+        if (!excludeNodes.contains(target) && matcher.match(
             blockManager.getDatanodeManager().getNetworkTopology(), source,
             target)) {
           if (null != target.chooseStorage4Block(t, block.getNumBytes())) {
