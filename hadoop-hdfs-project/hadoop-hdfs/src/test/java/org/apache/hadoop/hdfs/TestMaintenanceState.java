@@ -114,7 +114,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
 
     // Adjust the expiration.
     takeNodeOutofService(0, nodeOutofService.getDatanodeUuid(),
-        Time.monotonicNow() + EXPIRATION_IN_MS, null, AdminStates.NORMAL);
+        Time.now() + EXPIRATION_IN_MS, null, AdminStates.NORMAL);
 
     cleanupFile(fileSys, file);
   }
@@ -133,8 +133,8 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
     final FileSystem fileSys = getCluster().getFileSystem(0);
     writeFile(fileSys, file, replicas, 1);
 
-    // expiration has to be greater than Time.monotonicNow().
-    takeNodeOutofService(0, null, Time.monotonicNow(), null,
+    // expiration has to be greater than Time.now().
+    takeNodeOutofService(0, null, Time.now(), null,
         AdminStates.NORMAL);
 
     cleanupFile(fileSys, file);
@@ -203,7 +203,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
 
     // Adjust the expiration.
     takeNodeOutofService(0, nodeOutofService.getDatanodeUuid(),
-        Time.monotonicNow() + EXPIRATION_IN_MS, null, AdminStates.NORMAL);
+        Time.now() + EXPIRATION_IN_MS, null, AdminStates.NORMAL);
 
     // no change
     assertEquals(deadInMaintenance, ns.getNumInMaintenanceDeadDataNodes());
@@ -257,7 +257,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
 
     // Adjust the expiration.
     takeNodeOutofService(0, nodeOutofService.getDatanodeUuid(),
-        Time.monotonicNow() + EXPIRATION_IN_MS, null, AdminStates.NORMAL);
+        Time.now() + EXPIRATION_IN_MS, null, AdminStates.NORMAL);
 
     cleanupFile(fileSys, file);
   }
@@ -398,7 +398,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
 
     // Adjust the expiration.
     takeNodeOutofService(0, nodeOutofService.getDatanodeUuid(),
-        Time.monotonicNow() + EXPIRATION_IN_MS, null, AdminStates.NORMAL);
+        Time.now() + EXPIRATION_IN_MS, null, AdminStates.NORMAL);
 
     cleanupFile(fileSys, file);
   }
