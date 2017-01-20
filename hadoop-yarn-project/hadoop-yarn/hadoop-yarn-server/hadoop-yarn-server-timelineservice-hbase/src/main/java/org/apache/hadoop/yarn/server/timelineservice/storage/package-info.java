@@ -17,8 +17,8 @@
  */
 
 /**
- * Package org.apache.hadoop.server.timelineservice contains classes to be used
- * across timeline reader and collector.
+ * Package org.apache.hadoop.yarn.server.timelineservice.storage contains
+ * classes which define and implement reading and writing to backend storage.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
