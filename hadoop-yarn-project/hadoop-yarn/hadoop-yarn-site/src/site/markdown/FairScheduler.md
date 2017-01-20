@@ -117,6 +117,8 @@ The allocation file must be in XML format. The format contains five types of ele
 
     * fairSharePreemptionThreshold: the fair share preemption threshold for the queue. If the queue waits fairSharePreemptionTimeout without receiving fairSharePreemptionThreshold\*fairShare resources, it is allowed to preempt containers to take resources from other queues. If not set, the queue will inherit the value from its parent queue.
 
+    * allowPreemptionFrom: determines whether the scheduler is allowed to preempt resources from the queue. The default is true. If a queue has this property set to false, this property will apply recursively to all child queues.
+
 * **User elements**: which represent settings governing the behavior of individual users. They can contain a single property: maxRunningApps, a limit on the number of running apps for a particular user.
 
 * **A userMaxAppsDefault element**: which sets the default running app limit for any users whose limit is not otherwise specified.
