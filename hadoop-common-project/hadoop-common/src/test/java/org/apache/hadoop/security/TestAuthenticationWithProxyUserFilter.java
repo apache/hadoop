@@ -24,10 +24,13 @@ import org.apache.hadoop.http.FilterContainer;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
 import java.util.Map;
 
-public class TestAuthenticationFilter extends TestCase {
+/**
+ * This class is tested for {@link AuthenticationWithProxyUserFilter}
+ * to verify configurations of this filter.
+ */
+public class TestAuthenticationWithProxyUserFilter extends TestCase {
 
   @SuppressWarnings("unchecked")
   public void testConfiguration() throws Exception {
@@ -35,16 +38,19 @@ public class TestAuthenticationFilter extends TestCase {
     conf.set("hadoop.http.authentication.foo", "bar");
 
     conf.set(HttpServer2.BIND_ADDRESS, "barhost");
-    
+
     FilterContainer container = Mockito.mock(FilterContainer.class);
     Mockito.doAnswer(
-        new Answer() {
+      new Answer() {
         @Override
         public Object answer(InvocationOnMock invocationOnMock)
           throws Throwable {
           Object[] args = invocationOnMock.getArguments();
 
           assertEquals("authentication", args[0]);
+
+          assertEquals(
+              AuthenticationWithProxyUserFilter.class.getName(), args[1]);
 
           Map<String, String> conf = (Map<String, String>) args[2];
           assertEquals("/", conf.get("cookie.path"));
@@ -60,8 +66,9 @@ public class TestAuthenticationFilter extends TestCase {
           assertEquals("bar", conf.get("foo"));
 
           return null;
-        }}
-        ).when(container).addFilter(Mockito.<String>anyObject(),
+        }
+      }
+    ).when(container).addFilter(Mockito.<String>anyObject(),
                                 Mockito.<String>anyObject(),
                                 Mockito.<Map<String, String>>anyObject());
 
