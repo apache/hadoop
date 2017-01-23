@@ -33,10 +33,10 @@ To build the native library, we assume that user already have Tensorflow install
    Please note to build out libbridge.so correctly, you need to replace JDK_HOME with your own path. TENSORFLOW_HOME means tensorflow's installed folder which may be various.
    Here is an example path it may be: `/usr/lib/python2.7/site-packages/tensorflow`. Also, please make sure the python native library is also sepcified when building.
    
- ## How to build java library.
- To build the java part, you just need to run `mvn clean package` in current folder.
+## How to build java library.
+To build the java part, you just need to run `mvn clean package` in current folder.
  
- Here are the main java API it exposed:
+Here are the main java API it exposed:
  
  ```
  package org.tensorflow.bridge;
