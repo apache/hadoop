@@ -490,7 +490,12 @@ public class YarnConfiguration extends Configuration {
      RM_PREFIX + "delegation.token.max-lifetime";
   public static final long RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT =
     7*24*60*60*1000; // 7 days
-  
+
+  public static final String RM_DELEGATION_TOKEN_MAX_CONF_SIZE =
+      RM_PREFIX + "delegation-token.max-conf-size-bytes";
+  public static final int DEFAULT_RM_DELEGATION_TOKEN_MAX_CONF_SIZE_BYTES =
+      12800;
+
   public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
   public static final boolean DEFAULT_RM_RECOVERY_ENABLED = false;
 

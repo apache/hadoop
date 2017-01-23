@@ -1955,4 +1955,22 @@
   <name>mapreduce.job.redacted-properties</name>
   <value></value>
 </property>
+
+<property>
+  <description>
+    This configuration is a regex expression. The list of configurations that
+    match the regex expression will be sent to RM. RM will use these
+    configurations for renewing tokens.
+    This configuration is added for below scenario: User needs to run distcp
+    jobs across two clusters, but the RM does not have necessary hdfs
+    configurations to connect to the remote hdfs cluster. Hence, user relies on
+    this config to send the configurations to RM and RM uses these
+    configurations to renew tokens.
+    For example the following regex expression indicates the minimum required
+    configs for RM to connect to a remote hdfs cluster:
+    dfs.nameservices|^dfs.namenode.rpc-address.*$|^dfs.ha.namenodes.*$|^dfs.client.failover.proxy.provider.*$|dfs.namenode.kerberos.principal
+  </description>
+  <name>mapreduce.job.send-token-conf</name>
+  <value></value>
+</property>
 </configuration>

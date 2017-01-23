@@ -552,6 +552,8 @@ message ContainerLaunchContextProto {
   repeated string command = 5;
   repeated ApplicationACLMapProto application_ACLs = 6;
   optional ContainerRetryContextProto container_retry_context = 7;
+  optional bytes tokens_conf = 8;
+
 }
 
 message ContainerStatusProto {

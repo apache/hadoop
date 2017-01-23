@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.security.AccessControlException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -589,6 +590,21 @@ public class ClientRMService extends AbstractService implements
       return SubmitApplicationResponse.newInstance();
     }
 
+    ByteBuffer tokenConf =
+        submissionContext.getAMContainerSpec().getTokensConf();
+    if (tokenConf != null) {
+      int maxSize = getConfig()
+          .getInt(YarnConfiguration.RM_DELEGATION_TOKEN_MAX_CONF_SIZE,
+              YarnConfiguration.DEFAULT_RM_DELEGATION_TOKEN_MAX_CONF_SIZE_BYTES);
+      LOG.info("Using app provided configurations for delegation token renewal,"
+          + " total size = " + tokenConf.capacity());
+      if (tokenConf.capacity() > maxSize) {
+        throw new YarnException(
+            "Exceed " + YarnConfiguration.RM_DELEGATION_TOKEN_MAX_CONF_SIZE
+                + " = " + maxSize + " bytes, current conf size = "
+                + tokenConf.capacity() + " bytes.");
+      }
+    }
     if (submissionContext.getQueue() == null) {
       submissionContext.setQueue(YarnConfiguration.DEFAULT_QUEUE_NAME);
     }
@@ -623,8 +639,7 @@ public class ClientRMService extends AbstractService implements
       RMAuditLogger.logSuccess(user, AuditConstants.SUBMIT_APP_REQUEST,
           "ClientRMService", applicationId, callerContext);
     } catch (YarnException e) {
-      LOG.info("Exception in submitting application with id " +
-          applicationId.getId(), e);
+      LOG.info("Exception in submitting " + applicationId, e);
       RMAuditLogger.logFailure(user, AuditConstants.SUBMIT_APP_REQUEST,
           e.getMessage(), "ClientRMService",
           "Exception in submitting application", applicationId, callerContext);
