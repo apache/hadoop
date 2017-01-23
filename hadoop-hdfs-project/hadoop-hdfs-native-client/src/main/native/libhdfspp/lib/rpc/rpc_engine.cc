@@ -150,7 +150,8 @@ RpcEngine::RpcEngine(::asio::io_service *io_service, const Options &options,
       protocol_version_(protocol_version),
       call_id_(0),
       retry_timer(*io_service),
-      event_handlers_(std::make_shared<LibhdfsEvents>())
+      event_handlers_(std::make_shared<LibhdfsEvents>()),
+      connect_canceled_(false)
 {
   LOG_DEBUG(kRPC, << "RpcEngine::RpcEngine called");
 
@@ -180,6 +181,16 @@ void RpcEngine::Connect(const std::string &cluster_name,
 
   conn_ = InitializeConnection();
   conn_->Connect(last_endpoints_, auth_info_, handler);
+}
+
+bool RpcEngine::CancelPendingConnect() {
+  if(connect_canceled_) {
+    LOG_DEBUG(kRPC, << "RpcEngine@" << this << "::CancelPendingConnect called more than once");
+    return false;
+  }
+
+  connect_canceled_ = true;
+  return true;
 }
 
 void RpcEngine::Shutdown() {
@@ -249,6 +260,14 @@ void RpcEngine::AsyncRpc(
   std::lock_guard<std::mutex> state_lock(engine_state_lock_);
 
   LOG_TRACE(kRPC, << "RpcEngine::AsyncRpc called");
+
+  // In case user-side code isn't checking the status of Connect before doing RPC
+  if(connect_canceled_) {
+    io_service_->post(
+        [handler](){ handler(Status::Canceled()); }
+    );
+    return;
+  }
 
   if (!conn_) {
     conn_ = InitializeConnection();

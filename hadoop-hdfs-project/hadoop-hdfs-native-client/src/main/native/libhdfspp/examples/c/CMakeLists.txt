@@ -17,3 +17,4 @@
 #
 
 add_subdirectory(cat)
+add_subdirectory(connect_cancel)

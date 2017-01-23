@@ -353,6 +353,8 @@ class RpcEngine : public LockFreeRpcEngine {
                const std::vector<ResolvedNamenodeInfo> servers,
                RpcCallback &handler);
 
+  bool CancelPendingConnect();
+
   void AsyncRpc(const std::string &method_name,
                 const ::google::protobuf::MessageLite *req,
                 const std::shared_ptr<::google::protobuf::MessageLite> &resp,
@@ -417,6 +419,9 @@ private:
   std::shared_ptr<LibhdfsEvents> event_handlers_;
 
   std::mutex engine_state_lock_;
+
+  // Once Connect has been canceled there is no going back
+  bool connect_canceled_;
 
   // Keep endpoint info for all HA connections, a non-null ptr indicates
   // that HA info was found in the configuation.

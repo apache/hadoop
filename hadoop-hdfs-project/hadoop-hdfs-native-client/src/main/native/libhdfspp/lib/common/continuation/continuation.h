@@ -131,18 +131,6 @@ template <class State> inline void Pipeline<State>::Run(UserHandler &&handler) {
   Schedule(Status::OK());
 }
 
-template <class Handler> class BindContinuation : public Continuation {
-public:
-  BindContinuation(const Handler &handler) : handler_(handler) {}
-  virtual void Run(const Next &next) override { handler_(next); }
-
-private:
-  Handler handler_;
-};
-
-template <class Handler> static inline Continuation *Bind(const Handler &handler) {
-  return new BindContinuation<Handler>(handler);
-}
 }
 }
 

@@ -46,6 +46,8 @@ namespace hdfs {
 class FileSystemImpl : public FileSystem {
 public:
   MEMCHECKED_CLASS(FileSystemImpl)
+  typedef std::function<void(const Status &, FileSystem *)> ConnectCallback;
+
   explicit FileSystemImpl(IoService *&io_service, const std::string& user_name, const Options &options);
   explicit FileSystemImpl(std::shared_ptr<IoService>, const std::string& user_name, const Options &options);
   ~FileSystemImpl() override;
@@ -60,6 +62,9 @@ public:
   virtual void ConnectToDefaultFs(
       const std::function<void(const Status &, FileSystem *)> &handler) override;
   virtual Status ConnectToDefaultFs() override;
+
+  /* Cancel connection if FS is in the middle of one */
+  virtual bool CancelPendingConnect() override;
 
   virtual void Open(const std::string &path,
                     const std::function<void(const Status &, FileHandle *)>
@@ -196,6 +201,9 @@ private:
   std::string cluster_name_;
   NameNodeOperations nn_;
   std::shared_ptr<BadDataNodeTracker> bad_node_tracker_;
+
+  // Keep connect callback around in case it needs to be canceled
+  SwappableCallbackHolder<ConnectCallback> connect_callback_;
 
   /**
    * Runtime event monitoring handlers.

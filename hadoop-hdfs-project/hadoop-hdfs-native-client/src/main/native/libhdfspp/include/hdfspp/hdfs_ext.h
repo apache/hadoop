@@ -299,6 +299,7 @@ int hdfsPreAttachFileMonitor(libhdfspp_file_event_callback handler, int64_t cook
  *                    objects; NULL on error or empty result.
  *                    errno is set to non-zero on error or zero on success.
  **/
+LIBHDFS_EXTERNAL
 hdfsFileInfo * hdfsFind(hdfsFS fs, const char* path, const char* name, uint32_t * numEntries);
 
 
@@ -314,6 +315,7 @@ hdfsFileInfo * hdfsFind(hdfsFS fs, const char* path, const char* name, uint32_t 
  *  @param name    Name to be given to the created snapshot (may be NULL)
  *  @return        0 on success, corresponding errno on failure
  **/
+LIBHDFS_EXTERNAL
 int hdfsCreateSnapshot(hdfsFS fs, const char* path, const char* name);
 
 /**
@@ -324,6 +326,7 @@ int hdfsCreateSnapshot(hdfsFS fs, const char* path, const char* name);
  *  @param name    Name of the snapshot to be deleted (must be non-blank)
  *  @return        0 on success, corresponding errno on failure
  **/
+LIBHDFS_EXTERNAL
 int hdfsDeleteSnapshot(hdfsFS fs, const char* path, const char* name);
 
 /**
@@ -333,6 +336,7 @@ int hdfsDeleteSnapshot(hdfsFS fs, const char* path, const char* name);
  *  @param path    Path to the directory to be made snapshottable (must be non-blank)
  *  @return        0 on success, corresponding errno on failure
  **/
+LIBHDFS_EXTERNAL
 int hdfsAllowSnapshot(hdfsFS fs, const char* path);
 
 /**
@@ -342,7 +346,34 @@ int hdfsAllowSnapshot(hdfsFS fs, const char* path);
  *  @param path    Path to the directory to be made non-snapshottable (must be non-blank)
  *  @return        0 on success, corresponding errno on failure
  **/
+LIBHDFS_EXTERNAL
 int hdfsDisallowSnapshot(hdfsFS fs, const char* path);
+
+/**
+ * Create a FileSystem based on the builder but don't connect
+ * @param bld     Used to populate config options in the same manner as hdfsBuilderConnect.
+ *                Does not free builder.
+ **/
+LIBHDFS_EXTERNAL
+hdfsFS hdfsAllocateFileSystem(struct hdfsBuilder *bld);
+
+/**
+ * Connect a FileSystem created with hdfsAllocateFileSystem
+ * @param fs      A disconnected FS created with hdfsAllocateFileSystem
+ * @param bld     The same or exact copy of the builder used for Allocate, we still need a few fields.
+ *                Does not free builder.
+ * @return        0 on success, corresponding errno on failure
+ **/
+LIBHDFS_EXTERNAL
+int hdfsConnectAllocated(hdfsFS fs, struct hdfsBuilder *bld);
+
+/**
+ * Cancel a pending connection on a FileSystem
+ * @param fs      A fs in the process of connecting using hdfsConnectAllocated in another thread.
+ * @return        0 on success, corresponding errno on failure
+ **/
+LIBHDFS_EXTERNAL
+int hdfsCancelPendingConnection(hdfsFS fs);
 
 
 #ifdef __cplusplus

@@ -217,6 +217,12 @@ class FileSystem {
   virtual Status ConnectToDefaultFs() = 0;
 
   /**
+   * Cancels any attempts to connect to the HDFS cluster.
+   * FileSystem is expected to be destroyed after invoking this.
+   */
+  virtual bool CancelPendingConnect() = 0;
+
+  /**
    * Open a file on HDFS. The call issues an RPC to the NameNode to
    * gather the locations of all blocks in the file and to return a
    * new instance of the @ref InputStream object.

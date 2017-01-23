@@ -71,6 +71,17 @@ std::vector<std::string> SplitOnComma(const std::string &s, bool include_empty_s
   return res;
 }
 
+std::string RemoveSpaces(const std::string &str) {
+  std::string res;
+  for(unsigned int i=0; i<str.size(); i++) {
+    char curr = str[i];
+    if(curr != ' ') {
+      res += curr;
+    }
+  }
+  return res;
+}
+
 // Prepend hdfs:// to string if there isn't already a scheme
 // Converts unset optional into empty string
 std::string PrependHdfsScheme(optional<std::string> str) {
@@ -92,6 +103,8 @@ struct ha_parse_error : public std::exception {
 };
 
 std::vector<NamenodeInfo> HdfsConfiguration::LookupNameService(const std::string &nameservice) {
+  LOG_TRACE(kRPC, << "HDFSConfiguration@" << this << "::LookupNameService( nameservice=" << nameservice<< " ) called");
+
   std::vector<NamenodeInfo> namenodes;
   try {
     // Find namenodes that belong to nameservice
@@ -104,8 +117,10 @@ std::vector<NamenodeInfo> HdfsConfiguration::LookupNameService(const std::string
       else
         throw ha_parse_error("unable to find " + service_nodes);
 
-      for(auto it=namenode_ids.begin(); it != namenode_ids.end(); it++)
-        LOG_INFO(kRPC, << "Namenode: " << *it);
+      for(unsigned int i=0; i<namenode_ids.size(); i++) {
+        namenode_ids[i] = RemoveSpaces(namenode_ids[i]);
+        LOG_INFO(kRPC, << "Namenode: " << namenode_ids[i]);
+      }
     }
 
     // should this error if we only find 1 NN?
@@ -123,7 +138,11 @@ std::vector<NamenodeInfo> HdfsConfiguration::LookupNameService(const std::string
       }
 
       URI uri = node_uri.value();
-      LOG_INFO(kRPC, << "Read the following HA Namenode URI from config" << uri.GetDebugString());
+      if(uri.str() == "") {
+        LOG_WARN(kRPC, << "Attempted to read info for nameservice " << nameservice << " node " << dom_node_name << " but didn't find anything.")
+      } else {
+        LOG_INFO(kRPC, << "Read the following HA Namenode URI from config" << uri.GetDebugString());
+      }
 
       NamenodeInfo node(nameservice, *node_id, uri);
       namenodes.push_back(node);

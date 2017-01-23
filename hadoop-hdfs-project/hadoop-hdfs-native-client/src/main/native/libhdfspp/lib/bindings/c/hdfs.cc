@@ -332,6 +332,94 @@ hdfsFS doHdfsConnect(optional<std::string> nn, optional<tPort> port, optional<st
   }
 }
 
+hdfsFS hdfsAllocateFileSystem(struct hdfsBuilder *bld) {
+  // Same idea as the first half of doHdfsConnect, but return the wrapped FS before
+  // connecting.
+  try {
+    errno = 0;
+    std::shared_ptr<IoService> io_service = IoService::MakeShared();
+
+    int io_thread_count = bld->config.GetOptions().io_threads_;
+    if(io_thread_count < 1) {
+      io_service->InitDefaultWorkers();
+    } else {
+      io_service->InitWorkers(io_thread_count);
+    }
+
+    FileSystem *fs = FileSystem::New(io_service, bld->user.value_or(""), bld->config.GetOptions());
+    if (!fs) {
+      ReportError(ENODEV, "Could not create FileSystem object");
+      return nullptr;
+    }
+
+    if (fsEventCallback) {
+      fs->SetFsEventCallback(fsEventCallback.value());
+    }
+
+    return new hdfs_internal(fs);
+  } catch (const std::exception &e) {
+    ReportException(e);
+    return nullptr;
+  } catch (...) {
+    ReportCaughtNonException();
+    return nullptr;
+  }
+  return nullptr;
+}
+
+int hdfsConnectAllocated(hdfsFS fs, struct hdfsBuilder *bld) {
+  if(!CheckSystem(fs)) {
+    return ENODEV;
+  }
+
+  if(!bld) {
+    ReportError(ENODEV, "No hdfsBuilder object supplied");
+    return ENODEV;
+  }
+
+  // Get C++ FS to do connect
+  FileSystem *fsImpl = fs->get_impl();
+  if(!fsImpl) {
+    ReportError(ENODEV, "Null FileSystem implementation");
+    return ENODEV;
+  }
+
+  // Unpack the required bits of the hdfsBuilder
+  optional<std::string> nn = bld->overrideHost;
+  optional<tPort> port = bld->overridePort;
+  optional<std::string> user = bld->user;
+
+  // try-catch in case some of the third-party stuff throws
+  try {
+    Status status;
+    if (nn || port) {
+      if (!port) {
+        port = kDefaultPort;
+      }
+      std::string port_as_string = std::to_string(*port);
+      status = fsImpl->Connect(nn.value_or(""), port_as_string);
+    } else {
+      status = fsImpl->ConnectToDefaultFs();
+    }
+
+    if (!status.ok()) {
+      Error(status);
+      return ENODEV;
+    }
+
+    // 0 to indicate a good connection
+    return 0;
+  } catch (const std::exception & e) {
+    ReportException(e);
+    return ENODEV;
+  } catch (...) {
+    ReportCaughtNonException();
+    return ENODEV;
+  }
+
+  return 0;
+}
+
 hdfsFS hdfsConnect(const char *nn, tPort port) {
   return hdfsConnectAsUser(nn, port, "");
 }
@@ -348,6 +436,26 @@ hdfsFS hdfsConnectAsUserNewInstance(const char* nn, tPort port, const char *user
 hdfsFS hdfsConnectNewInstance(const char* nn, tPort port) {
   //libhdfspp always returns a new instance
   return hdfsConnectAsUser(nn, port, "");
+}
+
+int hdfsCancelPendingConnection(hdfsFS fs) {
+  // todo: stick an enum in hdfs_internal to check the connect state
+  if(!CheckSystem(fs)) {
+    return ENODEV;
+  }
+
+  FileSystem *fsImpl = fs->get_impl();
+  if(!fsImpl) {
+    ReportError(ENODEV, "Null FileSystem implementation");
+    return ENODEV;
+  }
+
+  bool canceled = fsImpl->CancelPendingConnect();
+  if(canceled) {
+    return 0;
+  } else {
+    return EINTR;
+  }
 }
 
 int hdfsDisconnect(hdfsFS fs) {
