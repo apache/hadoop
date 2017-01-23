@@ -1120,9 +1120,12 @@ public class RMAppImpl implements RMApp, Recoverable {
         try {
           app.rmContext.getDelegationTokenRenewer()
               .addApplicationAsyncDuringRecovery(app.getApplicationId(),
-                  app.parseCredentials(),
+                  BuilderUtils.parseCredentials(app.submissionContext),
                   app.submissionContext.getCancelTokensWhenComplete(),
-                  app.getUser());
+                  app.getUser(),
+                  BuilderUtils.parseTokensConf(app.submissionContext));
+          // set the memory free
+          app.submissionContext.getAMContainerSpec().setTokensConf(null);
         } catch (Exception e) {
           String msg = "Failed to fetch user credentials from application:"
               + e.getMessage();
@@ -1175,6 +1178,8 @@ public class RMAppImpl implements RMApp, Recoverable {
           app.submissionContext, false, app.applicationPriority));
       // send the ATS create Event
       app.sendATSCreateEvent();
+      // Set the memory free after submission context is persisted
+      app.submissionContext.getAMContainerSpec().setTokensConf(null);
     }
   }
 
@@ -1490,6 +1495,8 @@ public class RMAppImpl implements RMApp, Recoverable {
           .applicationFinished(app, finalState);
       app.rmContext.getSystemMetricsPublisher()
           .appFinished(app, finalState, app.finishTime);
+      // set the memory free
+      app.submissionContext.getAMContainerSpec().setTokensConf(null);
     };
   }
 
@@ -1697,18 +1704,6 @@ public class RMAppImpl implements RMApp, Recoverable {
   @Override
   public ResourceRequest getAMResourceRequest() {
     return this.amReq; 
-  }
-
-  protected Credentials parseCredentials() throws IOException {
-    Credentials credentials = new Credentials();
-    DataInputByteBuffer dibb = new DataInputByteBuffer();
-    ByteBuffer tokens = submissionContext.getAMContainerSpec().getTokens();
-    if (tokens != null) {
-      dibb.reset(tokens);
-      credentials.readTokenStorageStream(dibb);
-      tokens.rewind();
-    }
-    return credentials;
   }
 
   @Override

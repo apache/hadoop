@@ -17,18 +17,14 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -299,14 +295,14 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // constructor.
     RMAppImpl application = createAndPopulateNewRMApp(
         submissionContext, submitTime, user, false, -1);
-    Credentials credentials = null;
     try {
-      credentials = parseCredentials(submissionContext);
       if (UserGroupInformation.isSecurityEnabled()) {
         this.rmContext.getDelegationTokenRenewer()
-            .addApplicationAsync(applicationId, credentials,
+            .addApplicationAsync(applicationId,
+                BuilderUtils.parseCredentials(submissionContext),
                 submissionContext.getCancelTokensWhenComplete(),
-                application.getUser());
+                application.getUser(),
+                BuilderUtils.parseTokensConf(submissionContext));
       } else {
         // Dispatcher is not yet started at this time, so these START events
         // enqueued should be guaranteed to be first processed when dispatcher
@@ -315,11 +311,10 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
             .handle(new RMAppEvent(applicationId, RMAppEventType.START));
       }
     } catch (Exception e) {
-      LOG.warn("Unable to parse credentials.", e);
+      LOG.warn("Unable to parse credentials for " + applicationId, e);
       // Sending APP_REJECTED is fine, since we assume that the
       // RMApp is in NEW state and thus we haven't yet informed the
       // scheduler about the existence of the application
-      assert application.getState() == RMAppState.NEW;
       this.rmContext.getDispatcher().getEventHandler()
           .handle(new RMAppEvent(applicationId,
               RMAppEventType.APP_REJECTED, e.getMessage()));
@@ -515,20 +510,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     
     return null;
   }
-  
-  protected Credentials parseCredentials(
-      ApplicationSubmissionContext application) throws IOException {
-    Credentials credentials = new Credentials();
-    DataInputByteBuffer dibb = new DataInputByteBuffer();
-    ByteBuffer tokens = application.getAMContainerSpec().getTokens();
-    if (tokens != null) {
-      dibb.reset(tokens);
-      credentials.readTokenStorageStream(dibb);
-      tokens.rewind();
-    }
-    return credentials;
-  }
-  
+
   @Override
   public void recover(RMState state) throws Exception {
     RMStateStore store = rmContext.getStateStore();

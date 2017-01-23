@@ -704,6 +704,16 @@
   </property>
 
   <property>
+    <description>Maximum size in bytes for configurations that can be provided
+      by application to RM for delegation token renewal.
+      By experiment, it's roughly 128 bytes per key-value pair.
+      The default value 12800 allows roughly 100 configs, may be less.
+    </description>
+    <name>yarn.resourcemanager.delegation-token.max-conf-size-bytes</name>
+    <value>12800</value>
+  </property>
+
+  <property>
   <description>If true, ResourceManager will have proxy-user privileges.
     Use case: In a secure cluster, YARN requires the user hdfs delegation-tokens to
     do localization and log-aggregation on behalf of the user. If this is set to true,

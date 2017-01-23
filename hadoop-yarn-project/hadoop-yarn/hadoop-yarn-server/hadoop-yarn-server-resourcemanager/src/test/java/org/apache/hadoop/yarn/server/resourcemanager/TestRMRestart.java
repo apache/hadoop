@@ -112,6 +112,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
@@ -1745,32 +1746,28 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     memStore.init(conf);
 
     MockRM rm1 = new TestSecurityMockRM(conf, memStore) {
-      @Override
-      protected RMAppManager createRMAppManager() {
-        return new TestRMAppManager(this.rmContext, this.scheduler,
-          this.masterService, this.applicationACLsManager, conf);
+      class TestDelegationTokenRenewer extends DelegationTokenRenewer {
+        public void addApplicationAsync(ApplicationId applicationId, Credentials ts,
+            boolean shouldCancelAtEnd, String user, Configuration appConf) {
+          throw new RuntimeException("failed to submit app");
+        }
       }
-
-      class TestRMAppManager extends RMAppManager {
-
-        public TestRMAppManager(RMContext context, YarnScheduler scheduler,
-            ApplicationMasterService masterService,
-            ApplicationACLsManager applicationACLsManager, Configuration conf) {
-          super(context, scheduler, masterService, applicationACLsManager, conf);
-        }
-
-        @Override
-        protected Credentials parseCredentials(
-            ApplicationSubmissionContext application) throws IOException {
-          throw new IOException("Parsing credential error.");
-        }
+      @Override
+      protected DelegationTokenRenewer createDelegationTokenRenewer() {
+        return new TestDelegationTokenRenewer();
       }
     };
     rm1.start();
-    RMApp app1 =
-        rm1.submitApp(200, "name", "user",
+    RMApp app1 = null;
+    try {
+       app1 = rm1.submitApp(200, "name", "user",
           new HashMap<ApplicationAccessType, String>(), false, "default", -1,
           null, "MAPREDUCE", false);
+      Assert.fail();
+    } catch (Exception e) {
+
+    }
+    app1 = rm1.getRMContext().getRMApps().values().iterator().next();
     rm1.waitForState(app1.getApplicationId(), RMAppState.FAILED);
     // Check app staet is saved in state store.
     Assert.assertEquals(RMAppState.FAILED, memStore.getState()
