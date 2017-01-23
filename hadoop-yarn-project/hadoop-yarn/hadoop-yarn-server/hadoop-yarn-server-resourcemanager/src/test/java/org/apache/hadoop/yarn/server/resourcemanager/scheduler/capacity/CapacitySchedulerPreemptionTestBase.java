@@ -46,7 +46,7 @@ public class CapacitySchedulerPreemptionTestBase {
 
   final int GB = 1024;
 
-  Configuration conf;
+  CapacitySchedulerConfiguration conf;
 
   RMNodeLabelsManager mgr;
 
@@ -54,13 +54,15 @@ public class CapacitySchedulerPreemptionTestBase {
 
   @Before
   void setUp() throws Exception {
-    conf = new YarnConfiguration();
+    conf = new CapacitySchedulerConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
     conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
     conf.setClass(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
         ProportionalCapacityPreemptionPolicy.class, SchedulingEditPolicy.class);
-    conf = TestUtils.getConfigurationWithMultipleQueues(this.conf);
+    conf = (CapacitySchedulerConfiguration) TestUtils
+        .getConfigurationWithMultipleQueues(this.conf);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, 100 * GB);
 
     // Set preemption related configurations
     conf.setInt(CapacitySchedulerConfiguration.PREEMPTION_WAIT_TIME_BEFORE_KILL,
@@ -145,5 +147,19 @@ public class CapacitySchedulerPreemptionTestBase {
     }
 
     Assert.fail();
+  }
+
+  public void checkNumberOfPreemptionCandidateFromApp(
+      ProportionalCapacityPreemptionPolicy policy, int expected,
+      ApplicationAttemptId attemptId) {
+    int total = 0;
+
+    for (RMContainer rmContainer : policy.getToPreemptContainers().keySet()) {
+      if (rmContainer.getApplicationAttemptId().equals(attemptId)) {
+        ++ total;
+      }
+    }
+
+    Assert.assertEquals(expected, total);
   }
 }

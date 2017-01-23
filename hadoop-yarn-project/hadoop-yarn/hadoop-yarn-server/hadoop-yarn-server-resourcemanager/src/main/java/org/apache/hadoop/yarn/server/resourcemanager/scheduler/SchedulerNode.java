@@ -407,7 +407,7 @@ public abstract class SchedulerNode {
    * Set the reserved container in the node.
    * @param reservedContainer Reserved container in the node.
    */
-  protected synchronized void
+  public synchronized void
   setReservedContainer(RMContainer reservedContainer) {
     this.reservedContainer = reservedContainer;
   }
