@@ -202,6 +202,7 @@ void FileSystemImpl::Connect(const std::string &server,
   LOG_INFO(kFileSystem, << "FileSystemImpl::Connect(" << FMT_THIS_ADDR
                         << ", server=" << server << ", service="
                         << service << ") called");
+  connect_callback_.SetCallback(handler);
 
   /* IoService::New can return nullptr */
   if (!io_service_) {
@@ -236,8 +237,8 @@ void FileSystemImpl::Connect(const std::string &server,
   }
 
 
-  nn_.Connect(cluster_name_, /*server, service*/ resolved_namenodes, [this, handler](const Status & s) {
-    handler(s, this);
+  nn_.Connect(cluster_name_, /*server, service*/ resolved_namenodes, [this](const Status & s) {
+    connect_callback_.GetCallback()(s, this);
   });
 }
 
@@ -284,6 +285,43 @@ int FileSystemImpl::WorkerThreadCount() {
   } else {
     return io_service_->get_worker_thread_count();
   }
+}
+
+bool FileSystemImpl::CancelPendingConnect() {
+  if(!connect_callback_.IsCallbackSet()) {
+    LOG_DEBUG(kFileSystem, << "FileSystemImpl@" << this << "::CancelPendingConnect called before Connect started");
+    return false;
+  }
+  if(connect_callback_.IsCallbackAccessed()) {
+    LOG_DEBUG(kFileSystem, << "FileSystemImpl@" << this << "::CancelPendingConnect called after Connect completed");
+    return false;
+  }
+
+  // First invoke callback, then do proper teardown in RpcEngine and RpcConnection
+  ConnectCallback noop_callback = [](const Status &stat, FileSystem *fs) {
+    LOG_DEBUG(kFileSystem, << "Dummy callback invoked for canceled FileSystem@" << fs << "::Connect with status: " << stat.ToString());
+  };
+
+  bool callback_swapped = false;
+  ConnectCallback original_callback = connect_callback_.AtomicSwapCallback(noop_callback, callback_swapped);
+
+  if(callback_swapped) {
+    // Take original callback and invoke it as if it was canceled.
+    LOG_DEBUG(kFileSystem, << "Swapped in dummy callback.  Invoking connect callback with canceled status.");
+    std::function<void(void)> wrapped_callback = [original_callback, this](){
+      // handling code expected to check status before dereferenceing 'this'
+      original_callback(Status::Canceled(), this);
+    };
+    io_service_->PostTask(wrapped_callback);
+  } else {
+    LOG_INFO(kFileSystem, << "Unable to cancel FileSystem::Connect.  It hasn't been invoked yet or may have already completed.")
+    return false;
+  }
+
+  // Now push cancel down to clean up where possible and make sure the RpcEngine
+  // won't try to do retries in the background.  The rest of the memory cleanup
+  // happens when this FileSystem is deleted by the user.
+  return nn_.CancelPendingConnect();
 }
 
 void FileSystemImpl::Open(

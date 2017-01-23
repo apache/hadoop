@@ -16,7 +16,20 @@
 # limitations under the License.
 #
 
-add_subdirectory(cat)
-add_subdirectory(gendirs)
-add_subdirectory(find)
-add_subdirectory(connect_cancel)
+# Default LIBHDFSPP_DIR to the default install location.  You can override
+#    it by add -DLIBHDFSPP_DIR=... to your cmake invocation
+set(LIBHDFSPP_DIR CACHE STRING ${CMAKE_INSTALL_PREFIX})
+
+include_directories( ${LIBHDFSPP_DIR}/include )
+link_directories( ${LIBHDFSPP_DIR}/lib )
+
+add_executable(connect_cancel_c connect_cancel.c)
+target_link_libraries(connect_cancel_c hdfspp uriparser2)
+
+# Several examples in different languages need to produce executables with
+# same names. To allow executables with same names we keep their CMake
+# names different, but specify their executable names as follows:
+set_target_properties( connect_cancel_c
+    PROPERTIES
+    OUTPUT_NAME "connect_cancel_c"
+)

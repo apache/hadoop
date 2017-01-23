@@ -52,6 +52,8 @@ public:
                const std::vector<ResolvedNamenodeInfo> &servers,
                std::function<void(const Status &)> &&handler);
 
+  bool CancelPendingConnect();
+
   void GetBlockLocations(const std::string & path, uint64_t offset, uint64_t length,
     std::function<void(const Status &, std::shared_ptr<const struct FileInfo>)> handler);
 

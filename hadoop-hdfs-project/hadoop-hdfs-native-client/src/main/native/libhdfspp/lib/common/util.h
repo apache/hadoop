@@ -19,6 +19,7 @@
 #define LIB_COMMON_UTIL_H_
 
 #include "hdfspp/status.h"
+#include "common/logging.h"
 
 #include <sstream>
 #include <mutex>
@@ -112,6 +113,73 @@ inline asio::ip::tcp::socket *get_asio_socket_ptr<asio::ip::tcp::socket>
 
 //Check if the high bit is set
 bool IsHighBitSet(uint64_t num);
+
+
+// Provide a way to do an atomic swap on a callback.
+// SetCallback, AtomicSwapCallback, and GetCallback can only be called once each.
+// AtomicSwapCallback and GetCallback must only be called after SetCallback.
+//
+// We can't throw on error, and since the callback is templated it's tricky to
+// generate generic dummy callbacks.  Complain loudly in the log and get good
+// test coverage.  It shouldn't be too hard to avoid invalid states.
+template <typename CallbackType>
+class SwappableCallbackHolder {
+ private:
+  std::mutex state_lock_;
+  CallbackType callback_;
+  bool callback_set_      = false;
+  bool callback_swapped_  = false;
+  bool callback_accessed_ = false;
+ public:
+  bool IsCallbackSet() {
+    mutex_guard swap_lock(state_lock_);
+    return callback_set_;
+  }
+
+  bool IsCallbackAccessed() {
+    mutex_guard swap_lock(state_lock_);
+    return callback_accessed_;
+  }
+
+  bool SetCallback(const CallbackType& callback) {
+    mutex_guard swap_lock(state_lock_);
+    if(callback_set_ || callback_swapped_ || callback_accessed_) {
+      LOG_ERROR(kAsyncRuntime, << "SetCallback violates access invariants.")
+      return false;
+    }
+    callback_ = callback;
+    callback_set_ = true;
+    return true;
+  }
+
+  CallbackType AtomicSwapCallback(const CallbackType& replacement, bool& swapped) {
+    mutex_guard swap_lock(state_lock_);
+    if(!callback_set_ || callback_swapped_) {
+      LOG_ERROR(kAsyncRuntime, << "AtomicSwapCallback violates access invariants.")
+      swapped = false;
+    } else if (callback_accessed_) {
+      // Common case where callback has been invoked but caller may not know
+      LOG_DEBUG(kAsyncRuntime, << "AtomicSwapCallback called after callback has been accessed");
+      return false;
+    }
+
+    CallbackType old = callback_;
+    callback_ = replacement;
+    callback_swapped_ = true;
+    swapped = true;
+    return old;
+  }
+  CallbackType GetCallback() {
+    mutex_guard swap_lock(state_lock_);
+    if(!callback_set_ || callback_accessed_) {
+      LOG_ERROR(kAsyncRuntime, << "GetCallback violates access invariants.")
+    }
+    callback_accessed_ = true;
+    return callback_;
+  }
+};
+
+
 }
 
 #endif
