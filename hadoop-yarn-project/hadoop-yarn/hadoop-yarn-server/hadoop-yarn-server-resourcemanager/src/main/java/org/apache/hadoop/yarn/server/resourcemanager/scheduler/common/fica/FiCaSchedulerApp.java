@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEven
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerReservedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
@@ -96,13 +97,13 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
   private final Set<ContainerId> containersToPreempt =
     new HashSet<ContainerId>();
-    
+
   private CapacityHeadroomProvider headroomProvider;
 
   private ResourceCalculator rc = new DefaultResourceCalculator();
 
   private ResourceScheduler scheduler;
-  
+
   private AbstractContainerAllocator containerAllocator;
 
   /**
@@ -113,7 +114,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
   private Map<ContainerId, SchedContainerChangeRequest> toBeRemovedIncRequests =
       new ConcurrentHashMap<>();
 
-  public FiCaSchedulerApp(ApplicationAttemptId applicationAttemptId, 
+  public FiCaSchedulerApp(ApplicationAttemptId applicationAttemptId,
       String user, Queue queue, ActiveUsersManager activeUsersManager,
       RMContext rmContext) {
     this(applicationAttemptId, user, queue, activeUsersManager, rmContext,
@@ -801,7 +802,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     }
     return null;
   }
-  
+
   public void setHeadroomProvider(
     CapacityHeadroomProvider headroomProvider) {
     try {
@@ -811,7 +812,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       writeLock.unlock();
     }
   }
-  
+
   @Override
   public Resource getHeadroom() {
     try {
@@ -825,7 +826,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     }
 
   }
-  
+
   @Override
   public void transferStateFromPreviousAttempt(
       SchedulerApplicationAttempt appAttempt) {
@@ -837,7 +838,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       writeLock.unlock();
     }
   }
-  
+
   public boolean reserveIncreasedContainer(SchedulerRequestKey schedulerKey,
       FiCaSchedulerNode node,
       RMContainer rmContainer, Resource reservedResource) {
@@ -1100,6 +1101,87 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       } finally {
         writeLock.unlock();
       }
+    }
+  }
+
+  /**
+   * Move reservation from one node to another
+   * Comparing to unreserve container on source node and reserve a new
+   * container on target node. This method will not create new RMContainer
+   * instance. And this operation is atomic.
+   *
+   * @param reservedContainer to be moved reserved container
+   * @param sourceNode source node
+   * @param targetNode target node
+   *
+   * @return succeeded or not
+   */
+  public boolean moveReservation(RMContainer reservedContainer,
+      FiCaSchedulerNode sourceNode, FiCaSchedulerNode targetNode) {
+    try {
+      writeLock.lock();
+      if (!sourceNode.getPartition().equals(targetNode.getPartition())) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+              "Failed to move reservation, two nodes are in different partition");
+        }
+        return false;
+      }
+
+      // Update reserved container to node map
+      Map<NodeId, RMContainer> map = reservedContainers.get(
+          reservedContainer.getReservedSchedulerKey());
+      if (null == map) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Cannot find reserved container map.");
+        }
+        return false;
+      }
+
+      // Check if reserved container changed
+      if (sourceNode.getReservedContainer() != reservedContainer) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("To-be-moved container already updated.");
+        }
+        return false;
+      }
+
+      // Check if target node is empty, acquires lock of target node to make sure
+      // reservation happens transactional
+      synchronized (targetNode){
+        if (targetNode.getReservedContainer() != null) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Target node is already occupied before moving");
+          }
+        }
+
+        try {
+          targetNode.reserveResource(this,
+              reservedContainer.getReservedSchedulerKey(), reservedContainer);
+        } catch (IllegalStateException e) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Reserve on target node failed, e=", e);
+          }
+          return false;
+        }
+
+        // Set source node's reserved container to null
+        sourceNode.setReservedContainer(null);
+        map.remove(sourceNode.getNodeID());
+
+        // Update reserved container
+        reservedContainer.handle(
+            new RMContainerReservedEvent(reservedContainer.getContainerId(),
+                reservedContainer.getReservedResource(), targetNode.getNodeID(),
+                reservedContainer.getReservedSchedulerKey()));
+
+        // Add to target node
+        map.put(targetNode.getNodeID(), reservedContainer);
+
+        return true;
+      }
+    } finally {
+      writeLock.unlock();
     }
   }
 }

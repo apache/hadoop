@@ -18,19 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.StringTokenizer;
-
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -44,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.ReservationACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -51,6 +41,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingP
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AppPriorityACLConfigurationParser.AppPriorityACLKeyType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.PriorityUtilizationQueueOrderingPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.QueueOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
@@ -59,7 +51,17 @@ import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.collect.ImmutableSet;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.StringTokenizer;
 
 public class CapacitySchedulerConfiguration extends ReservationSchedulerConfiguration {
 
@@ -127,14 +129,21 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Private
   public static final String MAXIMUM_ALLOCATION_VCORES =
       "maximum-allocation-vcores";
-  
+
+  /**
+   * Ordering policy of queues
+   */
   public static final String ORDERING_POLICY = "ordering-policy";
-  
-  public static final String FIFO_ORDERING_POLICY = "fifo";
 
-  public static final String FAIR_ORDERING_POLICY = "fair";
+  /*
+   * Ordering policy inside a leaf queue to sort apps
+   */
+  public static final String FIFO_APP_ORDERING_POLICY = "fifo";
 
-  public static final String DEFAULT_ORDERING_POLICY = FIFO_ORDERING_POLICY;
+  public static final String FAIR_APP_ORDERING_POLICY = "fair";
+
+  public static final String DEFAULT_APP_ORDERING_POLICY =
+      FIFO_APP_ORDERING_POLICY;
   
   @Private
   public static final int DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS = 10000;
@@ -298,6 +307,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     String queueName = PREFIX + queue + DOT;
     return queueName;
   }
+
+  static String getQueueOrderingPolicyPrefix(String queue) {
+    String queueName = PREFIX + queue + DOT + ORDERING_POLICY + DOT;
+    return queueName;
+  }
   
   private String getNodeLabelPrefix(String queue, String label) {
     if (label.equals(CommonNodeLabelsManager.NO_LABEL)) {
@@ -400,20 +414,23 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         DEFAULT_USER_LIMIT);
     return userLimit;
   }
-  
+
+  // TODO (wangda): We need to better distinguish app ordering policy and queue
+  // ordering policy's classname / configuration options, etc. And dedup code
+  // if possible.
   @SuppressWarnings("unchecked")
-  public <S extends SchedulableEntity> OrderingPolicy<S> getOrderingPolicy(
+  public <S extends SchedulableEntity> OrderingPolicy<S> getAppOrderingPolicy(
       String queue) {
   
-    String policyType = get(getQueuePrefix(queue) + ORDERING_POLICY, 
-      DEFAULT_ORDERING_POLICY);
+    String policyType = get(getQueuePrefix(queue) + ORDERING_POLICY,
+        DEFAULT_APP_ORDERING_POLICY);
     
     OrderingPolicy<S> orderingPolicy;
     
-    if (policyType.trim().equals(FIFO_ORDERING_POLICY)) {
+    if (policyType.trim().equals(FIFO_APP_ORDERING_POLICY)) {
        policyType = FifoOrderingPolicy.class.getName();
     }
-    if (policyType.trim().equals(FAIR_ORDERING_POLICY)) {
+    if (policyType.trim().equals(FAIR_APP_ORDERING_POLICY)) {
        policyType = FairOrderingPolicy.class.getName();
     }
     try {
@@ -732,6 +749,20 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
     return Resources.createResource(maximumMemory, maximumCores);
+  }
+
+  @Private
+  public Priority getQueuePriority(String queue) {
+    String queuePolicyPrefix = getQueuePrefix(queue);
+    Priority pri = Priority.newInstance(
+        getInt(queuePolicyPrefix + "priority", 0));
+    return pri;
+  }
+
+  @Private
+  public void setQueuePriority(String queue, int priority) {
+    String queuePolicyPrefix = getQueuePrefix(queue);
+    setInt(queuePolicyPrefix + "priority", priority);
   }
 
   /**
@@ -1203,5 +1234,162 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     int maxApplicationsPerQueue =
         getInt(QUEUE_GLOBAL_MAX_APPLICATION, (int) UNDEFINED);
     return maxApplicationsPerQueue;
+  }
+
+  /**
+   * Ordering policy inside a parent queue to sort queues
+   */
+
+  /**
+   * Less relative usage queue can get next resource, this is default
+   */
+  public static final String QUEUE_UTILIZATION_ORDERING_POLICY = "utilization";
+
+  /**
+   * Combination of relative usage and priority
+   */
+  public static final String QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY =
+      "priority-utilization";
+
+  public static final String DEFAULT_QUEUE_ORDERING_POLICY =
+      QUEUE_UTILIZATION_ORDERING_POLICY;
+
+
+  @Private
+  public void setQueueOrderingPolicy(String queue, String policy) {
+    set(getQueuePrefix(queue) + ORDERING_POLICY, policy);
+  }
+
+  @Private
+  public QueueOrderingPolicy getQueueOrderingPolicy(String queue,
+      String parentPolicy) {
+    String defaultPolicy = parentPolicy;
+    if (null == defaultPolicy) {
+      defaultPolicy = DEFAULT_QUEUE_ORDERING_POLICY;
+    }
+
+    String policyType = get(getQueuePrefix(queue) + ORDERING_POLICY,
+        defaultPolicy);
+
+    QueueOrderingPolicy qop;
+    if (policyType.trim().equals(QUEUE_UTILIZATION_ORDERING_POLICY)) {
+      // Doesn't respect priority
+      qop = new PriorityUtilizationQueueOrderingPolicy(false);
+    } else if (policyType.trim().equals(
+        QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY)) {
+      qop = new PriorityUtilizationQueueOrderingPolicy(true);
+    } else {
+      String message =
+          "Unable to construct queue ordering policy=" + policyType + " queue="
+              + queue;
+      throw new YarnRuntimeException(message);
+    }
+
+    return qop;
+  }
+
+  /*
+   * Get global configuration for ordering policies
+   */
+  private String getOrderingPolicyGlobalConfigKey(String orderPolicyName,
+      String configKey) {
+    return PREFIX + ORDERING_POLICY + DOT + orderPolicyName + DOT + configKey;
+  }
+
+  /**
+   * Global configurations of queue-priority-utilization ordering policy
+   */
+  private static final String UNDER_UTILIZED_PREEMPTION_ENABLED =
+      "underutilized-preemption.enabled";
+
+  /**
+   * Do we allow under-utilized queue with higher priority to preempt queue
+   * with lower priority *even if queue with lower priority is not satisfied*.
+   *
+   * For example, two queues, a and b
+   * a.priority = 1, (a.used-capacity - a.reserved-capacity) = 40%
+   * b.priority = 0, b.used-capacity = 30%
+   *
+   * Set this configuration to true to allow queue-a to preempt container from
+   * queue-b.
+   *
+   * (The reason why deduct reserved-capacity from used-capacity for queue with
+   * higher priority is: the reserved-capacity is just scheduler's internal
+   * implementation to allocate large containers, it is not possible for
+   * application to use such reserved-capacity. It is possible that a queue with
+   * large container requests have a large number of containers but cannot
+   * allocate from any of them. But scheduler will make sure a satisfied queue
+   * will not preempt resource from any other queues. A queue is considered to
+   * be satisfied when queue's used-capacity - reserved-capacity ≥
+   * guaranteed-capacity.)
+   *
+   * @return allowed or not
+   */
+  public boolean getPUOrderingPolicyUnderUtilizedPreemptionEnabled() {
+    return getBoolean(getOrderingPolicyGlobalConfigKey(
+        QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY,
+        UNDER_UTILIZED_PREEMPTION_ENABLED), false);
+  }
+
+  @VisibleForTesting
+  public void setPUOrderingPolicyUnderUtilizedPreemptionEnabled(
+      boolean enabled) {
+    setBoolean(getOrderingPolicyGlobalConfigKey(
+        QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY,
+        UNDER_UTILIZED_PREEMPTION_ENABLED), enabled);
+  }
+
+  private static final String UNDER_UTILIZED_PREEMPTION_DELAY =
+      "underutilized-preemption.reserved-container-delay-ms";
+
+  /**
+   * When a reserved container of an underutilized queue is created. Preemption
+   * will kick in after specified delay (in ms).
+   *
+   * The total time to preempt resources for a reserved container from higher
+   * priority queue will be: reserved-container-delay-ms +
+   * {@link CapacitySchedulerConfiguration#PREEMPTION_WAIT_TIME_BEFORE_KILL}.
+   *
+   * This parameter is added to make preemption from lower priority queue which
+   * is underutilized to be more careful. This parameter takes effect when
+   * underutilized-preemption.enabled set to true.
+   *
+   * @return delay
+   */
+  public long getPUOrderingPolicyUnderUtilizedPreemptionDelay() {
+    return getLong(getOrderingPolicyGlobalConfigKey(
+        QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY,
+        UNDER_UTILIZED_PREEMPTION_DELAY), 60000L);
+  }
+
+  @VisibleForTesting
+  public void setPUOrderingPolicyUnderUtilizedPreemptionDelay(
+      long timeout) {
+    setLong(getOrderingPolicyGlobalConfigKey(
+        QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY,
+        UNDER_UTILIZED_PREEMPTION_DELAY), timeout);
+  }
+
+  private static final String UNDER_UTILIZED_PREEMPTION_MOVE_RESERVATION =
+      "underutilized-preemption.allow-move-reservation";
+
+  /**
+   * When doing preemption from under-satisfied queues for priority queue.
+   * Do we allow move reserved container from one host to another?
+   *
+   * @return allow or not
+   */
+  public boolean getPUOrderingPolicyUnderUtilizedPreemptionMoveReservation() {
+    return getBoolean(getOrderingPolicyGlobalConfigKey(
+        QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY,
+        UNDER_UTILIZED_PREEMPTION_MOVE_RESERVATION), false);
+  }
+
+  @VisibleForTesting
+  public void setPUOrderingPolicyUnderUtilizedPreemptionMoveReservation(
+      boolean allowMoveReservation) {
+    setBoolean(getOrderingPolicyGlobalConfigKey(
+        QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY,
+        UNDER_UTILIZED_PREEMPTION_MOVE_RESERVATION), allowMoveReservation);
   }
 }

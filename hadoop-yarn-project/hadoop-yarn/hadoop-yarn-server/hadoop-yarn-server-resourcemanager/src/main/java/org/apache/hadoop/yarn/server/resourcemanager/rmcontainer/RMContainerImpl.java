@@ -548,7 +548,12 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
       container.reservedResource = e.getReservedResource();
       container.reservedNode = e.getReservedNode();
       container.reservedSchedulerKey = e.getReservedSchedulerKey();
-      
+
+      Container c = container.getContainer();
+      if (c != null) {
+        c.setNodeId(container.reservedNode);
+      }
+
       if (!EnumSet.of(RMContainerState.NEW, RMContainerState.RESERVED)
           .contains(container.getState())) {
         // When container's state != NEW/RESERVED, it is an increase reservation

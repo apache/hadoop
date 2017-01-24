@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -193,6 +194,14 @@ public class ProportionalCapacityPreemptionPolicy
     rc = scheduler.getResourceCalculator();
     nlm = scheduler.getRMContext().getNodeLabelManager();
 
+    // Do we need white queue-priority preemption policy?
+    boolean isQueuePriorityPreemptionEnabled =
+        csConfig.getPUOrderingPolicyUnderUtilizedPreemptionEnabled();
+    if (isQueuePriorityPreemptionEnabled) {
+      candidatesSelectionPolicies.add(
+          new QueuePriorityContainerCandidateSelector(this));
+    }
+
     // Do we need to specially consider reserved containers?
     boolean selectCandidatesForResevedContainers = csConfig.getBoolean(
         CapacitySchedulerConfiguration.
@@ -352,6 +361,8 @@ public class ProportionalCapacityPreemptionPolicy
                 .clone(nlm.getResourceByLabel(partitionToLookAt, clusterResources)),
             partitionToLookAt);
       }
+
+      // Update effective priority of queues
     }
 
     this.leafQueueNames = ImmutableSet.copyOf(getLeafQueueNames(
@@ -368,13 +379,28 @@ public class ProportionalCapacityPreemptionPolicy
         new HashMap<>();
     for (PreemptionCandidatesSelector selector :
         candidatesSelectionPolicies) {
+      long startTime = 0;
       if (LOG.isDebugEnabled()) {
         LOG.debug(MessageFormat
             .format("Trying to use {0} to select preemption candidates",
                 selector.getClass().getName()));
+        startTime = clock.getTime();
       }
       toPreempt = selector.selectCandidates(toPreempt,
           clusterResources, totalPreemptionAllowed);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(MessageFormat
+            .format("{0} uses {1} millisecond to run",
+                selector.getClass().getName(), clock.getTime() - startTime));
+        int totalSelected = 0;
+        for (Set<RMContainer> set : toPreempt.values()) {
+          totalSelected += set.size();
+        }
+        LOG.debug(MessageFormat
+            .format("So far, total {0} containers selected to be preempted",
+                totalSelected));
+      }
     }
 
     if (LOG.isDebugEnabled()) {
@@ -470,11 +496,22 @@ public class ProportionalCapacityPreemptionPolicy
           reserved, curQueue);
 
       if (curQueue instanceof ParentQueue) {
+        String configuredOrderingPolicy =
+            ((ParentQueue) curQueue).getQueueOrderingPolicy().getConfigName();
+
         // Recursively add children
         for (CSQueue c : curQueue.getChildQueues()) {
           TempQueuePerPartition subq = cloneQueues(c, partitionResource,
               partitionToLookAt);
+
+          // If we respect priority
+          if (StringUtils.equals(
+              CapacitySchedulerConfiguration.QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY,
+              configuredOrderingPolicy)) {
+            subq.relativePriority = c.getPriority().getPriority();
+          }
           ret.addChild(subq);
+          subq.parent = ret;
         }
       }
     } finally {

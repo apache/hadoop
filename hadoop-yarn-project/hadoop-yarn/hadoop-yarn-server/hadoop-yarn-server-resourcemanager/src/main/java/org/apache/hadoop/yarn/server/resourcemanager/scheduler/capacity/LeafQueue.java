@@ -194,7 +194,7 @@ public class LeafQueue extends AbstractCSQueue {
       CapacitySchedulerConfiguration conf = csContext.getConfiguration();
 
       setOrderingPolicy(
-          conf.<FiCaSchedulerApp>getOrderingPolicy(getQueuePath()));
+          conf.<FiCaSchedulerApp>getAppOrderingPolicy(getQueuePath()));
 
       userLimit = conf.getUserLimit(getQueuePath());
       userLimitFactor = conf.getUserLimitFactor(getQueuePath());
@@ -296,7 +296,7 @@ public class LeafQueue extends AbstractCSQueue {
               .toString() + "\n" + "reservationsContinueLooking = "
               + reservationsContinueLooking + "\n" + "preemptionDisabled = "
               + getPreemptionDisabled() + "\n" + "defaultAppPriorityPerQueue = "
-              + defaultAppPriorityPerQueue);
+              + defaultAppPriorityPerQueue + "\npriority = " + priority);
     } finally {
       writeLock.unlock();
     }

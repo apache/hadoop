@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.QueueOrderingPolicy;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -219,7 +220,9 @@ public class TestProportionalCapacityPreemptionPolicy {
     };
     ProportionalCapacityPreemptionPolicy policy = buildPolicy(qData);
     policy.editSchedule();
-    verify(mDisp, times(16)).handle(argThat(new IsPreemptionRequestFor(appA)));
+
+    // A will preempt guaranteed-allocated.
+    verify(mDisp, times(10)).handle(argThat(new IsPreemptionRequestFor(appA)));
   }
   
   @Test
@@ -587,8 +590,8 @@ public class TestProportionalCapacityPreemptionPolicy {
     };
     ProportionalCapacityPreemptionPolicy policy = buildPolicy(qData);
     policy.editSchedule();
-    // correct imbalance between over-capacity queues
-    verify(mDisp, times(5)).handle(argThat(new IsPreemptionRequestFor(appA)));
+    // Will not preempt for over capacity queues
+    verify(mDisp, never()).handle(argThat(new IsPreemptionRequestFor(appA)));
   }
 
   @Test
@@ -701,7 +704,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   public void testZeroGuarOverCap() {
     int[][] qData = new int[][] {
       //  /    A   B   C    D   E   F
-         { 200, 100, 0, 99, 0, 100, 100 },  // abs
+         { 200, 100, 0, 100, 0, 100, 100 },  // abs
         { 200, 200, 200, 200, 200, 200, 200 },  // maxCap
         { 170,  170, 60, 20, 90, 0,  0 },  // used
         {  85,   50,  30,  10,  10,  20, 20 },  // pending
@@ -712,13 +715,13 @@ public class TestProportionalCapacityPreemptionPolicy {
     };
     ProportionalCapacityPreemptionPolicy policy = buildPolicy(qData);
     policy.editSchedule();
-    // we verify both that C has priority on B and D (has it has >0 guarantees)
-    // and that B and D are force to share their over capacity fairly (as they
-    // are both zero-guarantees) hence D sees some of its containers preempted
-    verify(mDisp, times(15)).handle(argThat(new IsPreemptionRequestFor(appC)));
+    // No preemption should happen because zero guaranteed queues should be
+    // treated as always satisfied, they should not preempt from each other.
+    verify(mDisp, never()).handle(argThat(new IsPreemptionRequestFor(appA)));
+    verify(mDisp, never()).handle(argThat(new IsPreemptionRequestFor(appB)));
+    verify(mDisp, never()).handle(argThat(new IsPreemptionRequestFor(appC)));
+    verify(mDisp, never()).handle(argThat(new IsPreemptionRequestFor(appD)));
   }
-  
-  
   
   @Test
   public void testHierarchicalLarge() {
@@ -1231,6 +1234,13 @@ public class TestProportionalCapacityPreemptionPolicy {
     when(pq.getChildQueues()).thenReturn(cqs);
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     when(pq.getReadLock()).thenReturn(lock.readLock());
+
+    // Ordering policy
+    QueueOrderingPolicy policy = mock(QueueOrderingPolicy.class);
+    when(policy.getConfigName()).thenReturn(
+        CapacitySchedulerConfiguration.QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY);
+    when(pq.getQueueOrderingPolicy()).thenReturn(policy);
+    when(pq.getPriority()).thenReturn(Priority.newInstance(0));
     for (int i = 0; i < subqueues; ++i) {
       pqs.add(pq);
     }
@@ -1301,6 +1311,7 @@ public class TestProportionalCapacityPreemptionPolicy {
     }
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     when(lq.getReadLock()).thenReturn(lock.readLock());
+    when(lq.getPriority()).thenReturn(Priority.newInstance(0));
     p.getChildQueues().add(lq);
     return lq;
   }

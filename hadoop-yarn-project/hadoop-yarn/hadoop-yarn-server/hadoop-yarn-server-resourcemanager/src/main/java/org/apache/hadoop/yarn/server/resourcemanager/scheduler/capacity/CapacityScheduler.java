@@ -269,16 +269,6 @@ public class CapacityScheduler extends
   }
 
   @Override
-  public Comparator<CSQueue> getNonPartitionedQueueComparator() {
-    return CapacitySchedulerQueueManager.NON_PARTITIONED_QUEUE_COMPARATOR;
-  }
-
-  @Override
-  public PartitionedQueueComparator getPartitionedQueueComparator() {
-    return CapacitySchedulerQueueManager.PARTITIONED_QUEUE_COMPARATOR;
-  }
-
-  @Override
   public int getNumClusterNodes() {
     return nodeTracker.nodeCount();
   }
@@ -2504,5 +2494,70 @@ public class CapacityScheduler extends
   @Override
   public CapacitySchedulerQueueManager getCapacitySchedulerQueueManager() {
     return this.queueManager;
+  }
+
+  /**
+   * Try to move a reserved container to a targetNode.
+   * If the targetNode is reserved by another application (other than this one).
+   * The previous reservation will be cancelled.
+   *
+   * @param toBeMovedContainer reserved container will be moved
+   * @param targetNode targetNode
+   * @return true if move succeeded. Return false if the targetNode is reserved by
+   *         a different container or move failed because of any other reasons.
+   */
+  public boolean moveReservedContainer(RMContainer toBeMovedContainer,
+      FiCaSchedulerNode targetNode) {
+    try {
+      writeLock.lock();
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Trying to move container=" + toBeMovedContainer + " to node="
+            + targetNode.getNodeID());
+      }
+
+      FiCaSchedulerNode sourceNode = getNode(toBeMovedContainer.getNodeId());
+      if (null == sourceNode) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Failed to move reservation, cannot find source node="
+              + toBeMovedContainer.getNodeId());
+        }
+        return false;
+      }
+
+      // Target node updated?
+      if (getNode(targetNode.getNodeID()) != targetNode) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+              "Failed to move reservation, node updated or removed, moving "
+                  + "cancelled.");
+        }
+        return false;
+      }
+
+      // Target node's reservation status changed?
+      if (targetNode.getReservedContainer() != null) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+              "Target node's reservation status changed, moving cancelled.");
+        }
+        return false;
+      }
+
+      FiCaSchedulerApp app = getApplicationAttempt(
+          toBeMovedContainer.getApplicationAttemptId());
+      if (null == app) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Cannot find to-be-moved container's application="
+              + toBeMovedContainer.getApplicationAttemptId());
+        }
+        return false;
+      }
+
+      // finally, move the reserved container
+      return app.moveReservation(toBeMovedContainer, sourceNode, targetNode);
+    } finally {
+      writeLock.unlock();
+    }
   }
 }

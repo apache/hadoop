@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.PriorityUtilizationQueueOrderingPolicy;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -49,13 +50,11 @@ public class AbstractPreemptableResourceCalculator {
 
     @Override
     public int compare(TempQueuePerPartition tq1, TempQueuePerPartition tq2) {
-      if (getIdealPctOfGuaranteed(tq1) < getIdealPctOfGuaranteed(tq2)) {
-        return -1;
-      }
-      if (getIdealPctOfGuaranteed(tq1) > getIdealPctOfGuaranteed(tq2)) {
-        return 1;
-      }
-      return 0;
+      double assigned1 = getIdealPctOfGuaranteed(tq1);
+      double assigned2 = getIdealPctOfGuaranteed(tq2);
+
+      return PriorityUtilizationQueueOrderingPolicy.compare(assigned1,
+          assigned2, tq1.relativePriority, tq2.relativePriority);
     }
 
     // Calculates idealAssigned / guaranteed
@@ -156,6 +155,7 @@ public class AbstractPreemptableResourceCalculator {
       // way, the most underserved queue(s) are always given resources first.
       Collection<TempQueuePerPartition> underserved = getMostUnderservedQueues(
           orderedByNeed, tqComparator);
+
       for (Iterator<TempQueuePerPartition> i = underserved.iterator(); i
           .hasNext();) {
         TempQueuePerPartition sub = i.next();

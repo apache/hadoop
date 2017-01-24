@@ -776,4 +776,115 @@ public class TestContainerAllocation {
         Resources.createResource(20 * GB), "", true).getMemorySize());
     rm1.close();
   }
+
+
+  @Test(timeout = 60000)
+  public void testQueuePriorityOrdering() throws Exception {
+    CapacitySchedulerConfiguration newConf =
+        (CapacitySchedulerConfiguration) TestUtils
+            .getConfigurationWithMultipleQueues(conf);
+
+    // Set ordering policy
+    newConf.setQueueOrderingPolicy(CapacitySchedulerConfiguration.ROOT,
+        CapacitySchedulerConfiguration.QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY);
+
+    // Set maximum capacity of A to 20
+    newConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + ".a", 20);
+    newConf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".c", 1);
+    newConf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".b", 2);
+    newConf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".a", 3);
+
+    MockRM rm1 = new MockRM(newConf);
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 100 * GB);
+
+    // launch an app to queue A, AM container should be launched in nm1
+    RMApp app1 = rm1.submitApp(2 * GB, "app", "user", null, "a");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    // launch an app to queue B, AM container should be launched in nm1
+    RMApp app2 = rm1.submitApp(2 * GB, "app", "user", null, "b");
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
+
+    // launch an app to queue C, AM container should be launched in nm1
+    RMApp app3 = rm1.submitApp(2 * GB, "app", "user", null, "c");
+    MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nm1);
+
+    // Each application asks 10 * 5GB containers
+    am1.allocate("*", 5 * GB, 10, null);
+    am2.allocate("*", 5 * GB, 10, null);
+    am3.allocate("*", 5 * GB, 10, null);
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+
+    FiCaSchedulerApp schedulerApp1 =
+        cs.getApplicationAttempt(am1.getApplicationAttemptId());
+    FiCaSchedulerApp schedulerApp2 =
+        cs.getApplicationAttempt(am2.getApplicationAttemptId());
+    FiCaSchedulerApp schedulerApp3 =
+        cs.getApplicationAttempt(am3.getApplicationAttemptId());
+
+    // container will be allocated to am1
+    // App1 will get 2 container allocated (plus AM container)
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    Assert.assertEquals(2, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp3.getLiveContainers().size());
+
+    // container will be allocated to am1 again,
+    // App1 will get 3 container allocated (plus AM container)
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    Assert.assertEquals(3, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp3.getLiveContainers().size());
+
+    // (Now usages of queues: a=12G (satisfied), b=2G, c=2G)
+
+    // container will be allocated to am2 (since app1 reaches its guaranteed
+    // capacity)
+    // App2 will get 2 container allocated (plus AM container)
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    Assert.assertEquals(3, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(2, schedulerApp2.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp3.getLiveContainers().size());
+
+    // Do this 3 times
+    // container will be allocated to am2 (since app1 reaches its guaranteed
+    // capacity)
+    // App2 will get 2 container allocated (plus AM container)
+    for (int i = 0; i < 3; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    }
+    Assert.assertEquals(3, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(5, schedulerApp2.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp3.getLiveContainers().size());
+
+    // (Now usages of queues: a=12G (satisfied), b=22G (satisfied), c=2G))
+
+    // Do this 10 times
+    for (int i = 0; i < 10; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    }
+    Assert.assertEquals(3, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(5, schedulerApp2.getLiveContainers().size());
+    Assert.assertEquals(11, schedulerApp3.getLiveContainers().size());
+
+    // (Now usages of queues: a=12G (satisfied), b=22G (satisfied),
+    // c=52G (satisfied and no pending))
+
+    // Do this 20 times, we can only allocate 3 containers, 1 to A and 3 to B
+    for (int i = 0; i < 20; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    }
+    Assert.assertEquals(4, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(6, schedulerApp2.getLiveContainers().size());
+    Assert.assertEquals(11, schedulerApp3.getLiveContainers().size());
+
+    // (Now usages of queues: a=17G (satisfied), b=27G (satisfied), c=52G))
+
+    rm1.close();
+  }
 }

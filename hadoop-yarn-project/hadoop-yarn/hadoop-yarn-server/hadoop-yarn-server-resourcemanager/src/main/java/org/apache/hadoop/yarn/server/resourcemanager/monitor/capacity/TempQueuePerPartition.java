@@ -53,6 +53,12 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
 
   protected Resource pendingDeductReserved;
 
+  // Relative priority of this queue to its parent
+  // If parent queue's ordering policy doesn't respect priority,
+  // this will be always 0
+  int relativePriority = 0;
+  TempQueuePerPartition parent = null;
+
   TempQueuePerPartition(String queueName, Resource current,
       boolean preemptionDisabled, String partition, Resource killable,
       float absCapacity, float absMaxCapacity, Resource totalPartitionResource,
@@ -114,8 +120,15 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     Resource absMaxCapIdealAssignedDelta = Resources.componentwiseMax(
         Resources.subtract(getMax(), idealAssigned),
         Resource.newInstance(0, 0));
-    // remain = avail - min(avail, (max - assigned), (current + pending -
-    // assigned))
+    // accepted = min{avail,
+    //               max - assigned,
+    //               current + pending - assigned,
+    //               # Make sure a queue will not get more than max of its
+    //               # used/guaranteed, this is to make sure preemption won't
+    //               # happen if all active queues are beyond their guaranteed
+    //               # This is for leaf queue only.
+    //               max(guaranteed, used) - assigned}
+    // remain = avail - accepted
     Resource accepted = Resources.min(rc, clusterResource,
         absMaxCapIdealAssignedDelta,
         Resources.min(rc, clusterResource, avail, Resources
@@ -137,6 +150,21 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
             .subtract(Resources.add(getUsed(),
                 (considersReservedResource ? pending : pendingDeductReserved)),
                 idealAssigned)));
+
+    // For leaf queue: accept = min(accept, max(guaranteed, used) - assigned)
+    // Why only for leaf queue?
+    // Because for a satisfied parent queue, it could have some under-utilized
+    // leaf queues. Such under-utilized leaf queue could preemption resources
+    // from over-utilized leaf queue located at other hierarchies.
+    if (null == children || children.isEmpty()) {
+      Resource maxOfGuranteedAndUsedDeductAssigned = Resources.subtract(
+          Resources.max(rc, clusterResource, getUsed(), getGuaranteed()),
+          idealAssigned);
+      maxOfGuranteedAndUsedDeductAssigned = Resources.max(rc, clusterResource,
+          maxOfGuranteedAndUsedDeductAssigned, Resources.none());
+      accepted = Resources.min(rc, clusterResource, accepted,
+          maxOfGuranteedAndUsedDeductAssigned);
+    }
     Resource remain = Resources.subtract(avail, accepted);
     Resources.addTo(idealAssigned, accepted);
     return remain;

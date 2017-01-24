@@ -32,6 +32,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -372,4 +373,10 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    */
   public void validateSubmitApplication(ApplicationId applicationId,
       String userName, String queue) throws AccessControlException;
+
+  /**
+   * Get priority of queue
+   * @return queue priority
+   */
+  Priority getPriority();
 }

@@ -18,18 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -64,6 +52,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.Activi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.AllocationState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.QueueOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerAllocationProposal;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.SchedulerContainer;
@@ -73,29 +62,34 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.Placeme
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSetUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
 @Private
 @Evolving
 public class ParentQueue extends AbstractCSQueue {
 
   private static final Log LOG = LogFactory.getLog(ParentQueue.class);
 
-  protected final Set<CSQueue> childQueues;  
+  protected final List<CSQueue> childQueues;
   private final boolean rootQueue;
-  private final Comparator<CSQueue> nonPartitionedQueueComparator;
-  private final PartitionedQueueComparator partitionQueueComparator;
   private volatile int numApplications;
   private final CapacitySchedulerContext scheduler;
 
   private final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
 
+  private QueueOrderingPolicy queueOrderingPolicy;
+
   public ParentQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
     super(cs, queueName, parent, old);
     this.scheduler = cs;
-    this.nonPartitionedQueueComparator = cs.getNonPartitionedQueueComparator();
-    this.partitionQueueComparator = new PartitionedQueueComparator();
-
     this.rootQueue = (parent == null);
 
     float rawCapacity = cs.getConfiguration().getNonLabeledQueueCapacity(getQueuePath());
@@ -107,7 +101,7 @@ public class ParentQueue extends AbstractCSQueue {
           ". Must be " + CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE);
     }
 
-    this.childQueues = new TreeSet<CSQueue>(nonPartitionedQueueComparator);
+    this.childQueues = new ArrayList<>();
 
     setupQueueConfigs(cs.getClusterResource());
 
@@ -116,7 +110,14 @@ public class ParentQueue extends AbstractCSQueue {
         ", fullname=" + getQueuePath());
   }
 
-  void setupQueueConfigs(Resource clusterResource)
+  // returns what is configured queue ordering policy
+  private String getQueueOrderingPolicyConfigName() {
+    return queueOrderingPolicy == null ?
+        null :
+        queueOrderingPolicy.getConfigName();
+  }
+
+  protected void setupQueueConfigs(Resource clusterResource)
       throws IOException {
     try {
       writeLock.lock();
@@ -134,13 +135,22 @@ public class ParentQueue extends AbstractCSQueue {
         }
       }
 
+      // Initialize queue ordering policy
+      queueOrderingPolicy = csContext.getConfiguration().getQueueOrderingPolicy(
+          getQueuePath(), parent == null ?
+              null :
+              ((ParentQueue) parent).getQueueOrderingPolicyConfigName());
+      queueOrderingPolicy.setQueues(childQueues);
+
       LOG.info(queueName + ", capacity=" + this.queueCapacities.getCapacity()
           + ", absoluteCapacity=" + this.queueCapacities.getAbsoluteCapacity()
           + ", maxCapacity=" + this.queueCapacities.getMaximumCapacity()
           + ", absoluteMaxCapacity=" + this.queueCapacities
           .getAbsoluteMaximumCapacity() + ", state=" + getState() + ", acls="
           + aclsString + ", labels=" + labelStrBuilder.toString() + "\n"
-          + ", reservationsContinueLooking=" + reservationsContinueLooking);
+          + ", reservationsContinueLooking=" + reservationsContinueLooking
+          + ", orderingPolicy=" + getQueueOrderingPolicyConfigName()
+          + ", priority=" + priority);
     } finally {
       writeLock.unlock();
     }
@@ -294,8 +304,8 @@ public class ParentQueue extends AbstractCSQueue {
 
       // Re-configure existing child queues and add new ones
       // The CS has already checked to ensure all existing child queues are present!
-      Map<String, CSQueue> currentChildQueues = getQueues(childQueues);
-      Map<String, CSQueue> newChildQueues = getQueues(
+      Map<String, CSQueue> currentChildQueues = getQueuesMap(childQueues);
+      Map<String, CSQueue> newChildQueues = getQueuesMap(
           newlyParsedParentQueue.childQueues);
       for (Map.Entry<String, CSQueue> e : newChildQueues.entrySet()) {
         String newChildQueueName = e.getKey();
@@ -338,7 +348,7 @@ public class ParentQueue extends AbstractCSQueue {
     }
   }
 
-  Map<String, CSQueue> getQueues(Set<CSQueue> queues) {
+  private Map<String, CSQueue> getQueuesMap(List<CSQueue> queues) {
     Map<String, CSQueue> queuesMap = new HashMap<String, CSQueue>();
     for (CSQueue queue : queues) {
       queuesMap.put(queue.getQueueName(), queue);
@@ -680,13 +690,7 @@ public class ParentQueue extends AbstractCSQueue {
 
   private Iterator<CSQueue> sortAndGetChildrenAllocationIterator(
       String partition) {
-    // Previously we keep a sorted list for default partition, it is not good
-    // when multi-threading scheduler is enabled, so to make a simpler code
-    // now re-sort queue every time irrespective to node partition.
-    partitionQueueComparator.setPartitionToLookAt(partition);
-    List<CSQueue> childrenList = new ArrayList<>(childQueues);
-    Collections.sort(childrenList, partitionQueueComparator);
-    return childrenList.iterator();
+    return queueOrderingPolicy.getAssignmentIterator(partition);
   }
 
   private CSAssignment assignContainersToChildQueues(Resource cluster,
@@ -1082,5 +1086,9 @@ public class ParentQueue extends AbstractCSQueue {
     } finally {
       this.writeLock.unlock();
     }
+  }
+
+  public QueueOrderingPolicy getQueueOrderingPolicy() {
+    return queueOrderingPolicy;
   }
 }
