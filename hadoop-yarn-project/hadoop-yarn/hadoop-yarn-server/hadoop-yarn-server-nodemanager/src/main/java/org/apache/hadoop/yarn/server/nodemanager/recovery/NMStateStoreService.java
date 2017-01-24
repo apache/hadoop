@@ -60,6 +60,13 @@ public abstract class NMStateStoreService extends AbstractService {
 
   }
 
+  /**
+   * Type of post recovery action.
+   */
+  public enum RecoveredContainerType {
+    KILL, RECOVER
+  }
+
   public enum RecoveredContainerStatus {
     REQUESTED,
     LAUNCHED,
@@ -77,6 +84,8 @@ public abstract class NMStateStoreService extends AbstractService {
     private String workDir;
     private String logDir;
     int version;
+    private RecoveredContainerType recoveryType =
+        RecoveredContainerType.RECOVER;
 
     public RecoveredContainerStatus getStatus() {
       return status;
@@ -143,6 +152,14 @@ public abstract class NMStateStoreService extends AbstractService {
           .append(", WorkDir: ").append(workDir)
           .append(", LogDir: ").append(logDir)
           .toString();
+    }
+
+    public RecoveredContainerType getRecoveryType() {
+      return recoveryType;
+    }
+
+    public void setRecoveryType(RecoveredContainerType recoveryType) {
+      this.recoveryType = recoveryType;
     }
   }
 
