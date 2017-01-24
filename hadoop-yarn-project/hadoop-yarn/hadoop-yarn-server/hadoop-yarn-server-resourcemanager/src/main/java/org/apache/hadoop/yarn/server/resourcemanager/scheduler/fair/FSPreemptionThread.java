@@ -135,8 +135,8 @@ class FSPreemptionThread extends Thread {
 
   /**
    * Identify containers to preempt on a given node. Try to find a list with
-   * least AM containers to avoid preempt AM containers. This method returns a
-   * non-null set of containers only if the number of AM containers is less
+   * least AM containers to avoid preempting AM containers. This method returns
+   * a non-null set of containers only if the number of AM containers is less
    * than maxAMContainers.
    *
    * @param request resource requested

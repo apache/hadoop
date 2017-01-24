@@ -315,7 +315,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
    *
    * @param numAMContainersPerNode number of AM containers per node
    */
-  private void setNumAmContainersPerNode(int numAMContainersPerNode) {
+  private void setNumAMContainersPerNode(int numAMContainersPerNode) {
     List<FSSchedulerNode> potentialNodes =
         scheduler.getNodeTracker().getNodesByResourceName("*");
     for (FSSchedulerNode node: potentialNodes) {
@@ -334,7 +334,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     setupCluster();
 
     takeAllResource("root.preemptable.child-1");
-    setNumAmContainersPerNode(2);
+    setNumAMContainersPerNode(2);
     preemptHalfResources("root.preemptable.child-2");
 
     verifyPreemption();
