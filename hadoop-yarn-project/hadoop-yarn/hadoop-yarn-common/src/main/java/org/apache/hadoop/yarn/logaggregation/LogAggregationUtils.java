@@ -20,12 +20,16 @@ package org.apache.hadoop.yarn.logaggregation;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
 
 @Private
 public class LogAggregationUtils {
@@ -77,9 +81,6 @@ public class LogAggregationUtils {
     return new Path(getRemoteLogUserDir(remoteRootLogDir, user), suffix);
   }
 
-  // TODO Add a utility method to list available log files. Ignore the
-  // temporary ones.
-  
   /**
    * Gets the remote log user dir.
    * @param remoteRootLogDir
@@ -114,5 +115,62 @@ public class LogAggregationUtils {
   @VisibleForTesting
   public static String getNodeString(String nodeId) {
     return nodeId.toString().replace(":", "_");
+  }
+
+  /**
+   * Return the remote application log directory.
+   * @param conf the configuration
+   * @param appId the application
+   * @param appOwner the application owner
+   * @return the remote application log directory path
+   * @throws IOException if we can not find remote application log directory
+   */
+  public static org.apache.hadoop.fs.Path getRemoteAppLogDir(
+      Configuration conf, ApplicationId appId, String appOwner)
+      throws IOException {
+    String suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(conf);
+    org.apache.hadoop.fs.Path remoteRootLogDir =
+        new org.apache.hadoop.fs.Path(conf.get(
+            YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
+    org.apache.hadoop.fs.Path remoteAppDir = null;
+    if (appOwner == null) {
+      org.apache.hadoop.fs.Path qualifiedRemoteRootLogDir =
+          FileContext.getFileContext(conf).makeQualified(remoteRootLogDir);
+      FileContext fc = FileContext.getFileContext(
+          qualifiedRemoteRootLogDir.toUri(), conf);
+      org.apache.hadoop.fs.Path toMatch = LogAggregationUtils
+          .getRemoteAppLogDir(remoteRootLogDir, appId, "*", suffix);
+      FileStatus[] matching  = fc.util().globStatus(toMatch);
+      if (matching == null || matching.length != 1) {
+        throw new IOException("Can not find remote application directory for "
+            + "the application:" + appId);
+      }
+      remoteAppDir = matching[0].getPath();
+    } else {
+      remoteAppDir = LogAggregationUtils.getRemoteAppLogDir(
+          remoteRootLogDir, appId, appOwner, suffix);
+    }
+    return remoteAppDir;
+  }
+
+  /**
+   * Get all available log files under remote app log directory.
+   * @param conf the configuration
+   * @param appId the applicationId
+   * @param appOwner the application owner
+   * @return the iterator of available log files
+   * @throws IOException if there is no log file available
+   */
+  public static RemoteIterator<FileStatus> getRemoteNodeFileDir(
+      Configuration conf, ApplicationId appId, String appOwner)
+      throws IOException {
+    Path remoteAppLogDir = getRemoteAppLogDir(conf, appId, appOwner);
+    RemoteIterator<FileStatus> nodeFiles = null;
+    Path qualifiedLogDir =
+        FileContext.getFileContext(conf).makeQualified(remoteAppLogDir);
+    nodeFiles = FileContext.getFileContext(qualifiedLogDir.toUri(),
+        conf).listStatus(remoteAppLogDir);
+    return nodeFiles;
   }
 }

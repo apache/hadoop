@@ -21,6 +21,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map.Entry;
 
 import javax.servlet.http.HttpServletRequest;
@@ -31,6 +33,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
@@ -45,6 +48,9 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogType;
+import org.apache.hadoop.yarn.logaggregation.LogToolUtils;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -53,9 +59,10 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainerInfo;
-import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainerLogsInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMContainerLogsInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NodeInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.WebApp;
@@ -200,6 +207,8 @@ public class NMWebServices {
    *
    * @param hsr
    *    HttpServletRequest
+   * @param res
+   *    HttpServletResponse
    * @param containerIdStr
    *    The container ID
    * @return
@@ -208,20 +217,52 @@ public class NMWebServices {
   @GET
   @Path("/containers/{containerid}/logs")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-  public ContainerLogsInfo getContainerLogsInfo(@javax.ws.rs.core.Context
-      HttpServletRequest hsr,
+  public Response getContainerLogsInfo(
+      @javax.ws.rs.core.Context HttpServletRequest hsr,
+      @javax.ws.rs.core.Context HttpServletResponse res,
       @PathParam("containerid") String containerIdStr) {
     ContainerId containerId = null;
     init();
     try {
       containerId = ContainerId.fromString(containerIdStr);
-    } catch (Exception e) {
+    } catch (IllegalArgumentException ex) {
       throw new BadRequestException("invalid container id, " + containerIdStr);
     }
     try {
-      return new ContainerLogsInfo(this.nmContext, containerId,
-          hsr.getRemoteUser());
-    } catch (YarnException ex) {
+      List<ContainerLogsInfo> containersLogsInfo = new ArrayList<>();
+      containersLogsInfo.add(new NMContainerLogsInfo(
+          this.nmContext, containerId,
+          hsr.getRemoteUser(), ContainerLogType.LOCAL));
+      // check whether we have aggregated logs in RemoteFS. If exists, show the
+      // the log meta for the aggregated logs as well.
+      ApplicationId appId = containerId.getApplicationAttemptId()
+          .getApplicationId();
+      Application app = this.nmContext.getApplications().get(appId);
+      String appOwner = app == null ? null : app.getUser();
+      try {
+        List<ContainerLogMeta> containerLogMeta = LogToolUtils
+            .getContainerLogMetaFromRemoteFS(this.nmContext.getConf(),
+                appId, containerIdStr,
+                this.nmContext.getNodeId().toString(), appOwner);
+        if (!containerLogMeta.isEmpty()) {
+          for (ContainerLogMeta logMeta : containerLogMeta) {
+            containersLogsInfo.add(new ContainerLogsInfo(logMeta,
+                ContainerLogType.AGGREGATED));
+          }
+        }
+      } catch (IOException ex) {
+        // Something wrong with we tries to access the remote fs for the logs.
+        // Skip it and do nothing
+      }
+      GenericEntity<List<ContainerLogsInfo>> meta = new GenericEntity<List<
+          ContainerLogsInfo>>(containersLogsInfo){};
+      ResponseBuilder resp = Response.ok(meta);
+      // Sending the X-Content-Type-Options response header with the value
+      // nosniff will prevent Internet Explorer from MIME-sniffing a response
+      // away from the declared content-type.
+      resp.header("X-Content-Type-Options", "nosniff");
+      return resp.build();
+    } catch (Exception ex) {
       throw new WebApplicationException(ex);
     }
   }
@@ -288,7 +329,7 @@ public class NMWebServices {
     try {
       containerId = ContainerId.fromString(containerIdStr);
     } catch (IllegalArgumentException ex) {
-      return Response.status(Status.BAD_REQUEST).build();
+      return Response.status(Status.BAD_REQUEST).entity(ex.getMessage()).build();
     }
     
     File logFile = null;
