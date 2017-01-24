@@ -18,6 +18,9 @@ Release 2.6.6 - UNRELEASED
     HDFS-11290. TestFSNameSystemMBean should wait until JMX cache is cleared.
     (Eric Krogen via aajisaka)
 
+    HDFS-11352. Potential deadlock in NN when failing over.
+    (Eric Krogen via aajisaka)
+
 Release 2.6.5 - 2016-10-08
 
   INCOMPATIBLE CHANGES

@@ -5368,7 +5368,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Metric({"TransactionsSinceLastCheckpoint",
       "Number of transactions since last checkpoint"})
   public long getTransactionsSinceLastCheckpoint() {
-    return getEditLog().getLastWrittenTxId() -
+    return getEditLog().getLastWrittenTxIdWithoutLock() -
         getFSImage().getStorage().getMostRecentCheckpointTxId();
   }
   
