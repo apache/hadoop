@@ -23,13 +23,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -44,7 +40,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.http.JettyUtils;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
@@ -57,8 +52,9 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat;
-import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogType;
+import org.apache.hadoop.yarn.logaggregation.PerContainerLogFileInfo;
+import org.apache.hadoop.yarn.logaggregation.TestContainerLogsUtils;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryClientService;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryManagerOnTimelineStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.TestApplicationHistoryManagerOnTimelineStore;
@@ -90,6 +86,7 @@ import com.google.inject.Singleton;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.ClientResponse.Status;
+import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
@@ -507,51 +504,20 @@ public class TestAHSWebServices extends JerseyTestBase {
   public void testContainerLogsForFinishedApps() throws Exception {
     String fileName = "syslog";
     String user = "user1";
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser("user1");
     NodeId nodeId = NodeId.newInstance("test host", 100);
     NodeId nodeId2 = NodeId.newInstance("host2", 1234);
-    //prepare the logs for remote directory
     ApplicationId appId = ApplicationId.newInstance(0, 1);
-    // create local logs
-    List<String> rootLogDirList = new ArrayList<String>();
-    rootLogDirList.add(rootLogDir);
-    Path rootLogDirPath = new Path(rootLogDir);
-    if (fs.exists(rootLogDirPath)) {
-      fs.delete(rootLogDirPath, true);
-    }
-    assertTrue(fs.mkdirs(rootLogDirPath));
-
-    Path appLogsDir = new Path(rootLogDirPath, appId.toString());
-    if (fs.exists(appLogsDir)) {
-      fs.delete(appLogsDir, true);
-    }
-    assertTrue(fs.mkdirs(appLogsDir));
-
-    // create container logs in local log file dir
-    // create two container log files. We can get containerInfo
-    // for container1 from AHS, but can not get such info for
-    // container100
-    ApplicationAttemptId appAttemptId =
-        ApplicationAttemptId.newInstance(appId, 1);
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
+        appId, 1);
     ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1);
     ContainerId containerId100 = ContainerId.newContainerId(appAttemptId, 100);
-    createContainerLogInLocalDir(appLogsDir, containerId1, fs, fileName,
-        ("Hello." + containerId1));
-    createContainerLogInLocalDir(appLogsDir, containerId100, fs, fileName,
-        ("Hello." + containerId100));
 
-    // upload container logs to remote log dir
-    Path path = new Path(conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR) +
-        user + "/logs/" + appId.toString());
-    if (fs.exists(path)) {
-      fs.delete(path, true);
-    }
-    assertTrue(fs.mkdirs(path));
-    uploadContainerLogIntoRemoteDir(ugi, conf, rootLogDirList, nodeId,
-        containerId1, path, fs);
-    uploadContainerLogIntoRemoteDir(ugi, conf, rootLogDirList, nodeId2,
-        containerId100, path, fs);
-
+    TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
+        rootLogDir, containerId1, nodeId, fileName, user,
+        ("Hello." + containerId1), true);
+    TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
+        rootLogDir, containerId100, nodeId2, fileName, user,
+        ("Hello." + containerId100), false);
     // test whether we can find container log from remote diretory if
     // the containerInfo for this container could be fetched from AHS.
     WebResource r = resource();
@@ -600,25 +566,14 @@ public class TestAHSWebServices extends JerseyTestBase {
 
     // create an application which can not be found from AHS
     ApplicationId appId100 = ApplicationId.newInstance(0, 100);
-    appLogsDir = new Path(rootLogDirPath, appId100.toString());
-    if (fs.exists(appLogsDir)) {
-      fs.delete(appLogsDir, true);
-    }
-    assertTrue(fs.mkdirs(appLogsDir));
-    ApplicationAttemptId appAttemptId100 =
-        ApplicationAttemptId.newInstance(appId100, 1);
-    ContainerId containerId1ForApp100 = ContainerId
-        .newContainerId(appAttemptId100, 1);
-    createContainerLogInLocalDir(appLogsDir, containerId1ForApp100, fs,
-        fileName, ("Hello." + containerId1ForApp100));
-    path = new Path(conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR) +
-        user + "/logs/" + appId100.toString());
-    if (fs.exists(path)) {
-      fs.delete(path, true);
-    }
-    assertTrue(fs.mkdirs(path));
-    uploadContainerLogIntoRemoteDir(ugi, conf, rootLogDirList, nodeId2,
-        containerId1ForApp100, path, fs);
+    ApplicationAttemptId appAttemptId100 = ApplicationAttemptId.newInstance(
+        appId100, 1);
+    ContainerId containerId1ForApp100 = ContainerId.newContainerId(
+        appAttemptId100, 1);
+
+    TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
+        rootLogDir, containerId1ForApp100, nodeId, fileName, user,
+        ("Hello." + containerId1ForApp100), true);
     r = resource();
     response = r.path("ws").path("v1")
         .path("applicationhistory").path("containerlogs")
@@ -696,35 +651,6 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertEquals(responseText.getBytes().length, fullTextSize);
   }
 
-  private static void createContainerLogInLocalDir(Path appLogsDir,
-      ContainerId containerId, FileSystem fs, String fileName, String content)
-      throws Exception {
-    Path containerLogsDir = new Path(appLogsDir, containerId.toString());
-    if (fs.exists(containerLogsDir)) {
-      fs.delete(containerLogsDir, true);
-    }
-    assertTrue(fs.mkdirs(containerLogsDir));
-    Writer writer =
-        new FileWriter(new File(containerLogsDir.toString(), fileName));
-    writer.write(content);
-    writer.close();
-  }
-
-  private static void uploadContainerLogIntoRemoteDir(UserGroupInformation ugi,
-      Configuration configuration, List<String> rootLogDirs, NodeId nodeId,
-      ContainerId containerId, Path appDir, FileSystem fs) throws Exception {
-    Path path =
-        new Path(appDir, LogAggregationUtils.getNodeString(nodeId));
-    AggregatedLogFormat.LogWriter writer =
-        new AggregatedLogFormat.LogWriter(configuration, path, ugi);
-    writer.writeApplicationOwner(ugi.getUserName());
-
-    writer.append(new AggregatedLogFormat.LogKey(containerId),
-        new AggregatedLogFormat.LogValue(rootLogDirs, containerId,
-        ugi.getShortUserName()));
-    writer.close();
-  }
-
   @Test(timeout = 10000)
   public void testContainerLogsForRunningApps() throws Exception {
     String fileName = "syslog";
@@ -770,6 +696,8 @@ public class TestAHSWebServices extends JerseyTestBase {
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1);
     WebResource r = resource();
+    // If we can get Container information from ATS, we re-direct the request
+    // to the nodemamager who runs the container.
     URI requestURI = r.path("ws").path("v1")
         .path("applicationhistory").path("containers")
         .path(containerId1.toString()).path("logs")
@@ -780,46 +708,52 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertTrue(redirectURL.contains("ws/v1/node/containers"));
     assertTrue(redirectURL.contains(containerId1.toString()));
     assertTrue(redirectURL.contains("/logs"));
+
+    // If we can not container information from ATS, we would try to
+    // get aggregated log meta from remote FileSystem.
+    ContainerId containerId1000 = ContainerId.newContainerId(
+        appAttemptId, 1000);
+    String fileName = "syslog";
+    String content = "Hello." + containerId1000;
+    NodeId nodeId = NodeId.newInstance("test host", 100);
+    TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
+        rootLogDir, containerId1000, nodeId, fileName, user, content, true);
+    ClientResponse response = r.path("ws").path("v1")
+        .path("applicationhistory").path("containers")
+        .path(containerId1000.toString()).path("logs")
+        .queryParam("user.name", user)
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+
+    List<ContainerLogsInfo> responseText = response.getEntity(new GenericType<
+        List<ContainerLogsInfo>>(){});
+    assertTrue(responseText.size() == 2);
+    for (ContainerLogsInfo logInfo : responseText) {
+      if(logInfo.getLogType().equals(ContainerLogType.AGGREGATED.toString())) {
+        List<PerContainerLogFileInfo> logMeta = logInfo
+            .getContainerLogsInfo();
+        assertTrue(logMeta.size() == 1);
+        assertEquals(logMeta.get(0).getFileName(), fileName);
+        assertEquals(logMeta.get(0).getFileSize(), String.valueOf(
+            content.length()));
+      } else {
+        assertEquals(logInfo.getLogType(), ContainerLogType.LOCAL.toString());
+      }
+    }
   }
 
   @Test(timeout = 10000)
   public void testContainerLogsMetaForFinishedApps() throws Exception {
-    String fileName = "syslog";
-    String user = "user1";
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser("user1");
-    NodeId nodeId = NodeId.newInstance("test host", 100);
-    //prepare the logs for remote directory
     ApplicationId appId = ApplicationId.newInstance(0, 1);
-    // create local logs
-    List<String> rootLogDirList = new ArrayList<String>();
-    rootLogDirList.add(rootLogDir);
-    Path rootLogDirPath = new Path(rootLogDir);
-    if (fs.exists(rootLogDirPath)) {
-      fs.delete(rootLogDirPath, true);
-    }
-    assertTrue(fs.mkdirs(rootLogDirPath));
-    Path appLogsDir = new Path(rootLogDirPath, appId.toString());
-    if (fs.exists(appLogsDir)) {
-      fs.delete(appLogsDir, true);
-    }
-    assertTrue(fs.mkdirs(appLogsDir));
-
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1);
+    String fileName = "syslog";
+    String user = "user1";
     String content = "Hello." + containerId1;
-    createContainerLogInLocalDir(appLogsDir, containerId1, fs, fileName,
-        content);
-
-    // upload container logs to remote log dir
-    Path path = new Path(conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR) +
-        user + "/logs/" + appId.toString());
-    if (fs.exists(path)) {
-      fs.delete(path, true);
-    }
-    assertTrue(fs.mkdirs(path));
-    uploadContainerLogIntoRemoteDir(ugi, conf, rootLogDirList, nodeId,
-        containerId1, path, fs);
+    NodeId nodeId = NodeId.newInstance("test host", 100);
+    TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
+        rootLogDir, containerId1, nodeId, fileName, user, content, true);
 
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1")
@@ -828,12 +762,16 @@ public class TestAHSWebServices extends JerseyTestBase {
         .queryParam("user.name", user)
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
-    ContainerLogsInfo responseText = response.getEntity(
-        ContainerLogsInfo.class);
-    assertEquals(responseText.getContainerLogsInfo().size(), 1);
-    assertEquals(responseText.getContainerLogsInfo().get(0).getFileName(),
-        fileName);
-    assertEquals(responseText.getContainerLogsInfo().get(0).getFileSize(),
+    List<ContainerLogsInfo> responseText = response.getEntity(new GenericType<
+        List<ContainerLogsInfo>>(){});
+    assertTrue(responseText.size() == 1);
+    assertEquals(responseText.get(0).getLogType(),
+        ContainerLogType.AGGREGATED.toString());
+    List<PerContainerLogFileInfo> logMeta = responseText.get(0)
+        .getContainerLogsInfo();
+    assertTrue(logMeta.size() == 1);
+    assertEquals(logMeta.get(0).getFileName(), fileName);
+    assertEquals(logMeta.get(0).getFileSize(),
         String.valueOf(content.length()));
   }
 

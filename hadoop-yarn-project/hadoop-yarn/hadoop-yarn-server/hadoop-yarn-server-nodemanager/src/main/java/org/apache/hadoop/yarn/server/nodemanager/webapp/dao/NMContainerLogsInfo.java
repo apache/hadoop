@@ -23,47 +23,42 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogType;
+import org.apache.hadoop.yarn.logaggregation.PerContainerLogFileInfo;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.ContainerLogsUtils;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
+import org.apache.hadoop.yarn.util.Times;
 
 /**
- * {@code ContainerLogsInfo} includes the log meta-data of containers.
- * <p>
- * The container log meta-data includes details such as:
- * <ul>
- *   <li>The filename of the container log.</li>
- *   <li>The size of the container log.</li>
- * </ul>
+ * NMContainerLogsInfo represents the meta data for container logs
+ * which exist in NM local log directory.
+ * This class extends {@link ContainerLogsInfo}.
  */
-
 @XmlRootElement(name = "containerLogsInfo")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ContainerLogsInfo {
-
-  @XmlElement(name = "containerLogInfo")
-  protected List<ContainerLogInfo> containerLogsInfo;
+public class NMContainerLogsInfo extends ContainerLogsInfo {
 
   //JAXB needs this
-  public ContainerLogsInfo() {}
+  public NMContainerLogsInfo() {}
 
-  public ContainerLogsInfo(final Context nmContext,
-      final ContainerId containerId, String remoteUser)
-      throws YarnException {
+  public NMContainerLogsInfo(final Context nmContext,
+      final ContainerId containerId, String remoteUser,
+      ContainerLogType logType) throws YarnException {
+    this.logType = logType.toString();
+    this.containerId = containerId.toString();
+    this.nodeId = nmContext.getNodeId().toString();
     this.containerLogsInfo = getContainerLogsInfo(
         containerId, remoteUser, nmContext);
   }
 
-  public List<ContainerLogInfo> getContainerLogsInfo() {
-    return this.containerLogsInfo;
-  }
-
-  private static List<ContainerLogInfo> getContainerLogsInfo(ContainerId id,
-      String remoteUser, Context nmContext) throws YarnException {
-    List<ContainerLogInfo> logFiles = new ArrayList<ContainerLogInfo>();
+  private static List<PerContainerLogFileInfo> getContainerLogsInfo(
+      ContainerId id, String remoteUser, Context nmContext)
+      throws YarnException {
+    List<PerContainerLogFileInfo> logFiles = new ArrayList<>();
     List<File> logDirs = ContainerLogsUtils.getContainerLogDirs(
         id, remoteUser, nmContext);
     for (File containerLogsDir : logDirs) {
@@ -71,42 +66,14 @@ public class ContainerLogsInfo {
       if (logs != null) {
         for (File log : logs) {
           if (log.isFile()) {
-            ContainerLogInfo logMeta = new ContainerLogInfo(
-                log.getName(), log.length());
+            PerContainerLogFileInfo logMeta = new PerContainerLogFileInfo(
+                log.getName(), Long.toString(log.length()),
+                Times.format(log.lastModified()));
             logFiles.add(logMeta);
           }
         }
       }
     }
     return logFiles;
-  }
-
-  private static class ContainerLogInfo {
-    private String fileName;
-    private long fileSize;
-
-    //JAXB needs this
-    public ContainerLogInfo() {}
-
-    public ContainerLogInfo(String fileName, long fileSize) {
-      this.setFileName(fileName);
-      this.setFileSize(fileSize);
-    }
-
-    public String getFileName() {
-      return fileName;
-    }
-
-    public void setFileName(String fileName) {
-      this.fileName = fileName;
-    }
-
-    public long getFileSize() {
-      return fileSize;
-    }
-
-    public void setFileSize(long fileSize) {
-      this.fileSize = fileSize;
-    }
   }
 }

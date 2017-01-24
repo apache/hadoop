@@ -962,7 +962,7 @@ public class AggregatedLogFormat {
 
     @Private
     public static Pair<String, String> readContainerMetaDataAndSkipData(
-        DataInputStream valueStream, PrintStream out) throws IOException {
+        DataInputStream valueStream) throws IOException {
 
       String fileType = valueStream.readUTF();
       String fileLengthStr = valueStream.readUTF();
