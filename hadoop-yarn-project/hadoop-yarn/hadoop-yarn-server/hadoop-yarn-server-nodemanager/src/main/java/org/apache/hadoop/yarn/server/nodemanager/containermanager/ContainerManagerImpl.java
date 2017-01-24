@@ -144,6 +144,7 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredApplicationsState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerType;
 import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider;
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -403,6 +404,12 @@ public class ContainerManagerImpl extends CompositeService implements
 
     if (context.getApplications().containsKey(appId)) {
       recoverActiveContainer(launchContext, token, rcs);
+      if (rcs.getRecoveryType() == RecoveredContainerType.KILL) {
+        dispatcher.getEventHandler().handle(
+            new ContainerKillEvent(containerId, ContainerExitStatus.ABORTED,
+                "Due to invalid StateStore info container was killed"
+                    + " during recovery"));
+      }
     } else {
       if (rcs.getStatus() != RecoveredContainerStatus.COMPLETED) {
         LOG.warn(containerId + " has no corresponding application!");
