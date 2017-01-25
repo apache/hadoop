@@ -33,9 +33,7 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-/**
- * Created by muzhongz on 16-12-27.
- */
+
 public class TFApplicationRpcServer implements TensorflowCluster, Runnable {
     private int rpcPort = -1;
     private String rpcAddress = null;

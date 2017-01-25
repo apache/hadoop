@@ -33,9 +33,6 @@ import java.util.List;
 import java.util.Map;
 
 
-/**
- * Created by muzhongz on 16-11-29.
- */
 public class TFServer {
     private static final Log LOG = LogFactory.getLog(TFServer.class);
 

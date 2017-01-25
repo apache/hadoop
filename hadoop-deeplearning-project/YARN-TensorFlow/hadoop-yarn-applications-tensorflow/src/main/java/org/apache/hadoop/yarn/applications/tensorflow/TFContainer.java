@@ -39,9 +39,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.*;
 
-/**
- * Created by muzhongz on 16-12-14.
- */
 public class TFContainer {
     private static final Log LOG = LogFactory.getLog(TFContainer.class);
 

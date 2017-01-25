@@ -17,14 +17,14 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                       http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
-    <artifactId>hadoop-deeplearning-project</artifactId>
+    <artifactId>YARN-TensorFlow</artifactId>
     <groupId>org.apache.hadoop</groupId>
     <version>3.0.0-alpha2-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-applications-tensorflow</artifactId>
   <version>3.0.0-alpha2-SNAPSHOT</version>
-  <name>Apache Hadoop YARN tensorflow</name>
+  <name>TensorFlow on YARN</name>
 
   <repositories>
     <repository>
@@ -171,8 +171,8 @@
               <protocVersion>${protobuf.version}</protocVersion>
               <protocCommand>${protoc.path}</protocCommand>
               <imports>
-                <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
-                <param>${basedir}/../../hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/proto</param>
+                <param>${basedir}/../../../hadoop-common-project/hadoop-common/src/main/proto</param>
+                <param>${basedir}/../../../hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/proto</param>
                 <param>${basedir}/src/main/proto</param>
               </imports>
               <source>

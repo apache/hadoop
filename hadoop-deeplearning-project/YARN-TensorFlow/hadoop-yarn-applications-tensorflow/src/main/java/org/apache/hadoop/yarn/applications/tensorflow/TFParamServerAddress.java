@@ -18,13 +18,9 @@
 
 package org.apache.hadoop.yarn.applications.tensorflow;
 
-import org.apache.hadoop.yarn.exceptions.YarnException;
+public class TFParamServerAddress extends TFServerAddress{
 
-import java.io.IOException;
-
-/**
- * Created by muzhongz on 16-12-27.
- */
-public interface TFApplicationRpc {
-    public String getClusterSpec() throws IOException, YarnException;
+    public TFParamServerAddress(ClusterSpec cluster, String address, int port, int taskIndex) {
+        super(cluster, address, port, "ps", taskIndex);
+    }
 }

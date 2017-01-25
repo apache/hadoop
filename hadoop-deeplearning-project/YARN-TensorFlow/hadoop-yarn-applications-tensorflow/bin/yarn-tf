@@ -5,24 +5,24 @@ WORKERS=0
 PSES=0
 JAR=""
 while true  
-do  
-    case "$1" in 
-         --job)  
-            JOB="$2" 
+do
+    case "$1" in
+         -job)
+            JOB="$2"
             echo "job script: $JOB"
-            shift  
+            shift
             ;;  
-         --wn)  
+         -numberworkers)
             WORKERS="$2" 
             echo "worker num: $WORKERS"
             shift  
             ;;  
-         --pn)  
+         -numberps)
             PSES="$2" 
             echo "ps num: $PSES"
             shift  
             ;;  
-         --jar)  
+         -jar)
             JAR="$2" 
             echo "jar path: $JAR"
             shift  
@@ -30,16 +30,17 @@ do
          *)  
             shift  
          break 
-         ;;  
-    esac  
-shift  
+         ;;
+    esac
+shift
 done
 
-CLIENT_MAIN_CLASS := "org.apache.hadoop.yarn.applications.tensorflow.Client"
+CLIENT_MAIN_CLASS="org.apache.hadoop.yarn.applications.tensorflow.Client"
 
-hadoop jar $JAR $CLIENT_MAIN_CLASS \
+yarn jar $JAR $CLIENT_MAIN_CLASS \
          --jar $JAR \
          --tf_client $JOB \
          --num_worker $WORKERS \
          --num_ps $PSES \
          --container_memory 4096
+

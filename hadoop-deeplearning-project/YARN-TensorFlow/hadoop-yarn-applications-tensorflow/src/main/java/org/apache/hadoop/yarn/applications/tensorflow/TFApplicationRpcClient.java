@@ -32,9 +32,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-/**
- * Created by muzhongz on 16-12-27.
- */
 public class TFApplicationRpcClient implements TFApplicationRpc {
     private String serverAddress;
     private int serverPort;

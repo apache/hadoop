@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.yarn.applications.tensorflow;
 
-/**
- * Created by muzhongz on 16-12-21.
- */
 public class TFServerAddress {
     private String address;
     private int port;

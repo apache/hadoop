@@ -28,9 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Created by muzhongz on 16-11-30.
- */
+
 public class TFClient implements Runnable {
 
     private static final Log LOG = LogFactory.getLog(TFClient.class);

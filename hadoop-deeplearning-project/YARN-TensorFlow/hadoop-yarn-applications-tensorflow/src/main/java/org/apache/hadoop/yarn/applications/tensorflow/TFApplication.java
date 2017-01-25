@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.yarn.applications.tensorflow;
 
-/**
- * Created by muzhongz on 16-12-16.
- */
 public class TFApplication {
 
     public static final String OPT_TF_APPNAME = "appname";

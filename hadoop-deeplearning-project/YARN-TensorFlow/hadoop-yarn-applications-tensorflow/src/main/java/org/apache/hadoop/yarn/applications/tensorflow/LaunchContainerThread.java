@@ -28,9 +28,6 @@ import org.apache.hadoop.yarn.api.records.*;
 import java.io.IOException;
 import java.util.*;
 
-/**
- * Created by muzhongz on 16-12-20.
- */
 public class LaunchContainerThread implements Runnable {
 
     private static final Log LOG = LogFactory.getLog(LaunchContainerThread.class);

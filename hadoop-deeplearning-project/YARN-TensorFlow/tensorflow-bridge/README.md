@@ -1,4 +1,4 @@
-This experimental module aims to provide a JNI bridge to launch Tensorflow servers. 
+
 
 ## How to build native library
 To build the native library, we assume that user already have Tensorflow installed on their servers and eventuall we'll build an independent .so file.

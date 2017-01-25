@@ -15,30 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.yarn.applications.tensorflow;
 
-/**
- * Created by muzhongz on 16-12-27.
- */
-public class ClusterSpecException extends Exception {
+public class TFMasterAddress {
+    private String address;
+    private int port;
 
-    public ClusterSpecException() {
-        super();
+    public String getAddress() {
+        return address;
     }
 
-    public ClusterSpecException(String message) {
-        super(message);
+    public void setAddress(String address) {
+        this.address = address;
     }
 
-    public ClusterSpecException(String message, Throwable cause) {
-        super(message, cause);
+    public int getPort() {
+        return port;
     }
 
-    public ClusterSpecException(Throwable cause) {
-        super(cause);
-    }
-
-    public ClusterSpecException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
+    public void setPort(int port) {
+        this.port = port;
     }
 }

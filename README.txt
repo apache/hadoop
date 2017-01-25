@@ -1,3 +1,3 @@
-Tensorflow on YARN
+Deep learning on Hadoop
 ======================
-A YARN native application for deep learning.
+In progress

@@ -39,9 +39,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
 
-/**
- * Created by muzhongz on 16-12-15.
- */
+
 public class TFAmContainer {
     private static final Log LOG = LogFactory.getLog(TFAmContainer.class);
     public static final String APPMASTER_JAR_PATH = "AppMaster.jar";
