@@ -3903,10 +3903,10 @@ public class BlockManager implements BlockStatsMXBean {
     BitSet bitSet = new BitSet(block.getTotalBlockNum());
     for (StorageAndBlockIndex si : block.getStorageAndIndexInfos()) {
       StoredReplicaState state = checkReplicaOnStorage(counters, block,
-          si.storage, nodesCorrupt, inStartupSafeMode);
+          si.getStorage(), nodesCorrupt, inStartupSafeMode);
       if (state == StoredReplicaState.LIVE) {
-        if (!bitSet.get(si.blockIndex)) {
-          bitSet.set(si.blockIndex);
+        if (!bitSet.get(si.getBlockIndex())) {
+          bitSet.set(si.getBlockIndex());
         } else {
           counters.subtract(StoredReplicaState.LIVE, 1);
           counters.add(StoredReplicaState.REDUNDANT, 1);

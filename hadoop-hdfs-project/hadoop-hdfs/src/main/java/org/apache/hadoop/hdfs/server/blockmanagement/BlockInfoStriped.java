@@ -244,13 +244,21 @@ public class BlockInfoStriped extends BlockInfo {
     return true;
   }
 
-  static class StorageAndBlockIndex {
-    final DatanodeStorageInfo storage;
-    final byte blockIndex;
+  public static class StorageAndBlockIndex {
+    private final DatanodeStorageInfo storage;
+    private final byte blockIndex;
 
     StorageAndBlockIndex(DatanodeStorageInfo storage, byte blockIndex) {
       this.storage = storage;
       this.blockIndex = blockIndex;
+    }
+
+    public DatanodeStorageInfo getStorage() {
+      return storage;
+    }
+
+    public byte getBlockIndex() {
+      return blockIndex;
     }
   }
 
