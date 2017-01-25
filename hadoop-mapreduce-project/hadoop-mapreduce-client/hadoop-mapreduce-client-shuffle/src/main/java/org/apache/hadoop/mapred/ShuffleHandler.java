@@ -947,7 +947,7 @@ public class ShuffleHandler extends AuxiliaryService {
       // to turn it on please enable this audit log
       // on log4j.properties by uncommenting the setting
       if (AUDITLOG.isDebugEnabled()) {
-        AUDITLOG.debug("shuffle for " + jobQ.get(0) +
+        AUDITLOG.debug("shuffle for " + jobQ.get(0) + " mappers: " + mapIds +
                          " reducer " + reduceQ.get(0));
       }
       int reduceId;
