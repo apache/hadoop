@@ -50,7 +50,10 @@ import org.apache.hadoop.net.*;
 import org.apache.hadoop.net.NetworkTopology.InvalidTopologyException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Timer;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
@@ -172,6 +175,14 @@ public class DatanodeManager {
    */
   private final HashMap<String, Integer> datanodesSoftwareVersions =
     new HashMap<>(4, 0.75f);
+
+  /**
+   * True if we should process latency metrics from downstream peers.
+   */
+  private final boolean dataNodePeerStatsEnabled;
+
+  @Nullable
+  private final SlowPeerTracker slowPeerTracker;
   
   /**
    * The minimum time between resending caching directives to Datanodes,
@@ -194,6 +205,12 @@ public class DatanodeManager {
     this.decomManager = new DecommissionManager(namesystem, blockManager,
         heartbeatManager);
     this.fsClusterStats = newFSClusterStats();
+    this.dataNodePeerStatsEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY,
+        DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT);
+
+    this.slowPeerTracker = dataNodePeerStatsEnabled ?
+        new SlowPeerTracker(conf, new Timer()) : null;
 
     this.defaultXferPort = NetUtils.createSocketAddr(
           conf.getTrimmed(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
@@ -1566,7 +1583,8 @@ public class DatanodeManager {
       StorageReport[] reports, final String blockPoolId,
       long cacheCapacity, long cacheUsed, int xceiverCount, 
       int maxTransfers, int failedVolumes,
-      VolumeFailureSummary volumeFailureSummary) throws IOException {
+      VolumeFailureSummary volumeFailureSummary,
+      @Nonnull SlowPeerReports slowPeers) throws IOException {
     final DatanodeDescriptor nodeinfo;
     try {
       nodeinfo = getDatanode(nodeReg);
@@ -1630,6 +1648,19 @@ public class DatanodeManager {
       cmds.add(new BalancerBandwidthCommand(nodeinfo.getBalancerBandwidth()));
       // set back to 0 to indicate that datanode has been sent the new value
       nodeinfo.setBalancerBandwidth(0);
+    }
+
+    if (slowPeerTracker != null) {
+      final Map<String, Double> slowPeersMap = slowPeers.getSlowPeers();
+      if (!slowPeersMap.isEmpty()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("DataNode " + nodeReg + " reported slow peers: " +
+              slowPeersMap);
+        }
+        for (String slowNodeId : slowPeersMap.keySet()) {
+          slowPeerTracker.addReport(slowNodeId, nodeReg.getIpcAddr(false));
+        }
+      }
     }
 
     if (!cmds.isEmpty()) {
@@ -1833,6 +1864,15 @@ public class DatanodeManager {
         * intervalSeconds;
     this.blockInvalidateLimit = Math.max(20 * (int) (intervalSeconds),
         DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT);
+  }
+
+  /**
+   * Retrieve information about slow peers as a JSON.
+   * Returns null if we are not tracking slow peers.
+   * @return
+   */
+  public String getSlowPeersReport() {
+    return slowPeerTracker != null ? slowPeerTracker.getJson() : null;
   }
 }
 

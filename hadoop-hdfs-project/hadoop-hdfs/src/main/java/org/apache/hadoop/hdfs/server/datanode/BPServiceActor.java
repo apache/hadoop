@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
@@ -127,7 +128,8 @@ class BPServiceActor implements Runnable {
     this.ibrManager = new IncrementalBlockReportManager(dnConf.ibrInterval);
     prevBlockReportId = ThreadLocalRandom.current().nextLong();
     scheduler = new Scheduler(dnConf.heartBeatInterval,
-        dnConf.getLifelineIntervalMs(), dnConf.blockReportInterval);
+        dnConf.getLifelineIntervalMs(), dnConf.blockReportInterval,
+        dnConf.slowPeersReportIntervalMs);
     // get the value of maxDataLength.
     this.maxDataLength = dnConf.getMaxDataLength();
   }
@@ -489,12 +491,18 @@ class BPServiceActor implements Runnable {
                 " storage reports from service actor: " + this);
     }
     
-    scheduler.updateLastHeartbeatTime(monotonicNow());
+    final long now = monotonicNow();
+    scheduler.updateLastHeartbeatTime(now);
     VolumeFailureSummary volumeFailureSummary = dn.getFSDataset()
         .getVolumeFailureSummary();
     int numFailedVolumes = volumeFailureSummary != null ?
         volumeFailureSummary.getFailedStorageLocations().length : 0;
-    return bpNamenode.sendHeartbeat(bpRegistration,
+    final boolean slowPeersReportDue = scheduler.isSlowPeersReportDue(now);
+    final SlowPeerReports slowPeers =
+        slowPeersReportDue && dn.getPeerMetrics() != null ?
+            SlowPeerReports.create(dn.getPeerMetrics().getOutliers()) :
+            SlowPeerReports.EMPTY_REPORT;
+    HeartbeatResponse response = bpNamenode.sendHeartbeat(bpRegistration,
         reports,
         dn.getFSDataset().getCacheCapacity(),
         dn.getFSDataset().getCacheUsed(),
@@ -502,7 +510,14 @@ class BPServiceActor implements Runnable {
         dn.getXceiverCount(),
         numFailedVolumes,
         volumeFailureSummary,
-        requestBlockReportLease);
+        requestBlockReportLease,
+        slowPeers);
+
+    if (slowPeersReportDue) {
+      // If the report was due and successfully sent, schedule the next one.
+      scheduler.scheduleNextSlowPeerReport();
+    }
+    return response;
   }
 
   @VisibleForTesting
@@ -1079,18 +1094,23 @@ class BPServiceActor implements Runnable {
     @VisibleForTesting
     boolean resetBlockReportTime = true;
 
+    @VisibleForTesting
+    volatile long nextSlowPeersReportTime = monotonicNow();
+
     private final AtomicBoolean forceFullBlockReport =
         new AtomicBoolean(false);
 
     private final long heartbeatIntervalMs;
     private final long lifelineIntervalMs;
     private final long blockReportIntervalMs;
+    private final long slowPeersReportIntervalMs;
 
     Scheduler(long heartbeatIntervalMs, long lifelineIntervalMs,
-        long blockReportIntervalMs) {
+              long blockReportIntervalMs, long slowPeersReportIntervalMs) {
       this.heartbeatIntervalMs = heartbeatIntervalMs;
       this.lifelineIntervalMs = lifelineIntervalMs;
       this.blockReportIntervalMs = blockReportIntervalMs;
+      this.slowPeersReportIntervalMs = slowPeersReportIntervalMs;
       scheduleNextLifeline(nextHeartbeatTime);
     }
 
@@ -1123,6 +1143,10 @@ class BPServiceActor implements Runnable {
       lastBlockReportTime = blockReportTime;
     }
 
+    void scheduleNextSlowPeerReport() {
+      nextSlowPeersReportTime = monotonicNow() + slowPeersReportIntervalMs;
+    }
+
     long getLastHearbeatTime() {
       return (monotonicNow() - lastHeartbeatTime)/1000;
     }
@@ -1147,6 +1171,10 @@ class BPServiceActor implements Runnable {
 
     boolean isBlockReportDue(long curTime) {
       return nextBlockReportTime - curTime <= 0;
+    }
+
+    boolean isSlowPeersReportDue(long curTime) {
+      return nextSlowPeersReportTime - curTime <= 0;
     }
 
     void forceFullBlockReportNow() {

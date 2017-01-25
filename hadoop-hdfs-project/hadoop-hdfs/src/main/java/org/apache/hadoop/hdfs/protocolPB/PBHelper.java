@@ -20,7 +20,10 @@ package org.apache.hadoop.hdfs.protocolPB;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.google.protobuf.ByteString;
 
@@ -44,6 +47,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.FinalizeComm
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.KeyUpdateCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDeletedBlockInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SlowPeerReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailureSummaryProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.BlockECReconstructionInfoProto;
@@ -107,6 +111,7 @@ import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStat
 import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
+import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 
 /**
@@ -827,6 +832,45 @@ public class PBHelper {
     builder.setEstimatedCapacityLostTotal(
         volumeFailureSummary.getEstimatedCapacityLostTotal());
     return builder.build();
+  }
+
+  public static List<SlowPeerReportProto> convertSlowPeerInfo(
+      SlowPeerReports slowPeers) {
+    if (slowPeers.getSlowPeers().size() == 0) {
+      return Collections.emptyList();
+    }
+
+    List<SlowPeerReportProto> slowPeerInfoProtos =
+        new ArrayList<>(slowPeers.getSlowPeers().size());
+    for (Map.Entry<String, Double> entry :
+        slowPeers.getSlowPeers().entrySet()) {
+      slowPeerInfoProtos.add(SlowPeerReportProto.newBuilder()
+              .setDataNodeId(entry.getKey())
+              .setAggregateLatency(entry.getValue())
+              .build());
+    }
+    return slowPeerInfoProtos;
+  }
+
+  public static SlowPeerReports convertSlowPeerInfo(
+      List<SlowPeerReportProto> slowPeerProtos) {
+
+    // No slow peers, or possibly an older DataNode.
+    if (slowPeerProtos == null || slowPeerProtos.size() == 0) {
+      return SlowPeerReports.EMPTY_REPORT;
+    }
+
+    Map<String, Double> slowPeersMap = new HashMap<>(slowPeerProtos.size());
+    for (SlowPeerReportProto proto : slowPeerProtos) {
+      if (!proto.hasDataNodeId()) {
+        // The DataNodeId should be reported.
+        continue;
+      }
+      slowPeersMap.put(
+          proto.getDataNodeId(),
+          proto.hasAggregateLatency() ? proto.getAggregateLatency() : 0.0);
+    }
+    return SlowPeerReports.create(slowPeersMap);
   }
 
   public static JournalInfo convert(JournalInfoProto info) {
