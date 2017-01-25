@@ -17,7 +17,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                       http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
-    <artifactId>hadoop-yarn-applications</artifactId>
+    <artifactId>hadoop-deeplearning-project</artifactId>
     <groupId>org.apache.hadoop</groupId>
     <version>3.0.0-alpha2-SNAPSHOT</version>
   </parent>
@@ -238,9 +238,8 @@
               <protocVersion>${protobuf.version}</protocVersion>
               <protocCommand>${protoc.path}</protocCommand>
               <imports>
-                <param>${basedir}/../../../../hadoop-common-project/hadoop-common/src/main/proto</param>
-                <param>${basedir}/../../../../hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/proto</param>
-                <param>${basedir}/../../hadoop-yarn-api/src/main/proto</param>
+                <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
+                <param>${basedir}/../../hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/proto</param>
                 <param>${basedir}/src/main/proto</param>
               </imports>
               <source>
