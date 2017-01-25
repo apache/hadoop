@@ -36,7 +36,6 @@
 
   <modules>
     <module>hadoop-yarn-applications-distributedshell</module>
-    <module>hadoop-yarn-applications-tensorflow</module>
     <module>hadoop-yarn-applications-unmanaged-am-launcher</module>
   </modules>
 
