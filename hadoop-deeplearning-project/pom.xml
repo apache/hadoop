@@ -30,7 +30,7 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>tensorflow-bridge</module>
+        <!--<module>tensorflow-bridge</module>-->
         <module>hadoop-yarn-applications-tensorflow</module>
     </modules>
 

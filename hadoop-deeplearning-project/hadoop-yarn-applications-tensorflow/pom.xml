@@ -240,7 +240,6 @@
               <imports>
                 <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
                 <param>${basedir}/../../hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/proto</param>
-                <param>${basedir}/../hadoop-yarn/hadoop-yarn-api/src/main/proto</param>
                 <param>${basedir}/src/main/proto</param>
               </imports>
               <source>
