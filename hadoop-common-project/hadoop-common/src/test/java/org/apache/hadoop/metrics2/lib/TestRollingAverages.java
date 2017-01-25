@@ -42,7 +42,8 @@ public class TestRollingAverages {
   public void testRollingAveragesEmptyRollover() throws Exception {
     final MetricsRecordBuilder rb = mockMetricsRecordBuilder();
     /* 5s interval and 2 windows */
-    try (final RollingAverages rollingAverages = new RollingAverages(5, 2)) {
+    try (final RollingAverages rollingAverages =
+             new RollingAverages(5000, 2)) {
       /* Check it initially */
       rollingAverages.snapshot(rb, true);
       verify(rb, never()).addGauge(
@@ -74,10 +75,10 @@ public class TestRollingAverages {
   public void testRollingAveragesRollover() throws Exception {
     final MetricsRecordBuilder rb = mockMetricsRecordBuilder();
     final String name = "foo2";
-    final int windowSize = 5; // 5s roll over interval
+    final int windowSizeMs = 5000; // 5s roll over interval
     final int numWindows = 2;
     final int numOpsPerIteration = 1000;
-    try (RollingAverages rollingAverages = new RollingAverages(windowSize,
+    try (RollingAverages rollingAverages = new RollingAverages(windowSizeMs,
         numWindows)) {
 
       /* Push values for three intervals */
@@ -92,7 +93,7 @@ public class TestRollingAverages {
          * Sleep until 1s after the next windowSize seconds interval, to let the
          * metrics roll over
          */
-        final long sleep = (start + (windowSize * 1000 * i) + 1000)
+        final long sleep = (start + (windowSizeMs * i) + 1000)
             - Time.monotonicNow();
         Thread.sleep(sleep);
 
@@ -110,12 +111,12 @@ public class TestRollingAverages {
         final long rollingTotal = i > 1 ? 2 * numOpsPerIteration
             : numOpsPerIteration;
         verify(rb).addGauge(
-            info("Foo2RollingAvgTime", "Rolling average time for foo2"),
+            info("[Foo2]RollingAvgTime", "Rolling average time for foo2"),
             rollingSum / rollingTotal);
 
         /* Verify the metrics were added the right number of times */
         verify(rb, times(i)).addGauge(
-            eq(info("Foo2RollingAvgTime", "Rolling average time for foo2")),
+            eq(info("[Foo2]RollingAvgTime", "Rolling average time for foo2")),
             anyDouble());
       }
     }

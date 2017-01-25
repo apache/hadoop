@@ -30,6 +30,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_LIFELINE_INTERVAL_SECONDS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NON_LOCAL_LAZY_PERSIST;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NON_LOCAL_LAZY_PERSIST_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOW_PEERS_REPORT_INTERVAL_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOW_PEERS_REPORT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
@@ -65,6 +67,8 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil;
 import org.apache.hadoop.security.SaslPropertiesResolver;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * Simple class encapsulating all of the configuration that the DataNode
  * loads at startup time.
@@ -91,6 +95,8 @@ public class DNConf {
   private final long lifelineIntervalMs;
   final long blockReportInterval;
   final long blockReportSplitThreshold;
+  final boolean peerStatsEnabled;
+  final long slowPeersReportIntervalMs;
   final long ibrInterval;
   final long initialBlockReportDelayMs;
   final long cacheReportInterval;
@@ -168,6 +174,13 @@ public class DNConf {
     this.blockReportInterval = getConf().getLong(
         DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
         DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT);
+    this.peerStatsEnabled = getConf().getBoolean(
+        DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY,
+        DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT);
+    this.slowPeersReportIntervalMs = getConf().getTimeDuration(
+        DFS_DATANODE_SLOW_PEERS_REPORT_INTERVAL_KEY,
+        DFS_DATANODE_SLOW_PEERS_REPORT_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
     this.ibrInterval = getConf().getLong(
         DFSConfigKeys.DFS_BLOCKREPORT_INCREMENTAL_INTERVAL_MSEC_KEY,
         DFSConfigKeys.DFS_BLOCKREPORT_INCREMENTAL_INTERVAL_MSEC_DEFAULT);

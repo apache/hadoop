@@ -20,6 +20,7 @@ package org.apache.hadoop.metrics2.lib;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,6 +40,9 @@ import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import javax.annotation.Nullable;
+
 import static org.apache.hadoop.metrics2.lib.Interns.*;
 
 /**
@@ -63,7 +67,10 @@ public class RollingAverages extends MutableMetric implements Closeable {
           .setNameFormat("RollingAverages-%d").build());
 
   private ScheduledFuture<?> scheduledTask = null;
+
+  @Nullable
   private Map<String, MutableRate> currentSnapshot;
+
   private final int numWindows;
   private final String avgInfoNameTemplate;
   private final String avgInfoDescTemplate;
@@ -100,31 +107,31 @@ public class RollingAverages extends MutableMetric implements Closeable {
 
   /**
    * Constructor of {@link RollingAverages}.
-   * @param windowSize
-   *          The number of seconds of each window for which sub set of samples
-   *          are gathered to compute the rolling average, A.K.A. roll over
-   *          interval.
+   * @param windowSizeMs
+   *          The number of milliseconds of each window for which subset
+   *          of samples are gathered to compute the rolling average, A.K.A.
+   *          roll over interval.
    * @param numWindows
    *          The number of windows maintained to compute the rolling average.
    * @param valueName
    *          of the metric (e.g. "Time", "Latency")
    */
   public RollingAverages(
-      final int windowSize,
+      final long windowSizeMs,
       final int numWindows,
       final String valueName) {
     String uvName = StringUtils.capitalize(valueName);
     String lvName = StringUtils.uncapitalize(valueName);
-    avgInfoNameTemplate = "%s" + "RollingAvg"+ uvName;
+    avgInfoNameTemplate = "[%s]" + "RollingAvg"+ uvName;
     avgInfoDescTemplate = "Rolling average "+ lvName +" for "+ "%s";
     this.numWindows = numWindows;
     scheduledTask = SCHEDULER.scheduleAtFixedRate(new RatesRoller(this),
-        windowSize, windowSize, TimeUnit.SECONDS);
+        windowSizeMs, windowSizeMs, TimeUnit.MILLISECONDS);
   }
 
   /**
    * Constructor of {@link RollingAverages}.
-   * @param windowSize
+   * @param windowSizeMs
    *          The number of seconds of each window for which sub set of samples
    *          are gathered to compute rolling average, also A.K.A roll over
    *          interval.
@@ -133,9 +140,9 @@ public class RollingAverages extends MutableMetric implements Closeable {
    *          average of the rolling averages.
    */
   public RollingAverages(
-      final int windowSize,
+      final long windowSizeMs,
       final int numWindows) {
-    this(windowSize, numWindows, "Time");
+    this(windowSizeMs, numWindows, "Time");
   }
 
   @Override
@@ -216,7 +223,7 @@ public class RollingAverages extends MutableMetric implements Closeable {
    * This function is not thread safe, callers should ensure thread safety.
    * </p>
    */
-  private void rollOverAvgs() {
+  private synchronized void rollOverAvgs() {
     if (currentSnapshot == null) {
       return;
     }
@@ -249,5 +256,33 @@ public class RollingAverages extends MutableMetric implements Closeable {
       scheduledTask.cancel(false);
     }
     scheduledTask = null;
+  }
+
+  /**
+   * Retrieve a map of metric name -> (aggregate).
+   * Filter out entries that don't have at least minSamples.
+   *
+   * @return a map of peer DataNode Id to the average latency to that
+   *         node seen over the measurement period.
+   */
+  public synchronized Map<String, Double> getStats(long minSamples) {
+    final Map<String, Double> stats = new HashMap<>();
+
+    for (final Entry<String, LinkedBlockingDeque<SumAndCount>> entry
+        : averages.entrySet()) {
+      final String name = entry.getKey();
+      double totalSum = 0;
+      long totalCount = 0;
+
+      for (final SumAndCount sumAndCount : entry.getValue()) {
+        totalCount += sumAndCount.getCount();
+        totalSum += sumAndCount.getSum();
+      }
+
+      if (totalCount > minSamples) {
+        stats.put(name, totalSum / totalCount);
+      }
+    }
+    return stats;
   }
 }

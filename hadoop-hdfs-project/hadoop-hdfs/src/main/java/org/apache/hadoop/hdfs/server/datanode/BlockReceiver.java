@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodePeerMetrics;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
@@ -93,7 +94,7 @@ class BlockReceiver implements Closeable {
   protected final String inAddr;
   protected final String myAddr;
   private String mirrorAddr;
-  private String bracketedMirrorAddr;
+  private String mirrorNameForMetrics;
   private DataOutputStream mirrorOut;
   private Daemon responder = null;
   private DataTransferThrottler throttler;
@@ -843,10 +844,9 @@ class BlockReceiver implements Closeable {
    * </p>
    */
   private void trackSendPacketToLastNodeInPipeline(final long elapsedMs) {
-    if (isPenultimateNode && mirrorAddr != null) {
-      datanode.getPeerMetrics().addSendPacketDownstream(
-          bracketedMirrorAddr,
-          elapsedMs);
+    final DataNodePeerMetrics peerMetrics = datanode.getPeerMetrics();
+    if (peerMetrics != null && isPenultimateNode) {
+      peerMetrics.addSendPacketDownstream(mirrorNameForMetrics, elapsedMs);
     }
   }
 
@@ -927,8 +927,13 @@ class BlockReceiver implements Closeable {
     boolean responderClosed = false;
     mirrorOut = mirrOut;
     mirrorAddr = mirrAddr;
-    bracketedMirrorAddr = "[" + mirrAddr + "]";
     isPenultimateNode = ((downstreams != null) && (downstreams.length == 1));
+    if (isPenultimateNode) {
+      mirrorNameForMetrics = (downstreams[0].getInfoSecurePort() != 0 ?
+          downstreams[0].getInfoSecureAddr() : downstreams[0].getInfoAddr());
+      LOG.debug("Will collect peer metrics for downstream node {}",
+          mirrorNameForMetrics);
+    }
     throttler = throttlerArg;
 
     this.replyOut = replyOut;

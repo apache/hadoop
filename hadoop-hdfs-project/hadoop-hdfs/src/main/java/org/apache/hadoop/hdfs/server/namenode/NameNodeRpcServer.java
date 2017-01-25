@@ -152,6 +152,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.NodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
+import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -202,6 +203,8 @@ import org.slf4j.Logger;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
+
+import javax.annotation.Nonnull;
 
 /**
  * This class is responsible for handling all of the RPC calls to the NameNode.
@@ -1412,12 +1415,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       StorageReport[] report, long dnCacheCapacity, long dnCacheUsed,
       int xmitsInProgress, int xceiverCount,
       int failedVolumes, VolumeFailureSummary volumeFailureSummary,
-      boolean requestFullBlockReportLease) throws IOException {
+      boolean requestFullBlockReportLease,
+      @Nonnull SlowPeerReports slowPeers) throws IOException {
     checkNNStartup();
     verifyRequest(nodeReg);
     return namesystem.handleHeartbeat(nodeReg, report,
         dnCacheCapacity, dnCacheUsed, xceiverCount, xmitsInProgress,
-        failedVolumes, volumeFailureSummary, requestFullBlockReportLease);
+        failedVolumes, volumeFailureSummary, requestFullBlockReportLease,
+        slowPeers);
   }
 
   @Override // DatanodeProtocol

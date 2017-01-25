@@ -1834,6 +1834,12 @@ public class NameNode extends ReconfigurableBase implements
     return getNamesystem().getBytesInFuture();
   }
 
+  @Override
+  public String getSlowPeersReport() {
+    return namesystem.getBlockManager().getDatanodeManager()
+        .getSlowPeersReport();
+  }
+
   /**
    * Shutdown the NN immediately in an ungraceful way. Used when it would be
    * unsafe for the NN to continue operating, e.g. during a failed HA state

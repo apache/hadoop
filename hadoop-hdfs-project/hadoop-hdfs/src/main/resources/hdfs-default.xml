@@ -1930,19 +1930,15 @@
 </property>
 
 <property>
-  <name>dfs.metrics.rolling.average.window.size</name>
-  <value>3600</value>
+  <name>dfs.datanode.slow.peers.report.interval</name>
+  <value>30m</value>
   <description>
-    The number of seconds of each window for which sub set of samples are gathered
-    to compute the rolling average, A.K.A. roll over interval.
-  </description>
-</property>
+    This setting controls how frequently DataNodes will report their peer
+    latencies to the NameNode via heartbeats.  This setting supports
+    multiple time unit suffixes as described in dfs.heartbeat.interval.
+    If no suffix is specified then milliseconds is assumed.
 
-<property>
-  <name>dfs.metrics.rolling.average.window.numbers</name>
-  <value>48</value>
-  <description>
-    The number of windows maintained to compute the rolling average.
+    It is ignored if dfs.datanode.peer.stats.enabled is false.
   </description>
 </property>
 

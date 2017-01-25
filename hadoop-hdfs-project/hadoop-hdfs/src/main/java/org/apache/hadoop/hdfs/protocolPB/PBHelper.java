@@ -19,7 +19,11 @@ package org.apache.hadoop.hdfs.protocolPB;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.google.protobuf.ByteString;
 
@@ -42,6 +46,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.FinalizeComm
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.KeyUpdateCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDeletedBlockInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SlowPeerReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailureSummaryProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
@@ -99,12 +104,13 @@ import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStat
 import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
+import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 
 /**
  * Utilities for converting protobuf classes to and from implementation classes
  * and other helper utilities to help in dealing with protobuf.
- * 
+ *
  * Note that when converting from an internal type to protobuf type, the
  * converter never return null for protobuf type. The check for internal type
  * being null must be done before calling the convert() method.
@@ -113,7 +119,7 @@ import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
  * and to protobuf, see {@link PBHelperClient}.
  */
 public class PBHelper {
-  private static final RegisterCommandProto REG_CMD_PROTO = 
+  private static final RegisterCommandProto REG_CMD_PROTO =
       RegisterCommandProto.newBuilder().build();
   private static final RegisterCommand REG_CMD = new RegisterCommand();
 
@@ -387,7 +393,7 @@ public class PBHelper {
       return ReplicaStateProto.FINALIZED;
     }
   }
-  
+
   public static DatanodeRegistrationProto convert(
       DatanodeRegistration registration) {
     DatanodeRegistrationProto.Builder builder = DatanodeRegistrationProto
@@ -424,7 +430,7 @@ public class PBHelper {
       return null;
     }
   }
-  
+
   public static BalancerBandwidthCommandProto convert(
       BalancerBandwidthCommand bbCmd) {
     return BalancerBandwidthCommandProto.newBuilder()
@@ -569,7 +575,7 @@ public class PBHelper {
     List<RecoveringBlockProto> list = recoveryCmd.getBlocksList();
     List<RecoveringBlock> recoveringBlocks = new ArrayList<RecoveringBlock>(
         list.size());
-    
+
     for (RecoveringBlockProto rbp : list) {
       recoveringBlocks.add(PBHelper.convert(rbp));
     }
@@ -654,9 +660,9 @@ public class PBHelper {
 
   public static ReceivedDeletedBlockInfoProto convert(
       ReceivedDeletedBlockInfo receivedDeletedBlockInfo) {
-    ReceivedDeletedBlockInfoProto.Builder builder = 
+    ReceivedDeletedBlockInfoProto.Builder builder =
         ReceivedDeletedBlockInfoProto.newBuilder();
-    
+
     ReceivedDeletedBlockInfoProto.BlockStatus status;
     switch (receivedDeletedBlockInfo.getStatus()) {
     case RECEIVING_BLOCK:
@@ -673,7 +679,7 @@ public class PBHelper {
           receivedDeletedBlockInfo.getStatus());
     }
     builder.setStatus(status);
-    
+
     if (receivedDeletedBlockInfo.getDelHints() != null) {
       builder.setDeleteHint(receivedDeletedBlockInfo.getDelHints());
     }
@@ -700,7 +706,7 @@ public class PBHelper {
         status,
         proto.hasDeleteHint() ? proto.getDeleteHint() : null);
   }
-  
+
   public static NamespaceInfoProto convert(NamespaceInfo info) {
     NamespaceInfoProto.Builder builder = NamespaceInfoProto.newBuilder();
     builder.setBlockPoolID(info.getBlockPoolID())
@@ -785,6 +791,45 @@ public class PBHelper {
     builder.setEstimatedCapacityLostTotal(
         volumeFailureSummary.getEstimatedCapacityLostTotal());
     return builder.build();
+  }
+
+  public static List<SlowPeerReportProto> convertSlowPeerInfo(
+      SlowPeerReports slowPeers) {
+    if (slowPeers.getSlowPeers().size() == 0) {
+      return Collections.emptyList();
+    }
+
+    List<SlowPeerReportProto> slowPeerInfoProtos =
+        new ArrayList<>(slowPeers.getSlowPeers().size());
+    for (Map.Entry<String, Double> entry :
+        slowPeers.getSlowPeers().entrySet()) {
+      slowPeerInfoProtos.add(SlowPeerReportProto.newBuilder()
+              .setDataNodeId(entry.getKey())
+              .setAggregateLatency(entry.getValue())
+              .build());
+    }
+    return slowPeerInfoProtos;
+  }
+
+  public static SlowPeerReports convertSlowPeerInfo(
+      List<SlowPeerReportProto> slowPeerProtos) {
+
+    // No slow peers, or possibly an older DataNode.
+    if (slowPeerProtos == null || slowPeerProtos.size() == 0) {
+      return SlowPeerReports.EMPTY_REPORT;
+    }
+
+    Map<String, Double> slowPeersMap = new HashMap<>(slowPeerProtos.size());
+    for (SlowPeerReportProto proto : slowPeerProtos) {
+      if (!proto.hasDataNodeId()) {
+        // The DataNodeId should be reported.
+        continue;
+      }
+      slowPeersMap.put(
+          proto.getDataNodeId(),
+          proto.hasAggregateLatency() ? proto.getAggregateLatency() : 0.0);
+    }
+    return SlowPeerReports.create(slowPeersMap);
   }
 
   public static JournalInfo convert(JournalInfoProto info) {

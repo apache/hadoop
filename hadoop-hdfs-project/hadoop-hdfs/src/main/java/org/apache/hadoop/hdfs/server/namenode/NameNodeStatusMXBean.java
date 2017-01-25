@@ -69,4 +69,10 @@ public interface NameNodeStatusMXBean {
    * @return number of bytes that can be deleted if exited from safe mode.
    */
   long getBytesWithFutureGenerationStamps();
+
+  /**
+   * Retrieves information about slow DataNodes, if the feature is
+   * enabled. The report is in a JSON format.
+   */
+  String getSlowPeersReport();
 }
