@@ -330,11 +330,6 @@ public class TestSchedulingPolicy {
       }
 
       @Override
-      public RMContainer preemptContainer() {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
       public Resource getFairShare() {
         throw new UnsupportedOperationException();
       }

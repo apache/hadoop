@@ -614,6 +614,26 @@ public class AppSchedulingInfo {
   }
 
   /**
+   * Method to return the next resource request to be serviced.
+   *
+   * In the initial implementation, we just pick any {@link ResourceRequest}
+   * corresponding to the highest priority.
+   *
+   * @return next {@link ResourceRequest} to allocate resources for.
+   */
+  @Unstable
+  public synchronized ResourceRequest getNextResourceRequest() {
+    SchedulingPlacementSet<SchedulerNode> ps = schedulerKeyToPlacementSets.get(
+        schedulerKeys.firstKey());
+    if (null != ps) {
+      for (ResourceRequest rr : ps.getResourceRequests().values()) {
+        return rr;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Returns if the place (node/rack today) is either blacklisted by the
    * application (user) or the system
    *
