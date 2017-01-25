@@ -575,7 +575,6 @@
                   <goal>shade</goal>
                 </goals>
                 <configuration>
-                  <createSourceJar>true</createSourceJar>
                   <artifactSet>
                     <excludes>
                       <!-- Fine to expose our already-shaded deps as dependencies -->

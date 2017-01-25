@@ -138,7 +138,6 @@
                   <goal>shade</goal>
                 </goals>
                 <configuration>
-                  <createSourceJar>true</createSourceJar>
                   <artifactSet>
                     <excludes>
                       <!-- We need a filter that matches just those things that aer included in the api jar -->
