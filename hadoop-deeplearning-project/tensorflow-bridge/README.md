@@ -34,7 +34,7 @@ To build the native library, we assume that user already have Tensorflow install
    Here is an example path it may be: `/usr/lib/python2.7/site-packages/tensorflow`. Also, please make sure the python native library is also sepcified when building.
    
 ## How to build java library.
-To build the java part, you just need to run `mvn clean package` in current folder.
+**Please note that hadoop requires protoc 2.5 while tensorflow-bridge needs protoc 3.1 which means you need to build this java library using a different environment. However, this java library has already been pulished out and the tenrflow on yarn project depends on that published artifact. So you don't need to compile this project and we'll fix this part in the future.**
  
 Here are the main java API it exposed:
  
