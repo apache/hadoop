@@ -142,7 +142,6 @@ import org.apache.slider.core.launch.ClasspathConstructor;
 import org.apache.slider.core.launch.CredentialUtils;
 import org.apache.slider.core.launch.JavaCommandLineBuilder;
 import org.apache.slider.core.launch.LaunchedApplication;
-import org.apache.slider.core.launch.RunningApplication;
 import org.apache.slider.core.launch.SerializedApplicationReport;
 import org.apache.slider.core.main.RunService;
 import org.apache.slider.core.persist.AppDefinitionPersister;
@@ -1535,7 +1534,9 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
 
   public void updateLifetime(String appName, long lifetime)
       throws YarnException, IOException {
-    ApplicationReport report = findInstance(appName);
+    EnumSet<YarnApplicationState> appStates = EnumSet.range(
+        YarnApplicationState.NEW, YarnApplicationState.RUNNING);
+    ApplicationReport report = findInstance(appName, appStates);
     if (report == null) {
       throw new YarnException("Application not found for " + appName);
     }
@@ -2672,15 +2673,17 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   }
 
   /**
-   * List Slider instances belonging to a specific user. This will include
-   * failed and killed instances; there may be duplicates
+   * List Slider instances belonging to a specific user with a specific app
+   * name and within a set of app states.
    * @param user user: "" means all users, null means "default"
+   * @param appName name of the application set as a tag
+   * @param appStates a set of states the applications should be in
    * @return a possibly empty list of Slider AMs
    */
-
-  public List<ApplicationReport> listSliderInstances(String user)
-    throws YarnException, IOException {
-    return yarnAppListClient.listInstances(user);
+  public List<ApplicationReport> listSliderInstances(String user,
+      String appName, EnumSet<YarnApplicationState> appStates)
+      throws YarnException, IOException {
+    return yarnAppListClient.listInstances(user, appName, appStates);
   }
 
   /**
@@ -2806,7 +2809,9 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     }
 
     // and those the RM knows about
-    List<ApplicationReport> instances = listSliderInstances(null);
+    EnumSet<YarnApplicationState> appStates = EnumSet.range(min, max);
+    List<ApplicationReport> instances = listSliderInstances(null, clustername,
+        appStates);
     sortApplicationsByMostRecent(instances);
     Map<String, ApplicationReport> reportMap =
         buildApplicationReportMap(instances, min, max);
@@ -3053,7 +3058,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   }
 
   /**
-   * Find an instance of an application belonging to the current user
+   * Find an instance of an application belonging to the current user.
    * @param appname application name
    * @return the app report or null if none is found
    * @throws YarnException YARN issues
@@ -3061,14 +3066,22 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
    */
   public ApplicationReport findInstance(String appname)
       throws YarnException, IOException {
-    return yarnAppListClient.findInstance(appname);
+    return findInstance(appname, null);
   }
   
-  private RunningApplication findApplication(String appname)
+  /**
+   * Find an instance of an application belonging to the current user and in
+   * specific app states.
+   * @param appname application name
+   * @param appStates app states in which the application should be in
+   * @return the app report or null if none is found
+   * @throws YarnException YARN issues
+   * @throws IOException IO problems
+   */
+  public ApplicationReport findInstance(String appname,
+      EnumSet<YarnApplicationState> appStates)
       throws YarnException, IOException {
-    ApplicationReport applicationReport = findInstance(appname);
-    return applicationReport != null ?
-           new RunningApplication(yarnClient, applicationReport): null; 
+    return yarnAppListClient.findInstance(appname, appStates);
   }
 
   /**
