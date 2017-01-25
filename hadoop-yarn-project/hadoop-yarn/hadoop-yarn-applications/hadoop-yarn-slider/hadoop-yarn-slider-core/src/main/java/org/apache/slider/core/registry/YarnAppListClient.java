@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,7 +78,7 @@ public class YarnAppListClient {
 
 
   /**
-   * Find an instance of a application belong to the current user
+   * Find an instance of a application belong to the current user.
    * @param appname application name
    * @return the app report or null if none is found
    * @throws YarnException YARN issues
@@ -86,7 +87,22 @@ public class YarnAppListClient {
   public ApplicationReport findInstance(String appname) throws
                                                         YarnException,
                                                         IOException {
-    List<ApplicationReport> instances = listInstances(null, appname);
+    return findInstance(appname, null);
+  }
+
+  /**
+   * Find an instance of a application belong to the current user in specific
+   * app states.
+   * @param appname application name
+   * @param appStates list of states in which application should be in
+   * @return the app report or null if none is found
+   * @throws YarnException YARN issues
+   * @throws IOException IO problems
+   */
+  public ApplicationReport findInstance(String appname,
+      EnumSet<YarnApplicationState> appStates)
+      throws YarnException, IOException {
+    List<ApplicationReport> instances = listInstances(null, appname, appStates);
     return yarnClient.findClusterInInstanceList(instances, appname);
   }
 
@@ -111,21 +127,44 @@ public class YarnAppListClient {
   }
 
   /**
-   * List all instances belonging to a specific user and a specific appname.
+   * List all instances belonging to a specific user with a specific app name.
    *
    * @param user
    *          user if not the default. null means default, "" means all users,
    *          otherwise it is the name of a user
-   * @param appname
+   * @param appName
    *          application name set as an application tag
    * @return a possibly empty list of AMs
    * @throws YarnException
    * @throws IOException
    */
-  public List<ApplicationReport> listInstances(String user, String appname)
+  public List<ApplicationReport> listInstances(String user, String appName)
       throws YarnException, IOException {
+    return listInstances(user, appName, null);
+  }
+
+  /**
+   * List all instances belonging to a specific user, with a specific app name
+   * and in specific app states.
+   *
+   * @param user
+   *          user if not the default. null means default, "" means all users,
+   *          otherwise it is the name of a user
+   * @param appName
+   *          application name set as an application tag
+   * @param appStates
+   *          a set of application states within which the app should be in
+   * @return a possibly empty list of AMs
+   * @throws YarnException
+   * @throws IOException
+   */
+  public List<ApplicationReport> listInstances(String user, String appName,
+      EnumSet<YarnApplicationState> appStates)
+      throws YarnException, IOException {
+    log.debug("listInstances called with user: {}, appName: {}, appStates: {}",
+        user, appName, appStates);
     String listUser = user == null ? username : user;
-    return yarnClient.listDeployedInstances(listUser, null, appname);
+    return yarnClient.listDeployedInstances(listUser, appStates, appName);
   }
 
   /**
