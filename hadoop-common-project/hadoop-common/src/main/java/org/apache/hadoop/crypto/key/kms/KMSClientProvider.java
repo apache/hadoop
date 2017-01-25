@@ -1033,10 +1033,9 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     return tokens;
   }
 
-  private boolean currentUgiContainsKmsDt() throws IOException {
-    // Add existing credentials from current UGI, since provider is cached.
-    Credentials creds = UserGroupInformation.getCurrentUser().
-        getCredentials();
+  private boolean containsKmsDt(UserGroupInformation ugi) throws IOException {
+    // Add existing credentials from the UGI, since provider is cached.
+    Credentials creds = ugi.getCredentials();
     if (!creds.getAllTokens().isEmpty()) {
       LOG.debug("Searching for token that matches service: {}", dtService);
       org.apache.hadoop.security.token.Token<? extends TokenIdentifier>
@@ -1059,11 +1058,15 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     if (currentUgi.getRealUser() != null) {
       // Use real user for proxy user
       actualUgi = currentUgi.getRealUser();
-    } else if (!currentUgiContainsKmsDt() &&
-        !currentUgi.hasKerberosCredentials()) {
+    }
+
+    if (!containsKmsDt(actualUgi) &&
+        !actualUgi.hasKerberosCredentials()) {
       // Use login user for user that does not have either
       // Kerberos credential or KMS delegation token for KMS operations
-      actualUgi = currentUgi.getLoginUser();
+      LOG.debug("using loginUser no KMS Delegation Token "
+          + "no Kerberos Credentials");
+      actualUgi = UserGroupInformation.getLoginUser();
     }
     return actualUgi;
   }
