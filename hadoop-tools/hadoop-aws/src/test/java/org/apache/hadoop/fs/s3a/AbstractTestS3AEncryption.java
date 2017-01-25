@@ -34,7 +34,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
  * are made for different file sizes as there have been reports that the
  * file length may be rounded up to match word boundaries.
  */
-public class ITestS3AEncryption extends AbstractS3ATestBase {
+public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
   private static final String AES256 = Constants.SERVER_SIDE_ENCRYPTION_AES256;
 
   @Override
@@ -42,7 +42,7 @@ public class ITestS3AEncryption extends AbstractS3ATestBase {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.disableFilesystemCaching(conf);
     conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
-        AES256);
+            getSSEAlgorithm());
     return conf;
   }
 
@@ -91,7 +91,22 @@ public class ITestS3AEncryption extends AbstractS3ATestBase {
    */
   private void assertEncrypted(Path path) throws IOException {
     ObjectMetadata md = getFileSystem().getObjectMetadata(path);
-    assertEquals(AES256, md.getSSEAlgorithm());
+    if(S3AEncryptionMethods.SSE_C.getMethod().equals(getSSEAlgorithm())){
+      assertEquals("AES256", md.getSSECustomerAlgorithm());
+    //TODO: generate md5 of SERVER_SIDE_ENCRYPTION_KEY and compare with
+      // md.getSSECustomerKeyMd5
+    }else if(S3AEncryptionMethods.SSE_KMS.getMethod()
+        .equals(getSSEAlgorithm())){
+      assertEquals("aws:kms", md.getSSEAlgorithm());
+      //S3 will return full arn of the key, so specify global arn in properties
+      assertEquals(this.getConfiguration().
+          getTrimmed(Constants.SERVER_SIDE_ENCRYPTION_KEY),
+          md.getSSEAwsKmsKeyId());
+    }else{
+      assertEquals("AES256", md.getSSEAlgorithm());
+    }
   }
+
+  protected abstract String getSSEAlgorithm();
 
 }

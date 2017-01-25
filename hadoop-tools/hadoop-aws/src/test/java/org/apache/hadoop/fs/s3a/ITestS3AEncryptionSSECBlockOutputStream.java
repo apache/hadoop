@@ -21,9 +21,12 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.conf.Configuration;
 
 /**
- * Run the encryption tests against the block output stream.
+ * Run the encryption tests against the Fast output stream.
+ * This verifies that both file writing paths can encrypt their data.
  */
-public class ITestS3AEncryptionBlockOutputStream extends ITestS3AEncryption {
+
+public class ITestS3AEncryptionSSECBlockOutputStream
+    extends AbstractTestS3AEncryption {
 
   @Override
   protected Configuration createConfiguration() {
@@ -31,6 +34,15 @@ public class ITestS3AEncryptionBlockOutputStream extends ITestS3AEncryption {
     conf.setBoolean(Constants.FAST_UPLOAD, true);
     conf.set(Constants.FAST_UPLOAD_BUFFER,
         Constants.FAST_UPLOAD_BYTEBUFFER);
+    conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        getSSEAlgorithm());
+    conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY,
+        "4niV/jPK5VFRHY+KNb6wtqYd4xXyMgdJ9XQJpcQUVbs=");
     return conf;
+  }
+
+  @Override
+  protected String getSSEAlgorithm() {
+    return S3AEncryptionMethods.SSE_C.getMethod();
   }
 }

@@ -840,8 +840,18 @@ from placing its declaration on the command line.
     <property>
       <name>fs.s3a.server-side-encryption-algorithm</name>
       <description>Specify a server-side encryption algorithm for s3a: file system.
-        Unset by default, and the only other currently allowable value is AES256.
+        Unset by default. It supports the following values: 'AES256' (for SSE-S3), 'SSE-KMS'
+         and 'SSE-C'
       </description>
+    </property>
+
+    <property>
+        <name>fs.s3a.server-side-encryption-key</name>
+        <description>Specific encryption key to use if fs.s3a.server-side-encryption-algorithm
+        has been set to 'SSE-KMS' or 'SSE-C'. In the case of SSE-C, the value of this property
+        should be the Base64 encoded key. If you are using SSE-KMS and leave this property empty,
+        you'll be using your default's S3 KMS key, otherwise you should set this property to
+        the specific KMS key id.</description>
     </property>
 
     <property>
