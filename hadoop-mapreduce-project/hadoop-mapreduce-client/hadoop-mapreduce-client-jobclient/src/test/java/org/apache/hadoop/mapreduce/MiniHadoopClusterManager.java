@@ -252,7 +252,7 @@ public class MiniHadoopClusterManager {
 
     // HDFS
     noDFS = cli.hasOption("nodfs");
-    numDataNodes = intArgument(cli, "datanodes", 1);
+    numDataNodes = intArgument(cli, "datanodes", 100);
     nnPort = intArgument(cli, "nnport", 0);
     dfsOpts = cli.hasOption("format") ? StartupOption.FORMAT
         : StartupOption.REGULAR;

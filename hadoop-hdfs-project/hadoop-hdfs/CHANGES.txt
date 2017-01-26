@@ -67,6 +67,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-10966. Enhance Dispatcher logic on deciding when to give up a source
     DataNode (Mark Wagner and zhz via kihwal)
 
+    HDFS-10534. NameNode WebUI should display DataNode usage histogram.
+    (Kai Sasaki via zhz)
+
   OPTIMIZATIONS
 
     HDFS-10896. Move lock logging logic from FSNamesystem into FSNamesystemLock.

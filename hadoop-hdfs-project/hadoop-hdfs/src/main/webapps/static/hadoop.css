@@ -213,3 +213,12 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
   margin-top:20px;
   display: none;
 }
+
+.bar rect {
+    fill: #5FA33F;
+}
+
+.bar text {
+    fill: #fff;
+    font: 10px sans-serif;
+}

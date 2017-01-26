@@ -393,6 +393,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/webapps/static/dust-full-2.0.0.min.js</exclude>
             <exclude>src/main/webapps/static/dust-helpers-1.1.1.min.js</exclude>
             <exclude>src/main/webapps/static/jquery-1.10.2.min.js</exclude>
+            <exclude>src/main/webapps/static/d3-v4.1.1.min.js</exclude>
           </excludes>
         </configuration>
       </plugin>
