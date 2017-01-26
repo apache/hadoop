@@ -213,14 +213,15 @@ public class StorageLocationChecker {
     }
 
     if (failedLocations.size() > maxVolumeFailuresTolerated) {
-      throw new IOException(
-          "Too many failed volumes: " + failedLocations.size() +
-          ". The configuration allows for a maximum of " +
-          maxVolumeFailuresTolerated + " failed volumes.");
+      throw new DiskErrorException("Too many failed volumes - "
+          + "current valid volumes: " + goodLocations.size()
+          + ", volumes configured: " + dataDirs.size()
+          + ", volumes failed: " + failedLocations.size()
+          + ", volume failures tolerated: " + maxVolumeFailuresTolerated);
     }
 
     if (goodLocations.size() == 0) {
-      throw new IOException("All directories in "
+      throw new DiskErrorException("All directories in "
           + DFS_DATANODE_DATA_DIR_KEY + " are invalid: "
           + failedLocations);
     }
