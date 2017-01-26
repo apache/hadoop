@@ -1851,7 +1851,7 @@ public class S3AFileSystem extends FileSystem {
   }
 
   private void setOptionalObjectMetadata(ObjectMetadata metadata) {
-    if (!S3AEncryptionMethods.NONE.equals(serverSideEncryptionAlgorithm)) {
+    if (S3AEncryptionMethods.SSE_S3.equals(serverSideEncryptionAlgorithm)) {
       metadata.setSSEAlgorithm(serverSideEncryptionAlgorithm.getMethod());
     }
   }
@@ -2043,9 +2043,7 @@ public class S3AFileSystem extends FileSystem {
           .append('\'');
     }
     if (S3AUtils.getServerSideEncryptionKey(getConf()) != null) {
-      sb.append(", serverSideEncryptionKey='")
-        .append(displayEncryptionKeyAs())
-        .append('\'');
+      sb.append(", serverSideEncryptionKey='*********'");
     }
     if (blockFactory != null) {
       sb.append(", blockFactory=").append(blockFactory);
@@ -2059,26 +2057,6 @@ public class S3AFileSystem extends FileSystem {
         .append("}");
     sb.append('}');
     return sb.toString();
-  }
-
-  /**
-   * Depending on which SSE encryption method is used, SSE-C uses the actual
-   * key material to encrypt data.  This shouldn't be displayed.  If SSE-KMS is
-   * enabled then it is a reference to the key id in AWS and is safe to display.
-   * SSE-S3 is abstracted away and serverSideEncryptionKey would not be
-   * populated.
-   *
-   * @return masked encryption key value, or the SSE KMS key id, or empty if
-   * there is no encryption key
-   */
-  private String displayEncryptionKeyAs() {
-    if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm)) {
-      return "************";
-    } else if(S3AEncryptionMethods.SSE_KMS
-        .equals(serverSideEncryptionAlgorithm)) {
-      return S3AUtils.getServerSideEncryptionKey(getConf());
-    }
-    return "";
   }
 
   /**

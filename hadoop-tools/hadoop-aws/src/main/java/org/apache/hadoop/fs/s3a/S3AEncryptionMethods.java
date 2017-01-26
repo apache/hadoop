@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.IOException;
+
 import org.apache.commons.lang3.StringUtils;
 
 /**
@@ -41,11 +43,19 @@ public enum S3AEncryptionMethods {
     return method;
   }
 
-  public static S3AEncryptionMethods getMethod(String name) {
+  public static S3AEncryptionMethods getMethod(String name) throws IOException {
     if(StringUtils.isBlank(name)) {
       return NONE;
-    }else {
-      return S3AEncryptionMethods.valueOf(name);
+    }
+    switch(name) {
+    case "AES256":
+      return SSE_S3;
+    case "SSE-KMS":
+      return SSE_KMS;
+    case "SSE-C":
+      return SSE_C;
+    default:
+      throw new IOException("Unknown Server Side algorithm "+name);
     }
   }
 }

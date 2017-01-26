@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -30,6 +31,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
  * Test whether or not encryption settings propagate by choosing an invalid
  * one. We expect the write to fail with a 400 bad request error
  */
+@Ignore
 public class ITestS3AEncryptionAlgorithmPropagation
     extends AbstractS3ATestBase {
 

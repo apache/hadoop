@@ -726,7 +726,8 @@ public final class S3AUtils {
 
   static String getServerSideEncryptionKey(Configuration conf) {
     try {
-      return getPassword(conf, Constants.SERVER_SIDE_ENCRYPTION_KEY, "");
+      return getPassword(conf, Constants.SERVER_SIDE_ENCRYPTION_KEY,
+        conf.getTrimmed(SERVER_SIDE_ENCRYPTION_KEY));
     } catch (IOException e) {
       LOG.error("Cannot retrieve SERVER_SIDE_ENCRYPTION_KEY", e);
     }
