@@ -15,11 +15,7 @@
 HDFS Disk Balancer
 ===================
 
-* [Overview](#Overview)
-* [Architecture](#Architecture)
-* [Commands](#Commands)
-* [Settings](#Settings)
-* [Debugging](#Debugging)
+<!-- MACRO{toc|fromDepth=0|toDepth=2} -->
 
 
 Overview

@@ -15,16 +15,7 @@
 Offline Image Viewer Guide
 ==========================
 
-* [Offline Image Viewer Guide](#Offline_Image_Viewer_Guide)
-    * [Overview](#Overview)
-    * [Usage](#Usage)
-        * [Web Processor](#Web_Processor)
-        * [XML Processor](#XML_Processor)
-    * [Options](#Options)
-    * [Analyzing Results](#Analyzing_Results)
-    * [oiv\_legacy Command](#oiv_legacy_Command)
-        * [Usage](#Usage)
-        * [Options](#Options)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------

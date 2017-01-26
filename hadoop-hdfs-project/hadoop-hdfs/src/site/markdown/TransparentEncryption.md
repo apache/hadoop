@@ -15,32 +15,7 @@
 Transparent Encryption in HDFS
 ==============================
 
-* [Overview](#Overview)
-* [Background](#Background)
-* [Use Cases](#Use_Cases)
-* [Architecture](#Architecture)
-    * [Overview](#Architecture_overview)
-    * [Accessing data within an encryption zone](#Accessing_data_within_an_encryption_zone)
-    * [Key Management Server, KeyProvider, EDEKs](#Key_Management_Server_KeyProvider_EDEKs)
-* [Configuration](#Configuration)
-    * [Configuring the cluster KeyProvider](#Configuring_the_cluster_KeyProvider)
-    * [Selecting an encryption algorithm and codec](#Selecting_an_encryption_algorithm_and_codec)
-    * [Namenode configuration](#Namenode_configuration)
-* [crypto command-line interface](#crypto_command-line_interface)
-    * [createZone](#createZone)
-    * [listZones](#listZones)
-    * [provisionTrash](#provisionTrash)
-    * [getFileEncryptionInfo](#getFileEncryptionInfo)
-* [Example usage](#Example_usage)
-* [Distcp considerations](#Distcp_considerations)
-    * [Running as the superuser](#Running_as_the_superuser)
-    * [Copying into encrypted locations](#Copying_into_encrypted_locations)
-* [Rename and Trash considerations](#Rename_and_Trash_considerations)
-* [Attack vectors](#Attack_vectors)
-    * [Hardware access exploits](#Hardware_access_exploits)
-    * [Root access exploits](#Root_access_exploits)
-    * [HDFS admin exploits](#HDFS_admin_exploits)
-    * [Rogue user exploits](#Rogue_user_exploits)
+<!-- MACRO{toc|fromDepth=0|toDepth=2} -->
 
 <a name="Overview"></a>Overview
 --------
