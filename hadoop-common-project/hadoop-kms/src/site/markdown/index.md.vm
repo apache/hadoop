@@ -200,7 +200,10 @@ The following environment variables (which can be set in KMS's `etc/hadoop/kms-e
 
 * KMS_HTTP_PORT
 * KMS_ADMIN_PORT
+* KMS_PROTOCOL
 * KMS_MAX_THREADS
+* KMS_ACCEPT_COUNT
+* KMS_ACCEPTOR_THREAD_COUNT
 * KMS_MAX_HTTP_HEADER_SIZE
 * KMS_LOGNOTE: You need to restart the KMS for the configuration changes to take effect.
 

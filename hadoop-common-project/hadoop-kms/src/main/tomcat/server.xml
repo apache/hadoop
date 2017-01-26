@@ -72,8 +72,10 @@
          APR (HTTP/AJP) Connector: /docs/apr.html
          Define a non-SSL HTTP/1.1 Connector on port ${kms.http.port}
     -->
-    <Connector port="${kms.http.port}" protocol="HTTP/1.1"
+    <Connector port="${kms.http.port}" protocol="${kms.protocol}"
                maxThreads="${kms.max.threads}"
+               acceptCount="${kms.accept.count}"
+               acceptorThreadCount="${kms.acceptor.thread.count}"
                connectionTimeout="20000"
                redirectPort="8443"
                maxHttpHeaderSize="${kms.max.http.header.size}"/>

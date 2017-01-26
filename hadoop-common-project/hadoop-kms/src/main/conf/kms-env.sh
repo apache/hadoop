@@ -36,9 +36,31 @@
 #
 # export KMS_ADMIN_PORT=`expr ${KMS_HTTP_PORT} + 1`
 
+# The Tomcat protocol to use for handling requests.
+# The default HTTP/1.1 handler is thread-per-request.
+# The NIO handler multiplexes multiple requests per thread.
+#
+# export KMS_PROTOCOL="HTTP/1.1"
+# export KMS_PROTOCOL="org.apache.coyote.http11.Http11NioProtocol"
+
 # The maximum number of Tomcat handler threads
 #
 # export KMS_MAX_THREADS=1000
+
+# The maximum queue length for incoming connection requests when all possible
+# request processing threads are in use. Any requests received when the queue
+# is full will be refused.
+#
+# export KMS_ACCEPT_COUNT=500
+
+# The number of threads to be used to accept connections. Increase this value
+# on a multi CPU machine, although you would never really need more than 2.
+# Also, with a lot of non keep alive connections, you might want to increase
+# this value as well.
+#
+# Increasing this has no effect unless using the NIO protocol.
+#
+# export KMS_ACCEPTOR_THREAD_COUNT=1
 
 # The maximum size of Tomcat HTTP header
 #

@@ -136,11 +136,32 @@ else
   print "Using   KMS_ADMIN_PORT:     ${KMS_ADMIN_PORT}"
 fi
 
+if [ "${KMS_PROTOCOL}" = "" ]; then
+  export KMS_PROTOCOL="HTTP/1.1"
+  print "Setting KMS_PROTOCOL:     ${KMS_PROTOCOL}"
+else
+  print "Using   KMS_PROTOCOL:     ${KMS_PROTOCOL}"
+fi
+
 if [ "${KMS_MAX_THREADS}" = "" ]; then
   export KMS_MAX_THREADS=1000
   print "Setting KMS_MAX_THREADS:     ${KMS_MAX_THREADS}"
 else
   print "Using   KMS_MAX_THREADS:     ${KMS_MAX_THREADS}"
+fi
+
+if [ "${KMS_ACCEPT_COUNT}" = "" ]; then
+  export KMS_ACCEPT_COUNT=500
+  print "Setting KMS_ACCEPT_COUNT:     ${KMS_ACCEPT_COUNT}"
+else
+  print "Using   KMS_ACCEPT_COUNT:     ${KMS_ACCEPT_COUNT}"
+fi
+
+if [ "${KMS_ACCEPTOR_THREAD_COUNT}" = "" ]; then
+  export KMS_ACCEPTOR_THREAD_COUNT=1
+  print "Setting KMS_ACCEPTOR_THREAD_COUNT:     ${KMS_ACCEPTOR_THREAD_COUNT}"
+else
+  print "Using   KMS_ACCEPTOR_THREAD_COUNT:     ${KMS_ACCEPTOR_THREAD_COUNT}"
 fi
 
 if [ "${KMS_MAX_HTTP_HEADER_SIZE}" = "" ]; then
