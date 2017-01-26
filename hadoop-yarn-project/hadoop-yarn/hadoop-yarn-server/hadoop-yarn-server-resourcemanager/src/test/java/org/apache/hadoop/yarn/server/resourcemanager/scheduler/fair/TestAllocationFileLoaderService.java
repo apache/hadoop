@@ -618,6 +618,94 @@ public class TestAllocationFileLoaderService {
     allocLoader.reloadAllocations();
   }
 
+  @Test
+  public void testParentTagWithReservation() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"parent\" type=\"parent\">");
+    out.println("<reservation>");
+    out.println("</reservation>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    allocLoader.init(conf);
+    ReloadListener confHolder = new ReloadListener();
+    allocLoader.setReloadListener(confHolder);
+    try {
+      allocLoader.reloadAllocations();
+    } catch (AllocationConfigurationException ex) {
+      assertEquals(ex.getMessage(), "The configuration settings for root.parent"
+          + " are invalid. A queue element that contains child queue elements"
+          + " or that has the type='parent' attribute cannot also include a"
+          + " reservation element.");
+    }
+  }
+
+  @Test
+  public void testParentWithReservation() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"parent\">");
+    out.println("<reservation>");
+    out.println("</reservation>");
+    out.println(" <queue name=\"child\">");
+    out.println(" </queue>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    allocLoader.init(conf);
+    ReloadListener confHolder = new ReloadListener();
+    allocLoader.setReloadListener(confHolder);
+    try {
+      allocLoader.reloadAllocations();
+    } catch (AllocationConfigurationException ex) {
+      assertEquals(ex.getMessage(), "The configuration settings for root.parent"
+          + " are invalid. A queue element that contains child queue elements"
+          + " or that has the type='parent' attribute cannot also include a"
+          + " reservation element.");
+    }
+  }
+
+  @Test
+  public void testParentTagWithChild() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"parent\" type=\"parent\">");
+    out.println(" <queue name=\"child\">");
+    out.println(" </queue>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    allocLoader.init(conf);
+    ReloadListener confHolder = new ReloadListener();
+    allocLoader.setReloadListener(confHolder);
+    allocLoader.reloadAllocations();
+    AllocationConfiguration queueConf = confHolder.allocConf;
+    // Check whether queue 'parent' and 'child' are loaded successfully
+    assertTrue(queueConf.getConfiguredQueues().get(FSQueueType.PARENT)
+        .contains("root.parent"));
+    assertTrue(queueConf.getConfiguredQueues().get(FSQueueType.LEAF)
+        .contains("root.parent.child"));
+  }
+
   /**
    * Verify that you can't have the queue name with just a non breaking
    * whitespace in the allocations file.
