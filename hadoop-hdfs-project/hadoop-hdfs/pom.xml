@@ -184,11 +184,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>com.twitter</groupId>
-      <artifactId>hpack</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>xerces</groupId>
       <artifactId>xercesImpl</artifactId>
       <scope>compile</scope>
