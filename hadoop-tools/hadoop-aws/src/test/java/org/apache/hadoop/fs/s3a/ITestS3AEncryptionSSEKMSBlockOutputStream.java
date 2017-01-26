@@ -37,7 +37,7 @@ public class ITestS3AEncryptionSSEKMSBlockOutputStream
   }
 
   @Override
-  protected String getSSEAlgorithm() {
-    return S3AEncryptionMethods.SSE_KMS.getMethod();
+  protected S3AEncryptionMethods getSSEAlgorithm() {
+    return S3AEncryptionMethods.SSE_KMS;
   }
 }

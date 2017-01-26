@@ -42,7 +42,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.disableFilesystemCaching(conf);
     conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
-            getSSEAlgorithm());
+            getSSEAlgorithm().getMethod());
     return conf;
   }
 
@@ -91,22 +91,24 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
    */
   private void assertEncrypted(Path path) throws IOException {
     ObjectMetadata md = getFileSystem().getObjectMetadata(path);
-    if(S3AEncryptionMethods.SSE_C.getMethod().equals(getSSEAlgorithm())){
+    switch(getSSEAlgorithm()) {
+    case SSE_C:
       assertEquals("AES256", md.getSSECustomerAlgorithm());
-    //TODO: generate md5 of SERVER_SIDE_ENCRYPTION_KEY and compare with
+      //TODO: generate md5 of SERVER_SIDE_ENCRYPTION_KEY and compare with
       // md.getSSECustomerKeyMd5
-    }else if(S3AEncryptionMethods.SSE_KMS.getMethod()
-        .equals(getSSEAlgorithm())){
+      break;
+    case SSE_KMS:
       assertEquals("aws:kms", md.getSSEAlgorithm());
       //S3 will return full arn of the key, so specify global arn in properties
       assertEquals(this.getConfiguration().
           getTrimmed(Constants.SERVER_SIDE_ENCRYPTION_KEY),
           md.getSSEAwsKmsKeyId());
-    }else{
+      break;
+    default:
       assertEquals("AES256", md.getSSEAlgorithm());
     }
   }
 
-  protected abstract String getSSEAlgorithm();
+  protected abstract S3AEncryptionMethods getSSEAlgorithm();
 
 }

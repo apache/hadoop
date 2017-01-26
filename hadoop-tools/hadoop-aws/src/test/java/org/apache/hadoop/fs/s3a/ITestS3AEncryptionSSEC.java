@@ -31,14 +31,14 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.disableFilesystemCaching(conf);
     conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
-        getSSEAlgorithm());
+        getSSEAlgorithm().getMethod());
     conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY,
         "4niV/jPK5VFRHY+KNb6wtqYd4xXyMgdJ9XQJpcQUVbs=");
     return conf;
   }
 
   @Override
-  protected String getSSEAlgorithm() {
-    return S3AEncryptionMethods.SSE_C.getMethod();
+  protected S3AEncryptionMethods getSSEAlgorithm() {
+    return S3AEncryptionMethods.SSE_C;
   }
 }

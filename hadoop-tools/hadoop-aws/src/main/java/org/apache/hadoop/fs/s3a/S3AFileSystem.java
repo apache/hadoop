@@ -138,8 +138,7 @@ public class S3AFileSystem extends FileSystem {
       LoggerFactory.getLogger("org.apache.hadoop.fs.s3a.S3AFileSystem.Progress");
   private LocalDirAllocator directoryAllocator;
   private CannedAccessControlList cannedACL;
-  private String serverSideEncryptionAlgorithm;
-  private String serverSideEncryptionKey;
+  private S3AEncryptionMethods serverSideEncryptionAlgorithm;
   private S3AInstrumentation instrumentation;
   private S3AStorageStatistics storageStatistics;
   private long readAhead;
@@ -231,10 +230,14 @@ public class S3AFileSystem extends FileSystem {
 
       initMultipartUploads(conf);
 
-      serverSideEncryptionAlgorithm =
-          conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM);
+      serverSideEncryptionAlgorithm = S3AEncryptionMethods.getMethod(
+          conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM));
+      if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
+          StringUtils.isBlank(S3AUtils.getServerSideEncryptionKey(getConf()))) {
+        throw new IOException("SSE-C is enable and no encryption key " +
+          "is provided.");
+      }
       LOG.debug("Using encryption {}", serverSideEncryptionAlgorithm);
-      serverSideEncryptionKey = conf.getTrimmed(SERVER_SIDE_ENCRYPTION_KEY);
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
 
@@ -524,7 +527,7 @@ public class S3AFileSystem extends FileSystem {
           bucket,
           pathToKey(f),
           serverSideEncryptionAlgorithm,
-          serverSideEncryptionKey),
+          S3AUtils.getServerSideEncryptionKey(getConf())),
             fileStatus.getLen(),
             s3,
             statistics,
@@ -909,10 +912,9 @@ public class S3AFileSystem extends FileSystem {
     GetObjectMetadataRequest request =
         new GetObjectMetadataRequest(bucket, key);
     //SSE-C requires to be filled in if enabled for object metadata
-    if(S3AEncryptionMethods.SSE_C.getMethod()
-        .equals(serverSideEncryptionAlgorithm) && StringUtils.
-        isNotBlank(serverSideEncryptionKey)) {
-      request.setSSECustomerKey(new SSECustomerKey(serverSideEncryptionKey));
+    if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
+        StringUtils.isNotBlank(S3AUtils.getServerSideEncryptionKey(getConf()))){
+      request.setSSECustomerKey(generateSSECustomerKey());
     }
     ObjectMetadata meta = s3.getObjectMetadata(request);
     incrementReadOperations();
@@ -1811,59 +1813,46 @@ public class S3AFileSystem extends FileSystem {
 
   protected void setOptionalMultipartUploadRequestParameters(
       InitiateMultipartUploadRequest req) {
-    if(S3AEncryptionMethods.SSE_KMS.getMethod()
-        .equals(serverSideEncryptionAlgorithm)) {
+    if(S3AEncryptionMethods.SSE_KMS.equals(serverSideEncryptionAlgorithm)) {
       req.setSSEAwsKeyManagementParams(generateSSEAwsKeyParams());
-    } else if(S3AEncryptionMethods.SSE_C.getMethod().
-        equals(serverSideEncryptionAlgorithm) &&
-        StringUtils.isNotBlank(serverSideEncryptionKey)) {
+    } else if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm)
+        && StringUtils.isNotBlank(
+          S3AUtils.getServerSideEncryptionKey(getConf()))) {
             //at the moment, only supports copy using the same key
-      req.setSSECustomerKey(new SSECustomerKey(serverSideEncryptionKey));
+      req.setSSECustomerKey(generateSSECustomerKey());
     }
   }
 
 
   protected void setOptionalCopyObjectRequestParameters(
-      CopyObjectRequest copyObjectRequest) {
-    if(S3AEncryptionMethods.SSE_KMS.getMethod()
-        .equals(serverSideEncryptionAlgorithm)) {
+      CopyObjectRequest copyObjectRequest) throws IOException {
+    if(S3AEncryptionMethods.SSE_KMS.equals(serverSideEncryptionAlgorithm)) {
       copyObjectRequest.setSSEAwsKeyManagementParams(
           generateSSEAwsKeyParams()
       );
-    } else if(S3AEncryptionMethods.SSE_C.getMethod().
-        equals(serverSideEncryptionAlgorithm) &&
-        StringUtils.isNotBlank(serverSideEncryptionKey)) {
+    } else if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm)
+        && StringUtils.isNotBlank(
+        S3AUtils.getServerSideEncryptionKey(getConf()))) {
         //at the moment, only supports copy using the same key
-      copyObjectRequest.setSourceSSECustomerKey(
-          new SSECustomerKey(serverSideEncryptionKey)
-      );
-      copyObjectRequest.setDestinationSSECustomerKey(
-          new SSECustomerKey(serverSideEncryptionKey)
-      );
+      SSECustomerKey customerKey = generateSSECustomerKey();
+      copyObjectRequest.setSourceSSECustomerKey(customerKey);
+      copyObjectRequest.setDestinationSSECustomerKey(customerKey);
     }
   }
 
   protected void setOptionalPutRequestParameters(PutObjectRequest request) {
-    if(S3AEncryptionMethods.SSE_KMS.getMethod()
-        .equals(serverSideEncryptionAlgorithm)) {
+    if(S3AEncryptionMethods.SSE_KMS.equals(serverSideEncryptionAlgorithm)) {
       request.setSSEAwsKeyManagementParams(generateSSEAwsKeyParams());
-    } else if(S3AEncryptionMethods.SSE_C.getMethod()
-        .equals(serverSideEncryptionAlgorithm) &&
-        StringUtils.isNotBlank(serverSideEncryptionKey)) {
-      request.setSSECustomerKey(new SSECustomerKey(serverSideEncryptionKey));
+    } else if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm)
+        && StringUtils.isNotBlank(
+        S3AUtils.getServerSideEncryptionKey(getConf()))) {
+      request.setSSECustomerKey(generateSSECustomerKey());
     }
   }
 
   private void setOptionalObjectMetadata(ObjectMetadata metadata) {
-    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)){
-      if(S3AEncryptionMethods.SSE_S3.getMethod()
-          .equals(serverSideEncryptionAlgorithm) ||
-              (!S3AEncryptionMethods.SSE_KMS.getMethod()
-                  .equals(serverSideEncryptionAlgorithm) &&
-              !S3AEncryptionMethods.SSE_C.getMethod()
-                  .equals(serverSideEncryptionAlgorithm))) {
-        metadata.setSSEAlgorithm(serverSideEncryptionAlgorithm);
-      }
+    if (!S3AEncryptionMethods.NONE.equals(serverSideEncryptionAlgorithm)) {
+      metadata.setSSEAlgorithm(serverSideEncryptionAlgorithm.getMethod());
     }
   }
 
@@ -1871,11 +1860,21 @@ public class S3AFileSystem extends FileSystem {
     //Use specified key, otherwise default to default master aws/s3 key by AWS
     SSEAwsKeyManagementParams sseAwsKeyManagementParams =
         new SSEAwsKeyManagementParams();
-    if (StringUtils.isNotBlank(serverSideEncryptionKey)) {
+    if (StringUtils.isNotBlank(S3AUtils.getServerSideEncryptionKey(getConf())
+    )) {
       sseAwsKeyManagementParams =
-        new SSEAwsKeyManagementParams(serverSideEncryptionKey);
+        new SSEAwsKeyManagementParams(
+          S3AUtils.getServerSideEncryptionKey(getConf())
+        );
     }
     return sseAwsKeyManagementParams;
+  }
+
+  private SSECustomerKey generateSSECustomerKey() {
+    SSECustomerKey customerKey = new SSECustomerKey(
+        S3AUtils.getServerSideEncryptionKey(getConf())
+    );
+    return customerKey;
   }
 
   /**
@@ -2043,7 +2042,7 @@ public class S3AFileSystem extends FileSystem {
           .append(serverSideEncryptionAlgorithm)
           .append('\'');
     }
-    if (serverSideEncryptionKey != null) {
+    if (S3AUtils.getServerSideEncryptionKey(getConf()) != null) {
       sb.append(", serverSideEncryptionKey='")
         .append(displayEncryptionKeyAs())
         .append('\'');
@@ -2069,13 +2068,17 @@ public class S3AFileSystem extends FileSystem {
    * SSE-S3 is abstracted away and serverSideEncryptionKey would not be
    * populated.
    *
-   * @return masked encryption key value, or the SSE KMS key id.
+   * @return masked encryption key value, or the SSE KMS key id, or empty if
+   * there is no encryption key
    */
   private String displayEncryptionKeyAs() {
     if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm)) {
       return "************";
+    } else if(S3AEncryptionMethods.SSE_KMS
+        .equals(serverSideEncryptionAlgorithm)) {
+      return S3AUtils.getServerSideEncryptionKey(getConf());
     }
-    return serverSideEncryptionKey;
+    return "";
   }
 
   /**

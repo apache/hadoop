@@ -25,7 +25,7 @@ package org.apache.hadoop.fs.s3a;
 public class ITestS3AEncryptionSSES3 extends AbstractTestS3AEncryption {
 
   @Override
-  protected String getSSEAlgorithm() {
-    return S3AEncryptionMethods.SSE_S3.getMethod();
+  protected S3AEncryptionMethods getSSEAlgorithm() {
+    return S3AEncryptionMethods.SSE_S3;
   }
 }

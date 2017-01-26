@@ -27,13 +27,13 @@ package org.apache.hadoop.fs.s3a;
 public class S3ObjectAttributes {
   private String bucket;
   private String key;
-  private String serverSideEncryptionAlgorithm;
+  private S3AEncryptionMethods serverSideEncryptionAlgorithm;
   private String serverSideEncryptionKey;
 
   public S3ObjectAttributes(
       String bucket,
       String key,
-      String serverSideEncryptionAlgorithm,
+      S3AEncryptionMethods serverSideEncryptionAlgorithm,
       String serverSideEncryptionKey) {
     this.bucket = bucket;
     this.key = key;
@@ -49,7 +49,7 @@ public class S3ObjectAttributes {
     return key;
   }
 
-  public String getServerSideEncryptionAlgorithm() {
+  public S3AEncryptionMethods getServerSideEncryptionAlgorithm() {
     return serverSideEncryptionAlgorithm;
   }
 

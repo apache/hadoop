@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * This enum is to centralize the encryption methods and
  * the value required in the configuration.
@@ -26,7 +28,8 @@ public enum S3AEncryptionMethods {
 
   SSE_S3("AES256"),
   SSE_KMS("SSE-KMS"),
-  SSE_C("SSE-C");
+  SSE_C("SSE-C"),
+  NONE("");
 
   private String method;
 
@@ -36,5 +39,13 @@ public enum S3AEncryptionMethods {
 
   public String getMethod() {
     return method;
+  }
+
+  public static S3AEncryptionMethods getMethod(String name) {
+    if(StringUtils.isBlank(name)) {
+      return NONE;
+    }else {
+      return S3AEncryptionMethods.valueOf(name);
+    }
   }
 }

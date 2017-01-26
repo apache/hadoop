@@ -79,7 +79,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
   private final String uri;
   public static final Logger LOG = S3AFileSystem.LOG;
   private final S3AInstrumentation.InputStreamStatistics streamStatistics;
-  private String serverSideEncryptionAlgorithm;
+  private S3AEncryptionMethods serverSideEncryptionAlgorithm;
   private String serverSideEncryptionKey;
   private final S3AInputPolicy inputPolicy;
   private long readahead = Constants.DEFAULT_READAHEAD_RANGE;
@@ -154,8 +154,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
     try {
       GetObjectRequest request = new GetObjectRequest(bucket, key)
           .withRange(targetPos, contentRangeFinish);
-      if (S3AEncryptionMethods.SSE_C.getMethod()
-          .equals(serverSideEncryptionAlgorithm) &&
+      if (S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
           StringUtils.isNotBlank(serverSideEncryptionKey)){
         request.setSSECustomerKey(new SSECustomerKey(serverSideEncryptionKey));
       }
