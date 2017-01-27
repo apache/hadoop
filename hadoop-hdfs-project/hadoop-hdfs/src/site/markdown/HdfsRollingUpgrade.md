@@ -18,25 +18,7 @@
 HDFS Rolling Upgrade
 ====================
 
-* [Introduction](#Introduction)
-* [Upgrade](#Upgrade)
-    * [Upgrade without Downtime](#Upgrade_without_Downtime)
-        * [Upgrading Non-Federated Clusters](#Upgrading_Non-Federated_Clusters)
-        * [Upgrading Federated Clusters](#Upgrading_Federated_Clusters)
-    * [Upgrade with Downtime](#Upgrade_with_Downtime)
-        * [Upgrading Non-HA Clusters](#Upgrading_Non-HA_Clusters)
-* [Downgrade and Rollback](#Downgrade_and_Rollback)
-* [Downgrade](#Downgrade)
-    * [Downgrade without Downtime](#Downgrade_without_Downtime)
-    * [Downgrade with Downtime](#Downgrade_with_Downtime)
-* [Rollback](#Rollback)
-* [Commands and Startup Options for Rolling Upgrade](#Commands_and_Startup_Options_for_Rolling_Upgrade)
-    * [DFSAdmin Commands](#DFSAdmin_Commands)
-        * [dfsadmin -rollingUpgrade](#dfsadmin_-rollingUpgrade)
-        * [dfsadmin -getDatanodeInfo](#dfsadmin_-getDatanodeInfo)
-        * [dfsadmin -shutdownDatanode](#dfsadmin_-shutdownDatanode)
-    * [NameNode Startup Options](#NameNode_Startup_Options)
-        * [namenode -rollingUpgrade](#namenode_-rollingUpgrade)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 
 Introduction

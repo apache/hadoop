@@ -15,30 +15,7 @@
 HDFS High Availability
 ======================
 
-* [HDFS High Availability](#HDFS_High_Availability)
-    * [Purpose](#Purpose)
-    * [Note: Using the Quorum Journal Manager or Conventional Shared Storage](#Note:_Using_the_Quorum_Journal_Manager_or_Conventional_Shared_Storage)
-    * [Background](#Background)
-    * [Architecture](#Architecture)
-    * [Hardware resources](#Hardware_resources)
-    * [Deployment](#Deployment)
-        * [Configuration overview](#Configuration_overview)
-        * [Configuration details](#Configuration_details)
-        * [Deployment details](#Deployment_details)
-        * [Administrative commands](#Administrative_commands)
-    * [Automatic Failover](#Automatic_Failover)
-        * [Introduction](#Introduction)
-        * [Components](#Components)
-        * [Deploying ZooKeeper](#Deploying_ZooKeeper)
-        * [Before you begin](#Before_you_begin)
-        * [Configuring automatic failover](#Configuring_automatic_failover)
-        * [Initializing HA state in ZooKeeper](#Initializing_HA_state_in_ZooKeeper)
-        * [Starting the cluster with start-dfs.sh](#Starting_the_cluster_with_start-dfs.sh)
-        * [Starting the cluster manually](#Starting_the_cluster_manually)
-        * [Securing access to ZooKeeper](#Securing_access_to_ZooKeeper)
-        * [Verifying automatic failover](#Verifying_automatic_failover)
-    * [Automatic Failover FAQ](#Automatic_Failover_FAQ)
-    * [BookKeeper as a Shared storage (EXPERIMENTAL)](#BookKeeper_as_a_Shared_storage_EXPERIMENTAL)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Purpose
 -------

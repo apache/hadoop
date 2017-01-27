@@ -15,11 +15,7 @@
 HFTP Guide
 ==========
 
-* [HFTP Guide](#HFTP_Guilde)
-     * [Deprecated](#Deprecated)
-     * [Introduction](#Introduction)
-     * [Implementation](#Implementation)
-     * [Configuration Options](#Configuration_Options)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 
 Deprecated

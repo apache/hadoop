@@ -15,10 +15,7 @@
 Offline Edits Viewer Guide
 ==========================
 
-* [Offline Edits Viewer Guide](#Offline_Edits_Viewer_Guide)
-    * [Overview](#Overview)
-    * [Usage](#Usage)
-    * [Case study: Hadoop cluster recovery](#Case_study:_Hadoop_cluster_recovery)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------
