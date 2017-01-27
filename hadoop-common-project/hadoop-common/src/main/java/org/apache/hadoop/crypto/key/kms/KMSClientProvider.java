@@ -1096,13 +1096,14 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       // Use real user for proxy user
       actualUgi = currentUgi.getRealUser();
     }
-
-    if (!containsKmsDt(actualUgi) &&
+    if (UserGroupInformation.isSecurityEnabled() &&
+        !containsKmsDt(actualUgi) &&
         !actualUgi.hasKerberosCredentials()) {
-      // Use login user for user that does not have either
+      // Use login user is only necessary when Kerberos is enabled
+      // but the actual user does not have either
       // Kerberos credential or KMS delegation token for KMS operations
-      LOG.debug("using loginUser no KMS Delegation Token "
-          + "no Kerberos Credentials");
+      LOG.debug("Using loginUser when Kerberos is enabled but the actual user" +
+          " does not have either KMS Delegation Token or Kerberos Credentials");
       actualUgi = UserGroupInformation.getLoginUser();
     }
     return actualUgi;
