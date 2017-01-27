@@ -39,10 +39,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import static com.amazonaws.services.dynamodbv2.model.KeyType.HASH;
 import static com.amazonaws.services.dynamodbv2.model.KeyType.RANGE;
 import static com.amazonaws.services.dynamodbv2.model.ScalarAttributeType.S;
-import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.BLOCK_SIZE;
-import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.FILE_LENGTH;
-import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.MOD_TIME;
-import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.pathToParentKeyAttribute;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
@@ -51,12 +47,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
-import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.CHILD;
-import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.IS_DIR;
-import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.PARENT;
-import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.itemToPathMetadata;
-import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.pathMetadataToItem;
-import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.pathToKey;
+import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
+import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.VERSION_MARKER;
+import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.VERSION;
 
 /**
  * Test the PathMetadataDynamoDBTranslation is able to translate between domain
@@ -214,6 +207,20 @@ public class TestPathMetadataDynamoDBTranslation {
         assertEquals(path.getName(), keyAttribute.getValue());
       }
     }
+  }
+
+  @Test
+  public void testVersionRoundTrip() throws Throwable {
+    final Item marker = createVersionMarker(VERSION_MARKER, VERSION, 0);
+    assertEquals("Extracted version from " + marker,
+        VERSION, extractVersionFromMarker(marker));
+  }
+
+  @Test
+  public void testVersionMarkerNotStatusIllegalPath() throws Throwable {
+    final Item marker = createVersionMarker(VERSION_MARKER, VERSION, 0);
+    assertNull("Path metadata fromfrom " + marker,
+        itemToPathMetadata(null, marker, "alice"));
   }
 
 }

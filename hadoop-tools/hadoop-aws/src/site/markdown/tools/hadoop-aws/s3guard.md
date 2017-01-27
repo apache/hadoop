@@ -241,6 +241,56 @@ operations succeed, and the subsequent MetadataStore updates fail, the S3
 changes will *not* be rolled back.  In this case, an error message will be
 logged.
 
+### Versioning
+
+S3Guard tables are created with a version marker, an entry with the primary
+key and child entry of `../VERSION`; the use of a relative path guarantees
+that it will not be resolved.
+
+#### Versioning policy.
+
+1. The version number of an S3Guard table will only be incremented when
+an incompatible change is made to the table structure —that is, the structure
+has changed so that it is no longer readable by older versions, or because
+it has added new mandatory fields which older versions do not create.
+1. The version number of S3Guard tables will only be changed by incrementing
+the value.
+1. Updated versions of S3Guard MAY continue to support older version tables.
+1. If an incompatible change is made such that existing tables are not compatible,
+then a means shall be provided to update existing tables. For example:
+an option in the Command Line Interface, or an option to upgrade tables
+during S3Guard initialization.
+
+*Note*: this policy does not indicate any intent to upgrade table structures
+in an incompatible manner. The version marker in tables exists to support
+such an option if it ever becomes necessary, by ensuring that all S3Guard
+client can recognise any version mismatch.
+
+#### Error: `S3Guard table lacks version marker.`
+
+The table which was intended to be used as a S3guard metadata store
+does not have any version marker indicating that it is a S3Guard table.
+
+It may be that this is not a S3Guard table.
+
+* Make sure that this is the correct table name.
+* Delete the table, so it can be rebuilt.
+
+#### Error: `Database table is from an incompatible S3Guard version`
+
+This indicates that the version of S3Guard which created (or possibly updated)
+the database table is from a different version that that expected by the S3A
+client.
+
+This error will also include the expected and actual version numbers.
+
+If the expected version is lower than the actual version, then the version
+of the S3A client library is too old to interact with this S3Guard-managed
+bucket. Upgrade the application/library.
+
+If the expected version is higher than the actual version, then the table
+itself will need upgrading.
+
 ## Testing S3Guard
 
 The basic strategy for testing S3Guard correctness consists of:

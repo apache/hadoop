@@ -62,6 +62,17 @@ final class PathMetadataDynamoDBTranslation {
   @VisibleForTesting
   static final String BLOCK_SIZE = "block_size";
 
+  /** Table version field {@value} in version marker item. */
+  @VisibleForTesting
+  static final String TABLE_VERSION = "table_version";
+
+  /** Table creation timestampfield {@value} in version marker item. */
+  @VisibleForTesting
+  static final String TABLE_CREATED = "table_created";
+
+  /** The version marker field is invalid. */
+  static final String E_NOT_VERSION_MARKER = "Not a version marker: ";
+
   /**
    * Returns the key schema for the DynamoDB table.
    *
@@ -96,7 +107,11 @@ final class PathMetadataDynamoDBTranslation {
       return null;
     }
 
-    Path path = new Path(item.getString(PARENT), item.getString(CHILD));
+    String parent = item.getString(PARENT);
+    Preconditions.checkNotNull(parent, "No parent entry in item %s", item);
+    String child = item.getString(CHILD);
+    Preconditions.checkNotNull(child, "No child entry in item %s", item);
+    Path path = new Path(parent, child);
     if (!path.isAbsoluteAndSchemeAuthorityNull()) {
       return null;
     }
@@ -136,8 +151,58 @@ final class PathMetadataDynamoDBTranslation {
           .withLong(MOD_TIME, status.getModificationTime())
           .withLong(BLOCK_SIZE, status.getBlockSize());
     }
-
     return item;
+  }
+
+  /**
+   * The version marker has a primary key whose PARENT is {@code name};
+   * this MUST NOT be a value which represents an absolute path.
+   * @param name name of the version marker
+   * @param version version number
+   * @param timestamp creation timestamp
+   * @return an item representing a version marker.
+   */
+  static Item createVersionMarker(String name, int version, long timestamp) {
+    return new Item().withPrimaryKey(createVersionMarkerPrimaryKey(name))
+        .withInt(TABLE_VERSION, version)
+        .withLong(TABLE_CREATED, timestamp);
+  }
+
+  /**
+   * Create the primary key of the version marker.
+   * @param name key name
+   * @return the key to use when registering or resolving version markers
+   */
+  static PrimaryKey createVersionMarkerPrimaryKey(String name) {
+    return new PrimaryKey(PARENT, name, CHILD, name);
+  }
+
+  /**
+   * Extract the version from a version marker item.
+   * @param marker version marker item
+   * @return the extracted version field
+   * @throws IOException if the item is not a version marker
+   */
+  static int extractVersionFromMarker(Item marker) throws IOException {
+    if (marker.hasAttribute(TABLE_VERSION)) {
+      return marker.getInt(TABLE_VERSION);
+    } else {
+      throw new IOException(E_NOT_VERSION_MARKER + marker);
+    }
+  }
+
+  /**
+   * Extract the creation time, if present.
+   * @param marker version marker item
+   * @return the creation time, or null
+   * @throws IOException if the item is not a version marker
+   */
+  static Long extractCreationTimeFromMarker(Item marker) throws IOException {
+    if (marker.hasAttribute(TABLE_CREATED)) {
+      return marker.getLong(TABLE_CREATED);
+    } else {
+      return null;
+    }
   }
 
   /**

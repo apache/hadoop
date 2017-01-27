@@ -25,6 +25,8 @@ import java.util.Collection;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.local.main.ServerRunner;
 import com.amazonaws.services.dynamodbv2.local.server.DynamoDBProxyServer;
@@ -59,6 +61,8 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
+import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.*;
+import static org.apache.hadoop.test.LambdaTestUtils.*;
 
 /**
  * Test that {@link DynamoDBMetadataStore} implements {@link MetadataStore}.
@@ -80,6 +84,9 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   private static final String BUCKET = "TestDynamoDBMetadataStore";
   private static final String S3URI =
       URI.create(Constants.FS_S3A + "://" + BUCKET).toString();
+  public static final PrimaryKey
+      VERSION_MARKER_PRIMARY_KEY = createVersionMarkerPrimaryKey(
+          DynamoDBMetadataStore.VERSION_MARKER);
 
   /** The DynamoDBLocal dynamoDBLocalServer instance for testing. */
   private static DynamoDBProxyServer dynamoDBLocalServer;
@@ -331,6 +338,58 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   }
 
   /**
+   * Test the low level version check code.
+   */
+  @Test
+  public void testItemVersionCompatibility() throws Throwable {
+    verifyVersionCompatibility("table",
+        createVersionMarker(VERSION_MARKER, VERSION, 0));
+  }
+
+  /**
+   * Test that a version marker entry without the version number field
+   * is rejected as incompatible with a meaningful error message.
+   */
+  @Test
+  public void testItemLacksVersion() throws Throwable {
+    intercept(IOException.class, E_NOT_VERSION_MARKER,
+        () -> verifyVersionCompatibility("table",
+            new Item().withPrimaryKey(
+                createVersionMarkerPrimaryKey(VERSION_MARKER))));
+  }
+
+  /**
+   * Delete the version marker and verify that table init fails.
+   */
+  @Test
+  public void testTableVersionRequired() throws Exception {
+    final DynamoDBMetadataStore ddbms = createContract().getMetadataStore();
+    Table table = verifyTableInitialized(BUCKET);
+    table.deleteItem(VERSION_MARKER_PRIMARY_KEY);
+
+    // create existing table
+    intercept(IOException.class, E_NO_VERSION_MARKER,
+        () -> ddbms.initTable());
+  }
+
+  /**
+   * Set the version value to a different number and verify that
+   * table init fails.
+   */
+  @Test
+  public void testTableVersionMismatch() throws Exception {
+    final DynamoDBMetadataStore ddbms = createContract().getMetadataStore();
+    Table table = verifyTableInitialized(BUCKET);
+    table.deleteItem(VERSION_MARKER_PRIMARY_KEY);
+    Item v200 = createVersionMarker(VERSION_MARKER, 200, 0);
+    table.putItem(v200);
+
+    // create existing table
+    intercept(IOException.class, E_INCOMPATIBLE_VERSION,
+        () -> ddbms.initTable());
+  }
+
+  /**
    * Test that initTable fails with IOException when table does not exist and
    * table auto-creation is disabled.
    */
@@ -421,12 +480,14 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
    * This validates the table is created and ACTIVE in DynamoDB.
    *
    * This should not rely on the {@link DynamoDBMetadataStore} implementation.
+   * Return the table
    */
-  private static void verifyTableInitialized(String tableName) {
+  private static Table verifyTableInitialized(String tableName) {
     final Table table = dynamoDB.getTable(tableName);
     final TableDescription td = table.describe();
     assertEquals(tableName, td.getTableName());
     assertEquals("ACTIVE", td.getTableStatus());
+    return table;
   }
 
   /**
