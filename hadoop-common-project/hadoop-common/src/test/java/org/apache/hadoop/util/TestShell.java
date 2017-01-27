@@ -479,7 +479,7 @@ public class TestShell extends Assert {
   }
 
   @Test(timeout=120000)
-  public void testShellKillAllProcesses() throws Throwable {
+  public void testDestroyAllShellProcesses() throws Throwable {
     Assume.assumeFalse(WINDOWS);
     StringBuffer sleepCommand = new StringBuffer();
     sleepCommand.append("sleep 200");
@@ -524,7 +524,7 @@ public class TestShell extends Assert {
       }
     }, 10, 10000);
 
-    Shell.destroyAllProcesses();
+    Shell.destroyAllShellProcesses();
     shexc1.getProcess().waitFor();
     shexc2.getProcess().waitFor();
   }
