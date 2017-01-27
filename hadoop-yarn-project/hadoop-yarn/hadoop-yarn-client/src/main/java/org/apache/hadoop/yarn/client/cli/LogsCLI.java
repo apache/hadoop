@@ -426,9 +426,18 @@ public class LogsCLI extends Configured implements Tool {
       if (response.getClientResponseStatus().equals(
           ClientResponse.Status.OK)) {
         try {
+          JSONArray array = new JSONArray();
           JSONObject json =
               response.getEntity(JSONObject.class);
-          JSONArray array = json.getJSONArray("containerLogsInfo");
+          Object logsInfoObj = json.get("containerLogsInfo");
+          if (logsInfoObj instanceof JSONObject) {
+            array.put((JSONObject)logsInfoObj);
+          } else if (logsInfoObj instanceof JSONArray) {
+            JSONArray logsArray = (JSONArray)logsInfoObj;
+            for (int i=0; i < logsArray.length(); i++) {
+              array.put(logsArray.getJSONObject(i));
+            }
+          }
           for (int i = 0; i < array.length(); i++) {
             JSONObject log = array.getJSONObject(i);
             Object ob = log.get("containerLogInfo");
