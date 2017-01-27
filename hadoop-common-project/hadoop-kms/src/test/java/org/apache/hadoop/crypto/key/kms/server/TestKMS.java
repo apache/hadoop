@@ -2285,7 +2285,11 @@ public class TestKMS {
 
   public void doWebHDFSProxyUserTest(final boolean kerberos) throws Exception {
     Configuration conf = new Configuration();
-    conf.set("hadoop.security.authentication", "kerberos");
+    if (kerberos) {
+      conf.set("hadoop.security.authentication", "kerberos");
+    }
+    UserGroupInformation.setConfiguration(conf);
+
     final File testDir = getTestDir();
     conf = createBaseKMSConf(testDir, conf);
     if (kerberos) {
