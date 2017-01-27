@@ -29,9 +29,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Initializes {@link AuthenticationWithProxyUserFilter}
- * which provides support for Kerberos HTTP SPNEGO authentication
- * and proxy user authentication.
+ * Initializes hadoop-auth AuthenticationFilter which provides support for
+ * Kerberos HTTP SPNEGO authentication.
  * <p/>
  * It enables anonymous access, simple/speudo and Kerberos HTTP SPNEGO
  * authentication  for Hadoop JobTracker, NameNode, DataNodes and
@@ -59,10 +58,8 @@ public class AuthenticationFilterInitializer extends FilterInitializer {
   public void initFilter(FilterContainer container, Configuration conf) {
     Map<String, String> filterConfig = getFilterConfigMap(conf, PREFIX);
 
-    // extend AuthenticationFilter's feature to
-    // support proxy user operation.
     container.addFilter("authentication",
-                        AuthenticationWithProxyUserFilter.class.getName(),
+                        AuthenticationFilter.class.getName(),
                         filterConfig);
   }
 
