@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
@@ -182,5 +183,10 @@ public class PriorityUtilizationQueueOrderingPolicy implements QueueOrderingPoli
     } else{
       return CapacitySchedulerConfiguration.QUEUE_UTILIZATION_ORDERING_POLICY;
     }
+  }
+
+  @VisibleForTesting
+  public List<CSQueue> getQueues() {
+    return queues;
   }
 }
