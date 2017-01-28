@@ -1083,4 +1083,47 @@ public class TestDecommission extends AdminStatesBaseTest {
     assertTrue("BlockPoolUsed should not be the same after a node has " +
         "been decommissioned!",initialBlockPoolUsed != newBlockPoolUsed);
   }
+
+  /**
+   * Verify if multiple DataNodes can be decommission at the same time.
+   */
+  @Test(timeout = 360000)
+  public void testMultipleNodesDecommission() throws Exception {
+    startCluster(1, 5);
+    final Path file = new Path("/testMultipleNodesDecommission.dat");
+    final FileSystem fileSys = getCluster().getFileSystem(0);
+    final FSNamesystem ns = getCluster().getNamesystem(0);
+
+    int repl = 3;
+    writeFile(fileSys, file, repl, 1);
+    // Request Decommission for DataNodes 1 and 2.
+    List<DatanodeInfo> decomDataNodes = takeNodeOutofService(0,
+        Lists.newArrayList(getCluster().getDataNodes().get(0).getDatanodeUuid(),
+            getCluster().getDataNodes().get(1).getDatanodeUuid()),
+        Long.MAX_VALUE, null, null, AdminStates.DECOMMISSIONED);
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          String errMsg = checkFile(fileSys, file, repl,
+              decomDataNodes.get(0).getXferAddr(), 5);
+          if (errMsg != null) {
+            LOG.warn("Check file: " + errMsg);
+          }
+          return true;
+        } catch (IOException e) {
+          LOG.warn("Check file: " + e);
+          return false;
+        }
+      }
+    }, 500, 30000);
+
+    // Put the decommissioned nodes back in service.
+    for (DatanodeInfo datanodeInfo : decomDataNodes) {
+      putNodeInService(0, datanodeInfo);
+    }
+
+    cleanupFile(fileSys, file);
+  }
 }
