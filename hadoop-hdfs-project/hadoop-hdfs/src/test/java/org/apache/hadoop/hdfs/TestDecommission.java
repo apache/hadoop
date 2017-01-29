@@ -1120,10 +1120,10 @@ public class TestDecommission extends AdminStatesBaseTest {
     final FileSystem fileSys = getCluster().getFileSystem(0);
     final FSNamesystem ns = getCluster().getNamesystem(0);
 
-    int repl = 3;
+    final int repl = 3;
     writeFile(fileSys, file, repl, 1);
     // Request Decommission for DataNodes 1 and 2.
-    List<DatanodeInfo> decomDataNodes = takeNodeOutofService(0,
+    final List<DatanodeInfo> decomDataNodes = takeNodeOutofService(0,
         Lists.newArrayList(getCluster().getDataNodes().get(0).getDatanodeUuid(),
             getCluster().getDataNodes().get(1).getDatanodeUuid()),
         Long.MAX_VALUE, null, null, AdminStates.DECOMMISSIONED);
