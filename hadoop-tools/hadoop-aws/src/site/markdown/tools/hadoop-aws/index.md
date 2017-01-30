@@ -2170,6 +2170,23 @@ that the file `contract-test-options.xml` does not contain any
 secret credentials itself. As the auth keys XML file is kept out of the
 source code tree, it is not going to get accidentally committed.
 
+### Configuring S3a Encryption
+
+For S3a encryption tests to run correctly, the 
+`fs.s3a.server-side-encryption-key` must be configured in the s3a contract xml 
+file with a AWS KMS encryption key arn as this value is different for each AWS 
+KMS.
+
+Example:
+
+    <property>
+      <name>fs.s3a.server-side-encryption-key</name>
+      <value>arn:aws:kms:us-west-2:360379543683:key/071a86ff-8881-4ba0-9230-95af6d01ca01</value>
+    </property>
+    
+You can also force all the tests to run with a specific SSE encryption method
+by configuring the property `fs.s3a.server-side-encryption-algorithm` in the s3a 
+contract file.
 
 ### Running the Tests
 

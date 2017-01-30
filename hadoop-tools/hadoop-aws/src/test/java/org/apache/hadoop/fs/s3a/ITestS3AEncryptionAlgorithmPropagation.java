@@ -19,39 +19,78 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
+import java.net.URI;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 
 /**
  * Test whether or not encryption settings propagate by choosing an invalid
- * one. We expect the write to fail with a 400 bad request error
+ * one. We expect the S3AFileSystem to fail to initialize.
  */
 @Ignore
 public class ITestS3AEncryptionAlgorithmPropagation
     extends AbstractS3ATestBase {
 
-  @Override
-  protected Configuration createConfiguration() {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
+  @Test
+  public void testEncryptionAlgorithmSetToDES() throws Throwable {
+    expectedException.expect(IOException.class);
+    expectedException.expectMessage("Unknown Server Side algorithm DES");
+
     Configuration conf = super.createConfiguration();
-    S3ATestUtils.disableFilesystemCaching(conf);
-    conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
-        "DES");
-    return conf;
+    //DES is an invalid encryption algorithm
+    conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM, "DES");
+    S3AContract contract = (S3AContract) createContract(conf);
+    contract.init();
+    //skip tests if they aren't enabled
+    assumeEnabled();
+    //extract the test FS
+    FileSystem fileSystem = contract.getTestFileSystem();
+    assertNotNull("null filesystem", fileSystem);
+    URI fsURI = fileSystem.getUri();
+    LOG.info("Test filesystem = {} implemented by {}",
+      fsURI, fileSystem);
+    assertEquals("wrong filesystem of " + fsURI,
+    contract.getScheme(), fsURI.getScheme());
+    fileSystem.initialize(fsURI, conf);
+
   }
 
   @Test
-  public void testEncrypt0() throws Throwable {
-    writeThenReadFileToFailure(0);
-  }
+  public void testEncryptionAlgorithSSECWithNoEncryptionKey() throws Throwable {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("The value of property " +
+      "fs.s3a.server-side-encryption-key must not be null");
 
-  @Test
-  public void testEncrypt256() throws Throwable {
-    writeThenReadFileToFailure(256);
+    Configuration conf = super.createConfiguration();
+    //SSE-C must be configured with an encryption key
+    conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM, S3AEncryptionMethods
+      .SSE_C.getMethod());
+    conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY, null);
+    S3AContract contract = (S3AContract) createContract(conf);
+    contract.init();
+    //skip tests if they aren't enabled
+    assumeEnabled();
+    //extract the test FS
+    FileSystem fileSystem = contract.getTestFileSystem();
+    assertNotNull("null filesystem", fileSystem);
+    URI fsURI = fileSystem.getUri();
+    LOG.info("Test filesystem = {} implemented by {}",
+      fsURI, fileSystem);
+    assertEquals("wrong filesystem of " + fsURI,
+      contract.getScheme(), fsURI.getScheme());
+    fileSystem.initialize(fsURI, conf);
   }
 
   /**
@@ -62,17 +101,6 @@ public class ITestS3AEncryptionAlgorithmPropagation
   @Override
   protected void mkdirs(Path path) throws IOException {
 
-  }
-
-  protected void writeThenReadFileToFailure(int len) throws IOException {
-    skipIfEncryptionTestsDisabled(getConfiguration());
-    describe("Create an encrypted file of size " + len);
-    try {
-      writeThenReadFile(methodName.getMethodName() + '-' + len, len);
-      fail("Expected an exception about an illegal encryption algorithm");
-    } catch (AWSS3IOException e) {
-      assertStatusCode(e, 400);
-    }
   }
 
 }
