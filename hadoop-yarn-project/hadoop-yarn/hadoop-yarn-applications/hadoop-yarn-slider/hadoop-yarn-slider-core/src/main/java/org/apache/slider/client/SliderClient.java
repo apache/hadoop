@@ -3519,7 +3519,8 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     if (clustername == null) {
       throw unknownClusterException("(undefined)");
     }
-    ApplicationReport instance = findInstance(clustername);
+    ApplicationReport instance = findInstance(clustername,
+        SliderUtils.getAllLiveAppStates());
     if (null == instance) {
       throw unknownClusterException(clustername);
     }
