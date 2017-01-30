@@ -232,6 +232,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected void serviceInit(Configuration conf) throws Exception {
     this.conf = conf;
     this.rmContext = new RMContextImpl();
+    rmContext.setResourceManager(this);
     
     this.configurationProvider =
         ConfigurationProviderFactory.getConfigurationProvider(conf);

@@ -156,4 +156,6 @@ public interface RMContext {
   RMAppLifetimeMonitor getRMAppLifetimeMonitor();
 
   String getHAZookeeperConnectionState();
+
+  ResourceManager getResourceManager();
 }

@@ -29,5 +29,8 @@ public enum RMFatalEventType {
   EMBEDDED_ELECTOR_FAILED,
 
   // Source <- Admin Service
-  TRANSITION_TO_ACTIVE_FAILED
+  TRANSITION_TO_ACTIVE_FAILED,
+
+  // Source <- Critical Thread Crash
+  CRITICAL_THREAD_CRASH
 }
