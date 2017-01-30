@@ -454,20 +454,39 @@ public abstract class MetadataStoreTestBase extends Assert {
     }
   }
 
+  /**
+   * Test that the MetadataStore differentiates between the same path in two
+   * different buckets.
+   * @throws Exception
+   */
+  @Test
+  public void testMultiBucketPaths() throws Exception {
+    String p1 = "s3a://bucket-a/path1";
+    String p2 = "s3a://bucket-b/path2";
+
+    // Make sure we start out empty
+    PathMetadata meta = ms.get(new Path(p1));
+    assertNull("Path should not be present yet.", meta);
+    meta = ms.get(new Path(p2));
+    assertNull("Path2 should not be present yet.", meta);
+
+    // Put p1, assert p2 doesn't match
+    ms.put(new PathMetadata(makeFileStatus(p1, 100)));
+    meta = ms.get(new Path(p2));
+    assertNull("Path 2 should not match path 1.", meta);
+
+    // Make sure delete is correct as well
+    if (!allowMissing()) {
+      ms.delete(new Path(p2));
+      meta = ms.get(new Path(p1));
+      assertNotNull("Path should not have been deleted");
+    }
+    ms.delete(new Path(p1));
+  }
 
   /*
    * Helper functions.
    */
-
-  /** Builds array of Path objects based on parent dir and filenames. */
-  private Path[] buildPaths(String parent, String... paths) {
-
-    Path[] output = new Path[paths.length];
-    for (int i = 0; i < paths.length; i++) {
-      output[i] = new Path(strToPath(parent), paths[i]);
-    }
-    return output;
-  }
 
   /** Modifies paths input array and returns it. */
   private String[] buildPathStrings(String parent, String... paths) {

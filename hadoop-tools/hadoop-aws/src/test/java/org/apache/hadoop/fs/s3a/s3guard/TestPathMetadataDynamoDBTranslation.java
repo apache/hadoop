@@ -27,6 +27,7 @@ import com.amazonaws.services.dynamodbv2.document.KeyAttribute;
 import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
+import com.google.common.base.Preconditions;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -56,10 +57,8 @@ import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.VERSION;
  * model objects and DynamoDB items.
  */
 public class TestPathMetadataDynamoDBTranslation {
-  private static final String DEFAULT_URI = "s3a://test-bucket/";
-  private static final URI S3AURI = URI.create(DEFAULT_URI);
 
-  private static final Path TEST_DIR_PATH = new Path("/myDir");
+  private static final Path TEST_DIR_PATH = new Path("s3a://test-bucket/myDir");
   private static final Item TEST_DIR_ITEM = new Item();
   private static PathMetadata testDirPathMetadata;
 
@@ -77,14 +76,14 @@ public class TestPathMetadataDynamoDBTranslation {
     testDirPathMetadata =
         new PathMetadata(new S3AFileStatus(false, TEST_DIR_PATH, username));
     TEST_DIR_ITEM
-        .withPrimaryKey(PARENT, "/", CHILD, TEST_DIR_PATH.getName())
+        .withPrimaryKey(PARENT, "/test-bucket", CHILD, TEST_DIR_PATH.getName())
         .withBoolean(IS_DIR, true);
 
     testFilePathMetadata = new PathMetadata(
         new S3AFileStatus(TEST_FILE_LENGTH, TEST_MOD_TIME, TEST_FILE_PATH,
             TEST_BLOCK_SIZE, username));
     TEST_FILE_ITEM
-        .withPrimaryKey(PARENT, TEST_DIR_PATH.toString(),
+        .withPrimaryKey(PARENT, pathToParentKey(TEST_FILE_PATH.getParent()),
             CHILD, TEST_FILE_PATH.getName())
         .withBoolean(IS_DIR, false)
         .withLong(FILE_LENGTH, TEST_FILE_LENGTH)
@@ -128,10 +127,10 @@ public class TestPathMetadataDynamoDBTranslation {
   public void testItemToPathMetadata() throws IOException {
     final String user =
         UserGroupInformation.getCurrentUser().getShortUserName();
-    assertNull(itemToPathMetadata(S3AURI, null, user));
+    assertNull(itemToPathMetadata(null, user));
 
-    verify(TEST_DIR_ITEM, itemToPathMetadata(S3AURI, TEST_DIR_ITEM, user));
-    verify(TEST_FILE_ITEM, itemToPathMetadata(S3AURI, TEST_FILE_ITEM, user));
+    verify(TEST_DIR_ITEM, itemToPathMetadata(TEST_DIR_ITEM, user));
+    verify(TEST_FILE_ITEM, itemToPathMetadata(TEST_FILE_ITEM, user));
   }
 
   /**
@@ -141,8 +140,8 @@ public class TestPathMetadataDynamoDBTranslation {
     assertNotNull(meta);
     assert meta.getFileStatus() instanceof S3AFileStatus;
     final S3AFileStatus status = (S3AFileStatus) meta.getFileStatus();
-    final Path path = Path.getPathWithoutSchemeAndAuthority(status.getPath());
-    assertEquals(item.get(PARENT), path.getParent().toString());
+    final Path path = status.getPath();
+    assertEquals(item.get(PARENT), pathToParentKey(path.getParent()));
     assertEquals(item.get(CHILD), path.getName());
     boolean isDir = item.hasAttribute(IS_DIR) && item.getBoolean(IS_DIR);
     assertEquals(isDir, status.isDirectory());
@@ -178,17 +177,29 @@ public class TestPathMetadataDynamoDBTranslation {
     assertNotNull(attr);
     assertEquals(PARENT, attr.getName());
     // this path is expected as parent filed
-    assertEquals(path.toString(), attr.getValue());
+    assertEquals(pathToParentKey(path), attr.getValue());
+  }
+
+  private static String pathToParentKey(Path p) {
+    Preconditions.checkArgument(p.isUriPathAbsolute());
+    URI parentUri = p.toUri();
+    String bucket = parentUri.getHost();
+    Preconditions.checkNotNull(bucket);
+    String s =  "/" + bucket + parentUri.getPath();
+    // strip trailing slash
+    if (s.endsWith("/")) {
+      s = s.substring(0, s.length()-1);
+    }
+    return s;
   }
 
   @Test
-  public void testPathToKey() {
+  public void testPathToKey() throws Exception {
     try {
       pathToKey(new Path("/"));
       fail("Root path should have not been mapped to any PrimaryKey");
     } catch (IllegalArgumentException ignored) {
     }
-
     doTestPathToKey(TEST_DIR_PATH);
     doTestPathToKey(TEST_FILE_PATH);
   }
@@ -202,7 +213,8 @@ public class TestPathMetadataDynamoDBTranslation {
     for (KeyAttribute keyAttribute : key.getComponents()) {
       assertThat(keyAttribute.getName(), anyOf(is(PARENT), is(CHILD)));
       if (PARENT.equals(keyAttribute.getName())) {
-        assertEquals(path.getParent().toString(), keyAttribute.getValue());
+        assertEquals(pathToParentKey(path.getParent()),
+            keyAttribute.getValue());
       } else {
         assertEquals(path.getName(), keyAttribute.getValue());
       }
@@ -220,7 +232,7 @@ public class TestPathMetadataDynamoDBTranslation {
   public void testVersionMarkerNotStatusIllegalPath() throws Throwable {
     final Item marker = createVersionMarker(VERSION_MARKER, VERSION, 0);
     assertNull("Path metadata fromfrom " + marker,
-        itemToPathMetadata(null, marker, "alice"));
+        itemToPathMetadata(marker, "alice"));
   }
 
 }

@@ -33,10 +33,12 @@ import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 
 /**
@@ -101,24 +103,26 @@ final class PathMetadataDynamoDBTranslation {
    * @param item DynamoDB item to convert
    * @return {@code item} converted to a {@link PathMetadata}
    */
-  static PathMetadata itemToPathMetadata(URI s3aUri, Item item, String username)
+  static PathMetadata itemToPathMetadata(Item item, String username)
       throws IOException {
     if (item == null) {
       return null;
     }
 
-    String parent = item.getString(PARENT);
-    Preconditions.checkNotNull(parent, "No parent entry in item %s", item);
-    String child = item.getString(CHILD);
-    Preconditions.checkNotNull(child, "No child entry in item %s", item);
-    Path path = new Path(parent, child);
-    if (!path.isAbsoluteAndSchemeAuthorityNull()) {
+    String parentStr = item.getString(PARENT);
+    Preconditions.checkNotNull(parentStr, "No parent entry in item %s", item);
+    String childStr = item.getString(CHILD);
+    Preconditions.checkNotNull(childStr, "No child entry in item %s", item);
+
+    // Skip table version markers, which are only non-absolute paths stored.
+    Path rawPath = new Path(parentStr, childStr);
+    if (!rawPath.isAbsoluteAndSchemeAuthorityNull()) {
       return null;
     }
 
-    if (s3aUri != null) {
-      path = path.makeQualified(s3aUri, null);
-    }
+    Path parent = new Path(Constants.FS_S3A + ":/" + parentStr + "/");
+    Path path = new Path(parent, childStr);
+
     boolean isDir = item.hasAttribute(IS_DIR) && item.getBoolean(IS_DIR);
     final FileStatus fileStatus;
     if (isDir) {
@@ -231,8 +235,28 @@ final class PathMetadataDynamoDBTranslation {
    * @return DynamoDB equality condition on {@code path} as parent
    */
   static KeyAttribute pathToParentKeyAttribute(Path path) {
-    removeSchemeAndAuthority(path);
-    return new KeyAttribute(PARENT, path.toUri().getPath());
+    return new KeyAttribute(PARENT, pathToParentKey(path));
+  }
+
+  /**
+   * e.g. pathToParentKey(s3a://bucket/path/a) -> /bucket/path/a
+   * @param path
+   * @return string for parent key
+   */
+  static String pathToParentKey(Path path) {
+    Preconditions.checkNotNull(path);
+    Preconditions.checkArgument(path.isUriPathAbsolute(), "Path not absolute");
+    URI uri = path.toUri();
+    String bucket = uri.getHost();
+    Preconditions.checkArgument(!StringUtils.isEmpty(bucket),
+        "Path missing bucket");
+    String pKey = "/" + bucket + uri.getPath();
+
+    // Strip trailing slash
+    if (pKey.endsWith("/")) {
+      pKey = pKey.substring(0, pKey.length() - 1);
+    }
+    return pKey;
   }
 
   /**
@@ -243,11 +267,10 @@ final class PathMetadataDynamoDBTranslation {
    * @return DynamoDB key for item matching {@code path}
    */
   static PrimaryKey pathToKey(Path path) {
-    path = removeSchemeAndAuthority(path);
     Preconditions.checkArgument(!path.isRoot(),
         "Root path is not mapped to any PrimaryKey");
-    return new PrimaryKey(PARENT, path.getParent().toUri().getPath(),
-        CHILD, path.getName());
+    return new PrimaryKey(PARENT, pathToParentKey(path.getParent()), CHILD,
+        path.getName());
   }
 
   /**
@@ -266,11 +289,6 @@ final class PathMetadataDynamoDBTranslation {
       keys[i++] = pathToKey(p);
     }
     return keys;
-  }
-
-  private static Path removeSchemeAndAuthority(Path path) {
-    Preconditions.checkNotNull(path);
-    return Path.getPathWithoutSchemeAndAuthority(path);
   }
 
   /**

@@ -166,6 +166,17 @@ following parameter to true.
 </property>
 ```
 
+We can also explicitly set the DynamoDB service endpoint we will connect to.
+This makes sure we always access the region our table lives in, even if we
+access S3 buckets in other regions.  In this example we use the endpoint for
+US West (Oregon):
+
+```xml
+<property>
+  <name>fs.s3a.s3guard.ddb.endpoint</name>
+  <value>dynamodb.us-west-2.amazonaws.com</value>
+</property>
+```
 Next, you need to set the DynamoDB read and write throughput requirements you
 expect to need for your cluster.  Setting higher values will cost you more
 money.

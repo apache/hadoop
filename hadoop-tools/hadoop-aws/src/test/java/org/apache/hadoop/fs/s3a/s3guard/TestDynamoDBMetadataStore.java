@@ -83,10 +83,10 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
       LoggerFactory.getLogger(TestDynamoDBMetadataStore.class);
   private static final String BUCKET = "TestDynamoDBMetadataStore";
   private static final String S3URI =
-      URI.create(Constants.FS_S3A + "://" + BUCKET).toString();
+      URI.create(Constants.FS_S3A + "://" + BUCKET + "/").toString();
   public static final PrimaryKey
       VERSION_MARKER_PRIMARY_KEY = createVersionMarkerPrimaryKey(
-          DynamoDBMetadataStore.VERSION_MARKER);
+      DynamoDBMetadataStore.VERSION_MARKER);
 
   /** The DynamoDBLocal dynamoDBLocalServer instance for testing. */
   private static DynamoDBProxyServer dynamoDBLocalServer;
@@ -415,12 +415,13 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Test
   public void testRootDirectory() throws IOException {
     final DynamoDBMetadataStore ddbms = getDynamoMetadataStore();
-    verifyRootDirectory(ddbms.get(new Path("/")), true);
+    Path rootPath = new Path(S3URI);
+    verifyRootDirectory(ddbms.get(rootPath), true);
 
     ddbms.put(new PathMetadata(new S3AFileStatus(true,
-        new Path("/foo"),
+        new Path(rootPath, "foo"),
         UserGroupInformation.getCurrentUser().getShortUserName())));
-    verifyRootDirectory(ddbms.get(new Path("/")), false);
+    verifyRootDirectory(ddbms.get(new Path(S3URI)), false);
   }
 
   private void verifyRootDirectory(PathMetadata rootMeta, boolean isEmpty) {
@@ -458,7 +459,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
       ddbms.initialize(s3afs);
       // we can list the empty table
-      ddbms.listChildren(new Path("/"));
+      ddbms.listChildren(new Path(S3URI));
 
       ddbms.destroy();
       verifyTableNotExist(tableName);
@@ -469,7 +470,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
       try {
         // we can no longer list the destroyed table
-        ddbms.listChildren(new Path("/"));
+        ddbms.listChildren(new Path(S3URI));
         fail("Should have failed after the table is destroyed!");
       } catch (IOException ignored) {
       }

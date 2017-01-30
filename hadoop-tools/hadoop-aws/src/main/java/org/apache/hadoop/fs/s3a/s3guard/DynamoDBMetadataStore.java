@@ -52,6 +52,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,7 +82,8 @@ import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*
  * represents a single directory or file.  Its path is split into separate table
  * attributes:
  * <ul>
- * <li> parent (absolute path of the parent). </li>
+ * <li> parent (absolute path of the parent, with bucket name inserted as
+ * first path component). </li>
  * <li> child (path of that specific child, relative to parent). </li>
  * <li> optional boolean attribute tracking whether the path is a directory.
  *      Absence or a false value indicates the path is a file. </li>
@@ -95,16 +97,14 @@ import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*
  *
  * The DynamoDB partition key is the parent, and the range key is the child.
  *
- * Root is a special case.  It has no parent, so it cannot be split into
- * separate parent and child attributes.  To avoid confusion in the DynamoDB
- * table, we simply do not persist root and instead treat it as a special case
- * path that always exists.
+ * To allow multiple buckets to share the same DynamoDB table, the bucket
+ * name is treated as the root directory.
  *
  * For example, assume the consistent store contains metadata representing this
  * file system structure:
  *
  * <pre>
- * /dir1
+ * s3a://bucket/dir1
  * |-- dir2
  * |   |-- file1
  * |   `-- file2
@@ -119,20 +119,20 @@ import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*
  * This is persisted to a single DynamoDB table as:
  *
  * <pre>
- * ==================================================================
- * | parent          | child | is_dir | mod_time | len |     ...    |
- * ==================================================================
- * | /               | dir1  | true   |          |     |            |
- * | /dir1           | dir2  | true   |          |     |            |
- * | /dir1           | dir3  | true   |          |     |            |
- * | /dir1/dir2      | file1 |        |   100    | 111 |            |
- * | /dir1/dir2      | file2 |        |   200    | 222 |            |
- * | /dir1/dir3      | dir4  | true   |          |     |            |
- * | /dir1/dir3      | dir5  | true   |          |     |            |
- * | /dir1/dir3/dir4 | file3 |        |   300    | 333 |            |
- * | /dir1/dir3/dir5 | file4 |        |   400    | 444 |            |
- * | /dir1/dir3      | dir6  | true   |          |     |            |
- * ==================================================================
+ * =========================================================================
+ * | parent                 | child | is_dir | mod_time | len |     ...    |
+ * =========================================================================
+ * | /bucket                | dir1  | true   |          |     |            |
+ * | /bucket/dir1           | dir2  | true   |          |     |            |
+ * | /bucket/dir1           | dir3  | true   |          |     |            |
+ * | /bucket/dir1/dir2      | file1 |        |   100    | 111 |            |
+ * | /bucket/dir1/dir2      | file2 |        |   200    | 222 |            |
+ * | /bucket/dir1/dir3      | dir4  | true   |          |     |            |
+ * | /bucket/dir1/dir3      | dir5  | true   |          |     |            |
+ * | /bucket/dir1/dir3/dir4 | file3 |        |   300    | 333 |            |
+ * | /bucket/dir1/dir3/dir5 | file4 |        |   400    | 444 |            |
+ * | /bucket/dir1/dir3      | dir6  | true   |          |     |            |
+ * =========================================================================
  * </pre>
  *
  * This choice of schema is efficient for read access patterns.
@@ -147,9 +147,11 @@ import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*
  * {@link #move(Collection, Collection)}, are less efficient with this schema.
  * They require mutating multiple items in the DynamoDB table.
  *
- * All DynamoDB access is performed within the same AWS region as the S3 bucket
- * that hosts the S3A instance.  During initialization, it checks the location
- * of the S3 bucket and creates a DynamoDB client connected to the same region.
+ * By default, DynamoDB access is performed within the same AWS region as
+ * the S3 bucket that hosts the S3A instance.  During initialization, it checks
+ * the location of the S3 bucket and creates a DynamoDB client connected to the
+ * same region. The region may also be set explicitly by setting the config
+ * parameter fs.s3a.s3guard.ddb.endpoint with the corresponding endpoint.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -176,7 +178,6 @@ public class DynamoDBMetadataStore implements MetadataStore {
   private Table table;
   private String tableName;
   private Configuration conf;
-  private URI s3Uri;
   private String username;
 
   /**
@@ -233,7 +234,6 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
     username = s3afs.getUsername();
     conf = s3afs.getConf();
-    s3Uri = s3afs.getUri();
     Class<? extends DynamoDBClientFactory> cls = conf.getClass(
         S3GUARD_DDB_CLIENT_FACTORY_IMPL,
         S3GUARD_DDB_CLIENT_FACTORY_IMPL_DEFAULT,
@@ -338,7 +338,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
             .withPrimaryKey(pathToKey(path))
             .withConsistentRead(true); // strictly consistent read
         final Item item = table.getItem(spec);
-        meta = itemToPathMetadata(s3Uri, item, username);
+        meta = itemToPathMetadata(item, username);
         LOG.debug("Get from table {} in region {} returning for {}: {}",
             tableName, region, path, meta);
       }
@@ -375,7 +375,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
       final List<PathMetadata> metas = new ArrayList<>();
       for (Item item : items) {
-        metas.add(itemToPathMetadata(s3Uri, item, username));
+        metas.add(itemToPathMetadata(item, username));
       }
       LOG.trace("Listing table {} in region {} for {} returning {}",
           tableName, region, path, metas);
@@ -399,8 +399,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
         + " paths to create", tableName, region,
         pathsToDelete == null ? 0 : pathsToDelete.size(),
         pathsToCreate == null ? 0 : pathsToCreate.size());
-    LOG.trace("move: pathsToDelete = {}, pathsToCreate = {}",
-        pathsToDelete, pathsToCreate);
+    LOG.trace("move: pathsToDelete = {}, pathsToCreate = {}", pathsToDelete,
+        pathsToCreate);
     try {
       processBatchWriteRequest(pathToKey(pathsToDelete),
           pathMetadataToItem(pathsToCreate));
@@ -714,13 +714,20 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   /**
-   * Validates a path object; and make it qualified if it's not.
+   * Validates a path object; it must be absolute, and contain a host
+   * (bucket) component.
    */
   private Path checkPath(Path path) {
     Preconditions.checkNotNull(path);
-    Preconditions.checkArgument(path.isAbsolute(),
-        "Path '" + path + "' is not absolute!");
-    return s3Uri == null ? path : path.makeQualified(s3Uri, null);
+    Preconditions.checkArgument(path.isAbsolute(), "Path %s is not absolute",
+        path);
+    URI uri = path.toUri();
+    Preconditions.checkNotNull(uri.getScheme(), "Path %s missing scheme", path);
+    Preconditions.checkArgument(uri.getScheme().equals(Constants.FS_S3A),
+        "Path %s scheme must be %s", path, Constants.FS_S3A);
+    Preconditions.checkArgument(!StringUtils.isEmpty(uri.getHost()), "Path %s" +
+        " is missing bucket.", path);
+    return path;
   }
 
   /**
