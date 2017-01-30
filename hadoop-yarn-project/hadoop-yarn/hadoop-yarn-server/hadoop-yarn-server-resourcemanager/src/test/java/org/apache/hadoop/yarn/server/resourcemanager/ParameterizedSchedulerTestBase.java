@@ -87,6 +87,7 @@ public abstract class ParameterizedSchedulerTestBase {
 
     conf.set(YarnConfiguration.RM_SCHEDULER, FairScheduler.class.getName());
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, FS_ALLOC_FILE);
+    conf.setLong(FairSchedulerConfiguration.UPDATE_INTERVAL_MS, 10);
   }
 
   public SchedulerType getSchedulerType() {
