@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -27,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -34,6 +34,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.Permission;
@@ -44,6 +45,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueStateManager
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  *
@@ -71,9 +74,6 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       return q1.getQueuePath().compareTo(q2.getQueuePath());
     }
   };
-
-  static final PartitionedQueueComparator PARTITIONED_QUEUE_COMPARATOR =
-      new PartitionedQueueComparator();
 
   static class QueueHook {
     public CSQueue hook(CSQueue queue) {
@@ -164,11 +164,11 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     CSQueue newRoot =  parseQueue(this.csContext, newConf, null,
         CapacitySchedulerConfiguration.ROOT, newQueues, queues, NOOP);
 
-    // Ensure all existing queues are still present
-    validateExistingQueues(queues, newQueues);
+    // Ensure queue hiearchy in the new XML file is proper.
+    validateQueueHierarchy(queues, newQueues);
 
-    // Add new queues
-    addNewQueues(queues, newQueues);
+    // Add new queues and delete OldQeueus only after validation.
+    updateQueues(queues, newQueues);
 
     // Re-configure queues
     root.reinitialize(newRoot, this.csContext.getClusterResource());
@@ -261,13 +261,14 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
   }
 
   /**
-   * Ensure all existing queues are present. Queues cannot be deleted
+   * Ensure all existing queues are present. Queues cannot be deleted if its not
+   * in Stopped state, Queue's cannot be moved from one hierarchy to other also.
+   *
    * @param queues existing queues
    * @param newQueues new queues
    */
-  private void validateExistingQueues(
-      Map<String, CSQueue> queues, Map<String, CSQueue> newQueues)
-      throws IOException {
+  private void validateQueueHierarchy(Map<String, CSQueue> queues,
+      Map<String, CSQueue> newQueues) throws IOException {
     // check that all static queues are included in the newQueues list
     for (Map.Entry<String, CSQueue> e : queues.entrySet()) {
       if (!(e.getValue() instanceof ReservationQueue)) {
@@ -275,8 +276,18 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         CSQueue oldQueue = e.getValue();
         CSQueue newQueue = newQueues.get(queueName);
         if (null == newQueue) {
-          throw new IOException(queueName + " cannot be found during refresh!");
+          // old queue doesn't exist in the new XML
+          if (oldQueue.getState() == QueueState.STOPPED) {
+            LOG.info("Deleting Queue " + queueName + ", as it is not"
+                + " present in the modified capacity configuration xml");
+          } else {
+            throw new IOException(oldQueue.getQueuePath() + " is deleted from"
+                + " the new capacity scheduler configuration, but the"
+                + " queue is not yet in stopped state. "
+                + "Current State : " + oldQueue.getState());
+          }
         } else if (!oldQueue.getQueuePath().equals(newQueue.getQueuePath())) {
+          //Queue's cannot be moved from one hierarchy to other
           throw new IOException(queueName + " is moved from:"
               + oldQueue.getQueuePath() + " to:" + newQueue.getQueuePath()
               + " after refresh, which is not allowed.");
@@ -286,18 +297,25 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
   }
 
   /**
-   * Add the new queues (only) to our list of queues...
-   * ... be careful, do not overwrite existing queues.
-   * @param queues the existing queues
-   * @param newQueues the new queues
+   * Updates to our list of queues: Adds the new queues and deletes the removed
+   * ones... be careful, do not overwrite existing queues.
+   *
+   * @param existingQueues, the existing queues
+   * @param newQueues the new queues based on new XML
    */
-  private void addNewQueues(
-      Map<String, CSQueue> queues, Map<String, CSQueue> newQueues) {
+  private void updateQueues(Map<String, CSQueue> existingQueues,
+      Map<String, CSQueue> newQueues) {
     for (Map.Entry<String, CSQueue> e : newQueues.entrySet()) {
       String queueName = e.getKey();
       CSQueue queue = e.getValue();
-      if (!queues.containsKey(queueName)) {
-        queues.put(queueName, queue);
+      if (!existingQueues.containsKey(queueName)) {
+        existingQueues.put(queueName, queue);
+      }
+    }
+    for (Map.Entry<String, CSQueue> e : existingQueues.entrySet()) {
+      String queueName = e.getKey();
+      if (!newQueues.containsKey(queueName)) {
+        existingQueues.remove(queueName);
       }
     }
   }

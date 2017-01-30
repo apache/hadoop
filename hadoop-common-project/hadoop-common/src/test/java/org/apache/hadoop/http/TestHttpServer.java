@@ -145,7 +145,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
 
   @BeforeClass public static void setup() throws Exception {
     Configuration conf = new Configuration();
-    conf.setInt(HttpServer2.HTTP_MAX_THREADS, 10);
+    conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, 10);
     server = createTestServer(conf);
     server.addServlet("echo", "/echo", EchoServlet.class);
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);

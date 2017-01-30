@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
+import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import java.io.IOException;
@@ -60,6 +62,7 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportReplica;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -642,7 +645,7 @@ public class BlockManager implements BlockStatsMXBean {
 
   @VisibleForTesting
   public BlockPlacementPolicy getBlockPlacementPolicy() {
-    return placementPolicies.getPolicy(false);
+    return placementPolicies.getPolicy(CONTIGUOUS);
   }
 
   /** Dump meta data to out. */
@@ -784,10 +787,13 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   public int getDefaultStorageNum(BlockInfo block) {
-    if (block.isStriped()) {
-      return ((BlockInfoStriped) block).getRealTotalBlockNum();
-    } else {
-      return defaultReplication;
+    switch (block.getBlockType()) {
+    case STRIPED: return ((BlockInfoStriped) block).getRealTotalBlockNum();
+    case CONTIGUOUS: return defaultReplication;
+    default:
+      throw new IllegalArgumentException(
+          "getDefaultStorageNum called with unknown BlockType: "
+          + block.getBlockType());
     }
   }
 
@@ -796,10 +802,13 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   public short getMinStorageNum(BlockInfo block) {
-    if (block.isStriped()) {
-      return ((BlockInfoStriped) block).getRealDataBlockNum();
-    } else {
-      return minReplication;
+    switch(block.getBlockType()) {
+    case STRIPED: return ((BlockInfoStriped) block).getRealDataBlockNum();
+    case CONTIGUOUS: return minReplication;
+    default:
+      throw new IllegalArgumentException(
+          "getMinStorageNum called with unknown BlockType: "
+          + block.getBlockType());
     }
   }
 
@@ -1723,7 +1732,7 @@ public class BlockManager implements BlockStatsMXBean {
       // It is costly to extract the filename for which chooseTargets is called,
       // so for now we pass in the block collection itself.
       final BlockPlacementPolicy placementPolicy =
-          placementPolicies.getPolicy(rw.getBlock().isStriped());
+          placementPolicies.getPolicy(rw.getBlock().getBlockType());
       rw.chooseTargets(placementPolicy, storagePolicySuite, excludedNodes);
     }
 
@@ -1928,9 +1937,9 @@ public class BlockManager implements BlockStatsMXBean {
   /** Choose target for WebHDFS redirection. */
   public DatanodeStorageInfo[] chooseTarget4WebHDFS(String src,
       DatanodeDescriptor clientnode, Set<Node> excludes, long blocksize) {
-    return placementPolicies.getPolicy(false).chooseTarget(src, 1, clientnode,
-        Collections.<DatanodeStorageInfo>emptyList(), false, excludes,
-        blocksize, storagePolicySuite.getDefaultPolicy(), null);
+    return placementPolicies.getPolicy(CONTIGUOUS).chooseTarget(src, 1,
+        clientnode, Collections.<DatanodeStorageInfo>emptyList(), false,
+        excludes, blocksize, storagePolicySuite.getDefaultPolicy(), null);
   }
 
   /** Choose target for getting additional datanodes for an existing pipeline. */
@@ -1941,9 +1950,11 @@ public class BlockManager implements BlockStatsMXBean {
       Set<Node> excludes,
       long blocksize,
       byte storagePolicyID,
-      boolean isStriped) {
-    final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(storagePolicyID);
-    final BlockPlacementPolicy blockplacement = placementPolicies.getPolicy(isStriped);
+      BlockType blockType) {
+    final BlockStoragePolicy storagePolicy =
+        storagePolicySuite.getPolicy(storagePolicyID);
+    final BlockPlacementPolicy blockplacement =
+        placementPolicies.getPolicy(blockType);
     return blockplacement.chooseTarget(src, numAdditionalNodes, clientnode,
         chosen, true, excludes, blocksize, storagePolicy, null);
   }
@@ -1962,12 +1973,14 @@ public class BlockManager implements BlockStatsMXBean {
       final long blocksize,
       final List<String> favoredNodes,
       final byte storagePolicyID,
-      final boolean isStriped,
+      final BlockType blockType,
       final EnumSet<AddBlockFlag> flags) throws IOException {
     List<DatanodeDescriptor> favoredDatanodeDescriptors = 
         getDatanodeDescriptors(favoredNodes);
-    final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(storagePolicyID);
-    final BlockPlacementPolicy blockplacement = placementPolicies.getPolicy(isStriped);
+    final BlockStoragePolicy storagePolicy =
+        storagePolicySuite.getPolicy(storagePolicyID);
+    final BlockPlacementPolicy blockplacement =
+        placementPolicies.getPolicy(blockType);
     final DatanodeStorageInfo[] targets = blockplacement.chooseTarget(src,
         numOfReplicas, client, excludedNodes, blocksize, 
         favoredDatanodeDescriptors, storagePolicy, flags);
@@ -3428,7 +3441,7 @@ public class BlockManager implements BlockStatsMXBean {
       final Collection<DatanodeStorageInfo> nonExcess, BlockInfo storedBlock,
       short replication, DatanodeDescriptor addedNode,
       DatanodeDescriptor delNodeHint, List<StorageType> excessTypes) {
-    BlockPlacementPolicy replicator = placementPolicies.getPolicy(false);
+    BlockPlacementPolicy replicator = placementPolicies.getPolicy(CONTIGUOUS);
     List<DatanodeStorageInfo> replicasToDelete = replicator
         .chooseReplicasToDelete(nonExcess, nonExcess, replication, excessTypes,
             addedNode, delNodeHint);
@@ -3490,7 +3503,7 @@ public class BlockManager implements BlockStatsMXBean {
       return;
     }
 
-    BlockPlacementPolicy placementPolicy = placementPolicies.getPolicy(true);
+    BlockPlacementPolicy placementPolicy = placementPolicies.getPolicy(STRIPED);
     // for each duplicated index, delete some replicas until only one left
     for (int targetIndex = duplicated.nextSetBit(0); targetIndex >= 0;
          targetIndex = duplicated.nextSetBit(targetIndex + 1)) {
@@ -3890,10 +3903,10 @@ public class BlockManager implements BlockStatsMXBean {
     BitSet bitSet = new BitSet(block.getTotalBlockNum());
     for (StorageAndBlockIndex si : block.getStorageAndIndexInfos()) {
       StoredReplicaState state = checkReplicaOnStorage(counters, block,
-          si.storage, nodesCorrupt, inStartupSafeMode);
+          si.getStorage(), nodesCorrupt, inStartupSafeMode);
       if (state == StoredReplicaState.LIVE) {
-        if (!bitSet.get(si.blockIndex)) {
-          bitSet.set(si.blockIndex);
+        if (!bitSet.get(si.getBlockIndex())) {
+          bitSet.set(si.getBlockIndex());
         } else {
           counters.subtract(StoredReplicaState.LIVE, 1);
           counters.add(StoredReplicaState.REDUNDANT, 1);
@@ -4145,9 +4158,10 @@ public class BlockManager implements BlockStatsMXBean {
       }
     }
     DatanodeInfo[] locs = liveNodes.toArray(new DatanodeInfo[liveNodes.size()]);
+    BlockType blockType = storedBlock.getBlockType();
     BlockPlacementPolicy placementPolicy = placementPolicies
-        .getPolicy(storedBlock.isStriped());
-    int numReplicas = storedBlock.isStriped() ? ((BlockInfoStriped) storedBlock)
+        .getPolicy(blockType);
+    int numReplicas = blockType == STRIPED ? ((BlockInfoStriped) storedBlock)
         .getRealDataBlockNum() : storedBlock.getReplication();
     return placementPolicy.verifyBlockPlacement(locs, numReplicas)
         .isPlacementPolicySatisfied();
@@ -4685,8 +4699,8 @@ public class BlockManager implements BlockStatsMXBean {
     return blockIdManager.isLegacyBlock(block);
   }
 
-  public long nextBlockId(boolean isStriped) {
-    return blockIdManager.nextBlockId(isStriped);
+  public long nextBlockId(BlockType blockType) {
+    return blockIdManager.nextBlockId(blockType);
   }
 
   boolean isGenStampInFuture(Block block) {

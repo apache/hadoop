@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -46,11 +47,13 @@ public class BlockPlacementPolicies{
     ecPolicy.initialize(conf, stats, clusterMap, host2datanodeMap);
   }
 
-  public BlockPlacementPolicy getPolicy(boolean isStriped){
-    if (isStriped) {
-      return ecPolicy;
-    } else {
-      return replicationPolicy;
+  public BlockPlacementPolicy getPolicy(BlockType blockType){
+    switch (blockType) {
+    case CONTIGUOUS: return replicationPolicy;
+    case STRIPED: return ecPolicy;
+    default:
+      throw new IllegalArgumentException(
+          "getPolicy received a BlockType that isn't supported.");
     }
   }
 }

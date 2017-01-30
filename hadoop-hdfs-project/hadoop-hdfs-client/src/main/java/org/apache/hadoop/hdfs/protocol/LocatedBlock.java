@@ -211,4 +211,8 @@ public class LocatedBlock {
   public boolean isStriped() {
     return false;
   }
+
+  public BlockType getBlockType() {
+    return BlockType.CONTIGUOUS;
+  }
 }

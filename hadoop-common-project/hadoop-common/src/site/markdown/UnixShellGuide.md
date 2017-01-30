@@ -103,6 +103,15 @@ In addition, daemons that run in an extra security mode also support `(command)_
 
 Apache Hadoop provides a way to do a user check per-subcommand.  While this method is easily circumvented and should not be considered a security-feature, it does provide a mechanism by which to prevent accidents.  For example, setting `HDFS_NAMENODE_USER=hdfs` will make the `hdfs namenode` and `hdfs --daemon start namenode` commands verify that the user running the commands are the hdfs user by checking the `USER` environment variable.  This also works for non-daemons.  Setting `HADOOP_DISTCP_USER=jane` will verify that `USER` is set to `jane` before being allowed to execute the `hadoop distcp` command.
 
+If a \_USER environment variable exists and commands are run with a privilege (e.g., as root; see hadoop_privilege_check in the API documentation), execution will switch to the specified user.  For commands that support user account switching for security and therefore have a SECURE\_USER variable, the base \_USER variable needs to be the user that is expected to be used to switch to the SECURE\_USER account.  For example:
+
+```bash
+HDFS_DATANODE_USER=root
+HDFS_DATANODE_SECURE_USER=hdfs
+```
+
+Be aware that if the \-\-workers flag is used, the user switch happens *after* ssh is invoked.  The multi-daemon start and stop commands in sbin will, however, switch (if appropriate) prior and will therefore use the keys of the specified \_USER.
+
 ## Developer and Advanced Administrator Environment
 
 ### Shell Profiles

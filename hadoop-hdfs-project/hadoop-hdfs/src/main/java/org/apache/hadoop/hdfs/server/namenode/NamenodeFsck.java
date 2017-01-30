@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +68,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped.StorageAndBlockIndex;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicies;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementStatus;
@@ -147,6 +149,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
 
   private boolean showReplicaDetails = false;
   private boolean showUpgradeDomains = false;
+  private boolean showMaintenanceState = false;
   private long staleInterval;
   private Tracer tracer;
 
@@ -230,6 +233,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         this.showReplicaDetails = true;
       } else if (key.equals("upgradedomains")) {
         this.showUpgradeDomains = true;
+      } else if (key.equals("maintenance")) {
+        this.showMaintenanceState = true;
       } else if (key.equals("storagepolicies")) {
         this.showStoragePolcies = true;
       } else if (key.equals("showprogress")) {
@@ -283,10 +288,12 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
           + numberReplicas.decommissioned());
       out.println("No. of decommissioning Replica: "
           + numberReplicas.decommissioning());
-      out.println("No. of entering maintenance Replica: "
-          + numberReplicas.liveEnteringMaintenanceReplicas());
-      out.println("No. of in maintenance Replica: "
-          + numberReplicas.maintenanceNotForReadReplicas());
+      if (this.showMaintenanceState) {
+        out.println("No. of entering maintenance Replica: "
+            + numberReplicas.liveEnteringMaintenanceReplicas());
+        out.println("No. of in maintenance Replica: "
+            + numberReplicas.maintenanceNotForReadReplicas());
+      }
       out.println("No. of corrupted Replica: " +
           numberReplicas.corruptReplicas());
       //record datanodes that have corrupted block replica
@@ -307,9 +314,9 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
           out.print(DECOMMISSIONED_STATUS);
         } else if (dn.isDecommissionInProgress()) {
           out.print(DECOMMISSIONING_STATUS);
-        } else if (dn.isEnteringMaintenance()) {
+        } else if (this.showMaintenanceState && dn.isEnteringMaintenance()) {
           out.print(ENTERING_MAINTENANCE_STATUS);
-        } else if (dn.isInMaintenance()) {
+        } else if (this.showMaintenanceState && dn.isInMaintenance()) {
           out.print(IN_MAINTENANCE_STATUS);
         } else {
           out.print(HEALTHY_STATUS);
@@ -586,9 +593,23 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         blockManager.getStorages(storedBlock) :
         storedBlock.getUnderConstructionFeature().getExpectedStorageLocations();
     StringBuilder sb = new StringBuilder(" [");
+    final boolean isStriped = storedBlock.isStriped();
+    Map<DatanodeStorageInfo, Long> storage2Id = new HashMap<>();
+    if (isStriped && isComplete) {
+      long blockId = storedBlock.getBlockId();
+      Iterable<StorageAndBlockIndex> sis =
+          ((BlockInfoStriped)storedBlock).getStorageAndIndexInfos();
+      for (StorageAndBlockIndex si: sis){
+        storage2Id.put(si.getStorage(), blockId + si.getBlockIndex());
+      }
+    }
 
     for (int i = 0; i < storages.length; i++) {
       DatanodeStorageInfo storage = storages[i];
+      if (isStriped && isComplete) {
+        long index = storage2Id.get(storage);
+        sb.append("blk_" + index + ":");
+      }
       DatanodeDescriptor dnDesc = storage.getDatanodeDescriptor();
       if (showRacks) {
         sb.append(NodeBase.getPath(dnDesc));
@@ -609,9 +630,11 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
           sb.append("DECOMMISSIONED)");
         } else if (dnDesc.isDecommissionInProgress()) {
           sb.append("DECOMMISSIONING)");
-        } else if (dnDesc.isEnteringMaintenance()) {
+        } else if (this.showMaintenanceState &&
+            dnDesc.isEnteringMaintenance()) {
           sb.append("ENTERING MAINTENANCE)");
-        } else if (dnDesc.isInMaintenance()) {
+        } else if (this.showMaintenanceState &&
+            dnDesc.isInMaintenance()) {
           sb.append("IN MAINTENANCE)");
         } else if (corruptReplicas != null
             && corruptReplicas.contains(dnDesc)) {
@@ -738,15 +761,15 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
             + targetFileReplication + " but found "
             + liveReplicas+ " live replica(s), "
             + decommissionedReplicas + " decommissioned replica(s), "
-            + decommissioningReplicas + " decommissioning replica(s), "
-            + enteringMaintenanceReplicas
-            + " entering maintenance replica(s) and "
-            + inMaintenanceReplicas + " in maintenance replica(s).");
+            + decommissioningReplicas + " decommissioning replica(s)"
+            + (this.showMaintenanceState ? (enteringMaintenanceReplicas
+            + ", entering maintenance replica(s) and " + inMaintenanceReplicas
+            + " in maintenance replica(s).") : "."));
       }
 
       // count mis replicated blocks
       BlockPlacementStatus blockPlacementStatus = bpPolicies.getPolicy(
-          lBlk.isStriped()).verifyBlockPlacement(lBlk.getLocations(),
+          lBlk.getBlockType()).verifyBlockPlacement(lBlk.getLocations(),
           targetFileReplication);
       if (!blockPlacementStatus.isPlacementPolicySatisfied()) {
         res.numMisReplicatedBlocks++;

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -26,6 +28,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.util.Time;
 
 import javax.annotation.Nullable;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Profiles the performance of the metadata and data related operations on
@@ -33,16 +36,30 @@ import javax.annotation.Nullable;
  */
 @InterfaceAudience.Private
 class ProfilingFileIoEvents {
+  static final Log LOG = LogFactory.getLog(ProfilingFileIoEvents.class);
 
   private final boolean isEnabled;
+  private final int sampleRangeMax;
 
   public ProfilingFileIoEvents(@Nullable Configuration conf) {
     if (conf != null) {
       isEnabled = conf.getBoolean(DFSConfigKeys
           .DFS_DATANODE_ENABLE_FILEIO_PROFILING_KEY, DFSConfigKeys
           .DFS_DATANODE_ENABLE_FILEIO_PROFILING_DEFAULT);
+      double fileIOSamplingFraction = conf.getDouble(DFSConfigKeys
+              .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY,
+          DFSConfigKeys
+              .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEAFULT);
+      if (fileIOSamplingFraction > 1) {
+        LOG.warn(DFSConfigKeys
+            .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY +
+            " value cannot be more than 1. Setting value to 1");
+        fileIOSamplingFraction = 1;
+      }
+      sampleRangeMax = (int) (fileIOSamplingFraction * Integer.MAX_VALUE);
     } else {
       isEnabled = false;
+      sampleRangeMax = 0;
     }
   }
 
@@ -69,7 +86,7 @@ class ProfilingFileIoEvents {
 
   public long beforeFileIo(@Nullable FsVolumeSpi volume,
       FileIoProvider.OPERATION op, long len) {
-    if (isEnabled) {
+    if (isEnabled && ThreadLocalRandom.current().nextInt() < sampleRangeMax) {
       DataNodeVolumeMetrics metrics = getVolumeMetrics(volume);
       if (metrics != null) {
         return Time.monotonicNow();
@@ -80,7 +97,7 @@ class ProfilingFileIoEvents {
 
   public void afterFileIo(@Nullable FsVolumeSpi volume,
       FileIoProvider.OPERATION op, long begin, long len) {
-    if (isEnabled) {
+    if (isEnabled && begin != 0) {
       DataNodeVolumeMetrics metrics = getVolumeMetrics(volume);
       if (metrics != null) {
         long latency = Time.monotonicNow() - begin;

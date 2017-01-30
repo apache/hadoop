@@ -20,10 +20,10 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-main</artifactId>
-    <version>3.0.0-alpha2-SNAPSHOT</version>
+    <version>3.0.0-alpha3-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-project</artifactId>
-  <version>3.0.0-alpha2-SNAPSHOT</version>
+  <version>3.0.0-alpha3-SNAPSHOT</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
@@ -361,6 +361,12 @@
           <type>test-jar</type>
       </dependency>
 
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-server-timelineservice-hbase</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
      <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-applications-distributedshell</artifactId>
@@ -492,8 +498,6 @@
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-kms</artifactId>
         <version>${project.version}</version>
-        <classifier>classes</classifier>
-        <type>jar</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
@@ -716,12 +720,6 @@
         <groupId>io.netty</groupId>
         <artifactId>netty-all</artifactId>
         <version>4.1.0.Beta5</version>
-      </dependency>
-
-      <dependency>
-        <groupId>com.twitter</groupId>
-        <artifactId>hpack</artifactId>
-        <version>0.11.0</version>
       </dependency>
 
       <dependency>
@@ -1223,13 +1221,6 @@
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-server</artifactId>
-        <version>${hbase.version}</version>
-        <scope>test</scope>
-        <classifier>tests</classifier>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-it</artifactId>
         <version>${hbase.version}</version>
         <scope>test</scope>
         <classifier>tests</classifier>

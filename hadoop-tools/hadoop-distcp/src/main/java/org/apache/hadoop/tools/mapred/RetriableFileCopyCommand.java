@@ -189,9 +189,10 @@ public class RetriableFileCopyCommand extends RetriableCommand {
                                   throws IOException {
     final Path sourcePath = source.getPath();
     FileSystem fs = sourcePath.getFileSystem(configuration);
-    if (fs.getFileStatus(sourcePath).getLen() != targetLen)
-      throw new IOException("Mismatch in length of source:" + sourcePath
-                + " and target:" + target);
+    long srcLen = fs.getFileStatus(sourcePath).getLen();
+    if (srcLen != targetLen)
+      throw new IOException("Mismatch in length of source:" + sourcePath + " (" + srcLen +
+          ") and target:" + target + " (" + targetLen + ")");
   }
 
   private void compareCheckSums(FileSystem sourceFS, Path source,

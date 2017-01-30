@@ -649,8 +649,20 @@ class OfflineImageReconstructor {
     if (ival != null) {
       bld.setStoragePolicyID(ival);
     }
-    Boolean bval = node.removeChildBool(INODE_SECTION_IS_STRIPED);
-    bld.setIsStriped(bval);
+    String blockType = node.removeChildStr(INODE_SECTION_BLOCK_TYPE);
+    if(blockType != null) {
+      switch (blockType) {
+      case "CONTIGUOUS":
+        bld.setBlockType(HdfsProtos.BlockTypeProto.CONTIGUOUS);
+        break;
+      case "STRIPED":
+        bld.setBlockType(HdfsProtos.BlockTypeProto.STRIPED);
+        break;
+      default:
+        throw new IOException("INode XML found with unknown <blocktype> " +
+            blockType);
+      }
+    }
     inodeBld.setFile(bld);
     // Will check remaining keys and serialize in processINodeXml
   }

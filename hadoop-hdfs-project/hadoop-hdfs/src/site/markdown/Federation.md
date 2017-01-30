@@ -15,20 +15,7 @@
 HDFS Federation
 ===============
 
-* [HDFS Federation](#HDFS_Federation)
-    * [Background](#Background)
-    * [Multiple Namenodes/Namespaces](#Multiple_NamenodesNamespaces)
-        * [Key Benefits](#Key_Benefits)
-    * [Federation Configuration](#Federation_Configuration)
-        * [Configuration:](#Configuration:)
-        * [Formatting Namenodes](#Formatting_Namenodes)
-        * [Upgrading from an older release and configuring federation](#Upgrading_from_an_older_release_and_configuring_federation)
-        * [Adding a new Namenode to an existing HDFS cluster](#Adding_a_new_Namenode_to_an_existing_HDFS_cluster)
-    * [Managing the cluster](#Managing_the_cluster)
-        * [Starting and stopping cluster](#Starting_and_stopping_cluster)
-        * [Balancer](#Balancer)
-        * [Decommissioning](#Decommissioning)
-        * [Cluster Web Console](#Cluster_Web_Console)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 This guide provides an overview of the HDFS Federation feature and how to configure and manage the federated cluster.
 

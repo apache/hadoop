@@ -77,8 +77,8 @@ public abstract class AllocateRequest {
   public static AllocateRequest newInstance(int responseID, float appProgress,
       List<ResourceRequest> resourceAsk,
       List<ContainerId> containersToBeReleased,
-      ResourceBlacklistRequest resourceBlacklistRequest,
-      List<UpdateContainerRequest> updateRequests) {
+      List<UpdateContainerRequest> updateRequests,
+      ResourceBlacklistRequest resourceBlacklistRequest) {
     return AllocateRequest.newBuilder().responseId(responseID)
         .progress(appProgress).askList(resourceAsk)
         .releaseList(containersToBeReleased)

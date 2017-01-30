@@ -416,12 +416,22 @@ public class TestDataNodeVolumeFailure {
     DFSTestUtil.createFile(fs, file2, 1024, (short)3, 1L);
     DFSTestUtil.waitReplication(fs, file2, (short)3);
 
-    // underReplicatedBlocks are due to failed volumes
-    int underReplicatedBlocks =
-        BlockManagerTestUtil.checkHeartbeatAndGetUnderReplicatedBlocksCount(
-            cluster.getNamesystem(), bm);
-    assertTrue("There is no under replicated block after volume failure",
-        underReplicatedBlocks > 0);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        // underReplicatedBlocks are due to failed volumes
+        int underReplicatedBlocks = BlockManagerTestUtil
+            .checkHeartbeatAndGetUnderReplicatedBlocksCount(
+                cluster.getNamesystem(), bm);
+
+        if (underReplicatedBlocks > 0) {
+          return true;
+        }
+        LOG.info("There is no under replicated block after volume failure.");
+
+        return false;
+      }
+    }, 500, 60000);
   }
 
   /**

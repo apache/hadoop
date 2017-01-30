@@ -18,21 +18,7 @@
 HDFS Snapshots
 ==============
 
-* [HDFS Snapshots](#HDFS_Snapshots)
-    * [Overview](#Overview)
-        * [Snapshottable Directories](#Snapshottable_Directories)
-        * [Snapshot Paths](#Snapshot_Paths)
-    * [Upgrading to a version of HDFS with snapshots](#Upgrading_to_a_version_of_HDFS_with_snapshots)
-    * [Snapshot Operations](#Snapshot_Operations)
-        * [Administrator Operations](#Administrator_Operations)
-            * [Allow Snapshots](#Allow_Snapshots)
-            * [Disallow Snapshots](#Disallow_Snapshots)
-        * [User Operations](#User_Operations)
-            * [Create Snapshots](#Create_Snapshots)
-            * [Delete Snapshots](#Delete_Snapshots)
-            * [Rename Snapshots](#Rename_Snapshots)
-            * [Get Snapshottable Directory Listing](#Get_Snapshottable_Directory_Listing)
-            * [Get Snapshots Difference Report](#Get_Snapshots_Difference_Report)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 
 Overview

@@ -1037,9 +1037,12 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       float queueUsagePerc = 0.0f;
       float clusterUsagePerc = 0.0f;
       if (!calc.isInvalidDivisor(cluster)) {
-        queueUsagePerc = calc.divide(cluster, usedResourceClone, Resources
-            .multiply(cluster, queue.getQueueInfo(false, false).getCapacity()))
-            * 100;
+        float queueCapacityPerc = queue.getQueueInfo(false, false)
+            .getCapacity();
+        if (queueCapacityPerc != 0) {
+          queueUsagePerc = calc.divide(cluster, usedResourceClone,
+              Resources.multiply(cluster, queueCapacityPerc)) * 100;
+        }
         clusterUsagePerc = calc.divide(cluster, usedResourceClone, cluster)
             * 100;
       }
@@ -1208,7 +1211,15 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
 
     return false;
   }
-  
+
+  /*
+   * Note that the behavior of appAttemptResourceUsage is different from queue's
+   * For queue, used = actual-used + reserved
+   * For app, used = actual-used.
+   *
+   * TODO (wangda): Need to make behaviors of queue/app's resource usage
+   * consistent
+   */
   @VisibleForTesting
   public ResourceUsage getAppAttemptResourceUsage() {
     return this.attemptResourceUsage;

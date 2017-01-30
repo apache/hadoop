@@ -32,7 +32,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 public interface CGroupsHandler {
 
-  public enum CGroupController {
+  /**
+   * List of supported cgroup subsystem types.
+   */
+  enum CGroupController {
     CPU("cpu"),
     NET_CLS("net_cls"),
     BLKIO("blkio"),
@@ -49,9 +52,9 @@ public interface CGroupsHandler {
     }
   }
 
-  public static final String CGROUP_FILE_TASKS = "tasks";
-  public static final String CGROUP_PARAM_CLASSID = "classid";
-  public static final String CGROUP_PARAM_BLKIO_WEIGHT = "weight";
+  String CGROUP_FILE_TASKS = "tasks";
+  String CGROUP_PARAM_CLASSID = "classid";
+  String CGROUP_PARAM_BLKIO_WEIGHT = "weight";
 
   String CGROUP_PARAM_MEMORY_HARD_LIMIT_BYTES = "limit_in_bytes";
   String CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES = "soft_limit_in_bytes";
@@ -63,30 +66,31 @@ public interface CGroupsHandler {
   String CGROUP_CPU_SHARES = "shares";
 
   /**
-   * Mounts a cgroup controller
-   * @param controller - the controller being mounted
-   * @throws ResourceHandlerException
+   * Mounts or initializes a cgroup controller.
+   * @param controller - the controller being initialized
+   * @throws ResourceHandlerException the initialization failed due to the
+   * environment
    */
-  public void mountCGroupController(CGroupController controller)
+  void initializeCGroupController(CGroupController controller)
       throws ResourceHandlerException;
 
   /**
-   * Creates a cgroup for a given controller
+   * Creates a cgroup for a given controller.
    * @param controller - controller type for which the cgroup is being created
    * @param cGroupId - id of the cgroup being created
    * @return full path to created cgroup
-   * @throws ResourceHandlerException
+   * @throws ResourceHandlerException creation failed
    */
-  public String createCGroup(CGroupController controller, String cGroupId)
+  String createCGroup(CGroupController controller, String cGroupId)
       throws ResourceHandlerException;
 
   /**
-   * Deletes the specified cgroup
+   * Deletes the specified cgroup.
    * @param controller - controller type for the cgroup
    * @param cGroupId - id of the cgroup being deleted
-   * @throws ResourceHandlerException
+   * @throws ResourceHandlerException deletion failed
    */
-  public void deleteCGroup(CGroupController controller, String cGroupId) throws
+  void deleteCGroup(CGroupController controller, String cGroupId) throws
       ResourceHandlerException;
 
   /**
@@ -95,59 +99,59 @@ public interface CGroupsHandler {
    * @param cGroupId - id of the cgroup
    * @return path for the cgroup relative to the root of (any) controller.
    */
-  public String getRelativePathForCGroup(String cGroupId);
+  String getRelativePathForCGroup(String cGroupId);
 
   /**
-   * Gets the full path for the cgroup, given a controller and a cgroup id
+   * Gets the full path for the cgroup, given a controller and a cgroup id.
    * @param controller - controller type for the cgroup
    * @param cGroupId - id of the cgroup
    * @return full path for the cgroup
    */
-  public String getPathForCGroup(CGroupController controller, String
+  String getPathForCGroup(CGroupController controller, String
       cGroupId);
 
   /**
    * Gets the full path for the cgroup's tasks file, given a controller and a
-   * cgroup id
+   * cgroup id.
    * @param controller - controller type for the cgroup
    * @param cGroupId - id of the cgroup
    * @return full path for the cgroup's tasks file
    */
-  public String getPathForCGroupTasks(CGroupController controller, String
+  String getPathForCGroupTasks(CGroupController controller, String
       cGroupId);
 
   /**
    * Gets the full path for a cgroup parameter, given a controller,
-   * cgroup id and parameter name
+   * cgroup id and parameter name.
    * @param controller - controller type for the cgroup
    * @param cGroupId - id of the cgroup
    * @param param - cgroup parameter ( e.g classid )
    * @return full path for the cgroup parameter
    */
-  public String getPathForCGroupParam(CGroupController controller, String
+  String getPathForCGroupParam(CGroupController controller, String
       cGroupId, String param);
 
   /**
-   * updates a cgroup parameter, given a controller, cgroup id, parameter name
+   * updates a cgroup parameter, given a controller, cgroup id, parameter name.
    * and a parameter value
    * @param controller - controller type for the cgroup
    * @param cGroupId - id of the cgroup
    * @param param - cgroup parameter ( e.g classid )
    * @param value - value to be written to the parameter file
-   * @throws ResourceHandlerException
+   * @throws ResourceHandlerException the operation failed
    */
-  public void updateCGroupParam(CGroupController controller, String cGroupId,
+  void updateCGroupParam(CGroupController controller, String cGroupId,
       String param, String value) throws ResourceHandlerException;
 
   /**
-   * reads a cgroup parameter value, given a controller, cgroup id, parameter
+   * reads a cgroup parameter value, given a controller, cgroup id, parameter.
    * name
    * @param controller - controller type for the cgroup
    * @param cGroupId - id of the cgroup
    * @param param - cgroup parameter ( e.g classid )
    * @return parameter value as read from the parameter file
-   * @throws ResourceHandlerException
+   * @throws ResourceHandlerException the operation failed
    */
-  public String getCGroupParam(CGroupController controller, String cGroupId,
+  String getCGroupParam(CGroupController controller, String cGroupId,
       String param) throws ResourceHandlerException;
 }

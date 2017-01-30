@@ -115,7 +115,7 @@ public class AMRMProxyApplicationContextImpl implements
           throw new YarnRuntimeException("Missing AMRM token for "
               + this.applicationAttemptId);
         }
-        keyId = this.amrmToken.decodeIdentifier().getKeyId();
+        keyId = this.localToken.decodeIdentifier().getKeyId();
         this.localTokenKeyId = keyId;
       } catch (IOException e) {
         throw new YarnRuntimeException("AMRM token decode error for "

@@ -46,13 +46,7 @@ public class KMSWebServer {
   private final HttpServer2 httpServer;
   private final String scheme;
 
-  KMSWebServer(Configuration cnf) throws Exception {
-    ConfigurationWithLogging conf = new ConfigurationWithLogging(cnf);
-
-    // Add SSL configuration file
-    conf.addResource(conf.get(SSLFactory.SSL_SERVER_CONF_KEY,
-        SSLFactory.SSL_SERVER_CONF_DEFAULT));
-
+  KMSWebServer(Configuration conf, Configuration sslConf) throws Exception {
     // Override configuration with deprecated environment variables.
     deprecateEnv("KMS_TEMP", conf, HttpServer2.HTTP_TEMP_DIR_KEY,
         KMSConfiguration.KMS_SITE_XML);
@@ -68,10 +62,10 @@ public class KMSWebServer {
         KMSConfiguration.KMS_SITE_XML);
     deprecateEnv("KMS_SSL_ENABLED", conf,
         KMSConfiguration.SSL_ENABLED_KEY, KMSConfiguration.KMS_SITE_XML);
-    deprecateEnv("KMS_SSL_KEYSTORE_FILE", conf,
+    deprecateEnv("KMS_SSL_KEYSTORE_FILE", sslConf,
         SSLFactory.SSL_SERVER_KEYSTORE_LOCATION,
         SSLFactory.SSL_SERVER_CONF_DEFAULT);
-    deprecateEnv("KMS_SSL_KEYSTORE_PASS", conf,
+    deprecateEnv("KMS_SSL_KEYSTORE_PASS", sslConf,
         SSLFactory.SSL_SERVER_KEYSTORE_PASSWORD,
         SSLFactory.SSL_SERVER_CONF_DEFAULT);
 
@@ -88,7 +82,7 @@ public class KMSWebServer {
     httpServer = new HttpServer2.Builder()
         .setName(NAME)
         .setConf(conf)
-        .setSSLConf(conf)
+        .setSSLConf(sslConf)
         .authFilterConfigurationPrefix(KMSAuthenticationFilter.CONFIG_PREFIX)
         .addEndpoint(endpoint)
         .build();
@@ -147,8 +141,11 @@ public class KMSWebServer {
 
   public static void main(String[] args) throws Exception {
     StringUtils.startupShutdownMessage(KMSWebServer.class, args, LOG);
-    Configuration conf = KMSConfiguration.getKMSConf();
-    KMSWebServer kmsWebServer = new KMSWebServer(conf);
+    Configuration conf = new ConfigurationWithLogging(
+        KMSConfiguration.getKMSConf());
+    Configuration sslConf = new ConfigurationWithLogging(
+        SSLFactory.readSSLConfiguration(conf, SSLFactory.Mode.SERVER));
+    KMSWebServer kmsWebServer = new KMSWebServer(conf, sslConf);
     kmsWebServer.start();
     kmsWebServer.join();
   }

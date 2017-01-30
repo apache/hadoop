@@ -18,11 +18,11 @@
 <parent>
    <groupId>org.apache.hadoop</groupId>
    <artifactId>hadoop-project</artifactId>
-   <version>3.0.0-alpha2-SNAPSHOT</version>
+   <version>3.0.0-alpha3-SNAPSHOT</version>
    <relativePath>../../hadoop-project</relativePath>
 </parent>
   <artifactId>hadoop-client-runtime</artifactId>
-  <version>3.0.0-alpha2-SNAPSHOT</version>
+  <version>3.0.0-alpha3-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <description>Apache Hadoop Client</description>
@@ -138,7 +138,6 @@
                   <goal>shade</goal>
                 </goals>
                 <configuration>
-                  <createSourceJar>true</createSourceJar>
                   <artifactSet>
                     <excludes>
                       <!-- We need a filter that matches just those things that aer included in the api jar -->

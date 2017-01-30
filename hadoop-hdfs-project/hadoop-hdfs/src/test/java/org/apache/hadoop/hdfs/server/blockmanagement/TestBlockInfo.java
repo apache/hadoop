@@ -23,6 +23,7 @@ import static org.hamcrest.core.Is.is;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBlockResult;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.junit.Assert;
@@ -54,7 +55,8 @@ public class TestBlockInfo {
   public void testAddStorage() throws Exception {
     BlockInfo blockInfo = new BlockInfoContiguous((short) 3);
 
-    final DatanodeStorageInfo storage = DFSTestUtil.createDatanodeStorageInfo("storageID", "127.0.0.1");
+    final DatanodeStorageInfo storage = DFSTestUtil.createDatanodeStorageInfo(
+        "storageID", "127.0.0.1");
 
     boolean added = blockInfo.addStorage(storage, blockInfo);
 
@@ -66,8 +68,10 @@ public class TestBlockInfo {
   public void testReplaceStorage() throws Exception {
 
     // Create two dummy storages.
-    final DatanodeStorageInfo storage1 = DFSTestUtil.createDatanodeStorageInfo("storageID1", "127.0.0.1");
-    final DatanodeStorageInfo storage2 = new DatanodeStorageInfo(storage1.getDatanodeDescriptor(), new DatanodeStorage("storageID2"));
+    final DatanodeStorageInfo storage1 = DFSTestUtil.createDatanodeStorageInfo(
+        "storageID1", "127.0.0.1");
+    final DatanodeStorageInfo storage2 = new DatanodeStorageInfo(
+        storage1.getDatanodeDescriptor(), new DatanodeStorage("storageID2"));
     final int NUM_BLOCKS = 10;
     BlockInfo[] blockInfos = new BlockInfo[NUM_BLOCKS];
 
@@ -82,5 +86,15 @@ public class TestBlockInfo {
         storage2.addBlock(blockInfos[NUM_BLOCKS / 2]) == AddBlockResult.ADDED;
     Assert.assertThat(added, is(false));
     Assert.assertThat(blockInfos[NUM_BLOCKS/2].getStorageInfo(0), is(storage2));
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testAddStorageWithDifferentBlock() throws Exception {
+    BlockInfo blockInfo1 = new BlockInfoContiguous(new Block(1000L), (short) 3);
+    BlockInfo blockInfo2 = new BlockInfoContiguous(new Block(1001L), (short) 3);
+
+    final DatanodeStorageInfo storage = DFSTestUtil.createDatanodeStorageInfo(
+        "storageID", "127.0.0.1");
+    blockInfo1.addStorage(storage, blockInfo2);
   }
 }

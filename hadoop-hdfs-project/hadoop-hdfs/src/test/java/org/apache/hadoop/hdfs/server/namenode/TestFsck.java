@@ -677,16 +677,16 @@ public class TestFsck {
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
     ErasureCodingPolicy ecPolicy =
         ErasureCodingPolicyManager.getSystemDefaultPolicy();
-    int numAllUnits = ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits();
+    final int dataBlocks = ecPolicy.getNumDataUnits();
+    final int cellSize = ecPolicy.getCellSize();
+    final int numAllUnits = dataBlocks + ecPolicy.getNumParityUnits();
+    int blockSize = 2 * cellSize;
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
         numAllUnits + 1).build();
-    FileSystem fs = null;
     String topDir = "/myDir";
-    byte[] randomBytes = new byte[3000000];
-    int seed = 42;
-    new Random(seed).nextBytes(randomBytes);
     cluster.waitActive();
-    fs = cluster.getFileSystem();
+    DistributedFileSystem fs = cluster.getFileSystem();
     util.createFiles(fs, topDir);
     // set topDir to EC when it has replicated files
     cluster.getFileSystem().getClient().setErasureCodingPolicy(
@@ -697,11 +697,12 @@ public class TestFsck {
     // Open a EC file for writing and do not close for now
     Path openFile = new Path(topDir + "/openECFile");
     FSDataOutputStream out = fs.create(openFile);
-    int writeCount = 0;
-    while (writeCount != 300) {
-      out.write(randomBytes);
-      writeCount++;
-    }
+    int blockGroupSize = dataBlocks * blockSize;
+    // data size is more than 1 block group and less than 2 block groups
+    byte[] randomBytes = new byte[2 * blockGroupSize - cellSize];
+    int seed = 42;
+    new Random(seed).nextBytes(randomBytes);
+    out.write(randomBytes);
 
     // make sure the fsck can correctly handle mixed ec/replicated files
     runFsck(conf, 0, true, topDir, "-files", "-blocks", "-openforwrite");
@@ -722,6 +723,27 @@ public class TestFsck {
     assertTrue(outStr.contains("Live_repl=" + numAllUnits));
     assertTrue(outStr.contains("Expected_repl=" + numAllUnits));
     assertTrue(outStr.contains("Under Construction Block:"));
+
+    // check reported blockIDs of internal blocks
+    LocatedStripedBlock lsb = (LocatedStripedBlock)fs.getClient()
+        .getLocatedBlocks(openFile.toString(), 0, cellSize * dataBlocks).get(0);
+    long groupId = lsb.getBlock().getBlockId();
+    byte[] indices = lsb.getBlockIndices();
+    DatanodeInfo[] locs = lsb.getLocations();
+    long blockId;
+    for (int i = 0; i < indices.length; i++) {
+      blockId = groupId + indices[i];
+      String str = "blk_" + blockId + ":" + locs[i];
+      assertTrue(outStr.contains(str));
+    }
+
+    // check the output of under-constructed blocks doesn't include the blockIDs
+    String regex = ".*Expected_repl=" + numAllUnits + "(.*)\nStatus:.*";
+    Pattern p = Pattern.compile(regex, Pattern.DOTALL);
+    Matcher m = p.matcher(outStr);
+    assertTrue(m.find());
+    String ucBlockOutput = m.group(1);
+    assertFalse(ucBlockOutput.contains("blk_"));
 
     // Close the file
     out.close();
@@ -906,12 +928,12 @@ public class TestFsck {
     DFSTestUtil.waitReplication(dfs, path, replFactor);
 
     // make sure datanode that has replica is fine before decommission
-    String fsckOut = runFsck(conf, 0, true, testFile, "-files", "-blocks",
-        "-replicaDetails");
+    String fsckOut = runFsck(conf, 0, true, testFile, "-files",
+        "-maintenance", "-blocks", "-replicaDetails");
     assertTrue(fsckOut.contains(NamenodeFsck.HEALTHY_STATUS));
     assertTrue(fsckOut.contains("(LIVE)"));
-    assertTrue(!fsckOut.contains("(ENTERING MAINTENANCE)"));
-    assertTrue(!fsckOut.contains("(IN MAINTENANCE)"));
+    assertFalse(fsckOut.contains("(ENTERING MAINTENANCE)"));
+    assertFalse(fsckOut.contains("(IN MAINTENANCE)"));
 
     // decommission datanode
     FSNamesystem fsn = cluster.getNameNode().getNamesystem();
@@ -924,11 +946,11 @@ public class TestFsck {
     final String dn0Name = dnDesc0.getXferAddr();
 
     // check the replica status while decommissioning
-    fsckOut = runFsck(conf, 0, true, testFile, "-files", "-blocks",
-        "-replicaDetails");
+    fsckOut = runFsck(conf, 0, true, testFile, "-files",
+        "-maintenance", "-blocks", "-replicaDetails");
     assertTrue(fsckOut.contains("(DECOMMISSIONING)"));
-    assertTrue(!fsckOut.contains("(ENTERING MAINTENANCE)"));
-    assertTrue(!fsckOut.contains("(IN MAINTENANCE)"));
+    assertFalse(fsckOut.contains("(ENTERING MAINTENANCE)"));
+    assertFalse(fsckOut.contains("(IN MAINTENANCE)"));
 
     // Start 2nd DataNode
     cluster.startDataNodes(conf, 1, true, null,
@@ -963,11 +985,11 @@ public class TestFsck {
     }, 500, 30000);
 
     // check the replica status after decommission is done
-    fsckOut = runFsck(conf, 0, true, testFile, "-files", "-blocks",
-        "-replicaDetails");
+    fsckOut = runFsck(conf, 0, true, testFile, "-files",
+        "-maintenance", "-blocks", "-replicaDetails");
     assertTrue(fsckOut.contains("(DECOMMISSIONED)"));
-    assertTrue(!fsckOut.contains("(ENTERING MAINTENANCE)"));
-    assertTrue(!fsckOut.contains("(IN MAINTENANCE)"));
+    assertFalse(fsckOut.contains("(ENTERING MAINTENANCE)"));
+    assertFalse(fsckOut.contains("(IN MAINTENANCE)"));
 
     DatanodeDescriptor dnDesc1 = dnm.getDatanode(
         cluster.getDataNodes().get(1).getDatanodeId());
@@ -975,12 +997,21 @@ public class TestFsck {
 
     bm.getDatanodeManager().getDecomManager().startMaintenance(dnDesc1,
         Long.MAX_VALUE);
+
     // check the replica status while entering maintenance
-    fsckOut = runFsck(conf, 0, true, testFile, "-files", "-blocks",
-        "-replicaDetails");
+    fsckOut = runFsck(conf, 0, true, testFile, "-files",
+        "-maintenance", "-blocks", "-replicaDetails");
     assertTrue(fsckOut.contains("(DECOMMISSIONED)"));
     assertTrue(fsckOut.contains("(ENTERING MAINTENANCE)"));
-    assertTrue(!fsckOut.contains("(IN MAINTENANCE)"));
+    assertFalse(fsckOut.contains("(IN MAINTENANCE)"));
+
+    // check entering maintenance replicas are printed only when requested
+    fsckOut = runFsck(conf, 0, true, testFile, "-files",
+        "-blocks", "-replicaDetails");
+    assertTrue(fsckOut.contains("(DECOMMISSIONED)"));
+    assertFalse(fsckOut.contains("(ENTERING MAINTENANCE)"));
+    assertFalse(fsckOut.contains("(IN MAINTENANCE)"));
+
 
     // Start 3rd DataNode
     cluster.startDataNodes(conf, 1, true, null,
@@ -1009,11 +1040,20 @@ public class TestFsck {
     }, 500, 30000);
 
     // check the replica status after decommission is done
-    fsckOut = runFsck(conf, 0, true, testFile, "-files", "-blocks",
-        "-replicaDetails");
+    fsckOut = runFsck(conf, 0, true, testFile, "-files",
+        "-maintenance", "-blocks", "-replicaDetails");
     assertTrue(fsckOut.contains("(DECOMMISSIONED)"));
-    assertTrue(!fsckOut.contains("(ENTERING MAINTENANCE)"));
+    assertFalse(fsckOut.contains("(ENTERING MAINTENANCE)"));
     assertTrue(fsckOut.contains("(IN MAINTENANCE)"));
+
+    // check in maintenance replicas are not printed when not requested
+    fsckOut = runFsck(conf, 0, true, testFile, "-files",
+        "-blocks", "-replicaDetails");
+    assertTrue(fsckOut.contains("(DECOMMISSIONED)"));
+    assertFalse(fsckOut.contains("(ENTERING MAINTENANCE)"));
+    assertFalse(fsckOut.contains("(IN MAINTENANCE)"));
+
+
   }
 
   /** Test if fsck can return -1 in case of failure.
@@ -1563,7 +1603,8 @@ public class TestFsck {
     String[] bIds = sb.toString().split(" ");
 
     //make sure datanode that has replica is fine before maintenance
-    String outStr = runFsck(conf, 0, true, "/", "-blockId", bIds[0]);
+    String outStr = runFsck(conf, 0, true, "/",
+        "-maintenance", "-blockId", bIds[0]);
     System.out.println(outStr);
     assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
 
@@ -1588,7 +1629,8 @@ public class TestFsck {
             }
           }
           if (datanodeInfo != null && datanodeInfo.isEnteringMaintenance()) {
-            String fsckOut = runFsck(conf, 5, false, "/", "-blockId", bIds[0]);
+            String fsckOut = runFsck(conf, 5, false, "/",
+                "-maintenance", "-blockId", bIds[0]);
             assertTrue(fsckOut.contains(
                 NamenodeFsck.ENTERING_MAINTENANCE_STATUS));
             return true;
@@ -1628,8 +1670,13 @@ public class TestFsck {
     }, 500, 30000);
 
     //check in maintenance node
-    String fsckOut = runFsck(conf, 4, false, "/", "-blockId", bIds[0]);
+    String fsckOut = runFsck(conf, 4, false, "/",
+        "-maintenance", "-blockId", bIds[0]);
     assertTrue(fsckOut.contains(NamenodeFsck.IN_MAINTENANCE_STATUS));
+
+    //check in maintenance node are not printed when not requested
+    fsckOut = runFsck(conf, 4, false, "/", "-blockId", bIds[0]);
+    assertFalse(fsckOut.contains(NamenodeFsck.IN_MAINTENANCE_STATUS));
   }
 
   /**
@@ -1897,7 +1944,7 @@ public class TestFsck {
           }
           if (datanodeInfo != null && datanodeInfo.isEnteringMaintenance()) {
             // verify fsck returns Healthy status
-            String fsckOut = runFsck(conf, 0, true, testFile);
+            String fsckOut = runFsck(conf, 0, true, testFile, "-maintenance");
             assertTrue(fsckOut.contains(NamenodeFsck.HEALTHY_STATUS));
             return true;
           }
@@ -1935,7 +1982,11 @@ public class TestFsck {
     }, 500, 30000);
 
     // verify fsck returns Healthy status
-    String fsckOut = runFsck(conf, 0, true, testFile);
+    String fsckOut = runFsck(conf, 0, true, testFile, "-maintenance");
+    assertTrue(fsckOut.contains(NamenodeFsck.HEALTHY_STATUS));
+
+    // verify fsck returns Healthy status even without maintenance option
+    fsckOut = runFsck(conf, 0, true, testFile);
     assertTrue(fsckOut.contains(NamenodeFsck.HEALTHY_STATUS));
   }
 

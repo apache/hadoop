@@ -23,7 +23,6 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 
 /**
  * A Schedulable represents an entity that can be scheduled such as an
@@ -96,4 +95,11 @@ public interface Schedulable {
 
   /** Assign a fair share to this Schedulable. */
   void setFairShare(Resource fairShare);
+
+  /**
+   * Check whether the schedulable is preemptable.
+   * @return <code>true</code> if the schedulable is preemptable;
+   *         <code>false</code> otherwise
+   */
+  boolean isPreemptable();
 }

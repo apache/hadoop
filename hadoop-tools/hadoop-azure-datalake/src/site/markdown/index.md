@@ -23,6 +23,7 @@
     * [Configuring Credentials & FileSystem](#Configuring_Credentials)
         * [Using Refresh Token](#Refresh_Token)
         * [Using Client Keys](#Client_Credential_Token)
+        * [Protecting the Credentials with Credential Providers](#Credential_Provider)
     * [Enabling ADL Filesystem](#Enabling_ADL)
     * [Accessing adl URLs](#Accessing_adl_URLs)
 * [Testing the hadoop-azure Module](#Testing_the_hadoop-azure_Module)
@@ -138,6 +139,49 @@ Add the following properties to your core-site.xml
       <value>PASSWORD FROM STEP 7 ABOVE</value>
     </property>
 
+
+### <a name="Credential_Provider" />Protecting the Credentials with Credential Providers
+
+In many Hadoop clusters, the core-site.xml file is world-readable. To protect
+these credentials from prying eyes, it is recommended that you use the
+credential provider framework to securely store them and access them through
+configuration.
+
+All ADLS credential properties can be protected by credential providers.
+For additional reading on the credential provider API, see
+[Credential Provider API](../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
+
+#### Provisioning
+
+```
+% hadoop credential create dfs.adls.oauth2.refresh.token -value 123
+    -provider localjceks://file/home/foo/adls.jceks
+% hadoop credential create dfs.adls.oauth2.credential -value 123
+    -provider localjceks://file/home/foo/adls.jceks
+```
+
+#### Configuring core-site.xml or command line property
+
+```
+<property>
+  <name>hadoop.security.credential.provider.path</name>
+  <value>localjceks://file/home/foo/adls.jceks</value>
+  <description>Path to interrogate for protected credentials.</description>
+</property>
+```
+
+#### Running DistCp
+
+```
+% hadoop distcp
+    [-D hadoop.security.credential.provider.path=localjceks://file/home/user/adls.jceks]
+    hdfs://<NameNode Hostname>:9001/user/foo/007020615
+    adl://<Account Name>.azuredatalakestore.net/testDir/
+```
+
+NOTE: You may optionally add the provider path property to the distcp command
+line instead of added job specific configuration to a generic core-site.xml.
+The square brackets above illustrate this capability.
 
 
 ## <a name="Enabling_ADL" />Enabling ADL Filesystem

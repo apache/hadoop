@@ -124,9 +124,9 @@ public abstract class Storage extends StorageInfo {
     public boolean isOfType(StorageDirType type);
   }
 
-  protected List<StorageDirectory> storageDirs =
+  private final List<StorageDirectory> storageDirs =
       new CopyOnWriteArrayList<>();
-  
+
   private class DirIterator implements Iterator<StorageDirectory> {
     final StorageDirType dirType;
     final boolean includeShared;

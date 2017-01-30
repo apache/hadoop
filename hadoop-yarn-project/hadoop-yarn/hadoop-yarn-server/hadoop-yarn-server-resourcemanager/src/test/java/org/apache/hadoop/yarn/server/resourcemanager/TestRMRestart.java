@@ -110,9 +110,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtil
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
+import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
+import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
@@ -148,6 +152,8 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     conf.setBoolean(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, false);
     conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
+    conf.setClass(YarnConfiguration.TIMELINE_SERVICE_WRITER_CLASS,
+        FileSystemTimelineWriterImpl.class, TimelineWriter.class);
     rmAddr = new InetSocketAddress("localhost", 8032);
     Assert.assertTrue(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS > 1);
   }
@@ -1740,32 +1746,28 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     memStore.init(conf);
 
     MockRM rm1 = new TestSecurityMockRM(conf, memStore) {
-      @Override
-      protected RMAppManager createRMAppManager() {
-        return new TestRMAppManager(this.rmContext, this.scheduler,
-          this.masterService, this.applicationACLsManager, conf);
+      class TestDelegationTokenRenewer extends DelegationTokenRenewer {
+        public void addApplicationAsync(ApplicationId applicationId, Credentials ts,
+            boolean shouldCancelAtEnd, String user, Configuration appConf) {
+          throw new RuntimeException("failed to submit app");
+        }
       }
-
-      class TestRMAppManager extends RMAppManager {
-
-        public TestRMAppManager(RMContext context, YarnScheduler scheduler,
-            ApplicationMasterService masterService,
-            ApplicationACLsManager applicationACLsManager, Configuration conf) {
-          super(context, scheduler, masterService, applicationACLsManager, conf);
-        }
-
-        @Override
-        protected Credentials parseCredentials(
-            ApplicationSubmissionContext application) throws IOException {
-          throw new IOException("Parsing credential error.");
-        }
+      @Override
+      protected DelegationTokenRenewer createDelegationTokenRenewer() {
+        return new TestDelegationTokenRenewer();
       }
     };
     rm1.start();
-    RMApp app1 =
-        rm1.submitApp(200, "name", "user",
+    RMApp app1 = null;
+    try {
+       app1 = rm1.submitApp(200, "name", "user",
           new HashMap<ApplicationAccessType, String>(), false, "default", -1,
           null, "MAPREDUCE", false);
+      Assert.fail();
+    } catch (Exception e) {
+
+    }
+    app1 = rm1.getRMContext().getRMApps().values().iterator().next();
     rm1.waitForState(app1.getApplicationId(), RMAppState.FAILED);
     // Check app staet is saved in state store.
     Assert.assertEquals(RMAppState.FAILED, memStore.getState()
@@ -2534,5 +2536,73 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     nm.nodeHeartbeat(am.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
     rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     return am;
+  }
+
+  @Test(timeout = 60000)
+  public void testRMRestartAfterNodeLabelDisabled() throws Exception {
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+
+    MockRM rm1 = new MockRM(
+        TestUtils.getConfigurationWithDefaultQueueLabels(conf), memStore) {
+      @Override
+      protected RMNodeLabelsManager createNodeLabelManager() {
+        RMNodeLabelsManager mgr = new RMNodeLabelsManager();
+        mgr.init(getConfig());
+        return mgr;
+      }
+    };
+    rm1.start();
+
+    // add node label "x" and set node to label mapping
+    Set<String> clusterNodeLabels = new HashSet<String>();
+    clusterNodeLabels.add("x");
+    RMNodeLabelsManager nodeLabelManager =
+        rm1.getRMContext().getNodeLabelManager();
+    nodeLabelManager.
+        addToCluserNodeLabelsWithDefaultExclusivity(clusterNodeLabels);
+    nodeLabelManager.addLabelsToNode(
+        ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x")));
+    MockNM nm1 = rm1.registerNode("h1:1234", 8000); // label = x
+
+    // submit an application with specifying am node label expression as "x"
+    RMApp app1 = rm1.submitApp(200, "someApp", "someUser", null, "a1", "x");
+    // check am container allocated with correct node label expression
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+    ContainerId  amContainerId1 =
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 1);
+    Assert.assertEquals("x", rm1.getRMContext().getScheduler().
+        getRMContainer(amContainerId1).getNodeLabelExpression());
+    finishApplicationMaster(app1, rm1, nm1, am1);
+
+    // restart rm with node label disabled
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, false);
+    MockRM rm2 = new MockRM(
+        TestUtils.getConfigurationWithDefaultQueueLabels(conf), memStore) {
+      @Override
+      protected RMNodeLabelsManager createNodeLabelManager() {
+        RMNodeLabelsManager mgr = new RMNodeLabelsManager();
+        mgr.init(getConfig());
+        return mgr;
+      }
+    };
+
+    // rm should successfully start with app1 loaded back in FAILED state
+    // due to node label not enabled but am resource request contains
+    // node label expression.
+    try {
+      rm2.start();
+      Assert.assertTrue("RM start successfully", true);
+      Assert.assertEquals(1, rm2.getRMContext().getRMApps().size());
+      rm2.waitForState(app1.getApplicationId(), RMAppState.FAILED);
+    } catch (Exception e) {
+      LOG.debug("Exception on start", e);
+      Assert.fail("RM should start without any issue");
+    } finally {
+      rm1.stop();
+      rm2.stop();
+    }
   }
 }

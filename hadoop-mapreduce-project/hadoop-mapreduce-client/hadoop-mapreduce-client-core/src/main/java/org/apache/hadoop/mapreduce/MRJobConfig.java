@@ -1013,4 +1013,6 @@ public interface MRJobConfig {
    * A comma-separated list of properties whose value will be redacted.
    */
   String MR_JOB_REDACTED_PROPERTIES = "mapreduce.job.redacted-properties";
+
+  String MR_JOB_SEND_TOKEN_CONF = "mapreduce.job.send-token-conf";
 }

@@ -185,7 +185,7 @@ public class LeafQueue extends AbstractCSQueue {
       CapacitySchedulerConfiguration conf = csContext.getConfiguration();
 
       setOrderingPolicy(
-          conf.<FiCaSchedulerApp>getOrderingPolicy(getQueuePath()));
+          conf.<FiCaSchedulerApp>getAppOrderingPolicy(getQueuePath()));
 
       userLimit = conf.getUserLimit(getQueuePath());
       userLimitFactor = conf.getUserLimitFactor(getQueuePath());
@@ -287,7 +287,7 @@ public class LeafQueue extends AbstractCSQueue {
               .toString() + "\n" + "reservationsContinueLooking = "
               + reservationsContinueLooking + "\n" + "preemptionDisabled = "
               + getPreemptionDisabled() + "\n" + "defaultAppPriorityPerQueue = "
-              + defaultAppPriorityPerQueue);
+              + defaultAppPriorityPerQueue + "\npriority = " + priority);
     } finally {
       writeLock.unlock();
     }
@@ -2155,38 +2155,64 @@ public class LeafQueue extends AbstractCSQueue {
     return Collections.unmodifiableCollection(apps);
   }
 
-  // Consider the headroom for each user in the queue.
-  // Total pending for the queue =
-  //   sum(for each user(min((user's headroom), sum(user's pending requests))))
-  //  NOTE: Used for calculating pedning resources in the preemption monitor.
+  /**
+   * Get total pending resource considering user limit for the leaf queue. This
+   * will be used for calculating pending resources in the preemption monitor.
+   *
+   * Consider the headroom for each user in the queue.
+   * Total pending for the queue =
+   * sum(for each user(min((user's headroom), sum(user's pending requests))))
+   * NOTE:
+
+   * @param clusterResources clusterResource
+   * @param partition node partition
+   * @param deductReservedFromPending When a container is reserved in CS,
+   *                                  pending resource will not be deducted.
+   *                                  This could lead to double accounting when
+   *                                  doing preemption:
+   *                                  In normal cases, we should deduct reserved
+   *                                  resource from pending to avoid
+   *                                  excessive preemption.
+   * @return Total pending resource considering user limit
+   */
+
   public Resource getTotalPendingResourcesConsideringUserLimit(
-          Resource resources, String partition) {
+      Resource clusterResources, String partition, boolean deductReservedFromPending) {
     try {
       readLock.lock();
       Map<String, Resource> userNameToHeadroom =
           new HashMap<>();
-      Resource pendingConsideringUserLimit = Resource.newInstance(0, 0);
+      Resource totalPendingConsideringUserLimit = Resource.newInstance(0, 0);
       for (FiCaSchedulerApp app : getApplications()) {
         String userName = app.getUser();
         if (!userNameToHeadroom.containsKey(userName)) {
           User user = getUser(userName);
           Resource headroom = Resources.subtract(
-              computeUserLimit(app.getUser(), resources, user, partition,
+              computeUserLimit(app.getUser(), clusterResources, user, partition,
                   SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY),
               user.getUsed(partition));
           // Make sure headroom is not negative.
           headroom = Resources.componentwiseMax(headroom, Resources.none());
           userNameToHeadroom.put(userName, headroom);
         }
+
+        // Check if we need to deduct reserved from pending
+        Resource pending = app.getAppAttemptResourceUsage().getPending(
+            partition);
+        if (deductReservedFromPending) {
+          pending = Resources.subtract(pending,
+              app.getAppAttemptResourceUsage().getReserved(partition));
+        }
+        pending = Resources.componentwiseMax(pending, Resources.none());
+
         Resource minpendingConsideringUserLimit = Resources.componentwiseMin(
-            userNameToHeadroom.get(userName),
-            app.getAppAttemptResourceUsage().getPending(partition));
-        Resources.addTo(pendingConsideringUserLimit,
+            userNameToHeadroom.get(userName), pending);
+        Resources.addTo(totalPendingConsideringUserLimit,
             minpendingConsideringUserLimit);
         Resources.subtractFrom(userNameToHeadroom.get(userName),
             minpendingConsideringUserLimit);
       }
-      return pendingConsideringUserLimit;
+      return totalPendingConsideringUserLimit;
     } finally {
       readLock.unlock();
     }

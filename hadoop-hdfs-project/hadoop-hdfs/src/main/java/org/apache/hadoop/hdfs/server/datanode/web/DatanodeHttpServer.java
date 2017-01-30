@@ -26,8 +26,8 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 
+import io.netty.bootstrap.ChannelFactory;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -96,7 +96,7 @@ public class DatanodeHttpServer implements Closeable {
     this.conf = conf;
 
     Configuration confForInfoServer = new Configuration(conf);
-    confForInfoServer.setInt(HttpServer2.HTTP_MAX_THREADS, 10);
+    confForInfoServer.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, 10);
     HttpServer2.Builder builder = new HttpServer2.Builder()
         .setName("datanode")
         .setConf(confForInfoServer)
@@ -138,8 +138,16 @@ public class DatanodeHttpServer implements Closeable {
         .childHandler(new ChannelInitializer<SocketChannel>() {
         @Override
         protected void initChannel(SocketChannel ch) throws Exception {
-          ch.pipeline().addLast(new PortUnificationServerHandler(jettyAddr,
-              conf, confForCreate, restCsrfPreventionFilter));
+          ChannelPipeline p = ch.pipeline();
+          p.addLast(new HttpRequestDecoder(),
+            new HttpResponseEncoder());
+          if (restCsrfPreventionFilter != null) {
+            p.addLast(new RestCsrfPreventionFilterHandler(
+                restCsrfPreventionFilter));
+          }
+          p.addLast(
+              new ChunkedWriteHandler(),
+              new URLDispatcher(jettyAddr, conf, confForCreate));
         }
       });
 

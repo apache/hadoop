@@ -137,4 +137,9 @@ public class FakeSchedulable implements Schedulable {
 
   @Override
   public void updateDemand() {}
+
+  @Override
+  public boolean isPreemptable() {
+    return true;
+  }
 }

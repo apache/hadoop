@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -60,16 +61,16 @@ public class BlockUnderConstructionFeature {
   private Block truncateBlock;
 
   public BlockUnderConstructionFeature(Block blk,
-      BlockUCState state, DatanodeStorageInfo[] targets, boolean isStriped) {
+      BlockUCState state, DatanodeStorageInfo[] targets, BlockType blockType) {
     assert getBlockUCState() != COMPLETE :
         "BlockUnderConstructionFeature cannot be in COMPLETE state";
     this.blockUCState = state;
-    setExpectedLocations(blk, targets, isStriped);
+    setExpectedLocations(blk, targets, blockType);
   }
 
   /** Set expected locations */
   public void setExpectedLocations(Block block, DatanodeStorageInfo[] targets,
-      boolean isStriped) {
+      BlockType blockType) {
     if (targets == null) {
       return;
     }
@@ -86,7 +87,7 @@ public class BlockUnderConstructionFeature {
       if (targets[i] != null) {
         // when creating a new striped block we simply sequentially assign block
         // index to each storage
-        Block replicaBlock = isStriped ?
+        Block replicaBlock = blockType == BlockType.STRIPED ?
             new Block(block.getBlockId() + i, 0, block.getGenerationStamp()) :
             block;
         replicas[offset++] = new ReplicaUnderConstruction(replicaBlock,

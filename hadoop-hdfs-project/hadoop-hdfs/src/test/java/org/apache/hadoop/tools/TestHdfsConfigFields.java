@@ -66,6 +66,10 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
     // Purposely hidden, based on comments in DFSConfigKeys
     configurationPropsToSkipCompare
         .add(DFSConfigKeys.DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_KEY);
+    configurationPropsToSkipCompare
+        .add(DFSConfigKeys.DFS_METRICS_ROLLING_AVERAGES_WINDOW_LENGTH_KEY);
+    configurationPropsToSkipCompare
+        .add(DFSConfigKeys.DFS_METRICS_ROLLING_AVERAGE_NUM_WINDOWS_KEY);
 
     // Fully deprecated properties?
     configurationPropsToSkipCompare
@@ -103,6 +107,8 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
         .add(DFSConfigKeys.DFS_DATANODE_ENABLE_FILEIO_PROFILING_KEY);
     configurationPropsToSkipCompare.add(DFSConfigKeys
         .DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_KEY);
+    configurationPropsToSkipCompare.add(DFSConfigKeys
+        .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY);
 
     // Allocate
     xmlPropsToSkipCompare = new HashSet<String>();

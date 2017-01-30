@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SaverContext;
@@ -329,14 +330,16 @@ public final class FSImageFormatPBINode {
       INodeSection.INodeFile f = n.getFile();
       List<BlockProto> bp = f.getBlocksList();
       short replication = (short) f.getReplication();
-      boolean isStriped = f.getIsStriped();
+      BlockType blockType = PBHelperClient.convert(f.getBlockType());
       LoaderContext state = parent.getLoaderContext();
-      ErasureCodingPolicy ecPolicy = ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      ErasureCodingPolicy ecPolicy = (blockType == BlockType.STRIPED) ?
+          ErasureCodingPolicyManager.getPolicyByPolicyID((byte) replication) :
+          null;
 
       BlockInfo[] blocks = new BlockInfo[bp.size()];
       for (int i = 0; i < bp.size(); ++i) {
         BlockProto b = bp.get(i);
-        if (isStriped) {
+        if (blockType == BlockType.STRIPED) {
           blocks[i] = new BlockInfoStriped(PBHelperClient.convert(b), ecPolicy);
         } else {
           blocks[i] = new BlockInfoContiguous(PBHelperClient.convert(b),
@@ -350,7 +353,7 @@ public final class FSImageFormatPBINode {
       final INodeFile file = new INodeFile(n.getId(),
           n.getName().toByteArray(), permissions, f.getModificationTime(),
           f.getAccessTime(), blocks, replication, f.getPreferredBlockSize(),
-          (byte)f.getStoragePolicyID(), isStriped);
+          (byte)f.getStoragePolicyID(), blockType);
 
       if (f.hasAcl()) {
         int[] entries = AclEntryStatusFormat.toInt(loadAclEntries(
@@ -373,7 +376,7 @@ public final class FSImageFormatPBINode {
           BlockInfo lastBlk = file.getLastBlock();
           // replace the last block of file
           final BlockInfo ucBlk;
-          if (isStriped) {
+          if (blockType == BlockType.STRIPED) {
             BlockInfoStriped striped = (BlockInfoStriped) lastBlk;
             ucBlk = new BlockInfoStriped(striped, ecPolicy);
           } else {
@@ -502,7 +505,7 @@ public final class FSImageFormatPBINode {
           .setPreferredBlockSize(file.getPreferredBlockSize())
           .setReplication(file.getFileReplication())
           .setStoragePolicyID(file.getLocalStoragePolicyID())
-          .setIsStriped(file.isStriped());
+          .setBlockType(PBHelperClient.convert(file.getBlockType()));
 
       AclFeature f = file.getAclFeature();
       if (f != null) {

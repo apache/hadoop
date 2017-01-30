@@ -65,10 +65,10 @@ class FSPreemptionThread extends Thread {
       try{
         starvedApp = context.getStarvedApps().take();
         if (!Resources.isNone(starvedApp.getStarvation())) {
-          List<RMContainer> containers =
+          PreemptableContainers containers =
               identifyContainersToPreempt(starvedApp);
           if (containers != null) {
-            preemptContainers(containers);
+            preemptContainers(containers.containers);
           }
         }
       } catch (InterruptedException e) {
@@ -87,9 +87,9 @@ class FSPreemptionThread extends Thread {
    * @return list of containers to preempt to satisfy starvedApp, null if the
    * app cannot be satisfied by preempting any running containers
    */
-  private List<RMContainer> identifyContainersToPreempt(
+  private PreemptableContainers identifyContainersToPreempt(
       FSAppAttempt starvedApp) {
-    List<RMContainer> containers = new ArrayList<>(); // return value
+    PreemptableContainers bestContainers = null;
 
     // Find the nodes that match the next resource request
     SchedulingPlacementSet nextPs =
@@ -107,9 +107,6 @@ class FSPreemptionThread extends Thread {
     // From the potential nodes, pick a node that has enough containers
     // from apps over their fairshare
     for (FSSchedulerNode node : potentialNodes) {
-      // Reset containers for the new node being considered.
-      containers.clear();
-
       // TODO (YARN-5829): Attempt to reserve the node for starved app. The
       // subsequent if-check needs to be reworked accordingly.
       FSAppAttempt nodeReservedApp = node.getReservedAppSchedulable();
@@ -119,39 +116,81 @@ class FSPreemptionThread extends Thread {
         continue;
       }
 
-      // Figure out list of containers to consider
-      List<RMContainer> containersToCheck =
-          node.getCopiedListOfRunningContainers();
-      containersToCheck.removeAll(node.getContainersForPreemption());
-
-      // Initialize potential with unallocated resources
-      Resource potential = Resources.clone(node.getUnallocatedResource());
-      for (RMContainer container : containersToCheck) {
-        FSAppAttempt app =
-            scheduler.getSchedulerApp(container.getApplicationAttemptId());
-
-        if (app.canContainerBePreempted(container)) {
-          // Flag container for preemption
-          containers.add(container);
-          Resources.addTo(potential, container.getAllocatedResource());
-        }
-
-        // Check if we have already identified enough containers
-        if (Resources.fitsIn(requestCapability, potential)) {
-          // Mark the containers as being considered for preemption on the node.
-          // Make sure the containers are subsequently removed by calling
-          // FSSchedulerNode#removeContainerForPreemption.
-          node.addContainersForPreemption(containers);
-          return containers;
+      int maxAMContainers = bestContainers == null ?
+          Integer.MAX_VALUE : bestContainers.numAMContainers;
+      PreemptableContainers preemptableContainers =
+          identifyContainersToPreemptOnNode(requestCapability, node,
+              maxAMContainers);
+      if (preemptableContainers != null) {
+        if (preemptableContainers.numAMContainers == 0) {
+          return preemptableContainers;
         } else {
-          // TODO (YARN-5829): Unreserve the node for the starved app.
+          bestContainers = preemptableContainers;
         }
+      }
+    }
+
+    return bestContainers;
+  }
+
+  /**
+   * Identify containers to preempt on a given node. Try to find a list with
+   * least AM containers to avoid preempting AM containers. This method returns
+   * a non-null set of containers only if the number of AM containers is less
+   * than maxAMContainers.
+   *
+   * @param request resource requested
+   * @param node the node to check
+   * @param maxAMContainers max allowed AM containers in the set
+   * @return list of preemptable containers with fewer AM containers than
+   *         maxAMContainers if such a list exists; null otherwise.
+   */
+  private PreemptableContainers identifyContainersToPreemptOnNode(
+      Resource request, FSSchedulerNode node, int maxAMContainers) {
+    PreemptableContainers preemptableContainers =
+        new PreemptableContainers(maxAMContainers);
+
+    // Figure out list of containers to consider
+    List<RMContainer> containersToCheck =
+        node.getRunningContainersWithAMsAtTheEnd();
+    containersToCheck.removeAll(node.getContainersForPreemption());
+
+    // Initialize potential with unallocated resources
+    Resource potential = Resources.clone(node.getUnallocatedResource());
+
+    for (RMContainer container : containersToCheck) {
+      FSAppAttempt app =
+          scheduler.getSchedulerApp(container.getApplicationAttemptId());
+
+      if (app.canContainerBePreempted(container)) {
+        // Flag container for preemption
+        if (!preemptableContainers.addContainer(container)) {
+          return null;
+        }
+
+        Resources.addTo(potential, container.getAllocatedResource());
+      }
+
+      // Check if we have already identified enough containers
+      if (Resources.fitsIn(request, potential)) {
+        return preemptableContainers;
+      } else {
+        // TODO (YARN-5829): Unreserve the node for the starved app.
       }
     }
     return null;
   }
 
   private void preemptContainers(List<RMContainer> containers) {
+    // Mark the containers as being considered for preemption on the node.
+    // Make sure the containers are subsequently removed by calling
+    // FSSchedulerNode#removeContainerForPreemption.
+    if (containers.size() > 0) {
+      FSSchedulerNode node = (FSSchedulerNode) scheduler.getNodeTracker()
+          .getNode(containers.get(0).getNodeId());
+      node.addContainersForPreemption(containers);
+    }
+
     // Warn application about containers to be killed
     for (RMContainer container : containers) {
       ApplicationAttemptId appAttemptId = container.getApplicationAttemptId();
@@ -188,6 +227,40 @@ class FSPreemptionThread extends Thread {
             scheduler.getNodeTracker().getNode(container.getAllocatedNode());
         containerNode.removeContainerForPreemption(container);
       }
+    }
+  }
+
+  /**
+   * A class to track preemptable containers.
+   */
+  private static class PreemptableContainers {
+    List<RMContainer> containers;
+    int numAMContainers;
+    int maxAMContainers;
+
+    PreemptableContainers(int maxAMContainers) {
+      containers = new ArrayList<>();
+      numAMContainers = 0;
+      this.maxAMContainers = maxAMContainers;
+    }
+
+    /**
+     * Add a container if the number of AM containers is less than
+     * maxAMContainers.
+     *
+     * @param container the container to add
+     * @return true if success; false otherwise
+     */
+    private boolean addContainer(RMContainer container) {
+      if (container.isAMContainer()) {
+        numAMContainers++;
+        if (numAMContainers >= maxAMContainers) {
+          return false;
+        }
+      }
+
+      containers.add(container);
+      return true;
     }
   }
 }

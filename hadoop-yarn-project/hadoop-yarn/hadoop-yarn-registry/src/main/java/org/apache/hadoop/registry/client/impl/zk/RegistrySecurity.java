@@ -749,8 +749,15 @@ public class RegistrySecurity extends AbstractService {
       String context)  {
     RegistrySecurity.validateContext(context);
     enableZookeeperClientSASL();
-    System.setProperty(PROP_ZK_SASL_CLIENT_USERNAME, username);
-    System.setProperty(PROP_ZK_SASL_CLIENT_CONTEXT, context);
+    setSystemPropertyIfUnset(PROP_ZK_SASL_CLIENT_USERNAME, username);
+    setSystemPropertyIfUnset(PROP_ZK_SASL_CLIENT_CONTEXT, context);
+  }
+
+  private static void setSystemPropertyIfUnset(String name, String value) {
+    String existingValue = System.getProperty(name);
+    if (existingValue == null || existingValue.isEmpty()) {
+      System.setProperty(name, value);
+    }
   }
 
   /**

@@ -136,7 +136,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
 
     boolean requireClientCert =
       conf.getBoolean(SSLFactory.SSL_REQUIRE_CLIENT_CERT_KEY,
-          SSLFactory.DEFAULT_SSL_REQUIRE_CLIENT_CERT);
+          SSLFactory.SSL_REQUIRE_CLIENT_CERT_DEFAULT);
 
     // certificate store
     String keystoreType =

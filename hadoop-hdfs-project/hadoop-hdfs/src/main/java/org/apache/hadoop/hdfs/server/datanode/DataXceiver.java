@@ -341,7 +341,9 @@ class DataXceiver extends Receiver implements Runnable {
    * the thread dies away.
    */
   private void collectThreadLocalStates() {
-    datanode.getPeerMetrics().collectThreadLocalStates();
+    if (datanode.getPeerMetrics() != null) {
+      datanode.getPeerMetrics().collectThreadLocalStates();
+    }
   }
 
   @Override

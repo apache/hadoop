@@ -15,43 +15,7 @@
 HDFS Commands Guide
 ===================
 
-* [Overview](#Overview)
-* [User Commands](#User_Commands)
-    * [classpath](#classpath)
-    * [dfs](#dfs)
-    * [envvars](#envvars)
-    * [fetchdt](#fetchdt)
-    * [fsck](#fsck)
-    * [getconf](#getconf)
-    * [groups](#groups)
-    * [lsSnapshottableDir](#lsSnapshottableDir)
-    * [jmxget](#jmxget)
-    * [oev](#oev)
-    * [oiv](#oiv)
-    * [oiv\_legacy](#oiv_legacy)
-    * [snapshotDiff](#snapshotDiff)
-    * [version](#version)
-* [Administration Commands](#Administration_Commands)
-    * [balancer](#balancer)
-    * [cacheadmin](#cacheadmin)
-    * [crypto](#crypto)
-    * [datanode](#datanode)
-    * [dfsadmin](#dfsadmin)
-    * [diskbalancer](#diskbalancer)
-    * [erasurecode](#erasurecode)
-    * [haadmin](#haadmin)
-    * [journalnode](#journalnode)
-    * [mover](#mover)
-    * [namenode](#namenode)
-    * [nfs3](#nfs3)
-    * [portmap](#portmap)
-    * [secondarynamenode](#secondarynamenode)
-    * [storagepolicies](#storagepolicies)
-    * [zkfc](#zkfc)
-* [Debug Commands](#Debug_Commands)
-    * [verifyMeta](#verifyMeta)
-    * [computeMeta](#computeMeta)
-    * [recoverLease](#recoverLease)
+<!-- MACRO{toc|fromDepth=0|toDepth=2} -->
 
 Overview
 --------
@@ -121,7 +85,8 @@ Usage:
               [-move | -delete | -openforwrite]
               [-files [-blocks [-locations | -racks | -replicaDetails | -upgradedomains]]]
               [-includeSnapshots] [-showprogress]
-              [-storagepolicies] [-blockId <blk_Id>]
+              [-storagepolicies] [-maintenance]
+              [-blockId <blk_Id>]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -139,6 +104,7 @@ Usage:
 | `-openforwrite` | Print out files opened for write. |
 | `-showprogress` | Print out dots for progress in output. Default is OFF (no progress). |
 | `-storagepolicies` | Print out storage policy summary for the blocks. |
+| `-maintenance` | Print out maintenance state node details. |
 | `-blockId` | Print out information about the block. |
 
 Runs the HDFS filesystem checking utility. See [fsck](./HdfsUserGuide.html#fsck) for more info.
@@ -486,6 +452,7 @@ Usage:
         hdfs haadmin -transitionToStandby <serviceId>
         hdfs haadmin -failover [--forcefence] [--forceactive] <serviceId> <serviceId>
         hdfs haadmin -getServiceState <serviceId>
+        hdfs haadmin -getAllServiceState
         hdfs haadmin -checkHealth <serviceId>
         hdfs haadmin -help <command>
 
@@ -495,6 +462,7 @@ Usage:
 | `-checkHealth` | check the health of the given NameNode |
 | `-failover` | initiate a failover between two NameNodes |
 | `-getServiceState` | determine whether the given NameNode is Active or Standby |
+| `-getAllServiceState` | returns the state of all the NameNodes | |
 | `-transitionToActive` | transition the state of the given NameNode to Active (Warning: No fencing is done) |
 | `-transitionToStandby` | transition the state of the given NameNode to Standby (Warning: No fencing is done) |
 | `-help` [cmd] | Displays help for the given command or all commands if none is specified. |

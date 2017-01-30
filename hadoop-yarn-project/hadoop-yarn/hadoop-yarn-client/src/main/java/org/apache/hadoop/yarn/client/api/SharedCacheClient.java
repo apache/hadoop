@@ -55,22 +55,37 @@ public abstract class SharedCacheClient extends AbstractService {
    * {@link ApplicationId} to identify which application will be using the
    * resource.
    * </p>
-   * 
+   *
    * <p>
    * The <code>SharedCacheManager</code> responds with whether or not the
    * resource exists in the cache. If the resource exists, a <code>Path</code>
    * to the resource in the shared cache is returned. If the resource does not
    * exist, null is returned instead.
    * </p>
-   * 
+   *
+   * <p>
+   * Once a path has been returned for a resource, that path is safe to use for
+   * the lifetime of the application that corresponds to the provided
+   * ApplicationId.
+   * </p>
+   *
+   * <p>
+   * Additionally, a name for the resource should be specified. A fragment will
+   * be added to the path with the desired name if the desired name is different
+   * than the name of the provided path from the shared cache. This ensures that
+   * if the returned path is used to create a LocalResource, then the symlink
+   * created during YARN localization will match the name specified.
+   * </p>
+   *
    * @param applicationId ApplicationId of the application using the resource
    * @param resourceKey the key (i.e. checksum) that identifies the resource
+   * @param resourceName the desired name of the resource
    * @return Path to the resource, or null if it does not exist
    */
   @Public
   @Unstable
-  public abstract Path use(ApplicationId applicationId, String resourceKey)
-      throws YarnException;
+  public abstract Path use(ApplicationId applicationId, String resourceKey,
+      String resourceName) throws YarnException;
 
   /**
    * <p>

@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile.HeaderFormat;
 
 /**
@@ -31,6 +32,9 @@ public interface INodeFileAttributes extends INodeAttributes {
 
   /** @return whether the file is striped (instead of contiguous) */
   boolean isStriped();
+
+  /** @return whether the file is striped (instead of contiguous) */
+  BlockType getBlockType();
 
   /** @return the ID of the ErasureCodingPolicy */
   byte getErasureCodingPolicyID();
@@ -53,10 +57,10 @@ public interface INodeFileAttributes extends INodeAttributes {
     public SnapshotCopy(byte[] name, PermissionStatus permissions,
         AclFeature aclFeature, long modificationTime, long accessTime,
         short replication, long preferredBlockSize,
-        byte storagePolicyID, XAttrFeature xAttrsFeature, boolean isStriped) {
+        byte storagePolicyID, XAttrFeature xAttrsFeature, BlockType blockType) {
       super(name, permissions, aclFeature, modificationTime, accessTime, 
           xAttrsFeature);
-      header = HeaderFormat.toLong(preferredBlockSize, replication, isStriped,
+      header = HeaderFormat.toLong(preferredBlockSize, replication, blockType,
           storagePolicyID);
     }
 
@@ -78,6 +82,11 @@ public interface INodeFileAttributes extends INodeAttributes {
     @Override
     public boolean isStriped() {
       return HeaderFormat.isStriped(header);
+    }
+
+    @Override
+    public BlockType getBlockType() {
+      return HeaderFormat.getBlockType(header);
     }
 
     @Override

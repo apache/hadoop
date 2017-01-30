@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -75,7 +76,8 @@ public class TestStripedINodeFile {
 
   private static INodeFile createStripedINodeFile() {
     return new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
-        null, (short)0, 1024L, HdfsConstants.COLD_STORAGE_POLICY_ID, true);
+        null, (short)0, 1024L, HdfsConstants.COLD_STORAGE_POLICY_ID,
+        BlockType.STRIPED);
   }
 
   @Test

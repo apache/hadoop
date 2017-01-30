@@ -15,20 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.datanode.web.dtp;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-
-import io.netty.handler.codec.http2.Http2ConnectionHandler;
+package org.apache.hadoop.yarn.logaggregation;
 
 /**
- * The HTTP/2 handler.
+ * Enumeration of various type of a container log.
  */
-@InterfaceAudience.Private
-public class DtpHttp2Handler extends Http2ConnectionHandler {
+public enum ContainerLogType {
 
-  public DtpHttp2Handler() {
-    super(true, new DtpHttp2FrameListener());
-    ((DtpHttp2FrameListener) decoder().listener()).encoder(encoder());
-  }
+  /** The log is from NodeManager local log directory. */
+  LOCAL,
+
+  /** The log is from Remote FileSystem application log directory. */
+  AGGREGATED
 }

@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
@@ -122,6 +123,7 @@ import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.EncryptionZon
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockStoragePolicyProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ContentSummaryProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CorruptFileBlocksProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CryptoProtocolVersionProto;
@@ -1773,6 +1775,24 @@ public class PBHelperClient {
 
   public static Block convert(BlockProto b) {
     return new Block(b.getBlockId(), b.getNumBytes(), b.getGenStamp());
+  }
+
+  public static BlockTypeProto convert(BlockType blockType) {
+    switch (blockType) {
+    case CONTIGUOUS: return BlockTypeProto.CONTIGUOUS;
+    case STRIPED: return BlockTypeProto.STRIPED;
+    default:
+      throw new IllegalArgumentException("Unexpected block type: " + blockType);
+    }
+  }
+
+  public static BlockType convert(BlockTypeProto blockType) {
+    switch (blockType.getNumber()) {
+    case BlockTypeProto.CONTIGUOUS_VALUE: return BlockType.CONTIGUOUS;
+    case BlockTypeProto.STRIPED_VALUE: return BlockType.STRIPED;
+    default:
+      throw new IllegalArgumentException("Unexpected block type: " + blockType);
+    }
   }
 
   static public DatanodeInfo[] convert(DatanodeInfoProto di[]) {

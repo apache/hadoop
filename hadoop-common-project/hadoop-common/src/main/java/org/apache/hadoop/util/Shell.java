@@ -27,7 +27,9 @@ import java.io.InterruptedIOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.WeakHashMap;
@@ -50,8 +52,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class Shell {
-  private static final Map <Process, Object> CHILD_PROCESSES =
-      Collections.synchronizedMap(new WeakHashMap<Process, Object>());
+  private static final Map<Shell, Object> CHILD_SHELLS =
+      Collections.synchronizedMap(new WeakHashMap<Shell, Object>());
   public static final Logger LOG = LoggerFactory.getLogger(Shell.class);
 
   /**
@@ -820,6 +822,7 @@ public abstract class Shell {
   private File dir;
   private Process process; // sub process used to execute the command
   private int exitCode;
+  private Thread waitingThread;
 
   /** Flag to indicate whether or not the script has finished executing. */
   private final AtomicBoolean completed = new AtomicBoolean(false);
@@ -920,7 +923,9 @@ public abstract class Shell {
     } else {
       process = builder.start();
     }
-    CHILD_PROCESSES.put(process, null);
+
+    waitingThread = Thread.currentThread();
+    CHILD_SHELLS.put(this, null);
 
     if (timeOutInterval > 0) {
       timeOutTimer = new Timer("Shell command timeout");
@@ -1017,7 +1022,8 @@ public abstract class Shell {
         LOG.warn("Error while closing the error stream", ioe);
       }
       process.destroy();
-      CHILD_PROCESSES.remove(process);
+      waitingThread = null;
+      CHILD_SHELLS.remove(this);
       lastTime = Time.monotonicNow();
     }
   }
@@ -1064,6 +1070,15 @@ public abstract class Shell {
   public int getExitCode() {
     return exitCode;
   }
+
+  /** get the thread that is waiting on this instance of <code>Shell</code>.
+   * @return the thread that ran runCommand() that spawned this shell
+   * or null if no thread is waiting for this shell to complete
+   */
+  public Thread getWaitingThread() {
+    return waitingThread;
+  }
+
 
   /**
    * This is an IOException with exit code added.
@@ -1318,20 +1333,27 @@ public abstract class Shell {
   }
 
   /**
-   * Static method to destroy all running <code>Shell</code> processes
-   * Iterates through a list of all currently running <code>Shell</code>
-   * processes and destroys them one by one. This method is thread safe and
-   * is intended to be used in a shutdown hook.
+   * Static method to destroy all running <code>Shell</code> processes.
+   * Iterates through a map of all currently running <code>Shell</code>
+   * processes and destroys them one by one. This method is thread safe
    */
-  public static void destroyAllProcesses() {
-    synchronized (CHILD_PROCESSES) {
-      for (Process key : CHILD_PROCESSES.keySet()) {
-        Process process = key;
-        if (key != null) {
-          process.destroy();
+  public static void destroyAllShellProcesses() {
+    synchronized (CHILD_SHELLS) {
+      for (Shell shell : CHILD_SHELLS.keySet()) {
+        if (shell.getProcess() != null) {
+          shell.getProcess().destroy();
         }
       }
-      CHILD_PROCESSES.clear();
+      CHILD_SHELLS.clear();
+    }
+  }
+
+  /**
+   * Static method to return a Set of all <code>Shell</code> objects.
+   */
+  public static Set<Shell> getAllShells() {
+    synchronized (CHILD_SHELLS) {
+      return new HashSet<>(CHILD_SHELLS.keySet());
     }
   }
 }
