@@ -100,36 +100,43 @@ public abstract class S3GuardTool extends Configured implements Tool {
    * @throws IOException on I/O errors.
    */
   boolean parseDynamoDBEndPoint(List<String> paths) throws IOException {
-    // Validate parameters.
-    boolean hasMsURI = commandFormat.getOptValue("m") != null &&
-        !commandFormat.getOptValue("m").isEmpty();
+    Configuration conf = getConf();
+    String fromCli = commandFormat.getOptValue("e");
+    String fromConf = conf.get(S3GUARD_DDB_ENDPOINT_KEY);
     boolean hasS3Path = !paths.isEmpty();
-    if (hasMsURI && hasS3Path) {
-      System.out.println("Must specify either -m URI or s3a://bucket");
-      return false;
-    } else if (hasMsURI) {
-      Configuration conf = getConf();
-      String endpoint = conf.get(S3GUARD_DDB_ENDPOINT_KEY);
-      String param = commandFormat.getOptValue("e");  // endpoint param
-      if ((endpoint == null || endpoint.isEmpty())
-          && (param == null || param.isEmpty())) {
-        System.out.printf("Must specify -e ENDPOINT or %s in conf.%n",
+
+    if (fromCli != null) {
+      if (fromCli.isEmpty()) {
+        System.out.println("No endpoint provided with -e flag");
+        return false;
+      }
+      if (hasS3Path) {
+        System.out.println("Providing both an S3 path and the -e flag is not " +
+            "supported. If you need to specify an endpoint for a different " +
+            "region than the S3 bucket, configure " + S3GUARD_DDB_ENDPOINT_KEY);
+        return false;
+      }
+      conf.set(S3GUARD_DDB_ENDPOINT_KEY, fromCli);
+      return true;
+    }
+
+    if (fromConf != null) {
+      if (fromConf.isEmpty()) {
+        System.out.printf("No endpoint provided with config %s, %n",
             S3GUARD_DDB_ENDPOINT_KEY);
         return false;
       }
+      return true;
+    }
 
-      if (param != null && !param.isEmpty()) {
-        conf.set(S3GUARD_DDB_ENDPOINT_KEY, param);
-      }
-    } else if (hasS3Path) {
-      // This CLI has a valid S3 path, so it uses S3AFileSystem instance
-      // to configure metadata store later.
+    if (hasS3Path) {
       String s3Path = paths.get(0);
       initS3AFileSystem(s3Path);
-    } else {
-      return false;
+      return true;
     }
-    return true;
+
+    System.out.println("No endpoint found from -e flag, config, or S3 bucket");
+    return false;
   }
 
   /**
@@ -142,6 +149,12 @@ public abstract class S3GuardTool extends Configured implements Tool {
     if (ms != null) {
       return ms;
     }
+    Configuration conf;
+    if (s3a == null) {
+      conf = getConf();
+    } else {
+      conf = s3a.getConf();
+    }
     String metaURI = commandFormat.getOptValue("m");
     if (metaURI != null && !metaURI.isEmpty()) {
       URI uri = URI.create(metaURI);
@@ -153,8 +166,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
         break;
       case "dynamodb":
         ms = new DynamoDBMetadataStore();
-        getConf().set(S3GUARD_DDB_TABLE_NAME_KEY, uri.getAuthority());
-        getConf().setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, create);
+        conf.set(S3GUARD_DDB_TABLE_NAME_KEY, uri.getAuthority());
+        conf.setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, create);
         break;
       default:
         throw new IOException(
@@ -164,11 +177,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
       // CLI does not specify metadata store URI, it uses default metadata store
       // DynamoDB instead.
       ms = new DynamoDBMetadataStore();
-      getConf().setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, create);
+      conf.setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, create);
     }
 
     if (s3a == null) {
-      ms.initialize(getConf());
+      ms.initialize(conf);
     } else {
       ms.initialize(s3a);
     }
@@ -220,7 +233,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
   static class InitMetadata extends S3GuardTool {
     private static final String NAME = "init";
     private static final String USAGE = NAME +
-        " [-r UNIT] [-w UNIT] [-e ENDPOINT -m URI|s3a://bucket]";
+        " [-r UNIT] [-w UNIT] -m URI ( -e ENDPOINT | s3a://bucket )";
 
     InitMetadata(Configuration conf) {
       super(conf);
@@ -252,6 +265,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
       // Validate parameters.
       if (!parseDynamoDBEndPoint(paths)) {
+        System.out.println(USAGE);
         return INVALID_ARGUMENT;
       }
       initMetadataStore(true);
@@ -265,7 +279,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
   static class DestroyMetadata extends S3GuardTool {
     private static final String NAME = "destroy";
     private static final String USAGE =
-        NAME + " [-e ENDPOINT -m URI|s3a://bucket]";
+        NAME + " -m URI ( -e ENDPOINT | s3a://bucket )";
 
     DestroyMetadata(Configuration conf) {
       super(conf);
@@ -390,8 +404,16 @@ public abstract class S3GuardTool extends Configured implements Tool {
         throw new IOException(e);
       }
       String filePath = uri.getPath();
+      if (filePath.isEmpty()) {
+        // If they specify a naked S3 URI (e.g. s3a://bucket), we'll consider
+        // root to be the path
+        filePath = "/";
+      }
       Path path = new Path(filePath);
       S3AFileStatus status = s3a.getFileStatus(path);
+
+      initMetadataStore(false);
+
       if (status.isFile()) {
         PathMetadata meta = new PathMetadata(status);
         ms.put(meta);

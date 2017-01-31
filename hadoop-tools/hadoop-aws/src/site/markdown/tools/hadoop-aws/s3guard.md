@@ -83,8 +83,8 @@ Note that the Null Metadata store can be explicitly requested if desired.
 
 ```xml
 <property>
-  <name>fs.s3a.metadatastore.impl</name>
-  <value>org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore</value>
+    <name>fs.s3a.metadatastore.impl</name>
+    <value>org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore</value>
 </property>
 ```
 
@@ -131,6 +131,23 @@ choose our own table name:
   <description>
     The DynamoDB table name to operate. Without this property, the respective
     S3 bucket name will be used.
+  </description>
+</property>
+```
+
+You may also wish to specify the endpoint to use for DynamoDB. In AWS, the
+endpoint should be matched to the region the table lives in. If an endpoint
+is not configured, it will be assume that it is in the same region as the S3
+bucket. A list of regions and endpoints for the DynamoDB service can be found in
+[Amazon's documentation](http://docs.aws.amazon.com/general/latest/gr/rande.html#ddb_region).
+
+```xml
+<property>
+  <name>fs.s3a.s3guard.ddb.endpoint</name>
+  <value>dynamodb.us-west-1.amazonaws.com</value>
+  <description>
+    Endpoint to use for DynamoDB requests. The endpoint should be matched to the
+    region the metastore database will be in.
   </description>
 </property>
 ```
@@ -193,7 +210,52 @@ with S3Guard.
 
 ## S3Guard Command Line Interface (CLI)
 
-TODO: TBD
+Note that in some cases an endpoint or a s3a:// URI can be provided.
+
+Metadata store URIs include a scheme that designates the backing store. For
+example (e.g. dynamodb://&lt;table_name&gt;). As documented above, endpoints can
+be inferred if the URI to an existing bucket is provided.
+
+### Init
+
+```
+hadoop s3a init -m URI ( -e ENDPOINT | s3a://BUCKET )
+```
+
+Creates and initializes an empty metadata store.
+
+A DynamoDB metadata store can be initialized with additional parameters
+pertaining to (provisioned throughput)[http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ProvisionedThroughput.html]:
+
+```
+[-w PROVISIONED_WRITES] [-r PROVISIONED_READS]
+```
+
+### Import
+
+```
+hadoop s3a import [-m URI] s3a://BUCKET
+```
+
+Pre-populates a metadata store according to the current contents of an S3
+bucket.
+
+### Diff
+
+```
+hadoop s3a diff [-m URI] s3a://BUCKET
+```
+
+Lists discrepancies between a metadata store and bucket. Note that depending on
+how S3Guard is used, certain discrepancies are to be expected.
+
+### Destroy
+
+```
+hadoop s3a destroy [-m URI] ( -e ENDPOINT | s3a://BUCKET )
+```
+
+Deletes a metadata store.
 
 ## Debugging and Error Handling
 
