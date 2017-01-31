@@ -315,6 +315,15 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   @Private
   public static final int DEFAULT_MAX_ASSIGN_PER_HEARTBEAT = -1;
+  
+  public static final String CS_CONF_PROVIDER = PREFIX
+      + "configuration.provider";
+
+  @Private
+  public static final String FILE_CS_CONF_PROVIDER = "file";
+
+  @Private
+  public static final String DEFAULT_CS_CONF_PROVIDER = FILE_CS_CONF_PROVIDER;
 
   AppPriorityACLConfigurationParser priorityACLConfig = new AppPriorityACLConfigurationParser();
 
