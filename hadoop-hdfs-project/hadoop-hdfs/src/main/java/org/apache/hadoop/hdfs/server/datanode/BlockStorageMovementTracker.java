@@ -146,4 +146,16 @@ public class BlockStorageMovementTracker implements Runnable {
       moverTaskFutures.notify();
     }
   }
+
+  /**
+   * Clear the pending movement and movement result queues.
+   */
+  void removeAll() {
+    synchronized (moverTaskFutures) {
+      moverTaskFutures.clear();
+    }
+    synchronized (movementResults) {
+      movementResults.clear();
+    }
+  }
 }

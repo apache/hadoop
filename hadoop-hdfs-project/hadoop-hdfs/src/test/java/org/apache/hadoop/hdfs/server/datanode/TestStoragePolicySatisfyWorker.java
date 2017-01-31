@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.junit.Assert.*;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -184,6 +186,63 @@ public class TestStoragePolicySatisfyWorker {
         cluster.getNamesystem().getBlockPoolId(), blockMovingInfos);
 
     waitForBlockMovementCompletion(worker, inode.getId(), 1, 30000);
+  }
+
+  /**
+   * Tests that drop SPS work method clears all the queues.
+   *
+   * @throws Exception
+   */
+  @Test(timeout = 120000)
+  public void testDropSPSWork() throws Exception {
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(20).build();
+
+    cluster.waitActive();
+    final DistributedFileSystem dfs = cluster.getFileSystem();
+    final String file = "/testDropSPSWork";
+    DFSTestUtil.createFile(dfs, new Path(file), false, 1024, 50 * 100,
+        DEFAULT_BLOCK_SIZE, (short) 2, 0, false, null);
+
+    // move to ARCHIVE
+    dfs.setStoragePolicy(new Path(file), "COLD");
+
+    DataNode src = cluster.getDataNodes().get(2);
+    DatanodeInfo targetDnInfo =
+        DFSTestUtil.getLocalDatanodeInfo(src.getXferPort());
+
+    StoragePolicySatisfyWorker worker =
+        new StoragePolicySatisfyWorker(conf, src);
+    List<BlockMovingInfo> blockMovingInfos = new ArrayList<>();
+    List<LocatedBlock> locatedBlocks =
+        dfs.getClient().getLocatedBlocks(file, 0).getLocatedBlocks();
+    for (LocatedBlock locatedBlock : locatedBlocks) {
+      BlockMovingInfo blockMovingInfo =
+          prepareBlockMovingInfo(locatedBlock.getBlock().getLocalBlock(),
+              locatedBlock.getLocations()[0], targetDnInfo,
+              locatedBlock.getStorageTypes()[0], StorageType.ARCHIVE);
+      blockMovingInfos.add(blockMovingInfo);
+    }
+    INode inode = cluster.getNamesystem().getFSDirectory().getINode(file);
+    worker.processBlockMovingTasks(inode.getId(),
+        cluster.getNamesystem().getBlockPoolId(), blockMovingInfos);
+    // Wait till results queue build up
+    waitForBlockMovementResult(worker, inode.getId(), 30000);
+    worker.dropSPSWork();
+    assertTrue(worker.getBlocksMovementsCompletionHandler()
+        .getBlksMovementResults().size() == 0);
+  }
+
+  private void waitForBlockMovementResult(
+      final StoragePolicySatisfyWorker worker, final long inodeId, int timeout)
+          throws Exception {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        List<BlocksStorageMovementResult> completedBlocks = worker
+            .getBlocksMovementsCompletionHandler().getBlksMovementResults();
+        return completedBlocks.size() > 0;
+      }
+    }, 100, timeout);
   }
 
   private void waitForBlockMovementCompletion(

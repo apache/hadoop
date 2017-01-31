@@ -61,6 +61,7 @@ message DatanodeCommandProto {
     BlockIdCommand = 8;
     BlockECReconstructionCommand = 9;
     BlockStorageMovementCommand = 10;
+    DropSPSWorkCommand = 11;
   }
 
   required Type cmdType = 1;    // Type of the command
@@ -76,6 +77,7 @@ message DatanodeCommandProto {
   optional BlockIdCommandProto blkIdCmd = 8;
   optional BlockECReconstructionCommandProto blkECReconstructionCmd = 9;
   optional BlockStorageMovementCommandProto blkStorageMovementCmd = 10;
+  optional DropSPSWorkCommandProto dropSPSWorkCmd = 11;
 }
 
 /**
@@ -163,6 +165,13 @@ message BlockStorageMovementCommandProto {
   required uint64 trackID = 1;
   required string blockPoolId = 2;
   repeated BlockStorageMovementProto blockStorageMovement = 3;
+}
+
+/**
+ * Instruct datanode to drop SPS work queues
+ */
+message DropSPSWorkCommandProto {
+  // void
 }
 
 /**

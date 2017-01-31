@@ -720,13 +720,13 @@ public class BlockManager implements BlockStatsMXBean {
     mxBeanName = MBeans.register("NameNode", "BlockStats", this);
     bmSafeMode.activate(blockTotal);
     if (sps != null && !haEnabled) {
-      sps.start();
+      sps.start(false);
     }
   }
 
   public void close() {
     if (sps != null) {
-      sps.stop();
+      sps.stop(false);
     }
     bmSafeMode.close();
     try {
@@ -5053,7 +5053,7 @@ public class BlockManager implements BlockStatsMXBean {
       return;
     }
 
-    sps.start();
+    sps.start(true);
   }
 
   /**
@@ -5067,12 +5067,7 @@ public class BlockManager implements BlockStatsMXBean {
       LOG.info("Storage policy satisfier is already stopped.");
       return;
     }
-    sps.stop();
-    // TODO: add command to DNs for stop in-progress processing SPS commands?
-    // to avoid confusions in cluster, I think sending commands from centralized
-    // place would be better to drop pending queues at DN. Anyway in progress
-    // work will be finished in a while, but this command can void starting
-    // fresh movements at DN.
+    sps.stop(true);
   }
 
   /**

@@ -214,6 +214,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   private final Queue<BlockStorageMovementInfosBatch> storageMovementBlocks =
       new LinkedList<>();
+  private volatile boolean dropSPSWork = false;
 
   /* Variables for maintaining number of blocks scheduled to be written to
    * this storage. This count is approximate and might be slightly bigger
@@ -1103,5 +1104,22 @@ public class DatanodeDescriptor extends DatanodeInfo {
       // itself if blocks are many(For example: a file contains many blocks).
       return storageMovementBlocks.poll();
     }
+  }
+
+  /**
+   * Set whether to drop SPS related queues at DN side.
+   *
+   * @param dropSPSWork
+   *          - true if need to drop SPS queues, otherwise false.
+   */
+  public synchronized void setDropSPSWork(boolean dropSPSWork) {
+    this.dropSPSWork = dropSPSWork;
+  }
+
+  /**
+   * @return true if need to drop SPS queues at DN.
+   */
+  public synchronized boolean shouldDropSPSWork() {
+    return this.dropSPSWork;
   }
 }

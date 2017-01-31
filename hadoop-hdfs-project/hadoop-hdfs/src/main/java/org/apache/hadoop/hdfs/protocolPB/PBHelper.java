@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockIdComma
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DropSPSWorkCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.FinalizeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.KeyUpdateCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDeletedBlockInfoProto;
@@ -112,6 +113,7 @@ import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DropSPSWorkCommand;
 import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
@@ -143,6 +145,10 @@ public class PBHelper {
   private static final RegisterCommandProto REG_CMD_PROTO = 
       RegisterCommandProto.newBuilder().build();
   private static final RegisterCommand REG_CMD = new RegisterCommand();
+  private static final DropSPSWorkCommandProto DROP_SPS_WORK_CMD_PROTO =
+      DropSPSWorkCommandProto.newBuilder().build();
+  private static final DropSPSWorkCommand DROP_SPS_WORK_CMD =
+      new DropSPSWorkCommand();
 
   private PBHelper() {
     /** Hidden constructor */
@@ -478,6 +484,8 @@ public class PBHelper {
       return PBHelper.convert(proto.getBlkECReconstructionCmd());
     case BlockStorageMovementCommand:
       return PBHelper.convert(proto.getBlkStorageMovementCmd());
+    case DropSPSWorkCommand:
+      return DROP_SPS_WORK_CMD;
     default:
       return null;
     }
@@ -616,6 +624,10 @@ public class PBHelper {
       builder.setCmdType(DatanodeCommandProto.Type.BlockStorageMovementCommand)
           .setBlkStorageMovementCmd(
               convert((BlockStorageMovementCommand) datanodeCommand));
+      break;
+    case DatanodeProtocol.DNA_DROP_SPS_WORK_COMMAND:
+      builder.setCmdType(DatanodeCommandProto.Type.DropSPSWorkCommand)
+          .setDropSPSWorkCmd(DROP_SPS_WORK_CMD_PROTO);
       break;
     case DatanodeProtocol.DNA_UNKNOWN: //Not expected
     default:

@@ -115,7 +115,6 @@ public class StoragePolicySatisfyWorker {
         TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),
         new Daemon.DaemonFactory() {
           private final AtomicInteger threadIndex = new AtomicInteger(0);
-
           @Override
           public Thread newThread(Runnable r) {
             Thread t = super.newThread(r);
@@ -421,10 +420,31 @@ public class StoragePolicySatisfyWorker {
         }
       }
     }
+
+    /**
+     * Clear the trackID vs movement status tracking map.
+     */
+    void removeAll() {
+      synchronized (trackIdVsMovementStatus) {
+        trackIdVsMovementStatus.clear();
+      }
+    }
+
   }
 
   @VisibleForTesting
   BlocksMovementsCompletionHandler getBlocksMovementsCompletionHandler() {
     return handler;
+  }
+
+  /**
+   * Drop the in-progress SPS work queues.
+   */
+  public void dropSPSWork() {
+    LOG.info("Received request to drop StoragePolicySatisfierWorker queues. "
+        + "So, none of the SPS Worker queued block movements will"
+        + " be scheduled.");
+    movementTracker.removeAll();
+    handler.removeAll();
   }
 }

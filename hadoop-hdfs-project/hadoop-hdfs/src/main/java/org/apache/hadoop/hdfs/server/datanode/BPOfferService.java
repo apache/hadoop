@@ -802,6 +802,10 @@ class BPOfferService {
           blkSPSCmd.getTrackID(), blkSPSCmd.getBlockPoolId(),
           blkSPSCmd.getBlockMovingTasks());
       break;
+    case DatanodeProtocol.DNA_DROP_SPS_WORK_COMMAND:
+      LOG.info("DatanodeCommand action: DNA_DROP_SPS_WORK_COMMAND");
+      dn.getStoragePolicySatisfyWorker().dropSPSWork();
+      break;
     default:
       LOG.warn("Unknown DatanodeCommand action: " + cmd.getAction());
     }

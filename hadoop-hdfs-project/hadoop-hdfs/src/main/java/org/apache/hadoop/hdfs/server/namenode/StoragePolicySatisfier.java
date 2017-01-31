@@ -99,9 +99,14 @@ public class StoragePolicySatisfier implements Runnable {
    * Start storage policy satisfier demon thread. Also start block storage
    * movements monitor for retry the attempts if needed.
    */
-  public synchronized void start() {
+  public synchronized void start(boolean reconfigStart) {
     isRunning = true;
-    LOG.info("Starting StoragePolicySatisfier.");
+    if (reconfigStart) {
+      LOG.info("Starting StoragePolicySatisfier, as admin requested to "
+          + "activate it.");
+    } else {
+      LOG.info("Starting StoragePolicySatisfier.");
+    }
     storagePolicySatisfierThread = new Daemon(this);
     storagePolicySatisfierThread.setName("StoragePolicySatisfier");
     storagePolicySatisfierThread.start();
@@ -110,10 +115,17 @@ public class StoragePolicySatisfier implements Runnable {
 
   /**
    * Stop storage policy satisfier demon thread.
+   *
+   * @param reconfigStop
    */
-  public synchronized void stop() {
+  public synchronized void stop(boolean reconfigStop) {
     isRunning = false;
-    LOG.info("Stopping StoragePolicySatisfier.");
+    if (reconfigStop) {
+      LOG.info("Stopping StoragePolicySatisfier, as admin requested to "
+          + "deactivate it.");
+    } else {
+      LOG.info("Stopping StoragePolicySatisfier.");
+    }
     if (storagePolicySatisfierThread == null) {
       return;
     }
@@ -123,7 +135,10 @@ public class StoragePolicySatisfier implements Runnable {
     } catch (InterruptedException ie) {
     }
     this.storageMovementsMonitor.stop();
-    this.clearQueues();
+    if (reconfigStop) {
+      this.clearQueues();
+      this.blockManager.getDatanodeManager().addDropSPSWorkCommandsToAllDNs();
+    }
   }
 
   /**
