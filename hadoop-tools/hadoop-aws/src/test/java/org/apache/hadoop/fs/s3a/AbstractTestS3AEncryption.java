@@ -35,7 +35,6 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
  * file length may be rounded up to match word boundaries.
  */
 public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
-  private static final String AES256 = Constants.SERVER_SIDE_ENCRYPTION_AES256;
 
   @Override
   protected Configuration createConfiguration() {

@@ -237,6 +237,12 @@ public class S3AFileSystem extends FileSystem {
         throw new IOException("SSE-C is enable and no encryption key " +
           "is provided.");
       }
+      if(S3AEncryptionMethods.SSE_S3.equals(serverSideEncryptionAlgorithm) &&
+          StringUtils.isNotBlank(S3AUtils.getServerSideEncryptionKey(
+            getConf()))) {
+        throw new IOException("SSE-S3 is configured and an encryption key is " +
+          "provided");
+      }
       LOG.debug("Using encryption {}", serverSideEncryptionAlgorithm);
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));

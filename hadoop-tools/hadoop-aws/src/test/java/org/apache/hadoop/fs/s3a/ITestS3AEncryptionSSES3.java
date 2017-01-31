@@ -18,11 +18,22 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.hadoop.conf.Configuration;
+
 /**
  * Concrete class that extends {@link AbstractTestS3AEncryption}
  * and tests SSE-S3 encryption.
  */
 public class ITestS3AEncryptionSSES3 extends AbstractTestS3AEncryption {
+
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    S3ATestUtils.disableFilesystemCaching(conf);
+    //must specify encryption key as null because SSE-S3 does not allow it
+    conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY, null);
+    return conf;
+  }
 
   @Override
   protected S3AEncryptionMethods getSSEAlgorithm() {

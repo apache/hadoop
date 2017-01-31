@@ -37,7 +37,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
  * one. We expect the S3AFileSystem to fail to initialize.
  */
 @Ignore
-public class ITestS3AEncryptionAlgorithmPropagation
+public class ITestS3AEncryptionAlgorithmValidation
     extends AbstractS3ATestBase {
 
   @Rule
@@ -59,24 +59,24 @@ public class ITestS3AEncryptionAlgorithmPropagation
     FileSystem fileSystem = contract.getTestFileSystem();
     assertNotNull("null filesystem", fileSystem);
     URI fsURI = fileSystem.getUri();
-    LOG.info("Test filesystem = {} implemented by {}",
-      fsURI, fileSystem);
+    LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
     assertEquals("wrong filesystem of " + fsURI,
-    contract.getScheme(), fsURI.getScheme());
+        contract.getScheme(), fsURI.getScheme());
     fileSystem.initialize(fsURI, conf);
 
   }
 
   @Test
-  public void testEncryptionAlgorithSSECWithNoEncryptionKey() throws Throwable {
+  public void testEncryptionAlgorithmSSECWithNoEncryptionKey() throws
+    Throwable {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("The value of property " +
-      "fs.s3a.server-side-encryption-key must not be null");
+        "fs.s3a.server-side-encryption-key must not be null");
 
     Configuration conf = super.createConfiguration();
     //SSE-C must be configured with an encryption key
     conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM, S3AEncryptionMethods
-      .SSE_C.getMethod());
+        .SSE_C.getMethod());
     conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY, null);
     S3AContract contract = (S3AContract) createContract(conf);
     contract.init();
@@ -86,10 +86,36 @@ public class ITestS3AEncryptionAlgorithmPropagation
     FileSystem fileSystem = contract.getTestFileSystem();
     assertNotNull("null filesystem", fileSystem);
     URI fsURI = fileSystem.getUri();
-    LOG.info("Test filesystem = {} implemented by {}",
-      fsURI, fileSystem);
+    LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
     assertEquals("wrong filesystem of " + fsURI,
-      contract.getScheme(), fsURI.getScheme());
+        contract.getScheme(), fsURI.getScheme());
+    fileSystem.initialize(fsURI, conf);
+  }
+
+  @Test
+  public void testEncryptionAlgorithmSSES3WithEncryptionKey() throws
+    Throwable {
+    expectedException.expect(IOException.class);
+    expectedException.expectMessage("SSE-S3 is configured and an " +
+        "encryption key is provided");
+
+    Configuration conf = super.createConfiguration();
+    //SSE-S3 cannot be configured with an encryption key
+    conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM, S3AEncryptionMethods
+        .SSE_S3.getMethod());
+    conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY,
+        "4niV/jPK5VFRHY+KNb6wtqYd4xXyMgdJ9XQJpcQUVbs=");
+    S3AContract contract = (S3AContract) createContract(conf);
+    contract.init();
+    //skip tests if they aren't enabled
+    assumeEnabled();
+    //extract the test FS
+    FileSystem fileSystem = contract.getTestFileSystem();
+    assertNotNull("null filesystem", fileSystem);
+    URI fsURI = fileSystem.getUri();
+    LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
+    assertEquals("wrong filesystem of " + fsURI,
+        contract.getScheme(), fsURI.getScheme());
     fileSystem.initialize(fsURI, conf);
   }
 
