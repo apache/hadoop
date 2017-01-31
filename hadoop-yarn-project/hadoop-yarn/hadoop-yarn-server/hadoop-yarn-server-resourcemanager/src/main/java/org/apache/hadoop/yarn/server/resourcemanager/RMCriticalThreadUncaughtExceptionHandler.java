@@ -47,15 +47,10 @@ public class RMCriticalThreadUncaughtExceptionHandler
 
   @Override
   public void uncaughtException(Thread t, Throwable e) {
-    LOG.fatal("Critical thread " + t + " crashed!", e);
+    LOG.fatal("Critical thread " + t.getName() + " crashed!", e);
 
     if (HAUtil.isHAEnabled(rmContext.getYarnConfiguration())) {
-      new Thread() {
-        @Override
-        public void run() {
-          rmContext.getResourceManager().handleTransitionToStandBy();
-        }
-      }.start();
+       rmContext.getResourceManager().handleTransitionToStandByInNewThread();
     } else {
       rmContext.getDispatcher().getEventHandler().handle(
           new RMFatalEvent(RMFatalEventType.CRITICAL_THREAD_CRASH,
