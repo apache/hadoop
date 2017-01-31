@@ -611,8 +611,10 @@ public class ZKRMStateStore extends RMStateStore {
     } else {
       safeCreate(nodeUpdatePath, appStateData, zkAcl,
           CreateMode.PERSISTENT);
-      LOG.debug(appId + " znode didn't exist. Created a new znode to"
-          + " update the application state.");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(appId + " znode didn't exist. Created a new znode to"
+            + " update the application state.");
+      }
     }
   }
 
@@ -656,8 +658,10 @@ public class ZKRMStateStore extends RMStateStore {
     } else {
       safeCreate(nodeUpdatePath, attemptStateData, zkAcl,
           CreateMode.PERSISTENT);
-      LOG.debug(appAttemptId + " znode didn't exist. Created a new znode to"
-          + " update the application attempt state.");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(appAttemptId + " znode didn't exist. Created a new znode to"
+            + " update the application attempt state.");
+      }
     }
   }
 
@@ -737,7 +741,9 @@ public class ZKRMStateStore extends RMStateStore {
     } else {
       // in case znode doesn't exist
       addStoreOrUpdateOps(trx, rmDTIdentifier, renewDate, false);
-      LOG.debug("Attempted to update a non-existing znode " + nodeRemovePath);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Attempted to update a non-existing znode " + nodeRemovePath);
+      }
     }
 
     trx.commit();
@@ -754,12 +760,12 @@ public class ZKRMStateStore extends RMStateStore {
     ByteArrayOutputStream seqOs = new ByteArrayOutputStream();
 
     try (DataOutputStream seqOut = new DataOutputStream(seqOs)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug((isUpdate ? "Storing " : "Updating ") + "RMDelegationToken_"
-            + rmDTIdentifier.getSequenceNumber());
-      }
 
       if (isUpdate) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Updating RMDelegationToken_"
+              + rmDTIdentifier.getSequenceNumber());
+        }
         trx.setData(nodeCreatePath, identifierData.toByteArray(), -1);
       } else {
         trx.create(nodeCreatePath, identifierData.toByteArray(), zkAcl,
@@ -768,8 +774,7 @@ public class ZKRMStateStore extends RMStateStore {
         seqOut.writeInt(rmDTIdentifier.getSequenceNumber());
 
         if (LOG.isDebugEnabled()) {
-          LOG.debug((isUpdate ? "Storing " : "Updating ")
-              + dtSequenceNumberPath + ". SequenceNumber: "
+          LOG.debug("Storing " + dtSequenceNumberPath + ". SequenceNumber: "
               + rmDTIdentifier.getSequenceNumber());
         }
 
