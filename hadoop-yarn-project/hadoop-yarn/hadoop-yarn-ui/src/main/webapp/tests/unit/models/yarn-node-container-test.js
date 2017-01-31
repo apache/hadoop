@@ -17,6 +17,7 @@
  */
 
 import { moduleForModel, test } from 'ember-qunit';
+import Ember from 'ember';
 
 moduleForModel('yarn-node-container', 'Unit | Model | NodeContainer', {
   // Specify the other units that are required for this test.

@@ -28,7 +28,7 @@ export default StackedBarchart.extend({
       {
         used: Number(n.get("usedMemoryMB")),
         avail: Number(n.get("availMemoryMB"))
-      }
+      };
     });
 
     containers.forEach(function(c) {
@@ -85,4 +85,4 @@ export default StackedBarchart.extend({
       data, this.get("title"), ["Used by this app", "Used by other apps",
         "Available"]);
   },
-})
+});

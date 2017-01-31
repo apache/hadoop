@@ -32,5 +32,5 @@ export default {
     }
 
     ref.set("model", data);
-  },
-}
+  }
+};

@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import Constants from 'yarn-ui/constants';
-
 export default {
   getApplicationLink: function(applicationId) {
     return "#/yarn-app/" + applicationId;

@@ -51,7 +51,7 @@ export default Ember.Component.extend({
         this.map[o.id] = o;
       }.bind(this));
 
-    var selected = this.get("selected");
+    // var selected = this.get("selected");
 
     this.initQueue("root", 1, this.treeData);
   },
@@ -125,9 +125,9 @@ export default Ember.Component.extend({
     // Enter any new nodes at the parent's previous position.
     var nodeEnter = node.enter().append("g")
       .attr("class", "node")
-      .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
-      .on("mouseover", function(d,i){
-        if (d.queueData.get("name") != this.get("selected")) {
+      .attr("transform", function() { return "translate(" + source.y0 + "," + source.x0 + ")"; })
+      .on("mouseover", function(d){
+        if (d.queueData.get("name") !== this.get("selected")) {
             document.location.href = "#/yarn-queues/" + d.queueData.get("name");
         }
 
@@ -161,10 +161,10 @@ export default Ember.Component.extend({
 
     // append percentage
     nodeEnter.append("text")
-      .attr("x", function(d) { return 0; })
+      .attr("x", function() { return 0; })
       .attr("dy", ".35em")
       .attr("fill", "white")
-      .attr("text-anchor", function(d) { return "middle"; })
+      .attr("text-anchor", function() { return "middle"; })
       .text(function(d) {
         var usedCap = d.queueData.get("usedCapacity");
         if (usedCap >= 100.0) {
@@ -195,14 +195,14 @@ export default Ember.Component.extend({
           return "#/yarn-queues/" + d.queueData.get("name");
         })
       .style("stroke-width", function(d) {
-        if (d.queueData.get("name") == this.get("selected")) {
+        if (d.queueData.get("name") === this.get("selected")) {
           return 7;
         } else {
           return 2;
         }
       }.bind(this))
       .style("stroke", function(d) {
-        if (d.queueData.get("name") == this.get("selected")) {
+        if (d.queueData.get("name") === this.get("selected")) {
           return "gray";
         } else {
           return "gray";
@@ -215,7 +215,7 @@ export default Ember.Component.extend({
     // Transition exiting nodes to the parent's new position.
     var nodeExit = node.exit().transition()
       .duration(duration)
-      .attr("transform", function(d) { return "translate(" + source.y + "," + source.x + ")"; })
+      .attr("transform", function() { return "translate(" + source.y + "," + source.x + ")"; })
       .remove();
 
     nodeExit.select("circle")
@@ -231,9 +231,9 @@ export default Ember.Component.extend({
     // Enter any new links at the parent's previous position.
     link.enter().insert("path", "g")
       .attr("class", "link")
-      .attr("d", function(d) {
-      var o = {x: source.x0, y: source.y0};
-      return diagonal({source: o, target: o});
+      .attr("d", function() {
+        var o = {x: source.x0, y: source.y0};
+        return diagonal({source: o, target: o});
       });
 
     // Transition links to their new position.
@@ -244,9 +244,9 @@ export default Ember.Component.extend({
     // Transition exiting nodes to the parent's new position.
     link.exit().transition()
       .duration(duration)
-      .attr("d", function(d) {
-      var o = {x: source.x, y: source.y};
-      return diagonal({source: o, target: o});
+      .attr("d", function() {
+        var o = {x: source.x, y: source.y};
+        return diagonal({source: o, target: o});
       })
       .remove();
 
@@ -265,7 +265,6 @@ export default Ember.Component.extend({
     var treeHeight = this.numOfLeafQueue * INBETWEEN_HEIGHT;
     var width = treeWidth + margin.left + margin.right;
     var height = treeHeight + margin.top + margin.bottom;
-    var layout = { };
 
     if (this.mainSvg) {
       this.mainSvg.remove();
@@ -287,7 +286,7 @@ export default Ember.Component.extend({
     root.x0 = height / 2;
     root.y0 = 0;
 
-    d3.select(self.frameElement).style("height", height);
+    d3.select(window.frameElement).style("height", height);
 
     this.update(root, root, tree, diagonal);
   },

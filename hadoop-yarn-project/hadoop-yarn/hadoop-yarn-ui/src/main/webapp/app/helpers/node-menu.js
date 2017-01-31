@@ -25,7 +25,7 @@ export default Ember.Helper.helper(function(params,hash) {
   // Place a menu within a panel inside col-md-2 container.
   var nodeIdSplitAtPort = hash.nodeId;
   var portIndex = nodeIdSplitAtPort.indexOf(':');
-  if (portIndex != -1) {
+  if (portIndex !== -1) {
     nodeIdSplitAtPort = nodeIdSplitAtPort.substring(0, portIndex) +
         ':&#8203;' + nodeIdSplitAtPort.substring(portIndex + 1);
   }
@@ -35,7 +35,7 @@ export default Ember.Helper.helper(function(params,hash) {
     var len = splitsAlongDots.length;
     for (var i = 0; i < len; i++) {
       normalizedNodeId = normalizedNodeId + splitsAlongDots[i];
-      if (i != len - 1) {
+      if (i !== len - 1) {
         normalizedNodeId = normalizedNodeId + '.&#8203;';
       }
     }
@@ -47,17 +47,17 @@ export default Ember.Helper.helper(function(params,hash) {
       '<div class="panel-heading"><h4>Node Manager<br>(' + normalizedNodeId + ')</h4></div>'+
       '<div class="panel-body"><ul class="nav nav-pills nav-stacked" id="stacked-menu">' +
       '<ul class="nav nav-pills nav-stacked collapse in"><li';
-  if (hash.path == 'yarn-node') {
+  if (hash.path === 'yarn-node') {
     html = html + ' class="active"';
   }
   html = html + '><a href="#/yarn-node/' + hash.nodeId + '/' + hash.nodeAddr +
       '">Node Information</a></li><li';
-  if (hash.path == 'yarn-node-apps') {
+  if (hash.path === 'yarn-node-apps') {
     html = html + ' class="active"';
   }
   html = html + '><a href="#/yarn-node-apps/' + hash.nodeId + '/' + hash.nodeAddr +
       '">List of Applications</a></li><li';
-  if (hash.path == 'yarn-node-containers') {
+  if (hash.path === 'yarn-node-containers') {
     html = html + ' class="active"';
   }
   html = html + '><a href="#/yarn-node-containers/' +hash.nodeId + '/' + hash.nodeAddr +

@@ -16,8 +16,11 @@
  * limitations under the License.
  */
 
+/* globals ENV: true */
 
-function getTimeLineURL(parameters) {
+import Ember from 'ember';
+
+function getTimeLineURL() {
   return '/conf?name=yarn.timeline-service.webapp.address';
 }
 
@@ -37,7 +40,6 @@ function updateConfigs(application) {
   }
 
   if(!ENV.hosts.timelineWebAddress) {
-    var result = [];
     var timelinehost = "";
     $.ajax({
       type: 'GET',
@@ -54,7 +56,7 @@ function updateConfigs(application) {
 
         Ember.Logger.log("Timeline Address from RM:" + address + ":" + port);
 
-        if(address == "0.0.0.0" || address == "localhost") {
+        if(address === "0.0.0.0" || address === "localhost") {
           var updatedAddress =  hostname + ":" + port;
 
           /* Timeline v2 is not supporting CORS, so make as default*/

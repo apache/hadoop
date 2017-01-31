@@ -47,18 +47,18 @@ export default DS.Model.extend({
    * Indicates no rows were retrieved from backend
    */
   isDummyNode: function() {
-    return this.get('id') == "dummy";
+    return this.get('id') === "dummy";
   }.property("id"),
 
   nodeStateStyle: function() {
     var style = "default";
     var nodeState = this.get("state");
-    if (nodeState == "REBOOTED") {
+    if (nodeState === "REBOOTED") {
       style = "warning";
-    } else if (nodeState == "UNHEALTHY" || nodeState == "DECOMMISSIONED" ||
-          nodeState == "LOST" || nodeState == "SHUTDOWN") {
+    } else if (nodeState === "UNHEALTHY" || nodeState === "DECOMMISSIONED" ||
+          nodeState === "LOST" || nodeState === "SHUTDOWN") {
       style = "danger";
-    } else if (nodeState == "RUNNING") {
+    } else if (nodeState === "RUNNING") {
       style = "success";
     }
     return "label label-" + style;

@@ -49,7 +49,7 @@ export default AbstractRoute.extend({
   afterModel(model) {
     // Handle errors and redirect if promise is rejected.
     if (model.errors && model.errors[0]) {
-      if (model.errors[0].status == 404) {
+      if (parseInt(model.errors[0].status) === 404) {
         this.replaceWith('/notfound');
       } else {
         this.replaceWith('/error');

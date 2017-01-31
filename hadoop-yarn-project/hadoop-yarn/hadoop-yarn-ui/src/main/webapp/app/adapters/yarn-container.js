@@ -25,14 +25,14 @@ export default DS.JSONAPIAdapter.extend({
   },
 
   host: function() {
-    return undefined
+    return undefined;
   }.property(),
 
   namespace: function() {
-    return undefined
+    return undefined;
   }.property(),
 
-  urlForQuery(query, modelName) {
+  urlForQuery(query/*, modelName*/) {
     var rmHosts = this.get(`hosts.rmWebAddress`);
     var tsHosts = this.get(`hosts.timelineWebAddress`);
     var rmNamespaces = this.get(`env.app.namespaces.cluster`);
@@ -47,8 +47,8 @@ export default DS.JSONAPIAdapter.extend({
     }
 
     var url = this._buildURL();
-    url = url + '/apps/' + Converter.attemptIdToAppId(query.app_attempt_id) 
-               + "/appattempts/" + query.app_attempt_id + "/containers";
+    url = url + '/apps/' + Converter.attemptIdToAppId(query.app_attempt_id) +
+          "/appattempts/" + query.app_attempt_id + "/containers";
     console.log(url);
     return url;
   },
@@ -58,6 +58,6 @@ export default DS.JSONAPIAdapter.extend({
     hash.crossDomain = true;
     hash.xhrFields = {withCredentials: true};
     hash.targetServer = "RM";
-    return this._super(url, method, hash); 
+    return this._super(url, method, hash);
   }
 });

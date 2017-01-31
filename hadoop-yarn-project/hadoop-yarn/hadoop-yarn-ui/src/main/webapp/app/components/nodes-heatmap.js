@@ -17,7 +17,6 @@
  */
 
 import BaseChartComponent from 'yarn-ui/components/base-chart-component';
-import Mock from 'yarn-ui/utils/mock';
 
 export default BaseChartComponent.extend({
   CELL_WIDTH: 250,
@@ -39,7 +38,7 @@ export default BaseChartComponent.extend({
         // Handle pie chart case
         var text = element.attr("tooltiptext");
 
-        this.tooltip.style("opacity", .9);
+        this.tooltip.style("opacity", 0.9);
         this.tooltip.html(text)
           .style("left", (d3.event.pageX) + "px")
           .style("top", (d3.event.pageY - 28) + "px");
@@ -82,10 +81,10 @@ export default BaseChartComponent.extend({
       2 * this.CELL_MARGIN;
     var sampleYOffset = layout.margin * 2;
 
-    for (var i = 1; i <= 5; i++) {
+    for (i = 1; i <= 5; i++) {
       var ratio = i * 0.2 - 0.1;
 
-      var rect = g.append("rect")
+      g.append("rect")
         .attr("x", sampleXOffset)
         .attr("y", sampleYOffset)
         .attr("fill", colorFunc(ratio))
@@ -101,14 +100,14 @@ export default BaseChartComponent.extend({
 
     var chartXOffset = -1;
 
-    for (var i = 0; i < racksArray.length; i++) {
+    for (i = 0; i < racksArray.length; i++) {
       var text = g.append("text")
         .text(racksArray[i])
         .attr("y", yOffset + this.CELL_HEIGHT / 2 + 5)
         .attr("x", layout.margin)
         .attr("class", "heatmap-rack");
 
-      if (-1 == chartXOffset) {
+      if (-1 === chartXOffset) {
         chartXOffset = layout.margin + text.node().getComputedTextLength() + 30;
       }
 
@@ -118,10 +117,10 @@ export default BaseChartComponent.extend({
         var rack = data[j].get("rack");
         var host = data[j].get("nodeHostName");
 
-        if (rack == racksArray[i]) {
+        if (rack === racksArray[i]) {
           if (!rack.includes(this.filter) && !host.includes(this.filter)) {
             this.addNode(g, xOffset, yOffset, colorFunc, data[j], false);
-            var text = g.append("text")
+            g.append("text")
               .text(host)
               .attr("y", yOffset + this.CELL_HEIGHT / 2 + 5)
               .attr("x", xOffset + this.CELL_WIDTH / 2)
@@ -151,7 +150,7 @@ export default BaseChartComponent.extend({
         xOffset += this.CELL_MARGIN + this.CELL_WIDTH;
       }
 
-      if (xOffset != chartXOffset) {
+      if (xOffset !== chartXOffset) {
         xOffset = chartXOffset;
         yOffset += this.CELL_MARGIN + this.CELL_HEIGHT;
       }
@@ -182,7 +181,7 @@ export default BaseChartComponent.extend({
   },
 
   addPlaceholderNode: function(g, xOffset, yOffset) {
-    var rect = g.append("rect")
+    g.append("rect")
       .attr("y", yOffset)
       .attr("x", xOffset)
       .attr("height", this.CELL_HEIGHT)
@@ -206,4 +205,4 @@ export default BaseChartComponent.extend({
       this.didInsertElement();
     }
   }
-})
+});

@@ -24,7 +24,7 @@ export default AbstractAdapter.extend({
   serverName: "RM",
 
   // Any cluster-metric specific adapter changes must be added here
-  pathForType(modelName) {
+  pathForType(/*modelName*/) {
     return ''; // move to some common place, return path by modelname.
-  },
+  }
 });
