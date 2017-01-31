@@ -23,7 +23,7 @@ export function nodeName(params/*, hash*/) {
   console.log('nodes-uid', params[0]);
   var nodeIdSplitAtPort = params[0];
   var portIndex = nodeIdSplitAtPort.indexOf(':');
-  if (portIndex != -1) {
+  if (portIndex !== -1) {
     nodeIdSplitAtPort = nodeIdSplitAtPort.substring(0, portIndex) +
         ':&#8203;' + nodeIdSplitAtPort.substring(portIndex + 1);
   }
@@ -33,7 +33,7 @@ export function nodeName(params/*, hash*/) {
     var len = splitsAlongDots.length;
     for (var i = 0; i < len; i++) {
       normalizedNodeId = normalizedNodeId + splitsAlongDots[i];
-      if (i != len - 1) {
+      if (i !== len - 1) {
         normalizedNodeId = normalizedNodeId + '.&#8203;';
       }
     }

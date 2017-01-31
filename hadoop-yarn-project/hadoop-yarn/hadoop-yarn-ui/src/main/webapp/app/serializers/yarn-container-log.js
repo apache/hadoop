@@ -20,8 +20,7 @@ import DS from 'ember-data';
 import Converter from 'yarn-ui/utils/converter';
 
 export default DS.JSONAPISerializer.extend({
-  normalizeSingleResponse(store, primaryModelClass, payload, id,
-      requestType) {
+  normalizeSingleResponse(store, primaryModelClass, payload, id/*, requestType*/) {
     // Convert plain text response into JSON.
     // ID is of the form nodeAddress!containerId!fileName
     var splits = Converter.splitForContainerLogs(id);

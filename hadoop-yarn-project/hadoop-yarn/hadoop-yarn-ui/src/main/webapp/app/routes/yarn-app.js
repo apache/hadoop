@@ -25,7 +25,7 @@ export default AbstractRoute.extend({
     return Ember.RSVP.hash({
       app: this.store.find('yarn-app', param.app_id),
 
-      rmContainers: this.store.find('yarn-app', param.app_id).then(function(app) {
+      rmContainers: this.store.find('yarn-app', param.app_id).then(function() {
         return this.store.query('yarn-app-attempt', {appId: param.app_id}).then(function (attempts) {
           if (attempts && attempts.get('firstObject')) {
             var appAttemptId = attempts.get('firstObject').get('appAttemptId');

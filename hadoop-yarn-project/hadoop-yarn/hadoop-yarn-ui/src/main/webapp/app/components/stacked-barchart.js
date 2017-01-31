@@ -17,7 +17,6 @@
  */
 
 import BaseChartComponent from 'yarn-ui/components/base-chart-component';
-import Mock from 'yarn-ui/utils/mock';
 
 export default BaseChartComponent.extend({
   MAX_BAR_HEIGHT: 120,
@@ -37,7 +36,7 @@ export default BaseChartComponent.extend({
         // Handle pie chart case
         var text = element.attr("tooltiptext");
 
-        this.tooltip.style("opacity", .9);
+        this.tooltip.style("opacity", 0.9);
         this.tooltip.html(text)
           .style("left", (d3.event.pageX) + "px")
           .style("top", (d3.event.pageY - 28) + "px");
@@ -99,9 +98,13 @@ export default BaseChartComponent.extend({
 
     var maxValue = 0;
     var maxN = 0;
-    for (var i = 0; i < data.length; i++) {
+
+    var i = 0;
+    var j = 0;
+
+    for (i = 0; i < data.length; i++) {
       var total = 0;
-      for (var j = 0; j < data[i].length; j++) {
+      for (j = 0; j < data[i].length; j++) {
         total += data[i][j].value;
       }
 
@@ -121,14 +124,14 @@ export default BaseChartComponent.extend({
       return b[0].value - a[0].value;
     });
 
-    for (var i = 0; i < data.length; i++) {
-      if (i % nBarPerRow == 0) {
+    for (i = 0; i < data.length; i++) {
+      if (i % nBarPerRow === 0) {
         xOffset = layout.margin;
         yOffset += layout.margin + height;
       }
 
       var leftTopY = yOffset;
-      for (var j = 0; j < data[i].length; j++) {
+      for (j = 0; j < data[i].length; j++) {
         var dy = data[i][j].value * height / maxValue;
         if (dy > 0) {
           leftTopY = leftTopY - dy;
@@ -148,7 +151,7 @@ export default BaseChartComponent.extend({
         }
       }
 
-      if (data[i].length == 1) {
+      if (data[i].length === 1) {
         g.append("text")
           .text(data[i][0].value)
           .attr("y", leftTopY - 10)
@@ -165,7 +168,7 @@ export default BaseChartComponent.extend({
     this.renderTitleAndBG(g, title, layout, false);
   },
 
-  draw: function(data, title, textWidth) {
+  draw: function() {
     this.initChart(true);
     //Mock.initMockNodesData(this);
 
@@ -195,4 +198,4 @@ export default BaseChartComponent.extend({
       this.didInsertElement();
     }
   }
-})
+});

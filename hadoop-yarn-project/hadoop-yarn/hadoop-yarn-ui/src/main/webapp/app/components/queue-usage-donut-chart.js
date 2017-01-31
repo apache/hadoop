@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
-import DonutChart from 'yarn-ui/components/donut-chart';
 import BaseUsageDonutChart from 'yarn-ui/components/base-usage-donut-chart';
 import ColorUtils from 'yarn-ui/utils/color-utils';
 import HrefAddressUtils from 'yarn-ui/utils/href-address-utils';
@@ -66,4 +64,4 @@ export default BaseUsageDonutChart.extend({
     this.initChart();
     this.draw();
   },
-})
+});

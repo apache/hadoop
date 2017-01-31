@@ -32,24 +32,24 @@ export default DS.Model.extend({
    * Indicates that there was no container retrieved from backend.
    */
   isDummyContainer: function() {
-    return this.get('id') == "dummy";
+    return this.get('id') === "dummy";
   }.property("id"),
 
   containerStateStyle: function() {
     var style = "primary";
     var containerState = this.get('state');
     var containerExitCode = this.get('exitCode');
-    if (containerState == "DONE") {
-      if (containerExitCode == "0") {
+    if (containerState === "DONE") {
+      if (parseInt(containerExitCode) === 0) {
         style = "success";
-      } else if (containerExitCode != "N/A") {
+      } else if (containerExitCode !== "N/A") {
         style = "danger";
       }
     }
-    if (containerState == "EXITED_WITH_SUCCESS") {
+    if (containerState === "EXITED_WITH_SUCCESS") {
       style = "success";
     }
-    if (containerState == "EXITED_WITH_FAILURE") {
+    if (containerState === "EXITED_WITH_FAILURE") {
       style = "danger";
     }
     return "label label-" + style;

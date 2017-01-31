@@ -24,7 +24,7 @@ import Ember from 'ember';
 export default Ember.Helper.helper(function(params,hash) {
   var num = hash.num;
   var den = hash.den;
-  if (den == 0) {
+  if (den === 0) {
     return 0;
   }
   return Math.floor(num/den);

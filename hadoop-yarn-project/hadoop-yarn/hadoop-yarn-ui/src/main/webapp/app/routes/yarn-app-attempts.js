@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
-
 import AbstractRoute from './abstract';
 
 export default AbstractRoute.extend({
