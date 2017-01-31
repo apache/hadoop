@@ -30,8 +30,9 @@ public class ITestS3AEncryptionSSES3 extends AbstractTestS3AEncryption {
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.disableFilesystemCaching(conf);
-    //must specify encryption key as null because SSE-S3 does not allow it
-    conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY, null);
+    //must specify encryption key as empty because SSE-S3 does not allow it,
+    //nor can it be null.
+    conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY, "");
     return conf;
   }
 

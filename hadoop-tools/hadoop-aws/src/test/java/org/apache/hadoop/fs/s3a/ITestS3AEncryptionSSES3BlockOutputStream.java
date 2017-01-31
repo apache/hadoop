@@ -32,8 +32,9 @@ public class ITestS3AEncryptionSSES3BlockOutputStream
     conf.setBoolean(Constants.FAST_UPLOAD, true);
     conf.set(Constants.FAST_UPLOAD_BUFFER,
         Constants.FAST_UPLOAD_BYTEBUFFER);
-    //must specify encryption key as null because SSE-S3 does not allow it
-    conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY, null);
+    //must specify encryption key as empty because SSE-S3 does not allow it,
+    //nor can it be null.
+    conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY, "");
     return conf;
   }
 

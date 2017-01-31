@@ -24,7 +24,7 @@ package org.apache.hadoop.fs.s3a;
  * as a way to reduce parameters being passed
  * to the constructor of such class.
  */
-public class S3ObjectAttributes {
+class S3ObjectAttributes {
   private String bucket;
   private String key;
   private S3AEncryptionMethods serverSideEncryptionAlgorithm;

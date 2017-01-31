@@ -234,7 +234,7 @@ public class S3AFileSystem extends FileSystem {
           conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM));
       if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
           StringUtils.isBlank(S3AUtils.getServerSideEncryptionKey(getConf()))) {
-        throw new IOException("SSE-C is enable and no encryption key " +
+        throw new IOException("SSE-C is enabled and no encryption key " +
           "is provided.");
       }
       if(S3AEncryptionMethods.SSE_S3.equals(serverSideEncryptionAlgorithm) &&
@@ -1819,40 +1819,52 @@ public class S3AFileSystem extends FileSystem {
 
   protected void setOptionalMultipartUploadRequestParameters(
       InitiateMultipartUploadRequest req) {
-    if(S3AEncryptionMethods.SSE_KMS.equals(serverSideEncryptionAlgorithm)) {
+    switch (serverSideEncryptionAlgorithm) {
+    case SSE_KMS:
       req.setSSEAwsKeyManagementParams(generateSSEAwsKeyParams());
-    } else if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm)
-        && StringUtils.isNotBlank(
-          S3AUtils.getServerSideEncryptionKey(getConf()))) {
-            //at the moment, only supports copy using the same key
-      req.setSSECustomerKey(generateSSECustomerKey());
+      break;
+    case SSE_C:
+      if (StringUtils.isNotBlank(S3AUtils.getServerSideEncryptionKey(getConf()))) {
+        //at the moment, only supports copy using the same key
+        req.setSSECustomerKey(generateSSECustomerKey());
+      }
+      break;
+    default:
     }
   }
 
 
   protected void setOptionalCopyObjectRequestParameters(
       CopyObjectRequest copyObjectRequest) throws IOException {
-    if(S3AEncryptionMethods.SSE_KMS.equals(serverSideEncryptionAlgorithm)) {
+    switch (serverSideEncryptionAlgorithm) {
+    case SSE_KMS:
       copyObjectRequest.setSSEAwsKeyManagementParams(
-          generateSSEAwsKeyParams()
+         generateSSEAwsKeyParams()
       );
-    } else if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm)
-        && StringUtils.isNotBlank(
-        S3AUtils.getServerSideEncryptionKey(getConf()))) {
+      break;
+    case SSE_C:
+      if (StringUtils.isNotBlank(S3AUtils.getServerSideEncryptionKey(getConf()))) {
         //at the moment, only supports copy using the same key
-      SSECustomerKey customerKey = generateSSECustomerKey();
-      copyObjectRequest.setSourceSSECustomerKey(customerKey);
-      copyObjectRequest.setDestinationSSECustomerKey(customerKey);
+        SSECustomerKey customerKey = generateSSECustomerKey();
+        copyObjectRequest.setSourceSSECustomerKey(customerKey);
+        copyObjectRequest.setDestinationSSECustomerKey(customerKey);
+      }
+      break;
+    default:
     }
   }
 
   protected void setOptionalPutRequestParameters(PutObjectRequest request) {
-    if(S3AEncryptionMethods.SSE_KMS.equals(serverSideEncryptionAlgorithm)) {
+    switch (serverSideEncryptionAlgorithm) {
+    case SSE_KMS:
       request.setSSEAwsKeyManagementParams(generateSSEAwsKeyParams());
-    } else if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm)
-        && StringUtils.isNotBlank(
-        S3AUtils.getServerSideEncryptionKey(getConf()))) {
-      request.setSSECustomerKey(generateSSECustomerKey());
+      break;
+    case SSE_C:
+      if (StringUtils.isNotBlank(S3AUtils.getServerSideEncryptionKey(getConf()))) {
+        request.setSSECustomerKey(generateSSECustomerKey());
+      }
+      break;
+    default:
     }
   }
 
@@ -1866,8 +1878,7 @@ public class S3AFileSystem extends FileSystem {
     //Use specified key, otherwise default to default master aws/s3 key by AWS
     SSEAwsKeyManagementParams sseAwsKeyManagementParams =
         new SSEAwsKeyManagementParams();
-    if (StringUtils.isNotBlank(S3AUtils.getServerSideEncryptionKey(getConf())
-    )) {
+    if (StringUtils.isNotBlank(S3AUtils.getServerSideEncryptionKey(getConf()))) {
       sseAwsKeyManagementParams =
         new SSEAwsKeyManagementParams(
           S3AUtils.getServerSideEncryptionKey(getConf())
@@ -2047,9 +2058,6 @@ public class S3AFileSystem extends FileSystem {
       sb.append(", serverSideEncryptionAlgorithm='")
           .append(serverSideEncryptionAlgorithm)
           .append('\'');
-    }
-    if (S3AUtils.getServerSideEncryptionKey(getConf()) != null) {
-      sb.append(", serverSideEncryptionKey='*********'");
     }
     if (blockFactory != null) {
       sb.append(", blockFactory=").append(blockFactory);

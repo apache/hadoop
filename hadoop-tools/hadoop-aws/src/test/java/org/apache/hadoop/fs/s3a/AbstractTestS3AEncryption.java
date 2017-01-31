@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.net.util.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -93,8 +95,8 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     switch(getSSEAlgorithm()) {
     case SSE_C:
       assertEquals("AES256", md.getSSECustomerAlgorithm());
-      //TODO: generate md5 of SERVER_SIDE_ENCRYPTION_KEY and compare with
-      // md.getSSECustomerKeyMd5
+      String md5Key = convertKeyToMd5();
+      assertEquals(md5Key, md.getSSECustomerKeyMd5());
       break;
     case SSE_KMS:
       assertEquals("aws:kms", md.getSSEAlgorithm());
@@ -106,6 +108,23 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     default:
       assertEquals("AES256", md.getSSEAlgorithm());
     }
+  }
+
+  /**
+   * Decodes the SERVER_SIDE_ENCRYPTION_KEY from base64 into an AES key, then
+   * gets the md5 of it, then encodes it in base64 so it will match the version
+   * that AWS returns to us.
+   *
+   * @return md5'd base64 encoded representation of the server side encryption
+   * key
+   */
+  private String convertKeyToMd5() {
+    String base64Key = getConfiguration().getTrimmed(
+        Constants.SERVER_SIDE_ENCRYPTION_KEY
+    );
+    byte[] key = Base64.decodeBase64(base64Key);
+    byte[] md5 =  DigestUtils.md5(key);
+    return Base64.encodeBase64String(md5).trim();
   }
 
   protected abstract S3AEncryptionMethods getSSEAlgorithm();

@@ -93,6 +93,32 @@ public class ITestS3AEncryptionAlgorithmValidation
   }
 
   @Test
+  public void testEncryptionAlgorithmSSECWithBlankEncryptionKey() throws
+    Throwable {
+    expectedException.expect(IOException.class);
+    expectedException.expectMessage("SSE-C is enabled and no " +
+        "encryption key is provided.");
+
+    Configuration conf = super.createConfiguration();
+    //SSE-C must be configured with an encryption key
+    conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM, S3AEncryptionMethods
+        .SSE_C.getMethod());
+    conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY, "");
+    S3AContract contract = (S3AContract) createContract(conf);
+    contract.init();
+    //skip tests if they aren't enabled
+    assumeEnabled();
+    //extract the test FS
+    FileSystem fileSystem = contract.getTestFileSystem();
+    assertNotNull("null filesystem", fileSystem);
+    URI fsURI = fileSystem.getUri();
+    LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
+    assertEquals("wrong filesystem of " + fsURI,
+        contract.getScheme(), fsURI.getScheme());
+    fileSystem.initialize(fsURI, conf);
+  }
+
+  @Test
   public void testEncryptionAlgorithmSSES3WithEncryptionKey() throws
     Throwable {
     expectedException.expect(IOException.class);

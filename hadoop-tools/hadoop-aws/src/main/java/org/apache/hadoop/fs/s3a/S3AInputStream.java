@@ -108,12 +108,8 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
                         S3AInstrumentation instrumentation,
                         long readahead,
                         S3AInputPolicy inputPolicy) {
-    Preconditions.checkArgument(
-        StringUtils.isNotEmpty(s3Attributes.getBucket()
-      ), "No Bucket");
-    Preconditions.checkArgument(
-        StringUtils.isNotEmpty(s3Attributes.getKey()
-      ), "No Key");
+    Preconditions.checkArgument(StringUtils.isNotEmpty(s3Attributes.getBucket()), "No Bucket");
+    Preconditions.checkArgument(StringUtils.isNotEmpty(s3Attributes.getKey()), "No Key");
     Preconditions.checkArgument(contentLength >= 0, "Negative content length");
     this.bucket = s3Attributes.getBucket();
     this.key = s3Attributes.getKey();
