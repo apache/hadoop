@@ -155,12 +155,13 @@ public final class S3Guard {
    * @param path path to directory
    * @param backingStatuses Directory listing from the backing store.
    * @param dirMeta  Directory listing from MetadataStore.  May be null.
+   * @param isAuthoritative State of authoritative mode
    * @return Final result of directory listing.
    * @throws IOException if metadata store update failed
    */
   public static FileStatus[] dirListingUnion(MetadataStore ms, Path path,
-      List<FileStatus> backingStatuses, DirListingMetadata dirMeta)
-      throws IOException {
+      List<FileStatus> backingStatuses, DirListingMetadata dirMeta,
+      boolean isAuthoritative) throws IOException {
 
     // Fast-path for NullMetadataStore
     if (ms instanceof NullMetadataStore) {
@@ -184,6 +185,7 @@ public final class S3Guard {
 
     // HADOOP-13760: filter out deleted files via PathMetadata#isDeleted() here
 
+    boolean changed = false;
     for (FileStatus s : backingStatuses) {
 
       // Minor race condition here.  Multiple threads could add to this
@@ -193,14 +195,14 @@ public final class S3Guard {
       // Any FileSystem has similar race conditions, but we could persist
       // a stale entry longer.  We could expose an atomic
       // DirListingMetadata#putIfNotPresent()
-      if (dirMeta.get(s.getPath()) == null) {
-        dirMeta.put(s);
-      }
+      changed = changed || dirMeta.put(s);
     }
 
-    // TODO optimize for when allowAuthoritative = false
-    dirMeta.setAuthoritative(true); // This is the full directory contents
-    ms.put(dirMeta);
+    if (changed && isAuthoritative) {
+      dirMeta.setAuthoritative(true); // This is the full directory contents
+      ms.put(dirMeta);
+    }
+
     return dirMetaToStatuses(dirMeta);
   }
 

@@ -149,12 +149,20 @@ public class DirListingMetadata {
    * {@code FileStatus} with the same path, it will be replaced.
    *
    * @param childFileStatus entry to add to this directory listing.
+   * @return true if the status was added or replaced with a new value. False
+   * if the same FileStatus value was already present.
    */
-  public void put(FileStatus childFileStatus) {
+  public boolean put(FileStatus childFileStatus) {
     Preconditions.checkNotNull(childFileStatus,
         "childFileStatus must be non-null");
     Path childPath = childStatusToPathKey(childFileStatus);
-    listMap.put(childPath, new PathMetadata(childFileStatus));
+    PathMetadata newValue = new PathMetadata(childFileStatus);
+    PathMetadata oldValue = listMap.put(childPath, newValue);
+    if (oldValue == null) {
+      return true;
+    } else {
+      return !oldValue.equals(newValue);
+    }
   }
 
   @Override
