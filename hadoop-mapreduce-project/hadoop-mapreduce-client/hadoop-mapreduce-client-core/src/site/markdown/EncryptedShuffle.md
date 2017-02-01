@@ -15,6 +15,8 @@
 Hadoop: Encrypted Shuffle
 =========================
 
+<!-- MACRO{toc|fromDepth=0|toDepth=2} -->
+
 Introduction
 ------------
 
