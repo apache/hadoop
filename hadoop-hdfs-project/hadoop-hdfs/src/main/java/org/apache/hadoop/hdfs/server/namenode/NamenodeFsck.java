@@ -589,23 +589,27 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       return "";
     }
     final boolean isComplete = storedBlock.isComplete();
-    DatanodeStorageInfo[] storages = isComplete ?
-        blockManager.getStorages(storedBlock) :
-        storedBlock.getUnderConstructionFeature().getExpectedStorageLocations();
+    Iterator<DatanodeStorageInfo> storagesItr;
     StringBuilder sb = new StringBuilder(" [");
     final boolean isStriped = storedBlock.isStriped();
     Map<DatanodeStorageInfo, Long> storage2Id = new HashMap<>();
-    if (isStriped && isComplete) {
-      long blockId = storedBlock.getBlockId();
-      Iterable<StorageAndBlockIndex> sis =
-          ((BlockInfoStriped)storedBlock).getStorageAndIndexInfos();
-      for (StorageAndBlockIndex si: sis){
-        storage2Id.put(si.getStorage(), blockId + si.getBlockIndex());
+    if (isComplete) {
+      if (isStriped) {
+        long blockId = storedBlock.getBlockId();
+        Iterable<StorageAndBlockIndex> sis =
+            ((BlockInfoStriped) storedBlock).getStorageAndIndexInfos();
+        for (StorageAndBlockIndex si : sis) {
+          storage2Id.put(si.getStorage(), blockId + si.getBlockIndex());
+        }
       }
+      storagesItr = storedBlock.getStorageInfos();
+    } else {
+      storagesItr = storedBlock.getUnderConstructionFeature()
+          .getExpectedStorageLocationsIterator();
     }
 
-    for (int i = 0; i < storages.length; i++) {
-      DatanodeStorageInfo storage = storages[i];
+    while (storagesItr.hasNext()) {
+      DatanodeStorageInfo storage = storagesItr.next();
       if (isStriped && isComplete) {
         long index = storage2Id.get(storage);
         sb.append("blk_" + index + ":");
@@ -649,7 +653,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
           sb.append("LIVE)");
         }
       }
-      if (i < storages.length - 1) {
+      if (storagesItr.hasNext()) {
         sb.append(", ");
       }
     }
