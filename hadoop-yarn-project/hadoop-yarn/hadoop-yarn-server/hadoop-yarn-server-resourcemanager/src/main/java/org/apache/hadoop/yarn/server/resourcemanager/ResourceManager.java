@@ -130,6 +130,7 @@ import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * The ResourceManager is the main class that is a set of components.
@@ -205,6 +206,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private Configuration conf;
 
   private UserGroupInformation rmLoginUGI;
+
+  private StandByTransitionRunnable standByTransitionRunnable;
   
   public ResourceManager() {
     super("ResourceManager");
@@ -233,6 +236,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.conf = conf;
     this.rmContext = new RMContextImpl();
     rmContext.setResourceManager(this);
+
+    standByTransitionRunnable = new StandByTransitionRunnable();
     
     this.configurationProvider =
         ConfigurationProviderFactory.getConfigurationProvider(conf);
@@ -823,15 +828,22 @@ public class ResourceManager extends CompositeService implements Recoverable {
   /**
    * Transition to standby in a new thread.
    */
-  public void handleTransitionToStandByInNewThread() {
-    Thread standByTransitionThread = new Thread(new StandByTransitionThread());
-    standByTransitionThread.setName("StandByTransitionThread Handler");
+  public synchronized void handleTransitionToStandByInNewThread() {
+    Thread standByTransitionThread = new Thread(standByTransitionRunnable);
+    standByTransitionThread.setName("StandByTransitionThread");
     standByTransitionThread.start();
   }
 
-  private class StandByTransitionThread implements Runnable {
+  private class StandByTransitionRunnable implements Runnable {
+    private AtomicBoolean hasRun = new AtomicBoolean(false);
+
     @Override
     public void run() {
+      // Prevent from running again if it has run.
+      if (hasRun.getAndSet(true)) {
+        return;
+      }
+
       if (rmContext.isHAEnabled()) {
         try {
           // Transition to standby and reinit active services
@@ -1189,6 +1201,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
       @Override
       public Void run() throws Exception {
         try {
+          standByTransitionRunnable = new StandByTransitionRunnable();
           startActiveServices();
           return null;
         } catch (Exception e) {
