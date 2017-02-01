@@ -824,25 +824,29 @@ public class ResourceManager extends CompositeService implements Recoverable {
    * Transition to standby in a new thread.
    */
   public void handleTransitionToStandByInNewThread() {
-    new Thread() {
-      @Override
-      public void run() {
-        if (rmContext.isHAEnabled()) {
-          try {
-            // Transition to standby and reinit active services
-            LOG.info("Transitioning RM to Standby mode");
-            transitionToStandby(true);
-            EmbeddedElector elector = rmContext.getLeaderElectorService();
-            if (elector != null) {
-              elector.rejoinElection();
-            }
-          } catch (Exception e) {
-            LOG.fatal("Failed to transition RM to Standby mode.", e);
-            ExitUtil.terminate(1, e);
+    Thread standByTransitionThread = new Thread(new StandByTransitionThread());
+    standByTransitionThread.setName("StandByTransitionThread Handler");
+    standByTransitionThread.start();
+  }
+
+  private class StandByTransitionThread implements Runnable {
+    @Override
+    public void run() {
+      if (rmContext.isHAEnabled()) {
+        try {
+          // Transition to standby and reinit active services
+          LOG.info("Transitioning RM to Standby mode");
+          transitionToStandby(true);
+          EmbeddedElector elector = rmContext.getLeaderElectorService();
+          if (elector != null) {
+            elector.rejoinElection();
           }
+        } catch (Exception e) {
+          LOG.fatal("Failed to transition RM to Standby mode.", e);
+          ExitUtil.terminate(1, e);
         }
       }
-    }.start();
+    }
   }
 
   @Private
