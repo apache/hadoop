@@ -260,7 +260,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     FairScheduler spyScheduler = spy(scheduler);
     Assert.assertTrue("Continuous scheduling should be disabled.",
         !spyScheduler.isContinuousSchedulingEnabled());
-    // Add one nodes
+    // Add one node
     RMNode node1 =
         MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 1,
             "127.0.0.1");
