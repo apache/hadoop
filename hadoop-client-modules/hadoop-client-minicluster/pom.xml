@@ -575,7 +575,6 @@
                   <goal>shade</goal>
                 </goals>
                 <configuration>
-                  <createSourceJar>true</createSourceJar>
                   <artifactSet>
                     <excludes>
                       <!-- Fine to expose our already-shaded deps as dependencies -->
@@ -732,8 +731,26 @@
                     <!-- Needed until MSHADE-182 -->
                     <transformer implementation="org.apache.hadoop.maven.plugin.shade.resource.ServicesResourceTransformer"/>
                     <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
-                    <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
-                      <addHeader>false</addHeader>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
+                      <resources>
+                        <resource>LICENSE</resource>
+                        <resource>LICENSE.txt</resource>
+                        <resource>NOTICE</resource>
+                        <resource>NOTICE.txt</resource>
+                        <resource>Grizzly_THIRDPARTYLICENSEREADME.txt</resource>
+                        <resource>LICENSE.dom-documentation.txt</resource>
+                        <resource>LICENSE.dom-software.txt</resource>
+                        <resource>LICENSE.dom-documentation.txt</resource>
+                        <resource>LICENSE.sax.txt</resource>
+                      </resources>
+                    </transformer>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
+                      <resource>META-INF/LICENSE.txt</resource>
+                      <file>${basedir}/../../LICENSE.txt</file>
+                    </transformer>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
+                      <resource>META-INF/NOTICE.txt</resource>
+                      <file>${basedir}/../../NOTICE.txt</file>
                     </transformer>
                   </transformers>
                 </configuration>

@@ -457,14 +457,19 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_METRICS_SESSION_ID_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_METRICS_SESSION_ID_KEY;
   public static final String  DFS_METRICS_PERCENTILES_INTERVALS_KEY = "dfs.metrics.percentiles.intervals";
-  public static final String  DFS_METRICS_ROLLING_AVERAGES_WINDOW_SIZE_KEY =
-      "dfs.metrics.rolling.average.window.size";
-  public static final int     DFS_METRICS_ROLLING_AVERAGES_WINDOW_SIZE_DEFAULT =
-      3600;
-  public static final String  DFS_METRICS_ROLLING_AVERAGES_WINDOW_NUMBERS_KEY =
-      "dfs.metrics.rolling.average.window.numbers";
-  public static final int DFS_METRICS_ROLLING_AVERAGES_WINDOW_NUMBERS_DEFAULT =
-      48;
+
+  // The following setting is not meant to be changed by administrators.
+  public static final String DFS_METRICS_ROLLING_AVERAGES_WINDOW_LENGTH_KEY =
+      "dfs.metrics.rolling.averages.window.length";
+  public static final String DFS_METRICS_ROLLING_AVERAGES_WINDOW_LENGTH_DEFAULT =
+      "5m";
+
+  // The following setting is not meant to be changed by administrators.
+  public static final String DFS_METRICS_ROLLING_AVERAGE_NUM_WINDOWS_KEY =
+      "dfs.metrics.rolling.average.num.windows";
+  public static final int DFS_METRICS_ROLLING_AVERAGE_NUM_WINDOWS_DEFAULT =
+      36;
+
   public static final String  DFS_DATANODE_PEER_STATS_ENABLED_KEY =
       "dfs.datanode.peer.stats.enabled";
   public static final boolean DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT = false;
@@ -668,6 +673,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   /* Maximum number of blocks to process for initializing replication queues */
   public static final String  DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT = "dfs.block.misreplication.processing.limit";
   public static final int     DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT_DEFAULT = 10000;
+
+  public static final String DFS_DATANODE_SLOW_PEERS_REPORT_INTERVAL_KEY =
+      "dfs.datanode.slow.peers.report.interval";
+  public static final String DFS_DATANODE_SLOW_PEERS_REPORT_INTERVAL_DEFAULT =
+      "30m";
 
   // property for fsimage compression
   public static final String DFS_IMAGE_COMPRESS_KEY = "dfs.image.compress";
@@ -1284,14 +1294,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DEFAULT_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE
       = HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_DEFAULT;
 
-
-  @Deprecated
-  public static final String  DFS_CLIENT_WRITE_PACKET_SIZE_KEY =
-      HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
-  @Deprecated
-  public static final int     DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT =
-      HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
-
   @Deprecated
   public static final String  DFS_CLIENT_SOCKET_TIMEOUT_KEY =
       HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
@@ -1384,13 +1386,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT =
       HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT;
 
-  @Deprecated
-  public static final String  DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY =
-      HdfsClientConfigKeys.DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY;
-
-  @Deprecated
-  public static final long    DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT =
-      HdfsClientConfigKeys.DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT;
   @Deprecated
   public static final String  DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS =
       HdfsClientConfigKeys.DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS;

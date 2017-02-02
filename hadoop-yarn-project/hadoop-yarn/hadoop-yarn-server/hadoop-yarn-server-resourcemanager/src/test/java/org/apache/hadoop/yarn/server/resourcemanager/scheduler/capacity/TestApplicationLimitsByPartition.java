@@ -594,9 +594,6 @@ public class TestApplicationLimitsByPartition {
         .thenReturn(Resources.createResource(GB));
     when(csContext.getMaximumResourceCapability())
         .thenReturn(Resources.createResource(16 * GB));
-    when(csContext.getNonPartitionedQueueComparator())
-        .thenReturn(
-            CapacitySchedulerQueueManager.NON_PARTITIONED_QUEUE_COMPARATOR);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     RMContext rmContext = TestUtils.getMockRMContext();
     RMContext spyRMContext = spy(rmContext);

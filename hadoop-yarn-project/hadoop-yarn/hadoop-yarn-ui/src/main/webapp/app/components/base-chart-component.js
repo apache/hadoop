@@ -96,7 +96,7 @@ export default Ember.Component.extend({
   },
 
   bindTooltip: function(d) {
-    d.on("mouseover", function(d) {
+    d.on("mouseover", function() {
         this.tooltip
           .style("left", (d3.event.pageX) + "px")
           .style("top", (d3.event.pageY - 28) + "px");
@@ -108,16 +108,16 @@ export default Ember.Component.extend({
           data = d.data;
         }
 
-        this.tooltip.style("opacity", .9);
+        this.tooltip.style("opacity", 0.9);
         var value = data.value;
-        if (this.get("type") == "memory") {
+        if (this.get("type") === "memory") {
           value = Converter.memoryToSimpliedUnit(value);
         }
         this.tooltip.html(data.label + " = " + value)
           .style("left", (d3.event.pageX) + "px")
           .style("top", (d3.event.pageY - 28) + "px");
       }.bind(this))
-      .on("mouseout", function(d) {
+      .on("mouseout", function() {
         this.tooltip.style("opacity", 0);
       }.bind(this));
   },

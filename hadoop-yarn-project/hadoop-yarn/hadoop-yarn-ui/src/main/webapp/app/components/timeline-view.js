@@ -41,13 +41,15 @@ export default Ember.Component.extend({
   }.property(),
 
   setSelected: function(d) {
-    if (this._selected == d) {
+    var dom;
+
+    if (this._selected === d) {
       return;
     }
 
     // restore color
     if (this._selected) {
-      var dom = d3.select("#timeline-bar-" + this._selected.get("id"));
+      dom = d3.select("#timeline-bar-" + this._selected.get("id"));
       dom.attr("fill", this.colors[0]);
     }
 
@@ -164,19 +166,19 @@ export default Ember.Component.extend({
       .attr("y", function(d, i) {
         return border + (gap + singleBarHeight) * i;
       })
-      .attr("x", function(d, i) {
+      .attr("x", function(d) {
         return border + textWidth + xScaler(d.get("startTs"));
       })
       .attr("height", singleBarHeight)
-      .attr("fill", function(d, i) {
+      .attr("fill", function() {
         return this.colors[0];
       }.bind(this))
-      .attr("width", function(d, i) {
+      .attr("width", function(d) {
         var finishedTs = xScaler(d.get("finishedTs"));
         finishedTs = finishedTs > 0 ? finishedTs : xScaler(end);
         return finishedTs - xScaler(d.get("startTs"));
       })
-      .attr("id", function(d, i) {
+      .attr("id", function(d) {
         return "timeline-bar-" + d.get("id");
       });
     bar.on("click", function(d) {
@@ -198,18 +200,18 @@ export default Ember.Component.extend({
   },
 
   bindTooltip: function(d) {
-    d.on("mouseover", function(d) {
+    d.on("mouseover", function() {
         this.tooltip
           .style("left", (d3.event.pageX) + "px")
           .style("top", (d3.event.pageY - 28) + "px");
       }.bind(this))
       .on("mousemove", function(d) {
-        this.tooltip.style("opacity", .9);
+        this.tooltip.style("opacity", 0.9);
         this.tooltip.html(d.get("tooltipLabel"))
           .style("left", (d3.event.pageX) + "px")
           .style("top", (d3.event.pageY - 28) + "px");
       }.bind(this))
-      .on("mouseout", function(d) {
+      .on("mouseout", function() {
         this.tooltip.style("opacity", 0);
       }.bind(this));
   },
@@ -244,7 +246,7 @@ export default Ember.Component.extend({
       }.bind(this));
     }
 
-    if(this.modelArr.length == 0) {
+    if(this.modelArr.length === 0) {
       return;
     }
 
@@ -254,8 +256,9 @@ export default Ember.Component.extend({
 
       return tsA - tsB;
     });
+    var begin = 0;
     if (this.modelArr.length > 0) {
-      var begin = this.modelArr[0].get("startTs");
+      begin = this.modelArr[0].get("startTs");
     }
     var end = 0;
     for (var i = 0; i < this.modelArr.length; i++) {

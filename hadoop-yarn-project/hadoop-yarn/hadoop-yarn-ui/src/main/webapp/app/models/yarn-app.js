@@ -54,7 +54,7 @@ export default DS.Model.extend({
   applicationExpiryTime: DS.attr('string'),
 
   isFailed: function() {
-    return this.get('finalStatus') == "FAILED"
+    return this.get('finalStatus') == "FAILED";
   }.property("finalStatus"),
 
   validatedFinishedTs: function() {
@@ -91,11 +91,11 @@ export default DS.Model.extend({
     var finalStatus = this.get("finalStatus");
     var style = "";
 
-    if (finalStatus == "KILLED") {
+    if (finalStatus === "KILLED") {
       style = "warning";
-    } else if (finalStatus == "FAILED") {
+    } else if (finalStatus === "FAILED") {
       style = "danger";
-    } else if (finalStatus == "SUCCEEDED") {
+    } else if (finalStatus === "SUCCEEDED") {
       style = "success";
     } else {
       style = "default";

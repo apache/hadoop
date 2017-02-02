@@ -20,8 +20,7 @@ import DS from 'ember-data';
 import Converter from 'yarn-ui/utils/converter';
 
 export default DS.JSONAPISerializer.extend({
-  internalNormalizeSingleResponse(store, primaryModelClass, payload, id,
-      requestType) {
+  internalNormalizeSingleResponse(store, primaryModelClass, payload, id) {
     if (payload.nodeInfo) {
       payload = payload.nodeInfo;
     }
@@ -46,11 +45,10 @@ export default DS.JSONAPISerializer.extend({
     return fixedPayload;
   },
 
-  normalizeSingleResponse(store, primaryModelClass, payload, id,
-      requestType) {
+  normalizeSingleResponse(store, primaryModelClass, payload, id/*, requestType*/) {
     // payload is of the form {"nodeInfo":{}}
     var p = this.internalNormalizeSingleResponse(store,
-        primaryModelClass, payload, id, requestType);
+        primaryModelClass, payload, id);
     return { data: p };
   },
 });

@@ -220,4 +220,21 @@ public class TestBlockInfoStriped {
     assertEquals(byteBuffer.array().length, byteStream.toByteArray().length);
     assertArrayEquals(byteBuffer.array(), byteStream.toByteArray());
   }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testAddStorageWithReplicatedBlock() {
+    DatanodeStorageInfo storage = DFSTestUtil.createDatanodeStorageInfo(
+        "storageID", "127.0.0.1");
+    BlockInfo replica = new BlockInfoContiguous(new Block(1000L), (short) 3);
+    info.addStorage(storage, replica);
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testAddStorageWithDifferentBlockGroup() {
+    DatanodeStorageInfo storage = DFSTestUtil.createDatanodeStorageInfo(
+        "storageID", "127.0.0.1");
+    BlockInfo diffGroup = new BlockInfoStriped(new Block(BASE_ID + 100),
+        testECPolicy);
+    info.addStorage(storage, diffGroup);
+  }
 }

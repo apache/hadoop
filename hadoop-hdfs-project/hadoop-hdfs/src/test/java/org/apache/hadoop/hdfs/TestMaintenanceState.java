@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileSystem;
@@ -114,7 +115,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
 
     // Adjust the expiration.
     takeNodeOutofService(0, nodeOutofService.getDatanodeUuid(),
-        Time.monotonicNow() + EXPIRATION_IN_MS, null, AdminStates.NORMAL);
+        Time.now() + EXPIRATION_IN_MS, null, AdminStates.NORMAL);
 
     cleanupFile(fileSys, file);
   }
@@ -133,8 +134,8 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
     final FileSystem fileSys = getCluster().getFileSystem(0);
     writeFile(fileSys, file, replicas, 1);
 
-    // expiration has to be greater than Time.monotonicNow().
-    takeNodeOutofService(0, null, Time.monotonicNow(), null,
+    // expiration has to be greater than Time.now().
+    takeNodeOutofService(0, null, Time.now(), null,
         AdminStates.NORMAL);
 
     cleanupFile(fileSys, file);
@@ -203,7 +204,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
 
     // Adjust the expiration.
     takeNodeOutofService(0, nodeOutofService.getDatanodeUuid(),
-        Time.monotonicNow() + EXPIRATION_IN_MS, null, AdminStates.NORMAL);
+        Time.now() + EXPIRATION_IN_MS, null, AdminStates.NORMAL);
 
     // no change
     assertEquals(deadInMaintenance, ns.getNumInMaintenanceDeadDataNodes());
@@ -257,7 +258,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
 
     // Adjust the expiration.
     takeNodeOutofService(0, nodeOutofService.getDatanodeUuid(),
-        Time.monotonicNow() + EXPIRATION_IN_MS, null, AdminStates.NORMAL);
+        Time.now() + EXPIRATION_IN_MS, null, AdminStates.NORMAL);
 
     cleanupFile(fileSys, file);
   }
@@ -398,7 +399,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
 
     // Adjust the expiration.
     takeNodeOutofService(0, nodeOutofService.getDatanodeUuid(),
-        Time.monotonicNow() + EXPIRATION_IN_MS, null, AdminStates.NORMAL);
+        Time.now() + EXPIRATION_IN_MS, null, AdminStates.NORMAL);
 
     cleanupFile(fileSys, file);
   }
@@ -520,6 +521,41 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
     cleanupFile(fileSys, file);
   }
 
+  /**
+   * Verify if multiple DataNodes can transition to maintenance state
+   * at the same time.
+   */
+  @Test(timeout = 360000)
+  public void testMultipleNodesMaintenance() throws Exception {
+    startCluster(1, 5);
+    final Path file = new Path("/testMultipleNodesMaintenance.dat");
+    final FileSystem fileSys = getCluster().getFileSystem(0);
+    final FSNamesystem ns = getCluster().getNamesystem(0);
+
+    int repl = 3;
+    writeFile(fileSys, file, repl, 1);
+    final DatanodeInfo[] nodes = getFirstBlockReplicasDatanodeInfos(fileSys,
+        file);
+
+    // Request maintenance for DataNodes 1 and 2 which has the file blocks.
+    List<DatanodeInfo> maintenanceDN = takeNodeOutofService(0,
+        Lists.newArrayList(nodes[0].getDatanodeUuid(),
+            nodes[1].getDatanodeUuid()), Long.MAX_VALUE, null, null,
+        AdminStates.IN_MAINTENANCE);
+
+    // Verify file replication matches maintenance state min replication
+    assertNull(checkWithRetry(ns, fileSys, file, 1, null, nodes[0]));
+
+    // Put the maintenance nodes back in service
+    for (DatanodeInfo datanodeInfo : maintenanceDN) {
+      putNodeInService(0, datanodeInfo);
+    }
+
+    // Verify file replication catching up to the old state
+    assertNull(checkWithRetry(ns, fileSys, file, repl, null));
+
+    cleanupFile(fileSys, file);
+  }
 
   @Test(timeout = 360000)
   public void testChangeReplicationFactors() throws IOException {

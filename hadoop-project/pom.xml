@@ -361,6 +361,12 @@
           <type>test-jar</type>
       </dependency>
 
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-server-timelineservice-hbase</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
      <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-applications-distributedshell</artifactId>
@@ -714,12 +720,6 @@
         <groupId>io.netty</groupId>
         <artifactId>netty-all</artifactId>
         <version>4.1.0.Beta5</version>
-      </dependency>
-
-      <dependency>
-        <groupId>com.twitter</groupId>
-        <artifactId>hpack</artifactId>
-        <version>0.11.0</version>
       </dependency>
 
       <dependency>
@@ -1211,13 +1211,6 @@
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-server</artifactId>
-        <version>${hbase.version}</version>
-        <scope>test</scope>
-        <classifier>tests</classifier>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-it</artifactId>
         <version>${hbase.version}</version>
         <scope>test</scope>
         <classifier>tests</classifier>

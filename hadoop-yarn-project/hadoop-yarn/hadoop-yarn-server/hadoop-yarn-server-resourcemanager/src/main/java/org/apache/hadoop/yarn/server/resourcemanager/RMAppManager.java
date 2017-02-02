@@ -17,18 +17,14 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -41,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
+import org.apache.hadoop.yarn.exceptions.InvalidLabelResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.security.AccessRequest;
@@ -63,6 +60,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
@@ -297,14 +295,14 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // constructor.
     RMAppImpl application = createAndPopulateNewRMApp(
         submissionContext, submitTime, user, false, -1);
-    Credentials credentials = null;
     try {
-      credentials = parseCredentials(submissionContext);
       if (UserGroupInformation.isSecurityEnabled()) {
         this.rmContext.getDelegationTokenRenewer()
-            .addApplicationAsync(applicationId, credentials,
+            .addApplicationAsync(applicationId,
+                BuilderUtils.parseCredentials(submissionContext),
                 submissionContext.getCancelTokensWhenComplete(),
-                application.getUser());
+                application.getUser(),
+                BuilderUtils.parseTokensConf(submissionContext));
       } else {
         // Dispatcher is not yet started at this time, so these START events
         // enqueued should be guaranteed to be first processed when dispatcher
@@ -313,11 +311,10 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
             .handle(new RMAppEvent(applicationId, RMAppEventType.START));
       }
     } catch (Exception e) {
-      LOG.warn("Unable to parse credentials.", e);
+      LOG.warn("Unable to parse credentials for " + applicationId, e);
       // Sending APP_REJECTED is fine, since we assume that the
       // RMApp is in NEW state and thus we haven't yet informed the
       // scheduler about the existence of the application
-      assert application.getState() == RMAppState.NEW;
       this.rmContext.getDispatcher().getEventHandler()
           .handle(new RMAppEvent(applicationId,
               RMAppEventType.APP_REJECTED, e.getMessage()));
@@ -335,6 +332,34 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     RMAppImpl application =
         createAndPopulateNewRMApp(appContext, appState.getSubmitTime(),
             appState.getUser(), true, appState.getStartTime());
+
+    // If null amReq has been returned, check if it is the case that
+    // application has specified node label expression while node label
+    // has been disabled. Reject the recovery of this application if it
+    // is true and give clear message so that user can react properly.
+    if (!appContext.getUnmanagedAM() &&
+        application.getAMResourceRequest() == null &&
+        !YarnConfiguration.areNodeLabelsEnabled(this.conf)) {
+      // check application submission context and see if am resource request
+      // or application itself contains any node label expression.
+      ResourceRequest amReqFromAppContext =
+          appContext.getAMContainerResourceRequest();
+      String labelExp = (amReqFromAppContext != null) ?
+          amReqFromAppContext.getNodeLabelExpression() : null;
+      if (labelExp == null) {
+        labelExp = appContext.getNodeLabelExpression();
+      }
+      if (labelExp != null &&
+          !labelExp.equals(RMNodeLabelsManager.NO_LABEL)) {
+        String message = "Failed to recover application " + appId
+            + ". NodeLabel is not enabled in cluster, but AM resource request "
+            + "contains a label expression.";
+        LOG.warn(message);
+        application.handle(
+            new RMAppEvent(appId, RMAppEventType.APP_REJECTED, message));
+        return;
+      }
+    }
 
     application.handle(new RMAppRecoverEvent(appId, rmState));
   }
@@ -355,8 +380,28 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     }
 
     ApplicationId applicationId = submissionContext.getApplicationId();
-    ResourceRequest amReq =
-        validateAndCreateResourceRequest(submissionContext, isRecovery);
+    ResourceRequest amReq = null;
+    try {
+      amReq = validateAndCreateResourceRequest(submissionContext, isRecovery);
+    } catch (InvalidLabelResourceRequestException e) {
+      // This can happen if the application had been submitted and run
+      // with Node Label enabled but recover with Node Label disabled.
+      // Thus there might be node label expression in the application's
+      // resource requests. If this is the case, create RmAppImpl with
+      // null amReq and reject the application later with clear error
+      // message. So that the application can still be tracked by RM
+      // after recovery and user can see what's going on and react accordingly.
+      if (isRecovery &&
+          !YarnConfiguration.areNodeLabelsEnabled(this.conf)) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("AMResourceRequest is not created for " + applicationId
+              + ". NodeLabel is not enabled in cluster, but AM resource "
+              + "request contains a label expression.");
+        }
+      } else {
+        throw e;
+      }
+    }
 
     // Verify and get the update application priority and set back to
     // submissionContext
@@ -465,20 +510,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     
     return null;
   }
-  
-  protected Credentials parseCredentials(
-      ApplicationSubmissionContext application) throws IOException {
-    Credentials credentials = new Credentials();
-    DataInputByteBuffer dibb = new DataInputByteBuffer();
-    ByteBuffer tokens = application.getAMContainerSpec().getTokens();
-    if (tokens != null) {
-      dibb.reset(tokens);
-      credentials.readTokenStorageStream(dibb);
-      tokens.rewind();
-    }
-    return credentials;
-  }
-  
+
   @Override
   public void recover(RMState state) throws Exception {
     RMStateStore store = rmContext.getStateStore();

@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -563,7 +564,7 @@ public class MockRM extends ResourceManager {
     return submitApp(resource, name, user, acls, false, queue,
       super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
       YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true, false,
-        false, null, 0, null, true, priority, amLabel, null);
+        false, null, 0, null, true, priority, amLabel, null, null);
   }
 
   public RMApp submitApp(Resource resource, String name, String user,
@@ -664,7 +665,17 @@ public class MockRM extends ResourceManager {
     return submitApp(capability, name, user, acls, unmanaged, queue,
       maxAppAttempts, ts, appType, waitForAccepted, keepContainers,
       isAppIdProvided, applicationId, attemptFailuresValidityInterval,
-        logAggregationContext, cancelTokensWhenComplete, priority, "", null);
+        logAggregationContext, cancelTokensWhenComplete, priority, "", null,
+        null);
+  }
+
+  public RMApp submitApp(Credentials cred, ByteBuffer tokensConf)
+      throws Exception {
+    return submitApp(Resource.newInstance(200, 1), "app1", "user", null, false,
+        null, super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+            YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), cred, null, true,
+        false, false, null, 0, null, true, Priority.newInstance(0), null, null,
+        tokensConf);
   }
 
   public RMApp submitApp(Resource capability, String name, String user,
@@ -674,7 +685,8 @@ public class MockRM extends ResourceManager {
       ApplicationId applicationId, long attemptFailuresValidityInterval,
       LogAggregationContext logAggregationContext,
       boolean cancelTokensWhenComplete, Priority priority, String amLabel,
-      Map<ApplicationTimeoutType, Long> applicationTimeouts)
+      Map<ApplicationTimeoutType, Long> applicationTimeouts,
+      ByteBuffer tokensConf)
       throws Exception {
     ApplicationId appId = isAppIdProvided ? applicationId : null;
     ApplicationClientProtocol client = getClientRMService();
@@ -713,6 +725,7 @@ public class MockRM extends ResourceManager {
       ts.writeTokenStorageToStream(dob);
       ByteBuffer securityTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
       clc.setTokens(securityTokens);
+      clc.setTokensConf(tokensConf);
     }
     sub.setAMContainerSpec(clc);
     sub.setAttemptFailuresValidityInterval(attemptFailuresValidityInterval);
@@ -729,22 +742,20 @@ public class MockRM extends ResourceManager {
     req.setApplicationSubmissionContext(sub);
     UserGroupInformation fakeUser =
       UserGroupInformation.createUserForTesting(user, new String[] {"someGroup"});
-    PrivilegedAction<SubmitApplicationResponse> action =
-      new PrivilegedAction<SubmitApplicationResponse>() {
+    PrivilegedExceptionAction<SubmitApplicationResponse> action =
+      new PrivilegedExceptionAction<SubmitApplicationResponse>() {
       ApplicationClientProtocol client;
       SubmitApplicationRequest req;
       @Override
-      public SubmitApplicationResponse run() {
+      public SubmitApplicationResponse run() throws IOException, YarnException {
         try {
           return client.submitApplication(req);
-        } catch (YarnException e) {
+        } catch (YarnException | IOException e) {
           e.printStackTrace();
-        } catch (IOException e) {
-          e.printStackTrace();
+          throw  e;
         }
-        return null;
       }
-      PrivilegedAction<SubmitApplicationResponse> setClientReq(
+      PrivilegedExceptionAction<SubmitApplicationResponse> setClientReq(
         ApplicationClientProtocol client, SubmitApplicationRequest req) {
         this.client = client;
         this.req = req;
@@ -1224,6 +1235,7 @@ public class MockRM extends ResourceManager {
         null, false, null,
         super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
             YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true,
-        false, false, null, 0, null, true, priority, null, applicationTimeouts);
+        false, false, null, 0, null, true, priority, null, applicationTimeouts,
+        null);
   }
 }

@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +68,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped.StorageAndBlockIndex;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicies;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementStatus;
@@ -587,13 +589,31 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       return "";
     }
     final boolean isComplete = storedBlock.isComplete();
-    DatanodeStorageInfo[] storages = isComplete ?
-        blockManager.getStorages(storedBlock) :
-        storedBlock.getUnderConstructionFeature().getExpectedStorageLocations();
+    Iterator<DatanodeStorageInfo> storagesItr;
     StringBuilder sb = new StringBuilder(" [");
+    final boolean isStriped = storedBlock.isStriped();
+    Map<DatanodeStorageInfo, Long> storage2Id = new HashMap<>();
+    if (isComplete) {
+      if (isStriped) {
+        long blockId = storedBlock.getBlockId();
+        Iterable<StorageAndBlockIndex> sis =
+            ((BlockInfoStriped) storedBlock).getStorageAndIndexInfos();
+        for (StorageAndBlockIndex si : sis) {
+          storage2Id.put(si.getStorage(), blockId + si.getBlockIndex());
+        }
+      }
+      storagesItr = storedBlock.getStorageInfos();
+    } else {
+      storagesItr = storedBlock.getUnderConstructionFeature()
+          .getExpectedStorageLocationsIterator();
+    }
 
-    for (int i = 0; i < storages.length; i++) {
-      DatanodeStorageInfo storage = storages[i];
+    while (storagesItr.hasNext()) {
+      DatanodeStorageInfo storage = storagesItr.next();
+      if (isStriped && isComplete) {
+        long index = storage2Id.get(storage);
+        sb.append("blk_" + index + ":");
+      }
       DatanodeDescriptor dnDesc = storage.getDatanodeDescriptor();
       if (showRacks) {
         sb.append(NodeBase.getPath(dnDesc));
@@ -633,7 +653,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
           sb.append("LIVE)");
         }
       }
-      if (i < storages.length - 1) {
+      if (storagesItr.hasNext()) {
         sb.append(", ");
       }
     }

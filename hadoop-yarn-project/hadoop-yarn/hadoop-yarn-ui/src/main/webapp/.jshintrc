@@ -2,7 +2,10 @@
   "predef": [
     "document",
     "window",
-    "-Promise"
+    "-Promise",
+    "d3",
+    "$",
+    "moment"
   ],
   "browser": true,
   "boss": true,

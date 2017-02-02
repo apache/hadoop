@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
@@ -92,6 +93,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
+import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
@@ -768,6 +770,26 @@ public class TestPBHelper {
         .setRemaining(500L);
     DatanodeInfo dnInfos3 = PBHelperClient.convert(b.build());
     assertEquals(dnInfos0.getNonDfsUsed(), dnInfos3.getNonDfsUsed());
+  }
+
+  @Test
+  public void testSlowPeerInfoPBHelper() {
+    // Test with a map that has a few slow peer entries.
+    final SlowPeerReports slowPeers = SlowPeerReports.create(
+        ImmutableMap.of("peer1", 0.0, "peer2", 1.0, "peer3", 2.0));
+    SlowPeerReports slowPeersConverted1 = PBHelper.convertSlowPeerInfo(
+        PBHelper.convertSlowPeerInfo(slowPeers));
+    assertTrue(
+        "Expected map:" + slowPeers + ", got map:" +
+            slowPeersConverted1.getSlowPeers(),
+        slowPeersConverted1.equals(slowPeers));
+
+    // Test with an empty map.
+    SlowPeerReports slowPeersConverted2 = PBHelper.convertSlowPeerInfo(
+        PBHelper.convertSlowPeerInfo(SlowPeerReports.EMPTY_REPORT));
+    assertTrue(
+        "Expected empty map:" + ", got map:" + slowPeersConverted2,
+        slowPeersConverted2.equals(SlowPeerReports.EMPTY_REPORT));
   }
 
   private void assertBlockECRecoveryInfoEquals(

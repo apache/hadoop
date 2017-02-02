@@ -18,25 +18,26 @@
 
 package org.apache.hadoop.yarn.server.webapp.dao;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogType;
+import org.apache.hadoop.yarn.logaggregation.PerContainerLogFileInfo;
 
 /**
  * {@code ContainerLogsInfo} includes the log meta-data of containers.
  * <p>
  * The container log meta-data includes details such as:
  * <ul>
- *   <li>The filename of the container log.</li>
- *   <li>The size of the container log.</li>
+ *   <li>A list of {@link PerContainerLogFileInfo}.</li>
+ *   <li>The container Id.</li>
+ *   <li>The NodeManager Id.</li>
+ *   <li>The logType: could be local or aggregated</li>
  * </ul>
  */
 
@@ -45,57 +46,42 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 public class ContainerLogsInfo {
 
   @XmlElement(name = "containerLogInfo")
-  protected List<ContainerLogInfo> containerLogsInfo;
+  protected List<PerContainerLogFileInfo> containerLogsInfo;
+
+  @XmlElement(name = "logType")
+  protected String logType;
+
+  @XmlElement(name = "containerId")
+  protected String containerId;
+
+  @XmlElement(name = "nodeId")
+  protected String nodeId;
 
   //JAXB needs this
   public ContainerLogsInfo() {}
 
-  public ContainerLogsInfo(Map<String, String> containerLogMeta)
+  public ContainerLogsInfo(ContainerLogMeta logMeta, ContainerLogType logType)
       throws YarnException {
-    this.containerLogsInfo = new ArrayList<ContainerLogInfo>();
-    for (Entry<String, String> meta : containerLogMeta.entrySet()) {
-      ContainerLogInfo info = new ContainerLogInfo(meta.getKey(),
-          meta.getValue());
-      containerLogsInfo.add(info);
-    }
+    this.containerLogsInfo = new ArrayList<PerContainerLogFileInfo>(
+        logMeta.getContainerLogMeta());
+    this.logType = logType.toString();
+    this.containerId = logMeta.getContainerId();
+    this.nodeId = logMeta.getNodeId();
   }
 
-  public List<ContainerLogInfo> getContainerLogsInfo() {
+  public List<PerContainerLogFileInfo> getContainerLogsInfo() {
     return this.containerLogsInfo;
   }
 
-  /**
-   * It includes the log meta-data of a container.
-   *
-   */
-  @Private
-  @VisibleForTesting
-  public static class ContainerLogInfo {
-    private String fileName;
-    private String fileSize;
+  public String getLogType() {
+    return this.logType;
+  }
 
-    //JAXB needs this
-    public ContainerLogInfo() {}
+  public String getContainerId() {
+    return this.containerId;
+  }
 
-    public ContainerLogInfo(String fileName, String fileSize) {
-      this.setFileName(fileName);
-      this.setFileSize(fileSize);
-    }
-
-    public String getFileName() {
-      return fileName;
-    }
-
-    public void setFileName(String fileName) {
-      this.fileName = fileName;
-    }
-
-    public String getFileSize() {
-      return fileSize;
-    }
-
-    public void setFileSize(String fileSize) {
-      this.fileSize = fileSize;
-    }
+  public String getNodeId() {
+    return this.nodeId;
   }
 }

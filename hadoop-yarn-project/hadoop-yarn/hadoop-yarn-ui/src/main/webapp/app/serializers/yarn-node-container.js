@@ -17,7 +17,6 @@
  */
 
 import DS from 'ember-data';
-import Ember from 'ember';
 
 export default DS.JSONAPISerializer.extend({
   internalNormalizeSingleResponse(store, primaryModelClass, payload) {
@@ -42,16 +41,14 @@ export default DS.JSONAPISerializer.extend({
     return fixedPayload;
   },
 
-  normalizeSingleResponse(store, primaryModelClass, payload, id,
-    requestType) {
+  normalizeSingleResponse(store, primaryModelClass, payload/*, id, requestType*/) {
     // payload is of the form {"container":{}}
     var p = this.internalNormalizeSingleResponse(store,
         primaryModelClass, payload);
     return { data: p };
   },
 
-  normalizeArrayResponse(store, primaryModelClass, payload, id,
-      requestType) {
+  normalizeArrayResponse(store, primaryModelClass, payload/*, id, requestType*/) {
     // expected return response is of the form { data: [ {}, {} ] }
     var normalizedArrayResponse = {};
     if (payload.containers && payload.containers.container) {

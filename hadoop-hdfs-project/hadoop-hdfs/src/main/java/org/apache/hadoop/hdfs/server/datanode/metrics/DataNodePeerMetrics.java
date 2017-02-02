@@ -18,40 +18,59 @@
 
 package org.apache.hadoop.hdfs.server.datanode.metrics;
 
-import java.util.concurrent.ThreadLocalRandom;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.metrics2.MetricsJsonBuilder;
 import org.apache.hadoop.metrics2.lib.RollingAverages;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 /**
  * This class maintains DataNode peer metrics (e.g. numOps, AvgTime, etc.) for
  * various peer operations.
  */
 @InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class DataNodePeerMetrics {
 
-  static final Log LOG = LogFactory.getLog(DataNodePeerMetrics.class);
+  public static final Logger LOG = LoggerFactory.getLogger(
+      DataNodePeerMetrics.class);
 
   private final RollingAverages sendPacketDownstreamRollingAvgerages;
 
   private final String name;
-  private final boolean peerStatsEnabled;
+
+  /**
+   * Threshold in milliseconds below which a DataNode is definitely not slow.
+   */
+  private static final long LOW_THRESHOLD_MS = 5;
+
+  private final SlowNodeDetector slowNodeDetector;
+
+  /**
+   * Minimum number of packet send samples which are required to qualify
+   * for outlier detection. If the number of samples is below this then
+   * outlier detection is skipped.
+   */
+  @VisibleForTesting
+  static final long MIN_OUTLIER_DETECTION_SAMPLES = 1000;
 
   public DataNodePeerMetrics(
       final String name,
-      final int windowSize,
-      final int numWindows,
-      final boolean peerStatsEnabled) {
+      final long windowSizeMs,
+      final int numWindows) {
     this.name = name;
-    this.peerStatsEnabled = peerStatsEnabled;
+    this.slowNodeDetector = new SlowNodeDetector(LOW_THRESHOLD_MS);
     sendPacketDownstreamRollingAvgerages = new RollingAverages(
-        windowSize,
-        numWindows);
+        windowSizeMs, numWindows);
   }
 
   public String name() {
@@ -66,21 +85,18 @@ public class DataNodePeerMetrics {
         ? "UndefinedDataNodeName" + ThreadLocalRandom.current().nextInt()
         : dnName.replace(':', '-'));
 
-    final int windowSize = conf.getInt(
-            DFSConfigKeys.DFS_METRICS_ROLLING_AVERAGES_WINDOW_SIZE_KEY,
-            DFSConfigKeys.DFS_METRICS_ROLLING_AVERAGES_WINDOW_SIZE_DEFAULT);
+    final long windowSizeMs = conf.getTimeDuration(
+            DFSConfigKeys.DFS_METRICS_ROLLING_AVERAGES_WINDOW_LENGTH_KEY,
+            DFSConfigKeys.DFS_METRICS_ROLLING_AVERAGES_WINDOW_LENGTH_DEFAULT,
+            TimeUnit.MILLISECONDS);
     final int numWindows = conf.getInt(
-        DFSConfigKeys.DFS_METRICS_ROLLING_AVERAGES_WINDOW_NUMBERS_KEY,
-        DFSConfigKeys.DFS_METRICS_ROLLING_AVERAGES_WINDOW_NUMBERS_DEFAULT);
-    final boolean peerStatsEnabled = conf.getBoolean(
-        DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY,
-        DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT);
+        DFSConfigKeys.DFS_METRICS_ROLLING_AVERAGE_NUM_WINDOWS_KEY,
+        DFSConfigKeys.DFS_METRICS_ROLLING_AVERAGE_NUM_WINDOWS_DEFAULT);
 
     return new DataNodePeerMetrics(
         name,
-        windowSize,
-        numWindows,
-        peerStatsEnabled);
+        windowSizeMs,
+        numWindows);
   }
 
   /**
@@ -94,9 +110,7 @@ public class DataNodePeerMetrics {
   public void addSendPacketDownstream(
       final String peerAddr,
       final long elapsedMs) {
-    if (peerStatsEnabled) {
-      sendPacketDownstreamRollingAvgerages.add(peerAddr, elapsedMs);
-    }
+    sendPacketDownstreamRollingAvgerages.add(peerAddr, elapsedMs);
   }
 
   /**
@@ -113,5 +127,20 @@ public class DataNodePeerMetrics {
    */
   public void collectThreadLocalStates() {
     sendPacketDownstreamRollingAvgerages.collectThreadLocalStates();
+  }
+
+  /**
+   * Retrieve the set of dataNodes that look significantly slower
+   * than their peers.
+   */
+  public Map<String, Double> getOutliers() {
+    // This maps the metric name to the aggregate latency.
+    // The metric name is the datanode ID.
+    final Map<String, Double> stats =
+        sendPacketDownstreamRollingAvgerages.getStats(
+            MIN_OUTLIER_DETECTION_SAMPLES);
+    LOG.trace("DataNodePeerMetrics: Got stats: {}", stats);
+
+    return slowNodeDetector.getOutliers(stats);
   }
 }

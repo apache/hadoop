@@ -29,8 +29,7 @@ export default Ember.Route.extend({
     error: function (error) {
       Ember.Logger.log(error.stack);
 
-      if (error && error.errors[0] &&
-          error.errors[0].status == 404) {
+      if (error && error.errors[0] && parseInt(error.errors[0].status) === 404) {
         this.intermediateTransitionTo('/notfound');
       } else {
         this.intermediateTransitionTo('/error');

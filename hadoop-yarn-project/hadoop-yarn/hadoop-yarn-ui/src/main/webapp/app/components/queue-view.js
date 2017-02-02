@@ -92,7 +92,7 @@ export default Ember.Component.extend(ChartUtilsMixin, {
     circle.on('mouseover', function () {
     }.bind(this));
     circle.on('mouseout', function () {
-      if (circle != this.queues.selectedQueueCircle) {
+      if (circle !== this.queues.selectedQueueCircle) {
         circle.style("fill", this.queueColors[0]);
       }
     }.bind(this));
@@ -143,7 +143,6 @@ export default Ember.Component.extend(ChartUtilsMixin, {
     // render queues
     this.queues.dataGroup = this.canvas.svg.append("g")
       .attr("id", "queues-g");
-    var rootQueue = undefined;
 
     if (this.queues.data) {
       this.renderQueue(this.queues.data['root'], 0, 0);
@@ -185,7 +184,7 @@ export default Ember.Component.extend(ChartUtilsMixin, {
   /*
    * data = [{label="xx", value=},{...}]
    */
-  renderTable: function (data, title, layout) {
+  renderTable: function (data) {
     d3.select("#main-svg")
       .append('table')
       .selectAll('tr')
@@ -254,7 +253,7 @@ export default Ember.Component.extend(ChartUtilsMixin, {
     for (var queueName in this.queues.data) {
       var q = this.queues.data[queueName];
       if ((!q.get("children")) || q.get("children")
-          .length == 0) {
+          .length === 0) {
         // it's a leafqueue
         leafQueueUsedCaps.push({
           label: q.get("name"),
@@ -274,10 +273,10 @@ export default Ember.Component.extend(ChartUtilsMixin, {
     var queue = this.queues.data[queueName];
     var idx = 0;
 
-    if (queue.get("name") == "root") {
+    if (queue.get("name") === "root") {
       this.renderLeafQueueUsedCapacities(this.getLayout(idx++));
     }
-    if (queue.get("name") != "root") {
+    if (queue.get("name") !== "root") {
       this.renderQueueCapacities(queue, this.getLayout(idx++));
     }
     if (queue.get("children") && queue.get("children")

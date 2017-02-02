@@ -110,7 +110,11 @@ abstract public class Task implements Writable, Configurable {
     CPU_MILLISECONDS,
     PHYSICAL_MEMORY_BYTES,
     VIRTUAL_MEMORY_BYTES,
-    COMMITTED_HEAP_BYTES
+    COMMITTED_HEAP_BYTES,
+    MAP_PHYSICAL_MEMORY_BYTES_MAX,
+    MAP_VIRTUAL_MEMORY_BYTES_MAX,
+    REDUCE_PHYSICAL_MEMORY_BYTES_MAX,
+    REDUCE_VIRTUAL_MEMORY_BYTES_MAX
   }
 
   /**
@@ -963,6 +967,24 @@ abstract public class Task implements Writable, Configurable {
 
     if (vMem != ResourceCalculatorProcessTree.UNAVAILABLE) {
       counters.findCounter(TaskCounter.VIRTUAL_MEMORY_BYTES).setValue(vMem);
+    }
+
+    if (pMem != ResourceCalculatorProcessTree.UNAVAILABLE) {
+      TaskCounter counter = isMapTask() ?
+          TaskCounter.MAP_PHYSICAL_MEMORY_BYTES_MAX :
+          TaskCounter.REDUCE_PHYSICAL_MEMORY_BYTES_MAX;
+      Counters.Counter pMemCounter =
+          counters.findCounter(counter);
+      pMemCounter.setValue(Math.max(pMemCounter.getValue(), pMem));
+    }
+
+    if (vMem != ResourceCalculatorProcessTree.UNAVAILABLE) {
+      TaskCounter counter = isMapTask() ?
+          TaskCounter.MAP_VIRTUAL_MEMORY_BYTES_MAX :
+          TaskCounter.REDUCE_VIRTUAL_MEMORY_BYTES_MAX;
+      Counters.Counter vMemCounter =
+          counters.findCounter(counter);
+      vMemCounter.setValue(Math.max(vMemCounter.getValue(), vMem));
     }
   }
 

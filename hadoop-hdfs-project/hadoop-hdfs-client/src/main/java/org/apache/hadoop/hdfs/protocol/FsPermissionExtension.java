@@ -29,6 +29,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
  */
 @InterfaceAudience.Private
 public class FsPermissionExtension extends FsPermission {
+  private static final long serialVersionUID = 0x13c298a4;
+
   private final static short ACL_BIT = 1 << 12;
   private final static short ENCRYPTED_BIT = 1 << 13;
   private final boolean aclBit;

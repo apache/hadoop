@@ -15,20 +15,7 @@
 ViewFs Guide
 ============
 
-* [ViewFs Guide](#ViewFs_Guide)
-    * [Introduction](#Introduction)
-    * [The Old World (Prior to Federation)](#The_Old_World_Prior_to_Federation)
-        * [Single Namenode Clusters](#Single_Namenode_Clusters)
-        * [Pathnames Usage Patterns](#Pathnames_Usage_Patterns)
-        * [Pathname Usage Best Practices](#Pathname_Usage_Best_Practices)
-    * [New World – Federation and ViewFs](#New_World__Federation_and_ViewFs)
-        * [How The Clusters Look](#How_The_Clusters_Look)
-        * [A Global Namespace Per Cluster Using ViewFs](#A_Global_Namespace_Per_Cluster_Using_ViewFs)
-        * [Pathname Usage Patterns](#Pathname_Usage_Patterns)
-        * [Pathname Usage Best Practices](#Pathname_Usage_Best_Practices)
-        * [Renaming Pathnames Across Namespaces](#Renaming_Pathnames_Across_Namespaces)
-        * [FAQ](#FAQ)
-    * [Appendix: A Mount Table Configuration Example](#Appendix:_A_Mount_Table_Configuration_Example)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Introduction
 ------------

@@ -57,7 +57,7 @@ test('Test getting nodes', function(assert) {
         containersCPUUsage: 0
       }}];
   var store = {
-    findAll: function(type) {
+    findAll: function() {
       return new Ember.RSVP.Promise(function(resolve) {
         resolve(response);
       });

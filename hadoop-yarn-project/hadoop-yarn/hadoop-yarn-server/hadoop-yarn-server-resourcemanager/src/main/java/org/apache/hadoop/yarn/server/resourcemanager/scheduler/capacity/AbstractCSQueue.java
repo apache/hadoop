@@ -109,6 +109,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   protected ReentrantReadWriteLock.ReadLock readLock;
   protected ReentrantReadWriteLock.WriteLock writeLock;
 
+  volatile Priority priority = Priority.newInstance(0);
+
   public AbstractCSQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
     this.labelManager = cs.getRMContext().getNodeLabelManager();
@@ -336,6 +338,9 @@ public abstract class AbstractCSQueue implements CSQueue {
           csContext.getConfiguration().getReservationContinueLook();
 
       this.preemptionDisabled = isQueueHierarchyPreemptionDisabled(this);
+
+      this.priority = csContext.getConfiguration().getQueuePriority(
+          getQueuePath());
     } finally {
       writeLock.unlock();
     }
@@ -933,5 +938,10 @@ public abstract class AbstractCSQueue implements CSQueue {
     } finally {
       this.writeLock.unlock();
     }
+  }
+
+  @Override
+  public Priority getPriority() {
+    return this.priority;
   }
 }

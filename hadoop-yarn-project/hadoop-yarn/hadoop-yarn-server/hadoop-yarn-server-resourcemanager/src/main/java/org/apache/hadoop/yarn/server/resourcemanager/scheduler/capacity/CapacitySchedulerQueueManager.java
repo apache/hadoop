@@ -75,9 +75,6 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     }
   };
 
-  static final PartitionedQueueComparator PARTITIONED_QUEUE_COMPARATOR =
-      new PartitionedQueueComparator();
-
   static class QueueHook {
     public CSQueue hook(CSQueue queue) {
       return queue;

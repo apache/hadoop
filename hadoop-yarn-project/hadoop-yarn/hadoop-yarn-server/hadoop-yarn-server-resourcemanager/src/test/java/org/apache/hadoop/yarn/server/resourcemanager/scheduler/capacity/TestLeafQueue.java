@@ -175,9 +175,6 @@ public class TestLeafQueue {
         thenReturn(Resources.createResource(16*GB, 32));
     when(csContext.getClusterResource()).
         thenReturn(Resources.createResource(100 * 16 * GB, 100 * 32));
-    when(csContext.getNonPartitionedQueueComparator()).
-        thenReturn(
-            CapacitySchedulerQueueManager.NON_PARTITIONED_QUEUE_COMPARATOR);
     when(csContext.getResourceCalculator()).
         thenReturn(resourceCalculator);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
@@ -414,7 +411,7 @@ public class TestLeafQueue {
       "testPolicyRoot" + System.currentTimeMillis();
 
     OrderingPolicy<FiCaSchedulerApp> comPol =    
-      testConf.<FiCaSchedulerApp>getOrderingPolicy(tproot);
+      testConf.<FiCaSchedulerApp>getAppOrderingPolicy(tproot);
     
     
   }
@@ -489,16 +486,16 @@ public class TestLeafQueue {
       "testPolicyRoot" + System.currentTimeMillis();
 
     OrderingPolicy<FiCaSchedulerApp> schedOrder =
-      testConf.<FiCaSchedulerApp>getOrderingPolicy(tproot);
+      testConf.<FiCaSchedulerApp>getAppOrderingPolicy(tproot);
 
     //override default to fair
     String policyType = CapacitySchedulerConfiguration.PREFIX + tproot +
       "." + CapacitySchedulerConfiguration.ORDERING_POLICY;
 
     testConf.set(policyType,
-      CapacitySchedulerConfiguration.FAIR_ORDERING_POLICY);
+      CapacitySchedulerConfiguration.FAIR_APP_ORDERING_POLICY);
     schedOrder =
-      testConf.<FiCaSchedulerApp>getOrderingPolicy(tproot);
+      testConf.<FiCaSchedulerApp>getAppOrderingPolicy(tproot);
     FairOrderingPolicy fop = (FairOrderingPolicy<FiCaSchedulerApp>) schedOrder;
     assertFalse(fop.getSizeBasedWeight());
 
@@ -508,7 +505,7 @@ public class TestLeafQueue {
       FairOrderingPolicy.ENABLE_SIZE_BASED_WEIGHT;
     testConf.set(sbwConfig, "true");
     schedOrder =
-      testConf.<FiCaSchedulerApp>getOrderingPolicy(tproot);
+      testConf.<FiCaSchedulerApp>getAppOrderingPolicy(tproot);
     fop = (FairOrderingPolicy<FiCaSchedulerApp>) schedOrder;
     assertTrue(fop.getSizeBasedWeight());
 

@@ -302,6 +302,9 @@ Configure `etc/hadoop/ssl-server.xml` with proper values, for example:
 </property>
 ```
 
+The SSL passwords can be secured by a credential provider. See
+[Credential Provider API](../../../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
+
 You need to create an SSL certificate for the KMS. As the `kms` Unix user, using the Java `keytool` command to create the SSL certificate:
 
     $ keytool -genkey -alias jetty -keyalg RSA

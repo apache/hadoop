@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringReader;
+import java.util.List;
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -34,6 +35,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.VersionInfo;
@@ -43,6 +45,9 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogType;
+import org.apache.hadoop.yarn.logaggregation.PerContainerLogFileInfo;
+import org.apache.hadoop.yarn.logaggregation.TestContainerLogsUtils;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
@@ -54,6 +59,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer.NMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
@@ -75,6 +81,7 @@ import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.ClientResponse.Status;
+import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
@@ -95,6 +102,8 @@ public class TestNMWebServices extends JerseyTestBase {
       TestNMWebServices.class.getSimpleName());
   private static File testLogDir = new File("target",
       TestNMWebServices.class.getSimpleName() + "LogDir");
+  private static File testRemoteLogDir = new File("target",
+      TestNMWebServices.class.getSimpleName() + "remote-log-dir");
 
   private static class WebServletModule extends ServletModule {
 
@@ -103,6 +112,9 @@ public class TestNMWebServices extends JerseyTestBase {
       Configuration conf = new Configuration();
       conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
       conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());
+      conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+      conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+          testRemoteLogDir.getAbsolutePath());
       dirsHandler = new LocalDirsHandlerService();
       NodeHealthCheckerService healthChecker = new NodeHealthCheckerService(
           NodeManager.getNodeHealthScriptRunner(conf), dirsHandler);
@@ -160,6 +172,7 @@ public class TestNMWebServices extends JerseyTestBase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
+    testRemoteLogDir.mkdir();
     testRootDir.mkdirs();
     testLogDir.mkdir();
     GuiceServletConfig.setInjector(
@@ -170,6 +183,7 @@ public class TestNMWebServices extends JerseyTestBase {
   static public void stop() {
     FileUtil.fullyDelete(testRootDir);
     FileUtil.fullyDelete(testLogDir);
+    FileUtil.fullyDelete(testRemoteLogDir);
   }
 
   public TestNMWebServices() {
@@ -338,7 +352,7 @@ public class TestNMWebServices extends JerseyTestBase {
   }
 
   private void testContainerLogs(WebResource r, ContainerId containerId)
-      throws IOException, JSONException {
+      throws IOException {
     final String containerIdStr = containerId.toString();
     final ApplicationAttemptId appAttemptId = containerId
         .getApplicationAttemptId();
@@ -446,10 +460,50 @@ public class TestNMWebServices extends JerseyTestBase {
         .path("logs").accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(200, response.getStatus());
-    JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals(json.getJSONObject("containerLogInfo")
-        .getString("fileName"), filename);
+    List<ContainerLogsInfo> responseList = response.getEntity(new GenericType<
+        List<ContainerLogsInfo>>(){});
+    assertTrue(responseList.size() == 1);
+    assertEquals(responseList.get(0).getLogType(),
+        ContainerLogType.LOCAL.toString());
+    List<PerContainerLogFileInfo> logMeta = responseList.get(0)
+        .getContainerLogsInfo();
+    assertTrue(logMeta.size() == 1);
+    assertEquals(logMeta.get(0).getFileName(), filename);
 
+    // now create an aggregated log in Remote File system
+    File tempLogDir = new File("target",
+        TestNMWebServices.class.getSimpleName() + "temp-log-dir");
+    try {
+      String aggregatedLogFile = filename + "-aggregated";
+      TestContainerLogsUtils.createContainerLogFileInRemoteFS(
+          nmContext.getConf(), FileSystem.get(nmContext.getConf()),
+          tempLogDir.getAbsolutePath(), containerId, nmContext.getNodeId(),
+          aggregatedLogFile, "user", logMessage, true);
+      r1 = resource();
+      response = r1.path("ws").path("v1").path("node")
+          .path("containers").path(containerIdStr)
+          .path("logs").accept(MediaType.APPLICATION_JSON)
+          .get(ClientResponse.class);
+      assertEquals(200, response.getStatus());
+      responseList = response.getEntity(new GenericType<
+          List<ContainerLogsInfo>>(){});
+      assertEquals(responseList.size(), 2);
+      for (ContainerLogsInfo logInfo : responseList) {
+        if(logInfo.getLogType().equals(
+            ContainerLogType.AGGREGATED.toString())) {
+          List<PerContainerLogFileInfo> meta = logInfo.getContainerLogsInfo();
+          assertTrue(meta.size() == 1);
+          assertEquals(meta.get(0).getFileName(), aggregatedLogFile);
+        } else {
+          assertEquals(logInfo.getLogType(), ContainerLogType.LOCAL.toString());
+          List<PerContainerLogFileInfo> meta = logInfo.getContainerLogsInfo();
+          assertTrue(meta.size() == 1);
+          assertEquals(meta.get(0).getFileName(), filename);
+        }
+      }
+    } finally {
+      FileUtil.fullyDelete(tempLogDir);
+    }
     // After container is completed, it is removed from nmContext
     nmContext.getContainers().remove(containerId);
     Assert.assertNull(nmContext.getContainers().get(containerId));

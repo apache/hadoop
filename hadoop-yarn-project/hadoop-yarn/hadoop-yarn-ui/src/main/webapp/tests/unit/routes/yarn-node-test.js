@@ -61,11 +61,11 @@ test('Test getting a node', function(assert) {
   // Create store which returns appropriate responses.
   var store = {
     findRecord: function(type) {
-      if (type == 'yarnNode') {
+      if (type === 'yarnNode') {
         return new Ember.RSVP.Promise(function(resolve) {
           resolve(nodeResponse);
         });
-      } else if (type == 'yarnRmNode') {
+      } else if (type === 'yarnRmNode') {
         return new Ember.RSVP.Promise(function(resolve) {
           resolve(rmNodeResponse);
         });

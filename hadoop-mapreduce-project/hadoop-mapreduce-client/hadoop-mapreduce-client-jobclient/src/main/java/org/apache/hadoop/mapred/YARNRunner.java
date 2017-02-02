@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
@@ -499,6 +500,12 @@ public class YARNRunner implements ClientProtocol {
         ContainerLaunchContext.newInstance(localResources, environment,
           vargsFinal, null, securityTokens, acls);
 
+    String regex = conf.get(MRJobConfig.MR_JOB_SEND_TOKEN_CONF);
+    if (regex != null && !regex.isEmpty()) {
+      setTokenRenewerConf(amContainer, conf, regex);
+    }
+
+
     Collection<String> tagsFromConf =
         jobConf.getTrimmedStringCollection(MRJobConfig.JOB_TAGS);
 
@@ -574,6 +581,35 @@ public class YARNRunner implements ClientProtocol {
     }
 
     return appContext;
+  }
+
+  private void setTokenRenewerConf(ContainerLaunchContext context,
+      Configuration conf, String regex) throws IOException {
+    DataOutputBuffer dob = new DataOutputBuffer();
+    Configuration copy = new Configuration(false);
+    copy.clear();
+    int count = 0;
+    for (Map.Entry<String, String> map : conf) {
+      String key = map.getKey();
+      String val = map.getValue();
+      if (key.matches(regex)) {
+        copy.set(key, val);
+        count++;
+      }
+    }
+    copy.write(dob);
+    ByteBuffer appConf = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+    LOG.info("Send configurations that match regex expression: " + regex
+        + " , total number of configs: " + count + ", total size : " + dob
+        .getLength() + " bytes.");
+    if (LOG.isDebugEnabled()) {
+      for (Iterator<Map.Entry<String, String>> itor = copy.iterator(); itor
+          .hasNext(); ) {
+        Map.Entry<String, String> entry = itor.next();
+        LOG.info(entry.getKey() + " ===> " + entry.getValue());
+      }
+    }
+    context.setTokensConf(appConf);
   }
 
   @Override

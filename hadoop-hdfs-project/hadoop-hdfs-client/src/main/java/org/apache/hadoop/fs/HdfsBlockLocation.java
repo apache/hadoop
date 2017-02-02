@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.fs;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.Serializable;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -28,9 +32,10 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class HdfsBlockLocation extends BlockLocation {
+public class HdfsBlockLocation extends BlockLocation implements Serializable {
+  private static final long serialVersionUID = 0x7aecec92;
 
-  private final LocatedBlock block;
+  private transient LocatedBlock block;
 
   public HdfsBlockLocation(BlockLocation loc, LocatedBlock block) {
     // Initialize with data from passed in BlockLocation
@@ -41,4 +46,12 @@ public class HdfsBlockLocation extends BlockLocation {
   public LocatedBlock getLocatedBlock() {
     return block;
   }
+
+  private void readObject(ObjectInputStream ois)
+      throws IOException, ClassNotFoundException {
+    ois.defaultReadObject();
+    // LocatedBlock is not Serializable
+    block = null;
+  }
+
 }

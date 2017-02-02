@@ -15,15 +15,7 @@
 HDFS Erasure Coding
 ===================
 
-* [HDFS Erasure Coding](#HDFS_Erasure_Coding)
-    * [Purpose](#Purpose)
-    * [Background](#Background)
-    * [Architecture](#Architecture)
-    * [Deployment](#Deployment)
-        * [Cluster and hardware configuration](#Cluster_and_hardware_configuration)
-        * [Configuration keys](#Configuration_keys)
-        * [Enable Intel ISA-L](#Enable_Intel_ISA-L)
-        * [Administrative commands](#Administrative_commands)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Purpose
 -------

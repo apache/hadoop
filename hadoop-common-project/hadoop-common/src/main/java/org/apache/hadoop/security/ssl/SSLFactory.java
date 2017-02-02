@@ -128,9 +128,10 @@ public class SSLFactory implements ConnectionConfigurator {
       throw new IllegalArgumentException("mode cannot be NULL");
     }
     this.mode = mode;
-    requireClientCert = conf.getBoolean(SSL_REQUIRE_CLIENT_CERT_KEY,
+    Configuration sslConf = readSSLConfiguration(conf, mode);
+
+    requireClientCert = sslConf.getBoolean(SSL_REQUIRE_CLIENT_CERT_KEY,
         SSL_REQUIRE_CLIENT_CERT_DEFAULT);
-    Configuration sslConf = readSSLConfiguration(mode);
 
     Class<? extends KeyStoresFactory> klass
       = conf.getClass(KEYSTORES_FACTORY_CLASS_KEY,
@@ -149,9 +150,11 @@ public class SSLFactory implements ConnectionConfigurator {
     }
   }
 
-  private Configuration readSSLConfiguration(Mode mode) {
+  public static Configuration readSSLConfiguration(Configuration conf,
+                                                   Mode mode) {
     Configuration sslConf = new Configuration(false);
-    sslConf.setBoolean(SSL_REQUIRE_CLIENT_CERT_KEY, requireClientCert);
+    sslConf.setBoolean(SSL_REQUIRE_CLIENT_CERT_KEY, conf.getBoolean(
+        SSL_REQUIRE_CLIENT_CERT_KEY, SSL_REQUIRE_CLIENT_CERT_DEFAULT));
     String sslConfResource;
     if (mode == Mode.CLIENT) {
       sslConfResource = conf.get(SSL_CLIENT_CONF_KEY,
