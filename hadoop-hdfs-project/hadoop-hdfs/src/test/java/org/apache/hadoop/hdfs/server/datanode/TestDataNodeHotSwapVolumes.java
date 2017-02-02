@@ -906,8 +906,7 @@ public class TestDataNodeHotSwapVolumes {
    */
   @Test(timeout=60000)
   public void testDirectlyReloadAfterCheckDiskError()
-      throws IOException, TimeoutException, InterruptedException,
-      ReconfigurationException {
+      throws Exception {
     // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
     // volume failures which is currently not supported on Windows.
     assumeNotWindows();
@@ -926,11 +925,7 @@ public class TestDataNodeHotSwapVolumes {
 
     DataNodeTestUtils.injectDataDirFailure(dirToFail);
     // Call and wait DataNode to detect disk failure.
-    long lastDiskErrorCheck = dn.getLastDiskErrorCheck();
-    dn.checkDiskErrorAsync(failedVolume);
-    while (dn.getLastDiskErrorCheck() == lastDiskErrorCheck) {
-      Thread.sleep(100);
-    }
+    DataNodeTestUtils.waitForDiskError(dn, failedVolume);
 
     createFile(new Path("/test1"), 32, (short)2);
     assertEquals(used, failedVolume.getDfsUsed());

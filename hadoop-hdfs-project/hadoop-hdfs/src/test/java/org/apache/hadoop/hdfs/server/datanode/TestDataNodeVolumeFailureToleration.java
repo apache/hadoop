@@ -39,7 +39,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 /**
  * Test the ability of a DN to tolerate volume failures.
@@ -57,6 +59,10 @@ public class TestDataNodeVolumeFailureToleration {
   // Wait at least (2 * re-check + 10 * heartbeat) seconds for
   // a datanode to be considered dead by the namenode.  
   final int WAIT_FOR_DEATH = 15000;
+
+  // specific the timeout for entire test class
+  @Rule
+  public Timeout timeout = new Timeout(120 * 1000);
 
   @Before
   public void setUp() throws Exception {
