@@ -204,6 +204,9 @@ public class TestJournal {
     
     // Close the journal in preparation for reformatting it.
     journal.close();
+    // Clear the storage directory before reformatting it
+    journal.getStorage().getJournalManager()
+        .getStorageDirectory().clearDirectory();
     journal.format(FAKE_NSINFO_2);
     
     assertEquals(0, journal.getLastPromisedEpoch());
@@ -414,6 +417,20 @@ public class TestJournal {
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
           "Incompatible namespaceID", ioe);
+    }
+  }
+
+  @Test
+  public void testFormatNonEmptyStorageDirectories() throws Exception {
+    try {
+      // Format again here and to format the non-empty directories in
+      // journal node.
+      journal.format(FAKE_NSINFO);
+      fail("Did not fail to format non-empty directories in journal node.");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains(
+          "Can't format the storage directory because the current "
+              + "directory is not empty.", ioe);
     }
   }
 

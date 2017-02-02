@@ -180,7 +180,14 @@ class JNStorage extends Storage {
   }
 
   void format(NamespaceInfo nsInfo) throws IOException {
+    unlockAll();
+    try {
+      sd.analyzeStorage(StartupOption.FORMAT, this, true);
+    } finally {
+      sd.unlock();
+    }
     setStorageInfo(nsInfo);
+
     LOG.info("Formatting journal " + sd + " with nsid: " + getNamespaceID());
     // Unlock the directory before formatting, because we will
     // re-analyze it after format(). The analyzeStorage() call
