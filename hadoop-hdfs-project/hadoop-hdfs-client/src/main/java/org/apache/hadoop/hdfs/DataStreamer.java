@@ -847,8 +847,9 @@ class DataStreamer extends Daemon {
       }
       long duration = Time.monotonicNow() - begin;
       if (duration > dfsclientSlowLogThresholdMs) {
-        LOG.warn("Slow waitForAckedSeqno took " + duration
-            + "ms (threshold=" + dfsclientSlowLogThresholdMs + "ms)");
+        LOG.warn("Slow waitForAckedSeqno took {}ms (threshold={}ms). File being"
+                + " written: {}, block: {}, Write pipeline datanodes: {}.",
+            duration, dfsclientSlowLogThresholdMs, src, block, nodes);
       }
     }
   }
