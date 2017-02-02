@@ -394,7 +394,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
     testThread.join();
 
     int maxWaitingAttempts = 2000;
-    while (maxWaitingAttempts-- > 0 ) {
+    while (maxWaitingAttempts-- > 0) {
       if (resourceManager.getRMContext().getHAServiceState()
           == HAServiceState.STANDBY) {
         break;

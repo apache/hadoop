@@ -207,8 +207,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   private UserGroupInformation rmLoginUGI;
 
-  private StandByTransitionRunnable standByTransitionRunnable;
-  
   public ResourceManager() {
     super("ResourceManager");
   }
@@ -237,8 +235,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.rmContext = new RMContextImpl();
     rmContext.setResourceManager(this);
 
-    standByTransitionRunnable = new StandByTransitionRunnable();
-    
     this.configurationProvider =
         ConfigurationProviderFactory.getConfigurationProvider(conf);
     this.configurationProvider.init(this.conf);
@@ -570,6 +566,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     private ResourceManager rm;
     private RMActiveServiceContext activeServiceContext;
     private boolean fromActive = false;
+    private StandByTransitionRunnable standByTransitionRunnable;
 
     RMActiveServices(ResourceManager rm) {
       super("RMActiveServices");
@@ -578,6 +575,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     @Override
     protected void serviceInit(Configuration configuration) throws Exception {
+      standByTransitionRunnable = new StandByTransitionRunnable();
+
       activeServiceContext = new RMActiveServiceContext();
       rmContext.setActiveServiceContext(activeServiceContext);
 
@@ -828,8 +827,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
   /**
    * Transition to standby in a new thread.
    */
-  public synchronized void handleTransitionToStandByInNewThread() {
-    Thread standByTransitionThread = new Thread(standByTransitionRunnable);
+  public void handleTransitionToStandByInNewThread() {
+    Thread standByTransitionThread =
+        new Thread(activeServices.standByTransitionRunnable);
     standByTransitionThread.setName("StandByTransitionThread");
     standByTransitionThread.start();
   }
@@ -1201,7 +1201,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
       @Override
       public Void run() throws Exception {
         try {
-          standByTransitionRunnable = new StandByTransitionRunnable();
           startActiveServices();
           return null;
         } catch (Exception e) {

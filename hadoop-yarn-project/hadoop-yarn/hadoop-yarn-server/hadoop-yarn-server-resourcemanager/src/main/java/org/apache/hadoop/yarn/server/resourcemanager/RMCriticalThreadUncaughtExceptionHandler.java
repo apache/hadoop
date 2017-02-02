@@ -50,7 +50,7 @@ public class RMCriticalThreadUncaughtExceptionHandler
     LOG.fatal("Critical thread " + t.getName() + " crashed!", e);
 
     if (HAUtil.isHAEnabled(rmContext.getYarnConfiguration())) {
-       rmContext.getResourceManager().handleTransitionToStandByInNewThread();
+      rmContext.getResourceManager().handleTransitionToStandByInNewThread();
     } else {
       rmContext.getDispatcher().getEventHandler().handle(
           new RMFatalEvent(RMFatalEventType.CRITICAL_THREAD_CRASH,
