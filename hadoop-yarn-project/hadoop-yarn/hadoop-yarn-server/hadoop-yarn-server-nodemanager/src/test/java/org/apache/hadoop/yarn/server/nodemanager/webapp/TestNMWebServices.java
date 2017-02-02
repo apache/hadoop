@@ -377,8 +377,9 @@ public class TestNMWebServices extends JerseyTestBase {
     ClientResponse response = r.path(filename)
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     String responseText = response.getEntity(String.class);
-    assertEquals(logMessage, responseText);
-    int fullTextSize = responseText.getBytes().length;
+    String responseLogMessage = getLogContext(responseText);
+    assertEquals(logMessage, responseLogMessage);
+    int fullTextSize = responseLogMessage.getBytes().length;
 
     // specify how many bytes we should get from logs
     // specify a position number, it would get the first n bytes from
@@ -387,9 +388,10 @@ public class TestNMWebServices extends JerseyTestBase {
         .queryParam("size", "5")
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
-    assertEquals(5, responseText.getBytes().length);
-    assertEquals(new String(logMessage.getBytes(), 0, 5), responseText);
-    assertTrue(fullTextSize >= responseText.getBytes().length);
+    responseLogMessage = getLogContext(responseText);
+    assertEquals(5, responseLogMessage.getBytes().length);
+    assertEquals(new String(logMessage.getBytes(), 0, 5), responseLogMessage);
+    assertTrue(fullTextSize >= responseLogMessage.getBytes().length);
 
     // specify the bytes which is larger than the actual file size,
     // we would get the full logs
@@ -397,8 +399,9 @@ public class TestNMWebServices extends JerseyTestBase {
         .queryParam("size", "10000")
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
-    assertEquals(fullTextSize, responseText.getBytes().length);
-    assertEquals(logMessage, responseText);
+    responseLogMessage = getLogContext(responseText);
+    assertEquals(fullTextSize, responseLogMessage.getBytes().length);
+    assertEquals(logMessage, responseLogMessage);
 
     // specify a negative number, it would get the last n bytes from
     // container log
@@ -406,25 +409,28 @@ public class TestNMWebServices extends JerseyTestBase {
         .queryParam("size", "-5")
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
-    assertEquals(5, responseText.getBytes().length);
+    responseLogMessage = getLogContext(responseText);
+    assertEquals(5, responseLogMessage.getBytes().length);
     assertEquals(new String(logMessage.getBytes(),
-        logMessage.getBytes().length - 5, 5), responseText);
-    assertTrue(fullTextSize >= responseText.getBytes().length);
+        logMessage.getBytes().length - 5, 5), responseLogMessage);
+    assertTrue(fullTextSize >= responseLogMessage.getBytes().length);
 
     response = r.path(filename)
         .queryParam("size", "-10000")
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
+    responseLogMessage = getLogContext(responseText);
     assertEquals("text/plain", response.getType().toString());
-    assertEquals(fullTextSize, responseText.getBytes().length);
-    assertEquals(logMessage, responseText);
+    assertEquals(fullTextSize, responseLogMessage.getBytes().length);
+    assertEquals(logMessage, responseLogMessage);
 
     // ask and download it
     response = r.path(filename)
         .queryParam("format", "octet-stream")
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
-    assertEquals(logMessage, responseText);
+    responseLogMessage = getLogContext(responseText);
+    assertEquals(logMessage, responseLogMessage);
     assertEquals(200, response.getStatus());
     assertEquals("application/octet-stream", response.getType().toString());
 
@@ -466,10 +472,11 @@ public class TestNMWebServices extends JerseyTestBase {
         TestNMWebServices.class.getSimpleName() + "temp-log-dir");
     try {
       String aggregatedLogFile = filename + "-aggregated";
+      String aggregatedLogMessage = "This is aggregated ;og.";
       TestContainerLogsUtils.createContainerLogFileInRemoteFS(
           nmContext.getConf(), FileSystem.get(nmContext.getConf()),
           tempLogDir.getAbsolutePath(), containerId, nmContext.getNodeId(),
-          aggregatedLogFile, "user", logMessage, true);
+          aggregatedLogFile, "user", aggregatedLogMessage, true);
       r1 = resource();
       response = r1.path("ws").path("v1").path("node")
           .path("containers").path(containerIdStr)
@@ -492,6 +499,21 @@ public class TestNMWebServices extends JerseyTestBase {
           assertEquals(meta.get(0).getFileName(), filename);
         }
       }
+
+      // Test whether we could get aggregated log as well
+      TestContainerLogsUtils.createContainerLogFileInRemoteFS(
+          nmContext.getConf(), FileSystem.get(nmContext.getConf()),
+          tempLogDir.getAbsolutePath(), containerId, nmContext.getNodeId(),
+          filename, "user", aggregatedLogMessage, true);
+      response = r.path(filename)
+          .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+      responseText = response.getEntity(String.class);
+      assertTrue(responseText.contains("LogType: "
+          + ContainerLogType.AGGREGATED));
+      assertTrue(responseText.contains(aggregatedLogMessage));
+      assertTrue(responseText.contains("LogType: "
+              + ContainerLogType.LOCAL));
+      assertTrue(responseText.contains(logMessage));
     } finally {
       FileUtil.fullyDelete(tempLogDir);
     }
@@ -501,7 +523,7 @@ public class TestNMWebServices extends JerseyTestBase {
     response = r.path(filename).accept(MediaType.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
-    assertEquals(logMessage, responseText);
+    assertTrue(responseText.contains(logMessage));
   }
 
   public void verifyNodesXML(NodeList nodes) throws JSONException, Exception {
@@ -591,4 +613,11 @@ public class TestNMWebServices extends JerseyTestBase {
         YarnVersionInfo.getVersion(), resourceManagerVersion);
   }
 
+  private String getLogContext(String fullMessage) {
+    String prefix = "LogContents:\n";
+    String postfix = "End of LogFile:";
+    int prefixIndex = fullMessage.indexOf(prefix) + prefix.length();
+    int postfixIndex = fullMessage.indexOf(postfix);
+    return fullMessage.substring(prefixIndex, postfixIndex);
+  }
 }
