@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -41,6 +42,9 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriInfo;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.http.JettyUtils;
@@ -57,6 +61,7 @@ import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainerInfo;
@@ -64,6 +69,7 @@ import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMContainerLogsInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
+import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.WebApp;
@@ -74,6 +80,7 @@ import com.google.inject.Singleton;
 @Singleton
 @Path("/ws/v1/node")
 public class NMWebServices {
+  private static final Log LOG = LogFactory.getLog(NMWebServices.class);
   private Context nmContext;
   private ResourceView rview;
   private WebApp webapp;
@@ -330,17 +337,32 @@ public class NMWebServices {
   @Produces({ MediaType.TEXT_PLAIN + "; " + JettyUtils.UTF_8 })
   @Public
   @Unstable
-  public Response getLogs(@PathParam("containerid") String containerIdStr,
+  public Response getLogs(
+      @PathParam("containerid") final String containerIdStr,
       @PathParam("filename") String filename,
       @QueryParam("format") String format,
       @QueryParam("size") String size) {
-    ContainerId containerId;
+    ContainerId tempContainerId;
     try {
-      containerId = ContainerId.fromString(containerIdStr);
+      tempContainerId = ContainerId.fromString(containerIdStr);
     } catch (IllegalArgumentException ex) {
       return Response.status(Status.BAD_REQUEST).build();
     }
-    
+    final ContainerId containerId = tempContainerId;
+    boolean tempIsRunning = false;
+    // check what is the status for container
+    try {
+      Container container = nmContext.getContainers().get(containerId);
+      tempIsRunning = (container.getContainerState() == ContainerState.RUNNING);
+    } catch (Exception ex) {
+      // This NM does not have this container any more. We
+      // assume the container has already finished.
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Can not find the container:" + containerId
+            + " in this node.");
+      }
+    }
+    final boolean isRunning = tempIsRunning;
     File logFile = null;
     try {
       logFile = ContainerLogsUtils.getContainerLogFile(
@@ -351,6 +373,8 @@ public class NMWebServices {
       return Response.serverError().entity(ex.getMessage()).build();
     }
     final long bytes = parseLongParam(size);
+    final String lastModifiedTime = Times.format(logFile.lastModified());
+    final String outputFileName = filename;
     String contentType = WebAppUtils.getDefaultLogContentType();
     if (format != null && !format.isEmpty()) {
       contentType = WebAppUtils.getSupportedLogContentType(format);
@@ -374,39 +398,40 @@ public class NMWebServices {
           try {
             int bufferSize = 65536;
             byte[] buf = new byte[bufferSize];
-            long toSkip = 0;
-            long totalBytesToRead = fileLength;
-            long skipAfterRead = 0;
-            if (bytes < 0) {
-              long absBytes = Math.abs(bytes);
-              if (absBytes < fileLength) {
-                toSkip = fileLength - absBytes;
-                totalBytesToRead = absBytes;
-              }
-              org.apache.hadoop.io.IOUtils.skipFully(fis, toSkip);
+            LogToolUtils.outputContainerLog(containerId.toString(),
+                nmContext.getNodeId().toString(), outputFileName, fileLength,
+                bytes, lastModifiedTime, fis, os, buf, ContainerLogType.LOCAL);
+            StringBuilder sb = new StringBuilder();
+            String endOfFile = "End of LogFile:" + outputFileName;
+            sb.append(endOfFile + ".");
+            if (isRunning) {
+              sb.append("This log file belongs to a running container ("
+                  + containerIdStr + ") and so may not be complete." + "\n");
             } else {
-              if (bytes < fileLength) {
-                totalBytesToRead = bytes;
-                skipAfterRead = fileLength - bytes;
+              sb.append("\n");
+            }
+            sb.append(StringUtils.repeat("*", endOfFile.length() + 50)
+                + "\n\n");
+            os.write(sb.toString().getBytes(Charset.forName("UTF-8")));
+            // If we have aggregated logs for this container,
+            // output the aggregation logs as well.
+            ApplicationId appId = containerId.getApplicationAttemptId()
+                .getApplicationId();
+            Application app = nmContext.getApplications().get(appId);
+            String appOwner = app == null ? null : app.getUser();
+            try {
+              LogToolUtils.outputAggregatedContainerLog(nmContext.getConf(),
+                  appId, appOwner, containerId.toString(),
+                  nmContext.getNodeId().toString(), outputFileName, bytes,
+                  os, buf);
+            } catch (Exception ex) {
+              // Something wrong when we try to access the aggregated log.
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Can not access the aggregated log for "
+                    + "the container:" + containerId);
+                LOG.debug(ex.getMessage());
               }
             }
-
-            long curRead = 0;
-            long pendingRead = totalBytesToRead - curRead;
-            int toRead = pendingRead > buf.length ? buf.length
-                : (int) pendingRead;
-            int len = fis.read(buf, 0, toRead);
-            while (len != -1 && curRead < totalBytesToRead) {
-              os.write(buf, 0, len);
-              curRead += len;
-
-              pendingRead = totalBytesToRead - curRead;
-              toRead = pendingRead > buf.length ? buf.length
-                  : (int) pendingRead;
-              len = fis.read(buf, 0, toRead);
-            }
-            org.apache.hadoop.io.IOUtils.skipFully(fis, skipAfterRead);
-            os.flush();
           } finally {
             IOUtils.closeQuietly(fis);
           }

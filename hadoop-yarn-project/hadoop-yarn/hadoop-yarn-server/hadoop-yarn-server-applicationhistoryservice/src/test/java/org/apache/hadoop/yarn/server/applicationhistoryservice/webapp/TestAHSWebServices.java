@@ -35,7 +35,7 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
-
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -584,7 +584,10 @@ public class TestAHSWebServices extends JerseyTestBase {
     responseText = response.getEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId1ForApp100));
     int fullTextSize = responseText.getBytes().length;
-    int tailTextSize = "\nEnd of LogType:syslog\n".getBytes().length;
+    String tailEndSeparator = StringUtils.repeat("*",
+        "End of LogFile:syslog".length() + 50) + "\n\n";
+    int tailTextSize = "\nEnd of LogFile:syslog\n".getBytes().length
+        + tailEndSeparator.getBytes().length;
 
     String logMessage = "Hello." + containerId1ForApp100;
     int fileContentSize = logMessage.getBytes().length;
@@ -685,6 +688,28 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertTrue(redirectURL.contains(containerId1.toString()));
     assertTrue(redirectURL.contains("/logs/" + fileName));
     assertTrue(redirectURL.contains("user.name=" + user));
+
+    // If we can not container information from ATS, we would try to
+    // get aggregated log from remote FileSystem.
+    ContainerId containerId1000 = ContainerId.newContainerId(
+        appAttemptId, 1000);
+    String content = "Hello." + containerId1000;
+    NodeId nodeId = NodeId.newInstance("test host", 100);
+    TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
+        rootLogDir, containerId1000, nodeId, fileName, user, content, true);
+    r = resource();
+    ClientResponse response = r.path("ws").path("v1")
+        .path("applicationhistory").path("containerlogs")
+        .path(containerId1000.toString()).path(fileName)
+        .queryParam("user.name", user)
+        .accept(MediaType.TEXT_PLAIN)
+        .get(ClientResponse.class);
+    String responseText = response.getEntity(String.class);
+    assertTrue(responseText.contains(content));
+    // Also test whether we output the empty local container log, and give
+    // the warning message.
+    assertTrue(responseText.contains("LogType: " + ContainerLogType.LOCAL));
+    assertTrue(responseText.contains(AHSWebServices.getNoRedirectWarning()));
   }
 
   @Test(timeout = 10000)
