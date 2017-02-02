@@ -192,13 +192,16 @@ function hdfscmd_case
     oiv_legacy)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer
     ;;
+    oz)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.Shell
+    ;;
     portmap)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME=org.apache.hadoop.portmap.Portmap
     ;;
     scm)
-      supportdaemonization="true"
-      CLASS='org.apache.hadoop.ozone.storage.StorageContainerManager'
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.ozone.storage.StorageContainerManager'
       hadoop_debug "Appending HADOOP_SCM_OPTS onto HADOOP_OPTS"
       HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_SCM_OPTS}"
     ;;    
