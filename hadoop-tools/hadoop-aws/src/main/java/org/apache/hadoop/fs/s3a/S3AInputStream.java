@@ -102,12 +102,12 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
   private long contentRangeStart;
 
   public S3AInputStream(S3ObjectAttributes s3Attributes,
-                        long contentLength,
-                        AmazonS3 client,
-                        FileSystem.Statistics stats,
-                        S3AInstrumentation instrumentation,
-                        long readahead,
-                        S3AInputPolicy inputPolicy) {
+      long contentLength,
+      AmazonS3 client,
+      FileSystem.Statistics stats,
+      S3AInstrumentation instrumentation,
+      long readahead,
+      S3AInputPolicy inputPolicy) {
     Preconditions.checkArgument(StringUtils.isNotEmpty(s3Attributes.getBucket()), "No Bucket");
     Preconditions.checkArgument(StringUtils.isNotEmpty(s3Attributes.getKey()), "No Key");
     Preconditions.checkArgument(contentLength >= 0, "Negative content length");

@@ -81,7 +81,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     rm(getFileSystem(), path, false, false);
   }
 
-  private String createFilename(int len) {
+  protected String createFilename(int len) {
     return String.format("%s-%04x", methodName.getMethodName(), len);
   }
 

@@ -233,15 +233,13 @@ public class S3AFileSystem extends FileSystem {
       serverSideEncryptionAlgorithm = S3AEncryptionMethods.getMethod(
           conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM));
       if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
-          StringUtils.isBlank(S3AUtils.getServerSideEncryptionKey(getConf()))) {
-        throw new IOException("SSE-C is enabled and no encryption key " +
-          "is provided.");
+          StringUtils.isBlank(getServerSideEncryptionKey(getConf()))) {
+        throw new IOException(Constants.SSE_C_NO_KEY_ERROR);
       }
       if(S3AEncryptionMethods.SSE_S3.equals(serverSideEncryptionAlgorithm) &&
-          StringUtils.isNotBlank(S3AUtils.getServerSideEncryptionKey(
+          StringUtils.isNotBlank(getServerSideEncryptionKey(
             getConf()))) {
-        throw new IOException("SSE-S3 is configured and an encryption key is " +
-          "provided");
+        throw new IOException(Constants.SSE_S3_WITH_KEY_ERROR);
       }
       LOG.debug("Using encryption {}", serverSideEncryptionAlgorithm);
       inputPolicy = S3AInputPolicy.getPolicy(
@@ -533,7 +531,7 @@ public class S3AFileSystem extends FileSystem {
           bucket,
           pathToKey(f),
           serverSideEncryptionAlgorithm,
-          S3AUtils.getServerSideEncryptionKey(getConf())),
+          getServerSideEncryptionKey(getConf())),
             fileStatus.getLen(),
             s3,
             statistics,
@@ -919,7 +917,7 @@ public class S3AFileSystem extends FileSystem {
         new GetObjectMetadataRequest(bucket, key);
     //SSE-C requires to be filled in if enabled for object metadata
     if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
-        StringUtils.isNotBlank(S3AUtils.getServerSideEncryptionKey(getConf()))){
+        StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))){
       request.setSSECustomerKey(generateSSECustomerKey());
     }
     ObjectMetadata meta = s3.getObjectMetadata(request);
@@ -1824,7 +1822,7 @@ public class S3AFileSystem extends FileSystem {
       req.setSSEAwsKeyManagementParams(generateSSEAwsKeyParams());
       break;
     case SSE_C:
-      if (StringUtils.isNotBlank(S3AUtils.getServerSideEncryptionKey(getConf()))) {
+      if (StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))) {
         //at the moment, only supports copy using the same key
         req.setSSECustomerKey(generateSSECustomerKey());
       }
@@ -1839,11 +1837,11 @@ public class S3AFileSystem extends FileSystem {
     switch (serverSideEncryptionAlgorithm) {
     case SSE_KMS:
       copyObjectRequest.setSSEAwsKeyManagementParams(
-         generateSSEAwsKeyParams()
+          generateSSEAwsKeyParams()
       );
       break;
     case SSE_C:
-      if (StringUtils.isNotBlank(S3AUtils.getServerSideEncryptionKey(getConf()))) {
+      if (StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))) {
         //at the moment, only supports copy using the same key
         SSECustomerKey customerKey = generateSSECustomerKey();
         copyObjectRequest.setSourceSSECustomerKey(customerKey);
@@ -1860,7 +1858,7 @@ public class S3AFileSystem extends FileSystem {
       request.setSSEAwsKeyManagementParams(generateSSEAwsKeyParams());
       break;
     case SSE_C:
-      if (StringUtils.isNotBlank(S3AUtils.getServerSideEncryptionKey(getConf()))) {
+      if (StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))) {
         request.setSSECustomerKey(generateSSECustomerKey());
       }
       break;
@@ -1878,10 +1876,10 @@ public class S3AFileSystem extends FileSystem {
     //Use specified key, otherwise default to default master aws/s3 key by AWS
     SSEAwsKeyManagementParams sseAwsKeyManagementParams =
         new SSEAwsKeyManagementParams();
-    if (StringUtils.isNotBlank(S3AUtils.getServerSideEncryptionKey(getConf()))) {
+    if (StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))) {
       sseAwsKeyManagementParams =
         new SSEAwsKeyManagementParams(
-          S3AUtils.getServerSideEncryptionKey(getConf())
+          getServerSideEncryptionKey(getConf())
         );
     }
     return sseAwsKeyManagementParams;
@@ -1889,7 +1887,7 @@ public class S3AFileSystem extends FileSystem {
 
   private SSECustomerKey generateSSECustomerKey() {
     SSECustomerKey customerKey = new SSECustomerKey(
-        S3AUtils.getServerSideEncryptionKey(getConf())
+        getServerSideEncryptionKey(getConf())
     );
     return customerKey;
   }

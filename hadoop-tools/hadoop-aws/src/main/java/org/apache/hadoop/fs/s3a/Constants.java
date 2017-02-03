@@ -307,4 +307,13 @@ public final class Constants {
    */
   @InterfaceAudience.Private
   public static final int MAX_MULTIPART_COUNT = 10000;
+
+  @InterfaceAudience.Private
+  public static final String SSE_C_NO_KEY_ERROR = S3AEncryptionMethods.SSE_C
+      .getMethod() +" is enabled and no encryption key is provided.";
+
+
+  @InterfaceAudience.Private
+  public static final String SSE_S3_WITH_KEY_ERROR = S3AEncryptionMethods.SSE_S3
+      .getMethod() +" is configured and an " + "encryption key is provided";
 }
