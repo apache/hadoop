@@ -58,7 +58,8 @@ KMS_SSL_TRUSTSTORE_PASS=`echo $CATALINA_OPTS | grep -o 'trustStorePassword=[^ ]*
 CATALINA_OPTS_DISP=`echo ${CATALINA_OPTS} | sed -e 's/trustStorePassword=[^ ]*/trustStorePassword=***/'`
 print "Using   CATALINA_OPTS:       ${CATALINA_OPTS_DISP}"
 
-catalina_opts="-Dkms.home.dir=${KMS_HOME}";
+catalina_opts="-Dproc_kms"
+catalina_opts="${catalina_opts} -Dkms.home.dir=${KMS_HOME}";
 catalina_opts="${catalina_opts} -Dkms.config.dir=${KMS_CONFIG}";
 catalina_opts="${catalina_opts} -Dkms.log.dir=${KMS_LOG}";
 catalina_opts="${catalina_opts} -Dkms.temp.dir=${KMS_TEMP}";
