@@ -146,7 +146,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
     return Resources.createResource(
         divideAndCeil(numerator.getMemory(), denominator),
         divideAndCeil(numerator.getVirtualCores(), denominator),
-        divideAndCeil(numerator.getGPUs(), denominator)
+        divideAndCeil(numerator.getGPUs(), denominator),
+        numerator.getGPULocality()
         );
   }
 
@@ -168,8 +169,9 @@ public class DominantResourceCalculator extends ResourceCalculator {
         Math.max(r.getGPUs(), minimumResource.getGPUs()),
         stepFactor.getGPUs()),
       maximumResource.getGPUs());
+
     return Resources.createResource(normalizedMemory,
-      normalizedCores, normalizedGPUs);
+      normalizedCores, normalizedGPUs, r.getGPULocality());
   }
 
   @Override
@@ -177,7 +179,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
     return Resources.createResource(
         roundUp(r.getMemory(), stepFactor.getMemory()), 
         roundUp(r.getVirtualCores(), stepFactor.getVirtualCores()),
-        roundUp(r.getGPUs(), stepFactor.getGPUs())
+        roundUp(r.getGPUs(), stepFactor.getGPUs()),
+        r.getGPULocality()
         );
   }
 
@@ -186,7 +189,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
     return Resources.createResource(
         roundDown(r.getMemory(), stepFactor.getMemory()),
         roundDown(r.getVirtualCores(), stepFactor.getVirtualCores()),
-        roundDown(r.getGPUs(), stepFactor.getGPUs())
+        roundDown(r.getGPUs(), stepFactor.getGPUs()),
+        r.getGPULocality()
         );
   }
 
@@ -201,7 +205,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
             stepFactor.getVirtualCores()),
         roundUp(
             (int)Math.ceil(r.getGPUs() * by),
-            stepFactor.getGPUs())
+            stepFactor.getGPUs()),
+        r.getGPULocality()
         );
   }
 
@@ -220,7 +225,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
         roundDown(
             (int)(r.getGPUs() * by),
             stepFactor.getGPUs()
-            )
+            ),
+        r.getGPULocality()
         );
   }
 

@@ -52,14 +52,17 @@ public abstract class SchedulerNode {
 
   private static final Log LOG = LogFactory.getLog(SchedulerNode.class);
 
-  private Resource availableResource = Resource.newInstance(0, 0, 0);
-  private Resource usedResource = Resource.newInstance(0, 0, 0);
+  // MJTHIS: Make sure these three are tracked correctly. Resources are added or substracted for a node
+  // , so arithmetic operations used here should factor in GPU location properly.
+  private Resource availableResource = Resource.newInstance(0, 0, 0, 0);
+  private Resource usedResource = Resource.newInstance(0, 0, 0, 0);
   private Resource totalResourceCapability;
   private RMContainer reservedContainer;
   private volatile int numContainers;
 
 
   /* set of containers that are allocated containers */
+  // MJTHIS: FIXME: this is maintained weirdly. Consecutive put changes existing ones as well.
   private final Map<ContainerId, RMContainer> launchedContainers =
       new HashMap<ContainerId, RMContainer>();
 
@@ -95,7 +98,7 @@ public abstract class SchedulerNode {
    */
   public synchronized void setTotalResource(Resource resource){
     this.totalResourceCapability = resource;
-    this.availableResource = Resources.subtract(totalResourceCapability,
+    this.availableResource = Resources.subtractWithLocality(totalResourceCapability,
       this.usedResource);
   }
   
@@ -226,8 +229,11 @@ public abstract class SchedulerNode {
           + rmNode.getNodeAddress());
       return;
     }
-    Resources.addTo(availableResource, resource);
-    Resources.subtractFrom(usedResource, resource);
+    Resources.subtractFromWithLocality(usedResource, resource);
+    Resources.addToWithLocality(availableResource, resource);
+
+    //assert Integer.bitCount(availableResource.getGPULocality()) == availableResource.getGPUs();
+    //assert Integer.bitCount(usedResource.getGPULocality()) == usedResource.getGPUs();
   }
 
   private synchronized void deductAvailableResource(Resource resource) {
@@ -236,8 +242,11 @@ public abstract class SchedulerNode {
           + rmNode.getNodeAddress());
       return;
     }
-    Resources.subtractFrom(availableResource, resource);
-    Resources.addTo(usedResource, resource);
+    Resources.addToWithLocality(usedResource, resource);
+    Resources.subtractFromWithLocality(availableResource, resource);
+
+    //assert Integer.bitCount(availableResource.getGPULocality()) == availableResource.getGPUs();
+    //assert Integer.bitCount(usedResource.getGPULocality()) == usedResource.getGPUs();
   }
 
   /**
@@ -285,6 +294,7 @@ public abstract class SchedulerNode {
       return;
     }
     allocateContainer(rmContainer);
+    // MJTHIS: FIXME: don't know how to deal with node recovery case yet.
   }
   
   public Set<String> getLabels() {

@@ -51,6 +51,7 @@ public class MockNM {
   private final int memory;
   private final int vCores;
   private final int GPUs;
+  private int GPULocation;
   private ResourceTrackerService resourceTracker;
   private int httpPort = 2;
   private MasterKey currentContainerTokenMasterKey;
@@ -62,14 +63,16 @@ public class MockNM {
     this(nodeIdStr, memory,
         Math.max(1, (memory * YarnConfiguration.DEFAULT_NM_VCORES) /
             YarnConfiguration.DEFAULT_NM_PMEM_MB),
-        Math.max(1, (memory * YarnConfiguration.DEFAULT_NM_GPUS) /
-            YarnConfiguration.DEFAULT_NM_PMEM_MB),
+        Math.min(Math.max(1, (memory * YarnConfiguration.DEFAULT_NM_GPUS) /
+            YarnConfiguration.DEFAULT_NM_PMEM_MB), 32),   // Maximum number of GPUs expressed by bit vector
         resourceTracker);
+    GPULocation = initGPULocation(GPUs);
   }
 
   public MockNM(String nodeIdStr, int memory, int vcores, int GPUs,
       ResourceTrackerService resourceTracker) {
     this(nodeIdStr, memory, vcores, GPUs, resourceTracker, YarnVersionInfo.getVersion());
+    GPULocation = initGPULocation(GPUs);
   }
 
   public MockNM(String nodeIdStr, int memory, int vcores, int GPUs,
@@ -81,6 +84,18 @@ public class MockNM {
     this.version = version;
     String[] splits = nodeIdStr.split(":");
     nodeId = BuilderUtils.newNodeId(splits[0], Integer.parseInt(splits[1]));
+    GPULocation = initGPULocation(GPUs);
+  }
+
+  private int initGPULocation(int GPUs)
+  {
+    int result = 0;
+    int pos = 1;
+    while (Integer.bitCount(result) < GPUs) {
+      result = result | pos;
+      pos = pos << 1;
+    }
+    return result;
   }
 
   public NodeId getNodeId() {
@@ -123,7 +138,7 @@ public class MockNM {
         RegisterNodeManagerRequest.class);
     req.setNodeId(nodeId);
     req.setHttpPort(httpPort);
-    Resource resource = BuilderUtils.newResource(memory, vCores, GPUs);
+    Resource resource = BuilderUtils.newResource(memory, vCores, GPUs, GPULocation);
     req.setResource(resource);
     req.setContainerStatuses(containerReports);
     req.setNMVersion(version);
@@ -209,5 +224,9 @@ public class MockNM {
 
   public int getGPUs() {
     return GPUs;
+  }
+
+  public int getGPULocation() {
+    return GPULocation;
   }
 }

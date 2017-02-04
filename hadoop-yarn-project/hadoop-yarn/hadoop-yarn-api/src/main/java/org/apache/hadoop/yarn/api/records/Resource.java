@@ -61,6 +61,17 @@ public abstract class Resource implements Comparable<Resource> {
     return resource;
   }
 
+  @Public
+  @Stable
+  public static Resource newInstance(int memory, int vCores, int GPUs, int GPULocality) {
+    Resource resource = Records.newRecord(Resource.class);
+    resource.setMemory(memory);
+    resource.setVirtualCores(vCores);
+    resource.setGPUs(GPUs);
+    resource.setGPULocality(GPULocality);
+    return resource;
+  }
+
   /**
    * Get <em>memory</em> of the resource.
    * @return <em>memory</em> of the resource
@@ -134,6 +145,33 @@ public abstract class Resource implements Comparable<Resource> {
   @Evolving
   public abstract void setGPUs(int GPUs);
 
+  /**
+   * Get <em> GPU locality information </em>.
+   *
+   * This abstracts GPU locality preference. Now, we have two types supported.
+   * 0 means that GPUs can be placed anywhere in the machine, and
+   * 1 means that GPUs are preferred to be placed in the same socket of the machine.
+   *
+   * @return <em>GPU locality information</em>
+   */
+  @Public
+  @Evolving
+  public abstract int getGPULocality();
+
+  /**
+   * Set <em>GPU allocation information</em>.
+   *
+   * This represents where assigned GPUs are placed using bit vector. Each bit indicates GPU id.
+   * Bits set as 1 mean that corresponding GPUs are assigned, and
+   * Bits set as 0 mean that corresponding GPUs are not unassigned.
+   * The sum of 1s should equal to the number of GPUs.
+   *
+   * @param GPULocality <em>GPU locality information</em>
+   */
+  @Public
+  @Evolving
+  public abstract void setGPULocality(int GPULocality);
+
   @Override
   public int hashCode() {
     final int prime = 263167;
@@ -155,7 +193,8 @@ public abstract class Resource implements Comparable<Resource> {
     Resource other = (Resource) obj;
     if (getMemory() != other.getMemory() ||
         getVirtualCores() != other.getVirtualCores() ||
-        getGPUs() != other.getGPUs()) {
+        getGPUs() != other.getGPUs() ||
+        getGPULocality() != other.getGPULocality()) {
       return false;
     }
     return true;
@@ -163,6 +202,6 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Override
   public String toString() {
-    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores() + ", GPUs:" + getGPUs() + ">";
+    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores() + ", GPUs:" + getGPUs() + ", GPULocality:" + getGPULocality() + ">";
   }
 }

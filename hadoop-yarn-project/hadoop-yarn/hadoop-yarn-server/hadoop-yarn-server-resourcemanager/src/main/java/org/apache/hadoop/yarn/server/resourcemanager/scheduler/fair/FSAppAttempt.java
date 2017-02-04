@@ -315,6 +315,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   synchronized public RMContainer allocate(NodeType type, FSSchedulerNode node,
       Priority priority, ResourceRequest request,
       Container container) {
+    // MJTHIS: This function is called by assignContainer() in down there.
+
     // Update allowed locality level
     NodeType allowed = allowedLocalityLevel.get(priority);
     if (allowed != null) {
@@ -496,6 +498,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   private Resource assignContainer(
       FSSchedulerNode node, ResourceRequest request, NodeType type,
       boolean reserved) {
+    // MJTHIS: called by assignContainer just below.
 
     // How much does this request need?
     Resource capability = request.getCapability();
@@ -510,8 +513,11 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       container = createContainer(node, capability, request.getPriority());
     }
 
+    // MJTHIS: this function is basically called for all the runnableApps in the queue. We check fit-in
+    // satisfied with GPU locality. If not fitting in, we mostly create a container.
+
     // Can we allocate a container on this node?
-    if (Resources.fitsIn(capability, available)) {
+    if (Resources.fitsInWithLocality(capability, available, node.getTotalResource())) {
       // Inform the application of the new container for this request
       RMContainer allocatedContainer =
           allocate(type, node, request.getPriority(), request, container);
@@ -527,6 +533,9 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       if (reserved) {
         unreserve(request.getPriority(), node);
       }
+
+      int allocated = Resources.allocateGPUs(capability, available, node.getTotalResource());
+      container.setGPULocation(allocated);
 
       // Inform the node
       node.allocateContainer(allocatedContainer);
@@ -555,6 +564,18 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   }
 
   private Resource assignContainer(FSSchedulerNode node, boolean reserved) {
+    // MJTHIS: this function is specific to app attempt, and selects a request to schedule for the node.
+    // As this function is called for all runnableApps in all leaf queues, it's okay to fall in scheduling
+    // the request.
+    //
+    // This function is called by several places. attemptScheduling() in FairScheduler.jave
+    // seems a main entry point.
+
+    // MJTHIS: However, we have to consider what if for all requests (or one starving) 'capability' may fit in
+    // 'available', but GPU locality can not be satisfied. Do we have to worry about potential high scheduling
+    // delay or starvation by this? Now, everything is without history; scheduling is work-conserving, so 'node'
+    // is just one that issues the heartbeat message.
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("Node offered to app: " + getName() + " reserved: " + reserved);
     }
@@ -663,8 +684,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     // Fail early if the reserved container won't fit.
     // Note that we have an assumption here that there's only one container size
     // per priority.
-    if (!Resources.fitsIn(node.getReservedContainer().getReservedResource(),
-        node.getAvailableResource())) {
+    if (!Resources.fitsInWithLocality(node.getReservedContainer().getReservedResource(),
+        node.getAvailableResource(), node.getTotalResource())) {
       return Resources.none();
     }
 

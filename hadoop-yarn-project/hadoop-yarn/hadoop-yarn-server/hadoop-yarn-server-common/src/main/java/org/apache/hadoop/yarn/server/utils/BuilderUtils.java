@@ -401,6 +401,16 @@ public class BuilderUtils {
     resource.setMemory(memory);
     resource.setVirtualCores(vCores);
     resource.setGPUs(GPUs);
+    resource.setGPULocality(0);
+    return resource;
+  }
+
+  public static Resource newResource(int memory, int vCores, int GPUs, int GPULocality) {
+    Resource resource = recordFactory.newRecordInstance(Resource.class);
+    resource.setMemory(memory);
+    resource.setVirtualCores(vCores);
+    resource.setGPUs(GPUs);
+    resource.setGPULocality(GPULocality);
     return resource;
   }
 

@@ -87,7 +87,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     // Add one node
     String host = "127.0.0.1";
     RMNode node1 = MockNodes.newNodeInfo(
-        1, Resources.createResource(4096, 4, 4), 1, host);
+        1, Resources.createResource(4096, 4, 4, 15), 1, host);
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
     NodeUpdateSchedulerEvent nodeUpdateEvent = new NodeUpdateSchedulerEvent(node1);

@@ -114,6 +114,20 @@ public class FairSchedulerTestBase {
     return request;
   }
 
+  protected ResourceRequest createResourceRequest(
+          int memory, int vcores, int GPUs, int GPULocality, String host, int priority, int numContainers,
+          boolean relaxLocality) {
+    ResourceRequest request = recordFactory.newRecordInstance(ResourceRequest.class);
+    request.setCapability(BuilderUtils.newResource(memory, vcores, GPUs, GPULocality));
+    request.setResourceName(host);
+    request.setNumContainers(numContainers);
+    Priority prio = recordFactory.newRecordInstance(Priority.class);
+    prio.setPriority(priority);
+    request.setPriority(prio);
+    request.setRelaxLocality(relaxLocality);
+    return request;
+  }
+
   /**
    * Creates a single container priority-1 request and submits to
    * scheduler.
@@ -170,6 +184,33 @@ public class FairSchedulerTestBase {
     scheduler.allocate(id, ask, new ArrayList<ContainerId>(), null, null);
     return id;
   }
+
+  protected ApplicationAttemptId createSchedulingRequest(
+          int memory, int vcores, int GPUs, int GPULocality, String queueId, String userId, int numContainers,
+          int priority) {
+    ApplicationAttemptId id = createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
+    scheduler.addApplication(id.getApplicationId(), queueId, userId, false);
+    // This conditional is for testAclSubmitApplication where app is rejected
+    // and no app is added.
+    if (scheduler.getSchedulerApplications().containsKey(id.getApplicationId())) {
+      scheduler.addApplicationAttempt(id, false, false);
+    }
+    List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
+    ResourceRequest request = createResourceRequest(memory, vcores, GPUs, GPULocality, ResourceRequest.ANY,
+            priority, numContainers, true);
+    ask.add(request);
+
+    RMApp rmApp = mock(RMApp.class);
+    RMAppAttempt rmAppAttempt = mock(RMAppAttempt.class);
+    when(rmApp.getCurrentAppAttempt()).thenReturn(rmAppAttempt);
+    when(rmAppAttempt.getRMAppAttemptMetrics()).thenReturn(
+            new RMAppAttemptMetrics(id, resourceManager.getRMContext()));
+    resourceManager.getRMContext().getRMApps()
+            .put(id.getApplicationId(), rmApp);
+
+    scheduler.allocate(id, ask, new ArrayList<ContainerId>(), null, null);
+    return id;
+  }
   
   protected ApplicationAttemptId createSchedulingRequest(String queueId,
       String userId, List<ResourceRequest> ask) {
@@ -205,6 +246,13 @@ public class FairSchedulerTestBase {
       int memory, int vcores, int GPUs, int priority, ApplicationAttemptId attId) {
     ResourceRequest request = createResourceRequest(memory, vcores, GPUs, ResourceRequest.ANY,
         priority, 1, true);
+    createSchedulingRequestExistingApplication(request, attId);
+  }
+
+  protected void createSchedulingRequestExistingApplication(
+          int memory, int vcores, int GPUs, int GPULocality, int priority, ApplicationAttemptId attId) {
+    ResourceRequest request = createResourceRequest(memory, vcores, GPUs, GPULocality, ResourceRequest.ANY,
+            priority, 1, true);
     createSchedulingRequestExistingApplication(request, attId);
   }
 

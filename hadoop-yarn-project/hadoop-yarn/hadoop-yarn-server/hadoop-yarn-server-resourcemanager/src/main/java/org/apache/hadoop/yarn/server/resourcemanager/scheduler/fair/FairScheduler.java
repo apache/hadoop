@@ -971,6 +971,10 @@ public class FairScheduler extends
    * Process a heartbeat update from a node.
    */
   private synchronized void nodeUpdate(RMNode nm) {
+    // MJTHIS: this is called by handle(), which processes various node events.
+    // 'nm' has totalCapability that is expected to show total resource capacity.
+    // More dynamic usage/availability information is stored at FSSchedulerNode below.
+
     long start = getClock().getTime();
     if (LOG.isDebugEnabled()) {
       LOG.debug("nodeUpdate: " + nm + " cluster capacity: " + clusterResource);
@@ -1065,6 +1069,10 @@ public class FairScheduler extends
 
   @VisibleForTesting
   synchronized void attemptScheduling(FSSchedulerNode node) {
+    // MJTHIS: two places that call this function:
+    // 1. continuousSchedulingAttempt() by ContinuousSchedulingThread that continuously attempts to schedule resources
+    // 2. nodeUpdate() that processes a heartbeat update from a node
+
     if (rmContext.isWorkPreservingRecoveryEnabled()
         && !rmContext.isSchedulerReadyForAllocatingContainers()) {
       return;
@@ -1112,6 +1120,7 @@ public class FairScheduler extends
       int assignedContainers = 0;
       while (node.getReservedContainer() == null) {
         boolean assignedContainer = false;
+        // MJTHIS: follow this, then it will reach assignContainer() at FSAppAttempt.java
         if (!queueMgr.getRootQueue().assignContainer(node).equals(
             Resources.none())) {
           assignedContainers++;

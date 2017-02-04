@@ -61,6 +61,16 @@ public class Resources {
     }
 
     @Override
+    public int getGPULocality() {
+      return 0;
+    }
+
+    @Override
+    public void setGPULocality(int GPULocality) {
+      throw new RuntimeException("NONE cannot be modified!");
+    }
+
+    @Override
     public int compareTo(Resource o) {
       int diff = 0 - o.getMemory();
       if (diff == 0) {
@@ -107,6 +117,16 @@ public class Resources {
     }
 
     @Override
+    public int getGPULocality() {
+      return Integer.MAX_VALUE;
+    }
+
+    @Override
+    public void setGPULocality(int GPULocality) {
+      throw new RuntimeException("NONE cannot be modified!");
+    }
+
+    @Override
     public int compareTo(Resource o) {
       int diff = 0 - o.getMemory();
       if (diff == 0) {
@@ -129,6 +149,16 @@ public class Resources {
     resource.setMemory(memory);
     resource.setVirtualCores(cores);
     resource.setGPUs(GPUs);
+    resource.setGPULocality(0);
+    return resource;
+  }
+
+  public static Resource createResource(int memory, int cores, int GPUs, int GPULocality) {
+    Resource resource = Records.newRecord(Resource.class);
+    resource.setMemory(memory);
+    resource.setVirtualCores(cores);
+    resource.setGPUs(GPUs);
+    resource.setGPULocality(GPULocality);
     return resource;
   }
 
@@ -141,7 +171,7 @@ public class Resources {
   }
 
   public static Resource clone(Resource res) {
-    return createResource(res.getMemory(), res.getVirtualCores(), res.getGPUs());
+    return createResource(res.getMemory(), res.getVirtualCores(), res.getGPUs(), res.getGPULocality());
   }
 
   public static Resource addTo(Resource lhs, Resource rhs) {
@@ -155,6 +185,23 @@ public class Resources {
     return addTo(clone(lhs), rhs);
   }
 
+  public static Resource addToWithLocality(Resource lhs, Resource rhs) {
+    lhs.setMemory(lhs.getMemory() + rhs.getMemory());
+    lhs.setVirtualCores(lhs.getVirtualCores() + rhs.getVirtualCores());
+    lhs.setGPUs(lhs.getGPUs() + rhs.getGPUs());
+
+    // MJTHIS: FIXME: not clear what to do with recovery
+    // Must uncomment it when you are running test cases
+    assert (lhs.getGPULocality() & rhs.getGPULocality()) == 0;
+    lhs.setGPULocality(lhs.getGPULocality() | rhs.getGPULocality());
+
+    return lhs;
+  }
+
+  public static Resource addWithLocality(Resource lhs, Resource rhs) {
+    return addToWithLocality(clone(lhs), rhs);
+  }
+
   public static Resource subtractFrom(Resource lhs, Resource rhs) {
     lhs.setMemory(lhs.getMemory() - rhs.getMemory());
     lhs.setVirtualCores(lhs.getVirtualCores() - rhs.getVirtualCores());
@@ -164,6 +211,23 @@ public class Resources {
 
   public static Resource subtract(Resource lhs, Resource rhs) {
     return subtractFrom(clone(lhs), rhs);
+  }
+
+  public static Resource subtractFromWithLocality(Resource lhs, Resource rhs) {
+    lhs.setMemory(lhs.getMemory() - rhs.getMemory());
+    lhs.setVirtualCores(lhs.getVirtualCores() - rhs.getVirtualCores());
+    lhs.setGPUs(lhs.getGPUs() - rhs.getGPUs());
+
+    // MJTHIS: FIXME: not clear what to do with recovery
+    // Must uncomment it when you are running test cases
+    assert (lhs.getGPULocality() | rhs.getGPULocality()) == lhs.getGPULocality();
+    lhs.setGPULocality(lhs.getGPULocality() & ~rhs.getGPULocality());
+
+    return lhs;
+  }
+
+  public static Resource subtractWithLocality(Resource lhs, Resource rhs) {
+    return subtractFromWithLocality(clone(lhs), rhs);
   }
 
   public static Resource negate(Resource resource) {
@@ -287,6 +351,31 @@ public class Resources {
         smaller.getVirtualCores() <= bigger.getVirtualCores() &&
         smaller.getGPUs() <= bigger.getGPUs();
   }
+
+  public static boolean fitsInWithLocality(Resource smaller, Resource bigger, Resource all) {
+    boolean fitsIn = fitsIn(smaller, bigger);
+    if (fitsIn == true) {
+      if (smaller.getGPULocality() > 0) {
+        if(searchGPUs(smaller.getGPUs(), bigger.getGPULocality(), all.getGPULocality(), true, false) != 0) {
+          return true;
+        }
+        else {
+          return false;
+        }
+      }
+      else {
+        if(searchGPUs(smaller.getGPUs(), bigger.getGPULocality(), all.getGPULocality(), false, false) != 0) {
+          return true;
+        }
+        else {
+          return false;
+        }
+      }
+    }
+    else {
+      return false;
+    }
+  }
   
   public static Resource componentwiseMin(Resource lhs, Resource rhs) {
     return createResource(Math.min(lhs.getMemory(), rhs.getMemory()),
@@ -298,5 +387,70 @@ public class Resources {
     return createResource(Math.max(lhs.getMemory(), rhs.getMemory()),
         Math.max(lhs.getVirtualCores(), rhs.getVirtualCores()),
         Math.max(lhs.getGPUs(), rhs.getGPUs()));
+  }
+
+  public static int allocateGPUs(Resource smaller, Resource bigger, Resource all) {
+    if (smaller.getGPULocality() > 0) {
+      return searchGPUs(smaller.getGPUs(), bigger.getGPULocality(), all.getGPULocality(), true, true);
+    }
+    else {
+      return searchGPUs(smaller.getGPUs(), bigger.getGPULocality(), all.getGPULocality(), false, true);
+    }
+  }
+
+  private static synchronized int searchGPUs(int request, int available, int total, boolean locality, boolean allocate)
+  {
+    assert request <= 32;
+
+    if (locality == false) {
+      if (allocate == false) {
+        return request <= Integer.bitCount(available) ? 1 : 0;
+      }
+      else {
+        int result = allocateGPUs(request, available);
+        assert Integer.bitCount(result) == request;
+        return result;
+      }
+    }
+    else {
+      // Now, just assume that each CPU node has four GPUs.
+      int numGPUsPerNode = 4;
+      int bitmask = 0xF;
+      int span = ((request - 1) / 4) + 1;   // Number of CPU nodes to span
+      int result = 0;
+      int requestPerNode = Math.min(request, numGPUsPerNode);
+
+      for (int i = 0; i < Integer.SIZE / numGPUsPerNode; i++) {
+        int in = available & (bitmask << (i * 4));
+        int out = allocateGPUs(requestPerNode, in);
+        if (Integer.bitCount(out) == requestPerNode) {
+          span--;
+          result = result | out;
+          if (span == 0) {
+            break;
+          }
+        }
+      }
+      if (allocate == false) {
+        return Integer.bitCount(result) == request ? 1 : 0;
+      }
+      else {
+        assert Integer.bitCount(result) == request;
+        return result;
+      }
+    }
+  }
+
+  private static int allocateGPUs(int request, int available)
+  {
+    int result = 0;
+    int pos = 1;
+    while ((Integer.bitCount(result) < request) && (pos != 0)) {
+      if ((pos & available) != 0) {
+        result = result | pos;
+      }
+      pos = pos << 1;
+    }
+    return result;
   }
 }

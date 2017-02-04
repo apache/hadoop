@@ -1506,6 +1506,9 @@ public class LeafQueue extends AbstractCSQueue {
         return Resources.none();
       }
 
+      //int allocated = Resources.allocateGPUs(capability, available, node.getTotalResource());
+      //container.setGPULocation(allocated);
+
       // Inform the node
       node.allocateContainer(allocatedContainer);
 

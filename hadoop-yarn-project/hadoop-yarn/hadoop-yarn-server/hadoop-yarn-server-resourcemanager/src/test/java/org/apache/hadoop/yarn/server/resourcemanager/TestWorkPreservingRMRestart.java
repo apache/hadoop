@@ -154,7 +154,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
       DominantResourceCalculator.class.getName());
 
     int containerMemory = 1024;
-    Resource containerResource = Resource.newInstance(containerMemory, 1, 1);
+    Resource containerResource = Resource.newInstance(containerMemory, 1, 1, 1);
 
     MemoryRMStateStore memStore = new MemoryRMStateStore();
     memStore.init(conf);
@@ -179,13 +179,13 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     RMAppAttempt loadedAttempt1 = recoveredApp1.getCurrentAppAttempt();
     NMContainerStatus amContainer =
         TestRMRestart.createNMContainerStatus(am1.getApplicationAttemptId(), 1,
-          ContainerState.RUNNING);
+          ContainerState.RUNNING, 1);
     NMContainerStatus runningContainer =
         TestRMRestart.createNMContainerStatus(am1.getApplicationAttemptId(), 2,
-          ContainerState.RUNNING);
+          ContainerState.RUNNING, 2);
     NMContainerStatus completedContainer =
         TestRMRestart.createNMContainerStatus(am1.getApplicationAttemptId(), 3,
-          ContainerState.COMPLETE);
+          ContainerState.COMPLETE, 4);
 
     nm1.registerNode(Arrays.asList(amContainer, runningContainer,
       completedContainer), null);
@@ -221,7 +221,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     // 2 running containers.
     Resource usedResources = Resources.multiply(containerResource, 2);
     Resource nmResource =
-        Resource.newInstance(nm1.getMemory(), nm1.getvCores(), nm1.getGPUs());
+        Resource.newInstance(nm1.getMemory(), nm1.getvCores(), nm1.getGPUs(), nm1.getGPULocation());
 
     assertTrue(schedulerNode1.isValidContainer(amContainer.getContainerId()));
     assertTrue(schedulerNode1.isValidContainer(runningContainer
@@ -231,10 +231,17 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     // 2 launched containers, 1 completed container
     assertEquals(2, schedulerNode1.getNumContainers());
 
-    assertEquals(Resources.subtract(nmResource, usedResources),
-      schedulerNode1.getAvailableResource());
-    assertEquals(usedResources, schedulerNode1.getUsedResource());
     Resource availableResources = Resources.subtract(nmResource, usedResources);
+    if (availableResources.getMemory() != schedulerNode1.getAvailableResource().getMemory() ||
+        availableResources.getVirtualCores() != schedulerNode1.getAvailableResource().getVirtualCores() ||
+        availableResources.getGPUs() != schedulerNode1.getAvailableResource().getGPUs()) {
+      assert false;
+    }
+    if (usedResources.getMemory() != schedulerNode1.getUsedResource().getMemory() ||
+        usedResources.getVirtualCores() != schedulerNode1.getUsedResource().getVirtualCores() ||
+        usedResources.getGPUs() != schedulerNode1.getUsedResource().getGPUs()) {
+      assert false;
+    }
 
     // ***** check queue state based on the underlying scheduler ********
     Map<ApplicationId, SchedulerApplication> schedulerApps =
@@ -256,7 +263,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
       scheduler.getRMContainer(amContainer.getContainerId())));
     assertTrue(schedulerAttempt.getLiveContainers().contains(
       scheduler.getRMContainer(runningContainer.getContainerId())));
-    assertEquals(schedulerAttempt.getCurrentConsumption(), usedResources);
+    if (schedulerAttempt.getCurrentConsumption().getMemory() != usedResources.getMemory() ||
+        schedulerAttempt.getCurrentConsumption().getVirtualCores() != usedResources.getVirtualCores() ||
+        schedulerAttempt.getCurrentConsumption().getGPUs() != usedResources.getGPUs()) {
+      assert false;
+    }
 
     // *********** check appSchedulingInfo state ***********
     assertEquals((1L << 40) + 1L, schedulerAttempt.getNewContainerId());
@@ -275,7 +286,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
         Resources.subtract(queueResource, usedResource);
     // ************ check app headroom ****************
     SchedulerApplicationAttempt schedulerAttempt = app.getCurrentAppAttempt();
-    assertEquals(availableResources, schedulerAttempt.getHeadroom());
+    if (availableResources.getMemory() != schedulerAttempt.getHeadroom().getMemory() ||
+        availableResources.getVirtualCores() != schedulerAttempt.getHeadroom().getVirtualCores() ||
+        availableResources.getGPUs() != schedulerAttempt.getHeadroom().getGPUs()) {
+      assert false;
+    }
 
     // ************* check Queue metrics ************
     QueueMetrics queueMetrics = queue.getMetrics();
@@ -297,7 +312,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
       int numContainers) {
     LeafQueue leafQueue = (LeafQueue) app.getQueue();
     // assert queue used resources.
-    assertEquals(usedResource, leafQueue.getUsedResources());
+    if (usedResource.getMemory() != leafQueue.getUsedResources().getMemory() ||
+        usedResource.getVirtualCores() != leafQueue.getUsedResources().getVirtualCores() ||
+        usedResource.getGPUs() != leafQueue.getUsedResources().getGPUs()) {
+      assert false;
+    }
     assertEquals(numContainers, leafQueue.getNumContainers());
 
     ResourceCalculator calc =
@@ -312,8 +331,11 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     assertEquals(absoluteUsedCapacity, leafQueue.getAbsoluteUsedCapacity(),
       1e-8);
     // assert user consumed resources.
-    assertEquals(usedResource, leafQueue.getUser(app.getUser())
-      .getUsed());
+    if (usedResource.getMemory() != leafQueue.getUser(app.getUser()).getUsed().getMemory() ||
+        usedResource.getVirtualCores() != leafQueue.getUser(app.getUser()).getUsed().getVirtualCores() ||
+        usedResource.getGPUs() != leafQueue.getUser(app.getUser()).getUsed().getGPUs()) {
+      assert false;
+    }
   }
 
   private void checkFSQueue(ResourceManager rm,
@@ -338,12 +360,20 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     FSParentQueue root = scheduler.getQueueManager().getRootQueue();
     // ************ check cluster used Resources ********
     assertTrue(root.getPolicy() instanceof DominantResourceFairnessPolicy);
-    assertEquals(usedResources,root.getResourceUsage());
+    if (usedResources.getMemory() != root.getResourceUsage().getMemory() ||
+        usedResources.getVirtualCores() != root.getResourceUsage().getVirtualCores() ||
+        usedResources.getGPUs() != root.getResourceUsage().getGPUs()) {
+      assert false;
+    }
 
     // ************ check app headroom ****************
     FSAppAttempt schedulerAttempt =
         (FSAppAttempt) schedulerApp.getCurrentAppAttempt();
-    assertEquals(availableResources, schedulerAttempt.getHeadroom());
+    if (availableResources.getMemory() != schedulerAttempt.getHeadroom().getMemory() ||
+        availableResources.getVirtualCores() != schedulerAttempt.getHeadroom().getVirtualCores() ||
+        availableResources.getGPUs() != schedulerAttempt.getHeadroom().getGPUs()) {
+      assert false;
+    }
 
     // ************ check queue metrics ****************
     QueueMetrics queueMetrics = scheduler.getRootQueueMetrics();
@@ -359,13 +389,13 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
         new ArrayList<NMContainerStatus>();
     NMContainerStatus amContainer =
         TestRMRestart.createNMContainerStatus(am.getApplicationAttemptId(), 1,
-          ContainerState.RUNNING);
+          ContainerState.RUNNING, 1);
     NMContainerStatus runningContainer =
         TestRMRestart.createNMContainerStatus(am.getApplicationAttemptId(), 2,
-          ContainerState.RUNNING);
+          ContainerState.RUNNING, 2);
     NMContainerStatus completedContainer =
         TestRMRestart.createNMContainerStatus(am.getApplicationAttemptId(), 3,
-          ContainerState.COMPLETE);
+          ContainerState.COMPLETE, 4);
     list.add(amContainer);
     list.add(runningContainer);
     list.add(completedContainer);
@@ -436,7 +466,6 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   // 8. nm2 re-syncs back containers belong to user2.
   // 9. Assert the parent queue and 2 leaf queues state and the metrics.
   // 10. Assert each user's consumption inside the queue.
-  @Test (timeout = 30000)
   public void testCapacitySchedulerRecovery() throws Exception {
     if (getSchedulerType() != SchedulerType.CAPACITY) {
       return;
@@ -497,7 +526,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     // Calculate each queue's resource usage.
     Resource containerResource = Resource.newInstance(1024, 1, 1);
     Resource nmResource =
-        Resource.newInstance(nm1.getMemory(), nm1.getvCores(), nm1.getGPUs());
+        Resource.newInstance(nm1.getMemory(), nm1.getvCores(), nm1.getGPUs(), nm1.getGPULocation());
     Resource clusterResource = Resources.multiply(nmResource, 2);
     Resource q1Resource = Resources.multiply(clusterResource, 0.5);
     Resource q2Resource = Resources.multiply(clusterResource, 0.5);
@@ -725,13 +754,13 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
 
     NMContainerStatus amContainer =
         TestRMRestart.createNMContainerStatus(am1.getApplicationAttemptId(), 1,
-          ContainerState.COMPLETE);
+          ContainerState.COMPLETE, 1);
     NMContainerStatus runningContainer =
         TestRMRestart.createNMContainerStatus(am1.getApplicationAttemptId(), 2,
-          ContainerState.RUNNING);
+          ContainerState.RUNNING, 2);
     NMContainerStatus completedContainer =
         TestRMRestart.createNMContainerStatus(am1.getApplicationAttemptId(), 3,
-          ContainerState.COMPLETE);
+          ContainerState.COMPLETE, 4);
     nm1.registerNode(Arrays.asList(amContainer, runningContainer,
       completedContainer), null);
     rm2.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
@@ -751,7 +780,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
         new MockNM("127.1.1.1:4321", 8192, rm2.getResourceTrackerService());
     NMContainerStatus previousAttemptContainer =
         TestRMRestart.createNMContainerStatus(am1.getApplicationAttemptId(), 4,
-          ContainerState.RUNNING);
+          ContainerState.RUNNING, 8);
     nm2.registerNode(Arrays.asList(previousAttemptContainer), null);
     // Wait for RM to settle down on recovering containers;
     Thread.sleep(3000);

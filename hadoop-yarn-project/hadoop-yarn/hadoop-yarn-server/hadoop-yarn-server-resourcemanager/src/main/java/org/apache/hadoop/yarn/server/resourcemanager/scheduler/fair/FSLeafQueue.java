@@ -323,6 +323,7 @@ public class FSLeafQueue extends FSQueue {
     // but we can accept it in practice since the probability is low.
     readLock.lock();
     try {
+      // MJTHIS: This is where we go through runnableApps
       for (FSAppAttempt sched : runnableApps) {
         if (SchedulerAppUtils.isBlacklisted(sched, node, LOG)) {
           continue;

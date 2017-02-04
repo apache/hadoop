@@ -204,6 +204,14 @@ public class ContainerPBImpl extends Container {
       builder.clearResource();
     this.resource = resource;
   }
+
+  @Override
+  public void setGPULocation(int GPULocation) {
+    maybeInitBuilder();
+    if (resource == null)
+      builder.clearResource();
+    this.resource.setGPULocality(GPULocation);
+  }
   
   @Override
   public Priority getPriority() {

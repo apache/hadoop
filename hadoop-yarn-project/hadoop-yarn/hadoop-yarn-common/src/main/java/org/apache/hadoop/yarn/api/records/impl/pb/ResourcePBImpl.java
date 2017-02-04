@@ -92,6 +92,18 @@ public class ResourcePBImpl extends Resource {
   }
 
   @Override
+  public int getGPULocality() {
+    ResourceProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getGPULocality());
+  }
+
+  @Override
+  public void setGPULocality(int GPULocality) {
+    maybeInitBuilder();
+    builder.setGPULocality((GPULocality));
+  }
+
+  @Override
   public int compareTo(Resource other) {
     int diff = this.getMemory() - other.getMemory();
     if (diff == 0) {

@@ -264,6 +264,9 @@ public class AppSchedulingInfo {
   synchronized public List<ResourceRequest> allocate(NodeType type,
       SchedulerNode node, Priority priority, ResourceRequest request,
       Container container) {
+    // MJTHIS: request seems to be request that is actually scheduled. Track how this is selected.
+    // It seems this function is called by allocate() in FSAppAttempt.java
+
     List<ResourceRequest> resourceRequests = new ArrayList<ResourceRequest>();
     if (type == NodeType.NODE_LOCAL) {
       allocateNodeLocal(node, priority, request, container, resourceRequests);

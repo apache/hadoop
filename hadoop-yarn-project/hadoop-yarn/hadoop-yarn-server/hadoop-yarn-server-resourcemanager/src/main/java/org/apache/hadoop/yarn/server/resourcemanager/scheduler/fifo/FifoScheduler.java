@@ -687,7 +687,11 @@ public class FifoScheduler extends
         // Inform the application
         RMContainer rmContainer =
             application.allocate(type, node, priority, request, container);
-        
+
+        //Resource available = node.getAvailableResource();
+        //int allocated = Resources.allocateGPUs(capability, available, node.getTotalResource());
+        //container.setGPULocation(allocated);
+
         // Inform the node
         node.allocateContainer(rmContainer);
 

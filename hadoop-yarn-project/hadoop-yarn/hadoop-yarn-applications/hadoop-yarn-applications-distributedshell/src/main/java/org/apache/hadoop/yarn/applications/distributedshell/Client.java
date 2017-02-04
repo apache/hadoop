@@ -154,6 +154,8 @@ public class Client {
   private int containerVirtualCores = 1;
   // Amt. of GPUs to request for container in which shell script will be executed
   private int containerGPUs = 1;
+  // GPU locality information to request for the container on which the shell command will run
+  private int containerGPULocality = 1;
   // No. of containers in which the shell script needs to be executed
   private int numContainers = 1;
   private String nodeLabelExpression = null;
@@ -264,6 +266,7 @@ public class Client {
     opts.addOption("container_memory", true, "Amount of memory in MB to be requested to run the shell command");
     opts.addOption("container_vcores", true, "Amount of virtual cores to be requested to run the shell command");
     opts.addOption("container_GPUs", true, "Amount of GPUs to be requested to run the shell command");
+    opts.addOption("container_GPULocality", true, "GPU locality information to be requested to run the shell command");
     opts.addOption("num_containers", true, "No. of containers on which the shell command needs to be executed");
     opts.addOption("log_properties", true, "log4j.properties file");
     opts.addOption("keep_containers_across_application_attempts", false,
@@ -408,6 +411,7 @@ public class Client {
     containerMemory = Integer.parseInt(cliParser.getOptionValue("container_memory", "10"));
     containerVirtualCores = Integer.parseInt(cliParser.getOptionValue("container_vcores", "1"));
     containerGPUs = Integer.parseInt(cliParser.getOptionValue("container_GPUs", "1"));
+    containerGPULocality = Integer.parseInt(cliParser.getOptionValue("container_GPULocality", "1"));
     numContainers = Integer.parseInt(cliParser.getOptionValue("num_containers", "1"));
     
 
@@ -417,6 +421,7 @@ public class Client {
           + " Specified containerMemory=" + containerMemory
           + ", containerVirtualCores=" + containerVirtualCores
           + ", containerGPUs=" + containerGPUs
+          + ", containerGPULocality=" + containerGPULocality
           + ", numContainer=" + numContainers);
     }
     
@@ -649,6 +654,7 @@ public class Client {
     vargs.add("--container_memory " + String.valueOf(containerMemory));
     vargs.add("--container_vcores " + String.valueOf(containerVirtualCores));
     vargs.add("--container_GPUs " + String.valueOf(containerGPUs));
+    vargs.add("--container_GPULocality " + String.valueOf(containerGPULocality));
     vargs.add("--num_containers " + String.valueOf(numContainers));
     if (null != nodeLabelExpression) {
       appContext.setNodeLabelExpression(nodeLabelExpression);

@@ -219,6 +219,8 @@ public class ApplicationMaster {
   private int containerVirtualCores = 1;
   // GPUs to request for the container on which the shell command will run
   private int containerGPUs = 1;
+  // GPU locality information to request for the container on which the shell command will run
+  private int containerGPULocality = 1;
   // Priority of the request
   private int requestPriority;
 
@@ -362,6 +364,8 @@ public class ApplicationMaster {
         "Amount of virtual cores to be requested to run the shell command");
     opts.addOption("container_GPUs", true,
         "Amount of GPUs to be requested to run the shell command");
+    opts.addOption("container_GPULocality", true,
+        "GPU locality information to be requested to run the shell command");
     opts.addOption("num_containers", true,
         "No. of containers on which the shell command needs to be executed");
     opts.addOption("priority", true, "Application Priority. Default 0");
@@ -496,6 +500,8 @@ public class ApplicationMaster {
         "container_vcores", "1"));
     containerGPUs = Integer.parseInt(cliParser.getOptionValue(
         "container_GPUs", "1"));
+    containerGPULocality = Integer.parseInt(cliParser.getOptionValue(
+            "container_GPULocality", "1"));
     numTotalContainers = Integer.parseInt(cliParser.getOptionValue(
         "num_containers", "1"));
     if (numTotalContainers == 0) {
@@ -611,6 +617,7 @@ public class ApplicationMaster {
           + " Using max value." + ", specified=" + containerGPUs + ", max="
           + maxGPUs);
       containerGPUs = maxGPUs;
+      containerGPULocality = 0;
     }
 
     List<Container> previousAMRunningContainers =
@@ -810,7 +817,9 @@ public class ApplicationMaster {
             + ", containerResourceVirtualCores"
             + allocatedContainer.getResource().getVirtualCores()
             + ", containerResourceGPUs"
-            + allocatedContainer.getResource().getGPUs());
+            + allocatedContainer.getResource().getGPUs()
+            + ", containerResourceGPULocality"
+            + allocatedContainer.getResource().getGPULocality());
         // + ", containerToken"
         // +allocatedContainer.getContainerToken().getIdentifier().toString());
 
@@ -1074,7 +1083,7 @@ public class ApplicationMaster {
     // Set up resource type requirements
     // For now, memory and CPU are supported so we set memory and cpu requirements
     Resource capability = Resource.newInstance(containerMemory,
-      containerVirtualCores, containerGPUs);
+      containerVirtualCores, containerGPUs, containerGPULocality);
 
     ContainerRequest request = new ContainerRequest(capability, null, null,
         pri);

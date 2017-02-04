@@ -120,6 +120,30 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
         scheduler.rootMetrics.getAvailableMB());
   }
 
+  private void registerNodeAndSubmitApp(
+          int memory, int vcores, int GPUs, int GPLocation, int appContainers, int appMemory) {
+    RMNode node1 = MockNodes.newNodeInfo(
+            1, Resources.createResource(memory, vcores, GPUs, GPLocation), 1, "node1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    assertEquals("Incorrect amount of resources in the cluster",
+            memory, scheduler.rootMetrics.getAvailableMB());
+    assertEquals("Incorrect amount of resources in the cluster",
+            vcores, scheduler.rootMetrics.getAvailableVirtualCores());
+
+    createSchedulingRequest(appMemory, "queueA", "user1", appContainers);
+    scheduler.update();
+    // Sufficient node check-ins to fully schedule containers
+    for (int i = 0; i < 3; i++) {
+      NodeUpdateSchedulerEvent nodeUpdate1 = new NodeUpdateSchedulerEvent(node1);
+      scheduler.handle(nodeUpdate1);
+    }
+    assertEquals("app1's request is not met",
+            memory - appContainers * appMemory,
+            scheduler.rootMetrics.getAvailableMB());
+  }
+
   @Test
   public void testPreemptionWithFreeResources() throws Exception {
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
@@ -143,7 +167,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
 
     startResourceManager(0f);
     // Create node with 4GB memory, 4 vcores, and 4 GPUs
-    registerNodeAndSubmitApp(4 * 1024, 4, 4, 2, 1024);
+    registerNodeAndSubmitApp(4 * 1024, 4, 4, 15, 2, 1024);
 
     // Verify submitting another request triggers preemption
     createSchedulingRequest(1024, "queueB", "user1", 1, 1);
@@ -159,7 +183,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
 
     startResourceManager(0.8f);
     // Create node with 4GB memory, 4 vcores, and 4 GPUs
-    registerNodeAndSubmitApp(4 * 1024, 4, 4, 3, 1024);
+    registerNodeAndSubmitApp(4 * 1024, 4, 4, 15, 3, 1024);
 
     // Verify submitting another request doesn't trigger preemption
     createSchedulingRequest(1024, "queueB", "user1", 1, 1);
@@ -175,7 +199,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
 
     startResourceManager(0.7f);
     // Create node with 4GB memory, 4 vcores, and 4 GPUs
-    registerNodeAndSubmitApp(4 * 1024, 4, 4, 3, 1024);
+    registerNodeAndSubmitApp(4 * 1024, 4, 4, 15, 3, 1024);
 
     // Verify submitting another request triggers preemption
     createSchedulingRequest(1024, "queueB", "user1", 1, 1);
