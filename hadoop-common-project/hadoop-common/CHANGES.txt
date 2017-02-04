@@ -159,6 +159,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-14474. Use OpenJDK 7 instead of Oracle JDK 7 to avoid
     oracle-java7-installer failures. (Akira Ajisaka via xiao)
 
+    HADOOP-14044. Synchronization issue in delegation token cancel
+    functionality. (Hrishikesh Gadre via xiao)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
