@@ -20,10 +20,12 @@ package org.apache.hadoop.http;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.http.HttpServer2.QuotingInputFilter.RequestQuoter;
 import org.apache.hadoop.http.resource.JerseyResource;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -637,5 +639,41 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     assertNotNull(conn.getHeaderField("Expires"));
     assertNotNull(conn.getHeaderField("Date"));
     assertEquals(conn.getHeaderField("Expires"), conn.getHeaderField("Date"));
+  }
+
+  private static void stopHttpServer(HttpServer2 server) throws Exception {
+    if (server != null) {
+      server.stop();
+    }
+  }
+
+  @Test
+  public void testPortRanges() throws Exception {
+    Configuration conf = new Configuration();
+    int port =  ServerSocketUtil.waitForPort(49000, 60);
+    int endPort = 49500;
+    conf.set("abc", "49000-49500");
+    HttpServer2.Builder builder = new HttpServer2.Builder()
+        .setName("test").setConf(new Configuration()).setFindPort(false);
+    IntegerRanges ranges = conf.getRange("abc", "");
+    int startPort = 0;
+    if (ranges != null && !ranges.isEmpty()) {
+       startPort = ranges.getRangeStart();
+       builder.setPortRanges(ranges);
+    }
+    builder.addEndpoint(URI.create("http://localhost:" + startPort));
+    HttpServer2 myServer = builder.build();
+    HttpServer2 myServer2 = null;
+    try {
+      myServer.start();
+      assertEquals(port, myServer.getConnectorAddress(0).getPort());
+      myServer2 = builder.build();
+      myServer2.start();
+      assertTrue(myServer2.getConnectorAddress(0).getPort() > port &&
+          myServer2.getConnectorAddress(0).getPort() <= endPort);
+    } finally {
+      stopHttpServer(myServer);
+      stopHttpServer(myServer2);
+    }
   }
 }

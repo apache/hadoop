@@ -53,6 +53,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.ConfServlet;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
@@ -133,6 +134,7 @@ public final class HttpServer2 implements FilterContainer {
 
   protected final WebAppContext webAppContext;
   protected final boolean findPort;
+  protected final IntegerRanges portRanges;
   protected final Map<Context, Boolean> defaultContexts =
       new HashMap<>();
   protected final List<String> filterNames = new ArrayList<>();
@@ -170,6 +172,7 @@ public final class HttpServer2 implements FilterContainer {
     private String keyPassword;
 
     private boolean findPort;
+    private IntegerRanges portRanges = null;
 
     private String hostName;
     private boolean disallowFallbackToRandomSignerSecretProvider;
@@ -239,6 +242,11 @@ public final class HttpServer2 implements FilterContainer {
 
     public Builder setFindPort(boolean findPort) {
       this.findPort = findPort;
+      return this;
+    }
+
+    public Builder setPortRanges(IntegerRanges ranges) {
+      this.portRanges = ranges;
       return this;
     }
 
@@ -397,6 +405,7 @@ public final class HttpServer2 implements FilterContainer {
     }
 
     this.findPort = b.findPort;
+    this.portRanges = b.portRanges;
     initializeWebServer(b.name, b.hostName, b.conf, b.pathSpecs);
   }
 
@@ -978,6 +987,93 @@ public final class HttpServer2 implements FilterContainer {
   }
 
   /**
+   * Bind listener by closing and opening the listener.
+   * @param listener
+   * @throws Exception
+   */
+  private static void bindListener(Connector listener) throws Exception {
+    // jetty has a bug where you can't reopen a listener that previously
+    // failed to open w/o issuing a close first, even if the port is changed
+    listener.close();
+    listener.open();
+    LOG.info("Jetty bound to port " + listener.getLocalPort());
+  }
+
+  /**
+   * Create bind exception by wrapping the bind exception thrown.
+   * @param listener
+   * @param ex
+   * @return
+   */
+  private static BindException constructBindException(Connector listener,
+      BindException ex) {
+    BindException be = new BindException("Port in use: "
+        + listener.getHost() + ":" + listener.getPort());
+    if (ex != null) {
+      be.initCause(ex);
+    }
+    return be;
+  }
+
+  /**
+   * Bind using single configured port. If findPort is true, we will try to bind
+   * after incrementing port till a free port is found.
+   * @param listener jetty listener.
+   * @param port port which is set in the listener.
+   * @throws Exception
+   */
+  private void bindForSinglePort(Connector listener, int port)
+      throws Exception {
+    while (true) {
+      try {
+        bindListener(listener);
+        break;
+      } catch (BindException ex) {
+        if (port == 0 || !findPort) {
+          throw constructBindException(listener, ex);
+        }
+      }
+      // try the next port number
+      listener.setPort(++port);
+      Thread.sleep(100);
+    }
+  }
+
+  /**
+   * Bind using port ranges. Keep on looking for a free port in the port range
+   * and throw a bind exception if no port in the configured range binds.
+   * @param listener jetty listener.
+   * @param startPort initial port which is set in the listener.
+   * @throws Exception
+   */
+  private void bindForPortRange(Connector listener, int startPort)
+      throws Exception {
+    BindException bindException = null;
+    try {
+      bindListener(listener);
+      return;
+    } catch (BindException ex) {
+      // Ignore exception.
+      bindException = ex;
+    }
+    for(Integer port : portRanges) {
+      if (port == startPort) {
+        continue;
+      }
+      Thread.sleep(100);
+      listener.setPort(port);
+      try {
+        bindListener(listener);
+        return;
+      } catch (BindException ex) {
+        // Ignore exception. Move to next port.
+        bindException = ex;
+      }
+    }
+    throw constructBindException(listener, bindException);
+  }
+
+  /**
    * Open the main listener for the server
    * @throws Exception
    */
@@ -988,25 +1084,10 @@ public final class HttpServer2 implements FilterContainer {
         continue;
       }
       int port = listener.getPort();
-      while (true) {
-        // jetty has a bug where you can't reopen a listener that previously
-        // failed to open w/o issuing a close first, even if the port is changed
-        try {
-          listener.close();
-          listener.open();
-          LOG.info("Jetty bound to port " + listener.getLocalPort());
-          break;
-        } catch (BindException ex) {
-          if (port == 0 || !findPort) {
-            BindException be = new BindException("Port in use: "
-                + listener.getHost() + ":" + listener.getPort());
-            be.initCause(ex);
-            throw be;
-          }
-        }
-        // try the next port number
-        listener.setPort(++port);
-        Thread.sleep(100);
+      if (portRanges != null && port != 0) {
+        bindForPortRange(listener, port);
+      } else {
+        bindForSinglePort(listener, port);
       }
     }
   }
