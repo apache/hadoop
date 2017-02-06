@@ -260,6 +260,16 @@ public class FSParentQueue extends FSQueue {
     readLock.lock();
     try {
       for (FSQueue queue : childQueues) {
+        // Skip selection for non-preemptable queue
+        if (!queue.canBePreempted()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("skipping from queue=" + getName()
+                + " because it's a non-preemptable queue or there is no"
+                + " sub-queues whose resource usage exceeds fair share.");
+          }
+          continue;
+        }
+
         if (candidateQueue == null ||
             comparator.compare(queue, candidateQueue) > 0) {
           candidateQueue = queue;

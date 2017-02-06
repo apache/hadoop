@@ -236,6 +236,29 @@ public abstract class FSQueue implements Queue, Schedulable {
   }
 
   /**
+   * Recursively check if the queue can be preempted based on whether the
+   * resource usage is greater than fair share.
+   *
+   * @return true if the queue can be preempted
+   */
+  public boolean canBePreempted() {
+    assert parent != null;
+    if (parent.policy.checkIfUsageOverFairShare(
+        getResourceUsage(), getFairShare())) {
+      return true;
+    } else {
+      // recursively find one queue which can be preempted
+      for (FSQueue queue: getChildQueues()) {
+        if (queue.canBePreempted()) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * Recomputes the shares for all child queues and applications based on this
    * queue's current share
    */
