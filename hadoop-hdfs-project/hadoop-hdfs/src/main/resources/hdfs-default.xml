@@ -4036,7 +4036,7 @@
 
 <property>
   <name>dfs.namenode.reconstruction.pending.timeout-sec</name>
-  <value>-1</value>
+  <value>300</value>
   <description>
     Timeout in seconds for block reconstruction.  If this value is 0 or less,
     then it will default to 5 minutes.

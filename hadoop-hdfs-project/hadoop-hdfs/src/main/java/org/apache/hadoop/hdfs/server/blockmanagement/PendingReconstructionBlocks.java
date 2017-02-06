@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.PrintWriter;
@@ -56,7 +57,8 @@ class PendingReconstructionBlocks {
   // It might take anywhere between 5 to 10 minutes before
   // a request is timed out.
   //
-  private long timeout = 5 * 60 * 1000;
+  private long timeout =
+      DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT * 1000;
   private final static long DEFAULT_RECHECK_INTERVAL = 5 * 60 * 1000;
 
   PendingReconstructionBlocks(long timeoutPeriod) {
