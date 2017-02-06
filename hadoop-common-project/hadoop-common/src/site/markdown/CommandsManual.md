@@ -263,11 +263,14 @@ Example:
 Note that the setting is not permanent and will be reset when the daemon is restarted.
 This command works by sending a HTTP/HTTPS request to the daemon's internal Jetty servlet, so it supports the following daemons:
 
+* Common
+    * key management server
 * HDFS
     * name node
     * secondary name node
     * data node
     * journal node
+    * HttpFS server
 * YARN
     * resource manager
     * node manager
