@@ -85,7 +85,6 @@ import com.google.common.base.Preconditions;
 public class Dispatcher {
   static final Log LOG = LogFactory.getLog(Dispatcher.class);
 
-  private static final int MAX_NO_PENDING_MOVE_ITERATIONS = 5;
   /**
    * the period of time to delay the usage of a DataNode after hitting
    * errors when using it for migrating data
@@ -1015,6 +1014,8 @@ public class Dispatcher {
     }
     if (moveExecutor == null) {
       LOG.warn("No mover threads available: skip moving " + p);
+      targetDn.removePendingBlock(p);
+      p.proxySource.removePendingBlock(p);
       return;
     }
 
