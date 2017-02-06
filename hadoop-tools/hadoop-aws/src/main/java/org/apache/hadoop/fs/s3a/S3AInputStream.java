@@ -37,6 +37,7 @@ import org.slf4j.Logger;
 import java.io.EOFException;
 import java.io.IOException;
 
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 
 /**
@@ -108,8 +109,8 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       S3AInstrumentation instrumentation,
       long readahead,
       S3AInputPolicy inputPolicy) {
-    Preconditions.checkArgument(StringUtils.isNotEmpty(s3Attributes.getBucket()), "No Bucket");
-    Preconditions.checkArgument(StringUtils.isNotEmpty(s3Attributes.getKey()), "No Key");
+    Preconditions.checkArgument(isNotEmpty(s3Attributes.getBucket()), "No Bucket");
+    Preconditions.checkArgument(isNotEmpty(s3Attributes.getKey()), "No Key");
     Preconditions.checkArgument(contentLength >= 0, "Negative content length");
     this.bucket = s3Attributes.getBucket();
     this.key = s3Attributes.getKey();
