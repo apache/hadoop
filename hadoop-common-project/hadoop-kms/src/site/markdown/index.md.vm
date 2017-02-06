@@ -1063,13 +1063,13 @@ configuration properties instead.
 
 Environment Variable     | Configuration Property       | Configuration File
 -------------------------|------------------------------|--------------------
+KMS_TEMP                 | hadoop.http.temp.dir         | kms-site.xml
 KMS_HTTP_PORT            | hadoop.kms.http.port         | kms-site.xml
 KMS_MAX_HTTP_HEADER_SIZE | hadoop.http.max.request.header.size and hadoop.http.max.response.header.size | kms-site.xml
 KMS_MAX_THREADS          | hadoop.http.max.threads      | kms-site.xml
 KMS_SSL_ENABLED          | hadoop.kms.ssl.enabled       | kms-site.xml
 KMS_SSL_KEYSTORE_FILE    | ssl.server.keystore.location | ssl-server.xml
 KMS_SSL_KEYSTORE_PASS    | ssl.server.keystore.password | ssl-server.xml
-KMS_TEMP                 | hadoop.http.temp.dir         | kms-site.xml
 
 $H3 Default HTTP Services
 
@@ -1081,3 +1081,37 @@ Name               | Description
 /logs              | Display log files
 /stacks            | Display JVM stacks
 /static/index.html | The static home page
+
+To control the access to servlet `/conf`, `/jmx`, `/logLevel`, `/logs`,
+and `/stacks`, configure the following properties in `kms-site.xml`:
+
+```xml
+  <property>
+    <name>hadoop.security.authorization</name>
+    <value>true</value>
+    <description>Is service-level authorization enabled?</description>
+  </property>
+
+  <property>
+    <name>hadoop.security.instrumentation.requires.admin</name>
+    <value>true</value>
+    <description>
+      Indicates if administrator ACLs are required to access
+      instrumentation servlets (JMX, METRICS, CONF, STACKS).
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.http.administrators</name>
+    <value></value>
+    <description>ACL for the admins, this configuration is used to control
+      who can access the default KMS servlets. The value should be a comma
+      separated list of users and groups. The user list comes first and is
+      separated by a space followed by the group list,
+      e.g. "user1,user2 group1,group2". Both users and groups are optional,
+      so "user1", " group1", "", "user1 group1", "user1,user2 group1,group2"
+      are all valid (note the leading space in " group1"). '*' grants access
+      to all users and groups, e.g. '*', '* ' and ' *' are all valid.
+    </description>
+  </property>
+```
