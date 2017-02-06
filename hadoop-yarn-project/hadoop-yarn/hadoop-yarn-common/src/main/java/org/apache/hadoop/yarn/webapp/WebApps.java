@@ -35,6 +35,7 @@ import javax.servlet.http.HttpServlet;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -92,6 +93,7 @@ public class WebApps {
     boolean findPort = false;
     Configuration conf;
     Policy httpPolicy = null;
+    String portRangeConfigKey = null;
     boolean devMode = false;
     private String spnegoPrincipalKey;
     private String spnegoKeytabKey;
@@ -154,6 +156,19 @@ public class WebApps {
     public Builder<T> withHttpPolicy(Configuration conf, Policy httpPolicy) {
       this.conf = conf;
       this.httpPolicy = httpPolicy;
+      return this;
+    }
+
+    /**
+     * Set port range config key and associated configuration object.
+     * @param config configuration.
+     * @param portRangeConfKey port range config key.
+     * @return builder object.
+     */
+    public Builder<T> withPortRange(Configuration config,
+        String portRangeConfKey) {
+      this.conf = config;
+      this.portRangeConfigKey = portRangeConfKey;
       return this;
     }
 
@@ -265,15 +280,24 @@ public class WebApps {
                   : WebAppUtils.HTTP_PREFIX;
         }
         HttpServer2.Builder builder = new HttpServer2.Builder()
-            .setName(name)
-            .addEndpoint(
-                URI.create(httpScheme + bindAddress
-                    + ":" + port)).setConf(conf).setFindPort(findPort)
+            .setName(name).setConf(conf).setFindPort(findPort)
             .setACL(new AccessControlList(conf.get(
-              YarnConfiguration.YARN_ADMIN_ACL, 
-              YarnConfiguration.DEFAULT_YARN_ADMIN_ACL)))
+                YarnConfiguration.YARN_ADMIN_ACL,
+                YarnConfiguration.DEFAULT_YARN_ADMIN_ACL)))
             .setPathSpec(pathList.toArray(new String[0]));
-
+        // Get port ranges from config.
+        IntegerRanges ranges = null;
+        if (portRangeConfigKey != null) {
+          ranges = conf.getRange(portRangeConfigKey, "");
+        }
+        int startPort = port;
+        if (ranges != null && !ranges.isEmpty()) {
+          // Set port ranges if its configured.
+          startPort = ranges.getRangeStart();
+          builder.setPortRanges(ranges);
+        }
+        builder.addEndpoint(URI.create(httpScheme + bindAddress +
+            ":" + startPort));
         boolean hasSpnegoConf = spnegoPrincipalKey != null
             && conf.get(spnegoPrincipalKey) != null && spnegoKeytabKey != null
             && conf.get(spnegoKeytabKey) != null;

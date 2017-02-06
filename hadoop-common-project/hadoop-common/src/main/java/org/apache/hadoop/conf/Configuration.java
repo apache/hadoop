@@ -1887,6 +1887,18 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return result.toString();
     }
 
+    /**
+     * Get range start for the first integer range.
+     * @return range start.
+     */
+    public int getRangeStart() {
+      if (ranges == null || ranges.isEmpty()) {
+        return -1;
+      }
+      Range r = ranges.get(0);
+      return r.start;
+    }
+
     @Override
     public Iterator<Integer> iterator() {
       return new RangeNumberIterator(ranges);
