@@ -545,16 +545,17 @@ public abstract class AbstractCSQueue implements CSQueue {
    * @return used resources by this queue for specified label
    */
   public final synchronized float getUsedCapacity(final String nodeLabel) {
+    Resource totalPartitionResource =
+        labelManager.getResourceByLabel(nodeLabel, this.clusterResource);
     Resource availableToQueue =
-        Resources.multiply(
-            labelManager.getResourceByLabel(nodeLabel, this.clusterResource),
+        Resources.multiply(totalPartitionResource,
             queueCapacities.getAbsoluteCapacity(nodeLabel));
-    if (!Resources.greaterThan(resourceCalculator, this.clusterResource,
+    if (!Resources.greaterThan(resourceCalculator, totalPartitionResource,
          availableToQueue, Resources.none())) {
       return 0.0f;
     }
     return
-        Resources.divide(resourceCalculator, this.clusterResource,
+        Resources.divide(resourceCalculator, totalPartitionResource,
             queueUsage.getUsed(nodeLabel), availableToQueue);
   }
 
@@ -564,13 +565,13 @@ public abstract class AbstractCSQueue implements CSQueue {
    * @return absolute used resources by this queue for specified label
    */
   public final synchronized float getAbsoluteUsedCapacity(final String nodeLabel) {
-    Resource labeledResources =
-               labelManager.getResourceByLabel(nodeLabel, this.clusterResource);
-    if (!Resources.greaterThan(resourceCalculator, this.clusterResource,
-        labeledResources, Resources.none())) {
+    Resource totalPartitionResource =
+        labelManager.getResourceByLabel(nodeLabel, this.clusterResource);
+    if (!Resources.greaterThan(resourceCalculator, totalPartitionResource,
+        totalPartitionResource, Resources.none())) {
       return 0.0f;
     }
-    return Resources.divide(resourceCalculator, this.clusterResource,
-        queueUsage.getUsed(nodeLabel), labeledResources);
+    return Resources.divide(resourceCalculator, totalPartitionResource,
+        queueUsage.getUsed(nodeLabel), totalPartitionResource);
   }
 }
