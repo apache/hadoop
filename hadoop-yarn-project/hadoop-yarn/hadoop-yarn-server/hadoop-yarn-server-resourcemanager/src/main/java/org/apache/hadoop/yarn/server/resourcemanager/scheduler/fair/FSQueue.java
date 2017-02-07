@@ -41,6 +41,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import com.google.common.base.Preconditions;
+
 @Private
 @Unstable
 public abstract class FSQueue implements Queue, Schedulable {
@@ -242,7 +244,9 @@ public abstract class FSQueue implements Queue, Schedulable {
    * @return true if the queue can be preempted
    */
   public boolean canBePreempted() {
-    assert parent != null;
+    Preconditions.checkNotNull(parent, "Parent queue can't be null since"
+        + " parent's policy is needed for preemptable checking.");
+
     if (parent.policy.checkIfUsageOverFairShare(
         getResourceUsage(), getFairShare())) {
       return true;

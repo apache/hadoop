@@ -2043,6 +2043,78 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         .size());
   }
 
+  @Test
+  public void testPreemptionFilterOutNonPreemptableQueues() throws Exception {
+    conf.setLong(FairSchedulerConfiguration.PREEMPTION_INTERVAL, 5000);
+    conf.setLong(FairSchedulerConfiguration.WAIT_TIME_BEFORE_KILL, 10000);
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "false");
+
+    ControlledClock clock = new ControlledClock();
+    scheduler.setClock(clock);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queueA\">");
+    out.println("  <queue name=\"queueA1\" />");
+    out.println("  <queue name=\"queueA2\" />");
+    out.println("</queue>");
+    out.println("<queue name=\"queueB\">");
+    out.println("</queue>");
+    out.println("<defaultFairSharePreemptionTimeout>10</defaultFairSharePreemptionTimeout>");
+    out.println("<defaultFairSharePreemptionThreshold>.5</defaultFairSharePreemptionThreshold>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add a node of 8 GB
+    RMNode node1 = MockNodes.newNodeInfo(1,
+        Resources.createResource(8 * GB, 8), 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    // Run apps in queueA.A1 and queueB
+    ApplicationAttemptId app1 = createSchedulingRequest(1 * GB, 1,
+        "queueA.queueA1", "user1", 4, 1);
+    ApplicationAttemptId app2 = createSchedulingRequest(1 * GB, 1, "queueB",
+        "user2", 4, 1);
+
+    scheduler.update();
+
+    NodeUpdateSchedulerEvent nodeUpdate1 = new NodeUpdateSchedulerEvent(node1);
+    for (int i = 0; i < 8; i++) {
+      scheduler.handle(nodeUpdate1);
+    }
+
+    // verify if the apps got the containers they requested
+    assertEquals(4, scheduler.getSchedulerApp(app1).getLiveContainers().size());
+    assertEquals(4, scheduler.getSchedulerApp(app2).getLiveContainers().size());
+
+    // Now submit an app in queueA.queueA2
+    createSchedulingRequest(GB, 1, "queueA.queueA2", "user3", 2, 1);
+    scheduler.update();
+
+    // Let 11 sec pass
+    clock.tickSec(11);
+
+    scheduler.update();
+    Resource toPreempt = scheduler.resourceDeficit(scheduler.getQueueManager()
+        .getLeafQueue("queueA.queueA2", false), clock.getTime());
+    assertEquals(2 * GB, toPreempt.getMemorySize());
+
+    // Verify if containers required by queueA2 are preempted from queueA1
+    // instead of queueB
+    scheduler.preemptResources(toPreempt);
+    assertEquals(2, scheduler.getSchedulerApp(app1).getPreemptionContainers()
+        .size());
+    assertEquals(0, scheduler.getSchedulerApp(app2).getPreemptionContainers()
+        .size());
+  }
+
   @Test (timeout = 5000)
   /**
    * Tests the timing of decision to preempt tasks.
