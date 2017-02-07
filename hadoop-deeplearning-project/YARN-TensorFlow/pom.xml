@@ -19,18 +19,17 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-project</artifactId>
+        <artifactId>hadoop-deeplearning-project</artifactId>
         <version>3.0.0-alpha2-SNAPSHOT</version>
-        <relativePath>../hadoop-project</relativePath>
     </parent>
-    <artifactId>hadoop-deeplearning-project</artifactId>
+    <artifactId>YARN-TensorFlow</artifactId>
     <version>3.0.0-alpha2-SNAPSHOT</version>
-    <description>Apache Hadoop Deep Learning Project</description>
-    <name>Apache Hadoop Deep Learning Project</name>
+    <description>YARN TensorFlow Project</description>
+    <name>YARN TensorFlow Project</name>
     <packaging>pom</packaging>
 
     <modules>
-        <module>YARN-TensorFlow</module>
+        <module>hadoop-yarn-applications-tensorflow</module>
     </modules>
 
 </project>

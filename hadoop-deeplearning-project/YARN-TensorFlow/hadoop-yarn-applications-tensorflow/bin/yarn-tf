@@ -1,0 +1,46 @@
+#!/bin/bash
+
+JOB=""
+WORKERS=0
+PSES=0
+JAR=""
+while true  
+do
+    case "$1" in
+         -job)
+            JOB="$2"
+            echo "job script: $JOB"
+            shift
+            ;;  
+         -numberworkers)
+            WORKERS="$2" 
+            echo "worker num: $WORKERS"
+            shift  
+            ;;  
+         -numberps)
+            PSES="$2" 
+            echo "ps num: $PSES"
+            shift  
+            ;;  
+         -jar)
+            JAR="$2" 
+            echo "jar path: $JAR"
+            shift  
+            ;;  
+         *)  
+            shift  
+         break 
+         ;;
+    esac
+shift
+done
+
+CLIENT_MAIN_CLASS="org.apache.hadoop.yarn.applications.tensorflow.Client"
+
+yarn jar $JAR $CLIENT_MAIN_CLASS \
+         --jar $JAR \
+         --tf_client $JOB \
+         --num_worker $WORKERS \
+         --num_ps $PSES \
+         --container_memory 4096
+
