@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMContainerLogsInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NodeInfo;
+import org.apache.hadoop.yarn.server.webapp.YarnWebServiceParams;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
@@ -227,7 +228,7 @@ public class NMWebServices {
   public Response getContainerLogsInfo(
       @javax.ws.rs.core.Context HttpServletRequest hsr,
       @javax.ws.rs.core.Context HttpServletResponse res,
-      @PathParam("containerid") String containerIdStr) {
+      @PathParam(YarnWebServiceParams.CONTAINER_ID) String containerIdStr) {
     ContainerId containerId = null;
     init();
     try {
@@ -298,10 +299,14 @@ public class NMWebServices {
   @Public
   @Unstable
   public Response getContainerLogFile(
-      @PathParam("containerid") String containerIdStr,
-      @PathParam("filename") String filename,
-      @QueryParam("format") String format,
-      @QueryParam("size") String size) {
+      @PathParam(YarnWebServiceParams.CONTAINER_ID)
+      final String containerIdStr,
+      @PathParam(YarnWebServiceParams.CONTAINER_LOG_FILE_NAME)
+      String filename,
+      @QueryParam(YarnWebServiceParams.RESPONSE_CONTENT_FORMAT)
+      String format,
+      @QueryParam(YarnWebServiceParams.RESPONSE_CONTENT_SIZE)
+      String size) {
     return getLogs(containerIdStr, filename, format, size);
   }
 
@@ -329,10 +334,14 @@ public class NMWebServices {
   @Public
   @Unstable
   public Response getLogs(
-      @PathParam("containerid") final String containerIdStr,
-      @PathParam("filename") String filename,
-      @QueryParam("format") String format,
-      @QueryParam("size") String size) {
+      @PathParam(YarnWebServiceParams.CONTAINER_ID)
+      final String containerIdStr,
+      @PathParam(YarnWebServiceParams.CONTAINER_LOG_FILE_NAME)
+      String filename,
+      @QueryParam(YarnWebServiceParams.RESPONSE_CONTENT_FORMAT)
+      String format,
+      @QueryParam(YarnWebServiceParams.RESPONSE_CONTENT_SIZE)
+      String size) {
     ContainerId tempContainerId;
     try {
       tempContainerId = ContainerId.fromString(containerIdStr);

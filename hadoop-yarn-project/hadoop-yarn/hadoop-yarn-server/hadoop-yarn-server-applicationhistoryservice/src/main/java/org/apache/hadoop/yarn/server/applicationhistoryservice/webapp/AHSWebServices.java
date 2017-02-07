@@ -41,6 +41,8 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -55,6 +57,7 @@ import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogType;
 import org.apache.hadoop.yarn.logaggregation.LogToolUtils;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
+import org.apache.hadoop.yarn.server.webapp.YarnWebServiceParams;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
@@ -66,15 +69,21 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.apache.hadoop.yarn.webapp.util.YarnWebServiceUtils;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import com.sun.jersey.api.client.ClientHandlerException;
+import com.sun.jersey.api.client.UniformInterfaceException;
 
 @Singleton
 @Path("/ws/v1/applicationhistory")
 public class AHSWebServices extends WebServices {
 
+  private static final Log LOG = LogFactory.getLog(AHSWebServices.class);
   private static final String NM_DOWNLOAD_URI_STR =
       "/ws/v1/node/containers";
   private static final Joiner JOINER = Joiner.on("");
@@ -215,6 +224,8 @@ public class AHSWebServices extends WebServices {
    *    HttpServletResponse
    * @param containerIdStr
    *    The container ID
+   * @param nmId
+   *    The Node Manager NodeId
    * @return
    *    The log file's name and current file size
    */
@@ -224,7 +235,8 @@ public class AHSWebServices extends WebServices {
   public Response getContainerLogsInfo(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
-      @PathParam("containerid") String containerIdStr) {
+      @PathParam(YarnWebServiceParams.CONTAINER_ID) String containerIdStr,
+      @QueryParam(YarnWebServiceParams.NM_ID) String nmId) {
     ContainerId containerId = null;
     init(res);
     try {
@@ -249,21 +261,43 @@ public class AHSWebServices extends WebServices {
     }
     if (isRunningState(appInfo.getAppState())) {
       String appOwner = appInfo.getUser();
-      ContainerInfo containerInfo;
-      try {
-        containerInfo = super.getContainer(
-            req, res, appId.toString(),
-            containerId.getApplicationAttemptId().toString(),
-            containerId.toString());
-      } catch (Exception ex) {
-        // return log meta for the aggregated logs if exists.
-        // It will also return empty log meta for the local logs.
-        return getContainerLogMeta(appId, appOwner, null,
-            containerIdStr, true);
+      String nodeHttpAddress = null;
+      if (nmId != null && !nmId.isEmpty()) {
+        try {
+          nodeHttpAddress = getNMWebAddressFromRM(conf, nmId);
+        } catch (Exception ex) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(ex.getMessage());
+          }
+        }
       }
-      String nodeHttpAddress = containerInfo.getNodeHttpAddress();
+      if (nodeHttpAddress == null || nodeHttpAddress.isEmpty()) {
+        ContainerInfo containerInfo;
+        try {
+          containerInfo = super.getContainer(
+              req, res, appId.toString(),
+              containerId.getApplicationAttemptId().toString(),
+              containerId.toString());
+        } catch (Exception ex) {
+          // return log meta for the aggregated logs if exists.
+          // It will also return empty log meta for the local logs.
+          return getContainerLogMeta(appId, appOwner, null,
+              containerIdStr, true);
+        }
+        nodeHttpAddress = containerInfo.getNodeHttpAddress();
+        // make sure nodeHttpAddress is not null and not empty. Otherwise,
+        // we would only get log meta for aggregated logs instead of
+        // re-directing the request
+        if (nodeHttpAddress == null || nodeHttpAddress.isEmpty()) {
+          // return log meta for the aggregated logs if exists.
+          // It will also return empty log meta for the local logs.
+          return getContainerLogMeta(appId, appOwner, null,
+              containerIdStr, true);
+        }
+      }
       String uri = "/" + containerId.toString() + "/logs";
-      String resURI = JOINER.join(nodeHttpAddress, NM_DOWNLOAD_URI_STR, uri);
+      String resURI = JOINER.join(getAbsoluteNMWebAddress(nodeHttpAddress),
+          NM_DOWNLOAD_URI_STR, uri);
       String query = req.getQueryString();
       if (query != null && !query.isEmpty()) {
         resURI += "?" + query;
@@ -293,6 +327,8 @@ public class AHSWebServices extends WebServices {
    *    The content type
    * @param size
    *    the size of the log file
+   * @param nmId
+   *    The Node Manager NodeId
    * @return
    *    The contents of the container's log file
    */
@@ -303,11 +339,13 @@ public class AHSWebServices extends WebServices {
   @Unstable
   public Response getContainerLogFile(@Context HttpServletRequest req,
       @Context HttpServletResponse res,
-      @PathParam("containerid") String containerIdStr,
-      @PathParam("filename") String filename,
-      @QueryParam("format") String format,
-      @QueryParam("size") String size) {
-    return getLogs(req, res, containerIdStr, filename, format, size);
+      @PathParam(YarnWebServiceParams.CONTAINER_ID) String containerIdStr,
+      @PathParam(YarnWebServiceParams.CONTAINER_LOG_FILE_NAME) String filename,
+      @QueryParam(YarnWebServiceParams.RESPONSE_CONTENT_FORMAT) String format,
+      @QueryParam(YarnWebServiceParams.RESPONSE_CONTENT_SIZE) String size,
+      @QueryParam(YarnWebServiceParams.NM_ID) String nmId) {
+    return getLogs(req, res, containerIdStr, filename, format,
+        size, nmId);
   }
 
   //TODO: YARN-4993: Refactory ContainersLogsBlock, AggregatedLogsBlock and
@@ -320,10 +358,11 @@ public class AHSWebServices extends WebServices {
   @Unstable
   public Response getLogs(@Context HttpServletRequest req,
       @Context HttpServletResponse res,
-      @PathParam("containerid") String containerIdStr,
-      @PathParam("filename") String filename,
-      @QueryParam("format") String format,
-      @QueryParam("size") String size) {
+      @PathParam(YarnWebServiceParams.CONTAINER_ID) String containerIdStr,
+      @PathParam(YarnWebServiceParams.CONTAINER_LOG_FILE_NAME) String filename,
+      @QueryParam(YarnWebServiceParams.RESPONSE_CONTENT_FORMAT) String format,
+      @QueryParam(YarnWebServiceParams.RESPONSE_CONTENT_SIZE) String size,
+      @QueryParam(YarnWebServiceParams.NM_ID) String nmId) {
     init(res);
     ContainerId containerId;
     try {
@@ -353,20 +392,41 @@ public class AHSWebServices extends WebServices {
     }
 
     if (isRunningState(appInfo.getAppState())) {
-      ContainerInfo containerInfo;
-      try {
-        containerInfo = super.getContainer(
-            req, res, appId.toString(),
-            containerId.getApplicationAttemptId().toString(),
-            containerId.toString());
-      } catch (Exception ex) {
-        // output the aggregated logs
-        return sendStreamOutputResponse(appId, appOwner, null, containerIdStr,
-            filename, format, length, true);
+      String nodeHttpAddress = null;
+      if (nmId != null && !nmId.isEmpty()) {
+        try {
+          nodeHttpAddress = getNMWebAddressFromRM(conf, nmId);
+        } catch (Exception ex) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(ex.getMessage());
+          }
+        }
       }
-      String nodeHttpAddress = containerInfo.getNodeHttpAddress();
+      if (nodeHttpAddress == null || nodeHttpAddress.isEmpty()) {
+        ContainerInfo containerInfo;
+        try {
+          containerInfo = super.getContainer(
+              req, res, appId.toString(),
+              containerId.getApplicationAttemptId().toString(),
+              containerId.toString());
+        } catch (Exception ex) {
+          // output the aggregated logs
+          return sendStreamOutputResponse(appId, appOwner, null,
+              containerIdStr, filename, format, length, true);
+        }
+        nodeHttpAddress = containerInfo.getNodeHttpAddress();
+        // make sure nodeHttpAddress is not null and not empty. Otherwise,
+        // we would only get aggregated logs instead of re-directing the
+        // request
+        if (nodeHttpAddress == null || nodeHttpAddress.isEmpty()) {
+          // output the aggregated logs
+          return sendStreamOutputResponse(appId, appOwner, null,
+              containerIdStr, filename, format, length, true);
+        }
+      }
       String uri = "/" + containerId.toString() + "/logs/" + filename;
-      String resURI = JOINER.join(nodeHttpAddress, NM_DOWNLOAD_URI_STR, uri);
+      String resURI = JOINER.join(getAbsoluteNMWebAddress(nodeHttpAddress),
+          NM_DOWNLOAD_URI_STR, uri);
       String query = req.getQueryString();
       if (query != null && !query.isEmpty()) {
         resURI += "?" + query;
@@ -473,7 +533,7 @@ public class AHSWebServices extends WebServices {
           .getContainerLogMetaFromRemoteFS(conf, appId, containerIdStr,
               nodeId, appOwner);
       if (containerLogMeta.isEmpty()) {
-        return createBadResponse(Status.INTERNAL_SERVER_ERROR,
+        throw new NotFoundException(
             "Can not get log meta for container: " + containerIdStr);
       }
       List<ContainerLogsInfo> containersLogsInfo = new ArrayList<>();
@@ -508,5 +568,24 @@ public class AHSWebServices extends WebServices {
     return "We do not have NodeManager web address, so we can not "
         + "re-direct the request to related NodeManager "
         + "for local container logs.";
+  }
+
+  private String getAbsoluteNMWebAddress(String nmWebAddress) {
+    if (nmWebAddress.contains(WebAppUtils.HTTP_PREFIX) ||
+        nmWebAddress.contains(WebAppUtils.HTTPS_PREFIX)) {
+      return nmWebAddress;
+    }
+    return WebAppUtils.getHttpSchemePrefix(conf) + nmWebAddress;
+  }
+
+  @VisibleForTesting
+  @Private
+  public String getNMWebAddressFromRM(Configuration configuration,
+      String nodeId) throws ClientHandlerException,
+      UniformInterfaceException, JSONException {
+    JSONObject nodeInfo = YarnWebServiceUtils.getNodeInfoFromRMWebService(
+        configuration, nodeId).getJSONObject("node");
+    return nodeInfo.has("nodeHTTPAddress") ?
+        nodeInfo.getString("nodeHTTPAddress") : null;
   }
 }
