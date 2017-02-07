@@ -90,7 +90,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
    * @param path path
    * @throws IOException on a failure
    */
-  private void assertEncrypted(Path path) throws IOException {
+  protected void assertEncrypted(Path path) throws IOException {
     ObjectMetadata md = getFileSystem().getObjectMetadata(path);
     switch(getSSEAlgorithm()) {
     case SSE_C:
