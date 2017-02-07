@@ -30,19 +30,45 @@
     <final>true</final>
   </property>
 
-  <!-- Uncomment these two properties to run integration tests with
-       local metadata store (S3Guard).
-
   <property>
-    <name>fs.s3a.metadatastore.authoritative</name>
-    <value>true</value>
-  </property>
-  <property>
-    <name>fs.s3a.metadatastore.impl</name>
-    <value>org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore</value>
+    <name>fs.s3a.bucket.landsat-pds.endpoint</name>
+    <value>${central.endpoint}</value>
+    <description>The endpoint for s3a://landsat-pds URLs</description>
   </property>
 
-  -->
+  <!-- Make sure S3Guard is disabled for read-only bucket tests. -->
+  <property>
+    <name>fs.s3a.bucket.landsat-pds.metadatastore.impl</name>
+    <value>${s3guard.null}</value>
+    <description>The read-only landsat-pds repository isn't
+        managed by s3guard</description>
+  </property>
+
+  <!-- Convenience definitions. -->
+  <property>
+    <name>s3guard.null</name>
+    <value>org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore</value>
+  </property>
+
+  <property>
+    <name>s3guard.dynamo</name>
+    <value>org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore</value>
+  </property>
+
+  <property>
+    <name>frankfurt.endpoint</name>
+    <value>s3.eu-central-1.amazonaws.com</value>
+  </property>
+
+  <property>
+    <name>ireland.endpoint</name>
+    <value>s3-eu-west-1.amazonaws.com</value>
+  </property>
+
+  <property>
+    <name>central.endpoint</name>
+    <value>s3.amazonaws.com</value>
+  </property>
 
   <!-- Scale integration tests may time out on slower connections
        you can reduce the operation count like so to mitigate this.

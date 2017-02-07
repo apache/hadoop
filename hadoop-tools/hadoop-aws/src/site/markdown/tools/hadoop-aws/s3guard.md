@@ -219,6 +219,18 @@ Attempting to perform more IO than the capacity requested simply throttles the
 IO; small capacity numbers are recommended when initially experimenting
 with S3Guard.
 
+## Credentials
+
+The DynamoDB metadata store takes advantage of the fact that the DynamoDB
+service uses uses the same authentication mechanisms as S3. With S3Guard,
+DynamoDB doesn't have any dedicated authentication configuration; it gets its
+credentials from the S3A client that is using it.
+
+The existing S3 authentication mechanisms can be used, except for one
+exception. Credentials placed in URIs are not supported for S3Guard.  The
+reason is that providing login details in filesystem URIs is considered
+unsafe and thus deprecated.
+
 ## S3Guard Command Line Interface (CLI)
 
 Note that in some cases an endpoint or a s3a:// URI can be provided.
