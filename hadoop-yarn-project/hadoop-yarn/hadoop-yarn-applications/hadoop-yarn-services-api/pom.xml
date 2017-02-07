@@ -19,12 +19,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-yarn-applications</artifactId>
-    <version>3.0.0-alpha2-SNAPSHOT</version>
+    <version>3.0.0-alpha3-SNAPSHOT</version>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-services-api</artifactId>
   <name>Apache Hadoop YARN Services API</name>
-  <version>3.0.0-alpha2-SNAPSHOT</version>
+  <version>3.0.0-alpha3-SNAPSHOT</version>
   <packaging>jar</packaging>
   <description>Hadoop YARN REST APIs for services</description>
 
