@@ -183,4 +183,10 @@ public class EagerKeyGeneratorKeyProviderCryptoExtension
     getExtension().drain(name);
     return keyVersion;
   }
+
+  @Override
+  public void invalidateCache(String name) throws IOException {
+    super.invalidateCache(name);
+    getExtension().drain(name);
+  }
 }

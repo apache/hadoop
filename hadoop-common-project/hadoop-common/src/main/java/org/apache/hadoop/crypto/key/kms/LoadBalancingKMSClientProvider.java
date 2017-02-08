@@ -178,6 +178,14 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
     }
   }
 
+  // This request is sent to all providers in the load-balancing group
+  @Override
+  public void invalidateCache(String keyName) throws IOException {
+    for (KMSClientProvider provider : providers) {
+      provider.invalidateCache(keyName);
+    }
+  }
+
   @Override
   public EncryptedKeyVersion
       generateEncryptedKey(final String encryptionKeyName)
@@ -218,14 +226,14 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
     }
   }
 
-  public EncryptedKeyVersion reencryptEncryptedKey(EncryptedKeyVersion edek)
+  public EncryptedKeyVersion reencryptEncryptedKey(EncryptedKeyVersion ekv)
       throws IOException, GeneralSecurityException {
     try {
       return doOp(new ProviderCallable<EncryptedKeyVersion>() {
         @Override
         public EncryptedKeyVersion call(KMSClientProvider provider)
             throws IOException, GeneralSecurityException {
-          return provider.reencryptEncryptedKey(edek);
+          return provider.reencryptEncryptedKey(ekv);
         }
       }, nextIdx());
     } catch (WrapperException we) {
@@ -325,6 +333,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
       throw new IOException(e.getCause());
     }
   }
+
   @Override
   public void deleteKey(final String name) throws IOException {
     doOp(new ProviderCallable<Void>() {
@@ -335,28 +344,33 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
       }
     }, nextIdx());
   }
+
   @Override
   public KeyVersion rollNewVersion(final String name, final byte[] material)
       throws IOException {
-    return doOp(new ProviderCallable<KeyVersion>() {
+    final KeyVersion newVersion = doOp(new ProviderCallable<KeyVersion>() {
       @Override
       public KeyVersion call(KMSClientProvider provider) throws IOException {
         return provider.rollNewVersion(name, material);
       }
     }, nextIdx());
+    invalidateCache(name);
+    return newVersion;
   }
 
   @Override
   public KeyVersion rollNewVersion(final String name)
       throws NoSuchAlgorithmException, IOException {
     try {
-      return doOp(new ProviderCallable<KeyVersion>() {
+      final KeyVersion newVersion = doOp(new ProviderCallable<KeyVersion>() {
         @Override
         public KeyVersion call(KMSClientProvider provider) throws IOException,
-        NoSuchAlgorithmException {
+            NoSuchAlgorithmException {
           return provider.rollNewVersion(name);
         }
       }, nextIdx());
+      invalidateCache(name);
+      return newVersion;
     } catch (WrapperException e) {
       if (e.getCause() instanceof GeneralSecurityException) {
         throw (NoSuchAlgorithmException) e.getCause();

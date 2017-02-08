@@ -103,7 +103,9 @@ This cache is used with the following 3 methods only, `getCurrentKey()` and `get
 
 For the `getCurrentKey()` method, cached entries are kept for a maximum of 30000 milliseconds regardless the number of times the key is being accessed (to avoid stale keys to be considered current).
 
-For the `getKeyVersion()` method, cached entries are kept with a default inactivity timeout of 600000 milliseconds (10 mins).
+For the `getKeyVersion()` and `getMetadata()` methods, cached entries are kept with a default inactivity timeout of 600000 milliseconds (10 mins).
+
+The cache is invalidated when the key is deleted by `deleteKey()`, or when `invalidateCache()` is called.
 
 These configurations can be changed via the following properties in the `etc/hadoop/kms-site.xml` configuration file:
 
@@ -840,6 +842,16 @@ $H4 Rollover Key
       "name"        : "versionName",
       "material"    : "<material>",    //base64, not present without GET ACL
     }
+
+$H4 Invalidate Cache of a Key
+
+*REQUEST:*
+
+    POST http://HOST:PORT/kms/v1/key/<key-name>/_invalidatecache
+
+*RESPONSE:*
+
+    200 OK
 
 $H4 Delete Key
 

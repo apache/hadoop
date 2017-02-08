@@ -594,6 +594,18 @@ public abstract class KeyProvider {
   }
 
   /**
+   * Can be used by implementing classes to invalidate the caches. This could be
+   * used after rollNewVersion to provide a strong guarantee to return the new
+   * version of the given key.
+   *
+   * @param name the basename of the key
+   * @throws IOException
+   */
+  public void invalidateCache(String name) throws IOException {
+    // NOP
+  }
+
+  /**
    * Ensures that any changes to the keys are written to persistent store.
    * @throws IOException
    */
