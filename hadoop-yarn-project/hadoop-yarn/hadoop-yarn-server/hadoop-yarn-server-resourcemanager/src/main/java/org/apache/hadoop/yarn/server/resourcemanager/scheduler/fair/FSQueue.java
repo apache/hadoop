@@ -244,10 +244,7 @@ public abstract class FSQueue implements Queue, Schedulable {
    * @return true if the queue can be preempted
    */
   public boolean canBePreempted() {
-    Preconditions.checkNotNull(parent, "Parent queue can't be null since"
-        + " parent's policy is needed for preemptable checking.");
-
-    if (parent.policy.checkIfUsageOverFairShare(
+    if (parent == null || parent.policy.checkIfUsageOverFairShare(
         getResourceUsage(), getFairShare())) {
       return true;
     } else {
