@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
-import static org.junit.Assert.assertFalse;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -157,23 +156,34 @@ public class TestYarnClient {
   }
 
   @Test
-  public void testTimelineClientInitFailure() throws Exception{
+  public void testStartWithTimelineV15Failure() throws Exception{
     Configuration conf = new Configuration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 1.5f);
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_CLIENT_BEST_EFFORT,
+        true);
     YarnClient client = YarnClient.createYarnClient();
     if(client instanceof YarnClientImpl) {
       YarnClientImpl impl = (YarnClientImpl) client;
       YarnClientImpl spyClient = spy(impl);
       when(spyClient.createTimelineClient()).thenThrow(
-          new NoClassDefFoundError(
-              "Mock a failure when init timeline instance"));
+          new IOException("ATS v1.5 client initialization failed. "));
       spyClient.init(conf);
       spyClient.start();
-      assertFalse("Timeline client should be disabled when"
-          + "it is failed to init",
-          spyClient.timelineServiceEnabled);
+      spyClient.getTimelineDelegationToken();
       spyClient.stop();
     }
+  }
+
+  @Test
+  public void testStartWithTimelineV15() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 1.5f);
+    YarnClientImpl client = (YarnClientImpl) YarnClient.createYarnClient();
+    client.init(conf);
+    client.start();
+    client.stop();
   }
 
   @SuppressWarnings("deprecation")
