@@ -825,7 +825,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   /**
-   * Transition to standby in a new thread.
+   * Transition to standby state in a new thread. The transition operation is
+   * asynchronous to avoid deadlock caused by cyclic dependency.
    */
   public void handleTransitionToStandByInNewThread() {
     Thread standByTransitionThread =
@@ -834,13 +835,24 @@ public class ResourceManager extends CompositeService implements Recoverable {
     standByTransitionThread.start();
   }
 
+  /**
+   * The class to transition RM to standby state. The same
+   * {@link StandByTransitionRunnable} object could be used in multiple threads,
+   * but runs only once. That's because RM can go back to active state after
+   * transition to standby state, the same runnable in the old context can't
+   * transition RM to standby state again. A new runnable is created every time
+   * RM transitions to active state.
+   */
   private class StandByTransitionRunnable implements Runnable {
-    private AtomicBoolean hasRun = new AtomicBoolean(false);
+    // The atomic variable to make sure multiple threads with the same runnable
+    // run only once.
+    private AtomicBoolean hasAlreadyRun = new AtomicBoolean(false);
 
     @Override
     public void run() {
-      // Prevent from running again if it has run.
-      if (hasRun.getAndSet(true)) {
+      // Run this only once, even if multiple threads end up triggering
+      // this simultaneously.
+      if (hasAlreadyRun.getAndSet(true)) {
         return;
       }
 

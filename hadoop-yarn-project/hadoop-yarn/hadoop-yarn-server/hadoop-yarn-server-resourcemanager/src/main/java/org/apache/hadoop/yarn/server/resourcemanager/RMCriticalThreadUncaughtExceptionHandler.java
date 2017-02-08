@@ -27,9 +27,9 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.yarn.conf.HAUtil;
 
 /**
- * This class either shutdowns {@link ResourceManager} or makes
- * {@link ResourceManager} transition to standby state if any uncaught exception
- * causes critical threads crash. It is intended to be installed by calling
+ * This class either shuts down {@link ResourceManager} or transitions the
+ * {@link ResourceManager} to standby state if a critical thread throws an
+ * uncaught exception. It is intended to be installed by calling
  * {@code setUncaughtExceptionHandler(Thread.UncaughtExceptionHandler)}
  * in the thread entry point or after creation of threads.
  */
