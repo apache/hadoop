@@ -165,7 +165,7 @@ public abstract class SchedulingPolicy {
       Resource queueUsage, Resource maxAvailable);
 
   /**
-   * Check whether the policy of a child queue are allowed.
+   * Check whether the policy of a child queue is allowed.
    *
    * @param childPolicy the policy of child queue
    */

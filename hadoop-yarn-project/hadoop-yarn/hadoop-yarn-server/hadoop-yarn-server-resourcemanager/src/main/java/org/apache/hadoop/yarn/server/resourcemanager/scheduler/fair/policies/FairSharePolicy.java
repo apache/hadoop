@@ -27,7 +27,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationConfigurationException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy;
@@ -181,9 +180,10 @@ public class FairSharePolicy extends SchedulingPolicy {
   @Override
   public boolean isChildPolicyAllowed(SchedulingPolicy childPolicy) {
     if (childPolicy instanceof DominantResourceFairnessPolicy) {
-      LOG.info("Queue policies can't be " + DominantResourceFairnessPolicy.NAME
-          + " if the parent policy is " + getName() + ". Please choose "
-          + "other polices for child queues instead.");
+      LOG.error("Queue policy can't be " + DominantResourceFairnessPolicy.NAME
+          + " if the parent policy is " + getName() + ". Choose " +
+          getName() + " or " + FifoPolicy.NAME + " for child queues instead."
+          + " Please note that " + FifoPolicy.NAME + " is only for leaf queues");
       return false;
     }
     return true;

@@ -134,8 +134,9 @@ public class FifoPolicy extends SchedulingPolicy {
 
   @Override
   public boolean isChildPolicyAllowed(SchedulingPolicy childPolicy) {
-    LOG.info(getName() + " policy is only for leaf queues. Please choose "
-        + "policies other than " + getName() + " for parent queues.");
+    LOG.error(getName() + " policy is only for leaf queues. Please choose "
+        + DominantResourceFairnessPolicy.NAME + " or " + FairSharePolicy.NAME
+        + " for parent queues.");
     return false;
   }
 }

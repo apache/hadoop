@@ -35,6 +35,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 import org.xml.sax.SAXException;
 
 import com.google.common.base.CharMatcher;
@@ -72,6 +73,9 @@ public class QueueManager {
 
   public void initialize(Configuration conf) throws IOException,
       SAXException, AllocationConfigurationException, ParserConfigurationException {
+    // Policies of root and default queue are set to
+    // SchedulingPolicy.DEFAULT_POLICY since the allocation file hasn't been
+    // loaded yet.
     rootQueue = new FSParentQueue("root", scheduler, null);
     queues.put(rootQueue.getName(), rootQueue);
 
@@ -286,6 +290,11 @@ public class QueueManager {
         leafQueues.add(leafQueue);
         queue = leafQueue;
       } else {
+        if (childPolicy instanceof FifoPolicy) {
+          LOG.error("Can't create queue '" + queueName + "', since "
+              + FifoPolicy.NAME + " is only for leaf queues.");
+          return null;
+        }
         newParent = new FSParentQueue(queueName, scheduler, parent);
         queue = newParent;
       }

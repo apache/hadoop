@@ -97,10 +97,11 @@ public abstract class FSQueue implements Queue, Schedulable {
 
   /**
    * Initialize a queue by setting its queue-specific properties and its
-   * metrics. This function don't set the policy for queues since there is
-   * different logic to do that.
-   * This function is invoked when a new queue is created or reloading the
-   * allocation configuration.
+   * metrics. This method is invoked when a new queue is created or reloading
+   * the allocation file.
+   * This method does not set policies for queues when reloading the allocation
+   * file since we need to either set all new policies or nothing, which is
+   * handled by method {@link #verifyAndSetPolicyFromConf}.
    *
    * @param recursive whether child queues should be reinitialized recursively
    */
@@ -466,7 +467,7 @@ public abstract class FSQueue implements Queue, Schedulable {
    * Recursively check policies for queues in pre-order. Get queue policies
    * from the allocation file instead of properties of {@link FSQueue} objects.
    * Set the policy for current queue if there is no policy violation for its
-   * children.
+   * children. This method is invoked while reloading the allocation file.
    *
    * @param queueConf allocation configuration
    * @return true if no policy violation and successfully set polices
