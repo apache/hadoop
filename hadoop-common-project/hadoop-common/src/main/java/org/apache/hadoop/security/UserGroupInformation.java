@@ -22,6 +22,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_KERBEROS_MIN_S
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -43,6 +45,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import javax.security.auth.DestroyFailedException;
 import javax.security.auth.Subject;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.kerberos.KerberosPrincipal;
@@ -74,8 +77,6 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-
-import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1120,10 +1121,40 @@ public class UserGroupInformation {
     reloginFromKeytab();
   }
 
+  // if the first kerberos ticket is not TGT, then remove and destroy it since
+  // the kerberos library of jdk always use the first kerberos ticket as TGT.
+  // See HADOOP-13433 for more details.
+  private void fixKerberosTicketOrder() {
+    Set<Object> creds = getSubject().getPrivateCredentials();
+    synchronized (creds) {
+      for (Iterator<Object> iter = creds.iterator(); iter.hasNext();) {
+        Object cred = iter.next();
+        if (cred instanceof KerberosTicket) {
+          KerberosTicket ticket = (KerberosTicket) cred;
+          if (!ticket.getServer().getName().startsWith("krbtgt")) {
+            LOG.warn("The first kerberos ticket is not TGT"
+                + "(the server principal is {}), remove and destroy it.",
+                ticket.getServer());
+            iter.remove();
+            try {
+              ticket.destroy();
+            } catch (DestroyFailedException e) {
+              LOG.warn("destroy ticket failed", e);
+            }
+          } else {
+            return;
+          }
+        }
+      }
+    }
+    LOG.warn("Warning, no kerberos ticket found while attempting to renew" +
+        " ticket");
+  }
+
   /**
    * Re-Login a user in from a keytab file. Loads a user identity from a keytab
    * file and logs them in. They become the currently logged-in user. This
-   * method assumes that {@link #loginUserFromKeytab(String, String)} had 
+   * method assumes that {@link #loginUserFromKeytab(String, String)} had
    * happened already.
    * The Subject field of this UserGroupInformation object is updated to have
    * the new credentials.
@@ -1131,13 +1162,13 @@ public class UserGroupInformation {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public synchronized void reloginFromKeytab()
-  throws IOException {
-    if (!isSecurityEnabled() ||
-         user.getAuthenticationMethod() != AuthenticationMethod.KERBEROS ||
-         !isKeytab)
+  public synchronized void reloginFromKeytab() throws IOException {
+    if (!isSecurityEnabled()
+        || user.getAuthenticationMethod() != AuthenticationMethod.KERBEROS
+        || !isKeytab) {
       return;
-    
+    }
+
     long now = Time.now();
     if (!shouldRenewImmediatelyForTests && !hasSufficientTimeElapsed(now)) {
       return;
@@ -1149,12 +1180,12 @@ public class UserGroupInformation {
         now < getRefreshTime(tgt)) {
       return;
     }
-    
+
     LoginContext login = getLogin();
     if (login == null || keytabFile == null) {
       throw new IOException("loginUserFromKeyTab must be done first");
     }
-    
+
     long start = 0;
     // register most recent relogin attempt
     user.setLastLogin(now);
@@ -1177,6 +1208,7 @@ public class UserGroupInformation {
         }
         start = Time.now();
         login.login();
+        fixKerberosTicketOrder();
         metrics.loginSuccess.add(Time.now() - start);
         setLogin(login);
       }
@@ -1198,12 +1230,12 @@ public class UserGroupInformation {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public synchronized void reloginFromTicketCache()
-  throws IOException {
-    if (!isSecurityEnabled() || 
-        user.getAuthenticationMethod() != AuthenticationMethod.KERBEROS ||
-        !isKrbTkt)
+  public synchronized void reloginFromTicketCache() throws IOException {
+    if (!isSecurityEnabled()
+        || user.getAuthenticationMethod() != AuthenticationMethod.KERBEROS
+        || !isKrbTkt) {
       return;
+    }
     LoginContext login = getLogin();
     if (login == null) {
       throw new IOException("login must be done first");
@@ -1231,13 +1263,13 @@ public class UserGroupInformation {
         LOG.debug("Initiating re-login for " + getUserName());
       }
       login.login();
+      fixKerberosTicketOrder();
       setLogin(login);
     } catch (LoginException le) {
       throw new IOException("Login failure for " + getUserName() + ": " + le,
           le);
     } 
   }
-
 
   /**
    * Log a user in from a keytab file. Loads a user identity from a keytab
