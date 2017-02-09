@@ -312,6 +312,9 @@ public class FairScheduler extends
           long start = getClock().getTime();
           update();
           long duration = getClock().getTime() - start;
+          // UpdateCall duration and ThreadRun Duration are the same after
+          // YARN-4752 (preemption overhaul), we keep both for compatibility.
+          fsOpDurations.addUpdateCallDuration(duration);
           fsOpDurations.addUpdateThreadRunDuration(duration);
         } catch (InterruptedException ie) {
           LOG.warn("Update thread interrupted. Exiting.");
@@ -351,7 +354,6 @@ public class FairScheduler extends
   protected void update() {
     try {
       writeLock.lock();
-      long start = getClock().getTime();
 
       FSQueue rootQueue = queueMgr.getRootQueue();
 
@@ -374,9 +376,6 @@ public class FairScheduler extends
               rootMetrics.getAvailableVirtualCores()) +
               "  Demand: " + rootQueue.getDemand());
         }
-
-        long duration = getClock().getTime() - start;
-        fsOpDurations.addUpdateCallDuration(duration);
       }
     } finally {
       writeLock.unlock();
