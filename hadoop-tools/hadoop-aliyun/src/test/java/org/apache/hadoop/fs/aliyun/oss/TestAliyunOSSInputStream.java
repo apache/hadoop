@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.fs.FileStatus;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -141,5 +142,13 @@ public class TestAliyunOSSInputStream {
     }
     assertTrue(instream.available() == 0);
     IOUtils.closeStream(instream);
+  }
+  @Test
+  public void testDirectoryModifiedTime() throws Exception {
+    Path emptyDirPath = setPath("/test/emptyDirectory");
+    fs.mkdirs(emptyDirPath);
+    FileStatus dirFileStatus = fs.getFileStatus(emptyDirPath);
+    assertTrue("expected the empty dir is new",
+        dirFileStatus.getModificationTime() > 0L);
   }
 }

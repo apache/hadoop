@@ -218,7 +218,8 @@ public class AliyunOSSFileSystem extends FileSystem {
         throw new FileNotFoundException(path + ": No such file or directory!");
       }
     } else if (objectRepresentsDirectory(key, meta.getContentLength())) {
-      return new FileStatus(0, true, 1, 0, 0, qualifiedPath);
+      return new FileStatus(0, true, 1, 0, meta.getLastModified().getTime(),
+           qualifiedPath);
     } else {
       return new FileStatus(meta.getContentLength(), false, 1,
           getDefaultBlockSize(path), meta.getLastModified().getTime(),
