@@ -112,19 +112,21 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
   }
 
   /**
-   * Returns the first non-empty queue with equal or lesser priority
-   * than <i>startIdx</i>. Wraps around, searching a maximum of N
-   * queues, where N is this.queues.size().
+   * Returns the first non-empty queue with equal to <i>startIdx</i>, or
+   * or scans from highest to lowest priority queue.
    *
    * @param startIdx the queue number to start searching at
    * @return the first non-empty queue with less priority, or null if
    * everything was empty
    */
   private BlockingQueue<E> getFirstNonEmptyQueue(int startIdx) {
+    BlockingQueue<E> queue = this.queues.get(startIdx);
+    if (queue.size() != 0) {
+      return queue;
+    }
     final int numQueues = this.queues.size();
     for(int i=0; i < numQueues; i++) {
-      int idx = (i + startIdx) % numQueues; // offset and wrap around
-      BlockingQueue<E> queue = this.queues.get(idx);
+      queue = this.queues.get(i);
       if (queue.size() != 0) {
         return queue;
       }
