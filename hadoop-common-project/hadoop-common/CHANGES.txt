@@ -112,6 +112,8 @@ Release 2.7.4 - UNRELEASED
 
     HADOOP-14001. Improve delegation token validity checking. (aajisaka)
 
+    HADOOP-13433 Race in UGI.reloginFromKeytab. (Duo Zhang via xiao)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
