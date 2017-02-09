@@ -542,18 +542,20 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   }
 
   void trackContainerForPreemption(RMContainer container) {
-    containersToPreempt.add(container);
-    synchronized (preemptedResources) {
-      Resources.addTo(preemptedResources, container.getAllocatedResource());
+    if (containersToPreempt.add(container)) {
+      synchronized (preemptedResources) {
+        Resources.addTo(preemptedResources, container.getAllocatedResource());
+      }
     }
   }
 
   private void untrackContainerForPreemption(RMContainer container) {
-    synchronized (preemptedResources) {
-      Resources.subtractFrom(preemptedResources,
-          container.getAllocatedResource());
+    if (containersToPreempt.remove(container)) {
+      synchronized (preemptedResources) {
+        Resources.subtractFrom(preemptedResources,
+            container.getAllocatedResource());
+      }
     }
-    containersToPreempt.remove(container);
   }
 
   Set<RMContainer> getPreemptionContainers() {
