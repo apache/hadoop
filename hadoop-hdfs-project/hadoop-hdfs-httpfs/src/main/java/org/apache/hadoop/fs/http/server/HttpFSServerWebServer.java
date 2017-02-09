@@ -15,7 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.crypto.key.kms.server;
+package org.apache.hadoop.fs.http.server;
+
+import static org.apache.hadoop.util.StringUtils.startupShutdownMessage;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -29,64 +31,80 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.ssl.SSLFactory;
-import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The KMS web server.
+ * The HttpFS web server.
  */
 @InterfaceAudience.Private
-public class KMSWebServer {
+public class HttpFSServerWebServer {
   private static final Logger LOG =
-      LoggerFactory.getLogger(KMSWebServer.class);
+      LoggerFactory.getLogger(HttpFSServerWebServer.class);
 
-  private static final String NAME = "kms";
-  private static final String SERVLET_PATH = "/kms";
+  private static final String HTTPFS_DEFAULT_XML = "httpfs-default.xml";
+  private static final String HTTPFS_SITE_XML = "httpfs-site.xml";
+
+  // HTTP properties
+  static final String HTTP_PORT_KEY = "hadoop.httpfs.http.port";
+  private static final int HTTP_PORT_DEFAULT = 14000;
+  static final String HTTP_HOST_KEY = "hadoop.httpfs.http.host";
+  private static final String HTTP_HOST_DEFAULT = "0.0.0.0";
+
+  // SSL properties
+  private static final String SSL_ENABLED_KEY = "hadoop.httpfs.ssl.enabled";
+  private static final boolean SSL_ENABLED_DEFAULT = false;
+
+  private static final String HTTP_ADMINS_KEY =
+      "hadoop.httpfs.http.administrators";
+
+  private static final String NAME = "webhdfs";
+  private static final String SERVLET_PATH = "/webhdfs";
+
+  static {
+    Configuration.addDefaultResource(HTTPFS_DEFAULT_XML);
+    Configuration.addDefaultResource(HTTPFS_SITE_XML);
+  }
 
   private final HttpServer2 httpServer;
   private final String scheme;
 
-  KMSWebServer(Configuration conf, Configuration sslConf) throws Exception {
+  HttpFSServerWebServer(Configuration conf, Configuration sslConf) throws
+      Exception {
     // Override configuration with deprecated environment variables.
-    deprecateEnv("KMS_TEMP", conf, HttpServer2.HTTP_TEMP_DIR_KEY,
-        KMSConfiguration.KMS_SITE_XML);
-    deprecateEnv("KMS_HTTP_PORT", conf,
-        KMSConfiguration.HTTP_PORT_KEY, KMSConfiguration.KMS_SITE_XML);
-    deprecateEnv("KMS_MAX_THREADS", conf,
-        HttpServer2.HTTP_MAX_THREADS_KEY, KMSConfiguration.KMS_SITE_XML);
-    deprecateEnv("KMS_MAX_HTTP_HEADER_SIZE", conf,
-        HttpServer2.HTTP_MAX_REQUEST_HEADER_SIZE_KEY,
-        KMSConfiguration.KMS_SITE_XML);
-    deprecateEnv("KMS_MAX_HTTP_HEADER_SIZE", conf,
-        HttpServer2.HTTP_MAX_RESPONSE_HEADER_SIZE_KEY,
-        KMSConfiguration.KMS_SITE_XML);
-    deprecateEnv("KMS_SSL_ENABLED", conf,
-        KMSConfiguration.SSL_ENABLED_KEY, KMSConfiguration.KMS_SITE_XML);
-    deprecateEnv("KMS_SSL_KEYSTORE_FILE", sslConf,
+    deprecateEnv("HTTPFS_TEMP", conf, HttpServer2.HTTP_TEMP_DIR_KEY,
+        HTTPFS_SITE_XML);
+    deprecateEnv("HTTPFS_HTTP_PORT", conf, HTTP_PORT_KEY,
+        HTTPFS_SITE_XML);
+    deprecateEnv("HTTPFS_MAX_THREADS", conf,
+        HttpServer2.HTTP_MAX_THREADS_KEY, HTTPFS_SITE_XML);
+    deprecateEnv("HTTPFS_MAX_HTTP_HEADER_SIZE", conf,
+        HttpServer2.HTTP_MAX_REQUEST_HEADER_SIZE_KEY, HTTPFS_SITE_XML);
+    deprecateEnv("HTTPFS_MAX_HTTP_HEADER_SIZE", conf,
+        HttpServer2.HTTP_MAX_RESPONSE_HEADER_SIZE_KEY, HTTPFS_SITE_XML);
+    deprecateEnv("HTTPFS_SSL_ENABLED", conf, SSL_ENABLED_KEY,
+        HTTPFS_SITE_XML);
+    deprecateEnv("HTTPFS_SSL_KEYSTORE_FILE", sslConf,
         SSLFactory.SSL_SERVER_KEYSTORE_LOCATION,
         SSLFactory.SSL_SERVER_CONF_DEFAULT);
-    deprecateEnv("KMS_SSL_KEYSTORE_PASS", sslConf,
+    deprecateEnv("HTTPFS_SSL_KEYSTORE_PASS", sslConf,
         SSLFactory.SSL_SERVER_KEYSTORE_PASSWORD,
         SSLFactory.SSL_SERVER_CONF_DEFAULT);
 
-    boolean sslEnabled = conf.getBoolean(KMSConfiguration.SSL_ENABLED_KEY,
-        KMSConfiguration.SSL_ENABLED_DEFAULT);
+    boolean sslEnabled = conf.getBoolean(SSL_ENABLED_KEY,
+        SSL_ENABLED_DEFAULT);
     scheme = sslEnabled ? HttpServer2.HTTPS_SCHEME : HttpServer2.HTTP_SCHEME;
 
-    String host = conf.get(KMSConfiguration.HTTP_HOST_KEY,
-        KMSConfiguration.HTTP_HOST_DEFAULT);
-    int port = conf.getInt(KMSConfiguration.HTTP_PORT_KEY,
-        KMSConfiguration.HTTP_PORT_DEFAULT);
+    String host = conf.get(HTTP_HOST_KEY, HTTP_HOST_DEFAULT);
+    int port = conf.getInt(HTTP_PORT_KEY, HTTP_PORT_DEFAULT);
     URI endpoint = new URI(scheme, null, host, port, null, null, null);
 
     httpServer = new HttpServer2.Builder()
         .setName(NAME)
         .setConf(conf)
         .setSSLConf(sslConf)
-        .authFilterConfigurationPrefix(KMSAuthenticationFilter.CONFIG_PREFIX)
-        .setACL(new AccessControlList(conf.get(
-            KMSConfiguration.HTTP_ADMINS_KEY, " ")))
+        .authFilterConfigurationPrefix(HttpFSAuthenticationFilter.CONF_PREFIX)
+        .setACL(new AccessControlList(conf.get(HTTP_ADMINS_KEY, " ")))
         .addEndpoint(endpoint)
         .build();
   }
@@ -107,17 +125,13 @@ public class KMSWebServer {
     }
     String propValue = conf.get(propName);
     LOG.warn("Environment variable {} = '{}' is deprecated and overriding"
-        + " property {} = '{}', please set the property in {} instead.",
+            + " property {} = '{}', please set the property in {} instead.",
         varName, value, propName, propValue, confFile);
     conf.set(propName, value, "environment variable " + varName);
   }
 
   public void start() throws IOException {
     httpServer.start();
-  }
-
-  public boolean isRunning() {
-    return httpServer.isAlive();
   }
 
   public void join() throws InterruptedException {
@@ -128,7 +142,7 @@ public class KMSWebServer {
     httpServer.stop();
   }
 
-  public URL getKMSUrl() {
+  public URL getUrl() {
     InetSocketAddress addr = httpServer.getConnectorAddress(0);
     if (null == addr) {
       return null;
@@ -143,13 +157,14 @@ public class KMSWebServer {
   }
 
   public static void main(String[] args) throws Exception {
-    StringUtils.startupShutdownMessage(KMSWebServer.class, args, LOG);
+    startupShutdownMessage(HttpFSServerWebServer.class, args, LOG);
     Configuration conf = new ConfigurationWithLogging(
-        KMSConfiguration.getKMSConf());
+        new Configuration(true));
     Configuration sslConf = new ConfigurationWithLogging(
         SSLFactory.readSSLConfiguration(conf, SSLFactory.Mode.SERVER));
-    KMSWebServer kmsWebServer = new KMSWebServer(conf, sslConf);
-    kmsWebServer.start();
-    kmsWebServer.join();
+    HttpFSServerWebServer webServer =
+        new HttpFSServerWebServer(conf, sslConf);
+    webServer.start();
+    webServer.join();
   }
 }

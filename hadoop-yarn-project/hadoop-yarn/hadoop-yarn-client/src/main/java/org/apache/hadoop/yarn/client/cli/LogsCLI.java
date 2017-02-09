@@ -64,7 +64,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
 import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
 import org.apache.hadoop.yarn.logaggregation.PerContainerLogFileInfo;
-import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
@@ -509,17 +508,9 @@ public class LogsCLI extends Configured implements Tool {
       newOptions.setLogTypes(matchedFiles);
 
       Client webServiceClient = Client.create();
-      String containerString = String.format(
-          LogCLIHelpers.CONTAINER_ON_NODE_PATTERN, containerIdStr, nodeId);
-      out.println(containerString);
-      out.println(StringUtils.repeat("=", containerString.length()));
       boolean foundAnyLogs = false;
       byte[] buffer = new byte[65536];
       for (String logFile : newOptions.getLogTypes()) {
-        out.println("LogType:" + logFile);
-        out.println("Log Upload Time:"
-            + Times.format(System.currentTimeMillis()));
-        out.println("Log Contents:");
         InputStream is = null;
         try {
           ClientResponse response = getResponeFromNMWebService(conf,
@@ -541,14 +532,6 @@ public class LogsCLI extends Configured implements Tool {
                 response.getEntity(String.class));
             out.println(msg);
           }
-          StringBuilder sb = new StringBuilder();
-          sb.append("End of LogType:" + logFile + ".");
-          if (request.getContainerState() == ContainerState.RUNNING) {
-            sb.append(" This log file belongs"
-                + " to a running container (" + containerIdStr + ") and so may"
-                + " not be complete.");
-          }
-          out.println(sb.toString());
           out.flush();
           foundAnyLogs = true;
         } catch (ClientHandlerException | UniformInterfaceException ex) {

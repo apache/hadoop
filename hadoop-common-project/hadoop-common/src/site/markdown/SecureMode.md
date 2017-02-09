@@ -196,7 +196,7 @@ AES offers the greatest cryptographic strength and the best performance. At this
 Data transfer between Web-console and clients are protected by using SSL(HTTPS). SSL configuration is recommended but not required to configure Hadoop security with Kerberos.
 
 To enable SSL for web console of HDFS daemons, set `dfs.http.policy` to either `HTTPS_ONLY` or `HTTP_AND_HTTPS` in hdfs-site.xml.
-Note that this does not affect KMS nor HttpFS, as they are implemented on top of Tomcat and do not respect this parameter. See [Hadoop KMS](../../hadoop-kms/index.html) and [Hadoop HDFS over HTTP - Server Setup](../../hadoop-hdfs-httpfs/ServerSetup.html) for instructions on enabling KMS over HTTPS and HttpFS over HTTPS, respectively.
+Note KMS and HttpFS do not respect this parameter. See [Hadoop KMS](../../hadoop-kms/index.html) and [Hadoop HDFS over HTTP - Server Setup](../../hadoop-hdfs-httpfs/ServerSetup.html) for instructions on enabling KMS over HTTPS and HttpFS over HTTPS, respectively.
 
 To enable SSL for web console of YARN daemons, set `yarn.http.policy` to `HTTPS_ONLY` in yarn-site.xml.
 

@@ -34,9 +34,7 @@ import org.apache.hadoop.crypto.key.CachingKeyProvider;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
-import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.PropertyConfigurator;
 import org.slf4j.Logger;
@@ -143,14 +141,6 @@ public class KMSWebApp implements ServletContextListener {
           UNAUTHENTICATED_CALLS_METER, new Meter());
 
       kmsAudit = new KMSAudit(kmsConf);
-
-      // this is required for the the JMXJsonServlet to work properly.
-      // the JMXJsonServlet is behind the authentication filter,
-      // thus the '*' ACL.
-      sce.getServletContext().setAttribute(HttpServer2.CONF_CONTEXT_ATTRIBUTE,
-          kmsConf);
-      sce.getServletContext().setAttribute(HttpServer2.ADMINS_ACL,
-          new AccessControlList(AccessControlList.WILDCARD_ACL_VALUE));
 
       // intializing the KeyProvider
       String providerString = kmsConf.get(KMSConfiguration.KEY_PROVIDER_URI);

@@ -322,6 +322,12 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `RemoteBytesRead` | Number of bytes read by remote clients |
 | `RemoteBytesWritten` | Number of bytes written by remote clients |
 | `BPServiceActorInfo` | The information about a block pool service actor |
+| `EcReconstructionTasks` | Total number of erasure coding reconstruction tasks |
+| `EcFailedReconstructionTasks` | Total number of erasure coding failed reconstruction tasks |
+| `EcDecodingTimeNanos` | Total number of nanoseconds spent by decoding tasks |
+| `EcReconstructionBytesRead` | Total number of bytes read by erasure coding worker |
+| `EcReconstructionBytesWritten` | Total number of bytes written by erasure coding worker |
+| `EcReconstructionRemoteBytesRead` | Total number of bytes remote read by erasure coding worker |
 
 FsVolume
 --------

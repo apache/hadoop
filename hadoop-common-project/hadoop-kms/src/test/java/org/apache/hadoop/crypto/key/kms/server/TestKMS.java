@@ -18,6 +18,7 @@
 package org.apache.hadoop.crypto.key.kms.server;
 
 import com.google.common.base.Supplier;
+import com.google.common.cache.LoadingCache;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
@@ -31,7 +32,7 @@ import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.KMSDelegationToken;
 import org.apache.hadoop.crypto.key.kms.LoadBalancingKMSClientProvider;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.crypto.key.kms.ValueQueue;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.Credentials;
@@ -49,6 +50,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.Whitebox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,11 +82,14 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.mockito.Mockito.when;
 
 public class TestKMS {
   private static final Logger LOG = LoggerFactory.getLogger(TestKMS.class);
@@ -126,6 +132,11 @@ public class TestKMS {
       throws IOException {
     return new LoadBalancingKMSClientProvider(
         new KMSClientProvider[] { new KMSClientProvider(uri, conf) }, conf);
+  }
+
+  private KMSClientProvider createKMSClientProvider(URI uri, Configuration conf)
+      throws IOException {
+    return new KMSClientProvider(uri, conf);
   }
 
   protected <T> T runServer(String keystore, String password, File confDir,
@@ -723,24 +734,68 @@ public class TestKMS {
 
         EncryptedKeyVersion ekv1 = kpce.generateEncryptedKey("k6");
         kpce.rollNewVersion("k6");
+        kpce.invalidateCache("k6");
+        EncryptedKeyVersion ekv2 = kpce.generateEncryptedKey("k6");
+        assertNotEquals("rollover did not generate a new key even after"
+            + " queue is drained", ekv1.getEncryptionKeyVersionName(),
+            ekv2.getEncryptionKeyVersionName());
+        return null;
+      }
+    });
+  }
 
-        /**
-         * due to the cache on the server side, client may get old keys.
-         * @see EagerKeyGeneratorKeyProviderCryptoExtension#rollNewVersion(String)
-         */
-        boolean rollSucceeded = false;
-        for (int i = 0; i <= EagerKeyGeneratorKeyProviderCryptoExtension
-            .KMS_KEY_CACHE_SIZE_DEFAULT + CommonConfigurationKeysPublic.
-            KMS_CLIENT_ENC_KEY_CACHE_SIZE_DEFAULT; ++i) {
-          EncryptedKeyVersion ekv2 = kpce.generateEncryptedKey("k6");
-          if (!(ekv1.getEncryptionKeyVersionName()
-              .equals(ekv2.getEncryptionKeyVersionName()))) {
-            rollSucceeded = true;
-            break;
-          }
+  @Test
+  public void testKMSProviderCaching() throws Exception {
+    Configuration conf = new Configuration();
+    File confDir = getTestDir();
+    conf = createBaseKMSConf(confDir, conf);
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "k1.ALL", "*");
+    writeConf(confDir, conf);
+
+    runServer(null, null, confDir, new KMSCallable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        final String keyName = "k1";
+        final String mockVersionName = "mock";
+        final Configuration conf = new Configuration();
+        final URI uri = createKMSUri(getKMSUrl());
+        KMSClientProvider kmscp = createKMSClientProvider(uri, conf);
+
+        // get the reference to the internal cache, to test invalidation.
+        ValueQueue vq =
+            (ValueQueue) Whitebox.getInternalState(kmscp, "encKeyVersionQueue");
+        LoadingCache<String, LinkedBlockingQueue<EncryptedKeyVersion>> kq =
+            ((LoadingCache<String, LinkedBlockingQueue<EncryptedKeyVersion>>)
+                Whitebox.getInternalState(vq, "keyQueues"));
+        EncryptedKeyVersion mockEKV = Mockito.mock(EncryptedKeyVersion.class);
+        when(mockEKV.getEncryptionKeyName()).thenReturn(keyName);
+        when(mockEKV.getEncryptionKeyVersionName()).thenReturn(mockVersionName);
+
+        // createKey()
+        KeyProvider.Options options = new KeyProvider.Options(conf);
+        options.setCipher("AES/CTR/NoPadding");
+        options.setBitLength(128);
+        options.setDescription("l1");
+        KeyProvider.KeyVersion kv0 = kmscp.createKey(keyName, options);
+        assertNotNull(kv0.getVersionName());
+
+        assertEquals("Default key version name is incorrect.", "k1@0",
+            kmscp.generateEncryptedKey(keyName).getEncryptionKeyVersionName());
+
+        kmscp.invalidateCache(keyName);
+        kq.get(keyName).put(mockEKV);
+        assertEquals("Key version incorrect after invalidating cache + putting"
+                + " mock key.", mockVersionName,
+            kmscp.generateEncryptedKey(keyName).getEncryptionKeyVersionName());
+
+        // test new version is returned after invalidation.
+        for (int i = 0; i < 100; ++i) {
+          kq.get(keyName).put(mockEKV);
+          kmscp.invalidateCache(keyName);
+          assertEquals("Cache invalidation guarantee failed.", "k1@0",
+              kmscp.generateEncryptedKey(keyName)
+                  .getEncryptionKeyVersionName());
         }
-        Assert.assertTrue("rollover did not generate a new key even after"
-            + " queue is drained", rollSucceeded);
         return null;
       }
     });

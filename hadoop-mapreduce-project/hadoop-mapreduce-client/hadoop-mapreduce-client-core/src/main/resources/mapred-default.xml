@@ -1389,6 +1389,14 @@
 </property>
 
 <property>
+  <name>yarn.app.mapreduce.am.webapp.port-range</name>
+  <value></value>
+  <description>Range of ports that the MapReduce AM can use for its webapp when binding.
+    Leave blank if you want all possible ports.
+    For example 50000-50050,50100-50200</description>
+</property>
+
+<property>
   <name>yarn.app.mapreduce.am.job.committer.cancel-timeout</name>
   <value>60000</value>
   <description>The amount of time in milliseconds to wait for the output

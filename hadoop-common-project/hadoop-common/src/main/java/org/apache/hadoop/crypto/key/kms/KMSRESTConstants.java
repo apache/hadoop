@@ -36,6 +36,7 @@ public class KMSRESTConstants {
   public static final String VERSIONS_SUB_RESOURCE = "_versions";
   public static final String EEK_SUB_RESOURCE = "_eek";
   public static final String CURRENT_VERSION_SUB_RESOURCE = "_currentversion";
+  public static final String INVALIDATECACHE_RESOURCE = "_invalidatecache";
 
   public static final String KEY = "key";
   public static final String EEK_OP = "eek_op";
