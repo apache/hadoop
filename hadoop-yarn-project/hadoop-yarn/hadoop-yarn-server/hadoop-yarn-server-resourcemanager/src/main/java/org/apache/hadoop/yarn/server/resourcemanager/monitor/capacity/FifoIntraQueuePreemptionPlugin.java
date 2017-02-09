@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.IntraQueueCandidatesSelector.TAPriorityComparator;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -264,8 +265,9 @@ public class FifoIntraQueuePreemptionPlugin
 
       // Verify whether we already calculated headroom for this user.
       if (userLimitResource == null) {
-        userLimitResource = Resources.clone(tq.leafQueue
-            .getUserLimitPerUser(userName, partitionBasedResource, partition));
+        userLimitResource = Resources.clone(
+            tq.leafQueue.getResourceLimitForAllUsers(userName, clusterResource,
+                partition, SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY));
 
         Resource amUsed = perUserAMUsed.get(userName);
         if (null == amUsed) {

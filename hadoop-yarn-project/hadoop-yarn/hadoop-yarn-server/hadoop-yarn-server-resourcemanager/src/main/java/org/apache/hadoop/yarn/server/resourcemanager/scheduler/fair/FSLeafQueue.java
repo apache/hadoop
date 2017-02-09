@@ -488,7 +488,7 @@ public class FSLeafQueue extends FSQueue {
   }
 
   @Override
-  public ActiveUsersManager getActiveUsersManager() {
+  public ActiveUsersManager getAbstractUsersManager() {
     return activeUsersManager;
   }
 

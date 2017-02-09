@@ -66,7 +66,7 @@ public class AppSchedulingInfo {
   private final String user;
 
   private Queue queue;
-  private ActiveUsersManager activeUsersManager;
+  private AbstractUsersManager abstractUsersManager;
   // whether accepted/allocated by scheduler
   private volatile boolean pending = true;
   private ResourceUsage appResourceUsage;
@@ -90,13 +90,13 @@ public class AppSchedulingInfo {
   public final ContainerUpdateContext updateContext;
 
   public AppSchedulingInfo(ApplicationAttemptId appAttemptId,
-      String user, Queue queue, ActiveUsersManager activeUsersManager,
+      String user, Queue queue, AbstractUsersManager abstractUsersManager,
       long epoch, ResourceUsage appResourceUsage) {
     this.applicationAttemptId = appAttemptId;
     this.applicationId = appAttemptId.getApplicationId();
     this.queue = queue;
     this.user = user;
-    this.activeUsersManager = activeUsersManager;
+    this.abstractUsersManager = abstractUsersManager;
     this.containerIdCounter = new AtomicLong(
         epoch << ResourceManager.EPOCH_BIT_SHIFT);
     this.appResourceUsage = appResourceUsage;
@@ -253,7 +253,7 @@ public class AppSchedulingInfo {
       // Activate application. Metrics activation is done here.
       if (lastRequestContainers <= 0) {
         schedulerKeys.add(schedulerKey);
-        activeUsersManager.activateApplication(user, applicationId);
+        abstractUsersManager.activateApplication(user, applicationId);
       }
     }
 
@@ -453,7 +453,7 @@ public class AppSchedulingInfo {
 
   public void checkForDeactivation() {
     if (schedulerKeys.isEmpty()) {
-      activeUsersManager.deactivateApplication(user, applicationId);
+      abstractUsersManager.deactivateApplication(user, applicationId);
     }
   }
   
@@ -483,9 +483,9 @@ public class AppSchedulingInfo {
       }
       oldMetrics.moveAppFrom(this);
       newMetrics.moveAppTo(this);
-      activeUsersManager.deactivateApplication(user, applicationId);
-      activeUsersManager = newQueue.getActiveUsersManager();
-      activeUsersManager.activateApplication(user, applicationId);
+      abstractUsersManager.deactivateApplication(user, applicationId);
+      abstractUsersManager = newQueue.getAbstractUsersManager();
+      abstractUsersManager.activateApplication(user, applicationId);
       this.queue = newQueue;
     } finally {
       this.writeLock.unlock();

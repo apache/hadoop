@@ -73,7 +73,7 @@ public class TestSchedulerApplicationAttempt {
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getEpoch()).thenReturn(3L);
     SchedulerApplicationAttempt app = new SchedulerApplicationAttempt(appAttId,
-        user, oldQueue, oldQueue.getActiveUsersManager(), rmContext);
+        user, oldQueue, oldQueue.getAbstractUsersManager(), rmContext);
     oldMetrics.submitApp(user);
     
     // confirm that containerId is calculated based on epoch.
@@ -169,7 +169,7 @@ public class TestSchedulerApplicationAttempt {
     ActiveUsersManager activeUsersManager = new ActiveUsersManager(metrics);
     Queue queue = mock(Queue.class);
     when(queue.getMetrics()).thenReturn(metrics);
-    when(queue.getActiveUsersManager()).thenReturn(activeUsersManager);
+    when(queue.getAbstractUsersManager()).thenReturn(activeUsersManager);
     when(queue.getQueueInfo(false, false)).thenReturn(queueInfo);
     return queue;
   }
@@ -198,7 +198,7 @@ public class TestSchedulerApplicationAttempt {
     Queue queue = createQueue("test", null);
     SchedulerApplicationAttempt app =
         new SchedulerApplicationAttempt(appAttId, user, queue,
-            queue.getActiveUsersManager(), rmContext);
+            queue.getAbstractUsersManager(), rmContext);
 
     // Resource request
     Resource requestedResource = Resource.newInstance(1536, 2);
@@ -211,7 +211,7 @@ public class TestSchedulerApplicationAttempt {
 
     queue = createQueue("test2", null, 0.5f);
     app = new SchedulerApplicationAttempt(appAttId, user, queue,
-        queue.getActiveUsersManager(), rmContext);
+        queue.getAbstractUsersManager(), rmContext);
     app.attemptResourceUsage.incUsed(requestedResource);
     assertEquals(30.0f, app.getResourceUsageReport().getQueueUsagePercentage(),
         0.01f);
@@ -229,7 +229,7 @@ public class TestSchedulerApplicationAttempt {
 
     queue = createQueue("test3", null, 0.0f);
     app = new SchedulerApplicationAttempt(appAttId, user, queue,
-        queue.getActiveUsersManager(), rmContext);
+        queue.getAbstractUsersManager(), rmContext);
 
     // Resource request
     app.attemptResourceUsage.incUsed(requestedResource);
@@ -255,7 +255,7 @@ public class TestSchedulerApplicationAttempt {
     final String user = "user1";
     Queue queue = createQueue("test", null);
     SchedulerApplicationAttempt app = new SchedulerApplicationAttempt(appAttId,
-        user, queue, queue.getActiveUsersManager(), rmContext);
+        user, queue, queue.getAbstractUsersManager(), rmContext);
 
     // Resource request
     Resource requestedResource = Resource.newInstance(1536, 2);
@@ -274,7 +274,7 @@ public class TestSchedulerApplicationAttempt {
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getEpoch()).thenReturn(3L);
     SchedulerApplicationAttempt app = new SchedulerApplicationAttempt(
-        attemptId, "user", queue, queue.getActiveUsersManager(), rmContext);
+        attemptId, "user", queue, queue.getAbstractUsersManager(), rmContext);
     Priority priority = Priority.newInstance(1);
     SchedulerRequestKey schedulerKey = toSchedulerKey(priority);
     assertEquals(0, app.getSchedulingOpportunities(schedulerKey));
