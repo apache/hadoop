@@ -197,13 +197,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   private AtomicInteger unconfirmedAllocatedVcores = new AtomicInteger();
 
   public SchedulerApplicationAttempt(ApplicationAttemptId applicationAttemptId, 
-      String user, Queue queue, ActiveUsersManager activeUsersManager,
+      String user, Queue queue, AbstractUsersManager abstractUsersManager,
       RMContext rmContext) {
     Preconditions.checkNotNull(rmContext, "RMContext should not be null");
     this.rmContext = rmContext;
     this.appSchedulingInfo = 
         new AppSchedulingInfo(applicationAttemptId, user, queue,  
-            activeUsersManager, rmContext.getEpoch(), attemptResourceUsage);
+            abstractUsersManager, rmContext.getEpoch(), attemptResourceUsage);
     this.queue = queue;
     this.pendingRelease = Collections.newSetFromMap(
         new ConcurrentHashMap<ContainerId, Boolean>());

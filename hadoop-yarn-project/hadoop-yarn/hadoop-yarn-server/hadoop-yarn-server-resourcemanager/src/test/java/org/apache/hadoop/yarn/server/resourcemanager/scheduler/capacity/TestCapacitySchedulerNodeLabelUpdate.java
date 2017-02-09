@@ -184,7 +184,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
       String userName, String partition, int memory) {
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
     LeafQueue queue = (LeafQueue) scheduler.getQueue(queueName);
-    LeafQueue.User user = queue.getUser(userName);
+    UsersManager.User user = queue.getUser(userName);
     Assert.assertEquals(memory,
         user.getResourceUsage().getUsed(partition).getMemorySize());
   }
@@ -241,7 +241,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     LeafQueue queue =
         (LeafQueue) ((CapacityScheduler) rm.getResourceScheduler())
             .getQueue("a");
-    ArrayList<UserInfo> users = queue.getUsers();
+    ArrayList<UserInfo> users = queue.getUsersManager().getUsersInfo();
     for (UserInfo userInfo : users) {
       if (userInfo.getUsername().equals("user")) {
         ResourceInfo resourcesUsed = userInfo.getResourcesUsed();

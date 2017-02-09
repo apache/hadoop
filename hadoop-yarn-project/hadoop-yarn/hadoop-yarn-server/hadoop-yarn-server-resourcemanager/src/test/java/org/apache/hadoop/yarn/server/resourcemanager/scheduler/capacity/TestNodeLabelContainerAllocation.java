@@ -1049,7 +1049,7 @@ public class TestNodeLabelContainerAllocation {
     RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "b");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm2);
     
-    // Each application request 5 * 1GB container
+    // Each application request 50 * 1GB container
     am1.allocate("*", 1 * GB, 50, new ArrayList<ContainerId>());
     
     // NM1 do 50 heartbeats
@@ -1169,12 +1169,14 @@ public class TestNodeLabelContainerAllocation {
     csConf.setAccessibleNodeLabels(A, toSet("x"));
     csConf.setCapacityByLabel(A, "x", 50);
     csConf.setMaximumCapacityByLabel(A, "x", 50);
+    csConf.setUserLimit(A, 200);
 
     final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     csConf.setCapacity(B, 50);
     csConf.setAccessibleNodeLabels(B, toSet("x"));
     csConf.setCapacityByLabel(B, "x", 50);
     csConf.setMaximumCapacityByLabel(B, "x", 50);
+    csConf.setUserLimit(B, 200);
 
     // set node -> label
     mgr.addToCluserNodeLabels(ImmutableSet.of(
@@ -1207,6 +1209,7 @@ public class TestNodeLabelContainerAllocation {
 
     SchedulerNode schedulerNode1 = cs.getSchedulerNode(nm1.getNodeId());
 
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
     for (int i = 0; i < 50; i++) {
       cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
     }
@@ -1250,7 +1253,7 @@ public class TestNodeLabelContainerAllocation {
       cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
     }
   }
-  
+
   private void waitSchedulerNodeJoined(MockRM rm, int expectedNodeNum)
       throws InterruptedException {
     int totalWaitTick = 100; // wait 10 sec at most.
