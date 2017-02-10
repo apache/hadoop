@@ -313,7 +313,8 @@ extends AMRMClientAsync<T> {
           try {
             object = responseQueue.take();
           } catch (InterruptedException ex) {
-            LOG.info("Interrupted while waiting for queue", ex);
+            LOG.debug("Interrupted while waiting for queue", ex);
+            Thread.currentThread().interrupt();
             continue;
           }
           if (object instanceof Throwable) {
