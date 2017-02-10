@@ -396,6 +396,15 @@ public class BuilderUtils {
     return report;
   }
 
+  public static Resource newResource(int memory, int vCores) {
+    Resource resource = recordFactory.newRecordInstance(Resource.class);
+    resource.setMemory(memory);
+    resource.setVirtualCores(vCores);
+    resource.setGPUs(0);
+    resource.setGPULocality(0);
+    return resource;
+  }
+
   public static Resource newResource(int memory, int vCores, int GPUs) {
     Resource resource = recordFactory.newRecordInstance(Resource.class);
     resource.setMemory(memory);
