@@ -22,8 +22,7 @@ import java.lang.Thread.UncaughtExceptionHandler;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.conf.HAUtil;
 
 /**
@@ -33,8 +32,7 @@ import org.apache.hadoop.yarn.conf.HAUtil;
  * {@code setUncaughtExceptionHandler(Thread.UncaughtExceptionHandler)}
  * in the thread entry point or after creation of threads.
  */
-@Public
-@Evolving
+@Private
 public class RMCriticalThreadUncaughtExceptionHandler
     implements UncaughtExceptionHandler {
   private static final Log LOG = LogFactory.getLog(
