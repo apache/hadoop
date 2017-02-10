@@ -1354,6 +1354,16 @@ int delete_as_user(const char *user,
   }
   // do the delete
   for(ptr = (char**)baseDirs; *ptr != NULL; ++ptr) {
+    struct stat sb;
+    if (stat(*ptr, &sb) != 0) {
+      if (errno == ENOENT) {
+        // Ignore missing dir. Continue deleting other directories.
+        continue;
+      } else {
+        fprintf(LOGFILE, "Could not stat %s - %s\n", *ptr, strerror(errno));
+        return -1;
+      }
+    }
     char* full_path = concatenate("%s/%s", "user subdir", 2,
                               *ptr, subdir);
     if (full_path == NULL) {
