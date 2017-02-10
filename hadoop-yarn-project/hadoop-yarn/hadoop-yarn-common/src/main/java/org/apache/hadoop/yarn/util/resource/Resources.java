@@ -144,6 +144,12 @@ public class Resources {
     return NONE;
   }
 
+  /**
+   * Check whether a resource object is empty (0 memory and 0 virtual cores).
+   * @param other The resource to check
+   * @return {@code true} if {@code other} has 0 memory and 0 virtual cores,
+   * {@code false} otherwise
+   */
   public static boolean isNone(Resource other) {
     return NONE.equals(other);
   }
