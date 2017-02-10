@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
@@ -39,9 +40,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
+  private final int GB = 1024;
   private final static String ALLOC_FILE = new File(TEST_DIR,
       TestFairSchedulerPreemption.class.getName() + ".xml").getAbsolutePath();
 
@@ -90,8 +91,6 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     resourceManager = new MockRM(conf);
     resourceManager.start();
 
-    assertTrue(
-        resourceManager.getResourceScheduler() instanceof StubbedFairScheduler);
     scheduler = (FairScheduler)resourceManager.getResourceScheduler();
 
     scheduler.setClock(clock);
@@ -188,5 +187,68 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     scheduler.preemptTasksIfNecessary();
     assertEquals("preemptResources() should have been called", 1024,
         ((StubbedFairScheduler) scheduler).lastPreemptMemory);
+  }
+
+  @Test
+  public void testPreemptionFilterOutNonPreemptableQueues() throws Exception {
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queueA\">");
+    out.println("  <queue name=\"queueA1\" />");
+    out.println("  <queue name=\"queueA2\" />");
+    out.println("</queue>");
+    out.println("<queue name=\"queueB\">");
+    out.println("</queue>");
+    out.println("<defaultFairSharePreemptionTimeout>5</defaultFairSharePreemptionTimeout>");
+    out.println("</allocations>");
+    out.close();
+
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, FairScheduler.class,
+        ResourceScheduler.class);
+    startResourceManager(0.8f);
+
+    // Add a node of 8 GB
+    RMNode node1 = MockNodes.newNodeInfo(1,
+        Resources.createResource(8 * GB, 8), 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    // Run apps in queueA.A1 and queueB
+    ApplicationAttemptId app1 = createSchedulingRequest(1 * GB, 1,
+        "queueA.queueA1", "user1", 4, 1);
+    ApplicationAttemptId app2 = createSchedulingRequest(1 * GB, 1, "queueB",
+        "user2", 4, 1);
+
+    scheduler.update();
+
+    NodeUpdateSchedulerEvent nodeUpdate1 = new NodeUpdateSchedulerEvent(node1);
+    for (int i = 0; i < 8; i++) {
+      scheduler.handle(nodeUpdate1);
+    }
+
+    // verify if the apps got the containers they requested
+    assertEquals(4, scheduler.getSchedulerApp(app1).getLiveContainers().size());
+    assertEquals(4, scheduler.getSchedulerApp(app2).getLiveContainers().size());
+
+    // Now submit an app in queueA.queueA2
+    createSchedulingRequest(GB, 1, "queueA.queueA2", "user3", 2, 1);
+    scheduler.update();
+
+    // Let 6 sec pass
+    clock.tickSec(6);
+
+    scheduler.update();
+    Resource toPreempt = scheduler.resourceDeficit(scheduler.getQueueManager()
+        .getLeafQueue("queueA.queueA2", false), clock.getTime());
+    assertEquals(2 * GB, toPreempt.getMemorySize());
+
+    // Verify if containers required by queueA2 are preempted from queueA1
+    // instead of queueB
+    scheduler.preemptResources(toPreempt);
+    assertEquals(2, scheduler.getSchedulerApp(app1).getPreemptionContainers()
+        .size());
+    assertEquals(0, scheduler.getSchedulerApp(app2).getPreemptionContainers()
+        .size());
   }
 }

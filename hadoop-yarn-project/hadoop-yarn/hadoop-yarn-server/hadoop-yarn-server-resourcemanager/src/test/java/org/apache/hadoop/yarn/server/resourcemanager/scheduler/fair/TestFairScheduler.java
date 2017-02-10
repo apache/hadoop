@@ -2036,10 +2036,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
             .getLeafQueue("queueA.queueA2", false), clock.getTime());
     assertEquals(3277, toPreempt.getMemorySize());
 
-    // verify if the 3 containers required by queueA2 are preempted in the same
+    // verify if the 4 containers required by queueA2 are preempted in the same
     // round
     scheduler.preemptResources(toPreempt);
-    assertEquals(3, scheduler.getSchedulerApp(app1).getPreemptionContainers()
+    assertEquals(4, scheduler.getSchedulerApp(app1).getPreemptionContainers()
         .size());
   }
 

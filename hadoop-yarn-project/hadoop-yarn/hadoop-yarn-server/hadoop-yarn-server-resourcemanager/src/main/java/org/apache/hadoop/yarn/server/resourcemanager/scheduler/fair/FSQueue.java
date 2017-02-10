@@ -41,6 +41,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import com.google.common.base.Preconditions;
+
 @Private
 @Unstable
 public abstract class FSQueue implements Queue, Schedulable {
@@ -233,6 +235,28 @@ public abstract class FSQueue implements Queue, Schedulable {
 
   public void setFairSharePreemptionThreshold(float fairSharePreemptionThreshold) {
     this.fairSharePreemptionThreshold = fairSharePreemptionThreshold;
+  }
+
+  /**
+   * Recursively check if the queue can be preempted based on whether the
+   * resource usage is greater than fair share.
+   *
+   * @return true if the queue can be preempted
+   */
+  public boolean canBePreempted() {
+    if (parent == null || parent.policy.checkIfUsageOverFairShare(
+        getResourceUsage(), getFairShare())) {
+      return true;
+    } else {
+      // recursively find one queue which can be preempted
+      for (FSQueue queue: getChildQueues()) {
+        if (queue.canBePreempted()) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   /**
