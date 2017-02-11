@@ -110,6 +110,16 @@ public class TimelineReaderServer extends CompositeService {
     startTimelineReaderWebApp();
   }
 
+  private void join() {
+    // keep the main thread that started the server up until it receives a stop
+    // signal
+    if (readerWebServer != null) {
+      try {
+        readerWebServer.join();
+      } catch (InterruptedException ignore) {}
+    }
+  }
+
   @Override
   protected void serviceStop() throws Exception {
     if (readerWebServer != null) {
@@ -185,6 +195,7 @@ public class TimelineReaderServer extends CompositeService {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
-    startTimelineReaderServer(args, conf);
+    TimelineReaderServer server = startTimelineReaderServer(args, conf);
+    server.join();
   }
 }
