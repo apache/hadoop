@@ -1073,7 +1073,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
 
   private void setAclsWithRetries(final String path)
       throws KeeperException, InterruptedException {
-    Stat stat = new Stat();
+    final Stat stat = new Stat();
     zkDoWithRetries(new ZKAction<Void>() {
       @Override
       public Void run() throws KeeperException, InterruptedException {
