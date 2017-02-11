@@ -183,6 +183,7 @@
                     <exclude>**/ITestJets3tNativeS3FileSystemContract.java</exclude>
                     <exclude>**/ITest*Root*.java</exclude>
                     <exclude>**/ITestS3AFileContextStatistics.java</exclude>
+                    <exclude>**/ITestS3AEncryptionSSE*.java</exclude>
                     <include>**/ITestS3AHuge*.java</include>
                   </excludes>
                 </configuration>
@@ -211,6 +212,7 @@
                     <include>**/ITest*Root*.java</include>
                     <include>**/ITestS3AFileContextStatistics.java</include>
                     <include>**/ITestS3AHuge*.java</include>
+                    <include>**/ITestS3AEncryptionSSE*.java</include>
                   </includes>
                 </configuration>
               </execution>

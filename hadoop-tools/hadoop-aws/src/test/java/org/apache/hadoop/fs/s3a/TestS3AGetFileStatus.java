@@ -26,6 +26,7 @@ import java.io.FileNotFoundException;
 import java.util.Collections;
 import java.util.Date;
 
+import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -34,6 +35,9 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
 import org.junit.Test;
 
 /**
@@ -48,7 +52,8 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
     ObjectMetadata meta = new ObjectMetadata();
     meta.setContentLength(1L);
     meta.setLastModified(new Date(2L));
-    when(s3.getObjectMetadata(BUCKET, key)).thenReturn(meta);
+    when(s3.getObjectMetadata(argThat(correctGetMetadataRequest(BUCKET, key))))
+      .thenReturn(meta);
     FileStatus stat = fs.getFileStatus(path);
     assertNotNull(stat);
     assertEquals(fs.makeQualified(path), stat.getPath());
@@ -61,10 +66,13 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
   public void testFakeDirectory() throws Exception {
     Path path = new Path("/dir");
     String key = path.toUri().getPath().substring(1);
-    when(s3.getObjectMetadata(BUCKET, key)).thenThrow(NOT_FOUND);
+    when(s3.getObjectMetadata(argThat(correctGetMetadataRequest(BUCKET, key))))
+      .thenThrow(NOT_FOUND);
     ObjectMetadata meta = new ObjectMetadata();
     meta.setContentLength(0L);
-    when(s3.getObjectMetadata(BUCKET, key + "/")).thenReturn(meta);
+    when(s3.getObjectMetadata(argThat(
+        correctGetMetadataRequest(BUCKET, key + "/"))
+    )).thenReturn(meta);
     FileStatus stat = fs.getFileStatus(path);
     assertNotNull(stat);
     assertEquals(fs.makeQualified(path), stat.getPath());
@@ -75,8 +83,11 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
   public void testImplicitDirectory() throws Exception {
     Path path = new Path("/dir");
     String key = path.toUri().getPath().substring(1);
-    when(s3.getObjectMetadata(BUCKET, key)).thenThrow(NOT_FOUND);
-    when(s3.getObjectMetadata(BUCKET, key + "/")).thenThrow(NOT_FOUND);
+    when(s3.getObjectMetadata(argThat(correctGetMetadataRequest(BUCKET,  key))))
+      .thenThrow(NOT_FOUND);
+    when(s3.getObjectMetadata(argThat(
+      correctGetMetadataRequest(BUCKET, key + "/"))
+    )).thenThrow(NOT_FOUND);
     ObjectListing objects = mock(ObjectListing.class);
     when(objects.getCommonPrefixes()).thenReturn(
         Collections.singletonList("dir/"));
@@ -93,8 +104,11 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
   public void testRoot() throws Exception {
     Path path = new Path("/");
     String key = path.toUri().getPath().substring(1);
-    when(s3.getObjectMetadata(BUCKET, key)).thenThrow(NOT_FOUND);
-    when(s3.getObjectMetadata(BUCKET, key + "/")).thenThrow(NOT_FOUND);
+    when(s3.getObjectMetadata(argThat(correctGetMetadataRequest(BUCKET, key))))
+      .thenThrow(NOT_FOUND);
+    when(s3.getObjectMetadata(argThat(
+      correctGetMetadataRequest(BUCKET, key + "/")
+    ))).thenThrow(NOT_FOUND);
     ObjectListing objects = mock(ObjectListing.class);
     when(objects.getCommonPrefixes()).thenReturn(
         Collections.<String>emptyList());
@@ -112,8 +126,11 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
   public void testNotFound() throws Exception {
     Path path = new Path("/dir");
     String key = path.toUri().getPath().substring(1);
-    when(s3.getObjectMetadata(BUCKET, key)).thenThrow(NOT_FOUND);
-    when(s3.getObjectMetadata(BUCKET, key + "/")).thenThrow(NOT_FOUND);
+    when(s3.getObjectMetadata(argThat(correctGetMetadataRequest(BUCKET, key))))
+      .thenThrow(NOT_FOUND);
+    when(s3.getObjectMetadata(argThat(
+      correctGetMetadataRequest(BUCKET, key + "/")
+    ))).thenThrow(NOT_FOUND);
     ObjectListing objects = mock(ObjectListing.class);
     when(objects.getCommonPrefixes()).thenReturn(
         Collections.<String>emptyList());
@@ -122,5 +139,27 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
     when(s3.listObjects(any(ListObjectsRequest.class))).thenReturn(objects);
     exception.expect(FileNotFoundException.class);
     fs.getFileStatus(path);
+  }
+
+  private Matcher<GetObjectMetadataRequest> correctGetMetadataRequest(
+      final String bucket, final String key) {
+    return new BaseMatcher<GetObjectMetadataRequest>() {
+
+      @Override
+      public void describeTo(Description description) {
+        description.appendText("bucket and key match");
+      }
+
+      @Override
+      public boolean matches(Object o) {
+        if(o instanceof GetObjectMetadataRequest) {
+          GetObjectMetadataRequest getObjectMetadataRequest =
+              (GetObjectMetadataRequest)o;
+          return getObjectMetadataRequest.getBucketName().equals(bucket)
+            && getObjectMetadataRequest.getKey().equals(key);
+        }
+        return false;
+      }
+    };
   }
 }
