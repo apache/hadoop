@@ -247,23 +247,23 @@ public class FSLeafQueue extends FSQueue {
    * @param minShareStarvation minshare starvation to distribute
    */
   private void updateStarvedAppsMinshare(
-      TreeSet<FSAppAttempt> appsWithDemand, Resource minShareStarvation) {
+      TreeSet<FSAppAttempt> appsWithDemand, final Resource minShareStarvation) {
+    Resource pending = Resources.clone(minShareStarvation);
+
     // Keep adding apps to the starved list until the unmet demand goes over
     // the remaining minshare
     for (FSAppAttempt app : appsWithDemand) {
-      if (!Resources.isNone(minShareStarvation())) {
-        Resource appMinShare =  app.getPendingDemand();
+      if (!Resources.isNone(pending)) {
+        Resource appMinShare = app.getPendingDemand();
         Resources.subtractFromNonNegative(
             appMinShare, app.getFairshareStarvation());
 
         if (Resources.greaterThan(policy.getResourceCalculator(),
-            scheduler.getClusterResource(),
-            appMinShare, minShareStarvation)) {
-          Resources.subtractFromNonNegative(
-              appMinShare, minShareStarvation);
-          minShareStarvation = none();
+            scheduler.getClusterResource(), appMinShare, pending)) {
+          Resources.subtractFromNonNegative(appMinShare, pending);
+          pending = none();
         } else {
-          Resources.subtractFrom(minShareStarvation, appMinShare);
+          Resources.subtractFromNonNegative(pending, appMinShare);
         }
         app.setMinshareStarvation(appMinShare);
         context.getStarvedApps().addStarvedApp(app);
@@ -305,6 +305,7 @@ public class FSLeafQueue extends FSQueue {
     // Compute minshare starvation that is not subsumed by fairshare starvation
     Resources.subtractFromNonNegative(minShareStarvation, fairShareStarvation);
 
+    // Assign this minshare to apps with pending demand over fairshare
     updateStarvedAppsMinshare(appsWithDemand, minShareStarvation);
   }
 

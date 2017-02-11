@@ -1152,24 +1152,32 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
    * starvation.
    */
   List<ResourceRequest> getStarvedResourceRequests() {
+    // List of RRs we build in this method to return
     List<ResourceRequest> ret = new ArrayList<>();
+
+    // Track visited RRs to avoid the same RR at multiple locality levels
     Map<Priority, List<Resource>> visitedRRs= new HashMap<>();
 
+    // Start with current starvation and track the pending amount
     Resource pending = getStarvation();
     for (ResourceRequest rr : appSchedulingInfo.getAllResourceRequests()) {
       if (Resources.isNone(pending)) {
+        // Found enough RRs to match the starvation
         break;
       }
+
+      // See if we have already seen this RR
       if (checkAndMarkRRVisited(visitedRRs, rr)) {
         continue;
       }
 
-      // Compute the number of containers of this capability that fit in the
-      // pending amount
+      // A RR can have multiple containers of a capability. We need to
+      // compute the number of containers that fit in "pending".
       int ratio = (int) Math.floor(
           Resources.ratio(scheduler.getResourceCalculator(),
               pending, rr.getCapability()));
       if (ratio == 0) {
+        // This RR's capability is too large to fit in pending
         continue;
       }
 
@@ -1179,9 +1187,11 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
         rr = ResourceRequest.newInstance(
             rr.getPriority(), rr.getResourceName(), rr.getCapability(), ratio);
       }
+
+      // Add the RR to return list and adjust "pending" accordingly
       ret.add(rr);
       Resources.subtractFromNonNegative(pending,
-          Resources.multiply(rr.getCapability(), ratio));
+          Resources.multiply(rr.getCapability(), rr.getNumContainers()));
     }
 
     return ret;
@@ -1203,8 +1213,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
    * Whether this app's starvation should be considered.
    */
   boolean shouldCheckForStarvation() {
-    long now = scheduler.getClock().getTime();
-    return now > nextStarvationCheck;
+    return scheduler.getClock().getTime() >= nextStarvationCheck;
   }
 
   /* Schedulable methods implementation */

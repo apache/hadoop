@@ -111,7 +111,7 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
     verifyLeafQueueStarvation();
 
     clock.tickMsec(
-        FairSchedulerWithMockPreemption.DELAY_FOR_NEXT_STARVATION_CHECK);
+        FairSchedulerWithMockPreemption.DELAY_FOR_NEXT_STARVATION_CHECK_MS);
     scheduler.update();
     assertTrue("Each app is marked as starved exactly once",
         preemptionThread.totalAppsAdded() > preemptionThread.uniqueAppsAdded());
