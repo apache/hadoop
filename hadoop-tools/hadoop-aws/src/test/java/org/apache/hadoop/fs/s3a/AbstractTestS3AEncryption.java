@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.net.util.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -34,15 +36,14 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
  * are made for different file sizes as there have been reports that the
  * file length may be rounded up to match word boundaries.
  */
-public class ITestS3AEncryption extends AbstractS3ATestBase {
-  private static final String AES256 = Constants.SERVER_SIDE_ENCRYPTION_AES256;
+public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
 
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.disableFilesystemCaching(conf);
     conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
-        AES256);
+            getSSEAlgorithm().getMethod());
     return conf;
   }
 
@@ -80,7 +81,7 @@ public class ITestS3AEncryption extends AbstractS3ATestBase {
     rm(getFileSystem(), path, false, false);
   }
 
-  private String createFilename(int len) {
+  protected String createFilename(int len) {
     return String.format("%s-%04x", methodName.getMethodName(), len);
   }
 
@@ -89,9 +90,43 @@ public class ITestS3AEncryption extends AbstractS3ATestBase {
    * @param path path
    * @throws IOException on a failure
    */
-  private void assertEncrypted(Path path) throws IOException {
+  protected void assertEncrypted(Path path) throws IOException {
     ObjectMetadata md = getFileSystem().getObjectMetadata(path);
-    assertEquals(AES256, md.getSSEAlgorithm());
+    switch(getSSEAlgorithm()) {
+    case SSE_C:
+      assertEquals("AES256", md.getSSECustomerAlgorithm());
+      String md5Key = convertKeyToMd5();
+      assertEquals(md5Key, md.getSSECustomerKeyMd5());
+      break;
+    case SSE_KMS:
+      assertEquals("aws:kms", md.getSSEAlgorithm());
+      //S3 will return full arn of the key, so specify global arn in properties
+      assertEquals(this.getConfiguration().
+          getTrimmed(Constants.SERVER_SIDE_ENCRYPTION_KEY),
+          md.getSSEAwsKmsKeyId());
+      break;
+    default:
+      assertEquals("AES256", md.getSSEAlgorithm());
+    }
   }
+
+  /**
+   * Decodes the SERVER_SIDE_ENCRYPTION_KEY from base64 into an AES key, then
+   * gets the md5 of it, then encodes it in base64 so it will match the version
+   * that AWS returns to us.
+   *
+   * @return md5'd base64 encoded representation of the server side encryption
+   * key
+   */
+  private String convertKeyToMd5() {
+    String base64Key = getConfiguration().getTrimmed(
+        Constants.SERVER_SIDE_ENCRYPTION_KEY
+    );
+    byte[] key = Base64.decodeBase64(base64Key);
+    byte[] md5 =  DigestUtils.md5(key);
+    return Base64.encodeBase64String(md5).trim();
+  }
+
+  protected abstract S3AEncryptionMethods getSSEAlgorithm();
 
 }
