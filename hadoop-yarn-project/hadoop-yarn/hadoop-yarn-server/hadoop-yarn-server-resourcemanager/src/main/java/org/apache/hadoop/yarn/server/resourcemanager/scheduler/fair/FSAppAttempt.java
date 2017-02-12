@@ -50,7 +50,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
-import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.text.DecimalFormat;
@@ -59,7 +58,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1117,32 +1115,6 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   }
 
   /**
-   * Helper method for {@link #getStarvedResourceRequests()}:
-   * Given a map of visited {@link ResourceRequest}s, it checks if
-   * {@link ResourceRequest} 'rr' has already been visited. The map is updated
-   * to reflect visiting 'rr'.
-   */
-  private static boolean checkAndMarkRRVisited(
-      Map<Priority, List<Resource>> visitedRRs, ResourceRequest rr) {
-    Priority priority = rr.getPriority();
-    Resource capability = rr.getCapability();
-    if (visitedRRs.containsKey(priority)) {
-      List<Resource> rrList = visitedRRs.get(priority);
-      if (rrList.contains(capability)) {
-        return true;
-      } else {
-        rrList.add(capability);
-        return false;
-      }
-    } else {
-      List<Resource> newRRList = new ArrayList<>();
-      newRRList.add(capability);
-      visitedRRs.put(priority, newRRList);
-      return false;
-    }
-  }
-
-  /**
    * Fetch a list of RRs corresponding to the extent the app is starved
    * (fairshare and minshare). This method considers the number of containers
    * in a RR and also only one locality-level (the first encountered
@@ -1156,7 +1128,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     List<ResourceRequest> ret = new ArrayList<>();
 
     // Track visited RRs to avoid the same RR at multiple locality levels
-    Map<Priority, List<Resource>> visitedRRs= new HashMap<>();
+    VisitedResourceRequestTracker visitedRRs =
+        new VisitedResourceRequestTracker(scheduler.getNodeTracker());
 
     // Start with current starvation and track the pending amount
     Resource pending = getStarvation();
@@ -1167,7 +1140,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       }
 
       // See if we have already seen this RR
-      if (checkAndMarkRRVisited(visitedRRs, rr)) {
+      if (!visitedRRs.visit(rr)) {
         continue;
       }
 
