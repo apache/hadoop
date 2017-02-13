@@ -234,7 +234,16 @@ public class AppSchedulingInfo {
   synchronized public ResourceRequest getResourceRequest(Priority priority,
       String resourceName) {
     Map<String, ResourceRequest> nodeRequests = requests.get(priority);
-    return (nodeRequests == null) ? null : nodeRequests.get(resourceName);
+
+    if (nodeRequests == null) {
+      return null;
+    }
+    else {
+      ResourceRequest rr = nodeRequests.get(resourceName);
+      if (rr == null) return null;
+      rr.setCapability(Resources.clone(rr.getCapability()));
+      return rr;
+    }
   }
 
   public synchronized Resource getResource(Priority priority) {

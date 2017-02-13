@@ -371,7 +371,8 @@ public class TestRMApplicationHistoryWriter {
     return actual == expected;
   }
   //MJTHIS: FIXME: temporarily skip this, but must be handled
-  //@Test
+  // WENCONG: fixed
+  @Test
   public void testRMWritingMassiveHistoryForFairSche() throws Exception {
     //test WritingMassiveHistory for Fair Scheduler.
     testRMWritingMassiveHistory(true);

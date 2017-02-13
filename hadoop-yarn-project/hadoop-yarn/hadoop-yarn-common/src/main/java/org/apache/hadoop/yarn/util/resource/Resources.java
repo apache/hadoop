@@ -192,7 +192,7 @@ public class Resources {
 
     // MJTHIS: FIXME: not clear what to do with recovery
     // Must uncomment it when you are running test cases
-    assert (lhs.getGPULocality() & rhs.getGPULocality()) == 0;
+    assert (lhs.getGPULocality() & rhs.getGPULocality()) == 0 : "lhs GPU locality is " + lhs.getGPULocality() + "; rhs GPU locality is " + rhs.getGPULocality();
     lhs.setGPULocality(lhs.getGPULocality() | rhs.getGPULocality());
 
     return lhs;
@@ -220,7 +220,7 @@ public class Resources {
 
     // MJTHIS: FIXME: not clear what to do with recovery
     // Must uncomment it when you are running test cases
-    assert (lhs.getGPULocality() | rhs.getGPULocality()) == lhs.getGPULocality();
+    assert (lhs.getGPULocality() | rhs.getGPULocality()) == lhs.getGPULocality() : "lhs GPU locality is " + lhs.getGPULocality() + "; rhs GPU locality is " + rhs.getGPULocality();
     lhs.setGPULocality(lhs.getGPULocality() & ~rhs.getGPULocality());
 
     return lhs;
@@ -376,7 +376,24 @@ public class Resources {
       return false;
     }
   }
-  
+  public static boolean fitInGpuLocality(Resource smaller, Resource bigger, Resource all){
+    if (smaller.getGPULocality() > 0) {
+      if(searchGPUs(smaller.getGPUs(), bigger.getGPULocality(), all.getGPULocality(), true, false) != 0) {
+        return true;
+      }
+      else {
+        return false;
+      }
+    }
+    else {
+      if(searchGPUs(smaller.getGPUs(), bigger.getGPULocality(), all.getGPULocality(), false, false) != 0) {
+        return true;
+      }
+      else {
+        return false;
+      }
+    }
+  }
   public static Resource componentwiseMin(Resource lhs, Resource rhs) {
     return createResource(Math.min(lhs.getMemory(), rhs.getMemory()),
         Math.min(lhs.getVirtualCores(), rhs.getVirtualCores()),

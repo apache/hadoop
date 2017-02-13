@@ -143,7 +143,8 @@ public class TestRM extends ParameterizedSchedulerTestBase {
   }
 
   //MJTHIS: FIXME: temporarily skip this, but must be handled
-  //@Test (timeout = 30000)
+  // WENCONG: fixed
+  @Test (timeout = 30000)
   public void testAppOnMultiNode() throws Exception {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
