@@ -248,7 +248,7 @@ hadoop s3a init -m URI ( -e ENDPOINT | s3a://BUCKET )
 Creates and initializes an empty metadata store.
 
 A DynamoDB metadata store can be initialized with additional parameters
-pertaining to (provisioned throughput)[http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ProvisionedThroughput.html]:
+pertaining to [Provisioned Throughput](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ProvisionedThroughput.html):
 
 ```
 [-w PROVISIONED_WRITES] [-r PROVISIONED_READS]
