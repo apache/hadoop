@@ -140,6 +140,13 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       Container container = rmContainer.getContainer();
       ContainerId containerId = container.getId();
 
+      // Remove from the list of containers
+      if (liveContainers.remove(containerId) == null) {
+        LOG.info("Additional complete request on completed container " +
+            rmContainer.getContainerId());
+        return;
+      }
+
       // Remove from the list of newly allocated containers if found
       newlyAllocatedContainers.remove(rmContainer);
 
@@ -151,8 +158,6 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
             + " in state: " + rmContainer.getState() + " event:" + event);
       }
 
-      // Remove from the list of containers
-      liveContainers.remove(rmContainer.getContainerId());
       untrackContainerForPreemption(rmContainer);
 
       Resource containerResource = rmContainer.getContainer().getResource();
