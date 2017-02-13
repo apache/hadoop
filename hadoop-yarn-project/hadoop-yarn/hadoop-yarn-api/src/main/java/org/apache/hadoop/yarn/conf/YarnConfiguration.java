@@ -1021,7 +1021,10 @@ public class YarnConfiguration extends Configuration {
 
   public static final String YARN_LOG_SERVER_URL =
     YARN_PREFIX + "log.server.url";
-  
+
+  public static final String YARN_LOG_SERVER_WEBSERVICE_URL =
+      YARN_PREFIX + "log.server.web-service.url";
+
   public static final String YARN_TRACKING_URL_GENERATOR = 
       YARN_PREFIX + "tracking.url.generator";
 
