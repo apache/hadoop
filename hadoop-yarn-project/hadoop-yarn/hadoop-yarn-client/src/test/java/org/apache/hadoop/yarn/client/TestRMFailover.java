@@ -423,7 +423,8 @@ public class TestRMFailover extends ClientBaseWithFixes {
     ResourceManager resourceManager = new MockRM();
     ((AsyncDispatcher) resourceManager.getRMContext().getDispatcher()).start();
     resourceManager.getRMContext().getStateStore().start();
-    resourceManager.getRMContext().getContainerTokenSecretManager().rollMasterKey();
+    resourceManager.getRMContext().getContainerTokenSecretManager().
+        rollMasterKey();
 
     final RMCriticalThreadUncaughtExceptionHandler exHandler =
         new RMCriticalThreadUncaughtExceptionHandler(
