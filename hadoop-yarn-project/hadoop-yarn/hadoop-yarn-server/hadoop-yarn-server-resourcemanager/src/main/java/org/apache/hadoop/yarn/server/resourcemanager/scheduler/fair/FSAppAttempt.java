@@ -124,7 +124,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   synchronized public void containerCompleted(RMContainer rmContainer,
       ContainerStatus containerStatus, RMContainerEventType event) {
-    
+
     Container container = rmContainer.getContainer();
     ContainerId containerId = container.getId();
     
@@ -140,9 +140,13 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
         );
     LOG.info("Completed container: " + rmContainer.getContainerId() + 
         " in state: " + rmContainer.getState() + " event:" + event);
-    
+
     // Remove from the list of containers
-    liveContainers.remove(rmContainer.getContainerId());
+    if (liveContainers.remove(containerId) == null) {
+      LOG.info("Additional complete request on completed container " +
+          rmContainer.getContainerId());
+      return;
+    }
 
     RMAuditLogger.logSuccess(getUser(), 
         AuditConstants.RELEASE_CONTAINER, "SchedulerApp", 
