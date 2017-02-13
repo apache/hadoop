@@ -162,8 +162,6 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   }
 
   @SuppressWarnings("rawtypes")
-  //MJTHIS: FIXME: temporarily skip this, but must be handled
-  // WENCONG: fixed
   @Test (timeout=180000)
   public void testRMRestart() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,

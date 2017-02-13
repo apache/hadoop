@@ -144,6 +144,15 @@ public class Resources {
     return createResource(memory, (memory > 0) ? 1 : 0, (memory > 0) ? 1 : 0);
   }
 
+  public static Resource createResource(int memory, int cores) {
+    Resource resource = Records.newRecord(Resource.class);
+    resource.setMemory(memory);
+    resource.setVirtualCores(cores);
+    resource.setGPUs(0);
+    resource.setGPULocality(0);
+    return resource;
+  }
+
   public static Resource createResource(int memory, int cores, int GPUs) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);

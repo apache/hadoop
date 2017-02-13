@@ -48,6 +48,9 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       "mapred.tasktracker.cumulativecputime.testing";
   /** CPU usage percentage for testing */
   public static final String CPU_USAGE = "mapred.tasktracker.cpuusage.testing";
+  /** number of GPUs for testing */
+  public static final String NUM_GPUS =
+      "mapred.tasktracker.numgpus.testing";
   /** process cumulative CPU usage time for testing */
   public static final String PROC_CUMULATIVE_CPU_TIME =
       "mapred.tasktracker.proccumulativecputime.testing";
@@ -104,5 +107,11 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   @Override
   public float getCpuUsage() {
     return getConf().getFloat(CPU_USAGE, -1);
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public int getNumGPUs() {
+    return getConf().getInt(NUM_GPUS, -1);
   }
 }
