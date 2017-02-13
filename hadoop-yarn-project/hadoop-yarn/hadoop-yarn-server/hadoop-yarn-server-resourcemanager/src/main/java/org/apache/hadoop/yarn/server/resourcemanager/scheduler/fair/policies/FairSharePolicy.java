@@ -183,7 +183,8 @@ public class FairSharePolicy extends SchedulingPolicy {
       LOG.error("Queue policy can't be " + DominantResourceFairnessPolicy.NAME
           + " if the parent policy is " + getName() + ". Choose " +
           getName() + " or " + FifoPolicy.NAME + " for child queues instead."
-          + " Please note that " + FifoPolicy.NAME + " is only for leaf queues");
+          + " Please note that " + FifoPolicy.NAME
+          + " is only for leaf queues.");
       return false;
     }
     return true;

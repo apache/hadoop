@@ -168,6 +168,7 @@ public abstract class SchedulingPolicy {
    * Check whether the policy of a child queue is allowed.
    *
    * @param childPolicy the policy of child queue
+   * @return true if the child policy is allowed; false otherwise
    */
   public boolean isChildPolicyAllowed(SchedulingPolicy childPolicy) {
     return true;

@@ -97,7 +97,7 @@ public abstract class FSQueue implements Queue, Schedulable {
 
   /**
    * Initialize a queue by setting its queue-specific properties and its
-   * metrics. This method is invoked when a new queue is created or reloading
+   * metrics. This method is invoked when creating a new queue or reloading
    * the allocation file.
    * This method does not set policies for queues when reloading the allocation
    * file since we need to either set all new policies or nothing, which is
@@ -474,10 +474,10 @@ public abstract class FSQueue implements Queue, Schedulable {
    *         for queues; false otherwise
    */
   public boolean verifyAndSetPolicyFromConf(AllocationConfiguration queueConf) {
-    SchedulingPolicy policy = queueConf.getSchedulingPolicy(getName());
+    SchedulingPolicy queuePolicy = queueConf.getSchedulingPolicy(getName());
 
     for (FSQueue child : getChildQueues()) {
-      if (!policy.isChildPolicyAllowed(
+      if (!queuePolicy.isChildPolicyAllowed(
           queueConf.getSchedulingPolicy(child.getName()))) {
         return false;
       }
@@ -488,7 +488,7 @@ public abstract class FSQueue implements Queue, Schedulable {
     }
 
     // Set the policy if no policy violation for all children
-    setPolicy(policy);
+    setPolicy(queuePolicy);
     return true;
   }
 }
