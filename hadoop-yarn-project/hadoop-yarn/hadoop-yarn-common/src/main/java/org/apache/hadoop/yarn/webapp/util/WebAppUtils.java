@@ -26,6 +26,7 @@ import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -428,7 +429,8 @@ public class WebAppUtils {
     return Arrays.asList("text", "octet-stream");
   }
 
-  private static String getURLEncodedQueryString(HttpServletRequest request) {
+  private static String getURLEncodedQueryString(HttpServletRequest request,
+      String parameterToRemove) {
     String queryString = request.getQueryString();
     if (queryString != null && !queryString.isEmpty()) {
       String reqEncoding = request.getCharacterEncoding();
@@ -436,10 +438,31 @@ public class WebAppUtils {
         reqEncoding = "ISO-8859-1";
       }
       Charset encoding = Charset.forName(reqEncoding);
-      List<NameValuePair> params = URLEncodedUtils.parse(queryString, encoding);
+      List<NameValuePair> params = URLEncodedUtils.parse(queryString,
+          encoding);
+      if (parameterToRemove != null && !parameterToRemove.isEmpty()) {
+        Iterator<NameValuePair> paramIterator = params.iterator();
+        while(paramIterator.hasNext()) {
+          NameValuePair current = paramIterator.next();
+          if (current.getName().equals(parameterToRemove)) {
+            paramIterator.remove();
+          }
+        }
+      }
       return URLEncodedUtils.format(params, encoding);
     }
     return null;
+  }
+
+  /**
+    * Get a query string which removes the passed parameter.
+    * @param httpRequest HttpServletRequest with the request details
+    * @param parameterName the query parameters must be removed
+    * @return the query parameter string
+    */
+  public static String removeQueryParams(HttpServletRequest httpRequest,
+      String parameterName) {
+    return getURLEncodedQueryString(httpRequest, parameterName);
   }
 
   /**
@@ -449,7 +472,7 @@ public class WebAppUtils {
    */
   public static String getHtmlEscapedURIWithQueryString(
       HttpServletRequest request) {
-    String urlEncodedQueryString = getURLEncodedQueryString(request);
+    String urlEncodedQueryString = getURLEncodedQueryString(request, null);
     if (urlEncodedQueryString != null) {
       return HtmlQuoting.quoteHtmlChars(
           request.getRequestURI() + "?" + urlEncodedQueryString);
@@ -466,7 +489,7 @@ public class WebAppUtils {
   public static String appendQueryParams(HttpServletRequest request,
       String targetUri) {
     String ret = targetUri;
-    String urlEncodedQueryString = getURLEncodedQueryString(request);
+    String urlEncodedQueryString = getURLEncodedQueryString(request, null);
     if (urlEncodedQueryString != null) {
       ret += "?" + urlEncodedQueryString;
     }

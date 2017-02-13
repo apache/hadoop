@@ -2650,6 +2650,14 @@
 
   <property>
     <description>
+    URL for log aggregation server web service
+    </description>
+    <name>yarn.log.server.web-service.url</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
     RM Application Tracking URL
     </description>
     <name>yarn.tracking.url.generator</name>
