@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileStatus;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -206,6 +207,12 @@ public class TestAliyunOSSFileSystemContract
     assertTrue("Should be directory",
         this.fs.getFileStatus(dirPath).isDirectory());
     assertFalse("Should not be file", this.fs.getFileStatus(dirPath).isFile());
+
+    Path parentPath = this.path("/test/oss");
+    for (FileStatus fileStatus: fs.listStatus(parentPath)) {
+      assertTrue("file and directory should be new",
+          fileStatus.getModificationTime() > 0L);
+    }
   }
 
   public void testMkdirsForExistingFile() throws Exception {
