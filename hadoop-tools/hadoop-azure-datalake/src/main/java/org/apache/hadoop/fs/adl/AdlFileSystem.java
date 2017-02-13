@@ -72,7 +72,7 @@ import static org.apache.hadoop.fs.adl.AdlConfKeys.*;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class AdlFileSystem extends FileSystem {
-  static final String SCHEME = "adl";
+  public static final String SCHEME = "adl";
   static final int DEFAULT_PORT = 443;
   private URI uri;
   private String userName;
