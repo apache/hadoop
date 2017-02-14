@@ -54,17 +54,6 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Public
   @Stable
-  public static Resource newInstance(Resource r) {
-    Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(r.getMemory());
-    resource.setVirtualCores(r.getVirtualCores());
-    resource.setGPUs(r.getGPUs());
-    resource.setGPULocality(r.getGPULocality());
-    return resource;
-  }
-
-  @Public
-  @Stable
   public static Resource newInstance(int memory, int vCores) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);

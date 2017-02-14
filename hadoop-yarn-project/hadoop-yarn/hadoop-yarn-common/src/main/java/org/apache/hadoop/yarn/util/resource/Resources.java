@@ -385,24 +385,7 @@ public class Resources {
       return false;
     }
   }
-  public static boolean fitInGpuLocality(Resource smaller, Resource bigger, Resource all){
-    if (smaller.getGPULocality() > 0) {
-      if(searchGPUs(smaller.getGPUs(), bigger.getGPULocality(), all.getGPULocality(), true, false) != 0) {
-        return true;
-      }
-      else {
-        return false;
-      }
-    }
-    else {
-      if(searchGPUs(smaller.getGPUs(), bigger.getGPULocality(), all.getGPULocality(), false, false) != 0) {
-        return true;
-      }
-      else {
-        return false;
-      }
-    }
-  }
+
   public static Resource componentwiseMin(Resource lhs, Resource rhs) {
     return createResource(Math.min(lhs.getMemory(), rhs.getMemory()),
         Math.min(lhs.getVirtualCores(), rhs.getVirtualCores()),
