@@ -379,6 +379,12 @@ definitions:
       resource:
         description: Resource used for this container.
         $ref: '#/definitions/Resource'
+      artifact:
+        description: Artifact used for this container.
+        $ref: '#/definitions/Artifact'
+      privileged_container:
+        type: boolean
+        description: Container running in privileged mode or not.
   ApplicationState:
     description: The current state of an application.
     properties:

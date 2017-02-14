@@ -1000,6 +1000,19 @@ public class ApplicationApiService implements ApplicationApi {
               resource.setCpus(jsonGetAsInt(componentRole, "yarn.vcores"));
               resource.setMemory(jsonGetAsString(componentRole, "yarn.memory"));
               container.setResource(resource);
+              Artifact artifact = new Artifact();
+              String dockerImageName = jsonGetAsString(componentRole,
+                  "docker.image");
+              if (StringUtils.isNotEmpty(dockerImageName)) {
+                artifact.setId(dockerImageName);
+                artifact.setType(Artifact.TypeEnum.DOCKER);
+              } else {
+                // Might have to handle tarballs here
+                artifact.setType(null);
+              }
+              container.setArtifact(artifact);
+              container.setPrivilegedContainer(
+                  jsonGetAsBoolean(componentRole, "docker.usePrivileged"));
               // TODO: add container property - for response only?
               app.addContainer(container);
             }
@@ -1055,6 +1068,11 @@ public class ApplicationApiService implements ApplicationApi {
   private Integer jsonGetAsInt(JsonObject object, String key) {
     return object.get(key) == null ? null
         : object.get(key).isJsonNull() ? null : object.get(key).getAsInt();
+  }
+
+  private Boolean jsonGetAsBoolean(JsonObject object, String key) {
+    return object.get(key) == null ? null
+        : object.get(key).isJsonNull() ? null : object.get(key).getAsBoolean();
   }
 
   private JsonObject jsonGetAsObject(JsonObject object, String key) {
