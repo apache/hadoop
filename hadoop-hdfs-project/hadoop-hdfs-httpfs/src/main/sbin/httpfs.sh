@@ -36,7 +36,8 @@ source ${HADOOP_LIBEXEC_DIR:-${BASEDIR}/libexec}/httpfs-config.sh
 #
 print "Using   CATALINA_OPTS:       ${CATALINA_OPTS}"
 
-catalina_opts="-Dhttpfs.home.dir=${HTTPFS_HOME}";
+catalina_opts="-Dproc_httpfs";
+catalina_opts="${catalina_opts} -Dhttpfs.home.dir=${HTTPFS_HOME}";
 catalina_opts="${catalina_opts} -Dhttpfs.config.dir=${HTTPFS_CONFIG}";
 catalina_opts="${catalina_opts} -Dhttpfs.log.dir=${HTTPFS_LOG}";
 catalina_opts="${catalina_opts} -Dhttpfs.temp.dir=${HTTPFS_TEMP}";
