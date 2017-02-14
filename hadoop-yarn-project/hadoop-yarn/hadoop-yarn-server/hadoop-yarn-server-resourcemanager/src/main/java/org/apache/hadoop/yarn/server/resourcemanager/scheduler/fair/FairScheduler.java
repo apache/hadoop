@@ -350,7 +350,6 @@ public class FairScheduler extends
   protected void update() {
     try {
       writeLock.lock();
-      long start = getClock().getTime();
 
       FSQueue rootQueue = queueMgr.getRootQueue();
 
@@ -373,9 +372,6 @@ public class FairScheduler extends
               rootMetrics.getAvailableVirtualCores()) +
               "  Demand: " + rootQueue.getDemand());
         }
-
-        long duration = getClock().getTime() - start;
-        fsOpDurations.addUpdateCallDuration(duration);
       }
     } finally {
       writeLock.unlock();

@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.security.PrivilegedEntity;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
@@ -262,10 +262,10 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
       ResourceLimits resourceLimits);
   
   /**
-   * Get the {@link ActiveUsersManager} for the queue.
-   * @return the <code>ActiveUsersManager</code> for the queue
+   * Get the {@link AbstractUsersManager} for the queue.
+   * @return the <code>AbstractUsersManager</code> for the queue
    */
-  public ActiveUsersManager getActiveUsersManager();
+  public AbstractUsersManager getAbstractUsersManager();
   
   /**
    * Adds all applications in the queue and its subqueues to the given collection.

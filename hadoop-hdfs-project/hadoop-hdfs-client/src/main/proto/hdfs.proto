@@ -514,3 +514,36 @@ message RollingUpgradeStatusProto {
 message StorageUuidsProto {
   repeated string storageUuids = 1;
 }
+
+/**
+ * File access permissions mode.
+ */
+enum AccessModeProto {
+    READ = 1;
+    WRITE = 2;
+    COPY = 3;
+    REPLACE = 4;
+}
+
+/**
+ * Secret information for the BlockKeyProto. This is not sent on the wire as
+ * such but is used to pack a byte array and encrypted and put in
+ * BlockKeyProto.bytes
+ * When adding further fields, make sure they are optional as they would
+ * otherwise not be backwards compatible.
+ *
+ * Note: As part of the migration from WritableUtils based tokens (aka "legacy")
+ * to Protocol Buffers, we use the first byte to determine the type. If the
+ * first byte is <=0 then it is a legacy token. This means that when using
+ * protobuf tokens, the the first field sent must have a `field_number` less
+ * than 16 to make sure that the first byte is positive. Otherwise it could be
+ * parsed as a legacy token. See HDFS-11026 for more discussion.
+ */
+message BlockTokenSecretProto {
+  optional uint64 expiryDate = 1;
+  optional uint32 keyId = 2;
+  optional string userId = 3;
+  optional string blockPoolId = 4;
+  optional uint64 blockId = 5;
+  repeated AccessModeProto modes = 6;
+}

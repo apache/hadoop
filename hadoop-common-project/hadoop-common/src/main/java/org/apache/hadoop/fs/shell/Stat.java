@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.FileStatus;
  * Format sequences:<br>
  *   %a: Permissions in octal<br>
  *   %A: Permissions in symbolic style<br>
- *   %b: Size of file in blocks<br>
+ *   %b: Size of file in bytes<br>
  *   %F: Type<br>
  *   %g: Group name of owner<br>
  *   %n: Filename<br>
@@ -60,7 +60,7 @@ class Stat extends FsCommand {
     "Print statistics about the file/directory at <path>" + NEWLINE +
     "in the specified format. Format accepts permissions in" + NEWLINE +
     "octal (%a) and symbolic (%A), filesize in" + NEWLINE +
-    "blocks (%b), type (%F), group name of owner (%g)," + NEWLINE +
+    "bytes (%b), type (%F), group name of owner (%g)," + NEWLINE +
     "name (%n), block size (%o), replication (%r), user name" + NEWLINE +
     "of owner (%u), modification date (%y, %Y)." + NEWLINE +
     "%y shows UTC date as \"yyyy-MM-dd HH:mm:ss\" and" + NEWLINE +

@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
@@ -361,9 +362,10 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
           queue.getQueueCapacities().getAbsoluteCapacity());
       HashSet<String> users = userMap.get(queue.getQueueName());
       Resource userLimit = Resources.divideAndCeil(rc, capacity, users.size());
-      for (String user : users) {
-        when(queue.getUserLimitPerUser(eq(user), any(Resource.class),
-            anyString())).thenReturn(userLimit);
+      for (String userName : users) {
+        when(queue.getResourceLimitForAllUsers(eq(userName),
+            any(Resource.class), anyString(), any(SchedulingMode.class)))
+                .thenReturn(userLimit);
       }
     }
   }

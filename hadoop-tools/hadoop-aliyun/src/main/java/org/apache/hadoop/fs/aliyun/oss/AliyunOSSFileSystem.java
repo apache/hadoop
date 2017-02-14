@@ -352,7 +352,7 @@ public class AliyunOSSFileSystem extends FileSystem {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Adding: rd: " + keyPath);
             }
-            result.add(new FileStatus(0, true, 1, 0, 0, keyPath));
+            result.add(getFileStatus(keyPath));
           }
         }
 

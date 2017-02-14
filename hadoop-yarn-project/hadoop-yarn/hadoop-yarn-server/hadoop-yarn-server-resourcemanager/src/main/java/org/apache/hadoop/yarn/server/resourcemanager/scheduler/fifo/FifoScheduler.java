@@ -177,7 +177,7 @@ public class FifoScheduler extends
     }
     
     @Override
-    public ActiveUsersManager getActiveUsersManager() {
+    public ActiveUsersManager getAbstractUsersManager() {
       return activeUsersManager;
     }
 

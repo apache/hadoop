@@ -542,6 +542,9 @@ public class BlockManager implements BlockStatsMXBean {
     
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
     boolean isHaEnabled = HAUtil.isHAEnabled(conf, nsId);
+    boolean shouldWriteProtobufToken = conf.getBoolean(
+        DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_PROTOBUF_ENABLE,
+        DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_PROTOBUF_ENABLE_DEFAULT);
 
     if (isHaEnabled) {
       // figure out which index we are of the nns
@@ -555,10 +558,12 @@ public class BlockManager implements BlockStatsMXBean {
         nnIndex++;
       }
       return new BlockTokenSecretManager(updateMin * 60 * 1000L,
-          lifetimeMin * 60 * 1000L, nnIndex, nnIds.size(), null, encryptionAlgorithm);
+          lifetimeMin * 60 * 1000L, nnIndex, nnIds.size(), null,
+          encryptionAlgorithm, shouldWriteProtobufToken);
     } else {
       return new BlockTokenSecretManager(updateMin*60*1000L,
-          lifetimeMin*60*1000L, 0, 1, null, encryptionAlgorithm);
+          lifetimeMin*60*1000L, 0, 1, null, encryptionAlgorithm,
+          shouldWriteProtobufToken);
     }
   }
 

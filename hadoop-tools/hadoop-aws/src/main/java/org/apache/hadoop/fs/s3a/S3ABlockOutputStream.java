@@ -382,6 +382,7 @@ class S3ABlockOutputStream extends OutputStream {
         writeOperationHelper.newPutRequest(
             block.startUpload(),
             size);
+    fs.setOptionalPutRequestParameters(putObjectRequest);
     long transferQueueTime = now();
     BlockUploadProgress callback =
         new BlockUploadProgress(

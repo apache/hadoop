@@ -23,7 +23,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -751,7 +750,7 @@ public class CapacityScheduler extends
       CSQueue queue = (CSQueue) application.getQueue();
 
       FiCaSchedulerApp attempt = new FiCaSchedulerApp(applicationAttemptId,
-          application.getUser(), queue, queue.getActiveUsersManager(),
+          application.getUser(), queue, queue.getAbstractUsersManager(),
           rmContext, application.getPriority(), isAttemptRecovering,
           activitiesManager);
       if (transferStateFromPreviousAttempt) {
