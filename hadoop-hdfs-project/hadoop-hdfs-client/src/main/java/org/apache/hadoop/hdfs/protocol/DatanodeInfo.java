@@ -51,7 +51,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   private long lastUpdate;
   private long lastUpdateMonotonic;
   private int xceiverCount;
-  private String location = NetworkTopology.DEFAULT_RACK;
+  private volatile String location = NetworkTopology.DEFAULT_RACK;
   private String softwareVersion;
   private List<String> dependentHostNames = new LinkedList<>();
   private String upgradeDomain;
@@ -333,10 +333,12 @@ public class DatanodeInfo extends DatanodeID implements Node {
   }
 
   /** network location */
-  public synchronized String getNetworkLocation() {return location;}
+  @Override
+  public String getNetworkLocation() {return location;}
 
   /** Sets the network location */
-  public synchronized void setNetworkLocation(String location) {
+  @Override
+  public void setNetworkLocation(String location) {
     this.location = NodeBase.normalize(location);
   }
 
