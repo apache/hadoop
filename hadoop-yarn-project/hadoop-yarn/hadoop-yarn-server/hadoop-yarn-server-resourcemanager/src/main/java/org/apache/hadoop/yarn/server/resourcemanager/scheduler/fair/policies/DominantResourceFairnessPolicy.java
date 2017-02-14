@@ -90,7 +90,7 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
 
   @Override
   public boolean checkIfUsageOverFairShare(Resource usage, Resource fairShare) {
-    return !Resources.fitsIn(usage, fairShare);
+    return Resources.greaterThan(CALCULATOR, null, usage, fairShare);
   }
 
   @Override

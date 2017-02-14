@@ -130,6 +130,7 @@ import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * The ResourceManager is the main class that is a set of components.
@@ -205,7 +206,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private Configuration conf;
 
   private UserGroupInformation rmLoginUGI;
-  
+
   public ResourceManager() {
     super("ResourceManager");
   }
@@ -232,7 +233,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected void serviceInit(Configuration conf) throws Exception {
     this.conf = conf;
     this.rmContext = new RMContextImpl();
-    
+    rmContext.setResourceManager(this);
+
     this.configurationProvider =
         ConfigurationProviderFactory.getConfigurationProvider(conf);
     this.configurationProvider.init(this.conf);
@@ -564,6 +566,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     private ResourceManager rm;
     private RMActiveServiceContext activeServiceContext;
     private boolean fromActive = false;
+    private StandByTransitionRunnable standByTransitionRunnable;
 
     RMActiveServices(ResourceManager rm) {
       super("RMActiveServices");
@@ -572,6 +575,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     @Override
     protected void serviceInit(Configuration configuration) throws Exception {
+      standByTransitionRunnable = new StandByTransitionRunnable();
+
       activeServiceContext = new RMActiveServiceContext();
       rmContext.setActiveServiceContext(activeServiceContext);
 
@@ -819,19 +824,51 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
   }
 
-  public void handleTransitionToStandBy() {
-    if (rmContext.isHAEnabled()) {
-      try {
-        // Transition to standby and reinit active services
-        LOG.info("Transitioning RM to Standby mode");
-        transitionToStandby(true);
-        EmbeddedElector elector = rmContext.getLeaderElectorService();
-        if (elector != null) {
-          elector.rejoinElection();
+  /**
+   * Transition to standby state in a new thread. The transition operation is
+   * asynchronous to avoid deadlock caused by cyclic dependency.
+   */
+  public void handleTransitionToStandByInNewThread() {
+    Thread standByTransitionThread =
+        new Thread(activeServices.standByTransitionRunnable);
+    standByTransitionThread.setName("StandByTransitionThread");
+    standByTransitionThread.start();
+  }
+
+  /**
+   * The class to transition RM to standby state. The same
+   * {@link StandByTransitionRunnable} object could be used in multiple threads,
+   * but runs only once. That's because RM can go back to active state after
+   * transition to standby state, the same runnable in the old context can't
+   * transition RM to standby state again. A new runnable is created every time
+   * RM transitions to active state.
+   */
+  private class StandByTransitionRunnable implements Runnable {
+    // The atomic variable to make sure multiple threads with the same runnable
+    // run only once.
+    private AtomicBoolean hasAlreadyRun = new AtomicBoolean(false);
+
+    @Override
+    public void run() {
+      // Run this only once, even if multiple threads end up triggering
+      // this simultaneously.
+      if (hasAlreadyRun.getAndSet(true)) {
+        return;
+      }
+
+      if (rmContext.isHAEnabled()) {
+        try {
+          // Transition to standby and reinit active services
+          LOG.info("Transitioning RM to Standby mode");
+          transitionToStandby(true);
+          EmbeddedElector elector = rmContext.getLeaderElectorService();
+          if (elector != null) {
+            elector.rejoinElection();
+          }
+        } catch (Exception e) {
+          LOG.fatal("Failed to transition RM to Standby mode.", e);
+          ExitUtil.terminate(1, e);
         }
-      } catch (Exception e) {
-        LOG.fatal("Failed to transition RM to Standby mode.", e);
-        ExitUtil.terminate(1, e);
       }
     }
   }
