@@ -62,7 +62,6 @@ public abstract class SchedulerNode {
 
 
   /* set of containers that are allocated containers */
-  // MJTHIS: FIXME: this is maintained weirdly. Consecutive put changes existing ones as well.
   private final Map<ContainerId, RMContainer> launchedContainers =
       new HashMap<ContainerId, RMContainer>();
 

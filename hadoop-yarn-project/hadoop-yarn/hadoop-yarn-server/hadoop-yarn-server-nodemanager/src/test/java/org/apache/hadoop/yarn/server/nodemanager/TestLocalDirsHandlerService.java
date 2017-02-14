@@ -84,7 +84,7 @@ public class TestLocalDirsHandlerService {
                         dirSvc.getServiceState());
     dirSvc.close();
   }
-  
+
   public void testGetFullDirs() throws Exception {
     Configuration conf = new YarnConfiguration();
 
