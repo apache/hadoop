@@ -48,6 +48,8 @@ public class Container extends BaseResource {
   private ContainerState state = null;
   private String componentName = null;
   private Resource resource = null;
+  private Artifact artifact = null;
+  private Boolean privilegedContainer = null;
 
   /**
    * Unique container id of a running application, e.g.
@@ -204,6 +206,42 @@ public class Container extends BaseResource {
     this.resource = resource;
   }
 
+  /**
+   * Artifact used for this container.
+   **/
+  public Container artifact(Artifact artifact) {
+    this.artifact = artifact;
+    return this;
+  }
+
+  @ApiModelProperty(example = "null", value = "Artifact used for this container.")
+  @JsonProperty("artifact")
+  public Artifact getArtifact() {
+    return artifact;
+  }
+
+  public void setArtifact(Artifact artifact) {
+    this.artifact = artifact;
+  }
+
+  /**
+   * Container running in privileged mode or not.
+   **/
+  public Container privilegedContainer(Boolean privilegedContainer) {
+    this.privilegedContainer = privilegedContainer;
+    return this;
+  }
+
+  @ApiModelProperty(example = "null", value = "Container running in privileged mode or not.")
+  @JsonProperty("privileged_container")
+  public Boolean getPrivilegedContainer() {
+    return privilegedContainer;
+  }
+
+  public void setPrivilegedContainer(Boolean privilegedContainer) {
+    this.privilegedContainer = privilegedContainer;
+  }
+
   @Override
   public boolean equals(java.lang.Object o) {
     if (this == o) {
@@ -213,20 +251,12 @@ public class Container extends BaseResource {
       return false;
     }
     Container container = (Container) o;
-    return Objects.equals(this.id, container.id)
-        && Objects.equals(this.launchTime, container.launchTime)
-        && Objects.equals(this.ip, container.ip)
-        && Objects.equals(this.hostname, container.hostname)
-        && Objects.equals(this.bareHost, container.bareHost)
-        && Objects.equals(this.state, container.state)
-        && Objects.equals(this.componentName, container.componentName)
-        && Objects.equals(this.resource, container.resource);
+    return Objects.equals(this.id, container.id);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, launchTime, ip, hostname, bareHost, state,
-        componentName, resource);
+    return Objects.hash(id);
   }
 
   @Override
@@ -244,6 +274,9 @@ public class Container extends BaseResource {
     sb.append("    componentName: ").append(toIndentedString(componentName))
         .append("\n");
     sb.append("    resource: ").append(toIndentedString(resource)).append("\n");
+    sb.append("    artifact: ").append(toIndentedString(artifact)).append("\n");
+    sb.append("    privilegedContainer: ")
+        .append(toIndentedString(privilegedContainer)).append("\n");
     sb.append("}");
     return sb.toString();
   }
