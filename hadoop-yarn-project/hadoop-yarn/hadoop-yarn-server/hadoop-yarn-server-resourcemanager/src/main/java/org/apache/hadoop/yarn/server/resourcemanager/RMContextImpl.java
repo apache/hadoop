@@ -81,6 +81,7 @@ public class RMContextImpl implements RMContext {
 
   private final Object haServiceStateLock = new Object();
 
+  private ResourceManager resourceManager;
   /**
    * Default constructor. To be used in conjunction with setter methods for
    * individual fields.
@@ -508,5 +509,14 @@ public class RMContextImpl implements RMContext {
     } else {
       return elector.getZookeeperConnectionState();
     }
+  }
+
+  @Override
+  public ResourceManager getResourceManager() {
+    return resourceManager;
+  }
+
+  public void setResourceManager(ResourceManager rm) {
+    this.resourceManager = rm;
   }
 }
