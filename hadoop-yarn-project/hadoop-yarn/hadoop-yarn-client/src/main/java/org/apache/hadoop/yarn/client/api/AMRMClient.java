@@ -33,17 +33,20 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -516,12 +519,38 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    * ResourceManager to change the existing resource allocation to the target
    * resource allocation.
    *
+   * @deprecated use
+   * {@link #requestContainerUpdate(Container, UpdateContainerRequest)}
+   *
    * @param container The container returned from the last successful resource
    *                  allocation or resource change
    * @param capability  The target resource capability of the container
    */
-  public abstract void requestContainerResourceChange(
-      Container container, Resource capability);
+  @Deprecated
+  public void requestContainerResourceChange(
+      Container container, Resource capability) {
+    Preconditions.checkNotNull(container, "Container cannot be null!!");
+    Preconditions.checkNotNull(capability,
+        "UpdateContainerRequest cannot be null!!");
+    requestContainerUpdate(container, UpdateContainerRequest.newInstance(
+        container.getVersion(), container.getId(),
+        Resources.fitsIn(capability, container.getResource()) ?
+            ContainerUpdateType.DECREASE_RESOURCE :
+            ContainerUpdateType.INCREASE_RESOURCE,
+        capability, null));
+  }
+
+  /**
+   * Request a container update before calling <code>allocate</code>.
+   * Any previous pending update request of the same container will be
+   * removed.
+   *
+   * @param container The container returned from the last successful resource
+   *                  allocation or update
+   * @param updateContainerRequest The <code>UpdateContainerRequest</code>.
+   */
+  public abstract void requestContainerUpdate(
+      Container container, UpdateContainerRequest updateContainerRequest);
 
   /**
    * Release containers assigned by the Resource Manager. If the app cannot use

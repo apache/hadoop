@@ -276,8 +276,10 @@ public class TestIncreaseAllocationExpirer {
             Resources.createResource(5 * GB), null)));
     List<UpdateContainerError> updateErrors = response.getUpdateErrors();
     Assert.assertEquals(1, updateErrors.size());
-    Assert.assertEquals("INCORRECT_CONTAINER_VERSION_ERROR|0|1",
+    Assert.assertEquals("INCORRECT_CONTAINER_VERSION_ERROR",
         updateErrors.get(0).getReason());
+    Assert.assertEquals(1,
+        updateErrors.get(0).getCurrentContainerVersion());
 
     // am1 asks to change containerId2 from 3GB to 5GB
     am1.sendContainerResizingRequest(Collections.singletonList(

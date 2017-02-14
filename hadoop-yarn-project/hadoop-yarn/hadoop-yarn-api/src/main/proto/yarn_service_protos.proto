@@ -78,6 +78,7 @@ message UpdateContainerRequestProto {
 message UpdateContainerErrorProto {
   optional string reason = 1;
   optional UpdateContainerRequestProto update_request = 2;
+  optional int32 current_container_version = 3;
 }
 
 message AllocateRequestProto {

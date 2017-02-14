@@ -169,15 +169,16 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   protected Set<ContainerId> pendingRelease = new TreeSet<ContainerId>();
   // change map holds container resource change requests between two allocate()
   // calls, and are cleared after each successful allocate() call.
-  protected final Map<ContainerId, SimpleEntry<Container, Resource>> change =
-      new HashMap<>();
+  protected final Map<ContainerId,
+      SimpleEntry<Container, UpdateContainerRequest>> change = new HashMap<>();
   // pendingChange map holds history of container resource change requests in
   // case AM needs to reregister with the ResourceManager.
   // Change requests are removed from this map if RM confirms the change
   // through allocate response, or if RM confirms that the container has been
   // completed.
-  protected final Map<ContainerId, SimpleEntry<Container, Resource>>
-      pendingChange = new HashMap<>();
+  protected final Map<ContainerId,
+      SimpleEntry<Container, UpdateContainerRequest>> pendingChange =
+      new HashMap<>();
 
   public AMRMClientImpl() {
     super(AMRMClientImpl.class.getName());
@@ -259,7 +260,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     AllocateRequest allocateRequest = null;
     List<String> blacklistToAdd = new ArrayList<String>();
     List<String> blacklistToRemove = new ArrayList<String>();
-    Map<ContainerId, SimpleEntry<Container, Resource>> oldChange =
+    Map<ContainerId, SimpleEntry<Container, UpdateContainerRequest>> oldChange =
         new HashMap<>();
     try {
       synchronized (this) {
@@ -375,14 +376,15 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
           //
           // Only insert entries from the cached oldChange map
           // that do not exist in the current change map:
-          for (Map.Entry<ContainerId, SimpleEntry<Container, Resource>> entry :
+          for (Map.Entry<ContainerId,
+              SimpleEntry<Container, UpdateContainerRequest>> entry :
               oldChange.entrySet()) {
             ContainerId oldContainerId = entry.getKey();
             Container oldContainer = entry.getValue().getKey();
-            Resource oldResource = entry.getValue().getValue();
+            UpdateContainerRequest oldupdate = entry.getValue().getValue();
             if (change.get(oldContainerId) == null) {
               change.put(
-                  oldContainerId, new SimpleEntry<>(oldContainer, oldResource));
+                  oldContainerId, new SimpleEntry<>(oldContainer, oldupdate));
             }
           }
           blacklistAdditions.addAll(blacklistToAdd);
@@ -395,19 +397,17 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
 
   private List<UpdateContainerRequest> createUpdateList() {
     List<UpdateContainerRequest> updateList = new ArrayList<>();
-    for (Map.Entry<ContainerId, SimpleEntry<Container, Resource>> entry :
-        change.entrySet()) {
-      Resource targetCapability = entry.getValue().getValue();
-      Resource currCapability = entry.getValue().getKey().getResource();
-      int version = entry.getValue().getKey().getVersion();
+    for (Map.Entry<ContainerId, SimpleEntry<Container,
+        UpdateContainerRequest>> entry : change.entrySet()) {
+      Resource targetCapability = entry.getValue().getValue().getCapability();
+      ExecutionType targetExecType =
+          entry.getValue().getValue().getExecutionType();
       ContainerUpdateType updateType =
-          ContainerUpdateType.INCREASE_RESOURCE;
-      if (Resources.fitsIn(targetCapability, currCapability)) {
-        updateType = ContainerUpdateType.DECREASE_RESOURCE;
-      }
+          entry.getValue().getValue().getContainerUpdateType();
+      int version = entry.getValue().getKey().getVersion();
       updateList.add(
           UpdateContainerRequest.newInstance(version, entry.getKey(),
-              updateType, targetCapability, null));
+              updateType, targetCapability, targetExecType));
     }
     return updateList;
   }
@@ -592,21 +592,47 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   }
 
   @Override
-  public synchronized void requestContainerResourceChange(
-      Container container, Resource capability) {
-    validateContainerResourceChangeRequest(
-        container.getId(), container.getResource(), capability);
+  public synchronized void requestContainerUpdate(
+      Container container, UpdateContainerRequest updateContainerRequest) {
+    Preconditions.checkNotNull(container, "Container cannot be null!!");
+    Preconditions.checkNotNull(updateContainerRequest,
+        "UpdateContainerRequest cannot be null!!");
+    LOG.info("Requesting Container update : " +
+        "container=" + container + ", " +
+        "updateType=" + updateContainerRequest.getContainerUpdateType() + ", " +
+        "targetCapability=" + updateContainerRequest.getCapability() + ", " +
+        "targetExecType=" + updateContainerRequest.getExecutionType());
+    if (updateContainerRequest.getCapability() != null &&
+        updateContainerRequest.getExecutionType() == null) {
+      validateContainerResourceChangeRequest(
+          updateContainerRequest.getContainerUpdateType(),
+          container.getId(), container.getResource(),
+          updateContainerRequest.getCapability());
+    } else if (updateContainerRequest.getExecutionType() != null &&
+        updateContainerRequest.getCapability() == null) {
+      validateContainerExecTypeChangeRequest(
+          updateContainerRequest.getContainerUpdateType(),
+          container.getId(), container.getExecutionType(),
+          updateContainerRequest.getExecutionType());
+    } else if (updateContainerRequest.getExecutionType() == null &&
+        updateContainerRequest.getCapability() == null) {
+      throw new IllegalArgumentException("Both target Capability and" +
+          "target Execution Type are null");
+    } else {
+      throw new IllegalArgumentException("Support currently exists only for" +
+          " EITHER update of Capability OR update of Execution Type NOT both");
+    }
     if (change.get(container.getId()) == null) {
       change.put(container.getId(),
-          new SimpleEntry<>(container, capability));
+          new SimpleEntry<>(container, updateContainerRequest));
     } else {
-      change.get(container.getId()).setValue(capability);
+      change.get(container.getId()).setValue(updateContainerRequest);
     }
     if (pendingChange.get(container.getId()) == null) {
       pendingChange.put(container.getId(),
-          new SimpleEntry<>(container, capability));
+          new SimpleEntry<>(container, updateContainerRequest));
     } else {
-      pendingChange.get(container.getId()).setValue(capability);
+      pendingChange.get(container.getId()).setValue(updateContainerRequest);
     }
   }
 
@@ -751,7 +777,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   }
 
   private void validateContainerResourceChangeRequest(
-      ContainerId containerId, Resource original, Resource target) {
+      ContainerUpdateType updateType, ContainerId containerId,
+      Resource original, Resource target) {
     Preconditions.checkArgument(containerId != null,
         "ContainerId cannot be null");
     Preconditions.checkArgument(original != null,
@@ -764,6 +791,36 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     Preconditions.checkArgument(!Resources.equals(Resources.none(), target)
             && Resources.fitsIn(Resources.none(), target),
         "Target resource capability must be greater than 0");
+    if (ContainerUpdateType.DECREASE_RESOURCE == updateType) {
+      Preconditions.checkArgument(Resources.fitsIn(target, original),
+          "Target resource capability must fit in Original capability");
+    } else {
+      Preconditions.checkArgument(Resources.fitsIn(original, target),
+          "Target resource capability must be more than Original capability");
+
+    }
+  }
+
+  private void validateContainerExecTypeChangeRequest(
+      ContainerUpdateType updateType, ContainerId containerId,
+      ExecutionType original, ExecutionType target) {
+    Preconditions.checkArgument(containerId != null,
+        "ContainerId cannot be null");
+    Preconditions.checkArgument(original != null,
+        "Original Execution Type cannot be null");
+    Preconditions.checkArgument(target != null,
+        "Target Execution Type cannot be null");
+    if (ContainerUpdateType.DEMOTE_EXECUTION_TYPE == updateType) {
+      Preconditions.checkArgument(target == ExecutionType.OPPORTUNISTIC
+              && original == ExecutionType.GUARANTEED,
+          "Incorrect Container update request, target should be" +
+              " OPPORTUNISTIC and original should be GUARANTEED");
+    } else {
+      Preconditions.checkArgument(target == ExecutionType.GUARANTEED
+                  && original == ExecutionType.OPPORTUNISTIC,
+          "Incorrect Container update request, target should be" +
+              " GUARANTEED and original should be OPPORTUNISTIC");
+    }
   }
 
   private void addResourceRequestToAsk(ResourceRequest remoteRequest) {

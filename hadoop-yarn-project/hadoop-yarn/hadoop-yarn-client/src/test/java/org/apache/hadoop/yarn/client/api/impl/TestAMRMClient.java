@@ -52,29 +52,7 @@ import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
-import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.ContainerState;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ExecutionType;
-import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.LocalResource;
-import org.apache.hadoop.yarn.api.records.NMToken;
-import org.apache.hadoop.yarn.api.records.NodeReport;
-import org.apache.hadoop.yarn.api.records.NodeState;
-import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.Token;
-import org.apache.hadoop.yarn.api.records.UpdatedContainer;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
@@ -1098,26 +1076,36 @@ public class TestAMRMClient {
         (AMRMClientImpl<ContainerRequest>) amClient;
     Assert.assertEquals(0, amClientImpl.change.size());
     // verify newer request overwrites older request for the container1
-    amClientImpl.requestContainerResourceChange(
-        container1, Resource.newInstance(2048, 1));
-    amClientImpl.requestContainerResourceChange(
-        container1, Resource.newInstance(4096, 1));
+    amClientImpl.requestContainerUpdate(container1,
+        UpdateContainerRequest.newInstance(container1.getVersion(),
+            container1.getId(), ContainerUpdateType.INCREASE_RESOURCE,
+            Resource.newInstance(2048, 1), null));
+    amClientImpl.requestContainerUpdate(container1,
+        UpdateContainerRequest.newInstance(container1.getVersion(),
+            container1.getId(), ContainerUpdateType.INCREASE_RESOURCE,
+            Resource.newInstance(4096, 1), null));
     Assert.assertEquals(Resource.newInstance(4096, 1),
-        amClientImpl.change.get(container1.getId()).getValue());
+        amClientImpl.change.get(container1.getId()).getValue().getCapability());
     // verify new decrease request cancels old increase request for container1
-    amClientImpl.requestContainerResourceChange(
-        container1, Resource.newInstance(512, 1));
+    amClientImpl.requestContainerUpdate(container1,
+        UpdateContainerRequest.newInstance(container1.getVersion(),
+            container1.getId(), ContainerUpdateType.DECREASE_RESOURCE,
+            Resource.newInstance(512, 1), null));
     Assert.assertEquals(Resource.newInstance(512, 1),
-        amClientImpl.change.get(container1.getId()).getValue());
+        amClientImpl.change.get(container1.getId()).getValue().getCapability());
     // request resource increase for container2
-    amClientImpl.requestContainerResourceChange(
-        container2, Resource.newInstance(2048, 1));
+    amClientImpl.requestContainerUpdate(container2,
+        UpdateContainerRequest.newInstance(container2.getVersion(),
+            container2.getId(), ContainerUpdateType.INCREASE_RESOURCE,
+            Resource.newInstance(2048, 1), null));
     Assert.assertEquals(Resource.newInstance(2048, 1),
-        amClientImpl.change.get(container2.getId()).getValue());
+        amClientImpl.change.get(container2.getId()).getValue().getCapability());
     // verify release request will cancel pending change requests for the same
     // container
-    amClientImpl.requestContainerResourceChange(
-        container3, Resource.newInstance(2048, 1));
+    amClientImpl.requestContainerUpdate(container3,
+        UpdateContainerRequest.newInstance(container3.getVersion(),
+            container3.getId(), ContainerUpdateType.INCREASE_RESOURCE,
+            Resource.newInstance(2048, 1), null));
     Assert.assertEquals(3, amClientImpl.pendingChange.size());
     amClientImpl.releaseAssignedContainer(container3.getId());
     Assert.assertEquals(2, amClientImpl.pendingChange.size());

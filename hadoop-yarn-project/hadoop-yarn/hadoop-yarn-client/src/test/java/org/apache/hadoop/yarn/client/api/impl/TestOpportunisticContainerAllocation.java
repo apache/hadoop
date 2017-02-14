@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -44,6 +45,8 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
+import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
@@ -54,6 +57,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler
+    .AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
@@ -66,13 +72,17 @@ import org.junit.Test;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Class that tests the allocation of OPPORTUNISTIC containers through the
@@ -83,7 +93,6 @@ public class TestOpportunisticContainerAllocation {
   private static MiniYARNCluster yarnCluster = null;
   private static YarnClient yarnClient = null;
   private static List<NodeReport> nodeReports = null;
-  private static ApplicationAttemptId attemptId = null;
   private static int nodeCount = 3;
 
   private static final int ROLLING_INTERVAL_SEC = 13;
@@ -92,11 +101,21 @@ public class TestOpportunisticContainerAllocation {
   private static Resource capability;
   private static Priority priority;
   private static Priority priority2;
+  private static Priority priority3;
+  private static Priority priority4;
   private static String node;
   private static String rack;
   private static String[] nodes;
   private static String[] racks;
   private final static int DEFAULT_ITERATION = 3;
+
+  // Per test..
+  private ApplicationAttemptId attemptId = null;
+  private AMRMClientImpl<AMRMClient.ContainerRequest> amClient = null;
+  private long availMB;
+  private int availVCores;
+  private long allocMB;
+  private int allocVCores;
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -106,7 +125,7 @@ public class TestOpportunisticContainerAllocation {
         YarnConfiguration.RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS,
         ROLLING_INTERVAL_SEC);
     conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, AM_EXPIRE_MS);
-    conf.setInt(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, 100);
+    conf.setInt(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, 1000);
     // set the minimum allocation so that resource decrease can go under 1024
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 512);
     conf.setBoolean(
@@ -129,7 +148,9 @@ public class TestOpportunisticContainerAllocation {
 
     priority = Priority.newInstance(1);
     priority2 = Priority.newInstance(2);
-    capability = Resource.newInstance(1024, 1);
+    priority3 = Priority.newInstance(3);
+    priority4 = Priority.newInstance(4);
+    capability = Resource.newInstance(512, 1);
 
     node = nodeReports.get(0).getNodeId().getHost();
     rack = nodeReports.get(0).getRackName();
@@ -193,10 +214,35 @@ public class TestOpportunisticContainerAllocation {
     UserGroupInformation.getCurrentUser().addToken(appAttempt.getAMRMToken());
     appAttempt.getAMRMToken()
         .setService(ClientRMProxy.getAMRMTokenService(conf));
+
+    // start am rm client
+    amClient = (AMRMClientImpl<AMRMClient.ContainerRequest>)AMRMClient
+        .createAMRMClient();
+
+    //setting an instance NMTokenCache
+    amClient.setNMTokenCache(new NMTokenCache());
+    //asserting we are not using the singleton instance cache
+    Assert.assertNotSame(NMTokenCache.getSingleton(),
+        amClient.getNMTokenCache());
+
+    amClient.init(conf);
+    amClient.start();
+
+    amClient.registerApplicationMaster("Host", 10000, "");
   }
 
   @After
   public void cancelApp() throws YarnException, IOException {
+    try {
+      amClient
+          .unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, null,
+              null);
+    } finally {
+      if (amClient != null &&
+          amClient.getServiceState() == Service.STATE.STARTED) {
+        amClient.stop();
+      }
+    }
     yarnClient.killApplication(attemptId.getApplicationId());
     attemptId = null;
   }
@@ -214,43 +260,254 @@ public class TestOpportunisticContainerAllocation {
   }
 
   @Test(timeout = 60000)
-  public void testAMRMClient() throws YarnException, IOException {
-    AMRMClient<AMRMClient.ContainerRequest> amClient = null;
-    try {
-      // start am rm client
-      amClient = AMRMClient.<AMRMClient.ContainerRequest>createAMRMClient();
+  public void testPromotionFromAcquired() throws YarnException, IOException {
+    // setup container request
+    assertEquals(0, amClient.ask.size());
+    assertEquals(0, amClient.release.size());
 
-      //setting an instance NMTokenCache
-      amClient.setNMTokenCache(new NMTokenCache());
-      //asserting we are not using the singleton instance cache
-      Assert.assertNotSame(NMTokenCache.getSingleton(),
-          amClient.getNMTokenCache());
+    amClient.addContainerRequest(
+        new AMRMClient.ContainerRequest(capability, null, null, priority2, 0,
+            true, null,
+            ExecutionTypeRequest.newInstance(
+                ExecutionType.OPPORTUNISTIC, true)));
 
-      amClient.init(conf);
-      amClient.start();
+    int oppContainersRequestedAny =
+        amClient.getTable(0).get(priority2, ResourceRequest.ANY,
+            ExecutionType.OPPORTUNISTIC, capability).remoteRequest
+            .getNumContainers();
 
-      amClient.registerApplicationMaster("Host", 10000, "");
+    assertEquals(1, oppContainersRequestedAny);
 
-      testOpportunisticAllocation(
-          (AMRMClientImpl<AMRMClient.ContainerRequest>) amClient);
+    assertEquals(1, amClient.ask.size());
+    assertEquals(0, amClient.release.size());
 
-      testAllocation((AMRMClientImpl<AMRMClient.ContainerRequest>)amClient);
+    // RM should allocate container within 2 calls to allocate()
+    int allocatedContainerCount = 0;
+    Map<ContainerId, Container> allocatedOpportContainers = new HashMap<>();
+    int iterationsLeft = 50;
 
-      amClient
-          .unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, null,
-              null);
+    amClient.getNMTokenCache().clearCache();
+    Assert.assertEquals(0,
+        amClient.getNMTokenCache().numberOfTokensInCache());
+    HashMap<String, Token> receivedNMTokens = new HashMap<>();
 
-    } finally {
-      if (amClient != null &&
-          amClient.getServiceState() == Service.STATE.STARTED) {
-        amClient.stop();
+    updateMetrics("Before Opp Allocation");
+
+    while (allocatedContainerCount < oppContainersRequestedAny
+        && iterationsLeft-- > 0) {
+      AllocateResponse allocResponse = amClient.allocate(0.1f);
+      assertEquals(0, amClient.ask.size());
+      assertEquals(0, amClient.release.size());
+
+      allocatedContainerCount +=
+          allocResponse.getAllocatedContainers().size();
+      for (Container container : allocResponse.getAllocatedContainers()) {
+        if (container.getExecutionType() == ExecutionType.OPPORTUNISTIC) {
+          allocatedOpportContainers.put(container.getId(), container);
+          removeCR(container);
+        }
+      }
+
+      for (NMToken token : allocResponse.getNMTokens()) {
+        String nodeID = token.getNodeId().toString();
+        receivedNMTokens.put(nodeID, token.getToken());
+      }
+
+      if (allocatedContainerCount < oppContainersRequestedAny) {
+        // sleep to let NM's heartbeat to RM and trigger allocations
+        sleep(100);
       }
     }
+
+    assertEquals(oppContainersRequestedAny, allocatedContainerCount);
+    assertEquals(oppContainersRequestedAny, allocatedOpportContainers.size());
+
+    updateMetrics("After Opp Allocation / Before Promotion");
+
+    try {
+      Container c = allocatedOpportContainers.values().iterator().next();
+      amClient.requestContainerUpdate(
+          c, UpdateContainerRequest.newInstance(c.getVersion(),
+              c.getId(), ContainerUpdateType.PROMOTE_EXECUTION_TYPE,
+              null, ExecutionType.OPPORTUNISTIC));
+      Assert.fail("Should throw Exception..");
+    } catch (IllegalArgumentException e) {
+      System.out.println("## " + e.getMessage());
+      Assert.assertTrue(e.getMessage().contains(
+          "target should be GUARANTEED and original should be OPPORTUNISTIC"));
+    }
+
+    Container c = allocatedOpportContainers.values().iterator().next();
+    amClient.requestContainerUpdate(
+        c, UpdateContainerRequest.newInstance(c.getVersion(),
+            c.getId(), ContainerUpdateType.PROMOTE_EXECUTION_TYPE,
+            null, ExecutionType.GUARANTEED));
+    iterationsLeft = 120;
+    Map<ContainerId, UpdatedContainer> updatedContainers = new HashMap<>();
+    // do a few iterations to ensure RM is not going to send new containers
+    while (iterationsLeft-- > 0 && updatedContainers.isEmpty()) {
+      // inform RM of rejection
+      AllocateResponse allocResponse = amClient.allocate(0.1f);
+      // RM did not send new containers because AM does not need any
+      if (allocResponse.getUpdatedContainers() != null) {
+        for (UpdatedContainer updatedContainer : allocResponse
+            .getUpdatedContainers()) {
+          System.out.println("Got update..");
+          updatedContainers.put(updatedContainer.getContainer().getId(),
+              updatedContainer);
+        }
+      }
+      if (iterationsLeft > 0) {
+        // sleep to make sure NM's heartbeat
+        sleep(100);
+      }
+    }
+
+    updateMetrics("After Promotion");
+
+    assertEquals(1, updatedContainers.size());
+    for (ContainerId cId : allocatedOpportContainers.keySet()) {
+      Container orig = allocatedOpportContainers.get(cId);
+      UpdatedContainer updatedContainer = updatedContainers.get(cId);
+      assertNotNull(updatedContainer);
+      assertEquals(ExecutionType.GUARANTEED,
+          updatedContainer.getContainer().getExecutionType());
+      assertEquals(orig.getResource(),
+          updatedContainer.getContainer().getResource());
+      assertEquals(orig.getNodeId(),
+          updatedContainer.getContainer().getNodeId());
+      assertEquals(orig.getVersion() + 1,
+          updatedContainer.getContainer().getVersion());
+    }
+    assertEquals(0, amClient.ask.size());
+    assertEquals(0, amClient.release.size());
+    amClient.ask.clear();
   }
 
-  private void testAllocation(
-      final AMRMClientImpl<AMRMClient.ContainerRequest> amClient)
-      throws YarnException, IOException {
+  @Test(timeout = 60000)
+  public void testDemotionFromAcquired() throws YarnException, IOException {
+    // setup container request
+    assertEquals(0, amClient.ask.size());
+    assertEquals(0, amClient.release.size());
+
+    amClient.addContainerRequest(
+        new AMRMClient.ContainerRequest(capability, null, null, priority3));
+
+    int guarContainersRequestedAny = amClient.getTable(0).get(priority3,
+        ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
+        .remoteRequest.getNumContainers();
+
+    assertEquals(1, guarContainersRequestedAny);
+
+    assertEquals(1, amClient.ask.size());
+    assertEquals(0, amClient.release.size());
+
+    // RM should allocate container within 2 calls to allocate()
+    int allocatedContainerCount = 0;
+    Map<ContainerId, Container> allocatedGuarContainers = new HashMap<>();
+    int iterationsLeft = 50;
+
+    amClient.getNMTokenCache().clearCache();
+    Assert.assertEquals(0,
+        amClient.getNMTokenCache().numberOfTokensInCache());
+    HashMap<String, Token> receivedNMTokens = new HashMap<>();
+
+    updateMetrics("Before Guar Allocation");
+
+    while (allocatedContainerCount < guarContainersRequestedAny
+        && iterationsLeft-- > 0) {
+      AllocateResponse allocResponse = amClient.allocate(0.1f);
+      assertEquals(0, amClient.ask.size());
+      assertEquals(0, amClient.release.size());
+
+      allocatedContainerCount +=
+          allocResponse.getAllocatedContainers().size();
+      for (Container container : allocResponse.getAllocatedContainers()) {
+        if (container.getExecutionType() == ExecutionType.GUARANTEED) {
+          allocatedGuarContainers.put(container.getId(), container);
+          removeCR(container);
+        }
+      }
+
+      for (NMToken token : allocResponse.getNMTokens()) {
+        String nodeID = token.getNodeId().toString();
+        receivedNMTokens.put(nodeID, token.getToken());
+      }
+
+      if (allocatedContainerCount < guarContainersRequestedAny) {
+        // sleep to let NM's heartbeat to RM and trigger allocations
+        sleep(100);
+      }
+    }
+
+    assertEquals(guarContainersRequestedAny, allocatedContainerCount);
+    assertEquals(guarContainersRequestedAny, allocatedGuarContainers.size());
+
+    updateMetrics("After Guar Allocation / Before Demotion");
+
+    try {
+      Container c = allocatedGuarContainers.values().iterator().next();
+      amClient.requestContainerUpdate(
+          c, UpdateContainerRequest.newInstance(c.getVersion(),
+              c.getId(), ContainerUpdateType.DEMOTE_EXECUTION_TYPE,
+              null, ExecutionType.GUARANTEED));
+      Assert.fail("Should throw Exception..");
+    } catch (IllegalArgumentException e) {
+      System.out.println("## " + e.getMessage());
+      Assert.assertTrue(e.getMessage().contains(
+          "target should be OPPORTUNISTIC and original should be GUARANTEED"));
+    }
+
+    Container c = allocatedGuarContainers.values().iterator().next();
+    amClient.requestContainerUpdate(
+        c, UpdateContainerRequest.newInstance(c.getVersion(),
+            c.getId(), ContainerUpdateType.DEMOTE_EXECUTION_TYPE,
+            null, ExecutionType.OPPORTUNISTIC));
+    iterationsLeft = 120;
+    Map<ContainerId, UpdatedContainer> updatedContainers = new HashMap<>();
+    // do a few iterations to ensure RM is not going to send new containers
+    while (iterationsLeft-- > 0 && updatedContainers.isEmpty()) {
+      // inform RM of rejection
+      AllocateResponse allocResponse = amClient.allocate(0.1f);
+      // RM did not send new containers because AM does not need any
+      if (allocResponse.getUpdatedContainers() != null) {
+        for (UpdatedContainer updatedContainer : allocResponse
+            .getUpdatedContainers()) {
+          System.out.println("Got update..");
+          updatedContainers.put(updatedContainer.getContainer().getId(),
+              updatedContainer);
+        }
+      }
+      if (iterationsLeft > 0) {
+        // sleep to make sure NM's heartbeat
+        sleep(100);
+      }
+    }
+
+    updateMetrics("After Demotion");
+
+    assertEquals(1, updatedContainers.size());
+    for (ContainerId cId : allocatedGuarContainers.keySet()) {
+      Container orig = allocatedGuarContainers.get(cId);
+      UpdatedContainer updatedContainer = updatedContainers.get(cId);
+      assertNotNull(updatedContainer);
+      assertEquals(ExecutionType.OPPORTUNISTIC,
+          updatedContainer.getContainer().getExecutionType());
+      assertEquals(orig.getResource(),
+          updatedContainer.getContainer().getResource());
+      assertEquals(orig.getNodeId(),
+          updatedContainer.getContainer().getNodeId());
+      assertEquals(orig.getVersion() + 1,
+          updatedContainer.getContainer().getVersion());
+    }
+    assertEquals(0, amClient.ask.size());
+    assertEquals(0, amClient.release.size());
+    amClient.ask.clear();
+  }
+
+  @Test(timeout = 60000)
+  public void testMixedAllocationAndRelease() throws YarnException,
+      IOException {
     // setup container request
     assertEquals(0, amClient.ask.size());
     assertEquals(0, amClient.release.size());
@@ -274,16 +531,6 @@ public class TestOpportunisticContainerAllocation {
             ExecutionTypeRequest.newInstance(
                 ExecutionType.OPPORTUNISTIC, true)));
 
-    amClient.removeContainerRequest(
-        new AMRMClient.ContainerRequest(capability, nodes, racks, priority));
-    amClient.removeContainerRequest(
-        new AMRMClient.ContainerRequest(capability, nodes, racks, priority));
-    amClient.removeContainerRequest(
-        new AMRMClient.ContainerRequest(capability, null, null, priority2, 0,
-            true, null,
-            ExecutionTypeRequest.newInstance(
-                ExecutionType.OPPORTUNISTIC, true)));
-
     int containersRequestedNode = amClient.getTable(0).get(priority,
         node, ExecutionType.GUARANTEED, capability).remoteRequest
         .getNumContainers();
@@ -294,6 +541,38 @@ public class TestOpportunisticContainerAllocation {
         ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
         .remoteRequest.getNumContainers();
     int oppContainersRequestedAny =
+        amClient.getTable(0).get(priority2, ResourceRequest.ANY,
+            ExecutionType.OPPORTUNISTIC, capability).remoteRequest
+            .getNumContainers();
+
+    assertEquals(4, containersRequestedNode);
+    assertEquals(4, containersRequestedRack);
+    assertEquals(4, containersRequestedAny);
+    assertEquals(2, oppContainersRequestedAny);
+
+    assertEquals(4, amClient.ask.size());
+    assertEquals(0, amClient.release.size());
+
+    amClient.removeContainerRequest(
+        new AMRMClient.ContainerRequest(capability, nodes, racks, priority));
+    amClient.removeContainerRequest(
+        new AMRMClient.ContainerRequest(capability, nodes, racks, priority));
+    amClient.removeContainerRequest(
+        new AMRMClient.ContainerRequest(capability, null, null, priority2, 0,
+            true, null,
+            ExecutionTypeRequest.newInstance(
+                ExecutionType.OPPORTUNISTIC, true)));
+
+    containersRequestedNode = amClient.getTable(0).get(priority,
+        node, ExecutionType.GUARANTEED, capability).remoteRequest
+        .getNumContainers();
+    containersRequestedRack = amClient.getTable(0).get(priority,
+        rack, ExecutionType.GUARANTEED, capability).remoteRequest
+        .getNumContainers();
+    containersRequestedAny = amClient.getTable(0).get(priority,
+        ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
+        .remoteRequest.getNumContainers();
+    oppContainersRequestedAny =
         amClient.getTable(0).get(priority2, ResourceRequest.ANY,
             ExecutionType.OPPORTUNISTIC, capability).remoteRequest
             .getNumContainers();
@@ -309,7 +588,7 @@ public class TestOpportunisticContainerAllocation {
     // RM should allocate container within 2 calls to allocate()
     int allocatedContainerCount = 0;
     int allocatedOpportContainerCount = 0;
-    int iterationsLeft = 10;
+    int iterationsLeft = 50;
     Set<ContainerId> releases = new TreeSet<>();
 
     amClient.getNMTokenCache().clearCache();
@@ -324,8 +603,8 @@ public class TestOpportunisticContainerAllocation {
       assertEquals(0, amClient.ask.size());
       assertEquals(0, amClient.release.size());
 
-      allocatedContainerCount += allocResponse.getAllocatedContainers()
-          .size();
+      allocatedContainerCount +=
+          allocResponse.getAllocatedContainers().size();
       for (Container container : allocResponse.getAllocatedContainers()) {
         if (container.getExecutionType() == ExecutionType.OPPORTUNISTIC) {
           allocatedOpportContainerCount++;
@@ -345,9 +624,9 @@ public class TestOpportunisticContainerAllocation {
       }
     }
 
-    assertEquals(allocatedContainerCount,
-        containersRequestedAny + oppContainersRequestedAny);
-    assertEquals(allocatedOpportContainerCount, oppContainersRequestedAny);
+    assertEquals(containersRequestedAny + oppContainersRequestedAny,
+        allocatedContainerCount);
+    assertEquals(oppContainersRequestedAny, allocatedOpportContainerCount);
     for (ContainerId rejectContainerId : releases) {
       amClient.releaseAssignedContainer(rejectContainerId);
     }
@@ -395,26 +674,25 @@ public class TestOpportunisticContainerAllocation {
   /**
    * Tests allocation with requests comprising only opportunistic containers.
    */
-  private void testOpportunisticAllocation(
-      final AMRMClientImpl<AMRMClient.ContainerRequest> amClient)
-      throws YarnException, IOException {
+  @Test(timeout = 60000)
+  public void testOpportunisticAllocation() throws YarnException, IOException {
     // setup container request
     assertEquals(0, amClient.ask.size());
     assertEquals(0, amClient.release.size());
 
     amClient.addContainerRequest(
-        new AMRMClient.ContainerRequest(capability, null, null, priority, 0,
+        new AMRMClient.ContainerRequest(capability, null, null, priority3, 0,
             true, null,
             ExecutionTypeRequest.newInstance(
                 ExecutionType.OPPORTUNISTIC, true)));
     amClient.addContainerRequest(
-        new AMRMClient.ContainerRequest(capability, null, null, priority, 0,
+        new AMRMClient.ContainerRequest(capability, null, null, priority3, 0,
             true, null,
             ExecutionTypeRequest.newInstance(
                 ExecutionType.OPPORTUNISTIC, true)));
 
     int oppContainersRequestedAny =
-        amClient.getTable(0).get(priority, ResourceRequest.ANY,
+        amClient.getTable(0).get(priority3, ResourceRequest.ANY,
             ExecutionType.OPPORTUNISTIC, capability).remoteRequest
             .getNumContainers();
 
@@ -456,7 +734,41 @@ public class TestOpportunisticContainerAllocation {
       }
     }
 
+    assertEquals(oppContainersRequestedAny, allocatedContainerCount);
     assertEquals(1, receivedNMTokens.values().size());
+  }
+
+  private void removeCR(Container container) {
+    List<? extends Collection<AMRMClient.ContainerRequest>>
+        matchingRequests = amClient.getMatchingRequests(container
+            .getPriority(),
+        ResourceRequest.ANY, ExecutionType.OPPORTUNISTIC,
+        container.getResource());
+    Set<AMRMClient.ContainerRequest> toRemove = new HashSet<>();
+    for (Collection<AMRMClient.ContainerRequest> rc : matchingRequests) {
+      for (AMRMClient.ContainerRequest cr : rc) {
+        toRemove.add(cr);
+      }
+    }
+    for (AMRMClient.ContainerRequest cr : toRemove) {
+      amClient.removeContainerRequest(cr);
+    }
+  }
+
+  private void updateMetrics(String msg) {
+    AbstractYarnScheduler scheduler =
+        (AbstractYarnScheduler)yarnCluster.getResourceManager()
+            .getResourceScheduler();
+    availMB = scheduler.getRootQueueMetrics().getAvailableMB();
+    availVCores = scheduler.getRootQueueMetrics().getAvailableVirtualCores();
+    allocMB = scheduler.getRootQueueMetrics().getAllocatedMB();
+    allocVCores = scheduler.getRootQueueMetrics().getAllocatedVirtualCores();
+    System.out.println("## METRICS (" + msg + ")==>");
+    System.out.println(" : availMB=" + availMB + ", " +
+        "availVCores=" +availVCores + ", " +
+        "allocMB=" + allocMB + ", " +
+        "allocVCores=" + allocVCores + ", ");
+    System.out.println("<== ##");
   }
 
   private void sleep(int sleepTime) {

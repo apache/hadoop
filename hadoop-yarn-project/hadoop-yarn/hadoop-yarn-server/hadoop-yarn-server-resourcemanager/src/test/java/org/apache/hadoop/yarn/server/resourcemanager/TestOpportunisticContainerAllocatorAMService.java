@@ -251,8 +251,11 @@ public class TestOpportunisticContainerAllocatorAMService {
 
     Assert.assertEquals(0, allocateResponse.getUpdatedContainers().size());
     Assert.assertEquals(1, allocateResponse.getUpdateErrors().size());
-    Assert.assertEquals("INCORRECT_CONTAINER_VERSION_ERROR|1|0",
+    Assert.assertEquals("INCORRECT_CONTAINER_VERSION_ERROR",
         allocateResponse.getUpdateErrors().get(0).getReason());
+    Assert.assertEquals(0,
+        allocateResponse.getUpdateErrors().get(0)
+            .getCurrentContainerVersion());
     Assert.assertEquals(container.getId(),
         allocateResponse.getUpdateErrors().get(0)
             .getUpdateContainerRequest().getContainerId());

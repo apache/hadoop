@@ -183,19 +183,25 @@ public class RMServerUtils {
           }
         }
       }
-      checkAndcreateUpdateError(updateErrors, updateReq, msg);
+      checkAndcreateUpdateError(updateErrors, updateReq, rmContainer, msg);
     }
     return updateRequests;
   }
 
   private static void checkAndcreateUpdateError(
       List<UpdateContainerError> errors, UpdateContainerRequest updateReq,
-      String msg) {
+      RMContainer rmContainer, String msg) {
     if (msg != null) {
       UpdateContainerError updateError = RECORD_FACTORY
           .newRecordInstance(UpdateContainerError.class);
       updateError.setReason(msg);
       updateError.setUpdateContainerRequest(updateReq);
+      if (rmContainer != null) {
+        updateError.setCurrentContainerVersion(
+            rmContainer.getContainer().getVersion());
+      } else {
+        updateError.setCurrentContainerVersion(-1);
+      }
       errors.add(updateError);
     }
   }
@@ -211,9 +217,7 @@ public class RMServerUtils {
     // version
     if (msg == null && updateReq.getContainerVersion() !=
         rmContainer.getContainer().getVersion()) {
-      msg = INCORRECT_CONTAINER_VERSION_ERROR + "|"
-          + updateReq.getContainerVersion() + "|"
-          + rmContainer.getContainer().getVersion();
+      msg = INCORRECT_CONTAINER_VERSION_ERROR;
     }
     // No more than 1 container update per request.
     if (msg == null &&
