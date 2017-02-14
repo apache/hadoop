@@ -69,6 +69,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -157,6 +159,15 @@ public class TestOfflineImageViewer {
       Path invalidXMLDir = new Path("/dirContainingInvalidXMLChar\u0000here");
       hdfs.mkdirs(invalidXMLDir);
       dirCount++;
+
+      //Create a directory with sticky bits
+      Path stickyBitDir = new Path("/stickyBit");
+      hdfs.mkdirs(stickyBitDir);
+      hdfs.setPermission(stickyBitDir, new FsPermission(FsAction.ALL,
+          FsAction.ALL, FsAction.ALL, true));
+      dirCount++;
+      writtenFiles.put(stickyBitDir.toString(),
+          hdfs.getFileStatus(stickyBitDir));
 
       // Get delegation tokens so we log the delegation token op
       Token<?>[] delegationTokens = hdfs
