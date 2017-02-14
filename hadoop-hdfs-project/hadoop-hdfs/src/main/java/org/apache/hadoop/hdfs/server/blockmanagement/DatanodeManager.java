@@ -1738,7 +1738,7 @@ public class DatanodeManager {
 
   /**
    * Tell all datanodes to use a new, non-persistent bandwidth value for
-   * dfs.balance.bandwidthPerSec.
+   * dfs.datanode.balance.bandwidthPerSec.
    *
    * A system administrator can tune the balancer bandwidth parameter
    * (dfs.datanode.balance.bandwidthPerSec) dynamically by calling

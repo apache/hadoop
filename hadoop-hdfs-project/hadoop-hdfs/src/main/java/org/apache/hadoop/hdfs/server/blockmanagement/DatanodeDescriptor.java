@@ -184,7 +184,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private boolean forceRegistration = false;
 
   // A system administrator can tune the balancer bandwidth parameter
-  // (dfs.balance.bandwidthPerSec) dynamically by calling
+  // (dfs.datanode.balance.bandwidthPerSec) dynamically by calling
   // "dfsadmin -setBalanacerBandwidth <newbandwidth>", at which point the
   // following 'bandwidth' variable gets updated with the new value for each
   // node. Once the heartbeat command is issued to update the value on the
