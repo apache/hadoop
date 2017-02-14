@@ -27,7 +27,7 @@ export default Ember.Controller.extend({
       routeName: 'application'
     },{
       text: "Applications",
-      routeName: 'yarn-apps'
+      routeName: 'yarn-apps.apps'
     }, {
       text: `App [${appId}]`,
       routeName: 'yarn-app',

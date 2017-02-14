@@ -30,7 +30,7 @@ export default Ember.Controller.extend({
       routeName: 'yarn-nodes.table'
     }, {
       text: `Node [ ${nodeInfo.id} ]`,
-      href: `/#/yarn-node/${nodeInfo.id}/${nodeInfo.addr}`,
+      href: `#/yarn-node/${nodeInfo.id}/${nodeInfo.addr}`,
     }];
   })
 
