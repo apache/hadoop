@@ -35,6 +35,12 @@ public class ActionHalt extends AsyncAction {
 
   public ActionHalt(
       int status,
+      String text) {
+    this(status, text, 0, TimeUnit.MILLISECONDS);
+  }
+
+  public ActionHalt(
+      int status,
       String text,
       long delay, TimeUnit timeUnit) {
     

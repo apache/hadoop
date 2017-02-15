@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.impl.NMClientAsyncImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -115,6 +116,7 @@ import org.apache.slider.providers.ProviderService;
 import org.apache.slider.providers.SliderProviderFactory;
 import org.apache.slider.providers.slideram.SliderAMClientProvider;
 import org.apache.slider.providers.slideram.SliderAMProviderService;
+import org.apache.slider.server.appmaster.actions.ActionHalt;
 import org.apache.slider.server.appmaster.actions.ActionRegisterServiceInstance;
 import org.apache.slider.server.appmaster.actions.ActionStopSlider;
 import org.apache.slider.server.appmaster.actions.ActionUpgradeContainers;
@@ -1937,7 +1939,21 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
 
   @Override //AMRMClientAsync
   public void onError(Throwable e) {
-    LOG_YARN.info("Ignoring AMRMClientAsync.onError() received {}", e);
+    if (e instanceof InvalidResourceRequestException) {
+      // stop the cluster
+      LOG_YARN.error("AMRMClientAsync.onError() received {}", e, e);
+      signalAMComplete(new ActionStopSlider("stop", EXIT_EXCEPTION_THROWN,
+          FinalApplicationStatus.FAILED,
+          "AMRMClientAsync.onError() received " + e));
+    } else if (e instanceof InvalidApplicationMasterRequestException) {
+      // halt the AM
+      LOG_YARN.error("AMRMClientAsync.onError() received {}", e, e);
+      queue(new ActionHalt(EXIT_EXCEPTION_THROWN,
+          "AMRMClientAsync.onError() received " + e));
+    } else {
+      // ignore and log
+      LOG_YARN.info("Ignoring AMRMClientAsync.onError() received {}", e);
+    }
   }
   
 /* =================================================================== */
