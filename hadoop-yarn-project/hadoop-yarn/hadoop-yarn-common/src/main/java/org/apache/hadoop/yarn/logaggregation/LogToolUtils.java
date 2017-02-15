@@ -141,7 +141,7 @@ public final class LogToolUtils {
   public static void outputContainerLog(String containerId, String nodeId,
       String fileName, long fileLength, long outputSize,
       String lastModifiedTime, InputStream fis, OutputStream os,
-      byte[] buf, ContainerLogType logType) throws IOException {
+      byte[] buf, ContainerLogAggregationType logType) throws IOException {
     long toSkip = 0;
     long totalBytesToRead = fileLength;
     long skipAfterRead = 0;
@@ -171,9 +171,9 @@ public final class LogToolUtils {
           LogToolUtils.CONTAINER_ON_NODE_PATTERN,
           containerId, nodeId);
       sb.append(containerStr + "\n");
-      sb.append("LogType: " + logType + "\n");
+      sb.append("LogAggregationType: " + logType + "\n");
       sb.append(StringUtils.repeat("=", containerStr.length()) + "\n");
-      sb.append("FileName:" + fileName + "\n");
+      sb.append("LogType:" + fileName + "\n");
       sb.append("LogLastModifiedTime:" + lastModifiedTime + "\n");
       sb.append("LogLength:" + Long.toString(fileLength) + "\n");
       sb.append("LogContents:\n");
@@ -240,9 +240,10 @@ public final class LogToolUtils {
                 LogToolUtils.outputContainerLog(containerId,
                     nodeId, fileType, fileLength, outputSize,
                     Times.format(thisNodeFile.getModificationTime()),
-                    valueStream, os, buf, ContainerLogType.AGGREGATED);
+                    valueStream, os, buf,
+                    ContainerLogAggregationType.AGGREGATED);
                 StringBuilder sb = new StringBuilder();
-                String endOfFile = "End of LogFile:" + fileType;
+                String endOfFile = "End of LogType:" + fileType;
                 sb.append("\n" + endOfFile + "\n");
                 sb.append(StringUtils.repeat("*", endOfFile.length() + 50)
                     + "\n\n");

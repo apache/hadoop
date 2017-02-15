@@ -54,7 +54,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
-import org.apache.hadoop.yarn.logaggregation.ContainerLogType;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
 import org.apache.hadoop.yarn.logaggregation.LogToolUtils;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
@@ -244,7 +244,7 @@ public class NMWebServices {
       List<ContainerLogsInfo> containersLogsInfo = new ArrayList<>();
       containersLogsInfo.add(new NMContainerLogsInfo(
           this.nmContext, containerId,
-          hsr.getRemoteUser(), ContainerLogType.LOCAL));
+          hsr.getRemoteUser(), ContainerLogAggregationType.LOCAL));
       // check whether we have aggregated logs in RemoteFS. If exists, show the
       // the log meta for the aggregated logs as well.
       ApplicationId appId = containerId.getApplicationAttemptId()
@@ -259,7 +259,7 @@ public class NMWebServices {
         if (!containerLogMeta.isEmpty()) {
           for (ContainerLogMeta logMeta : containerLogMeta) {
             containersLogsInfo.add(new ContainerLogsInfo(logMeta,
-                ContainerLogType.AGGREGATED));
+                ContainerLogAggregationType.AGGREGATED));
           }
         }
       } catch (IOException ex) {
@@ -421,9 +421,10 @@ public class NMWebServices {
             byte[] buf = new byte[bufferSize];
             LogToolUtils.outputContainerLog(containerId.toString(),
                 nmContext.getNodeId().toString(), outputFileName, fileLength,
-                bytes, lastModifiedTime, fis, os, buf, ContainerLogType.LOCAL);
+                bytes, lastModifiedTime, fis, os, buf,
+                ContainerLogAggregationType.LOCAL);
             StringBuilder sb = new StringBuilder();
-            String endOfFile = "End of LogFile:" + outputFileName;
+            String endOfFile = "End of LogType:" + outputFileName;
             sb.append(endOfFile + ".");
             if (isRunning) {
               sb.append("This log file belongs to a running container ("

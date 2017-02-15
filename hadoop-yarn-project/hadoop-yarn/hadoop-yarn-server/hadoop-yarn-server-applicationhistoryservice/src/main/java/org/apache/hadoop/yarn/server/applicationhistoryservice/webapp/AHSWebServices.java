@@ -54,7 +54,7 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
-import org.apache.hadoop.yarn.logaggregation.ContainerLogType;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
 import org.apache.hadoop.yarn.logaggregation.LogToolUtils;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
 import org.apache.hadoop.yarn.server.webapp.YarnWebServiceParams;
@@ -501,13 +501,14 @@ public class AHSWebServices extends WebServices {
         boolean findLogs = LogToolUtils.outputAggregatedContainerLog(conf,
             appId, appOwner, containerIdStr, nodeId, logFile, bytes, os, buf);
         if (!findLogs) {
-          throw new IOException("Can not find logs for container:"
-              + containerIdStr);
+          os.write(("Can not find logs for container:"
+              + containerIdStr).getBytes(Charset.forName("UTF-8")));
         } else {
           if (printEmptyLocalContainerLog) {
             StringBuilder sb = new StringBuilder();
             sb.append(containerIdStr + "\n");
-            sb.append("LogType: " + ContainerLogType.LOCAL + "\n");
+            sb.append("LogAggregationType: "
+                + ContainerLogAggregationType.LOCAL + "\n");
             sb.append("LogContents:\n");
             sb.append(getNoRedirectWarning() + "\n");
             os.write(sb.toString().getBytes(Charset.forName("UTF-8")));
@@ -539,14 +540,14 @@ public class AHSWebServices extends WebServices {
       List<ContainerLogsInfo> containersLogsInfo = new ArrayList<>();
       for (ContainerLogMeta meta : containerLogMeta) {
         ContainerLogsInfo logInfo = new ContainerLogsInfo(meta,
-            ContainerLogType.AGGREGATED);
+            ContainerLogAggregationType.AGGREGATED);
         containersLogsInfo.add(logInfo);
       }
       if (emptyLocalContainerLogMeta) {
         ContainerLogMeta emptyMeta = new ContainerLogMeta(
             containerIdStr, "N/A");
         ContainerLogsInfo empty = new ContainerLogsInfo(emptyMeta,
-            ContainerLogType.LOCAL);
+            ContainerLogAggregationType.LOCAL);
         containersLogsInfo.add(empty);
       }
       GenericEntity<List<ContainerLogsInfo>> meta = new GenericEntity<List<
