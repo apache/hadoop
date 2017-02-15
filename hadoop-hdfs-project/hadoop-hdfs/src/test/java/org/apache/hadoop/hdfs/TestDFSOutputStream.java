@@ -110,8 +110,7 @@ public class TestDFSOutputStream {
    * packet size < 64kB. See HDFS-7308 for details.
    */
   @Test
-  public void testComputePacketChunkSize()
-      throws Exception {
+  public void testComputePacketChunkSize() throws Exception {
     DistributedFileSystem fs = cluster.getFileSystem();
     FSDataOutputStream os = fs.create(new Path("/test"));
     DFSOutputStream dos = (DFSOutputStream) Whitebox.getInternalState(os,
