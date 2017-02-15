@@ -247,7 +247,8 @@ public class FSLeafQueue extends FSQueue {
    * @param minShareStarvation minshare starvation to distribute
    */
   private void updateStarvedAppsMinshare(
-      TreeSet<FSAppAttempt> appsWithDemand, final Resource minShareStarvation) {
+      final TreeSet<FSAppAttempt> appsWithDemand,
+      final Resource minShareStarvation) {
     Resource pending = Resources.clone(minShareStarvation);
 
     // Keep adding apps to the starved list until the unmet demand goes over

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -37,6 +39,8 @@ import java.util.Set;
  * The implementation is not thread-safe.
  */
 class VisitedResourceRequestTracker {
+  private static final Log LOG =
+      LogFactory.getLog(VisitedResourceRequestTracker.class);
   private final Map<Priority, Map<Resource, TrackerPerPriorityResource>> map =
       new HashMap<>();
   private final ClusterNodeTracker<FSSchedulerNode> nodeTracker;
@@ -49,7 +53,7 @@ class VisitedResourceRequestTracker {
   /**
    * Check if the {@link ResourceRequest} is visited before, and track it.
    * @param rr {@link ResourceRequest} to visit
-   * @return true if <code>rr</code> this is the first visit across all
+   * @return true if <code>rr</code> is the first visit across all
    * locality levels, false otherwise
    */
   boolean visit(ResourceRequest rr) {
@@ -101,6 +105,17 @@ class VisitedResourceRequestTracker {
       }
     }
 
+    /**
+     * Based on whether <code>resourceName</code> is a node, rack or ANY,
+     * check if this has been visited earlier.
+     *
+     * A node is considered visited if its rack or ANY have been visited.
+     * A rack is considered visited if any nodes or ANY have been visited.
+     * Any is considered visited if any of the nodes/racks have been visited.
+     *
+     * @param resourceName
+     * @return
+     */
     private boolean visit(String resourceName) {
       if (resourceName.equals(ResourceRequest.ANY)) {
         return visitAny();
@@ -108,17 +123,24 @@ class VisitedResourceRequestTracker {
 
       List<FSSchedulerNode> nodes =
           nodeTracker.getNodesByResourceName(resourceName);
-      switch (nodes.size()) {
-        case 0:
-          // Log error
-          return false;
-        case 1:
-          // Node
-          return visitNode(nodes.remove(0).getRackName());
-        default:
-          // Rack
-          return visitRack(resourceName);
+      int numNodes = nodes.size();
+      if (numNodes == 0) {
+        LOG.error("Found ResourceRequest for a non-existent node/rack named " +
+            resourceName);
+        return false;
       }
+
+      if (numNodes == 1) {
+        // Found a single node. To be safe, let us verify it is a node and
+        // not a rack with a single node.
+        FSSchedulerNode node = nodes.get(0);
+        if (node.getNodeName().equals(resourceName)) {
+          return visitNode(node.getRackName());
+        }
+      }
+
+      // At this point, it is not ANY or a node. Must be a rack
+      return visitRack(resourceName);
     }
   }
 }

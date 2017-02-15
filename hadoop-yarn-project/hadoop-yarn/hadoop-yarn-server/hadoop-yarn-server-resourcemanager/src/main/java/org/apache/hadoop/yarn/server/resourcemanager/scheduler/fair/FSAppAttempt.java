@@ -1146,19 +1146,19 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
       // A RR can have multiple containers of a capability. We need to
       // compute the number of containers that fit in "pending".
-      int ratio = (int) Math.floor(
+      int numContainersThatFit = (int) Math.floor(
           Resources.ratio(scheduler.getResourceCalculator(),
               pending, rr.getCapability()));
-      if (ratio == 0) {
+      if (numContainersThatFit == 0) {
         // This RR's capability is too large to fit in pending
         continue;
       }
 
       // If the RR is only partially being satisfied, include only the
       // partial number of containers.
-      if (ratio < rr.getNumContainers()) {
-        rr = ResourceRequest.newInstance(
-            rr.getPriority(), rr.getResourceName(), rr.getCapability(), ratio);
+      if (numContainersThatFit < rr.getNumContainers()) {
+        rr = ResourceRequest.newInstance(rr.getPriority(),
+            rr.getResourceName(), rr.getCapability(), numContainersThatFit);
       }
 
       // Add the RR to return list and adjust "pending" accordingly
