@@ -1058,7 +1058,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         appAttempt.amReq.setRelaxLocality(true);
 
         appAttempt.getAMBlacklistManager().refreshNodeHostCount(
-            appAttempt.scheduler.getNumClusterNodes());
+            RMServerUtils.getApplicableNodeCountForAM(appAttempt.rmContext,
+                appAttempt.conf, appAttempt.amReq));
 
         ResourceBlacklistRequest amBlacklist =
             appAttempt.getAMBlacklistManager().getBlacklistUpdates();
@@ -1245,7 +1246,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       }
     }
   }
-
 
   private void rememberTargetTransitions(RMAppAttemptEvent event,
       Object transitionToDo, RMAppAttemptState targetFinalState) {

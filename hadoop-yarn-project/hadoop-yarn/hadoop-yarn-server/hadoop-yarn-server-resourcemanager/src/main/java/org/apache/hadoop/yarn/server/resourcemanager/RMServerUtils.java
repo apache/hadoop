@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt
     .RMAppAttemptState;
@@ -522,5 +523,26 @@ public class RMServerUtils {
       }
     }
     return newApplicationTimeout;
+  }
+
+  /**
+   * Get applicable Node count for AM.
+   *
+   * @param rmContext context
+   * @param conf configuration
+   * @param amreq am resource request
+   * @return applicable node count
+   */
+  public static int getApplicableNodeCountForAM(RMContext rmContext,
+      Configuration conf, ResourceRequest amreq) {
+    if (YarnConfiguration.areNodeLabelsEnabled(conf)) {
+      RMNodeLabelsManager labelManager = rmContext.getNodeLabelManager();
+      String amNodeLabelExpression = amreq.getNodeLabelExpression();
+      amNodeLabelExpression = (amNodeLabelExpression == null
+          || amNodeLabelExpression.trim().isEmpty())
+              ? RMNodeLabelsManager.NO_LABEL : amNodeLabelExpression;
+      return labelManager.getActiveNMCountPerLabel(amNodeLabelExpression);
+    }
+    return rmContext.getScheduler().getNumClusterNodes();
   }
 }
