@@ -913,7 +913,15 @@ public class DataNode extends ReconfigurableBase
   }
 
   private void startPlugins(Configuration conf) {
-    plugins = conf.getInstances(DFS_DATANODE_PLUGINS_KEY, ServicePlugin.class);
+    try {
+      plugins = conf.getInstances(DFS_DATANODE_PLUGINS_KEY,
+          ServicePlugin.class);
+    } catch (RuntimeException e) {
+      String pluginsValue = conf.get(DFS_DATANODE_PLUGINS_KEY);
+      LOG.error("Unable to load DataNode plugins. Specified list of plugins: " +
+          pluginsValue, e);
+      throw e;
+    }
     for (ServicePlugin p: plugins) {
       try {
         p.start(this);

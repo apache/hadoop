@@ -765,8 +765,15 @@ public class NameNode implements NameNodeStatusMXBean {
       httpServer.setFSImage(getFSImage());
     }
     rpcServer.start();
-    plugins = conf.getInstances(DFS_NAMENODE_PLUGINS_KEY,
-        ServicePlugin.class);
+    try {
+      plugins = conf.getInstances(DFS_NAMENODE_PLUGINS_KEY,
+          ServicePlugin.class);
+    } catch (RuntimeException e) {
+      String pluginsValue = conf.get(DFS_NAMENODE_PLUGINS_KEY);
+      LOG.error("Unable to load NameNode plugins. Specified list of plugins: " +
+          pluginsValue, e);
+      throw e;
+    }
     for (ServicePlugin p: plugins) {
       try {
         p.start(this);
