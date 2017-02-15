@@ -50,7 +50,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
-import org.apache.hadoop.yarn.logaggregation.ContainerLogType;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
 import org.apache.hadoop.yarn.logaggregation.PerContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.TestContainerLogsUtils;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -530,7 +530,7 @@ public class TestNMWebServices extends JerseyTestBase {
         List<ContainerLogsInfo>>(){});
     assertTrue(responseList.size() == 1);
     assertEquals(responseList.get(0).getLogType(),
-        ContainerLogType.LOCAL.toString());
+        ContainerLogAggregationType.LOCAL.toString());
     List<PerContainerLogFileInfo> logMeta = responseList.get(0)
         .getContainerLogsInfo();
     assertTrue(logMeta.size() == 1);
@@ -557,12 +557,13 @@ public class TestNMWebServices extends JerseyTestBase {
       assertEquals(responseList.size(), 2);
       for (ContainerLogsInfo logInfo : responseList) {
         if(logInfo.getLogType().equals(
-            ContainerLogType.AGGREGATED.toString())) {
+            ContainerLogAggregationType.AGGREGATED.toString())) {
           List<PerContainerLogFileInfo> meta = logInfo.getContainerLogsInfo();
           assertTrue(meta.size() == 1);
           assertEquals(meta.get(0).getFileName(), aggregatedLogFile);
         } else {
-          assertEquals(logInfo.getLogType(), ContainerLogType.LOCAL.toString());
+          assertEquals(logInfo.getLogType(),
+              ContainerLogAggregationType.LOCAL.toString());
           List<PerContainerLogFileInfo> meta = logInfo.getContainerLogsInfo();
           assertTrue(meta.size() == 1);
           assertEquals(meta.get(0).getFileName(), filename);
@@ -577,11 +578,11 @@ public class TestNMWebServices extends JerseyTestBase {
       response = r.path(filename)
           .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
       responseText = response.getEntity(String.class);
-      assertTrue(responseText.contains("LogType: "
-          + ContainerLogType.AGGREGATED));
+      assertTrue(responseText.contains("LogAggregationType: "
+          + ContainerLogAggregationType.AGGREGATED));
       assertTrue(responseText.contains(aggregatedLogMessage));
-      assertTrue(responseText.contains("LogType: "
-              + ContainerLogType.LOCAL));
+      assertTrue(responseText.contains("LogAggregationType: "
+              + ContainerLogAggregationType.LOCAL));
       assertTrue(responseText.contains(logMessage));
     } finally {
       FileUtil.fullyDelete(tempLogDir);
@@ -685,7 +686,7 @@ public class TestNMWebServices extends JerseyTestBase {
 
   private String getLogContext(String fullMessage) {
     String prefix = "LogContents:\n";
-    String postfix = "End of LogFile:";
+    String postfix = "End of LogType:";
     int prefixIndex = fullMessage.indexOf(prefix) + prefix.length();
     int postfixIndex = fullMessage.indexOf(postfix);
     return fullMessage.substring(prefixIndex, postfixIndex);

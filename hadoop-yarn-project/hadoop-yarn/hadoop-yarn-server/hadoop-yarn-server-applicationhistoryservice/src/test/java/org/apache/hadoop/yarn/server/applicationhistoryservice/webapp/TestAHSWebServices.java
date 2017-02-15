@@ -52,7 +52,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.logaggregation.ContainerLogType;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
 import org.apache.hadoop.yarn.logaggregation.PerContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.TestContainerLogsUtils;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryClientService;
@@ -599,8 +599,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertTrue(responseText.contains("Hello." + containerId1ForApp100));
     int fullTextSize = responseText.getBytes().length;
     String tailEndSeparator = StringUtils.repeat("*",
-        "End of LogFile:syslog".length() + 50) + "\n\n";
-    int tailTextSize = "\nEnd of LogFile:syslog\n".getBytes().length
+        "End of LogType:syslog".length() + 50) + "\n\n";
+    int tailTextSize = "\nEnd of LogType:syslog\n".getBytes().length
         + tailEndSeparator.getBytes().length;
 
     String logMessage = "Hello." + containerId1ForApp100;
@@ -752,7 +752,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertTrue(responseText.contains(content));
     // Also test whether we output the empty local container log, and give
     // the warning message.
-    assertTrue(responseText.contains("LogType: " + ContainerLogType.LOCAL));
+    assertTrue(responseText.contains("LogAggregationType: "
+        + ContainerLogAggregationType.LOCAL));
     assertTrue(responseText.contains(AHSWebServices.getNoRedirectWarning()));
 
     // If we can not container information from ATS, and we specify the NM id,
@@ -767,7 +768,8 @@ public class TestAHSWebServices extends JerseyTestBase {
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertTrue(responseText.contains(content));
-    assertTrue(responseText.contains("LogType: " + ContainerLogType.LOCAL));
+    assertTrue(responseText.contains("LogAggregationType: "
+        + ContainerLogAggregationType.LOCAL));
     assertTrue(responseText.contains(AHSWebServices.getNoRedirectWarning()));
   }
 
@@ -830,7 +832,8 @@ public class TestAHSWebServices extends JerseyTestBase {
         List<ContainerLogsInfo>>(){});
     assertTrue(responseText.size() == 2);
     for (ContainerLogsInfo logInfo : responseText) {
-      if(logInfo.getLogType().equals(ContainerLogType.AGGREGATED.toString())) {
+      if(logInfo.getLogType().equals(
+          ContainerLogAggregationType.AGGREGATED.toString())) {
         List<PerContainerLogFileInfo> logMeta = logInfo
             .getContainerLogsInfo();
         assertTrue(logMeta.size() == 1);
@@ -838,7 +841,8 @@ public class TestAHSWebServices extends JerseyTestBase {
         assertEquals(logMeta.get(0).getFileSize(), String.valueOf(
             content.length()));
       } else {
-        assertEquals(logInfo.getLogType(), ContainerLogType.LOCAL.toString());
+        assertEquals(logInfo.getLogType(),
+            ContainerLogAggregationType.LOCAL.toString());
       }
     }
 
@@ -856,7 +860,8 @@ public class TestAHSWebServices extends JerseyTestBase {
         List<ContainerLogsInfo>>(){});
     assertTrue(responseText.size() == 2);
     for (ContainerLogsInfo logInfo : responseText) {
-      if(logInfo.getLogType().equals(ContainerLogType.AGGREGATED.toString())) {
+      if(logInfo.getLogType().equals(
+          ContainerLogAggregationType.AGGREGATED.toString())) {
         List<PerContainerLogFileInfo> logMeta = logInfo
             .getContainerLogsInfo();
         assertTrue(logMeta.size() == 1);
@@ -864,7 +869,8 @@ public class TestAHSWebServices extends JerseyTestBase {
         assertEquals(logMeta.get(0).getFileSize(), String.valueOf(
             content.length()));
       } else {
-        assertEquals(logInfo.getLogType(), ContainerLogType.LOCAL.toString());
+        assertEquals(logInfo.getLogType(),
+            ContainerLogAggregationType.LOCAL.toString());
       }
     }
   }
@@ -893,7 +899,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         List<ContainerLogsInfo>>(){});
     assertTrue(responseText.size() == 1);
     assertEquals(responseText.get(0).getLogType(),
-        ContainerLogType.AGGREGATED.toString());
+        ContainerLogAggregationType.AGGREGATED.toString());
     List<PerContainerLogFileInfo> logMeta = responseText.get(0)
         .getContainerLogsInfo();
     assertTrue(logMeta.size() == 1);
