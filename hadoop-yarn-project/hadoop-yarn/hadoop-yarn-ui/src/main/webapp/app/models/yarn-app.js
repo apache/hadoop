@@ -37,7 +37,7 @@ export default DS.Model.extend({
   amNodeLabelExpression: DS.attr('string'),
   applicationTags: DS.attr('string'),
   applicationType: DS.attr('string'),
-  priority: DS.attr('number'),
+  priority: DS.attr('string'),
   allocatedMB: DS.attr('number'),
   allocatedVCores: DS.attr('number'),
   runningContainers: DS.attr('number'),

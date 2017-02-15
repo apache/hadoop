@@ -35,11 +35,11 @@ export default Ember.Controller.extend({
     }];
   }),
 
-  amHostHttpAddressFormatted: function() {
+  amHostHttpAddressFormatted: Ember.computed('model.app.amHostHttpAddress', function() {
     var amHostAddress = this.get('model.app.amHostHttpAddress');
-    if (amHostAddress.indexOf('http://') < 0) {
+    if (amHostAddress && amHostAddress.indexOf('://') < 0) {
       amHostAddress = 'http://' + amHostAddress;
     }
     return amHostAddress;
-  }.property('model.app.amHostHttpAddress')
+  })
 });

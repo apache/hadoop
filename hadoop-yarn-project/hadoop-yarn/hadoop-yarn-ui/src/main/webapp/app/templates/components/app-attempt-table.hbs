@@ -33,7 +33,7 @@
     {{#if attempt.IsAmNodeUrl}}
     <tr>
       <td>AM Node Web UI</td>
-      <td><a href={{attempt.nodeHttpAddress}}>{{attempt.nodeHttpAddress}}</a></td>
+      <td><a href="{{nodeHttpAddressFormatted}}" target="_blank">{{nodeHttpAddressFormatted}}</a></td>
     </tr>
     {{/if}}
     <tr>
@@ -43,7 +43,7 @@
     {{#if attempt.IsLinkAvailable}}
     <tr>
       <td>Log</td>
-      <td><a href={{attempt.logsLink}}>link</a></td>
+      <td><a href="{{attempt.logsLink}}" target="_blank">Link</a></td>
     </tr>
     {{/if}}
     {{#if attempt.attemptState}}

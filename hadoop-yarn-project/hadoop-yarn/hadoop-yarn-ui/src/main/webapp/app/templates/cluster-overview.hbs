@@ -27,11 +27,11 @@
           <div class="panel-heading">
             Cluster Resource Usage By Applications
           </div>
-          <div class="container-fluid" id="appusage-donut-chart">
+          <div class="container-fluid donut-chart" id="appusage-donut-chart">
             {{app-usage-donut-chart data=model.apps
             showLabels=true
             parentId="appusage-donut-chart"
-            ratio=0.6
+            ratio=0.5
             maxHeight=400}}
           </div>
         </div>
@@ -42,11 +42,11 @@
           <div class="panel-heading">
             Cluster Resource Usage By Leaf Queues
           </div>
-          <div class="container-fluid" id="queueusage-donut-chart">
+          <div class="container-fluid donut-chart" id="queueusage-donut-chart">
             {{queue-usage-donut-chart data=model.queues
             showLabels=true
             parentId="queueusage-donut-chart"
-            ratio=0.6
+            ratio=0.5
             maxHeight=400}}
           </div>
         </div>
