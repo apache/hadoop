@@ -165,21 +165,21 @@
 
         <div class="col-md-4 container-fluid">
           <div class="panel panel-default">
-            <div class="panel-heading">App Master Info</div>
+            <div class="panel-heading">Application Master Info</div>
             <table class="display table table-striped table-bordered"
                    cellspacing="0" width="100%">
               <thead>
               <tr>
                 <th>Master Container Log</th>
                 <td>Master Node</td>
-                <td>Master Node Label Expr</td>
+                <td>Master Node Label Expression</td>
               </tr>
               </thead>
 
               <tbody>
               <tr>
-                <td><a href={{model.app.amContainerLogs}} target="_blank">Link</a></td>
-                <td><a href={{amHostHttpAddressFormatted}} target="_blank">Link</a></td>
+                <td><a href="{{model.app.amContainerLogs}}" target="_blank">Link</a></td>
+                <td><a href="{{amHostHttpAddressFormatted}}" target="_blank">Link</a></td>
                 <td>{{model.app.amNodeLabelExpression}}</td>
               </tr>
               </tbody>
