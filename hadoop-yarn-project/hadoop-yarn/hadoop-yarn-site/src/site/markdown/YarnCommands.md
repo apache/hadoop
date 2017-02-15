@@ -15,31 +15,7 @@
 YARN Commands
 =============
 
-* [Overview](#Overview)
-* [User Commands](#User_Commands)
-    * [application](#application)
-    * [applicationattempt](#applicationattempt)
-    * [classpath](#classpath)
-    * [container](#container)
-    * [jar](#jar)
-    * [logs](#logs)
-    * [node](#node)
-    * [queue](#queue)
-    * [version](#version)
-* [Administration Commands](#Administration_Commands)
-    * [daemonlog](#daemonlog)
-    * [nodemanager](#nodemanager)
-    * [proxyserver](#proxyserver)
-    * [resourcemanager](#resourcemanager)
-    * [rmadmin](#rmadmin)
-    * [scmadmin](#scmadmin)
-    * [sharedcachemanager](#sharedcachemanager)
-    * [timelineserver](#timelineserver)
-* [Files](#Files)
-    * [etc/hadoop/hadoop-env.sh](#etchadoophadoop-env.sh)
-    * [etc/hadoop/yarn-env.sh](#etchadoopyarn-env.sh)
-    * [etc/hadoop/hadoop-user-functions.sh](#etchadoophadoop-user-functions.sh)
-    * [~/.hadooprc](#a.hadooprc)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------

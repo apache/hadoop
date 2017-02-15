@@ -15,12 +15,7 @@
 Web Application Proxy
 =====================
 
-* [Overview](#Overview)
-    * [Introduction](#Introduction)
-    * [Current Status](#Current_Status)
-* [Deployment](#Deployment)
-    * [Configurations](#Configurations)
-    * [Running Web Application Proxy](#Running_Web_Proxy)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 
 Overview

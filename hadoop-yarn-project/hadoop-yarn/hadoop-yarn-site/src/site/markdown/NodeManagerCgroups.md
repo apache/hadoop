@@ -15,8 +15,7 @@
 Using CGroups with YARN
 =======================
 
-* [CGroups Configuration](#CGroups_configuration)
-* [CGroups and Security](#CGroups_and_security)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 CGroups is a mechanism for aggregating/partitioning sets of tasks, and all their future children, into hierarchical groups with specialized behaviour. CGroups is a Linux kernel feature and was merged into kernel version 2.6.24. From a YARN perspective, this allows containers to be limited in their resource usage. A good example of this is CPU usage. Without CGroups, it becomes hard to limit container CPU usage. Currently, CGroups is only used for limiting CPU usage.
 

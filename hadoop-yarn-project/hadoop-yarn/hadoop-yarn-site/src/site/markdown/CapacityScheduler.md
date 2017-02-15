@@ -15,19 +15,7 @@
 Hadoop: Capacity Scheduler
 ==========================
 
-* [Purpose](#Purpose)
-* [Overview](#Overview)
-* [Features](#Features)
-* [Configuration](#Configuration)
-    * [Setting up `ResourceManager` to use `CapacityScheduler`](#Setting_up_ResourceManager_to_use_CapacityScheduler`)
-    * [Setting up queues](#Setting_up_queues)
-    * [Queue Properties](#Queue_Properties)
-    * [Setup for application priority](#Setup_for_application_priority.)
-    * [Capacity Scheduler container preemption](#Capacity_Scheduler_container_preemption)
-    * [Configuring `ReservationSystem` with `CapacityScheduler`](#Configuring_ReservationSystem_with_CapacityScheduler)
-    * [Other Properties](#Other_Properties)
-    * [Reviewing the configuration of the CapacityScheduler](#Reviewing_the_configuration_of_the_CapacityScheduler)
-* [Changing Queue Configuration](#Changing_Queue_Configuration)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Purpose
 -------

@@ -15,18 +15,7 @@
 ResourceManger Restart
 ======================
 
-* [Overview](#Overview)
-* [Feature](#Feature)
-* [Configurations](#Configurations)
-    * [Enable RM Restart](#Enable_RM_Restart)
-    * [Configure the state-store for persisting the RM state](#Configure_the_state-store_for_persisting_the_RM_state)
-    * [How to choose the state-store implementation](#How_to_choose_the_state-store_implementation)
-    * [Configurations for Hadoop FileSystem based state-store implementation](#Configurations_for_Hadoop_FileSystem_based_state-store_implementation)
-    * [Configurations for ZooKeeper based state-store implementation](#Configurations_for_ZooKeeper_based_state-store_implementation)
-    * [Configurations for LevelDB based state-store implementation](#Configurations_for_LevelDB_based_state-store_implementation)
-    * [Configurations for work-preserving RM recovery](#Configurations_for_work-preserving_RM_recovery)
-* [Notes](#Notes)
-* [Sample Configurations](#Sample_Configurations)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------
