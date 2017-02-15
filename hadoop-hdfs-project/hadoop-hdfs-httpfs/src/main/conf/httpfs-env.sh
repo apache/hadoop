@@ -44,6 +44,10 @@
 #
 # export HTTPFS_SSL_ENABLED=false
 
+# The comma separated list of encryption ciphers for SSL
+#
+# export HTTPFS_SSL_CIPHERS=
+
 # The maximum size of Tomcat HTTP header
 #
 # export HTTPFS_MAX_HTTP_HEADER_SIZE=65536

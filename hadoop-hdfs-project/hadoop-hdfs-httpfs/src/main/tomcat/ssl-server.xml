@@ -72,6 +72,7 @@
                maxThreads="150" scheme="https" secure="true"
                maxHttpHeaderSize="${httpfs.max.http.header.size}"
                clientAuth="false" sslEnabledProtocols="TLSv1,TLSv1.1,TLSv1.2,SSLv2Hello"
+               ciphers="${httpfs.ssl.ciphers}"
                keystoreFile="${httpfs.ssl.keystore.file}"
                keystorePass="${httpfs.ssl.keystore.pass}"/>
 
