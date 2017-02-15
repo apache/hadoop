@@ -224,8 +224,10 @@ public class AliyunOSSInputStream extends FSInputStream {
     if (position == pos) {
       return;
     } else if (pos > position && pos < position + partRemaining) {
-      AliyunOSSUtils.skipFully(wrappedStream, pos - position);
+      long len = pos - position;
+      AliyunOSSUtils.skipFully(wrappedStream, len);
       position = pos;
+      partRemaining -= len;
     } else {
       reopen(pos);
     }
