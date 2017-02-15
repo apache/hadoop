@@ -1082,6 +1082,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   /**
    * Helper method that computes the extent of fairshare starvation.
+   * @return freshly computed fairshare starvation
    */
   Resource fairShareStarvation() {
     Resource threshold = Resources.multiply(
