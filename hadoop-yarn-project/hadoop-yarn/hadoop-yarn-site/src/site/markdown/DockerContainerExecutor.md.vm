@@ -15,12 +15,7 @@
 Docker Container Executor
 =========================
 
-* [Overview](#Overview)
-* [Cluster Configuration](#Cluster_Configuration)
-* [Tips for connecting to a secure docker repository](#Tips_for_connecting_to_a_secure_docker_repository)
-* [Job Configuration](#Job_Configuration)
-* [Docker Image Requirements](#Docker_Image_Requirements)
-* [Working example of yarn launched docker containers](#Working_example_of_yarn_launched_docker_containers)
+<!-- MACRO{toc|fromDepth=0|toDepth=1} -->
 
 DEPRECATED
 ----------

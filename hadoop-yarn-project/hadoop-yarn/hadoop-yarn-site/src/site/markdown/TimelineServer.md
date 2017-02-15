@@ -15,21 +15,7 @@
 The YARN Timeline Server
 ========================
 
-* [Overview](#Overview)
-    * [Introduction](#Introduction)
-    * [Current Status](#Current_Status)
-    * [Timeline Structure](#Timeline_Structure)
-* [Deployment](#Deployment)
-    * [Configurations](#Configurations)
-    * [Running the Timeline Server](#Running_Timeline_Server)
-    * [Accessing generic-data via command-line](#Accessing_generic-data_via_command-line)
-* [Publishing of application specific data](#Publishing_of_application_specific_data)
-* [Timeline Server REST API](#Timeline_Server_REST_API_v1)
-* [Generic Data REST APIs](#GENERIC_DATA_REST_APIS)
-* [Timelnine Server Performance Test Tool](#TIMELINE_SERVER_PERFORMANCE_TEST_TOOL)
-    * [Highlights](#HIGHLIGHTS)
-    * [Usage](#USAGE)
-    * [Sample Runs](#SAMPLE_RUNS)
+<!-- MACRO{toc|fromDepth=1|toDepth=1} -->
 
 <a name="Overview"></a>Overview
 ---------

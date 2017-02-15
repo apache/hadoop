@@ -15,13 +15,7 @@
 NodeManager REST API's
 =======================
 
-* [Overview](#Overview)
-* [Enabling CORS support](#Enabling_CORS_support)
-* [NodeManager Information API](#NodeManager_Information_API)
-* [Applications API](#Applications_API)
-* [Application API](#Application_API)
-* [Containers API](#Containers_API)
-* [Container API](#Container_API)
+<!-- MACRO{toc|fromDepth=0|toDepth=1} -->
 
 Overview
 --------
