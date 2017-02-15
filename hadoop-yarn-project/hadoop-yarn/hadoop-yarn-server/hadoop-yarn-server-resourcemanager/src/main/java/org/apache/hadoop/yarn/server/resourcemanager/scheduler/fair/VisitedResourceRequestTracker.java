@@ -113,8 +113,8 @@ class VisitedResourceRequestTracker {
      * A rack is considered visited if any nodes or ANY have been visited.
      * Any is considered visited if any of the nodes/racks have been visited.
      *
-     * @param resourceName
-     * @return
+     * @param resourceName nodename or rackname or ANY
+     * @return true if this is the first visit, false otherwise
      */
     private boolean visit(String resourceName) {
       if (resourceName.equals(ResourceRequest.ANY)) {
