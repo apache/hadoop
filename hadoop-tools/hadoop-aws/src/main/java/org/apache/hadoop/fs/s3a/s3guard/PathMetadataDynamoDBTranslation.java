@@ -145,8 +145,7 @@ final class PathMetadataDynamoDBTranslation {
    */
   static Item pathMetadataToItem(PathMetadata meta) {
     Preconditions.checkNotNull(meta);
-    assert meta.getFileStatus() instanceof S3AFileStatus;
-    final S3AFileStatus status = (S3AFileStatus) meta.getFileStatus();
+    final FileStatus status = meta.getFileStatus();
     final Item item = new Item().withPrimaryKey(pathToKey(status.getPath()));
     if (status.isDirectory()) {
       item.withBoolean(IS_DIR, true);
