@@ -1725,8 +1725,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   }
 
   @SuppressWarnings("resource")
-  //MJTHIS: FIXME: temporarily skip this, but must be handled
-  //@Test (timeout = 60000)
+  @Test (timeout = 60000)
   public void testQueueMetricsOnRMRestart() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
