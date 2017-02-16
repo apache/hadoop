@@ -381,6 +381,16 @@ public class YarnClientImpl extends YarnClient {
         return null;
       }
       throw e;
+    } catch (NoClassDefFoundError e) {
+      NoClassDefFoundError wrappedError = new NoClassDefFoundError(
+          e.getMessage() + ". It appears that the timeline client "
+              + "failed to initiate because an incompatible dependency "
+              + "in classpath. If timeline service is optional to this "
+              + "client, try to work around by setting "
+              + YarnConfiguration.TIMELINE_SERVICE_ENABLED
+              + " to false in client configuration.");
+      wrappedError.setStackTrace(e.getStackTrace());
+      throw wrappedError;
     }
   }
 
