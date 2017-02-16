@@ -593,7 +593,11 @@ public class AdlFileSystem extends FileSystem {
     boolean isDirectory = entry.type == DirectoryEntryType.DIRECTORY;
     long lastModificationData = entry.lastModifiedTime.getTime();
     long lastAccessTime = entry.lastAccessTime.getTime();
-    FsPermission permission = new AdlPermission(aclBitStatus,
+    // set aclBit from ADLS backend response if
+    // ADL_SUPPORT_ACL_BIT_IN_FSPERMISSION is true.
+    final boolean aclBit = aclBitStatus ? entry.aclBit : false;
+
+    FsPermission permission = new AdlPermission(aclBit,
         Short.valueOf(entry.permission, 8));
     String user = entry.user;
     String group = entry.group;

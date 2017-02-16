@@ -66,6 +66,15 @@ public final class TestADLResponseData {
         "\"owner\":\"NotSupportYet\",\"group\":\"NotSupportYet\"}}";
   }
 
+  public static String getGetFileStatusJSONResponse(boolean aclBit) {
+    return "{\"FileStatus\":{\"length\":1024," +
+        "\"pathSuffix\":\"\",\"type\":\"FILE\",\"blockSize\":268435456," +
+        "\"accessTime\":1452103827023,\"modificationTime\":1452103827023," +
+        "\"replication\":0,\"permission\":\"777\"," +
+        "\"owner\":\"NotSupportYet\",\"group\":\"NotSupportYet\",\"aclBit\":\""
+        + aclBit + "\"}}";
+  }
+
   public static String getListFileStatusJSONResponse(int dirSize) {
     String list = "";
     for (int i = 0; i < dirSize; ++i) {
@@ -79,6 +88,18 @@ public final class TestADLResponseData {
 
     list = list.substring(0, list.length() - 1);
     return "{\"FileStatuses\":{\"FileStatus\":[" + list + "]}}";
+  }
+
+  public static String getListFileStatusJSONResponse(boolean aclBit) {
+    return "{\"FileStatuses\":{\"FileStatus\":[{\"length\":0,\"pathSuffix\":\""
+        + java.util.UUID.randomUUID()
+        + "\",\"type\":\"DIRECTORY\",\"blockSize\":0,"
+        + "\"accessTime\":1481184513488,"
+        + "\"modificationTime\":1481184513488,\"replication\":0,"
+        + "\"permission\":\"770\","
+        + "\"owner\":\"4b27fe1a-d9ab-4a04-ad7a-4bba72cd9e6c\","
+        + "\"group\":\"4b27fe1a-d9ab-4a04-ad7a-4bba72cd9e6c\",\"aclBit\":\""
+        + aclBit + "\"}]}}";
   }
 
   public static String getJSONResponse(boolean status) {
