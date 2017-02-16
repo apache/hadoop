@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 
 /**
  * This class is responsible for testing local listStatus implementation to
@@ -100,4 +101,35 @@ public class TestListStatus extends AdlMockWebServer {
     LOG.debug("Time : " + (endTime - startTime));
   }
 
+  @Test
+  public void listStatusAclBit()
+          throws URISyntaxException, IOException {
+    // With ACLBIT set to true
+    getMockServer().enqueue(new MockResponse().setResponseCode(200)
+            .setBody(TestADLResponseData.getListFileStatusJSONResponse(true)));
+    FileStatus[] ls = null;
+    long startTime = Time.monotonicNow();
+    ls = getMockAdlFileSystem()
+            .listStatus(new Path("/test1/test2"));
+    long endTime = Time.monotonicNow();
+    LOG.debug("Time : " + (endTime - startTime));
+    for (int i = 0; i < ls.length; i++) {
+      Assert.assertTrue(ls[i].isDirectory());
+      Assert.assertEquals(true, ls[i].getPermission().getAclBit());
+    }
+
+    // With ACLBIT set to false
+    ls = null;
+    getMockServer().enqueue(new MockResponse().setResponseCode(200)
+            .setBody(TestADLResponseData.getListFileStatusJSONResponse(false)));
+    startTime = Time.monotonicNow();
+    ls = getMockAdlFileSystem()
+            .listStatus(new Path("/test1/test2"));
+    endTime = Time.monotonicNow();
+    LOG.debug("Time : " + (endTime - startTime));
+    for (int i = 0; i < ls.length; i++) {
+      Assert.assertTrue(ls[i].isDirectory());
+      Assert.assertEquals(false, ls[i].getPermission().getAclBit());
+    }
+  }
 }
