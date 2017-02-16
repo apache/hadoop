@@ -351,6 +351,36 @@ public class TestParam {
       LOG.info("EXPECTED: " + e);
     }
   }
+
+  @Test
+  public void testUserGroupOkAfterResettingAclPattern() {
+    AclPermissionParam.Domain oldDomain =
+        AclPermissionParam.getAclPermissionPattern();
+
+    String newPattern =
+        "^(default:)?(user|group|mask|other):" +
+            "[[0-9A-Za-z_][@A-Za-z0-9._-]]*:([rwx-]{3})?" +
+            "(,(default:)?(user|group|mask|other):" +
+            "[[0-9A-Za-z_][@A-Za-z0-9._-]]*:([rwx-]{3})?)*$";
+    AclPermissionParam.setAclPermissionPattern(newPattern);
+
+    try {
+
+      AclPermissionParam aclNumericUserParam =
+          new AclPermissionParam("user:110201:rwx");
+      assertNotNull(aclNumericUserParam.getValue());
+
+      AclPermissionParam aclGroupWithDomainParam =
+          new AclPermissionParam("group:foo@bar:rwx");
+      assertNotNull(aclGroupWithDomainParam.getValue());
+
+    } catch (IllegalArgumentException e) {
+      Assert.fail(
+          "The modified regex for ACL patterns was not respected: " + e);
+    }
+
+    AclPermissionParam.setAclPermissionPattern(oldDomain);
+  }
  
   @Test
   public void testXAttrNameParam() {
