@@ -156,26 +156,6 @@ public class TestYarnClient {
   }
 
   @Test
-  public void testStartWithTimelineV15Failure() throws Exception{
-    Configuration conf = new Configuration();
-    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
-    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 1.5f);
-    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_CLIENT_BEST_EFFORT,
-        true);
-    YarnClient client = YarnClient.createYarnClient();
-    if(client instanceof YarnClientImpl) {
-      YarnClientImpl impl = (YarnClientImpl) client;
-      YarnClientImpl spyClient = spy(impl);
-      when(spyClient.createTimelineClient()).thenThrow(
-          new IOException("ATS v1.5 client initialization failed. "));
-      spyClient.init(conf);
-      spyClient.start();
-      spyClient.getTimelineDelegationToken();
-      spyClient.stop();
-    }
-  }
-
-  @Test
   public void testStartWithTimelineV15() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
@@ -184,6 +164,89 @@ public class TestYarnClient {
     client.init(conf);
     client.start();
     client.stop();
+  }
+
+  @Test
+  public void testStartTimelineClientWithErrors()
+      throws Exception {
+    // If timeline client failed to init with a NoClassDefFoundError
+    // it should be wrapped with an informative error message
+    testCreateTimelineClientWithError(
+        1.5f,
+        true,
+        false,
+        new NoClassDefFoundError("Mock a NoClassDefFoundError"),
+        new CreateTimelineClientErrorVerifier(1) {
+          @Override
+          public void verifyError(Throwable e) {
+            Assert.assertTrue(e instanceof NoClassDefFoundError);
+            Assert.assertTrue(e.getMessage() != null &&
+                e.getMessage().contains(
+                    YarnConfiguration.TIMELINE_SERVICE_ENABLED));
+          }
+        });
+
+    // Disable timeline service for this client,
+    // yarn client will not fail when such error happens
+    testCreateTimelineClientWithError(
+        1.5f,
+        false,
+        false,
+        new NoClassDefFoundError("Mock a NoClassDefFoundError"),
+        new CreateTimelineClientErrorVerifier(0) {
+          @Override public void verifyError(Throwable e) {
+            Assert.fail("NoClassDefFoundError while creating timeline client"
+                + "should be tolerated when timeline service is disabled.");
+          }
+        }
+    );
+
+    // Set best-effort to true, verify an error is still fatal
+    testCreateTimelineClientWithError(
+        1.5f,
+        true,
+        true,
+        new NoClassDefFoundError("Mock a NoClassDefFoundError"),
+        new CreateTimelineClientErrorVerifier(1) {
+          @Override public void verifyError(Throwable e) {
+            Assert.assertTrue(e instanceof NoClassDefFoundError);
+            Assert.assertTrue(e.getMessage() != null &&
+                e.getMessage().contains(
+                    YarnConfiguration.TIMELINE_SERVICE_ENABLED));
+          }
+        }
+    );
+
+    // Set best-effort to false, verify that an exception
+    // causes the client to fail
+    testCreateTimelineClientWithError(
+        1.5f,
+        true,
+        false,
+        new IOException("ATS v1.5 client initialization failed."),
+        new CreateTimelineClientErrorVerifier(1) {
+          @Override
+          public void verifyError(Throwable e) {
+            Assert.assertTrue(e instanceof IOException);
+          }
+        }
+    );
+
+    // Set best-effort to true, verify that an normal exception
+    // won't fail the entire client
+    testCreateTimelineClientWithError(
+        1.5f,
+        true,
+        true,
+        new IOException("ATS v1.5 client initialization failed."),
+        new CreateTimelineClientErrorVerifier(0) {
+          @Override
+          public void verifyError(Throwable e) {
+            Assert.fail("IOException while creating timeline client"
+                + "should be tolerated when best effort is true");
+          }
+        }
+    );
   }
 
   @SuppressWarnings("deprecation")
@@ -1679,5 +1742,67 @@ public class TestYarnClient {
     SignalContainerRequest request = signalReqCaptor.getValue();
     Assert.assertEquals(containerId, request.getContainerId());
     Assert.assertEquals(command, request.getCommand());
+  }
+
+  private void testCreateTimelineClientWithError(
+      float timelineVersion,
+      boolean timelineServiceEnabled,
+      boolean timelineClientBestEffort,
+      Throwable mockErr,
+      CreateTimelineClientErrorVerifier errVerifier) throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
+        timelineServiceEnabled);
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_CLIENT_BEST_EFFORT,
+        timelineClientBestEffort);
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION,
+        timelineVersion);
+    YarnClient client = new MockYarnClient();
+    if (client instanceof YarnClientImpl) {
+      YarnClientImpl impl = (YarnClientImpl) client;
+      YarnClientImpl spyClient = spy(impl);
+      when(spyClient.createTimelineClient()).thenThrow(mockErr);
+      CreateTimelineClientErrorVerifier verifier = spy(errVerifier);
+      spyClient.init(conf);
+      spyClient.start();
+
+      ApplicationSubmissionContext context =
+          mock(ApplicationSubmissionContext.class);
+      ContainerLaunchContext containerContext =
+          mock(ContainerLaunchContext.class);
+      ApplicationId applicationId =
+          ApplicationId.newInstance(System.currentTimeMillis(), 1);
+      when(containerContext.getTokens()).thenReturn(null);
+      when(context.getApplicationId()).thenReturn(applicationId);
+      when(spyClient.isSecurityEnabled()).thenReturn(true);
+      when(context.getAMContainerSpec()).thenReturn(containerContext);
+
+      try {
+        spyClient.submitApplication(context);
+      } catch (Throwable e) {
+        verifier.verifyError(e);
+      } finally {
+        // Make sure the verifier runs with expected times
+        // This is required because in case throwable is swallowed
+        // and verifyError never gets the chance to run
+        verify(verifier, times(verifier.getExpectedTimes()))
+            .verifyError(any(Throwable.class));
+        spyClient.stop();
+      }
+    }
+  }
+
+  private abstract class CreateTimelineClientErrorVerifier {
+    // Verify verifyError gets executed with expected times
+    private int times = 0;
+    protected CreateTimelineClientErrorVerifier(int times) {
+      this.times = times;
+    }
+    public int getExpectedTimes() {
+      return this.times;
+    }
+    // Verification a throwable is in desired state
+    // E.g verify type and error message
+    public abstract void verifyError(Throwable e);
   }
 }
