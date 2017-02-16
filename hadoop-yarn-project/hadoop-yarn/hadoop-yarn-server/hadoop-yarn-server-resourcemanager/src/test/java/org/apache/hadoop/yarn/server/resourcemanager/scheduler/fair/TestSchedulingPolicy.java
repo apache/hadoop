@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Stack;
@@ -30,16 +31,29 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
+
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 
 public class TestSchedulingPolicy {
   private static final Log LOG = LogFactory.getLog(TestSchedulingPolicy.class);
+  private final static String ALLOC_FILE =
+      new File(FairSchedulerTestBase.TEST_DIR, "test-queues").getAbsolutePath();
+  private FairSchedulerConfiguration conf;
+  private FairScheduler scheduler;
+
+  @Before
+  public void setUp() throws Exception {
+    scheduler = new FairScheduler();
+    conf = new FairSchedulerConfiguration();
+  }
 
   @Test(timeout = 1000)
   public void testParseSchedulingPolicy()
@@ -76,66 +90,6 @@ public class TestSchedulingPolicy {
     sm = SchedulingPolicy.parse("fifo");
     assertTrue("Invalid scheduler name",
         sm.getName().equals(FifoPolicy.NAME));
-  }
-
-  /**
-   * Trivial tests that make sure
-   * {@link SchedulingPolicy#isApplicableTo(SchedulingPolicy, byte)} works as
-   * expected for the possible values of depth
-   * 
-   * @throws AllocationConfigurationException
-   */
-  @Test(timeout = 1000)
-  public void testIsApplicableTo() throws AllocationConfigurationException {
-    final String ERR = "Broken SchedulingPolicy#isApplicableTo";
-    
-    // fifo
-    SchedulingPolicy policy = SchedulingPolicy.parse("fifo");
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_LEAF));
-    assertFalse(ERR, SchedulingPolicy.isApplicableTo(
-        SchedulingPolicy.parse("fifo"), SchedulingPolicy.DEPTH_INTERMEDIATE));
-    assertFalse(ERR, SchedulingPolicy.isApplicableTo(
-        SchedulingPolicy.parse("fifo"), SchedulingPolicy.DEPTH_ROOT));
-
-    
-    // fair
-    policy = SchedulingPolicy.parse("fair"); 
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_LEAF));
-    assertTrue(ERR, SchedulingPolicy.isApplicableTo(policy,
-        SchedulingPolicy.DEPTH_INTERMEDIATE));
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_ROOT));
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_PARENT));
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_ANY));
-    
-    // drf
-    policy = SchedulingPolicy.parse("drf"); 
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_LEAF));
-    assertTrue(ERR, SchedulingPolicy.isApplicableTo(policy,
-        SchedulingPolicy.DEPTH_INTERMEDIATE));
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_ROOT));
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_PARENT));
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_ANY));
-    
-    policy = Mockito.mock(SchedulingPolicy.class);
-    Mockito.when(policy.getApplicableDepth()).thenReturn(
-        SchedulingPolicy.DEPTH_PARENT);
-    assertTrue(ERR, SchedulingPolicy.isApplicableTo(policy,
-        SchedulingPolicy.DEPTH_INTERMEDIATE));
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_ROOT));
-    assertTrue(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_PARENT));
-    assertFalse(ERR,
-        SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_ANY));
   }
 
   /**
@@ -353,4 +307,222 @@ public class TestSchedulingPolicy {
     }
   }
 
+  @Test
+  public void testSchedulingPolicyViolation() throws IOException {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"root\">");
+    out.println("<schedulingPolicy>fair</schedulingPolicy>");
+    out.println("    <queue name=\"child1\">");
+    out.println("    <schedulingPolicy>drf</schedulingPolicy>");
+    out.println("    </queue>");
+    out.println("    <queue name=\"child2\">");
+    out.println("    <schedulingPolicy>fair</schedulingPolicy>");
+    out.println("    </queue>");
+    out.println("</queue>");
+    out.println("<defaultQueueSchedulingPolicy>drf" +
+        "</defaultQueueSchedulingPolicy>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.init(conf);
+
+    FSQueue child1 = scheduler.getQueueManager().getQueue("child1");
+    assertNull("Queue 'child1' should be null since its policy isn't allowed to"
+        + " be 'drf' if its parent policy is 'fair'.", child1);
+
+    // dynamic queue
+    FSQueue dynamicQueue = scheduler.getQueueManager().
+        getLeafQueue("dynamicQueue", true);
+    assertNull("Dynamic queue should be null since it isn't allowed to be 'drf'"
+        + " policy if its parent policy is 'fair'.", dynamicQueue);
+
+    // Set child1 to 'fair' and child2 to 'drf', the reload the allocation file.
+    out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"root\">");
+    out.println("<schedulingPolicy>fair</schedulingPolicy>");
+    out.println("    <queue name=\"child1\">");
+    out.println("    <schedulingPolicy>fair</schedulingPolicy>");
+    out.println("    </queue>");
+    out.println("    <queue name=\"child2\">");
+    out.println("    <schedulingPolicy>drf</schedulingPolicy>");
+    out.println("    </queue>");
+    out.println("</queue>");
+    out.println("<defaultQueueSchedulingPolicy>drf" +
+        "</defaultQueueSchedulingPolicy>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.reinitialize(conf, null);
+    child1 = scheduler.getQueueManager().getQueue("child1");
+    assertNotNull("Queue 'child1' should be not null since its policy is "
+        + "allowed to be 'fair' if its parent policy is 'fair'.", child1);
+
+    // Detect the policy violation of Child2, keep the original policy instead
+    // of setting the new policy.
+    FSQueue child2 = scheduler.getQueueManager().getQueue("child2");
+    assertTrue("Queue 'child2' should be 'fair' since its new policy 'drf' "
+        + "is not allowed.", child2.getPolicy() instanceof FairSharePolicy);
+  }
+
+  @Test
+  public void testSchedulingPolicyViolationInTheMiddleLevel()
+      throws IOException {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"root\">");
+    out.println("<schedulingPolicy>fair</schedulingPolicy>");
+    out.println("  <queue name=\"level2\">");
+    out.println("    <schedulingPolicy>fair</schedulingPolicy>");
+    out.println("    <queue name=\"level3\">");
+    out.println("    <schedulingPolicy>drf</schedulingPolicy>");
+    out.println("       <queue name=\"leaf\">");
+    out.println("       <schedulingPolicy>fair</schedulingPolicy>");
+    out.println("       </queue>");
+    out.println("    </queue>");
+    out.println("  </queue>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.init(conf);
+
+    FSQueue level2 = scheduler.getQueueManager().getQueue("level2");
+    assertNotNull("Queue 'level2' shouldn't be null since its policy is allowed"
+        + " to be 'fair' if its parent policy is 'fair'.", level2);
+    FSQueue level3 = scheduler.getQueueManager().getQueue("level2.level3");
+    assertNull("Queue 'level3' should be null since its policy isn't allowed"
+        + " to be 'drf' if its parent policy is 'fair'.", level3);
+    FSQueue leaf = scheduler.getQueueManager().getQueue("level2.level3.leaf");
+    assertNull("Queue 'leaf' should be null since its parent failed to create.",
+        leaf);
+  }
+
+  @Test
+  public void testFIFOPolicyOnlyForLeafQueues()
+      throws IOException {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"root\">");
+    out.println("  <queue name=\"intermediate\">");
+    out.println("    <schedulingPolicy>fifo</schedulingPolicy>");
+    out.println("    <queue name=\"leaf\">");
+    out.println("    <schedulingPolicy>fair</schedulingPolicy>");
+    out.println("    </queue>");
+    out.println("  </queue>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.init(conf);
+
+    FSQueue intermediate = scheduler.getQueueManager().getQueue("intermediate");
+    assertNull("Queue 'intermediate' should be null since 'fifo' is only for "
+        + "leaf queue.", intermediate);
+
+    out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"root\">");
+    out.println("  <queue name=\"intermediate\">");
+    out.println("    <schedulingPolicy>fair</schedulingPolicy>");
+    out.println("    <queue name=\"leaf\">");
+    out.println("    <schedulingPolicy>fifo</schedulingPolicy>");
+    out.println("    </queue>");
+    out.println("  </queue>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.reinitialize(conf, null);
+
+    assertNotNull(scheduler.getQueueManager().getQueue("intermediate"));
+
+    FSQueue leaf = scheduler.getQueueManager().getQueue("intermediate.leaf");
+    assertNotNull("Queue 'leaf' should be null since 'fifo' is only for "
+        + "leaf queue.", leaf);
+  }
+
+  @Test
+  public void testPolicyReinitilization() throws IOException {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"root\">");
+    out.println("<schedulingPolicy>fair</schedulingPolicy>");
+    out.println("    <queue name=\"child1\">");
+    out.println("    <schedulingPolicy>fair</schedulingPolicy>");
+    out.println("    </queue>");
+    out.println("    <queue name=\"child2\">");
+    out.println("    <schedulingPolicy>fair</schedulingPolicy>");
+    out.println("    </queue>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.init(conf);
+
+    // Set child1 to 'drf' which is not allowed, then reload the allocation file
+    out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"root\">");
+    out.println("<schedulingPolicy>fair</schedulingPolicy>");
+    out.println("    <queue name=\"child1\">");
+    out.println("    <schedulingPolicy>drf</schedulingPolicy>");
+    out.println("    </queue>");
+    out.println("    <queue name=\"child2\">");
+    out.println("    <schedulingPolicy>fifo</schedulingPolicy>");
+    out.println("    </queue>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.reinitialize(conf, null);
+
+    FSQueue child1 = scheduler.getQueueManager().getQueue("child1");
+    assertTrue("Queue 'child1' should still be 'fair' since 'drf' isn't allowed"
+            + " if its parent policy is 'fair'.",
+        child1.getPolicy() instanceof FairSharePolicy);
+    FSQueue child2 = scheduler.getQueueManager().getQueue("child2");
+    assertTrue("Queue 'child2' should still be 'fair' there is a policy"
+            + " violation while reinitialization.",
+        child2.getPolicy() instanceof FairSharePolicy);
+
+    // Set both child1 and root to 'drf', then reload the allocation file
+    out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"root\">");
+    out.println("<schedulingPolicy>drf</schedulingPolicy>");
+    out.println("    <queue name=\"child1\">");
+    out.println("    <schedulingPolicy>drf</schedulingPolicy>");
+    out.println("    </queue>");
+    out.println("    <queue name=\"child2\">");
+    out.println("    <schedulingPolicy>fifo</schedulingPolicy>");
+    out.println("    </queue>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.reinitialize(conf, null);
+
+    child1 = scheduler.getQueueManager().getQueue("child1");
+    assertTrue("Queue 'child1' should be 'drf' since both 'root' and 'child1'"
+            + " are 'drf'.",
+        child1.getPolicy() instanceof DominantResourceFairnessPolicy);
+    child2 = scheduler.getQueueManager().getQueue("child2");
+    assertTrue("Queue 'child2' should still be 'fifo' there is no policy"
+            + " violation while reinitialization.",
+        child2.getPolicy() instanceof FifoPolicy);
+  }
 }

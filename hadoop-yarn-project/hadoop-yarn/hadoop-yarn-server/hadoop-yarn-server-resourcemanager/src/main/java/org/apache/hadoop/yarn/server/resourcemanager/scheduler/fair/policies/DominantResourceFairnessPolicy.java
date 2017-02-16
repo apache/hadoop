@@ -58,11 +58,6 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
   }
 
   @Override
-  public byte getApplicableDepth() {
-    return SchedulingPolicy.DEPTH_ANY;
-  }
-
-  @Override
   public Comparator<Schedulable> getComparator() {
     return COMPARATOR;
   }
