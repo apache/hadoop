@@ -239,19 +239,6 @@ public class FSParentQueue extends FSQueue {
     }
   }
 
-  @Override
-  public void setPolicy(SchedulingPolicy policy)
-      throws AllocationConfigurationException {
-    boolean allowed =
-        SchedulingPolicy.isApplicableTo(policy, (parent == null)
-            ? SchedulingPolicy.DEPTH_ROOT
-            : SchedulingPolicy.DEPTH_INTERMEDIATE);
-    if (!allowed) {
-      throwPolicyDoesnotApplyException(policy);
-    }
-    super.policy = policy;
-  }
-
   void incrementRunnableApps() {
     writeLock.lock();
     try {
