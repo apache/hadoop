@@ -38,6 +38,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.crypto.KeyGenerator;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -141,6 +143,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
+import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -153,8 +156,6 @@ import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 
 import com.google.common.annotations.VisibleForTesting;
-
-import javax.crypto.KeyGenerator;
 
 /**
  * The Map-Reduce Application Master.
@@ -1066,6 +1067,7 @@ public class MRAppMaster extends CompositeService {
     private final ClusterInfo clusterInfo = new ClusterInfo();
     private final ClientToAMTokenSecretManager clientToAMTokenSecretManager;
     private TimelineClient timelineClient = null;
+    private TimelineV2Client timelineV2Client = null;
 
     private final TaskAttemptFinishingMonitor taskAttemptFinishingMonitor;
 
@@ -1081,7 +1083,7 @@ public class MRAppMaster extends CompositeService {
 
         if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
           // create new version TimelineClient
-          timelineClient = TimelineClient.createTimelineClient(
+          timelineV2Client = TimelineV2Client.createTimelineClient(
               appAttemptID.getApplicationId());
         } else {
           timelineClient = TimelineClient.createTimelineClient();
@@ -1177,9 +1179,13 @@ public class MRAppMaster extends CompositeService {
       return taskAttemptFinishingMonitor;
     }
 
-    // Get Timeline Collector's address (get sync from RM)
     public TimelineClient getTimelineClient() {
       return timelineClient;
+    }
+
+    // Get Timeline Collector's address (get sync from RM)
+    public TimelineV2Client getTimelineV2Client() {
+      return timelineV2Client;
     }
   }
 

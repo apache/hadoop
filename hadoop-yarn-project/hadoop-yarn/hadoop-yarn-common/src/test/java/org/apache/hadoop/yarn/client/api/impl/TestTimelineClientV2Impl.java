@@ -50,7 +50,7 @@ public class TestTimelineClientV2Impl {
   public void setup() {
     conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
-    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 1.0f);
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
     conf.setInt(YarnConfiguration.NUMBER_OF_ASYNC_ENTITIES_TO_MERGE, 3);
     if (!currTestName.getMethodName()
         .contains("testRetryOnConnectionFailure")) {
@@ -71,7 +71,7 @@ public class TestTimelineClientV2Impl {
   }
 
   private class TestV2TimelineClientForExceptionHandling
-      extends TimelineClientImpl {
+      extends TimelineV2ClientImpl {
     public TestV2TimelineClientForExceptionHandling(ApplicationId id) {
       super(id);
     }
