@@ -19,9 +19,9 @@
 package org.apache.hadoop.yarn.logaggregation;
 
 /**
- * Enumeration of various type of a container log.
+ * Enumeration of various aggregation type of a container log.
  */
-public enum ContainerLogType {
+public enum ContainerLogAggregationType {
 
   /** The log is from NodeManager local log directory. */
   LOCAL,

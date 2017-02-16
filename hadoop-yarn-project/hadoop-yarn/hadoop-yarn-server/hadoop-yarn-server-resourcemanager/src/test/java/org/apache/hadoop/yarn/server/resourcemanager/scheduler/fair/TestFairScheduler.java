@@ -5164,5 +5164,4 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         Resources.equals(aQueue.getDemand(), maxResource) &&
         Resources.equals(bQueue.getDemand(), maxResource));
   }
-
 }

@@ -19,4 +19,11 @@
 import Ember from 'ember';
 
 export default Ember.Component.extend({
+  nodeHttpAddressFormatted: Ember.computed('attempt.nodeHttpAddress', function() {
+    var nodeHttpAddress = this.get('attempt.nodeHttpAddress');
+    if (nodeHttpAddress && nodeHttpAddress.indexOf('://') < 0) {
+      nodeHttpAddress = 'http://' + nodeHttpAddress;
+    }
+    return nodeHttpAddress;
+  })
 });

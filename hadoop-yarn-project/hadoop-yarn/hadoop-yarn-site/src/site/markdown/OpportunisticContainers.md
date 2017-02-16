@@ -15,22 +15,7 @@
 Opportunistic Containers
 ========================
 
-* [Purpose](#Purpose)
-* [Quick Guide](#Quick_Guide)
-    * [Main Goal](#Main_Goal)
-    * [Enabling Opportunistic Containers](#Enabling_Opportunistic_Containers)
-    * [Running a Sample Job](#Running_a_Sample_Job)
-    * [Opportunistic Containers in Web UI](#Opportunistic_Containers_in_Web_UI)
-* [Overview](#Overview)
-* [Container Execution Types](#Container_Execution_Types)
-* [Execution of Opportunistic Containers](#Execution_of_Opportunistic_Containers)
-* [Allocation of Opportunistic Containers](#Allocation_of_Opportunistic_Containers)
-    * [Centralized Allocation](#Centralized_Allocation)
-    * [Distributed Allocation](#Distributed_Allocation)
-    * [Determining Nodes for Allocation](#Determining_Nodes_for_Allocation)
-    * [Rebalancing Node Load](#Rebalancing_Node_Load)
-* [Advanced Configuration](#Advanced_Configuration)
-* [Items for Future Work](#Items_for_Future_Work)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 
 <a name="Purpose"></a>Purpose

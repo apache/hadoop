@@ -15,18 +15,7 @@
 Hadoop YARN - Introduction to the web services REST API's
 ==========================================================
 
-* [Overview](#Overview)
-* [URI's](#URIs)
-* [HTTP Requests](#HTTP_Requests)
-    * [Summary of HTTP operations](#Summary_of_HTTP_operations)
-    * [Security](#Security)
-    * [Headers Supported](#Headers_Supported)
-* [HTTP Responses](#HTTP_Responses)
-    * [Compression](#Compression)
-    * [Response Formats](#Response_Formats)
-    * [Response Errors](#Response_Errors)
-    * [Response Examples](#Response_Examples)
-* [Sample Usage](#Sample_Usage)
+<!-- MACRO{toc|fromDepth=0|toDepth=2} -->
 
 Overview
 --------

@@ -26,7 +26,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.logaggregation.ContainerLogType;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
 import org.apache.hadoop.yarn.logaggregation.PerContainerLogFileInfo;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.ContainerLogsUtils;
@@ -47,7 +47,7 @@ public class NMContainerLogsInfo extends ContainerLogsInfo {
 
   public NMContainerLogsInfo(final Context nmContext,
       final ContainerId containerId, String remoteUser,
-      ContainerLogType logType) throws YarnException {
+      ContainerLogAggregationType logType) throws YarnException {
     this.logType = logType.toString();
     this.containerId = containerId.toString();
     this.nodeId = nmContext.getNodeId().toString();

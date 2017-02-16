@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.web.JsonUtil;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
 import org.apache.hadoop.hdfs.web.resources.PostOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
+import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -108,6 +110,10 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
     throws IOException {
     this.conf = conf;
     this.confForCreate = confForCreate;
+    /** set user pattern based on configuration file */
+    UserParam.setUserPattern(
+            conf.get(DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY,
+                    DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT));
   }
 
   @Override

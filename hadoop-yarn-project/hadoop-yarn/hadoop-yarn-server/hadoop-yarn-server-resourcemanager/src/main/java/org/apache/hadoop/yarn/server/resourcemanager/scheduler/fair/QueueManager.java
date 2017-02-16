@@ -35,6 +35,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 import org.xml.sax.SAXException;
 
 import com.google.common.base.CharMatcher;
@@ -42,10 +43,10 @@ import com.google.common.annotations.VisibleForTesting;
 import java.util.Iterator;
 import java.util.Set;
 import org.apache.hadoop.yarn.api.records.Resource;
+
 /**
  * Maintains a list of queues as well as scheduling parameters for each queue,
  * such as guaranteed share allocations, from the fair scheduler config file.
- * 
  */
 @Private
 @Unstable
@@ -72,6 +73,9 @@ public class QueueManager {
 
   public void initialize(Configuration conf) throws IOException,
       SAXException, AllocationConfigurationException, ParserConfigurationException {
+    // Policies of root and default queue are set to
+    // SchedulingPolicy.DEFAULT_POLICY since the allocation file hasn't been
+    // loaded yet.
     rootQueue = new FSParentQueue("root", scheduler, null);
     queues.put(rootQueue.getName(), rootQueue);
 
@@ -80,7 +84,7 @@ public class QueueManager {
     // Recursively reinitialize to propagate queue properties
     rootQueue.reinit(true);
   }
-  
+
   /**
    * Get a leaf queue by name, creating it if the create param is true and is necessary.
    * If the queue is not or can not be a leaf queue, i.e. it already exists as a
@@ -272,12 +276,25 @@ public class QueueManager {
       FSParentQueue newParent = null;
       String queueName = i.next();
 
+      // Check if child policy is allowed
+      SchedulingPolicy childPolicy = scheduler.getAllocationConfiguration().
+          getSchedulingPolicy(queueName);
+      if (!parent.getPolicy().isChildPolicyAllowed(childPolicy)) {
+        LOG.error("Can't create queue '" + queueName + "'.");
+        return null;
+      }
+
       // Only create a leaf queue at the very end
       if (!i.hasNext() && (queueType != FSQueueType.PARENT)) {
         FSLeafQueue leafQueue = new FSLeafQueue(queueName, scheduler, parent);
         leafQueues.add(leafQueue);
         queue = leafQueue;
       } else {
+        if (childPolicy instanceof FifoPolicy) {
+          LOG.error("Can't create queue '" + queueName + "', since "
+              + FifoPolicy.NAME + " is only for leaf queues.");
+          return null;
+        }
         newParent = new FSParentQueue(queueName, scheduler, parent);
         queue = newParent;
       }
@@ -479,6 +496,13 @@ public class QueueManager {
   public void updateAllocationConfiguration(AllocationConfiguration queueConf) {
     // Create leaf queues and the parent queues in a leaf's ancestry if they do not exist
     synchronized (queues) {
+      // Verify and set scheduling policies for existing queues before creating
+      // any queue, since we need parent policies to determine if we can create
+      // its children.
+      if (!rootQueue.verifyAndSetPolicyFromConf(queueConf)) {
+        LOG.error("Setting scheduling policies for existing queues failed!");
+      }
+
       for (String name : queueConf.getConfiguredQueues().get(
               FSQueueType.LEAF)) {
         if (removeEmptyIncompatibleQueues(name, FSQueueType.LEAF)) {

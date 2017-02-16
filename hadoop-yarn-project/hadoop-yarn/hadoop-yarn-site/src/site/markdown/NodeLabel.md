@@ -15,19 +15,7 @@
 YARN Node Labels
 ===============
 
-* [Overview](#Overview)
-* [Features](#Features)
-* [Configuration](#Configuration)
-    * [Setting up ResourceManager to enable Node Labels](#Setting_up_ResourceManager_to_enable_Node_Labels)
-    * [Add/modify node labels list to YARN](#Add/modify_node_labels_list_to_YARN)
-    * [Remove node labels from YARN](#Remove_node_labels_from_YARN)
-    * [Add/modify node-to-labels mapping to YARN](#Add/modify_node-to-labels_mapping_to_YARN)
-    * [Configuration of Schedulers for node labels](#Configuration_of_Schedulers_for_node_labels)
-* [Specifying node label for application](#Specifying_node_label_for_application)
-* [Monitoring](#Monitoring)
-    * [Monitoring through web UI](#Monitoring_through_web_UI)
-    * [Monitoring through commandline](#Monitoring_through_commandline)
-* [Useful links](#Useful_links)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------

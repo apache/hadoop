@@ -15,13 +15,7 @@
 Launching Applications Using Docker Containers
 ==============================================
 
-* [Overview](#Overview)
-* [Cluster Configuration](#Cluster_Configuration)
-* [Docker Image Requirements](#Docker_Image_Requirements)
-* [Application Submission](#Application_Submission)
-* [Connecting to a Secure Docker Repository](#Connecting_to_a_Secure_Docker_Repository)
-* [Example: MapReduce](#Example:_MapReduce)
-* [Example: Spark](#Example:_Spark)
+<!-- MACRO{toc|fromDepth=0|toDepth=1} -->
 
 Overview
 --------

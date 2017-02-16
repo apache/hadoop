@@ -71,7 +71,7 @@ public class StripedDataStreamer extends DataStreamer {
 
   @Override
   protected void endBlock() {
-    coordinator.offerEndBlock(index, block);
+    coordinator.offerEndBlock(index, block.getCurrentBlock());
     super.endBlock();
   }
 
@@ -93,7 +93,7 @@ public class StripedDataStreamer extends DataStreamer {
   protected LocatedBlock nextBlockOutputStream() throws IOException {
     boolean success;
     LocatedBlock lb = getFollowingBlock();
-    block = lb.getBlock();
+    block.setCurrentBlock(lb.getBlock());
     block.setNumBytes(0);
     bytesSent = 0;
     accessToken = lb.getBlockToken();
@@ -105,7 +105,7 @@ public class StripedDataStreamer extends DataStreamer {
     success = createBlockOutputStream(nodes, storageTypes, 0L, false);
 
     if (!success) {
-      block = null;
+      block.setCurrentBlock(null);
       final DatanodeInfo badNode = nodes[getErrorState().getBadNodeIndex()];
       LOG.warn("Excluding datanode " + badNode);
       excludedNodes.put(badNode, badNode);
@@ -161,7 +161,7 @@ public class StripedDataStreamer extends DataStreamer {
         success = coordinator.takeStreamerUpdateResult(index);
         if (success) {
           // if all succeeded, update its block using the new GS
-          block = newBlock(block, newGS);
+          updateBlockGS(newGS);
         } else {
           // otherwise close the block stream and restart the recovery process
           closeStream();

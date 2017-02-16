@@ -20,12 +20,20 @@ import Ember from 'ember';
 
 export default Ember.Controller.extend({
 
-  breadcrumbs: [{
-    text: "Home",
-    routeName: 'application'
-  }, {
-    text: "Applications",
-    routeName: 'yarn-apps.apps',
-  }]
+  breadcrumbs: Ember.computed("model.nodeInfo", function () {
+    var nodeInfo = this.get("model.nodeInfo");
+    return [{
+      text: "Home",
+      routeName: 'application'
+    },{
+      text: "Nodes",
+      routeName: 'yarn-nodes.table'
+    }, {
+      text: `Node [ ${nodeInfo.id} ]`,
+      href: `#/yarn-node/${nodeInfo.id}/${nodeInfo.addr}`
+    }, {
+      text: `Container [ ${nodeInfo.containerId} ]`
+    }];
+  })
 
 });

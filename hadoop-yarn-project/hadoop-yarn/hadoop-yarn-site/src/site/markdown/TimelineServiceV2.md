@@ -15,25 +15,9 @@
 The YARN Timeline Service v.2
 ========================
 
-* [Overview](#Overview)
-    * [Introduction](#Introduction)
-    * [Architecture](#Architecture)
-    * [Current Status](#Current_Status)
-* [Deployment](#Deployment)
-    * [Configurations](#Configurations)
-    * [Enabling Timeline Service v.2](#Enabling_Timeline_Service_v2)
-* [Publishing of application specific data](#Publishing_of_application_specific_data)
-* [Timeline Service v.2 REST API](#Timeline_Service_REST_API_v2)
-    * [Query Flows](#REST_API_LIST_FLOWS)
-    * [Query Flow Runs](#REST_API_LIST_FLOW_RUNS)
-    * [Query Flow Run](#REST_API_LIST_FLOW_RUN)
-    * [Query Apps for a Flow](#REST_API_LIST_FLOW_APPS)
-    * [Query Apps for a Flow Run](#REST_API_LIST_FLOWRUN_APPS)
-    * [Query App](#REST_API_LIST_APP)
-    * [Query Generic Entities](#REST_API_LIST_ENTITIES)
-    * [Query Generic Entity](#REST_API_LIST_ENTITY)
+<!-- MACRO{toc|fromDepth=0|toDepth=2} -->
 
-#<a name="Overview"></a>Overview
+## <a name="Overview"></a>Overview
 
 ### <a name="Introduction"></a>Introduction
 
@@ -128,9 +112,9 @@ analysis
 * Migration and compatibility with v.1
 
 
-#<a name="Deployment"></a>Deployment
+## <a name="Deployment"></a>Deployment
 
-###<a name="Configurations"></a>Configurations
+### <a name="Configurations"></a>Configurations
 
 New configuration parameters that are introduced with v.2 are marked bold.
 
@@ -269,7 +253,7 @@ To write MapReduce framework data to Timeline Service v.2, enable the following 
 </property>
 ```
 
-###<a name="Publishing_of_application_specific_data"></a> Publishing application specific data
+### <a name="Publishing_of_application_specific_data"></a> Publishing application specific data
 
 This section is for YARN application developers that want to integrate with Timeline Service v.2.
 
@@ -402,7 +386,7 @@ You can provide the flow context via YARN application tags:
     appContext.setApplicationTags(tags);
 
 
-# <a name="Timeline_Service_REST_API_v2"></a>Timeline Service v.2 REST API
+## Timeline Service v.2 REST API
 
 Querying Timeline Service v.2 is currently only supported via REST API; there is no API client
 implemented in the YARN libraries.
@@ -430,14 +414,14 @@ Returns a JSON object describing the service instance and version information.
 
 The following shows the supported queries on the REST API.
 
-## <a name="REST_API_LIST_FLOWS"></a>Query Flows
+### <a name="REST_API_LIST_FLOWS"></a>Query Flows
 
 With Query Flows API, you can retrieve a list of active flows that had runs most recently.
 If the REST endpoint without the cluster name is used, the cluster specified by the configuration
 `yarn.resourcemanager.cluster-id` in `yarn-site.xml` is taken. If none of the flows match the
 predicates, an empty list will be returned.
 
-### HTTP request:
+#### HTTP request:
 
     GET /ws/v2/timeline/clusters/{cluster name}/flows/
 
@@ -445,7 +429,7 @@ predicates, an empty list will be returned.
 
     GET /ws/v2/timeline/flows/
 
-### Query Parameters Supported:
+#### Query Parameters Supported:
 
 1. `limit` - If specified, defines the number of flows to return. The maximum possible value for limit
   is maximum value of Long. If it is not specified or has a value less than 0, then limit will be
@@ -462,7 +446,7 @@ predicates, an empty list will be returned.
   "daterange=20150711-" returns flows active on and after 20150711.<br/>
   "daterange=-20150711" returns flows active on and before 20150711.<br/>
 
-### Example JSON Response:
+#### Example JSON Response:
 
     [
       {
@@ -515,14 +499,14 @@ predicates, an empty list will be returned.
       }
     ]
 
-### Response Codes
+#### Response Codes
 
 1. If successful, a HTTP 200 (OK) response is returned.
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
 
 
-## <a name="REST_API_LIST_FLOW_RUNS"></a>Query Flow Runs
+### <a name="REST_API_LIST_FLOW_RUNS"></a>Query Flow Runs
 
 With Query Flow Runs API, you can drill further down to get the runs (specific instances) of a
 given flow. This returns the most recent runs that belong to the given flow. If the REST
@@ -530,7 +514,7 @@ endpoint without the cluster name is used, the cluster specified by the configur
 `yarn.resourcemanager.cluster-id` in `yarn-site.xml` is taken. If none of the flow runs match the
 predicates, an empty list will be returned.
 
-### HTTP request:
+#### HTTP request:
 
     GET /ws/v2/timeline/clusters/{cluster name}/users/{user name}/flows/{flow name}/runs/
 
@@ -538,7 +522,7 @@ predicates, an empty list will be returned.
 
     GET /ws/v2/timeline/users/{user name}/flows/{flow name}/runs/
 
-### Query Parameters Supported:
+#### Query Parameters Supported:
 
 1. `limit` - If specified, defines the number of flows to return. The maximum possible value for limit
   is maximum value of Long. If it is not specified or has a value less than 0, then limit will be
@@ -558,7 +542,7 @@ predicates, an empty list will be returned.
   Other fields will lead to HTTP 400 (Bad Request) response. If not specified, in response, id, type, createdtime and info fields
   will be returned.
 
-### Example JSON Response:
+#### Example JSON Response:
 
     [
       {
@@ -595,21 +579,21 @@ predicates, an empty list will be returned.
       }
     ]
 
-### Response Codes
+#### Response Codes
 
 1. If successful, a HTTP 200 (OK) response is returned.
 1. If any problem occurs in parsing request or if an invalid field is specified in fields query param, HTTP 400 (Bad Request) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
 
 
-## <a name="REST_API_LIST_FLOW_RUN"></a>Query Flow Run
+### <a name="REST_API_LIST_FLOW_RUN"></a>Query Flow Run
 
 With this API, you can query a specific flow run identified by cluster, user, flow name and run id.
 If the REST endpoint without the cluster name is used, the cluster specified by the configuration
 `yarn.resourcemanager.cluster-id` in `yarn-site.xml` is taken. Metrics are returned by default
 while querying individual flow runs.
 
-### HTTP request:
+#### HTTP request:
 
     GET /ws/v2/timeline/clusters/{cluster name}/users/{user name}/flows/{flow name}/runs/{run id}
 
@@ -617,7 +601,7 @@ while querying individual flow runs.
 
     GET /ws/v2/timeline/users/{user name}/flows/{flow name}/runs/{run id}
 
-### Query Parameters Supported:
+#### Query Parameters Supported:
 
 1. `metricstoretrieve` - If specified, defines which metrics to retrieve or which ones not to retrieve and send back in response.
   metricstoretrieve can be an expression of the form :<br/>
@@ -628,7 +612,7 @@ while querying individual flow runs.
   This specifies a comma separated list of metric id prefixes. Only metrics not matching any of the prefixes will be retrieved.<br/>
   Please note that URL unsafe characters such as spaces will have to be suitably encoded.
 
-### Example JSON Response:
+#### Example JSON Response:
 
     {
       "metrics": [
@@ -664,14 +648,14 @@ while querying individual flow runs.
       "relatesto": {}
     }
 
-### Response Codes
+#### Response Codes
 
 1. If successful, a HTTP 200(OK) response is returned.
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. If flow run for the given flow run id cannot be found, HTTP 404 (Not Found) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
 
-## <a name="REST_API_LIST_FLOW_APPS"></a>Query Apps for a flow
+### <a name="REST_API_LIST_FLOW_APPS"></a>Query Apps for a flow
 
 With this API, you can query all the YARN applications that are part of a specific flow. If the
 REST endpoint without the cluster name is used, the cluster specified by the configuration
@@ -679,7 +663,7 @@ REST endpoint without the cluster name is used, the cluster specified by the con
 applications are more than the limit, the most recent apps up to the limit will be returned. If
 none of the apps match the predicates, an empty list will be returned.
 
-### HTTP request:
+#### HTTP request:
 
     GET /ws/v2/timeline/clusters/{cluster name}/users/{user name}/flows/{flow name}/apps
 
@@ -687,7 +671,7 @@ none of the apps match the predicates, an empty list will be returned.
 
     GET /ws/v2/timeline/users/{user name}/flows/{flow name}/apps
 
-### Query Parameters Supported:
+#### Query Parameters Supported:
 
 1. `limit` - If specified, defines the number of applications to return. The maximum possible value for limit
   is maximum value of Long. If it is not specified or has a value less than 0, then limit will be
@@ -761,7 +745,7 @@ none of the apps match the predicates, an empty list will be returned.
   Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
   considered as 1 i.e. latest single value of metric(s) will be returned.
 
-### Example JSON Response:
+#### Example JSON Response:
 
     [
       {
@@ -792,13 +776,13 @@ none of the apps match the predicates, an empty list will be returned.
       }
     ]
 
-### Response Codes
+#### Response Codes
 
 1. If successful, a HTTP 200 (OK) response is returned.
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
 
-## <a name="REST_API_LIST_FLOWRUN_APPS"></a>Query Apps for a flow run
+### <a name="REST_API_LIST_FLOWRUN_APPS"></a>Query Apps for a flow run
 
 With this API, you can query all the YARN applications that are part of a specific flow run. If the
 REST endpoint without the cluster name is used, the cluster specified by the configuration
@@ -806,7 +790,7 @@ REST endpoint without the cluster name is used, the cluster specified by the con
 are more than the limit, the most recent apps up to the limit will be returned. If none of the apps
 match the predicates, an empty list will be returned.
 
-### HTTP request:
+#### HTTP request:
 
     GET /ws/v2/timeline/clusters/{cluster name}/users/{user name}/flows/{flow name}/runs/{run id}/apps
 
@@ -814,7 +798,7 @@ match the predicates, an empty list will be returned.
 
     GET /ws/v2/timeline/users/{user name}/flows/{flow name}/runs/{run id}/apps/
 
-### Query Parameters Supported:
+#### Query Parameters Supported:
 
 1. `limit` - If specified, defines the number of applications to return. The maximum possible value for limit
   is maximum value of Long. If it is not specified or has a value less than 0, then limit will be
@@ -888,7 +872,7 @@ match the predicates, an empty list will be returned.
   Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
   considered as 1 i.e. latest single value of metric(s) will be returned.
 
-### Example JSON Response:
+#### Example JSON Response:
 
     [
       {
@@ -906,14 +890,14 @@ match the predicates, an empty list will be returned.
       }
     ]
 
-### Response Codes
+#### Response Codes
 
 1. If successful, a HTTP 200 (OK) response is returned.
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
 
 
-## <a name="REST_API_LIST_APP"></a>Query app
+### <a name="REST_API_LIST_APP"></a>Query app
 
 With this API, you can query a single YARN application identified by the cluster and the
 application ID. If the REST endpoint without the cluster name is used, the cluster specified by the
@@ -922,7 +906,7 @@ information i.e. user, flow name and run id are not mandatory but if specified i
 preclude the need for an additional operation to fetch flow context information based on cluster
 and app id.
 
-### HTTP request:
+#### HTTP request:
 
     GET /ws/v2/timeline/clusters/{cluster name}/apps/{app id}
 
@@ -930,7 +914,7 @@ and app id.
 
     GET /ws/v2/timeline/apps/{app id}
 
-### Query Parameters Supported:
+#### Query Parameters Supported:
 
 1. `userid` -  If specified, only applications belonging to this user will be returned. This query param must be specified along with flowname and flowrunid query params, otherwise it will be ignored.
   If userid, flowname and flowrunid are not specified, we would have to fetch flow context information based on cluster and appid while executing the query.
@@ -964,7 +948,7 @@ and app id.
   Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
   considered as 1 i.e. latest single value of metric(s) will be returned.
 
-### Example JSON Response:
+#### Example JSON Response:
 
     {
       "metrics": [],
@@ -980,14 +964,14 @@ and app id.
       "relatesto": {}
     }
 
-### Response Codes
+#### Response Codes
 
 1. If successful, a HTTP 200(OK) response is returned.
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. If flow context information cannot be retrieved or application for the given app id cannot be found, HTTP 404 (Not Found) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
 
-## <a name="REST_API_LIST_ENTITIES"></a>Query generic entities
+### <a name="REST_API_LIST_ENTITIES"></a>Query generic entities
 
 With this API, you can query generic entities identified by cluster ID, application ID and
 per-framework entity type. If the REST endpoint without the cluster name is used, the cluster
@@ -1001,7 +985,7 @@ For instance, we can query containers by specifying entity type as `YARN_CONTAIN
 attempts by specifying entity type as `YARN_APPLICATION_ATTEMPT`.
 If none of the entities match the predicates, an empty list will be returned.
 
-### HTTP request:
+#### HTTP request:
 
     GET /ws/v2/timeline/clusters/{cluster name}/apps/{app id}/entities/{entity type}
 
@@ -1009,7 +993,7 @@ If none of the entities match the predicates, an empty list will be returned.
 
     GET /ws/v2/timeline/apps/{app id}/entities/{entity type}
 
-### Query Parameters Supported:
+#### Query Parameters Supported:
 
 1. `userid` -  If specified, only entities belonging to this user will be returned. This query param must be specified along with flowname and flowrunid query params, otherwise it will be ignored.
   If userid, flowname and flowrunid are not specified, we would have to fetch flow context information based on cluster and appid while executing the query.
@@ -1088,7 +1072,7 @@ If none of the entities match the predicates, an empty list will be returned.
   Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
   considered as 1 i.e. latest single value of metric(s) will be returned.
 
-### Example JSON Response:
+#### Example JSON Response:
 
     [
       {
@@ -1119,14 +1103,14 @@ If none of the entities match the predicates, an empty list will be returned.
       }
     ]
 
-### Response Codes
+#### Response Codes
 
 1. If successful, a HTTP 200(OK) response is returned.
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. If flow context information cannot be retrieved, HTTP 404 (Not Found) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
 
-## <a name="REST_API_LIST_ENTITY"></a>Query generic entity
+### <a name="REST_API_LIST_ENTITY"></a>Query generic entity
 
 With this API, you can query a specific generic entity identified by cluster ID, application ID,
 per-framework entity type and entity ID. If the REST endpoint without the cluster name is used, the
@@ -1139,7 +1123,7 @@ a specific YARN container by specifying entity type as `YARN_CONTAINER` and givi
 container ID. Similarly, application attempt can be queried by specifying entity type as
 `YARN_APPLICATION_ATTEMPT` and entity ID being the application attempt ID.
 
-### HTTP request:
+#### HTTP request:
 
     GET /ws/v2/timeline/clusters/{cluster name}/apps/{app id}/entities/{entity type}/{entity id}
 
@@ -1147,7 +1131,7 @@ container ID. Similarly, application attempt can be queried by specifying entity
 
     GET /ws/v2/timeline/apps/{app id}/entities/{entity type}/{entity id}
 
-### Query Parameters Supported:
+#### Query Parameters Supported:
 
 1. `userid` -  If specified, entity must belong to this user. This query param must be specified along with flowname and flowrunid query params, otherwise it will be ignored.
   If userid, flowname and flowrunid are not specified, we would have to fetch flow context information based on cluster and appid while executing the query.
@@ -1181,7 +1165,7 @@ container ID. Similarly, application attempt can be queried by specifying entity
   Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
   considered as 1 i.e. latest single value of metric(s) will be returned.
 
-### Example JSON Response:
+#### Example JSON Response:
 
     {
       "metrics": [ ],
@@ -1197,7 +1181,7 @@ container ID. Similarly, application attempt can be queried by specifying entity
       "relatesto": { }
     }
 
-### Response Codes
+#### Response Codes
 
 1. If successful, a HTTP 200 (OK) response is returned.
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.

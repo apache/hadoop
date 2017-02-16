@@ -15,13 +15,7 @@
 NodeManager
 ===========
 
-* [Overview](#Overview)
-* [Health Checker Service](#Health_checker_service)
-    * [Disk Checker](#Disk_Checker)
-    * [External Health Script](#External_Health_Script)
-* [NodeManager Restart](#NodeManager_Restart)
-    * [Introduction](#Introduction)
-    * [Enabling NM Restart](#Enabling_NM_Restart)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------
