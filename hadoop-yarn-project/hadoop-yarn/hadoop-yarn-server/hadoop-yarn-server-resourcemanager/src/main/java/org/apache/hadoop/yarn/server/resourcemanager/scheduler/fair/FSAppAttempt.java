@@ -83,8 +83,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   private Resource fairShare = Resources.createResource(0, 0);
 
   // Preemption related variables
+  private final Object preemptionVariablesLock = new Object();
   private final Resource preemptedResources = Resources.clone(Resources.none());
   private final Set<RMContainer> containersToPreempt = new HashSet<>();
+
   private Resource fairshareStarvation = Resources.none();
   private long lastTimeAtFairShare;
   private long nextStarvationCheck;
@@ -552,29 +554,29 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   }
 
   void trackContainerForPreemption(RMContainer container) {
-    if (containersToPreempt.add(container)) {
-      synchronized (preemptedResources) {
+    synchronized (preemptionVariablesLock) {
+      if (containersToPreempt.add(container)) {
         Resources.addTo(preemptedResources, container.getAllocatedResource());
       }
     }
   }
 
   private void untrackContainerForPreemption(RMContainer container) {
-    if (containersToPreempt.remove(container)) {
-      synchronized (preemptedResources) {
+    synchronized (preemptionVariablesLock) {
+      if (containersToPreempt.remove(container)) {
         Resources.subtractFrom(preemptedResources,
             container.getAllocatedResource());
       }
     }
   }
 
-  Set<RMContainer> getPreemptionContainers() {
-    return containersToPreempt;
-  }
-
-  private Resource getPreemptedResources() {
-    synchronized (preemptedResources) {
-      return preemptedResources;
+  Set<ContainerId> getPreemptionContainerIds() {
+    synchronized (preemptionVariablesLock) {
+      Set<ContainerId> preemptionContainerIds = new HashSet<>();
+      for (RMContainer container : containersToPreempt) {
+        preemptionContainerIds.add(container.getContainerId());
+      }
+      return preemptionContainerIds;
     }
   }
 
@@ -591,9 +593,11 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       return false;
     }
 
-    if (containersToPreempt.contains(container)) {
-      // The container is already under consideration for preemption
-      return false;
+    synchronized (preemptionVariablesLock) {
+      if (containersToPreempt.contains(container)) {
+        // The container is already under consideration for preemption
+        return false;
+      }
     }
 
     // Check if the app's allocation will be over its fairshare even
@@ -969,7 +973,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
             if (LOG.isTraceEnabled()) {
               LOG.trace("Assign container on " + node.getNodeName()
                   + " node, assignType: OFF_SWITCH" + ", allowedLocality: "
-                  + allowedLocality + ", priority: " + schedulerKey.getPriority()
+                  + allowedLocality + ", priority: "
+                  + schedulerKey.getPriority()
                   + ", app attempt id: " + this.attemptId);
             }
             return assignContainer(node, offswitchAsk, NodeType.OFF_SWITCH,
@@ -1226,13 +1231,13 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   @Override
   public Resource getResourceUsage() {
-    /*
-     * getResourcesToPreempt() returns zero, except when there are containers
-     * to preempt. Avoid creating an object in the common case.
-     */
-    return getPreemptedResources().equals(Resources.none())
-        ? getCurrentConsumption()
-        : Resources.subtract(getCurrentConsumption(), getPreemptedResources());
+    // Subtract copies the object, so that we have a snapshot,
+    // in case usage changes, while the caller is using the value
+    synchronized (preemptionVariablesLock) {
+      return containersToPreempt.isEmpty()
+          ? getCurrentConsumption()
+          : Resources.subtract(getCurrentConsumption(), preemptedResources);
+    }
   }
 
   @Override
