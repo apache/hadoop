@@ -182,6 +182,24 @@ public class Resources {
     return subtractFrom(clone(lhs), rhs);
   }
 
+  /**
+   * Subtract <code>rhs</code> from <code>lhs</code> and reset any negative
+   * values to zero.
+   * @param lhs {@link Resource} to subtract from
+   * @param rhs {@link Resource} to subtract
+   * @return the value of lhs after subtraction
+   */
+  public static Resource subtractFromNonNegative(Resource lhs, Resource rhs) {
+    subtractFrom(lhs, rhs);
+    if (lhs.getMemorySize() < 0) {
+      lhs.setMemorySize(0);
+    }
+    if (lhs.getVirtualCores() < 0) {
+      lhs.setVirtualCores(0);
+    }
+    return lhs;
+  }
+
   public static Resource negate(Resource resource) {
     return subtract(NONE, resource);
   }
