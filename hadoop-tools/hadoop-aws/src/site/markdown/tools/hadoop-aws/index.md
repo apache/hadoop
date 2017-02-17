@@ -999,7 +999,7 @@ This is because the property values are kept in these files, and cannot be
 dynamically patched.
 
 Instead, callers need to create different configuration files for each
-bucket, setting the base secrets (`fs.s3a.bucket.nightly.access.key`, etc),
+bucket, setting the base secrets (`fs.s3a.access.key`, etc),
 then declare the path to the appropriate credential file in
 a bucket-specific version of the property `fs.s3a.security.credential.provider.path`.
 
@@ -1073,7 +1073,7 @@ declaration. For example:
 ### <a name="s3a_fast_upload"></a>Stabilizing: S3A Fast Upload
 
 
-**New in Hadoop 2.7; significantly enhanced in Hadoop 2.9**
+**New in Hadoop 2.7; significantly enhanced in Hadoop 2.8**
 
 
 Because of the nature of the S3 object store, data written to an S3A `OutputStream`
@@ -1233,8 +1233,18 @@ consumed, and so eliminates heap size as the limiting factor in queued uploads
   <value>disk</value>
 </property>
 
+<property>
+  <name>fs.s3a.buffer.dir</name>
+  <value></value>
+  <description>Comma separated list of temporary directories use for
+  storing blocks of data prior to their being uploaded to S3.
+  When unset, the Hadoop temporary directory hadoop.tmp.dir is used</description>
+</property>
+
 ```
 
+This is the default buffer mechanism. The amount of data which can
+be buffered is limited by the amount of available disk space.
 
 #### <a name="s3a_fast_upload_bytebuffer"></a>Fast Upload with ByteBuffers: `fs.s3a.fast.upload.buffer=bytebuffer`
 
@@ -1248,7 +1258,7 @@ The amount of data which can be buffered is
 limited by the Java runtime, the operating system, and, for YARN applications,
 the amount of memory requested for each container.
 
-The slower the write bandwidth to S3, the greater the risk of running out
+The slower the upload bandwidth to S3, the greater the risk of running out
 of memory —and so the more care is needed in
 [tuning the upload settings](#s3a_fast_upload_thread_tuning).
 
