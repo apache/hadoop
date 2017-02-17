@@ -61,6 +61,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_TREAT_SUBJECT_EXTERNAL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL;
@@ -1020,8 +1021,7 @@ public class TestUserGroupInformation {
     assertTrue(credsugiTokens.contains(token2));
   }
 
-  @Test
-  public void testCheckTGTAfterLoginFromSubject() throws Exception {
+  private void testCheckTGTAfterLoginFromSubjectHelper() throws Exception {
     // security on, default is remove default realm
     SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
     UserGroupInformation.setConfiguration(conf);
@@ -1031,6 +1031,7 @@ public class TestUserGroupInformation {
     KeyTab keytab = KeyTab.getInstance();
     subject.getPrivateCredentials().add(keytab);
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+
     ugi.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws IOException {
@@ -1040,6 +1041,17 @@ public class TestUserGroupInformation {
         return null;
       }
     });
+  }
+
+  @Test(expected = KerberosAuthException.class)
+  public void testCheckTGTAfterLoginFromSubject() throws Exception {
+    testCheckTGTAfterLoginFromSubjectHelper();
+  }
+
+  @Test
+  public void testCheckTGTAfterLoginFromSubjectFix() throws Exception {
+    conf.setBoolean(HADOOP_TREAT_SUBJECT_EXTERNAL_KEY, true);
+    testCheckTGTAfterLoginFromSubjectHelper();
   }
 
   @Test

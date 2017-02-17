@@ -75,6 +75,7 @@ public class TestUGIWithMiniKdc {
     SecurityUtil.setAuthenticationMethod(
         UserGroupInformation.AuthenticationMethod.KERBEROS, conf);
     UserGroupInformation.setConfiguration(conf);
+    UserGroupInformation.setEnableRenewThreadCreationForTest(true);
 
     LoginContext loginContext = null;
     try {
