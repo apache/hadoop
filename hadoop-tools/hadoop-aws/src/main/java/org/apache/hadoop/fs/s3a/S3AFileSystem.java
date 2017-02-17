@@ -2142,6 +2142,7 @@ public class S3AFileSystem extends FileSystem {
    * {@inheritDoc}
    */
   @Override
+  @SuppressWarnings("deprecation")
   public boolean isDirectory(Path f) throws IOException {
     incrementStatistic(INVOCATION_IS_DIRECTORY);
     return super.isDirectory(f);
@@ -2152,6 +2153,7 @@ public class S3AFileSystem extends FileSystem {
    * {@inheritDoc}
    */
   @Override
+  @SuppressWarnings("deprecation")
   public boolean isFile(Path f) throws IOException {
     incrementStatistic(INVOCATION_IS_FILE);
     return super.isFile(f);
