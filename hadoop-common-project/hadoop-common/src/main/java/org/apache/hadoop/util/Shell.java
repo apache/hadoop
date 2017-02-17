@@ -950,6 +950,9 @@ public abstract class Shell {
           // so only log a WARN if the command didn't time out
           if (!isTimedOut()) {
             LOG.warn("Error reading the error stream", ioe);
+          } else {
+            LOG.debug("Error reading the error stream due to shell "
+                + "command timeout", ioe);
           }
         }
       }

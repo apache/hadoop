@@ -258,7 +258,7 @@ public class ShellBasedUnixGroupsMapping extends Configured
    * @param errMessage error message from the shell command
    * @param groupNames the incomplete list of group names
    * @return a list of resolved group names
-   * @throws PartialGroupNameException
+   * @throws PartialGroupNameException if the resolution fails or times out
    */
   private List<String> resolvePartialGroupNames(String userName,
       String errMessage, String groupNames) throws PartialGroupNameException {
@@ -277,24 +277,24 @@ public class ShellBasedUnixGroupsMapping extends Configured
       LOG.warn("Some group names for '{}' are not resolvable. {}",
           userName, errMessage);
       // attempt to partially resolve group names
-      ShellCommandExecutor exec2 = createGroupIDExecutor(userName);
+      ShellCommandExecutor partialResolver = createGroupIDExecutor(userName);
       try {
-        exec2.execute();
-        return parsePartialGroupNames(groupNames, exec2.getOutput());
+        partialResolver.execute();
+        return parsePartialGroupNames(
+            groupNames, partialResolver.getOutput());
       } catch (ExitCodeException ece) {
         // If exception is thrown trying to get group id list,
         // something is terribly wrong, so give up.
-        throw new PartialGroupNameException("failed to get group id list for " +
-        "user '" + userName + "'", ece);
+        throw new PartialGroupNameException(
+            "failed to get group id list for user '" + userName + "'", ece);
       } catch (IOException ioe) {
         String message =
             "Can't execute the shell command to " +
             "get the list of group id for user '" + userName + "'";
-        if (exec2.isTimedOut()) {
+        if (partialResolver.isTimedOut()) {
           message +=
               " because of the command taking longer than " +
               "the configured timeout: " + timeout + " seconds";
-          throw new PartialGroupNameException(message);
         }
         throw new PartialGroupNameException(message, ioe);
       }

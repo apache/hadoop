@@ -45,9 +45,6 @@ public class TestShellBasedUnixGroupsMapping {
       GenericTestUtils.LogCapturer.captureLogs(
           ShellBasedUnixGroupsMapping.LOG);
 
-  private static final boolean WINDOWS =
-      (Shell.osType == Shell.OSType.OS_TYPE_WIN);
-
   private class TestGroupUserNotExist
       extends ShellBasedUnixGroupsMapping {
     /**
@@ -234,7 +231,7 @@ public class TestShellBasedUnixGroupsMapping {
     @Override
     protected String[] getGroupsForUserCommand(String userName) {
       // Sleeps 2 seconds when executed and writes no output
-      if (WINDOWS) {
+      if (Shell.WINDOWS) {
         return new String[]{"timeout", timeoutSecs.toString()};
       }
       return new String[]{"sleep", timeoutSecs.toString()};
