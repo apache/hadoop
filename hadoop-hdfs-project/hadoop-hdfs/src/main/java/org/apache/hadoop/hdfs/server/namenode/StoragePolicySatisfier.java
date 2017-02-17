@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -151,19 +150,8 @@ public class StoragePolicySatisfier implements Runnable {
 
   // Return true if a Mover instance is running
   private boolean checkIfMoverRunning() {
-    boolean ret = false;
-    try {
-      String moverId = HdfsServerConstants.MOVER_ID_PATH.toString();
-      INode inode = namesystem.getFSDirectory().getINode(
-          moverId, FSDirectory.DirOp.READ);
-      if (inode != null) {
-        ret = true;
-      }
-    } catch (IOException e) {
-      LOG.info("StoragePolicySatisfier is enabled as no Mover ID file found.");
-      ret = false;
-    }
-    return ret;
+    String moverId = HdfsServerConstants.MOVER_ID_PATH.toString();
+    return namesystem.isFileOpenedForWrite(moverId);
   }
 
   @Override
@@ -177,7 +165,8 @@ public class StoragePolicySatisfier implements Runnable {
         this.storageMovementsMonitor.stop();
         LOG.error(
             "Stopping StoragePolicySatisfier thread " + "as Mover ID file "
-                + HdfsServerConstants.MOVER_ID_PATH.toString() + " exists");
+                + HdfsServerConstants.MOVER_ID_PATH.toString()
+                + " been opened. Maybe a Mover instance is running!");
         return;
       }
     }

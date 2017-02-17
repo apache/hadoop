@@ -3564,7 +3564,22 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   BlockInfo getStoredBlock(Block block) {
     return blockManager.getStoredBlock(block);
   }
-  
+
+  @Override
+  public boolean isFileOpenedForWrite(String path) {
+    readLock();
+    try {
+      INode inode = dir.getINode(path, FSDirectory.DirOp.READ);
+      INodeFile iNodeFile = INodeFile.valueOf(inode, path);
+      LeaseManager.Lease lease = leaseManager.getLease(iNodeFile);
+      return lease != null;
+    } catch (IOException e) {
+      return false;
+    } finally {
+      readUnlock();
+    }
+  }
+
   @Override
   public boolean isInSnapshot(long blockCollectionID) {
     assert hasReadLock();

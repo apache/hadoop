@@ -45,4 +45,11 @@ public interface Namesystem extends RwLock, SafeMode {
    *         middle of the starting active services.
    */
   boolean inTransitionToActive();
+
+  /**
+   * Check if file is been opened for write purpose.
+   * @param filePath
+   * @return true if valid write lease exists, otherwise return false.
+   */
+  boolean isFileOpenedForWrite(String filePath);
 }

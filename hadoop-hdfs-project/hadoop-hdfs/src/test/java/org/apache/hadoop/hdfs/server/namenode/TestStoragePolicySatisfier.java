@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -97,27 +98,31 @@ public class TestStoragePolicySatisfier {
 
     try {
       createCluster();
-      // Change policy to COLD
-      dfs.setStoragePolicy(new Path(file), COLD);
-      FSNamesystem namesystem = hdfsCluster.getNamesystem();
-      INode inode = namesystem.getFSDirectory().getINode(file);
-
-      StorageType[][] newtypes =
-          new StorageType[][]{{StorageType.ARCHIVE, StorageType.ARCHIVE},
-              {StorageType.ARCHIVE, StorageType.ARCHIVE},
-              {StorageType.ARCHIVE, StorageType.ARCHIVE}};
-      startAdditionalDNs(config, 3, numOfDatanodes, newtypes,
-          storagesPerDatanode, capacity, hdfsCluster);
-
-      namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
-
-      hdfsCluster.triggerHeartbeats();
-      // Wait till namenode notified about the block location details
-      DFSTestUtil.waitExpectedStorageType(
-          file, StorageType.ARCHIVE, 3, 30000, dfs);
+      doTestWhenStoragePolicySetToCOLD();
     } finally {
       shutdownCluster();
     }
+  }
+
+  private void doTestWhenStoragePolicySetToCOLD() throws Exception {
+    // Change policy to COLD
+    dfs.setStoragePolicy(new Path(file), COLD);
+    FSNamesystem namesystem = hdfsCluster.getNamesystem();
+    INode inode = namesystem.getFSDirectory().getINode(file);
+
+    StorageType[][] newtypes =
+        new StorageType[][]{{StorageType.ARCHIVE, StorageType.ARCHIVE},
+            {StorageType.ARCHIVE, StorageType.ARCHIVE},
+            {StorageType.ARCHIVE, StorageType.ARCHIVE}};
+    startAdditionalDNs(config, 3, numOfDatanodes, newtypes,
+        storagesPerDatanode, capacity, hdfsCluster);
+
+    namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+
+    hdfsCluster.triggerHeartbeats();
+    // Wait till namenode notified about the block location details
+    DFSTestUtil.waitExpectedStorageType(
+        file, StorageType.ARCHIVE, 3, 30000, dfs);
   }
 
   @Test(timeout = 300000)
@@ -500,19 +505,78 @@ public class TestStoragePolicySatisfier {
    */
   @Test(timeout = 300000)
   public void testWhenMoverIsAlreadyRunningBeforeStoragePolicySatisfier()
+      throws Exception {
+    boolean running;
+    FSDataOutputStream out = null;
+    try {
+      createCluster();
+      // Stop SPS
+      hdfsCluster.getNameNode().reconfigurePropertyImpl(
+          DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY, "false");
+      running = hdfsCluster.getFileSystem()
+          .getClient().isStoragePolicySatisfierRunning();
+      Assert.assertFalse("SPS should stopped as configured.", running);
+
+      // Simulate the case by creating MOVER_ID file
+      out = hdfsCluster.getFileSystem().create(
+          HdfsServerConstants.MOVER_ID_PATH);
+
+      // Restart SPS
+      hdfsCluster.getNameNode().reconfigurePropertyImpl(
+          DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY, "true");
+
+      running = hdfsCluster.getFileSystem()
+          .getClient().isStoragePolicySatisfierRunning();
+      Assert.assertFalse("SPS should not be able to run as file "
+          + HdfsServerConstants.MOVER_ID_PATH + " is being hold.", running);
+
+      // Simulate Mover exists
+      out.close();
+      out = null;
+      hdfsCluster.getFileSystem().delete(
+          HdfsServerConstants.MOVER_ID_PATH, true);
+
+      // Restart SPS again
+      hdfsCluster.getNameNode().reconfigurePropertyImpl(
+          DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY, "true");
+      running = hdfsCluster.getFileSystem()
+          .getClient().isStoragePolicySatisfierRunning();
+      Assert.assertTrue("SPS should be running as "
+          + "Mover already exited", running);
+
+      // Check functionality after SPS restart
+      doTestWhenStoragePolicySetToCOLD();
+    } catch (ReconfigurationException e) {
+      throw new IOException("Exception when reconfigure "
+          + DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ACTIVATE_KEY, e);
+    } finally {
+      if (out != null) {
+        out.close();
+      }
+      hdfsCluster.shutdown();
+    }
+  }
+
+  /**
+   * Tests to verify that SPS should be able to start when the Mover ID file
+   * is not being hold by a Mover. This can be the case when Mover exits
+   * ungracefully without deleting the ID file from HDFS.
+   */
+  @Test(timeout = 300000)
+  public void testWhenMoverExitsWithoutDeleteMoverIDFile()
       throws IOException {
     try {
       createCluster();
-      // Simulate Mover by creating MOVER_ID file
+      // Simulate the case by creating MOVER_ID file
       DFSTestUtil.createFile(hdfsCluster.getFileSystem(),
           HdfsServerConstants.MOVER_ID_PATH, 0, (short) 1, 0);
       hdfsCluster.restartNameNode(true);
       boolean running = hdfsCluster.getFileSystem()
           .getClient().isStoragePolicySatisfierRunning();
-      Assert.assertFalse("SPS should not start "
-          + "when a Mover instance is running", running);
+      Assert.assertTrue("SPS should be running as "
+          + "no Mover really running", running);
     } finally {
-      shutdownCluster();
+      hdfsCluster.shutdown();
     }
   }
 
