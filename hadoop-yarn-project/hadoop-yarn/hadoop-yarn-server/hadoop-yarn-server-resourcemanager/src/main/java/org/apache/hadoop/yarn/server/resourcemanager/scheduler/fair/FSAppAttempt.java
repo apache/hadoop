@@ -602,12 +602,11 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
     // Check if the app's allocation will be over its fairshare even
     // after preempting this container
-    Resource currentUsage = getResourceUsage();
-    Resource fairshare = getFairShare();
-    Resource overFairShareBy = Resources.subtract(currentUsage, fairshare);
+    Resource usageAfterPreemption = Resources.subtract(
+        getResourceUsage(), container.getAllocatedResource());
 
-    return (Resources.fitsIn(container.getAllocatedResource(),
-        overFairShareBy));
+    return !Resources.lessThan(fsQueue.getPolicy().getResourceCalculator(),
+        scheduler.getClusterResource(), usageAfterPreemption, getFairShare());
   }
 
   /**
