@@ -42,7 +42,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
-import org.apache.hadoop.yarn.client.api.TimelineClient;
+import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
@@ -328,7 +328,8 @@ extends AMRMClientAsync<T> {
           AllocateResponse response = (AllocateResponse) object;
 
           String collectorAddress = response.getCollectorAddr();
-          TimelineClient timelineClient = client.getRegisteredTimeineClient();
+          TimelineV2Client timelineClient =
+              client.getRegisteredTimelineV2Client();
           if (timelineClient != null && collectorAddress != null
               && !collectorAddress.isEmpty()) {
             if (collectorAddr == null
