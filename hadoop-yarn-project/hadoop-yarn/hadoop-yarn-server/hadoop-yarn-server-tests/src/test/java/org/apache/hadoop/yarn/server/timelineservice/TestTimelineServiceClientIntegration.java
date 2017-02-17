@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.QueueEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.UserEntity;
-import org.apache.hadoop.yarn.client.api.TimelineClient;
+import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
@@ -96,8 +96,8 @@ public class TestTimelineServiceClientIntegration {
 
   @Test
   public void testPutEntities() throws Exception {
-    TimelineClient client =
-        TimelineClient.createTimelineClient(ApplicationId.newInstance(0, 1));
+    TimelineV2Client client =
+        TimelineV2Client.createTimelineClient(ApplicationId.newInstance(0, 1));
     try {
       // set the timeline service address manually
       client.setTimelineServiceAddress(
@@ -123,8 +123,8 @@ public class TestTimelineServiceClientIntegration {
   @Test
   public void testPutExtendedEntities() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
-    TimelineClient client =
-        TimelineClient.createTimelineClient(appId);
+    TimelineV2Client client =
+        TimelineV2Client.createTimelineClient(appId);
     try {
       // set the timeline service address manually
       client.setTimelineServiceAddress(

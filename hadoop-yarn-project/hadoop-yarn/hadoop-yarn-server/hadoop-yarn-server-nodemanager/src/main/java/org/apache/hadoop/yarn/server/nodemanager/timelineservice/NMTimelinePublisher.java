@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
-import org.apache.hadoop.yarn.client.api.TimelineClient;
+import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -77,7 +77,7 @@ public class NMTimelinePublisher extends CompositeService {
 
   private String httpAddress;
 
-  private final Map<ApplicationId, TimelineClient> appToClientMap;
+  private final Map<ApplicationId, TimelineV2Client> appToClientMap;
 
   public NMTimelinePublisher(Context context) {
     super(NMTimelinePublisher.class.getName());
@@ -103,7 +103,7 @@ public class NMTimelinePublisher extends CompositeService {
   }
 
   @VisibleForTesting
-  Map<ApplicationId, TimelineClient> getAppToClientMap() {
+  Map<ApplicationId, TimelineV2Client> getAppToClientMap() {
     return appToClientMap;
   }
 
@@ -148,7 +148,7 @@ public class NMTimelinePublisher extends CompositeService {
       try {
         // no need to put it as part of publisher as timeline client already has
         // Queuing concept
-        TimelineClient timelineClient = getTimelineClient(appId);
+        TimelineV2Client timelineClient = getTimelineClient(appId);
         if (timelineClient != null) {
           timelineClient.putEntitiesAsync(entity);
         } else {
@@ -242,7 +242,7 @@ public class NMTimelinePublisher extends CompositeService {
     try {
       // no need to put it as part of publisher as timeline client already has
       // Queuing concept
-      TimelineClient timelineClient = getTimelineClient(appId);
+      TimelineV2Client timelineClient = getTimelineClient(appId);
       if (timelineClient != null) {
         timelineClient.putEntitiesAsync(entity);
       } else {
@@ -273,7 +273,7 @@ public class NMTimelinePublisher extends CompositeService {
         LOG.debug("Publishing the entity " + entity + ", JSON-style content: "
             + TimelineUtils.dumpTimelineRecordtoJSON(entity));
       }
-      TimelineClient timelineClient = getTimelineClient(appId);
+      TimelineV2Client timelineClient = getTimelineClient(appId);
       if (timelineClient != null) {
         timelineClient.putEntities(entity);
       } else {
@@ -390,8 +390,8 @@ public class NMTimelinePublisher extends CompositeService {
 
   public void createTimelineClient(ApplicationId appId) {
     if (!appToClientMap.containsKey(appId)) {
-      TimelineClient timelineClient =
-          TimelineClient.createTimelineClient(appId);
+      TimelineV2Client timelineClient =
+          TimelineV2Client.createTimelineClient(appId);
       timelineClient.init(getConfig());
       timelineClient.start();
       appToClientMap.put(appId, timelineClient);
@@ -399,7 +399,7 @@ public class NMTimelinePublisher extends CompositeService {
   }
 
   public void stopTimelineClient(ApplicationId appId) {
-    TimelineClient client = appToClientMap.remove(appId);
+    TimelineV2Client client = appToClientMap.remove(appId);
     if (client != null) {
       client.stop();
     }
@@ -407,13 +407,13 @@ public class NMTimelinePublisher extends CompositeService {
 
   public void setTimelineServiceAddress(ApplicationId appId,
       String collectorAddr) {
-    TimelineClient client = appToClientMap.get(appId);
+    TimelineV2Client client = appToClientMap.get(appId);
     if (client != null) {
       client.setTimelineServiceAddress(collectorAddr);
     }
   }
 
-  private TimelineClient getTimelineClient(ApplicationId appId) {
+  private TimelineV2Client getTimelineClient(ApplicationId appId) {
     return appToClientMap.get(appId);
   }
 }
