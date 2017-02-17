@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ClusterNodeTracker;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
@@ -92,7 +93,7 @@ public abstract class SchedulingPolicy {
     return getInstance(clazz);
   }
   
-  public void initialize(Resource clusterCapacity) {}
+  public void initialize(ClusterNodeTracker clusterNodeTracker) {}
 
   /**
    * The {@link ResourceCalculator} returned by this method should be used

@@ -1452,8 +1452,7 @@ public class FairScheduler extends
         } else {
           allocConf = queueInfo;
           setQueueAcls(allocConf.getQueueAcls());
-          allocConf.getDefaultSchedulingPolicy().initialize(
-              getClusterResource());
+          allocConf.getDefaultSchedulingPolicy().initialize(getNodeTracker());
           queueMgr.updateAllocationConfiguration(allocConf);
           applyChildDefaults();
           maxRunningEnforcer.updateRunnabilityOnReload();

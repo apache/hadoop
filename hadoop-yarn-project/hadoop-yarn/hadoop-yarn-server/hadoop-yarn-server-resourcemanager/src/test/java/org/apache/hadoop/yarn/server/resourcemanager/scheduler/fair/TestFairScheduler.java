@@ -3308,7 +3308,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSAppAttempt app2 = scheduler.getSchedulerApp(appAttId2);
 
     DominantResourceFairnessPolicy drfPolicy = new DominantResourceFairnessPolicy();
-    drfPolicy.initialize(scheduler.getClusterResource());
+    drfPolicy.initialize(scheduler.getNodeTracker());
     scheduler.getQueueManager().getQueue("queue1").setPolicy(drfPolicy);
     scheduler.update();
 
@@ -3354,7 +3354,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSAppAttempt app3 = scheduler.getSchedulerApp(appAttId3);
     
     DominantResourceFairnessPolicy drfPolicy = new DominantResourceFairnessPolicy();
-    drfPolicy.initialize(scheduler.getClusterResource());
+    drfPolicy.initialize(scheduler.getNodeTracker());
     scheduler.getQueueManager().getQueue("root").setPolicy(drfPolicy);
     scheduler.getQueueManager().getQueue("queue1").setPolicy(drfPolicy);
     scheduler.update();
@@ -3369,7 +3369,48 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.handle(updateEvent);
     Assert.assertEquals(1, app2.getLiveContainers().size());
   }
-  
+
+  @Test
+  public void testDRFWithClusterResourceChanges() throws Exception {
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    RMNode node = MockNodes.newNodeInfo(1, BuilderUtils.newResource(8 * GB, 5));
+    NodeAddedSchedulerEvent nodeEvent = new NodeAddedSchedulerEvent(node);
+    scheduler.handle(nodeEvent);
+
+    ApplicationAttemptId appAttId1 =
+        createSchedulingRequest(4 * GB, 1, "queue1", "user1", 1);
+    FSAppAttempt app1 = scheduler.getSchedulerApp(appAttId1);
+    ApplicationAttemptId appAttId2 =
+        createSchedulingRequest(2 * GB, 2, "queue1", "user1", 1);
+    FSAppAttempt app2 = scheduler.getSchedulerApp(appAttId2);
+
+    DominantResourceFairnessPolicy drfPolicy =
+        new DominantResourceFairnessPolicy();
+    drfPolicy.initialize(scheduler.getNodeTracker());
+
+    // assign containers
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node);
+    scheduler.handle(updateEvent);
+    scheduler.handle(updateEvent);
+
+    // app1 has share weights [1/2, 1/5], app2 has share weights [1/4, 2/5],
+    // app1 > app2 since 1/2 > 2/5
+    assertTrue(drfPolicy.getComparator().compare(app1, app2) > 0);
+
+    // add one node to the cluster, compare two apps again
+    RMNode node2 = MockNodes.newNodeInfo(1,
+        BuilderUtils.newResource(8 * GB, 1));
+    scheduler.handle(new NodeAddedSchedulerEvent(node2));
+
+    // share weights have changed because of cluster resource change.
+    // app1 has share weights [1/4, 1/6], app2 has share weights [1/8, 1/3]
+    // app1 < app2 since 1/4 < 1/3
+    assertTrue(drfPolicy.getComparator().compare(app1, app2) < 0);
+  }
+
   @Test
   public void testDRFHierarchicalQueues() throws Exception {
     scheduler.init(conf);
@@ -3399,7 +3440,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSAppAttempt app4 = scheduler.getSchedulerApp(appAttId4);
     
     DominantResourceFairnessPolicy drfPolicy = new DominantResourceFairnessPolicy();
-    drfPolicy.initialize(scheduler.getClusterResource());
+    drfPolicy.initialize(scheduler.getNodeTracker());
     scheduler.getQueueManager().getQueue("root").setPolicy(drfPolicy);
     scheduler.getQueueManager().getQueue("queue1").setPolicy(drfPolicy);
     scheduler.getQueueManager().getQueue("queue1.subqueue1").setPolicy(drfPolicy);
