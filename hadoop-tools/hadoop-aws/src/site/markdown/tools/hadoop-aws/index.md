@@ -2313,7 +2313,7 @@ like `ITestS3A*` shown above, it may cause unpredictable test failures.
 ### Testing against different regions
 
 S3A can connect to different regions —the tests support this. Simply
-define the target region in `contract-tests.xml` or any `auth-keys.xml`
+define the target region in `contract-test-options.xml` or any `auth-keys.xml`
 file referenced.
 
 ```xml
