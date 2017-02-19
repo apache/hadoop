@@ -103,6 +103,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * A scheduler that schedules resources between a set of queues. The scheduler
@@ -831,8 +832,9 @@ public class FairScheduler extends
     // Release containers
     releaseContainers(release, application);
 
+    ReentrantReadWriteLock.WriteLock lock = application.getWriteLock();
+    lock.lock();
     try {
-      application.getWriteLock().lock();
       if (!ask.isEmpty()) {
         if (LOG.isDebugEnabled()) {
           LOG.debug(
@@ -847,22 +849,19 @@ public class FairScheduler extends
         application.showRequests();
       }
     } finally {
-      application.getWriteLock().unlock();
+      lock.unlock();
     }
 
+    Set<ContainerId> preemptionContainerIds =
+        application.getPreemptionContainerIds();
     if (LOG.isDebugEnabled()) {
       LOG.debug(
           "allocate: post-update" + " applicationAttemptId=" + appAttemptId
               + " #ask=" + ask.size() + " reservation= " + application
               .getCurrentReservation());
 
-      LOG.debug("Preempting " + application.getPreemptionContainers().size()
+      LOG.debug("Preempting " + preemptionContainerIds.size()
           + " container(s)");
-    }
-
-    Set<ContainerId> preemptionContainerIds = new HashSet<ContainerId>();
-    for (RMContainer container : application.getPreemptionContainers()) {
-      preemptionContainerIds.add(container.getContainerId());
     }
 
     application.updateBlacklist(blacklistAdditions, blacklistRemovals);

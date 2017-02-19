@@ -392,10 +392,11 @@ public class AppController extends Controller implements AMParams {
    */
   boolean checkAccess(Job job) {
     String remoteUser = request().getRemoteUser();
-    UserGroupInformation callerUGI = null;
-    if (remoteUser != null) {
-      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+    if (remoteUser == null) {
+      return false;
     }
+    UserGroupInformation callerUGI =
+        UserGroupInformation.createRemoteUser(remoteUser);
     if (callerUGI != null && !job.checkAccess(callerUGI, JobACL.VIEW_JOB)) {
       return false;
     }

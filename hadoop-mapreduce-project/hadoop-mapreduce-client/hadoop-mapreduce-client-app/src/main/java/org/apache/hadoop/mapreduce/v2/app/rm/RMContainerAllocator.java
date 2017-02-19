@@ -882,8 +882,8 @@ public class RMContainerAllocator extends RMContainerRequestor
     MRAppMaster.RunningAppContext appContext =
         (MRAppMaster.RunningAppContext)this.getContext();
     if (collectorAddr != null && !collectorAddr.isEmpty()
-        && appContext.getTimelineClient() != null) {
-      appContext.getTimelineClient().setTimelineServiceAddress(
+        && appContext.getTimelineV2Client() != null) {
+      appContext.getTimelineV2Client().setTimelineServiceAddress(
           response.getCollectorAddr());
     }
 

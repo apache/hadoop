@@ -141,7 +141,7 @@ public class YarnClientImpl extends YarnClient {
   Text timelineService;
   @VisibleForTesting
   String timelineDTRenewer;
-  protected boolean timelineServiceEnabled;
+  private boolean timelineV1ServiceEnabled;
   protected boolean timelineServiceBestEffort;
 
   private static final String ROOT = "root";
@@ -167,9 +167,14 @@ public class YarnClientImpl extends YarnClient {
         YarnConfiguration.DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS);
     }
 
+    float timelineServiceVersion =
+        conf.getFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION,
+            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_VERSION);
     if (conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
-        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)) {
-      timelineServiceEnabled = true;
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)
+        && ((Float.compare(timelineServiceVersion, 1.0f) == 0)
+            || (Float.compare(timelineServiceVersion, 1.5f) == 0))) {
+      timelineV1ServiceEnabled = true;
       timelineDTRenewer = getTimelineDelegationTokenRenewer(conf);
       timelineService = TimelineUtils.buildTimelineTokenService(conf);
     }
@@ -178,7 +183,7 @@ public class YarnClientImpl extends YarnClient {
     // TimelineServer which means we are able to get history information
     // for applications/applicationAttempts/containers by using ahsClient
     // when the TimelineServer is running.
-    if (timelineServiceEnabled || conf.getBoolean(
+    if (timelineV1ServiceEnabled || conf.getBoolean(
         YarnConfiguration.APPLICATION_HISTORY_ENABLED,
         YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED)) {
       historyServiceEnabled = true;
@@ -257,7 +262,7 @@ public class YarnClientImpl extends YarnClient {
 
     // Automatically add the timeline DT into the CLC
     // Only when the security and the timeline service are both enabled
-    if (isSecurityEnabled() && timelineServiceEnabled) {
+    if (isSecurityEnabled() && timelineV1ServiceEnabled) {
       addTimelineDelegationToken(appContext.getAMContainerSpec());
     }
 
@@ -376,6 +381,16 @@ public class YarnClientImpl extends YarnClient {
         return null;
       }
       throw e;
+    } catch (NoClassDefFoundError e) {
+      NoClassDefFoundError wrappedError = new NoClassDefFoundError(
+          e.getMessage() + ". It appears that the timeline client "
+              + "failed to initiate because an incompatible dependency "
+              + "in classpath. If timeline service is optional to this "
+              + "client, try to work around by setting "
+              + YarnConfiguration.TIMELINE_SERVICE_ENABLED
+              + " to false in client configuration.");
+      wrappedError.setStackTrace(e.getStackTrace());
+      throw wrappedError;
     }
   }
 
