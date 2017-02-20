@@ -298,6 +298,25 @@ final class S3ADataBlocks {
 
   }
 
+  static class S3AByteArrayOutputStream extends ByteArrayOutputStream {
+
+    S3AByteArrayOutputStream(int size) {
+      super(size);
+    }
+
+    /**
+     * InputStream backed by the internal byte array
+     *
+     * @return
+     */
+    ByteArrayInputStream getInputStream() {
+      ByteArrayInputStream bin = new ByteArrayInputStream(this.buf, 0, count);
+      this.reset();
+      this.buf = null;
+      return bin;
+    }
+  }
+
   /**
    * Stream to memory via a {@code ByteArrayOutputStream}.
    *
@@ -310,14 +329,14 @@ final class S3ADataBlocks {
    */
 
   static class ByteArrayBlock extends DataBlock {
-    private ByteArrayOutputStream buffer;
+    private S3AByteArrayOutputStream buffer;
     private final int limit;
     // cache data size so that it is consistent after the buffer is reset.
     private Integer dataSize;
 
     ByteArrayBlock(int limit) {
       this.limit = limit;
-      buffer = new ByteArrayOutputStream();
+      buffer = new S3AByteArrayOutputStream(limit);
     }
 
     /**
@@ -333,8 +352,7 @@ final class S3ADataBlocks {
     InputStream startUpload() throws IOException {
       super.startUpload();
       dataSize = buffer.size();
-      ByteArrayInputStream bufferData = new ByteArrayInputStream(
-          buffer.toByteArray());
+      ByteArrayInputStream bufferData = buffer.getInputStream();
       buffer = null;
       return bufferData;
     }
