@@ -27,6 +27,7 @@ import org.apache.hadoop.io.IOUtils;
 import com.google.common.collect.Sets;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -75,6 +76,15 @@ public abstract class MetadataStoreTestBase extends Assert {
    */
   public boolean allowMissing() {
     return false;
+  }
+
+  /**
+   * Pruning is an optional feature for metadata store implementations.
+   * Tests will only check that functionality if it is expected to work.
+   * @return true if the test should expect pruning to work.
+   */
+  public boolean supportsPruning() {
+    return true;
   }
 
   /** The MetadataStore contract used to test against. */
@@ -484,6 +494,68 @@ public abstract class MetadataStoreTestBase extends Assert {
     ms.delete(new Path(p1));
   }
 
+  @Test
+  public void testPruneFiles() throws Exception {
+    Assume.assumeTrue(supportsPruning());
+    createNewDirs("/pruneFiles");
+
+    long oldTime = getTime();
+    ms.put(new PathMetadata(makeFileStatus("/pruneFiles/old", 1, oldTime,
+        oldTime)));
+    DirListingMetadata ls2 = ms.listChildren(strToPath("/pruneFiles"));
+    if (!allowMissing()) {
+      assertListingsEqual(ls2.getListing(), "/pruneFiles/old");
+    }
+
+    // It's possible for the Local implementation to get from /pruneFiles/old's
+    // modification time to here in under 1ms, causing it to not get pruned
+    Thread.sleep(1);
+    long cutoff = System.currentTimeMillis();
+    long newTime = getTime();
+    ms.put(new PathMetadata(makeFileStatus("/pruneFiles/new", 1, newTime,
+        newTime)));
+
+    DirListingMetadata ls;
+    ls = ms.listChildren(strToPath("/pruneFiles"));
+    if (!allowMissing()) {
+      assertListingsEqual(ls.getListing(), "/pruneFiles/new",
+          "/pruneFiles/old");
+    }
+    ms.prune(cutoff);
+    ls = ms.listChildren(strToPath("/pruneFiles"));
+    if (allowMissing()) {
+      assertNotCached("/pruneFiles/old");
+    } else {
+      assertListingsEqual(ls.getListing(), "/pruneFiles/new");
+    }
+  }
+
+  @Test
+  public void testPruneDirs() throws Exception {
+    Assume.assumeTrue(supportsPruning());
+
+    // We only test that files, not dirs, are removed during prune.
+    // We specifically allow directories to remain, as it is more robust
+    // for DynamoDBMetadataStore's prune() implementation: If a
+    // file was created in a directory while it was being pruned, it would
+    // violate the invariant that all ancestors of a file exist in the table.
+
+    createNewDirs("/pruneDirs/dir");
+
+    long oldTime = getTime();
+    ms.put(new PathMetadata(makeFileStatus("/pruneDirs/dir/file",
+        1, oldTime, oldTime)));
+
+    // It's possible for the Local implementation to get from the old
+    // modification time to here in under 1ms, causing it to not get pruned
+    Thread.sleep(1);
+    long cutoff = getTime();
+
+    ms.prune(cutoff);
+
+    assertNotCached("/pruneDirs/dir/file");
+  }
+
   /*
    * Helper functions.
    */
@@ -600,23 +672,34 @@ public abstract class MetadataStoreTestBase extends Assert {
     }
   }
 
-  FileStatus basicFileStatus(Path path, int size, boolean isDir)
-      throws IOException {
-    return new FileStatus(size, isDir, REPLICATION, BLOCK_SIZE, modTime,
-        accessTime, PERMISSION, OWNER, GROUP, path);
+  FileStatus basicFileStatus(Path path, int size, boolean isDir) throws
+      IOException {
+    return basicFileStatus(path, size, isDir, modTime, accessTime);
   }
 
-  private FileStatus makeFileStatus(String pathStr, int size)
-      throws IOException {
-    return basicFileStatus(strToPath(pathStr), size, false);
+  FileStatus basicFileStatus(Path path, int size, boolean isDir,
+      long newModTime, long newAccessTime) throws IOException {
+    return new FileStatus(size, isDir, REPLICATION, BLOCK_SIZE, newModTime,
+        newAccessTime, PERMISSION, OWNER, GROUP, path);
+  }
+
+  private FileStatus makeFileStatus(String pathStr, int size) throws
+      IOException {
+    return makeFileStatus(pathStr, size, modTime, accessTime);
+  }
+
+  private FileStatus makeFileStatus(String pathStr, int size, long newModTime,
+      long newAccessTime) throws IOException {
+    return basicFileStatus(strToPath(pathStr), size, false,
+        newModTime, newAccessTime);
   }
 
   void verifyFileStatus(FileStatus status, long size) {
-    S3ATestUtils.verifyFileStatus(status, size, BLOCK_SIZE, getModTime());
+    S3ATestUtils.verifyFileStatus(status, size, BLOCK_SIZE, modTime);
   }
 
   private FileStatus makeDirStatus(String pathStr) throws IOException {
-    return basicFileStatus(strToPath(pathStr), 0, true);
+    return basicFileStatus(strToPath(pathStr), 0, true, modTime, accessTime);
   }
 
   /**
@@ -633,6 +716,10 @@ public abstract class MetadataStoreTestBase extends Assert {
 
   long getAccessTime() {
     return accessTime;
+  }
+
+  protected static long getTime() {
+    return System.currentTimeMillis();
   }
 
 }

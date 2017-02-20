@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.shell.CommandFormat;
@@ -45,6 +46,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 
@@ -601,10 +603,93 @@ public abstract class S3GuardTool extends Configured implements Tool {
     }
   }
 
+  /**
+   * Prune metadata that has not been modified recently.
+   */
+  static class Prune extends S3GuardTool {
+    private static final String NAME = "prune";
+    private static final String USAGE = NAME +
+        "([-D days] [-H hours] [-M minutes] [-S seconds]))" +
+        " ( -m METASTORE | s3a://bucket/path/ )";
+
+    Prune(Configuration conf) {
+      super(conf);
+
+      commandFormat.addOptionWithValue("D");
+      commandFormat.addOptionWithValue("H");
+      commandFormat.addOptionWithValue("M");
+      commandFormat.addOptionWithValue("S");
+    }
+
+    @VisibleForTesting
+    void setMetadataStore(MetadataStore ms) {
+      Preconditions.checkNotNull(ms);
+      this.ms = ms;
+    }
+
+    @Override
+    String getName() {
+      return NAME;
+    }
+
+    private long getDeltaComponent(TimeUnit unit, String arg) {
+      String raw = commandFormat.getOptValue(arg);
+      if (raw == null || raw.isEmpty()) {
+        return 0;
+      }
+      Long parsed = Long.parseLong(raw);
+      return unit.toMillis(parsed);
+    }
+
+    @VisibleForTesting
+    public int run(String[] args, PrintStream out) throws
+        InterruptedException, IOException {
+      List<String> paths = parseArgs(args);
+      if (!parseDynamoDBEndPoint(paths)) {
+        System.out.println(USAGE);
+        return INVALID_ARGUMENT;
+      }
+      initMetadataStore(false);
+
+      Configuration conf = getConf();
+      long confDelta = conf.getLong(Constants.S3GUARD_CLI_PRUNE_AGE, 0);
+
+      long cliDelta = 0;
+      cliDelta += getDeltaComponent(TimeUnit.DAYS, "D");
+      cliDelta += getDeltaComponent(TimeUnit.HOURS, "H");
+      cliDelta += getDeltaComponent(TimeUnit.MINUTES, "M");
+      cliDelta += getDeltaComponent(TimeUnit.SECONDS, "S");
+
+      if (confDelta <= 0 && cliDelta <= 0) {
+        System.err.println(
+            "You must specify a positive age for metadata to prune.");
+      }
+
+      // A delta provided on the CLI overrides if one is configured
+      long delta = confDelta;
+      if (cliDelta > 0) {
+        delta = cliDelta;
+      }
+
+      long now = System.currentTimeMillis();
+      long divide = now - delta;
+
+      ms.prune(divide);
+
+      out.flush();
+      return SUCCESS;
+    }
+
+    @Override
+    public int run(String[] args) throws InterruptedException, IOException {
+      return run(args, System.out);
+    }
+  }
+
   private static void printHelp() {
     System.out.println("Usage: hadoop " + NAME + " [" +
         InitMetadata.NAME + "|" + DestroyMetadata.NAME +
-        "|" + Import.NAME + "|" + Diff.NAME +
+        "|" + Import.NAME + "|" + Diff.NAME + "|" + Prune.NAME +
         "] [OPTIONS] [ARGUMENTS]");
 
     System.out.println("\tperform metadata store " +
@@ -638,6 +723,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
       break;
     case Diff.NAME:
       cmd = new Diff(conf);
+      break;
+    case Prune.NAME:
+      cmd = new Prune(conf);
       break;
     default:
       printHelp();

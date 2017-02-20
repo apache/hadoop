@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 
 /**
@@ -268,6 +269,47 @@ public class LocalMetadataStore implements MetadataStore {
     if (dirHash != null) {
       dirHash.clear();
     }
+  }
+
+  @Override
+  public synchronized void prune(long modTime) throws IOException {
+    Iterator<Map.Entry<Path, PathMetadata>> files =
+        fileHash.entrySet().iterator();
+    while (files.hasNext()) {
+      Map.Entry<Path, PathMetadata> entry = files.next();
+      if (expired(entry.getValue().getFileStatus(), modTime)) {
+        files.remove();
+      }
+    }
+    Iterator<Map.Entry<Path, DirListingMetadata>> dirs =
+        dirHash.entrySet().iterator();
+    Collection<Path> ancestors = new LinkedList<>();
+    while (dirs.hasNext()) {
+      Map.Entry<Path, DirListingMetadata> entry = dirs.next();
+      Path path = entry.getKey();
+      DirListingMetadata metadata = entry.getValue();
+      Collection<PathMetadata> oldChildren = metadata.getListing();
+      Collection<PathMetadata> newChildren = new LinkedList<>();
+
+      for (PathMetadata child : oldChildren) {
+        FileStatus status = child.getFileStatus();
+        if (!expired(status, modTime)) {
+          newChildren.add(child);
+        }
+      }
+      if (newChildren.size() == 0) {
+        dirs.remove();
+        ancestors.add(entry.getKey());
+      } else {
+        dirHash.put(path, new DirListingMetadata(path, newChildren, false));
+      }
+    }
+  }
+
+  private boolean expired(FileStatus status, long expiry) {
+    // Note: S3 doesn't track modification time on directories, so for
+    // consistency with the DynamoDB implementation we ignore that here
+    return status.getModificationTime() < expiry && !status.isDirectory();
   }
 
   @VisibleForTesting

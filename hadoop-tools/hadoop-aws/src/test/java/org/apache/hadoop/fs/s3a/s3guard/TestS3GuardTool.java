@@ -78,8 +78,8 @@ public class TestS3GuardTool extends S3GuardToolTestBase {
   public void testDiffCommand() throws IOException {
     S3AFileSystem fs = getFs();
     MetadataStore ms = getMetadataStore();
-    Set<Path> filesOnS3 = new HashSet<>();  // files on S3.
-    Set<Path> filesOnMS = new HashSet<>();  // files on metadata store.
+    Set<Path> filesOnS3 = new HashSet<>(); // files on S3.
+    Set<Path> filesOnMS = new HashSet<>(); // files on metadata store.
 
     String testPath = getTestPath("/test-diff");
     mkdirs(new Path(testPath), true, true);

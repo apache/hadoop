@@ -280,6 +280,14 @@ hadoop s3a destroy [-m URI] ( -e ENDPOINT | s3a://BUCKET )
 
 Deletes a metadata store.
 
+### Prune
+
+```
+hadoop s3a prune [-D DAYS] [-H HOURS] [-M MINUTES] [-S SECONDS] [-m URI] ( -e ENDPOINT | s3a://BUCKET )
+```
+
+Trims metadata for files that are older than the time given. Must supply at least length of time.
+
 ## Debugging and Error Handling
 
 If you run into network connectivity issues, or have a machine failure in the

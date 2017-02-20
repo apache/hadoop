@@ -165,4 +165,18 @@ public interface MetadataStore extends Closeable {
    * @throws IOException if there is an error
    */
   void destroy() throws IOException;
+
+  /**
+   * Clear any metadata older than a specified time from the repository.
+   * Implementations MUST clear file metadata, and MAY clear directory metadata
+   * (s3a itself does not track modification time for directories).
+   * Implementations may also choose to throw UnsupportedOperationException
+   * istead. Note that modification times should be in UTC, as returned by
+   * System.currentTimeMillis at the time of modification.
+   *
+   * @param modTime Oldest modification time to allow
+   * @throws IOException if there is an error
+   * @throws UnsupportedOperationException if not implemented
+   */
+  void prune(long modTime) throws IOException, UnsupportedOperationException;
 }

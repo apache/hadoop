@@ -21,15 +21,20 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Test;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Common functionality for S3GuardTool test cases.
@@ -112,9 +117,46 @@ public abstract class S3GuardToolTestBase {
     }
 
     if (onMetadataStore) {
-      S3AFileStatus status = new S3AFileStatus(100L, 10000L,
+      S3AFileStatus status = new S3AFileStatus(100L, System.currentTimeMillis(),
           fs.qualify(path), 512L, "hdfs");
       putFile(ms, status);
     }
+  }
+
+  private void testPruneCommand(Configuration cmdConf, String[] args)
+      throws Exception {
+    Path parent = new Path(getTestPath("/prune-cli"));
+    try {
+      fs.mkdirs(parent);
+
+      S3GuardTool.Prune cmd = new S3GuardTool.Prune(cmdConf);
+      cmd.setMetadataStore(ms);
+
+      createFile(new Path(parent, "stale"), true, true);
+      Thread.sleep(TimeUnit.SECONDS.toMillis(2));
+      createFile(new Path(parent, "fresh"), true, true);
+
+      assertEquals(2, ms.listChildren(parent).getListing().size());
+      assertEquals("Prune command did not exit successfully - see output",
+          SUCCESS, cmd.run(args));
+      assertEquals(1, ms.listChildren(parent).getListing().size());
+    } finally {
+      fs.delete(parent, true);
+      ms.prune(Long.MAX_VALUE);
+    }
+  }
+
+  @Test
+  public void testPruneCommandCLI() throws Exception {
+    String testPath = getTestPath("testPruneCommandCLI");
+    testPruneCommand(fs.getConf(), new String[]{"prune", "-S", "1", testPath});
+  }
+
+  @Test
+  public void testPruneCommandConf() throws Exception {
+    conf.setLong(Constants.S3GUARD_CLI_PRUNE_AGE,
+        TimeUnit.SECONDS.toMillis(1));
+    String testPath = getTestPath("testPruneCommandConf");
+    testPruneCommand(conf, new String[]{"prune", testPath});
   }
 }

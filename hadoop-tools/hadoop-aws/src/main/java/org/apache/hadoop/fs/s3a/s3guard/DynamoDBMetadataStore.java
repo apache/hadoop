@@ -38,10 +38,12 @@ import com.amazonaws.services.dynamodbv2.document.ItemCollection;
 import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
 import com.amazonaws.services.dynamodbv2.document.PutItemOutcome;
 import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
+import com.amazonaws.services.dynamodbv2.document.ScanOutcome;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.TableWriteItems;
 import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
+import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
@@ -596,6 +598,45 @@ public class DynamoDBMetadataStore implements MetadataStore {
     } catch (AmazonClientException e) {
       throw translateException("destroy", (String) null, e);
     }
+  }
+
+  private ItemCollection<ScanOutcome> expiredFiles(long modTime) {
+    String filterExpression = "mod_time < :mod_time";
+    String projectionExpression = "parent,child";
+    ValueMap map = new ValueMap().withLong(":mod_time", modTime);
+    return table.scan(filterExpression, projectionExpression, null, map);
+  }
+
+  @Override
+  public void prune(long modTime) throws IOException {
+    int itemCount = 0;
+    try {
+      Collection<Path> deletionBatch =
+          new ArrayList(S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT);
+      int delay = conf.getInt(S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY,
+          S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_DEFAULT);
+      for (Item item : expiredFiles(modTime)) {
+        PathMetadata md = PathMetadataDynamoDBTranslation
+            .itemToPathMetadata(item, username);
+        Path path = md.getFileStatus().getPath();
+        deletionBatch.add(path);
+        itemCount++;
+        if (deletionBatch.size() == S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT) {
+          Thread.sleep(delay);
+          processBatchWriteRequest(pathToKey(deletionBatch), new Item[0]);
+          deletionBatch.clear();
+        }
+      }
+      if (deletionBatch.size() > 0) {
+        Thread.sleep(delay);
+        processBatchWriteRequest(pathToKey(deletionBatch), new Item[0]);
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupted();
+      throw new InterruptedIOException("Pruning was interrupted");
+    }
+    LOG.info("Finished pruning {} items in batches of {}", itemCount,
+        S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT);
   }
 
   @Override

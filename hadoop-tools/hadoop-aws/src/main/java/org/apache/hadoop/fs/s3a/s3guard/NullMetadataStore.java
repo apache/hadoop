@@ -87,6 +87,11 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
+  public void prune(long modTime) {
+    return;
+  }
+
+  @Override
   public String toString() {
     return "NullMetadataStore";
   }

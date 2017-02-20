@@ -1260,6 +1260,16 @@
     </description>
 </property>
 
+<property>
+    <name>fs.s3a.s3guard.cli.prune.age</name>
+    <value>86400000</value>
+    <description>
+        Default age (in milliseconds) after which to prune metadata from the
+        metadatastore when the prune command is run.  Can be overridden on the
+        command-line.
+    </description>
+</property>
+
 
 <property>
   <name>fs.s3a.impl</name>
@@ -1331,7 +1341,18 @@
     </description>
 </property>
 
-  <property>
+<property>
+  <name>fs.s3a.s3guard.ddb.background.sleep</name>
+  <value>25</value>
+  <description>
+    Length (in milliseconds) of pause between each batch of deletes when
+    pruning metadata.  Prevents prune operations (which can typically be low
+    priority background operations) from overly interfering with other I/O
+    operations.
+  </description>
+</property>
+
+<property>
   <name>fs.AbstractFileSystem.s3a.impl</name>
   <value>org.apache.hadoop.fs.s3a.S3A</value>
   <description>The implementation class of the S3A AbstractFileSystem.</description>
