@@ -195,7 +195,8 @@ public final class S3Guard {
       // Any FileSystem has similar race conditions, but we could persist
       // a stale entry longer.  We could expose an atomic
       // DirListingMetadata#putIfNotPresent()
-      changed = changed || dirMeta.put(s);
+      boolean updated = dirMeta.put(s);
+      changed = changed || updated;
     }
 
     if (changed && isAuthoritative) {
