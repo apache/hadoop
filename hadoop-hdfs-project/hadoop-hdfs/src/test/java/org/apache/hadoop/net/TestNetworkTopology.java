@@ -296,7 +296,7 @@ public class TestNetworkTopology {
       assertFalse(cluster.contains(dataNodes[i]));
     }
     assertEquals(0, cluster.getNumOfLeaves());
-    assertEquals(0, cluster.clusterMap.children.size());
+    assertEquals(0, cluster.clusterMap.getChildren().size());
     for(int i=0; i<dataNodes.length; i++) {
       cluster.add(dataNodes[i]);
     }
