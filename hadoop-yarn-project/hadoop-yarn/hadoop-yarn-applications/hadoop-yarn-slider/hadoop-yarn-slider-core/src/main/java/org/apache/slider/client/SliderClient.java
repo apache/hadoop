@@ -2070,7 +2070,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     amLauncher.setKeepContainersOverRestarts(true);
     // set lifetime in submission context;
     Map<ApplicationTimeoutType, Long> appTimeout = new HashMap<>();
-    if (lifetime >= 0) {
+    if (lifetime > 0) {
       appTimeout.put(ApplicationTimeoutType.LIFETIME, lifetime);
     }
     amLauncher.submissionContext.setApplicationTimeouts(appTimeout);
