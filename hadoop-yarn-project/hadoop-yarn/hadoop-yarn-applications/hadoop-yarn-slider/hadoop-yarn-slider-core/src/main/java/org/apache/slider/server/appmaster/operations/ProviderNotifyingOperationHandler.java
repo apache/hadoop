@@ -23,6 +23,8 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.slider.providers.ProviderService;
 
+import java.util.List;
+
 public class ProviderNotifyingOperationHandler extends RMOperationHandler {
   
   private final ProviderService providerService;
@@ -51,5 +53,11 @@ public class ProviderNotifyingOperationHandler extends RMOperationHandler {
   @Override
   public void cancelSingleRequest(AMRMClient.ContainerRequest request) {
     providerService.cancelSingleRequest(request);
+  }
+
+  @Override
+  public void updateBlacklist(List<String> blacklistAdditions,
+      List<String> blacklistRemovals) {
+    providerService.updateBlacklist(blacklistAdditions, blacklistRemovals);
   }
 }

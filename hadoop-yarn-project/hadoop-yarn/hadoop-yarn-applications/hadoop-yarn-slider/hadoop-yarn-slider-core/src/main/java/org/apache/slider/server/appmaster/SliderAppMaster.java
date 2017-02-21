@@ -1755,7 +1755,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
    */
   private void scheduleFailureWindowResets(ConfTree resources) throws
       BadConfigException {
-    ResetFailureWindow reset = new ResetFailureWindow();
+    ResetFailureWindow reset = new ResetFailureWindow(rmOperationHandler);
     ConfTreeOperations ops = new ConfTreeOperations(resources);
     MapOperations globals = ops.getGlobalOptions();
     long seconds = globals.getTimeRange(ResourceKeys.CONTAINER_FAILURE_WINDOW,
@@ -1986,6 +1986,12 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
   @Override
   public void cancelSingleRequest(AMRMClient.ContainerRequest request) {
     rmOperationHandler.cancelSingleRequest(request);
+  }
+
+  @Override
+  public void updateBlacklist(List<String> blacklistAdditions,
+      List<String> blacklistRemovals) {
+    rmOperationHandler.updateBlacklist(blacklistAdditions, blacklistRemovals);
   }
 
 /* =================================================================== */
