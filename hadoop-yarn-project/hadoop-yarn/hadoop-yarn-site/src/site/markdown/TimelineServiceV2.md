@@ -340,56 +340,48 @@ To write MapReduce framework data to Timeline Service v.2, enable the following 
 
 This section is for YARN application developers that want to integrate with Timeline Service v.2.
 
-Developers can continue to use the `TimelineClient` API to publish per-framework data to the
-Timeline Service v.2. You only need to instantiate the right type of the client to write to v.2.
-On the other hand, the entity/object API for v.2 is different than v.1 as the object model is
-significantly changed. The v.2 timeline entity class is
-`org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity` whereas the v.1 class is
-`org.apache.hadoop.yarn.api.records.timeline.TimelineEntity`. The methods on `TimelineClient`
-suitable for writing to Timeline Service v.2 are clearly delineated, and they use the v.2
-types as arguments.
+Developers need to use the `TimelineV2Client` API to publish per-framework data to the
+Timeline Service v.2. The entity/object API for v.2 is different than v.1 as
+the object model is significantly changed. The v.2 timeline entity class is
+`org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity`.
 
 Timeline Service v.2 `putEntities` methods come in 2 varieties: `putEntities` and
 `putEntitiesAsync`. The former is a blocking operation which must be used for writing more
 critical data (e.g. lifecycle events). The latter is a non-blocking operation. Note that neither
 has a return value.
 
-Creating a `TimelineClient` for v.2 involves passing in the application id to the factory method.
+Creating a `TimelineV2Client` involves passing in the application id to the static method
+`TimelineV2Client.createTimelineClient`.
 
 For example:
 
 
     // Create and start the Timeline client v.2
-    TimelineClient client = TimelineClient.createTimelineClient(appId);
-    client.init(conf);
-    client.start();
+    TimelineV2Client timelineClient =
+        TimelineV2Client.createTimelineClient(appId);
+    timelineClient.init(conf);
+    timelineClient.start();
 
     try {
       TimelineEntity myEntity = new TimelineEntity();
-      myEntity.setEntityType("MY_APPLICATION");
-      myEntity.setEntityId("MyApp1")
+      myEntity.setType("MY_APPLICATION");
+      myEntity.setId("MyApp1");
       // Compose other entity info
 
       // Blocking write
-      client.putEntities(entity);
+      timelineClient.putEntities(myEntity);
 
       TimelineEntity myEntity2 = new TimelineEntity();
       // Compose other info
 
       // Non-blocking write
-      timelineClient.putEntitiesAsync(entity);
+      timelineClient.putEntitiesAsync(myEntity2);
 
-    } catch (IOException e) {
-      // Handle the exception
-    } catch (RuntimeException e) {
-      // In Hadoop 2.6, if attempts submit information to the Timeline Server fail more than the retry limit,
-      // a RuntimeException will be raised. This may change in future releases, being
-      // replaced with a IOException that is (or wraps) that which triggered retry failures.
-    } catch (YarnException e) {
+    } catch (IOException | YarnException e) {
       // Handle the exception
     } finally {
       // Stop the Timeline client
-      client.stop();
+      timelineClient.stop();
     }
 
 As evidenced above, you need to specify the YARN application id to be able to write to the Timeline
@@ -397,9 +389,9 @@ Service v.2. Note that currently you need to be on the cluster to be able to wri
 Service. For example, an application master or code in the container can write to the Timeline
 Service, while an off-cluster MapReduce job submitter cannot.
 
-After creating the timeline client, user also needs to set the timeline collector address for the application. If `AMRMClient` is used then by registering the timeline client by calling `AMRMClient#registerTimelineClient` is sufficient.
+After creating the timeline v2 client, user also needs to set the timeline collector address for the application. If `AMRMClient` is used then by registering the timeline client by calling `AMRMClient#registerTimelineV2Client` is sufficient.
 
-    amRMClient.registerTimelineClient(timelineClient);
+    amRMClient.registerTimelineV2Client(timelineClient);
 
 Else address needs to be retrieved from the AM allocate response and need to be set in timeline client explicitly.
 
