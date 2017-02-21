@@ -87,6 +87,10 @@ public final class AdlConfKeys {
       "adl.feature.support.acl.bit";
   static final boolean ADL_SUPPORT_ACL_BIT_IN_FSPERMISSION_DEFAULT = true;
 
+  static final String ADL_ENABLEUPN_FOR_OWNERGROUP_KEY =
+      "adl.feature.ownerandgroup.enableupn";
+  static final boolean ADL_ENABLEUPN_FOR_OWNERGROUP_DEFAULT = false;
+
   private AdlConfKeys() {
   }
 }
