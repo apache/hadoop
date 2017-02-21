@@ -107,4 +107,10 @@ public class AsyncRMOperationHandler extends RMOperationHandler {
   public void addContainerRequest(AMRMClient.ContainerRequest req) {
     client.addContainerRequest(req);
   }
+
+  @Override
+  public void updateBlacklist(List<String> blacklistAdditions,
+      List<String> blacklistRemovals) {
+    client.updateBlacklist(blacklistAdditions, blacklistRemovals);
+  }
 }

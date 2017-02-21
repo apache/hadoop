@@ -411,6 +411,12 @@ public abstract class AbstractProviderService
   }
 
   @Override
+  public void updateBlacklist(List<String> blacklistAdditions,
+      List<String> blacklistRemovals) {
+    // no-op
+  }
+
+  @Override
   public void execute(List<AbstractRMOperation> operations) {
     for (AbstractRMOperation operation : operations) {
       operation.execute(this);
