@@ -431,11 +431,11 @@ Usage:
 
 Runs the diskbalancer CLI. See [HDFS Diskbalancer](./HDFSDiskbalancer.html) for more information on this command.
 
-### `erasurecode`
+### `ec`
 
 Usage:
 
-       hdfs erasurecode [generic options]
+       hdfs ec [generic options]
          [-setPolicy [-p <policyName>] <path>]
          [-getPolicy <path>]
          [-listPolicies]

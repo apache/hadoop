@@ -32,7 +32,7 @@ import java.io.IOException;
 public class ECCli extends FsShell {
 
   private final static String usagePrefix =
-      "Usage: hdfs erasurecode [generic options]";
+      "Usage: hdfs ec [generic options]";
 
   @Override
   protected String getUsagePrefix() {

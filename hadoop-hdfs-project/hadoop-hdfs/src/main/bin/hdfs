@@ -41,7 +41,7 @@ function hadoop_usage
   hadoop_add_subcommand "dfsadmin" "run a DFS admin client"
   hadoop_add_subcommand "diskbalancer" "Distributes data evenly among disks on a given node"
   hadoop_add_subcommand "envvars" "display computed Hadoop environment variables"
-  hadoop_add_subcommand "erasurecode" "run a HDFS ErasureCoding CLI"
+  hadoop_add_subcommand "ec" "run a HDFS ErasureCoding CLI"
   hadoop_add_subcommand "fetchdt" "fetch a delegation token from the NameNode"
   hadoop_add_subcommand "fsck" "run a DFS filesystem checking utility"
   hadoop_add_subcommand "getconf" "get config values from configuration"
@@ -129,7 +129,7 @@ function hdfscmd_case
       echo "HADOOP_TOOLS_LIB_JARS_DIR='${HADOOP_TOOLS_LIB_JARS_DIR}'"
       exit 0
     ;;
-    erasurecode)
+    ec)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.erasurecode.ECCli
     ;;
     fetchdt)
