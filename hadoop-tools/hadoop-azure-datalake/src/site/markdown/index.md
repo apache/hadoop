@@ -26,6 +26,7 @@
         * [Protecting the Credentials with Credential Providers](#Credential_Provider)
     * [Enabling ADL Filesystem](#Enabling_ADL)
     * [Accessing adl URLs](#Accessing_adl_URLs)
+    * [User/Group Representation](#OIDtoUPNConfiguration)
 * [Testing the hadoop-azure Module](#Testing_the_hadoop-azure_Module)
 
 ## <a name="Introduction" />Introduction
@@ -42,6 +43,8 @@ The jar file is named azure-datalake-store.jar.
 * Can act as a source of data in a MapReduce job, or a sink.
 * Tested on both Linux and Windows.
 * Tested for scale.
+* API setOwner/setAcl/removeAclEntries/modifyAclEntries accepts UPN or OID
+  (Object ID) as user and group name.
 
 ## <a name="Limitations" />Limitations
 Partial or no support for the following operations :
@@ -221,6 +224,29 @@ commands demonstrate access to a storage account named `youraccount`.
 
     > hadoop fs -cat adl://yourcontainer.azuredatalakestore.net/testDir/testFile
     test file content
+
+### <a name="OIDtoUPNConfiguration" />User/Group Representation
+The hadoop-azure-datalake module provides support for configuring how
+User/Group information is represented during
+getFileStatus/listStatus/getAclStatus.
+
+Add the following properties to your core-site.xml
+
+        <property>
+          <name>adl.feature.ownerandgroup.enableupn</name>
+          <value>true</value>
+          <description>
+            When true : User and Group in FileStatus/AclStatus response is
+            represented as user friendly name as per Azure AD profile.
+
+            When false (default) : User and Group in FileStatus/AclStatus
+            response is represented by the unique identifier from Azure AD
+            profile (Object ID as GUID).
+
+            For performance optimization, Recommended default value.
+          </description>
+        </property>
+
 ## <a name="Testing_the_hadoop-azure_Module" />Testing the azure-datalake-store Module
 The hadoop-azure module includes a full suite of unit tests. Most of the tests will run without additional configuration by running mvn test. This includes tests against mocked storage, which is an in-memory emulation of Azure Data Lake Storage.
 
