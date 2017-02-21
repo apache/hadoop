@@ -4351,14 +4351,6 @@ public abstract class FSEditLogOp {
       this.name = StringUtils.toUpperCase(name);
     }
 
-    static RollingUpgradeOp getStartInstance(OpInstanceCache cache) {
-      return (RollingUpgradeOp) cache.get(OP_ROLLING_UPGRADE_START);
-    }
-
-    static RollingUpgradeOp getFinalizeInstance(OpInstanceCache cache) {
-      return (RollingUpgradeOp) cache.get(OP_ROLLING_UPGRADE_FINALIZE);
-    }
-
     @Override
     void resetSubFields() {
       time = 0L;
