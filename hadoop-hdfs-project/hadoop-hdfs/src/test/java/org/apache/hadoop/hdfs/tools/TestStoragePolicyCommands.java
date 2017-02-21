@@ -74,8 +74,9 @@ public class TestStoragePolicyCommands {
      * test: set storage policy
      */
     final StoragePolicyAdmin admin = new StoragePolicyAdmin(conf);
-    DFSTestUtil.toolRun(admin, "-setStoragePolicy -path /foo -policy WARM", 0,
-        "Set storage policy WARM on " + foo.toString());
+    DFSTestUtil.toolRun(admin, "-setStoragePolicy -path " + fs.getUri()
+        + "/foo -policy WARM", 0, "Set storage policy WARM on " + fs.getUri()
+        + "/foo");
     DFSTestUtil.toolRun(admin, "-setStoragePolicy -path /foo/bar -policy COLD",
         0, "Set storage policy COLD on " + bar.toString());
     DFSTestUtil.toolRun(admin, "-setStoragePolicy -path /foo/bar/wow -policy HOT",
@@ -91,8 +92,9 @@ public class TestStoragePolicyCommands {
     final BlockStoragePolicy warm = suite.getPolicy("WARM");
     final BlockStoragePolicy cold = suite.getPolicy("COLD");
     final BlockStoragePolicy hot = suite.getPolicy("HOT");
-    DFSTestUtil.toolRun(admin, "-getStoragePolicy -path /foo", 0,
-        "The storage policy of " + foo.toString() + ":\n" + warm);
+    DFSTestUtil.toolRun(admin, "-getStoragePolicy -path " + fs.getUri()
+        + "/foo", 0, "The storage policy of " + fs.getUri() + "/foo:\n"
+        + warm);
     DFSTestUtil.toolRun(admin, "-getStoragePolicy -path /foo/bar", 0,
         "The storage policy of " + bar.toString() + ":\n" + cold);
     DFSTestUtil.toolRun(admin, "-getStoragePolicy -path /foo/bar/wow", 0,
@@ -103,8 +105,8 @@ public class TestStoragePolicyCommands {
     /*
      * test: unset storage policy
      */
-    DFSTestUtil.toolRun(admin, "-unsetStoragePolicy -path /foo", 0,
-        "Unset storage policy from " + foo.toString());
+    DFSTestUtil.toolRun(admin, "-unsetStoragePolicy -path " + fs.getUri()
+        + "/foo", 0, "Unset storage policy from " + fs.getUri() + "/foo");
     DFSTestUtil.toolRun(admin, "-unsetStoragePolicy -path /foo/bar", 0,
         "Unset storage policy from " + bar.toString());
     DFSTestUtil.toolRun(admin, "-unsetStoragePolicy -path /foo/bar/wow", 0,
