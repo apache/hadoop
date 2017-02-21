@@ -751,7 +751,20 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     this.loadDefaults = other.loadDefaults;
     setQuietMode(other.getQuietMode());
   }
-  
+
+  /**
+   * Reload existing configuration instances.
+   */
+  public static synchronized void reloadExistingConfigurations() {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Reloading " + REGISTRY.keySet().size()
+          + " existing configurations");
+    }
+    for (Configuration conf : REGISTRY.keySet()) {
+      conf.reloadConfiguration();
+    }
+  }
+
   /**
    * Add a default resource. Resources are loaded in the order of the resources 
    * added.

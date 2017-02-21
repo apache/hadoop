@@ -88,6 +88,10 @@ public class AdlFileSystem extends FileSystem {
   private AccessTokenProvider tokenProvider;
   private AzureADTokenProvider azureTokenProvider;
 
+  static {
+    AdlConfKeys.addDeprecatedKeys();
+  }
+
   @Override
   public String getScheme() {
     return SCHEME;
