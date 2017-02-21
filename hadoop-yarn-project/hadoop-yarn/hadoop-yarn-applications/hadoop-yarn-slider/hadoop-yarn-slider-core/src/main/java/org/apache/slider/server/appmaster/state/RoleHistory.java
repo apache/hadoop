@@ -34,6 +34,7 @@ import org.apache.slider.server.appmaster.management.BoolMetric;
 import org.apache.slider.server.appmaster.management.MetricsAndMonitoring;
 import org.apache.slider.server.appmaster.management.Timestamp;
 import org.apache.slider.server.appmaster.operations.AbstractRMOperation;
+import org.apache.slider.server.appmaster.operations.UpdateBlacklistOperation;
 import org.apache.slider.server.avro.LoadedRoleHistory;
 import org.apache.slider.server.avro.NodeEntryRecord;
 import org.apache.slider.server.avro.RoleHistoryHeader;
@@ -49,6 +50,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -544,6 +546,38 @@ public class RoleHistory {
     if (nodesForRoleId != null) {
       Collections.sort(nodesForRoleId, new NodeInstance.Preferred(role));
     }
+  }
+
+  public synchronized UpdateBlacklistOperation updateBlacklist(
+      Collection<RoleStatus> roleStatuses) {
+    List<String> blacklistAdditions = new ArrayList<>();
+    List<String> blacklistRemovals = new ArrayList<>();
+    for (Entry<String, NodeInstance> nodeInstanceEntry : nodemap.entrySet()) {
+      boolean shouldBeBlacklisted = false;
+      String nodeHost = nodeInstanceEntry.getKey();
+      NodeInstance nodeInstance = nodeInstanceEntry.getValue();
+      for (RoleStatus roleStatus : roleStatuses) {
+        if (nodeInstance.exceedsFailureThreshold(roleStatus)) {
+          shouldBeBlacklisted = true;
+          break;
+        }
+      }
+      if (shouldBeBlacklisted) {
+        if (!nodeInstance.isBlacklisted()) {
+          blacklistAdditions.add(nodeHost);
+          nodeInstance.setBlacklisted(true);
+        }
+      } else {
+        if (nodeInstance.isBlacklisted()) {
+          blacklistRemovals.add(nodeHost);
+          nodeInstance.setBlacklisted(false);
+        }
+      }
+    }
+    if (blacklistAdditions.isEmpty() && blacklistRemovals.isEmpty()) {
+      return null;
+    }
+    return new UpdateBlacklistOperation(blacklistAdditions, blacklistRemovals);
   }
 
   /**

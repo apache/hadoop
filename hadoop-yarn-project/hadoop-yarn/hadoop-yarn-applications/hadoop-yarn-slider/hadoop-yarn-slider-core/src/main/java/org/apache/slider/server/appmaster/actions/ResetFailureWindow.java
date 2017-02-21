@@ -19,21 +19,31 @@
 package org.apache.slider.server.appmaster.actions;
 
 import org.apache.slider.server.appmaster.SliderAppMaster;
+import org.apache.slider.server.appmaster.operations.AbstractRMOperation;
+import org.apache.slider.server.appmaster.operations.RMOperationHandlerActions;
 import org.apache.slider.server.appmaster.state.AppState;
 
 /**
  * Requests the AM to reset the failure window
  */
 public class ResetFailureWindow extends AsyncAction {
+  private final RMOperationHandlerActions operationHandler;
 
-  public ResetFailureWindow() {
+  public ResetFailureWindow(RMOperationHandlerActions operationHandler) {
     super("ResetFailureWindow");
+    this.operationHandler = operationHandler;
   }
 
   @Override
   public void execute(SliderAppMaster appMaster,
       QueueAccess queueService,
       AppState appState) throws Exception {
-    appState.resetFailureCounts();
+    synchronized (appMaster) {
+      appState.resetFailureCounts();
+      AbstractRMOperation blacklistOperation = appState.updateBlacklist();
+      if (blacklistOperation != null) {
+        blacklistOperation.execute(operationHandler);
+      }
+    }
   }
 }

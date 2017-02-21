@@ -42,6 +42,8 @@ public class NodeInstance {
 
   public final String hostname;
 
+  private boolean blacklisted = false;
+
   /**
    * last state of node. Starts off as {@link NodeState#RUNNING},
    * on the assumption that it is live.
@@ -79,6 +81,14 @@ public class NodeInstance {
   public NodeInstance(String hostname, int roles) {
     this.hostname = hostname;
     nodeEntries = new ArrayList<>(roles);
+  }
+
+  public synchronized void setBlacklisted(boolean blacklisted) {
+    this.blacklisted = blacklisted;
+  }
+
+  public boolean isBlacklisted() {
+    return blacklisted;
   }
 
   /**

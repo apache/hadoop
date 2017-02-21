@@ -27,25 +27,25 @@ import java.util.List;
 public interface RMOperationHandlerActions {
 
   /**
-   * Release an assigned container
+   * Release an assigned container.
    * @param containerId container
    */
   void releaseAssignedContainer(ContainerId containerId);
 
   /**
-   * Issue a container request
+   * Issue a container request.
    * @param request
    */
   void addContainerRequest(AMRMClient.ContainerRequest request);
 
   /**
-   * Cancel a specific request
+   * Cancel a specific request.
    * @param request request to cancel
    */
   void cancelSingleRequest(AMRMClient.ContainerRequest request);
 
   /**
-   * Remove a container request
+   * Remove a container request.
    * @param priority1 priority to remove at
    * @param priority2 second priority to target
    * @param count number to remove
@@ -53,7 +53,15 @@ public interface RMOperationHandlerActions {
   int cancelContainerRequests(Priority priority1, Priority priority2, int count);
 
   /**
-   * Execute an entire list of operations
+   * Blacklist resources.
+   * @param blacklistAdditions resources to add to the blacklist
+   * @param blacklistRemovals resources to remove from the blacklist
+   */
+  void updateBlacklist(List<String> blacklistAdditions,
+      List<String> blacklistRemovals);
+
+  /**
+   * Execute an entire list of operations.
    * @param operations ops
    */
   void execute(List<AbstractRMOperation> operations);
