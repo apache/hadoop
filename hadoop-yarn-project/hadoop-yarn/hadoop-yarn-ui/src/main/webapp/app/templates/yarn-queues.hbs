@@ -26,7 +26,7 @@
     <div class="col-lg-4 container-fluid">
       <div class="panel panel-default">
         <div class="panel-heading">
-          Queue Information
+          Queue Information: {{model.selected}}
         </div>
         {{queue-configuration-table queue=model.selectedQueue}}
       </div>
@@ -35,7 +35,7 @@
     <div class="col-lg-4 container-fluid">
       <div class="panel panel-default">
         <div class="panel-heading">
-          Queue Capacities
+          Queue Capacities: {{model.selected}}
         </div>
         <div class="container-fluid" id="capacity-bar-chart">
           <br/>
@@ -52,7 +52,7 @@
     <div class="col-lg-4 container-fluid">
       <div class="panel panel-default">
         <div class="panel-heading">
-          Running Apps
+          Running Apps: {{model.selected}}
         </div>
         <div class="container-fluid" id="numapplications-donut-chart">
           {{donut-chart data=model.selectedQueue.numOfApplicationsDonutChartData

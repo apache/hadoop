@@ -58,7 +58,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Usage: hdfs erasurecode [generic options]</expected-output>
+          <expected-output>Usage: hdfs ec [generic options]</expected-output>
         </comparator>
       </comparators>
     </test>

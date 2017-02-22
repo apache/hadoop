@@ -128,7 +128,7 @@ export default Ember.Component.extend({
       .attr("transform", function() { return "translate(" + source.y0 + "," + source.x0 + ")"; })
       .on("mouseover", function(d){
         if (d.queueData.get("name") !== this.get("selected")) {
-            document.location.href = "#/yarn-queues/" + d.queueData.get("name");
+            document.location.href = "#/yarn-queues/" + d.queueData.get("name") + "!";
         }
 
         Ember.run.later(this, function () {
@@ -143,7 +143,7 @@ export default Ember.Component.extend({
 
       }.bind(this))
     .on("click", function (d) {
-      document.location.href = "#/yarn-queue/" + d.queueData.get("name");
+      document.location.href = "#/yarn-queue/" + d.queueData.get("name") + "/info";
     });
 
     nodeEnter.append("circle")
@@ -190,7 +190,7 @@ export default Ember.Component.extend({
 
     nodeUpdate.select("circle")
       .attr("r", 30)
-      .attr("href", 
+      .attr("href",
         function(d) {
           return "#/yarn-queues/" + d.queueData.get("name");
         })

@@ -32,6 +32,10 @@ Router.map(function() {
     this.route('table');
     this.route('heatmap');
   });
+  this.route('yarn-queue', {path: '/yarn-queue/:queue_name'}, function() {
+    this.route('info');
+    this.route('apps');
+  });
   this.route('yarn-nodes-heatmap');
   this.route('yarn-node', { path: '/yarn-node/:node_id/:node_addr' });
   this.route('yarn-node-apps', { path: '/yarn-node-apps/:node_id/:node_addr' });
@@ -43,7 +47,6 @@ Router.map(function() {
       { path: '/yarn-node-container/:node_id/:node_addr/:container_id' });
   this.route('yarn-container-log', { path:
       '/yarn-container-log/:node_id/:node_addr/:container_id/:filename' });
-  this.route('yarn-queue', { path: '/yarn-queue/:queue_name' });
 
   this.route('cluster-overview');
   this.route('yarn-app', { path: '/yarn-app/:app_id' });
@@ -52,7 +55,6 @@ Router.map(function() {
   this.route('notfound', { path: '*:' });
   this.route('yarn-app-attempts', { path: '/yarn-app-attempts/:app_id' });
   this.route('yarn-queues', { path: '/yarn-queues/:queue_name' });
-  this.route('yarn-queue-apps', { path: '/yarn-queue-apps/:queue_name' });
 });
 
 export default Router;
