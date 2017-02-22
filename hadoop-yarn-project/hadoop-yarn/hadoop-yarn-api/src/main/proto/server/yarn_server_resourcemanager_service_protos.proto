@@ -84,7 +84,8 @@ message RefreshNodesResourcesResponseProto {
 }
 
 message AddToClusterNodeLabelsRequestProto {
-  repeated NodeLabelProto nodeLabels = 1;
+  repeated string deprecatedNodeLabels = 1;
+  repeated NodeLabelProto nodeLabels = 2;
 }
 
 message AddToClusterNodeLabelsResponseProto {
@@ -98,7 +99,7 @@ message RemoveFromClusterNodeLabelsResponseProto {
 }
 
 message ReplaceLabelsOnNodeRequestProto {
-  repeated NodeIdToLabelsNameProto nodeToLabels = 1;
+  repeated NodeIdToLabelsProto nodeToLabels = 1;
   optional bool failOnUnknownNodes = 2;
 }
 
