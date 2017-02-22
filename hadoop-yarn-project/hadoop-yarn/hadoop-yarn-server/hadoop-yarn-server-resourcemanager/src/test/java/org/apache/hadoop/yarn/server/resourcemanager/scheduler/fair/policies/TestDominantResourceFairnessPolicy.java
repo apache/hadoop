@@ -45,7 +45,7 @@ public class TestDominantResourceFairnessPolicy {
     DominantResourceFairnessPolicy policy = new DominantResourceFairnessPolicy();
     FSContext fsContext = mock(FSContext.class);
     when(fsContext.getClusterResource()).
-        thenReturn(BuilderUtils.newResource(clusterMem, clusterCpu));
+        thenReturn(Resources.createResource(clusterMem, clusterCpu));
     policy.initialize(fsContext);
     return policy.getComparator();
   }
@@ -165,5 +165,22 @@ public class TestDominantResourceFairnessPolicy {
     assertEquals(.5, shares.getWeight(ResourceType.CPU), .00001);
     assertEquals(ResourceType.CPU, resourceOrder[0]);
     assertEquals(ResourceType.MEMORY, resourceOrder[1]);
+  }
+
+  @Test
+  public void testCompareSchedulablesWithClusterResourceChanges(){
+    Schedulable schedulable1 = createSchedulable(2000, 1);
+    Schedulable schedulable2 = createSchedulable(1000, 2);
+
+    // schedulable1 has share weights [1/2, 1/5], schedulable2 has share
+    // weights [1/4, 2/5], schedulable1 > schedulable2 since 1/2 > 2/5
+    assertTrue(createComparator(4000, 5)
+        .compare(schedulable1, schedulable2) > 0);
+
+    // share weights have changed because of the cluster resource change.
+    // schedulable1 has share weights [1/4, 1/6], schedulable2 has share
+    // weights [1/8, 1/3], schedulable1 < schedulable2 since 1/4 < 1/3
+    assertTrue(createComparator(8000, 6)
+        .compare(schedulable1, schedulable2) < 0);
   }
 }

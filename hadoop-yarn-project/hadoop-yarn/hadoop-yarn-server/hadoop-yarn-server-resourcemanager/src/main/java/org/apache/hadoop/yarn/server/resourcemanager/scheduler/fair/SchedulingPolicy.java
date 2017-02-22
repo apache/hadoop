@@ -91,7 +91,23 @@ public abstract class SchedulingPolicy {
     }
     return getInstance(clazz);
   }
-  
+
+  /**
+   * Initialize the scheduling policy with cluster resources. Deprecated since
+   * it doesn't track cluster resource changes.
+   *
+   * @param clusterCapacity cluster resources
+   */
+  @Deprecated
+  public void initialize(Resource clusterCapacity) {}
+
+  /**
+   * Initialize the scheduling policy with a {@link FSContext} object which can
+   * track cluster resource changes.
+   *
+   * @param fsContext a {@link FSContext} object which is used to get current
+   *                  cluster resources
+   */
   public void initialize(FSContext fsContext) {}
 
   /**
