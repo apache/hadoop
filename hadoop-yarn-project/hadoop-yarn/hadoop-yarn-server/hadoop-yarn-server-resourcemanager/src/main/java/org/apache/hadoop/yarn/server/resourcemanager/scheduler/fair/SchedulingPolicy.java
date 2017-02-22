@@ -93,8 +93,9 @@ public abstract class SchedulingPolicy {
   }
 
   /**
-   * Initialize the scheduling policy with cluster resources. Deprecated since
-   * it doesn't track cluster resource changes.
+   * Initialize the scheduling policy with cluster resources.
+   * @deprecated  Since it doesn't track cluster resource changes, replaced by
+   * {@link #initialize(FSContext)}.
    *
    * @param clusterCapacity cluster resources
    */
@@ -102,10 +103,10 @@ public abstract class SchedulingPolicy {
   public void initialize(Resource clusterCapacity) {}
 
   /**
-   * Initialize the scheduling policy with a {@link FSContext} object which can
-   * track cluster resource changes.
+   * Initialize the scheduling policy with a {@link FSContext} object, which has
+   * a pointer to the cluster resources among other information.
    *
-   * @param fsContext a {@link FSContext} object which is used to get current
+   * @param fsContext a {@link FSContext} object which has a pointer to the
    *                  cluster resources
    */
   public void initialize(FSContext fsContext) {}
