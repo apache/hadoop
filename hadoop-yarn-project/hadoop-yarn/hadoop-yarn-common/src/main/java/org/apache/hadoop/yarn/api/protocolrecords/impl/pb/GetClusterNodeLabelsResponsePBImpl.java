@@ -72,11 +72,15 @@ public class GetClusterNodeLabelsResponsePBImpl extends
   private void addNodeLabelsToProto() {
     maybeInitBuilder();
     builder.clearNodeLabels();
+    builder.clearDeprecatedNodeLabels();
     List<NodeLabelProto> protoList = new ArrayList<NodeLabelProto>();
+    List<String> protoListString = new ArrayList<String>();
     for (NodeLabel r : this.updatedNodeLabels) {
       protoList.add(convertToProtoFormat(r));
+      protoListString.add(r.getName());
     }
     builder.addAllNodeLabels(protoList);
+    builder.addAllDeprecatedNodeLabels(protoListString);
   }
 
   @Override

@@ -30,17 +30,16 @@ import org.apache.hadoop.yarn.util.Records;
 public abstract class AddToClusterNodeLabelsRequest {
   @Public
   @Unstable
-  public static AddToClusterNodeLabelsRequest newInstance(
-      List<NodeLabel> NodeLabels) {
-    AddToClusterNodeLabelsRequest request =
-      Records.newRecord(AddToClusterNodeLabelsRequest.class);
-    request.setNodeLabels(NodeLabels);
+  public static AddToClusterNodeLabelsRequest newInstance(List<NodeLabel> nodeLabels) {
+    AddToClusterNodeLabelsRequest request = Records
+        .newRecord(AddToClusterNodeLabelsRequest.class);
+    request.setNodeLabels(nodeLabels);
     return request;
   }
 
   @Public
   @Unstable
-  public abstract void setNodeLabels(List<NodeLabel> NodeLabels);
+  public abstract void setNodeLabels(List<NodeLabel> nodeLabels);
 
   @Public
   @Unstable
