@@ -206,13 +206,12 @@ public class FairScheduler extends
 
   public FairScheduler() {
     super(FairScheduler.class.getName());
-    context = new FSContext();
+    context = new FSContext(this);
     allocsLoader = new AllocationFileLoaderService();
     queueMgr = new QueueManager(this);
     maxRunningEnforcer = new MaxRunningAppsEnforcer(this);
   }
 
-  @VisibleForTesting
   public FSContext getContext() {
     return context;
   }
@@ -1450,8 +1449,7 @@ public class FairScheduler extends
         } else {
           allocConf = queueInfo;
           setQueueAcls(allocConf.getQueueAcls());
-          allocConf.getDefaultSchedulingPolicy().initialize(
-              getClusterResource());
+          allocConf.getDefaultSchedulingPolicy().initialize(getContext());
           queueMgr.updateAllocationConfiguration(allocConf);
           applyChildDefaults();
           maxRunningEnforcer.updateRunnabilityOnReload();
