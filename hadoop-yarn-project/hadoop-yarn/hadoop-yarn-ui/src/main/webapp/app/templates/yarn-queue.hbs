@@ -24,17 +24,17 @@
     <div class="col-md-2 container-fluid">
       <div class="panel panel-default">
         <div class="panel-heading">
-          <h4>Application</h4>
+          <h4>Queue</h4>
         </div>
         <div class="panel-body">
           <ul class="nav nav-pills nav-stacked" id="stacked-menu">
             <ul class="nav nav-pills nav-stacked collapse in">
-              {{#link-to 'yarn-queue' tagName="li"}}
-                {{#link-to 'yarn-queue' model.selected}}Information
+              {{#link-to 'yarn-queue.info' tagName="li"}}
+                {{#link-to 'yarn-queue.info' model.selected}}Information
                 {{/link-to}}
               {{/link-to}}
-              {{#link-to 'yarn-queue-apps' tagName="li"}}
-                {{#link-to 'yarn-queue-apps' model.selected}}Applications List
+              {{#link-to 'yarn-queue.apps' tagName="li"}}
+                {{#link-to 'yarn-queue.apps' model.selected}}Applications List
                 {{/link-to}}
               {{/link-to}}
             </ul>
@@ -44,65 +44,8 @@
     </div>
 
     <div class="col-md-10 container-fluid">
-      <!-- timeline view of children -->
-      <div class="row">
-
-        <div class="col-lg-4 container-fluid">
-          <div class="panel panel-default">
-            <div class="panel-heading">
-              Queue Information
-            </div>
-            {{queue-configuration-table queue=model.selectedQueue}}
-          </div>
-        </div>
-
-        <div class="col-lg-4 container-fluid">
-          <div class="panel panel-default">
-            <div class="panel-heading">
-              Queue Capacities
-            </div>
-            <div class="container-fluid" id="capacity-bar-chart">
-              <br/>
-              {{bar-chart data=model.selectedQueue.capacitiesBarChartData
-              title=""
-              parentId="capacity-bar-chart"
-              textWidth=170
-              ratio=0.55
-              maxHeight=350}}
-            </div>
-          </div>
-        </div>
-
-        {{#if model.selectedQueue.hasUserUsages}}
-          <div class="col-lg-4 container-fluid" id="userusage-donut-chart">
-            {{donut-chart data=model.selectedQueue.userUsagesDonutChartData
-            title="User Usages"
-            showLabels=true
-            parentId="userusage-donut-chart"
-            type="memory"
-            ratio=0.6
-            maxHeight=350}}
-          </div>
-        {{/if}}
-
-        <div class="col-lg-4 container-fluid">
-          <div class="panel panel-default">
-            <div class="panel-heading">
-              Running Apps
-            </div>
-            <div class="container-fluid" id="numapplications-donut-chart">
-              {{donut-chart data=model.selectedQueue.numOfApplicationsDonutChartData
-              showLabels=true
-              parentId="numapplications-donut-chart"
-              ratio=0.6
-              maxHeight=350}}
-            </div>
-          </div>
-        </div>
-
-      </div>
+      {{outlet}}
     </div>
 
   </div>
 </div>
-{{outlet}}
