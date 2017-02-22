@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy;
@@ -104,17 +105,17 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
   }
 
   @Override
-  public void initialize(Resource clusterCapacity) {
-    COMPARATOR.setClusterCapacity(clusterCapacity);
+  public void initialize(FSContext fsContext) {
+    COMPARATOR.setFSContext(fsContext);
   }
 
   public static class DominantResourceFairnessComparator implements Comparator<Schedulable> {
     private static final int NUM_RESOURCES = ResourceType.values().length;
-    
-    private Resource clusterCapacity;
 
-    public void setClusterCapacity(Resource clusterCapacity) {
-      this.clusterCapacity = clusterCapacity;
+    private FSContext fsContext;
+
+    public void setFSContext(FSContext fsContext) {
+      this.fsContext = fsContext;
     }
 
     @Override
@@ -125,7 +126,8 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
       ResourceWeights sharesOfMinShare2 = new ResourceWeights();
       ResourceType[] resourceOrder1 = new ResourceType[NUM_RESOURCES];
       ResourceType[] resourceOrder2 = new ResourceType[NUM_RESOURCES];
-      
+      Resource clusterCapacity = fsContext.getClusterResource();
+
       // Calculate shares of the cluster for each resource both schedulables.
       calculateShares(s1.getResourceUsage(),
           clusterCapacity, sharesOfCluster1, resourceOrder1, s1.getWeights());
