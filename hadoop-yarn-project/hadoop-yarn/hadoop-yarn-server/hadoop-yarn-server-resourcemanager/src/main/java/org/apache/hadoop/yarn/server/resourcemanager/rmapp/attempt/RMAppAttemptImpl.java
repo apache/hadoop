@@ -38,6 +38,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import javax.crypto.SecretKey;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -119,6 +120,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       "%s State change from %s to %s on event = %s";
   private static final String RECOVERY_MESSAGE =
       "Recovering attempt: %s with final state = %s";
+  private static final String DIAGNOSTIC_LIMIT_CONFIG_ERROR_MESSAGE =
+      "The value of %s should be a positive integer: %s";
 
   private static final Log LOG = LogFactory.getLog(RMAppAttemptImpl.class);
 
@@ -127,6 +130,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
   public final static Priority AM_CONTAINER_PRIORITY = recordFactory
       .newRecordInstance(Priority.class);
+
   static {
     AM_CONTAINER_PRIORITY.setPriority(0);
   }
@@ -171,7 +175,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   // Set to null initially. Will eventually get set
   // if an RMAppAttemptUnregistrationEvent occurs
   private FinalApplicationStatus finalStatus = null;
-  private final StringBuilder diagnostics = new StringBuilder();
+  private final BoundedAppender diagnostics;
   private int amContainerExitStatus = ContainerExitStatus.INVALID;
 
   private Configuration conf;
@@ -518,6 +522,45 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
     this.amReq = amReq;
     this.blacklistedNodesForAM = amBlacklistManager;
+
+    final int diagnosticsLimitKC = getDiagnosticsLimitKCOrThrow(conf);
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(YarnConfiguration.APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC + " : " +
+              diagnosticsLimitKC);
+    }
+
+    this.diagnostics = new BoundedAppender(diagnosticsLimitKC * 1024);
+  }
+
+  private int getDiagnosticsLimitKCOrThrow(final Configuration configuration) {
+    try {
+      final int diagnosticsLimitKC = configuration.getInt(
+          YarnConfiguration.APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC,
+          YarnConfiguration.DEFAULT_APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC);
+
+      if (diagnosticsLimitKC <= 0) {
+        final String message =
+            String.format(DIAGNOSTIC_LIMIT_CONFIG_ERROR_MESSAGE,
+                YarnConfiguration.APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC,
+                diagnosticsLimitKC);
+        LOG.error(message);
+
+        throw new YarnRuntimeException(message);
+      }
+
+      return diagnosticsLimitKC;
+    } catch (final NumberFormatException ignored) {
+      final String diagnosticsLimitKCString = configuration
+          .get(YarnConfiguration.APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC);
+      final String message =
+          String.format(DIAGNOSTIC_LIMIT_CONFIG_ERROR_MESSAGE,
+              YarnConfiguration.APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC,
+              diagnosticsLimitKCString);
+      LOG.error(message);
+
+      throw new YarnRuntimeException(message);
+    }
   }
 
   @Override
@@ -738,6 +781,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     }
   }
 
+  @VisibleForTesting
+  void appendDiagnostics(final CharSequence message) {
+    this.diagnostics.append(message);
+  }
+
   public int getAMContainerExitStatus() {
     this.readLock.lock();
     try {
@@ -926,8 +974,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           attemptState.getState()));
     }
 
-    diagnostics.append("Attempt recovered after RM restart");
-    diagnostics.append(attemptState.getDiagnostics());
+    this.diagnostics.append("Attempt recovered after RM restart");
+    this.diagnostics.append(attemptState.getDiagnostics());
     this.amContainerExitStatus = attemptState.getAMContainerExitStatus();
     if (amContainerExitStatus == ContainerExitStatus.PREEMPTED) {
       this.attemptMetrics.setIsPreempted();
@@ -942,7 +990,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.startTime = attemptState.getStartTime();
     this.finishTime = attemptState.getFinishTime();
     this.attemptMetrics.updateAggregateAppResourceUsage(
-        attemptState.getMemorySeconds(),attemptState.getVcoreSeconds());
+        attemptState.getMemorySeconds(), attemptState.getVcoreSeconds());
     this.attemptMetrics.updateAggregatePreemptedAppResourceUsage(
         attemptState.getPreemptedMemorySeconds(),
         attemptState.getPreemptedVcoreSeconds());
@@ -1057,7 +1105,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         appAttempt.amReq.setRelaxLocality(true);
 
         appAttempt.getAMBlacklistManager().refreshNodeHostCount(
-            appAttempt.scheduler.getNumClusterNodes());
+            RMServerUtils.getApplicableNodeCountForAM(appAttempt.rmContext,
+                appAttempt.conf, appAttempt.amReq));
 
         ResourceBlacklistRequest amBlacklist =
             appAttempt.getAMBlacklistManager().getBlacklistUpdates();
@@ -1245,7 +1294,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       }
     }
   }
-
 
   private void rememberTargetTransitions(RMAppAttemptEvent event,
       Object transitionToDo, RMAppAttemptState targetFinalState) {
@@ -1655,8 +1703,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private void setAMContainerCrashedDiagnosticsAndExitStatus(
       RMAppAttemptContainerFinishedEvent finishEvent) {
     ContainerStatus status = finishEvent.getContainerStatus();
-    String diagnostics = getAMContainerCrashedDiagnostics(finishEvent);
-    this.diagnostics.append(diagnostics);
+    this.diagnostics.append(getAMContainerCrashedDiagnostics(finishEvent));
     this.amContainerExitStatus = status.getExitStatus();
   }
 
@@ -1825,7 +1872,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     progress = 1.0f;
     RMAppAttemptUnregistrationEvent unregisterEvent =
         (RMAppAttemptUnregistrationEvent) event;
-    diagnostics.append(unregisterEvent.getDiagnosticMsg());
+    this.diagnostics.append(unregisterEvent.getDiagnosticMsg());
     originalTrackingUrl = sanitizeTrackingUrl(unregisterEvent.getFinalTrackingUrl());
     finalStatus = unregisterEvent.getFinalApplicationStatus();
   }
@@ -2231,5 +2278,116 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       }
     }
     return Collections.EMPTY_SET;
+  }
+
+  /**
+   * A {@link CharSequence} appender that considers its {@link #limit} as upper
+   * bound.
+   * <p>
+   * When {@link #limit} would be reached on append, past messages will be
+   * truncated from head, and a header telling the user about truncation will be
+   * prepended, with ellipses in between header and messages.
+   * <p>
+   * Note that header and ellipses are not counted against {@link #limit}.
+   * <p>
+   * An example:
+   *
+   * <pre>
+   * {@code
+   *   // At the beginning it's an empty string
+   *   final Appendable shortAppender = new BoundedAppender(80);
+   *   // The whole message fits into limit
+   *   shortAppender.append(
+   *       "message1 this is a very long message but fitting into limit\n");
+   *   // The first message is truncated, the second not
+   *   shortAppender.append("message2 this is shorter than the previous one\n");
+   *   // The first message is deleted, the second truncated, the third
+   *   // preserved
+   *   shortAppender.append("message3 this is even shorter message, maybe.\n");
+   *   // The first two are deleted, the third one truncated, the last preserved
+   *   shortAppender.append("message4 the shortest one, yet the greatest :)");
+   *   // Current contents are like this:
+   *   // Diagnostic messages truncated, showing last 80 chars out of 199:
+   *   // ...s is even shorter message, maybe.
+   *   // message4 the shortest one, yet the greatest :)
+   * }
+   * </pre>
+   * <p>
+   * Note that <tt>null</tt> values are {@link #append(CharSequence) append}ed
+   * just like in {@link StringBuilder#append(CharSequence) original
+   * implementation}.
+   * <p>
+   * Note that this class is not thread safe.
+   */
+  @VisibleForTesting
+  static class BoundedAppender {
+    @VisibleForTesting
+    static final String TRUNCATED_MESSAGES_TEMPLATE =
+        "Diagnostic messages truncated, showing last "
+            + "%d chars out of %d:%n...%s";
+
+    private final int limit;
+    private final StringBuilder messages = new StringBuilder();
+    private int totalCharacterCount = 0;
+
+    BoundedAppender(final int limit) {
+      Preconditions.checkArgument(limit > 0, "limit should be positive");
+
+      this.limit = limit;
+    }
+
+    /**
+     * Append a {@link CharSequence} considering {@link #limit}, truncating
+     * from the head of {@code csq} or {@link #messages} when necessary.
+     *
+     * @param csq the {@link CharSequence} to append
+     * @return this
+     */
+    BoundedAppender append(final CharSequence csq) {
+      appendAndCount(csq);
+      checkAndCut();
+
+      return this;
+    }
+
+    private void appendAndCount(final CharSequence csq) {
+      final int before = messages.length();
+      messages.append(csq);
+      final int after = messages.length();
+      totalCharacterCount += after - before;
+    }
+
+    private void checkAndCut() {
+      if (messages.length() > limit) {
+        final int newStart = messages.length() - limit;
+        messages.delete(0, newStart);
+      }
+    }
+
+    /**
+     * Get current length of messages considering truncates
+     * without header and ellipses.
+     *
+     * @return current length
+     */
+    int length() {
+      return messages.length();
+    }
+
+    /**
+     * Get a string representation of the actual contents, displaying also a
+     * header and ellipses when there was a truncate.
+     *
+     * @return String representation of the {@link #messages}
+     */
+    @Override
+    public String toString() {
+      if (messages.length() < totalCharacterCount) {
+        return String.format(TRUNCATED_MESSAGES_TEMPLATE, messages.length(),
+            totalCharacterCount, messages.toString());
+      }
+
+      return messages.toString();
+    }
   }
 }

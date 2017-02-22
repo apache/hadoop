@@ -35,7 +35,7 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
-
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -52,7 +52,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.logaggregation.ContainerLogType;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
 import org.apache.hadoop.yarn.logaggregation.PerContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.TestContainerLogsUtils;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryClientService;
@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
+import org.apache.hadoop.yarn.server.webapp.YarnWebServiceParams;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
@@ -84,6 +85,7 @@ import org.junit.runners.Parameterized;
 import com.google.inject.Guice;
 import com.google.inject.Singleton;
 import com.google.inject.servlet.ServletModule;
+import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.ClientResponse.Status;
 import com.sun.jersey.api.client.GenericType;
@@ -103,6 +105,8 @@ public class TestAHSWebServices extends JerseyTestBase {
   private static FileSystem fs;
   private static final String remoteLogRootDir = "target/logs/";
   private static final String rootLogDir = "target/LocalLogs";
+  private static final String NM_WEBADDRESS = "test-nm-web-address:9999";
+  private static final String NM_ID = "test:1234";
 
   @BeforeClass
   public static void setupClass() throws Exception {
@@ -130,7 +134,17 @@ public class TestAHSWebServices extends JerseyTestBase {
     };
     historyClientService.init(conf);
     historyClientService.start();
-    ahsWebservice = new AHSWebServices(historyClientService, conf);
+    ahsWebservice = new AHSWebServices(historyClientService, conf) {
+      @Override
+      public String getNMWebAddressFromRM(Configuration configuration,
+          String nodeId) throws ClientHandlerException,
+          UniformInterfaceException, JSONException {
+        if (nodeId.equals(NM_ID)) {
+          return NM_WEBADDRESS;
+        }
+        return null;
+      }
+    };
     fs = FileSystem.get(conf);
     GuiceServletConfig.setInjector(
         Guice.createInjector(new WebServletModule()));
@@ -584,7 +598,10 @@ public class TestAHSWebServices extends JerseyTestBase {
     responseText = response.getEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId1ForApp100));
     int fullTextSize = responseText.getBytes().length;
-    int tailTextSize = "\nEnd of LogType:syslog\n".getBytes().length;
+    String tailEndSeparator = StringUtils.repeat("*",
+        "End of LogType:syslog".length() + 50) + "\n\n";
+    int tailTextSize = "\nEnd of LogType:syslog\n".getBytes().length
+        + tailEndSeparator.getBytes().length;
 
     String logMessage = "Hello." + containerId1ForApp100;
     int fileContentSize = logMessage.getBytes().length;
@@ -673,6 +690,22 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertTrue(redirectURL.contains("/logs/" + fileName));
     assertTrue(redirectURL.contains("user.name=" + user));
 
+    // If we specify NM id, we would re-direct the request
+    // to this NM's Web Address.
+    requestURI = r.path("ws").path("v1")
+        .path("applicationhistory").path("containerlogs")
+        .path(containerId1.toString()).path(fileName)
+        .queryParam("user.name", user)
+        .queryParam(YarnWebServiceParams.NM_ID, NM_ID)
+        .getURI();
+    redirectURL = getRedirectURL(requestURI.toString());
+    assertTrue(redirectURL != null);
+    assertTrue(redirectURL.contains(NM_WEBADDRESS));
+    assertTrue(redirectURL.contains("ws/v1/node/containers"));
+    assertTrue(redirectURL.contains(containerId1.toString()));
+    assertTrue(redirectURL.contains("/logs/" + fileName));
+    assertTrue(redirectURL.contains("user.name=" + user));
+
     // Test with new API
     requestURI = r.path("ws").path("v1")
         .path("applicationhistory").path("containers")
@@ -685,6 +718,59 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertTrue(redirectURL.contains(containerId1.toString()));
     assertTrue(redirectURL.contains("/logs/" + fileName));
     assertTrue(redirectURL.contains("user.name=" + user));
+
+    requestURI = r.path("ws").path("v1")
+        .path("applicationhistory").path("containers")
+        .path(containerId1.toString()).path("logs").path(fileName)
+        .queryParam("user.name", user)
+        .queryParam(YarnWebServiceParams.NM_ID, NM_ID)
+        .getURI();
+    redirectURL = getRedirectURL(requestURI.toString());
+    assertTrue(redirectURL != null);
+    assertTrue(redirectURL.contains(NM_WEBADDRESS));
+    assertTrue(redirectURL.contains("ws/v1/node/containers"));
+    assertTrue(redirectURL.contains(containerId1.toString()));
+    assertTrue(redirectURL.contains("/logs/" + fileName));
+    assertTrue(redirectURL.contains("user.name=" + user));
+
+    // If we can not container information from ATS, we would try to
+    // get aggregated log from remote FileSystem.
+    ContainerId containerId1000 = ContainerId.newContainerId(
+        appAttemptId, 1000);
+    String content = "Hello." + containerId1000;
+    NodeId nodeId = NodeId.newInstance("test host", 100);
+    TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
+        rootLogDir, containerId1000, nodeId, fileName, user, content, true);
+    r = resource();
+    ClientResponse response = r.path("ws").path("v1")
+        .path("applicationhistory").path("containerlogs")
+        .path(containerId1000.toString()).path(fileName)
+        .queryParam("user.name", user)
+        .accept(MediaType.TEXT_PLAIN)
+        .get(ClientResponse.class);
+    String responseText = response.getEntity(String.class);
+    assertTrue(responseText.contains(content));
+    // Also test whether we output the empty local container log, and give
+    // the warning message.
+    assertTrue(responseText.contains("LogAggregationType: "
+        + ContainerLogAggregationType.LOCAL));
+    assertTrue(responseText.contains(AHSWebServices.getNoRedirectWarning()));
+
+    // If we can not container information from ATS, and we specify the NM id,
+    // but we can not get nm web address, we would still try to
+    // get aggregated log from remote FileSystem.
+    response = r.path("ws").path("v1")
+        .path("applicationhistory").path("containerlogs")
+        .path(containerId1000.toString()).path(fileName)
+        .queryParam(YarnWebServiceParams.NM_ID, "invalid-nm:1234")
+        .queryParam("user.name", user)
+        .accept(MediaType.TEXT_PLAIN)
+        .get(ClientResponse.class);
+    responseText = response.getEntity(String.class);
+    assertTrue(responseText.contains(content));
+    assertTrue(responseText.contains("LogAggregationType: "
+        + ContainerLogAggregationType.LOCAL));
+    assertTrue(responseText.contains(AHSWebServices.getNoRedirectWarning()));
   }
 
   @Test(timeout = 10000)
@@ -696,21 +782,38 @@ public class TestAHSWebServices extends JerseyTestBase {
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1);
     WebResource r = resource();
-    // If we can get Container information from ATS, we re-direct the request
-    // to the nodemamager who runs the container.
+    // If we specify the NMID, we re-direct the request by using
+    // the NM's web address
     URI requestURI = r.path("ws").path("v1")
         .path("applicationhistory").path("containers")
         .path(containerId1.toString()).path("logs")
-        .queryParam("user.name", user).getURI();
+        .queryParam("user.name", user)
+        .queryParam(YarnWebServiceParams.NM_ID, NM_ID)
+        .getURI();
     String redirectURL = getRedirectURL(requestURI.toString());
+    assertTrue(redirectURL != null);
+    assertTrue(redirectURL.contains(NM_WEBADDRESS));
+    assertTrue(redirectURL.contains("ws/v1/node/containers"));
+    assertTrue(redirectURL.contains(containerId1.toString()));
+    assertTrue(redirectURL.contains("/logs"));
+
+    // If we do not specify the NodeId but can get Container information
+    // from ATS, we re-direct the request to the node manager
+    // who runs the container.
+    requestURI = r.path("ws").path("v1")
+        .path("applicationhistory").path("containers")
+        .path(containerId1.toString()).path("logs")
+        .queryParam("user.name", user).getURI();
+    redirectURL = getRedirectURL(requestURI.toString());
     assertTrue(redirectURL != null);
     assertTrue(redirectURL.contains("test:1234"));
     assertTrue(redirectURL.contains("ws/v1/node/containers"));
     assertTrue(redirectURL.contains(containerId1.toString()));
     assertTrue(redirectURL.contains("/logs"));
 
-    // If we can not container information from ATS, we would try to
-    // get aggregated log meta from remote FileSystem.
+    // If we can not container information from ATS,
+    // and not specify nodeId,
+    // we would try to get aggregated log meta from remote FileSystem.
     ContainerId containerId1000 = ContainerId.newContainerId(
         appAttemptId, 1000);
     String fileName = "syslog";
@@ -729,7 +832,8 @@ public class TestAHSWebServices extends JerseyTestBase {
         List<ContainerLogsInfo>>(){});
     assertTrue(responseText.size() == 2);
     for (ContainerLogsInfo logInfo : responseText) {
-      if(logInfo.getLogType().equals(ContainerLogType.AGGREGATED.toString())) {
+      if(logInfo.getLogType().equals(
+          ContainerLogAggregationType.AGGREGATED.toString())) {
         List<PerContainerLogFileInfo> logMeta = logInfo
             .getContainerLogsInfo();
         assertTrue(logMeta.size() == 1);
@@ -737,7 +841,36 @@ public class TestAHSWebServices extends JerseyTestBase {
         assertEquals(logMeta.get(0).getFileSize(), String.valueOf(
             content.length()));
       } else {
-        assertEquals(logInfo.getLogType(), ContainerLogType.LOCAL.toString());
+        assertEquals(logInfo.getLogType(),
+            ContainerLogAggregationType.LOCAL.toString());
+      }
+    }
+
+    // If we can not container information from ATS,
+    // and we specify NM id, but can not find NM WebAddress for this nodeId,
+    // we would still try to get aggregated log meta from remote FileSystem.
+    response = r.path("ws").path("v1")
+        .path("applicationhistory").path("containers")
+        .path(containerId1000.toString()).path("logs")
+        .queryParam(YarnWebServiceParams.NM_ID, "invalid-nm:1234")
+        .queryParam("user.name", user)
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    responseText = response.getEntity(new GenericType<
+        List<ContainerLogsInfo>>(){});
+    assertTrue(responseText.size() == 2);
+    for (ContainerLogsInfo logInfo : responseText) {
+      if(logInfo.getLogType().equals(
+          ContainerLogAggregationType.AGGREGATED.toString())) {
+        List<PerContainerLogFileInfo> logMeta = logInfo
+            .getContainerLogsInfo();
+        assertTrue(logMeta.size() == 1);
+        assertEquals(logMeta.get(0).getFileName(), fileName);
+        assertEquals(logMeta.get(0).getFileSize(), String.valueOf(
+            content.length()));
+      } else {
+        assertEquals(logInfo.getLogType(),
+            ContainerLogAggregationType.LOCAL.toString());
       }
     }
   }
@@ -766,7 +899,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         List<ContainerLogsInfo>>(){});
     assertTrue(responseText.size() == 1);
     assertEquals(responseText.get(0).getLogType(),
-        ContainerLogType.AGGREGATED.toString());
+        ContainerLogAggregationType.AGGREGATED.toString());
     List<PerContainerLogFileInfo> logMeta = responseText.get(0)
         .getContainerLogsInfo();
     assertTrue(logMeta.size() == 1);

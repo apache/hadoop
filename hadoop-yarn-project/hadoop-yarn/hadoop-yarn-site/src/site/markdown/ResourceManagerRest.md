@@ -15,32 +15,7 @@
 ResourceManager REST API's.
 ===========================
 
-* [Overview](#Overview)
-* [Enabling CORS support](#Enabling_CORS_support)
-* [Cluster Information API](#Cluster_Information_API)
-* [Cluster Metrics API](#Cluster_Metrics_API)
-* [Cluster Scheduler API](#Cluster_Scheduler_API)
-* [Cluster Applications API](#Cluster_Applications_API)
-* [Cluster Application Statistics API](#Cluster_Application_Statistics_API)
-* [Cluster Application API](#Cluster_Application_API)
-* [Cluster Application Attempts API](#Cluster_Application_Attempts_API)
-* [Cluster Nodes API](#Cluster_Nodes_API)
-* [Cluster Node API](#Cluster_Node_API)
-* [Cluster Writeable APIs](#Cluster_Writeable_APIs)
-* [Cluster New Application API](#Cluster_New_Application_API)
-* [Cluster Applications API(Submit Application)](#Cluster_Applications_APISubmit_Application)
-* [Cluster Application State API](#Cluster_Application_State_API)
-* [Cluster Application Queue API](#Cluster_Application_Queue_API)
-* [Cluster Application Priority API](#Cluster_Application_Priority_API)
-* [Cluster Delegation Tokens API](#Cluster_Delegation_Tokens_API)
-* [Cluster Reservation API List](#Cluster_Reservation_API_List)
-* [Cluster Reservation API Create](#Cluster_Reservation_API_Create)
-* [Cluster Reservation API Submit](#Cluster_Reservation_API_Submit)
-* [Cluster Reservation API Update](#Cluster_Reservation_API_Update)
-* [Cluster Reservation API Delete](#Cluster_Reservation_API_Delete)
-* [Cluster Application Timeouts API](#Cluster_Application_Timeouts_API)
-* [Cluster Application Timeout API](#Cluster_Application_Timeout_API)
-* [Cluster Application Timeout Update API](#Cluster_Application_Timeout_Update_API)
+<!-- MACRO{toc|fromDepth=0|toDepth=1} -->
 
 Overview
 --------

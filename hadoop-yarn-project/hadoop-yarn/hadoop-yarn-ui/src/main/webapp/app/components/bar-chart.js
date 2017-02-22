@@ -55,17 +55,15 @@ export default BaseChartComponent.extend({
       .domain([0, maxValue])
       .range([0, maxBarWidth]);
 
+    var getBarText = function(i) {
+      return data[i].label;
+    };
     // show bar text
-    for (var i = 0; i < data.length; i++) {
+    for (i = 0; i < data.length; i++) {
       g.append("text")
-        .text(
-          function() {
-            return data[i].label;
-          })
-        .attr("y", function() {
-          return layout.y1 + singleBarHeight / 2 + layout.margin + (gap +
-            singleBarHeight) * i + 30;
-        })
+        .text(getBarText(i))
+        .attr("y", layout.y1 + singleBarHeight / 2 + layout.margin +
+          (gap + singleBarHeight) * i + 30)
         .attr("x", layout.x1 + layout.margin);
     }
 
@@ -96,17 +94,15 @@ export default BaseChartComponent.extend({
         return w;
       });
 
+    var getBarValue = function(i) {
+      return data[i].value;
+    };
     // show bar value
-    for (var i = 0; i < data.length; i++) {
+    for (i = 0; i < data.length; i++) {
       g.append("text")
-        .text(
-          function() {
-            return data[i].value;
-          })
-        .attr("y", function() {
-          return layout.y1 + singleBarHeight / 2 + layout.margin + (gap +
-            singleBarHeight) * i + 30;
-        })
+        .text(getBarValue(i))
+        .attr("y", layout.y1 + singleBarHeight / 2 + layout.margin +
+              (gap + singleBarHeight) * i + 30)
         .attr("x", layout.x1 + layout.margin + textWidth + 15 + xScaler(data[i].value));
     }
   },
@@ -123,5 +119,5 @@ export default BaseChartComponent.extend({
   didInsertElement: function() {
     this.initChart();
     this.draw();
-  },
-})
+  }
+});

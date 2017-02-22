@@ -41,7 +41,7 @@ export default BaseChartComponent.extend({
     }
 
     if (!middleValue) {
-      if (this.get("type") == "memory") {
+      if (this.get("type") === "memory") {
         middleValue = Converter.memoryToSimpliedUnit(total);
       } else {
         middleValue = total;
@@ -111,7 +111,7 @@ export default BaseChartComponent.extend({
         if (allZero) {
           return this.colors[i];
         }
-      }.bind(this))
+      }.bind(this));
     this.bindTooltip(path);
     path.on("click", function (d) {
       var data = d.data;
@@ -119,7 +119,7 @@ export default BaseChartComponent.extend({
         this.tooltip.remove();
         document.location.href = data.link;
       }
-    }.bind(this))
+    }.bind(this));
 
     // Show labels
     if (showLabels) {
@@ -147,7 +147,7 @@ export default BaseChartComponent.extend({
         })
         .text(function(d) {
           var value = d.value;
-          if (this.get("type") == "memory") {
+          if (this.get("type") === "memory") {
             value = Converter.memoryToSimpliedUnit(value);
           }
           return d.label + ' = ' + value + suffix;
@@ -190,4 +190,4 @@ export default BaseChartComponent.extend({
     this.initChart();
     this.draw();
   },
-})
+});

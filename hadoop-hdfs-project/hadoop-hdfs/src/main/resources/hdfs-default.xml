@@ -503,6 +503,15 @@
 </property>
 
 <property>
+  <name>dfs.block.access.token.protobuf.enable</name>
+  <value>false</value>
+  <description>
+    If "true", block tokens are written using Protocol Buffers.
+    If "false", block tokens are written using Legacy format.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.data.dir</name>
   <value>file://${hadoop.tmp.dir}/dfs/data</value>
   <description>Determines where on the local filesystem an DFS data node
@@ -4036,7 +4045,7 @@
 
 <property>
   <name>dfs.namenode.reconstruction.pending.timeout-sec</name>
-  <value>-1</value>
+  <value>300</value>
   <description>
     Timeout in seconds for block reconstruction.  If this value is 0 or less,
     then it will default to 5 minutes.

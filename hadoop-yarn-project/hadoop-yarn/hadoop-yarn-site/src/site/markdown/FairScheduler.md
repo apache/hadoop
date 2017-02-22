@@ -15,19 +15,7 @@
 Hadoop: Fair Scheduler
 ======================
 
-* [Purpose](#Purpose)
-* [Introduction](#Introduction)
-* [Hierarchical queues with pluggable policies](#Hierarchical_queues_with_pluggable_policies)
-* [Automatically placing applications in queues](#Automatically_placing_applications_in_queues)
-* [Installation](#Installation)
-* [Configuration](#Configuration)
-    * [Properties that can be placed in yarn-site.xml](#Properties_that_can_be_placed_in_yarn-site.xml)
-    * [Allocation file format](#Allocation_file_format)
-    * [Queue Access Control Lists](#Queue_Access_Control_Lists)
-* [Administration](#Administration)
-    * [Modifying configuration at runtime](#Modifying_configuration_at_runtime)
-    * [Monitoring through web UI](#Monitoring_through_web_UI)
-    * [Moving applications between queues](#Moving_applications_between_queues)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 ##Purpose
 

@@ -63,7 +63,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     maxApplications = q.getMaxApplications();
     maxApplicationsPerUser = q.getMaxApplicationsPerUser();
     userLimit = q.getUserLimit();
-    users = new UsersInfo(q.getUsers());
+    users = new UsersInfo(q.getUsersManager().getUsersInfo());
     userLimitFactor = q.getUserLimitFactor();
     AMResourceLimit = new ResourceInfo(q.getAMResourceLimit());
     usedAMResource = new ResourceInfo(q.getQueueResourceUsage().getAMUsed());

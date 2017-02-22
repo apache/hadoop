@@ -757,6 +757,17 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     }
   }
 
+  @Override
+  public void invalidateCache(String name) throws IOException {
+    checkNotEmpty(name, "name");
+    final URL url = createURL(KMSRESTConstants.KEY_RESOURCE, name,
+        KMSRESTConstants.INVALIDATECACHE_RESOURCE, null);
+    final HttpURLConnection conn = createConnection(url, HTTP_POST);
+    // invalidate the server cache first, then drain local cache.
+    call(conn, null, HttpURLConnection.HTTP_OK, null);
+    drain(name);
+  }
+
   private KeyVersion rollNewVersionInternal(String name, byte[] material)
       throws NoSuchAlgorithmException, IOException {
     checkNotEmpty(name, "name");
@@ -771,7 +782,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     Map response = call(conn, jsonMaterial,
         HttpURLConnection.HTTP_OK, Map.class);
     KeyVersion keyVersion = parseJSONKeyVersion(response);
-    encKeyVersionQueue.drain(name);
+    invalidateCache(name);
     return keyVersion;
   }
 

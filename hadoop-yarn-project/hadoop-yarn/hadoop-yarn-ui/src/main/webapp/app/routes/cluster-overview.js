@@ -23,7 +23,7 @@ import AbstractRoute from './abstract';
 export default AbstractRoute.extend({
   model() {
     return Ember.RSVP.hash({
-      clusterMetrics: this.store.findAll('ClusterMetric'),
+      clusterMetrics: this.store.findAll('ClusterMetric', {reload: true}),
       apps: this.store.query('yarn-app',
         {
           state: "RUNNING"

@@ -32,7 +32,7 @@ How Does HttpFS Works?
 
 HttpFS is a separate service from Hadoop NameNode.
 
-HttpFS itself is Java web-application and it runs using a preconfigured Tomcat bundled with HttpFS binary distribution.
+HttpFS itself is Java Jetty web-application.
 
 HttpFS HTTP web-service API calls are HTTP REST calls that map to a HDFS file system operation. For example, using the `curl` Unix command:
 

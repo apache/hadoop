@@ -144,6 +144,8 @@ public class RequestHedgingRMFailoverProxyProvider<T>
             args);
       }
 
+      LOG.info("Looking for the active RM in " + Arrays.toString(rmServiceIds)
+          + "...");
       ExecutorService executor = null;
       CompletionService<Object> completionService;
       try {
@@ -166,7 +168,7 @@ public class RequestHedgingRMFailoverProxyProvider<T>
         Object retVal;
         try {
           retVal = callResultFuture.get();
-          LOG.info("Invocation successful on [" + pInfo + "]");
+          LOG.info("Found active RM [" + pInfo + "]");
           return retVal;
         } catch (Exception ex) {
           // Throw exception from first responding RM so that clients can handle
@@ -192,7 +194,7 @@ public class RequestHedgingRMFailoverProxyProvider<T>
 
   @Override
   public void performFailover(T currentProxy) {
-    LOG.info("Connection lost, trying to fail over.");
+    LOG.info("Connection lost with " + successfulProxy + ", trying to fail over.");
     successfulProxy = null;
   }
 }

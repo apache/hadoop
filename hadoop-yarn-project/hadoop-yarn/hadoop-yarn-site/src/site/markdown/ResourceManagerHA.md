@@ -15,15 +15,7 @@
 ResourceManager High Availability
 =================================
 
-* [Introduction](#Introduction)
-* [Architecture](#Architecture)
-    * [RM Failover](#RM_Failover)
-    * [Recovering prevous active-RM's state](#Recovering_prevous_active-RMs_state)
-* [Deployment](#Deployment)
-    * [Configurations](#Configurations)
-    * [Admin commands](#Admin_commands)
-    * [ResourceManager Web UI services](#ResourceManager_Web_UI_services)
-    * [Web Services](#Web_Services)
+<!-- MACRO{toc|fromDepth=0|toDepth=2} -->
 
 Introduction
 ------------

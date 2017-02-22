@@ -2650,6 +2650,14 @@
 
   <property>
     <description>
+    URL for log aggregation server web service
+    </description>
+    <name>yarn.log.server.web-service.url</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
     RM Application Tracking URL
     </description>
     <name>yarn.tracking.url.generator</name>
@@ -3012,6 +3020,21 @@
     </description>
     <name>yarn.resourcemanager.application-timeouts.monitor.interval-ms</name>
     <value>3000</value>
+  </property>
+
+  <property>
+    <description>
+      Defines the limit of the diagnostics message of an application
+      attempt, in kilo characters (character count * 1024).
+      When using ZooKeeper to store application state behavior, it's
+      important to limit the size of the diagnostic messages to
+      prevent YARN from overwhelming ZooKeeper. In cases where
+      yarn.resourcemanager.state-store.max-completed-applications is set to
+      a large number, it may be desirable to reduce the value of this property
+      to limit the total data stored.
+    </description>
+    <name>yarn.app.attempt.diagnostics.limit.kc</name>
+    <value>64</value>
   </property>
 
 </configuration>

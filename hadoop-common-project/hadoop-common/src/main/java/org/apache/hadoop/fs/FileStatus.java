@@ -20,6 +20,9 @@ package org.apache.hadoop.fs;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.InvalidObjectException;
+import java.io.ObjectInputValidation;
+import java.io.Serializable;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -31,11 +34,14 @@ import org.apache.hadoop.io.Writable;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class FileStatus implements Writable, Comparable<FileStatus> {
+public class FileStatus implements Writable, Comparable<FileStatus>,
+    Serializable, ObjectInputValidation {
+
+  private static final long serialVersionUID = 0x13caeae8;
 
   private Path path;
   private long length;
-  private boolean isdir;
+  private Boolean isdir;
   private short block_replication;
   private long blocksize;
   private long modification_time;
@@ -387,4 +393,15 @@ public class FileStatus implements Writable, Comparable<FileStatus> {
     sb.append("}");
     return sb.toString();
   }
+
+  @Override
+  public void validateObject() throws InvalidObjectException {
+    if (null == path) {
+      throw new InvalidObjectException("No Path in deserialized FileStatus");
+    }
+    if (null == isdir) {
+      throw new InvalidObjectException("No type in deserialized FileStatus");
+    }
+  }
+
 }

@@ -19,11 +19,16 @@
 package org.apache.hadoop.hdfs.security.token.block;
 
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.EnumSet;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.AccessModeProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenSecretProto;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -44,20 +49,22 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   private String blockPoolId;
   private long blockId;
   private final EnumSet<AccessMode> modes;
+  private boolean useProto;
 
   private byte [] cache;
 
   public BlockTokenIdentifier() {
-    this(null, null, 0, EnumSet.noneOf(AccessMode.class));
+    this(null, null, 0, EnumSet.noneOf(AccessMode.class), false);
   }
 
   public BlockTokenIdentifier(String userId, String bpid, long blockId,
-      EnumSet<AccessMode> modes) {
+      EnumSet<AccessMode> modes, boolean useProto) {
     this.cache = null;
     this.userId = userId;
     this.blockPoolId = bpid;
     this.blockId = blockId;
     this.modes = modes == null ? EnumSet.noneOf(AccessMode.class) : modes;
+    this.useProto = useProto;
   }
 
   @Override
@@ -144,9 +151,45 @@ public class BlockTokenIdentifier extends TokenIdentifier {
         ^ (blockPoolId == null ? 0 : blockPoolId.hashCode());
   }
 
+  /**
+   * readFields peeks at the first byte of the DataInput and determines if it
+   * was written using WritableUtils ("Legacy") or Protobuf. We can do this
+   * because we know the first field is the Expiry date.
+   *
+   * In the case of the legacy buffer, the expiry date is a VInt, so the size
+   * (which should always be >1) is encoded in the first byte - which is
+   * always negative due to this encoding. However, there are sometimes null
+   * BlockTokenIdentifier written so we also need to handle the case there
+   * the first byte is also 0.
+   *
+   * In the case of protobuf, the first byte is a type tag for the expiry date
+   * which is written as <code>(field_number << 3 |  wire_type</code>.
+   * So as long as the field_number  is less than 16, but also positive, then
+   * we know we have a Protobuf.
+   *
+   * @param in <code>DataInput</code> to deserialize this object from.
+   * @throws IOException
+   */
   @Override
   public void readFields(DataInput in) throws IOException {
     this.cache = null;
+
+    final DataInputStream dis = (DataInputStream)in;
+    if (!dis.markSupported()) {
+      throw new IOException("Could not peek first byte.");
+    }
+    dis.mark(1);
+    final byte firstByte = dis.readByte();
+    dis.reset();
+    if (firstByte <= 0) {
+      readFieldsLegacy(dis);
+    } else {
+      readFieldsProtobuf(dis);
+    }
+  }
+
+  @VisibleForTesting
+  void readFieldsLegacy(DataInput in) throws IOException {
     expiryDate = WritableUtils.readVLong(in);
     keyId = WritableUtils.readVInt(in);
     userId = WritableUtils.readString(in);
@@ -157,10 +200,44 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     for (int i = 0; i < length; i++) {
       modes.add(WritableUtils.readEnum(in, AccessMode.class));
     }
+    useProto = false;
+  }
+
+  @VisibleForTesting
+  void readFieldsProtobuf(DataInput in) throws IOException {
+    BlockTokenSecretProto blockTokenSecretProto =
+        BlockTokenSecretProto.parseFrom((DataInputStream)in);
+    expiryDate = blockTokenSecretProto.getExpiryDate();
+    keyId = blockTokenSecretProto.getKeyId();
+    if (blockTokenSecretProto.hasUserId()) {
+      userId = blockTokenSecretProto.getUserId();
+    } else {
+      userId = null;
+    }
+    if (blockTokenSecretProto.hasBlockPoolId()) {
+      blockPoolId = blockTokenSecretProto.getBlockPoolId();
+    } else {
+      blockPoolId = null;
+    }
+    blockId = blockTokenSecretProto.getBlockId();
+    for (int i = 0; i < blockTokenSecretProto.getModesCount(); i++) {
+      AccessModeProto accessModeProto = blockTokenSecretProto.getModes(i);
+      modes.add(PBHelperClient.convert(accessModeProto));
+    }
+    useProto = true;
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
+    if (useProto) {
+      writeProtobuf(out);
+    } else {
+      writeLegacy(out);
+    }
+  }
+
+  @VisibleForTesting
+  void writeLegacy(DataOutput out) throws IOException {
     WritableUtils.writeVLong(out, expiryDate);
     WritableUtils.writeVInt(out, keyId);
     WritableUtils.writeString(out, userId);
@@ -170,6 +247,12 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     for (AccessMode aMode : modes) {
       WritableUtils.writeEnum(out, aMode);
     }
+  }
+
+  @VisibleForTesting
+  void writeProtobuf(DataOutput out) throws IOException {
+    BlockTokenSecretProto secret = PBHelperClient.convert(this);
+    out.write(secret.toByteArray());
   }
 
   @Override

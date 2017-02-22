@@ -809,8 +809,15 @@ public class NameNode extends ReconfigurableBase implements
       httpServer.setFSImage(getFSImage());
     }
     rpcServer.start();
-    plugins = conf.getInstances(DFS_NAMENODE_PLUGINS_KEY,
-        ServicePlugin.class);
+    try {
+      plugins = conf.getInstances(DFS_NAMENODE_PLUGINS_KEY,
+          ServicePlugin.class);
+    } catch (RuntimeException e) {
+      String pluginsValue = conf.get(DFS_NAMENODE_PLUGINS_KEY);
+      LOG.error("Unable to load NameNode plugins. Specified list of plugins: " +
+          pluginsValue, e);
+      throw e;
+    }
     for (ServicePlugin p: plugins) {
       try {
         p.start(this);
@@ -1579,62 +1586,53 @@ public class NameNode extends ReconfigurableBase implements
     }
     setStartupOption(conf, startOpt);
 
+    boolean aborted = false;
     switch (startOpt) {
-      case FORMAT: {
-        boolean aborted = format(conf, startOpt.getForceFormat(),
-            startOpt.getInteractiveFormat());
-        terminate(aborted ? 1 : 0);
-        return null; // avoid javac warning
-      }
-      case GENCLUSTERID: {
-        System.err.println("Generating new cluster id:");
-        System.out.println(NNStorage.newClusterID());
-        terminate(0);
-        return null;
-      }
-      case ROLLBACK: {
-        boolean aborted = doRollback(conf, true);
-        terminate(aborted ? 1 : 0);
-        return null; // avoid warning
-      }
-      case BOOTSTRAPSTANDBY: {
-        String toolArgs[] = Arrays.copyOfRange(argv, 1, argv.length);
-        int rc = BootstrapStandby.run(toolArgs, conf);
-        terminate(rc);
-        return null; // avoid warning
-      }
-      case INITIALIZESHAREDEDITS: {
-        boolean aborted = initializeSharedEdits(conf,
-            startOpt.getForceFormat(),
-            startOpt.getInteractiveFormat());
-        terminate(aborted ? 1 : 0);
-        return null; // avoid warning
-      }
-      case BACKUP:
-      case CHECKPOINT: {
-        NamenodeRole role = startOpt.toNodeRole();
-        DefaultMetricsSystem.initialize(role.toString().replace(" ", ""));
-        return new BackupNode(conf, role);
-      }
-      case RECOVER: {
-        NameNode.doRecovery(startOpt, conf);
-        return null;
-      }
-      case METADATAVERSION: {
-        printMetadataVersion(conf);
-        terminate(0);
-        return null; // avoid javac warning
-      }
-      case UPGRADEONLY: {
-        DefaultMetricsSystem.initialize("NameNode");
-        new NameNode(conf);
-        terminate(0);
-        return null;
-      }
-      default: {
-        DefaultMetricsSystem.initialize("NameNode");
-        return new NameNode(conf);
-      }
+    case FORMAT:
+      aborted = format(conf, startOpt.getForceFormat(),
+          startOpt.getInteractiveFormat());
+      terminate(aborted ? 1 : 0);
+      return null; // avoid javac warning
+    case GENCLUSTERID:
+      System.err.println("Generating new cluster id:");
+      System.out.println(NNStorage.newClusterID());
+      terminate(0);
+      return null;
+    case ROLLBACK:
+      aborted = doRollback(conf, true);
+      terminate(aborted ? 1 : 0);
+      return null; // avoid warning
+    case BOOTSTRAPSTANDBY:
+      String[] toolArgs = Arrays.copyOfRange(argv, 1, argv.length);
+      int rc = BootstrapStandby.run(toolArgs, conf);
+      terminate(rc);
+      return null; // avoid warning
+    case INITIALIZESHAREDEDITS:
+      aborted = initializeSharedEdits(conf,
+          startOpt.getForceFormat(),
+          startOpt.getInteractiveFormat());
+      terminate(aborted ? 1 : 0);
+      return null; // avoid warning
+    case BACKUP:
+    case CHECKPOINT:
+      NamenodeRole role = startOpt.toNodeRole();
+      DefaultMetricsSystem.initialize(role.toString().replace(" ", ""));
+      return new BackupNode(conf, role);
+    case RECOVER:
+      NameNode.doRecovery(startOpt, conf);
+      return null;
+    case METADATAVERSION:
+      printMetadataVersion(conf);
+      terminate(0);
+      return null; // avoid javac warning
+    case UPGRADEONLY:
+      DefaultMetricsSystem.initialize("NameNode");
+      new NameNode(conf);
+      terminate(0);
+      return null;
+    default:
+      DefaultMetricsSystem.initialize("NameNode");
+      return new NameNode(conf);
     }
   }
 

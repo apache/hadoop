@@ -43,7 +43,7 @@ import java.util.Properties;
 public class HttpFSAuthenticationFilter
     extends DelegationTokenAuthenticationFilter {
 
-  private static final String CONF_PREFIX = "httpfs.authentication.";
+  static final String CONF_PREFIX = "httpfs.authentication.";
 
   private static final String SIGNATURE_SECRET_FILE = SIGNATURE_SECRET + ".file";
 

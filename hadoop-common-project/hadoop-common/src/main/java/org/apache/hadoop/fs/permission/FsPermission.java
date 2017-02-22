@@ -20,6 +20,9 @@ package org.apache.hadoop.fs.permission;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.InvalidObjectException;
+import java.io.ObjectInputValidation;
+import java.io.Serializable;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,8 +39,10 @@ import org.apache.hadoop.io.WritableFactory;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class FsPermission implements Writable {
+public class FsPermission implements Writable, Serializable,
+    ObjectInputValidation {
   private static final Log LOG = LogFactory.getLog(FsPermission.class);
+  private static final long serialVersionUID = 0x2fe08564;
 
   static final WritableFactory FACTORY = new WritableFactory() {
     @Override
@@ -60,7 +65,7 @@ public class FsPermission implements Writable {
   private FsAction useraction = null;
   private FsAction groupaction = null;
   private FsAction otheraction = null;
-  private boolean stickyBit = false;
+  private Boolean stickyBit = false;
 
   private FsPermission() {}
 
@@ -202,7 +207,7 @@ public class FsPermission implements Writable {
       return this.useraction == that.useraction
           && this.groupaction == that.groupaction
           && this.otheraction == that.otheraction
-          && this.stickyBit == that.stickyBit;
+          && this.stickyBit.booleanValue() == that.stickyBit.booleanValue();
     }
     return false;
   }
@@ -377,6 +382,7 @@ public class FsPermission implements Writable {
   }
   
   private static class ImmutableFsPermission extends FsPermission {
+    private static final long serialVersionUID = 0x1bab54bd;
     public ImmutableFsPermission(short permission) {
       super(permission);
     }
@@ -384,6 +390,16 @@ public class FsPermission implements Writable {
     @Override
     public void readFields(DataInput in) throws IOException {
       throw new UnsupportedOperationException();
+    }
+  }
+
+  @Override
+  public void validateObject() throws InvalidObjectException {
+    if (null == useraction || null == groupaction || null == otheraction) {
+      throw new InvalidObjectException("Invalid mode in FsPermission");
+    }
+    if (null == stickyBit) {
+      throw new InvalidObjectException("No sticky bit in FsPermission");
     }
   }
 }

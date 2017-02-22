@@ -550,7 +550,7 @@ public abstract class Storage extends StorageInfo {
           Files.newDirectoryStream(currentDir.toPath())) {
         if (dirStream.iterator().hasNext()) {
           throw new InconsistentFSStateException(root,
-              "Can't format the storage directory because the current/ "
+              "Can't format the storage directory because the current "
                   + "directory is not empty.");
         }
       }

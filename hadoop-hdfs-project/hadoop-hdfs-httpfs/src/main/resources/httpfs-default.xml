@@ -15,6 +15,78 @@
 -->
 <configuration>
 
+  <property>
+    <name>hadoop.httpfs.http.port</name>
+    <value>14000</value>
+    <description>
+      The HTTP port for HttpFS REST API.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.httpfs.http.host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The bind host for HttpFS REST API.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.httpfs.http.administrators</name>
+    <value></value>
+    <description>ACL for the admins, this configuration is used to control
+      who can access the default servlets for HttpFS server. The value
+      should be a comma separated list of users and groups. The user list
+      comes first and is separated by a space followed by the group list,
+      e.g. "user1,user2 group1,group2". Both users and groups are optional,
+      so "user1", " group1", "", "user1 group1", "user1,user2 group1,group2"
+      are all valid (note the leading space in " group1"). '*' grants access
+      to all users and groups, e.g. '*', '* ' and ' *' are all valid.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.httpfs.ssl.enabled</name>
+    <value>false</value>
+    <description>
+      Whether SSL is enabled. Default is false, i.e. disabled.
+    </description>
+  </property>
+
+  <!-- HTTP properties -->
+
+  <property>
+    <name>hadoop.http.max.threads</name>
+    <value>1000</value>
+    <description>
+      The maxmimum number of threads.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.http.max.request.header.size</name>
+    <value>65536</value>
+    <description>
+      The maxmimum HTTP request header size.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.http.max.response.header.size</name>
+    <value>65536</value>
+    <description>
+      The maxmimum HTTP response header size.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.http.temp.dir</name>
+    <value>${hadoop.tmp.dir}/httpfs</value>
+    <description>
+      HttpFS temp directory.
+    </description>
+  </property>
+
   <!-- HttpFSServer Server -->
 
   <property>

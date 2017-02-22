@@ -24,7 +24,9 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.COMPLETE;
 
@@ -107,6 +109,29 @@ public class BlockUnderConstructionFeature {
       storages[i] = replicas[i].getExpectedStorageLocation();
     }
     return storages;
+  }
+
+  /**
+   * Note that this iterator doesn't guarantee thread-safe. It depends on
+   * external mechanisms such as the FSNamesystem lock for protection.
+   */
+  public Iterator<DatanodeStorageInfo> getExpectedStorageLocationsIterator() {
+    return new Iterator<DatanodeStorageInfo>() {
+      private int index = 0;
+
+      @Override
+      public boolean hasNext() {
+        return index <  replicas.length;
+      }
+
+      @Override
+      public DatanodeStorageInfo next() {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        return replicas[index++].getExpectedStorageLocation();
+      }
+    };
   }
 
   /**

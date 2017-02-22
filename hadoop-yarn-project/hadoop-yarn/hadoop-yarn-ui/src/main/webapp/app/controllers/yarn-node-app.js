@@ -26,10 +26,13 @@ export default Ember.Controller.extend({
       text: "Home",
       routeName: 'application'
     }, {
-      text: `Node [ ${nodeInfo.id} ]`,
-      href: `/#/yarn-node/${nodeInfo.id}/${nodeInfo.addr}`,
+      text: "Nodes",
+      routeName: 'yarn-nodes.table'
     }, {
-      text: "Application",
+      text: `Node [ ${nodeInfo.id} ]`,
+      href: `#/yarn-node/${nodeInfo.id}/${nodeInfo.addr}`,
+    }, {
+      text: `Application [ ${nodeInfo.appId} ]`,
     }];
   })
 

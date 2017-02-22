@@ -110,7 +110,7 @@ export default {
     }
   },
   memoryToSimpliedUnit: function(mb) {
-    var unit = "MB"
+    var unit = "MB";
     var value = mb;
     if (value / 1024 >= 0.9) {
       value = value / 1024;

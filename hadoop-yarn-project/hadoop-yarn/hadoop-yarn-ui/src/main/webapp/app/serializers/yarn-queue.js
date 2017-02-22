@@ -49,7 +49,7 @@ export default DS.JSONAPISerializer.extend({
           relationshipUserData.push({
             type: "YarnUser",
             id: u.username + "_" + payload.queueName,
-          })
+          });
         });
       }
 
@@ -85,12 +85,12 @@ export default DS.JSONAPISerializer.extend({
       return {
         queue: this._super(store, primaryModelClass, fixedPayload, id, requestType),
         includedData: includedData
-      }
+      };
     },
 
     handleQueue(store, primaryModelClass, payload, id, requestType) {
       var data = [];
-      var includedData = []
+      var includedData = [];
       var result = this.normalizeSingleResponse(store, primaryModelClass,
         payload, id, requestType);
 
@@ -112,8 +112,8 @@ export default DS.JSONAPISerializer.extend({
 
       return {
         data: data,
-        includedData, includedData
-      }
+        includedData: includedData
+      };
     },
 
     normalizeArrayResponse(store, primaryModelClass, payload, id,

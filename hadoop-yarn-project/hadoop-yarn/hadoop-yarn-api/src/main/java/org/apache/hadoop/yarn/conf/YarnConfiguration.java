@@ -1077,7 +1077,10 @@ public class YarnConfiguration extends Configuration {
 
   public static final String YARN_LOG_SERVER_URL =
     YARN_PREFIX + "log.server.url";
-  
+
+  public static final String YARN_LOG_SERVER_WEBSERVICE_URL =
+      YARN_PREFIX + "log.server.web-service.url";
+
   public static final String YARN_TRACKING_URL_GENERATOR = 
       YARN_PREFIX + "tracking.url.generator";
 
@@ -2615,6 +2618,11 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "cluster.max-application-priority";
 
   public static final int DEFAULT_CLUSTER_LEVEL_APPLICATION_PRIORITY = 0;
+
+  public static final String APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC =
+      YARN_PREFIX + "app.attempt.diagnostics.limit.kc";
+
+  public static final int DEFAULT_APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC = 64;
 
   @Private
   public static boolean isDistributedNodeLabelConfiguration(Configuration conf) {

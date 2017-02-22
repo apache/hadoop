@@ -1078,7 +1078,7 @@ public class DFSAdmin extends FsShell {
       "\tHDFS block balancing.\n\n" +
       "\t\t<bandwidth> is the maximum number of bytes per second\n" +
       "\t\tthat will be used by each datanode. This value overrides\n" +
-      "\t\tthe dfs.balance.bandwidthPerSec parameter.\n\n" +
+      "\t\tthe dfs.datanode.balance.bandwidthPerSec parameter.\n\n" +
       "\t\t--- NOTE: The new value is not persistent on the DataNode.---\n";
 
     String getBalancerBandwidth = "-getBalancerBandwidth <datanode_host:ipc_port>:\n" +

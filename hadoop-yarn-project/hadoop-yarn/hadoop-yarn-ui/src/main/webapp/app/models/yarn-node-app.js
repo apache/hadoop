@@ -27,16 +27,16 @@ export default DS.Model.extend({
    * Indicates no rows were retrieved from backend
    */
   isDummyApp: function() {
-    return this.get('id') == "dummy";
+    return this.get('id') === "dummy";
   }.property("id"),
 
   appStateStyle: function() {
     var style = "default";
     var appState = this.get("state");
-    if (appState == "RUNNING" || appState == "FINISHING_CONTAINERS_WAIT" ||
-        appState == "APPLICATION_RESOURCES_CLEANINGUP") {
+    if (appState === "RUNNING" || appState === "FINISHING_CONTAINERS_WAIT" ||
+        appState === "APPLICATION_RESOURCES_CLEANINGUP") {
       style = "primary";
-    } else if (appState == "FINISHED") {
+    } else if (appState === "FINISHED") {
       style = "success";
     }
     return "label label-" + style;

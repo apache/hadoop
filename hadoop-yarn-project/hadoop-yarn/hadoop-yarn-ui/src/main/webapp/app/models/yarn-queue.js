@@ -48,17 +48,17 @@ export default DS.Model.extend({
     return [
       {
         label: "Absolute Capacity",
-        value: this.get("name") == "root" ? 100 : this.get("absCapacity")
+        value: this.get("name") === "root" ? 100 : this.get("absCapacity")
       },
       {
         label: "Absolute Used",
-        value: this.get("name") == "root" ? this.get("usedCapacity") : this.get("absUsedCapacity")
+        value: this.get("name") === "root" ? this.get("usedCapacity") : this.get("absUsedCapacity")
       },
       {
         label: "Absolute Max Capacity",
-        value: this.get("name") == "root" ? 100 : this.get("absMaxCapacity")
+        value: this.get("name") === "root" ? 100 : this.get("absMaxCapacity")
       }
-    ]
+    ];
   }.property("absCapacity", "absUsedCapacity", "absMaxCapacity"),
 
   userUsagesDonutChartData: function() {
@@ -68,7 +68,7 @@ export default DS.Model.extend({
         data.push({
           label: o.get("name"),
           value: o.get("usedMemoryMB")
-        })
+        });
       });
     }
 
@@ -89,6 +89,6 @@ export default DS.Model.extend({
         label: "Active Apps",
         value: this.get("numActiveApplications") || 0
       }
-    ]
-  }.property(),
+    ];
+  }.property()
 });

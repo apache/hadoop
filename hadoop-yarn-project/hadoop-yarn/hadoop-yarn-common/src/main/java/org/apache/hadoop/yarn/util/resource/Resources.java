@@ -144,6 +144,12 @@ public class Resources {
     return NONE;
   }
 
+  /**
+   * Check whether a resource object is empty (0 memory and 0 virtual cores).
+   * @param other The resource to check
+   * @return {@code true} if {@code other} has 0 memory and 0 virtual cores,
+   * {@code false} otherwise
+   */
   public static boolean isNone(Resource other) {
     return NONE.equals(other);
   }
@@ -174,6 +180,24 @@ public class Resources {
 
   public static Resource subtract(Resource lhs, Resource rhs) {
     return subtractFrom(clone(lhs), rhs);
+  }
+
+  /**
+   * Subtract <code>rhs</code> from <code>lhs</code> and reset any negative
+   * values to zero.
+   * @param lhs {@link Resource} to subtract from
+   * @param rhs {@link Resource} to subtract
+   * @return the value of lhs after subtraction
+   */
+  public static Resource subtractFromNonNegative(Resource lhs, Resource rhs) {
+    subtractFrom(lhs, rhs);
+    if (lhs.getMemorySize() < 0) {
+      lhs.setMemorySize(0);
+    }
+    if (lhs.getVirtualCores() < 0) {
+      lhs.setVirtualCores(0);
+    }
+    return lhs;
   }
 
   public static Resource negate(Resource resource) {

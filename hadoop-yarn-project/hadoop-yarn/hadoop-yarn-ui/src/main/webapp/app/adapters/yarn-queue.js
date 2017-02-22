@@ -23,8 +23,8 @@ export default AbstractAdapter.extend({
   restNameSpace: "cluster",
   serverName: "RM",
 
-  pathForType(modelName) {
+  pathForType(/*modelName*/) {
     return 'scheduler'; // move to some common place, return path by modelname.
-  },
+  }
 
 });

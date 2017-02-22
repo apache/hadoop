@@ -27,6 +27,10 @@ import static org.apache.hadoop.fs.adl.AdlConfKeys
 import static org.apache.hadoop.fs.adl.AdlConfKeys
     .ADL_DEBUG_SET_LOCAL_USER_AS_OWNER_DEFAULT;
 import static org.apache.hadoop.fs.adl.AdlConfKeys
+    .ADL_ENABLEUPN_FOR_OWNERGROUP_DEFAULT;
+import static org.apache.hadoop.fs.adl.AdlConfKeys
+    .ADL_ENABLEUPN_FOR_OWNERGROUP_KEY;
+import static org.apache.hadoop.fs.adl.AdlConfKeys
     .ADL_EXPERIMENT_POSITIONAL_READ_DEFAULT;
 import static org.apache.hadoop.fs.adl.AdlConfKeys
     .ADL_EXPERIMENT_POSITIONAL_READ_KEY;
@@ -99,5 +103,10 @@ public class TestValidateConfiguration {
     Assert.assertEquals(false, ADL_DEBUG_SET_LOCAL_USER_AS_OWNER_DEFAULT);
     Assert.assertEquals(4 * 1024 * 1024, DEFAULT_READ_AHEAD_BUFFER_SIZE);
     Assert.assertEquals(4 * 1024 * 1024, DEFAULT_WRITE_AHEAD_BUFFER_SIZE);
+
+    Assert.assertEquals("adl.feature.ownerandgroup.enableupn",
+        ADL_ENABLEUPN_FOR_OWNERGROUP_KEY);
+    Assert.assertEquals(false,
+        ADL_ENABLEUPN_FOR_OWNERGROUP_DEFAULT);
   }
 }

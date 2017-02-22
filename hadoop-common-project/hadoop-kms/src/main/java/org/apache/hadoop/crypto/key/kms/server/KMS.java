@@ -61,7 +61,7 @@ import java.util.Map;
 public class KMS {
 
   public static enum KMSOp {
-    CREATE_KEY, DELETE_KEY, ROLL_NEW_VERSION,
+    CREATE_KEY, DELETE_KEY, ROLL_NEW_VERSION, INVALIDATE_CACHE,
     GET_KEYS, GET_KEYS_METADATA,
     GET_KEY_VERSIONS, GET_METADATA, GET_KEY_VERSION, GET_CURRENT_KEY,
     GENERATE_EEK, DECRYPT_EEK, REENCRYPT_EEK
@@ -248,6 +248,37 @@ public class KMS {
               .build();
     } catch (Exception e) {
       LOG.debug("Exception in rolloverKey.", e);
+      throw e;
+    }
+  }
+
+  @POST
+  @Path(KMSRESTConstants.KEY_RESOURCE + "/{name:.*}/"
+      + KMSRESTConstants.INVALIDATECACHE_RESOURCE)
+  public Response invalidateCache(@PathParam("name") final String name)
+      throws Exception {
+    try {
+      LOG.trace("Entering invalidateCache Method.");
+      KMSWebApp.getAdminCallsMeter().mark();
+      KMSClientProvider.checkNotEmpty(name, "name");
+      UserGroupInformation user = HttpUserGroupInformation.get();
+      assertAccess(KMSACLs.Type.ROLLOVER, user, KMSOp.INVALIDATE_CACHE, name);
+      LOG.debug("Invalidating cache with key name {}.", name);
+
+      user.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          provider.invalidateCache(name);
+          provider.flush();
+          return null;
+        }
+      });
+
+      kmsAudit.ok(user, KMSOp.INVALIDATE_CACHE, name, "");
+      LOG.trace("Exiting invalidateCache for key name {}.", name);
+      return Response.ok().build();
+    } catch (Exception e) {
+      LOG.debug("Exception in invalidateCache for key name {}.", name, e);
       throw e;
     }
   }

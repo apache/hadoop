@@ -52,7 +52,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 /**
  * Test reporting of DN volume failure counts and metrics.
@@ -79,6 +81,10 @@ public class TestDataNodeVolumeFailureReporting {
   // Wait at least (2 * re-check + 10 * heartbeat) seconds for
   // a datanode to be considered dead by the namenode.  
   final int WAIT_FOR_DEATH = 15000;
+
+  // specific the timeout for entire test class
+  @Rule
+  public Timeout timeout = new Timeout(120 * 1000);
 
   @Before
   public void setUp() throws Exception {
@@ -204,12 +210,12 @@ public class TestDataNodeVolumeFailureReporting {
     DFSTestUtil.createFile(fs, file3, 1024, (short)3, 1L);
     DFSTestUtil.waitReplication(fs, file3, (short)2);
 
-    // The DN should consider itself dead
-    DFSTestUtil.waitForDatanodeDeath(dns.get(2));
-
     // And report two failed volumes
     checkFailuresAtDataNode(dns.get(2), 2, true, dn3Vol1.getAbsolutePath(),
         dn3Vol2.getAbsolutePath());
+
+    // The DN should consider itself dead
+    DFSTestUtil.waitForDatanodeDeath(dns.get(2));
 
     // The NN considers the DN dead
     DFSTestUtil.waitForDatanodeStatus(dm, 2, 1, 2, 

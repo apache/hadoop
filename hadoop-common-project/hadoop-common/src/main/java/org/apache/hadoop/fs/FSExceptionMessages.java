@@ -48,4 +48,7 @@ public class FSExceptionMessages {
       = "Requested more bytes than destination buffer size";
 
   public static final String PERMISSION_DENIED = "Permission denied";
+
+  public static final String PERMISSION_DENIED_BY_STICKY_BIT =
+      "Permission denied by sticky bit";
 }

@@ -39,10 +39,11 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
-import org.apache.hadoop.yarn.client.api.TimelineClient;
+import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
@@ -207,9 +208,9 @@ extends AMRMClientAsync<T> {
   }
 
   @Override
-  public void requestContainerResourceChange(
-      Container container, Resource capability) {
-    client.requestContainerResourceChange(container, capability);
+  public void requestContainerUpdate(Container container,
+      UpdateContainerRequest updateContainerRequest) {
+    client.requestContainerUpdate(container, updateContainerRequest);
   }
 
   /**
@@ -313,7 +314,8 @@ extends AMRMClientAsync<T> {
           try {
             object = responseQueue.take();
           } catch (InterruptedException ex) {
-            LOG.info("Interrupted while waiting for queue", ex);
+            LOG.debug("Interrupted while waiting for queue", ex);
+            Thread.currentThread().interrupt();
             continue;
           }
           if (object instanceof Throwable) {
@@ -324,7 +326,8 @@ extends AMRMClientAsync<T> {
 
           AllocateResponse response = (AllocateResponse) object;
           String collectorAddress = response.getCollectorAddr();
-          TimelineClient timelineClient = client.getRegisteredTimelineClient();
+          TimelineV2Client timelineClient =
+              client.getRegisteredTimelineV2Client();
           if (timelineClient != null && collectorAddress != null
               && !collectorAddress.isEmpty()) {
             if (collectorAddr == null

@@ -3745,8 +3745,7 @@ public abstract class FSEditLogOp {
     }
 
     static AddCacheDirectiveInfoOp getInstance(OpInstanceCache cache) {
-      return (AddCacheDirectiveInfoOp) cache
-          .get(OP_ADD_CACHE_DIRECTIVE);
+      return (AddCacheDirectiveInfoOp) cache.get(OP_ADD_CACHE_DIRECTIVE);
     }
 
     @Override
@@ -3816,8 +3815,7 @@ public abstract class FSEditLogOp {
     }
 
     static ModifyCacheDirectiveInfoOp getInstance(OpInstanceCache cache) {
-      return (ModifyCacheDirectiveInfoOp) cache
-          .get(OP_MODIFY_CACHE_DIRECTIVE);
+      return (ModifyCacheDirectiveInfoOp) cache.get(OP_MODIFY_CACHE_DIRECTIVE);
     }
 
     @Override
@@ -3893,8 +3891,7 @@ public abstract class FSEditLogOp {
     }
 
     static RemoveCacheDirectiveInfoOp getInstance(OpInstanceCache cache) {
-      return (RemoveCacheDirectiveInfoOp) cache
-          .get(OP_REMOVE_CACHE_DIRECTIVE);
+      return (RemoveCacheDirectiveInfoOp) cache.get(OP_REMOVE_CACHE_DIRECTIVE);
     }
 
     @Override
@@ -4146,8 +4143,8 @@ public abstract class FSEditLogOp {
       super(OP_REMOVE_XATTR);
     }
     
-    static RemoveXAttrOp getInstance() {
-      return new RemoveXAttrOp();
+    static RemoveXAttrOp getInstance(OpInstanceCache cache) {
+      return (RemoveXAttrOp) cache.get(OP_REMOVE_XATTR);
     }
 
     @Override
@@ -4199,8 +4196,8 @@ public abstract class FSEditLogOp {
       super(OP_SET_XATTR);
     }
     
-    static SetXAttrOp getInstance() {
-      return new SetXAttrOp();
+    static SetXAttrOp getInstance(OpInstanceCache cache) {
+      return (SetXAttrOp) cache.get(OP_SET_XATTR);
     }
 
     @Override
@@ -4252,8 +4249,8 @@ public abstract class FSEditLogOp {
       super(OP_SET_ACL);
     }
 
-    static SetAclOp getInstance() {
-      return new SetAclOp();
+    static SetAclOp getInstance(OpInstanceCache cache) {
+      return (SetAclOp) cache.get(OP_SET_ACL);
     }
 
     @Override
@@ -4352,14 +4349,6 @@ public abstract class FSEditLogOp {
     public RollingUpgradeOp(FSEditLogOpCodes code, String name) {
       super(code);
       this.name = StringUtils.toUpperCase(name);
-    }
-
-    static RollingUpgradeOp getStartInstance(OpInstanceCache cache) {
-      return (RollingUpgradeOp) cache.get(OP_ROLLING_UPGRADE_START);
-    }
-
-    static RollingUpgradeOp getFinalizeInstance(OpInstanceCache cache) {
-      return (RollingUpgradeOp) cache.get(OP_ROLLING_UPGRADE_FINALIZE);
     }
 
     @Override

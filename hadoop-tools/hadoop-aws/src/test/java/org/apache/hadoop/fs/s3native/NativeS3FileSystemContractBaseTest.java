@@ -85,7 +85,7 @@ public abstract class NativeS3FileSystemContractBaseTest
 
   public void testDirWithDifferentMarkersWorks() throws Exception {
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i <= 3; i++) {
       String base = "test/hadoop" + i;
       Path path = path("/" + base);
 

@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.ConfigurationWithLogging;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
@@ -84,6 +85,8 @@ public class KMSWebServer {
         .setConf(conf)
         .setSSLConf(sslConf)
         .authFilterConfigurationPrefix(KMSAuthenticationFilter.CONFIG_PREFIX)
+        .setACL(new AccessControlList(conf.get(
+            KMSConfiguration.HTTP_ADMINS_KEY, " ")))
         .addEndpoint(endpoint)
         .build();
   }

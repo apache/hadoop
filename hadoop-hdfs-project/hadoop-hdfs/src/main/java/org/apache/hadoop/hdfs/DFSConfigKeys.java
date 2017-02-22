@@ -219,7 +219,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String  DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY =
       "dfs.namenode.reconstruction.pending.timeout-sec";
-  public static final int     DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT = -1;
+  public static final int
+      DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT = 300;
 
   public static final String  DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY =
       "dfs.namenode.maintenance.replication.min";
@@ -640,6 +641,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long    DFS_BLOCK_ACCESS_KEY_UPDATE_INTERVAL_DEFAULT = 600L;
   public static final String  DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY = "dfs.block.access.token.lifetime";
   public static final long    DFS_BLOCK_ACCESS_TOKEN_LIFETIME_DEFAULT = 600L;
+  public static final String  DFS_BLOCK_ACCESS_TOKEN_PROTOBUF_ENABLE = "dfs.block.access.token.protobuf.enable";
+  public static final boolean DFS_BLOCK_ACCESS_TOKEN_PROTOBUF_ENABLE_DEFAULT = false;
 
   public static final String DFS_BLOCK_REPLICATOR_CLASSNAME_KEY = "dfs.block.replicator.classname";
   public static final Class<BlockPlacementPolicyDefault> DFS_BLOCK_REPLICATOR_CLASSNAME_DEFAULT = BlockPlacementPolicyDefault.class;
@@ -1294,14 +1297,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DEFAULT_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE
       = HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_DEFAULT;
 
-
-  @Deprecated
-  public static final String  DFS_CLIENT_WRITE_PACKET_SIZE_KEY =
-      HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
-  @Deprecated
-  public static final int     DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT =
-      HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
-
   @Deprecated
   public static final String  DFS_CLIENT_SOCKET_TIMEOUT_KEY =
       HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
@@ -1394,13 +1389,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT =
       HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT;
 
-  @Deprecated
-  public static final String  DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY =
-      HdfsClientConfigKeys.DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY;
-
-  @Deprecated
-  public static final long    DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT =
-      HdfsClientConfigKeys.DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT;
   @Deprecated
   public static final String  DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS =
       HdfsClientConfigKeys.DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS;

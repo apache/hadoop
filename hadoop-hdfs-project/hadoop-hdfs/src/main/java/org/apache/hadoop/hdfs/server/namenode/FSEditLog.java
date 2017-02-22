@@ -1206,14 +1206,14 @@ public class FSEditLog implements LogsPurgeable {
   }
 
   void logSetAcl(String src, List<AclEntry> entries) {
-    SetAclOp op = SetAclOp.getInstance();
+    final SetAclOp op = SetAclOp.getInstance(cache.get());
     op.src = src;
     op.aclEntries = entries;
     logEdit(op);
   }
   
   void logSetXAttrs(String src, List<XAttr> xAttrs, boolean toLogRpcIds) {
-    final SetXAttrOp op = SetXAttrOp.getInstance();
+    final SetXAttrOp op = SetXAttrOp.getInstance(cache.get());
     op.src = src;
     op.xAttrs = xAttrs;
     logRpcIds(op, toLogRpcIds);
@@ -1221,7 +1221,7 @@ public class FSEditLog implements LogsPurgeable {
   }
   
   void logRemoveXAttrs(String src, List<XAttr> xAttrs, boolean toLogRpcIds) {
-    final RemoveXAttrOp op = RemoveXAttrOp.getInstance();
+    final RemoveXAttrOp op = RemoveXAttrOp.getInstance(cache.get());
     op.src = src;
     op.xAttrs = xAttrs;
     logRpcIds(op, toLogRpcIds);

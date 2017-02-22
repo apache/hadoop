@@ -48,6 +48,8 @@ public class KMSConfiguration {
   public static final int HTTP_PORT_DEFAULT = 9600;
   public static final String HTTP_HOST_KEY = "hadoop.kms.http.host";
   public static final String HTTP_HOST_DEFAULT = "0.0.0.0";
+  public static final String HTTP_ADMINS_KEY =
+      "hadoop.kms.http.administrators";
 
   // SSL properties
   public static final String SSL_ENABLED_KEY = "hadoop.kms.ssl.enabled";

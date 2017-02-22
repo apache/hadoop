@@ -36,9 +36,12 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import com.google.common.base.Supplier;
 
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
@@ -256,5 +259,28 @@ public class DataNodeTestUtils {
       }
     }
     return null;
+  }
+
+  /**
+   * Call and wait DataNode to detect disk failure.
+   *
+   * @param dn
+   * @param volume
+   * @throws Exception
+   */
+  public static void waitForDiskError(DataNode dn, FsVolumeSpi volume)
+      throws Exception {
+    LOG.info("Starting to wait for datanode to detect disk failure.");
+    final long lastDiskErrorCheck = dn.getLastDiskErrorCheck();
+    dn.checkDiskErrorAsync(volume);
+    // Wait 10 seconds for checkDiskError thread to finish and discover volume
+    // failures.
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+
+      @Override
+      public Boolean get() {
+        return dn.getLastDiskErrorCheck() != lastDiskErrorCheck;
+      }
+    }, 100, 10000);
   }
 }

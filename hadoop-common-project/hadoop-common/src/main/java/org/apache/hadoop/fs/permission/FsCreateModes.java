@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class FsCreateModes extends FsPermission {
+  private static final long serialVersionUID = 0x22986f6d;
   private final FsPermission unmasked;
 
   /**

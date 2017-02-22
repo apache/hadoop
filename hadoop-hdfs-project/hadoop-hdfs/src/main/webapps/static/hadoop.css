@@ -236,8 +236,8 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
 }
 
 .dfshealth-node-decommissioned:before {
-    color: #eea236;
-    content: "\e136";
+    color: #bc5f04;
+    content: "\e090";
 }
 
 .dfshealth-node-down:before {
@@ -248,6 +248,11 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
 .dfshealth-node-down-decommissioned:before {
     color: #2e6da6;
     content: "\e017";
+}
+
+.dfshealth-node-down-maintenance:before {
+    color: #eea236;
+    content: "\e136";
 }
 
 .dfshealth-node-legend {

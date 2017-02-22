@@ -32,6 +32,7 @@ import com.microsoft.azure.datalake.store.DirectoryEntry;
 import com.microsoft.azure.datalake.store.DirectoryEntryType;
 import com.microsoft.azure.datalake.store.IfExists;
 import com.microsoft.azure.datalake.store.LatencyTracker;
+import com.microsoft.azure.datalake.store.UserGroupRepresentation;
 import com.microsoft.azure.datalake.store.oauth2.AccessTokenProvider;
 import com.microsoft.azure.datalake.store.oauth2.ClientCredsTokenProvider;
 import com.microsoft.azure.datalake.store.oauth2.RefreshTokenBasedTokenProvider;
@@ -72,7 +73,7 @@ import static org.apache.hadoop.fs.adl.AdlConfKeys.*;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class AdlFileSystem extends FileSystem {
-  static final String SCHEME = "adl";
+  public static final String SCHEME = "adl";
   static final int DEFAULT_PORT = 443;
   private URI uri;
   private String userName;
@@ -80,6 +81,8 @@ public class AdlFileSystem extends FileSystem {
   private ADLStoreClient adlClient;
   private Path workingDirectory;
   private boolean aclBitStatus;
+  private UserGroupRepresentation oidOrUpn;
+
 
   // retained for tests
   private AccessTokenProvider tokenProvider;
@@ -181,6 +184,11 @@ public class AdlFileSystem extends FileSystem {
     if (!trackLatency) {
       LatencyTracker.disable();
     }
+
+    boolean enableUPN = conf.getBoolean(ADL_ENABLEUPN_FOR_OWNERGROUP_KEY,
+        ADL_ENABLEUPN_FOR_OWNERGROUP_DEFAULT);
+    oidOrUpn = enableUPN ? UserGroupRepresentation.UPN :
+        UserGroupRepresentation.OID;
   }
 
   /**
@@ -439,7 +447,8 @@ public class AdlFileSystem extends FileSystem {
   @Override
   public FileStatus getFileStatus(final Path f) throws IOException {
     statistics.incrementReadOps(1);
-    DirectoryEntry entry = adlClient.getDirectoryEntry(toRelativeFilePath(f));
+    DirectoryEntry entry =
+        adlClient.getDirectoryEntry(toRelativeFilePath(f), oidOrUpn);
     return toFileStatus(entry, f);
   }
 
@@ -456,7 +465,7 @@ public class AdlFileSystem extends FileSystem {
   public FileStatus[] listStatus(final Path f) throws IOException {
     statistics.incrementReadOps(1);
     List<DirectoryEntry> entries =
-        adlClient.enumerateDirectory(toRelativeFilePath(f));
+        adlClient.enumerateDirectory(toRelativeFilePath(f), oidOrUpn);
     return toFileStatuses(entries, f);
   }
 
@@ -593,7 +602,11 @@ public class AdlFileSystem extends FileSystem {
     boolean isDirectory = entry.type == DirectoryEntryType.DIRECTORY;
     long lastModificationData = entry.lastModifiedTime.getTime();
     long lastAccessTime = entry.lastAccessTime.getTime();
-    FsPermission permission = new AdlPermission(aclBitStatus,
+    // set aclBit from ADLS backend response if
+    // ADL_SUPPORT_ACL_BIT_IN_FSPERMISSION is true.
+    final boolean aclBit = aclBitStatus ? entry.aclBit : false;
+
+    FsPermission permission = new AdlPermission(aclBit,
         Short.valueOf(entry.permission, 8));
     String user = entry.user;
     String group = entry.group;
@@ -745,8 +758,8 @@ public class AdlFileSystem extends FileSystem {
   @Override
   public AclStatus getAclStatus(final Path path) throws IOException {
     statistics.incrementReadOps(1);
-    com.microsoft.azure.datalake.store.acl.AclStatus adlStatus = adlClient
-        .getAclStatus(toRelativeFilePath(path));
+    com.microsoft.azure.datalake.store.acl.AclStatus adlStatus =
+        adlClient.getAclStatus(toRelativeFilePath(path), oidOrUpn);
     AclStatus.Builder aclStatusBuilder = new AclStatus.Builder();
     aclStatusBuilder.owner(adlStatus.owner);
     aclStatusBuilder.group(adlStatus.group);
@@ -958,5 +971,11 @@ public class AdlFileSystem extends FileSystem {
       throw new IOException("Password " + key + " not found");
     }
     return new String(passchars);
+  }
+
+  @VisibleForTesting
+  public void setUserGroupRepresentationAsUPN(boolean enableUPN) {
+    oidOrUpn = enableUPN ? UserGroupRepresentation.UPN :
+        UserGroupRepresentation.OID;
   }
 }

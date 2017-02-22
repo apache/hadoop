@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
@@ -102,6 +103,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * A scheduler that schedules resources between a set of queues. The scheduler
@@ -350,7 +352,6 @@ public class FairScheduler extends
   protected void update() {
     try {
       writeLock.lock();
-      long start = getClock().getTime();
 
       FSQueue rootQueue = queueMgr.getRootQueue();
 
@@ -373,9 +374,6 @@ public class FairScheduler extends
               rootMetrics.getAvailableVirtualCores()) +
               "  Demand: " + rootQueue.getDemand());
         }
-
-        long duration = getClock().getTime() - start;
-        fsOpDurations.addUpdateCallDuration(duration);
       }
     } finally {
       writeLock.unlock();
@@ -834,8 +832,9 @@ public class FairScheduler extends
     // Release containers
     releaseContainers(release, application);
 
+    ReentrantReadWriteLock.WriteLock lock = application.getWriteLock();
+    lock.lock();
     try {
-      application.getWriteLock().lock();
       if (!ask.isEmpty()) {
         if (LOG.isDebugEnabled()) {
           LOG.debug(
@@ -850,22 +849,19 @@ public class FairScheduler extends
         application.showRequests();
       }
     } finally {
-      application.getWriteLock().unlock();
+      lock.unlock();
     }
 
+    Set<ContainerId> preemptionContainerIds =
+        application.getPreemptionContainerIds();
     if (LOG.isDebugEnabled()) {
       LOG.debug(
           "allocate: post-update" + " applicationAttemptId=" + appAttemptId
               + " #ask=" + ask.size() + " reservation= " + application
               .getCurrentReservation());
 
-      LOG.debug("Preempting " + application.getPreemptionContainers().size()
+      LOG.debug("Preempting " + preemptionContainerIds.size()
           + " container(s)");
-    }
-
-    Set<ContainerId> preemptionContainerIds = new HashSet<ContainerId>();
-    for (RMContainer container : application.getPreemptionContainers()) {
-      preemptionContainerIds.add(container.getContainerId());
     }
 
     application.updateBlacklist(blacklistAdditions, blacklistRemovals);
@@ -1272,12 +1268,16 @@ public class FairScheduler extends
 
       updateThread = new UpdateThread();
       updateThread.setName("FairSchedulerUpdateThread");
+      updateThread.setUncaughtExceptionHandler(
+          new RMCriticalThreadUncaughtExceptionHandler(rmContext));
       updateThread.setDaemon(true);
 
       if (continuousSchedulingEnabled) {
         // start continuous scheduling thread
         schedulingThread = new ContinuousSchedulingThread();
         schedulingThread.setName("FairSchedulerContinuousScheduling");
+        schedulingThread.setUncaughtExceptionHandler(
+            new RMCriticalThreadUncaughtExceptionHandler(rmContext));
         schedulingThread.setDaemon(true);
       }
 
@@ -1303,6 +1303,8 @@ public class FairScheduler extends
   @VisibleForTesting
   protected void createPreemptionThread() {
     preemptionThread = new FSPreemptionThread(this);
+    preemptionThread.setUncaughtExceptionHandler(
+        new RMCriticalThreadUncaughtExceptionHandler(rmContext));
   }
 
   private void updateReservationThreshold() {
@@ -1777,5 +1779,9 @@ public class FairScheduler extends
 
   public float getReservableNodesRatio() {
     return reservableNodesRatio;
+  }
+
+  long getNMHeartbeatInterval() {
+    return nmHeartbeatInterval;
   }
 }

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
-import static org.junit.Assert.assertFalse;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -157,23 +156,97 @@ public class TestYarnClient {
   }
 
   @Test
-  public void testTimelineClientInitFailure() throws Exception{
+  public void testStartWithTimelineV15() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
-    YarnClient client = YarnClient.createYarnClient();
-    if(client instanceof YarnClientImpl) {
-      YarnClientImpl impl = (YarnClientImpl) client;
-      YarnClientImpl spyClient = spy(impl);
-      when(spyClient.createTimelineClient()).thenThrow(
-          new NoClassDefFoundError(
-              "Mock a failure when init timeline instance"));
-      spyClient.init(conf);
-      spyClient.start();
-      assertFalse("Timeline client should be disabled when"
-          + "it is failed to init",
-          spyClient.timelineServiceEnabled);
-      spyClient.stop();
-    }
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 1.5f);
+    YarnClientImpl client = (YarnClientImpl) YarnClient.createYarnClient();
+    client.init(conf);
+    client.start();
+    client.stop();
+  }
+
+  @Test
+  public void testStartTimelineClientWithErrors()
+      throws Exception {
+    // If timeline client failed to init with a NoClassDefFoundError
+    // it should be wrapped with an informative error message
+    testCreateTimelineClientWithError(
+        1.5f,
+        true,
+        false,
+        new NoClassDefFoundError("Mock a NoClassDefFoundError"),
+        new CreateTimelineClientErrorVerifier(1) {
+          @Override
+          public void verifyError(Throwable e) {
+            Assert.assertTrue(e instanceof NoClassDefFoundError);
+            Assert.assertTrue(e.getMessage() != null &&
+                e.getMessage().contains(
+                    YarnConfiguration.TIMELINE_SERVICE_ENABLED));
+          }
+        });
+
+    // Disable timeline service for this client,
+    // yarn client will not fail when such error happens
+    testCreateTimelineClientWithError(
+        1.5f,
+        false,
+        false,
+        new NoClassDefFoundError("Mock a NoClassDefFoundError"),
+        new CreateTimelineClientErrorVerifier(0) {
+          @Override public void verifyError(Throwable e) {
+            Assert.fail("NoClassDefFoundError while creating timeline client"
+                + "should be tolerated when timeline service is disabled.");
+          }
+        }
+    );
+
+    // Set best-effort to true, verify an error is still fatal
+    testCreateTimelineClientWithError(
+        1.5f,
+        true,
+        true,
+        new NoClassDefFoundError("Mock a NoClassDefFoundError"),
+        new CreateTimelineClientErrorVerifier(1) {
+          @Override public void verifyError(Throwable e) {
+            Assert.assertTrue(e instanceof NoClassDefFoundError);
+            Assert.assertTrue(e.getMessage() != null &&
+                e.getMessage().contains(
+                    YarnConfiguration.TIMELINE_SERVICE_ENABLED));
+          }
+        }
+    );
+
+    // Set best-effort to false, verify that an exception
+    // causes the client to fail
+    testCreateTimelineClientWithError(
+        1.5f,
+        true,
+        false,
+        new IOException("ATS v1.5 client initialization failed."),
+        new CreateTimelineClientErrorVerifier(1) {
+          @Override
+          public void verifyError(Throwable e) {
+            Assert.assertTrue(e instanceof IOException);
+          }
+        }
+    );
+
+    // Set best-effort to true, verify that an normal exception
+    // won't fail the entire client
+    testCreateTimelineClientWithError(
+        1.5f,
+        true,
+        true,
+        new IOException("ATS v1.5 client initialization failed."),
+        new CreateTimelineClientErrorVerifier(0) {
+          @Override
+          public void verifyError(Throwable e) {
+            Assert.fail("IOException while creating timeline client"
+                + "should be tolerated when best effort is true");
+          }
+        }
+    );
   }
 
   @SuppressWarnings("deprecation")
@@ -536,9 +609,9 @@ public class TestYarnClient {
     client.start();
 
     // Get labels to nodes mapping
-    Map<NodeLabel, Set<NodeId>> expectedLabelsToNodes =
+    Map<String, Set<NodeId>> expectedLabelsToNodes =
         ((MockYarnClient)client).getLabelsToNodesMap();
-    Map<NodeLabel, Set<NodeId>> labelsToNodes = client.getLabelsToNodes();
+    Map<String, Set<NodeId>> labelsToNodes = client.getLabelsToNodes();
     Assert.assertEquals(labelsToNodes, expectedLabelsToNodes);
     Assert.assertEquals(labelsToNodes.size(), 3);
 
@@ -562,17 +635,11 @@ public class TestYarnClient {
     client.start();
 
     // Get labels to nodes mapping
-    Map<NodeId, Set<NodeLabel>> expectedNodesToLabels = ((MockYarnClient) client)
+    Map<NodeId, Set<String>> expectedNodesToLabels = ((MockYarnClient) client)
         .getNodeToLabelsMap();
-    Map<NodeId, Set<NodeLabel>> nodesToLabels = client.getNodeToLabels();
+    Map<NodeId, Set<String>> nodesToLabels = client.getNodeToLabels();
     Assert.assertEquals(nodesToLabels, expectedNodesToLabels);
     Assert.assertEquals(nodesToLabels.size(), 1);
-
-    // Verify exclusivity
-    Set<NodeLabel> labels = nodesToLabels.get(NodeId.newInstance("host", 0));
-    for (NodeLabel label : labels) {
-      Assert.assertFalse(label.isExclusive());
-    }
 
     client.stop();
     client.close();
@@ -811,7 +878,7 @@ public class TestYarnClient {
     }
 
     @Override
-    public Map<NodeLabel, Set<NodeId>> getLabelsToNodes()
+    public Map<String, Set<NodeId>> getLabelsToNodes()
         throws YarnException, IOException {
       when(mockLabelsToNodesResponse.getLabelsToNodes()).thenReturn(
           getLabelsToNodesMap());
@@ -819,48 +886,45 @@ public class TestYarnClient {
     }
 
     @Override
-    public Map<NodeLabel, Set<NodeId>> getLabelsToNodes(Set<String> labels)
+    public Map<String, Set<NodeId>> getLabelsToNodes(Set<String> labels)
         throws YarnException, IOException {
       when(mockLabelsToNodesResponse.getLabelsToNodes()).thenReturn(
           getLabelsToNodesMap(labels));
       return super.getLabelsToNodes(labels);
     }
 
-    public Map<NodeLabel, Set<NodeId>> getLabelsToNodesMap() {
-      Map<NodeLabel, Set<NodeId>> map = new HashMap<NodeLabel, Set<NodeId>>();
+    public Map<String, Set<NodeId>> getLabelsToNodesMap() {
+      Map<String, Set<NodeId>> map = new HashMap<String, Set<NodeId>>();
       Set<NodeId> setNodeIds =
           new HashSet<NodeId>(Arrays.asList(
           NodeId.newInstance("host1", 0), NodeId.newInstance("host2", 0)));
-      map.put(NodeLabel.newInstance("x"), setNodeIds);
-      map.put(NodeLabel.newInstance("y"), setNodeIds);
-      map.put(NodeLabel.newInstance("z"), setNodeIds);
+      map.put("x", setNodeIds);
+      map.put("y", setNodeIds);
+      map.put("z", setNodeIds);
       return map;
     }
 
-    public Map<NodeLabel, Set<NodeId>> getLabelsToNodesMap(Set<String> labels) {
-      Map<NodeLabel, Set<NodeId>> map = new HashMap<NodeLabel, Set<NodeId>>();
-      Set<NodeId> setNodeIds =
-          new HashSet<NodeId>(Arrays.asList(
+    public Map<String, Set<NodeId>> getLabelsToNodesMap(Set<String> labels) {
+      Map<String, Set<NodeId>> map = new HashMap<String, Set<NodeId>>();
+      Set<NodeId> setNodeIds = new HashSet<NodeId>(Arrays.asList(
           NodeId.newInstance("host1", 0), NodeId.newInstance("host2", 0)));
-      for(String label : labels) {
-        map.put(NodeLabel.newInstance(label), setNodeIds);
+      for (String label : labels) {
+        map.put(label, setNodeIds);
       }
       return map;
     }
 
     @Override
-    public Map<NodeId, Set<NodeLabel>> getNodeToLabels() throws YarnException,
+    public Map<NodeId, Set<String>> getNodeToLabels() throws YarnException,
         IOException {
       when(mockNodeToLabelsResponse.getNodeToLabels()).thenReturn(
           getNodeToLabelsMap());
       return super.getNodeToLabels();
     }
 
-    public Map<NodeId, Set<NodeLabel>> getNodeToLabelsMap() {
-      Map<NodeId, Set<NodeLabel>> map = new HashMap<NodeId, Set<NodeLabel>>();
-      Set<NodeLabel> setNodeLabels = new HashSet<NodeLabel>(Arrays.asList(
-          NodeLabel.newInstance("x", false),
-          NodeLabel.newInstance("y", false)));
+    public Map<NodeId, Set<String>> getNodeToLabelsMap() {
+      Map<NodeId, Set<String>> map = new HashMap<NodeId, Set<String>>();
+      Set<String> setNodeLabels = new HashSet<String>(Arrays.asList("x", "y"));
       map.put(NodeId.newInstance("host", 0), setNodeLabels);
       return map;
     }
@@ -1669,5 +1733,67 @@ public class TestYarnClient {
     SignalContainerRequest request = signalReqCaptor.getValue();
     Assert.assertEquals(containerId, request.getContainerId());
     Assert.assertEquals(command, request.getCommand());
+  }
+
+  private void testCreateTimelineClientWithError(
+      float timelineVersion,
+      boolean timelineServiceEnabled,
+      boolean timelineClientBestEffort,
+      Throwable mockErr,
+      CreateTimelineClientErrorVerifier errVerifier) throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
+        timelineServiceEnabled);
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_CLIENT_BEST_EFFORT,
+        timelineClientBestEffort);
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION,
+        timelineVersion);
+    YarnClient client = new MockYarnClient();
+    if (client instanceof YarnClientImpl) {
+      YarnClientImpl impl = (YarnClientImpl) client;
+      YarnClientImpl spyClient = spy(impl);
+      when(spyClient.createTimelineClient()).thenThrow(mockErr);
+      CreateTimelineClientErrorVerifier verifier = spy(errVerifier);
+      spyClient.init(conf);
+      spyClient.start();
+
+      ApplicationSubmissionContext context =
+          mock(ApplicationSubmissionContext.class);
+      ContainerLaunchContext containerContext =
+          mock(ContainerLaunchContext.class);
+      ApplicationId applicationId =
+          ApplicationId.newInstance(System.currentTimeMillis(), 1);
+      when(containerContext.getTokens()).thenReturn(null);
+      when(context.getApplicationId()).thenReturn(applicationId);
+      when(spyClient.isSecurityEnabled()).thenReturn(true);
+      when(context.getAMContainerSpec()).thenReturn(containerContext);
+
+      try {
+        spyClient.submitApplication(context);
+      } catch (Throwable e) {
+        verifier.verifyError(e);
+      } finally {
+        // Make sure the verifier runs with expected times
+        // This is required because in case throwable is swallowed
+        // and verifyError never gets the chance to run
+        verify(verifier, times(verifier.getExpectedTimes()))
+            .verifyError(any(Throwable.class));
+        spyClient.stop();
+      }
+    }
+  }
+
+  private abstract class CreateTimelineClientErrorVerifier {
+    // Verify verifyError gets executed with expected times
+    private int times = 0;
+    protected CreateTimelineClientErrorVerifier(int times) {
+      this.times = times;
+    }
+    public int getExpectedTimes() {
+      return this.times;
+    }
+    // Verification a throwable is in desired state
+    // E.g verify type and error message
+    public abstract void verifyError(Throwable e);
   }
 }

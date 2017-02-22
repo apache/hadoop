@@ -29,7 +29,10 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.Objects;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -43,6 +46,7 @@ import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
@@ -51,6 +55,8 @@ import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
+import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.Copy;
@@ -132,14 +138,15 @@ public class S3AFileSystem extends FileSystem {
   private long partSize;
   private boolean enableMultiObjectsDelete;
   private TransferManager transfers;
-  private ListeningExecutorService threadPoolExecutor;
+  private ListeningExecutorService boundedThreadPool;
+  private ExecutorService unboundedThreadPool;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
   private static final Logger PROGRESS =
       LoggerFactory.getLogger("org.apache.hadoop.fs.s3a.S3AFileSystem.Progress");
   private LocalDirAllocator directoryAllocator;
   private CannedAccessControlList cannedACL;
-  private String serverSideEncryptionAlgorithm;
+  private S3AEncryptionMethods serverSideEncryptionAlgorithm;
   private S3AInstrumentation instrumentation;
   private S3AStorageStatistics storageStatistics;
   private long readAhead;
@@ -219,11 +226,17 @@ public class S3AFileSystem extends FileSystem {
           MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS, 1);
       long keepAliveTime = longOption(conf, KEEPALIVE_TIME,
           DEFAULT_KEEPALIVE_TIME, 0);
-      threadPoolExecutor = BlockingThreadPoolExecutorService.newInstance(
+      boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
           maxThreads,
           maxThreads + totalTasks,
           keepAliveTime, TimeUnit.SECONDS,
           "s3a-transfer-shared");
+      unboundedThreadPool = new ThreadPoolExecutor(
+          maxThreads, Integer.MAX_VALUE,
+          keepAliveTime, TimeUnit.SECONDS,
+          new LinkedBlockingQueue<Runnable>(),
+          BlockingThreadPoolExecutorService.newDaemonThreadFactory(
+              "s3a-transfer-unbounded"));
 
       initTransferManager();
 
@@ -233,8 +246,17 @@ public class S3AFileSystem extends FileSystem {
 
       initMultipartUploads(conf);
 
-      serverSideEncryptionAlgorithm =
-          conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM);
+      serverSideEncryptionAlgorithm = S3AEncryptionMethods.getMethod(
+          conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM));
+      if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
+          StringUtils.isBlank(getServerSideEncryptionKey(getConf()))) {
+        throw new IOException(Constants.SSE_C_NO_KEY_ERROR);
+      }
+      if(S3AEncryptionMethods.SSE_S3.equals(serverSideEncryptionAlgorithm) &&
+          StringUtils.isNotBlank(getServerSideEncryptionKey(
+            getConf()))) {
+        throw new IOException(Constants.SSE_S3_WITH_KEY_ERROR);
+      }
       LOG.debug("Using encryption {}", serverSideEncryptionAlgorithm);
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
@@ -304,7 +326,7 @@ public class S3AFileSystem extends FileSystem {
     transferConfiguration.setMultipartCopyPartSize(partSize);
     transferConfiguration.setMultipartCopyThreshold(multiPartThreshold);
 
-    transfers = new TransferManager(s3, threadPoolExecutor);
+    transfers = new TransferManager(s3, unboundedThreadPool);
     transfers.setConfiguration(transferConfiguration);
   }
 
@@ -523,9 +545,18 @@ public class S3AFileSystem extends FileSystem {
           + " because it is a directory");
     }
 
-    return new FSDataInputStream(new S3AInputStream(bucket, pathToKey(f),
-      fileStatus.getLen(), s3, statistics, instrumentation, readAhead,
-        inputPolicy));
+    return new FSDataInputStream(
+        new S3AInputStream(new S3ObjectAttributes(
+          bucket,
+          pathToKey(f),
+          serverSideEncryptionAlgorithm,
+          getServerSideEncryptionKey(getConf())),
+            fileStatus.getLen(),
+            s3,
+            statistics,
+            instrumentation,
+            readAhead,
+            inputPolicy));
   }
 
   /**
@@ -573,7 +604,7 @@ public class S3AFileSystem extends FileSystem {
       output = new FSDataOutputStream(
           new S3ABlockOutputStream(this,
               key,
-              new SemaphoredDelegatingExecutor(threadPoolExecutor,
+              new SemaphoredDelegatingExecutor(boundedThreadPool,
                   blockOutputActiveBlocks, true),
               progress,
               partSize,
@@ -946,7 +977,14 @@ public class S3AFileSystem extends FileSystem {
    */
   protected ObjectMetadata getObjectMetadata(String key) {
     incrementStatistic(OBJECT_METADATA_REQUESTS);
-    ObjectMetadata meta = s3.getObjectMetadata(bucket, key);
+    GetObjectMetadataRequest request =
+        new GetObjectMetadataRequest(bucket, key);
+    //SSE-C requires to be filled in if enabled for object metadata
+    if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
+        StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))){
+      request.setSSECustomerKey(generateSSECustomerKey());
+    }
+    ObjectMetadata meta = s3.getObjectMetadata(request);
     incrementReadOperations();
     return meta;
   }
@@ -1040,6 +1078,7 @@ public class S3AFileSystem extends FileSystem {
       ObjectMetadata metadata, File srcfile) {
     PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key,
         srcfile);
+    setOptionalPutRequestParameters(putObjectRequest);
     putObjectRequest.setCannedAcl(cannedACL);
     putObjectRequest.setMetadata(metadata);
     return putObjectRequest;
@@ -1058,6 +1097,7 @@ public class S3AFileSystem extends FileSystem {
       ObjectMetadata metadata, InputStream inputStream) {
     PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key,
         inputStream, metadata);
+    setOptionalPutRequestParameters(putObjectRequest);
     putObjectRequest.setCannedAcl(cannedACL);
     return putObjectRequest;
   }
@@ -1070,9 +1110,7 @@ public class S3AFileSystem extends FileSystem {
    */
   public ObjectMetadata newObjectMetadata() {
     final ObjectMetadata om = new ObjectMetadata();
-    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
-      om.setSSEAlgorithm(serverSideEncryptionAlgorithm);
-    }
+    setOptionalObjectMetadata(om);
     return om;
   }
 
@@ -1853,11 +1891,10 @@ public class S3AFileSystem extends FileSystem {
     try {
       ObjectMetadata srcom = getObjectMetadata(srcKey);
       ObjectMetadata dstom = cloneObjectMetadata(srcom);
-      if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
-        dstom.setSSEAlgorithm(serverSideEncryptionAlgorithm);
-      }
+      setOptionalObjectMetadata(dstom);
       CopyObjectRequest copyObjectRequest =
           new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
+      setOptionalCopyObjectRequestParameters(copyObjectRequest);
       copyObjectRequest.setCannedAccessControlList(cannedACL);
       copyObjectRequest.setNewObjectMetadata(dstom);
 
@@ -1887,6 +1924,83 @@ public class S3AFileSystem extends FileSystem {
       throw translateException("copyFile("+ srcKey+ ", " + dstKey + ")",
           srcKey, e);
     }
+  }
+
+  protected void setOptionalMultipartUploadRequestParameters(
+      InitiateMultipartUploadRequest req) {
+    switch (serverSideEncryptionAlgorithm) {
+    case SSE_KMS:
+      req.setSSEAwsKeyManagementParams(generateSSEAwsKeyParams());
+      break;
+    case SSE_C:
+      if (StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))) {
+        //at the moment, only supports copy using the same key
+        req.setSSECustomerKey(generateSSECustomerKey());
+      }
+      break;
+    default:
+    }
+  }
+
+
+  protected void setOptionalCopyObjectRequestParameters(
+      CopyObjectRequest copyObjectRequest) throws IOException {
+    switch (serverSideEncryptionAlgorithm) {
+    case SSE_KMS:
+      copyObjectRequest.setSSEAwsKeyManagementParams(
+          generateSSEAwsKeyParams()
+      );
+      break;
+    case SSE_C:
+      if (StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))) {
+        //at the moment, only supports copy using the same key
+        SSECustomerKey customerKey = generateSSECustomerKey();
+        copyObjectRequest.setSourceSSECustomerKey(customerKey);
+        copyObjectRequest.setDestinationSSECustomerKey(customerKey);
+      }
+      break;
+    default:
+    }
+  }
+
+  protected void setOptionalPutRequestParameters(PutObjectRequest request) {
+    switch (serverSideEncryptionAlgorithm) {
+    case SSE_KMS:
+      request.setSSEAwsKeyManagementParams(generateSSEAwsKeyParams());
+      break;
+    case SSE_C:
+      if (StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))) {
+        request.setSSECustomerKey(generateSSECustomerKey());
+      }
+      break;
+    default:
+    }
+  }
+
+  private void setOptionalObjectMetadata(ObjectMetadata metadata) {
+    if (S3AEncryptionMethods.SSE_S3.equals(serverSideEncryptionAlgorithm)) {
+      metadata.setSSEAlgorithm(serverSideEncryptionAlgorithm.getMethod());
+    }
+  }
+
+  private SSEAwsKeyManagementParams generateSSEAwsKeyParams() {
+    //Use specified key, otherwise default to default master aws/s3 key by AWS
+    SSEAwsKeyManagementParams sseAwsKeyManagementParams =
+        new SSEAwsKeyManagementParams();
+    if (StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))) {
+      sseAwsKeyManagementParams =
+        new SSEAwsKeyManagementParams(
+          getServerSideEncryptionKey(getConf())
+        );
+    }
+    return sseAwsKeyManagementParams;
+  }
+
+  private SSECustomerKey generateSSECustomerKey() {
+    SSECustomerKey customerKey = new SSECustomerKey(
+        getServerSideEncryptionKey(getConf())
+    );
+    return customerKey;
   }
 
   /**
@@ -2075,7 +2189,8 @@ public class S3AFileSystem extends FileSystem {
     }
     sb.append(", metastore=").append(metadataStore);
     sb.append(", authoritative=").append(allowAuthoritative);
-    sb.append(", executor=").append(threadPoolExecutor);
+    sb.append(", boundedExecutor=").append(boundedThreadPool);
+    sb.append(", unboundedExecutor=").append(unboundedThreadPool);
     sb.append(", statistics {")
         .append(statistics)
         .append("}");
@@ -2362,6 +2477,7 @@ public class S3AFileSystem extends FileSystem {
               key,
               newObjectMetadata(-1));
       initiateMPURequest.setCannedACL(cannedACL);
+      setOptionalMultipartUploadRequestParameters(initiateMPURequest);
       try {
         return s3.initiateMultipartUpload(initiateMPURequest)
             .getUploadId();

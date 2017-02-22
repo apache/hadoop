@@ -114,7 +114,7 @@ import com.google.common.base.Preconditions;
  * defined in the default configuration file:
  * <pre>
  * <property>
- *   <name>dfs.balance.bandwidthPerSec</name>
+ *   <name>dfs.datanode.balance.bandwidthPerSec</name>
  *   <value>1048576</value>
  * <description>  Specifies the maximum bandwidth that each datanode 
  * can utilize for the balancing purpose in term of the number of bytes 

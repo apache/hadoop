@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.security.token.block;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
@@ -31,7 +32,10 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
+import java.util.Calendar;
 import java.util.EnumSet;
+import java.util.GregorianCalendar;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -57,6 +61,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetRep
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthResponseProto;
 import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.TestWritable;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -104,7 +110,7 @@ public class TestBlockToken {
   final ExtendedBlock block1 = new ExtendedBlock("0", 0L);
   final ExtendedBlock block2 = new ExtendedBlock("10", 10L);
   final ExtendedBlock block3 = new ExtendedBlock("-10", -108L);
-  
+
   @Before
   public void disableKerberos() {
     Configuration conf = new Configuration();
@@ -128,7 +134,7 @@ public class TestBlockToken {
         InvocationOnMock invocation) throws IOException {
       Object args[] = invocation.getArguments();
       assertEquals(2, args.length);
-      GetReplicaVisibleLengthRequestProto req = 
+      GetReplicaVisibleLengthRequestProto req =
           (GetReplicaVisibleLengthRequestProto) args[1];
       Set<TokenIdentifier> tokenIds = UserGroupInformation.getCurrentUser()
           .getTokenIdentifiers();
@@ -158,17 +164,27 @@ public class TestBlockToken {
     return id;
   }
 
-  @Test
-  public void testWritable() throws Exception {
+  private void testWritable(boolean enableProtobuf) throws Exception {
     TestWritable.testWritable(new BlockTokenIdentifier());
     BlockTokenSecretManager sm = new BlockTokenSecretManager(
-        blockKeyUpdateInterval, blockTokenLifetime, 0, 1, "fake-pool", null);
+        blockKeyUpdateInterval, blockTokenLifetime, 0, 1, "fake-pool", null,
+        enableProtobuf);
     TestWritable.testWritable(generateTokenId(sm, block1,
         EnumSet.allOf(BlockTokenIdentifier.AccessMode.class)));
     TestWritable.testWritable(generateTokenId(sm, block2,
         EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE)));
     TestWritable.testWritable(generateTokenId(sm, block3,
         EnumSet.noneOf(BlockTokenIdentifier.AccessMode.class)));
+  }
+
+  @Test
+  public void testWritableLegacy() throws Exception {
+    testWritable(false);
+  }
+
+  @Test
+  public void testWritableProtobuf() throws Exception {
+    testWritable(true);
   }
 
   private void tokenGenerationAndVerification(BlockTokenSecretManager master,
@@ -198,12 +214,14 @@ public class TestBlockToken {
   }
 
   /** test block key and token handling */
-  @Test
-  public void testBlockTokenSecretManager() throws Exception {
+  private void testBlockTokenSecretManager(boolean enableProtobuf)
+      throws Exception {
     BlockTokenSecretManager masterHandler = new BlockTokenSecretManager(
-        blockKeyUpdateInterval, blockTokenLifetime, 0, 1, "fake-pool", null);
+        blockKeyUpdateInterval, blockTokenLifetime, 0, 1, "fake-pool", null,
+        enableProtobuf);
     BlockTokenSecretManager slaveHandler = new BlockTokenSecretManager(
-        blockKeyUpdateInterval, blockTokenLifetime, "fake-pool", null);
+        blockKeyUpdateInterval, blockTokenLifetime, "fake-pool", null,
+        enableProtobuf);
     ExportedBlockKeys keys = masterHandler.exportKeys();
     slaveHandler.addKeys(keys);
     tokenGenerationAndVerification(masterHandler, slaveHandler);
@@ -215,6 +233,16 @@ public class TestBlockToken {
     tokenGenerationAndVerification(masterHandler, slaveHandler);
   }
 
+  @Test
+  public void testBlockTokenSecretManagerLegacy() throws Exception {
+    testBlockTokenSecretManager(false);
+  }
+
+  @Test
+  public void testBlockTokenSecretManagerProtobuf() throws Exception {
+    testBlockTokenSecretManager(true);
+  }
+
   private static Server createMockDatanode(BlockTokenSecretManager sm,
       Token<BlockTokenIdentifier> token, Configuration conf)
       throws IOException, ServiceException {
@@ -223,7 +251,7 @@ public class TestBlockToken {
     BlockTokenIdentifier id = sm.createIdentifier();
     id.readFields(new DataInputStream(new ByteArrayInputStream(token
         .getIdentifier())));
-    
+
     doAnswer(new GetLengthAnswer(sm, id)).when(mockDN)
         .getReplicaVisibleLength(any(RpcController.class),
             any(GetReplicaVisibleLengthRequestProto.class));
@@ -237,14 +265,14 @@ public class TestBlockToken {
         .setNumHandlers(5).setVerbose(true).setSecretManager(sm).build();
   }
 
-  @Test
-  public void testBlockTokenRpc() throws Exception {
+  private void testBlockTokenRpc(boolean enableProtobuf) throws Exception {
     Configuration conf = new Configuration();
     conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
-    
+
     BlockTokenSecretManager sm = new BlockTokenSecretManager(
-        blockKeyUpdateInterval, blockTokenLifetime, 0, 1, "fake-pool", null);
+        blockKeyUpdateInterval, blockTokenLifetime, 0, 1, "fake-pool", null,
+        enableProtobuf);
     Token<BlockTokenIdentifier> token = sm.generateToken(block3,
         EnumSet.allOf(BlockTokenIdentifier.AccessMode.class));
 
@@ -270,20 +298,30 @@ public class TestBlockToken {
     }
   }
 
+  @Test
+  public void testBlockTokenRpcLegacy() throws Exception {
+    testBlockTokenRpc(false);
+  }
+
+  @Test
+  public void testBlockTokenRpcProtobuf() throws Exception {
+    testBlockTokenRpc(true);
+  }
+
   /**
    * Test that fast repeated invocations of createClientDatanodeProtocolProxy
    * will not end up using up thousands of sockets. This is a regression test
    * for HDFS-1965.
    */
-  @Test
-  public void testBlockTokenRpcLeak() throws Exception {
+  private void testBlockTokenRpcLeak(boolean enableProtobuf) throws Exception {
     Configuration conf = new Configuration();
     conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
-    
+
     Assume.assumeTrue(FD_DIR.exists());
     BlockTokenSecretManager sm = new BlockTokenSecretManager(
-        blockKeyUpdateInterval, blockTokenLifetime, 0, 1, "fake-pool", null);
+        blockKeyUpdateInterval, blockTokenLifetime, 0, 1, "fake-pool", null,
+        enableProtobuf);
     Token<BlockTokenIdentifier> token = sm.generateToken(block3,
         EnumSet.allOf(BlockTokenIdentifier.AccessMode.class));
 
@@ -334,6 +372,16 @@ public class TestBlockToken {
     RPC.stopProxy(proxyToNoWhere);
   }
 
+  @Test
+  public void testBlockTokenRpcLeakLegacy() throws Exception {
+    testBlockTokenRpcLeak(false);
+  }
+
+  @Test
+  public void testBlockTokenRpcLeakProtobuf() throws Exception {
+    testBlockTokenRpcLeak(true);
+  }
+
   /**
    * @return the current number of file descriptors open by this process.
    */
@@ -344,17 +392,19 @@ public class TestBlockToken {
   /**
    * Test {@link BlockPoolTokenSecretManager}
    */
-  @Test
-  public void testBlockPoolTokenSecretManager() throws Exception {
+  private void testBlockPoolTokenSecretManager(boolean enableProtobuf)
+      throws Exception {
     BlockPoolTokenSecretManager bpMgr = new BlockPoolTokenSecretManager();
 
     // Test BlockPoolSecretManager with upto 10 block pools
     for (int i = 0; i < 10; i++) {
       String bpid = Integer.toString(i);
       BlockTokenSecretManager masterHandler = new BlockTokenSecretManager(
-          blockKeyUpdateInterval, blockTokenLifetime, 0, 1, "fake-pool", null);
+          blockKeyUpdateInterval, blockTokenLifetime, 0, 1, "fake-pool", null,
+          enableProtobuf);
       BlockTokenSecretManager slaveHandler = new BlockTokenSecretManager(
-          blockKeyUpdateInterval, blockTokenLifetime, "fake-pool", null);
+          blockKeyUpdateInterval, blockTokenLifetime, "fake-pool", null,
+          enableProtobuf);
       bpMgr.addBlockPool(bpid, slaveHandler);
 
       ExportedBlockKeys keys = masterHandler.exportKeys();
@@ -370,20 +420,31 @@ public class TestBlockToken {
     }
   }
 
+  @Test
+  public void testBlockPoolTokenSecretManagerLegacy() throws Exception {
+    testBlockPoolTokenSecretManager(false);
+  }
+
+  @Test
+  public void testBlockPoolTokenSecretManagerProtobuf() throws Exception {
+    testBlockPoolTokenSecretManager(true);
+  }
+
   /**
    * This test writes a file and gets the block locations without closing the
    * file, and tests the block token in the last block. Block token is verified
    * by ensuring it is of correct kind.
-   * 
+   *
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test
-  public void testBlockTokenInLastLocatedBlock() throws IOException,
-      InterruptedException {
+  private void testBlockTokenInLastLocatedBlock(boolean enableProtobuf)
+      throws IOException, InterruptedException {
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512);
+    conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_PROTOBUF_ENABLE,
+        enableProtobuf);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(1).build();
     cluster.waitActive();
@@ -410,5 +471,189 @@ public class TestBlockToken {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testBlockTokenInLastLocatedBlockLegacy() throws IOException,
+      InterruptedException {
+    testBlockTokenInLastLocatedBlock(false);
+  }
+
+  @Test
+  public void testBlockTokenInLastLocatedBlockProtobuf() throws IOException,
+      InterruptedException {
+    testBlockTokenInLastLocatedBlock(true);
+  }
+
+  @Test
+  public void testLegacyBlockTokenBytesIsLegacy() throws IOException {
+    final boolean useProto = false;
+    BlockTokenSecretManager sm = new BlockTokenSecretManager(
+        blockKeyUpdateInterval, blockTokenLifetime, 0, 1, "fake-pool", null,
+        useProto);
+    Token<BlockTokenIdentifier> token = sm.generateToken(block1,
+        EnumSet.noneOf(BlockTokenIdentifier.AccessMode.class));
+    final byte[] tokenBytes = token.getIdentifier();
+    BlockTokenIdentifier legacyToken = new BlockTokenIdentifier();
+    BlockTokenIdentifier protobufToken = new BlockTokenIdentifier();
+    BlockTokenIdentifier readToken = new BlockTokenIdentifier();
+
+    DataInputBuffer dib = new DataInputBuffer();
+
+    dib.reset(tokenBytes, tokenBytes.length);
+    legacyToken.readFieldsLegacy(dib);
+
+    boolean invalidProtobufMessage = false;
+    try {
+      dib.reset(tokenBytes, tokenBytes.length);
+      protobufToken.readFieldsProtobuf(dib);
+    } catch (IOException e) {
+      invalidProtobufMessage = true;
+    }
+    assertTrue(invalidProtobufMessage);
+
+    dib.reset(tokenBytes, tokenBytes.length);
+    readToken.readFields(dib);
+
+    // Using legacy, the token parses as a legacy block token and not a protobuf
+    assertEquals(legacyToken, readToken);
+    assertNotEquals(protobufToken, readToken);
+  }
+
+  @Test
+  public void testEmptyLegacyBlockTokenBytesIsLegacy() throws IOException {
+    BlockTokenIdentifier emptyIdent = new BlockTokenIdentifier();
+    DataOutputBuffer dob = new DataOutputBuffer(4096);
+    DataInputBuffer dib = new DataInputBuffer();
+
+    emptyIdent.writeLegacy(dob);
+    byte[] emptyIdentBytes = Arrays.copyOf(dob.getData(), dob.getLength());
+
+    BlockTokenIdentifier legacyToken = new BlockTokenIdentifier();
+    BlockTokenIdentifier protobufToken = new BlockTokenIdentifier();
+    BlockTokenIdentifier readToken = new BlockTokenIdentifier();
+
+    dib.reset(emptyIdentBytes, emptyIdentBytes.length);
+    legacyToken.readFieldsLegacy(dib);
+
+    boolean invalidProtobufMessage = false;
+    try {
+      dib.reset(emptyIdentBytes, emptyIdentBytes.length);
+      protobufToken.readFieldsProtobuf(dib);
+    } catch (IOException e) {
+      invalidProtobufMessage = true;
+    }
+    assertTrue(invalidProtobufMessage);
+
+    dib.reset(emptyIdentBytes, emptyIdentBytes.length);
+    readToken.readFields(dib);
+    assertTrue(invalidProtobufMessage);
+  }
+
+  @Test
+  public void testProtobufBlockTokenBytesIsProtobuf() throws IOException {
+    final boolean useProto = true;
+    BlockTokenSecretManager sm = new BlockTokenSecretManager(
+        blockKeyUpdateInterval, blockTokenLifetime, 0, 1, "fake-pool", null,
+        useProto);
+    Token<BlockTokenIdentifier> token = sm.generateToken(block1,
+        EnumSet.noneOf(BlockTokenIdentifier.AccessMode.class));
+    final byte[] tokenBytes = token.getIdentifier();
+    BlockTokenIdentifier legacyToken = new BlockTokenIdentifier();
+    BlockTokenIdentifier protobufToken = new BlockTokenIdentifier();
+    BlockTokenIdentifier readToken = new BlockTokenIdentifier();
+
+    DataInputBuffer dib = new DataInputBuffer();
+
+    /* We receive NegativeArraySizeException because we didn't call
+     * readFields and instead try to parse this directly as a legacy
+     * BlockTokenIdentifier.
+     *
+     * Note: because the parsing depends on the expiryDate which is based on
+     * `Time.now()` it can sometimes fail with IOException and sometimes with
+     * NegativeArraySizeException.
+     */
+    boolean invalidLegacyMessage = false;
+    try {
+      dib.reset(tokenBytes, tokenBytes.length);
+      legacyToken.readFieldsLegacy(dib);
+    } catch (IOException | NegativeArraySizeException e) {
+      invalidLegacyMessage = true;
+    }
+    assertTrue(invalidLegacyMessage);
+
+    dib.reset(tokenBytes, tokenBytes.length);
+    protobufToken.readFieldsProtobuf(dib);
+
+    dib.reset(tokenBytes, tokenBytes.length);
+    readToken.readFields(dib);
+
+    // Using protobuf, the token parses as a protobuf and not a legacy block
+    // token
+    assertNotEquals(legacyToken, readToken);
+    assertEquals(protobufToken, readToken);
+  }
+
+  public void testCraftedProtobufBlockTokenIdentifier(
+      BlockTokenIdentifier identifier, boolean expectIOE,
+      boolean expectRTE) throws IOException {
+    DataOutputBuffer dob = new DataOutputBuffer(4096);
+    DataInputBuffer dib = new DataInputBuffer();
+
+    identifier.writeProtobuf(dob);
+    byte[] identBytes = Arrays.copyOf(dob.getData(), dob.getLength());
+
+    BlockTokenIdentifier legacyToken = new BlockTokenIdentifier();
+    BlockTokenIdentifier protobufToken = new BlockTokenIdentifier();
+    BlockTokenIdentifier readToken = new BlockTokenIdentifier();
+
+    boolean invalidLegacyMessage = false;
+    try {
+      dib.reset(identBytes, identBytes.length);
+      legacyToken.readFieldsLegacy(dib);
+    } catch (IOException e) {
+      if (!expectIOE) {
+        fail("Received IOException but it was not expected.");
+      }
+      invalidLegacyMessage = true;
+    } catch (RuntimeException e) {
+      if (!expectRTE) {
+        fail("Received RuntimeException but it was not expected.");
+      }
+      invalidLegacyMessage = true;
+    }
+
+    assertTrue(invalidLegacyMessage);
+
+    dib.reset(identBytes, identBytes.length);
+    protobufToken.readFieldsProtobuf(dib);
+
+    dib.reset(identBytes, identBytes.length);
+    readToken.readFieldsProtobuf(dib);
+    assertEquals(protobufToken, readToken);
+  }
+
+  @Test
+  public void testCraftedProtobufBlockTokenBytesIsProtobuf() throws
+      IOException {
+    // Empty BlockTokenIdentifiers throw IOException
+    BlockTokenIdentifier identifier = new BlockTokenIdentifier();
+    testCraftedProtobufBlockTokenIdentifier(identifier, true, false);
+
+    /* Parsing BlockTokenIdentifier with expiryDate
+     * 2017-02-09 00:12:35,072+0100 will throw IOException.
+     * However, expiryDate of
+     * 2017-02-09 00:12:35,071+0100 will throw NegativeArraySizeException.
+     */
+    Calendar cal = new GregorianCalendar();
+    cal.set(2017, 1, 9, 0, 12, 35);
+    long datetime = cal.getTimeInMillis();
+    datetime = ((datetime / 1000) * 1000); // strip milliseconds.
+    datetime = datetime + 71; // 2017-02-09 00:12:35,071+0100
+    identifier.setExpiryDate(datetime);
+    testCraftedProtobufBlockTokenIdentifier(identifier, false, true);
+    datetime += 1; // 2017-02-09 00:12:35,072+0100
+    identifier.setExpiryDate(datetime);
+    testCraftedProtobufBlockTokenIdentifier(identifier, true, false);
   }
 }

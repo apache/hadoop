@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerFini
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerReservedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
@@ -117,24 +117,24 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       new ConcurrentHashMap<>();
 
   public FiCaSchedulerApp(ApplicationAttemptId applicationAttemptId,
-      String user, Queue queue, ActiveUsersManager activeUsersManager,
+      String user, Queue queue, AbstractUsersManager abstractUsersManager,
       RMContext rmContext) {
-    this(applicationAttemptId, user, queue, activeUsersManager, rmContext,
+    this(applicationAttemptId, user, queue, abstractUsersManager, rmContext,
         Priority.newInstance(0), false);
   }
 
   public FiCaSchedulerApp(ApplicationAttemptId applicationAttemptId,
-      String user, Queue queue, ActiveUsersManager activeUsersManager,
+      String user, Queue queue, AbstractUsersManager abstractUsersManager,
       RMContext rmContext, Priority appPriority, boolean isAttemptRecovering) {
-    this(applicationAttemptId, user, queue, activeUsersManager, rmContext,
+    this(applicationAttemptId, user, queue, abstractUsersManager, rmContext,
         appPriority, isAttemptRecovering, null);
   }
 
   public FiCaSchedulerApp(ApplicationAttemptId applicationAttemptId,
-      String user, Queue queue, ActiveUsersManager activeUsersManager,
+      String user, Queue queue, AbstractUsersManager abstractUsersManager,
       RMContext rmContext, Priority appPriority, boolean isAttemptRecovering,
       ActivitiesManager activitiesManager) {
-    super(applicationAttemptId, user, queue, activeUsersManager, rmContext);
+    super(applicationAttemptId, user, queue, abstractUsersManager, rmContext);
 
     RMApp rmApp = rmContext.getRMApps().get(getApplicationId());
 

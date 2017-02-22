@@ -54,9 +54,11 @@ public class PrivilegedNfsGatewayStarter implements Daemon {
     }
 
     try {
-      registrationSocket = new DatagramSocket(
-                    new InetSocketAddress("localhost", clientPort));
+      InetSocketAddress socketAddress =
+                new InetSocketAddress("localhost", clientPort);
+      registrationSocket = new DatagramSocket(null);
       registrationSocket.setReuseAddress(true);
+      registrationSocket.bind(socketAddress);
     } catch (SocketException e) {
       LOG.error("Init failed for port=" + clientPort, e);
       throw e;

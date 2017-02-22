@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -233,8 +234,11 @@ public class TestAMRMClientOnRMRestart {
     nm1.nodeHeartbeat(containerId.getApplicationAttemptId(),
         containerId.getContainerId(), ContainerState.RUNNING);
     dispatcher.await();
-    amClient.requestContainerResourceChange(
-        container, Resource.newInstance(2048, 1));
+    amClient.requestContainerUpdate(
+        container, UpdateContainerRequest.newInstance(
+            container.getVersion(), container.getId(),
+            ContainerUpdateType.INCREASE_RESOURCE,
+            Resource.newInstance(2048, 1), null));
     it.remove();
 
     allocateResponse = amClient.allocate(0.3f);

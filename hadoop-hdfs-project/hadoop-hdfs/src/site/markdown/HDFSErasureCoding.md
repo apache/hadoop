@@ -116,9 +116,9 @@ Deployment
 
 ### Administrative commands
 
-  HDFS provides an `erasurecode` subcommand to perform administrative commands related to erasure coding.
+  HDFS provides an `ec` subcommand to perform administrative commands related to erasure coding.
 
-       hdfs erasurecode [generic options]
+       hdfs ec [generic options]
          [-setPolicy [-p <policyName>] <path>]
          [-getPolicy <path>]
          [-unsetPolicy <path>]

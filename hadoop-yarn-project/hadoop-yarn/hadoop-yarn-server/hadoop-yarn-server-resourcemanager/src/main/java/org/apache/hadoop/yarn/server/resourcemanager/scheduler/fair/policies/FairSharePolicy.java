@@ -21,6 +21,8 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.Comparator;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -40,6 +42,7 @@ import com.google.common.annotations.VisibleForTesting;
 @Private
 @Unstable
 public class FairSharePolicy extends SchedulingPolicy {
+  private static final Log LOG = LogFactory.getLog(FifoPolicy.class);
   @VisibleForTesting
   public static final String NAME = "fair";
   private static final DefaultResourceCalculator RESOURCE_CALCULATOR =
@@ -175,7 +178,15 @@ public class FairSharePolicy extends SchedulingPolicy {
   }
 
   @Override
-  public byte getApplicableDepth() {
-    return SchedulingPolicy.DEPTH_ANY;
+  public boolean isChildPolicyAllowed(SchedulingPolicy childPolicy) {
+    if (childPolicy instanceof DominantResourceFairnessPolicy) {
+      LOG.error("Queue policy can't be " + DominantResourceFairnessPolicy.NAME
+          + " if the parent policy is " + getName() + ". Choose " +
+          getName() + " or " + FifoPolicy.NAME + " for child queues instead."
+          + " Please note that " + FifoPolicy.NAME
+          + " is only for leaf queues.");
+      return false;
+    }
+    return true;
   }
 }

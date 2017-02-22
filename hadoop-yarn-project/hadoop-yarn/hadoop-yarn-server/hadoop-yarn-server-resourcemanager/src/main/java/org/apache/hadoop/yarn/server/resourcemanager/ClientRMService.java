@@ -1490,7 +1490,7 @@ public class ClientRMService extends AbstractService implements
       GetNodesToLabelsRequest request) throws YarnException, IOException {
     RMNodeLabelsManager labelsMgr = rmContext.getNodeLabelManager();
     GetNodesToLabelsResponse response =
-        GetNodesToLabelsResponse.newInstance(labelsMgr.getNodeLabelsInfo());
+        GetNodesToLabelsResponse.newInstance(labelsMgr.getNodeLabels());
     return response;
   }
 
@@ -1500,10 +1500,10 @@ public class ClientRMService extends AbstractService implements
     RMNodeLabelsManager labelsMgr = rmContext.getNodeLabelManager();
     if (request.getNodeLabels() == null || request.getNodeLabels().isEmpty()) {
       return GetLabelsToNodesResponse.newInstance(
-          labelsMgr.getLabelsInfoToNodes());
+          labelsMgr.getLabelsToNodes());
     } else {
       return GetLabelsToNodesResponse.newInstance(
-          labelsMgr.getLabelsInfoToNodes(request.getNodeLabels()));
+          labelsMgr.getLabelsToNodes(request.getNodeLabels()));
     }
   }
 
