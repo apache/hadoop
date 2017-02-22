@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -604,8 +603,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     Resource usageAfterPreemption = Resources.subtract(
         getResourceUsage(), container.getAllocatedResource());
 
-    return !Resources.lessThan(fsQueue.getPolicy().getResourceCalculator(),
-        scheduler.getClusterResource(), usageAfterPreemption, getFairShare());
+    return !isUsageBelowShare(usageAfterPreemption, getFairShare());
   }
 
   /**
@@ -855,8 +853,11 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   }
 
   private boolean isReservable(Resource capacity) {
-    return scheduler.isAtLeastReservationThreshold(
-        getQueue().getPolicy().getResourceCalculator(), capacity);
+    // Reserve only when the app is starved and the requested container size
+    // is larger than the configured threshold
+    return isStarved() &&
+        scheduler.isAtLeastReservationThreshold(
+            getQueue().getPolicy().getResourceCalculator(), capacity);
   }
 
   private boolean hasNodeOrRackLocalRequests(SchedulerRequestKey schedulerKey) {
@@ -1078,25 +1079,36 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
    * @return freshly computed fairshare starvation
    */
   Resource fairShareStarvation() {
+    long now = scheduler.getClock().getTime();
     Resource threshold = Resources.multiply(
         getFairShare(), fsQueue.getFairSharePreemptionThreshold());
-    Resource starvation = Resources.componentwiseMin(threshold, demand);
-    Resources.subtractFromNonNegative(starvation, getResourceUsage());
+    Resource fairDemand = Resources.componentwiseMin(threshold, demand);
 
-    long now = scheduler.getClock().getTime();
-    boolean starved = !Resources.isNone(starvation);
+    // Check if the queue is starved for fairshare
+    boolean starved = isUsageBelowShare(getResourceUsage(), fairDemand);
 
     if (!starved) {
       lastTimeAtFairShare = now;
     }
 
-    if (starved &&
-        (now - lastTimeAtFairShare > fsQueue.getFairSharePreemptionTimeout())) {
-      this.fairshareStarvation = starvation;
+    if (!starved ||
+        now - lastTimeAtFairShare < fsQueue.getFairSharePreemptionTimeout()) {
+      fairshareStarvation = Resources.none();
     } else {
-      this.fairshareStarvation = Resources.none();
+      // The app has been starved for longer than preemption-timeout.
+      fairshareStarvation =
+          Resources.subtractFromNonNegative(fairDemand, getResourceUsage());
     }
-    return this.fairshareStarvation;
+    return fairshareStarvation;
+  }
+
+  /**
+   * Helper method that checks if {@code usage} is strictly less than
+   * {@code share}.
+   */
+  private boolean isUsageBelowShare(Resource usage, Resource share) {
+    return fsQueue.getPolicy().getResourceCalculator().compare(
+        scheduler.getClusterResource(), usage, share, true) < 0;
   }
 
   ResourceRequest getNextResourceRequest() {
@@ -1107,9 +1119,15 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
    * Helper method that captures if this app is identified to be starved.
    * @return true if the app is starved for fairshare, false otherwise
    */
-  @VisibleForTesting
   boolean isStarvedForFairShare() {
-    return !Resources.isNone(fairshareStarvation);
+    return isUsageBelowShare(getResourceUsage(), getFairShare());
+  }
+
+  /**
+   * Is application starved for fairshare or minshare
+   */
+  private boolean isStarved() {
+    return isStarvedForFairShare() || !Resources.isNone(minshareStarvation);
   }
 
   /**
@@ -1322,6 +1340,11 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   @Override
   public boolean equals(Object o) {
     return super.equals(o);
+  }
+
+  @Override
+  public String toString() {
+    return getApplicationAttemptId() + " Alloc: " + getCurrentConsumption();
   }
 
   @Override

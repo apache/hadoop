@@ -131,8 +131,9 @@ public class FairSharePolicy extends SchedulingPolicy {
         // Apps are tied in fairness ratio. Break the tie by submit time and job
         // name to get a deterministic ordering, which is useful for unit tests.
         res = (int) Math.signum(s1.getStartTime() - s2.getStartTime());
-        if (res == 0)
+        if (res == 0) {
           res = s1.getName().compareTo(s2.getName());
+        }
       }
       return res;
     }
