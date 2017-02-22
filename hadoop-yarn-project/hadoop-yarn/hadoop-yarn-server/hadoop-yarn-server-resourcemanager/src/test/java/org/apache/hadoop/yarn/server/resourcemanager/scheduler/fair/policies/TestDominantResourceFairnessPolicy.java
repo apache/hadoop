@@ -27,7 +27,7 @@ import java.util.Comparator;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ClusterNodeTracker;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FakeSchedulable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -43,10 +43,10 @@ public class TestDominantResourceFairnessPolicy {
   private Comparator<Schedulable> createComparator(int clusterMem,
       int clusterCpu) {
     DominantResourceFairnessPolicy policy = new DominantResourceFairnessPolicy();
-    ClusterNodeTracker clusterNodeTracker = mock(ClusterNodeTracker.class);
-    when(clusterNodeTracker.getClusterCapacity()).
+    FSContext fsContext = mock(FSContext.class);
+    when(fsContext.getClusterResource()).
         thenReturn(BuilderUtils.newResource(clusterMem, clusterCpu));
-    policy.initialize(clusterNodeTracker);
+    policy.initialize(fsContext);
     return policy.getComparator();
   }
   

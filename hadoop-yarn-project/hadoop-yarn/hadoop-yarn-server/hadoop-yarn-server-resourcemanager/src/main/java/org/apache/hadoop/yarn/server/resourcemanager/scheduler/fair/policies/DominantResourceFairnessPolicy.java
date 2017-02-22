@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ClusterNodeTracker;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy;
@@ -105,17 +105,17 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
   }
 
   @Override
-  public void initialize(ClusterNodeTracker clusterNodeTracker) {
-    COMPARATOR.setClusterNodeTracker(clusterNodeTracker);
+  public void initialize(FSContext fsContext) {
+    COMPARATOR.setFSContext(fsContext);
   }
 
   public static class DominantResourceFairnessComparator implements Comparator<Schedulable> {
     private static final int NUM_RESOURCES = ResourceType.values().length;
 
-    private ClusterNodeTracker clusterNodeTracker;
+    private FSContext fsContext;
 
-    public void setClusterNodeTracker(ClusterNodeTracker clusterNodeTracker) {
-      this.clusterNodeTracker = clusterNodeTracker;
+    public void setFSContext(FSContext fsContext) {
+      this.fsContext = fsContext;
     }
 
     @Override
@@ -126,7 +126,7 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
       ResourceWeights sharesOfMinShare2 = new ResourceWeights();
       ResourceType[] resourceOrder1 = new ResourceType[NUM_RESOURCES];
       ResourceType[] resourceOrder2 = new ResourceType[NUM_RESOURCES];
-      Resource clusterCapacity = clusterNodeTracker.getClusterCapacity();
+      Resource clusterCapacity = fsContext.getClusterResource();
 
       // Calculate shares of the cluster for each resource both schedulables.
       calculateShares(s1.getResourceUsage(),
