@@ -58,7 +58,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     Exception {
     final Path[] path = new Path[1];
     intercept(java.nio.file.AccessDeniedException.class,
-        "Forbidden (Service: Amazon S3; Status Code: 403;", () -> {
+        "Service: Amazon S3; Status Code: 403;", () -> {
 
         int len = 2048;
         skipIfEncryptionTestsDisabled(getConfiguration());
