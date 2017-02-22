@@ -1,4 +1,4 @@
-/**
+{{!
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,29 +14,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+}}
 
-import Ember from 'ember';
-
-import AbstractRoute from './abstract';
-
-export default AbstractRoute.extend({
-  model(param) {
-    return Ember.RSVP.hash({
-      selected : param.queue_name,
-      queues: this.store.findAll('yarn-queue'),
-      selectedQueue : undefined,
-      apps: undefined, // apps of selected queue
-    });
-  },
-
-  afterModel(model) {
-    model.selectedQueue = this.store.peekRecord('yarn-queue', model.selected);
-    model.apps = this.store.findAll('yarn-app');
-  },
-
-  unloadAll() {
-    this.store.unloadAll('yarn-queue');
-    this.store.unloadAll('yarn-app');
-  }
-});
+<div class="row">
+  <div class="col-lg-12 container-fluid">
+    {{#if model.apps}}
+      {{app-table table-id="apps-table" arr=model.apps}}
+      {{simple-table table-id="apps-table" bFilter=true colTypes="elapsed-time" colTargets="7"}}
+    {{else}}
+      <h4 align = "center">Could not find any applications from this cluster</h4>
+    {{/if}}
+  </div>
+</div>

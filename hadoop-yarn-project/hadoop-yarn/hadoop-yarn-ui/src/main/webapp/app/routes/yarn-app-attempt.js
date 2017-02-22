@@ -23,15 +23,15 @@ import AbstractRoute from './abstract';
 export default AbstractRoute.extend({
   model(param) {
     return Ember.RSVP.hash({
-      attempt: this.store.findRecord('yarn-app-attempt', param.app_attempt_id),
-      
-      rmContainers: this.store.query('yarn-container', 
+      attempt: this.store.findRecord('yarn-app-attempt', param.app_attempt_id, {reload: true}),
+
+      rmContainers: this.store.query('yarn-container',
         {
           app_attempt_id: param.app_attempt_id,
           is_rm: true
         }),
-      
-      tsContainers: this.store.query('yarn-container', 
+
+      tsContainers: this.store.query('yarn-container',
         {
           app_attempt_id: param.app_attempt_id,
           is_rm: false

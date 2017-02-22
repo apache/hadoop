@@ -16,14 +16,7 @@
  * limitations under the License.
  */
 
-import { moduleFor, test } from 'ember-qunit';
+import Ember from 'ember';
 
-moduleFor('route:yarn-queue-apps', 'Unit | Route | yarn queue apps', {
-  // Specify the other units that are required for this test.
-  // needs: ['controller:foo']
-});
-
-test('it exists', function(assert) {
-  let route = this.subject();
-  assert.ok(route);
+export default Ember.Route.extend({
 });

@@ -25,8 +25,8 @@ export default AbstractRoute.extend({
     // Fetches data from both NM and RM. RM is queried to get node usage info.
     return Ember.RSVP.hash({
       nodeInfo: { id: param.node_id, addr: param.node_addr },
-      node: this.store.findRecord('yarn-node', param.node_addr),
-      rmNode: this.store.findRecord('yarn-rm-node', param.node_id)
+      node: this.store.findRecord('yarn-node', param.node_addr, {reload: true}),
+      rmNode: this.store.findRecord('yarn-rm-node', param.node_id, {reload: true})
     });
   },
 

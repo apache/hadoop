@@ -16,20 +16,14 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
+import { moduleFor, test } from 'ember-qunit';
 
-import AbstractRoute from './abstract';
+moduleFor('route:yarn-queue/apps', 'Unit | Route | yarn queue/apps', {
+  // Specify the other units that are required for this test.
+  // needs: ['controller:foo']
+});
 
-export default AbstractRoute.extend({
-  model() {
-    return Ember.RSVP.hash({
-      apps: this.store.findAll('yarn-app', {reload: true}),
-      clusterMetrics: this.store.findAll('ClusterMetric', {reload: true}),
-    });
-  },
-
-  unloadAll() {
-    this.store.unloadAll('yarn-app');
-    this.store.unloadAll('ClusterMetric');
-  }
+test('it exists', function(assert) {
+  let route = this.subject();
+  assert.ok(route);
 });

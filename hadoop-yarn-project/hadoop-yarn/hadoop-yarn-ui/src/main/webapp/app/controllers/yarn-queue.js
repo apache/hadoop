@@ -22,10 +22,11 @@ export default Ember.Controller.extend({
   needReload: true,
   selectedQueue: undefined,
 
-  breadcrumbs: Ember.computed("model.selected", function () {
+  breadcrumbs: Ember.computed("model.selected", "target.currentPath", function () {
     var queueName = this.get("model.selected");
+    var path = this.get("target.currentPath");
 
-    return [{
+    var crumbs = [{
       text: "Home",
       routeName: 'application'
     }, {
@@ -34,11 +35,19 @@ export default Ember.Controller.extend({
       model: 'root'
     }, {
       text: `Queue [ ${queueName} ]`,
-      routeName: 'yarn-queue',
+      routeName: 'yarn-queue.info',
       model: queueName
     }];
 
-  }),
+    if (path && path === "yarn-queue.apps") {
+      crumbs.push({
+        text: "Applications",
+        routeName: 'yarn-queue.apps',
+        model: queueName
+      });
+    }
 
+    return crumbs;
+  })
 
 });

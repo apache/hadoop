@@ -138,6 +138,14 @@ div.tooltip {
 }
 
 /*
+ * Loading icon styles
+ */
+.loading-mask > img {
+  display: block;
+  margin: 0 auto;
+}
+
+/*
  * Data table
  */
 
