@@ -109,13 +109,14 @@ class ScopedResolver {
 
     // Now set up the promise, set it in async_resolve's callback
     result_status_ = std::make_shared<std::promise<Status>>();
+    std::shared_ptr<std::promise<Status>> shared_result = result_status_;
 
     // Callback to pull a copy of endpoints out of resolver and set promise
-    auto callback = [this](const asio::error_code &ec, ::asio::ip::tcp::resolver::iterator out) {
+    auto callback = [this, shared_result](const asio::error_code &ec, ::asio::ip::tcp::resolver::iterator out) {
       if(!ec) {
         std::copy(out, ::asio::ip::tcp::resolver::iterator(), std::back_inserter(endpoints_));
       }
-      result_status_->set_value( ToStatus(ec) );
+      shared_result->set_value( ToStatus(ec) );
     };
     resolver_.async_resolve(query_, callback);
     return true;
