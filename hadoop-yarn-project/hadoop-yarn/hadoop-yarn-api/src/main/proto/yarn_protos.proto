@@ -267,13 +267,13 @@ message NodeReportProto {
   optional ResourceUtilizationProto node_utilization = 12;
 }
 
-message NodeIdToLabelsInfoProto {
+message NodeIdToLabelsProto {
   optional NodeIdProto nodeId = 1;
-  repeated NodeLabelProto nodeLabels = 2;
+  repeated string nodeLabels = 2;
 }
 
 message LabelsToNodeIdsProto {
-  optional NodeLabelProto nodeLabels = 1;
+  optional string nodeLabels = 1;
   repeated NodeIdProto nodeId = 2;
 }
 
