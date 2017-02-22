@@ -851,21 +851,21 @@ public class YarnClientImpl extends YarnClient {
   }
 
   @Override
-  public Map<NodeId, Set<NodeLabel>> getNodeToLabels() throws YarnException,
+  public Map<NodeId, Set<String>> getNodeToLabels() throws YarnException,
       IOException {
     return rmClient.getNodeToLabels(GetNodesToLabelsRequest.newInstance())
         .getNodeToLabels();
   }
 
   @Override
-  public Map<NodeLabel, Set<NodeId>> getLabelsToNodes() throws YarnException,
+  public Map<String, Set<NodeId>> getLabelsToNodes() throws YarnException,
       IOException {
     return rmClient.getLabelsToNodes(GetLabelsToNodesRequest.newInstance())
         .getLabelsToNodes();
   }
 
   @Override
-  public Map<NodeLabel, Set<NodeId>> getLabelsToNodes(Set<String> labels)
+  public Map<String, Set<NodeId>> getLabelsToNodes(Set<String> labels)
       throws YarnException, IOException {
     return rmClient.getLabelsToNodes(
         GetLabelsToNodesRequest.newInstance(labels)).getLabelsToNodes();

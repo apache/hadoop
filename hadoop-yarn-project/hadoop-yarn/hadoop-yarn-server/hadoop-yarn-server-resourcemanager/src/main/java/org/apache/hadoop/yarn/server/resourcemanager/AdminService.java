@@ -700,9 +700,10 @@ public class AdminService extends CompositeService implements
     AddToClusterNodeLabelsResponse response =
         recordFactory.newRecordInstance(AddToClusterNodeLabelsResponse.class);
     try {
-      rmContext.getNodeLabelManager().addToCluserNodeLabels(request.getNodeLabels());
-      RMAuditLogger
-          .logSuccess(user.getShortUserName(), operation, "AdminService");
+      rmContext.getNodeLabelManager()
+          .addToCluserNodeLabels(request.getNodeLabels());
+      RMAuditLogger.logSuccess(user.getShortUserName(), operation,
+          "AdminService");
       return response;
     } catch (IOException ioe) {
       throw logAndWrapException(ioe, user.getShortUserName(), operation, msg);

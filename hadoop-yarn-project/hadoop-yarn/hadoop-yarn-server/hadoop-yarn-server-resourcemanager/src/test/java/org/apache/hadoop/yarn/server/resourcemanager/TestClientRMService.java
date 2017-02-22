@@ -1511,27 +1511,19 @@ public class TestClientRMService {
     // Get node labels mapping
     GetNodesToLabelsResponse response1 = client
         .getNodeToLabels(GetNodesToLabelsRequest.newInstance());
-    Map<NodeId, Set<NodeLabel>> nodeToLabels = response1.getNodeToLabels();
+    Map<NodeId, Set<String>> nodeToLabels = response1.getNodeToLabels();
     Assert.assertTrue(nodeToLabels.keySet().containsAll(
         Arrays.asList(node1, node2)));
     Assert.assertTrue(nodeToLabels.get(node1)
-        .containsAll(Arrays.asList(labelX)));
+        .containsAll(Arrays.asList(labelX.getName())));
     Assert.assertTrue(nodeToLabels.get(node2)
-        .containsAll(Arrays.asList(labelY)));
-    // Verify whether labelX's exclusivity is false
-    for (NodeLabel x : nodeToLabels.get(node1)) {
-      Assert.assertFalse(x.isExclusive());
-    }
-    // Verify whether labelY's exclusivity is true
-    for (NodeLabel y : nodeToLabels.get(node2)) {
-      Assert.assertTrue(y.isExclusive());
-    }
+        .containsAll(Arrays.asList(labelY.getName())));
     // Below label "x" is not present in the response as exclusivity is true
     Assert.assertFalse(nodeToLabels.get(node1).containsAll(
         Arrays.asList(NodeLabel.newInstance("x"))));
 
     rpc.stopProxy(client, conf);
-    rm.close();
+    rm.stop();
   }
 
   @Test
@@ -1582,18 +1574,14 @@ public class TestClientRMService {
     // Get labels to nodes mapping
     GetLabelsToNodesResponse response1 = client
         .getLabelsToNodes(GetLabelsToNodesRequest.newInstance());
-    Map<NodeLabel, Set<NodeId>> labelsToNodes = response1.getLabelsToNodes();
-    // Verify whether all NodeLabel's exclusivity are false
-    for (Map.Entry<NodeLabel, Set<NodeId>> nltn : labelsToNodes.entrySet()) {
-      Assert.assertFalse(nltn.getKey().isExclusive());
-    }
+    Map<String, Set<NodeId>> labelsToNodes = response1.getLabelsToNodes();
     Assert.assertTrue(labelsToNodes.keySet().containsAll(
-        Arrays.asList(labelX, labelY, labelZ)));
-    Assert.assertTrue(labelsToNodes.get(labelX).containsAll(
+        Arrays.asList(labelX.getName(), labelY.getName(), labelZ.getName())));
+    Assert.assertTrue(labelsToNodes.get(labelX.getName()).containsAll(
         Arrays.asList(node1A)));
-    Assert.assertTrue(labelsToNodes.get(labelY).containsAll(
+    Assert.assertTrue(labelsToNodes.get(labelY.getName()).containsAll(
         Arrays.asList(node2A, node3A)));
-    Assert.assertTrue(labelsToNodes.get(labelZ).containsAll(
+    Assert.assertTrue(labelsToNodes.get(labelZ.getName()).containsAll(
         Arrays.asList(node1B, node3B)));
 
     // Get labels to nodes mapping for specific labels
@@ -1602,17 +1590,13 @@ public class TestClientRMService {
     GetLabelsToNodesResponse response2 = client
         .getLabelsToNodes(GetLabelsToNodesRequest.newInstance(setlabels));
     labelsToNodes = response2.getLabelsToNodes();
-    // Verify whether all NodeLabel's exclusivity are false
-    for (Map.Entry<NodeLabel, Set<NodeId>> nltn : labelsToNodes.entrySet()) {
-      Assert.assertFalse(nltn.getKey().isExclusive());
-    }
     Assert.assertTrue(labelsToNodes.keySet().containsAll(
-        Arrays.asList(labelX, labelZ)));
-    Assert.assertTrue(labelsToNodes.get(labelX).containsAll(
+        Arrays.asList(labelX.getName(), labelZ.getName())));
+    Assert.assertTrue(labelsToNodes.get(labelX.getName()).containsAll(
         Arrays.asList(node1A)));
-    Assert.assertTrue(labelsToNodes.get(labelZ).containsAll(
+    Assert.assertTrue(labelsToNodes.get(labelZ.getName()).containsAll(
         Arrays.asList(node1B, node3B)));
-    Assert.assertEquals(labelsToNodes.get(labelY), null);
+    Assert.assertEquals(labelsToNodes.get(labelY.getName()), null);
 
     rpc.stopProxy(client, conf);
     rm.close();

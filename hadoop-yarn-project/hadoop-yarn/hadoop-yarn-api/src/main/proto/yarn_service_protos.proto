@@ -232,7 +232,7 @@ message GetNodesToLabelsRequestProto {
 }
 
 message GetNodesToLabelsResponseProto {
-  repeated NodeIdToLabelsInfoProto nodeToLabels = 1;
+  repeated NodeIdToLabelsProto nodeToLabels = 1;
 }
 
 message GetLabelsToNodesRequestProto {
@@ -247,7 +247,8 @@ message GetClusterNodeLabelsRequestProto {
 }
 
 message GetClusterNodeLabelsResponseProto {
-  repeated NodeLabelProto nodeLabels = 1;
+  repeated string deprecatedNodeLabels = 1;
+  repeated NodeLabelProto nodeLabels = 2;
 }
 
 message UpdateApplicationPriorityRequestProto {
