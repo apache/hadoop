@@ -1092,6 +1092,25 @@ public class Journal implements Closeable {
     committedTxnId.set(startTxId - 1);
   }
 
+  synchronized boolean renameTmpSegment(File tmpFile, File finalFile,
+      long endTxId) throws IOException {
+    final boolean success;
+    if (endTxId <= committedTxnId.get()) {
+      success = tmpFile.renameTo(finalFile);
+      if (!success) {
+        LOG.warn("Unable to rename edits file from " + tmpFile + " to " +
+            finalFile);
+      }
+    } else {
+      success = false;
+      LOG.error("The endTxId of the temporary file is not less than the " +
+          "last committed transaction id. Aborting renaming to final file" +
+          finalFile);
+    }
+
+    return success;
+  }
+
   public Long getJournalCTime() throws IOException {
     return storage.getJournalManager().getJournalCTime();
   }

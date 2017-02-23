@@ -259,7 +259,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
       final String path = StringUtils.popOptionWithArgument("-path", args);
       if (path == null) {
         System.err.println("Please specify the path from which "
-            + "the storage policy will be unsetd.\nUsage: " + getLongUsage());
+            + "the storage policy will be unset.\nUsage: " + getLongUsage());
         return 1;
       }
 

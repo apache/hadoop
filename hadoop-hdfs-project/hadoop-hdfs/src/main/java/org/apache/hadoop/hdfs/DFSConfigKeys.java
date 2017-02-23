@@ -707,6 +707,16 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_IMAGE_TRANSFER_CHUNKSIZE_KEY = "dfs.image.transfer.chunksize";
   public static final int DFS_IMAGE_TRANSFER_CHUNKSIZE_DEFAULT = 64 * 1024;
 
+  // Edit Log segment transfer timeout
+  public static final String DFS_EDIT_LOG_TRANSFER_TIMEOUT_KEY =
+      "dfs.edit.log.transfer.timeout";
+  public static final int DFS_EDIT_LOG_TRANSFER_TIMEOUT_DEFAULT = 30 * 1000;
+
+  // Throttling Edit Log Segment transfer for Journal Sync
+  public static final String DFS_EDIT_LOG_TRANSFER_RATE_KEY =
+      "dfs.edit.log.transfer.bandwidthPerSec";
+  public static final long DFS_EDIT_LOG_TRANSFER_RATE_DEFAULT = 0; //no throttling
+
   // Datanode File IO Stats
   public static final String DFS_DATANODE_ENABLE_FILEIO_PROFILING_KEY =
       "dfs.datanode.enable.fileio.profiling";
@@ -891,6 +901,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_JOURNALNODE_KEYTAB_FILE_KEY = "dfs.journalnode.keytab.file";
   public static final String  DFS_JOURNALNODE_KERBEROS_PRINCIPAL_KEY = "dfs.journalnode.kerberos.principal";
   public static final String  DFS_JOURNALNODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY = "dfs.journalnode.kerberos.internal.spnego.principal";
+  public static final String DFS_JOURNALNODE_ENABLE_SYNC_KEY =
+      "dfs.journalnode.enable.sync";
+  public static final boolean DFS_JOURNALNODE_ENABLE_SYNC_DEFAULT = false;
+  public static final String DFS_JOURNALNODE_SYNC_INTERVAL_KEY =
+      "dfs.journalnode.sync.interval";
+  public static final long DFS_JOURNALNODE_SYNC_INTERVAL_DEFAULT = 2*60*1000L;
 
   // Journal-node related configs for the client side.
   public static final String  DFS_QJOURNAL_QUEUE_SIZE_LIMIT_KEY = "dfs.qjournal.queued-edits.limit.mb";

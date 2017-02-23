@@ -401,7 +401,8 @@ public class TransferFsImage {
   
   public static MD5Hash doGetUrl(URL url, List<File> localPaths,
       Storage dstStorage, boolean getChecksum) throws IOException {
-    return Util.doGetUrl(url, localPaths, dstStorage, getChecksum, timeout);
+    return Util.doGetUrl(url, localPaths, dstStorage, getChecksum, timeout,
+        null);
   }
 
   private static MD5Hash parseMD5Header(HttpServletRequest request) {

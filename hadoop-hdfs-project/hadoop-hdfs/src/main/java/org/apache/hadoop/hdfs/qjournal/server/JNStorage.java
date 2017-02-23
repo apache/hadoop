@@ -49,7 +49,6 @@ class JNStorage extends Storage {
   private final FileJournalManager fjm;
   private final StorageDirectory sd;
   private StorageState state;
-  
 
   private static final List<Pattern> CURRENT_DIR_PURGE_REGEXES =
       ImmutableList.of(
@@ -119,6 +118,14 @@ class JNStorage extends Storage {
     String name = NNStorage.getInProgressEditsFileName(segmentTxId) +
         ".epoch=" + epoch; 
     return new File(sd.getCurrentDir(), name);
+  }
+
+  File getTemporaryEditsFile(long startTxId, long endTxId, long timestamp) {
+    return NNStorage.getTemporaryEditsFile(sd, startTxId, endTxId, timestamp);
+  }
+
+  File getFinalizedEditsFile(long startTxId, long endTxId) {
+    return NNStorage.getFinalizedEditsFile(sd, startTxId, endTxId);
   }
 
   /**

@@ -30,7 +30,8 @@ public class DefaultResourceCalculator extends ResourceCalculator {
       LogFactory.getLog(DefaultResourceCalculator.class);
 
   @Override
-  public int compare(Resource unused, Resource lhs, Resource rhs) {
+  public int compare(Resource unused, Resource lhs, Resource rhs,
+      boolean singleType) {
     // Only consider memory
     return Long.compare(lhs.getMemorySize(), rhs.getMemorySize());
   }
