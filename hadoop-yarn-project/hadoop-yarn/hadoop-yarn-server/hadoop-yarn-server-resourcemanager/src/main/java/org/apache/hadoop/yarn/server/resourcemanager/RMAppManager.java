@@ -53,7 +53,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRecoverEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
@@ -604,7 +603,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     RMApp app = this.rmContext.getRMApps().get(applicationId);
 
     synchronized (applicationId) {
-      if (app.isAppInCompletedStates()) {
+      if (app == null || app.isAppInCompletedStates()) {
         return;
       }
 
@@ -650,7 +649,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // 2. Update this information to state-store
     // 3. Perform real move operation and update in-memory data structures.
     synchronized (applicationId) {
-      if (app.isAppInCompletedStates()) {
+      if (app == null || app.isAppInCompletedStates()) {
         return;
       }
 
