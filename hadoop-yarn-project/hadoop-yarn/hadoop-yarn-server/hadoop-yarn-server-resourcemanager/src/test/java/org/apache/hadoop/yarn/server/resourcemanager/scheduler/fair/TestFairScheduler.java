@@ -5071,6 +5071,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.handle(updateEvent);
 
     createSchedulingRequestExistingApplication(1024, 1, 1, appAttemptId);
+    scheduler.update();
     scheduler.handle(updateEvent);
 
     // no reservation yet

@@ -407,8 +407,7 @@ public class FSLeafQueue extends FSQueue {
     readLock.lock();
     try {
       for (FSAppAttempt app : runnableApps) {
-        Resource pending = app.getAppAttemptResourceUsage().getPending();
-        if (!Resources.isNone(pending) &&
+        if (!Resources.isNone(app.getPendingDemand()) &&
             (assignment || app.shouldCheckForStarvation())) {
           pendingForResourceApps.add(app);
         }
