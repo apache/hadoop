@@ -194,15 +194,9 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     for (NodeId nodeId: blacklistNodeIds) {
       SchedulerNode node = scheduler.getSchedulerNode(nodeId);
       if (node != null) {
-        Resources.subtractFrom(availableResources,
+        Resources.subtractFromNonNegative(availableResources,
             node.getAvailableResource());
       }
-    }
-    if (availableResources.getMemory() < 0) {
-      availableResources.setMemory(0);
-    }
-    if (availableResources.getVirtualCores() < 0) {
-      availableResources.setVirtualCores(0);
     }
   }
 
