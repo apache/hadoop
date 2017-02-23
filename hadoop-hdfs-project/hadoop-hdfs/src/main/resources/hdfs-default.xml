@@ -1279,6 +1279,26 @@
 </property>
 
 <property>
+  <name>dfs.edit.log.transfer.timeout</name>
+  <value>30000</value>
+  <description>
+    Socket timeout for edit log transfer in milliseconds. This timeout
+    should be configured such that normal edit log transfer for journal
+    node syncing can complete successfully.
+  </description>
+</property>
+
+<property>
+  <name>dfs.edit.log.transfer.bandwidthPerSec</name>
+  <value>0</value>
+  <description>
+    Maximum bandwidth used for transferring edit log to between journal nodes
+    for syncing, in bytes per second.
+    A default value of 0 indicates that throttling is disabled.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.support.allow.format</name>
   <value>true</value>
   <description>Does HDFS namenode allow itself to be formatted?
@@ -3781,6 +3801,27 @@
   <value>/tmp/hadoop/dfs/journalnode/</value>
   <description>
     The directory where the journal edit files are stored.
+  </description>
+</property>
+
+<property>
+  <name>dfs.journalnode.enable.sync</name>
+  <value>true</value>
+  <description>
+    If true, the journal nodes wil sync with each other. The journal nodes
+    will periodically gossip with other journal nodes to compare edit log
+    manifests and if they detect any missing log segment, they will download
+    it from the other journal nodes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.journalnode.sync.interval</name>
+  <value>120000</value>
+  <description>
+    Time interval, in milliseconds, between two Journal Node syncs.
+    This configuration takes effect only if the journalnode sync is enabled
+    by setting the configuration parameter dfs.journalnode.enable.sync to true.
   </description>
 </property>
 

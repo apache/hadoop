@@ -255,4 +255,12 @@ public class MiniJournalCluster {
       }
     }
   }
+
+  public void setNamenodeSharedEditsConf(String jid) {
+    URI quorumJournalURI = getQuorumJournalURI(jid);
+    for (int i = 0; i < nodes.length; i++) {
+      nodes[i].node.getConf().set(DFSConfigKeys
+          .DFS_NAMENODE_SHARED_EDITS_DIR_KEY, quorumJournalURI.toString());
+    }
+  }
 }
