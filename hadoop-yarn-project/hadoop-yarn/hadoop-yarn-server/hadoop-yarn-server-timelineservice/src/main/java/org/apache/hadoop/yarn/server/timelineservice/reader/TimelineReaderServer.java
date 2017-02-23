@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.http.lib.StaticUserWebFilter;
+import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -134,6 +135,14 @@ public class TimelineReaderServer extends CompositeService {
         YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
         WebAppUtils.getTimelineReaderWebAppURL(conf));
     LOG.info("Instantiating TimelineReaderWebApp at " + bindAddress);
+    boolean enableCorsFilter = conf.getBoolean(
+        YarnConfiguration.TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED,
+        YarnConfiguration.TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED_DEFAULT);
+    // setup CORS
+    if (enableCorsFilter) {
+      conf.setBoolean(HttpCrossOriginFilterInitializer.PREFIX
+          + HttpCrossOriginFilterInitializer.ENABLED_SUFFIX, true);
+    }
     try {
       HttpServer2.Builder builder = new HttpServer2.Builder()
             .setName("timeline")
