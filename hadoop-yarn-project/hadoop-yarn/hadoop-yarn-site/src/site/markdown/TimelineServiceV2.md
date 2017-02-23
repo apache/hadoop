@@ -160,6 +160,15 @@ New configuration parameters that are introduced with v.2 are marked bold.
 | **`yarn.timeline-service.hbase.coprocessor.app-final-value-retention-milliseconds`** | The setting that controls how long the final value of a metric of a completed app is retained before merging into the flow sum. Defaults to `259200000` (3 days). This should be set in the HBase cluster. |
 | **`yarn.rm.system-metrics-publisher.emit-container-events`** | The setting that controls whether yarn container metrics is published to the timeline server or not by RM. This configuration setting is for ATS V2. Defaults to `false`. |
 
+#### Enabling CORS support
+To enable cross-origin support (CORS) for the Timeline Service v.2, please set the following configuration parameters:
+
+In yarn-site.xml, set yarn.timeline-service.http-cross-origin.enabled to true.
+
+In core-site.xml, add org.apache.hadoop.security.HttpCrossOriginFilterInitializer to hadoop.http.filter.initializers.
+
+For more configurations used for cross-origin support, refer to [HttpAuthentication](../../hadoop-project-dist/hadoop-common/HttpAuthentication.html#CORS). Please note that yarn.timeline-service.http-cross-origin.enabled, if set to true, overrides hadoop.http.cross-origin.enabled.
+
 
 
 ### <a name="Enabling_Timeline_Service_v2"></a>Enabling Timeline Service v.2
