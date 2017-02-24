@@ -966,7 +966,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       }
 
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
-      long free = node.getRemaining();
+      long free = storage.getRemaining();
       long lastHeartbeat = node.getLastUpdateMonotonic();
       if (lastHeartbeat < oldestHeartbeat) {
         oldestHeartbeat = lastHeartbeat;
