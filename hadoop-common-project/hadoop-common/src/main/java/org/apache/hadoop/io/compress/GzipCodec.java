@@ -45,10 +45,6 @@ public class GzipCodec extends DefaultCodec {
   protected static class GzipOutputStream extends CompressorStream {
 
     private static class ResetableGZIPOutputStream extends GZIPOutputStream {
-      private static final int TRAILER_SIZE = 8;
-      public static final String JVMVersion= System.getProperty("java.version");
-      private static final boolean HAS_BROKEN_FINISH =
-          (IBM_JAVA && JVMVersion.contains("1.6.0"));
 
       public ResetableGZIPOutputStream(OutputStream out) throws IOException {
         super(out);
