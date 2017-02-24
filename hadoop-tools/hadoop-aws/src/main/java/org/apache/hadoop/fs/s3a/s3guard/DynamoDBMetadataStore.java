@@ -199,14 +199,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
   @VisibleForTesting
   static DynamoDB createDynamoDB(S3AFileSystem fs) throws IOException {
     Preconditions.checkNotNull(fs);
-    String region;
-    try {
-      region = fs.getAmazonS3Client().getBucketLocation(fs.getBucket());
-    } catch (AmazonClientException e) {
-      throw translateException("Determining bucket location",
-          fs.getUri().toString(), e);
-    }
-    return createDynamoDB(fs, region);
+    return createDynamoDB(fs, fs.getBucketLocation());
   }
 
   /**
@@ -236,13 +229,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
         "DynamoDBMetadataStore only supports S3A filesystem.");
     final S3AFileSystem s3afs = (S3AFileSystem) fs;
     final String bucket = s3afs.getBucket();
-    try {
-      region = s3afs.getAmazonS3Client().getBucketLocation(bucket);
-    } catch (AmazonClientException e) {
-      throw translateException("Determining bucket location",
-          fs.getUri().toString(), e);
-    }
-
+    region = s3afs.getBucketLocation();
     username = s3afs.getUsername();
     conf = s3afs.getConf();
     Class<? extends DynamoDBClientFactory> cls = conf.getClass(

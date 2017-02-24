@@ -390,8 +390,32 @@ public class S3AFileSystem extends FileSystem {
    * Returns the S3 client used by this filesystem.
    * @return AmazonS3Client
    */
-  public AmazonS3 getAmazonS3Client() {
+  AmazonS3 getAmazonS3Client() {
     return s3;
+  }
+
+  /**
+   * Get the region of a bucket.
+   * @return the region in which a bucket is located
+   * @throws IOException on any failure.
+   */
+  public String getBucketLocation() throws IOException {
+    return getBucketLocation(bucket);
+  }
+
+  /**
+   * Get the region of a bucket.
+   * @param bucketName the name of the bucket
+   * @return the region in which a bucket is located
+   * @throws IOException on any failure.
+   */
+  public String getBucketLocation(String bucketName) throws IOException {
+    try {
+      return s3.getBucketLocation(bucketName);
+    } catch (AmazonClientException e) {
+      throw translateException("getBucketLocation()",
+          bucketName, e);
+    }
   }
 
   /**

@@ -216,7 +216,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
       assertNotNull(ddbms.getTable());
       assertEquals(tableName, ddbms.getTable().getTableName());
       assertEquals("DynamoDB table should be in the same region as S3 bucket",
-          s3afs.getAmazonS3Client().getBucketLocation(tableName),
+          s3afs.getBucketLocation(tableName),
           ddbms.getRegion());
     }
   }
