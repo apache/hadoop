@@ -25,6 +25,7 @@ import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -190,7 +191,7 @@ public class ShellBasedUnixGroupsMapping extends Configured
             "command '{}' ran longer than the configured timeout limit of " +
             "{} seconds.",
             user,
-            Arrays.asList(executor.getExecString()),
+            Joiner.on(' ').join(executor.getExecString()),
             timeout
         );
         return EMPTY_GROUPS;
