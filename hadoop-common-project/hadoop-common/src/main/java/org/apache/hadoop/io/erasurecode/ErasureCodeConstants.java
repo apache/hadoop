@@ -25,16 +25,16 @@ public final class ErasureCodeConstants {
   private ErasureCodeConstants() {
   }
 
-  public static final String RS_DEFAULT_CODEC_NAME = "rs-default";
+  public static final String RS_CODEC_NAME = "rs";
   public static final String RS_LEGACY_CODEC_NAME = "rs-legacy";
   public static final String XOR_CODEC_NAME = "xor";
   public static final String HHXOR_CODEC_NAME = "hhxor";
 
   public static final ECSchema RS_6_3_SCHEMA = new ECSchema(
-      RS_DEFAULT_CODEC_NAME, 6, 3);
+      RS_CODEC_NAME, 6, 3);
 
   public static final ECSchema RS_3_2_SCHEMA = new ECSchema(
-      RS_DEFAULT_CODEC_NAME, 3, 2);
+      RS_CODEC_NAME, 3, 2);
 
   public static final ECSchema RS_6_3_LEGACY_SCHEMA = new ECSchema(
       RS_LEGACY_CODEC_NAME, 6, 3);
@@ -43,5 +43,5 @@ public final class ErasureCodeConstants {
       XOR_CODEC_NAME, 2, 1);
 
   public static final ECSchema RS_10_4_SCHEMA = new ECSchema(
-      RS_DEFAULT_CODEC_NAME, 10, 4);
+      RS_CODEC_NAME, 10, 4);
 }

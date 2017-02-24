@@ -657,10 +657,10 @@
 </property>
 
 <property>
-  <name>io.erasurecode.codec.rs-default.rawcoder</name>
+  <name>io.erasurecode.codec.rs.rawcoder</name>
   <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory</value>
   <description>
-    Raw coder implementation for the rs-default codec. The default value is a
+    Raw coder implementation for the rs codec. The default value is a
     pure Java implementation. There is also a native implementation. Its value
     is org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory.
   </description>
