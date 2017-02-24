@@ -1846,6 +1846,9 @@ public class YarnConfiguration extends Configuration {
   public static final String TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX =
       TIMELINE_SERVICE_PREFIX + "entity-group-fs-store.";
 
+  public static final String TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_CACHE_STORE =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "cache-store-class";
+
   public static final String TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_ACTIVE_DIR =
       TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "active-dir";
 
