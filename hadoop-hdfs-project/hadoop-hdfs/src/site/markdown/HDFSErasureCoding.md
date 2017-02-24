@@ -119,30 +119,30 @@ Deployment
   HDFS provides an `ec` subcommand to perform administrative commands related to erasure coding.
 
        hdfs ec [generic options]
-         [-setPolicy [-p <policyName>] <path>]
-         [-getPolicy <path>]
-         [-unsetPolicy <path>]
+         [-setPolicy -policy <policyName> -path <path>]
+         [-getPolicy -path <path>]
+         [-unsetPolicy -path <path>]
          [-listPolicies]
          [-usage [cmd ...]]
          [-help [cmd ...]]
 
 Below are the details about each command.
 
- *  `[-setPolicy [-p <policyName>] <path>]`
+ *  `[-setPolicy -policy <policyName> -path <path>]`
 
     Sets an ErasureCoding policy on a directory at the specified path.
 
       `path`: An directory in HDFS. This is a mandatory parameter. Setting a policy only affects newly created files, and does not affect existing files.
 
-      `policyName`: The ErasureCoding policy to be used for files under this directory. This is an optional parameter, specified using ‘-p’ flag. If no policy is specified, the system default ErasureCodingPolicy will be used.
+      `policyName`: The ErasureCoding policy to be used for files under this directory.
 
- *  `[-getPolicy <path>]`
+ *  `[-getPolicy -path <path>]`
 
      Get details of the ErasureCoding policy of a file or directory at the specified path.
 
- *  `[-unsetPolicy <path>]`
+ *  `[-unsetPolicy -path <path>]`
 
-     Unset an ErasureCoding policy from a directory at the specified path when previously user sets the ErasureCoding policy on this directory via "setPolicy" command. If the directory inherits the ErasureCoding policy from its parent group, "unsetPolicy" command on this directory will not have any effect. Unset ErasureCoding policy on a directory which doesn't have ErasureCoding policy will not return an error.
+     Unset an ErasureCoding policy set by a previous call to "setPolicy" on a directory. If the directory inherits the ErasureCoding policy from an ancestor directory, "unsetPolicy" is a no-op. Unsetting the policy on a directory which doesn't have an explicit policy set will not return an error.
 
  *  `[-listPolicies]`
 
