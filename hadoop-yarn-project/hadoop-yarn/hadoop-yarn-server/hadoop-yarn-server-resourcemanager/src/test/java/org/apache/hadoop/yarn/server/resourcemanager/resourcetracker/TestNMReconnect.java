@@ -165,7 +165,7 @@ public class TestNMReconnect {
     dispatcher.register(SchedulerEventType.class, scheduler);
 
     String hostname1 = "localhost1";
-    Resource capability = BuilderUtils.newResource(4096, 4, 4);
+    Resource capability = BuilderUtils.newResource(4096, 4, 4, 15);
 
     RegisterNodeManagerRequest request1 = recordFactory
         .newRecordInstance(RegisterNodeManagerRequest.class);
@@ -180,7 +180,7 @@ public class TestNMReconnect {
         context.getRMNodes().get(nodeId1));
     Assert.assertEquals(context.getRMNodes().get(nodeId1).
         getTotalCapability(), capability);
-    Resource capability1 = BuilderUtils.newResource(2048, 2, 2);
+    Resource capability1 = BuilderUtils.newResource(2048, 2, 2, 3);
     request1.setResource(capability1);
     resourceTrackerService.registerNodeManager(request1);
     Assert.assertNotNull(context.getRMNodes().get(nodeId1));

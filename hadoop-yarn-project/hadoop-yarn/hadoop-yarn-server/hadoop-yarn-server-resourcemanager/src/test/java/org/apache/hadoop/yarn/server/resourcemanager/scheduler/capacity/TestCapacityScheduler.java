@@ -732,7 +732,7 @@ public class TestCapacityScheduler {
     Map<NodeId, ResourceOption> nodeResourceMap = 
         new HashMap<NodeId, ResourceOption>();
     nodeResourceMap.put(nm1.getNodeId(), 
-        ResourceOption.newInstance(Resource.newInstance(2 * GB, 1, 1), -1));
+        ResourceOption.newInstance(Resource.newInstance(2 * GB, 1, 1, 1), -1));
     UpdateNodeResourceRequest request = 
         UpdateNodeResourceRequest.newInstance(nodeResourceMap);
     AdminService as = ((MockRM)rm).getAdminService();
@@ -2913,7 +2913,7 @@ public class TestCapacityScheduler {
 
     // Register node1
     String hostname1 = "localhost1";
-    Resource capability = BuilderUtils.newResource(4096, 4, 4);
+    Resource capability = BuilderUtils.newResource(4096, 4, 4, 15);
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
     RegisterNodeManagerRequest request1 =
@@ -2925,10 +2925,13 @@ public class TestCapacityScheduler {
     privateResourceTrackerService.registerNodeManager(request1);
     privateDispatcher.await();
     Resource clusterResource = resourceManager.getResourceScheduler().getClusterResource();
-    Assert.assertEquals("Initial cluster resources don't match", capability,
-        clusterResource);
+    if (capability.getMemory() != clusterResource.getMemory() ||
+            capability.getVirtualCores() != clusterResource.getVirtualCores() ||
+            capability.getGPUs() != clusterResource.getGPUs()) {
+      assert false : "Initial cluster resources don't match";
+    }
 
-    Resource newCapability = BuilderUtils.newResource(1024, 1, 1);
+    Resource newCapability = BuilderUtils.newResource(1024, 1, 1, 1);
     RegisterNodeManagerRequest request2 =
         recordFactory.newRecordInstance(RegisterNodeManagerRequest.class);
     request2.setNodeId(nodeId1);
@@ -2938,8 +2941,11 @@ public class TestCapacityScheduler {
     sleepHandler.sleepFlag = true;
     privateResourceTrackerService.registerNodeManager(request2);
     privateDispatcher.await();
-    Assert.assertEquals("Cluster resources don't match", newCapability,
-        resourceManager.getResourceScheduler().getClusterResource());
+    if (newCapability.getMemory() != resourceManager.getResourceScheduler().getClusterResource().getMemory() ||
+            newCapability.getVirtualCores() != resourceManager.getResourceScheduler().getClusterResource().getVirtualCores() ||
+            newCapability.getGPUs() != resourceManager.getResourceScheduler().getClusterResource().getGPUs()) {
+      assert false : "Cluster resources don't match";
+    }
     privateResourceTrackerService.stop();
   }
 }
