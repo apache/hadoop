@@ -17,32 +17,46 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                       http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
-    <artifactId>hadoop-yarn</artifactId>
+    <artifactId>hadoop-yarn-server</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>2.9.0-SNAPSHOT</version>
+    <version>3.0.0-alpha3-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
-  <artifactId>hadoop-yarn-server</artifactId>
-  <version>2.9.0-SNAPSHOT</version>
-  <name>Apache Hadoop YARN Server</name>
-  <packaging>pom</packaging>
+  <artifactId>hadoop-yarn-server-router</artifactId>
+  <version>3.0.0-alpha3-SNAPSHOT</version>
+  <name>Apache Hadoop YARN Router</name>
 
   <properties>
-    <hadoop.common.build.dir>${basedir}/../../../../hadoop-common-project/hadoop-common/target</hadoop.common.build.dir>
+    <!-- Needed for generating FindBugs warnings using parent pom -->
+    <yarn.basedir>${project.parent.parent.basedir}</yarn.basedir>
   </properties>
 
-  <!-- Do not add dependencies here, add them to the POM of the leaf module -->
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-api</artifactId>
+    </dependency>
 
-  <modules>
-    <module>hadoop-yarn-server-common</module>
-    <module>hadoop-yarn-server-nodemanager</module>
-    <module>hadoop-yarn-server-web-proxy</module>
-    <module>hadoop-yarn-server-resourcemanager</module>
-    <module>hadoop-yarn-server-sharedcachemanager</module>
-    <module>hadoop-yarn-server-tests</module>
-    <module>hadoop-yarn-server-applicationhistoryservice</module>
-    <module>hadoop-yarn-server-timeline-pluginstorage</module>
-    <module>hadoop-yarn-server-router</module>
-  </modules>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-common</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-server-common</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+    </plugins>
+  </build>
+
 </project>
