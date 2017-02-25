@@ -183,10 +183,14 @@ public class WebHdfsFileSystem extends FileSystem
   ) throws IOException {
     super.initialize(uri, conf);
     setConf(conf);
-    /** set user pattern based on configuration file */
+
+    // set user and acl patterns based on configuration file
     UserParam.setUserPattern(conf.get(
         HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY,
         HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT));
+    AclPermissionParam.setAclPermissionPattern(conf.get(
+        HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_KEY,
+        HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT));
 
     boolean isOAuth = conf.getBoolean(
         HdfsClientConfigKeys.DFS_WEBHDFS_OAUTH_ENABLED_KEY,
