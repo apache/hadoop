@@ -733,4 +733,30 @@ public final class S3AUtils {
     }
     return null;
   }
+
+  /**
+   * Close the Closeable objects and <b>ignore</b> any Exception or
+   * null pointers.
+   * (This is the SLF4J equivalent of that in {@code IOUtils}).
+   * @param log the log to log at debug level. Can be null.
+   * @param closeables the objects to close
+   */
+  public static void closeAll(Logger log,
+      java.io.Closeable... closeables) {
+    for (java.io.Closeable c : closeables) {
+      if (c != null) {
+        try {
+          if (log != null) {
+            log.debug("Closing {}", c);
+          }
+          c.close();
+        } catch (Exception e) {
+          if (log != null && log.isDebugEnabled()) {
+            log.debug("Exception in closing {}", c, e);
+          }
+        }
+      }
+    }
+  }
+
 }
