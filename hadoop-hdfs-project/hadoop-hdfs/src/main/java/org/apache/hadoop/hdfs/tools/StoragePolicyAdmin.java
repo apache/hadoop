@@ -143,7 +143,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
     public int run(Configuration conf, List<String> args) throws IOException {
       final String path = StringUtils.popOptionWithArgument("-path", args);
       if (path == null) {
-        System.err.println("Please specify the path with -path.\nUsage:" +
+        System.err.println("Please specify the path with -path.\nUsage: " +
             getLongUsage());
         return 1;
       }

@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.CreateOptions;
 import org.junit.After;
 import org.junit.Assert;
@@ -471,6 +472,62 @@ public class TestWasbUriAndConfiguration {
       assertTrue(afs instanceof Wasb);
       assertEquals(-1, afs.getUri().getPort());
     } finally {
+      testAccount.cleanup();
+      FileSystem.closeAll();
+    }
+  }
+
+   /**
+   * Tests the cases when the scheme specified is 'wasbs'.
+   */
+  @Test
+  public void testAbstractFileSystemImplementationForWasbsScheme() throws Exception {
+    try {
+      testAccount = AzureBlobStorageTestAccount.createMock();
+      Configuration conf = testAccount.getFileSystem().getConf();
+      String authority = testAccount.getFileSystem().getUri().getAuthority();
+      URI defaultUri = new URI("wasbs", authority, null, null, null);
+      conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
+      conf.set("fs.AbstractFileSystem.wasbs.impl", "org.apache.hadoop.fs.azure.Wasbs");
+      conf.addResource("azure-test.xml");
+
+      FileSystem fs = FileSystem.get(conf);
+      assertTrue(fs instanceof NativeAzureFileSystem);
+      assertEquals("wasbs", fs.getScheme());
+
+      AbstractFileSystem afs = FileContext.getFileContext(conf)
+          .getDefaultFileSystem();
+      assertTrue(afs instanceof Wasbs);
+      assertEquals(-1, afs.getUri().getPort());
+      assertEquals("wasbs", afs.getUri().getScheme());
+    } finally {
+      testAccount.cleanup();
+      FileSystem.closeAll();
+    }
+  }
+
+  @Test
+  public void testNoAbstractFileSystemImplementationSpecifiedForWasbsScheme() throws Exception {
+    try {
+      testAccount = AzureBlobStorageTestAccount.createMock();
+      Configuration conf = testAccount.getFileSystem().getConf();
+      String authority = testAccount.getFileSystem().getUri().getAuthority();
+      URI defaultUri = new URI("wasbs", authority, null, null, null);
+      conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
+
+      FileSystem fs = FileSystem.get(conf);
+      assertTrue(fs instanceof NativeAzureFileSystem);
+      assertEquals("wasbs", fs.getScheme());
+
+      // should throw if 'fs.AbstractFileSystem.wasbs.impl'' is not specified
+      try{
+        FileContext.getFileContext(conf).getDefaultFileSystem();
+        fail("Should've thrown.");
+      }catch(UnsupportedFileSystemException e){
+      }
+
+    } finally {
+      testAccount.cleanup();
       FileSystem.closeAll();
     }
   }

@@ -556,6 +556,30 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
         }
       }
     );
+    metrics.register("variable.cluster.reserved.memory",
+        new Gauge<Long>() {
+          @Override
+          public Long getValue() {
+            if(getRootQueueMetrics() == null) {
+              return 0L;
+            } else {
+              return getRootQueueMetrics().getReservedMB();
+            }
+          }
+        }
+    );
+    metrics.register("variable.cluster.reserved.vcores",
+        new Gauge<Integer>() {
+          @Override
+          public Integer getValue() {
+            if(getRootQueueMetrics() == null) {
+              return 0;
+            } else {
+              return getRootQueueMetrics().getReservedVirtualCores();
+            }
+          }
+        }
+    );
   }
 
   private void registerContainerAppNumMetrics() {

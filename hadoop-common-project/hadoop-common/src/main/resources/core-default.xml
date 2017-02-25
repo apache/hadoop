@@ -188,6 +188,19 @@
 </property>
 
 <property>
+  <name>hadoop.security.groups.shell.command.timeout</name>
+  <value>0s</value>
+  <description>
+    Used by the ShellBasedUnixGroupsMapping class, this property controls how
+    long to wait for the underlying shell command that is run to fetch groups.
+    Expressed in seconds (e.g. 10s, 1m, etc.), if the running command takes
+    longer than the value configured, the command is aborted and the groups
+    resolver would return a result of no groups found. A value of 0s (default)
+    would mean an infinite wait (i.e. wait until the command exits on its own).
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.connection.timeout.ms</name>
   <value>60000</value>
   <description>
@@ -644,10 +657,10 @@
 </property>
 
 <property>
-  <name>io.erasurecode.codec.rs-default.rawcoder</name>
+  <name>io.erasurecode.codec.rs.rawcoder</name>
   <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory</value>
   <description>
-    Raw coder implementation for the rs-default codec. The default value is a
+    Raw coder implementation for the rs codec. The default value is a
     pure Java implementation. There is also a native implementation. Its value
     is org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory.
   </description>

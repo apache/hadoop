@@ -1228,7 +1228,8 @@ public class ClientRMService extends AbstractService implements
     }
 
     try {
-      this.rmAppManager.moveApplicationAcrossQueue(applicationId,
+      this.rmAppManager.moveApplicationAcrossQueue(
+          application.getApplicationId(),
           request.getTargetQueue());
     } catch (YarnException ex) {
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
@@ -1662,7 +1663,8 @@ public class ClientRMService extends AbstractService implements
     }
 
     try {
-      rmAppManager.updateApplicationPriority(callerUGI, applicationId,
+      rmAppManager.updateApplicationPriority(callerUGI,
+          application.getApplicationId(),
           newAppPriority);
     } catch (YarnException ex) {
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),

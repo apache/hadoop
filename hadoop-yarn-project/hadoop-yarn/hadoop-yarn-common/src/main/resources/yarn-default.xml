@@ -2096,6 +2096,11 @@
   </property>
 
   <!-- Timeline Service v1.5 Configuration -->
+  <property>
+    <name>yarn.timeline-service.entity-group-fs-store.cache-store-class</name>
+    <value>org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore</value>
+    <description>Caching storage timeline server v1.5 is using. </description>
+  </property>
 
   <property>
     <name>yarn.timeline-service.entity-group-fs-store.active-dir</name>

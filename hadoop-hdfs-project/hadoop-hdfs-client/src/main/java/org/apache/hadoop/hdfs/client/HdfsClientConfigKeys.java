@@ -35,6 +35,8 @@ public interface HdfsClientConfigKeys {
   String  DFS_WEBHDFS_USER_PATTERN_KEY =
       "dfs.webhdfs.user.provider.user.pattern";
   String  DFS_WEBHDFS_USER_PATTERN_DEFAULT = "^[A-Za-z_][A-Za-z0-9._-]*[$]?$";
+  String  DFS_WEBHDFS_ACL_PERMISSION_PATTERN_KEY =
+      "dfs.webhdfs.acl.provider.permission.pattern";
   String DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT =
       "^(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?(,(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?)*$";
 

@@ -644,6 +644,7 @@ public class FTPFileSystem extends FileSystem {
    * @return
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   private boolean rename(FTPClient client, Path src, Path dst)
       throws IOException {
     Path workDir = new Path(client.printWorkingDirectory());

@@ -15,22 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
+package org.apache.hadoop.fs.azure;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.DelegateToFileSystem;
 
 /**
- * This tests write operation of DFS striped file with RS-10-4-64k
- *  erasure code policy.
+ * WASB implementation of AbstractFileSystem for wasbs scheme.
+ * This impl delegates to the old FileSystem
  */
-public class TestDFSRSDefault10x4StripedOutputStream
-    extends TestDFSStripedOutputStream {
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public class Wasbs extends DelegateToFileSystem {
+
+  Wasbs(final URI theUri, final Configuration conf) throws IOException,
+      URISyntaxException {
+    super(theUri, new NativeAzureFileSystem(), conf, "wasbs", false);
+  }
 
   @Override
-  public ErasureCodingPolicy getEcPolicy() {
-    return ErasureCodingPolicyManager.getPolicyByPolicyID(
-        HdfsConstants.RS_10_4_POLICY_ID);
+  public int getUriDefaultPort() {
+    return -1;
   }
 }
