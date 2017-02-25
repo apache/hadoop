@@ -25,7 +25,6 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.metrics2.util.MBeans;
-import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AppenderSkeleton;
@@ -38,7 +37,6 @@ import org.junit.rules.Timeout;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 
@@ -51,7 +49,6 @@ import static org.mockito.Mockito.mock;
  */
 public class TestNameNodeMetricsLogger {
   static final Log LOG = LogFactory.getLog(TestNameNodeMetricsLogger.class);
-  static final Random random = new Random(System.currentTimeMillis());
 
   @Rule
   public Timeout timeout = new Timeout(300000);
@@ -112,15 +109,11 @@ public class TestNameNodeMetricsLogger {
   private NameNode makeNameNode(boolean enableMetricsLogging)
       throws IOException {
     Configuration conf = new HdfsConfiguration();
-    conf.set(FS_DEFAULT_NAME_KEY, "hdfs://localhost:" + getRandomPort());
-    conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:" + getRandomPort());
+    conf.set(FS_DEFAULT_NAME_KEY, "hdfs://localhost:0");
+    conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     conf.setInt(DFS_NAMENODE_METRICS_LOGGER_PERIOD_SECONDS_KEY,
         enableMetricsLogging ? 1 : 0);  // If enabled, log early and log often
     return new TestNameNode(conf);
-  }
-
-  private int getRandomPort() throws IOException {
-    return ServerSocketUtil.getPort(0, 10);
   }
 
   private void addAppender(Log log, Appender appender) {
