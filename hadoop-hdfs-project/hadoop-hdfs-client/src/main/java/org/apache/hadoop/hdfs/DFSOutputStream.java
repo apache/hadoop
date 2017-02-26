@@ -606,9 +606,9 @@ public class DFSOutputStream extends FSOutputSummer
       // update the block length first time irrespective of flag
       if (updateLength || getStreamer().getPersistBlocks().get()) {
         synchronized (this) {
-          if (!getStreamer().streamerClosed()
-              && getStreamer().getBlock() != null) {
-            lastBlockLength = getStreamer().getBlock().getNumBytes();
+          final ExtendedBlock block = getStreamer().getBlock();
+          if (!getStreamer().streamerClosed() && block != null) {
+            lastBlockLength = block.getNumBytes();
           }
         }
       }
