@@ -17,6 +17,7 @@
  *******************************************************************************/
 package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
@@ -69,5 +70,12 @@ public interface ReservationAgent {
    */
   public boolean deleteReservation(ReservationId reservationId, String user,
       Plan plan) throws PlanningException;
+
+  /**
+   * Init configuration.
+   *
+   * @param conf Configuration
+   */
+  void init(Configuration conf);
 
 }
