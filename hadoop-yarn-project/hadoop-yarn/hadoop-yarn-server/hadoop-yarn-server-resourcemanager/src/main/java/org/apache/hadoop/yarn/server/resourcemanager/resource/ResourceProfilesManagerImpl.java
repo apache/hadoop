@@ -49,9 +49,9 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
   private static final String MEMORY = ResourceInformation.MEMORY_MB.getName();
   private static final String VCORES = ResourceInformation.VCORES.getName();
 
-  private static final String DEFAULT_PROFILE = "default";
-  private static final String MINIMUM_PROFILE = "minimum";
-  private static final String MAXIMUM_PROFILE = "maximum";
+  public static final String DEFAULT_PROFILE = "default";
+  public static final String MINIMUM_PROFILE = "minimum";
+  public static final String MAXIMUM_PROFILE = "maximum";
 
   private static final String[] MANDATORY_PROFILES =
       { DEFAULT_PROFILE, MINIMUM_PROFILE, MAXIMUM_PROFILE };
