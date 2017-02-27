@@ -108,8 +108,10 @@ public class TestContainerServer {
       conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
           pipeline.getLeader().getContainerPort());
 
-      server = new XceiverServer(conf, new Dispatcher(
-          mock(ContainerManager.class)));
+      Dispatcher dispatcher =
+              new Dispatcher(mock(ContainerManager.class), conf);
+      dispatcher.init();
+      server = new XceiverServer(conf, dispatcher);
       client = new XceiverClient(pipeline, conf);
 
       server.start();
@@ -120,6 +122,10 @@ public class TestContainerServer {
       ContainerCommandResponseProto response = client.sendCommand(request);
       Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
       Assert.assertEquals(response.getResult(), ContainerProtos.Result.SUCCESS);
+      Assert.assertTrue(dispatcher.
+                          getContainerMetrics().
+                            getContainerOpsMetrics(
+                              ContainerProtos.Type.CreateContainer)== 1);
     } finally {
       if (client != null) {
         client.close();
@@ -142,6 +148,14 @@ public class TestContainerServer {
     public ContainerCommandResponseProto
     dispatch(ContainerCommandRequestProto msg) throws IOException {
       return ContainerTestHelper.getCreateContainerResponse(msg);
+    }
+
+    @Override
+    public void init() {
+    }
+
+    @Override
+    public void shutdown() {
     }
   }
 }
