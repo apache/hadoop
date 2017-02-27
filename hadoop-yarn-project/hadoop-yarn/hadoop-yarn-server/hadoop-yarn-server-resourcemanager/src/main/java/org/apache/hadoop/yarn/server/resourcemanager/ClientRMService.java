@@ -140,6 +140,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ResourceProfilesNotEnabledException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -1796,7 +1797,8 @@ public class ClientRMService extends AbstractService implements
         .getBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
             YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED);
     if (!resourceProfilesEnabled) {
-      throw new YarnException("Resource profiles are not enabled");
+      throw new ResourceProfilesNotEnabledException(
+          "Resource profiles are not enabled");
     }
     return resourceProfilesManager.getResourceProfiles();
   }

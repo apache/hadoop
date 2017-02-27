@@ -150,17 +150,21 @@ public abstract class ProfileCapability {
         .checkArgument(capability != null, "Capability cannot be null");
     Preconditions.checkArgument(resourceProfilesMap != null,
         "Resource profiles map cannot be null");
+    Resource none = Resource.newInstance(0, 0);
     Resource resource = Resource.newInstance(0, 0);
-
-    if (resourceProfilesMap.containsKey(capability.getProfileName())) {
-      resource = Resource
-          .newInstance(resourceProfilesMap.get(capability.getProfileName()));
+    String profileName = capability.getProfileName();
+    if (profileName.isEmpty()) {
+      profileName = DEFAULT_PROFILE;
+    }
+    if (resourceProfilesMap.containsKey(profileName)) {
+      resource = Resource.newInstance(resourceProfilesMap.get(profileName));
     }
 
-    if(capability.getProfileCapabilityOverride()!= null) {
+    if (capability.getProfileCapabilityOverride() != null &&
+        !capability.getProfileCapabilityOverride().equals(none)) {
       for (Map.Entry<String, ResourceInformation> entry : capability
           .getProfileCapabilityOverride().getResources().entrySet()) {
-        if (entry.getValue() != null && entry.getValue().getValue() != 0) {
+        if (entry.getValue() != null && entry.getValue().getValue() >= 0) {
           resource.setResourceInformation(entry.getKey(), entry.getValue());
         }
       }

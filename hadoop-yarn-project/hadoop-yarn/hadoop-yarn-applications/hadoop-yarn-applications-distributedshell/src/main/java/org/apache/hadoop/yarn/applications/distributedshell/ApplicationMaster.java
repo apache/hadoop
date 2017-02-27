@@ -87,6 +87,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ProfileCapability;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.URL;
@@ -103,6 +104,7 @@ import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.impl.NMClientAsyncImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.log4j.LogManager;
@@ -229,11 +231,17 @@ public class ApplicationMaster {
   @VisibleForTesting
   protected int numTotalContainers = 1;
   // Memory to request for the container on which the shell command will run
-  private long containerMemory = 10;
+  private static final long DEFAULT_CONTAINER_MEMORY = 10;
+  private long containerMemory = DEFAULT_CONTAINER_MEMORY;
   // VirtualCores to request for the container on which the shell command will run
-  private int containerVirtualCores = 1;
+  private static final int DEFAULT_CONTAINER_VCORES = 1;
+  private int containerVirtualCores = DEFAULT_CONTAINER_VCORES;
   // Priority of the request
   private int requestPriority;
+
+  // Resource profile for the container
+  private String containerResourceProfile = "";
+  Map<String, Resource> resourceProfiles;
 
   // Counter for completed containers ( complete denotes successful or failed )
   private AtomicInteger numCompletedContainers = new AtomicInteger();
@@ -394,6 +402,8 @@ public class ApplicationMaster {
         "Amount of memory in MB to be requested to run the shell command");
     opts.addOption("container_vcores", true,
         "Amount of virtual cores to be requested to run the shell command");
+    opts.addOption("container_resource_profile", true,
+        "Resource profile to be requested to run the shell command");
     opts.addOption("num_containers", true,
         "No. of containers on which the shell command needs to be executed");
     opts.addOption("priority", true, "Application Priority. Default 0");
@@ -535,9 +545,11 @@ public class ApplicationMaster {
     }
 
     containerMemory = Integer.parseInt(cliParser.getOptionValue(
-        "container_memory", "10"));
+        "container_memory", "-1"));
     containerVirtualCores = Integer.parseInt(cliParser.getOptionValue(
-        "container_vcores", "1"));
+        "container_vcores", "-1"));
+    containerResourceProfile =
+        cliParser.getOptionValue("container_resource_profile", "");
     numTotalContainers = Integer.parseInt(cliParser.getOptionValue(
         "num_containers", "1"));
     if (numTotalContainers == 0) {
@@ -656,6 +668,7 @@ public class ApplicationMaster {
     RegisterApplicationMasterResponse response = amRMClient
         .registerApplicationMaster(appMasterHostname, appMasterRpcPort,
             appMasterTrackingUrl);
+    resourceProfiles = response.getResourceProfiles();
     // Dump out information about cluster capability as seen by the
     // resource manager
     long maxMem = response.getMaximumResourceCapability().getMemorySize();
@@ -1193,12 +1206,8 @@ public class ApplicationMaster {
     Priority pri = Priority.newInstance(requestPriority);
 
     // Set up resource type requirements
-    // For now, memory and CPU are supported so we set memory and cpu requirements
-    Resource capability = Resource.newInstance(containerMemory,
-      containerVirtualCores);
-
-    ContainerRequest request = new ContainerRequest(capability, null, null,
-        pri);
+    ContainerRequest request =
+        new ContainerRequest(createProfileCapability(), null, null, pri);
     LOG.info("Requested container ask: " + request.toString());
     return request;
   }
@@ -1459,4 +1468,36 @@ public class ApplicationMaster {
     }
   }
 
+  private ProfileCapability createProfileCapability()
+      throws YarnRuntimeException {
+    if (containerMemory < -1 || containerMemory == 0) {
+      throw new YarnRuntimeException("Value of AM memory '" + containerMemory
+          + "' has to be greater than 0");
+    }
+    if (containerVirtualCores < -1 || containerVirtualCores == 0) {
+      throw new YarnRuntimeException(
+          "Value of AM vcores '" + containerVirtualCores
+              + "' has to be greater than 0");
+    }
+
+    Resource resourceCapability =
+        Resource.newInstance(containerMemory, containerVirtualCores);
+    if (resourceProfiles == null) {
+      containerMemory = containerMemory == -1 ? DEFAULT_CONTAINER_MEMORY :
+          containerMemory;
+      containerVirtualCores =
+          containerVirtualCores == -1 ? DEFAULT_CONTAINER_VCORES :
+              containerVirtualCores;
+      resourceCapability.setMemorySize(containerMemory);
+      resourceCapability.setVirtualCores(containerVirtualCores);
+    }
+
+    String profileName = containerResourceProfile;
+    if ("".equals(containerResourceProfile) && resourceProfiles != null) {
+      profileName = "default";
+    }
+    ProfileCapability capability =
+        ProfileCapability.newInstance(profileName, resourceCapability);
+    return capability;
+  }
 }

@@ -1099,6 +1099,7 @@ public class TestDistributedShell {
           "1"
       };
       client.init(args);
+      client.run();
       Assert.fail("Exception is expected");
     } catch (IllegalArgumentException e) {
       Assert.assertTrue("The throw exception is not expected",
@@ -1325,5 +1326,33 @@ public class TestDistributedShell {
       }
     }
     return numOfWords;
+  }
+
+  @Test
+  public void testDistributedShellResourceProfiles() throws Exception {
+    String[][] args = {
+        {"--jar", APPMASTER_JAR, "--num_containers", "1", "--shell_command",
+            Shell.WINDOWS ? "dir" : "ls", "--container_resource_profile",
+            "maximum" },
+        {"--jar", APPMASTER_JAR, "--num_containers", "1", "--shell_command",
+            Shell.WINDOWS ? "dir" : "ls", "--master_resource_profile",
+            "default" },
+        {"--jar", APPMASTER_JAR, "--num_containers", "1", "--shell_command",
+            Shell.WINDOWS ? "dir" : "ls", "--master_resource_profile",
+            "default", "--container_resource_profile", "maximum" }
+        };
+
+    for (int i = 0; i < args.length; ++i) {
+      LOG.info("Initializing DS Client");
+      Client client = new Client(new Configuration(yarnCluster.getConfig()));
+      Assert.assertTrue(client.init(args[i]));
+      LOG.info("Running DS Client");
+      try {
+        client.run();
+        Assert.fail("Client run should throw error");
+      } catch (Exception e) {
+        continue;
+      }
+    }
   }
 }
