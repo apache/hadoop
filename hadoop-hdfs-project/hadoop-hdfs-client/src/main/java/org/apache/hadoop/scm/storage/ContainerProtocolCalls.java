@@ -27,19 +27,30 @@ import com.google.protobuf.ByteString;
 
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ChunkInfo;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.GetKeyRequestProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.GetKeyResponseProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .ContainerCommandRequestProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .ContainerCommandResponseProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .GetKeyRequestProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .GetKeyResponseProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.KeyData;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.PutKeyRequestProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ReadChunkRequestProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ReadChunkResponseProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .PutKeyRequestProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .ReadChunkRequestProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .ReadChunkResponseProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Type;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.WriteChunkRequestProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.PutSmallFileRequestProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.GetSmallFileResponseProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.GetSmallFileRequestProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .WriteChunkRequestProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .PutSmallFileRequestProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .GetSmallFileResponseProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .GetSmallFileRequestProto;
 import org.apache.hadoop.scm.XceiverClient;
 
 /**
@@ -207,6 +218,33 @@ public final class ContainerProtocolCalls {
         .setPutSmallFile(putSmallFileRequest)
         .build();
     ContainerCommandResponseProto response = client.sendCommand(request);
+    validateContainerResponse(response, traceID);
+  }
+
+  /**
+   * createContainer call that creates a container on the datanode.
+   * @param client  - client
+   * @param traceID - traceID
+   * @throws IOException
+   */
+  public static void createContainer(XceiverClient client, String traceID)
+      throws IOException {
+    ContainerProtos.CreateContainerRequestProto.Builder createRequest =
+        ContainerProtos.CreateContainerRequestProto
+            .newBuilder();
+    ContainerProtos.ContainerData.Builder containerData = ContainerProtos
+        .ContainerData.newBuilder();
+    containerData.setName(client.getPipeline().getContainerName());
+    createRequest.setPipeline(client.getPipeline().getProtobufMessage());
+    createRequest.setContainerData(containerData.build());
+
+    ContainerCommandRequestProto.Builder request =
+        ContainerCommandRequestProto.newBuilder();
+    request.setCmdType(ContainerProtos.Type.CreateContainer);
+    request.setCreateContainer(createRequest);
+    request.setTraceID(traceID);
+    ContainerCommandResponseProto response = client.sendCommand(
+        request.build());
     validateContainerResponse(response, traceID);
   }
 

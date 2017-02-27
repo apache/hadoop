@@ -55,7 +55,7 @@ public class TestOzoneContainer {
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
 
     MiniOzoneCluster cluster = new MiniOzoneCluster.Builder(conf)
-        .setHandlerType("local").build();
+        .setHandlerType("distributed").build();
 
     // We don't start Ozone Container via data node, we will do it
     // independently in our test path.
@@ -99,7 +99,7 @@ public class TestOzoneContainer {
         pipeline.getLeader().getContainerPort());
 
     MiniOzoneCluster cluster = new MiniOzoneCluster.Builder(conf)
-        .setHandlerType("local").build();
+        .setHandlerType("distributed").build();
 
     // This client talks to ozone container via datanode.
     XceiverClient client = new XceiverClient(pipeline, conf);
@@ -189,7 +189,7 @@ public class TestOzoneContainer {
         pipeline.getLeader().getContainerPort());
 
     MiniOzoneCluster cluster = new MiniOzoneCluster.Builder(conf)
-        .setHandlerType("local").build();
+        .setHandlerType("distributed").build();
 
     // This client talks to ozone container via datanode.
     XceiverClient client = new XceiverClient(pipeline, conf);

@@ -47,7 +47,7 @@ public class StorageContainerDatanodeProtocolServerSideTranslatorPB
       StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto request)
       throws ServiceException {
     try {
-      return impl.getVersion();
+      return impl.getVersion(request);
     } catch (IOException e) {
       throw new ServiceException(e);
     }

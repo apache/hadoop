@@ -66,7 +66,7 @@ public class TestEndPoint {
              SCMTestUtils.createEndpoint(SCMTestUtils.getConf(),
                  serverAddress, 1000)) {
       SCMVersionResponseProto responseProto = rpcEndPoint.getEndPoint()
-          .getVersion();
+          .getVersion(null);
       Assert.assertNotNull(responseProto);
       Assert.assertEquals(responseProto.getKeys(0).getKey(),
           VersionInfo.DESCRIPTION_KEY);
