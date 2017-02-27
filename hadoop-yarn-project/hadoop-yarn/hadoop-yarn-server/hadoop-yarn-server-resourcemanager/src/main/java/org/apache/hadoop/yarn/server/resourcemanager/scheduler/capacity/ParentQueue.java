@@ -343,6 +343,9 @@ public class ParentQueue extends AbstractCSQueue {
       // Re-sort all queues
       childQueues.clear();
       childQueues.addAll(currentChildQueues.values());
+
+      // Make sure we notifies QueueOrderingPolicy
+      queueOrderingPolicy.setQueues(childQueues);
     } finally {
       writeLock.unlock();
     }
