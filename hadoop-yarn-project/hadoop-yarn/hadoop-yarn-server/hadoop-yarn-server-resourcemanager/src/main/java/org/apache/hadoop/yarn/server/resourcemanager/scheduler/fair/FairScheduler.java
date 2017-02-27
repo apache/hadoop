@@ -104,6 +104,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 
 /**
  * A scheduler that schedules resources between a set of queues. The scheduler
@@ -1781,5 +1782,9 @@ public class FairScheduler extends
 
   long getNMHeartbeatInterval() {
     return nmHeartbeatInterval;
+  }
+
+  ReadLock getSchedulerReadLock() {
+    return this.readLock;
   }
 }
