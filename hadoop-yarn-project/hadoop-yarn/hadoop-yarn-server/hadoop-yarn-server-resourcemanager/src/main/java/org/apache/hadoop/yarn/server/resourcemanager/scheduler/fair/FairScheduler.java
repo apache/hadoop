@@ -104,6 +104,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 
 /**
  * A scheduler that schedules resources between a set of queues. The scheduler
@@ -205,13 +206,12 @@ public class FairScheduler extends
 
   public FairScheduler() {
     super(FairScheduler.class.getName());
-    context = new FSContext();
+    context = new FSContext(this);
     allocsLoader = new AllocationFileLoaderService();
     queueMgr = new QueueManager(this);
     maxRunningEnforcer = new MaxRunningAppsEnforcer(this);
   }
 
-  @VisibleForTesting
   public FSContext getContext() {
     return context;
   }
@@ -1452,8 +1452,7 @@ public class FairScheduler extends
         } else {
           allocConf = queueInfo;
           setQueueAcls(allocConf.getQueueAcls());
-          allocConf.getDefaultSchedulingPolicy().initialize(
-              getClusterResource());
+          allocConf.getDefaultSchedulingPolicy().initialize(getContext());
           queueMgr.updateAllocationConfiguration(allocConf);
           applyChildDefaults();
           maxRunningEnforcer.updateRunnabilityOnReload();
@@ -1783,5 +1782,9 @@ public class FairScheduler extends
 
   long getNMHeartbeatInterval() {
     return nmHeartbeatInterval;
+  }
+
+  ReadLock getSchedulerReadLock() {
+    return this.readLock;
   }
 }

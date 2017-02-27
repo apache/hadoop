@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -66,6 +67,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.log4j.Logger;
 
 import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
@@ -107,11 +109,19 @@ public abstract class AMSimulator extends TaskRunner.Task {
   // progress
   protected int totalContainers;
   protected int finishedContainers;
+
+  // waiting for AM container
+  volatile boolean isAMContainerRunning = false;
+  volatile Container amContainer;
   
   protected final Logger LOG = Logger.getLogger(AMSimulator.class);
-  
+
+  // resource for AM container
+  private final static int MR_AM_CONTAINER_RESOURCE_MEMORY_MB = 1024;
+  private final static int MR_AM_CONTAINER_RESOURCE_VCORES = 1;
+
   public AMSimulator() {
-    this.responseQueue = new LinkedBlockingQueue<AllocateResponse>();
+    this.responseQueue = new LinkedBlockingQueue<>();
   }
 
   public void init(int id, int heartbeatInterval, 
@@ -142,23 +152,30 @@ public abstract class AMSimulator extends TaskRunner.Task {
     // submit application, waiting until ACCEPTED
     submitApp();
 
-    // register application master
-    registerAM();
-
     // track app metrics
     trackApp();
   }
 
+  public synchronized void notifyAMContainerLaunched(Container masterContainer)
+      throws Exception {
+    this.amContainer = masterContainer;
+    this.appAttemptId = masterContainer.getId().getApplicationAttemptId();
+    registerAM();
+    isAMContainerRunning = true;
+  }
+
   @Override
   public void middleStep() throws Exception {
-    // process responses in the queue
-    processResponseQueue();
-    
-    // send out request
-    sendContainerRequest();
-    
-    // check whether finish
-    checkStop();
+    if (isAMContainerRunning) {
+      // process responses in the queue
+      processResponseQueue();
+
+      // send out request
+      sendContainerRequest();
+
+      // check whether finish
+      checkStop();
+    }
   }
 
   @Override
@@ -168,6 +185,22 @@ public abstract class AMSimulator extends TaskRunner.Task {
     if (isTracked) {
       untrackApp();
     }
+
+    // Finish AM container
+    if (amContainer != null) {
+      LOG.info("AM container = " + amContainer.getId() + " reported to finish");
+      se.getNmMap().get(amContainer.getNodeId()).cleanupContainer(
+          amContainer.getId());
+    } else {
+      LOG.info("AM container is null");
+    }
+
+    if (null == appAttemptId) {
+      // If appAttemptId == null, AM is not launched from RM's perspective, so
+      // it's unnecessary to finish am as well
+      return;
+    }
+
     // unregister application master
     final FinishApplicationMasterRequest finishAMRequest = recordFactory
                   .newRecordInstance(FinishApplicationMasterRequest.class);
@@ -256,7 +289,9 @@ public abstract class AMSimulator extends TaskRunner.Task {
     conLauContext.setLocalResources(new HashMap<String, LocalResource>());
     conLauContext.setServiceData(new HashMap<String, ByteBuffer>());
     appSubContext.setAMContainerSpec(conLauContext);
-    appSubContext.setUnmanagedAM(true);
+    appSubContext.setResource(Resources
+        .createResource(MR_AM_CONTAINER_RESOURCE_MEMORY_MB,
+            MR_AM_CONTAINER_RESOURCE_VCORES));
     subAppRequest.setApplicationSubmissionContext(appSubContext);
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
     ugi.doAs(new PrivilegedExceptionAction<Object>() {
@@ -267,22 +302,6 @@ public abstract class AMSimulator extends TaskRunner.Task {
       }
     });
     LOG.info(MessageFormat.format("Submit a new application {0}", appId));
-    
-    // waiting until application ACCEPTED
-    RMApp app = rm.getRMContext().getRMApps().get(appId);
-    while(app.getState() != RMAppState.ACCEPTED) {
-      Thread.sleep(10);
-    }
-
-    // Waiting until application attempt reach LAUNCHED
-    // "Unmanaged AM must register after AM attempt reaches LAUNCHED state"
-    this.appAttemptId = rm.getRMContext().getRMApps().get(appId)
-        .getCurrentAppAttempt().getAppAttemptId();
-    RMAppAttempt rmAppAttempt = rm.getRMContext().getRMApps().get(appId)
-        .getCurrentAppAttempt();
-    while (rmAppAttempt.getAppAttemptState() != RMAppAttemptState.LAUNCHED) {
-      Thread.sleep(10);
-    }
   }
 
   private void registerAM()
@@ -335,7 +354,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
     for (ContainerSimulator cs : csList) {
       String rackHostNames[] = SLSUtils.getRackHostName(cs.getHostname());
       // check rack local
-      String rackname = rackHostNames[0];
+      String rackname = "/" + rackHostNames[0];
       if (rackLocalRequestMap.containsKey(rackname)) {
         rackLocalRequestMap.get(rackname).setNumContainers(
             rackLocalRequestMap.get(rackname).getNumContainers() + 1);
@@ -382,5 +401,13 @@ public abstract class AMSimulator extends TaskRunner.Task {
   }
   public int getNumTasks() {
     return totalContainers;
+  }
+
+  public ApplicationId getApplicationId() {
+    return appId;
+  }
+
+  public ApplicationAttemptId getApplicationAttemptId() {
+    return appAttemptId;
   }
 }

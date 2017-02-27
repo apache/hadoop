@@ -130,7 +130,7 @@ function hdfscmd_case
       exit 0
     ;;
     ec)
-      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.erasurecode.ECCli
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.ECAdmin
     ;;
     fetchdt)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DelegationTokenFetcher

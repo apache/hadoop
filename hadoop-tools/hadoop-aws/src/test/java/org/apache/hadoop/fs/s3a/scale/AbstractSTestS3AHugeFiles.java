@@ -34,11 +34,13 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.util.Progressable;
 
@@ -159,13 +161,20 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     Statistic putBytesPending = Statistic.OBJECT_PUT_BYTES_PENDING;
 
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
-
+    S3AInstrumentation.OutputStreamStatistics streamStatistics;
     long blocksPer10MB = blocksPerMB * 10;
     ProgressCallback progress = new ProgressCallback(timer);
     try (FSDataOutputStream out = fs.create(hugefile,
         true,
         uploadBlockSize,
         progress)) {
+      try {
+        streamStatistics = getOutputStreamStatistics(out);
+      } catch (ClassCastException e) {
+        LOG.info("Wrapped output stream is not block stream: {}",
+            out.getWrappedStream());
+        streamStatistics = null;
+      }
 
       for (long block = 1; block <= blocks; block++) {
         out.write(data);
@@ -190,7 +199,8 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         }
       }
       // now close the file
-      LOG.info("Closing file and completing write operation");
+      LOG.info("Closing stream {}", out);
+      LOG.info("Statistics : {}", streamStatistics);
       ContractTestUtils.NanoTimer closeTimer
           = new ContractTestUtils.NanoTimer();
       out.close();
@@ -201,6 +211,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         filesizeMB, uploadBlockSize);
     logFSState();
     bandwidth(timer, filesize);
+    LOG.info("Statistics after stream closed: {}", streamStatistics);
     long putRequestCount = storageStatistics.getLong(putRequests);
     Long putByteCount = storageStatistics.getLong(putBytes);
     LOG.info("PUT {} bytes in {} operations; {} MB/operation",
@@ -214,7 +225,14 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     S3AFileStatus status = fs.getFileStatus(hugefile);
     ContractTestUtils.assertIsFile(hugefile, status);
     assertEquals("File size in " + status, filesize, status.getLen());
-    progress.verifyNoFailures("Put file " + hugefile + " of size " + filesize);
+    if (progress != null) {
+      progress.verifyNoFailures("Put file " + hugefile
+          + " of size " + filesize);
+    }
+    if (streamStatistics != null) {
+      assertEquals("actively allocated blocks in " + streamStatistics,
+          0, streamStatistics.blocksActivelyAllocated());
+    }
   }
 
   /**
@@ -285,7 +303,9 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   void assumeHugeFileExists() throws IOException {
     S3AFileSystem fs = getFileSystem();
     ContractTestUtils.assertPathExists(fs, "huge file not created", hugefile);
-    ContractTestUtils.assertIsFile(fs, hugefile);
+    FileStatus status = fs.getFileStatus(hugefile);
+    ContractTestUtils.assertIsFile(hugefile, status);
+    assertTrue("File " + hugefile + " is empty", status.getLen() > 0);
   }
 
   private void logFSState() {

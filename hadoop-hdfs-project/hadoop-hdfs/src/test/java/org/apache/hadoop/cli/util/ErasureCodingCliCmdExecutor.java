@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.cli.util;
 
-import org.apache.hadoop.hdfs.tools.erasurecode.ECCli;
+import org.apache.hadoop.hdfs.tools.ECAdmin;
 import org.apache.hadoop.util.ToolRunner;
 
 public class ErasureCodingCliCmdExecutor extends CommandExecutor {
   protected String namenode = null;
-  protected ECCli admin = null;
+  protected ECAdmin admin = null;
 
-  public ErasureCodingCliCmdExecutor(String namenode, ECCli admin) {
+  public ErasureCodingCliCmdExecutor(String namenode, ECAdmin admin) {
     this.namenode = namenode;
     this.admin = admin;
   }

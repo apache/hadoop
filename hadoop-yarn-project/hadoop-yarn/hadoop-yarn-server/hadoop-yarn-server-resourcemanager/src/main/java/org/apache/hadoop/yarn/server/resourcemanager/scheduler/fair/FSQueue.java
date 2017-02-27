@@ -135,7 +135,7 @@ public abstract class FSQueue implements Queue, Schedulable {
   }
 
   public void setPolicy(SchedulingPolicy policy) {
-    policy.initialize(scheduler.getClusterResource());
+    policy.initialize(scheduler.getContext());
     this.policy = policy;
   }
 

@@ -388,6 +388,11 @@ public class DatanodeStorageInfo {
     return null;
   }
 
+  @VisibleForTesting
+  void setRemainingForTests(int remaining) {
+    this.remaining = remaining;
+  }
+
   static enum AddBlockResult {
     ADDED, REPLACED, ALREADY_EXIST
   }

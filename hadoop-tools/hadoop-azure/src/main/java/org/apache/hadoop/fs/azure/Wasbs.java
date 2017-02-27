@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,18 +16,32 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a;
+package org.apache.hadoop.fs.azure;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.DelegateToFileSystem;
+
 /**
- * Use {@link Constants#FAST_UPLOAD_BYTEBUFFER} for buffering.
+ * WASB implementation of AbstractFileSystem for wasbs scheme.
+ * This impl delegates to the old FileSystem
  */
-public class ITestS3ABlockOutputByteBuffer extends ITestS3ABlockOutputArray {
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public class Wasbs extends DelegateToFileSystem {
 
-  protected String getBlockOutputBufferName() {
-    return Constants.FAST_UPLOAD_BYTEBUFFER;
+  Wasbs(final URI theUri, final Configuration conf) throws IOException,
+      URISyntaxException {
+    super(theUri, new NativeAzureFileSystem(), conf, "wasbs", false);
   }
 
-  protected S3ADataBlocks.BlockFactory createFactory(S3AFileSystem fileSystem) {
-    return new S3ADataBlocks.ByteBufferBlockFactory(fileSystem);
+  @Override
+  public int getUriDefaultPort() {
+    return -1;
   }
-
 }

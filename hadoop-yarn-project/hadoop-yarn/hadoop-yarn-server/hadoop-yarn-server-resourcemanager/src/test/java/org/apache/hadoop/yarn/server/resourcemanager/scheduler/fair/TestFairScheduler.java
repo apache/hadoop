@@ -119,6 +119,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.xml.sax.SAXException;
 
@@ -2627,71 +2628,57 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals(1, scheduler.getSchedulerApp(attId4).getLiveContainers().size());
   }
 
+  /**
+   * Reserve at a lower priority and verify the lower priority request gets
+   * allocated
+   */
   @Test (timeout = 5000)
-  public void testReservationWhileMultiplePriorities() throws IOException {
+  public void testReservationWithMultiplePriorities() throws IOException {
     scheduler.init(conf);
     scheduler.start();
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     // Add a node
-    RMNode node1 =
-        MockNodes
-            .newNodeInfo(1, Resources.createResource(1024, 4), 1, "127.0.0.1");
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(2048, 2));
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
-
-    ApplicationAttemptId attId = createSchedulingRequest(1024, 4, "queue1",
-        "user1", 1, 2);
-    scheduler.update();
     NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1);
-    scheduler.handle(updateEvent);
-    
-    FSAppAttempt app = scheduler.getSchedulerApp(attId);
-    assertEquals(1, app.getLiveContainers().size());
-    
-    ContainerId containerId = scheduler.getSchedulerApp(attId)
-        .getLiveContainers().iterator().next().getContainerId();
 
-    // Cause reservation to be created
-    createSchedulingRequestExistingApplication(1024, 4, 2, attId);
+    // Create first app and take up half resources so the second app that asks
+    // for the entire node won't have enough.
+    FSAppAttempt app1 = scheduler.getSchedulerApp(
+        createSchedulingRequest(1024, 1, "queue", "user", 1));
     scheduler.update();
     scheduler.handle(updateEvent);
+    assertEquals("Basic allocation failed", 1, app1.getLiveContainers().size());
 
-    assertEquals(1, app.getLiveContainers().size());
-    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
-    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableVirtualCores());
-    
-    // Create request at higher priority
-    createSchedulingRequestExistingApplication(1024, 4, 1, attId);
+    // Create another app and reserve at a lower priority first
+    ApplicationAttemptId attId =
+        createSchedulingRequest(2048, 2, "queue1", "user1", 1, 2);
+    FSAppAttempt app2 = scheduler.getSchedulerApp(attId);
     scheduler.update();
     scheduler.handle(updateEvent);
-    
-    assertEquals(1, app.getLiveContainers().size());
-    // Reserved container should still be at lower priority
-    for (RMContainer container : app.getReservedContainers()) {
-      assertEquals(2,
-          container.getReservedSchedulerKey().getPriority().getPriority());
-    }
-    
-    // Complete container
-    scheduler.allocate(attId, new ArrayList<ResourceRequest>(),
+    assertEquals("Reservation at lower priority failed",
+        1, app2.getReservedContainers().size());
+
+    // Request container on the second app at a higher priority
+    createSchedulingRequestExistingApplication(2048, 2, 1, attId);
+
+    // Complete the first container so we can trigger allocation for app2
+    ContainerId containerId =
+        app1.getLiveContainers().iterator().next().getContainerId();
+    scheduler.allocate(app1.getApplicationAttemptId(), new ArrayList<>(),
         Arrays.asList(containerId), null, null, NULL_UPDATE_REQUESTS);
-    assertEquals(1024, scheduler.getRootQueueMetrics().getAvailableMB());
-    assertEquals(4, scheduler.getRootQueueMetrics().getAvailableVirtualCores());
-    
-    // Schedule at opening
-    scheduler.update();
+
+    // Trigger allocation for app2
     scheduler.handle(updateEvent);
-    
+
     // Reserved container (at lower priority) should be run
-    Collection<RMContainer> liveContainers = app.getLiveContainers();
-    assertEquals(1, liveContainers.size());
-    for (RMContainer liveContainer : liveContainers) {
-      Assert.assertEquals(2, liveContainer.getContainer().getPriority()
-          .getPriority());
-    }
-    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
-    assertEquals(0, scheduler.getRootQueueMetrics().getAvailableVirtualCores());
+    Collection<RMContainer> liveContainers = app2.getLiveContainers();
+    assertEquals("Allocation post completion failed", 1, liveContainers.size());
+    assertEquals("High prio container allocated against low prio reservation",
+        2, liveContainers.iterator().next().getContainer().
+            getPriority().getPriority());
   }
   
   @Test
@@ -3222,8 +3209,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   }
 
   /**
-   * If we update our ask to strictly request a node, it doesn't make sense to keep
-   * a reservation on another.
+   * Strict locality requests shouldn't reserve resources on another node.
    */
   @Test
   public void testReservationsStrictLocality() throws IOException {
@@ -3231,40 +3217,39 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.start();
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
-    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
-    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(1024), 2, "127.0.0.2");
+    // Add two nodes
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024, 1));
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
+    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(1024, 1));
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+    scheduler.handle(nodeEvent2);
 
-    ApplicationAttemptId attId = createSchedulingRequest(1024, "queue1",
-        "user1", 0);
+    // Submit application without container requests
+    ApplicationAttemptId attId =
+        createSchedulingRequest(1024, "queue1", "user1", 0);
     FSAppAttempt app = scheduler.getSchedulerApp(attId);
-    
-    ResourceRequest nodeRequest = createResourceRequest(1024, node2.getHostName(), 1, 2, true);
-    ResourceRequest rackRequest = createResourceRequest(1024, "rack1", 1, 2, true);
-    ResourceRequest anyRequest = createResourceRequest(1024, ResourceRequest.ANY,
-        1, 2, false);
+
+    // Request a container on node2
+    ResourceRequest nodeRequest =
+        createResourceRequest(1024, node2.getHostName(), 1, 1, true);
+    ResourceRequest rackRequest =
+        createResourceRequest(1024, "rack1", 1, 1, false);
+    ResourceRequest anyRequest =
+        createResourceRequest(1024, ResourceRequest.ANY, 1, 1, false);
     createSchedulingRequestExistingApplication(nodeRequest, attId);
     createSchedulingRequestExistingApplication(rackRequest, attId);
     createSchedulingRequestExistingApplication(anyRequest, attId);
-    
     scheduler.update();
 
+    // Heartbeat from node1. App shouldn't get an allocation or reservation
     NodeUpdateSchedulerEvent nodeUpdateEvent = new NodeUpdateSchedulerEvent(node1);
     scheduler.handle(nodeUpdateEvent);
-    assertEquals(1, app.getLiveContainers().size());
+    assertEquals("App assigned a container on the wrong node",
+        0, app.getLiveContainers().size());
     scheduler.handle(nodeUpdateEvent);
-    assertEquals(1, app.getReservedContainers().size());
-    
-    // now, make our request node-specific (on a different node)
-    rackRequest = createResourceRequest(1024, "rack1", 1, 1, false);
-    anyRequest = createResourceRequest(1024, ResourceRequest.ANY,
-        1, 1, false);
-    scheduler.allocate(attId, Arrays.asList(rackRequest, anyRequest),
-        new ArrayList<ContainerId>(), null, null, NULL_UPDATE_REQUESTS);
-
-    scheduler.handle(nodeUpdateEvent);
-    assertEquals(0, app.getReservedContainers().size());
+    assertEquals("App reserved a container on the wrong node",
+        0, app.getReservedContainers().size());
   }
   
   @Test
@@ -3308,7 +3293,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSAppAttempt app2 = scheduler.getSchedulerApp(appAttId2);
 
     DominantResourceFairnessPolicy drfPolicy = new DominantResourceFairnessPolicy();
-    drfPolicy.initialize(scheduler.getClusterResource());
+    drfPolicy.initialize(scheduler.getContext());
     scheduler.getQueueManager().getQueue("queue1").setPolicy(drfPolicy);
     scheduler.update();
 
@@ -3354,7 +3339,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSAppAttempt app3 = scheduler.getSchedulerApp(appAttId3);
     
     DominantResourceFairnessPolicy drfPolicy = new DominantResourceFairnessPolicy();
-    drfPolicy.initialize(scheduler.getClusterResource());
+    drfPolicy.initialize(scheduler.getContext());
     scheduler.getQueueManager().getQueue("root").setPolicy(drfPolicy);
     scheduler.getQueueManager().getQueue("queue1").setPolicy(drfPolicy);
     scheduler.update();
@@ -3369,7 +3354,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.handle(updateEvent);
     Assert.assertEquals(1, app2.getLiveContainers().size());
   }
-  
+
   @Test
   public void testDRFHierarchicalQueues() throws Exception {
     scheduler.init(conf);
@@ -3399,7 +3384,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSAppAttempt app4 = scheduler.getSchedulerApp(appAttId4);
     
     DominantResourceFairnessPolicy drfPolicy = new DominantResourceFairnessPolicy();
-    drfPolicy.initialize(scheduler.getClusterResource());
+    drfPolicy.initialize(scheduler.getContext());
     scheduler.getQueueManager().getQueue("root").setPolicy(drfPolicy);
     scheduler.getQueueManager().getQueue("queue1").setPolicy(drfPolicy);
     scheduler.getQueueManager().getQueue("queue1.subqueue1").setPolicy(drfPolicy);
@@ -5094,6 +5079,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.handle(updateEvent);
 
     createSchedulingRequestExistingApplication(1024, 1, 1, appAttemptId);
+    scheduler.update();
     scheduler.handle(updateEvent);
 
     // no reservation yet

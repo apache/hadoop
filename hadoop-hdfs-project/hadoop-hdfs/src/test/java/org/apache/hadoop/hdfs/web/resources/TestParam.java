@@ -351,6 +351,40 @@ public class TestParam {
       LOG.info("EXPECTED: " + e);
     }
   }
+
+  @Test
+  public void testUserGroupOkAfterAlteringAclPattern() {
+    // Preserve default pattern value
+    AclPermissionParam.Domain oldDomain =
+        AclPermissionParam.getAclPermissionPattern();
+
+    // Override the pattern with one that accepts '@' and numbers
+    // in the first character of usernames/groupnames
+    String newPattern =
+        "^(default:)?(user|group|mask|other):" +
+            "[[0-9A-Za-z_][@A-Za-z0-9._-]]*:([rwx-]{3})?" +
+            "(,(default:)?(user|group|mask|other):" +
+            "[[0-9A-Za-z_][@A-Za-z0-9._-]]*:([rwx-]{3})?)*$";
+
+    try {
+      AclPermissionParam.setAclPermissionPattern(newPattern);
+
+      String numericUserSpec = "user:110201:rwx";
+      AclPermissionParam aclNumericUserParam =
+          new AclPermissionParam(numericUserSpec);
+      Assert.assertEquals(numericUserSpec, aclNumericUserParam.getValue());
+
+      String oddGroupSpec = "group:foo@bar:rwx";
+      AclPermissionParam aclGroupWithDomainParam =
+          new AclPermissionParam(oddGroupSpec);
+      Assert.assertEquals(oddGroupSpec, aclGroupWithDomainParam.getValue());
+
+    } finally {
+      // Revert back to the default rules for remainder of tests
+      AclPermissionParam.setAclPermissionPattern(oldDomain);
+    }
+
+  }
  
   @Test
   public void testXAttrNameParam() {

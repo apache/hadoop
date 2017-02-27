@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -206,4 +207,7 @@ public abstract class PlanningAlgorithm implements ReservationAgent {
 
   }
 
+  @Override
+  public void init(Configuration conf) {
+  }
 }

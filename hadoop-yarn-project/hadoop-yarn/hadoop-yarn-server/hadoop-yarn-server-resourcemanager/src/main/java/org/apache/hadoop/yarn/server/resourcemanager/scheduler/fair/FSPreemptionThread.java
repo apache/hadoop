@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.locks.Lock;
 
 /**
  * Thread that handles FairScheduler preemption.
@@ -43,6 +44,7 @@ class FSPreemptionThread extends Thread {
   private final long warnTimeBeforeKill;
   private final long delayBeforeNextStarvationCheck;
   private final Timer preemptionTimer;
+  private final Lock schedulerReadLock;
 
   FSPreemptionThread(FairScheduler scheduler) {
     setDaemon(true);
@@ -61,6 +63,7 @@ class FSPreemptionThread extends Thread {
         : 4 * scheduler.getNMHeartbeatInterval()); // 4 heartbeats
     delayBeforeNextStarvationCheck = warnTimeBeforeKill + allocDelay +
         fsConf.getWaitTimeBeforeNextStarvationCheck();
+    schedulerReadLock = scheduler.getSchedulerReadLock();
   }
 
   public void run() {
@@ -68,7 +71,14 @@ class FSPreemptionThread extends Thread {
       FSAppAttempt starvedApp;
       try{
         starvedApp = context.getStarvedApps().take();
-        preemptContainers(identifyContainersToPreempt(starvedApp));
+        // Hold the scheduler readlock so this is not concurrent with the
+        // update thread.
+        schedulerReadLock.lock();
+        try {
+          preemptContainers(identifyContainersToPreempt(starvedApp));
+        } finally {
+          schedulerReadLock.unlock();
+        }
         starvedApp.preemptionTriggered(delayBeforeNextStarvationCheck);
       } catch (InterruptedException e) {
         LOG.info("Preemption thread interrupted! Exiting.");

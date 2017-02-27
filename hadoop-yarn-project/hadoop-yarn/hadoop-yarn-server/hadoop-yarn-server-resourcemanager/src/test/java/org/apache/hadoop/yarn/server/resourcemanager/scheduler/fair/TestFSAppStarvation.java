@@ -96,6 +96,14 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
   public void testPreemptionEnabled() throws Exception {
     setupClusterAndSubmitJobs();
 
+    // Wait for apps to be processed by MockPreemptionThread
+    for (int i = 0; i < 6000; ++i) {
+      if (preemptionThread.uniqueAppsAdded() >= 3) {
+        break;
+      }
+      Thread.sleep(10);
+    }
+
     assertNotNull("FSContext does not have an FSStarvedApps instance",
         scheduler.getContext().getStarvedApps());
     assertEquals("Expecting 3 starved applications, one each for the "
@@ -113,8 +121,19 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
     clock.tickMsec(
         FairSchedulerWithMockPreemption.DELAY_FOR_NEXT_STARVATION_CHECK_MS);
     scheduler.update();
+
+    // Wait for apps to be processed by MockPreemptionThread
+    for (int i = 0; i < 6000; ++i) {
+      if(preemptionThread.totalAppsAdded() >
+          preemptionThread.uniqueAppsAdded()) {
+        break;
+      }
+      Thread.sleep(10);
+    }
+
     assertTrue("Each app is marked as starved exactly once",
-        preemptionThread.totalAppsAdded() > preemptionThread.uniqueAppsAdded());
+        preemptionThread.totalAppsAdded() >
+            preemptionThread.uniqueAppsAdded());
   }
 
   /*
@@ -154,9 +173,6 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
 
     // Scheduler update to populate starved apps
     scheduler.update();
-
-    // Wait for apps to be processed by MockPreemptionThread
-    Thread.yield();
   }
 
   /**

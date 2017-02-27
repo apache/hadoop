@@ -110,8 +110,8 @@ public class TestGreedyReservationAgent {
     // setting conf to
     conf.setBoolean(GreedyReservationAgent.GREEDY_FAVOR_EARLY_ALLOCATION,
         allocateLeft);
-
-    agent = new GreedyReservationAgent(conf);
+    agent = new GreedyReservationAgent();
+    agent.init(conf);
 
     QueueMetrics queueMetrics = mock(QueueMetrics.class);
     RMContext context = ReservationSystemTestUtil.createMockRMContext();

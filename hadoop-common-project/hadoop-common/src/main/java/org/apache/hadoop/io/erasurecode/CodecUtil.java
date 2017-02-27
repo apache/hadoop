@@ -55,9 +55,9 @@ public final class CodecUtil {
   public static final String IO_ERASURECODE_CODEC_XOR =
       XORErasureCodec.class.getCanonicalName();
   /** Erasure coder Reed-Solomon codec. */
-  public static final String IO_ERASURECODE_CODEC_RS_DEFAULT_KEY =
+  public static final String IO_ERASURECODE_CODEC_RS_KEY =
       "io.erasurecode.codec.rs";
-  public static final String IO_ERASURECODE_CODEC_RS_DEFAULT =
+  public static final String IO_ERASURECODE_CODEC_RS =
       RSErasureCodec.class.getCanonicalName();
   /** Erasure coder hitch hiker XOR codec. */
   public static final String IO_ERASURECODE_CODEC_HHXOR_KEY =
@@ -67,10 +67,10 @@ public final class CodecUtil {
 
   /** Supported erasure codec classes. */
 
-  /** Raw coder factory for the RS default codec. */
-  public static final String IO_ERASURECODE_CODEC_RS_DEFAULT_RAWCODER_KEY =
-      "io.erasurecode.codec.rs-default.rawcoder";
-  public static final String IO_ERASURECODE_CODEC_RS_DEFAULT_RAWCODER_DEFAULT =
+  /** Raw coder factory for the RS codec. */
+  public static final String IO_ERASURECODE_CODEC_RS_RAWCODER_KEY =
+      "io.erasurecode.codec.rs.rawcoder";
+  public static final String IO_ERASURECODE_CODEC_RS_RAWCODER_DEFAULT =
       RSRawErasureCoderFactory.class.getCanonicalName();
 
   /** Raw coder factory for the RS legacy codec. */
@@ -183,10 +183,10 @@ public final class CodecUtil {
   private static String getRawCoderFactNameFromCodec(Configuration conf,
                                                      String codec) {
     switch (codec) {
-    case ErasureCodeConstants.RS_DEFAULT_CODEC_NAME:
+    case ErasureCodeConstants.RS_CODEC_NAME:
       return conf.get(
-          IO_ERASURECODE_CODEC_RS_DEFAULT_RAWCODER_KEY,
-          IO_ERASURECODE_CODEC_RS_DEFAULT_RAWCODER_DEFAULT);
+          IO_ERASURECODE_CODEC_RS_RAWCODER_KEY,
+          IO_ERASURECODE_CODEC_RS_RAWCODER_DEFAULT);
     case ErasureCodeConstants.RS_LEGACY_CODEC_NAME:
       return conf.get(
           IO_ERASURECODE_CODEC_RS_LEGACY_RAWCODER_KEY,
@@ -233,15 +233,15 @@ public final class CodecUtil {
 
   private static String getCodecClassName(Configuration conf, String codec) {
     switch (codec) {
-    case ErasureCodeConstants.RS_DEFAULT_CODEC_NAME:
+    case ErasureCodeConstants.RS_CODEC_NAME:
       return conf.get(
-          CodecUtil.IO_ERASURECODE_CODEC_RS_DEFAULT_KEY,
-          CodecUtil.IO_ERASURECODE_CODEC_RS_DEFAULT);
+          CodecUtil.IO_ERASURECODE_CODEC_RS_KEY,
+          CodecUtil.IO_ERASURECODE_CODEC_RS);
     case ErasureCodeConstants.RS_LEGACY_CODEC_NAME:
       //TODO:rs-legacy should be handled differently.
       return conf.get(
-          CodecUtil.IO_ERASURECODE_CODEC_RS_DEFAULT_KEY,
-          CodecUtil.IO_ERASURECODE_CODEC_RS_DEFAULT);
+          CodecUtil.IO_ERASURECODE_CODEC_RS_KEY,
+          CodecUtil.IO_ERASURECODE_CODEC_RS);
     case ErasureCodeConstants.XOR_CODEC_NAME:
       return conf.get(
           CodecUtil.IO_ERASURECODE_CODEC_XOR_KEY,

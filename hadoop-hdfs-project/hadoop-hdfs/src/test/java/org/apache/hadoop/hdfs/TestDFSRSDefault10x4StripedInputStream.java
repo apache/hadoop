@@ -22,7 +22,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 
 /**
- * This tests read operation of DFS striped file with RS-DEFAULT-10-4-64k
+ * This tests read operation of DFS striped file with RS-10-4-64k
  *  erasure code policy.
  */
 public class TestDFSRSDefault10x4StripedInputStream extends
