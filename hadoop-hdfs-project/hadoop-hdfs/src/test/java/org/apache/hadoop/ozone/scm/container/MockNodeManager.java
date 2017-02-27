@@ -5,9 +5,9 @@
  * licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p>
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -19,6 +19,10 @@ package org.apache.hadoop.ozone.scm.container;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
+import org.apache.hadoop.ozone.protocol.VersionResponse;
+import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 
 import java.io.IOException;
@@ -43,7 +47,7 @@ public class MockNodeManager implements NodeManager {
 
   /**
    * Sets the chill mode value.
-   * @param chillmode
+   * @param chillmode  boolean
    */
   public void setChillmode(boolean chillmode) {
     this.chillmode = chillmode;
@@ -197,5 +201,42 @@ public class MockNodeManager implements NodeManager {
   @Override
   public void run() {
 
+  }
+
+  /**
+   * Gets the version info from SCM.
+   *
+   * @param versionRequest - version Request.
+   * @return - returns SCM version info and other required information needed by
+   * datanode.
+   */
+  @Override
+  public VersionResponse getVersion(StorageContainerDatanodeProtocolProtos
+      .SCMVersionRequestProto versionRequest) {
+    return null;
+  }
+
+  /**
+   * Register the node if the node finds that it is not registered with any
+   * SCM.
+   *
+   * @param datanodeID - Send datanodeID with Node info, but datanode UUID is
+   * empty. Server returns a datanodeID for the given node.
+   * @return SCMHeartbeatResponseProto
+   */
+  @Override
+  public SCMCommand register(DatanodeID datanodeID) {
+    return null;
+  }
+
+  /**
+   * Send heartbeat to indicate the datanode is alive and doing well.
+   *
+   * @param datanodeID - Datanode ID.
+   * @return SCMheartbeat response list
+   */
+  @Override
+  public List<SCMCommand> sendHeartbeat(DatanodeID datanodeID) {
+    return null;
   }
 }

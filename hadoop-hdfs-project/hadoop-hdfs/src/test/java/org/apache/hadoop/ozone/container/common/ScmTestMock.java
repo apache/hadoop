@@ -79,7 +79,8 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
    */
   @Override
   public StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto
-      getVersion() throws IOException {
+      getVersion(StorageContainerDatanodeProtocolProtos
+      .SCMVersionRequestProto unused) throws IOException {
     rpcCount.incrementAndGet();
     sleepIfNeeded();
     VersionInfo versionInfo = VersionInfo.getLatestVersion();
@@ -119,7 +120,10 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
         .newBuilder().setCmdType(StorageContainerDatanodeProtocolProtos
             .Type.nullCmd)
         .setNullCommand(
-            NullCommand.newBuilder().build().getProtoBufMessage()).build();
+            StorageContainerDatanodeProtocolProtos.NullCmdResponseProto
+                .parseFrom(
+                    NullCommand.newBuilder().build().getProtoBufMessage()))
+        .build();
     return StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto
         .newBuilder()
         .addCommands(cmdResponse).build();

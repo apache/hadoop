@@ -31,11 +31,11 @@ public abstract class SCMCommand<T extends GeneratedMessage> {
    * Returns the type of this command.
    * @return Type
    */
-  abstract Type getType();
+  public  abstract Type getType();
 
   /**
    * Gets the protobuf message of this object.
    * @return A protobuf message.
    */
-  abstract T getProtoBufMessage();
+  public abstract byte[] getProtoBufMessage();
 }

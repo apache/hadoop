@@ -46,7 +46,7 @@ public class ContainerMapping implements Mapping {
       LoggerFactory.getLogger(ContainerMapping.class);
 
   private final NodeManager nodeManager;
-  private final int cacheSize;
+  private final long cacheSize;
   private final Lock lock;
   private final Charset encoding = Charset.forName("UTF-8");
   private final LevelDBStore store;
@@ -77,7 +77,7 @@ public class ContainerMapping implements Mapping {
     }
     File dbPath = new File(scmMetaDataDir, "SCM.db");
     Options options = new Options();
-    options.cacheSize(this.cacheSize * (1024 * 1024));
+    options.cacheSize(this.cacheSize * (1024L * 1024L));
     options.createIfMissing();
     store = new LevelDBStore(dbPath, options);
     this.lock = new ReentrantLock();
@@ -85,6 +85,7 @@ public class ContainerMapping implements Mapping {
   }
 
   /**
+   * // TODO : Fix the code to handle multiple nodes.
    * Translates a list of nodes, ordered such that the first is the leader, into
    * a corresponding {@link Pipeline} object.
    *

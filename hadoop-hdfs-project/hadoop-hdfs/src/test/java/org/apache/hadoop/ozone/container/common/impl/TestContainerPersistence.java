@@ -102,7 +102,7 @@ public class TestContainerPersistence {
     Assert.assertTrue(containerDir.mkdirs());
 
     cluster = new MiniOzoneCluster.Builder(conf)
-        .setHandlerType("local").build();
+        .setHandlerType("distributed").build();
     containerManager = new ContainerManagerImpl();
     chunkManager = new ChunkManagerImpl(containerManager);
     containerManager.setChunkManager(chunkManager);
@@ -113,7 +113,9 @@ public class TestContainerPersistence {
 
   @AfterClass
   public static void shutdown() throws IOException {
-    cluster.shutdown();
+    if(cluster != null) {
+      cluster.shutdown();
+    }
     FileUtils.deleteDirectory(new File(path));
   }
 

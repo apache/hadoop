@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -301,10 +301,10 @@ public class DatanodeID implements Comparable<DatanodeID> {
    * @param datanodeIDProto - protoBuf Message
    * @return DataNodeID
    */
-  public static DatanodeID getFromProtoBuf(HdfsProtos.DatanodeIDProto
-                                               datanodeIDProto) {
-    DatanodeID id = new DatanodeID(datanodeIDProto.getDatanodeUuid(),
-        datanodeIDProto.getIpAddr(), datanodeIDProto.getHostName(),
+  public static DatanodeID getFromProtoBuf(
+      HdfsProtos.DatanodeIDProto datanodeIDProto) {
+    DatanodeID id = new DatanodeID(datanodeIDProto.getIpAddr(),
+        datanodeIDProto.getHostName(), datanodeIDProto.getDatanodeUuid(),
         datanodeIDProto.getXferPort(), datanodeIDProto.getInfoPort(),
         datanodeIDProto.getInfoSecurePort(), datanodeIDProto.getIpcPort());
     id.setContainerPort(datanodeIDProto.getContainerPort());
@@ -315,7 +315,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
    * Returns a DataNodeID protobuf message from a datanode ID.
    * @return HdfsProtos.DatanodeIDProto
    */
-  public  HdfsProtos.DatanodeIDProto getProtoBufMessage() {
+  public HdfsProtos.DatanodeIDProto getProtoBufMessage() {
     HdfsProtos.DatanodeIDProto.Builder builder =
         HdfsProtos.DatanodeIDProto.newBuilder();
 

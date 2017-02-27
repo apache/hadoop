@@ -57,7 +57,7 @@ public class RegisteredCommand extends
    * @return Type
    */
   @Override
-  Type getType() {
+  public Type getType() {
     return Type.registeredCommand;
   }
 
@@ -94,12 +94,12 @@ public class RegisteredCommand extends
    * @return A protobuf message.
    */
   @Override
-  SCMRegisteredCmdResponseProto getProtoBufMessage() {
+  public byte[] getProtoBufMessage() {
     return SCMRegisteredCmdResponseProto.newBuilder()
         .setClusterID(this.clusterID)
         .setDatanodeUUID(this.datanodeUUID)
         .setErrorCode(this.error)
-        .build();
+        .build().toByteArray();
   }
 
   /**

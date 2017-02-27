@@ -49,7 +49,7 @@ public class VersionEndpointTask implements
     rpcEndPoint.lock();
     try{
       SCMVersionResponseProto versionResponse =
-          rpcEndPoint.getEndPoint().getVersion();
+          rpcEndPoint.getEndPoint().getVersion(null);
       rpcEndPoint.setVersion(VersionResponse.getFromProtobuf(versionResponse));
 
       EndpointStateMachine.EndPointStates nextState =

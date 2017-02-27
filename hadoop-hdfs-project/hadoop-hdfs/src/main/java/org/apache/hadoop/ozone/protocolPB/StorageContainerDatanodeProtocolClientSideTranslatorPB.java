@@ -92,11 +92,12 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
   /**
    * Returns SCM version.
    *
+   * @param unused - set to null and unused.
    * @return Version info.
    */
   @Override
-  public SCMVersionResponseProto getVersion() throws IOException {
-
+  public SCMVersionResponseProto getVersion(SCMVersionRequestProto
+      unused) throws IOException {
     SCMVersionRequestProto request =
         SCMVersionRequestProto.newBuilder().build();
     final SCMVersionResponseProto response;

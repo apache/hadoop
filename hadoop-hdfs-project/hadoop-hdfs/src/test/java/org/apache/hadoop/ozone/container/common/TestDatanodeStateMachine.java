@@ -93,12 +93,7 @@ public class TestDatanodeStateMachine {
     path = Paths.get(path.toString(),
         TestDatanodeStateMachine.class.getSimpleName() + ".id").toString();
     conf.set(OzoneConfigKeys.OZONE_SCM_DATANODE_ID, path);
-
-
-    executorService = HadoopExecutors.newScheduledThreadPool(
-        conf.getInt(
-            OzoneConfigKeys.OZONE_SCM_CONTAINER_THREADS,
-            OzoneConfigKeys.OZONE_SCM_CONTAINER_THREADS_DEFAULT),
+    executorService = HadoopExecutors.newCachedThreadPool(
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("Test Data Node State Machine Thread - %d").build());
   }

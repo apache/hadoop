@@ -63,7 +63,6 @@ public class Pipeline {
     return newPipeline;
   }
 
-  /** Adds a member to pipeline */
 
   /**
    * Adds a member to the pipeline.

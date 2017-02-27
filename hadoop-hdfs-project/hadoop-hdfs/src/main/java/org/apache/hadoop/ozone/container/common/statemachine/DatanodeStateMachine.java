@@ -5,9 +5,9 @@
  * licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p>
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -20,7 +20,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneClientUtils;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
@@ -29,10 +28,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  * State Machine Class.
@@ -55,14 +52,13 @@ public class DatanodeStateMachine implements Closeable {
    */
   public DatanodeStateMachine(Configuration conf) throws IOException {
     this.conf = conf;
-    executorService = HadoopExecutors.newScheduledThreadPool(
-        this.conf.getInt(OzoneConfigKeys.OZONE_SCM_CONTAINER_THREADS,
-            OzoneConfigKeys.OZONE_SCM_CONTAINER_THREADS_DEFAULT),
-        new ThreadFactoryBuilder().setDaemon(true)
+    executorService = HadoopExecutors.newCachedThreadPool(
+                new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("Datanode State Machine Thread - %d").build());
     connectionManager = new SCMConnectionManager(conf);
     context = new StateContext(this.conf, DatanodeStates.getInitState(), this);
-    heartbeatFrequency = OzoneClientUtils.getScmHeartbeatInterval(conf);
+    heartbeatFrequency = TimeUnit.SECONDS.toMillis(
+        OzoneClientUtils.getScmHeartbeatInterval(conf));
     container = new OzoneContainer(conf);
   }
 
@@ -84,6 +80,7 @@ public class DatanodeStateMachine implements Closeable {
     container.start();
     while (context.getState() != DatanodeStates.SHUTDOWN) {
       try {
+        LOG.debug("Executing cycle Number : {}", context.getExecutionCount());
         nextHB = Time.monotonicNow() + heartbeatFrequency;
         context.execute(executorService, heartbeatFrequency,
             TimeUnit.MILLISECONDS);
@@ -91,8 +88,8 @@ public class DatanodeStateMachine implements Closeable {
         if (now < nextHB) {
           Thread.sleep(nextHB - now);
         }
-      } catch (InterruptedException | ExecutionException | TimeoutException e) {
-        LOG.error("Unable to finish the execution", e);
+      } catch (Exception e) {
+        LOG.error("Unable to finish the execution.", e);
       }
     }
   }

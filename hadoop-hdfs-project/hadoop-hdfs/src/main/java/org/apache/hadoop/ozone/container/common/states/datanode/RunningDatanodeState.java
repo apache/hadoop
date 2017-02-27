@@ -22,22 +22,15 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.container.common.statemachine
-    .DatanodeStateMachine;
-import org.apache.hadoop.ozone.container.common.statemachine
-    .EndpointStateMachine;
-import org.apache.hadoop.ozone.container.common.statemachine
-    .SCMConnectionManager;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine.EndpointStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.states.DatanodeState;
-import org.apache.hadoop.ozone.container.common.states.endpoint
-    .HeartbeatEndpointTask;
-import org.apache.hadoop.ozone.container.common.states.endpoint
-    .RegisterEndpointTask;
-import org.apache.hadoop.ozone.container.common.states.endpoint
-    .VersionEndpointTask;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.ozone.container.common.states.endpoint.HeartbeatEndpointTask;
+import org.apache.hadoop.ozone.container.common.states.endpoint.RegisterEndpointTask;
+import org.apache.hadoop.ozone.container.common.states.endpoint.VersionEndpointTask;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -109,7 +102,7 @@ public class RunningDatanodeState implements DatanodeState {
     DatanodeID temp = new DatanodeID(
         //TODO : Replace this with proper network and kerberos
         // support code.
-        InetAddress.getLocalHost().getHostAddress().toString(),
+        InetAddress.getLocalHost().getHostAddress(),
         DataNode.getHostName(conf),
         UUID.randomUUID().toString(),
         0, /** XferPort - SCM does not use this port  */
@@ -134,6 +127,13 @@ public class RunningDatanodeState implements DatanodeState {
   private StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto
       createNewContainerID(Path idPath)
       throws IOException {
+
+    if(!idPath.getParent().toFile().exists() &&
+        !idPath.getParent().toFile().mkdirs()) {
+      LOG.error("Failed to create container ID locations. Path: {}",
+          idPath.getParent());
+      throw new IOException("Unable to create container ID directories.");
+    }
     StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto
         containerIDProto = StorageContainerDatanodeProtocolProtos
         .ContainerNodeIDProto.newBuilder()
@@ -213,7 +213,8 @@ public class RunningDatanodeState implements DatanodeState {
       ecs.submit(endpointTask);
     }
   }
-
+  //TODO : Cache some of these tasks instead of creating them
+  //all the time.
   private Callable<EndpointStateMachine.EndPointStates>
       getEndPointTask(EndpointStateMachine endpoint) {
     switch (endpoint.getState()) {

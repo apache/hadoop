@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,10 +31,18 @@ import org.apache.hadoop.ozone.protocol.LocatedContainer;
 import org.apache.hadoop.ozone.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetStorageContainerLocationsRequestProto;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetStorageContainerLocationsResponseProto;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.LocatedContainerProto;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerResponseProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos
+    .GetStorageContainerLocationsRequestProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos
+    .GetStorageContainerLocationsResponseProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos.LocatedContainerProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos.ContainerResponseProto;
+
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 /**
  * This class is the server-side translator that forwards requests received on
@@ -63,7 +71,7 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       throws ServiceException {
     Set<String> keys = Sets.newLinkedHashSetWithExpectedSize(
         req.getKeysCount());
-    for (String key: req.getKeysList()) {
+    for (String key : req.getKeysList()) {
       keys.add(key);
     }
     final Set<LocatedContainer> locatedContainers;
@@ -74,13 +82,13 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
     }
     GetStorageContainerLocationsResponseProto.Builder resp =
         GetStorageContainerLocationsResponseProto.newBuilder();
-    for (LocatedContainer locatedContainer: locatedContainers) {
+    for (LocatedContainer locatedContainer : locatedContainers) {
       LocatedContainerProto.Builder locatedContainerProto =
           LocatedContainerProto.newBuilder()
-          .setKey(locatedContainer.getKey())
-          .setMatchedKeyPrefix(locatedContainer.getMatchedKeyPrefix())
-          .setContainerName(locatedContainer.getContainerName());
-      for (DatanodeInfo location: locatedContainer.getLocations()) {
+              .setKey(locatedContainer.getKey())
+              .setMatchedKeyPrefix(locatedContainer.getMatchedKeyPrefix())
+              .setContainerName(locatedContainer.getContainerName());
+      for (DatanodeInfo location : locatedContainer.getLocations()) {
         locatedContainerProto.addLocations(PBHelperClient.convert(location));
       }
       locatedContainerProto.setLeader(
@@ -94,6 +102,15 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public ContainerResponseProto allocateContainer(RpcController unused,
       StorageContainerLocationProtocolProtos.ContainerRequestProto request)
       throws ServiceException {
-    return null;
+    try {
+      Pipeline pipeline = impl.allocateContainer(request.getContainerName());
+      return ContainerResponseProto.newBuilder()
+          .setPipeline(pipeline.getProtobufMessage())
+          .setErrorCode(ContainerResponseProto.Error.success)
+          .build();
+
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 }

@@ -27,7 +27,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import com.google.common.base.Joiner;
@@ -147,8 +146,8 @@ class BlockPoolManager {
   
   void refreshNamenodes(Configuration conf)
       throws IOException {
-    LOG.info("Refresh request received for nameservices: " + conf.get
-            (DFSConfigKeys.DFS_NAMESERVICES));
+    LOG.info("Refresh request received for nameservices: " +
+        conf.get(DFSConfigKeys.DFS_NAMESERVICES));
 
     Map<String, Map<String, InetSocketAddress>> newAddressMap =
         new HashMap<>();
@@ -163,14 +162,6 @@ class BlockPoolManager {
     } catch (IOException ioe) {
       LOG.warn("Unable to get NameNode addresses. " +
           "This may be an Ozone-only cluster.");
-    }
-
-    if (dn.isOzoneEnabled()) {
-      newAddressMap.putAll(OzoneClientUtils.getScmServiceRpcAddresses(conf));
-
-      // SCM does not have a lifeline service port (yet).
-      newLifelineAddressMap.putAll(
-          OzoneClientUtils.getScmServiceRpcAddresses(conf));
     }
 
     if (newAddressMap.isEmpty()) {

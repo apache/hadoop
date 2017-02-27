@@ -94,11 +94,6 @@ public final class OzoneConfigKeys {
   public static final long OZONE_SCM_STALENODE_INTERVAL_DEFAULT =
       OZONE_SCM_HEARBEAT_INTERVAL_SECONDS_DEFAULT * 1000L * 3L;
 
-  public static final String OZONE_SCM_CONTAINER_THREADS =
-      "ozone.scm.container.threads";
-  public static final int OZONE_SCM_CONTAINER_THREADS_DEFAULT =
-      Runtime.getRuntime().availableProcessors() * 2;
-
   public static final String OZONE_SCM_HEARTBEAT_RPC_TIMEOUT =
       "ozone.scm.heartbeat.rpc-timeout";
   public static final long OZONE_SCM_HEARTBEAT_RPC_TIMEOUT_DEFAULT =
@@ -142,6 +137,9 @@ public final class OzoneConfigKeys {
   public static final String OZONE_SCM_DATANODE_ID = "ozone.scm.datanode.id";
 
 
+  public static final String OZONE_SCM_DB_CACHE_SIZE_MB =
+      "ozone.scm.db.cache.size.mb";
+  public static final int OZONE_SCM_DB_CACHE_SIZE_DEFAULT = 128;
 
   /**
    * There is no need to instantiate this class.

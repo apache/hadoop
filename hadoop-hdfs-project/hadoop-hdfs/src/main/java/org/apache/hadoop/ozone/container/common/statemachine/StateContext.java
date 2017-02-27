@@ -187,5 +187,13 @@ public class StateContext {
     }
   }
 
+  /**
+   * Returns the count of the Execution.
+   * @return long
+   */
+  public long getExecutionCount() {
+    return stateExecutionCount.get();
+  }
+
 
 }

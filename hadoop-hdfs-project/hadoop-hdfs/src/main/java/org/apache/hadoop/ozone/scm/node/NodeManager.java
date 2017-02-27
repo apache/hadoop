@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.scm.node;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
 
 import java.io.Closeable;
 import java.util.List;
@@ -45,9 +46,8 @@ import java.util.List;
  * DECOMMISSIONED - Someone told us to remove this node from the tracking
  * list, by calling removeNode. We will throw away this nodes info soon.
  */
-public interface NodeManager extends Closeable, Runnable {
-
-
+public interface NodeManager extends StorageContainerNodeProtocol, Closeable,
+    Runnable {
   /**
    * Removes a data node from the management of this Node Manager.
    *

@@ -321,9 +321,9 @@ public final class OzoneClientUtils {
    * @param conf - Ozone Config
    * @return - HB interval in seconds.
    */
-  public static int getScmHeartbeatInterval(Configuration conf) {
-    return conf.getInt(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS,
-        OZONE_SCM_HEARBEAT_INTERVAL_SECONDS_DEFAULT);
+  public static long getScmHeartbeatInterval(Configuration conf) {
+    return conf.getTimeDuration(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS,
+        OZONE_SCM_HEARBEAT_INTERVAL_SECONDS_DEFAULT, TimeUnit.SECONDS);
   }
 
   /**

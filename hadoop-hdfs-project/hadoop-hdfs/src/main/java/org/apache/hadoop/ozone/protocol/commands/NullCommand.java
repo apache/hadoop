@@ -44,8 +44,8 @@ public class NullCommand extends SCMCommand<NullCmdResponseProto> {
    * @return A protobuf message.
    */
   @Override
-  public NullCmdResponseProto getProtoBufMessage() {
-    return NullCmdResponseProto.newBuilder().build();
+  public byte[] getProtoBufMessage() {
+    return NullCmdResponseProto.newBuilder().build().toByteArray();
   }
 
   /**
