@@ -41,4 +41,13 @@ public interface ContainerDispatcher {
   ContainerCommandResponseProto dispatch(ContainerCommandRequestProto msg)
       throws IOException;
 
+  /**
+   * Initialize the Dispatcher.
+   */
+  void init();
+
+  /**
+   * Shutdown Dispatcher services.
+   */
+  void shutdown();
 }

@@ -81,7 +81,7 @@ public class OzoneContainer {
     this.keyManager = new KeyManagerImpl(manager, ozoneConfig);
     manager.setKeyManager(this.keyManager);
 
-    this.dispatcher = new Dispatcher(manager);
+    this.dispatcher = new Dispatcher(manager, this.ozoneConfig);
     server = new XceiverServer(this.ozoneConfig, this.dispatcher);
   }
 
@@ -92,6 +92,7 @@ public class OzoneContainer {
    */
   public void start() throws IOException {
     server.start();
+    dispatcher.init();
   }
 
   /**
@@ -129,6 +130,8 @@ public class OzoneContainer {
   public void stop() {
     LOG.info("Attempting to stop container services.");
     server.stop();
+    dispatcher.shutdown();
+
     try {
       this.manager.writeLock();
       this.chunkManager.shutdown();
