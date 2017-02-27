@@ -532,7 +532,7 @@ public class TestAMRMClient {
                   List<? extends Collection<ContainerRequest>> matches,
                   int matchSize) {
     assertEquals(1, matches.size());
-    assertEquals(matches.get(0).size(), matchSize);
+    assertEquals(matchSize, matches.get(0).size());
   }
   
   @Test (timeout=60000)
