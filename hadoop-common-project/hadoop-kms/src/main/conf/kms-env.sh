@@ -66,6 +66,10 @@
 #
 # export KMS_MAX_HTTP_HEADER_SIZE=65536
 
+# The comma separated list of encryption ciphers for SSL
+#
+# export KMS_SSL_CIPHERS=
+
 # The location of the SSL keystore if using SSL
 #
 # export KMS_SSL_KEYSTORE_FILE=${HOME}/.keystore

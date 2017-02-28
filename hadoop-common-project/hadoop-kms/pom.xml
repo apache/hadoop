@@ -394,6 +394,9 @@
                     <delete dir="${project.build.directory}/tomcat.exp"/>
                     <delete dir="${kms.tomcat.dist.dir}/webapps"/>
                     <mkdir dir="${kms.tomcat.dist.dir}/webapps"/>
+                    <delete file="${kms.tomcat.dist.dir}/conf/catalina-default.properties"/>
+                    <copy file="${basedir}/src/main/tomcat/catalina-default.properties"
+                          toDir="${kms.tomcat.dist.dir}/conf"/>
                     <delete file="${kms.tomcat.dist.dir}/conf/server.xml"/>
                     <copy file="${basedir}/src/main/tomcat/server.xml"
                           toDir="${kms.tomcat.dist.dir}/conf"/>

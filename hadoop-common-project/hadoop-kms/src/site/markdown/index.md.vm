@@ -301,7 +301,11 @@ The answer to "What is your first and last name?" (i.e. "CN") must be the hostna
 
 NOTE: You need to restart the KMS for the configuration changes to take effect.
 
-NOTE: Some old SSL clients may use weak ciphers that are not supported by the KMS server. It is recommended to upgrade the SSL client.
+In order to support some old SSL clients, the default encryption ciphers
+include a few relatively weaker ciphers. Set environment variable
+`KMS_SSL_CIPHERS` or property `kms.ssl.ciphers` to override. The value is a
+comma separated list of ciphers documented in this
+[Tomcat Wiki](https://wiki.apache.org/tomcat/Security/Ciphers).
 
 $H4 ACLs (Access Control Lists)
 

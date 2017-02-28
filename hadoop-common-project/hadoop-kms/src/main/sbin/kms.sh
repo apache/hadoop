@@ -59,24 +59,45 @@ CATALINA_OPTS_DISP=`echo ${CATALINA_OPTS} | sed -e 's/trustStorePassword=[^ ]*/t
 print "Using   CATALINA_OPTS:       ${CATALINA_OPTS_DISP}"
 
 catalina_opts="-Dproc_kms"
-catalina_opts="${catalina_opts} -Dkms.home.dir=${KMS_HOME}";
-catalina_opts="${catalina_opts} -Dkms.config.dir=${KMS_CONFIG}";
-catalina_opts="${catalina_opts} -Dkms.log.dir=${KMS_LOG}";
-catalina_opts="${catalina_opts} -Dkms.temp.dir=${KMS_TEMP}";
-catalina_opts="${catalina_opts} -Dkms.admin.port=${KMS_ADMIN_PORT}";
-catalina_opts="${catalina_opts} -Dkms.http.port=${KMS_HTTP_PORT}";
-catalina_opts="${catalina_opts} -Dkms.protocol=${KMS_PROTOCOL}";
-catalina_opts="${catalina_opts} -Dkms.max.threads=${KMS_MAX_THREADS}";
-catalina_opts="${catalina_opts} -Dkms.accept.count=${KMS_ACCEPT_COUNT}";
-catalina_opts="${catalina_opts} -Dkms.acceptor.thread.count=${KMS_ACCEPTOR_THREAD_COUNT}";
-catalina_opts="${catalina_opts} -Dkms.max.http.header.size=${KMS_MAX_HTTP_HEADER_SIZE}";
-catalina_opts="${catalina_opts} -Dkms.ssl.keystore.file=${KMS_SSL_KEYSTORE_FILE}";
 catalina_opts="${catalina_opts} -Djava.library.path=${JAVA_LIBRARY_PATH}";
 
 print "Adding to CATALINA_OPTS:     ${catalina_opts}"
 print "Found KMS_SSL_KEYSTORE_PASS:     `echo ${KMS_SSL_KEYSTORE_PASS} | sed 's/./*/g'`"
 
 export CATALINA_OPTS="${CATALINA_OPTS} ${catalina_opts}"
+
+catalina_init_properties() {
+  cp "${CATALINA_BASE}/conf/catalina-default.properties" \
+    "${CATALINA_BASE}/conf/catalina.properties"
+}
+
+catalina_set_property() {
+  local key=$1
+  local value=$2
+  [[ -z "${value}" ]] && return
+  local disp_value="${3:-${value}}"
+  print "Setting catalina property ${key} to ${disp_value}"
+  echo "${key}=${value}" >> "${CATALINA_BASE}/conf/catalina.properties"
+}
+
+if [[ "${1}" = "start" || "${1}" = "run" ]]; then
+  catalina_init_properties
+  catalina_set_property "kms.home.dir" "${KMS_HOME}"
+  catalina_set_property "kms.config.dir" "${KMS_CONFIG}"
+  catalina_set_property "kms.log.dir" "${KMS_LOG}"
+  catalina_set_property "kms.temp.dir" "${KMS_TEMP}"
+  catalina_set_property "kms.admin.port" "${KMS_ADMIN_PORT}"
+  catalina_set_property "kms.http.port" "${KMS_HTTP_PORT}"
+  catalina_set_property "kms.protocol" "${KMS_PROTOCOL}"
+  catalina_set_property "kms.max.threads" "${KMS_MAX_THREADS}"
+  catalina_set_property "kms.accept.count" "${KMS_ACCEPT_COUNT}"
+  catalina_set_property "kms.acceptor.thread.count" \
+    "${KMS_ACCEPTOR_THREAD_COUNT}"
+  catalina_set_property "kms.max.http.header.size" \
+    "${KMS_MAX_HTTP_HEADER_SIZE}"
+  catalina_set_property "kms.ssl.ciphers" "${KMS_SSL_CIPHERS}"
+  catalina_set_property "kms.ssl.keystore.file" "${KMS_SSL_KEYSTORE_FILE}"
+fi
 
 # A bug in catalina.sh script does not use CATALINA_OPTS for stopping the server
 #
@@ -95,4 +116,8 @@ if [ ! "${KMS_SSL_KEYSTORE_PASS}" = "" ] || [ ! "${KMS_SSL_TRUSTSTORE_PASS}" = "
     | sed 's/"_kms_ssl_truststore_pass_"/'"\"${KMS_SSL_TRUSTSTORE_PASS_ESCAPED}\""'/g' > ${CATALINA_BASE}/conf/ssl-server.xml
 fi 
 
-exec ${KMS_CATALINA_HOME}/bin/catalina.sh "$@"
+if [ "${KMS_SILENT}" != "true" ]; then
+  exec "${KMS_CATALINA_HOME}/bin/catalina.sh" "$@"
+else
+  exec "${KMS_CATALINA_HOME}/bin/catalina.sh" "$@" > /dev/null
+fi

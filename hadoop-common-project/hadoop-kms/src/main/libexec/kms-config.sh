@@ -56,7 +56,10 @@ print "Setting KMS_HOME:          ${KMS_HOME}"
 if [ -e "${KMS_HOME}/bin/kms-env.sh" ]; then
   print "Sourcing:                    ${KMS_HOME}/bin/kms-env.sh"
   source ${KMS_HOME}/bin/kms-env.sh
-  grep "^ *export " ${KMS_HOME}/bin/kms-env.sh | sed 's/ *export/  setting/'
+  if [ "${KMS_SILENT}" != "true" ]; then
+    grep "^ *export " "${KMS_HOME}/bin/kms-env.sh" |
+      sed 's/ *export/  setting/'
+  fi
 fi
 
 # verify that the sourced env file didn't change KMS_HOME
@@ -81,7 +84,10 @@ kms_config=${KMS_CONFIG}
 if [ -e "${KMS_CONFIG}/kms-env.sh" ]; then
   print "Sourcing:                    ${KMS_CONFIG}/kms-env.sh"
   source ${KMS_CONFIG}/kms-env.sh
-  grep "^ *export " ${KMS_CONFIG}/kms-env.sh | sed 's/ *export/  setting/'
+  if [ "${KMS_SILENT}" != "true" ]; then
+    grep "^ *export " "${KMS_CONFIG}/kms-env.sh" |
+      sed 's/ *export/  setting/'
+  fi
 fi
 
 # verify that the sourced env file didn't change KMS_HOME
@@ -169,6 +175,31 @@ if [ "${KMS_MAX_HTTP_HEADER_SIZE}" = "" ]; then
   print "Setting KMS_MAX_HTTP_HEADER_SIZE:     ${KMS_MAX_HTTP_HEADER_SIZE}"
 else
   print "Using   KMS_MAX_HTTP_HEADER_SIZE:     ${KMS_MAX_HTTP_HEADER_SIZE}"
+fi
+
+if [ "${KMS_SSL_CIPHERS}" = "" ]; then
+  export KMS_SSL_CIPHERS="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+  KMS_SSL_CIPHERS+=",TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+  KMS_SSL_CIPHERS+=",TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384"
+  KMS_SSL_CIPHERS+=",TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"
+  KMS_SSL_CIPHERS+=",TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384"
+  KMS_SSL_CIPHERS+=",TLS_ECDH_RSA_WITH_AES_256_CBC_SHA"
+  KMS_SSL_CIPHERS+=",TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256"
+  KMS_SSL_CIPHERS+=",TLS_ECDH_RSA_WITH_AES_128_CBC_SHA"
+  KMS_SSL_CIPHERS+=",TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA"
+  KMS_SSL_CIPHERS+=",TLS_RSA_WITH_AES_256_CBC_SHA256"
+  KMS_SSL_CIPHERS+=",TLS_RSA_WITH_AES_256_CBC_SHA"
+  KMS_SSL_CIPHERS+=",TLS_RSA_WITH_AES_128_CBC_SHA256"
+  KMS_SSL_CIPHERS+=",TLS_RSA_WITH_AES_128_CBC_SHA"
+  KMS_SSL_CIPHERS+=",TLS_RSA_WITH_3DES_EDE_CBC_SHA"
+  KMS_SSL_CIPHERS+=",TLS_DHE_RSA_WITH_AES_256_CBC_SHA256"
+  KMS_SSL_CIPHERS+=",TLS_DHE_RSA_WITH_AES_256_CBC_SHA"
+  KMS_SSL_CIPHERS+=",TLS_DHE_RSA_WITH_AES_128_CBC_SHA256"
+  KMS_SSL_CIPHERS+=",TLS_DHE_RSA_WITH_AES_128_CBC_SHA"
+  KMS_SSL_CIPHERS+=",TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA"
+  print "Setting KMS_SSL_CIPHERS:           ${KMS_SSL_CIPHERS}"
+else
+  print "Using   KMS_SSL_CIPHERS:           ${KMS_SSL_CIPHERS}"
 fi
 
 if [ "${KMS_SSL_KEYSTORE_FILE}" = "" ]; then
