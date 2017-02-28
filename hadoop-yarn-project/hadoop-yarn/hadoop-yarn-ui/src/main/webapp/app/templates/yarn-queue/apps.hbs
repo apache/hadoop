@@ -19,8 +19,7 @@
 <div class="row">
   <div class="col-lg-12 container-fluid">
     {{#if model.apps}}
-      {{app-table table-id="apps-table" arr=model.apps}}
-      {{simple-table table-id="apps-table" bFilter=true colTypes="elapsed-time" colTargets="7"}}
+      {{em-table columns=columns rows=model.apps}}
     {{else}}
       <h4 align = "center">Could not find any applications from this cluster</h4>
     {{/if}}

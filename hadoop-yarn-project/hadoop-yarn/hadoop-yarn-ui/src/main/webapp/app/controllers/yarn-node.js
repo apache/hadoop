@@ -20,8 +20,9 @@ import Ember from 'ember';
 
 export default Ember.Controller.extend({
 
-  breadcrumbs: Ember.computed("model.attempt.appId", function () {
+  breadcrumbs: Ember.computed("model.nodeInfo", function () {
     var nodeInfo = this.get("model.nodeInfo");
+
     return [{
       text: "Home",
       routeName: 'application'

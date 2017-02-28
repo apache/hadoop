@@ -31,8 +31,7 @@ export default AbstractRoute.extend({
     return Ember.RSVP.hash({
       selected : queueName,
       queues: this.store.query('yarn-queue', {}),
-      selectedQueue : undefined,
-      apps: this.store.findAll('yarn-app', {reload: true})
+      selectedQueue : undefined
     });
   },
 

@@ -54,7 +54,6 @@ export default BaseChartComponent.extend({
     // 50 is for title
     var outerRadius = (h - 50 - 2 * layout.margin) / 2;
     var innerRadius = outerRadius * 0.618;
-    console.log("inner:" + innerRadius + " outer:" + outerRadius);
 
     var arc = d3.svg.arc()
       .innerRadius(innerRadius)

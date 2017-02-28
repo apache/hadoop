@@ -36,7 +36,6 @@ export default BaseUsageDonutChart.extend({
           value: v.toFixed(2)
         });
 
-        console.log(v);
         avail = avail - v;
       }
     }.bind(this));
