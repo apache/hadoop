@@ -93,7 +93,7 @@ public class TestS3AAWSCredentialsProvider {
 
     URI uri = testFile.toUri();
     AWSCredentialProviderList list = S3AUtils.createAWSCredentialProviderSet(
-        uri, conf, uri);
+        uri, conf);
     List<Class<? extends AWSCredentialsProvider>> expectedClasses =
         Arrays.asList(
             TemporaryAWSCredentialsProvider.class,
@@ -107,9 +107,9 @@ public class TestS3AAWSCredentialsProvider {
     URI uri1 = new URI("s3a://bucket1"), uri2 = new URI("s3a://bucket2");
     Configuration conf = new Configuration();
     AWSCredentialProviderList list1 = S3AUtils.createAWSCredentialProviderSet(
-        uri1, conf, uri1);
+        uri1, conf);
     AWSCredentialProviderList list2 = S3AUtils.createAWSCredentialProviderSet(
-        uri2, conf, uri2);
+        uri2, conf);
     List<Class<? extends AWSCredentialsProvider>> expectedClasses =
         Arrays.asList(
             BasicAWSCredentialsProvider.class,
@@ -132,9 +132,9 @@ public class TestS3AAWSCredentialsProvider {
             AnonymousAWSCredentialsProvider.class);
     conf.set(AWS_CREDENTIALS_PROVIDER, buildClassListString(expectedClasses));
     AWSCredentialProviderList list1 = S3AUtils.createAWSCredentialProviderSet(
-        uri1, conf, uri1);
+        uri1, conf);
     AWSCredentialProviderList list2 = S3AUtils.createAWSCredentialProviderSet(
-        uri2, conf, uri2);
+        uri2, conf);
     assertCredentialProviders(expectedClasses, list1);
     assertCredentialProviders(expectedClasses, list2);
     assertSameInstanceProfileCredentialsProvider(list1.getProviders().get(1),
@@ -150,9 +150,9 @@ public class TestS3AAWSCredentialsProvider {
             InstanceProfileCredentialsProvider.class);
     conf.set(AWS_CREDENTIALS_PROVIDER, buildClassListString(expectedClasses));
     AWSCredentialProviderList list1 = S3AUtils.createAWSCredentialProviderSet(
-        uri1, conf, uri1);
+        uri1, conf);
     AWSCredentialProviderList list2 = S3AUtils.createAWSCredentialProviderSet(
-        uri2, conf, uri2);
+        uri2, conf);
     assertCredentialProviders(expectedClasses, list1);
     assertCredentialProviders(expectedClasses, list2);
     assertSameInstanceProfileCredentialsProvider(list1.getProviders().get(0),
@@ -226,7 +226,7 @@ public class TestS3AAWSCredentialsProvider {
         conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE));
     expectException(IOException.class, expectedErrorText);
     URI uri = testFile.toUri();
-    S3AUtils.createAWSCredentialProviderSet(uri, conf, uri);
+    S3AUtils.createAWSCredentialProviderSet(uri, conf);
   }
 
   /**

@@ -52,11 +52,10 @@ interface S3ClientFactory {
    * because both values may be useful in logging.
    *
    * @param name raw input S3A file system URI
-   * @param uri validated form of S3A file system URI
    * @return S3 client
    * @throws IOException IO problem
    */
-  AmazonS3 createS3Client(URI name, URI uri) throws IOException;
+  AmazonS3 createS3Client(URI name) throws IOException;
 
   /**
    * The default factory implementation, which calls the AWS SDK to configure
@@ -68,10 +67,10 @@ interface S3ClientFactory {
     private static final Logger LOG = S3AFileSystem.LOG;
 
     @Override
-    public AmazonS3 createS3Client(URI name, URI uri) throws IOException {
+    public AmazonS3 createS3Client(URI name) throws IOException {
       Configuration conf = getConf();
       AWSCredentialsProvider credentials =
-          createAWSCredentialProviderSet(name, conf, uri);
+          createAWSCredentialProviderSet(name, conf);
       ClientConfiguration awsConf = new ClientConfiguration();
       initConnectionSettings(conf, awsConf);
       initProxySupport(conf, awsConf);

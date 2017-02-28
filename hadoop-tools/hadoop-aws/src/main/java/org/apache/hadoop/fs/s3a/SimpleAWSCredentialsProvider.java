@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.ProviderUtils;
 
 import java.io.IOException;
-import java.net.URI;
 
 import static org.apache.hadoop.fs.s3a.Constants.ACCESS_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SECRET_KEY;
@@ -51,7 +50,7 @@ public class SimpleAWSCredentialsProvider implements AWSCredentialsProvider {
   private String secretKey;
   private IOException lookupIOE;
 
-  public SimpleAWSCredentialsProvider(URI uri, Configuration conf) {
+  public SimpleAWSCredentialsProvider(Configuration conf) {
     try {
       Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
           conf, S3AFileSystem.class);
