@@ -277,7 +277,8 @@ public class TestClientRMService {
     } catch (ApplicationNotFoundException ex) {
       Assert.assertEquals(ex.getMessage(),
           "Application with id '" + request.getApplicationId()
-              + "' doesn't exist in RM.");
+              + "' doesn't exist in RM. Please check that the "
+              + "job submission was successful.");
     }
   }
 

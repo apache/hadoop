@@ -357,7 +357,8 @@ public class ClientRMService extends AbstractService implements
       // If the RM doesn't have the application, throw
       // ApplicationNotFoundException and let client to handle.
       throw new ApplicationNotFoundException("Application with id '"
-          + applicationId + "' doesn't exist in RM.");
+          + applicationId + "' doesn't exist in RM. Please check "
+          + "that the job submission was successful.");
     }
 
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
@@ -391,7 +392,8 @@ public class ClientRMService extends AbstractService implements
       // ApplicationNotFoundException and let client to handle.
       throw new ApplicationNotFoundException("Application with id '"
           + request.getApplicationAttemptId().getApplicationId()
-          + "' doesn't exist in RM.");
+          + "' doesn't exist in RM. Please check that the job "
+          + "submission was successful.");
     }
 
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
@@ -430,7 +432,8 @@ public class ClientRMService extends AbstractService implements
       // If the RM doesn't have the application, throw
       // ApplicationNotFoundException and let client to handle.
       throw new ApplicationNotFoundException("Application with id '" + appId
-          + "' doesn't exist in RM.");
+          + "' doesn't exist in RM. Please check that the job submission "
+          + "was successful.");
     }
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
         ApplicationAccessType.VIEW_APP, application);
@@ -478,7 +481,8 @@ public class ClientRMService extends AbstractService implements
       // If the RM doesn't have the application, throw
       // ApplicationNotFoundException and let client to handle.
       throw new ApplicationNotFoundException("Application with id '" + appId
-          + "' doesn't exist in RM.");
+          + "' doesn't exist in RM. Please check that the job submission "
+          + "was successful.");
     }
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
         ApplicationAccessType.VIEW_APP, application);
@@ -528,7 +532,8 @@ public class ClientRMService extends AbstractService implements
       // If the RM doesn't have the application, throw
       // ApplicationNotFoundException and let client to handle.
       throw new ApplicationNotFoundException("Application with id '" + appId
-          + "' doesn't exist in RM.");
+          + "' doesn't exist in RM. Please check that the job submission "
+          + "was successful.");
     }
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
         ApplicationAccessType.VIEW_APP, application);
