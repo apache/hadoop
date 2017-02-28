@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -60,9 +59,7 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
@@ -85,7 +82,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeDecreaseContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
@@ -99,7 +95,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
@@ -872,43 +868,6 @@ public class CapacityScheduler extends
     }
   }
 
-  private LeafQueue updateIncreaseRequests(
-      List<UpdateContainerRequest> increaseRequests, FiCaSchedulerApp app) {
-    // When application has some pending to-be-removed resource requests,
-    app.removedToBeRemovedIncreaseRequests();
-
-    if (null == increaseRequests || increaseRequests.isEmpty()) {
-      return null;
-    }
-
-    // Pre-process increase requests
-    List<SchedContainerChangeRequest> schedIncreaseRequests =
-        createSchedContainerChangeRequests(increaseRequests, true);
-    LeafQueue leafQueue = (LeafQueue) app.getQueue();
-
-    try {
-      /*
-       * Acquire application's lock here to make sure application won't
-       * finish when updateIncreaseRequest is called.
-       */
-      app.getWriteLock().lock();
-      // make sure we aren't stopping/removing the application
-      // when the allocate comes in
-      if (app.isStopped()) {
-        return null;
-      }
-      // Process increase resource requests
-      if (app.updateIncreaseRequests(schedIncreaseRequests)) {
-        return leafQueue;
-      }
-    } finally {
-      app.getWriteLock().unlock();
-    }
-
-
-    return null;
-  }
-
   @Override
   @Lock(Lock.NoLock.class)
   public Allocation allocate(ApplicationAttemptId applicationAttemptId,
@@ -920,21 +879,13 @@ public class CapacityScheduler extends
       return EMPTY_ALLOCATION;
     }
 
-    // Handle promotions and demotions
-    handleExecutionTypeUpdates(
-        application, updateRequests.getPromotionRequests(),
-        updateRequests.getDemotionRequests());
+    // Handle all container updates
+    handleContainerUpdates(application, updateRequests);
 
     // Release containers
     releaseContainers(release, application);
 
-    // update increase requests
-    LeafQueue updateDemandForQueue =
-        updateIncreaseRequests(updateRequests.getIncreaseRequests(),
-        application);
-
-    // Decrease containers
-    decreaseContainers(updateRequests.getDecreaseRequests(), application);
+    LeafQueue updateDemandForQueue = null;
 
     // Sanity check for new allocation requests
     normalizeRequests(ask);
@@ -959,8 +910,7 @@ public class CapacityScheduler extends
         }
 
         // Update application requests
-        if (application.updateResourceRequests(ask) && (updateDemandForQueue
-            == null)) {
+        if (application.updateResourceRequests(ask)) {
           updateDemandForQueue = (LeafQueue) application.getQueue();
         }
 
@@ -1466,7 +1416,7 @@ public class CapacityScheduler extends
           (ContainerExpiredSchedulerEvent) event;
       ContainerId containerId = containerExpiredEvent.getContainerId();
       if (containerExpiredEvent.isIncrease()) {
-        rollbackContainerResource(containerId);
+        rollbackContainerUpdate(containerId);
       } else {
         completedContainer(getRMContainer(containerId),
             SchedulerUtils.createAbnormalContainerStatus(
@@ -1618,31 +1568,6 @@ public class CapacityScheduler extends
     }
   }
 
-  private void rollbackContainerResource(
-      ContainerId containerId) {
-    RMContainer rmContainer = getRMContainer(containerId);
-    if (rmContainer == null) {
-      LOG.info("Cannot rollback resource for container " + containerId
-          + ". The container does not exist.");
-      return;
-    }
-    FiCaSchedulerApp application = getCurrentAttemptForContainer(containerId);
-    if (application == null) {
-      LOG.info("Cannot rollback resource for container " + containerId
-          + ". The application that the container "
-          + "belongs to does not exist.");
-      return;
-    }
-    LOG.info("Roll back resource for container " + containerId);
-
-    SchedulerNode schedulerNode = getSchedulerNode(
-        rmContainer.getAllocatedNode());
-    SchedContainerChangeRequest decreaseRequest =
-        new SchedContainerChangeRequest(this.rmContext, schedulerNode,
-            rmContainer, rmContainer.getLastConfirmedResource());
-    decreaseContainer(decreaseRequest, application);
-  }
-
   @Override
   protected void completedContainerInternal(
       RMContainer rmContainer, ContainerStatus containerStatus,
@@ -1674,32 +1599,6 @@ public class CapacityScheduler extends
     LeafQueue queue = (LeafQueue) application.getQueue();
     queue.completedContainer(getClusterResource(), application, node,
         rmContainer, containerStatus, event, null, true);
-  }
-
-  @Override
-  protected void decreaseContainer(SchedContainerChangeRequest decreaseRequest,
-      SchedulerApplicationAttempt attempt) {
-    RMContainer rmContainer = decreaseRequest.getRMContainer();
-    // Check container status before doing decrease
-    if (rmContainer.getState() != RMContainerState.RUNNING) {
-      LOG.info(
-          "Trying to decrease a container not in RUNNING state, container="
-              + rmContainer + " state=" + rmContainer.getState().name());
-      return;
-    }
-    FiCaSchedulerApp app = (FiCaSchedulerApp) attempt;
-    LeafQueue queue = (LeafQueue) attempt.getQueue();
-    try {
-      queue.decreaseContainer(getClusterResource(), decreaseRequest, app);
-      // Notify RMNode that the container can be pulled by NodeManager in the
-      // next heartbeat
-      this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMNodeDecreaseContainerEvent(decreaseRequest.getNodeId(),
-              Collections.singletonList(rmContainer.getContainer())));
-    } catch (InvalidResourceRequestException e) {
-      LOG.warn("Error happens when checking decrease request, Ignoring.."
-          + " exception=", e);
-    }
   }
 
   @Lock(Lock.NoLock.class)
@@ -2386,8 +2285,8 @@ public class CapacityScheduler extends
             getSchedulerContainer(rmContainer, true),
             getSchedulerContainersToRelease(csAssignment),
             getSchedulerContainer(csAssignment.getFulfilledReservedContainer(),
-                false), csAssignment.isIncreasedAllocation(),
-            csAssignment.getType(), csAssignment.getRequestLocalityType(),
+                false), csAssignment.getType(),
+            csAssignment.getRequestLocalityType(),
             csAssignment.getSchedulingMode() != null ?
                 csAssignment.getSchedulingMode() :
                 SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY,
@@ -2403,8 +2302,8 @@ public class CapacityScheduler extends
             getSchedulerContainer(rmContainer, false),
             getSchedulerContainersToRelease(csAssignment),
             getSchedulerContainer(csAssignment.getFulfilledReservedContainer(),
-                false), csAssignment.isIncreasedAllocation(),
-            csAssignment.getType(), csAssignment.getRequestLocalityType(),
+                false), csAssignment.getType(),
+            csAssignment.getRequestLocalityType(),
             csAssignment.getSchedulingMode() != null ?
                 csAssignment.getSchedulingMode() :
                 SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY,
