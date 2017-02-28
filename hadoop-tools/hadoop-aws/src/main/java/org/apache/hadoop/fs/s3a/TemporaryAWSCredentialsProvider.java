@@ -24,7 +24,6 @@ import com.amazonaws.auth.AWSCredentials;
 import org.apache.commons.lang.StringUtils;
 
 import java.io.IOException;
-import java.net.URI;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -51,7 +50,7 @@ public class TemporaryAWSCredentialsProvider implements AWSCredentialsProvider {
   private String sessionToken;
   private IOException lookupIOE;
 
-  public TemporaryAWSCredentialsProvider(URI uri, Configuration conf) {
+  public TemporaryAWSCredentialsProvider(Configuration conf) {
     try {
       Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
           conf, S3AFileSystem.class);
