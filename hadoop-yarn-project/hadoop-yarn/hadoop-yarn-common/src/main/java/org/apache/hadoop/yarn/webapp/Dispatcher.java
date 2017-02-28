@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.webapp;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -115,6 +117,15 @@ public class Dispatcher extends HttpServlet {
     String pathInfo = req.getPathInfo();
     if (pathInfo == null) {
       pathInfo = "/";
+    }
+    // The implementation class of HttpServletRequest in
+    // Guice-3.0 does not decode paths that are encoded,
+    // decode path info here for further operation.
+    try {
+      pathInfo = new URI(pathInfo).getPath();
+    }  catch (URISyntaxException ex) {
+      // Just leave it alone for compatibility.
+      LOG.error(pathInfo + ": Failed to decode path.", ex);
     }
     Controller.RequestContext rc =
         injector.getInstance(Controller.RequestContext.class);

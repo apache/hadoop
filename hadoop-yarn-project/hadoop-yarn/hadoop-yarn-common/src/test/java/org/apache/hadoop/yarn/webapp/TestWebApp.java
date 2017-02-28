@@ -27,12 +27,12 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -258,6 +258,35 @@ public class TestWebApp {
       assertEquals(404, getResponseCode(baseUrl +"test/goo"));
       assertEquals(200, getResponseCode(baseUrl +"ws/v1/test"));
       assertTrue(getContent(baseUrl +"ws/v1/test").contains("myInfo"));
+    } finally {
+      app.stop();
+    }
+  }
+
+  @Test public void testEncodedUrl() throws Exception {
+    WebApp app =
+        WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
+          @Override
+          public void setup() {
+            bind(MyTestJAXBContextResolver.class);
+            bind(MyTestWebService.class);
+
+            route("/:foo", FooController.class);
+          }
+        });
+    String baseUrl = baseUrl(app);
+
+    try {
+      // Test encoded url
+      String rawPath = "localhost:8080";
+      String encodedUrl = baseUrl + "test/" +
+          URLEncoder.encode(rawPath, "UTF-8");
+      assertEquals("foo" + rawPath, getContent(encodedUrl).trim());
+
+      rawPath = "@;%$";
+      encodedUrl = baseUrl + "test/" +
+          URLEncoder.encode(rawPath, "UTF-8");
+      assertEquals("foo" + rawPath, getContent(encodedUrl).trim());
     } finally {
       app.stop();
     }
