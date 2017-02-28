@@ -17,27 +17,15 @@
  */
 
 import Ember from 'ember';
+import TableDefinition from 'em-table/utils/table-definition';
+import AppTableController from '../app-table-columns';
 
-import AbstractRoute from './abstract';
+export default AppTableController.extend({
+  // Your custom instance of table definition
+  tableDefinition: TableDefinition.create(),
 
-export default AbstractRoute.extend({
-  model(param) {
-    return Ember.RSVP.hash({
-      selected : param.queue_name,
-      queues: this.store.query('yarn-queue', {}),
-      selectedQueue : undefined,
-      apps: this.store.query('yarn-app', {
-        queue: param.queue_name
-      })
-    });
-  },
-
-  afterModel(model) {
-    model.selectedQueue = this.store.peekRecord('yarn-queue', model.selected);
-  },
-
-  unloadAll() {
-    this.store.unloadAll('yarn-queue');
-    this.store.unloadAll('yarn-app');
-  }
+  // Search text alias, any change in controller's searchText would affect the table's searchText, and vice-versa.
+  _selectedObserver: Ember.on("init", Ember.observer("model.selected", function () {
+    this.set("tableDefinition.searchText", this.get("model.selected"));
+  })),
 });

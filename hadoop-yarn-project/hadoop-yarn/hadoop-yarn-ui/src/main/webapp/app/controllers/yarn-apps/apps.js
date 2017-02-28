@@ -16,28 +16,10 @@
  * limitations under the License.
  */
 
+
 import Ember from 'ember';
+import ColumnDef from 'em-table/utils/column-definition';
+import AppTableController from '../app-table-columns';
 
-import AbstractRoute from './abstract';
-
-export default AbstractRoute.extend({
-  model(param) {
-    return Ember.RSVP.hash({
-      selected : param.queue_name,
-      queues: this.store.query('yarn-queue', {}),
-      selectedQueue : undefined,
-      apps: this.store.query('yarn-app', {
-        queue: param.queue_name
-      })
-    });
-  },
-
-  afterModel(model) {
-    model.selectedQueue = this.store.peekRecord('yarn-queue', model.selected);
-  },
-
-  unloadAll() {
-    this.store.unloadAll('yarn-queue');
-    this.store.unloadAll('yarn-app');
-  }
+export default AppTableController.extend({
 });

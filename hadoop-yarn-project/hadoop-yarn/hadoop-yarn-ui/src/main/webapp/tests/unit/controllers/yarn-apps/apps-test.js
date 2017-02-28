@@ -16,28 +16,15 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
+import { moduleFor, test } from 'ember-qunit';
 
-import AbstractRoute from './abstract';
+moduleFor('controller:yarn-apps/apps', 'Unit | Controller | yarn apps/apps', {
+  // Specify the other units that are required for this test.
+  // needs: ['controller:foo']
+});
 
-export default AbstractRoute.extend({
-  model(param) {
-    return Ember.RSVP.hash({
-      selected : param.queue_name,
-      queues: this.store.query('yarn-queue', {}),
-      selectedQueue : undefined,
-      apps: this.store.query('yarn-app', {
-        queue: param.queue_name
-      })
-    });
-  },
-
-  afterModel(model) {
-    model.selectedQueue = this.store.peekRecord('yarn-queue', model.selected);
-  },
-
-  unloadAll() {
-    this.store.unloadAll('yarn-queue');
-    this.store.unloadAll('yarn-app');
-  }
+// Replace this with your real tests.
+test('it exists', function(assert) {
+  let controller = this.subject();
+  assert.ok(controller);
 });
