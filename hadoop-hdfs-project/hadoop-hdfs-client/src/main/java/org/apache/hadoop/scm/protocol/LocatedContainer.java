@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.protocol;
+package org.apache.hadoop.scm.protocol;
 
 import java.util.Set;
 

@@ -16,19 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.protocol;
+package org.apache.hadoop.scm.protocol;
 
 import java.io.IOException;
 import java.util.Set;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 /**
  * ContainerLocationProtocol is used by an HDFS node to find the set of nodes
  * that currently host a container.
  */
-@InterfaceAudience.Private
 public interface StorageContainerLocationProtocol {
 
   /**
