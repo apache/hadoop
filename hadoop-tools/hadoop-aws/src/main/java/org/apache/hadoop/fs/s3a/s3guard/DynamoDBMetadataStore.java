@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.document.BatchWriteItemOutcome;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
@@ -193,33 +193,20 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
   /**
    * A utility function to create DynamoDB instance.
-   * @param fs S3A file system.
+   * @param conf the file system configuration
+   * @param s3Region region of the associated S3 bucket (if any).
    * @return DynamoDB instance.
    */
-  @VisibleForTesting
-  static DynamoDB createDynamoDB(S3AFileSystem fs) throws IOException {
-    Preconditions.checkNotNull(fs);
-    return createDynamoDB(fs, fs.getBucketLocation());
-  }
-
-  /**
-   * A utility function to create DynamoDB instance.
-   * @param fs S3A file system.
-   * @param region region of the S3A file system.
-   * @return DynamoDB instance.
-   */
-  private static DynamoDB createDynamoDB(S3AFileSystem fs, String region)
+  private static DynamoDB createDynamoDB(Configuration conf, String s3Region)
       throws IOException {
-    Preconditions.checkNotNull(fs);
-    Preconditions.checkNotNull(region);
-    final Configuration conf = fs.getConf();
-    Class<? extends DynamoDBClientFactory> cls = conf.getClass(
+    Preconditions.checkNotNull(conf);
+    final Class<? extends DynamoDBClientFactory> cls = conf.getClass(
         S3GUARD_DDB_CLIENT_FACTORY_IMPL,
         S3GUARD_DDB_CLIENT_FACTORY_IMPL_DEFAULT,
         DynamoDBClientFactory.class);
-    LOG.debug("Creating dynamo DB client {}", cls);
-    AmazonDynamoDBClient dynamoDBClient = ReflectionUtils.newInstance(cls, conf)
-        .createDynamoDBClient(fs.getUri(), region);
+    LOG.debug("Creating DynamoDB client {} with S3 region {}", cls, s3Region);
+    final AmazonDynamoDB dynamoDBClient = ReflectionUtils.newInstance(cls, conf)
+        .createDynamoDBClient(s3Region);
     return new DynamoDB(dynamoDBClient);
   }
 
@@ -232,13 +219,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     region = s3afs.getBucketLocation();
     username = s3afs.getUsername();
     conf = s3afs.getConf();
-    Class<? extends DynamoDBClientFactory> cls = conf.getClass(
-        S3GUARD_DDB_CLIENT_FACTORY_IMPL,
-        S3GUARD_DDB_CLIENT_FACTORY_IMPL_DEFAULT,
-        DynamoDBClientFactory.class);
-    AmazonDynamoDBClient dynamoDBClient = ReflectionUtils.newInstance(cls, conf)
-        .createDynamoDBClient(s3afs.getUri(), region);
-    dynamoDB = new DynamoDB(dynamoDBClient);
+    dynamoDB = createDynamoDB(conf, region);
 
     // use the bucket as the DynamoDB table name if not specified in config
     tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY, bucket);
@@ -269,18 +250,12 @@ public class DynamoDBMetadataStore implements MetadataStore {
     tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY);
     Preconditions.checkArgument(!StringUtils.isEmpty(tableName),
         "No DynamoDB table name configured!");
-    username = UserGroupInformation.getCurrentUser().getShortUserName();
+    region = conf.getTrimmed(S3GUARD_DDB_REGION_KEY);
+    Preconditions.checkArgument(!StringUtils.isEmpty(region),
+        "No DynamoDB region configured!");
+    dynamoDB = createDynamoDB(conf, region);
 
-    Class<? extends DynamoDBClientFactory> clsDdb = conf.getClass(
-        S3GUARD_DDB_CLIENT_FACTORY_IMPL,
-        S3GUARD_DDB_CLIENT_FACTORY_IMPL_DEFAULT,
-        DynamoDBClientFactory.class);
-    LOG.debug("Creating dynamo DB client {}", clsDdb);
-    AmazonDynamoDBClient dynamoDBClient =
-        ReflectionUtils.newInstance(clsDdb, conf)
-            .createDynamoDBClient(conf);
-    dynamoDB = new DynamoDB(dynamoDBClient);
-    region = dynamoDBClient.getEndpointPrefix();
+    username = UserGroupInformation.getCurrentUser().getShortUserName();
     setMaxRetries(conf);
 
     initTable();

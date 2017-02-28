@@ -1291,13 +1291,12 @@
 </property>
 
 <property>
-  <name>fs.s3a.s3guard.ddb.endpoint</name>
+  <name>fs.s3a.s3guard.ddb.region</name>
   <value></value>
   <description>
-    AWS DynamoDB endpoint to connect to. An up-to-date list is
+    AWS DynamoDB region to connect to. An up-to-date list is
     provided in the AWS Documentation: regions and endpoints. Without this
-    property, the AWS SDK will look up a regional endpoint automatically
-    according to the S3 region.
+    property, the S3Guard will operate table in the associated S3 bucket region.
   </description>
 </property>
 

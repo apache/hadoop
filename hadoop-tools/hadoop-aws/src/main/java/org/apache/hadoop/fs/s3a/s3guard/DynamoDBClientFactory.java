@@ -19,12 +19,12 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.io.IOException;
-import java.net.URI;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.amazonaws.services.s3.model.Region;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.DefaultS3ClientFactory;
 
-import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_ENDPOINT_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet;
 
 /**
@@ -46,89 +46,49 @@ interface DynamoDBClientFactory extends Configurable {
   Logger LOG = LoggerFactory.getLogger(DynamoDBClientFactory.class);
 
   /**
-   * To create a DynamoDB client with the same region as the s3 bucket.
+   * Create a DynamoDB client object from configuration.
    *
-   * @param fsUri FileSystem URI after any login details have been stripped
-   * @param s3Region the s3 region
+   * The DynamoDB client to create does not have to relate to any S3 buckets.
+   * All information needed to create a DynamoDB client is from the hadoop
+   * configuration. Specially, if the region is not configured, it will use the
+   * provided region parameter. If region is neither configured nor provided,
+   * it will indicate an error.
+   *
+   * @param defaultRegion the default region of the AmazonDynamoDB client
    * @return a new DynamoDB client
    * @throws IOException if any IO error happens
    */
-  AmazonDynamoDBClient createDynamoDBClient(URI fsUri, String s3Region)
-      throws IOException;
+  AmazonDynamoDB createDynamoDBClient(String defaultRegion) throws IOException;
 
   /**
-   * To create a DynamoDB client against the given endpoint in config.
-   *
-   * This DynamoDB client does not relate to any S3 buckets so the region is
-   * determined implicitly by the endpoint.
-   *
-   * @return a new DynamoDB client
-   * @throws IOException if any IO error happens
-   */
-  AmazonDynamoDBClient createDynamoDBClient(Configuration conf)
-      throws IOException;
-
-  /**
-   * The default implementation for creating an AmazonDynamoDBClient.
+   * The default implementation for creating an AmazonDynamoDB.
    */
   class DefaultDynamoDBClientFactory extends Configured
       implements DynamoDBClientFactory {
     @Override
-    public AmazonDynamoDBClient createDynamoDBClient(URI fsUri, String s3Region)
+    public AmazonDynamoDB createDynamoDBClient(String defaultRegion)
         throws IOException {
       assert getConf() != null : "Should have been configured before usage";
-      Region region;
-      try {
-        region = Region.fromValue(s3Region);
-      } catch (IllegalArgumentException e) {
-        final String msg = "Region '" + s3Region +
-            "' is invalid; should use the same region as S3 bucket";
-        LOG.error(msg);
-        throw new IllegalArgumentException(msg, e);
-      }
-      LOG.debug("Creating DynamoDBClient for fsUri {} in region {}",
-          fsUri, region);
 
       final Configuration conf = getConf();
-      final AWSCredentialsProvider credentials =
-          createAWSCredentialProviderSet(fsUri, conf, fsUri);
-      final ClientConfiguration awsConf =
-          DefaultS3ClientFactory.createAwsConf(conf);
-      AmazonDynamoDBClient ddb = new AmazonDynamoDBClient(credentials, awsConf);
-
-      ddb.withRegion(region.toAWSRegion());
-      final String endPoint = conf.getTrimmed(S3GUARD_DDB_ENDPOINT_KEY);
-      if (StringUtils.isNotEmpty(endPoint)) {
-        setEndPoint(ddb, endPoint);
-      }
-      return ddb;
-    }
-
-    @Override
-    public AmazonDynamoDBClient createDynamoDBClient(Configuration conf)
-        throws IOException {
       final AWSCredentialsProvider credentials =
           createAWSCredentialProviderSet(null, conf, null);
       final ClientConfiguration awsConf =
           DefaultS3ClientFactory.createAwsConf(conf);
-      AmazonDynamoDBClient ddb = new AmazonDynamoDBClient(credentials, awsConf);
-      setEndPoint(ddb, conf.getTrimmed(S3GUARD_DDB_ENDPOINT_KEY));
 
-      return ddb;
-    }
-
-    /**
-     * Helper method to set the endpoint for an AmazonDynamoDBClient.
-     */
-    private static void setEndPoint(AmazonDynamoDBClient ddb, String endPoint) {
-      assert ddb != null;
-      try {
-        ddb.withEndpoint(endPoint);
-      } catch (IllegalArgumentException e) {
-        final String msg = "Incorrect DynamoDB endpoint: " + endPoint;
-        LOG.error(msg, e);
-        throw new IllegalArgumentException(msg, e);
+      String region = conf.getTrimmed(S3GUARD_DDB_REGION_KEY);
+      if (StringUtils.isEmpty(region)) {
+        region = defaultRegion;
       }
+      Preconditions.checkState(StringUtils.isNotEmpty(region),
+          "No DynamoDB region is provided!");
+      LOG.debug("Creating DynamoDB client in region {}", region);
+
+      return AmazonDynamoDBClientBuilder.standard()
+          .withCredentials(credentials)
+          .withClientConfiguration(awsConf)
+          .withRegion(region)
+          .build();
     }
   }
 

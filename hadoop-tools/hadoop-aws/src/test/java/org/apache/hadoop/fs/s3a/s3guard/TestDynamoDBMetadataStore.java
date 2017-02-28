@@ -24,6 +24,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
@@ -46,11 +51,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.DefaultS3ClientFactory;
 import org.apache.hadoop.fs.s3a.MockS3ClientFactory;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
@@ -60,6 +67,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.*;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
@@ -143,6 +151,26 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     }
   }
 
+  static class LocalDynamoDBClientFactory extends Configured
+      implements DynamoDBClientFactory {
+    @Override
+    public AmazonDynamoDB createDynamoDBClient(String region)
+        throws IOException {
+      final Configuration conf = getConf();
+      final AWSCredentialsProvider credentials =
+          createAWSCredentialProviderSet(null, conf, null);
+      final ClientConfiguration awsConf =
+          DefaultS3ClientFactory.createAwsConf(conf);
+      LOG.info("Creating AmazonDynamoDB client using endpoint {}", ddbEndpoint);
+      return AmazonDynamoDBClientBuilder.standard()
+          .withCredentials(credentials)
+          .withClientConfiguration(awsConf)
+          .withEndpointConfiguration(
+              new AwsClientBuilder.EndpointConfiguration(ddbEndpoint, region))
+          .build();
+    }
+  }
+
   /**
    * Each contract has its own S3AFileSystem and DynamoDBMetadataStore objects.
    */
@@ -159,8 +187,9 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
       // setting config for creating a DynamoDBClient against local server
       conf.set(Constants.ACCESS_KEY, "dummy-access-key");
       conf.set(Constants.SECRET_KEY, "dummy-secret-key");
-      conf.set(Constants.S3GUARD_DDB_ENDPOINT_KEY, ddbEndpoint);
       conf.setBoolean(Constants.S3GUARD_DDB_TABLE_CREATE_KEY, true);
+      conf.setClass(S3Guard.S3GUARD_DDB_CLIENT_FACTORY_IMPL,
+          LocalDynamoDBClientFactory.class, DynamoDBClientFactory.class);
 
       // always create new file system object for a test contract
       s3afs = (S3AFileSystem) FileSystem.newInstance(conf);
@@ -230,7 +259,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final String tableName = "testInitializeWithConfiguration";
     final Configuration conf = getFileSystem().getConf();
     conf.unset(Constants.S3GUARD_DDB_TABLE_NAME_KEY);
-    conf.unset(Constants.S3GUARD_DDB_ENDPOINT_KEY);
+    conf.unset(Constants.S3GUARD_DDB_REGION_KEY);
     try {
       DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
       ddbms.initialize(conf);
@@ -242,15 +271,12 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     try {
       DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
       ddbms.initialize(conf);
-      fail("Should have failed because as the endpoint is not set!");
+      fail("Should have failed because as the region is not set!");
     } catch (IllegalArgumentException ignored) {
     }
-    // config endpoint
-    conf.set(Constants.S3GUARD_DDB_ENDPOINT_KEY, ddbEndpoint);
-    // config credentials
-    conf.set(Constants.ACCESS_KEY, "dummy-access-key");
-    conf.set(Constants.SECRET_KEY, "dummy-secret-key");
-    conf.setBoolean(Constants.S3GUARD_DDB_TABLE_CREATE_KEY, true);
+    // config region
+    conf.set(Constants.S3GUARD_DDB_REGION_KEY,
+        getFileSystem().getBucketLocation());
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
       ddbms.initialize(conf);
       verifyTableInitialized(tableName);

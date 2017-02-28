@@ -333,14 +333,15 @@ public final class Constants {
       "fs.s3a.s3guard.cli.prune.age";
 
   /**
-   * The endpoint of the DynamoDB service.
+   * The region of the DynamoDB service.
    *
-   * This config has no default value. If the user does not set this, the AWS
-   * SDK will find the endpoint automatically by the Region.
+   * This config has no default value. If the user does not set this, the
+   * S3Guard will operate table in the associated S3 bucket region.
    */
   @InterfaceStability.Unstable
-  public static final String S3GUARD_DDB_ENDPOINT_KEY =
-      "fs.s3a.s3guard.ddb.endpoint";
+  public static final String S3GUARD_DDB_REGION_KEY =
+      "fs.s3a.s3guard.ddb.region";
+
   /**
    * The DynamoDB table name to use.
    *

@@ -77,8 +77,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
     commandFormat = new CommandFormat(0, Integer.MAX_VALUE, "h");
     // For metadata store URI
     commandFormat.addOptionWithValue("m");
-    // DDB endpoint.
-    commandFormat.addOptionWithValue("e");
+    // DDB region.
+    commandFormat.addOptionWithValue("r");
   }
 
   /**
@@ -92,7 +92,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
   }
 
   /**
-   * Parse dynamodb Endpoint from either -m option or a S3 path.
+   * Parse DynamoDB region from either -m option or a S3 path.
    *
    * This function should only be called from {@link InitMetadata} or
    * {@link DestroyMetadata}.
@@ -101,31 +101,31 @@ public abstract class S3GuardTool extends Configured implements Tool {
    * @return false for invalid parameters.
    * @throws IOException on I/O errors.
    */
-  boolean parseDynamoDBEndPoint(List<String> paths) throws IOException {
+  boolean parseDynamoDBRegion(List<String> paths) throws IOException {
     Configuration conf = getConf();
-    String fromCli = commandFormat.getOptValue("e");
-    String fromConf = conf.get(S3GUARD_DDB_ENDPOINT_KEY);
+    String fromCli = commandFormat.getOptValue("r");
+    String fromConf = conf.get(S3GUARD_DDB_REGION_KEY);
     boolean hasS3Path = !paths.isEmpty();
 
     if (fromCli != null) {
       if (fromCli.isEmpty()) {
-        System.out.println("No endpoint provided with -e flag");
+        System.err.println("No region provided with -r flag");
         return false;
       }
       if (hasS3Path) {
-        System.out.println("Providing both an S3 path and the -e flag is not " +
-            "supported. If you need to specify an endpoint for a different " +
-            "region than the S3 bucket, configure " + S3GUARD_DDB_ENDPOINT_KEY);
+        System.err.println("Providing both an S3 path and the -r flag is not " +
+            "supported. If you need to specify a different region from the " +
+            "S3 bucket, configure " + S3GUARD_DDB_REGION_KEY);
         return false;
       }
-      conf.set(S3GUARD_DDB_ENDPOINT_KEY, fromCli);
+      conf.set(S3GUARD_DDB_REGION_KEY, fromCli);
       return true;
     }
 
     if (fromConf != null) {
       if (fromConf.isEmpty()) {
-        System.out.printf("No endpoint provided with config %s, %n",
-            S3GUARD_DDB_ENDPOINT_KEY);
+        System.err.printf("No region provided with config %s, %n",
+            S3GUARD_DDB_REGION_KEY);
         return false;
       }
       return true;
@@ -137,7 +137,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       return true;
     }
 
-    System.out.println("No endpoint found from -e flag, config, or S3 bucket");
+    System.err.println("No region found from -r flag, config, or S3 bucket");
     return false;
   }
 
@@ -235,7 +235,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
   static class InitMetadata extends S3GuardTool {
     private static final String NAME = "init";
     private static final String USAGE = NAME +
-        " [-r UNIT] [-w UNIT] -m URI ( -e ENDPOINT | s3a://bucket )";
+        " [-r UNIT] [-w UNIT] -m URI ( -r REGION | s3a://bucket )";
 
     InitMetadata(Configuration conf) {
       super(conf);
@@ -266,7 +266,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       }
 
       // Validate parameters.
-      if (!parseDynamoDBEndPoint(paths)) {
+      if (!parseDynamoDBRegion(paths)) {
         System.out.println(USAGE);
         return INVALID_ARGUMENT;
       }
@@ -281,7 +281,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
   static class DestroyMetadata extends S3GuardTool {
     private static final String NAME = "destroy";
     private static final String USAGE =
-        NAME + " -m URI ( -e ENDPOINT | s3a://bucket )";
+        NAME + " -m URI ( -r REGION | s3a://bucket )";
 
     DestroyMetadata(Configuration conf) {
       super(conf);
@@ -294,7 +294,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
     public int run(String[] args) throws IOException {
       List<String> paths = parseArgs(args);
-      if (!parseDynamoDBEndPoint(paths)) {
+      if (!parseDynamoDBRegion(paths)) {
         System.out.println(USAGE);
         return INVALID_ARGUMENT;
       }
@@ -645,7 +645,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public int run(String[] args, PrintStream out) throws
         InterruptedException, IOException {
       List<String> paths = parseArgs(args);
-      if (!parseDynamoDBEndPoint(paths)) {
+      if (!parseDynamoDBRegion(paths)) {
         System.out.println(USAGE);
         return INVALID_ARGUMENT;
       }

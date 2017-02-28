@@ -38,7 +38,7 @@ public class ITestDynamoDBMetadataStoreScale
     Configuration conf = getFileSystem().getConf();
     String ddbTable = conf.get(S3GUARD_DDB_TABLE_NAME_KEY);
     assumeNotNull("DynamoDB table is configured", ddbTable);
-    String ddbEndpoint = conf.get(S3GUARD_DDB_ENDPOINT_KEY);
+    String ddbEndpoint = conf.get(S3GUARD_DDB_REGION_KEY);
     assumeNotNull("DynamoDB endpoint is configured", ddbEndpoint);
 
     DynamoDBMetadataStore ms = new DynamoDBMetadataStore();
