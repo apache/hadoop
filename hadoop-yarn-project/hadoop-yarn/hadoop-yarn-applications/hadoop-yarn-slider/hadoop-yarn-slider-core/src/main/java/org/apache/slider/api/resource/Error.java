@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.services.resource;
+package org.apache.slider.api.resource;
 
 import io.swagger.annotations.ApiModelProperty;
 

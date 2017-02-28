@@ -15,34 +15,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.services.resource;
+package org.apache.slider.api.resource;
 
-import java.io.Serializable;
+import io.swagger.annotations.ApiModel;
 
-public class BaseResource implements Serializable {
-  private static final long serialVersionUID = 1492603053176889431L;
+/**
+ * The current state of an application.
+ **/
 
-  private String uri;
-
-  /**
-   * Resource location, e.g. \
-   * "/applications/helloworld/containers/container_e3751_1458061340047_0008_01_000002\
-   * "
-   **/
-  public String getUri() {
-    return uri;
-  }
-
-  public void setUri(String uri) {
-    this.uri = uri;
-  }
-
-  @Override
-  public String toString() {
-    StringBuilder builder = new StringBuilder();
-    builder.append("BaseResource [uri=");
-    builder.append(uri);
-    builder.append("]");
-    return builder.toString();
-  }
+@ApiModel(description = "The current state of an application.")
+@javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
+public enum ApplicationState {
+  ACCEPTED, STARTED, READY, STOPPED, FAILED;
 }

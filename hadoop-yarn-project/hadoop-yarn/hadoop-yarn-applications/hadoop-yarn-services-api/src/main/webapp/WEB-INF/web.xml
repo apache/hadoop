@@ -21,7 +21,7 @@
         <servlet-class>com.sun.jersey.spi.container.servlet.ServletContainer</servlet-class>
         <init-param>
             <param-name>com.sun.jersey.config.property.packages</param-name>
-            <param-value>org.apache.hadoop.yarn.services.webapp,org.apache.hadoop.yarn.services.api,org.apache.hadoop.yarn.services.resource,org.apache.hadoop.yarn.services.api.impl</param-value>
+            <param-value>org.apache.hadoop.yarn.services.webapp,org.apache.hadoop.yarn.services.api,org.apache.slider.api.resource,org.apache.hadoop.yarn.services.api.impl</param-value>
         </init-param>
         <init-param>
           <param-name>com.sun.jersey.api.json.POJOMappingFeature</param-name>
