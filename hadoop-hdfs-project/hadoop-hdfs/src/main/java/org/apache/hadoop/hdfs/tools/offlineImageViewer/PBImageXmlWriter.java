@@ -496,9 +496,7 @@ public final class PBImageXmlWriter {
       o(INODE_SECTION_STORAGE_POLICY_ID, f.getStoragePolicyID());
     }
     if (f.getBlockType() != BlockTypeProto.CONTIGUOUS) {
-      out.print("<" + INODE_SECTION_BLOCK_TYPE + ">");
-      o(SECTION_NAME, f.getBlockType().name());
-      out.print("</" + INODE_SECTION_BLOCK_TYPE + ">\n");
+      o(INODE_SECTION_BLOCK_TYPE, f.getBlockType().name());
     }
 
     if (f.hasFileUC()) {

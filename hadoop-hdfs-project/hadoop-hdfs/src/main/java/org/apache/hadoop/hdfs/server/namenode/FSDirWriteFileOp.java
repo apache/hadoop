@@ -416,21 +416,25 @@ class FSDirWriteFileOp {
     assert fsd.hasWriteLock();
     try {
       // check if the file has an EC policy
+      boolean isStriped = false;
       ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.
           getErasureCodingPolicy(fsd.getFSNamesystem(), existing);
       if (ecPolicy != null) {
-        replication = ecPolicy.getId();
+        isStriped = true;
       }
-      final BlockType blockType = ecPolicy != null?
+      final BlockType blockType = isStriped ?
           BlockType.STRIPED : BlockType.CONTIGUOUS;
+      final Short replicationFactor = (!isStriped ? replication : null);
+      final Byte ecPolicyID = (isStriped ? ecPolicy.getId() : null);
       if (underConstruction) {
         newNode = newINodeFile(id, permissions, modificationTime,
-            modificationTime, replication, preferredBlockSize, storagePolicyId,
-            blockType);
+            modificationTime, replicationFactor, ecPolicyID, preferredBlockSize,
+            storagePolicyId, blockType);
         newNode.toUnderConstruction(clientName, clientMachine);
       } else {
         newNode = newINodeFile(id, permissions, modificationTime, atime,
-            replication, preferredBlockSize, storagePolicyId, blockType);
+            replicationFactor, ecPolicyID, preferredBlockSize,
+            storagePolicyId, blockType);
       }
       newNode.setLocalName(localName);
       INodesInPath iip = fsd.addINode(existing, newNode,
@@ -523,15 +527,19 @@ class FSDirWriteFileOp {
     INodesInPath newiip;
     fsd.writeLock();
     try {
+      boolean isStriped = false;
       ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.
           getErasureCodingPolicy(fsd.getFSNamesystem(), existing);
       if (ecPolicy != null) {
-        replication = ecPolicy.getId();
+        isStriped = true;
       }
-      final BlockType blockType = ecPolicy != null?
+      final BlockType blockType = isStriped ?
           BlockType.STRIPED : BlockType.CONTIGUOUS;
+      final Short replicationFactor = (!isStriped ? replication : null);
+      final Byte ecPolicyID = (isStriped ? ecPolicy.getId() : null);
       INodeFile newNode = newINodeFile(fsd.allocateNewInodeId(), permissions,
-          modTime, modTime, replication, preferredBlockSize, blockType);
+          modTime, modTime, replicationFactor, ecPolicyID, preferredBlockSize,
+          blockType);
       newNode.setLocalName(localName);
       newNode.toUnderConstruction(clientName, clientMachine);
       newiip = fsd.addINode(existing, newNode, permissions.getPermission());
@@ -702,17 +710,17 @@ class FSDirWriteFileOp {
 
   private static INodeFile newINodeFile(
       long id, PermissionStatus permissions, long mtime, long atime,
-      short replication, long preferredBlockSize, byte storagePolicyId,
-      BlockType blockType) {
+      Short replication, Byte ecPolicyID, long preferredBlockSize,
+      byte storagePolicyId, BlockType blockType) {
     return new INodeFile(id, null, permissions, mtime, atime,
-        BlockInfo.EMPTY_ARRAY, replication, preferredBlockSize,
+        BlockInfo.EMPTY_ARRAY, replication, ecPolicyID, preferredBlockSize,
         storagePolicyId, blockType);
   }
 
   private static INodeFile newINodeFile(long id, PermissionStatus permissions,
-      long mtime, long atime, short replication, long preferredBlockSize,
-      BlockType blockType) {
-    return newINodeFile(id, permissions, mtime, atime, replication,
+      long mtime, long atime, Short replication, Byte ecPolicyID,
+      long preferredBlockSize, BlockType blockType) {
+    return newINodeFile(id, permissions, mtime, atime, replication, ecPolicyID,
         preferredBlockSize, (byte)0, blockType);
   }
 

@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.junit.After;
 import org.junit.Before;
@@ -343,7 +344,9 @@ public class TestErasureCodingPolicies {
         assertEquals(policy, fs.getErasureCodingPolicy(file));
         assertEquals(policy, fs.getErasureCodingPolicy(dir));
         INode iNode = namesystem.getFSDirectory().getINode(file.toString());
-        assertEquals(policy.getId(), iNode.asFile().getFileReplication());
+        assertEquals(policy.getId(), iNode.asFile().getErasureCodingPolicyID());
+        assertEquals(INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS,
+            iNode.asFile().getFileReplication());
       }
     }
   }

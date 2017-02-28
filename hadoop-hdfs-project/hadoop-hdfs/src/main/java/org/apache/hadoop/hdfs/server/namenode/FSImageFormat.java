@@ -896,9 +896,9 @@ public class FSImageFormat {
           in.readShort());
       final long preferredBlockSize = in.readLong();
 
-      return new INodeFileAttributes.SnapshotCopy(name, permissions, null, modificationTime,
-          accessTime, replication, preferredBlockSize, (byte) 0, null,
-          BlockType.CONTIGUOUS);
+      return new INodeFileAttributes.SnapshotCopy(name, permissions, null,
+          modificationTime, accessTime, replication, null, preferredBlockSize,
+          (byte) 0, null, BlockType.CONTIGUOUS);
     }
 
     public INodeDirectoryAttributes loadINodeDirectoryAttributes(DataInput in)

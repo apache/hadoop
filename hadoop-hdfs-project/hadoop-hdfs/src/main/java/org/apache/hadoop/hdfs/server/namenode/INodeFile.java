@@ -62,6 +62,11 @@ import com.google.common.base.Preconditions;
 public class INodeFile extends INodeWithAdditionalFields
     implements INodeFileAttributes, BlockCollection {
 
+  /**
+   * Erasure Coded striped blocks have replication factor of 1.
+   */
+  public static final short DEFAULT_REPL_FOR_STRIPED_BLOCKS = 1;
+
   /** The same as valueOf(inode, path, false). */
   public static INodeFile valueOf(INode inode, String path
       ) throws FileNotFoundException {
@@ -126,7 +131,6 @@ public class INodeFile extends INodeWithAdditionalFields
      * Different types can be replica or EC
      */
     private static final int LAYOUT_BIT_WIDTH = 1;
-
     private static final int MAX_REDUNDANCY = (1 << 11) - 1;
 
     HeaderFormat(LongBitFormat previous, int length, long min) {
@@ -134,8 +138,13 @@ public class INodeFile extends INodeWithAdditionalFields
     }
 
     static short getReplication(long header) {
-      long layoutRedundancy = BLOCK_LAYOUT_AND_REDUNDANCY.BITS.retrieve(header);
-      return (short) (layoutRedundancy & MAX_REDUNDANCY);
+      if (isStriped(header)) {
+        return DEFAULT_REPL_FOR_STRIPED_BLOCKS;
+      } else {
+        long layoutRedundancy =
+            BLOCK_LAYOUT_AND_REDUNDANCY.BITS.retrieve(header);
+        return (short) (layoutRedundancy & MAX_REDUNDANCY);
+      }
     }
 
     static byte getECPolicyID(long header) {
@@ -158,8 +167,7 @@ public class INodeFile extends INodeWithAdditionalFields
     static final long BLOCK_TYPE_MASK_STRIPED = 1 << 11;
 
     static boolean isStriped(long header) {
-      long layoutRedundancy = BLOCK_LAYOUT_AND_REDUNDANCY.BITS.retrieve(header);
-      return (layoutRedundancy & BLOCK_TYPE_MASK) != 0;
+      return getBlockType(header) == STRIPED;
     }
 
     static BlockType getBlockType(long header) {
@@ -172,22 +180,40 @@ public class INodeFile extends INodeWithAdditionalFields
       }
     }
 
-    static long toLong(long preferredBlockSize, short replication,
-        BlockType blockType, byte storagePolicyID) {
-      Preconditions.checkArgument(replication >= 0 &&
-          replication <= MAX_REDUNDANCY);
+    /**
+     * Construct block layout redundancy based on the given BlockType,
+     * replication factor and EC PolicyID.
+     */
+    static long getBlockLayoutRedundancy(final BlockType blockType,
+        final Short replication, final Byte erasureCodingPolicyID) {
+      long layoutRedundancy = 0;
+      if (blockType == STRIPED) {
+        Preconditions.checkArgument(replication == null &&
+            erasureCodingPolicyID != null);
+        Preconditions.checkArgument(
+            ErasureCodingPolicyManager.getPolicyByPolicyID(
+                erasureCodingPolicyID) != null);
+        layoutRedundancy |= BLOCK_TYPE_MASK_STRIPED;
+        // Following bitwise OR with signed byte erasureCodingPolicyID is safe
+        // as the PolicyID can never be in negative.
+        layoutRedundancy |= erasureCodingPolicyID;
+      } else {
+        Preconditions.checkArgument(replication != null &&
+            erasureCodingPolicyID == null);
+        Preconditions.checkArgument(replication >= 0 &&
+            replication <= MAX_REDUNDANCY);
+        layoutRedundancy |= replication;
+      }
+      return layoutRedundancy;
+    }
+
+    static long toLong(long preferredBlockSize, long layoutRedundancy,
+        byte storagePolicyID) {
       long h = 0;
       if (preferredBlockSize == 0) {
         preferredBlockSize = PREFERRED_BLOCK_SIZE.BITS.getMin();
       }
       h = PREFERRED_BLOCK_SIZE.BITS.combine(preferredBlockSize, h);
-      // For erasure coded files, replication is used to store ec policy id
-      // TODO: this is hacky. Add some utility to generate the layoutRedundancy
-      long layoutRedundancy = 0;
-      if (blockType == STRIPED) {
-        layoutRedundancy |= BLOCK_TYPE_MASK_STRIPED;
-      }
-      layoutRedundancy |= replication;
       h = BLOCK_LAYOUT_AND_REDUNDANCY.BITS.combine(layoutRedundancy, h);
       h = STORAGE_POLICY_ID.BITS.combine(storagePolicyID, h);
       return h;
@@ -202,15 +228,17 @@ public class INodeFile extends INodeWithAdditionalFields
   INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
             long atime, BlockInfo[] blklist, short replication,
             long preferredBlockSize) {
-    this(id, name, permissions, mtime, atime, blklist, replication,
+    this(id, name, permissions, mtime, atime, blklist, replication, null,
         preferredBlockSize, (byte) 0, CONTIGUOUS);
   }
 
   INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
-      long atime, BlockInfo[] blklist, short replication,
+      long atime, BlockInfo[] blklist, Short replication, Byte ecPolicyID,
       long preferredBlockSize, byte storagePolicyID, BlockType blockType) {
     super(id, name, permissions, mtime, atime);
-    header = HeaderFormat.toLong(preferredBlockSize, replication, blockType,
+    final long layoutRedundancy = HeaderFormat.getBlockLayoutRedundancy(
+        blockType, replication, ecPolicyID);
+    header = HeaderFormat.toLong(preferredBlockSize, layoutRedundancy,
         storagePolicyID);
     if (blklist != null && blklist.length > 0) {
       for (BlockInfo b : blklist) {
@@ -462,6 +490,9 @@ public class INodeFile extends INodeWithAdditionalFields
    * */
   @Override // INodeFileAttributes
   public final short getFileReplication() {
+    if (isStriped()) {
+      return DEFAULT_REPL_FOR_STRIPED_BLOCKS;
+    }
     return getFileReplication(CURRENT_STATE_ID);
   }
 
