@@ -72,6 +72,9 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-11333. Print a user friendly error message when plugins are not found. (Wei-Chiu Chuang)
 
+    HDFS-11466. Change dfs.namenode.write-lock-reporting-threshold-ms default
+    from 1000ms to 5000ms. (wang via zhz)
+
   OPTIMIZATIONS
 
     HDFS-10896. Move lock logging logic from FSNamesystem into FSNamesystemLock.
