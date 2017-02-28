@@ -23,9 +23,9 @@ import static org.apache.hadoop.yarn.services.utils.RestApiErrorMessages.*;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.hadoop.yarn.services.resource.Application;
-import org.apache.hadoop.yarn.services.resource.Artifact;
-import org.apache.hadoop.yarn.services.resource.Resource;
+import org.apache.slider.api.resource.Application;
+import org.apache.slider.api.resource.Artifact;
+import org.apache.slider.api.resource.Resource;
 import org.apache.slider.common.SliderKeys;
 import org.junit.After;
 import org.junit.Assert;

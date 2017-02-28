@@ -19,7 +19,7 @@ package org.apache.hadoop.yarn.services.api;
 
 import javax.ws.rs.core.Response;
 
-import org.apache.hadoop.yarn.services.resource.Application;
+import org.apache.slider.api.resource.Application;
 
 /**
  * Apache Hadoop YARN Services REST API interface.

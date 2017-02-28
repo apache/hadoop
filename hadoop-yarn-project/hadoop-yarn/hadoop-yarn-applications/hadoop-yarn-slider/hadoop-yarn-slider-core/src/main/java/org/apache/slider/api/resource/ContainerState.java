@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.services.resource;
+package org.apache.slider.api.resource;
 
 /**
  * The current state of the container of an application.
