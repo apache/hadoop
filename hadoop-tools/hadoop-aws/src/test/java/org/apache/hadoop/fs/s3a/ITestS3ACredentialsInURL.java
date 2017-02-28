@@ -84,6 +84,11 @@ public class ITestS3ACredentialsInURL extends Assert {
     conf.unset(Constants.ACCESS_KEY);
     conf.unset(Constants.SECRET_KEY);
     fs = S3ATestUtils.createTestFileSystem(conf);
+
+    // Skip in the case of S3Guard with DynamoDB because it cannot get
+    // credentials for its own use if they're only in S3 URLs
+    Assume.assumeFalse(fs.hasMetadataStore());
+
     String fsURI = fs.getUri().toString();
     assertFalse("FS URI contains a @ symbol", fsURI.contains("@"));
     assertFalse("FS URI contains a % symbol", fsURI.contains("%"));
