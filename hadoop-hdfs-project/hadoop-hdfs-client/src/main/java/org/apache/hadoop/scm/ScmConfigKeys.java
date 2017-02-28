@@ -30,6 +30,11 @@ public final class ScmConfigKeys {
       "dfs.container.ipc";
   public static final int DFS_CONTAINER_IPC_PORT_DEFAULT = 50011;
 
+  public static final String SCM_CONTAINER_CLIENT_STALE_THRESHOLD_KEY =
+      "scm.container.client.idle.threshold";
+  public static final int SCM_CONTAINER_CLIENT_STALE_THRESHOLD_DEFAULT =
+      10000;
+
   // TODO : this is copied from OzoneConsts, may need to move to a better place
   public static final int CHUNK_SIZE = 1 * 1024 * 1024; // 1 MB
 }
