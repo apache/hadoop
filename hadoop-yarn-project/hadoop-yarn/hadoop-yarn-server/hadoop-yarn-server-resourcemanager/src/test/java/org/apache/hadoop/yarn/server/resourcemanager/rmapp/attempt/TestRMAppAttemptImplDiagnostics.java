@@ -106,6 +106,6 @@ public class TestRMAppAttemptImplDiagnostics {
     when(mockRMContext.getDispatcher()).thenReturn(mockDispatcher);
 
     return new RMAppAttemptImpl(mockApplicationAttemptId, mockRMContext, null,
-        null, null, configuration, false, null);
+        null, null, configuration, null, null);
   }
 }
