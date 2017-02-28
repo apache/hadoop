@@ -32,8 +32,8 @@ import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ozone.protocol.LocatedContainer;
-import org.apache.hadoop.ozone.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.scm.protocol.LocatedContainer;
+import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.junit.rules.Timeout;
 
 /**

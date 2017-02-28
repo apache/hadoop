@@ -21,8 +21,7 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfiguration;
-import org.apache.hadoop.ozone.protocolPB
-    .StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.junit.AfterClass;
 import org.junit.Assert;

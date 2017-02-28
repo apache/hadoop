@@ -27,8 +27,8 @@ import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
-import org.apache.hadoop.ozone.protocol.LocatedContainer;
-import org.apache.hadoop.ozone.protocol.StorageContainerLocationProtocol;
+import org.apache.hadoop.scm.protocol.LocatedContainer;
+import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto
@@ -43,6 +43,7 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos.ContainerResponseProto;
 
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
 
 /**
  * This class is the server-side translator that forwards requests received on
