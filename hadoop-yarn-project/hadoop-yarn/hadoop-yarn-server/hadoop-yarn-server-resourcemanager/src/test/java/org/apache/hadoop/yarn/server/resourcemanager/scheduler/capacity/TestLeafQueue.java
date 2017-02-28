@@ -1056,11 +1056,11 @@ public class TestLeafQueue {
     qb.releaseResource(clusterResource, app_0,
         app_0.getAppSchedulingInfo().getPendingAsk(u0SchedKey)
             .getPerAllocationResource(),
-        null, null, false);
+        null, null);
     qb.releaseResource(clusterResource, app_2,
         app_2.getAppSchedulingInfo().getPendingAsk(u1SchedKey)
             .getPerAllocationResource(),
-        null, null, false);
+        null, null);
 
     qb.setUserLimit(50);
     qb.setUserLimitFactor(1);

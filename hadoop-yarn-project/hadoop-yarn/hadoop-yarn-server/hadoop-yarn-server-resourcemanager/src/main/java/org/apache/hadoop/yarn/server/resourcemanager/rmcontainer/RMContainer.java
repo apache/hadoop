@@ -91,10 +91,6 @@ public interface RMContainer extends EventHandler<RMContainerEvent> {
   String getNodeHttpAddress();
   
   String getNodeLabelExpression();
-  
-  boolean hasIncreaseReservation();
-  
-  void cancelIncreaseReservation();
 
   String getQueueName();
 

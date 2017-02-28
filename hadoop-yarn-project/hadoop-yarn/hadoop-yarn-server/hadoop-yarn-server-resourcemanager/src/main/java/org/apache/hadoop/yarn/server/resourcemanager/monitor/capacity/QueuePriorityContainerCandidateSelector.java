@@ -281,7 +281,8 @@ public class QueuePriorityContainerCandidateSelector
   private boolean preChecksForMovingReservedContainerToNode(
       RMContainer reservedContainer, FiCaSchedulerNode newNode) {
     // Don't do this if it has hard-locality preferences
-    if (reservedContainer.hasIncreaseReservation()) {
+    if (reservedContainer.getReservedSchedulerKey().getContainerToUpdate()
+        != null) {
       // This means a container update request (like increase / promote)
       return false;
     }

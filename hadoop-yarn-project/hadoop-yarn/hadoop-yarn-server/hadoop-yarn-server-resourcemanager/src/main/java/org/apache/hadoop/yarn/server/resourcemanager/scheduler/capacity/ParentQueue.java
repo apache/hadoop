@@ -788,12 +788,11 @@ public class ParentQueue extends AbstractCSQueue {
   }
 
   private void internalReleaseResource(Resource clusterResource,
-      FiCaSchedulerNode node, Resource releasedResource,
-      boolean changeResource) {
+      FiCaSchedulerNode node, Resource releasedResource) {
     try {
       writeLock.lock();
       super.releaseResource(clusterResource, releasedResource,
-          node.getPartition(), changeResource);
+          node.getPartition());
 
       if (LOG.isDebugEnabled()) {
         LOG.debug(
@@ -802,38 +801,6 @@ public class ParentQueue extends AbstractCSQueue {
 
     } finally {
       writeLock.unlock();
-    }
-  }
-  
-  @Override
-  public void decreaseContainer(Resource clusterResource,
-      SchedContainerChangeRequest decreaseRequest, FiCaSchedulerApp app)
-      throws InvalidResourceRequestException {
-    // delta capacity is negative when it's a decrease request
-    Resource absDeltaCapacity =
-        Resources.negate(decreaseRequest.getDeltaCapacity());
-
-    internalReleaseResource(clusterResource,
-        csContext.getNode(decreaseRequest.getNodeId()), absDeltaCapacity, false);
-
-    // Inform the parent
-    if (parent != null) {
-      parent.decreaseContainer(clusterResource, decreaseRequest, app);
-    }
-  }
-  
-  @Override
-  public void unreserveIncreasedContainer(Resource clusterResource,
-      FiCaSchedulerApp app, FiCaSchedulerNode node, RMContainer rmContainer) {
-    if (app != null) {
-      internalReleaseResource(clusterResource, node,
-          rmContainer.getReservedResource(), false);
-
-      // Inform the parent
-      if (parent != null) {
-        parent.unreserveIncreasedContainer(clusterResource, app, node,
-            rmContainer);
-      }    
     }
   }
 
@@ -845,7 +812,7 @@ public class ParentQueue extends AbstractCSQueue {
       boolean sortQueues) {
     if (application != null) {
       internalReleaseResource(clusterResource, node,
-          rmContainer.getContainer().getResource(), false);
+          rmContainer.getContainer().getResource());
 
       // Inform the parent
       if (parent != null) {
@@ -901,7 +868,7 @@ public class ParentQueue extends AbstractCSQueue {
       FiCaSchedulerNode node = scheduler.getNode(
           rmContainer.getContainer().getNodeId());
       allocateResource(clusterResource,
-          rmContainer.getContainer().getResource(), node.getPartition(), false);
+          rmContainer.getContainer().getResource(), node.getPartition());
     } finally {
       writeLock.unlock();
     }
@@ -938,7 +905,7 @@ public class ParentQueue extends AbstractCSQueue {
       FiCaSchedulerNode node =
           scheduler.getNode(rmContainer.getContainer().getNodeId());
       allocateResource(clusterResource, rmContainer.getContainer()
-          .getResource(), node.getPartition(), false);
+          .getResource(), node.getPartition());
       LOG.info("movedContainer" + " queueMoveIn=" + getQueueName()
           + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="
           + getAbsoluteUsedCapacity() + " used=" + queueUsage.getUsed() + " cluster="
@@ -958,7 +925,7 @@ public class ParentQueue extends AbstractCSQueue {
           scheduler.getNode(rmContainer.getContainer().getNodeId());
       super.releaseResource(clusterResource,
           rmContainer.getContainer().getResource(),
-          node.getPartition(), false);
+          node.getPartition());
       LOG.info("movedContainer" + " queueMoveOut=" + getQueueName()
           + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="
           + getAbsoluteUsedCapacity() + " used=" + queueUsage.getUsed() + " cluster="
@@ -975,11 +942,10 @@ public class ParentQueue extends AbstractCSQueue {
   }
 
   void allocateResource(Resource clusterResource,
-      Resource resource, String nodePartition, boolean changeContainerResource) {
+      Resource resource, String nodePartition) {
     try {
       writeLock.lock();
-      super.allocateResource(clusterResource, resource, nodePartition,
-          changeContainerResource);
+      super.allocateResource(clusterResource, resource, nodePartition);
 
       /**
        * check if we need to kill (killable) containers if maximum resource violated.
@@ -1069,8 +1035,7 @@ public class ParentQueue extends AbstractCSQueue {
           // Book-keeping
           // Note: Update headroom to account for current allocation too...
           allocateResource(cluster, allocation.getAllocatedOrReservedResource(),
-              schedulerContainer.getNodePartition(),
-              allocation.isIncreasedAllocation());
+              schedulerContainer.getNodePartition());
 
           LOG.info("assignedContainer" + " queue=" + getQueueName()
               + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="

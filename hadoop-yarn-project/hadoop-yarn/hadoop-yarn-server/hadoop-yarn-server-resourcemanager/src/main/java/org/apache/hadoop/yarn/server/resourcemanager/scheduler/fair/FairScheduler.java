@@ -836,9 +836,7 @@ public class FairScheduler extends
     }
 
     // Handle promotions and demotions
-    handleExecutionTypeUpdates(
-        application, updateRequests.getPromotionRequests(),
-        updateRequests.getDemotionRequests());
+    handleContainerUpdates(application, updateRequests);
 
     // Sanity check
     normalizeRequests(ask);
@@ -1788,13 +1786,6 @@ public class FairScheduler extends
       targetQueueName = getDefaultQueueForPlanQueue(targetQueueName);
     }
     return targetQueueName;
-  }
-
-  @Override
-  protected void decreaseContainer(
-      SchedContainerChangeRequest decreaseRequest,
-      SchedulerApplicationAttempt attempt) {
-    // TODO Auto-generated method stub    
   }
 
   public float getReservableNodesRatio() {

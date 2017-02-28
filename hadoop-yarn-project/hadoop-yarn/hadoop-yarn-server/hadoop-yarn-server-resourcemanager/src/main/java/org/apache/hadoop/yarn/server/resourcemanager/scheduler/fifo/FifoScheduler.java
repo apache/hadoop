@@ -937,14 +937,6 @@ public class FifoScheduler extends
   }
 
   @Override
-  protected void decreaseContainer(
-      SchedContainerChangeRequest decreaseRequest,
-      SchedulerApplicationAttempt attempt) {
-    // TODO Auto-generated method stub
-    
-  }
-
-  @Override
   protected synchronized void nodeUpdate(RMNode nm) {
     super.nodeUpdate(nm);
 

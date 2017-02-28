@@ -156,26 +156,16 @@ public class RMServerUtils {
       if (msg == null) {
         if ((updateType != ContainerUpdateType.PROMOTE_EXECUTION_TYPE) &&
             (updateType !=ContainerUpdateType.DEMOTE_EXECUTION_TYPE)) {
-          Resource original = rmContainer.getContainer().getResource();
-          Resource target = updateReq.getCapability();
-          if (Resources.fitsIn(target, original)) {
-            // This is a decrease request
-            if (validateIncreaseDecreaseRequest(rmContext, updateReq,
-                maximumAllocation, false)) {
-              updateRequests.getDecreaseRequests().add(updateReq);
-              outstandingUpdate.add(updateReq.getContainerId());
-            } else {
-              msg = RESOURCE_OUTSIDE_ALLOWED_RANGE;
-            }
-          } else {
-            // This is an increase request
-            if (validateIncreaseDecreaseRequest(rmContext, updateReq,
-                maximumAllocation, true)) {
+          if (validateIncreaseDecreaseRequest(
+              rmContext, updateReq, maximumAllocation)) {
+            if (ContainerUpdateType.INCREASE_RESOURCE == updateType) {
               updateRequests.getIncreaseRequests().add(updateReq);
-              outstandingUpdate.add(updateReq.getContainerId());
             } else {
-              msg = RESOURCE_OUTSIDE_ALLOWED_RANGE;
+              updateRequests.getDecreaseRequests().add(updateReq);
             }
+            outstandingUpdate.add(updateReq.getContainerId());
+          } else {
+            msg = RESOURCE_OUTSIDE_ALLOWED_RANGE;
           }
         } else {
           ExecutionType original = rmContainer.getExecutionType();
@@ -329,8 +319,7 @@ public class RMServerUtils {
 
   // Sanity check and normalize target resource
   private static boolean validateIncreaseDecreaseRequest(RMContext rmContext,
-      UpdateContainerRequest request, Resource maximumAllocation,
-      boolean increase) {
+      UpdateContainerRequest request, Resource maximumAllocation) {
     if (request.getCapability().getMemorySize() < 0
         || request.getCapability().getMemorySize() > maximumAllocation
         .getMemorySize()) {
