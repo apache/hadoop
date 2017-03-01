@@ -17,6 +17,7 @@
 package org.apache.hadoop.ozone.scm.container;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -42,6 +43,8 @@ import java.util.UUID;
 public class TestContainerMapping {
   private static ContainerMapping mapping;
   private static MockNodeManager nodeManager;
+  private static File testDir;
+
   @Rule
   public ExpectedException thrown = ExpectedException.none();
   @BeforeClass
@@ -53,7 +56,7 @@ public class TestContainerMapping {
         TestContainerMapping.class.getSimpleName());
 
     conf.set(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS, path);
-    File testDir = Paths.get(path).toFile();
+    testDir = Paths.get(path).toFile();
     boolean folderExisted = testDir.exists() || testDir.mkdirs();
     if (!folderExisted) {
       throw new IOException("Unable to create test diectory path");
@@ -65,6 +68,7 @@ public class TestContainerMapping {
   @AfterClass
   public static void cleanup() throws IOException {
     mapping.close();
+    FileUtil.fullyDelete(testDir);
   }
 
   @Before
