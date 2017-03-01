@@ -63,6 +63,7 @@ public class SimpleUdpServer {
     server.setOption("broadcast", "false");
     server.setOption("sendBufferSize", SEND_BUFFER_SIZE);
     server.setOption("receiveBufferSize", RECEIVE_BUFFER_SIZE);
+    server.setOption("reuseAddress", true);
 
     // Listen to the UDP port
     ch = server.bind(new InetSocketAddress(port));
