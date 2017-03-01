@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.federation.resolver;
 
+import java.io.File;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
@@ -46,8 +47,10 @@ public class TestDefaultSubClusterResolver {
       throw new RuntimeException(
           "Could not find 'nodes' dummy file in classpath");
     }
+    // This will get rid of the beginning '/' in the url in Windows env
+    File file = new File(url.getPath());
 
-    conf.set(YarnConfiguration.FEDERATION_MACHINE_LIST, url.getPath());
+    conf.set(YarnConfiguration.FEDERATION_MACHINE_LIST, file.getPath());
     resolver.setConf(conf);
     resolver.load();
   }
@@ -62,8 +65,10 @@ public class TestDefaultSubClusterResolver {
       throw new RuntimeException(
           "Could not find 'nodes-malformed' dummy file in classpath");
     }
+    // This will get rid of the beginning '/' in the url in Windows env
+    File file = new File(url.getPath());
 
-    conf.set(YarnConfiguration.FEDERATION_MACHINE_LIST, url.getPath());
+    conf.set(YarnConfiguration.FEDERATION_MACHINE_LIST, file.getPath());
     resolver.setConf(conf);
     resolver.load();
   }
