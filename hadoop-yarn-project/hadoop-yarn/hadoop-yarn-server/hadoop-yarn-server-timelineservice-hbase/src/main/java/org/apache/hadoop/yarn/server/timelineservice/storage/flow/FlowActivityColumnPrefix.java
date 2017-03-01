@@ -271,7 +271,7 @@ public enum FlowActivityColumnPrefix
     byte[] columnQualifier = getColumnPrefixBytes(qualifier);
     Attribute[] combinedAttributes =
         HBaseTimelineStorageUtils.combineAttributes(attributes, this.aggOp);
-    column.store(rowKey, tableMutator, columnQualifier, null, inputValue,
+    column.store(rowKey, tableMutator, columnQualifier, timestamp, inputValue,
         combinedAttributes);
   }
 }
