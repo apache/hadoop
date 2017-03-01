@@ -64,7 +64,7 @@ public class ITestS3GuardToolDynamoDB extends S3GuardToolTestBase {
   public void testDynamoDBInitDestroyCycle() throws IOException,
       InterruptedException {
     String testTableName = "testDynamoDBInitDestroy" + new Random().nextInt();
-    String testS3Url = getTestPath(testTableName);
+    String testS3Url = path(testTableName).toString();
     S3AFileSystem fs = getFs();
     DynamoDB db = null;
     try {

@@ -51,8 +51,9 @@ public class TestS3GuardTool extends S3GuardToolTestBase {
   public void testImportCommand() throws IOException {
     S3AFileSystem fs = getFs();
     MetadataStore ms = getMetadataStore();
-    fs.mkdirs(new Path("/test"));
-    Path dir = new Path("/test/a");
+    Path parent = path("test-import");
+    fs.mkdirs(parent);
+    Path dir = new Path(parent, "a");
     fs.mkdirs(dir);
     for (int i = 0; i < 10; i++) {
       String child = String.format("file-%d", i);
@@ -65,10 +66,10 @@ public class TestS3GuardTool extends S3GuardToolTestBase {
     cmd.setMetadataStore(ms);
 
     assertEquals("Import command did not exit successfully - see output",
-        SUCCESS, cmd.run(new String[]{"import", getTestPath("/test/a")}));
+        SUCCESS, cmd.run(new String[]{"import", dir.toString()}));
 
     DirListingMetadata children =
-        ms.listChildren(new Path(getTestPath("/test/a")));
+        ms.listChildren(dir);
     assertEquals("Unexpected number of paths imported", 10, children
         .getListing().size());
     // assertTrue(children.isAuthoritative());
@@ -81,8 +82,8 @@ public class TestS3GuardTool extends S3GuardToolTestBase {
     Set<Path> filesOnS3 = new HashSet<>(); // files on S3.
     Set<Path> filesOnMS = new HashSet<>(); // files on metadata store.
 
-    String testPath = getTestPath("/test-diff");
-    mkdirs(new Path(testPath), true, true);
+    Path testPath = path("test-diff");
+    mkdirs(testPath, true, true);
 
     Path msOnlyPath = new Path(testPath, "ms_only");
     mkdirs(msOnlyPath, false, true);
@@ -107,7 +108,8 @@ public class TestS3GuardTool extends S3GuardToolTestBase {
     Diff cmd = new Diff(fs.getConf());
     cmd.setMetadataStore(ms);
     assertEquals("Diff command did not exit successfully - see output", SUCCESS,
-        cmd.run(new String[]{"diff", "-m", "local://metadata", testPath}, out));
+        cmd.run(new String[]{"diff", "-m", "local://metadata",
+            testPath.toString()}, out));
 
     Set<Path> actualOnS3 = new HashSet<>();
     Set<Path> actualOnMS = new HashSet<>();

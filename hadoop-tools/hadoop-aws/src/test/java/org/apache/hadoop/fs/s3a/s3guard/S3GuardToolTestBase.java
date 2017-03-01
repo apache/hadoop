@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
@@ -39,7 +40,7 @@ import static org.junit.Assert.assertEquals;
 /**
  * Common functionality for S3GuardTool test cases.
  */
-public abstract class S3GuardToolTestBase {
+public abstract class S3GuardToolTestBase extends AbstractS3ATestBase {
 
   protected static final String OWNER = "hdfs";
 
@@ -57,11 +58,6 @@ public abstract class S3GuardToolTestBase {
 
   protected S3AFileSystem getFs() {
     return fs;
-  }
-
-  /** Get test path of s3. */
-  protected String getTestPath(String path) {
-    return fs.qualify(new Path(path)).toString();
   }
 
   protected abstract MetadataStore newMetadataStore();
@@ -125,7 +121,7 @@ public abstract class S3GuardToolTestBase {
 
   private void testPruneCommand(Configuration cmdConf, String[] args)
       throws Exception {
-    Path parent = new Path(getTestPath("/prune-cli"));
+    Path parent = path("prune-cli");
     try {
       fs.mkdirs(parent);
 
@@ -148,7 +144,7 @@ public abstract class S3GuardToolTestBase {
 
   @Test
   public void testPruneCommandCLI() throws Exception {
-    String testPath = getTestPath("testPruneCommandCLI");
+    String testPath = path("testPruneCommandCLI").toString();
     testPruneCommand(fs.getConf(), new String[]{"prune", "-S", "1", testPath});
   }
 
@@ -156,7 +152,7 @@ public abstract class S3GuardToolTestBase {
   public void testPruneCommandConf() throws Exception {
     conf.setLong(Constants.S3GUARD_CLI_PRUNE_AGE,
         TimeUnit.SECONDS.toMillis(1));
-    String testPath = getTestPath("testPruneCommandConf");
+    String testPath = path("testPruneCommandConf").toString();
     testPruneCommand(conf, new String[]{"prune", testPath});
   }
 }
