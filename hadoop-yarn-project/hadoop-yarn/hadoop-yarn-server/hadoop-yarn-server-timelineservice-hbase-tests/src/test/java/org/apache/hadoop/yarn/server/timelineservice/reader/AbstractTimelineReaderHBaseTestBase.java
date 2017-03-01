@@ -86,19 +86,7 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
           "org.apache.hadoop.yarn.server.timelineservice.storage."
               + "HBaseTimelineReaderImpl");
       config.setInt("hfile.format.version", 3);
-      server = new TimelineReaderServer() {
-        @Override
-        protected void setupOptions(Configuration conf) {
-          // The parent code tries to use HttpServer2 from this version of
-          // Hadoop, but the tests are loading in HttpServer2 from
-          // ${hbase-compatible-hadoop.version}. This version uses Jetty 9
-          // while ${hbase-compatible-hadoop.version} uses Jetty 6, and there
-          // are many differences, including classnames and packages.
-          // We do nothing here, so that we don't cause a NoSuchMethodError.
-          // Once ${hbase-compatible-hadoop.version} is changed to Hadoop 3,
-          // we should be able to remove this @Override.
-        }
-      };
+      server = new TimelineReaderServer();
       server.init(config);
       server.start();
       serverPort = server.getWebServerPort();
@@ -119,11 +107,11 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
     ClientResponse resp =
         client.resource(uri).accept(MediaType.APPLICATION_JSON)
             .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    if (resp == null || resp.getStatusInfo()
-        .getStatusCode() != ClientResponse.Status.OK.getStatusCode()) {
+    if (resp == null ||
+        resp.getClientResponseStatus() != ClientResponse.Status.OK) {
       String msg = "";
       if (resp != null) {
-        msg = String.valueOf(resp.getStatusInfo().getStatusCode());
+        msg = String.valueOf(resp.getClientResponseStatus());
       }
       throw new IOException(
           "Incorrect response from timeline reader. " + "Status=" + msg);
@@ -137,7 +125,7 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
             .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertNotNull(resp);
     assertTrue("Response from server should have been " + status,
-        resp.getStatusInfo().getStatusCode() == status.getStatusCode());
+        resp.getClientResponseStatus() == status);
     System.out.println("Response is: " + resp.getEntity(String.class));
   }
 
