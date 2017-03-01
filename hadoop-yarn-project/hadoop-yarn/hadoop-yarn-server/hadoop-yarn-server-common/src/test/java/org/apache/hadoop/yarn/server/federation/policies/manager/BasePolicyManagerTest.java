@@ -89,9 +89,6 @@ public abstract class BasePolicyManagerTest {
     FederationAMRMProxyPolicy federationAMRMProxyPolicy =
         wfp2.getAMRMPolicy(context, null);
 
-    // needed only for tests (getARMRMPolicy change the "type" in conf)
-    fpc.setType(wfp.getClass().getCanonicalName());
-
     FederationRouterPolicy federationRouterPolicy =
         wfp2.getRouterPolicy(context, null);
 

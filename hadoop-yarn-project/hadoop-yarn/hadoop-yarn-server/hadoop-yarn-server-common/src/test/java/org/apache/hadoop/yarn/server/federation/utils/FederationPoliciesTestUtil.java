@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.*;
 import org.apache.hadoop.yarn.util.Records;
 
+import java.io.File;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -162,7 +163,10 @@ public final class FederationPoliciesTestUtil {
       throw new RuntimeException(
           "Could not find 'nodes' dummy file in classpath");
     }
-    conf.set(YarnConfiguration.FEDERATION_MACHINE_LIST, url.getPath());
+    // This will get rid of the beginning '/' in the url in Windows env
+    File file = new File(url.getPath());
+
+    conf.set(YarnConfiguration.FEDERATION_MACHINE_LIST, file.getPath());
     resolver.setConf(conf);
     resolver.load();
     return resolver;
