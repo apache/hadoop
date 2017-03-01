@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFormat;
+import org.apache.hadoop.fs.shell.PathData;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtilClient;
@@ -107,15 +108,21 @@ public class DFSAdmin extends FsShell {
    * An abstract class for the execution of a file system command
    */
   abstract private static class DFSAdminCommand extends Command {
-    final DistributedFileSystem dfs;
+    protected DistributedFileSystem dfs;
     /** Constructor */
-    public DFSAdminCommand(FileSystem fs) {
-      super(fs.getConf());
+    public DFSAdminCommand(Configuration conf) {
+      super(conf);
+    }
+
+    @Override
+    public void run(PathData pathData) throws IOException {
+      FileSystem fs = pathData.fs;
       if (!(fs instanceof DistributedFileSystem)) {
-        throw new IllegalArgumentException("FileSystem " + fs.getUri() + 
-            " is not an HDFS file system");
+        throw new IllegalArgumentException("FileSystem " + fs.getUri()
+            + " is not an HDFS file system");
       }
-      this.dfs = (DistributedFileSystem)fs;
+      this.dfs = (DistributedFileSystem) fs;
+      run(pathData.path);
     }
   }
   
@@ -131,8 +138,8 @@ public class DFSAdmin extends FsShell {
     "\t\tIt does not fault if the directory has no quota.";
     
     /** Constructor */
-    ClearQuotaCommand(String[] args, int pos, FileSystem fs) {
-      super(fs);
+    ClearQuotaCommand(String[] args, int pos, Configuration conf) {
+      super(conf);
       CommandFormat c = new CommandFormat(1, Integer.MAX_VALUE);
       List<String> parameters = c.parse(args, pos);
       this.args = parameters.toArray(new String[parameters.size()]);
@@ -177,8 +184,8 @@ public class DFSAdmin extends FsShell {
     private final long quota; // the quota to be set
 
     /** Constructor */
-    SetQuotaCommand(String[] args, int pos, FileSystem fs) {
-      super(fs);
+    SetQuotaCommand(String[] args, int pos, Configuration conf) {
+      super(conf);
       CommandFormat c = new CommandFormat(2, Integer.MAX_VALUE);
       List<String> parameters = c.parse(args, pos);
       this.quota = Long.parseLong(parameters.remove(0));
@@ -228,8 +235,8 @@ public class DFSAdmin extends FsShell {
     private StorageType type;
 
     /** Constructor */
-    ClearSpaceQuotaCommand(String[] args, int pos, FileSystem fs) {
-      super(fs);
+    ClearSpaceQuotaCommand(String[] args, int pos, Configuration conf) {
+      super(conf);
       CommandFormat c = new CommandFormat(1, Integer.MAX_VALUE);
       c.addOptionWithValue("storageType");
       List<String> parameters = c.parse(args, pos);
@@ -292,8 +299,8 @@ public class DFSAdmin extends FsShell {
     private StorageType type;
     
     /** Constructor */
-    SetSpaceQuotaCommand(String[] args, int pos, FileSystem fs) {
-      super(fs);
+    SetSpaceQuotaCommand(String[] args, int pos, Configuration conf) {
+      super(conf);
       CommandFormat c = new CommandFormat(2, Integer.MAX_VALUE);
       List<String> parameters = c.parse(args, pos);
       String str = parameters.remove(0).trim();
@@ -702,10 +709,11 @@ public class DFSAdmin extends FsShell {
    * @param argv List of of command line parameters.
    * @exception IOException
    */
-  public void allowSnapshot(String[] argv) throws IOException {   
-    DistributedFileSystem dfs = getDFS();
+  public void allowSnapshot(String[] argv) throws IOException {
+    Path p = new Path(argv[1]);
+    final DistributedFileSystem dfs = AdminHelper.getDFS(p.toUri(), getConf());
     try {
-      dfs.allowSnapshot(new Path(argv[1]));
+      dfs.allowSnapshot(p);
     } catch (SnapshotException e) {
       throw new RemoteException(e.getClass().getName(), e.getMessage());
     }
@@ -718,10 +726,11 @@ public class DFSAdmin extends FsShell {
    * @param argv List of of command line parameters.
    * @exception IOException
    */
-  public void disallowSnapshot(String[] argv) throws IOException {  
-    DistributedFileSystem dfs = getDFS();
+  public void disallowSnapshot(String[] argv) throws IOException {
+    Path p = new Path(argv[1]);
+    final DistributedFileSystem dfs = AdminHelper.getDFS(p.toUri(), getConf());
     try {
-      dfs.disallowSnapshot(new Path(argv[1]));
+      dfs.disallowSnapshot(p);
     } catch (SnapshotException e) {
       throw new RemoteException(e.getClass().getName(), e.getMessage());
     }
@@ -1927,13 +1936,13 @@ public class DFSAdmin extends FsShell {
       } else if ("-metasave".equals(cmd)) {
         exitCode = metaSave(argv, i);
       } else if (ClearQuotaCommand.matches(cmd)) {
-        exitCode = new ClearQuotaCommand(argv, i, getDFS()).runAll();
+        exitCode = new ClearQuotaCommand(argv, i, getConf()).runAll();
       } else if (SetQuotaCommand.matches(cmd)) {
-        exitCode = new SetQuotaCommand(argv, i, getDFS()).runAll();
+        exitCode = new SetQuotaCommand(argv, i, getConf()).runAll();
       } else if (ClearSpaceQuotaCommand.matches(cmd)) {
-        exitCode = new ClearSpaceQuotaCommand(argv, i, getDFS()).runAll();
+        exitCode = new ClearSpaceQuotaCommand(argv, i, getConf()).runAll();
       } else if (SetSpaceQuotaCommand.matches(cmd)) {
-        exitCode = new SetSpaceQuotaCommand(argv, i, getDFS()).runAll();
+        exitCode = new SetSpaceQuotaCommand(argv, i, getConf()).runAll();
       } else if ("-refreshServiceAcl".equals(cmd)) {
         exitCode = refreshServiceAcl();
       } else if ("-refreshUserToGroupsMappings".equals(cmd)) {
