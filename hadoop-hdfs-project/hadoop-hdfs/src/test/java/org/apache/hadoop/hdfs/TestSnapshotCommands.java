@@ -23,6 +23,8 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -60,6 +62,7 @@ public class TestSnapshotCommands {
   @Before
   public void setUp() throws IOException {
     fs.mkdirs(new Path("/sub1"));
+    fs.mkdirs(new Path("/Fully/QPath"));
     fs.allowSnapshot(new Path("/sub1"));
     fs.mkdirs(new Path("/sub1/sub1sub1"));
     fs.mkdirs(new Path("/sub1/sub1sub2"));
@@ -160,5 +163,36 @@ public class TestSnapshotCommands {
     DFSTestUtil.DFSAdminRun("-disallowSnapshot /sub1", 0, "Disallowing snaphot on /sub1 succeeded", conf);
     // now it can be deleted
     DFSTestUtil.FsShellRun("-rmr /sub1", conf);
+  }
+
+  @Test (timeout=60000)
+  public void testSnapshotCommandsWithURI()throws Exception {
+    Configuration config = new HdfsConfiguration();
+    //fs.defaultFS should not be used, when path is fully qualified.
+    config.set("fs.defaultFS", "hdfs://127.0.0.1:1024");
+    String path = fs.getUri() + "/Fully/QPath";
+    DFSTestUtil.DFSAdminRun("-allowSnapshot " + path, 0,
+        "Allowing snaphot on " + path + " succeeded", config);
+    DFSTestUtil.FsShellRun("-createSnapshot " + path + " sn1", config);
+    // create file1
+    DFSTestUtil
+        .createFile(fs, new Path(fs.getUri() + "/Fully/QPath/File1"), 1024,
+            (short) 1, 100);
+    // create file2
+    DFSTestUtil
+        .createFile(fs, new Path(fs.getUri() + "/Fully/QPath/File2"), 1024,
+            (short) 1, 100);
+    DFSTestUtil.FsShellRun("-createSnapshot " + path + " sn2", config);
+    // verify the snapshotdiff using api and command line
+    SnapshotDiffReport report =
+        fs.getSnapshotDiffReport(new Path(path), "sn1", "sn2");
+    DFSTestUtil.toolRun(new SnapshotDiff(config), path + " sn1 sn2", 0,
+        report.toString());
+    DFSTestUtil.FsShellRun("-renameSnapshot " + path + " sn2 sn3", config);
+    DFSTestUtil.FsShellRun("-deleteSnapshot " + path + " sn1", config);
+    DFSTestUtil.FsShellRun("-deleteSnapshot " + path + " sn3", config);
+    DFSTestUtil.DFSAdminRun("-disallowSnapshot " + path, 0,
+        "Disallowing snaphot on " + path + " succeeded", config);
+    fs.delete(new Path("/Fully/QPath"), true);
   }
 }
