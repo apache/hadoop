@@ -1334,6 +1334,10 @@ public class TimelineReaderWebServices {
    *     2 dates.
    *     "daterange=20150711-" returns flows active on and after 20150711.
    *     "daterange=-20150711" returns flows active on and before 20150711.
+   * @param fromId If specified, retrieve the next set of flows from the given
+   *     fromId. The set of flows retrieved is inclusive of specified fromId.
+   *     fromId should be taken from the value associated with FROM_ID info key
+   *     in flow entity response which was sent earlier.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     set of <cite>FlowActivityEntity</cite> instances are returned.<br>
@@ -1350,8 +1354,9 @@ public class TimelineReaderWebServices {
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
       @QueryParam("limit") String limit,
-      @QueryParam("daterange") String dateRange) {
-    return getFlows(req, res, null, limit, dateRange);
+      @QueryParam("daterange") String dateRange,
+      @QueryParam("fromid") String fromId) {
+    return getFlows(req, res, null, limit, dateRange, fromId);
   }
 
   /**
@@ -1380,6 +1385,10 @@ public class TimelineReaderWebServices {
    *     2 dates.
    *     "daterange=20150711-" returns flows active on and after 20150711.
    *     "daterange=-20150711" returns flows active on and before 20150711.
+   * @param fromId If specified, retrieve the next set of flows from the given
+   *     fromId. The set of flows retrieved is inclusive of specified fromId.
+   *     fromId should be taken from the value associated with FROM_ID info key
+   *     in flow entity response which was sent earlier.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     set of <cite>FlowActivityEntity</cite> instances are returned.<br>
@@ -1397,7 +1406,8 @@ public class TimelineReaderWebServices {
       @Context HttpServletResponse res,
       @PathParam("clusterid") String clusterId,
       @QueryParam("limit") String limit,
-      @QueryParam("daterange") String dateRange) {
+      @QueryParam("daterange") String dateRange,
+      @QueryParam("fromid") String fromId) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
@@ -1414,7 +1424,7 @@ public class TimelineReaderWebServices {
       TimelineEntityFilters entityFilters =
           TimelineReaderWebServicesUtils.createTimelineEntityFilters(
               limit, null, null, null, null, null, null, null, null, null,
-              null);
+              fromId);
       entityFilters.setCreatedTimeBegin(range.dateStart);
       entityFilters.setCreatedTimeEnd(range.dateEnd);
       entities = timelineReaderManager.getEntities(

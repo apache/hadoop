@@ -195,39 +195,29 @@ enum TimelineUIDConverter {
   };
 
   /**
-   * Delimiter used for UID.
-   */
-  public static final char UID_DELIMITER_CHAR = '!';
-
-  /**
-   * Escape Character used if delimiter or escape character itself is part of
-   * different components of UID.
-   */
-  public static final char UID_ESCAPE_CHAR = '*';
-
-  /**
-   * Split UID using {@link #UID_DELIMITER_CHAR} and {@link #UID_ESCAPE_CHAR}.
+   * Split UID using {@link TimelineReaderUtils#DEFAULT_DELIMITER_CHAR} and
+   * {@link TimelineReaderUtils#DEFAULT_ESCAPE_CHAR}.
    * @param uid UID to be splitted.
    * @return a list of different parts of UID split across delimiter.
    * @throws IllegalArgumentException if UID is not properly escaped.
    */
   private static List<String> splitUID(String uid)
       throws IllegalArgumentException {
-    return TimelineReaderUtils.split(uid, UID_DELIMITER_CHAR, UID_ESCAPE_CHAR);
+    return TimelineReaderUtils.split(uid);
   }
 
   /**
-   * Join different parts of UID delimited by {@link #UID_DELIMITER_CHAR} with
-   * delimiter and escape character escaped using {@link #UID_ESCAPE_CHAR} if
-   * UID parts contain them.
+   * Join different parts of UID delimited by
+   * {@link TimelineReaderUtils#DEFAULT_DELIMITER_CHAR} with delimiter and
+   * escape character escaped using
+   * {@link TimelineReaderUtils#DEFAULT_ESCAPE_CHAR} if UID parts contain them.
    * @param parts an array of UID parts to be joined.
    * @return a string joined using the delimiter with escape and delimiter
-   *     characters escaped if they are part of the string parts to be joined.
-   *     Returns null if one of the parts is null.
+   *         characters escaped if they are part of the string parts to be
+   *         joined. Returns null if one of the parts is null.
    */
   private static String joinAndEscapeUIDParts(String[] parts) {
-    return TimelineReaderUtils.joinAndEscapeStrings(parts, UID_DELIMITER_CHAR,
-        UID_ESCAPE_CHAR);
+    return TimelineReaderUtils.joinAndEscapeStrings(parts);
   }
 
   /**

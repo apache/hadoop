@@ -24,10 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.lang.reflect.UndeclaredThrowableException;
-import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URL;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,7 +36,6 @@ import java.util.Set;
 import javax.ws.rs.core.MediaType;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
@@ -50,17 +46,11 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric.Type;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
-import org.apache.hadoop.yarn.server.timelineservice.storage.DataGeneratorForTest;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
-import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -70,27 +60,26 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.ClientResponse.Status;
 import com.sun.jersey.api.client.GenericType;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
-import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
-import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 
-public class TestTimelineReaderWebServicesHBaseStorage {
-  private int serverPort;
-  private TimelineReaderServer server;
-  private static HBaseTestingUtility util;
+/**
+ * Test TimelineReder Web Service REST API's.
+ */
+public class TestTimelineReaderWebServicesHBaseStorage
+    extends AbstractTimelineReaderHBaseTestBase {
   private static long ts = System.currentTimeMillis();
   private static long dayTs =
       HBaseTimelineStorageUtils.getTopOfTheDayTimestamp(ts);
 
   @BeforeClass
-  public static void setup() throws Exception {
-    util = new HBaseTestingUtility();
-    Configuration conf = util.getConfiguration();
-    conf.setInt("hfile.format.version", 3);
-    util.startMiniCluster();
-    DataGeneratorForTest.createSchema(conf);
+  public static void setupBeforeClass() throws Exception {
+    setup();
     loadData();
+    initialize();
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    tearDown();
   }
 
   private static void loadData() throws Exception {
@@ -344,7 +333,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     }
 
     HBaseTimelineWriterImpl hbi = null;
-    Configuration c1 = util.getConfiguration();
+    Configuration c1 = getHBaseTestingUtility().getConfiguration();
     try {
       hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
@@ -393,84 +382,6 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     }
   }
 
-  @AfterClass
-  public static void tearDown() throws Exception {
-    util.shutdownMiniCluster();
-  }
-
-  @Before
-  public void init() throws Exception {
-    try {
-      Configuration config = util.getConfiguration();
-      config.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
-      config.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
-      config.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
-          "localhost:0");
-      config.set(YarnConfiguration.RM_CLUSTER_ID, "cluster1");
-      config.set(YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
-          "org.apache.hadoop.yarn.server.timelineservice.storage." +
-              "HBaseTimelineReaderImpl");
-      config.setInt("hfile.format.version", 3);
-      server = new TimelineReaderServer() {
-        @Override
-        protected void setupOptions(Configuration conf) {
-          // The parent code tries to use HttpServer2 from this version of
-          // Hadoop, but the tests are loading in HttpServer2 from
-          // ${hbase-compatible-hadoop.version}.  This version uses Jetty 9
-          // while ${hbase-compatible-hadoop.version} uses Jetty 6, and there
-          // are many differences, including classnames and packages.
-          // We do nothing here, so that we don't cause a NoSuchMethodError.
-          // Once ${hbase-compatible-hadoop.version} is changed to Hadoop 3,
-          // we should be able to remove this @Override.
-        }
-      };
-      server.init(config);
-      server.start();
-      serverPort = server.getWebServerPort();
-    } catch (Exception e) {
-      Assert.fail("Web server failed to start");
-    }
-  }
-
-  private static Client createClient() {
-    ClientConfig cfg = new DefaultClientConfig();
-    cfg.getClasses().add(YarnJacksonJaxbJsonProvider.class);
-    return new Client(new URLConnectionClientHandler(
-        new DummyURLConnectionFactory()), cfg);
-  }
-
-  private static ClientResponse getResponse(Client client, URI uri)
-      throws Exception {
-    ClientResponse resp =
-        client.resource(uri).accept(MediaType.APPLICATION_JSON)
-        .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    if (resp == null ||
-        resp.getStatusInfo().getStatusCode() !=
-            ClientResponse.Status.OK.getStatusCode()) {
-      String msg = "";
-      if (resp != null) {
-        msg = String.valueOf(resp.getStatusInfo().getStatusCode());
-      }
-      throw new IOException("Incorrect response from timeline reader. " +
-          "Status=" + msg);
-    }
-    return resp;
-  }
-
-  private static class DummyURLConnectionFactory
-      implements HttpURLConnectionFactory {
-
-    @Override
-    public HttpURLConnection getHttpURLConnection(final URL url)
-        throws IOException {
-      try {
-        return (HttpURLConnection)url.openConnection();
-      } catch (UndeclaredThrowableException e) {
-        throw new IOException(e.getCause());
-      }
-    }
-  }
-
   private static TimelineEntity newEntity(String type, String id) {
     TimelineEntity entity = new TimelineEntity();
     entity.setIdentifier(new TimelineEntity.Identifier(type, id));
@@ -512,22 +423,11 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     return false;
   }
 
-  private static void verifyHttpResponse(Client client, URI uri,
-      Status status) {
-    ClientResponse resp =
-        client.resource(uri).accept(MediaType.APPLICATION_JSON)
-        .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertNotNull(resp);
-    assertTrue("Response from server should have been " + status,
-        resp.getStatusInfo().getStatusCode() == status.getStatusCode());
-    System.out.println("Response is: " + resp.getEntity(String.class));
-  }
-
   @Test
   public void testGetFlowRun() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/runs/" +
           "1002345678919");
       ClientResponse resp = getResponse(client, uri);
@@ -548,7 +448,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       }
 
       // Query without specifying cluster ID.
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/users/user1/flows/flow_name/runs/1002345678919");
       resp = getResponse(client, uri);
       entity = resp.getEntity(FlowRunEntity.class);
@@ -573,7 +473,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetFlowRuns() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/runs");
       ClientResponse resp = getResponse(client, uri);
       Set<FlowRunEntity> entities =
@@ -593,8 +493,9 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         assertEquals(0, entity.getMetrics().size());
       }
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/" +
-          "clusters/cluster1/users/user1/flows/flow_name/runs?limit=1");
+      uri =
+          URI.create("http://localhost:" + getServerPort() + "/ws/v2/timeline/"
+              + "clusters/cluster1/users/user1/flows/flow_name/runs?limit=1");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<FlowRunEntity>>(){});
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; charset=utf-8",
@@ -609,7 +510,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         assertEquals(0, entity.getMetrics().size());
       }
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/runs?" +
           "createdtimestart=1425016501030");
       resp = getResponse(client, uri);
@@ -626,7 +527,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         assertEquals(0, entity.getMetrics().size());
       }
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/runs?" +
           "createdtimestart=1425016500999&createdtimeend=1425016501035");
       resp = getResponse(client, uri);
@@ -646,7 +547,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         assertEquals(0, entity.getMetrics().size());
       }
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/runs?" +
           "createdtimeend=1425016501030");
       resp = getResponse(client, uri);
@@ -663,7 +564,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         assertEquals(0, entity.getMetrics().size());
       }
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/runs?" +
           "fields=metrics");
       resp = getResponse(client, uri);
@@ -686,7 +587,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       // fields as CONFIGS will lead to a HTTP 400 as it makes no sense for
       // flow runs.
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/runs?" +
           "fields=CONFIGS");
       verifyHttpResponse(client, uri, Status.BAD_REQUEST);
@@ -699,7 +600,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetFlowRunsMetricsToRetrieve() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/runs?" +
           "metricstoretrieve=MAP_,HDFS_");
       ClientResponse resp = getResponse(client, uri);
@@ -719,7 +620,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       }
       assertEquals(3, metricCnt);
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/runs?" +
           "metricstoretrieve=!(MAP_,HDFS_)");
       resp = getResponse(client, uri);
@@ -746,7 +647,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     Client client = createClient();
     try {
       // Query all flows.
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/flows");
       ClientResponse resp = getResponse(client, uri);
       Set<FlowActivityEntity> flowEntities =
@@ -772,7 +673,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       // Query flowruns based on UID returned in query above.
       List<String> listFlowRunUIDs = new ArrayList<String>();
       for (String flowUID : listFlowUIDs) {
-        uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+        uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
             "timeline/flow-uid/" + flowUID + "/runs");
         resp = getResponse(client, uri);
         Set<FlowRunEntity> frEntities =
@@ -792,7 +693,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       // Query single flowrun based on UIDs' returned in query to get flowruns.
       for (String flowRunUID : listFlowRunUIDs) {
-        uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+        uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
             "timeline/run-uid/" + flowRunUID);
         resp = getResponse(client, uri);
         FlowRunEntity entity = resp.getEntity(FlowRunEntity.class);
@@ -804,7 +705,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       for (String flowRunUID : listFlowRunUIDs) {
         TimelineReaderContext context =
             TimelineUIDConverter.FLOWRUN_UID.decodeUID(flowRunUID);
-        uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+        uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
             "timeline/run-uid/" + flowRunUID + "/apps");
         resp = getResponse(client, uri);
         Set<TimelineEntity> appEntities =
@@ -824,7 +725,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       // Query single app based on UIDs' returned in query to get apps.
       for (String appUID : listAppUIDs) {
-        uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+        uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
             "timeline/app-uid/" + appUID);
         resp = getResponse(client, uri);
         TimelineEntity entity = resp.getEntity(TimelineEntity.class);
@@ -837,7 +738,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       for (String appUID : listAppUIDs) {
         TimelineReaderContext context =
             TimelineUIDConverter.APPLICATION_UID.decodeUID(appUID);
-        uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+        uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
             "timeline/app-uid/" + appUID + "/entities/type1");
         resp = getResponse(client, uri);
         Set<TimelineEntity> entities =
@@ -859,39 +760,39 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       // Query single entity based on UIDs' returned in query to get entities.
       for (String entityUID : listEntityUIDs) {
-        uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+        uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
             "timeline/entity-uid/" + entityUID);
         resp = getResponse(client, uri);
         TimelineEntity entity = resp.getEntity(TimelineEntity.class);
         assertNotNull(entity);
       }
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/flow-uid/dummy:flow/runs");
       verifyHttpResponse(client, uri, Status.BAD_REQUEST);
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/run-uid/dummy:flowrun");
       verifyHttpResponse(client, uri, Status.BAD_REQUEST);
 
       // Run Id is not a numerical value.
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/run-uid/some:dummy:flow:123v456");
       verifyHttpResponse(client, uri, Status.BAD_REQUEST);
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/run-uid/dummy:flowrun/apps");
       verifyHttpResponse(client, uri, Status.BAD_REQUEST);
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/app-uid/dummy:app");
       verifyHttpResponse(client, uri, Status.BAD_REQUEST);
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/app-uid/dummy:app/entities/type1");
       verifyHttpResponse(client, uri, Status.BAD_REQUEST);
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/entity-uid/dummy:entity");
       verifyHttpResponse(client, uri, Status.BAD_REQUEST);
     } finally {
@@ -905,7 +806,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     try {
       String appUIDWithFlowInfo =
           "cluster1!user1!flow_name!1002345678919!application_1111111111_1111";
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/"+
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/"+
           "timeline/app-uid/" + appUIDWithFlowInfo);
       ClientResponse resp = getResponse(client, uri);
       TimelineEntity appEntity1 = resp.getEntity(TimelineEntity.class);
@@ -914,8 +815,9 @@ public class TestTimelineReaderWebServicesHBaseStorage {
           TimelineEntityType.YARN_APPLICATION.toString(), appEntity1.getType());
       assertEquals("application_1111111111_1111", appEntity1.getId());
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/" +
-          "app-uid/" + appUIDWithFlowInfo + "/entities/type1");
+      uri =
+          URI.create("http://localhost:" + getServerPort() + "/ws/v2/timeline/"
+              + "app-uid/" + appUIDWithFlowInfo + "/entities/type1");
       resp = getResponse(client, uri);
       Set<TimelineEntity> entities1 =
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
@@ -932,8 +834,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       }
 
       String appUIDWithoutFlowInfo = "cluster1!application_1111111111_1111";
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/"+
-          "app-uid/" + appUIDWithoutFlowInfo);
+      uri = URI.create("http://localhost:" + getServerPort()
+          + "/ws/v2/timeline/" + "app-uid/" + appUIDWithoutFlowInfo);
       resp = getResponse(client, uri);
       TimelineEntity appEntity2 = resp.getEntity(TimelineEntity.class);
       assertNotNull(appEntity2);
@@ -941,8 +843,9 @@ public class TestTimelineReaderWebServicesHBaseStorage {
           TimelineEntityType.YARN_APPLICATION.toString(), appEntity2.getType());
       assertEquals("application_1111111111_1111", appEntity2.getId());
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/" +
-          "app-uid/" + appUIDWithoutFlowInfo + "/entities/type1");
+      uri =
+          URI.create("http://localhost:" + getServerPort() + "/ws/v2/timeline/"
+              + "app-uid/" + appUIDWithoutFlowInfo + "/entities/type1");
       resp = getResponse(client, uri);
       Set<TimelineEntity> entities2 =
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
@@ -959,8 +862,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       }
 
       String entityUIDWithFlowInfo = appUIDWithFlowInfo + "!type1!0!entity1";
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/"+
-          "entity-uid/" + entityUIDWithFlowInfo);
+      uri = URI.create("http://localhost:" + getServerPort()
+          + "/ws/v2/timeline/" + "entity-uid/" + entityUIDWithFlowInfo);
       resp = getResponse(client, uri);
       TimelineEntity singleEntity1 = resp.getEntity(TimelineEntity.class);
       assertNotNull(singleEntity1);
@@ -969,8 +872,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       String entityUIDWithoutFlowInfo =
           appUIDWithoutFlowInfo + "!type1!0!entity1";
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/"+
-          "entity-uid/" + entityUIDWithoutFlowInfo);
+      uri = URI.create("http://localhost:" + getServerPort()
+          + "/ws/v2/timeline/" + "entity-uid/" + entityUIDWithoutFlowInfo);
       resp = getResponse(client, uri);
       TimelineEntity singleEntity2 = resp.getEntity(TimelineEntity.class);
       assertNotNull(singleEntity2);
@@ -987,7 +890,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     try {
       String appUID =
           "cluster1!user*1!flow_name!1002345678919!application_1111111111_1111";
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/"+
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/"+
           "timeline/app-uid/" + appUID);
       verifyHttpResponse(client, uri, Status.BAD_REQUEST);
     } finally {
@@ -999,19 +902,19 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetFlows() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/flows");
 
       verifyFlowEntites(client, uri, 3, new int[] {3, 2, 1},
           new String[] {"flow1", "flow_name", "flow_name2"});
 
       // Query without specifying cluster ID.
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/flows/");
       verifyFlowEntites(client, uri, 3, new int[] {3, 2, 1},
           new String[] {"flow1", "flow_name", "flow_name2"});
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
               "timeline/clusters/cluster1/flows?limit=1");
       verifyFlowEntites(client, uri, 1, new int[] {3},
           new String[] {"flow1"});
@@ -1020,45 +923,82 @@ public class TestTimelineReaderWebServicesHBaseStorage {
           HBaseTimelineStorageUtils.getTopOfTheDayTimestamp(1425016501000L);
 
       DateFormat fmt = TimelineReaderWebServices.DATE_FORMAT.get();
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/flows?daterange="
           + fmt.format(firstFlowActivity) + "-"
           + fmt.format(dayTs));
       verifyFlowEntites(client, uri, 3, new int[] {3, 2, 1},
           new String[] {"flow1", "flow_name", "flow_name2"});
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/flows?daterange=" +
           fmt.format(dayTs + (4*86400000L)));
       verifyFlowEntites(client, uri, 0, new int[] {}, new String[] {});
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/flows?daterange=-" +
           fmt.format(dayTs));
       verifyFlowEntites(client, uri, 3, new int[] {3, 2, 1},
           new String[] {"flow1", "flow_name", "flow_name2"});
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/flows?daterange=" +
            fmt.format(firstFlowActivity) + "-");
       verifyFlowEntites(client, uri, 3, new int[] {3, 2, 1},
           new String[] {"flow1", "flow_name", "flow_name2"});
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/flows?daterange=20150711:20150714");
       verifyHttpResponse(client, uri, Status.BAD_REQUEST);
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/flows?daterange=20150714-20150711");
       verifyHttpResponse(client, uri, Status.BAD_REQUEST);
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/flows?daterange=2015071129-20150712");
       verifyHttpResponse(client, uri, Status.BAD_REQUEST);
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/flows?daterange=20150711-2015071243");
       verifyHttpResponse(client, uri, Status.BAD_REQUEST);
+    } finally {
+      client.destroy();
+    }
+  }
+
+  @Test
+  public void testGetFlowsForPagination() throws Exception {
+    Client client = createClient();
+    int noOfEntities = 3;
+    int limit = 2;
+    try {
+      String flowURI = "http://localhost:" + getServerPort() + "/ws/v2/"
+          + "timeline/clusters/cluster1/flows";
+      URI uri = URI.create(flowURI);
+      List<FlowActivityEntity> flowEntites =
+          verifyFlowEntites(client, uri, 3, new int[] {3, 2, 1},
+              new String[] {"flow1", "flow_name", "flow_name2"});
+      FlowActivityEntity fEntity1 = flowEntites.get(0);
+      FlowActivityEntity fEntity3 = flowEntites.get(noOfEntities - 1);
+
+      uri = URI.create(flowURI + "?limit=" + limit);
+      flowEntites = verifyFlowEntites(client, uri, limit);
+      assertEquals(fEntity1, flowEntites.get(0));
+      FlowActivityEntity fEntity2 = flowEntites.get(limit - 1);
+
+      uri = URI
+          .create(flowURI + "?limit=" + limit + "&fromid="
+              + fEntity2.getInfo().get(TimelineReaderUtils.FROMID_KEY));
+      flowEntites = verifyFlowEntites(client, uri, noOfEntities - limit + 1);
+      assertEquals(fEntity2, flowEntites.get(0));
+      assertEquals(fEntity3, flowEntites.get(noOfEntities - limit));
+
+      uri = URI
+          .create(flowURI + "?limit=" + limit + "&fromid="
+              + fEntity3.getInfo().get(TimelineReaderUtils.FROMID_KEY));
+      flowEntites = verifyFlowEntites(client, uri, 1);
+      assertEquals(fEntity3, flowEntites.get(0));
     } finally {
       client.destroy();
     }
@@ -1068,7 +1008,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetApp() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111?" +
           "userid=user1&fields=ALL&flowname=flow_name&flowrunid=1002345678919");
       ClientResponse resp = getResponse(client, uri);
@@ -1086,7 +1026,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         assertTrue(verifyMetrics(metric, m1, m2, m3));
       }
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
               "timeline/apps/application_1111111111_2222?userid=user1" +
               "&fields=metrics&flowname=flow_name&flowrunid=1002345678919");
       resp = getResponse(client, uri);
@@ -1108,7 +1048,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetAppWithoutFlowInfo() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111?" +
           "fields=ALL");
       ClientResponse resp = getResponse(client, uri);
@@ -1127,7 +1067,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         assertTrue(verifyMetrics(metric, m1, m2, m3));
       }
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111?" +
           "fields=ALL&metricslimit=10");
       resp = getResponse(client, uri);
@@ -1157,7 +1097,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetEntityWithoutFlowInfo() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1/entity1");
       ClientResponse resp = getResponse(client, uri);
@@ -1174,7 +1114,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetEntitiesWithoutFlowInfo() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1");
       ClientResponse resp = getResponse(client, uri);
@@ -1198,7 +1138,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetEntitiesDataToRetrieve() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?confstoretrieve=cfg_");
       ClientResponse resp = getResponse(client, uri);
@@ -1215,7 +1155,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       }
       assertEquals(2, cfgCnt);
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?confstoretrieve=cfg_,config_");
       resp = getResponse(client, uri);
@@ -1232,7 +1172,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       }
       assertEquals(5, cfgCnt);
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?confstoretrieve=!(cfg_,config_)");
       resp = getResponse(client, uri);
@@ -1248,7 +1188,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       }
       assertEquals(1, cfgCnt);
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?metricstoretrieve=MAP_");
       resp = getResponse(client, uri);
@@ -1264,7 +1204,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       }
       assertEquals(1, metricCnt);
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?metricstoretrieve=MAP1_,HDFS_");
       resp = getResponse(client, uri);
@@ -1281,7 +1221,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       }
       assertEquals(3, metricCnt);
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?metricstoretrieve=!(MAP1_,HDFS_)");
       resp = getResponse(client, uri);
@@ -1306,7 +1246,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetEntitiesConfigFilters() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?conffilters=config_param1%20eq%20value1%20OR%20" +
           "config_param1%20eq%20value3");
@@ -1320,7 +1260,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
             entity.getId().equals("entity2"));
       }
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?conffilters=config_param1%20eq%20value1%20AND" +
           "%20configuration_param2%20eq%20value2");
@@ -1331,7 +1271,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       // conffilters=(config_param1 eq value1 AND configuration_param2 eq
       // value2) OR (config_param1 eq value3 AND cfg_param3 eq value1)
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?conffilters=(config_param1%20eq%20value1%20AND" +
           "%20configuration_param2%20eq%20value2)%20OR%20(config_param1%20eq" +
@@ -1349,7 +1289,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       // conffilters=(config_param1 eq value1 AND configuration_param2 eq
       // value2) OR (config_param1 eq value3 AND cfg_param3 eq value1)
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?conffilters=(config_param1%20eq%20value1%20AND" +
           "%20configuration_param2%20eq%20value2)%20OR%20(config_param1%20eq" +
@@ -1365,7 +1305,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       }
       assertEquals(3, cfgCnt);
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?conffilters=(config_param1%20eq%20value1%20AND" +
           "%20configuration_param2%20eq%20value2)%20OR%20(config_param1%20eq" +
@@ -1391,7 +1331,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       // entity1. For ne, both entity1 and entity2 will be returned. For ene,
       // only entity2 will be returned as we are checking for existence too.
       // conffilters=configuration_param2 ne value3
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?conffilters=configuration_param2%20ne%20value3");
       resp = getResponse(client, uri);
@@ -1403,7 +1343,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
             entity.getId().equals("entity2"));
       }
       // conffilters=configuration_param2 ene value3
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?conffilters=configuration_param2%20ene%20value3");
       resp = getResponse(client, uri);
@@ -1423,7 +1363,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     Client client = createClient();
     try {
       // infofilters=info1 eq cluster1 OR info1 eq cluster2
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?infofilters=info1%20eq%20cluster1%20OR%20info1%20eq" +
           "%20cluster2");
@@ -1438,7 +1378,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       }
 
       // infofilters=info1 eq cluster1 AND info4 eq 35000
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?infofilters=info1%20eq%20cluster1%20AND%20info4%20" +
           "eq%2035000");
@@ -1448,7 +1388,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       assertEquals(0, entities.size());
 
       // infofilters=info4 eq 35000 OR info4 eq 36000
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?infofilters=info4%20eq%2035000%20OR%20info4%20eq" +
           "%2036000");
@@ -1463,7 +1403,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       // infofilters=(info1 eq cluster1 AND info4 eq 35000) OR
       // (info1 eq cluster2 AND info2 eq 2.0)
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?infofilters=(info1%20eq%20cluster1%20AND%20info4%20" +
           "eq%2035000)%20OR%20(info1%20eq%20cluster2%20AND%20info2%20eq%202.0" +
@@ -1482,7 +1422,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       // infofilters=(info1 eq cluster1 AND info4 eq 35000) OR
       // (info1 eq cluster2 AND info2 eq 2.0)
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?infofilters=(info1%20eq%20cluster1%20AND%20info4%20" +
           "eq%2035000)%20OR%20(info1%20eq%20cluster2%20AND%20info2%20eq%20" +
@@ -1504,7 +1444,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       // both entity1 and entity2 will be returned. For ene, only entity2 will
       // be returned as we are checking for existence too.
       // infofilters=info3 ne 39000
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?infofilters=info3%20ne%2039000");
       resp = getResponse(client, uri);
@@ -1516,7 +1456,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
             entity.getId().equals("entity2"));
       }
       // infofilters=info3 ene 39000
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?infofilters=info3%20ene%2039000");
       resp = getResponse(client, uri);
@@ -1536,7 +1476,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     Client client = createClient();
     try {
       // metricfilters=HDFS_BYTES_READ lt 60 OR HDFS_BYTES_READ eq 157
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?metricfilters=HDFS_BYTES_READ%20lt%2060%20OR%20" +
           "HDFS_BYTES_READ%20eq%20157");
@@ -1551,7 +1491,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       }
 
       // metricfilters=HDFS_BYTES_READ lt 60 AND MAP_SLOT_MILLIS gt 40
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?metricfilters=HDFS_BYTES_READ%20lt%2060%20AND%20" +
           "MAP_SLOT_MILLIS%20gt%2040");
@@ -1562,7 +1502,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       // metricfilters=(HDFS_BYTES_READ lt 60 AND MAP_SLOT_MILLIS gt 40) OR
       // (MAP1_SLOT_MILLIS ge 140 AND MAP11_SLOT_MILLIS le 122)
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?metricfilters=(HDFS_BYTES_READ%20lt%2060%20AND%20" +
           "MAP_SLOT_MILLIS%20gt%2040)%20OR%20(MAP1_SLOT_MILLIS%20ge" +
@@ -1580,7 +1520,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       // metricfilters=(HDFS_BYTES_READ lt 60 AND MAP_SLOT_MILLIS gt 40) OR
       // (MAP1_SLOT_MILLIS ge 140 AND MAP11_SLOT_MILLIS le 122)
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?metricfilters=(HDFS_BYTES_READ%20lt%2060%20AND%20" +
           "MAP_SLOT_MILLIS%20gt%2040)%20OR%20(MAP1_SLOT_MILLIS%20ge" +
@@ -1598,7 +1538,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       // metricfilters=(HDFS_BYTES_READ lt 60 AND MAP_SLOT_MILLIS gt 40) OR
       // (MAP1_SLOT_MILLIS ge 140 AND MAP11_SLOT_MILLIS le 122)
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?metricfilters=(HDFS_BYTES_READ%20lt%2060%20AND%20" +
           "MAP_SLOT_MILLIS%20gt%2040)%20OR%20(MAP1_SLOT_MILLIS%20ge" +
@@ -1619,7 +1559,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       }
       assertEquals(2, metricCnt);
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?metricfilters=(HDFS_BYTES_READ%20lt%2060%20AND%20" +
           "MAP_SLOT_MILLIS%20gt%2040)%20OR%20(MAP1_SLOT_MILLIS%20ge" +
@@ -1652,7 +1592,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       // entity1. For ne, both entity1 and entity2 will be returned. For ene,
       // only entity2 will be returned as we are checking for existence too.
       // metricfilters=MAP11_SLOT_MILLIS ne 100
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?metricfilters=MAP11_SLOT_MILLIS%20ne%20100");
       resp = getResponse(client, uri);
@@ -1664,7 +1604,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
             entity.getId().equals("entity2"));
       }
       // metricfilters=MAP11_SLOT_MILLIS ene 100
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?metricfilters=MAP11_SLOT_MILLIS%20ene%20100");
       resp = getResponse(client, uri);
@@ -1683,7 +1623,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetEntitiesEventFilters() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?eventfilters=event1,event3");
       ClientResponse resp = getResponse(client, uri);
@@ -1696,7 +1636,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
             entity.getId().equals("entity2"));
       }
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?eventfilters=!(event1,event3)");
       resp = getResponse(client, uri);
@@ -1705,7 +1645,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       assertEquals(0, entities.size());
 
       // eventfilters=!(event1,event3) OR event5,event6
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?eventfilters=!(event1,event3)%20OR%20event5,event6");
       resp = getResponse(client, uri);
@@ -1718,7 +1658,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       //  eventfilters=(!(event1,event3) OR event5,event6) OR
       // (event1,event2 AND (event3,event4))
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?eventfilters=(!(event1,event3)%20OR%20event5," +
           "event6)%20OR%20(event1,event2%20AND%20(event3,event4))");
@@ -1739,7 +1679,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetEntitiesRelationFilters() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?isrelatedto=type3:entity31,type2:entity21:entity22");
       ClientResponse resp = getResponse(client, uri);
@@ -1752,7 +1692,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
             entity.getId().equals("entity2"));
       }
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/" +
+      uri = URI.create("http://localhost:" + getServerPort() +
+          "/ws/v2/timeline/" +
           "clusters/cluster1/apps/application_1111111111_1111/entities/type1" +
           "?isrelatedto=!(type3:entity31,type2:entity21:entity22)");
       resp = getResponse(client, uri);
@@ -1762,7 +1703,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       // isrelatedto=!(type3:entity31,type2:entity21:entity22)OR type5:entity51,
       // type6:entity61:entity66
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/" +
+      uri = URI.create("http://localhost:" + getServerPort() +
+          "/ws/v2/timeline/" +
           "clusters/cluster1/apps/application_1111111111_1111/entities/type1" +
           "?isrelatedto=!(type3:entity31,type2:entity21:entity22)%20OR%20" +
           "type5:entity51,type6:entity61:entity66");
@@ -1777,7 +1719,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       // isrelatedto=(!(type3:entity31,type2:entity21:entity22)OR type5:
       // entity51,type6:entity61:entity66) OR (type1:entity14,type2:entity21:
       // entity22 AND (type3:entity32:entity35,type4:entity42))
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/" +
+      uri = URI.create("http://localhost:" + getServerPort() +
+          "/ws/v2/timeline/" +
           "clusters/cluster1/apps/application_1111111111_1111/entities/type1" +
           "?isrelatedto=(!(type3:entity31,type2:entity21:entity22)%20OR%20" +
           "type5:entity51,type6:entity61:entity66)%20OR%20(type1:entity14," +
@@ -1794,7 +1737,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
 
       // relatesto=!(type3:entity31,type2:entity21:entity22)OR type5:entity51,
       // type6:entity61:entity66
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/" +
+      uri = URI.create("http://localhost:" + getServerPort() +
+          "/ws/v2/timeline/" +
           "clusters/cluster1/apps/application_1111111111_1111/entities/type1" +
           "?relatesto=!%20(type3:entity31,type2:entity21:entity22%20)%20OR%20" +
           "type5:entity51,type6:entity61:entity66");
@@ -1809,7 +1753,9 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       // relatesto=(!(type3:entity31,type2:entity21:entity22)OR type5:entity51,
       // type6:entity61:entity66) OR (type1:entity14,type2:entity21:entity22 AND
       // (type3:entity32:entity35 , type4:entity42))
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/" +
+      uri =
+          URI.create("http://localhost:" + getServerPort() +
+          "/ws/v2/timeline/" +
           "clusters/cluster1/apps/application_1111111111_1111/entities/type1" +
           "?relatesto=(!(%20type3:entity31,type2:entity21:entity22)%20OR%20" +
           "type5:entity51,type6:entity61:entity66%20)%20OR%20(type1:entity14," +
@@ -1835,7 +1781,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetEntityDataToRetrieve() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1/entity2?confstoretrieve=cfg_,configuration_");
       ClientResponse resp = getResponse(client, uri);
@@ -1849,7 +1795,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
             configKey.startsWith("cfg_"));
       }
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1/entity2?confstoretrieve=!(cfg_,configuration_)");
       resp = getResponse(client, uri);
@@ -1862,7 +1808,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         assertTrue(configKey.startsWith("config_"));
       }
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1/entity2?metricstoretrieve=MAP1_,HDFS_");
       resp = getResponse(client, uri);
@@ -1876,7 +1822,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
             metric.getId().startsWith("HDFS_"));
       }
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1/entity2?metricstoretrieve=!(MAP1_,HDFS_)");
       resp = getResponse(client, uri);
@@ -1891,7 +1837,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         assertEquals(1, metric.getValues().size());
       }
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1/entity2?metricstoretrieve=!(MAP1_,HDFS_)&" +
           "metricslimit=5");
@@ -1914,7 +1860,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetFlowRunApps() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/runs/" +
           "1002345678919/apps?fields=ALL");
       ClientResponse resp = getResponse(client, uri);
@@ -1934,7 +1880,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         }
       }
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
               "timeline/clusters/cluster1/users/user1/flows/flow_name/runs/" +
               "1002345678919/apps?fields=ALL&metricslimit=2");
       resp = getResponse(client, uri);
@@ -1954,14 +1900,14 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       }
 
       // Query without specifying cluster ID.
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/users/user1/flows/flow_name/runs/1002345678919/apps");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
       assertNotNull(entities);
       assertEquals(2, entities.size());
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/users/user1/flows/flow_name/runs/1002345678919/" +
           "apps?limit=1");
       resp = getResponse(client, uri);
@@ -1977,7 +1923,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetFlowApps() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/apps?" +
           "fields=ALL");
       ClientResponse resp = getResponse(client, uri);
@@ -2016,7 +1962,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         }
       }
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/apps?" +
           "fields=ALL&metricslimit=6");
       resp = getResponse(client, uri);
@@ -2060,14 +2006,14 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       }
 
       // Query without specifying cluster ID.
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/users/user1/flows/flow_name/apps");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
       assertNotNull(entities);
       assertEquals(3, entities.size());
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/users/user1/flows/flow_name/apps?limit=1");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
@@ -2083,7 +2029,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     Client client = createClient();
     try {
       String entityType = TimelineEntityType.YARN_APPLICATION.toString();
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/apps?" +
           "eventfilters=" + ApplicationMetricsConstants.FINISHED_EVENT_TYPE);
       ClientResponse resp = getResponse(client, uri);
@@ -2094,7 +2040,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       assertTrue("Unexpected app in result", entities.contains(
           newEntity(entityType, "application_1111111111_1111")));
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/apps?" +
           "metricfilters=HDFS_BYTES_READ%20ge%200");
       resp = getResponse(client, uri);
@@ -2104,7 +2050,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       assertTrue("Unexpected app in result", entities.contains(
           newEntity(entityType, "application_1111111111_1111")));
 
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/apps?" +
           "conffilters=cfg1%20eq%20value1");
       resp = getResponse(client, uri);
@@ -2122,7 +2068,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetFlowRunNotPresent() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/users/user1/flows/flow_name/runs/" +
           "1002345678929");
       verifyHttpResponse(client, uri, Status.NOT_FOUND);
@@ -2135,7 +2081,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetFlowsNotPresent() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster2/flows");
       ClientResponse resp = getResponse(client, uri);
       Set<FlowActivityEntity> entities =
@@ -2153,7 +2099,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetAppNotPresent() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1378");
       verifyHttpResponse(client, uri, Status.NOT_FOUND);
     } finally {
@@ -2165,7 +2111,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetFlowRunAppsNotPresent() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster2/users/user1/flows/flow_name/runs/" +
           "1002345678919/apps");
       ClientResponse resp = getResponse(client, uri);
@@ -2184,7 +2130,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   public void testGetFlowAppsNotPresent() throws Exception {
     Client client = createClient();
     try {
-      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+      URI uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +
           "timeline/clusters/cluster2/users/user1/flows/flow_name55/apps");
       ClientResponse resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
@@ -2198,21 +2144,13 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     }
   }
 
-  @After
-  public void stop() throws Exception {
-    if (server != null) {
-      server.stop();
-      server = null;
-    }
-  }
-
   @Test
   public void testGenericEntitiesForPagination() throws Exception {
     Client client = createClient();
     try {
       int limit = 10;
       String queryParam = "?limit=" + limit;
-      String resourceUri = "http://localhost:" + serverPort + "/ws/v2/"
+      String resourceUri = "http://localhost:" + getServerPort() + "/ws/v2/"
           + "timeline/clusters/cluster1/apps/application_1111111111_1111/"
           + "entities/entitytype";
       URI uri = URI.create(resourceUri + queryParam);
@@ -2276,7 +2214,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     return entity;
   }
 
-  private void verifyFlowEntites(Client client, URI uri, int noOfEntities,
+  private List<FlowActivityEntity> verifyFlowEntites(Client client, URI uri,
+      int noOfEntities,
       int[] a, String[] flowsInSequence) throws Exception {
     ClientResponse resp = getResponse(client, uri);
     List<FlowActivityEntity> entities =
@@ -2292,6 +2231,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
           timelineEntity.getInfo().get("SYSTEM_INFO_FLOW_NAME"));
       assertEquals(a[count++], timelineEntity.getFlowRuns().size());
     }
+    return entities;
   }
 
   @Test
@@ -2300,7 +2240,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     try {
       // app entities stored is 15 during initialization.
       int totalAppEntities = 15;
-      String resourceUri = "http://localhost:" + serverPort + "/ws/v2/"
+      String resourceUri = "http://localhost:" + getServerPort() + "/ws/v2/"
           + "timeline/clusters/cluster1/users/user1/flows/flow1/apps";
       URI uri = URI.create(resourceUri);
       ClientResponse resp = getResponse(client, uri);
@@ -2344,7 +2284,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     try {
       // app entities stored is 15 during initialization.
       int totalAppEntities = 5;
-      String resourceUri = "http://localhost:" + serverPort + "/ws/v2/"
+      String resourceUri = "http://localhost:" + getServerPort() + "/ws/v2/"
           + "timeline/clusters/cluster1/users/user1/flows/flow1/runs/1/apps";
       URI uri = URI.create(resourceUri);
       ClientResponse resp = getResponse(client, uri);
@@ -2388,7 +2328,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     try {
       // app entities stored is 15 during initialization.
       int totalRuns = 3;
-      String resourceUri = "http://localhost:" + serverPort + "/ws/v2/"
+      String resourceUri = "http://localhost:" + getServerPort() + "/ws/v2/"
           + "timeline/clusters/cluster1/users/user1/flows/flow1/runs";
       URI uri = URI.create(resourceUri);
       ClientResponse resp = getResponse(client, uri);
