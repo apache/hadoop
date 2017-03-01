@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -40,6 +41,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.BaseFederationPoliciesTest;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
+import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.resolver.DefaultSubClusterResolverImpl;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -117,6 +119,21 @@ public class TestLocalityMulticastAMRMProxyPolicy
         getActiveSubclusters());
   }
 
+  @Test(expected = FederationPolicyInitializationException.class)
+  public void testNullWeights() throws Exception {
+    getPolicyInfo().setAMRMPolicyWeights(null);
+    initializePolicy();
+    fail();
+  }
+
+  @Test(expected = FederationPolicyInitializationException.class)
+  public void testEmptyWeights() throws Exception {
+    getPolicyInfo()
+        .setAMRMPolicyWeights(new HashMap<SubClusterIdInfo, Float>());
+    initializePolicy();
+    fail();
+  }
+
   @Test
   public void testSplitBasedOnHeadroom() throws Exception {
 
@@ -154,7 +171,7 @@ public class TestLocalityMulticastAMRMProxyPolicy
     AllocateResponse ar = getAllocateResponseWithTargetHeadroom(100);
     ((FederationAMRMProxyPolicy) getPolicy())
         .notifyOfResponse(SubClusterId.newInstance("subcluster2"), ar);
-    ((FederationAMRMProxyPolicy) getPolicy())
+    response = ((FederationAMRMProxyPolicy) getPolicy())
         .splitResourceRequests(resourceRequests);
 
     LOG.info("After headroom update");
@@ -332,7 +349,7 @@ public class TestLocalityMulticastAMRMProxyPolicy
 
     // we expect 5 entry for subcluster1 (4 from request-id 1, and part
     // of the broadcast of request-id 2
-    checkExpectedAllocation(response, "subcluster1", 5, 25);
+    checkExpectedAllocation(response, "subcluster1", 5, 26);
 
     // sub-cluster 2 should contain 3 entry from request-id 1 and 1 from the
     // broadcast of request-id 2, and no request-id 0
