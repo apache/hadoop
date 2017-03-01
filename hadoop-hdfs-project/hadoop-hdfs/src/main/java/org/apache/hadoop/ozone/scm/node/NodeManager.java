@@ -135,4 +135,16 @@ public interface NodeManager extends StorageContainerNodeProtocol, Closeable,
     DEAD
   }
 
+  /**
+   * Returns the aggregated node stats.
+   * @return the aggregated node stats.
+   */
+  SCMNodeStat getStats();
+
+  /**
+   * Return a list of node stats.
+   * @return a list of individual node stats (live/stale but not dead).
+   */
+  List<SCMNodeStat> getNodeStats();
+
 }

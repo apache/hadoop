@@ -231,6 +231,7 @@ public class RunningDatanodeState implements DatanodeState {
           .setConfig(conf)
           .setEndpointStateMachine(endpoint)
           .setNodeID(getContainerNodeID())
+          .setContext(context)
           .build();
     case SHUTDOWN:
       break;

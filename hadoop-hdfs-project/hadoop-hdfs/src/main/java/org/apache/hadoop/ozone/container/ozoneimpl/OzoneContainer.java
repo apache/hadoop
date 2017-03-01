@@ -29,6 +29,8 @@ import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -138,6 +140,8 @@ public class OzoneContainer {
       this.keyManager.shutdown();
       this.manager.shutdown();
       LOG.info("container services shutdown complete.");
+    } catch (IOException ex) {
+      LOG.warn("container service shutdown error:", ex);
     } finally {
       this.manager.writeUnlock();
     }
@@ -154,5 +158,12 @@ public class OzoneContainer {
       StorageLocation location = StorageLocation.parse(dir);
       pathList.add(location);
     }
+  }
+
+  /**
+   * Returns node report of container storage usage.
+   */
+  public SCMNodeReport getNodeReport() throws IOException {
+    return this.manager.getNodeReport();
   }
 }

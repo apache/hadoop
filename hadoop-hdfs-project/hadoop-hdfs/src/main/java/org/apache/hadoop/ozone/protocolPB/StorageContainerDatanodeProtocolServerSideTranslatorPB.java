@@ -78,7 +78,7 @@ public class StorageContainerDatanodeProtocolServerSideTranslatorPB
       SCMHeartbeatRequestProto request) throws ServiceException {
     try {
       return impl.sendHeartbeat(DatanodeID.getFromProtoBuf(request
-          .getDatanodeID()));
+          .getDatanodeID()), request.getNodeReport());
     } catch (IOException e) {
       throw new ServiceException(e);
     }

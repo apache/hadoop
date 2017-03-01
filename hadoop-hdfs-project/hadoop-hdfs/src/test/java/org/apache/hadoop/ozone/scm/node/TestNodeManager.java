@@ -22,6 +22,10 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
@@ -103,7 +107,7 @@ public class TestNodeManager {
       // Send some heartbeats from different nodes.
       for (int x = 0; x < nodeManager.getMinimumChillModeNodes(); x++) {
         DatanodeID datanodeID = SCMTestUtils.getDatanodeID(nodeManager);
-        nodeManager.sendHeartbeat(datanodeID);
+        nodeManager.sendHeartbeat(datanodeID, null);
       }
 
       // Wait for 4 seconds max.
@@ -149,7 +153,7 @@ public class TestNodeManager {
 
       // Need 100 nodes to come out of chill mode, only one node is sending HB.
       nodeManager.setMinimumChillModeNodes(100);
-      nodeManager.sendHeartbeat(SCMTestUtils.getDatanodeID(nodeManager));
+      nodeManager.sendHeartbeat(SCMTestUtils.getDatanodeID(nodeManager), null);
       GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatThead(), 100,
           4 * 1000);
       assertFalse("Not enough heartbeat, Node manager should have been in " +
@@ -175,7 +179,7 @@ public class TestNodeManager {
 
       // Send 10 heartbeat from same node, and assert we never leave chill mode.
       for (int x = 0; x < 10; x++) {
-        nodeManager.sendHeartbeat(datanodeID);
+        nodeManager.sendHeartbeat(datanodeID, null);
       }
 
       GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatThead(), 100,
@@ -204,7 +208,7 @@ public class TestNodeManager {
     nodeManager.close();
 
     // These should never be processed.
-    nodeManager.sendHeartbeat(datanodeID);
+    nodeManager.sendHeartbeat(datanodeID, null);
 
     // Let us just wait for 2 seconds to prove that HBs are not processed.
     Thread.sleep(2 * 1000);
@@ -231,7 +235,7 @@ public class TestNodeManager {
 
       for (int x = 0; x < count; x++) {
         DatanodeID datanodeID = SCMTestUtils.getDatanodeID(nodeManager);
-        nodeManager.sendHeartbeat(datanodeID);
+        nodeManager.sendHeartbeat(datanodeID, null);
       }
       GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatThead(), 100,
           4 * 1000);
@@ -317,14 +321,18 @@ public class TestNodeManager {
       DatanodeID staleNode = SCMTestUtils.getDatanodeID(nodeManager);
 
       // Heartbeat once
-      nodeManager.sendHeartbeat(staleNode);
+      nodeManager.sendHeartbeat(staleNode, null);
 
       // Heartbeat all other nodes.
-      nodeList.forEach(nodeManager::sendHeartbeat);
+      for (DatanodeID dn : nodeList) {
+        nodeManager.sendHeartbeat(dn, null);
+      }
 
       // Wait for 2 seconds .. and heartbeat good nodes again.
       Thread.sleep(2 * 1000);
-      nodeList.forEach(nodeManager::sendHeartbeat);
+      for (DatanodeID dn : nodeList) {
+        nodeManager.sendHeartbeat(dn, null);
+      }
 
       // Wait for 2 more seconds, 3 seconds is the stale window for this test
       Thread.sleep(2 * 1000);
@@ -367,19 +375,25 @@ public class TestNodeManager {
       DatanodeID deadNode = SCMTestUtils.getDatanodeID(nodeManager);
 
       // Heartbeat once
-      nodeManager.sendHeartbeat(deadNode);
+      nodeManager.sendHeartbeat(deadNode, null);
 
       // Heartbeat all other nodes.
-      nodeList.forEach(nodeManager::sendHeartbeat);
+      for (DatanodeID dn : nodeList) {
+        nodeManager.sendHeartbeat(dn, null);
+      }
 
       // Wait for 2 seconds .. and heartbeat good nodes again.
       Thread.sleep(2 * 1000);
 
-      nodeList.forEach(nodeManager::sendHeartbeat);
+      for (DatanodeID dn : nodeList) {
+        nodeManager.sendHeartbeat(dn, null);
+      }
       Thread.sleep(3 * 1000);
 
       // heartbeat good nodes again.
-      nodeList.forEach(nodeManager::sendHeartbeat);
+      for (DatanodeID dn : nodeList) {
+        nodeManager.sendHeartbeat(dn, null);
+      }
 
       //  6 seconds is the dead window for this test , so we wait a total of
       // 7 seconds to make sure that the node moves into dead state.
@@ -408,7 +422,7 @@ public class TestNodeManager {
     try (SCMNodeManager nodeManager = createNodeManager(getConf())) {
       GenericTestUtils.LogCapturer logCapturer =
           GenericTestUtils.LogCapturer.captureLogs(SCMNodeManager.LOG);
-      nodeManager.sendHeartbeat(null);
+      nodeManager.sendHeartbeat(null, null);
       logCapturer.stopCapturing();
       assertThat(logCapturer.getOutput(), containsString("Datanode ID in " +
           "heartbeat is null"));
@@ -484,9 +498,9 @@ public class TestNodeManager {
           SCMTestUtils.getDatanodeID(nodeManager, "StaleNode");
       DatanodeID deadNode =
           SCMTestUtils.getDatanodeID(nodeManager, "DeadNode");
-      nodeManager.sendHeartbeat(healthyNode);
-      nodeManager.sendHeartbeat(staleNode);
-      nodeManager.sendHeartbeat(deadNode);
+      nodeManager.sendHeartbeat(healthyNode, null);
+      nodeManager.sendHeartbeat(staleNode, null);
+      nodeManager.sendHeartbeat(deadNode, null);
 
       // Sleep so that heartbeat processing thread gets to run.
       Thread.sleep(500);
@@ -512,12 +526,12 @@ public class TestNodeManager {
        * the 3 second windows.
        */
 
-      nodeManager.sendHeartbeat(healthyNode);
-      nodeManager.sendHeartbeat(staleNode);
-      nodeManager.sendHeartbeat(deadNode);
+      nodeManager.sendHeartbeat(healthyNode, null);
+      nodeManager.sendHeartbeat(staleNode, null);
+      nodeManager.sendHeartbeat(deadNode, null);
 
       Thread.sleep(1500);
-      nodeManager.sendHeartbeat(healthyNode);
+      nodeManager.sendHeartbeat(healthyNode, null);
       Thread.sleep(2 * 1000);
       assertEquals(1, nodeManager.getNodeCount(HEALTHY));
 
@@ -537,10 +551,10 @@ public class TestNodeManager {
        * staleNode to move to stale state and deadNode to move to dead state.
        */
 
-      nodeManager.sendHeartbeat(healthyNode);
-      nodeManager.sendHeartbeat(staleNode);
+      nodeManager.sendHeartbeat(healthyNode, null);
+      nodeManager.sendHeartbeat(staleNode, null);
       Thread.sleep(1500);
-      nodeManager.sendHeartbeat(healthyNode);
+      nodeManager.sendHeartbeat(healthyNode, null);
       Thread.sleep(2 * 1000);
 
       // 3.5 seconds have elapsed for stale node, so it moves into Stale.
@@ -570,9 +584,9 @@ public class TestNodeManager {
        * Cluster State : let us heartbeat all the nodes and verify that we get
        * back all the nodes in healthy state.
        */
-      nodeManager.sendHeartbeat(healthyNode);
-      nodeManager.sendHeartbeat(staleNode);
-      nodeManager.sendHeartbeat(deadNode);
+      nodeManager.sendHeartbeat(healthyNode, null);
+      nodeManager.sendHeartbeat(staleNode, null);
+      nodeManager.sendHeartbeat(deadNode, null);
       Thread.sleep(500);
       //Assert all nodes are healthy.
       assertEquals(3, nodeManager.getAllNodes().size());
@@ -591,8 +605,9 @@ public class TestNodeManager {
   private void heartbeatNodeSet(SCMNodeManager manager, List<DatanodeID> list,
                                 int sleepDuration) throws InterruptedException {
     while (!Thread.currentThread().isInterrupted()) {
-      list.forEach(manager::sendHeartbeat);
-      Thread.sleep(sleepDuration);
+      for (DatanodeID dn : list) {
+        manager.sendHeartbeat(dn, null);
+      }      Thread.sleep(sleepDuration);
     }
   }
 
@@ -676,7 +691,10 @@ public class TestNodeManager {
 
       // No Thread just one time HBs the node manager, so that these will be
       // marked as dead nodes eventually.
-      deadNodeList.forEach(nodeManager::sendHeartbeat);
+      for (DatanodeID dn : deadNodeList) {
+        nodeManager.sendHeartbeat(dn, null);
+      }
+
 
       Thread thread1 = new Thread(healthyNodeTask);
       thread1.setDaemon(true);
@@ -828,7 +846,7 @@ public class TestNodeManager {
     try (SCMNodeManager nodeManager = createNodeManager(conf)) {
       nodeManager.setMinimumChillModeNodes(10);
       DatanodeID datanodeID = SCMTestUtils.getDatanodeID(nodeManager);
-      nodeManager.sendHeartbeat(datanodeID);
+      nodeManager.sendHeartbeat(datanodeID, null);
       String status = nodeManager.getChillModeStatus();
       Assert.assertThat(status, CoreMatchers.containsString("Still in chill " +
           "mode. Waiting on nodes to report in."));
@@ -858,7 +876,7 @@ public class TestNodeManager {
       // Assert that node manager force enter cannot be overridden by nodes HBs.
       for(int x= 0; x < 20; x++) {
         DatanodeID datanode = SCMTestUtils.getDatanodeID(nodeManager);
-        nodeManager.sendHeartbeat(datanode);
+        nodeManager.sendHeartbeat(datanode, null);
       }
 
       Thread.sleep(500);
@@ -873,6 +891,147 @@ public class TestNodeManager {
           CoreMatchers.containsString("Out of chill mode."));
       assertFalse(nodeManager.isInManualChillMode());
     }
+  }
 
+  /**
+   * Test multiple nodes sending initial heartbeat with their node report.
+   *
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws TimeoutException
+   */
+  @Test
+  public void testScmStatsFromNodeReport() throws IOException,
+      InterruptedException, TimeoutException {
+    Configuration conf = getConf();
+    final int nodeCount = 10;
+    final long capacity = 2000;
+    final long used = 100;
+    final long remaining = capacity - used;
+
+    try (SCMNodeManager nodeManager = createNodeManager(conf)) {
+      for (int x = 0; x < nodeCount; x++) {
+        DatanodeID datanodeID = SCMTestUtils.getDatanodeID(nodeManager);
+
+        SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
+        SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
+        srb.setStorageUuid(UUID.randomUUID().toString());
+        srb.setCapacity(capacity).setScmUsed(used).
+            setRemaining(capacity - used).build();
+        nodeManager.sendHeartbeat(datanodeID,
+            nrb.addStorageReport(srb).build());
+      }
+      GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatThead(), 100,
+          4 * 1000);
+      assertEquals(nodeCount, nodeManager.getNodeCount(HEALTHY));
+      assertEquals(capacity * nodeCount,
+          nodeManager.getStats().getCapacity());
+      assertEquals(used * nodeCount,
+          nodeManager.getStats().getScmUsed());
+      assertEquals(remaining * nodeCount,
+          nodeManager.getStats().getRemaining());
+    }
+  }
+
+  /**
+   * Test single node stat update based on nodereport from different heartbeat
+   * status (healthy, stale and dead).
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws TimeoutException
+   */
+  @Test
+  public void testScmNodeReportUpdate() throws IOException,
+      InterruptedException, TimeoutException {
+    Configuration conf = getConf();
+    final int heartbeatCount = 5;
+    final int nodeCount = 1;
+    final int interval = 100;
+
+    conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, interval);
+    conf.setInt(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1);
+    conf.setInt(OZONE_SCM_STALENODE_INTERVAL_MS, 3 * 1000);
+    conf.setInt(OZONE_SCM_DEADNODE_INTERVAL_MS, 6 * 1000);
+
+    try (SCMNodeManager nodeManager = createNodeManager(conf)) {
+      DatanodeID datanodeID = SCMTestUtils.getDatanodeID(nodeManager);
+      final long capacity = 2000;
+      final long usedPerHeartbeat = 100;
+
+      for (int x = 0; x < heartbeatCount; x++) {
+        SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
+        SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
+        srb.setStorageUuid(UUID.randomUUID().toString());
+        srb.setCapacity(capacity).setScmUsed(x * usedPerHeartbeat)
+            .setRemaining(capacity - x * usedPerHeartbeat).build();
+        nrb.addStorageReport(srb);
+
+        nodeManager.sendHeartbeat(datanodeID, nrb.build());
+        Thread.sleep(100);
+      }
+
+      GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatThead(), 100,
+          4 * 1000);
+      assertEquals(nodeCount, nodeManager.getNodeCount(HEALTHY));
+
+      final long expectedScmUsed = usedPerHeartbeat * (heartbeatCount -1);
+      final long expectedRemaining = capacity -
+          usedPerHeartbeat * (heartbeatCount - 1);
+      assertEquals(capacity, nodeManager.getStats().getCapacity());
+      assertEquals(expectedScmUsed, nodeManager.getStats().getScmUsed());
+      assertEquals(expectedRemaining, nodeManager.getStats().getRemaining());
+
+      // Test NodeManager#getNodeStats
+      assertEquals(nodeCount, nodeManager.getNodeStats().size());
+      assertEquals(capacity, nodeManager.getNodeStats().get(0).getCapacity());
+      assertEquals(expectedScmUsed,
+          nodeManager.getNodeStats().get(0).getScmUsed());
+      assertEquals(expectedRemaining,
+          nodeManager.getNodeStats().get(0).getRemaining());
+
+      // Wait up to 4s so that the node becomes stale
+      // Verify the usage info should be unchanged.
+      GenericTestUtils.waitFor(
+          () -> nodeManager.getNodeCount(NodeManager.NODESTATE.STALE) == 1, 100,
+          4 * 1000);
+      assertEquals(nodeCount, nodeManager.getNodeStats().size());
+      assertEquals(capacity, nodeManager.getNodeStats().get(0).getCapacity());
+      assertEquals(expectedScmUsed,
+          nodeManager.getNodeStats().get(0).getScmUsed());
+      assertEquals(expectedRemaining,
+          nodeManager.getNodeStats().get(0).getRemaining());
+
+      // Wait up to 3 more seconds so the node becomes dead
+      // Verify usage info should be updated.
+      GenericTestUtils.waitFor(
+          () -> nodeManager.getNodeCount(NodeManager.NODESTATE.DEAD) == 1, 100,
+          3 * 1000);
+
+      assertEquals(0, nodeManager.getNodeStats().size());
+      assertEquals(0, nodeManager.getStats().getCapacity());
+      assertEquals(0, nodeManager.getStats().getScmUsed());
+      assertEquals(0, nodeManager.getStats().getRemaining());
+
+      // Send a new report to bring the dead node back to healty
+      SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
+      SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
+      srb.setStorageUuid(UUID.randomUUID().toString());
+      srb.setCapacity(capacity).setScmUsed(expectedScmUsed)
+          .setRemaining(expectedRemaining).build();
+      nrb.addStorageReport(srb);
+      nodeManager.sendHeartbeat(datanodeID, nrb.build());
+
+      // Wait up to 5 seconds so that the dead node becomes healthy
+      // Verify usage info should be updated.
+      GenericTestUtils.waitFor(
+          () -> nodeManager.getNodeCount(NodeManager.NODESTATE.HEALTHY) == 1,
+          100, 5 * 1000);
+      assertEquals(nodeCount, nodeManager.getNodeStats().size());
+      assertEquals(capacity, nodeManager.getNodeStats().get(0).getCapacity());
+      assertEquals(expectedScmUsed,
+          nodeManager.getNodeStats().get(0).getScmUsed());
+      assertEquals(expectedRemaining,
+          nodeManager.getNodeStats().get(0).getRemaining());
+    }
   }
 }

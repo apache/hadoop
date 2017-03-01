@@ -45,6 +45,8 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeAddressList;
 import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
@@ -393,9 +395,10 @@ public class StorageContainerManager
    * @throws IOException
    */
   @Override
-  public SCMHeartbeatResponseProto sendHeartbeat(DatanodeID datanodeID)
-      throws IOException {
-    List<SCMCommand> commands = getScmNodeManager().sendHeartbeat(datanodeID);
+  public SCMHeartbeatResponseProto sendHeartbeat(DatanodeID datanodeID,
+      SCMNodeReport nodeReport) throws IOException {
+    List<SCMCommand> commands =
+        getScmNodeManager().sendHeartbeat(datanodeID, nodeReport);
     List<SCMCommandResponseProto> cmdReponses = new LinkedList<>();
     for (SCMCommand cmd : commands) {
       cmdReponses.add(getCommandResponse(cmd));

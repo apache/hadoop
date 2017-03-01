@@ -24,6 +24,10 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -120,7 +124,7 @@ public class ContainerManagerImpl implements ContainerManager {
         dataDirs.add(location);
       }
       this.locationManager =
-          new ContainerLocationManagerImpl(containerDirs, dataDirs);
+          new ContainerLocationManagerImpl(containerDirs, dataDirs, config);
 
     } finally {
       readUnlock();
@@ -395,9 +399,10 @@ public class ContainerManagerImpl implements ContainerManager {
    * @throws IOException
    */
   @Override
-  public void shutdown() {
+  public void shutdown() throws IOException {
     Preconditions.checkState(this.hasWriteLock());
     this.containerMap.clear();
+    this.locationManager.shutdown();
   }
 
 
@@ -495,6 +500,25 @@ public class ContainerManagerImpl implements ContainerManager {
   @Override
   public KeyManager getKeyManager() {
     return this.keyManager;
+  }
+
+  /**
+   * Get the node report.
+   * @return node report.
+   */
+  @Override
+  public SCMNodeReport getNodeReport() throws IOException {
+    StorageLocationReport[] reports = locationManager.getLocationReport();
+    SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
+    for (int i = 0; i < reports.length; i++) {
+      SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
+      nrb.addStorageReport(i, srb.setStorageUuid(reports[i].getId())
+          .setCapacity(reports[i].getCapacity())
+          .setScmUsed(reports[i].getScmUsed())
+          .setRemaining(reports[i].getRemaining())
+          .build());
+    }
+    return nrb.build();
   }
 
   /**

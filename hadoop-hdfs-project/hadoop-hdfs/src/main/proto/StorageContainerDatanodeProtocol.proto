@@ -47,6 +47,23 @@ import "DatanodeContainerProtocol.proto";
 */
 message SCMHeartbeatRequestProto {
   required DatanodeIDProto datanodeID = 1;
+  optional SCMNodeReport nodeReport= 2;
+}
+
+/**
+* This message is send along with the heart beat to report datanode
+* storage utilization by SCM.
+*/
+message SCMNodeReport {
+  repeated SCMStorageReport storageReport= 1;
+}
+
+message SCMStorageReport {
+  required string storageUuid = 1;
+  optional uint64 capacity = 2 [default = 0];
+  optional uint64 scmUsed = 3 [default = 0];
+  optional uint64 remaining = 4 [default = 0];
+  optional StorageTypeProto storageType = 5 [default = DISK];
 }
 
 message SCMRegisterRequestProto {

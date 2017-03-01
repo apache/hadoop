@@ -22,6 +22,8 @@ import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.NullCommand;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.scm.VersionInfo;
 
 import java.io.IOException;
@@ -104,12 +106,13 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
    * Used by data node to send a Heartbeat.
    *
    * @param datanodeID - Datanode ID.
+   * @param nodeReport - node report.
    * @return - SCMHeartbeatResponseProto
    * @throws IOException
    */
   @Override
   public StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto
-      sendHeartbeat(DatanodeID datanodeID)
+      sendHeartbeat(DatanodeID datanodeID, SCMNodeReport nodeReport)
       throws IOException {
     rpcCount.incrementAndGet();
     heartbeatCount.incrementAndGet();

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.ozone.container.common.interfaces;
 
+import org.apache.hadoop.ozone.container.common.impl.StorageLocationReport;
+
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -41,4 +43,16 @@ public interface ContainerLocationManager {
    */
   Path getDataPath(String containerName) throws IOException;
 
+  /**
+   * Returns an array of storage location usage report.
+   * @return storage location usage report.
+   */
+  StorageLocationReport[] getLocationReport() throws IOException;
+
+  /**
+   * Supports clean shutdown of container.
+   *
+   * @throws IOException
+   */
+  void shutdown() throws IOException;
 }

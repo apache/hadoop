@@ -24,6 +24,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.util.RwLock;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.IOException;
@@ -93,7 +95,7 @@ public interface ContainerManager extends RwLock {
    *
    * @throws IOException
    */
-  void shutdown();
+  void shutdown() throws IOException;
 
   /**
    * Sets the Chunk Manager.
@@ -123,4 +125,9 @@ public interface ContainerManager extends RwLock {
    */
   KeyManager getKeyManager();
 
+  /**
+   * Get the Node Report of container storage usage.
+   * @return node report.
+   */
+  SCMNodeReport getNodeReport() throws IOException;
 }

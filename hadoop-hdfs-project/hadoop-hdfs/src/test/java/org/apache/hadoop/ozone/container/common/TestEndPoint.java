@@ -237,7 +237,7 @@ public class TestEndPoint {
              SCMTestUtils.createEndpoint(SCMTestUtils.getConf(),
                  serverAddress, 1000)) {
       SCMHeartbeatResponseProto responseProto = rpcEndPoint.getEndPoint()
-          .sendHeartbeat(dataNode);
+          .sendHeartbeat(dataNode, null);
       Assert.assertNotNull(responseProto);
       Assert.assertEquals(1, responseProto.getCommandsCount());
       Assert.assertNotNull(responseProto.getCommandsList().get(0));
@@ -257,7 +257,7 @@ public class TestEndPoint {
         .build();
     rpcEndPoint.setState(EndpointStateMachine.EndPointStates.HEARTBEAT);
     HeartbeatEndpointTask endpointTask =
-        new HeartbeatEndpointTask(rpcEndPoint, SCMTestUtils.getConf());
+        new HeartbeatEndpointTask(rpcEndPoint, SCMTestUtils.getConf(), null);
     endpointTask.setContainerNodeIDProto(containerNodeID);
     endpointTask.call();
     Assert.assertNotNull(endpointTask.getContainerNodeIDProto());

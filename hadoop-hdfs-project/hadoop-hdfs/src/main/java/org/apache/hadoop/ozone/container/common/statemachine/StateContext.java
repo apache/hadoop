@@ -22,6 +22,7 @@ import org.apache.hadoop.ozone.container.common.states.DatanodeState;
 import org.apache.hadoop.ozone.container.common.states.datanode
     .RunningDatanodeState;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 
 import java.util.LinkedList;
 import java.util.Queue;
@@ -43,6 +44,7 @@ public class StateContext {
   private final AtomicLong stateExecutionCount;
   private final Configuration conf;
   private DatanodeStateMachine.DatanodeStates state;
+  private SCMNodeReport nrState;
 
   /**
    * Constructs a StateContext.
@@ -59,6 +61,7 @@ public class StateContext {
     commandQueue = new LinkedList<>();
     lock = new ReentrantLock();
     stateExecutionCount = new AtomicLong(0);
+    nrState = SCMNodeReport.getDefaultInstance();
   }
 
   /**
@@ -109,6 +112,22 @@ public class StateContext {
    */
   public void setState(DatanodeStateMachine.DatanodeStates state) {
     this.state = state;
+  }
+
+  /**
+   * Returns the node report of the datanode state context.
+   * @return the node report.
+   */
+  public SCMNodeReport getNodeReport() {
+    return nrState;
+  }
+
+  /**
+   * Sets the storage location report of the datanode state context.
+   * @param nrReport - node report
+   */
+  public void setReportState(SCMNodeReport nrReport) {
+    this.nrState = nrReport;
   }
 
   /**
