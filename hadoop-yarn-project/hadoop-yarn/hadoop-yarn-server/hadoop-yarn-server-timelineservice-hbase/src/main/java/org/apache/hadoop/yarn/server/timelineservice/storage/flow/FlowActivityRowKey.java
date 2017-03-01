@@ -17,10 +17,14 @@
  */
 package org.apache.hadoop.yarn.server.timelineservice.storage.flow;
 
+import java.util.List;
+
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverterToString;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 
 /**
@@ -32,8 +36,8 @@ public class FlowActivityRowKey {
   private final Long dayTs;
   private final String userId;
   private final String flowName;
-  private final KeyConverter<FlowActivityRowKey> flowActivityRowKeyConverter =
-      new FlowActivityRowKeyConverter();
+  private final FlowActivityRowKeyConverter
+      flowActivityRowKeyConverter = new FlowActivityRowKeyConverter();
 
   /**
    * @param clusterId identifying the cluster
@@ -104,13 +108,32 @@ public class FlowActivityRowKey {
   }
 
   /**
+   * Constructs a row key for the flow activity table as follows:
+   * {@code clusterId!dayTimestamp!user!flowName}.
+   * @return String representation of row key
+   */
+  public String getRowKeyAsString() {
+    return flowActivityRowKeyConverter.encodeAsString(this);
+  }
+
+  /**
+   * Given the raw row key as string, returns the row key as an object.
+   * @param encodedRowKey String representation of row key.
+   * @return A <cite>FlowActivityRowKey</cite> object.
+   */
+  public static FlowActivityRowKey parseRowKeyFromString(String encodedRowKey) {
+    return new FlowActivityRowKeyConverter().decodeFromString(encodedRowKey);
+  }
+
+  /**
    * Encodes and decodes row key for flow activity table. The row key is of the
    * form : clusterId!dayTimestamp!user!flowName. dayTimestamp(top of the day
    * timestamp) is a long and rest are strings.
    * <p>
    */
-  final private static class FlowActivityRowKeyConverter implements
-      KeyConverter<FlowActivityRowKey> {
+  final private static class FlowActivityRowKeyConverter
+      implements KeyConverter<FlowActivityRowKey>,
+      KeyConverterToString<FlowActivityRowKey> {
 
     private FlowActivityRowKeyConverter() {
     }
@@ -191,6 +214,34 @@ public class FlowActivityRowKey {
           Separator.decode(Bytes.toString(rowKeyComponents[3]),
               Separator.QUALIFIERS, Separator.TAB, Separator.SPACE);
       return new FlowActivityRowKey(clusterId, dayTs, userId, flowName);
+    }
+
+    @Override
+    public String encodeAsString(FlowActivityRowKey key) {
+      if (key.getDayTimestamp() == null) {
+        return TimelineReaderUtils
+            .joinAndEscapeStrings(new String[] {key.clusterId});
+      } else if (key.getUserId() == null) {
+        return TimelineReaderUtils.joinAndEscapeStrings(
+            new String[] {key.clusterId, key.dayTs.toString()});
+      } else if (key.getFlowName() == null) {
+        return TimelineReaderUtils.joinAndEscapeStrings(
+            new String[] {key.clusterId, key.dayTs.toString(), key.userId});
+      }
+      return TimelineReaderUtils.joinAndEscapeStrings(new String[] {
+          key.clusterId, key.dayTs.toString(), key.userId, key.flowName});
+    }
+
+    @Override
+    public FlowActivityRowKey decodeFromString(String encodedRowKey) {
+      List<String> split = TimelineReaderUtils.split(encodedRowKey);
+      if (split == null || split.size() != 4) {
+        throw new IllegalArgumentException(
+            "Invalid row key for flow activity.");
+      }
+      Long dayTs = Long.valueOf(split.get(1));
+      return new FlowActivityRowKey(split.get(0), dayTs, split.get(2),
+          split.get(3));
     }
   }
 }

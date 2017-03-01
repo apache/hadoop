@@ -175,7 +175,7 @@ public class TimelineReaderServer extends CompositeService {
   }
 
   @VisibleForTesting
-  int getWebServerPort() {
+  public int getWebServerPort() {
     return readerWebServer.getConnectorAddress(0).getPort();
   }
 
