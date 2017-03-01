@@ -21,6 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.commons.collections.map.HashedMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
@@ -34,8 +35,13 @@ import org.apache.hadoop.ozone.protocol.proto
     .ErrorCode;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
+import org.apache.hadoop.ozone.protocol
+    .proto.StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+import org.apache.hadoop.ozone.protocol
+    .proto.StorageContainerDatanodeProtocolProtos.SCMStorageReport;
 
 import org.apache.hadoop.ozone.scm.VersionInfo;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,7 +73,7 @@ import static org.apache.hadoop.util.Time.monotonicNow;
  * <p>
  * Each heartbeat that SCMNodeManager receives is  put into heartbeatQueue. The
  * worker thread wakes up and grabs that heartbeat from the queue. The worker
- * thread will lookup the healthynodes map and update the timestamp if the entry
+ * thread will lookup the healthynodes map and set the timestamp if the entry
  * is there. if not it will look up stale and deadnodes map.
  * <p>
  * The getNode(byState) functions make copy of node maps and then creates a list
@@ -85,14 +91,20 @@ public class SCMNodeManager
   @VisibleForTesting
   static final Logger LOG =
       LoggerFactory.getLogger(SCMNodeManager.class);
+
   /**
    * Key = NodeID, value = timestamp.
    */
   private final Map<String, Long> healthyNodes;
   private final Map<String, Long> staleNodes;
   private final Map<String, Long> deadNodes;
-  private final Queue<DatanodeID> heartbeatQueue;
+  private final Queue<HeartbeatQueueItem> heartbeatQueue;
   private final Map<String, DatanodeID> nodes;
+  // Individual live node stats
+  private final Map<String, SCMNodeStat> nodeStats;
+  // Aggregated node stats
+  private SCMNodeStat scmStat;
+  // TODO: expose nodeStats and scmStat as metrics
   private final AtomicInteger healthyNodeCount;
   private final AtomicInteger staleNodeCount;
   private final AtomicInteger deadNodeCount;
@@ -121,6 +133,8 @@ public class SCMNodeManager
     deadNodes = new ConcurrentHashMap<>();
     staleNodes = new ConcurrentHashMap<>();
     nodes = new HashMap<>();
+    nodeStats = new HashedMap();
+    scmStat = new SCMNodeStat();
 
     healthyNodeCount = new AtomicInteger(0);
     staleNodeCount = new AtomicInteger(0);
@@ -158,7 +172,7 @@ public class SCMNodeManager
    */
   @Override
   public void removeNode(DatanodeID node) throws UnregisteredNodeException {
-    // TODO : Fix me.
+    // TODO : Fix me when adding the SCM CLI.
 
   }
 
@@ -371,9 +385,9 @@ public class SCMNodeManager
     // Process the whole queue.
     while (!heartbeatQueue.isEmpty() &&
         (lastHBProcessedCount < maxHBToProcessPerLoop)) {
-      DatanodeID datanodeID = heartbeatQueue.poll();
+      HeartbeatQueueItem hbItem = heartbeatQueue.poll();
       synchronized (this) {
-        handleHeartbeat(datanodeID);
+        handleHeartbeat(hbItem);
       }
       // we are shutting down or something give up processing the rest of
       // HBs. This will terminate the HB processing thread.
@@ -439,7 +453,8 @@ public class SCMNodeManager
     // 4. And the most important reason, heartbeats are not blocked even if
     // this thread does not run, they will go into the processing queue.
 
-    if (!Thread.currentThread().isInterrupted()) {
+    if (!Thread.currentThread().isInterrupted() &&
+        !executorService.isShutdown()) {
       executorService.schedule(this, heartbeatCheckerIntervalMs, TimeUnit
           .MILLISECONDS);
     } else {
@@ -489,40 +504,85 @@ public class SCMNodeManager
     staleNodeCount.decrementAndGet();
     deadNodes.put(entry.getKey(), entry.getValue());
     deadNodeCount.incrementAndGet();
+
+    // Update SCM node stats
+    SCMNodeStat deadNodeStat = nodeStats.get(entry.getKey());
+    scmStat.subtract(deadNodeStat);
+    nodeStats.remove(entry.getKey());
   }
 
   /**
    * Handles a single heartbeat from a datanode.
    *
-   * @param datanodeID - datanode ID.
+   * @param hbItem - heartbeat item from a datanode.
    */
-  private void handleHeartbeat(DatanodeID datanodeID) {
+  private void handleHeartbeat(HeartbeatQueueItem hbItem) {
     lastHBProcessedCount++;
 
+    String datanodeID = hbItem.getDatanodeID().getDatanodeUuid();
+    SCMNodeReport nodeReport = hbItem.getNodeReport();
+    long recvTimestamp = hbItem.getRecvTimestamp();
+    long processTimestamp = Time.monotonicNow();
+    if (LOG.isTraceEnabled()) {
+      //TODO: add average queue time of heartbeat request as metrics
+      LOG.trace("Processing Heartbeat from datanode {}: queueing time {}",
+          datanodeID, processTimestamp - recvTimestamp);
+    }
+
     // If this node is already in the list of known and healthy nodes
-    // just update the last timestamp and return.
-    if (healthyNodes.containsKey(datanodeID.getDatanodeUuid())) {
-      healthyNodes.put(datanodeID.getDatanodeUuid(), monotonicNow());
+    // just set the last timestamp and return.
+    if (healthyNodes.containsKey(datanodeID)) {
+      healthyNodes.put(datanodeID, processTimestamp);
+      updateNodeStat(datanodeID, nodeReport);
       return;
     }
 
     // A stale node has heartbeat us we need to remove the node from stale
     // list and move to healthy list.
-    if (staleNodes.containsKey(datanodeID.getDatanodeUuid())) {
-      staleNodes.remove(datanodeID.getDatanodeUuid());
-      healthyNodes.put(datanodeID.getDatanodeUuid(), monotonicNow());
+    if (staleNodes.containsKey(datanodeID)) {
+      staleNodes.remove(datanodeID);
+      healthyNodes.put(datanodeID, processTimestamp);
       healthyNodeCount.incrementAndGet();
       staleNodeCount.decrementAndGet();
+      updateNodeStat(datanodeID, nodeReport);
       return;
     }
 
     // A dead node has heartbeat us, we need to remove that node from dead
     // node list and move it to the healthy list.
-    if (deadNodes.containsKey(datanodeID.getDatanodeUuid())) {
-      deadNodes.remove(datanodeID.getDatanodeUuid());
-      healthyNodes.put(datanodeID.getDatanodeUuid(), monotonicNow());
+    if (deadNodes.containsKey(datanodeID)) {
+      deadNodes.remove(datanodeID);
+      healthyNodes.put(datanodeID, processTimestamp);
       deadNodeCount.decrementAndGet();
       healthyNodeCount.incrementAndGet();
+      updateNodeStat(datanodeID, nodeReport);
+      return;
+    }
+    LOG.warn("SCM receive heartbeat from unregistered datanode {}", datanodeID);
+  }
+
+  private void updateNodeStat(String datanodeID, SCMNodeReport nodeReport) {
+    SCMNodeStat stat = nodeStats.get(datanodeID);
+    if (stat == null) {
+      LOG.debug("SCM updateNodeStat based on heartbeat from previous" +
+          "dead datanode {}", datanodeID);
+      stat = new SCMNodeStat();
+    }
+
+    if (nodeReport != null && nodeReport.getStorageReportCount() > 0) {
+      long totalCapacity = 0;
+      long totalRemaining = 0;
+      long totalScmUsed = 0;
+      List<SCMStorageReport> storageReports = nodeReport.getStorageReportList();
+      for (SCMStorageReport report : storageReports) {
+        totalCapacity += report.getCapacity();
+        totalRemaining += report.getRemaining();
+        totalScmUsed += report.getScmUsed();
+      }
+      scmStat.subtract(stat);
+      stat.set(totalCapacity, totalScmUsed, totalRemaining);
+      nodeStats.put(datanodeID, stat);
+      scmStat.add(stat);
     }
   }
 
@@ -591,6 +651,7 @@ public class SCMNodeManager
     totalNodes.incrementAndGet();
     healthyNodes.put(datanodeID.getDatanodeUuid(), monotonicNow());
     healthyNodeCount.incrementAndGet();
+    nodeStats.put(datanodeID.getDatanodeUuid(), new SCMNodeStat());
     LOG.info("Data node with ID: {} Registered.",
         datanodeID.getDatanodeUuid());
     return RegisteredCommand.newBuilder()
@@ -625,23 +686,47 @@ public class SCMNodeManager
    * Send heartbeat to indicate the datanode is alive and doing well.
    *
    * @param datanodeID - Datanode ID.
+   * @param nodeReport - node report.
    * @return SCMheartbeat response.
    * @throws IOException
    */
   @Override
-  public List<SCMCommand> sendHeartbeat(DatanodeID datanodeID) {
+  public List<SCMCommand> sendHeartbeat(DatanodeID datanodeID,
+      SCMNodeReport nodeReport) {
 
     // Checking for NULL to make sure that we don't get
     // an exception from ConcurrentList.
     // This could be a problem in tests, if this function is invoked via
     // protobuf, transport layer will guarantee that this is not null.
     if (datanodeID != null) {
-      heartbeatQueue.add(datanodeID);
-
+      heartbeatQueue.add(
+          new HeartbeatQueueItem.Builder()
+              .setDatanodeID(datanodeID)
+              .setNodeReport(nodeReport)
+              .build());
     } else {
       LOG.error("Datanode ID in heartbeat is null");
     }
 
     return commandQueue.getCommand(datanodeID);
+  }
+
+  /**
+   * Returns the aggregated node stats.
+   * @return the aggregated node stats.
+   */
+  @Override
+  public SCMNodeStat getStats() {
+    return new SCMNodeStat(this.scmStat);
+  }
+
+  /**
+   * Return a list of node stats.
+   * @return a list of individual node stats (live/stale but not dead).
+   */
+  @Override
+  public List<SCMNodeStat> getNodeStats(){
+    return nodeStats.entrySet().stream().map(
+        entry -> nodeStats.get(entry.getKey())).collect(Collectors.toList());
   }
 }

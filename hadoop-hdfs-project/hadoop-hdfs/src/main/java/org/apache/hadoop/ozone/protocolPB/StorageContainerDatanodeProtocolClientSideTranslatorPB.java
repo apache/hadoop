@@ -28,6 +28,8 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
 import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
@@ -113,15 +115,17 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
    * Send by datanode to SCM.
    *
    * @param datanodeID - DatanodeID
+   * @param nodeReport - node report
    * @throws IOException
    */
 
   @Override
-  public SCMHeartbeatResponseProto sendHeartbeat(DatanodeID datanodeID)
-      throws IOException {
-    SCMHeartbeatRequestProto.Builder req =
-        SCMHeartbeatRequestProto.newBuilder();
+  public SCMHeartbeatResponseProto sendHeartbeat(DatanodeID datanodeID,
+      SCMNodeReport nodeReport) throws IOException {
+    SCMHeartbeatRequestProto.Builder req = SCMHeartbeatRequestProto
+        .newBuilder();
     req.setDatanodeID(datanodeID.getProtoBufMessage());
+    req.setNodeReport(nodeReport);
     final SCMHeartbeatResponseProto resp;
     try {
       resp = rpcProxy.sendHeartbeat(NULL_RPC_CONTROLLER, req.build());

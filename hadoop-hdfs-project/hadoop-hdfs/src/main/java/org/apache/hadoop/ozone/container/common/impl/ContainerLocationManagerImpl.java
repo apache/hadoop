@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.interfaces
@@ -29,12 +30,13 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
  * A class that tells the ContainerManager where to place the containers.
  * Please note : There is *no* one-to-one correlation between metadata
- * metadataLocations and data metadataLocations.
+ * Locations and data Locations.
  *
  *  For example : A user could map all container files to a
  *  SSD but leave data/metadata on bunch of other disks.
@@ -43,9 +45,10 @@ public class ContainerLocationManagerImpl implements ContainerLocationManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(ContainerLocationManagerImpl.class);
 
-  private final List<StorageLocation> dataLocations;
+  private final List<ContainerStorageLocation> dataLocations;
   private int currentIndex;
   private final List<StorageLocation> metadataLocations;
+
 
   /**
    * Constructs a Location Manager.
@@ -53,14 +56,19 @@ public class ContainerLocationManagerImpl implements ContainerLocationManager {
    * where we store the container metadata.
    * @param dataDirs - metadataLocations where we store the actual
    * data or chunk files.
+   * @param conf - configuration.
    * @throws IOException
    */
   public ContainerLocationManagerImpl(List<StorageLocation> metadataLocations,
-      List<StorageLocation> dataDirs)
+      List<StorageLocation> dataDirs, Configuration conf)
       throws IOException {
-    dataLocations = dataDirs;
+    dataLocations = new LinkedList<>();
+    for (StorageLocation dataDir : dataDirs) {
+      dataLocations.add(new ContainerStorageLocation(dataDir, conf));
+    }
     this.metadataLocations = metadataLocations;
   }
+
   /**
    * Returns the path where the container should be placed from a set of
    * metadataLocations.
@@ -90,5 +98,46 @@ public class ContainerLocationManagerImpl implements ContainerLocationManager {
             .getNormalizedUri());
     currentPath = currentPath.resolve(OzoneConsts.CONTAINER_PREFIX);
     return currentPath.resolve(containerName);
+  }
+
+  @Override
+  public StorageLocationReport[] getLocationReport() throws IOException {
+    StorageLocationReport[] reports =
+        new StorageLocationReport[dataLocations.size()];
+    for (int idx = 0; idx < dataLocations.size(); idx++) {
+      ContainerStorageLocation loc = dataLocations.get(idx);
+      long scmUsed = 0;
+      long remaining = 0;
+      try {
+        scmUsed = loc.getScmUsed();
+        remaining = loc.getAvailable();
+      } catch (IOException ex) {
+        LOG.warn("Failed to get scmUsed and remaining for container " +
+            "storage location {}", loc.getNormalizedUri());
+        // reset scmUsed and remaining if df/du failed.
+        scmUsed = 0;
+        remaining = 0;
+      }
+
+      // TODO: handle failed storage
+      // For now, include storage report for location that failed to get df/du.
+      StorageLocationReport r = new StorageLocationReport(
+          loc.getStorageUuId(), false, loc.getCapacity(),
+          scmUsed, remaining);
+      reports[idx++] = r;
+    }
+    return reports;
+  }
+
+  /**
+   * Supports clean shutdown of container location du threads.
+   *
+   * @throws IOException
+   */
+  @Override
+  public void shutdown() throws IOException {
+    for (ContainerStorageLocation loc: dataLocations) {
+      loc.shutdown();
+    }
   }
 }

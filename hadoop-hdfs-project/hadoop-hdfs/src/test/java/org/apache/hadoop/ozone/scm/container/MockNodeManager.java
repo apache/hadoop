@@ -23,7 +23,11 @@ import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+
 import org.apache.hadoop.ozone.scm.node.NodeManager;
+import org.apache.hadoop.ozone.scm.node.SCMNodeStat;
 
 import java.io.IOException;
 import java.util.LinkedList;
@@ -173,6 +177,24 @@ public class MockNodeManager implements NodeManager {
   }
 
   /**
+   * Returns the aggregated node stats.
+   * @return the aggregated node stats.
+   */
+  @Override
+  public SCMNodeStat getStats() {
+    return null;
+  }
+
+  /**
+   * Return a list of node stats.
+   * @return a list of individual node stats (live/stale but not dead).
+   */
+  @Override
+  public List<SCMNodeStat> getNodeStats() {
+    return null;
+  }
+
+  /**
    * Closes this stream and releases any system resources associated with it. If
    * the stream is already closed then invoking this method has no effect.
    * <p>
@@ -233,10 +255,12 @@ public class MockNodeManager implements NodeManager {
    * Send heartbeat to indicate the datanode is alive and doing well.
    *
    * @param datanodeID - Datanode ID.
+   * @param nodeReport - node report.
    * @return SCMheartbeat response list
    */
   @Override
-  public List<SCMCommand> sendHeartbeat(DatanodeID datanodeID) {
+  public List<SCMCommand> sendHeartbeat(DatanodeID datanodeID,
+      SCMNodeReport nodeReport) {
     return null;
   }
 }

@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.container.common.statemachine
     .EndpointStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto;
 import org.slf4j.Logger;
@@ -41,6 +42,7 @@ public class HeartbeatEndpointTask
   private final EndpointStateMachine rpcEndpoint;
   private final Configuration conf;
   private ContainerNodeIDProto containerNodeIDProto;
+  private StateContext context;
 
   /**
    * Constructs a SCM heart beat.
@@ -48,9 +50,10 @@ public class HeartbeatEndpointTask
    * @param conf Config.
    */
   public HeartbeatEndpointTask(EndpointStateMachine rpcEndpoint,
-      Configuration conf) {
+      Configuration conf, StateContext context) {
     this.rpcEndpoint = rpcEndpoint;
     this.conf = conf;
+    this.context = context;
   }
 
   /**
@@ -85,8 +88,9 @@ public class HeartbeatEndpointTask
       Preconditions.checkState(this.containerNodeIDProto != null);
       DatanodeID datanodeID = DatanodeID.getFromProtoBuf(this
           .containerNodeIDProto.getDatanodeID());
-      // TODO : Add the command to command processor queue.
-      rpcEndpoint.getEndPoint().sendHeartbeat(datanodeID);
+
+      rpcEndpoint.getEndPoint().sendHeartbeat(datanodeID,
+          this.context.getNodeReport());
       rpcEndpoint.zeroMissedCount();
     } catch (IOException ex) {
       rpcEndpoint.logIfNeeded(ex
@@ -112,6 +116,7 @@ public class HeartbeatEndpointTask
     private EndpointStateMachine endPointStateMachine;
     private Configuration conf;
     private ContainerNodeIDProto containerNodeIDProto;
+    private StateContext context;
 
     /**
      * Constructs the builder class.
@@ -152,6 +157,16 @@ public class HeartbeatEndpointTask
       return this;
     }
 
+    /**
+     * Sets the context.
+     * @param stateContext - State context.
+     * @return this.
+     */
+    public Builder setContext(StateContext stateContext) {
+      this.context = stateContext;
+      return this;
+    }
+
     public HeartbeatEndpointTask build() {
       if (endPointStateMachine == null) {
         LOG.error("No endpoint specified.");
@@ -172,10 +187,9 @@ public class HeartbeatEndpointTask
       }
 
       HeartbeatEndpointTask task = new HeartbeatEndpointTask(this
-          .endPointStateMachine, this.conf);
+          .endPointStateMachine, this.conf, this.context);
       task.setContainerNodeIDProto(containerNodeIDProto);
       return task;
     }
-
   }
 }
