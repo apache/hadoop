@@ -192,7 +192,8 @@ public class ErasureCodeBenchmarkThroughput
     }
     if (!dfs.exists(ecPath)) {
       dfs.mkdirs(ecPath);
-      dfs.getClient().setErasureCodingPolicy(ecPath.toString(), ecPolicy);
+      dfs.getClient()
+          .setErasureCodingPolicy(ecPath.toString(), ecPolicy.getName());
     } else {
       Preconditions.checkArgument(
           dfs.getClient().

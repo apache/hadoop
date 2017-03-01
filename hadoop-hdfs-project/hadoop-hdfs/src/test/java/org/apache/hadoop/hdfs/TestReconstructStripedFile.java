@@ -107,7 +107,8 @@ public class TestReconstructStripedFile {
     cluster.waitActive();
 
     fs = cluster.getFileSystem();
-    fs.getClient().setErasureCodingPolicy("/", null);
+    fs.getClient().setErasureCodingPolicy("/",
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
 
     List<DataNode> datanodes = cluster.getDataNodes();
     for (int i = 0; i < dnNum; i++) {

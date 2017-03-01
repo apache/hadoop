@@ -63,7 +63,8 @@ public class TestOfflineImageViewerWithStripedBlocks {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.waitActive();
-    cluster.getFileSystem().getClient().setErasureCodingPolicy("/", null);
+    cluster.getFileSystem().getClient().setErasureCodingPolicy("/",
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
     fs = cluster.getFileSystem();
     Path eczone = new Path("/eczone");
     fs.mkdirs(eczone);

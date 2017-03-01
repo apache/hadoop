@@ -1459,14 +1459,12 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void setErasureCodingPolicy(String src, ErasureCodingPolicy ecPolicy)
+  public void setErasureCodingPolicy(String src, String ecPolicyName)
       throws IOException {
     final SetErasureCodingPolicyRequestProto.Builder builder =
         SetErasureCodingPolicyRequestProto.newBuilder();
     builder.setSrc(src);
-    if (ecPolicy != null) {
-      builder.setEcPolicy(PBHelperClient.convertErasureCodingPolicy(ecPolicy));
-    }
+    builder.setEcPolicyName(ecPolicyName);
     SetErasureCodingPolicyRequestProto req = builder.build();
     try {
       rpcProxy.setErasureCodingPolicy(null, req);

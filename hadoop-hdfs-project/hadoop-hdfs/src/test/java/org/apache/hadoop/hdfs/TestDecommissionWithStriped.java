@@ -142,7 +142,8 @@ public class TestDecommissionWithStriped {
     client = getDfsClient(cluster.getNameNode(0), conf);
 
     dfs.mkdirs(ecDir);
-    dfs.setErasureCodingPolicy(ecDir, null);
+    dfs.setErasureCodingPolicy(ecDir,
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
   }
 
   @After

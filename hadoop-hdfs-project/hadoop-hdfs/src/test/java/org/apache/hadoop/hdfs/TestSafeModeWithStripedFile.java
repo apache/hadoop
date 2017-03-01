@@ -63,7 +63,8 @@ public class TestSafeModeWithStripedFile {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 100);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
-    cluster.getFileSystem().getClient().setErasureCodingPolicy("/", null);
+    cluster.getFileSystem().getClient().setErasureCodingPolicy("/",
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
     cluster.waitActive();
   }
 

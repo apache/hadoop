@@ -59,7 +59,8 @@ public class TestWriteStripedFileWithFailure {
   public void setup() throws IOException {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
-    cluster.getFileSystem().getClient().setErasureCodingPolicy("/", null);
+    cluster.getFileSystem().getClient().setErasureCodingPolicy("/",
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
     fs = cluster.getFileSystem();
   }
 

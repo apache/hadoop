@@ -738,7 +738,8 @@ public class TestNameNodeMXBean {
       // create file
       Path ecDirPath = new Path("/striped");
       fs.mkdir(ecDirPath, FsPermission.getDirDefault());
-      fs.getClient().setErasureCodingPolicy(ecDirPath.toString(), null);
+      fs.getClient().setErasureCodingPolicy(ecDirPath.toString(),
+          ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
       Path file = new Path(ecDirPath, "corrupted");
       final int length = cellSize * dataBlocks;
       final byte[] bytes = StripedFileTestUtil.generateBytes(length);

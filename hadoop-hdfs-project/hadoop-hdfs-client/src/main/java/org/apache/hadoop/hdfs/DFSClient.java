@@ -2611,12 +2611,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
 
-  public void setErasureCodingPolicy(String src, ErasureCodingPolicy ecPolicy)
+  public void setErasureCodingPolicy(String src, String ecPolicyName)
       throws IOException {
     checkOpen();
     try (TraceScope ignored =
              newPathTraceScope("setErasureCodingPolicy", src)) {
-      namenode.setErasureCodingPolicy(src, ecPolicy);
+      namenode.setErasureCodingPolicy(src, ecPolicyName);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
           SafeModeException.class,

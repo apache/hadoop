@@ -59,14 +59,16 @@ final class FSDirErasureCodingOp {
    *
    * @param fsn The namespace
    * @param srcArg The path of the target directory.
-   * @param ecPolicy The erasure coding policy to set on the target directory.
+   * @param ecPolicyName The erasure coding policy name to set on the target
+   *                    directory.
    * @param logRetryCache whether to record RPC ids in editlog for retry
    *          cache rebuilding
    * @return {@link HdfsFileStatus}
    * @throws IOException
+   * @throws HadoopIllegalArgumentException if the policy is not enabled
    */
   static HdfsFileStatus setErasureCodingPolicy(final FSNamesystem fsn,
-      final String srcArg, final ErasureCodingPolicy ecPolicy,
+      final String srcArg, final String ecPolicyName,
       final boolean logRetryCache) throws IOException {
     assert fsn.hasWriteLock();
 
@@ -78,6 +80,13 @@ final class FSDirErasureCodingOp {
     List<XAttr> xAttrs;
     fsd.writeLock();
     try {
+      ErasureCodingPolicy ecPolicy = fsn.getErasureCodingPolicyManager()
+          .getPolicyByName(ecPolicyName);
+      if (ecPolicy == null) {
+        throw new HadoopIllegalArgumentException("Policy '" +
+            ecPolicyName + "' does not match any supported erasure coding " +
+            "policies.");
+      }
       iip = fsd.resolvePath(pc, src, DirOp.WRITE_LINK);
       src = iip.getPath();
       xAttrs = setErasureCodingPolicyXAttr(fsn, iip, ecPolicy);

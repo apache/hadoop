@@ -150,7 +150,8 @@ public class TestReconstructStripedBlocksWithRackAwareness {
         .numDataNodes(hosts.length).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
-    fs.setErasureCodingPolicy(new Path("/"), null);
+    fs.setErasureCodingPolicy(new Path("/"),
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
     FSNamesystem fsn = cluster.getNamesystem();
     BlockManager bm = fsn.getBlockManager();
 
@@ -220,7 +221,8 @@ public class TestReconstructStripedBlocksWithRackAwareness {
         .numDataNodes(hosts.length).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
-    fs.setErasureCodingPolicy(new Path("/"), null);
+    fs.setErasureCodingPolicy(new Path("/"),
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
 
     MiniDFSCluster.DataNodeProperties lastHost = stopDataNode(
         hosts[hosts.length - 1]);
@@ -273,7 +275,8 @@ public class TestReconstructStripedBlocksWithRackAwareness {
         .numDataNodes(hostNames.length).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
-    fs.setErasureCodingPolicy(new Path("/"), null);
+    fs.setErasureCodingPolicy(new Path("/"),
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
 
     final BlockManager bm = cluster.getNamesystem().getBlockManager();
     final DatanodeManager dm = bm.getDatanodeManager();

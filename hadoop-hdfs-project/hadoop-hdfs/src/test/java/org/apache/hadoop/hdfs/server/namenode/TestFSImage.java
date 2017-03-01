@@ -156,7 +156,7 @@ public class TestFSImage {
   private void testSaveAndLoadStripedINodeFile(FSNamesystem fsn, Configuration conf,
                                                boolean isUC) throws IOException{
     // Construct an INode with StripedBlock for saving and loading
-    fsn.setErasureCodingPolicy("/", testECPolicy, false);
+    fsn.setErasureCodingPolicy("/", testECPolicy.getName(), false);
     long id = 123456789;
     byte[] name = "testSaveAndLoadInodeFile_testfile".getBytes();
     PermissionStatus permissionStatus = new PermissionStatus("testuser_a",
@@ -472,8 +472,8 @@ public class TestFSImage {
       // Create directories and files
       fs.mkdirs(parentDir);
       fs.mkdirs(childDir);
-      fs.setErasureCodingPolicy(parentDir, testECPolicy);
-      fs.setErasureCodingPolicy(childDir, ec32Policy);
+      fs.setErasureCodingPolicy(parentDir, testECPolicy.getName());
+      fs.setErasureCodingPolicy(childDir, ec32Policy.getName());
       Path file_10_4 = new Path(parentDir, "striped_file_10_4");
       Path file_3_2 = new Path(childDir, "striped_file_3_2");
 

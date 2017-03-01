@@ -1442,9 +1442,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, SetErasureCodingPolicyRequestProto req)
       throws ServiceException {
     try {
-      ErasureCodingPolicy ecPolicy = req.hasEcPolicy() ?
-          PBHelperClient.convertErasureCodingPolicy(req.getEcPolicy()) : null;
-      server.setErasureCodingPolicy(req.getSrc(), ecPolicy);
+      server.setErasureCodingPolicy(req.getSrc(), req.getEcPolicyName());
       return SetErasureCodingPolicyResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);

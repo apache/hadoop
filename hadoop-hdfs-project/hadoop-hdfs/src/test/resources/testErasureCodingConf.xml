@@ -359,7 +359,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Policy 'invalidpolicy' does not match any of the supported policies. Please select any one of [</expected-output>
+          <expected-output>Policy 'invalidpolicy' does not match any supported erasure coding policies.</expected-output>
         </comparator>
       </comparators>
     </test>

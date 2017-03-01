@@ -690,7 +690,7 @@ public class TestFsck {
     util.createFiles(fs, topDir);
     // set topDir to EC when it has replicated files
     cluster.getFileSystem().getClient().setErasureCodingPolicy(
-        topDir, ecPolicy);
+        topDir, ecPolicy.getName());
 
     // create a new file under topDir
     DFSTestUtil.createFile(fs, new Path(topDir, "ecFile"), 1024, (short) 1, 0L);
@@ -2307,7 +2307,8 @@ public class TestFsck {
     // create file
     Path ecDirPath = new Path("/striped");
     fs.mkdir(ecDirPath, FsPermission.getDirDefault());
-    fs.getClient().setErasureCodingPolicy(ecDirPath.toString(), null);
+    fs.getClient().setErasureCodingPolicy(ecDirPath.toString(),
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
     Path file = new Path(ecDirPath, "corrupted");
     final int length = cellSize * dataBlocks;
     final byte[] bytes = StripedFileTestUtil.generateBytes(length);
@@ -2372,7 +2373,8 @@ public class TestFsck {
     // create file
     Path ecDirPath = new Path("/striped");
     fs.mkdir(ecDirPath, FsPermission.getDirDefault());
-    fs.getClient().setErasureCodingPolicy(ecDirPath.toString(), null);
+    fs.getClient().setErasureCodingPolicy(ecDirPath.toString(),
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
     Path file = new Path(ecDirPath, "missing");
     final int length = cellSize * dataBlocks;
     final byte[] bytes = StripedFileTestUtil.generateBytes(length);

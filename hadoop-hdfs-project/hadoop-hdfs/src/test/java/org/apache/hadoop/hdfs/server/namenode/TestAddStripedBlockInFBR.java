@@ -87,7 +87,8 @@ public class TestAddStripedBlockInFBR {
     final Path repDir = new Path("/rep");
     dfs.mkdirs(ecDir);
     dfs.mkdirs(repDir);
-    dfs.getClient().setErasureCodingPolicy(ecDir.toString(), null);
+    dfs.getClient().setErasureCodingPolicy(ecDir.toString(),
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
 
     // create several non-EC files and one EC file
     final Path[] repFiles = new Path[groupSize];

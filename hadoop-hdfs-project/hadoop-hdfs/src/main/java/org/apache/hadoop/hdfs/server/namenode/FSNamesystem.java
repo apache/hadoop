@@ -6772,13 +6772,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Set an erasure coding policy on the given path.
    * @param srcArg  The path of the target directory.
-   * @param ecPolicy The erasure coding policy to set on the target directory.
+   * @param ecPolicyName The erasure coding policy to set on the target
+   *                    directory.
    * @throws AccessControlException  if the caller is not the superuser.
    * @throws UnresolvedLinkException if the path can't be resolved.
    * @throws SafeModeException       if the Namenode is in safe mode.
    */
-  void setErasureCodingPolicy(final String srcArg, final ErasureCodingPolicy
-      ecPolicy, final boolean logRetryCache) throws IOException,
+  void setErasureCodingPolicy(final String srcArg, final String ecPolicyName,
+      final boolean logRetryCache) throws IOException,
       UnresolvedLinkException, SafeModeException, AccessControlException {
     final String operationName = "setErasureCodingPolicy";
     checkSuperuserPrivilege();
@@ -6790,7 +6791,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set erasure coding policy on " + srcArg);
       resultingStat = FSDirErasureCodingOp.setErasureCodingPolicy(this,
-          srcArg, ecPolicy, logRetryCache);
+          srcArg, ecPolicyName, logRetryCache);
       success = true;
     } catch (AccessControlException ace) {
       logAuditEvent(success, operationName, srcArg, null,

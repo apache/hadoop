@@ -80,7 +80,8 @@ public class TestWriteReadStripedFile {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     fs = cluster.getFileSystem();
     fs.mkdirs(new Path("/ec"));
-    cluster.getFileSystem().getClient().setErasureCodingPolicy("/ec", null);
+    cluster.getFileSystem().getClient().setErasureCodingPolicy("/ec",
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
   }
 
   @After

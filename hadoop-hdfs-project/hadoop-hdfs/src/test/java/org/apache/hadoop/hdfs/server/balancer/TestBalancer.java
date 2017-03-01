@@ -1940,7 +1940,8 @@ public class TestBalancer {
       cluster.waitActive();
       client = NameNodeProxies.createProxy(conf, cluster.getFileSystem(0).getUri(),
           ClientProtocol.class).getProxy();
-      client.setErasureCodingPolicy("/", null);
+      client.setErasureCodingPolicy("/",
+          ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
 
       long totalCapacity = sum(capacities);
 

@@ -307,7 +307,8 @@ public class TestStripedINodeFile {
       dfs.mkdirs(ecDir);
 
       // set erasure coding policy
-      dfs.setErasureCodingPolicy(ecDir, null);
+      dfs.setErasureCodingPolicy(ecDir,
+          ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
       DFSTestUtil.createFile(dfs, ecFile, len, (short) 1, 0xFEED);
       DFSTestUtil.createFile(dfs, contiguousFile, len, (short) 1, 0xFEED);
       final FSDirectory fsd = fsn.getFSDirectory();
@@ -408,7 +409,8 @@ public class TestStripedINodeFile {
       client.mkdirs(fooDir, new FsPermission((short) 777), true);
       client.setStoragePolicy(fooDir, HdfsConstants.ONESSD_STORAGE_POLICY_NAME);
       // set an EC policy on "/foo" directory
-      client.setErasureCodingPolicy(fooDir, null);
+      client.setErasureCodingPolicy(fooDir,
+          ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
 
       // write file to fooDir
       final String barFile = "/foo/bar";

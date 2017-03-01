@@ -236,7 +236,8 @@ public class TestOfflineImageViewer {
       ErasureCodingPolicy ecPolicy =
           ErasureCodingPolicyManager.getPolicyByPolicyID(
               HdfsConstants.XOR_2_1_POLICY_ID);
-      hdfs.getClient().setErasureCodingPolicy(ecDir.toString(), ecPolicy);
+      hdfs.getClient().setErasureCodingPolicy(ecDir.toString(),
+          ecPolicy.getName());
       writtenFiles.put(ecDir.toString(), hdfs.getFileStatus(ecDir));
 
       // Create an empty Erasure Coded file

@@ -201,7 +201,8 @@ public class TestReconstructStripedBlocks {
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
       BlockManager bm = cluster.getNamesystem().getBlockManager();
-      fs.getClient().setErasureCodingPolicy("/", null);
+      fs.getClient().setErasureCodingPolicy("/",
+          ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
       int fileLen = dataBlocks * blockSize;
       Path p = new Path("/test2RecoveryTasksForSameBlockGroup");
       final byte[] data = new byte[fileLen];
@@ -266,7 +267,8 @@ public class TestReconstructStripedBlocks {
 
     try {
       fs.mkdirs(dirPath);
-      fs.setErasureCodingPolicy(dirPath, null);
+      fs.setErasureCodingPolicy(dirPath,
+          ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
       DFSTestUtil.createFile(fs, filePath,
           cellSize * dataBlocks * 2, (short) 1, 0L);
 

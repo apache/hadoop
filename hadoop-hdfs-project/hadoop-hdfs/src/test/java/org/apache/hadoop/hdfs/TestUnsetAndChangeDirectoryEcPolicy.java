@@ -101,7 +101,7 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
     // Test unset a directory which has no EC policy
     fs.unsetErasureCodingPolicy(dirPath);
     // Set EC policy on directory
-    fs.setErasureCodingPolicy(dirPath, ecPolicy);
+    fs.setErasureCodingPolicy(dirPath, ecPolicy.getName());
 
     DFSTestUtil.createFile(fs, ecFilePath, fileLen, (short) 1, 0L);
     fs.unsetErasureCodingPolicy(dirPath);
@@ -142,12 +142,12 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
         .getPolicyByPolicyID(HdfsConstants.RS_3_2_POLICY_ID);
 
     fs.mkdirs(parentDir);
-    fs.setErasureCodingPolicy(parentDir, ecPolicy);
+    fs.setErasureCodingPolicy(parentDir, ecPolicy.getName());
     fs.mkdirs(childDir);
     // Create RS(6,3) EC policy file
     DFSTestUtil.createFile(fs, ec63FilePath, fileLen, (short) 1, 0L);
     // Set RS(3,2) EC policy on child directory
-    fs.setErasureCodingPolicy(childDir, ec32Policy);
+    fs.setErasureCodingPolicy(childDir, ec32Policy.getName());
     // Create RS(3,2) EC policy file
     DFSTestUtil.createFile(fs, ec32FilePath, fileLen, (short) 1, 0L);
 
@@ -202,7 +202,7 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
     // Test unset root path which has no EC policy
     fs.unsetErasureCodingPolicy(rootPath);
     // Set EC policy on root path
-    fs.setErasureCodingPolicy(rootPath, ecPolicy);
+    fs.setErasureCodingPolicy(rootPath, ecPolicy.getName());
     DFSTestUtil.createFile(fs, ecFilePath, fileLen, (short) 1, 0L);
     fs.unsetErasureCodingPolicy(rootPath);
     DFSTestUtil.createFile(fs, replicateFilePath, fileLen, (short) 1, 0L);
@@ -240,11 +240,11 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
         .getPolicyByPolicyID(HdfsConstants.RS_3_2_POLICY_ID);
 
     fs.unsetErasureCodingPolicy(rootPath);
-    fs.setErasureCodingPolicy(rootPath, ecPolicy);
+    fs.setErasureCodingPolicy(rootPath, ecPolicy.getName());
     // Create RS(6,3) EC policy file
     DFSTestUtil.createFile(fs, ec63FilePath, fileLen, (short) 1, 0L);
     // Change EC policy from RS(6,3) to RS(3,2)
-    fs.setErasureCodingPolicy(rootPath, ec32Policy);
+    fs.setErasureCodingPolicy(rootPath, ec32Policy.getName());
     DFSTestUtil.createFile(fs, ec32FilePath, fileLen, (short) 1, 0L);
 
     // start to check
@@ -281,7 +281,7 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
     final Path replicateFilePath2 = new Path(ecDirPath, "rep_file2");
 
     fs.mkdirs(ecDirPath);
-    fs.setErasureCodingPolicy(ecDirPath, ecPolicy);
+    fs.setErasureCodingPolicy(ecDirPath, ecPolicy.getName());
     DFSTestUtil.createFile(fs, ecFilePath, fileLen, (short) 1, 0L);
     fs.unsetErasureCodingPolicy(ecDirPath);
     DFSTestUtil.createFile(fs, replicateFilePath, fileLen, (short) 3, 0L);
@@ -328,7 +328,7 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
 
     // Set EC policy on non-existent directory
     try {
-      fs.setErasureCodingPolicy(dirPath, ecPolicy);
+      fs.setErasureCodingPolicy(dirPath, ecPolicy.getName());
       fail("FileNotFoundException should be thrown for a non-existent"
           + " file path");
     } catch (FileNotFoundException e) {
@@ -347,7 +347,7 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
 
     // Set EC policy on file
     try {
-      fs.setErasureCodingPolicy(ecFilePath, ecPolicy);
+      fs.setErasureCodingPolicy(ecFilePath, ecPolicy.getName());
       fail("IOException should be thrown for setting EC policy on file");
     } catch (IOException e) {
       assertExceptionContains("Attempt to set an erasure coding policy " +

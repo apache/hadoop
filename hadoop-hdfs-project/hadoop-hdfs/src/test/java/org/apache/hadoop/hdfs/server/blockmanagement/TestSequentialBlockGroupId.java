@@ -88,8 +88,8 @@ public class TestSequentialBlockGroupId {
     blockGrpIdGenerator = cluster.getNamesystem().getBlockManager()
         .getBlockIdManager().getBlockGroupIdGenerator();
     fs.mkdirs(ecDir);
-    cluster.getFileSystem().getClient()
-        .setErasureCodingPolicy("/ecDir", null);
+    cluster.getFileSystem().getClient().setErasureCodingPolicy("/ecDir",
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
   }
 
   @After
