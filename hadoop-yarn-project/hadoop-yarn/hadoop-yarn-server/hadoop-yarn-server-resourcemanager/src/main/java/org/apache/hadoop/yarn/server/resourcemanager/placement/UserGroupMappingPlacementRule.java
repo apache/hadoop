@@ -119,10 +119,16 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
         }
       }
       if (mapping.type == MappingType.GROUP) {
-        for (String userGroups : groups.getGroups(user)) {
-          if (userGroups.equals(mapping.source)) {
-            return mapping.queue;
+        try {
+          for (String userGroups : groups.getGroups(user)) {
+            if (userGroups.equals(mapping.source)) {
+              return mapping.queue;
+            }
           }
+        } catch (IOException e) {
+          LOG.warn("Failed to apply queue mapping with user "
+                  + user + ". Reason: " + e.getMessage());
+          continue;
         }
       }
     }
