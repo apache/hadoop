@@ -94,8 +94,8 @@ public class SlowPeerTracker {
     this.timer = timer;
     this.allReports = new ConcurrentHashMap<>();
     this.reportValidityMs = conf.getTimeDuration(
-        DFSConfigKeys.DFS_DATANODE_SLOW_PEERS_REPORT_INTERVAL_KEY,
-        DFSConfigKeys.DFS_DATANODE_SLOW_PEERS_REPORT_INTERVAL_DEFAULT,
+        DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY,
+        DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS) * 3;
   }
 
