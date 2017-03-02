@@ -970,13 +970,14 @@ public class TestNodeManager {
         Thread.sleep(100);
       }
 
-      GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatThead(), 100,
-          4 * 1000);
-      assertEquals(nodeCount, nodeManager.getNodeCount(HEALTHY));
-
       final long expectedScmUsed = usedPerHeartbeat * (heartbeatCount -1);
       final long expectedRemaining = capacity -
           usedPerHeartbeat * (heartbeatCount - 1);
+
+      GenericTestUtils.waitFor(
+          () -> nodeManager.getStats().getScmUsed() == expectedScmUsed, 100,
+          4 * 1000);
+
       assertEquals(capacity, nodeManager.getStats().getCapacity());
       assertEquals(expectedScmUsed, nodeManager.getStats().getScmUsed());
       assertEquals(expectedRemaining, nodeManager.getStats().getRemaining());
@@ -1001,11 +1002,11 @@ public class TestNodeManager {
       assertEquals(expectedRemaining,
           nodeManager.getNodeStats().get(0).getRemaining());
 
-      // Wait up to 3 more seconds so the node becomes dead
+      // Wait up to 4 more seconds so the node becomes dead
       // Verify usage info should be updated.
       GenericTestUtils.waitFor(
           () -> nodeManager.getNodeCount(NodeManager.NODESTATE.DEAD) == 1, 100,
-          3 * 1000);
+          4 * 1000);
 
       assertEquals(0, nodeManager.getNodeStats().size());
       assertEquals(0, nodeManager.getStats().getCapacity());
@@ -1026,6 +1027,9 @@ public class TestNodeManager {
       GenericTestUtils.waitFor(
           () -> nodeManager.getNodeCount(NodeManager.NODESTATE.HEALTHY) == 1,
           100, 5 * 1000);
+      GenericTestUtils.waitFor(
+          () -> nodeManager.getStats().getScmUsed() == expectedScmUsed, 100,
+          4 * 1000);
       assertEquals(nodeCount, nodeManager.getNodeStats().size());
       assertEquals(capacity, nodeManager.getNodeStats().get(0).getCapacity());
       assertEquals(expectedScmUsed,
