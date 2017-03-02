@@ -26,14 +26,6 @@ while [ -h "${PRG}" ]; do
   fi
 done
 
-function hadoop_escape() {
-      # Escape special chars for the later sed which saves the text as xml attribute
-      local ret
-      ret=$(sed 's/[\/&]/\\&/g' <<< "$1" | sed 's/&/\&amp;/g' | sed 's/"/\\\&quot;/g' \
-          | sed "s/'/\\\\\&apos;/g" | sed 's/</\\\&lt;/g' | sed 's/>/\\\&gt;/g')
-      echo "$ret"
-}
-
 BASEDIR=`dirname ${PRG}`
 BASEDIR=`cd ${BASEDIR}/..;pwd`
 
@@ -97,6 +89,13 @@ if [[ "${1}" = "start" || "${1}" = "run" ]]; then
     "${KMS_MAX_HTTP_HEADER_SIZE}"
   catalina_set_property "kms.ssl.ciphers" "${KMS_SSL_CIPHERS}"
   catalina_set_property "kms.ssl.keystore.file" "${KMS_SSL_KEYSTORE_FILE}"
+
+  # Set a KEYSTORE_PASS if not already set
+  KMS_SSL_KEYSTORE_PASS=${KMS_SSL_KEYSTORE_PASS:-password}
+  catalina_set_property "kms.ssl.keystore.pass" \
+    "${KMS_SSL_KEYSTORE_PASS}" "<redacted>"
+  catalina_set_property "kms.ssl.truststore.pass" \
+    "${KMS_SSL_TRUSTSTORE_PASS}" "<redacted>"
 fi
 
 # A bug in catalina.sh script does not use CATALINA_OPTS for stopping the server
@@ -104,17 +103,6 @@ fi
 if [ "${1}" = "stop" ]; then
   export JAVA_OPTS=${CATALINA_OPTS}
 fi
-
-# If ssl, the populate the passwords into ssl-server.xml before starting tomcat
-if [ ! "${KMS_SSL_KEYSTORE_PASS}" = "" ] || [ ! "${KMS_SSL_TRUSTSTORE_PASS}" = "" ]; then
-  # Set a KEYSTORE_PASS if not already set
-  KMS_SSL_KEYSTORE_PASS=${KMS_SSL_KEYSTORE_PASS:-password}
-  KMS_SSL_KEYSTORE_PASS_ESCAPED=$(hadoop_escape "$KMS_SSL_KEYSTORE_PASS")
-  KMS_SSL_TRUSTSTORE_PASS_ESCAPED=$(hadoop_escape "$KMS_SSL_TRUSTSTORE_PASS")
-  cat ${CATALINA_BASE}/conf/ssl-server.xml.conf \
-    | sed 's/"_kms_ssl_keystore_pass_"/'"\"${KMS_SSL_KEYSTORE_PASS_ESCAPED}\""'/g' \
-    | sed 's/"_kms_ssl_truststore_pass_"/'"\"${KMS_SSL_TRUSTSTORE_PASS_ESCAPED}\""'/g' > ${CATALINA_BASE}/conf/ssl-server.xml
-fi 
 
 if [ "${KMS_SILENT}" != "true" ]; then
   exec "${KMS_CATALINA_HOME}/bin/catalina.sh" "$@"
