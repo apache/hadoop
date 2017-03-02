@@ -323,6 +323,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String FILE_CS_CONF_PROVIDER = "file";
 
   @Private
+  public static final String STORE_CS_CONF_PROVIDER = "store";
+
+  @Private
   public static final String DEFAULT_CS_CONF_PROVIDER = FILE_CS_CONF_PROVIDER;
 
   AppPriorityACLConfigurationParser priorityACLConfig = new AppPriorityACLConfigurationParser();
