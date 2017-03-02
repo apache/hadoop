@@ -37,6 +37,7 @@ import java.net.URLEncoder;
 import java.nio.file.AccessDeniedException;
 
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.TEST_FS_S3A_NAME;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeS3GuardNotEnabled;
 
 /**
  * Tests that credentials can go into the URL. This includes a valid
@@ -63,6 +64,11 @@ public class ITestS3ACredentialsInURL extends Assert {
   public void testInstantiateFromURL() throws Throwable {
 
     Configuration conf = new Configuration();
+
+    // Skip in the case of S3Guard with DynamoDB because it cannot get
+    // credentials for its own use if they're only in S3 URLs
+    assumeS3GuardNotEnabled(conf);
+
     String accessKey = conf.get(Constants.ACCESS_KEY);
     String secretKey = conf.get(Constants.SECRET_KEY);
     String fsname = conf.getTrimmed(TEST_FS_S3A_NAME, "");
@@ -84,10 +90,6 @@ public class ITestS3ACredentialsInURL extends Assert {
     conf.unset(Constants.ACCESS_KEY);
     conf.unset(Constants.SECRET_KEY);
     fs = S3ATestUtils.createTestFileSystem(conf);
-
-    // Skip in the case of S3Guard with DynamoDB because it cannot get
-    // credentials for its own use if they're only in S3 URLs
-    Assume.assumeFalse(fs.hasMetadataStore());
 
     String fsURI = fs.getUri().toString();
     assertFalse("FS URI contains a @ symbol", fsURI.contains("@"));

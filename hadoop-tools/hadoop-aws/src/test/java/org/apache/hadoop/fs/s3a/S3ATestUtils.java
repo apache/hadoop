@@ -33,11 +33,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
 import static org.junit.Assert.*;
 
 /**
@@ -320,6 +322,22 @@ public final class S3ATestUtils {
         System.getProperty(S3ATestConstants.TEST_UNIQUE_FORK_ID);
     return testUniqueForkId == null ? defVal :
         new Path("/" + testUniqueForkId, "test");
+  }
+
+  /**
+   * Assume testing S3Guard is not enabled.
+   */
+  public static void assumeS3GuardNotEnabled(Configuration originalConf)
+      throws URISyntaxException {
+    Assume.assumeFalse(getTestPropertyBool(originalConf, TEST_S3GUARD_ENABLED,
+        originalConf.getBoolean(TEST_S3GUARD_ENABLED, false)));
+
+    final String fsname = originalConf.getTrimmed(TEST_FS_S3A_NAME);
+    Assume.assumeNotNull(fsname);
+    final String bucket = new URI(fsname).getHost();
+    final Configuration conf = propagateBucketOptions(originalConf, bucket);
+    Assume.assumeTrue(S3GUARD_METASTORE_NULL.equals(
+        conf.getTrimmed(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL)));
   }
 
   /**
