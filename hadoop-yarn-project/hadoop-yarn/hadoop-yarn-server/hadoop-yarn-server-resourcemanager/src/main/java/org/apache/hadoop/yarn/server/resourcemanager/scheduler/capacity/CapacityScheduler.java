@@ -104,6 +104,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.Activi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.AllocationState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.CSConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.FileBasedCSConfigurationProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.MutableCSConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.KillableContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.AssignmentInformation;
@@ -295,10 +296,15 @@ public class CapacityScheduler extends
       String confProviderStr = configuration.get(
           CapacitySchedulerConfiguration.CS_CONF_PROVIDER,
           CapacitySchedulerConfiguration.DEFAULT_CS_CONF_PROVIDER);
-      if (confProviderStr.equals(
-          CapacitySchedulerConfiguration.FILE_CS_CONF_PROVIDER)) {
-        this.csConfProvider = new FileBasedCSConfigurationProvider(rmContext);
-      } else {
+      switch (confProviderStr) {
+      case CapacitySchedulerConfiguration.FILE_CS_CONF_PROVIDER:
+        this.csConfProvider =
+            new FileBasedCSConfigurationProvider(rmContext);
+        break;
+      case CapacitySchedulerConfiguration.STORE_CS_CONF_PROVIDER:
+        this.csConfProvider = new MutableCSConfigurationProvider(rmContext);
+        break;
+      default:
         throw new IOException("Invalid CS configuration provider: " +
             confProviderStr);
       }
