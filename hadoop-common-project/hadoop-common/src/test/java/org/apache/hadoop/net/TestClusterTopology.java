@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import org.apache.commons.math3.stat.inference.ChiSquareTest;
+import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -80,7 +81,7 @@ public class TestClusterTopology extends Assert {
   @Test
   public void testCountNumNodes() throws Exception {
     // create the topology
-    NetworkTopology cluster = new NetworkTopology();
+    NetworkTopology cluster = NetworkTopology.getInstance(new Configuration());
     NodeElement node1 = getNewNode("node1", "/d1/r1");
     cluster.add(node1);
     NodeElement node2 = getNewNode("node2", "/d1/r2");
@@ -128,7 +129,7 @@ public class TestClusterTopology extends Assert {
   @Test
   public void testChooseRandom() {
     // create the topology
-    NetworkTopology cluster = new NetworkTopology();
+    NetworkTopology cluster = NetworkTopology.getInstance(new Configuration());
     NodeElement node1 = getNewNode("node1", "/d1/r1");
     cluster.add(node1);
     NodeElement node2 = getNewNode("node2", "/d1/r2");

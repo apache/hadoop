@@ -61,7 +61,7 @@ public interface InnerNode extends Node {
    *
    * @param leafIndex an indexed leaf of the node
    * @param excludedNode an excluded node (can be null)
-   * @return
+   * @return the leaf node corresponding to the given index.
    */
   Node getLeaf(int leafIndex, Node excludedNode);
 }
