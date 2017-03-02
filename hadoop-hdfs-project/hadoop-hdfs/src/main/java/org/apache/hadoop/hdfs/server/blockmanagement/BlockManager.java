@@ -436,12 +436,12 @@ public class BlockManager implements BlockStatsMXBean {
           + DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY
           + " = " + minMaintenanceR + " < 0");
     }
-    if (minMaintenanceR > minR) {
+    if (minMaintenanceR > defaultReplication) {
       throw new IOException("Unexpected configuration parameters: "
           + DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY
           + " = " + minMaintenanceR + " > "
-          + DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY
-          + " = " + minR);
+          + DFSConfigKeys.DFS_REPLICATION_KEY
+          + " = " + defaultReplication);
     }
     this.minReplicationToBeInMaintenance = (short)minMaintenanceR;
 
@@ -747,6 +747,11 @@ public class BlockManager implements BlockStatsMXBean {
 
   public short getMinReplicationToBeInMaintenance() {
     return minReplicationToBeInMaintenance;
+  }
+
+  private short getMinMaintenanceStorageNum(BlockInfo block) {
+    return (short) Math.min(minReplicationToBeInMaintenance,
+        block.getReplication());
   }
 
   /**
@@ -3718,7 +3723,7 @@ public class BlockManager implements BlockStatsMXBean {
   boolean isNeededReplicationForMaintenance(BlockInfo storedBlock,
       NumberReplicas numberReplicas) {
     return storedBlock.isComplete() && (numberReplicas.liveReplicas() <
-        getMinReplicationToBeInMaintenance() ||
+        getMinMaintenanceStorageNum(storedBlock) ||
         !isPlacementPolicySatisfied(storedBlock));
   }
 
@@ -3744,7 +3749,7 @@ public class BlockManager implements BlockStatsMXBean {
     final short expectedRedundancy = getExpectedReplicaNum(block);
     return (short)Math.max(expectedRedundancy -
         numberReplicas.maintenanceReplicas(),
-        getMinReplicationToBeInMaintenance());
+        getMinMaintenanceStorageNum(block));
   }
 
   public short getExpectedReplicaNum(BlockInfo block) {
