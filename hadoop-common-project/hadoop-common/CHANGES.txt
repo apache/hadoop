@@ -31,6 +31,9 @@ Release 2.7.4 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HADOOP-14138. Remove S3A ref from META-INF service discovery, rely on
+    existing core-default entry (Steve Loughran via jlowe)
+
   BUG FIXES
 
     HADOOP-13362. DefaultMetricsSystem leaks the source name when a source
