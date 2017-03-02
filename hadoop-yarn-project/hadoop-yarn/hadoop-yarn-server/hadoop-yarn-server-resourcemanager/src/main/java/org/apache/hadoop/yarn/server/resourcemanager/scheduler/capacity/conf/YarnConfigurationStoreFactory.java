@@ -18,30 +18,29 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-
-import java.io.IOException;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
- * Configuration provider for {@link CapacityScheduler}.
+ * Factory class for creating instances of {@link YarnConfigurationStore}.
  */
-public interface CSConfigurationProvider {
+public final class YarnConfigurationStoreFactory {
 
-  /**
-   * Initialize the configuration provider with given conf.
-   * @param conf configuration to initialize with
-   * @throws IOException if initialization fails due to misconfiguration
-   */
-  void init(Configuration conf) throws IOException;
+  private static final Log LOG = LogFactory.getLog(
+      YarnConfigurationStoreFactory.class);
 
-  /**
-   * Loads capacity scheduler configuration object.
-   * @param conf initial bootstrap configuration
-   * @return CS configuration
-   * @throws IOException if fail to retrieve configuration
-   */
-  CapacitySchedulerConfiguration loadConfiguration(Configuration conf)
-      throws IOException;
+  private YarnConfigurationStoreFactory() {
+    // Unused.
+  }
+
+  public static YarnConfigurationStore getStore(Configuration conf) {
+    Class<? extends YarnConfigurationStore> storeClass =
+        conf.getClass(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+            InMemoryConfigurationStore.class, YarnConfigurationStore.class);
+    LOG.info("Using YarnConfigurationStore implementation - " + storeClass);
+    return ReflectionUtils.newInstance(storeClass, conf);
+  }
 }

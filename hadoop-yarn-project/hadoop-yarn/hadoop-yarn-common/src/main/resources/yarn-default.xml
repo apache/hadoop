@@ -3340,4 +3340,16 @@
       </description>
   </property>
 
+  <property>
+    <description>
+      The type of configuration store to use for storing scheduler
+      configurations, if using a mutable configuration provider.
+      Keywords such as "memory" map to certain configuration store
+      implementations. If keyword is not found, try to load this
+      value as a class.
+    </description>
+    <name>yarn.scheduler.configuration.store.class</name>
+    <value>memory</value>
+  </property>
+
 </configuration>
