@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
@@ -90,6 +91,7 @@ public final class FederationStateStoreFacade {
   private int cacheTimeToLive;
   private Configuration conf;
   private Cache<Object, Object> cache;
+  private SubClusterResolver subclusterResolver;
 
   private FederationStateStoreFacade() {
     initializeFacadeInternal(new Configuration());
@@ -103,6 +105,12 @@ public final class FederationStateStoreFacade {
           YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CLIENT_CLASS,
           FederationStateStore.class, createRetryPolicy(conf));
       this.stateStore.init(conf);
+
+      this.subclusterResolver = createInstance(conf,
+          YarnConfiguration.FEDERATION_CLUSTER_RESOLVER_CLASS,
+          YarnConfiguration.DEFAULT_FEDERATION_CLUSTER_RESOLVER_CLASS,
+          SubClusterResolver.class);
+      this.subclusterResolver.load();
 
       initCache();
 
@@ -348,6 +356,15 @@ public final class FederationStateStoreFacade {
   }
 
   /**
+   * Get the singleton instance of SubClusterResolver.
+   *
+   * @return SubClusterResolver instance
+   */
+  public SubClusterResolver getSubClusterResolver() {
+    return this.subclusterResolver;
+  }
+
+  /**
    * Helper method to create instances of Object using the class name defined in
    * the configuration object. The instances creates {@link RetryProxy} using
    * the specific {@link RetryPolicy}.
@@ -359,23 +376,40 @@ public final class FederationStateStoreFacade {
    * @param retryPolicy the policy for retrying method call failures
    * @return a retry proxy for the specified interface
    */
-  @SuppressWarnings("unchecked")
   public static <T> Object createRetryInstance(Configuration conf,
       String configuredClassName, String defaultValue, Class<T> type,
       RetryPolicy retryPolicy) {
+
+    return RetryProxy.create(type,
+        createInstance(conf, configuredClassName, defaultValue, type),
+        retryPolicy);
+  }
+
+  /**
+   * Helper method to create instances of Object using the class name specified
+   * in the configuration object.
+   *
+   * @param conf the yarn configuration
+   * @param configuredClassName the configuration provider key
+   * @param defaultValue the default implementation class
+   * @param type the required interface/base class
+   * @param <T> The type of the instance to create
+   * @return the instances created
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> T createInstance(Configuration conf,
+      String configuredClassName, String defaultValue, Class<T> type) {
 
     String className = conf.get(configuredClassName, defaultValue);
     try {
       Class<?> clusterResolverClass = conf.getClassByName(className);
       if (type.isAssignableFrom(clusterResolverClass)) {
-        return RetryProxy.create(type,
-            (T) ReflectionUtils.newInstance(clusterResolverClass, conf),
-            retryPolicy);
+        return (T) ReflectionUtils.newInstance(clusterResolverClass, conf);
       } else {
-        throw new YarnRuntimeException(
-            "Class: " + className + " not instance of " + type.getSimpleName());
+        throw new YarnRuntimeException("Class: " + className
+            + " not instance of " + type.getCanonicalName());
       }
-    } catch (Exception e) {
+    } catch (ClassNotFoundException e) {
       throw new YarnRuntimeException("Could not instantiate : " + className, e);
     }
   }
