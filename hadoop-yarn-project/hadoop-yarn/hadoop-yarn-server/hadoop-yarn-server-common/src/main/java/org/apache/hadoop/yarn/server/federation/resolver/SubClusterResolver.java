@@ -25,8 +25,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 
 /**
- * An utility that helps to determine the sub-cluster that a specified node
- * belongs to.
+ * An utility that helps to determine the sub-cluster that a specified node or
+ * rack belongs to. All implementing classes should be thread-safe.
  */
 public interface SubClusterResolver extends Configurable {
 

@@ -2701,6 +2701,13 @@
     </description>
     <name>yarn.federation.machine-list</name>
   </property>
+  <property>
+    <description>
+      Class name for SubClusterResolver
+    </description>
+    <name>yarn.federation.subcluster-resolver.class</name>
+    <value>org.apache.hadoop.yarn.server.federation.resolver.DefaultSubClusterResolverImpl</value>
+  </property>
 
   <property>
     <description>

@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.server.federation.resolver;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 
-import java.util.HashMap;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 
 /**
@@ -31,9 +31,9 @@ import java.util.Map;
  */
 public abstract class AbstractSubClusterResolver implements SubClusterResolver {
   private Map<String, SubClusterId> nodeToSubCluster =
-      new HashMap<String, SubClusterId>();
+      new ConcurrentHashMap<String, SubClusterId>();
   private Map<String, Set<SubClusterId>> rackToSubClusters =
-      new HashMap<String, Set<SubClusterId>>();
+      new ConcurrentHashMap<String, Set<SubClusterId>>();
 
   @Override
   public SubClusterId getSubClusterForNode(String nodename)
