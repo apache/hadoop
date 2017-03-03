@@ -26,11 +26,15 @@ import org.junit.Rule;
 import org.junit.rules.Timeout;
 
 import java.net.InetSocketAddress;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.*;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
-
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * This test class verifies the parsing of SCM endpoint config settings.
@@ -216,5 +220,105 @@ public class TestOzoneClientUtils {
     addr = OzoneClientUtils.getScmDataNodeBindAddress(conf);
     assertThat(addr.getHostString(), is("5.6.7.8"));
     assertThat(addr.getPort(), is(200));
+  }
+
+  @Test
+  public void testGetSCMAddresses() {
+    final Configuration conf = new OzoneConfiguration();
+    Collection<InetSocketAddress> addresses = null;
+    InetSocketAddress addr = null;
+    Iterator<InetSocketAddress> it = null;
+
+    // Verify valid IP address setup
+    conf.setStrings(OZONE_SCM_NAMES, "1.2.3.4");
+    addresses = OzoneClientUtils.getSCMAddresses(conf);
+    assertThat(addresses.size(), is(1));
+    addr = addresses.iterator().next();
+    assertThat(addr.getHostName(), is("1.2.3.4"));
+    assertThat(addr.getPort(), is(OZONE_SCM_DEFAULT_PORT));
+
+    // Verify valid hostname setup
+    conf.setStrings(OZONE_SCM_NAMES, "scm1");
+    addresses = OzoneClientUtils.getSCMAddresses(conf);
+    assertThat(addresses.size(), is(1));
+    addr = addresses.iterator().next();
+    assertThat(addr.getHostName(), is("scm1"));
+    assertThat(addr.getPort(), is(OZONE_SCM_DEFAULT_PORT));
+
+    // Verify valid hostname and port
+    conf.setStrings(OZONE_SCM_NAMES, "scm1:1234");
+    addresses = OzoneClientUtils.getSCMAddresses(conf);
+    assertThat(addresses.size(), is(1));
+    addr = addresses.iterator().next();
+    assertThat(addr.getHostName(), is("scm1"));
+    assertThat(addr.getPort(), is(1234));
+
+    final HashMap<String, Integer> hostsAndPorts =
+        new HashMap<String, Integer>();
+    hostsAndPorts.put("scm1", 1234);
+    hostsAndPorts.put("scm2", 2345);
+    hostsAndPorts.put("scm3", 3456);
+
+    // Verify multiple hosts and port
+    conf.setStrings(OZONE_SCM_NAMES, "scm1:1234,scm2:2345,scm3:3456");
+    addresses = OzoneClientUtils.getSCMAddresses(conf);
+    assertThat(addresses.size(), is(3));
+    it = addresses.iterator();
+    HashMap<String, Integer> expected1 = new HashMap<>(hostsAndPorts);
+    while(it.hasNext()) {
+      InetSocketAddress current = it.next();
+      assertTrue(expected1.remove(current.getHostName(),
+          current.getPort()));
+    }
+    assertTrue(expected1.isEmpty());
+
+    // Verify names with spaces
+    conf.setStrings(OZONE_SCM_NAMES, " scm1:1234, scm2:2345 , scm3:3456 ");
+    addresses = OzoneClientUtils.getSCMAddresses(conf);
+    assertThat(addresses.size(), is(3));
+    it = addresses.iterator();
+    HashMap<String, Integer> expected2 = new HashMap<>(hostsAndPorts);
+    while(it.hasNext()) {
+      InetSocketAddress current = it.next();
+      assertTrue(expected2.remove(current.getHostName(),
+          current.getPort()));
+    }
+    assertTrue(expected2.isEmpty());
+
+    // Verify empty value
+    conf.setStrings(OZONE_SCM_NAMES, "");
+    try {
+      addresses = OzoneClientUtils.getSCMAddresses(conf);
+      fail("Empty value should cause an IllegalArgumentException");
+    } catch (Exception e) {
+      assertTrue(e instanceof IllegalArgumentException);
+    }
+
+    // Verify invalid hostname
+    conf.setStrings(OZONE_SCM_NAMES, "s..x..:1234");
+    try {
+      addresses = OzoneClientUtils.getSCMAddresses(conf);
+      fail("An invalid hostname should cause an IllegalArgumentException");
+    } catch (Exception e) {
+      assertTrue(e instanceof IllegalArgumentException);
+    }
+
+    // Verify invalid port
+    conf.setStrings(OZONE_SCM_NAMES, "scm:xyz");
+    try {
+      addresses = OzoneClientUtils.getSCMAddresses(conf);
+      fail("An invalid port should cause an IllegalArgumentException");
+    } catch (Exception e) {
+      assertTrue(e instanceof IllegalArgumentException);
+    }
+
+    // Verify a mixed case (valid and invalid value both appears)
+    conf.setStrings(OZONE_SCM_NAMES, "scm1:1234, scm:xyz");
+    try {
+      addresses = OzoneClientUtils.getSCMAddresses(conf);
+      fail("An invalid value should cause an IllegalArgumentException");
+    } catch (Exception e) {
+      assertTrue(e instanceof IllegalArgumentException);
+    }
   }
 }

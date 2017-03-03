@@ -261,4 +261,36 @@ public class TestDatanodeStateMachine {
       Assert.assertEquals(1, mock.getHeartbeatCount());
     }
   }
+
+  /**
+   * Test state transition with a list of invalid SCM names,
+   * and verify the state transits to SHUTDOWN each time.
+   */
+  @Test
+  public void testDatanodeStateMachineWithInvalidSCMNames()
+      throws Exception {
+    for (String name : new String[] {
+        "",          // Empty
+        "x..y",      // Invalid schema
+        "scm:",      // Missing port
+        "scm:xyz",   // Invalid port
+        "scm:123456" // Port out of range
+    }) {
+      conf.setStrings(OzoneConfigKeys.OZONE_SCM_NAMES, name);
+      final DatanodeStateMachine stateMachine =
+          new DatanodeStateMachine(conf);
+      DatanodeStateMachine.DatanodeStates currentState =
+          stateMachine.getContext().getState();
+      Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
+          currentState);
+
+      DatanodeState<DatanodeStateMachine.DatanodeStates> task =
+          stateMachine.getContext().getTask();
+      task.execute(executorService);
+      DatanodeStateMachine.DatanodeStates newState =
+          task.await(2, TimeUnit.SECONDS);
+      Assert.assertEquals(DatanodeStateMachine.DatanodeStates.SHUTDOWN,
+          newState);
+    }
+  }
 }

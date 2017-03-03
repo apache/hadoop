@@ -16,11 +16,9 @@
  */
 package org.apache.hadoop.ozone.container.common.states.datanode;
 
-import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneClientUtils;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
@@ -29,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.Collection;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -70,26 +69,23 @@ public class InitDatanodeState implements DatanodeState,
    */
   @Override
   public DatanodeStateMachine.DatanodeStates call() throws Exception {
-    String[] addresses = conf.getStrings(OzoneConfigKeys.OZONE_SCM_NAMES);
-    final Optional<Integer> defaultPort =  Optional.of(OzoneConfigKeys
-        .OZONE_SCM_DEFAULT_PORT);
-
-    if (addresses == null || addresses.length <= 0) {
-      LOG.error("SCM addresses need to be a set of valid DNS names " +
-          "or IP addresses. Null or empty address list found. Aborting " +
-          "containers.");
+    Collection<InetSocketAddress> addresses = null;
+    try {
+      addresses = OzoneClientUtils.getSCMAddresses(conf);
+    } catch (IllegalArgumentException e) {
+      if(!Strings.isNullOrEmpty(e.getMessage())) {
+        LOG.error("Failed to get SCM addresses: " + e.getMessage());
+      }
       return DatanodeStateMachine.DatanodeStates.SHUTDOWN;
     }
-    for (String address : addresses) {
-      Optional<String> hostname = OzoneClientUtils.getHostName(address);
-      if (!hostname.isPresent()) {
-        LOG.error("Invalid hostname for SCM.");
-        return DatanodeStateMachine.DatanodeStates.SHUTDOWN;
+
+    if (addresses == null || addresses.isEmpty()) {
+      LOG.error("Null or empty SCM address list found.");
+      return DatanodeStateMachine.DatanodeStates.SHUTDOWN;
+    } else {
+      for (InetSocketAddress addr : addresses) {
+        connectionManager.addSCMServer(addr);
       }
-      Optional<Integer> port = OzoneClientUtils.getHostPort(address);
-      InetSocketAddress addr = NetUtils.createSocketAddr(hostname.get(),
-          port.or(defaultPort.get()));
-      connectionManager.addSCMServer(addr);
     }
     return this.context.getState().getNextState();
   }

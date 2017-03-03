@@ -29,7 +29,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -80,6 +82,44 @@ public final class OzoneClientUtils {
 
   private OzoneClientUtils() {
     // Never constructed
+  }
+
+  /**
+   * Retrieve the socket addresses of all storage container managers.
+   *
+   * @param conf
+   * @return A collection of SCM addresses
+   * @throws IllegalArgumentException If the configuration is invalid
+   */
+  public static Collection<InetSocketAddress> getSCMAddresses(
+      Configuration conf) throws IllegalArgumentException {
+    Collection<InetSocketAddress> addresses =
+        new HashSet<InetSocketAddress>();
+    Collection<String> names =
+        conf.getTrimmedStringCollection(OzoneConfigKeys.OZONE_SCM_NAMES);
+    if (names == null || names.isEmpty()) {
+      throw new IllegalArgumentException(OzoneConfigKeys.OZONE_SCM_NAMES
+          + " need to be a set of valid DNS names or IP addresses."
+          + " Null or empty address list found.");
+    }
+
+    final com.google.common.base.Optional<Integer>
+        defaultPort =  com.google.common.base.Optional.of(OzoneConfigKeys
+        .OZONE_SCM_DEFAULT_PORT);
+    for (String address : names) {
+      com.google.common.base.Optional<String> hostname =
+          OzoneClientUtils.getHostName(address);
+      if (!hostname.isPresent()) {
+        throw new IllegalArgumentException("Invalid hostname for SCM: "
+            + hostname);
+      }
+      com.google.common.base.Optional<Integer> port =
+          OzoneClientUtils.getHostPort(address);
+      InetSocketAddress addr = NetUtils.createSocketAddr(hostname.get(),
+          port.or(defaultPort.get()));
+      addresses.add(addr);
+    }
+    return addresses;
   }
 
   /**
