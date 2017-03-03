@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static java.lang.Math.abs;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -44,32 +43,18 @@ class ProfilingFileIoEvents {
 
   public ProfilingFileIoEvents(@Nullable Configuration conf) {
     if (conf != null) {
+      isEnabled = conf.getBoolean(DFSConfigKeys
+          .DFS_DATANODE_ENABLE_FILEIO_PROFILING_KEY, DFSConfigKeys
+          .DFS_DATANODE_ENABLE_FILEIO_PROFILING_DEFAULT);
       double fileIOSamplingFraction = conf.getDouble(DFSConfigKeys
               .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY,
           DFSConfigKeys
-              .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEFAULT);
-      if (abs(fileIOSamplingFraction) < 0.000001) {
-        LOG.info(DFSConfigKeys
-            .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY + " set to "
-            + fileIOSamplingFraction + ". Disabling file IO profiling");
-        isEnabled = false;
-      } else if (fileIOSamplingFraction < 0.000001) {
+              .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEAFULT);
+      if (fileIOSamplingFraction > 1) {
         LOG.warn(DFSConfigKeys
             .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY +
-            " value cannot be less than 0. Disabling file IO profiling.");
-        isEnabled = false;
-      } else if (fileIOSamplingFraction > 1) {
-        LOG.warn(DFSConfigKeys
-            .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY +
-            " value cannot be more than 1. Setting value to 1 and enabling " +
-            "file IO profiling");
-        isEnabled = true;
+            " value cannot be more than 1. Setting value to 1");
         fileIOSamplingFraction = 1;
-      } else {
-        LOG.info(DFSConfigKeys
-            .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY + " set to "
-            + fileIOSamplingFraction + ". Enabling file IO profiling");
-        isEnabled = true;
       }
       sampleRangeMax = (int) (fileIOSamplingFraction * Integer.MAX_VALUE);
     } else {

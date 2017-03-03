@@ -107,6 +107,8 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
         .add(DFSConfigKeys.DFS_DATANODE_STARTUP_KEY);
     configurationPropsToSkipCompare
         .add(DFSConfigKeys.DFS_NAMENODE_STARTUP_KEY);
+    configurationPropsToSkipCompare
+        .add(DFSConfigKeys.DFS_DATANODE_ENABLE_FILEIO_PROFILING_KEY);
     configurationPropsToSkipCompare.add(DFSConfigKeys
         .DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_KEY);
     configurationPropsToSkipCompare.add(DFSConfigKeys
