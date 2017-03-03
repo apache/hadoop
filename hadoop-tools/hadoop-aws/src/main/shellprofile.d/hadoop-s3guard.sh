@@ -15,19 +15,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if ! declare -f hadoop_subcommand_s3a >/dev/null 2>/dev/null; then
+if ! declare -f hadoop_subcommand_s3guard >/dev/null 2>/dev/null; then
 
   if [[ "${HADOOP_SHELL_EXECNAME}" = hadoop ]]; then
-    hadoop_add_subcommand "s3a" "manage data on S3"
+    hadoop_add_subcommand "s3guard" "manage metadata on S3"
   fi
 
   # this can't be indented otherwise shelldocs won't get it
 
-## @description  s3a command for hadoop
+## @description  s3guard command for hadoop
 ## @audience     public
 ## @stability    stable
 ## @replaceable  yes
-function hadoop_subcommand_s3a
+function hadoop_subcommand_s3guard
 {
   # shellcheck disable=SC2034
   HADOOP_CLASSNAME=org.apache.hadoop.fs.s3a.s3guard.S3GuardTool

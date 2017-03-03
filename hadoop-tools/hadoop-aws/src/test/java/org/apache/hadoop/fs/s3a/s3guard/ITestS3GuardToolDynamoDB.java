@@ -22,8 +22,8 @@ import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.DestroyMetadata;
-import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.InitMetadata;
+import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Destroy;
+import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Init;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -69,10 +69,11 @@ public class ITestS3GuardToolDynamoDB extends S3GuardToolTestBase {
     DynamoDB db = null;
     try {
       // Initialize MetadataStore
-      InitMetadata initCmd = new InitMetadata(fs.getConf());
+      Init initCmd = new Init(fs.getConf());
       assertEquals("Init command did not exit successfully - see output",
           SUCCESS, initCmd.run(new String[]{
-              "init", "-m", "dynamodb://" + testTableName, testS3Url
+              "init", "-meta", "dynamodb://" + testTableName,
+              testS3Url
           }));
       // Verify it exists
       MetadataStore ms = getMetadataStore();
@@ -84,10 +85,11 @@ public class ITestS3GuardToolDynamoDB extends S3GuardToolTestBase {
           exist(db, testTableName));
 
       // Destroy MetadataStore
-      DestroyMetadata destroyCmd = new DestroyMetadata(fs.getConf());
+      Destroy destroyCmd = new Destroy(fs.getConf());
       assertEquals("Destroy command did not exit successfully - see output",
           SUCCESS, destroyCmd.run(new String[]{
-              "destroy", "-m", "dynamodb://" + testTableName, testS3Url
+              "destroy", "-meta", "dynamodb://" + testTableName,
+              testS3Url
           }));
       // Verify it does not exist
       assertFalse(String.format("%s still exists", testTableName),

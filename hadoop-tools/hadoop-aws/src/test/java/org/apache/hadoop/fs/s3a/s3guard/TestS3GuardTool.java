@@ -108,7 +108,7 @@ public class TestS3GuardTool extends S3GuardToolTestBase {
     Diff cmd = new Diff(fs.getConf());
     cmd.setMetadataStore(ms);
     assertEquals("Diff command did not exit successfully - see output", SUCCESS,
-        cmd.run(new String[]{"diff", "-m", "local://metadata",
+        cmd.run(new String[]{"diff", "-meta", "local://metadata",
             testPath.toString()}, out));
 
     Set<Path> actualOnS3 = new HashSet<>();

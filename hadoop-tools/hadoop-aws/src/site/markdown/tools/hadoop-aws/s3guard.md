@@ -242,7 +242,7 @@ be inferred if the URI to an existing bucket is provided.
 ### Init
 
 ```
-hadoop s3a init -m URI ( -e ENDPOINT | s3a://BUCKET )
+hadoop s3a init -meta URI ( -endpoint ENDPOINT | s3a://BUCKET )
 ```
 
 Creates and initializes an empty metadata store.
@@ -251,13 +251,13 @@ A DynamoDB metadata store can be initialized with additional parameters
 pertaining to [Provisioned Throughput](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ProvisionedThroughput.html):
 
 ```
-[-w PROVISIONED_WRITES] [-r PROVISIONED_READS]
+[-write PROVISIONED_WRITES] [-read PROVISIONED_READS]
 ```
 
 ### Import
 
 ```
-hadoop s3a import [-m URI] s3a://BUCKET
+hadoop s3a import [-meta URI] s3a://BUCKET
 ```
 
 Pre-populates a metadata store according to the current contents of an S3
@@ -266,7 +266,7 @@ bucket.
 ### Diff
 
 ```
-hadoop s3a diff [-m URI] s3a://BUCKET
+hadoop s3a diff [-meta URI] s3a://BUCKET
 ```
 
 Lists discrepancies between a metadata store and bucket. Note that depending on
@@ -275,7 +275,7 @@ how S3Guard is used, certain discrepancies are to be expected.
 ### Destroy
 
 ```
-hadoop s3a destroy [-m URI] ( -e ENDPOINT | s3a://BUCKET )
+hadoop s3a destroy [-meta URI] ( -endpoint ENDPOINT | s3a://BUCKET )
 ```
 
 Deletes a metadata store.
@@ -283,7 +283,8 @@ Deletes a metadata store.
 ### Prune
 
 ```
-hadoop s3a prune [-D DAYS] [-H HOURS] [-M MINUTES] [-S SECONDS] [-m URI] ( -e ENDPOINT | s3a://BUCKET )
+hadoop s3a prune [-days DAYS] [-hours HOURS] [-minutes MINUTES]
+    [-seconds SECONDS] [-m URI] ( -endpoint ENDPOINT | s3a://BUCKET )
 ```
 
 Trims metadata for files that are older than the time given. Must supply at least length of time.

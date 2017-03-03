@@ -56,7 +56,20 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 public abstract class S3GuardTool extends Configured implements Tool {
   private static final Logger LOG = LoggerFactory.getLogger(S3GuardTool.class);
 
-  private static final String NAME = "s3a";
+  private static final String NAME = "s3guard";
+  private static final String COMMON_USAGE =
+      "When possible and not overridden by more specific options, metadata\n" +
+      "repository information will be inferred from the S3A URL (if provided)";
+  private static final String USAGE = NAME +
+      " [command] [OPTIONS] [s3a://BUCKET]\n\n" +
+      "Commands: \n" +
+      "\t" + Init.NAME + " - " + Init.PURPOSE + "\n" +
+      "\t" + Destroy.NAME + " - " + Destroy.PURPOSE + "\n" +
+      "\t" + Import.NAME + " - " + Import.PURPOSE + "\n" +
+      "\t" + Diff.NAME + " - " + Diff.PURPOSE + "\n" +
+      "\t" + Prune.NAME + " - " + Prune.PURPOSE + "\n";
+
+  abstract public String getUsage();
 
   // Exit codes
   static final int SUCCESS = 0;
@@ -67,6 +80,16 @@ public abstract class S3GuardTool extends Configured implements Tool {
   protected MetadataStore ms;
   protected CommandFormat commandFormat;
 
+  private static final String META_FLAG = "meta";
+  private static final String DAYS_FLAG = "days";
+  private static final String HOURS_FLAG = "hours";
+  private static final String MINUTES_FLAG = "minutes";
+  private static final String SECONDS_FLAG = "seconds";
+
+  private static final String REGION_FLAG = "region";
+  private static final String READ_FLAG = "read";
+  private static final String WRITE_FLAG = "write";
+
   /**
    * Constructor a S3Guard tool with HDFS configuration.
    * @param conf Configuration.
@@ -74,11 +97,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
   public S3GuardTool(Configuration conf) {
     super(conf);
 
-    commandFormat = new CommandFormat(0, Integer.MAX_VALUE, "h");
+    commandFormat = new CommandFormat(0, Integer.MAX_VALUE);
     // For metadata store URI
-    commandFormat.addOptionWithValue("m");
+    commandFormat.addOptionWithValue(META_FLAG);
     // DDB region.
-    commandFormat.addOptionWithValue("r");
+    commandFormat.addOptionWithValue(REGION_FLAG);
   }
 
   /**
@@ -94,8 +117,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
   /**
    * Parse DynamoDB region from either -m option or a S3 path.
    *
-   * This function should only be called from {@link InitMetadata} or
-   * {@link DestroyMetadata}.
+   * This function should only be called from {@link Init} or
+   * {@link Destroy}.
    *
    * @param paths remaining parameters from CLI.
    * @return false for invalid parameters.
@@ -103,19 +126,19 @@ public abstract class S3GuardTool extends Configured implements Tool {
    */
   boolean parseDynamoDBRegion(List<String> paths) throws IOException {
     Configuration conf = getConf();
-    String fromCli = commandFormat.getOptValue("r");
+    String fromCli = commandFormat.getOptValue(REGION_FLAG);
     String fromConf = conf.get(S3GUARD_DDB_REGION_KEY);
     boolean hasS3Path = !paths.isEmpty();
 
     if (fromCli != null) {
       if (fromCli.isEmpty()) {
-        System.err.println("No region provided with -r flag");
+        System.err.println("No region provided with -" + REGION_FLAG + " flag");
         return false;
       }
       if (hasS3Path) {
-        System.err.println("Providing both an S3 path and the -r flag is not " +
-            "supported. If you need to specify a different region from the " +
-            "S3 bucket, configure " + S3GUARD_DDB_REGION_KEY);
+        System.err.println("Providing both an S3 path and the -" + REGION_FLAG
+            + " flag is not supported. If you need to specify a different "
+            + "region than the S3 bucket, configure " + S3GUARD_DDB_REGION_KEY);
         return false;
       }
       conf.set(S3GUARD_DDB_REGION_KEY, fromCli);
@@ -137,7 +160,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
       return true;
     }
 
-    System.err.println("No region found from -r flag, config, or S3 bucket");
+    System.err.println("No region found from -" + REGION_FLAG + " flag, " +
+        "config, or S3 bucket");
     return false;
   }
 
@@ -157,7 +181,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
     } else {
       conf = s3a.getConf();
     }
-    String metaURI = commandFormat.getOptValue("m");
+    String metaURI = commandFormat.getOptValue(META_FLAG);
     if (metaURI != null && !metaURI.isEmpty()) {
       URI uri = URI.create(metaURI);
       LOG.info("create metadata store: {}", uri + " scheme: "
@@ -232,17 +256,30 @@ public abstract class S3GuardTool extends Configured implements Tool {
   /**
    * Create the metadata store.
    */
-  static class InitMetadata extends S3GuardTool {
+  static class Init extends S3GuardTool {
     private static final String NAME = "init";
-    private static final String USAGE = NAME +
-        " [-r UNIT] [-w UNIT] -m URI ( -r REGION | s3a://bucket )";
+    public static final String PURPOSE = "initialize metadata repository";
+    private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n" +
+        "\t" + PURPOSE + "\n\n" +
+        "Common options:\n" +
+        "  -" + META_FLAG + " URL - Metadata repository details " +
+          "(implementation-specific)\n" +
+        "\n" +
+        "Amazon DynamoDB-specific options:\n" +
+        "  -" + REGION_FLAG + " REGION - Service region for connections\n" +
+        "  -" + READ_FLAG + " UNIT - Provisioned read throughput units\n" +
+        "  -" + WRITE_FLAG + " UNIT - Provisioned write through put units\n" +
+        "\n" +
+        "  URLs for Amazon DynamoDB are of the form dynamodb://TABLE_NAME.\n" +
+        "  Specifying both the -" + REGION_FLAG + " option and an S3A path\n" +
+        "  is not supported.";
 
-    InitMetadata(Configuration conf) {
+    Init(Configuration conf) {
       super(conf);
       // read capacity.
-      commandFormat.addOptionWithValue("r");
+      commandFormat.addOptionWithValue(READ_FLAG);
       // write capacity.
-      commandFormat.addOptionWithValue("w");
+      commandFormat.addOptionWithValue(WRITE_FLAG);
     }
 
     @Override
@@ -251,15 +288,20 @@ public abstract class S3GuardTool extends Configured implements Tool {
     }
 
     @Override
+    public String getUsage() {
+      return USAGE;
+    }
+
+    @Override
     public int run(String[] args) throws IOException {
       List<String> paths = parseArgs(args);
 
-      String readCap = commandFormat.getOptValue("r");
+      String readCap = commandFormat.getOptValue(READ_FLAG);
       if (readCap != null && !readCap.isEmpty()) {
         int readCapacity = Integer.parseInt(readCap);
         getConf().setInt(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY, readCapacity);
       }
-      String writeCap = commandFormat.getOptValue("w");
+      String writeCap = commandFormat.getOptValue(WRITE_FLAG);
       if (writeCap != null && !writeCap.isEmpty()) {
         int writeCapacity = Integer.parseInt(writeCap);
         getConf().setInt(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY, writeCapacity);
@@ -267,7 +309,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
       // Validate parameters.
       if (!parseDynamoDBRegion(paths)) {
-        System.out.println(USAGE);
+        System.err.println(USAGE);
         return INVALID_ARGUMENT;
       }
       initMetadataStore(true);
@@ -278,12 +320,23 @@ public abstract class S3GuardTool extends Configured implements Tool {
   /**
    * Destroy a metadata store.
    */
-  static class DestroyMetadata extends S3GuardTool {
+  static class Destroy extends S3GuardTool {
     private static final String NAME = "destroy";
-    private static final String USAGE =
-        NAME + " -m URI ( -r REGION | s3a://bucket )";
+    public static final String PURPOSE = "destroy metadata repository";
+    private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n" +
+        "\t" + PURPOSE + "\n\n" +
+        "Common options:\n" +
+        "  -" + META_FLAG + " URL - Metadata repository details " +
+          "(implementation-specific)\n" +
+        "\n" +
+        "Amazon DynamoDB-specific options:\n" +
+        "  -" + REGION_FLAG + " REGION - Service region for connections\n" +
+        "\n" +
+        "  URLs for Amazon DynamoDB are of the form dynamodb://TABLE_NAME.\n" +
+        "  Specifying both the -" + REGION_FLAG + " option and an S3A path\n" +
+        "  is not supported.";
 
-    DestroyMetadata(Configuration conf) {
+    Destroy(Configuration conf) {
       super(conf);
     }
 
@@ -292,10 +345,15 @@ public abstract class S3GuardTool extends Configured implements Tool {
       return NAME;
     }
 
+    @Override
+    public String getUsage() {
+      return USAGE;
+    }
+
     public int run(String[] args) throws IOException {
       List<String> paths = parseArgs(args);
       if (!parseDynamoDBRegion(paths)) {
-        System.out.println(USAGE);
+        System.err.println(USAGE);
         return INVALID_ARGUMENT;
       }
 
@@ -313,8 +371,20 @@ public abstract class S3GuardTool extends Configured implements Tool {
    */
   static class Import extends S3GuardTool {
     private static final String NAME = "import";
-    private static final String USAGE = NAME +
-        " [-m URI] s3a://bucket/path/";
+    public static final String PURPOSE = "import metadata from existing S3 " +
+        "data";
+    private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n" +
+        "\t" + PURPOSE + "\n\n" +
+        "Common options:\n" +
+        "  -" + META_FLAG + " URL - Metadata repository details " +
+        "(implementation-specific)\n" +
+        "\n" +
+        "Amazon DynamoDB-specific options:\n" +
+        "  -" + REGION_FLAG + " REGION - Service region for connections\n" +
+        "\n" +
+        "  URLs for Amazon DynamoDB are of the form dynamodb://TABLE_NAME.\n" +
+        "  Specifying both the -" + REGION_FLAG + " option and an S3A path\n" +
+        "  is not supported.";
 
     private final Set<Path> dirCache = new HashSet<>();
 
@@ -333,7 +403,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
       return NAME;
     }
 
-    private String getUsage() {
+    @Override
+    public String getUsage() {
       return USAGE;
     }
 
@@ -393,7 +464,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public int run(String[] args) throws IOException {
       List<String> paths = parseArgs(args);
       if (paths.isEmpty()) {
-        System.out.println(getUsage());
+        System.err.println(getUsage());
         return INVALID_ARGUMENT;
       }
       String s3Path = paths.get(0);
@@ -432,8 +503,21 @@ public abstract class S3GuardTool extends Configured implements Tool {
    */
   static class Diff extends S3GuardTool {
     private static final String NAME = "diff";
-    private static final String USAGE = NAME +
-        " [-m URI] s3a://bucket/path/";
+    public static final String PURPOSE = "report on delta between S3 and " +
+        "repository";
+    private static final String USAGE = NAME + " [OPTIONS] s3a://BUCKET\n" +
+        "\t" + PURPOSE + "\n\n" +
+        "Common options:\n" +
+        "  -" + META_FLAG + " URL - Metadata repository details " +
+        "(implementation-specific)\n" +
+        "\n" +
+        "Amazon DynamoDB-specific options:\n" +
+        "  -" + REGION_FLAG + " REGION - Service region for connections\n" +
+        "\n" +
+        "  URLs for Amazon DynamoDB are of the form dynamodb://TABLE_NAME.\n" +
+        "  Specifying both the -" + REGION_FLAG + " option and an S3A path\n" +
+        "  is not supported.";
+
     private static final String SEP = "\t";
     static final String S3_PREFIX = "S3";
     static final String MS_PREFIX = "MS";
@@ -451,6 +535,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
     @Override
     String getName() {
       return NAME;
+    }
+
+    @Override
+    public String getUsage() {
+      return USAGE;
     }
 
     /**
@@ -608,17 +697,28 @@ public abstract class S3GuardTool extends Configured implements Tool {
    */
   static class Prune extends S3GuardTool {
     private static final String NAME = "prune";
-    private static final String USAGE = NAME +
-        "([-D days] [-H hours] [-M minutes] [-S seconds]))" +
-        " ( -m METASTORE | s3a://bucket/path/ )";
+    public static final String PURPOSE = "truncate older metadata from " +
+        "repository";
+    private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n" +
+        "\t" + PURPOSE + "\n\n" +
+        "Common options:\n" +
+        "  -" + META_FLAG + " URL - Metadata repository details " +
+        "(implementation-specific)\n" +
+        "\n" +
+        "Amazon DynamoDB-specific options:\n" +
+        "  -" + REGION_FLAG + " REGION - Service region for connections\n" +
+        "\n" +
+        "  URLs for Amazon DynamoDB are of the form dynamodb://TABLE_NAME.\n" +
+        "  Specifying both the -" + REGION_FLAG + " option and an S3A path\n" +
+        "  is not supported.";
 
     Prune(Configuration conf) {
       super(conf);
 
-      commandFormat.addOptionWithValue("D");
-      commandFormat.addOptionWithValue("H");
-      commandFormat.addOptionWithValue("M");
-      commandFormat.addOptionWithValue("S");
+      commandFormat.addOptionWithValue(DAYS_FLAG);
+      commandFormat.addOptionWithValue(HOURS_FLAG);
+      commandFormat.addOptionWithValue(MINUTES_FLAG);
+      commandFormat.addOptionWithValue(SECONDS_FLAG);
     }
 
     @VisibleForTesting
@@ -630,6 +730,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
     @Override
     String getName() {
       return NAME;
+    }
+
+    @Override
+    public String getUsage() {
+      return USAGE;
     }
 
     private long getDeltaComponent(TimeUnit unit, String arg) {
@@ -646,7 +751,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         InterruptedException, IOException {
       List<String> paths = parseArgs(args);
       if (!parseDynamoDBRegion(paths)) {
-        System.out.println(USAGE);
+        System.err.println(USAGE);
         return INVALID_ARGUMENT;
       }
       initMetadataStore(false);
@@ -655,10 +760,10 @@ public abstract class S3GuardTool extends Configured implements Tool {
       long confDelta = conf.getLong(Constants.S3GUARD_CLI_PRUNE_AGE, 0);
 
       long cliDelta = 0;
-      cliDelta += getDeltaComponent(TimeUnit.DAYS, "D");
-      cliDelta += getDeltaComponent(TimeUnit.HOURS, "H");
-      cliDelta += getDeltaComponent(TimeUnit.MINUTES, "M");
-      cliDelta += getDeltaComponent(TimeUnit.SECONDS, "S");
+      cliDelta += getDeltaComponent(TimeUnit.DAYS, "days");
+      cliDelta += getDeltaComponent(TimeUnit.HOURS, "hours");
+      cliDelta += getDeltaComponent(TimeUnit.MINUTES, "minutes");
+      cliDelta += getDeltaComponent(TimeUnit.SECONDS, "seconds");
 
       if (confDelta <= 0 && cliDelta <= 0) {
         System.err.println(
@@ -686,14 +791,18 @@ public abstract class S3GuardTool extends Configured implements Tool {
     }
   }
 
-  private static void printHelp() {
-    System.out.println("Usage: hadoop " + NAME + " [" +
-        InitMetadata.NAME + "|" + DestroyMetadata.NAME +
-        "|" + Import.NAME + "|" + Diff.NAME + "|" + Prune.NAME +
-        "] [OPTIONS] [ARGUMENTS]");
+  private static S3GuardTool cmd;
 
-    System.out.println("\tperform metadata store " +
-        "administrative commands for s3a filesystem.");
+  private static void printHelp() {
+    if (cmd == null) {
+      System.err.println("Usage: hadoop " + USAGE);
+      System.err.println("\tperform metadata store " +
+          "administrative commands for s3a filesystem.");
+    } else {
+      System.err.println("Usage: hadoop " + cmd.getUsage());
+    }
+    System.err.println();
+    System.err.println(COMMON_USAGE);
   }
 
   /**
@@ -710,13 +819,12 @@ public abstract class S3GuardTool extends Configured implements Tool {
       return INVALID_ARGUMENT;
     }
     final String subCommand = args[0];
-    S3GuardTool cmd;
     switch (subCommand) {
-    case InitMetadata.NAME:
-      cmd = new InitMetadata(conf);
+    case Init.NAME:
+      cmd = new Init(conf);
       break;
-    case DestroyMetadata.NAME:
-      cmd = new DestroyMetadata(conf);
+    case Destroy.NAME:
+      cmd = new Destroy(conf);
       break;
     case Import.NAME:
       cmd = new Import(conf);
@@ -738,8 +846,12 @@ public abstract class S3GuardTool extends Configured implements Tool {
     try {
       int ret = run(args, new Configuration());
       System.exit(ret);
-    } catch (Exception e) {
+    } catch (CommandFormat.UnknownOptionException e) {
       System.err.println(e.getMessage());
+      printHelp();
+      System.exit(INVALID_ARGUMENT);
+    } catch (Exception e) {
+      e.printStackTrace(System.err);
       System.exit(ERROR);
     }
   }

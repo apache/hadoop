@@ -145,7 +145,8 @@ public abstract class S3GuardToolTestBase extends AbstractS3ATestBase {
   @Test
   public void testPruneCommandCLI() throws Exception {
     String testPath = path("testPruneCommandCLI").toString();
-    testPruneCommand(fs.getConf(), new String[]{"prune", "-S", "1", testPath});
+    testPruneCommand(fs.getConf(), new String[]{"prune", "-seconds", "1",
+        testPath});
   }
 
   @Test
