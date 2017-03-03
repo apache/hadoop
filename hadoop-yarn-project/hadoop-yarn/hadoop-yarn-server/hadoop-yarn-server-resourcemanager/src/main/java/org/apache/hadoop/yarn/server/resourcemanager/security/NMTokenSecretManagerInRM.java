@@ -192,7 +192,7 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
   public NMToken createAndGetNMToken(String applicationSubmitter,
       ApplicationAttemptId appAttemptId, Container container) {
     try {
-      this.readLock.lock();
+      this.writeLock.lock();
       HashSet<NodeId> nodeSet = this.appAttemptToNodeKeyMap.get(appAttemptId);
       NMToken nmToken = null;
       if (nodeSet != null) {
@@ -208,7 +208,7 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
       }
       return nmToken;
     } finally {
-      this.readLock.unlock();
+      this.writeLock.unlock();
     }
   }
 
