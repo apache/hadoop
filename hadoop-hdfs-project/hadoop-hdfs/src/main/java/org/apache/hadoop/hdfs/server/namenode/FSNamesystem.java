@@ -6782,16 +6782,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       final boolean logRetryCache) throws IOException,
       UnresolvedLinkException, SafeModeException, AccessControlException {
     final String operationName = "setErasureCodingPolicy";
-    checkSuperuserPrivilege();
     checkOperation(OperationCategory.WRITE);
     HdfsFileStatus resultingStat = null;
+    final FSPermissionChecker pc = getPermissionChecker();
     boolean success = false;
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set erasure coding policy on " + srcArg);
       resultingStat = FSDirErasureCodingOp.setErasureCodingPolicy(this,
-          srcArg, ecPolicyName, logRetryCache);
+          srcArg, ecPolicyName, pc, logRetryCache);
       success = true;
     } catch (AccessControlException ace) {
       logAuditEvent(success, operationName, srcArg, null,
@@ -6818,16 +6818,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       final boolean logRetryCache) throws IOException,
       UnresolvedLinkException, SafeModeException, AccessControlException {
     final String operationName = "unsetErasureCodingPolicy";
-    checkSuperuserPrivilege();
     checkOperation(OperationCategory.WRITE);
     HdfsFileStatus resultingStat = null;
+    final FSPermissionChecker pc = getPermissionChecker();
     boolean success = false;
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot unset erasure coding policy on " + srcArg);
       resultingStat = FSDirErasureCodingOp.unsetErasureCodingPolicy(this,
-          srcArg, logRetryCache);
+          srcArg, pc, logRetryCache);
       success = true;
     } catch (AccessControlException ace) {
       logAuditEvent(success, operationName, srcArg, null,
@@ -6849,10 +6849,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   ErasureCodingPolicy getErasureCodingPolicy(String src)
       throws AccessControlException, UnresolvedLinkException, IOException {
     checkOperation(OperationCategory.READ);
+    FSPermissionChecker pc = getPermissionChecker();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return FSDirErasureCodingOp.getErasureCodingPolicy(this, src);
+      return FSDirErasureCodingOp.getErasureCodingPolicy(this, src, pc);
     } finally {
       readUnlock("getErasureCodingPolicy");
     }
