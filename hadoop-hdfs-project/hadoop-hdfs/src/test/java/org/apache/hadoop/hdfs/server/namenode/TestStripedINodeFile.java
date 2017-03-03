@@ -54,6 +54,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
 
 /**
@@ -80,6 +81,18 @@ public class TestStripedINodeFile {
   private static INodeFile createStripedINodeFile() {
     return new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
         null, null, HdfsConstants.RS_6_3_POLICY_ID, 1024L,
+        HdfsConstants.COLD_STORAGE_POLICY_ID, BlockType.STRIPED);
+  }
+
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
+
+  @Test
+  public void testInvalidECPolicy() throws IllegalArgumentException {
+    thrown.expect(IllegalArgumentException.class);
+    thrown.expectMessage("Could not find EC policy with ID 0xbb");
+    new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
+        null, null, (byte) 0xBB, 1024L,
         HdfsConstants.COLD_STORAGE_POLICY_ID, BlockType.STRIPED);
   }
 

@@ -1108,8 +1108,7 @@ public class FSEditLogLoader {
           // versions of Hadoop. Current versions always log
           // OP_ADD operations as each block is allocated.
           if (isStriped) {
-            newBI = new BlockInfoStriped(newBlock,
-                ErasureCodingPolicyManager.getSystemDefaultPolicy());
+            newBI = new BlockInfoStriped(newBlock, ecPolicy);
           } else {
             newBI = new BlockInfoContiguous(newBlock,
                 file.getFileReplication());

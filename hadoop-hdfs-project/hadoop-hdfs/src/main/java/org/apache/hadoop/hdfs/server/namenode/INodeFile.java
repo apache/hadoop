@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.util.LongBitFormat;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.StringUtils;
 
 /** I-node for closed file. */
 @InterfaceAudience.Private
@@ -190,9 +191,10 @@ public class INodeFile extends INodeWithAdditionalFields
       if (blockType == STRIPED) {
         Preconditions.checkArgument(replication == null &&
             erasureCodingPolicyID != null);
-        Preconditions.checkArgument(
-            ErasureCodingPolicyManager.getPolicyByPolicyID(
-                erasureCodingPolicyID) != null);
+        Preconditions.checkArgument(ErasureCodingPolicyManager
+            .getPolicyByPolicyID(erasureCodingPolicyID) != null,
+            "Could not find EC policy with ID 0x" + StringUtils
+                .byteToHexString(erasureCodingPolicyID));
         layoutRedundancy |= BLOCK_TYPE_MASK_STRIPED;
         // Following bitwise OR with signed byte erasureCodingPolicyID is safe
         // as the PolicyID can never be in negative.
@@ -201,7 +203,8 @@ public class INodeFile extends INodeWithAdditionalFields
         Preconditions.checkArgument(replication != null &&
             erasureCodingPolicyID == null);
         Preconditions.checkArgument(replication >= 0 &&
-            replication <= MAX_REDUNDANCY);
+            replication <= MAX_REDUNDANCY,
+            "Invalid replication value " + replication);
         layoutRedundancy |= replication;
       }
       return layoutRedundancy;
@@ -513,9 +516,8 @@ public class INodeFile extends INodeWithAdditionalFields
     ErasureCodingPolicy ecPolicy =
         ErasureCodingPolicyManager.getPolicyByPolicyID(
             getErasureCodingPolicyID());
-    if (ecPolicy == null){
-      ecPolicy = ErasureCodingPolicyManager.getSystemDefaultPolicy();
-    }
+    Preconditions.checkNotNull(ecPolicy, "Could not find EC policy with ID 0x"
+        + StringUtils.byteToHexString(getErasureCodingPolicyID()));
     return (short) (ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits());
   }
 

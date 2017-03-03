@@ -102,6 +102,7 @@ final class FSDirErasureCodingOp {
     FSDirectory fsd = fsn.getFSDirectory();
     assert fsd.hasWriteLock();
     Preconditions.checkNotNull(srcIIP, "INodes cannot be null");
+    Preconditions.checkNotNull(ecPolicy, "EC policy cannot be null");
     String src = srcIIP.getPath();
     final INode inode = srcIIP.getLastINode();
     if (inode == null) {
@@ -112,29 +113,24 @@ final class FSDirErasureCodingOp {
           "for a file " + src);
     }
 
-    // System default erasure coding policy will be used since no specified.
-    if (ecPolicy == null) {
-      ecPolicy = ErasureCodingPolicyManager.getSystemDefaultPolicy();
-    } else {
-      // If ecPolicy is specified check if it is one among active policies.
-      boolean validPolicy = false;
-      ErasureCodingPolicy[] activePolicies =
-          FSDirErasureCodingOp.getErasureCodingPolicies(fsd.getFSNamesystem());
+    // Check that the EC policy is one of the active policies.
+    boolean validPolicy = false;
+    ErasureCodingPolicy[] activePolicies =
+        FSDirErasureCodingOp.getErasureCodingPolicies(fsd.getFSNamesystem());
+    for (ErasureCodingPolicy activePolicy : activePolicies) {
+      if (activePolicy.equals(ecPolicy)) {
+        validPolicy = true;
+        break;
+      }
+    }
+    if (!validPolicy) {
+      List<String> ecPolicyNames = new ArrayList<String>();
       for (ErasureCodingPolicy activePolicy : activePolicies) {
-        if (activePolicy.equals(ecPolicy)) {
-          validPolicy = true;
-          break;
-        }
+        ecPolicyNames.add(activePolicy.getName());
       }
-      if (!validPolicy) {
-        List<String> ecPolicyNames = new ArrayList<String>();
-        for (ErasureCodingPolicy activePolicy : activePolicies) {
-          ecPolicyNames.add(activePolicy.getName());
-        }
-        throw new HadoopIllegalArgumentException("Policy [ " +
-            ecPolicy.getName() + " ] does not match any of the " +
-            "supported policies. Please select any one of " + ecPolicyNames);
-      }
+      throw new HadoopIllegalArgumentException("Policy [ " +
+          ecPolicy.getName() + " ] does not match any of the " +
+          "supported policies. Please select any one of " + ecPolicyNames);
     }
 
     final XAttr ecXAttr;
