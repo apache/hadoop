@@ -87,19 +87,44 @@ public class WebAppUtils {
           hostName + ":" + port);
     }
   }
-  
-  public static String getRMWebAppURLWithScheme(Configuration conf) {
-    return getHttpSchemePrefix(conf) + getRMWebAppURLWithoutScheme(conf);
-  }
-  
-  public static String getRMWebAppURLWithoutScheme(Configuration conf) {
-    if (YarnConfiguration.useHttps(conf)) {
-      return conf.get(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS,
+
+  public static String getRMWebAppURLWithoutScheme(Configuration conf,
+      boolean isHAEnabled)  {
+    YarnConfiguration yarnConfig = new YarnConfiguration(conf);
+    // set RM_ID if we have not configure it.
+    if (isHAEnabled) {
+      String rmId = yarnConfig.get(YarnConfiguration.RM_HA_ID);
+      if (rmId == null || rmId.isEmpty()) {
+        List<String> rmIds = new ArrayList<>(HAUtil.getRMHAIds(conf));
+        if (rmIds != null && !rmIds.isEmpty()) {
+          yarnConfig.set(YarnConfiguration.RM_HA_ID, rmIds.get(0));
+        }
+      }
+    }
+    if (YarnConfiguration.useHttps(yarnConfig)) {
+      if (isHAEnabled) {
+        return HAUtil.getConfValueForRMInstance(
+            YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS, yarnConfig);
+      }
+      return yarnConfig.get(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS,
           YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_ADDRESS);
     }else {
-      return conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
+      if (isHAEnabled) {
+        return HAUtil.getConfValueForRMInstance(
+            YarnConfiguration.RM_WEBAPP_ADDRESS, yarnConfig);
+      }
+      return yarnConfig.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
           YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS);
     }
+  }
+
+  public static String getRMWebAppURLWithScheme(Configuration conf) {
+    return getHttpSchemePrefix(conf) + getRMWebAppURLWithoutScheme(
+        conf, HAUtil.isHAEnabled(conf));
+  }
+
+  public static String getRMWebAppURLWithoutScheme(Configuration conf) {
+    return getRMWebAppURLWithoutScheme(conf, false);
   }
 
   public static List<String> getProxyHostsAndPortsForAmFilter(
