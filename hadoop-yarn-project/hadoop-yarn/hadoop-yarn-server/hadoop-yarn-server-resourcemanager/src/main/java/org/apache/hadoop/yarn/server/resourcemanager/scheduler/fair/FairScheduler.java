@@ -349,7 +349,8 @@ public class FairScheduler extends
    * fair shares, deficits, minimum slot allocations, and amount of used and
    * required resources per job.
    */
-  protected void update() {
+  @VisibleForTesting
+  public void update() {
     try {
       writeLock.lock();
 
