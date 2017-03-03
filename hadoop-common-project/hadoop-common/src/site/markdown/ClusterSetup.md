@@ -208,7 +208,7 @@ The following parameters can be used to control the node health monitoring scrip
 |:---- |:---- |:---- |
 | `yarn.nodemanager.health-checker.script.path` | Node health script | Script to check for node's health status. |
 | `yarn.nodemanager.health-checker.script.opts` | Node health script options | Options for script to check for node's health status. |
-| `yarn.nodemanager.health-checker.script.interval-ms` | Node health script interval | Time interval for running health script. |
+| `yarn.nodemanager.health-checker.interval-ms` | Node health script interval | Time interval for running health script. |
 | `yarn.nodemanager.health-checker.script.timeout-ms` | Node health script timeout interval | Timeout for health script execution. |
 
 The health checker script is not supposed to give ERROR if only some of the local disks become bad. NodeManager has the ability to periodically check the health of the local disks (specifically checks nodemanager-local-dirs and nodemanager-log-dirs) and after reaching the threshold of number of bad directories based on the value set for the config property yarn.nodemanager.disk-health-checker.min-healthy-disks, the whole node is marked unhealthy and this info is sent to resource manager also. The boot disk is either raided or a failure in the boot disk is identified by the health checker script.
