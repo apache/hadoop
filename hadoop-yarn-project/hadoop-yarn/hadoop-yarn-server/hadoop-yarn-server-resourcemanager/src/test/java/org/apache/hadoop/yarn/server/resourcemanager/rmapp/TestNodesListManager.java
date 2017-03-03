@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AbstractEvent;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
+import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -238,7 +239,7 @@ public class TestNodesListManager {
     Dispatcher dispatcher = new DrainDispatcher() {
       @SuppressWarnings({ "rawtypes", "unchecked" })
       @Override
-      public EventHandler getEventHandler() {
+      public EventHandler<Event> getEventHandler() {
 
         class EventArgMatcher extends ArgumentMatcher<AbstractEvent> {
           @Override

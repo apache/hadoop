@@ -48,6 +48,14 @@ public final class Constants {
   public static final String AWS_CREDENTIALS_PROVIDER =
       "fs.s3a.aws.credentials.provider";
 
+  /**
+   * Extra set of security credentials which will be prepended to that
+   * set in {@code "hadoop.security.credential.provider.path"}.
+   * This extra option allows for per-bucket overrides.
+   */
+  public static final String S3A_SECURITY_CREDENTIAL_PROVIDER_PATH =
+      "fs.s3a.security.credential.provider.path";
+
   // session token for when using TemporaryAWSCredentialsProvider
   public static final String SESSION_TOKEN = "fs.s3a.session.token";
 
@@ -208,16 +216,27 @@ public final class Constants {
       "fs.s3a.multipart.purge.age";
   public static final long DEFAULT_PURGE_EXISTING_MULTIPART_AGE = 86400;
 
-  // s3 server-side encryption
+  // s3 server-side encryption, see S3AEncryptionMethods for valid options
   public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM =
       "fs.s3a.server-side-encryption-algorithm";
 
   /**
    * The standard encryption algorithm AWS supports.
    * Different implementations may support others (or none).
+   * Use the S3AEncryptionMethods instead when configuring
+   * which Server Side Encryption to use.
    */
+  @Deprecated
   public static final String SERVER_SIDE_ENCRYPTION_AES256 =
       "AES256";
+
+  /**
+   *  Used to specify which AWS KMS key to use if
+   *  SERVER_SIDE_ENCRYPTION_ALGORITHM is AWS_KMS (will default to aws/s3
+   *  master key if left blank) or with SSE_C, the actual AES 256 key.
+   */
+  public static final String SERVER_SIDE_ENCRYPTION_KEY =
+      "fs.s3a.server-side-encryption-key";
 
   //override signature algorithm used for signing requests
   public static final String SIGNING_ALGORITHM = "fs.s3a.signing-algorithm";
@@ -225,6 +244,12 @@ public final class Constants {
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
   public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
   public static final String FS_S3A = "s3a";
+
+  /** Prefix for all S3A properties: {@value}. */
+  public static final String FS_S3A_PREFIX = "fs.s3a.";
+
+  /** Prefix for S3A bucket-specific properties: {@value}. */
+  public static final String FS_S3A_BUCKET_PREFIX = "fs.s3a.bucket.";
 
   public static final int S3A_DEFAULT_PORT = -1;
 
@@ -282,4 +307,13 @@ public final class Constants {
    */
   @InterfaceAudience.Private
   public static final int MAX_MULTIPART_COUNT = 10000;
+
+  @InterfaceAudience.Private
+  public static final String SSE_C_NO_KEY_ERROR = S3AEncryptionMethods.SSE_C
+      .getMethod() +" is enabled and no encryption key is provided.";
+
+
+  @InterfaceAudience.Private
+  public static final String SSE_S3_WITH_KEY_ERROR = S3AEncryptionMethods.SSE_S3
+      .getMethod() +" is configured and an " + "encryption key is provided";
 }

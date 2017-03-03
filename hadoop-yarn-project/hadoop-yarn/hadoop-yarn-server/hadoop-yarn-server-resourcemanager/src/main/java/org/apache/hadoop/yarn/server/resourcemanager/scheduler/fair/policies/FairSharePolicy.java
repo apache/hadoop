@@ -21,6 +21,8 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.Comparator;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -40,6 +42,7 @@ import com.google.common.annotations.VisibleForTesting;
 @Private
 @Unstable
 public class FairSharePolicy extends SchedulingPolicy {
+  private static final Log LOG = LogFactory.getLog(FifoPolicy.class);
   @VisibleForTesting
   public static final String NAME = "fair";
   private static final DefaultResourceCalculator RESOURCE_CALCULATOR =
@@ -79,29 +82,32 @@ public class FairSharePolicy extends SchedulingPolicy {
       double minShareRatio1, minShareRatio2;
       double useToWeightRatio1, useToWeightRatio2;
       double weight1, weight2;
+      //Do not repeat the getResourceUsage calculation
+      Resource resourceUsage1 = s1.getResourceUsage();
+      Resource resourceUsage2 = s2.getResourceUsage();
       Resource minShare1 = Resources.min(RESOURCE_CALCULATOR, null,
           s1.getMinShare(), s1.getDemand());
       Resource minShare2 = Resources.min(RESOURCE_CALCULATOR, null,
           s2.getMinShare(), s2.getDemand());
       boolean s1Needy = Resources.lessThan(RESOURCE_CALCULATOR, null,
-          s1.getResourceUsage(), minShare1);
+          resourceUsage1, minShare1);
       boolean s2Needy = Resources.lessThan(RESOURCE_CALCULATOR, null,
-          s2.getResourceUsage(), minShare2);
-      minShareRatio1 = (double) s1.getResourceUsage().getMemorySize()
+          resourceUsage2, minShare2);
+      minShareRatio1 = (double) resourceUsage1.getMemorySize()
           / Resources.max(RESOURCE_CALCULATOR, null, minShare1, ONE).getMemorySize();
-      minShareRatio2 = (double) s2.getResourceUsage().getMemorySize()
+      minShareRatio2 = (double) resourceUsage2.getMemorySize()
           / Resources.max(RESOURCE_CALCULATOR, null, minShare2, ONE).getMemorySize();
 
       weight1 = s1.getWeights().getWeight(ResourceType.MEMORY);
       weight2 = s2.getWeights().getWeight(ResourceType.MEMORY);
       if (weight1 > 0.0 && weight2 > 0.0) {
-        useToWeightRatio1 = s1.getResourceUsage().getMemorySize() / weight1;
-        useToWeightRatio2 = s2.getResourceUsage().getMemorySize() / weight2;
+        useToWeightRatio1 = resourceUsage1.getMemorySize() / weight1;
+        useToWeightRatio2 = resourceUsage2.getMemorySize() / weight2;
       } else { // Either weight1 or weight2 equals to 0
         if (weight1 == weight2) {
           // If they have same weight, just compare usage
-          useToWeightRatio1 = s1.getResourceUsage().getMemorySize();
-          useToWeightRatio2 = s2.getResourceUsage().getMemorySize();
+          useToWeightRatio1 = resourceUsage1.getMemorySize();
+          useToWeightRatio2 = resourceUsage2.getMemorySize();
         } else {
           // By setting useToWeightRatios to negative weights, we give the
           // zero-weight one less priority, so the non-zero weight one will
@@ -125,8 +131,9 @@ public class FairSharePolicy extends SchedulingPolicy {
         // Apps are tied in fairness ratio. Break the tie by submit time and job
         // name to get a deterministic ordering, which is useful for unit tests.
         res = (int) Math.signum(s1.getStartTime() - s2.getStartTime());
-        if (res == 0)
+        if (res == 0) {
           res = s1.getName().compareTo(s2.getName());
+        }
       }
       return res;
     }
@@ -172,7 +179,15 @@ public class FairSharePolicy extends SchedulingPolicy {
   }
 
   @Override
-  public byte getApplicableDepth() {
-    return SchedulingPolicy.DEPTH_ANY;
+  public boolean isChildPolicyAllowed(SchedulingPolicy childPolicy) {
+    if (childPolicy instanceof DominantResourceFairnessPolicy) {
+      LOG.error("Queue policy can't be " + DominantResourceFairnessPolicy.NAME
+          + " if the parent policy is " + getName() + ". Choose " +
+          getName() + " or " + FifoPolicy.NAME + " for child queues instead."
+          + " Please note that " + FifoPolicy.NAME
+          + " is only for leaf queues.");
+      return false;
+    }
+    return true;
   }
 }

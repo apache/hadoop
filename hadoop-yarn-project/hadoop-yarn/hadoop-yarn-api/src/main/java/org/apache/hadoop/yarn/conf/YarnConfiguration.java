@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.ActiveStandbyElector;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -311,106 +312,74 @@ public class YarnConfiguration extends Configuration {
   /** ACL used in case none is found. Allows nothing. */
   public static final String DEFAULT_YARN_APP_ACL = " ";
 
-  /** Setting that controls whether distributed scheduling is enabled or not. */
-  public static final String DIST_SCHEDULING_ENABLED =
-      YARN_PREFIX + "distributed-scheduling.enabled";
-  public static final boolean DIST_SCHEDULING_ENABLED_DEFAULT = false;
-
   /** Setting that controls whether opportunistic container allocation
    *  is enabled or not. */
+  @Unstable
   public static final String OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED =
-      YARN_PREFIX + "opportunistic-container-allocation.enabled";
+      RM_PREFIX + "opportunistic-container-allocation.enabled";
   public static final boolean
-      OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED_DEFAULT = false;
-
-  /** Minimum memory (in MB) used for allocating an opportunistic container. */
-  public static final String OPPORTUNISTIC_CONTAINERS_MIN_MEMORY_MB =
-      YARN_PREFIX + "opportunistic-containers.min-memory-mb";
-  public static final int OPPORTUNISTIC_CONTAINERS_MIN_MEMORY_MB_DEFAULT = 512;
-
-  /** Minimum virtual CPU cores used for allocating an opportunistic container.
-   * */
-  public static final String OPPORTUNISTIC_CONTAINERS_MIN_VCORES =
-      YARN_PREFIX + "opportunistic-containers.min-vcores";
-  public static final int OPPORTUNISTIC_CONTAINERS_MIN_VCORES_DEFAULT = 1;
-
-  /** Maximum memory (in MB) used for allocating an opportunistic container. */
-  public static final String OPPORTUNISTIC_CONTAINERS_MAX_MEMORY_MB =
-      YARN_PREFIX + "opportunistic-containers.max-memory-mb";
-  public static final int OPPORTUNISTIC_CONTAINERS_MAX_MEMORY_MB_DEFAULT = 2048;
-
-  /** Maximum virtual CPU cores used for allocating an opportunistic container.
-   * */
-  public static final String OPPORTUNISTIC_CONTAINERS_MAX_VCORES =
-      YARN_PREFIX + "opportunistic-containers.max-vcores";
-  public static final int OPPORTUNISTIC_CONTAINERS_MAX_VCORES_DEFAULT = 4;
-
-  /** Incremental memory (in MB) used for allocating an opportunistic container.
-   * */
-  public static final String OPPORTUNISTIC_CONTAINERS_INCR_MEMORY_MB =
-      YARN_PREFIX + "opportunistic-containers.incr-memory-mb";
-  public static final int OPPORTUNISTIC_CONTAINERS_INCR_MEMORY_MB_DEFAULT =
-      512;
-
-  /** Incremental virtual CPU cores used for allocating an opportunistic
-   * container. */
-  public static final String OPPORTUNISTIC_CONTAINERS_INCR_VCORES =
-      YARN_PREFIX + "opportunistic-containers.incr-vcores";
-  public static final int OPPORTUNISTIC_CONTAINERS_INCR_VCORES_DEFAULT = 1;
-
-  /** Container token expiry for opportunistic containers. */
-  public static final String OPPORTUNISTIC_CONTAINERS_TOKEN_EXPIRY_MS =
-      YARN_PREFIX + "opportunistic-containers.container-token-expiry-ms";
-  public static final int OPPORTUNISTIC_CONTAINERS_TOKEN_EXPIRY_MS_DEFAULT =
-      600000;
+      DEFAULT_OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED = false;
 
   /** Number of nodes to be used by the Opportunistic Container allocator for
    * dispatching containers during container allocation. */
+  @Unstable
   public static final String OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED =
-      YARN_PREFIX + "opportunistic-container-allocation.nodes-used";
-  public static final int OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED_DEFAULT =
+      RM_PREFIX + "opportunistic-container-allocation.nodes-used";
+  public static final int DEFAULT_OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED =
       10;
 
   /** Frequency for computing least loaded NMs. */
+  @Unstable
   public static final String NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS =
-      YARN_PREFIX + "nm-container-queuing.sorting-nodes-interval-ms";
+      RM_PREFIX + "nm-container-queuing.sorting-nodes-interval-ms";
   public static final long
-      NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS_DEFAULT = 1000;
+      DEFAULT_NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS = 1000;
 
-  /** Comparator for determining node load for Distributed Scheduling. */
+  /** Comparator for determining node load for scheduling of opportunistic
+   * containers. */
+  @Unstable
   public static final String NM_CONTAINER_QUEUING_LOAD_COMPARATOR =
-      YARN_PREFIX + "nm-container-queuing.load-comparator";
-  public static final String NM_CONTAINER_QUEUING_LOAD_COMPARATOR_DEFAULT =
+      RM_PREFIX + "nm-container-queuing.load-comparator";
+  public static final String DEFAULT_NM_CONTAINER_QUEUING_LOAD_COMPARATOR =
       "QUEUE_LENGTH";
 
   /** Value of standard deviation used for calculation of queue limit
    * thresholds. */
+  @Unstable
   public static final String NM_CONTAINER_QUEUING_LIMIT_STDEV =
-      YARN_PREFIX + "nm-container-queuing.queue-limit-stdev";
-  public static final float NM_CONTAINER_QUEUING_LIMIT_STDEV_DEFAULT =
+      RM_PREFIX + "nm-container-queuing.queue-limit-stdev";
+  public static final float DEFAULT_NM_CONTAINER_QUEUING_LIMIT_STDEV =
       1.0f;
 
-  /** Min length of container queue at NodeManager. */
+  /** Min length of container queue at NodeManager. This is a cluster-wide
+   * configuration that acts as the lower-bound of optimal queue length
+   * calculated by the NodeQueueLoadMonitor */
+  @Unstable
   public static final String NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH =
-      YARN_PREFIX + "nm-container-queuing.min-queue-length";
-  public static final int NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH_DEFAULT = 1;
+      RM_PREFIX + "nm-container-queuing.min-queue-length";
+  public static final int DEFAULT_NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH = 5;
 
-  /** Max length of container queue at NodeManager. */
+  /** Max length of container queue at NodeManager. This is a cluster-wide
+   * configuration that acts as the upper-bound of optimal queue length
+   * calculated by the NodeQueueLoadMonitor */
+  @Unstable
   public static final String NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH =
-      YARN_PREFIX + "nm-container-queuing.max-queue-length";
-  public static final int NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH_DEFAULT = 10;
+      RM_PREFIX + "nm-container-queuing.max-queue-length";
+  public static final int DEFAULT_NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH = 15;
 
   /** Min queue wait time for a container at a NodeManager. */
+  @Unstable
   public static final String NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS =
-      YARN_PREFIX + "nm-container-queuing.min-queue-wait-time-ms";
-  public static final int NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS_DEFAULT =
-      1;
+      RM_PREFIX + "nm-container-queuing.min-queue-wait-time-ms";
+  public static final int DEFAULT_NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS =
+      10;
 
   /** Max queue wait time for a container queue at a NodeManager. */
+  @Unstable
   public static final String NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS =
-      YARN_PREFIX + "nm-container-queuing.max-queue-wait-time-ms";
-  public static final int NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS_DEFAULT =
-      10;
+      RM_PREFIX + "nm-container-queuing.max-queue-wait-time-ms";
+  public static final int DEFAULT_NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS =
+      100;
 
   /**
    * Enable/disable intermediate-data encryption at YARN level. For now, this
@@ -557,7 +526,12 @@ public class YarnConfiguration extends Configuration {
      RM_PREFIX + "delegation.token.max-lifetime";
   public static final long RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT =
     7*24*60*60*1000; // 7 days
-  
+
+  public static final String RM_DELEGATION_TOKEN_MAX_CONF_SIZE =
+      RM_PREFIX + "delegation-token.max-conf-size-bytes";
+  public static final int DEFAULT_RM_DELEGATION_TOKEN_MAX_CONF_SIZE_BYTES =
+      12800;
+
   public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
   public static final boolean DEFAULT_RM_RECOVERY_ENABLED = false;
 
@@ -691,9 +665,20 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_HA_FC_ELECTOR_ZK_RETRIES_KEY = RM_HA_PREFIX
       + "failover-controller.active-standby-elector.zk.retries";
 
-  @Private
+
+  /**
+   * Whether to use curator-based elector for leader election.
+   *
+   * @deprecated Eventually, we want to default to the curator-based
+   * implementation and remove the {@link ActiveStandbyElector} based
+   * implementation. We should remove this config then.
+   */
+  @Unstable
+  @Deprecated
   public static final String CURATOR_LEADER_ELECTOR =
       RM_HA_PREFIX + "curator-leader-elector.enabled";
+  @Private
+  @Unstable
   public static final boolean DEFAULT_CURATOR_LEADER_ELECTOR_ENABLED = false;
 
   ////////////////////////////////
@@ -834,10 +819,16 @@ public class YarnConfiguration extends Configuration {
   /** Prefix for all node manager configs.*/
   public static final String NM_PREFIX = "yarn.nodemanager.";
 
-  /** Enable Queuing of <code>OPPORTUNISTIC</code> containers. */
-  public static final String NM_CONTAINER_QUEUING_ENABLED = NM_PREFIX
-      + "container-queuing-enabled";
-  public static final boolean NM_CONTAINER_QUEUING_ENABLED_DEFAULT = false;
+  /** Max Queue length of <code>OPPORTUNISTIC</code> containers on the NM. */
+  public static final String NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH =
+      NM_PREFIX + "opportunistic-containers-max-queue-length";
+  public static final int DEFAULT_NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH =
+      0;
+
+  /** Setting that controls whether distributed scheduling is enabled or not. */
+  public static final String DIST_SCHEDULING_ENABLED =
+      NM_PREFIX + "distributed-scheduling.enabled";
+  public static final boolean DEFAULT_DIST_SCHEDULING_ENABLED = false;
 
   /** Environment variables that will be sent to containers.*/
   public static final String NM_ADMIN_USER_ENV = NM_PREFIX + "admin-env";
@@ -1086,7 +1077,10 @@ public class YarnConfiguration extends Configuration {
 
   public static final String YARN_LOG_SERVER_URL =
     YARN_PREFIX + "log.server.url";
-  
+
+  public static final String YARN_LOG_SERVER_WEBSERVICE_URL =
+      YARN_PREFIX + "log.server.web-service.url";
+
   public static final String YARN_TRACKING_URL_GENERATOR = 
       YARN_PREFIX + "tracking.url.generator";
 
@@ -1471,6 +1465,26 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_DOCKER_DEFAULT_CONTAINER_NETWORK =
       "host";
 
+  /** The mode in which the Java Container Sandbox should run detailed by
+   *  the JavaSandboxLinuxContainerRuntime. */
+  public static final String YARN_CONTAINER_SANDBOX =
+      LINUX_CONTAINER_RUNTIME_PREFIX + "sandbox-mode";
+  public static final String DEFAULT_YARN_CONTAINER_SANDBOX = "disabled";
+
+  /** Permissions for application local directories.*/
+  public static final String YARN_CONTAINER_SANDBOX_FILE_PERMISSIONS =
+      YARN_CONTAINER_SANDBOX + ".local-dirs.permissions";
+  public static final String DEFAULT_YARN_CONTAINER_SANDBOX_FILE_PERMISSIONS =
+      "read";
+
+  /** Location for non-default java policy file.*/
+  public static final String YARN_CONTAINER_SANDBOX_POLICY =
+      YARN_CONTAINER_SANDBOX + ".policy";
+
+  /** The group which will run by default without the java security manager.*/
+  public static final String YARN_CONTAINER_SANDBOX_WHITELIST_GROUP =
+      YARN_CONTAINER_SANDBOX + ".whitelist-group";
+
   /** The path to the Linux container executor.*/
   public static final String NM_LINUX_CONTAINER_EXECUTOR_PATH =
     NM_PREFIX + "linux-container-executor.path";
@@ -1544,7 +1558,7 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "application-timeouts.monitor.interval-ms";
 
   public static final long DEFAULT_RM_APPLICATION_MONITOR_INTERVAL_MS =
-      60000;
+      3000;
 
   /**
    * Interval of time the linux container executor should try cleaning up
@@ -1750,7 +1764,7 @@ public class YarnConfiguration extends Configuration {
 
   public static final String AMRM_PROXY_CLIENT_THREAD_COUNT = NM_PREFIX
       + "amrmproxy.client.thread-count";
-  public static final int DEFAULT_AMRM_PROXY_CLIENT_THREAD_COUNT = 25;
+  public static final int DEFAULT_AMRM_PROXY_CLIENT_THREAD_COUNT = 3;
 
   public static final String AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE =
       NM_PREFIX + "amrmproxy.interceptor-class.pipeline";
@@ -1896,6 +1910,9 @@ public class YarnConfiguration extends Configuration {
   public static final String TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX =
       TIMELINE_SERVICE_PREFIX + "entity-group-fs-store.";
 
+  public static final String TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_CACHE_STORE =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "cache-store-class";
+
   public static final String TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_ACTIVE_DIR =
       TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "active-dir";
 
@@ -2014,8 +2031,17 @@ public class YarnConfiguration extends Configuration {
   public static final String TIMELINE_SERVICE_WRITER_CLASS =
       TIMELINE_SERVICE_PREFIX + "writer.class";
 
+  public static final String DEFAULT_TIMELINE_SERVICE_WRITER_CLASS =
+      "org.apache.hadoop.yarn.server.timelineservice"
+          + ".storage.HBaseTimelineWriterImpl";
+
   public static final String TIMELINE_SERVICE_READER_CLASS =
       TIMELINE_SERVICE_PREFIX + "reader.class";
+
+  public static final String DEFAULT_TIMELINE_SERVICE_READER_CLASS =
+      "org.apache.hadoop.yarn.server.timelineservice" +
+          ".storage.HBaseTimelineReaderImpl";
+
 
   /** The setting that controls how often the timeline collector flushes the
    * timeline writer.
@@ -2616,6 +2642,11 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_CLUSTER_LEVEL_APPLICATION_PRIORITY = 0;
 
+  public static final String APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC =
+      YARN_PREFIX + "app.attempt.diagnostics.limit.kc";
+
+  public static final int DEFAULT_APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC = 64;
+
   @Private
   public static boolean isDistributedNodeLabelConfiguration(Configuration conf) {
     return DISTRIBUTED_NODELABEL_CONFIGURATION_TYPE.equals(conf.get(
@@ -2781,7 +2812,7 @@ public class YarnConfiguration extends Configuration {
 
   /**
    * Get the socket address for <code>name</code> property as a
-   * <code>InetSocketAddress</code>. On a HA cluster,
+   * <code>InetSocketAddress</code>. On an HA cluster,
    * this fetches the address corresponding to the RM identified by
    * {@link #RM_HA_ID}.
    * @param name property name.
@@ -2859,14 +2890,14 @@ public class YarnConfiguration extends Configuration {
 
   public static boolean isDistSchedulingEnabled(Configuration conf) {
     return conf.getBoolean(YarnConfiguration.DIST_SCHEDULING_ENABLED,
-        YarnConfiguration.DIST_SCHEDULING_ENABLED_DEFAULT);
+        YarnConfiguration.DEFAULT_DIST_SCHEDULING_ENABLED);
   }
 
   public static boolean isOpportunisticContainerAllocationEnabled(
       Configuration conf) {
     return conf.getBoolean(
         YarnConfiguration.OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED,
-        YarnConfiguration.OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED_DEFAULT);
+        YarnConfiguration.DEFAULT_OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED);
   }
 
   // helper methods for timeline service configuration

@@ -25,6 +25,7 @@ import java.util.NoSuchElementException;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.LightWeightGSet;
@@ -175,6 +176,8 @@ public abstract class BlockInfo extends Block
 
   public abstract boolean isStriped();
 
+  public abstract BlockType getBlockType();
+
   /** @return true if there is no datanode storage associated with the block */
   abstract boolean hasNoStorage();
 
@@ -262,11 +265,11 @@ public abstract class BlockInfo extends Block
       DatanodeStorageInfo[] targets) {
     if (isComplete()) {
       uc = new BlockUnderConstructionFeature(this, s, targets,
-          this.isStriped());
+          this.getBlockType());
     } else {
       // the block is already under construction
       uc.setBlockUCState(s);
-      uc.setExpectedLocations(this, targets, this.isStriped());
+      uc.setExpectedLocations(this, targets, this.getBlockType());
     }
   }
 

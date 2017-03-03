@@ -17,13 +17,14 @@
 */
 package org.apache.hadoop.yarn.event;
 
+import org.apache.hadoop.conf.Configuration;
+
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 @SuppressWarnings("rawtypes")
 public class DrainDispatcher extends AsyncDispatcher {
   private volatile boolean drained = false;
-  private volatile boolean stopped = false;
   private final BlockingQueue<Event> queue;
   private final Object mutex;
 
@@ -35,6 +36,13 @@ public class DrainDispatcher extends AsyncDispatcher {
     super(eventQueue);
     this.queue = eventQueue;
     this.mutex = this;
+  }
+
+  @Override
+  public void serviceInit(Configuration conf)
+      throws Exception {
+    conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, false);
+    super.serviceInit(conf);
   }
 
   /**
@@ -50,7 +58,7 @@ public class DrainDispatcher extends AsyncDispatcher {
    * Busy loop waiting for all queued events to drain.
    */
   public void await() {
-    while (!drained) {
+    while (!isDrained()) {
       Thread.yield();
     }
   }
@@ -60,7 +68,7 @@ public class DrainDispatcher extends AsyncDispatcher {
     return new Runnable() {
       @Override
       public void run() {
-        while (!stopped && !Thread.currentThread().isInterrupted()) {
+        while (!isStopped() && !Thread.currentThread().isInterrupted()) {
           synchronized (mutex) {
             // !drained if dispatch queued new events on this dispatcher
             drained = queue.isEmpty();
@@ -81,9 +89,9 @@ public class DrainDispatcher extends AsyncDispatcher {
 
   @SuppressWarnings("unchecked")
   @Override
-  public EventHandler getEventHandler() {
-    final EventHandler actual = super.getEventHandler();
-    return new EventHandler() {
+  public EventHandler<Event> getEventHandler() {
+    final EventHandler<Event> actual = super.getEventHandler();
+    return new EventHandler<Event>() {
       @Override
       public void handle(Event event) {
         synchronized (mutex) {
@@ -96,12 +104,8 @@ public class DrainDispatcher extends AsyncDispatcher {
 
   @Override
   protected boolean isDrained() {
-    return drained;
-  }
-
-  @Override
-  protected void serviceStop() throws Exception {
-    stopped = true;
-    super.serviceStop();
+    synchronized (mutex) {
+      return drained;
+    }
   }
 }

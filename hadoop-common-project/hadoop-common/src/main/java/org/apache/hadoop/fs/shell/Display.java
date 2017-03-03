@@ -52,10 +52,6 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.codehaus.jackson.JsonEncoding;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonGenerator;
-import org.codehaus.jackson.util.MinimalPrettyPrinter;
 
 /**
  * Display contents or checksums of files 
@@ -277,12 +273,7 @@ class Display extends FsCommand {
       Schema schema = fileReader.getSchema();
       writer = new GenericDatumWriter<Object>(schema);
       output = new ByteArrayOutputStream();
-      JsonGenerator generator =
-        new JsonFactory().createJsonGenerator(output, JsonEncoding.UTF8);
-      MinimalPrettyPrinter prettyPrinter = new MinimalPrettyPrinter();
-      prettyPrinter.setRootValueSeparator(System.getProperty("line.separator"));
-      generator.setPrettyPrinter(prettyPrinter);
-      encoder = EncoderFactory.get().jsonEncoder(schema, generator);
+      encoder = EncoderFactory.get().jsonEncoder(schema, output);
     }
 
     /**

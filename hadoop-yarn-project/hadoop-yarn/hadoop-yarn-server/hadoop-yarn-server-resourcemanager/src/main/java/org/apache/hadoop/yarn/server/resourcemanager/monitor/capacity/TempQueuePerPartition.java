@@ -51,6 +51,14 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
   LeafQueue leafQueue;
   boolean preemptionDisabled;
 
+  protected Resource pendingDeductReserved;
+
+  // Relative priority of this queue to its parent
+  // If parent queue's ordering policy doesn't respect priority,
+  // this will be always 0
+  int relativePriority = 0;
+  TempQueuePerPartition parent = null;
+
   TempQueuePerPartition(String queueName, Resource current,
       boolean preemptionDisabled, String partition, Resource killable,
       float absCapacity, float absMaxCapacity, Resource totalPartitionResource,
@@ -61,10 +69,13 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     if (queue instanceof LeafQueue) {
       LeafQueue l = (LeafQueue) queue;
       pending = l.getTotalPendingResourcesConsideringUserLimit(
-          totalPartitionResource, partition);
+          totalPartitionResource, partition, false);
+      pendingDeductReserved = l.getTotalPendingResourcesConsideringUserLimit(
+          totalPartitionResource, partition, true);
       leafQueue = l;
     } else {
       pending = Resources.createResource(0);
+      pendingDeductReserved = Resources.createResource(0);
     }
 
     this.normalizedGuarantee = Float.NaN;
@@ -95,14 +106,11 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     assert leafQueue == null;
     children.add(q);
     Resources.addTo(pending, q.pending);
+    Resources.addTo(pendingDeductReserved, q.pendingDeductReserved);
   }
 
   public ArrayList<TempQueuePerPartition> getChildren() {
     return children;
-  }
-
-  public Resource getUsedDeductReservd() {
-    return Resources.subtract(current, reserved);
   }
 
   // This function "accepts" all the resources it can (pending) and return
@@ -112,8 +120,15 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     Resource absMaxCapIdealAssignedDelta = Resources.componentwiseMax(
         Resources.subtract(getMax(), idealAssigned),
         Resource.newInstance(0, 0));
-    // remain = avail - min(avail, (max - assigned), (current + pending -
-    // assigned))
+    // accepted = min{avail,
+    //               max - assigned,
+    //               current + pending - assigned,
+    //               # Make sure a queue will not get more than max of its
+    //               # used/guaranteed, this is to make sure preemption won't
+    //               # happen if all active queues are beyond their guaranteed
+    //               # This is for leaf queue only.
+    //               max(guaranteed, used) - assigned}
+    // remain = avail - accepted
     Resource accepted = Resources.min(rc, clusterResource,
         absMaxCapIdealAssignedDelta,
         Resources.min(rc, clusterResource, avail, Resources
@@ -121,7 +136,8 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
              * When we're using FifoPreemptionSelector (considerReservedResource
              * = false).
              *
-             * We should deduct reserved resource to avoid excessive preemption:
+             * We should deduct reserved resource from pending to avoid excessive
+             * preemption:
              *
              * For example, if an under-utilized queue has used = reserved = 20.
              * Preemption policy will try to preempt 20 containers (which is not
@@ -131,11 +147,24 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
              * resource can be used by pending request, so policy will preempt
              * resources repeatly.
              */
-            .subtract(
-                Resources.add((considersReservedResource
-                    ? getUsed()
-                    : getUsedDeductReservd()), pending),
+            .subtract(Resources.add(getUsed(),
+                (considersReservedResource ? pending : pendingDeductReserved)),
                 idealAssigned)));
+
+    // For leaf queue: accept = min(accept, max(guaranteed, used) - assigned)
+    // Why only for leaf queue?
+    // Because for a satisfied parent queue, it could have some under-utilized
+    // leaf queues. Such under-utilized leaf queue could preemption resources
+    // from over-utilized leaf queue located at other hierarchies.
+    if (null == children || children.isEmpty()) {
+      Resource maxOfGuranteedAndUsedDeductAssigned = Resources.subtract(
+          Resources.max(rc, clusterResource, getUsed(), getGuaranteed()),
+          idealAssigned);
+      maxOfGuranteedAndUsedDeductAssigned = Resources.max(rc, clusterResource,
+          maxOfGuranteedAndUsedDeductAssigned, Resources.none());
+      accepted = Resources.min(rc, clusterResource, accepted,
+          maxOfGuranteedAndUsedDeductAssigned);
+    }
     Resource remain = Resources.subtract(avail, accepted);
     Resources.addTo(idealAssigned, accepted);
     return remain;

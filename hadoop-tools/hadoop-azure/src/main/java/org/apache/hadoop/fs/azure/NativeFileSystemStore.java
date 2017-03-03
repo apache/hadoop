@@ -74,7 +74,16 @@ interface NativeFileSystemStore {
   void changePermissionStatus(String key, PermissionStatus newPermission)
       throws AzureException;
 
-  void delete(String key) throws IOException;
+  /**
+   * API to delete a blob in the back end azure storage.
+   * @param key - key to the blob being deleted.
+   * @return return true when delete is successful, false if
+   * blob cannot be found or delete is not possible without
+   * exception.
+   * @throws IOException Exception encountered while deleting in
+   * azure storage.
+   */
+  boolean delete(String key) throws IOException;
 
   void rename(String srcKey, String dstKey) throws IOException;
 
@@ -84,7 +93,8 @@ interface NativeFileSystemStore {
   /**
    * Delete all keys with the given prefix. Used for testing.
    *
-   * @throws IOException
+   * @param prefix prefix of objects to be deleted.
+   * @throws IOException Exception encountered while deleting keys.
    */
   @VisibleForTesting
   void purge(String prefix) throws IOException;
@@ -92,7 +102,7 @@ interface NativeFileSystemStore {
   /**
    * Diagnostic method to dump state to the console.
    *
-   * @throws IOException
+   * @throws IOException Exception encountered while dumping to console.
    */
   void dump() throws IOException;
 
@@ -104,7 +114,17 @@ interface NativeFileSystemStore {
   void updateFolderLastModifiedTime(String key, Date lastModified,
       SelfRenewingLease folderLease) throws AzureException;
 
-  void delete(String key, SelfRenewingLease lease) throws IOException;
+  /**
+   * API to delete a blob in the back end azure storage.
+   * @param key - key to the blob being deleted.
+   * @param lease - Active lease on the blob.
+   * @return return true when delete is successful, false if
+   * blob cannot be found or delete is not possible without
+   * exception.
+   * @throws IOException Exception encountered while deleting in
+   * azure storage.
+   */
+  boolean delete(String key, SelfRenewingLease lease) throws IOException;
       
   SelfRenewingLease acquireLease(String key) throws AzureException;
 

@@ -36,12 +36,14 @@ public class KMSRESTConstants {
   public static final String VERSIONS_SUB_RESOURCE = "_versions";
   public static final String EEK_SUB_RESOURCE = "_eek";
   public static final String CURRENT_VERSION_SUB_RESOURCE = "_currentversion";
+  public static final String INVALIDATECACHE_RESOURCE = "_invalidatecache";
 
   public static final String KEY = "key";
   public static final String EEK_OP = "eek_op";
   public static final String EEK_GENERATE = "generate";
   public static final String EEK_DECRYPT = "decrypt";
   public static final String EEK_NUM_KEYS = "num_keys";
+  public static final String EEK_REENCRYPT = "reencrypt";
 
   public static final String IV_FIELD = "iv";
   public static final String NAME_FIELD = "name";

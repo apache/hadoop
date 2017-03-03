@@ -22,6 +22,7 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -123,12 +124,7 @@ public class FileSystemApplicationHistoryStore extends AbstractService
     rootDirPath = new Path(fsWorkingPath, ROOT_DIR_NAME);
     try {
       fs = getFileSystem(fsWorkingPath, conf);
-
-      if (!fs.isDirectory(rootDirPath)) {
-        fs.mkdirs(rootDirPath);
-        fs.setPermission(rootDirPath, ROOT_DIR_UMASK);
-      }
-
+      fs.mkdirs(rootDirPath, ROOT_DIR_UMASK);
     } catch (IOException e) {
       LOG.error("Error when initializing FileSystemHistoryStorage", e);
       throw e;
@@ -659,9 +655,11 @@ public class FileSystemApplicationHistoryStore extends AbstractService
   private HistoryFileReader getHistoryFileReader(ApplicationId appId)
       throws IOException {
     Path applicationHistoryFile = new Path(rootDirPath, appId.toString());
-    if (!fs.exists(applicationHistoryFile)) {
-      throw new IOException("History file for application " + appId
-          + " is not found");
+    try {
+      fs.getFileStatus(applicationHistoryFile);
+    } catch (FileNotFoundException e) {
+      throw (FileNotFoundException) new FileNotFoundException("History file for"
+          + " application " + appId + " is not found: " + e).initCause(e);
     }
     // The history file is still under writing
     if (outstandingWriters.containsKey(appId)) {

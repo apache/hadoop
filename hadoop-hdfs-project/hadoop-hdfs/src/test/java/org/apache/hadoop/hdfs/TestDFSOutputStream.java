@@ -50,6 +50,11 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyLong;
+import org.mockito.Mockito;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import org.mockito.internal.util.reflection.Whitebox;
 
 import static org.junit.Assert.assertEquals;
@@ -105,8 +110,7 @@ public class TestDFSOutputStream {
    * packet size < 64kB. See HDFS-7308 for details.
    */
   @Test
-  public void testComputePacketChunkSize()
-      throws Exception {
+  public void testComputePacketChunkSize() throws Exception {
     DistributedFileSystem fs = cluster.getFileSystem();
     FSDataOutputStream os = fs.create(new Path("/test"));
     DFSOutputStream dos = (DFSOutputStream) Whitebox.getInternalState(os,
@@ -200,6 +204,20 @@ public class TestDFSOutputStream {
     }
     // Verify that only one DN has no data.
     assertEquals(1, 3 - numDataNodesWithData);
+  }
+
+  @Test
+  public void testEndLeaseCall() throws Exception {
+    Configuration conf = new Configuration();
+    DFSClient client = new DFSClient(cluster.getNameNode(0)
+        .getNameNodeAddress(), conf);
+    DFSClient spyClient = Mockito.spy(client);
+    DFSOutputStream dfsOutputStream = spyClient.create("/file2",
+        FsPermission.getFileDefault(),
+        EnumSet.of(CreateFlag.CREATE), (short) 3, 1024, null , 1024, null);
+    DFSOutputStream spyDFSOutputStream = Mockito.spy(dfsOutputStream);
+    spyDFSOutputStream.closeThreads(anyBoolean());
+    verify(spyClient, times(1)).endFileLease(anyLong());
   }
 
   @AfterClass

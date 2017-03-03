@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -85,7 +86,8 @@ public class TestCheckpointPreemptionPolicy {
     jid = MRBuilderUtils.newJobId(appId, 1);
 
     mActxt = mock(RunningAppContext.class);
-    EventHandler ea = mock(EventHandler.class);
+    @SuppressWarnings("unchecked")
+    EventHandler<Event> ea = mock(EventHandler.class);
     when(mActxt.getEventHandler()).thenReturn(ea);
     for (int i = 0; i < 40; ++i) {
       ContainerId cId = ContainerId.newContainerId(appAttemptId, i);

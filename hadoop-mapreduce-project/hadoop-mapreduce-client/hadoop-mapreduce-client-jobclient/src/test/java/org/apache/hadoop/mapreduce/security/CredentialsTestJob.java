@@ -58,7 +58,6 @@ public class CredentialsTestJob extends Configured implements Tool {
       String secretName = "alias"+i;
       // get token storage and a key
       byte[] secretValue =  ts.getSecretKey(new Text(secretName));
-      System.out.println(secretValue);
 
       if (secretValue == null){
         throw new RuntimeException("The key "+ secretName + " is not available. "); 
@@ -66,6 +65,7 @@ public class CredentialsTestJob extends Configured implements Tool {
       }
 
       String secretValueStr = new String (secretValue);
+      System.out.println(secretValueStr);
 
       if  ( !("password"+i).equals(secretValueStr)){
         throw new RuntimeException("The key "+ secretName +

@@ -130,6 +130,7 @@ import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * The ResourceManager is the main class that is a set of components.
@@ -205,7 +206,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private Configuration conf;
 
   private UserGroupInformation rmLoginUGI;
-  
+
   public ResourceManager() {
     super("ResourceManager");
   }
@@ -232,7 +233,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected void serviceInit(Configuration conf) throws Exception {
     this.conf = conf;
     this.rmContext = new RMContextImpl();
-    
+    rmContext.setResourceManager(this);
+
     this.configurationProvider =
         ConfigurationProviderFactory.getConfigurationProvider(conf);
     this.configurationProvider.init(this.conf);
@@ -272,16 +274,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.rmContext.setHAEnabled(HAUtil.isHAEnabled(this.conf));
     if (this.rmContext.isHAEnabled()) {
       HAUtil.verifyAndSetConfiguration(this.conf);
-      curatorEnabled = conf.getBoolean(YarnConfiguration.CURATOR_LEADER_ELECTOR,
-          YarnConfiguration.DEFAULT_CURATOR_LEADER_ELECTOR_ENABLED);
-      if (curatorEnabled) {
-        this.curator = createAndStartCurator(conf);
-        LeaderElectorService elector = new LeaderElectorService(rmContext, this);
-        addService(elector);
-        rmContext.setLeaderElectorService(elector);
-      }
     }
-    
+
     // Set UGI and do login
     // If security is enabled, use login user
     // If security is not enabled, use current user
@@ -297,9 +291,26 @@ public class ResourceManager extends CompositeService implements Recoverable {
     addIfService(rmDispatcher);
     rmContext.setDispatcher(rmDispatcher);
 
+    // The order of services below should not be changed as services will be
+    // started in same order
+    // As elector service needs admin service to be initialized and started,
+    // first we add admin service then elector service
+
     adminService = createAdminService();
     addService(adminService);
     rmContext.setRMAdminService(adminService);
+
+    // elector must be added post adminservice
+    if (this.rmContext.isHAEnabled()) {
+      // If the RM is configured to use an embedded leader elector,
+      // initialize the leader elector.
+      if (HAUtil.isAutomaticFailoverEnabled(conf)
+          && HAUtil.isAutomaticFailoverEmbedded(conf)) {
+        EmbeddedElector elector = createEmbeddedElector();
+        addIfService(elector);
+        rmContext.setLeaderElectorService(elector);
+      }
+    }
 
     rmContext.setYarnConfiguration(conf);
     
@@ -329,6 +340,20 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmContext.setSystemMetricsPublisher(systemMetricsPublisher);
 
     super.serviceInit(this.conf);
+  }
+
+  protected EmbeddedElector createEmbeddedElector() throws IOException {
+    EmbeddedElector elector;
+    curatorEnabled =
+        conf.getBoolean(YarnConfiguration.CURATOR_LEADER_ELECTOR,
+            YarnConfiguration.DEFAULT_CURATOR_LEADER_ELECTOR_ENABLED);
+    if (curatorEnabled) {
+      this.curator = createAndStartCurator(conf);
+      elector = new CuratorBasedElectorService(rmContext, this);
+    } else {
+      elector = new ActiveStandbyElectorBasedElectorService(rmContext);
+    }
+    return elector;
   }
 
   public CuratorFramework createAndStartCurator(Configuration conf)
@@ -399,7 +424,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected Dispatcher createDispatcher() {
-    return new AsyncDispatcher();
+    return new AsyncDispatcher("RM Event dispatcher");
   }
 
   protected ResourceScheduler createScheduler() {
@@ -541,6 +566,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     private ResourceManager rm;
     private RMActiveServiceContext activeServiceContext;
     private boolean fromActive = false;
+    private StandByTransitionRunnable standByTransitionRunnable;
 
     RMActiveServices(ResourceManager rm) {
       super("RMActiveServices");
@@ -549,6 +575,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     @Override
     protected void serviceInit(Configuration configuration) throws Exception {
+      standByTransitionRunnable = new StandByTransitionRunnable();
+
       activeServiceContext = new RMActiveServiceContext();
       rmContext.setActiveServiceContext(activeServiceContext);
 
@@ -796,21 +824,51 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
   }
 
-  public void handleTransitionToStandBy() {
-    if (rmContext.isHAEnabled()) {
-      try {
-        // Transition to standby and reinit active services
-        LOG.info("Transitioning RM to Standby mode");
-        transitionToStandby(true);
-        if (curatorEnabled) {
-          rmContext.getLeaderElectorService().reJoinElection();
-        } else {
-          adminService.resetLeaderElection();
-        }
+  /**
+   * Transition to standby state in a new thread. The transition operation is
+   * asynchronous to avoid deadlock caused by cyclic dependency.
+   */
+  public void handleTransitionToStandByInNewThread() {
+    Thread standByTransitionThread =
+        new Thread(activeServices.standByTransitionRunnable);
+    standByTransitionThread.setName("StandByTransitionThread");
+    standByTransitionThread.start();
+  }
+
+  /**
+   * The class to transition RM to standby state. The same
+   * {@link StandByTransitionRunnable} object could be used in multiple threads,
+   * but runs only once. That's because RM can go back to active state after
+   * transition to standby state, the same runnable in the old context can't
+   * transition RM to standby state again. A new runnable is created every time
+   * RM transitions to active state.
+   */
+  private class StandByTransitionRunnable implements Runnable {
+    // The atomic variable to make sure multiple threads with the same runnable
+    // run only once.
+    private AtomicBoolean hasAlreadyRun = new AtomicBoolean(false);
+
+    @Override
+    public void run() {
+      // Run this only once, even if multiple threads end up triggering
+      // this simultaneously.
+      if (hasAlreadyRun.getAndSet(true)) {
         return;
-      } catch (Exception e) {
-        LOG.fatal("Failed to transition RM to Standby mode.");
-        ExitUtil.terminate(1, e);
+      }
+
+      if (rmContext.isHAEnabled()) {
+        try {
+          // Transition to standby and reinit active services
+          LOG.info("Transitioning RM to Standby mode");
+          transitionToStandby(true);
+          EmbeddedElector elector = rmContext.getLeaderElectorService();
+          if (elector != null) {
+            elector.rejoinElection();
+          }
+        } catch (Exception e) {
+          LOG.fatal("Failed to transition RM to Standby mode.", e);
+          ExitUtil.terminate(1, e);
+        }
       }
     }
   }
@@ -1442,8 +1500,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
    * @param conf
    * @throws Exception
    */
-  private static void deleteRMStateStore(Configuration conf) throws Exception {
+  @VisibleForTesting
+  static void deleteRMStateStore(Configuration conf) throws Exception {
     RMStateStore rmStore = RMStateStoreFactory.getStore(conf);
+    rmStore.setResourceManager(new ResourceManager());
     rmStore.init(conf);
     rmStore.start();
     try {
@@ -1455,9 +1515,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
   }
 
-  private static void removeApplication(Configuration conf, String applicationId)
+  @VisibleForTesting
+  static void removeApplication(Configuration conf, String applicationId)
       throws Exception {
     RMStateStore rmStore = RMStateStoreFactory.getStore(conf);
+    rmStore.setResourceManager(new ResourceManager());
     rmStore.init(conf);
     rmStore.start();
     try {

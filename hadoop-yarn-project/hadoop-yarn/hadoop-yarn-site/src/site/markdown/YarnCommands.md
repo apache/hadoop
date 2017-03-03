@@ -15,31 +15,7 @@
 YARN Commands
 =============
 
-* [Overview](#Overview)
-* [User Commands](#User_Commands)
-    * [application](#application)
-    * [applicationattempt](#applicationattempt)
-    * [classpath](#classpath)
-    * [container](#container)
-    * [jar](#jar)
-    * [logs](#logs)
-    * [node](#node)
-    * [queue](#queue)
-    * [version](#version)
-* [Administration Commands](#Administration_Commands)
-    * [daemonlog](#daemonlog)
-    * [nodemanager](#nodemanager)
-    * [proxyserver](#proxyserver)
-    * [resourcemanager](#resourcemanager)
-    * [rmadmin](#rmadmin)
-    * [scmadmin](#scmadmin)
-    * [sharedcachemanager](#sharedcachemanager)
-    * [timelineserver](#timelineserver)
-* [Files](#Files)
-    * [etc/hadoop/hadoop-env.sh](#etchadoophadoop-env.sh)
-    * [etc/hadoop/yarn-env.sh](#etchadoopyarn-env.sh)
-    * [etc/hadoop/hadoop-user-functions.sh](#etchadoophadoop-user-functions.sh)
-    * [~/.hadooprc](#a.hadooprc)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------
@@ -76,6 +52,7 @@ Usage: `yarn application [options] `
 | -movetoqueue \<Application Id\> | Moves the application to a different queue. |
 | -queue \<Queue Name\> | Works with the movetoqueue command to specify which queue to move an application to. |
 | -status \<ApplicationId\> | Prints the status of the application. |
+| -updateLifetime \<Timeout\> | Update application timeout (from the time of request) in seconds. ApplicationId can be specified using 'appId' option. |
 | -updatePriority \<Priority\> | Update priority of an application. ApplicationId can be passed using 'appId' option. |
 
 Prints application(s) report/kill application
@@ -166,6 +143,12 @@ Usage: `yarn version`
 
 Prints the Hadoop version.
 
+### `envvars`
+
+Usage: `yarn envvars`
+
+Display computed Hadoop environment variables.
+
 Administration Commands
 -----------------------
 
@@ -223,6 +206,7 @@ Usage:
      -transitionToStandby <serviceId>
      -failover [--forcefence] [--forceactive] <serviceId> <serviceId>
      -getServiceState <serviceId>
+     -getAllServiceState
      -checkHealth <serviceId>
      -help [cmd]
 ```
@@ -247,6 +231,7 @@ Usage:
 | -transitionToStandby [--forcemanual] \<serviceId\> | Transitions the service into Standby state. This command can not be used if automatic failover is enabled. Though you can override this by --forcemanual option, you need caution. |
 | -failover [--forceactive] \<serviceId1\> \<serviceId2\> | Initiate a failover from serviceId1 to serviceId2. Try to failover to the target service even if it is not ready if the --forceactive option is used. This command can not be used if automatic failover is enabled. |
 | -getServiceState \<serviceId\> | Returns the state of the service. |
+| -getAllServiceState | Returns the state of all the services. |
 | -checkHealth \<serviceId\> | Requests that the service perform a health check. The RMAdmin tool will exit with a non-zero exit code if the check fails. |
 | -help [cmd] | Displays help for the given command or all commands if none is specified. |
 

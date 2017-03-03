@@ -19,12 +19,11 @@
   <parent>
     <artifactId>hadoop-mapreduce-client</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.0.0-alpha2-SNAPSHOT</version>
+    <version>3.0.0-alpha3-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-mapreduce-client-nativetask</artifactId>
-  <version>3.0.0-alpha2-SNAPSHOT</version>
+  <version>3.0.0-alpha3-SNAPSHOT</version>
   <name>Apache Hadoop MapReduce NativeTask</name>
 
   <properties>
@@ -93,8 +92,6 @@
         <configuration>
           <excludes>
             <exclude>src/main/native/testData/*</exclude>
-            <!-- gtest has a compatible license -->
-            <exclude>src/main/native/gtest/**/*</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -112,6 +109,10 @@
         <snappy.lib></snappy.lib>
         <snappy.include></snappy.include>
         <require.snappy>false</require.snappy>
+        <zstd.prefix></zstd.prefix>
+        <zstd.lib></zstd.lib>
+        <zstd.include></zstd.include>
+        <require.zstd>false</require.zstd>
       </properties>
       <build>
         <plugins>
@@ -200,6 +201,10 @@
                     <CUSTOM_SNAPPY_PREFIX>${snappy.prefix}</CUSTOM_SNAPPY_PREFIX>
                     <CUSTOM_SNAPPY_LIB>${snappy.lib}</CUSTOM_SNAPPY_LIB>
                     <CUSTOM_SNAPPY_INCLUDE>${snappy.include}</CUSTOM_SNAPPY_INCLUDE>
+                    <REQUIRE_ZSTD>${require.zstd}</REQUIRE_ZSTD>
+                    <CUSTOM_ZSTD_PREFIX>${zstd.prefix}</CUSTOM_ZSTD_PREFIX>
+                    <CUSTOM_ZSTD_LIB>${zstd.lib}</CUSTOM_ZSTD_LIB>
+                    <CUSTOM_ZSTD_INCLUDE>${zstd.include}</CUSTOM_ZSTD_INCLUDE>
                   </vars>
                 </configuration>
               </execution>
@@ -208,12 +213,16 @@
                 <phase>test</phase>
                 <goals><goal>cmake-test</goal></goals>
                 <configuration>
-                  <testName>test-native-task</testName>
+                  <!-- this should match the xml name without the TEST-part down below -->
+                  <testName>nativetask-nttest</testName>
                   <workingDirectory>${project.build.directory}/native/test</workingDirectory>
                   <source>${basedir}/src</source>
                   <binary>${project.build.directory}/native/test/nttest</binary>
-                  <args><arg>--gtest_filter=-Perf.</arg></args>
-                  <results>${project.build.directory}/native/test/native-results</results>
+                  <args>
+                    <arg>--gtest_filter=-Perf.</arg>
+                    <arg>--gtest_output=xml:${project.build.directory}/surefire-reports/TEST-nativetask-nttest.xml</arg>
+                  </args>
+                  <results>${project.build.directory}/surefire-reports</results>
                 </configuration>
               </execution>
             </executions>

@@ -140,7 +140,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       // note that for append case, it is possible that we append partial data
       // and then fail. In that case, for the next retry, we either reuse the
       // partial appended data if it is good or we overwrite the whole file
-      if (!toAppend && targetFS.exists(targetPath)) {
+      if (!toAppend) {
         targetFS.delete(targetPath, false);
       }
     }
@@ -189,9 +189,10 @@ public class RetriableFileCopyCommand extends RetriableCommand {
                                   throws IOException {
     final Path sourcePath = source.getPath();
     FileSystem fs = sourcePath.getFileSystem(configuration);
-    if (fs.getFileStatus(sourcePath).getLen() != targetLen)
-      throw new IOException("Mismatch in length of source:" + sourcePath
-                + " and target:" + target);
+    long srcLen = fs.getFileStatus(sourcePath).getLen();
+    if (srcLen != targetLen)
+      throw new IOException("Mismatch in length of source:" + sourcePath + " (" + srcLen +
+          ") and target:" + target + " (" + targetLen + ")");
   }
 
   private void compareCheckSums(FileSystem sourceFS, Path source,

@@ -91,3 +91,12 @@ message AuthMethodResponseProto {
 message UserResponseProto {
   required string user = 1;
 }
+
+message SleepRequestProto2 {
+  optional int64 sleep_time = 1;
+}
+
+message SleepResponseProto2 {
+  optional int64 receive_time = 1;
+  optional int64 response_time = 2;
+}

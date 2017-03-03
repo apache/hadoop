@@ -22,55 +22,71 @@ package org.apache.hadoop.fs.adl.live;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.adl.AdlFileSystem;
+import org.apache.hadoop.util.ReflectionUtils;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
 /**
- * Utility class to configure real Adls storage to run Live test suite against.
+ * Configure Adl storage file system.
  */
 public final class AdlStorageConfiguration {
-  private AdlStorageConfiguration() {}
+  static final String CONTRACT_XML = "adls.xml";
 
   private static final String CONTRACT_ENABLE_KEY =
-      "dfs.adl.test.contract" + ".enable";
-  private static final String TEST_CONFIGURATION_FILE_NAME =
-      "contract-test-options.xml";
-  private static final String TEST_SUPPORTED_TEST_CONFIGURATION_FILE_NAME =
-      "adls.xml";
+      "dfs.adl.test.contract.enable";
+  private static final boolean CONTRACT_ENABLE_DEFAULT = false;
+
+  private static final String FILE_SYSTEM_KEY =
+      String.format("test.fs.%s.name", AdlFileSystem.SCHEME);
+
+  private static final String FILE_SYSTEM_IMPL_KEY =
+      String.format("fs.%s.impl", AdlFileSystem.SCHEME);
+  private static final Class<?> FILE_SYSTEM_IMPL_DEFAULT =
+      AdlFileSystem.class;
 
   private static boolean isContractTestEnabled = false;
   private static Configuration conf = null;
 
-  public static Configuration getConfiguration() {
-    Configuration localConf = new Configuration();
-    localConf.addResource(TEST_CONFIGURATION_FILE_NAME);
-    localConf.addResource(TEST_SUPPORTED_TEST_CONFIGURATION_FILE_NAME);
-    return localConf;
+  private AdlStorageConfiguration() {
   }
 
-  public static boolean isContractTestEnabled() {
+  public synchronized static Configuration getConfiguration() {
+    Configuration newConf = new Configuration();
+    newConf.addResource(CONTRACT_XML);
+    return newConf;
+  }
+
+  public synchronized static boolean isContractTestEnabled() {
     if (conf == null) {
       conf = getConfiguration();
     }
 
-    isContractTestEnabled = conf.getBoolean(CONTRACT_ENABLE_KEY, false);
+    isContractTestEnabled = conf.getBoolean(CONTRACT_ENABLE_KEY,
+        CONTRACT_ENABLE_DEFAULT);
     return isContractTestEnabled;
   }
 
-  public static FileSystem createAdlStorageConnector()
+  public synchronized static FileSystem createStorageConnector()
       throws URISyntaxException, IOException {
     if (conf == null) {
       conf = getConfiguration();
     }
 
-    if(!isContractTestEnabled()) {
+    if (!isContractTestEnabled()) {
       return null;
     }
 
-    AdlFileSystem fileSystem = new AdlFileSystem();
-    fileSystem.initialize(new URI(conf.get("fs.defaultFS")), conf);
-    return fileSystem;
+    String fileSystem = conf.get(FILE_SYSTEM_KEY);
+    if (fileSystem == null || fileSystem.trim().length() == 0) {
+      throw new IOException("Default file system not configured.");
+    }
+
+    Class<?> clazz = conf.getClass(FILE_SYSTEM_IMPL_KEY,
+        FILE_SYSTEM_IMPL_DEFAULT);
+    FileSystem fs = (FileSystem) ReflectionUtils.newInstance(clazz, conf);
+    fs.initialize(new URI(fileSystem), conf);
+    return fs;
   }
 }

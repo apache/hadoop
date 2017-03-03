@@ -91,7 +91,7 @@ public class TestTaskAttemptFinishingMonitor {
 
   }
 
-  public static class MockEventHandler implements EventHandler {
+  public static class MockEventHandler implements EventHandler<Event> {
     public boolean timedOut = false;
 
     @Override

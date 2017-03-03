@@ -213,7 +213,7 @@ public class TestAMRMClientAsync {
     
     asyncClient.stop();
     // stopping should have joined all threads and completed all callbacks
-    Assert.assertTrue(callbackHandler.callbackCount == 0);
+    Assert.assertTrue(callbackHandler.callbackCount > 0);
   }
 
   @Test (timeout = 10000)

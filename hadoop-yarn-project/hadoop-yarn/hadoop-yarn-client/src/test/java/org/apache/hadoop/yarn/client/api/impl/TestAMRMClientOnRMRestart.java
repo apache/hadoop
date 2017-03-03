@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -66,6 +67,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
@@ -232,8 +234,11 @@ public class TestAMRMClientOnRMRestart {
     nm1.nodeHeartbeat(containerId.getApplicationAttemptId(),
         containerId.getContainerId(), ContainerState.RUNNING);
     dispatcher.await();
-    amClient.requestContainerResourceChange(
-        container, Resource.newInstance(2048, 1));
+    amClient.requestContainerUpdate(
+        container, UpdateContainerRequest.newInstance(
+            container.getVersion(), container.getId(),
+            ContainerUpdateType.INCREASE_RESOURCE,
+            Resource.newInstance(2048, 1), null));
     it.remove();
 
     allocateResponse = amClient.allocate(0.3f);
@@ -574,8 +579,7 @@ public class TestAMRMClientOnRMRestart {
         ApplicationAttemptId applicationAttemptId, List<ResourceRequest> ask,
         List<ContainerId> release, List<String> blacklistAdditions,
         List<String> blacklistRemovals,
-        List<UpdateContainerRequest> increaseRequests,
-        List<UpdateContainerRequest> decreaseRequests) {
+        ContainerUpdates updateRequests) {
       List<ResourceRequest> askCopy = new ArrayList<ResourceRequest>();
       for (ResourceRequest req : ask) {
         ResourceRequest reqCopy =
@@ -586,13 +590,12 @@ public class TestAMRMClientOnRMRestart {
       }
       lastAsk = ask;
       lastRelease = release;
-      lastIncrease = increaseRequests;
-      lastDecrease = decreaseRequests;
+      lastIncrease = updateRequests.getIncreaseRequests();
+      lastDecrease = updateRequests.getDecreaseRequests();
       lastBlacklistAdditions = blacklistAdditions;
       lastBlacklistRemovals = blacklistRemovals;
       return super.allocate(applicationAttemptId, askCopy, release,
-          blacklistAdditions, blacklistRemovals, increaseRequests,
-          decreaseRequests);
+          blacklistAdditions, blacklistRemovals, updateRequests);
     }
   }
 

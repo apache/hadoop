@@ -17,7 +17,6 @@
 */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapreduce.checkpoint.EnumCounter;
 
@@ -48,6 +47,7 @@ import org.apache.hadoop.mapreduce.v2.app.rm.preemption.CheckpointAMPreemptionPo
 import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -102,7 +102,8 @@ public class TestTaskAttemptListenerImpl {
         mock(RMHeartbeatHandler.class);
     TaskHeartbeatHandler hbHandler = mock(TaskHeartbeatHandler.class);
     Dispatcher dispatcher = mock(Dispatcher.class);
-    EventHandler ea = mock(EventHandler.class);
+    @SuppressWarnings("unchecked")
+    EventHandler<Event> ea = mock(EventHandler.class);
     when(dispatcher.getEventHandler()).thenReturn(ea);
 
     when(appCtx.getEventHandler()).thenReturn(ea);
@@ -212,7 +213,8 @@ public class TestTaskAttemptListenerImpl {
         mock(RMHeartbeatHandler.class);
     final TaskHeartbeatHandler hbHandler = mock(TaskHeartbeatHandler.class);
     Dispatcher dispatcher = mock(Dispatcher.class);
-    EventHandler ea = mock(EventHandler.class);
+    @SuppressWarnings("unchecked")
+    EventHandler<Event> ea = mock(EventHandler.class);
     when(dispatcher.getEventHandler()).thenReturn(ea);
     when(appCtx.getEventHandler()).thenReturn(ea);
     CheckpointAMPreemptionPolicy policy = new CheckpointAMPreemptionPolicy();
@@ -273,7 +275,8 @@ public class TestTaskAttemptListenerImpl {
         mock(RMHeartbeatHandler.class);
     final TaskHeartbeatHandler hbHandler = mock(TaskHeartbeatHandler.class);
     Dispatcher dispatcher = mock(Dispatcher.class);
-    EventHandler ea = mock(EventHandler.class);
+    @SuppressWarnings("unchecked")
+    EventHandler<Event> ea = mock(EventHandler.class);
     when(dispatcher.getEventHandler()).thenReturn(ea);
     when(appCtx.getEventHandler()).thenReturn(ea);
     CheckpointAMPreemptionPolicy policy = new CheckpointAMPreemptionPolicy();
@@ -318,7 +321,8 @@ public class TestTaskAttemptListenerImpl {
     when(mockJob.getTask(any(TaskId.class))).thenReturn(mockTask);
 
     Dispatcher dispatcher = mock(Dispatcher.class);
-    EventHandler ea = mock(EventHandler.class);
+    @SuppressWarnings("unchecked")
+    EventHandler<Event> ea = mock(EventHandler.class);
     when(dispatcher.getEventHandler()).thenReturn(ea);
 
     RMHeartbeatHandler rmHeartbeatHandler =
@@ -398,7 +402,8 @@ public class TestTaskAttemptListenerImpl {
         mock(RMHeartbeatHandler.class);
     TaskHeartbeatHandler hbHandler = mock(TaskHeartbeatHandler.class);
     Dispatcher dispatcher = mock(Dispatcher.class);
-    EventHandler ea = mock(EventHandler.class);
+    @SuppressWarnings("unchecked")
+    EventHandler<Event> ea = mock(EventHandler.class);
     when(dispatcher.getEventHandler()).thenReturn(ea);
 
     when(appCtx.getEventHandler()).thenReturn(ea);

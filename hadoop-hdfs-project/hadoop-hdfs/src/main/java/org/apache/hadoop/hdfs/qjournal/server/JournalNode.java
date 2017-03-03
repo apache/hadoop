@@ -68,6 +68,8 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   private JournalNodeRpcServer rpcServer;
   private JournalNodeHttpServer httpServer;
   private final Map<String, Journal> journalsById = Maps.newHashMap();
+  private final Map<String, JournalNodeSyncer> journalSyncersById = Maps
+      .newHashMap();
   private ObjectName journalNodeInfoBeanName;
   private String httpServerURI;
   private File localDir;
@@ -92,9 +94,22 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
       LOG.info("Initializing journal in directory " + logDir);      
       journal = new Journal(conf, logDir, jid, startOpt, new ErrorReporter());
       journalsById.put(jid, journal);
+
+      // Start SyncJouranl thread, if JournalNode Sync is enabled
+      if (conf.getBoolean(
+          DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_KEY,
+          DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_DEFAULT)) {
+        startSyncer(journal, jid);
+      }
     }
-    
+
     return journal;
+  }
+
+  private void startSyncer(Journal journal, String jid) {
+    JournalNodeSyncer jSyncer = new JournalNodeSyncer(this, journal, jid, conf);
+    journalSyncersById.put(jid, jSyncer);
+    jSyncer.start();
   }
 
   @VisibleForTesting
@@ -190,7 +205,11 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
    */
   public void stop(int rc) {
     this.resultCode = rc;
-    
+
+    for (JournalNodeSyncer jSyncer : journalSyncersById.values()) {
+      jSyncer.stopSync();
+    }
+
     if (rpcServer != null) { 
       rpcServer.stop();
     }

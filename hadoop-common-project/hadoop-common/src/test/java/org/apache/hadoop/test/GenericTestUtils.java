@@ -18,10 +18,13 @@
 package org.apache.hadoop.test;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.StringWriter;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
@@ -272,7 +275,74 @@ public abstract class GenericTestUtils {
         "Thread diagnostics:\n" +
         TimedOutTestsListener.buildThreadDiagnosticString());
   }
-  
+
+  /**
+   * Prints output to one {@link PrintStream} while copying to the other.
+   * <p>
+   * Closing the main {@link PrintStream} will NOT close the other.
+   */
+  public static class TeePrintStream extends PrintStream {
+    private final PrintStream other;
+
+    public TeePrintStream(OutputStream main, PrintStream other) {
+      super(main);
+      this.other = other;
+    }
+
+    @Override
+    public void flush() {
+      super.flush();
+      other.flush();
+    }
+
+    @Override
+    public void write(byte[] buf, int off, int len) {
+      super.write(buf, off, len);
+      other.write(buf, off, len);
+    }
+  }
+
+  /**
+   * Capture output printed to {@link System#err}.
+   * <p>
+   * Usage:
+   * <pre>
+   *   try (SystemErrCapturer capture = new SystemErrCapturer()) {
+   *     ...
+   *     // Call capture.getOutput() to get the output string
+   *   }
+   * </pre>
+   *
+   * TODO: Add lambda support once Java 8 is common.
+   * <pre>
+   *   SystemErrCapturer.withCapture(capture -> {
+   *     ...
+   *   })
+   * </pre>
+   */
+  public static class SystemErrCapturer implements AutoCloseable {
+    final private ByteArrayOutputStream bytes;
+    final private PrintStream bytesPrintStream;
+    final private PrintStream oldErr;
+
+    public SystemErrCapturer() {
+      bytes = new ByteArrayOutputStream();
+      bytesPrintStream = new PrintStream(bytes);
+      oldErr = System.err;
+      System.setErr(new TeePrintStream(oldErr, bytesPrintStream));
+    }
+
+    public String getOutput() {
+      return bytes.toString();
+    }
+
+    @Override
+    public void close() throws Exception {
+      IOUtils.closeQuietly(bytesPrintStream);
+      System.setErr(oldErr);
+    }
+  }
+
   public static class LogCapturer {
     private StringWriter sw = new StringWriter();
     private WriterAppender appender;

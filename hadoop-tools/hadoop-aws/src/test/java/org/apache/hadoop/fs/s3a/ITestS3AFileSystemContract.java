@@ -89,21 +89,6 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
   }
 
   @Override
-  public void testRenameFileAsExistingFile() throws Exception {
-    if (!renameSupported()) {
-      return;
-    }
-
-    Path src = path("/test/hadoop/file");
-    createFile(src);
-    Path dst = path("/test/new/newfile");
-    createFile(dst);
-    // s3 doesn't support rename option
-    // rename-overwrites-dest is always allowed.
-    rename(src, dst, true, false, true);
-  }
-
-  @Override
   public void testRenameDirectoryAsExistingDirectory() throws Exception {
     if (!renameSupported()) {
       return;

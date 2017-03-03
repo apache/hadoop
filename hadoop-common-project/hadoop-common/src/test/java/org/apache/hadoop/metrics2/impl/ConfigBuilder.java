@@ -18,8 +18,11 @@
 
 package org.apache.hadoop.metrics2.impl;
 
-import org.apache.commons.configuration.PropertiesConfiguration;
-import org.apache.commons.configuration.SubsetConfiguration;
+import org.apache.commons.configuration2.PropertiesConfiguration;
+import org.apache.commons.configuration2.SubsetConfiguration;
+import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler;
+
+import java.io.FileWriter;
 
 /**
  * Helper class for building configs, mostly used in tests
@@ -33,6 +36,7 @@ public class ConfigBuilder {
    */
   public ConfigBuilder() {
     config = new PropertiesConfiguration();
+    config.setListDelimiterHandler(new DefaultListDelimiterHandler(','));
   }
 
   /**
@@ -54,7 +58,8 @@ public class ConfigBuilder {
    */
   public ConfigBuilder save(String filename) {
     try {
-      config.save(filename);
+      FileWriter fw = new FileWriter(filename);
+      config.write(fw);
     }
     catch (Exception e) {
       throw new RuntimeException("Error saving config", e);

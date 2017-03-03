@@ -28,14 +28,13 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
-import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.util.LineReader;
 import org.junit.After;
-import org.junit.Assume;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -46,6 +45,7 @@ import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 
 /**
  * Look at the performance of S3a operations.
@@ -78,10 +78,11 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     String testFile =  conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE);
     if (testFile.isEmpty()) {
       assumptionMessage = "Empty test property: " + KEY_CSVTEST_FILE;
+      LOG.warn(assumptionMessage);
       testDataAvailable = false;
     } else {
-      S3ATestUtils.useCSVDataEndpoint(conf);
       testData = new Path(testFile);
+      LOG.info("Using {} as input stream source", testData);
       Path path = this.testData;
       bindS3aFS(path);
       try {
@@ -112,7 +113,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
    * Declare that the test requires the CSV test dataset.
    */
   private void requireCSVTestData() {
-    Assume.assumeTrue(assumptionMessage, testDataAvailable);
+    assume(assumptionMessage, testDataAvailable);
   }
 
   /**
@@ -145,7 +146,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
 
   /**
    * Open a test file with the read buffer specified in the setting
-   * {@link #KEY_READ_BUFFER_SIZE}.
+   * {@link org.apache.hadoop.fs.s3a.S3ATestConstants#KEY_READ_BUFFER_SIZE}.
    *
    * @param path path to open
    * @param inputPolicy input policy to use
@@ -216,12 +217,18 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     long count = 0;
     // implicitly rounding down here
     long blockCount = len / blockSize;
+    long totalToRead = blockCount * blockSize;
+    long minimumBandwidth = 128 * 1024;
+    int maxResetCount = 4;
+    int resetCount = 0;
     for (long i = 0; i < blockCount; i++) {
       int offset = 0;
       int remaining = blockSize;
+      long blockId = i + 1;
       NanoTimer blockTimer = new NanoTimer();
       int reads = 0;
       while (remaining > 0) {
+        NanoTimer readTimer = new NanoTimer();
         int bytesRead = in.read(block, offset, remaining);
         reads++;
         if (bytesRead == 1) {
@@ -230,12 +237,46 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
         remaining -= bytesRead;
         offset += bytesRead;
         count += bytesRead;
+        readTimer.end();
+        if (bytesRead != 0) {
+          LOG.debug("Bytes in read #{}: {} , block bytes: {}," +
+                  " remaining in block: {}" +
+                  " duration={} nS; ns/byte: {}, bandwidth={} MB/s",
+              reads, bytesRead, blockSize - remaining, remaining,
+              readTimer.duration(),
+              readTimer.nanosPerOperation(bytesRead),
+              readTimer.bandwidthDescription(bytesRead));
+        } else {
+          LOG.warn("0 bytes returned by read() operation #{}", reads);
+        }
       }
-      blockTimer.end("Reading block %d in %d reads", i, reads);
+      blockTimer.end("Reading block %d in %d reads", blockId, reads);
+      String bw = blockTimer.bandwidthDescription(blockSize);
+      LOG.info("Bandwidth of block {}: {} MB/s: ", blockId, bw);
+      if (bandwidth(blockTimer, blockSize) < minimumBandwidth) {
+        LOG.warn("Bandwidth {} too low on block {}: resetting connection",
+            bw, blockId);
+        Assert.assertTrue("Bandwidth of " + bw +" too low after  "
+            + resetCount + " attempts", resetCount <= maxResetCount);
+        resetCount++;
+        // reset the connection
+        getS3AInputStream(in).resetConnection();
+      }
     }
-    timer2.end("Time to read %d bytes in %d blocks", len, blockCount);
-    bandwidth(timer2, count);
+    timer2.end("Time to read %d bytes in %d blocks", totalToRead, blockCount);
+    LOG.info("Overall Bandwidth {} MB/s; reset connections {}",
+        timer2.bandwidth(totalToRead), resetCount);
     logStreamStatistics();
+  }
+
+  /**
+   * Work out the bandwidth in bytes/second.
+   * @param timer timer measuring the duration
+   * @param bytes bytes
+   * @return the number of bytes/second of the recorded operation
+   */
+  public static double bandwidth(NanoTimer timer, long bytes) {
+    return bytes * 1.0e9 / timer.duration();
   }
 
   @Test

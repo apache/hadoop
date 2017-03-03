@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.fs.adl;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DelegateToFileSystem;
 
@@ -29,6 +31,8 @@ import java.net.URISyntaxException;
 /**
  * Expose adl:// scheme to access ADL file system.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class Adl extends DelegateToFileSystem {
 
   Adl(URI theUri, Configuration conf) throws IOException, URISyntaxException {

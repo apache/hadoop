@@ -33,7 +33,7 @@ import java.io.IOException;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DiskBalancerVolume {
   private static final ObjectReader READER =
-      new ObjectMapper().reader(DiskBalancerVolume.class);
+      new ObjectMapper().readerFor(DiskBalancerVolume.class);
 
   private String path;
   private long capacity;

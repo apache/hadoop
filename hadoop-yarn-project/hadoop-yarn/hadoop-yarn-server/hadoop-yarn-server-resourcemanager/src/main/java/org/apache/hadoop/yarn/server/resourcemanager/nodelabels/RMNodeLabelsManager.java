@@ -350,6 +350,22 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
     }
   }
   
+  /*
+   * Get active node count based on label.
+   */
+  public int getActiveNMCountPerLabel(String label) {
+    if (label == null) {
+      return 0;
+    }
+    try {
+      readLock.lock();
+      RMNodeLabel labelInfo = labelCollections.get(label);
+      return (labelInfo == null) ? 0 : labelInfo.getNumActiveNMs();
+    } finally {
+      readLock.unlock();
+    }
+  }
+
   public Set<String> getLabelsOnNode(NodeId nodeId) {
     try {
       readLock.lock();

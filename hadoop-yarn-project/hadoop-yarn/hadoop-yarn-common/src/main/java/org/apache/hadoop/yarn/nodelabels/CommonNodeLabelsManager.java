@@ -211,7 +211,7 @@ public class CommonNodeLabelsManager extends AbstractService {
   // for UT purpose
   protected void initDispatcher(Configuration conf) {
     // create async handler
-    dispatcher = new AsyncDispatcher();
+    dispatcher = new AsyncDispatcher("NodeLabelManager dispatcher");
     AsyncDispatcher asyncDispatcher = (AsyncDispatcher) dispatcher;
     asyncDispatcher.init(conf);
     asyncDispatcher.setDrainEventsOnStop();

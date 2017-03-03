@@ -33,19 +33,29 @@ import org.junit.Test;
  */
 public class TestDelegateToFsCheckPath {
   @Test
-  public void testCheckPathWithoutDefaultPorts() throws URISyntaxException,
+  public void testCheckPathWithoutDefaultPort() throws URISyntaxException,
       IOException {
     URI uri = new URI("dummy://dummy-host");
-    AbstractFileSystem afs = new DummyDelegateToFileSystem(uri);
+    AbstractFileSystem afs = new DummyDelegateToFileSystem(uri,
+        new UnOverrideDefaultPortFileSystem());
     afs.checkPath(new Path("dummy://dummy-host"));
+  }
+
+  @Test
+  public void testCheckPathWithDefaultPort() throws URISyntaxException,
+      IOException {
+    URI uri = new URI(String.format("dummy://dummy-host:%d",
+        OverrideDefaultPortFileSystem.DEFAULT_PORT));
+    AbstractFileSystem afs = new DummyDelegateToFileSystem(uri,
+        new OverrideDefaultPortFileSystem());
+    afs.checkPath(new Path("dummy://dummy-host/user/john/test"));
   }
 
   private static class DummyDelegateToFileSystem
       extends DelegateToFileSystem {
-    public DummyDelegateToFileSystem(URI uri) throws URISyntaxException,
-        IOException {
-      super(uri, new UnOverrideDefaultPortFileSystem(), new Configuration(),
-          "dummy", false);
+    public DummyDelegateToFileSystem(URI uri, FileSystem fs)
+        throws URISyntaxException, IOException {
+      super(uri, fs, new Configuration(), "dummy", false);
     }
   }
 
@@ -121,6 +131,19 @@ public class TestDelegateToFsCheckPath {
     public FileStatus getFileStatus(Path f) throws IOException {
       // deliberately empty
       return null;
+    }
+  }
+
+  /**
+   * OverrideDefaultPortFileSystem defines default port.
+   */
+  private static class OverrideDefaultPortFileSystem
+      extends UnOverrideDefaultPortFileSystem {
+    private static final int DEFAULT_PORT = 1234;
+
+    @Override
+    public int getDefaultPort() {
+      return DEFAULT_PORT;
     }
   }
 }

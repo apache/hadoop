@@ -319,32 +319,35 @@
   </property>
 
   <property>
-    <description>The minimum allocation for every container request at the RM,
-    in MBs. Memory requests lower than this will throw a
-    InvalidResourceRequestException.</description>
+    <description>The minimum allocation for every container request at the RM
+    in MBs. Memory requests lower than this will be set to the value of this
+    property. Additionally, a node manager that is configured to have less memory
+    than this value will be shut down by the resource manager.</description>
     <name>yarn.scheduler.minimum-allocation-mb</name>
     <value>1024</value>
   </property>
 
   <property>
-    <description>The maximum allocation for every container request at the RM,
-    in MBs. Memory requests higher than this will throw a
+    <description>The maximum allocation for every container request at the RM
+    in MBs. Memory requests higher than this will throw an
     InvalidResourceRequestException.</description>
     <name>yarn.scheduler.maximum-allocation-mb</name>
     <value>8192</value>
   </property>
 
   <property>
-    <description>The minimum allocation for every container request at the RM,
-    in terms of virtual CPU cores. Requests lower than this will throw a
-    InvalidResourceRequestException.</description>
+    <description>The minimum allocation for every container request at the RM
+    in terms of virtual CPU cores. Requests lower than this will be set to the
+    value of this property. Additionally, a node manager that is configured to
+    have fewer virtual cores than this value will be shut down by the resource
+    manager.</description>
     <name>yarn.scheduler.minimum-allocation-vcores</name>
     <value>1</value>
   </property>
 
   <property>
-    <description>The maximum allocation for every container request at the RM,
-    in terms of virtual CPU cores. Requests higher than this will throw a
+    <description>The maximum allocation for every container request at the RM
+    in terms of virtual CPU cores. Requests higher than this will throw an
     InvalidResourceRequestException.</description>
     <name>yarn.scheduler.maximum-allocation-vcores</name>
     <value>4</value>
@@ -441,7 +444,7 @@
   <property>
     <description>Host:Port of the ZooKeeper server to be used by the RM. This
       must be supplied when using the ZooKeeper based implementation of the
-      RM state store and/or embedded automatic failover in a HA setting.
+      RM state store and/or embedded automatic failover in an HA setting.
     </description>
     <name>yarn.resourcemanager.zk-address</name>
     <!--value>127.0.0.1:2181</value-->
@@ -490,7 +493,7 @@
 
   <property>
     <description>
-      ACLs to be used for the root znode when using ZKRMStateStore in a HA
+      ACLs to be used for the root znode when using ZKRMStateStore in an HA
       scenario for fencing.
 
       ZKRMStateStore supports implicit fencing to allow a single
@@ -606,7 +609,7 @@
   </property>
 
   <property>
-    <description>Name of the cluster. In a HA setting,
+    <description>Name of the cluster. In an HA setting,
       this is used to ensure the RM participates in leader
       election for this cluster and ensures it does not affect
       other clusters</description>
@@ -698,6 +701,16 @@
     <description>Interval at which the delayed token removal thread runs</description>
     <name>yarn.resourcemanager.delayed.delegation-token.removal-interval-ms</name>
     <value>30000</value>
+  </property>
+
+  <property>
+    <description>Maximum size in bytes for configurations that can be provided
+      by application to RM for delegation token renewal.
+      By experiment, it's roughly 128 bytes per key-value pair.
+      The default value 12800 allows roughly 100 configs, may be less.
+    </description>
+    <name>yarn.resourcemanager.delegation-token.max-conf-size-bytes</name>
+    <value>12800</value>
   </property>
 
   <property>
@@ -1000,10 +1013,10 @@
   </property>
 
   <property>
-    <description>Enable Queuing of OPPORTUNISTIC containers on the
+    <description>Max number of OPPORTUNISTIC containers to queue at the
       nodemanager.</description>
-    <name>yarn.nodemanager.container-queuing-enabled</name>
-    <value>false</value>
+    <name>yarn.nodemanager.opportunistic-containers-max-queue-length</name>
+    <value>0</value>
   </property>
 
   <property>
@@ -1344,7 +1357,8 @@
   </property>
 
   <property>
-    <description>How often to monitor the node and the containers.</description>
+    <description>How often to monitor the node and the containers.
+    If 0 or negative, monitoring is disabled.</description>
     <name>yarn.nodemanager.resource-monitor.interval-ms</name>
     <value>3000</value>
   </property>
@@ -1362,7 +1376,8 @@
 
   <property>
     <description>How often to monitor containers. If not set, the value for
-    yarn.nodemanager.resource-monitor.interval-ms will be used.</description>
+    yarn.nodemanager.resource-monitor.interval-ms will be used.
+    If 0 or negative, container monitoring is disabled.</description>
     <name>yarn.nodemanager.container-monitor.interval-ms</name>
   </property>
 
@@ -1456,9 +1471,11 @@
 
   <property>
     <description>The cgroups hierarchy under which to place YARN proccesses (cannot contain commas).
-    If yarn.nodemanager.linux-container-executor.cgroups.mount is false (that is, if cgroups have
-    been pre-configured), then this cgroups hierarchy must already exist and be writable by the
-    NodeManager user, otherwise the NodeManager may fail.
+    If yarn.nodemanager.linux-container-executor.cgroups.mount is false
+    (that is, if cgroups have been pre-configured) and the Yarn user has write
+    access to the parent directory, then the directory will be created.
+    If the directory already exists, the administrator has to give Yarn
+    write permissions to it recursively.
     Only used when the LCE resources handler is set to the CgroupsLCEResourcesHandler.</description>
     <name>yarn.nodemanager.linux-container-executor.cgroups.hierarchy</name>
     <value>/hadoop-yarn</value>
@@ -1564,6 +1581,32 @@
       networks.</description>
     <name>yarn.nodemanager.runtime.linux.docker.default-container-network</name>
     <value>host</value>
+  </property>
+
+  <property>
+    <description>The mode in which the Java Container Sandbox should run detailed by
+      the JavaSandboxLinuxContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.sandbox-mode</name>
+    <value>disabled</value>
+  </property>
+
+  <property>
+    <description>Permissions for application local directories.</description>
+    <name>yarn.nodemanager.runtime.linux.sandbox-mode.local-dirs.permissions</name>
+    <value>read</value>
+  </property>
+
+  <property>
+    <description>Location for non-default java policy file.</description>
+    <name>yarn.nodemanager.runtime.linux.sandbox-mode.policy</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>The group which will run by default without the java security
+      manager.</description>
+    <name>yarn.nodemanager.runtime.linux.sandbox-mode.whitelist-group</name>
+    <value></value>
   </property>
 
   <property>
@@ -2079,6 +2122,11 @@
   </property>
 
   <!-- Timeline Service v1.5 Configuration -->
+  <property>
+    <name>yarn.timeline-service.entity-group-fs-store.cache-store-class</name>
+    <value>org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore</value>
+    <description>Caching storage timeline server v1.5 is using. </description>
+  </property>
 
   <property>
     <name>yarn.timeline-service.entity-group-fs-store.active-dir</name>
@@ -2186,7 +2234,7 @@
   <property>
     <name>yarn.timeline-service.client.fd-retain-secs</name>
     <description>
-      How long the ATS v1.5 writer will keep a FSStream open.
+      How long the ATS v1.5 writer will keep an FSStream open.
       If this fsstream does not write anything for this configured time,
       it will be close.
     </description>
@@ -2633,6 +2681,14 @@
 
   <property>
     <description>
+    URL for log aggregation server web service
+    </description>
+    <name>yarn.log.server.web-service.url</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
     RM Application Tracking URL
     </description>
     <name>yarn.tracking.url.generator</name>
@@ -2749,7 +2805,7 @@
     <description>
     Setting that controls whether distributed scheduling is enabled.
     </description>
-    <name>yarn.distributed-scheduling.enabled</name>
+    <name>yarn.nodemanager.distributed-scheduling.enabled</name>
     <value>false</value>
   </property>
 
@@ -2758,65 +2814,8 @@
       Setting that controls whether opportunistic container allocation
       is enabled.
     </description>
-    <name>yarn.opportunistic-container-allocation.enabled</name>
+    <name>yarn.resourcemanager.opportunistic-container-allocation.enabled</name>
     <value>false</value>
-  </property>
-
-  <property>
-    <description>
-      Minimum memory (in MB) used for allocating an opportunistic container.
-    </description>
-    <name>yarn.opportunistic-containers.min-memory-mb</name>
-    <value>512</value>
-  </property>
-
-  <property>
-    <description>
-      Minimum virtual CPU cores used for allocating an opportunistic container.
-    </description>
-    <name>yarn.opportunistic-containers.min-vcores</name>
-    <value>1</value>
-  </property>
-
-  <property>
-    <description>
-    Maximum memory (in MB) used for allocating an opportunistic container.
-    </description>
-    <name>yarn.opportunistic-containers.max-memory-mb</name>
-    <value>2048</value>
-  </property>
-
-  <property>
-    <description>
-    Maximum virtual CPU cores used for allocating an opportunistic container.
-    </description>
-    <name>yarn.opportunistic-containers.max-vcores</name>
-    <value>4</value>
-  </property>
-
-  <property>
-    <description>
-    Incremental memory (in MB) used for allocating an opportunistic container.
-    </description>
-    <name>yarn.opportunistic-containers.incr-memory-mb</name>
-    <value>512</value>
-  </property>
-
-  <property>
-    <description>
-    Incremental virtual CPU cores used for allocating an opportunistic
-      container.
-    </description>
-    <name>yarn.opportunistic-containers.incr-vcores</name>
-    <value>1</value>
-  </property>
-
-  <property>
-    <description>
-    Container token expiry for opportunistic containers.
-    </description>
-    <name>yarn.opportunistic-containers.container-token-expiry-ms</name>
-    <value>600000</value>
   </property>
 
   <property>
@@ -2824,7 +2823,7 @@
     Number of nodes to be used by the Opportunistic Container Allocator for
     dispatching containers during container allocation.
     </description>
-    <name>yarn.opportunistic-container-allocation.nodes-used</name>
+    <name>yarn.resourcemanager.opportunistic-container-allocation.nodes-used</name>
     <value>10</value>
   </property>
 
@@ -2832,7 +2831,7 @@
     <description>
     Frequency for computing least loaded NMs.
     </description>
-    <name>yarn.nm-container-queuing.sorting-nodes-interval-ms</name>
+    <name>yarn.resourcemanager.nm-container-queuing.sorting-nodes-interval-ms</name>
     <value>1000</value>
   </property>
 
@@ -2840,7 +2839,7 @@
     <description>
     Comparator for determining node load for Distributed Scheduling.
     </description>
-    <name>yarn.nm-container-queuing.load-comparator</name>
+    <name>yarn.resourcemanager.nm-container-queuing.load-comparator</name>
     <value>QUEUE_LENGTH</value>
   </property>
 
@@ -2848,7 +2847,7 @@
     <description>
     Value of standard deviation used for calculation of queue limit thresholds.
     </description>
-    <name>yarn.nm-container-queuing.queue-limit-stdev</name>
+    <name>yarn.resourcemanager.nm-container-queuing.queue-limit-stdev</name>
     <value>1.0f</value>
   </property>
 
@@ -2856,32 +2855,32 @@
     <description>
     Min length of container queue at NodeManager.
     </description>
-    <name>yarn.nm-container-queuing.min-queue-length</name>
-    <value>1</value>
+    <name>yarn.resourcemanager.nm-container-queuing.min-queue-length</name>
+    <value>5</value>
   </property>
 
   <property>
     <description>
     Max length of container queue at NodeManager.
     </description>
-    <name>yarn.nm-container-queuing.max-queue-length</name>
-    <value>10</value>
+    <name>yarn.resourcemanager.nm-container-queuing.max-queue-length</name>
+    <value>15</value>
   </property>
 
   <property>
     <description>
     Min queue wait time for a container at a NodeManager.
     </description>
-    <name>yarn.nm-container-queuing.min-queue-wait-time-ms</name>
-    <value>1</value>
+    <name>yarn.resourcemanager.nm-container-queuing.min-queue-wait-time-ms</name>
+    <value>10</value>
   </property>
 
   <property>
     <description>
     Max queue wait time for a container queue at a NodeManager.
     </description>
-    <name>yarn.nm-container-queuing.max-queue-wait-time-ms</name>
-    <value>10</value>
+    <name>yarn.resourcemanager.nm-container-queuing.max-queue-wait-time-ms</name>
+    <value>100</value>
   </property>
 
   <property>
@@ -3051,7 +3050,22 @@
     The RMAppLifetimeMonitor Service uses this value as monitor interval
     </description>
     <name>yarn.resourcemanager.application-timeouts.monitor.interval-ms</name>
-    <value>60000</value>
+    <value>3000</value>
+  </property>
+
+  <property>
+    <description>
+      Defines the limit of the diagnostics message of an application
+      attempt, in kilo characters (character count * 1024).
+      When using ZooKeeper to store application state behavior, it's
+      important to limit the size of the diagnostic messages to
+      prevent YARN from overwhelming ZooKeeper. In cases where
+      yarn.resourcemanager.state-store.max-completed-applications is set to
+      a large number, it may be desirable to reduce the value of this property
+      to limit the total data stored.
+    </description>
+    <name>yarn.app.attempt.diagnostics.limit.kc</name>
+    <value>64</value>
   </property>
 
 </configuration>

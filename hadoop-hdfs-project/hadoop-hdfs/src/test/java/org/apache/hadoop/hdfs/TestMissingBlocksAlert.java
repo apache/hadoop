@@ -59,7 +59,8 @@ public class TestMissingBlocksAlert {
     try {
       Configuration conf = new HdfsConfiguration();
       //minimize test delay
-      conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 0);
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
+          0);
       conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
       int fileLen = 10*1024;
       conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, fileLen/2);

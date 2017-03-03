@@ -126,6 +126,7 @@ public class TestSystemMetricsPublisher {
             .thenReturn(Collections.singletonList("java -Xmx1024m"));
         when(asc.getAMContainerSpec()).thenReturn(containerLaunchContext);
         when(app.getApplicationSubmissionContext()).thenReturn(asc);
+        when(app.getApplicationPriority()).thenReturn(Priority.newInstance(1));
         metricsPublisher.appUpdated(app, 4L);
       } else {
         metricsPublisher.appUpdated(app, 4L);
@@ -527,6 +528,7 @@ public class TestSystemMetricsPublisher {
     when(amReq.getNodeLabelExpression()).thenReturn("high-mem");
     when(app.getAMResourceRequest()).thenReturn(amReq);
     when(app.getAmNodeLabelExpression()).thenCallRealMethod();
+    when(app.getApplicationPriority()).thenReturn(Priority.newInstance(10));
     when(app.getCallerContext())
         .thenReturn(new CallerContext.Builder("context").build());
     return app;

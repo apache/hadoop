@@ -22,42 +22,14 @@ package org.apache.hadoop.fs.adl.live;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractRenameTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.junit.Before;
-import org.junit.Test;
 
 /**
- * Verify Adls RENAME semantics compliance with Hadoop.
+ * Test rename contract test cases on Adl file system.
  */
 public class TestAdlContractRenameLive extends AbstractContractRenameTest {
 
   @Override
   protected AbstractFSContract createContract(Configuration configuration) {
     return new AdlStorageContract(configuration);
-  }
-
-  @Before
-  @Override
-  public void setup() throws Exception {
-    org.junit.Assume
-        .assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
-    super.setup();
-  }
-
-  @Test
-  public void testRenameFileOverExistingFile() throws Throwable {
-    ContractTestUtils
-        .unsupported("BUG : Adl to support full complete POSIX" + "behaviour");
-  }
-
-  @Test
-  public void testRenameFileNonexistentDir() throws Throwable {
-    ContractTestUtils
-        .unsupported("BUG : Adl to support create dir is not " + "exist");
-  }
-
-  @Test
-  public void testRenameWithNonEmptySubDir() throws Throwable {
-    ContractTestUtils.unsupported("BUG : Adl to support non empty dir move.");
   }
 }

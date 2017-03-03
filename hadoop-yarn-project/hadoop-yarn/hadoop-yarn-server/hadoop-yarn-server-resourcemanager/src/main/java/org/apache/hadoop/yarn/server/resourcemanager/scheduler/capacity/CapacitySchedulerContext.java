@@ -23,6 +23,7 @@ import java.util.Comparator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
@@ -60,10 +61,6 @@ public interface CapacitySchedulerContext {
   Configuration getConf();
 
   ResourceCalculator getResourceCalculator();
-
-  Comparator<CSQueue> getNonPartitionedQueueComparator();
-  
-  PartitionedQueueComparator getPartitionedQueueComparator();
   
   FiCaSchedulerNode getNode(NodeId nodeId);
 
@@ -83,4 +80,12 @@ public interface CapacitySchedulerContext {
   ResourceUsage getClusterResourceUsage();
 
   ActivitiesManager getActivitiesManager();
+
+  CapacitySchedulerQueueManager getCapacitySchedulerQueueManager();
+
+  /**
+   *
+   * @return Max Cluster level App priority.
+   */
+  Priority getMaxClusterLevelAppPriority();
 }

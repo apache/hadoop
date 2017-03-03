@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -80,7 +81,7 @@ public class FsDatasetUtil {
     return matches[0];
   }
 
-  public static FileInputStream openAndSeek(File file, long offset)
+  public static FileDescriptor openAndSeek(File file, long offset)
       throws IOException {
     RandomAccessFile raf = null;
     try {
@@ -88,7 +89,7 @@ public class FsDatasetUtil {
       if (offset > 0) {
         raf.seek(offset);
       }
-      return new FileInputStream(raf.getFD());
+      return raf.getFD();
     } catch(IOException ioe) {
       IOUtils.cleanup(null, raf);
       throw ioe;

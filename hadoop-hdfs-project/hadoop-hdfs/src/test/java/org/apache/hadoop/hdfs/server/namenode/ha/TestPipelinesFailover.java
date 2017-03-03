@@ -142,8 +142,9 @@ public class TestPipelinesFailover {
       MethodToTestIdempotence methodToTest) throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
-    // Don't check replication periodically.
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1000);
+    // Don't check low redundancy periodically.
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
+        1000);
     
     FSDataOutputStream stm = null;
     MiniDFSCluster cluster = newMiniCluster(conf, 3);

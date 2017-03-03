@@ -32,9 +32,13 @@ public class TestS3xLoginHelper extends Assert {
   public static final String BUCKET = "s3a://bucket";
   private static final URI ENDPOINT = uri(BUCKET);
   public static final String S = "%2f";
+  public static final String P = "%2b";
+  public static final String P_RAW = "+";
   public static final String USER = "user";
   public static final String PASS = "pass";
   public static final String PASLASHSLASH = "pa" + S + S;
+  public static final String PAPLUS = "pa" + P;
+  public static final String PAPLUS_RAW = "pa" + P_RAW;
 
   public static final URI WITH_USER_AND_PASS = uri("s3a://user:pass@bucket");
   public static final Path PATH_WITH_LOGIN =
@@ -42,6 +46,10 @@ public class TestS3xLoginHelper extends Assert {
 
   public static final URI WITH_SLASH_IN_PASS = uri(
       "s3a://user:" + PASLASHSLASH + "@bucket");
+  public static final URI WITH_PLUS_IN_PASS = uri(
+      "s3a://user:" + PAPLUS + "@bucket");
+  public static final URI WITH_PLUS_RAW_IN_PASS = uri(
+      "s3a://user:" + PAPLUS_RAW + "@bucket");
   public static final URI USER_NO_PASS = uri("s3a://user@bucket");
   public static final URI WITH_USER_AND_COLON = uri("s3a://user:@bucket");
   public static final URI NO_USER = uri("s3a://:pass@bucket");
@@ -117,6 +125,16 @@ public class TestS3xLoginHelper extends Assert {
   }
 
   @Test
+  public void testLoginWithPlusInPass() throws Throwable {
+    assertMatchesLogin(USER, "pa+", WITH_PLUS_IN_PASS);
+  }
+
+  @Test
+  public void testLoginWithPlusRawInPass() throws Throwable {
+    assertMatchesLogin(USER, "pa+", WITH_PLUS_RAW_IN_PASS);
+  }
+
+  @Test
   public void testLoginWithUser() throws Throwable {
     assertMatchesLogin(USER, "", USER_NO_PASS);
   }
@@ -149,6 +167,16 @@ public class TestS3xLoginHelper extends Assert {
   @Test
   public void testFsUriWithSlashInPass() throws Throwable {
     assertMatchesEndpoint(WITH_SLASH_IN_PASS);
+  }
+
+  @Test
+  public void testFsUriWithPlusInPass() throws Throwable {
+    assertMatchesEndpoint(WITH_PLUS_IN_PASS);
+  }
+
+  @Test
+  public void testFsUriWithPlusRawInPass() throws Throwable {
+    assertMatchesEndpoint(WITH_PLUS_RAW_IN_PASS);
   }
 
   @Test

@@ -25,13 +25,13 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -39,14 +39,17 @@ import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
 
+import com.google.common.base.Supplier;
+
 import java.io.IOException;
 
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_DATA_BLOCKS;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_PARITY_BLOCKS;
-
 public class TestAddStripedBlockInFBR {
-  private final short GROUP_SIZE = (short) (NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS);
+  private final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private final int cellSize = ecPolicy.getCellSize();
+  private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
+  private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
+  private final short groupSize = (short) (dataBlocks + parityBlocks);
 
   private MiniDFSCluster cluster;
   private DistributedFileSystem dfs;
@@ -57,7 +60,7 @@ public class TestAddStripedBlockInFBR {
   @Before
   public void setup() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(GROUP_SIZE).build();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize).build();
     cluster.waitActive();
     dfs = cluster.getFileSystem();
   }
@@ -84,26 +87,40 @@ public class TestAddStripedBlockInFBR {
     final Path repDir = new Path("/rep");
     dfs.mkdirs(ecDir);
     dfs.mkdirs(repDir);
-    dfs.getClient().setErasureCodingPolicy(ecDir.toString(), null);
+    dfs.getClient().setErasureCodingPolicy(ecDir.toString(),
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
 
     // create several non-EC files and one EC file
-    final Path[] repFiles = new Path[GROUP_SIZE];
-    for (int i = 0; i < GROUP_SIZE; i++) {
+    final Path[] repFiles = new Path[groupSize];
+    for (int i = 0; i < groupSize; i++) {
       repFiles[i] = new Path(repDir, "f" + i);
       DFSTestUtil.createFile(dfs, repFiles[i], 1L, (short) 3, 0L);
     }
     final Path ecFile = new Path(ecDir, "f");
     DFSTestUtil.createFile(dfs, ecFile,
-        BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS, (short) 1, 0L);
+        cellSize * dataBlocks, (short) 1, 0L);
 
-    // trigger dn's FBR. The FBR will add block-dn mapping.
-    DataNodeTestUtils.triggerBlockReport(dn);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
 
-    // make sure NN has correct block-dn mapping
-    BlockInfoStriped blockInfo = (BlockInfoStriped) cluster.getNamesystem()
-        .getFSDirectory().getINode(ecFile.toString()).asFile().getLastBlock();
-    NumberReplicas nr = spy.countNodes(blockInfo);
-    Assert.assertEquals(GROUP_SIZE, nr.liveReplicas());
-    Assert.assertEquals(0, nr.excessReplicas());
+      @Override
+      public Boolean get() {
+        try {
+          // trigger dn's FBR. The FBR will add block-dn mapping.
+          cluster.triggerBlockReports();
+
+          // make sure NN has correct block-dn mapping
+          BlockInfoStriped blockInfo = (BlockInfoStriped) cluster
+              .getNamesystem().getFSDirectory().getINode(ecFile.toString())
+              .asFile().getLastBlock();
+          NumberReplicas nr = spy.countNodes(blockInfo);
+
+          return nr.excessReplicas() == 0 && nr.liveReplicas() == groupSize;
+        } catch (Exception ignored) {
+          // Ignore the exception
+        }
+
+        return false;
+      }
+    }, 3000, 60000);
   }
 }

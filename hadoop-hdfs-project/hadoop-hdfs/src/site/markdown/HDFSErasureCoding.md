@@ -15,15 +15,7 @@
 HDFS Erasure Coding
 ===================
 
-* [HDFS Erasure Coding](#HDFS_Erasure_Coding)
-    * [Purpose](#Purpose)
-    * [Background](#Background)
-    * [Architecture](#Architecture)
-    * [Deployment](#Deployment)
-        * [Cluster and hardware configuration](#Cluster_and_hardware_configuration)
-        * [Configuration keys](#Configuration_keys)
-        * [Enable Intel ISA-L](#Enable_Intel_ISA-L)
-        * [Administrative commands](#Administrative_commands)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Purpose
 -------
@@ -72,7 +64,7 @@ Architecture
 
       2. _The size of a striping cell._ This determines the granularity of striped reads and writes, including buffer sizes and encoding work.
 
-    There are three policies currently being supported: RS-DEFAULT-3-2-64k, RS-DEFAULT-6-3-64k and RS-LEGACY-6-3-64k. All with default cell size of 64KB. The system default policy is RS-DEFAULT-6-3-64k which use the default schema RS_6_3_SCHEMA with a cell size of 64KB.
+    Five policies are currently supported: RS-3-2-64k, RS-6-3-64k, RS-10-4-64k, RS-LEGACY-6-3-64k, and XOR-2-1-64k. All with default cell size of 64KB. The system default policy is RS-6-3-64k which use the default schema RS_6_3_SCHEMA with a cell size of 64KB.
 
  *  **Intel ISA-L**
     Intel ISA-L stands for Intel Intelligent Storage Acceleration Library. ISA-L is a collection of optimized low-level functions used primarily in storage applications. It includes a fast block Reed-Solomon type erasure codes optimized for Intel AVX and AVX2 instruction sets.
@@ -99,7 +91,7 @@ Deployment
 ### Configuration keys
 
   The codec implementation for Reed-Solomon and XOR can be configured with the following client and DataNode configuration keys:
-  `io.erasurecode.codec.rs-default.rawcoder` for the default RS codec,
+  `io.erasurecode.codec.rs.rawcoder` for the default RS codec,
   `io.erasurecode.codec.rs-legacy.rawcoder` for the legacy RS codec,
   `io.erasurecode.codec.xor.rawcoder` for the XOR codec.
   The default implementations for all of these codecs are pure Java. For default RS codec, there is also a native implementation which leverages Intel ISA-L library to improve the performance of codec. For XOR codec, a native implementation which leverages Intel ISA-L library to improve the performance of codec is also supported. Please refer to section "Enable Intel ISA-L" for more detail information.
@@ -116,7 +108,7 @@ Deployment
   HDFS native implementation of default RS codec leverages Intel ISA-L library to improve the encoding and decoding calculation. To enable and use Intel ISA-L, there are three steps.
   1. Build ISA-L library. Please refer to the offical site "https://github.com/01org/isa-l/" for detail information.
   2. Build Hadoop with ISA-L support. Please refer to "Intel ISA-L build options" section in "Build instructions for Hadoop"(BUILDING.txt) document. Use -Dbundle.isal to copy the contents of the isal.lib directory into the final tar file. Deploy hadoop with the tar file. Make sure ISA-L library is available on both HDFS client and DataNodes.
-  3. Configure the `io.erasurecode.codec.rs-default.rawcoder` key with value `org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory` on HDFS client and DataNodes.
+  3. Configure the `io.erasurecode.codec.rs.rawcoder` key with value `org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory` on HDFS client and DataNodes.
 
   To check ISA-L library enable state, try "Hadoop checknative" command. It will tell you if ISA-L library is enabled or not.
 
@@ -124,28 +116,33 @@ Deployment
 
 ### Administrative commands
 
-  HDFS provides an `erasurecode` subcommand to perform administrative commands related to erasure coding.
+  HDFS provides an `ec` subcommand to perform administrative commands related to erasure coding.
 
-       hdfs erasurecode [generic options]
-         [-setPolicy [-p <policyName>] <path>]
-         [-getPolicy <path>]
+       hdfs ec [generic options]
+         [-setPolicy -policy <policyName> -path <path>]
+         [-getPolicy -path <path>]
+         [-unsetPolicy -path <path>]
          [-listPolicies]
          [-usage [cmd ...]]
          [-help [cmd ...]]
 
 Below are the details about each command.
 
- *  `[-setPolicy [-p <policyName>] <path>]`
+ *  `[-setPolicy -policy <policyName> -path <path>]`
 
     Sets an ErasureCoding policy on a directory at the specified path.
 
       `path`: An directory in HDFS. This is a mandatory parameter. Setting a policy only affects newly created files, and does not affect existing files.
 
-      `policyName`: The ErasureCoding policy to be used for files under this directory. This is an optional parameter, specified using ‘-p’ flag. If no policy is specified, the system default ErasureCodingPolicy will be used.
+      `policyName`: The ErasureCoding policy to be used for files under this directory.
 
- *  `[-getPolicy <path>]`
+ *  `[-getPolicy -path <path>]`
 
      Get details of the ErasureCoding policy of a file or directory at the specified path.
+
+ *  `[-unsetPolicy -path <path>]`
+
+     Unset an ErasureCoding policy set by a previous call to "setPolicy" on a directory. If the directory inherits the ErasureCoding policy from an ancestor directory, "unsetPolicy" is a no-op. Unsetting the policy on a directory which doesn't have an explicit policy set will not return an error.
 
  *  `[-listPolicies]`
 

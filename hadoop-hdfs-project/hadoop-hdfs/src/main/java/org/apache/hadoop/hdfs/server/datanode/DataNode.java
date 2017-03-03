@@ -21,8 +21,6 @@ package org.apache.hadoop.hdfs.server.datanode;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_PERMISSION_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_PERMISSION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DNS_INTERFACE_KEY;
@@ -69,7 +67,6 @@ import java.io.PrintStream;
 import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.channels.ServerSocketChannel;
 import java.security.PrivilegedExceptionAction;
@@ -79,6 +76,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -90,10 +88,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.annotation.Nullable;
 import javax.management.ObjectName;
 import javax.net.SocketFactory;
 
@@ -105,18 +103,16 @@ import org.apache.hadoop.conf.ReconfigurableBase;
 import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.conf.ReconfigurationTaskStatus;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.ozone.container.common.statemachine
-    .DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
+import org.apache.hadoop.hdfs.server.datanode.checker.DatasetVolumeChecker;
+import org.apache.hadoop.hdfs.server.datanode.checker.StorageLocationChecker;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -171,7 +167,9 @@ import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResour
 import org.apache.hadoop.hdfs.server.datanode.erasurecode.ErasureCodingWorker;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeDiskMetrics;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodePeerMetrics;
 import org.apache.hadoop.hdfs.server.datanode.web.DatanodeHttpServer;
 import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerConstants;
 import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerException;
@@ -208,7 +206,6 @@ import org.apache.hadoop.tracing.TraceAdminProtocolServerSideTranslatorPB;
 import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.tracing.TracerConfigurationManager;
 import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.InvalidChecksumSizeException;
@@ -216,6 +213,7 @@ import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.Timer;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.htrace.core.Tracer;
 import org.eclipse.jetty.util.ajax.JSON;
@@ -282,7 +280,7 @@ public class DataNode extends ReconfigurableBase
         ", offset: %s" + // offset
         ", srvID: %s" +  // DatanodeRegistration
         ", blockid: %s" + // block id
-        ", duration: %s";  // duration time
+        ", duration(ns): %s";  // duration time
         
   static final Log ClientTraceLog =
     LogFactory.getLog(DataNode.class.getName() + ".clienttrace");
@@ -308,6 +306,7 @@ public class DataNode extends ReconfigurableBase
   public static final Log METRICS_LOG = LogFactory.getLog("DataNodeMetricsLog");
 
   private static final String DATANODE_HTRACE_PREFIX = "datanode.htrace.";
+  private final FileIoProvider fileIoProvider;
 
   /**
    * Use {@link NetUtils#createSocketAddr(String)} instead.
@@ -340,6 +339,9 @@ public class DataNode extends ReconfigurableBase
   private int infoSecurePort;
 
   DataNodeMetrics metrics;
+  @Nullable
+  private DataNodePeerMetrics peerMetrics;
+  private DataNodeDiskMetrics diskMetrics;
   private InetSocketAddress streamingAddr;
   
   // See the note below in incrDatanodeNetworkErrors re: concurrency.
@@ -378,11 +380,8 @@ public class DataNode extends ReconfigurableBase
   SaslDataTransferClient saslClient;
   SaslDataTransferServer saslServer;
   private ObjectName dataNodeInfoBeanName;
-  private Thread checkDiskErrorThread = null;
-  protected final int checkDiskErrorInterval;
-  private boolean checkDiskErrorFlag = false;
-  private Object checkDiskErrorMutex = new Object();
-  private long lastDiskErrorCheck;
+  // Test verification only
+  private volatile long lastDiskErrorCheck;
   private String supergroup;
   private boolean isPermissionEnabled;
   private String dnUserName = null;
@@ -394,6 +393,11 @@ public class DataNode extends ReconfigurableBase
       .availableProcessors();
   private static final double CONGESTION_RATIO = 1.5;
   private DiskBalancer diskBalancer;
+
+  @Nullable
+  private final StorageLocationChecker storageLocationChecker;
+
+  private final DatasetVolumeChecker volumeChecker;
 
   private final SocketFactory socketFactory;
   private DatanodeStateMachine datanodeStateMachine;
@@ -415,11 +419,12 @@ public class DataNode extends ReconfigurableBase
    */
   @VisibleForTesting
   @InterfaceAudience.LimitedPrivate("HDFS")
-  DataNode(final Configuration conf) {
+  DataNode(final Configuration conf) throws DiskErrorException {
     super(conf);
     this.tracer = createTracer(conf);
     this.tracerConfigurationManager =
         new TracerConfigurationManager(DATANODE_HTRACE_PREFIX, conf);
+    this.fileIoProvider = new FileIoProvider(conf, this);
     this.fileDescriptorPassingDisabledReason = null;
     this.maxNumberOfBlocksToLog = 0;
     this.confVersion = null;
@@ -428,10 +433,11 @@ public class DataNode extends ReconfigurableBase
     this.blockScanner = new BlockScanner(this, this.getConf());
     this.pipelineSupportECN = false;
     this.ozoneEnabled = false;
-    this.checkDiskErrorInterval =
-        ThreadLocalRandom.current().nextInt(5000, (int) (5000 * 1.25));
     this.socketFactory = NetUtils.getDefaultSocketFactory(conf);
+    this.dnConf = new DNConf(this);
     initOOBTimeout();
+    storageLocationChecker = null;
+    volumeChecker = new DatasetVolumeChecker(conf, new Timer());
   }
 
   /**
@@ -440,11 +446,13 @@ public class DataNode extends ReconfigurableBase
    */
   DataNode(final Configuration conf,
            final List<StorageLocation> dataDirs,
+           final StorageLocationChecker storageLocationChecker,
            final SecureResources resources) throws IOException {
     super(conf);
     this.tracer = createTracer(conf);
     this.tracerConfigurationManager =
         new TracerConfigurationManager(DATANODE_HTRACE_PREFIX, conf);
+    this.fileIoProvider = new FileIoProvider(conf, this);
     this.blockScanner = new BlockScanner(this);
     this.lastDiskErrorCheck = 0;
     this.maxNumberOfBlocksToLog = conf.getLong(DFS_MAX_NUM_BLOCKS_TO_LOG_KEY,
@@ -471,8 +479,7 @@ public class DataNode extends ReconfigurableBase
         ",hdfs-" +
         conf.get("hadoop.hdfs.configuration.version", "UNSPECIFIED");
 
-    this.checkDiskErrorInterval =
-        ThreadLocalRandom.current().nextInt(5000, (int) (5000 * 1.25));
+    this.volumeChecker = new DatasetVolumeChecker(conf, new Timer());
 
     // Determine whether we should try to pass file descriptors to clients.
     if (conf.getBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY,
@@ -517,6 +524,7 @@ public class DataNode extends ReconfigurableBase
             });
 
     initOOBTimeout();
+    this.storageLocationChecker = storageLocationChecker;
   }
 
   @Override  // ReconfigurableBase
@@ -624,6 +632,10 @@ public class DataNode extends ReconfigurableBase
         .getSystemLoadAverage();
     return load > NUM_CORES * CONGESTION_RATIO ? PipelineAck.ECN.CONGESTED :
         PipelineAck.ECN.SUPPORTED;
+  }
+
+  public FileIoProvider getFileIoProvider() {
+    return fileIoProvider;
   }
 
   /**
@@ -790,7 +802,7 @@ public class DataNode extends ReconfigurableBase
 
   /**
    * Remove volumes from DataNode.
-   * See {@link #removeVolumes(Set, boolean)} for details.
+   * See {@link #removeVolumes(Collection, boolean)} for details.
    *
    * @param locations the StorageLocations of the volumes to be removed.
    * @throws IOException
@@ -813,7 +825,7 @@ public class DataNode extends ReconfigurableBase
    *   <ul>Reset configuration DATA_DIR and {@link #dataDirs} to represent
    *   active volumes.</ul>
    * </li>
-   * @param absoluteVolumePaths the absolute path of volumes.
+   * @param storageLocations the absolute path of volumes.
    * @param clearFailure if true, clears the failure information related to the
    *                     volumes.
    * @throws IOException
@@ -922,7 +934,15 @@ public class DataNode extends ReconfigurableBase
   }
 
   private void startPlugins(Configuration conf) {
-    plugins = conf.getInstances(DFS_DATANODE_PLUGINS_KEY, ServicePlugin.class);
+    try {
+      plugins = conf.getInstances(DFS_DATANODE_PLUGINS_KEY,
+          ServicePlugin.class);
+    } catch (RuntimeException e) {
+      String pluginsValue = conf.get(DFS_DATANODE_PLUGINS_KEY);
+      LOG.error("Unable to load DataNode plugins. Specified list of plugins: " +
+          pluginsValue, e);
+      throw e;
+    }
     for (ServicePlugin p: plugins) {
       try {
         p.start(this);
@@ -1368,6 +1388,8 @@ public class DataNode extends ReconfigurableBase
     initIpcServer();
 
     metrics = DataNodeMetrics.create(getConf(), getDisplayName());
+    peerMetrics = dnConf.peerStatsEnabled ?
+        DataNodePeerMetrics.create(getConf(), getDisplayName()) : null;
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
 
     ecWorker = new ErasureCodingWorker(getConf(), this);
@@ -1383,6 +1405,11 @@ public class DataNode extends ReconfigurableBase
         dnConf.saslPropsResolver, dnConf.trustedChannelResolver);
     saslServer = new SaslDataTransferServer(dnConf, blockPoolTokenSecretManager);
     startMetricsLogger();
+
+    if (dnConf.diskStatsEnabled) {
+      diskMetrics = new DataNodeDiskMetrics(this,
+          dnConf.outliersReportIntervalMs);
+    }
   }
 
   /**
@@ -1548,9 +1575,12 @@ public class DataNode extends ReconfigurableBase
           + blockKeyUpdateInterval / (60 * 1000)
           + " min(s), tokenLifetime=" + blockTokenLifetime / (60 * 1000)
           + " min(s)");
+      final boolean enableProtobuf = getConf().getBoolean(
+          DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_PROTOBUF_ENABLE,
+          DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_PROTOBUF_ENABLE_DEFAULT);
       final BlockTokenSecretManager secretMgr = 
           new BlockTokenSecretManager(0, blockTokenLifetime, blockPoolId,
-              dnConf.encryptionAlgorithm);
+              dnConf.encryptionAlgorithm, enableProtobuf);
       blockPoolTokenSecretManager.addBlockPool(blockPoolId, secretMgr);
     }
   }
@@ -1784,11 +1814,15 @@ public class DataNode extends ReconfigurableBase
       throw new IOException(ie.getMessage());
     }
   }
-    
+
   public DataNodeMetrics getMetrics() {
     return metrics;
   }
   
+  public DataNodePeerMetrics getPeerMetrics() {
+    return peerMetrics;
+  }
+
   /** Ensure the authentication method is kerberos */
   private void checkKerberosAuthMethod(String msg) throws IOException {
     // User invoking the call must be same as the datanode user
@@ -1920,7 +1954,7 @@ public class DataNode extends ReconfigurableBase
         }
       }
     }
-    
+
     List<BPOfferService> bposArray = (this.blockPoolManager == null)
         ? new ArrayList<BPOfferService>()
         : this.blockPoolManager.getAllNamenodeThreads();
@@ -1943,11 +1977,6 @@ public class DataNode extends ReconfigurableBase
       }
     }
 
-    // Interrupt the checkDiskErrorThread and terminate it.
-    if(this.checkDiskErrorThread != null) {
-      this.checkDiskErrorThread.interrupt();
-    }
-    
     // Record the time of initial notification
     long timeNotified = Time.monotonicNow();
 
@@ -1973,132 +2002,145 @@ public class DataNode extends ReconfigurableBase
       this.objectStoreHandler.close();
     }
 
-    if(this.ozoneEnabled) {
-      if(datanodeStateMachine != null) {
+    if (this.ozoneEnabled) {
+      if (datanodeStateMachine != null) {
         try {
           datanodeStateMachine.close();
         } catch (Exception e) {
           LOG.error("Error is ozone shutdown. ex {}", e.toString());
         }
       }
-    }
+      volumeChecker.shutdownAndWait(1, TimeUnit.SECONDS);
 
-    if (pauseMonitor != null) {
-      pauseMonitor.stop();
-    }
+      if (storageLocationChecker != null) {
+        storageLocationChecker.shutdownAndWait(1, TimeUnit.SECONDS);
+      }
 
-    // shouldRun is set to false here to prevent certain threads from exiting
-    // before the restart prep is done.
-    this.shouldRun = false;
-    
-    // wait reconfiguration thread, if any, to exit
-    shutdownReconfigurationTask();
+      if (pauseMonitor != null) {
+        pauseMonitor.stop();
+      }
 
-    // wait for all data receiver threads to exit
-    if (this.threadGroup != null) {
-      int sleepMs = 2;
-      while (true) {
-        // When shutting down for restart, wait 2.5 seconds before forcing
-        // termination of receiver threads.
-        if (!this.shutdownForUpgrade ||
-            (this.shutdownForUpgrade && (Time.monotonicNow() - timeNotified
-                > 1000))) {
-          this.threadGroup.interrupt();
-          break;
-        }
-        LOG.info("Waiting for threadgroup to exit, active threads is " +
-                 this.threadGroup.activeCount());
-        if (this.threadGroup.activeCount() == 0) {
-          break;
-        }
-        try {
-          Thread.sleep(sleepMs);
-        } catch (InterruptedException e) {}
-        sleepMs = sleepMs * 3 / 2; // exponential backoff
-        if (sleepMs > 200) {
-          sleepMs = 200;
-        }
-      }
-      this.threadGroup = null;
-    }
-    if (this.dataXceiverServer != null) {
-      // wait for dataXceiverServer to terminate
-      try {
-        this.dataXceiverServer.join();
-      } catch (InterruptedException ie) {
-      }
-    }
-    if (this.localDataXceiverServer != null) {
-      // wait for localDataXceiverServer to terminate
-      try {
-        this.localDataXceiverServer.join();
-      } catch (InterruptedException ie) {
-      }
-    }
-    if (metrics != null) {
-      metrics.setDataNodeActiveXceiversCount(0);
-    }
-
-   // IPC server needs to be shutdown late in the process, otherwise
-   // shutdown command response won't get sent.
-   if (ipcServer != null) {
-      ipcServer.stop();
-    }
-
-    if(blockPoolManager != null) {
-      try {
-        this.blockPoolManager.shutDownAll(bposArray);
-      } catch (InterruptedException ie) {
-        LOG.warn("Received exception in BlockPoolManager#shutDownAll: ", ie);
-      }
-    }
-    
-    if (storage != null) {
-      try {
-        this.storage.unlockAll();
-      } catch (IOException ie) {
-        LOG.warn("Exception when unlocking storage: " + ie, ie);
-      }
-    }
-    if (data != null) {
-      data.shutdown();
-    }
-    if (metrics != null) {
-      metrics.shutdown();
-    }
-    if (dataNodeInfoBeanName != null) {
-      MBeans.unregister(dataNodeInfoBeanName);
-      dataNodeInfoBeanName = null;
-    }
-    if (shortCircuitRegistry != null) shortCircuitRegistry.shutdown();
-    LOG.info("Shutdown complete.");
-    synchronized(this) {
-      // it is already false, but setting it again to avoid a findbug warning.
+      // shouldRun is set to false here to prevent certain threads from exiting
+      // before the restart prep is done.
       this.shouldRun = false;
-      // Notify the main thread.
-      notifyAll();
-    }
-    tracer.close();
-  }
-  
-  
-  /**
-   * Check if there is a disk failure asynchronously and if so, handle the error
-   */
-  public void checkDiskErrorAsync() {
-    synchronized(checkDiskErrorMutex) {
-      checkDiskErrorFlag = true;
-      if(checkDiskErrorThread == null) {
-        startCheckDiskErrorThread();
-        checkDiskErrorThread.start();
-        LOG.info("Starting CheckDiskError Thread");
+
+      // wait reconfiguration thread, if any, to exit
+      shutdownReconfigurationTask();
+
+      // wait for all data receiver threads to exit
+      if (this.threadGroup != null) {
+        int sleepMs = 2;
+        while (true) {
+          // When shutting down for restart, wait 2.5 seconds before forcing
+          // termination of receiver threads.
+          if (!this.shutdownForUpgrade ||
+              (this.shutdownForUpgrade && (Time.monotonicNow() - timeNotified
+                  > 1000))) {
+            this.threadGroup.interrupt();
+            break;
+          }
+          LOG.info("Waiting for threadgroup to exit, active threads is " +
+              this.threadGroup.activeCount());
+          if (this.threadGroup.activeCount() == 0) {
+            break;
+          }
+          try {
+            Thread.sleep(sleepMs);
+          } catch (InterruptedException e) {
+          }
+          sleepMs = sleepMs * 3 / 2; // exponential backoff
+          if (sleepMs > 200) {
+            sleepMs = 200;
+          }
+        }
+        this.threadGroup = null;
       }
+      if (this.dataXceiverServer != null) {
+        // wait for dataXceiverServer to terminate
+        try {
+          this.dataXceiverServer.join();
+        } catch (InterruptedException ie) {
+        }
+      }
+      if (this.localDataXceiverServer != null) {
+        // wait for localDataXceiverServer to terminate
+        try {
+          this.localDataXceiverServer.join();
+        } catch (InterruptedException ie) {
+        }
+      }
+      if (metrics != null) {
+        metrics.setDataNodeActiveXceiversCount(0);
+      }
+
+      // IPC server needs to be shutdown late in the process, otherwise
+      // shutdown command response won't get sent.
+      if (ipcServer != null) {
+        ipcServer.stop();
+      }
+
+      if (blockPoolManager != null) {
+        try {
+          this.blockPoolManager.shutDownAll(bposArray);
+        } catch (InterruptedException ie) {
+          LOG.warn("Received exception in BlockPoolManager#shutDownAll: ", ie);
+        }
+      }
+
+      if (storage != null) {
+        try {
+          this.storage.unlockAll();
+        } catch (IOException ie) {
+          LOG.warn("Exception when unlocking storage: " + ie, ie);
+        }
+      }
+      if (data != null) {
+        data.shutdown();
+      }
+      if (metrics != null) {
+        metrics.shutdown();
+      }
+      if (diskMetrics != null) {
+        diskMetrics.shutdownAndWait();
+      }
+      if (dataNodeInfoBeanName != null) {
+        MBeans.unregister(dataNodeInfoBeanName);
+        dataNodeInfoBeanName = null;
+      }
+      if (shortCircuitRegistry != null) shortCircuitRegistry.shutdown();
+      LOG.info("Shutdown complete.");
+      synchronized (this) {
+        // it is already false, but setting it again to avoid a findbug warning.
+        this.shouldRun = false;
+        // Notify the main thread.
+        notifyAll();
+      }
+      tracer.close();
     }
   }
-  
-  private void handleDiskError(String errMsgr) {
+
+  /**
+   * Check if there is a disk failure asynchronously
+   * and if so, handle the error.
+   */
+  public void checkDiskErrorAsync(FsVolumeSpi volume) {
+    volumeChecker.checkVolume(
+        volume, (healthyVolumes, failedVolumes) -> {
+          if (failedVolumes.size() > 0) {
+            LOG.warn("checkDiskErrorAsync callback got {} failed volumes: {}",
+                failedVolumes.size(), failedVolumes);
+          } else {
+            LOG.debug("checkDiskErrorAsync: no volume failures detected");
+          }
+          lastDiskErrorCheck = Time.monotonicNow();
+          handleVolumeFailures(failedVolumes);
+        });
+  }
+
+  private void handleDiskError(String failedVolumes) {
     final boolean hasEnoughResources = data.hasEnoughResource();
-    LOG.warn("DataNode.handleDiskError: Keep Running: " + hasEnoughResources);
+    LOG.warn("DataNode.handleDiskError on : [" + failedVolumes +
+        "] Keep Running: " + hasEnoughResources);
     
     // If we have enough active valid volumes then we do not want to 
     // shutdown the DN completely.
@@ -2108,7 +2150,7 @@ public class DataNode extends ReconfigurableBase
 
     //inform NameNodes
     for(BPOfferService bpos: blockPoolManager.getAllNamenodeThreads()) {
-      bpos.trySendErrorReport(dpError, errMsgr);
+      bpos.trySendErrorReport(dpError, failedVolumes);
     }
     
     if(hasEnoughResources) {
@@ -2116,7 +2158,8 @@ public class DataNode extends ReconfigurableBase
       return; // do not shutdown
     }
     
-    LOG.warn("DataNode is shutting down: " + errMsgr);
+    LOG.warn("DataNode is shutting down due to failed volumes: ["
+        + failedVolumes + "]");
     shouldRun = false;
   }
     
@@ -2479,8 +2522,11 @@ public class DataNode extends ReconfigurableBase
         }
         LOG.warn(bpReg + ":Failed to transfer " + b + " to " +
             targets[0] + " got ", ie);
-        // check if there are any disk problem
-        checkDiskErrorAsync();
+        // disk check moved to FileIoProvider
+        IOException cause = DatanodeUtil.getCauseIfDiskError(ie);
+        if (cause != null) { // possible disk error
+          LOG.warn("IOException in DataTransfer#run(). Cause is ", cause);
+        }
       } finally {
         decrementXmitsInProgress();
         IOUtils.closeStream(blockSender);
@@ -2669,21 +2715,6 @@ public class DataNode extends ReconfigurableBase
     }
   }
 
-  // Small wrapper around the DiskChecker class that provides means to mock
-  // DiskChecker static methods and unittest DataNode#getDataDirsFromURIs.
-  static class DataNodeDiskChecker {
-    private final FsPermission expectedPermission;
-
-    public DataNodeDiskChecker(FsPermission expectedPermission) {
-      this.expectedPermission = expectedPermission;
-    }
-
-    public void checkDir(LocalFileSystem localFS, Path path)
-        throws DiskErrorException, IOException {
-      DiskChecker.checkDir(localFS, path, expectedPermission);
-    }
-  }
-
   /**
    * Make an instance of DataNode after ensuring that at least one of the
    * given data directories (and their parent directories, if necessary)
@@ -2698,44 +2729,18 @@ public class DataNode extends ReconfigurableBase
    */
   static DataNode makeInstance(Collection<StorageLocation> dataDirs,
       Configuration conf, SecureResources resources) throws IOException {
-    LocalFileSystem localFS = FileSystem.getLocal(conf);
-    FsPermission permission = new FsPermission(
-        conf.get(DFS_DATANODE_DATA_DIR_PERMISSION_KEY,
-                 DFS_DATANODE_DATA_DIR_PERMISSION_DEFAULT));
-    DataNodeDiskChecker dataNodeDiskChecker =
-        new DataNodeDiskChecker(permission);
-    List<StorageLocation> locations =
-        checkStorageLocations(dataDirs, localFS, dataNodeDiskChecker);
+    List<StorageLocation> locations;
+    StorageLocationChecker storageLocationChecker =
+        new StorageLocationChecker(conf, new Timer());
+    try {
+      locations = storageLocationChecker.check(conf, dataDirs);
+    } catch (InterruptedException ie) {
+      throw new IOException("Failed to instantiate DataNode", ie);
+    }
     DefaultMetricsSystem.initialize("DataNode");
 
     assert locations.size() > 0 : "number of data directories should be > 0";
-    return new DataNode(conf, locations, resources);
-  }
-
-  // DataNode ctor expects AbstractList instead of List or Collection...
-  static List<StorageLocation> checkStorageLocations(
-      Collection<StorageLocation> dataDirs,
-      LocalFileSystem localFS, DataNodeDiskChecker dataNodeDiskChecker)
-          throws IOException {
-    ArrayList<StorageLocation> locations = new ArrayList<StorageLocation>();
-    StringBuilder invalidDirs = new StringBuilder();
-    for (StorageLocation location : dataDirs) {
-      final URI uri = location.getUri();
-      try {
-        dataNodeDiskChecker.checkDir(localFS, new Path(uri));
-        locations.add(location);
-      } catch (IOException ioe) {
-        LOG.warn("Invalid " + DFS_DATANODE_DATA_DIR_KEY + " "
-            + location + " : ", ioe);
-        invalidDirs.append("\"").append(uri.getPath()).append("\" ");
-      }
-    }
-    if (locations.size() == 0) {
-      throw new IOException("All directories in "
-          + DFS_DATANODE_DATA_DIR_KEY + " are invalid: "
-          + invalidDirs);
-    }
-    return locations;
+    return new DataNode(conf, locations, storageLocationChecker, resources);
   }
 
   @Override
@@ -3091,7 +3096,7 @@ public class DataNode extends ReconfigurableBase
       return "";
     }
   }
-  
+
   public void refreshNamenodes(Configuration conf) throws IOException {
     blockPoolManager.refreshNamenodes(conf);
   }
@@ -3280,68 +3285,62 @@ public class DataNode extends ReconfigurableBase
   }
 
   /**
-   * Check the disk error
+   * Check the disk error synchronously.
    */
-  private void checkDiskError() {
-    Set<StorageLocation> unhealthyLocations = data.checkDataDir();
-    if (unhealthyLocations != null && !unhealthyLocations.isEmpty()) {
-      try {
-        // Remove all unhealthy volumes from DataNode.
-        removeVolumes(unhealthyLocations, false);
-      } catch (IOException e) {
-        LOG.warn("Error occurred when removing unhealthy storage dirs: "
-            + e.getMessage(), e);
-      }
-      StringBuilder sb = new StringBuilder("DataNode failed volumes:");
-      for (StorageLocation location : unhealthyLocations) {
-        sb.append(location + ";");
-      }
-      handleDiskError(sb.toString());
+  @VisibleForTesting
+  public void checkDiskError() throws IOException {
+    Set<FsVolumeSpi> unhealthyVolumes;
+    try {
+      unhealthyVolumes = volumeChecker.checkAllVolumes(data);
+      lastDiskErrorCheck = Time.monotonicNow();
+    } catch (InterruptedException e) {
+      LOG.error("Interruped while running disk check", e);
+      throw new IOException("Interrupted while running disk check", e);
+    }
+
+    if (unhealthyVolumes.size() > 0) {
+      LOG.warn("checkDiskError got {} failed volumes - {}",
+          unhealthyVolumes.size(), unhealthyVolumes);
+      handleVolumeFailures(unhealthyVolumes);
+    } else {
+      LOG.debug("checkDiskError encountered no failures");
     }
   }
 
-  /**
-   * Starts a new thread which will check for disk error check request 
-   * every 5 sec
-   */
-  private void startCheckDiskErrorThread() {
-    checkDiskErrorThread = new Thread(new Runnable() {
-          @Override
-          public void run() {
-            while(shouldRun) {
-              boolean tempFlag ;
-              synchronized(checkDiskErrorMutex) {
-                tempFlag = checkDiskErrorFlag;
-                checkDiskErrorFlag = false;
-              }
-              if(tempFlag) {
-                try {
-                  checkDiskError();
-                } catch (Exception e) {
-                  LOG.warn("Unexpected exception occurred while checking disk error  " + e);
-                  checkDiskErrorThread = null;
-                  return;
-                }
-                synchronized(checkDiskErrorMutex) {
-                  lastDiskErrorCheck = Time.monotonicNow();
-                }
-              }
-              try {
-                Thread.sleep(checkDiskErrorInterval);
-              } catch (InterruptedException e) {
-                LOG.debug("InterruptedException in check disk error thread", e);
-                checkDiskErrorThread = null;
-                return;
-              }
-            }
-          }
-    });
-  }
-  
-  public long getLastDiskErrorCheck() {
-    synchronized(checkDiskErrorMutex) {
-      return lastDiskErrorCheck;
+  private void handleVolumeFailures(Set<FsVolumeSpi> unhealthyVolumes) {
+    if (unhealthyVolumes.isEmpty()) {
+      LOG.debug("handleVolumeFailures done with empty " +
+          "unhealthyVolumes");
+      return;
     }
+
+    data.handleVolumeFailures(unhealthyVolumes);
+    Set<StorageLocation> unhealthyLocations = new HashSet<>(
+        unhealthyVolumes.size());
+
+    StringBuilder sb = new StringBuilder("DataNode failed volumes:");
+    for (FsVolumeSpi vol : unhealthyVolumes) {
+      unhealthyLocations.add(vol.getStorageLocation());
+      sb.append(vol.getStorageLocation()).append(";");
+    }
+
+    try {
+      // Remove all unhealthy volumes from DataNode.
+      removeVolumes(unhealthyLocations, false);
+    } catch (IOException e) {
+      LOG.warn("Error occurred when removing unhealthy storage dirs: "
+          + e.getMessage(), e);
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(sb.toString());
+    }
+      // send blockreport regarding volume failure
+    handleDiskError(sb.toString());
+  }
+
+  @VisibleForTesting
+  public long getLastDiskErrorCheck() {
+    return lastDiskErrorCheck;
   }
 
   @Override
@@ -3529,5 +3528,11 @@ public class DataNode extends ReconfigurableBase
   @VisibleForTesting
   void setBlockScanner(BlockScanner blockScanner) {
     this.blockScanner = blockScanner;
+  }
+
+  @Override // DataNodeMXBean
+  public String getSendPacketDownstreamAvgInfo() {
+    return peerMetrics != null ?
+        peerMetrics.dumpSendPacketDownstreamAvgInfoAsJson() : null;
   }
 }

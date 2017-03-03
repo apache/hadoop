@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.util;
 
-import org.codehaus.jackson.map.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;

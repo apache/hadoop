@@ -64,7 +64,7 @@ public class ClusterInfo {
     this.hadoopBuildVersion = VersionInfo.getBuildVersion();
     this.hadoopVersionBuiltOn = VersionInfo.getDate();
     this.haZooKeeperConnectionState =
-        rm.getRMContext().getRMAdminService().getHAZookeeperConnectionState();
+        rm.getRMContext().getHAZookeeperConnectionState();
   }
 
   public String getState() {

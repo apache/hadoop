@@ -15,19 +15,7 @@
 Hadoop: Writing YARN Applications
 =================================
 
-* [Purpose](#Purpose)
-* [Concepts and Flow](#Concepts_and_Flow)
-* [Interfaces](#Interfaces)
-* [Writing a Simple Yarn Application](#Writing_a_Simple_Yarn_Application)
-    * [Writing a simple Client](#Writing_a_simple_Client)
-    * [Writing an ApplicationMaster (AM)](#Writing_an_ApplicationMaster_AM)
-* [FAQ](#FAQ)
-    * [How can I distribute my application's jars to all of the nodes in the YARN cluster that need it?](#How_can_I_distribute_my_applications_jars_to_all_of_the_nodes_in_the_YARN_cluster_that_need_it)
-    * [How do I get the ApplicationMaster's ApplicationAttemptId?](#How_do_I_get_the_ApplicationMasters_ApplicationAttemptId)
-    * [Why my container is killed by the NodeManager?](#Why_my_container_is_killed_by_the_NodeManager)
-    * [How do I include native libraries?](#How_do_I_include_native_libraries)
-* [Useful Links](#Useful_Links)
-* [Sample Code](#Sample_Code)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Purpose
 -------

@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
@@ -33,9 +34,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
- * NamespaceInfo is returned by the name-node in reply 
+ * NamespaceInfo is returned by the name-node in reply
  * to a data-node handshake.
- * 
+ *
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -44,6 +45,7 @@ public class NamespaceInfo extends StorageInfo {
   String blockPoolID = "";    // id of the block pool
   String softwareVersion;
   long capabilities;
+  HAServiceState state;
 
   // only authoritative on the server-side to determine advertisement to
   // clients.  enum will update the supported values
@@ -76,12 +78,7 @@ public class NamespaceInfo extends StorageInfo {
 
   // defaults to enabled capabilites since this ctor is for server
   public NamespaceInfo() {
-    this(NodeType.NAME_NODE);
-  }
-
-  // defaults to enabled capabilites since this ctor is for server
-  public NamespaceInfo(NodeType nodeType) {
-    super(nodeType);
+    super(NodeType.NAME_NODE);
     buildVersion = null;
     capabilities = CAPABILITIES_SUPPORTED;
   }
@@ -89,35 +86,43 @@ public class NamespaceInfo extends StorageInfo {
   // defaults to enabled capabilites since this ctor is for server
   public NamespaceInfo(int nsID, String clusterID, String bpID,
       long cT, String buildVersion, String softwareVersion) {
-    this(nsID, clusterID, bpID, cT, buildVersion,
-         softwareVersion, NodeType.NAME_NODE,
-         CAPABILITIES_SUPPORTED);
+    this(nsID, clusterID, bpID, cT, buildVersion, softwareVersion,
+        CAPABILITIES_SUPPORTED);
+  }
+
+  public NamespaceInfo(int nsID, String clusterID, String bpID,
+      long cT, String buildVersion, String softwareVersion,
+      long capabilities, HAServiceState st) {
+    this(nsID, clusterID, bpID, cT, buildVersion, softwareVersion,
+        capabilities);
+    this.state = st;
   }
 
   // for use by server and/or client
   public NamespaceInfo(int nsID, String clusterID, String bpID,
       long cT, String buildVersion, String softwareVersion,
-      NodeType nodeType, long capabilities) {
+      long capabilities) {
     super(HdfsServerConstants.NAMENODE_LAYOUT_VERSION, nsID, clusterID, cT,
-        nodeType);
+        NodeType.NAME_NODE);
     blockPoolID = bpID;
     this.buildVersion = buildVersion;
     this.softwareVersion = softwareVersion;
     this.capabilities = capabilities;
   }
 
-  public NamespaceInfo(int nsID, String clusterID, String bpID, 
+  public NamespaceInfo(int nsID, String clusterID, String bpID,
       long cT) {
     this(nsID, clusterID, bpID, cT, Storage.getBuildVersion(),
         VersionInfo.getVersion());
   }
 
   public NamespaceInfo(int nsID, String clusterID, String bpID,
-                       long cT, NodeType nodeType) {
+      long cT, HAServiceState st) {
     this(nsID, clusterID, bpID, cT, Storage.getBuildVersion(),
-         VersionInfo.getVersion(), nodeType, CAPABILITIES_SUPPORTED);
+        VersionInfo.getVersion());
+    this.state = st;
   }
-  
+
   public long getCapabilities() {
     return capabilities;
   }
@@ -125,6 +130,11 @@ public class NamespaceInfo extends StorageInfo {
   @VisibleForTesting
   public void setCapabilities(long capabilities) {
     this.capabilities = capabilities;
+  }
+
+  @VisibleForTesting
+  public void setState(HAServiceState state) {
+    this.state = state;
   }
 
   public boolean isCapabilitySupported(Capability capability) {
@@ -141,9 +151,13 @@ public class NamespaceInfo extends StorageInfo {
   public String getBlockPoolID() {
     return blockPoolID;
   }
-  
+
   public String getSoftwareVersion() {
     return softwareVersion;
+  }
+
+  public HAServiceState getState() {
+    return state;
   }
 
   @Override

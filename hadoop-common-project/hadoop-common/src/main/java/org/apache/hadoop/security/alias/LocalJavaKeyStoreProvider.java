@@ -151,7 +151,7 @@ public final class LocalJavaKeyStoreProvider extends
   public void flush() throws IOException {
     super.flush();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Reseting permissions to '" + permissions + "'");
+      LOG.debug("Resetting permissions to '" + permissions + "'");
     }
     if (!Shell.WINDOWS) {
       Files.setPosixFilePermissions(Paths.get(file.getCanonicalPath()),

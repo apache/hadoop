@@ -15,19 +15,7 @@
 MapReduce Commands Guide
 ========================
 
-* [Overview](#Overview)
-* [User Commands](#User_Commands)
-    * [archive](#archive)
-    * [archive-logs](#archive-logs)
-    * [classpath](#classpath)
-    * [distcp](#distcp)
-    * [job](#job)
-    * [pipes](#pipes)
-    * [queue](#queue)
-    * [version](#version)
-* [Administration Commands](#Administration_Commands)
-    * [historyserver](#historyserver)
-    * [hsadmin](#hsadmin)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------
@@ -139,6 +127,12 @@ Usage: `mapred queue [-list] | [-info <job-queue-name> [-showJobs]] | [-showacls
 Prints the version.
 
 Usage: `mapred version`
+
+### `envvars`
+
+Usage: `mapred envvars`
+
+Display computed Hadoop environment variables.
 
 Administration Commands
 -----------------------

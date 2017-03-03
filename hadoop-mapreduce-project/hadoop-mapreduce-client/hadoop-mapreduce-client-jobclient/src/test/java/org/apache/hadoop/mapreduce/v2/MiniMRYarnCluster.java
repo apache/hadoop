@@ -45,6 +45,7 @@ import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -255,11 +256,8 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
           };
         }.start();
 
-        while (!jhsStarted) {
-          LOG.info("Waiting for HistoryServer to start...");
-          Thread.sleep(1500);
-        }
-        //TODO Add a timeout. State.STOPPED check ?
+        GenericTestUtils.waitFor(() -> jhsStarted, 1500, 60_000);
+
         if (historyServer.getServiceState() != STATE.STARTED) {
           throw new IOException("HistoryServer failed to start");
         }

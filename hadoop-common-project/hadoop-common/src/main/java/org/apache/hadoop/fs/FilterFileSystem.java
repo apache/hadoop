@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
+import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Progressable;
 
@@ -232,6 +233,12 @@ public class FilterFileSystem extends FileSystem {
   @Override
   public boolean rename(Path src, Path dst) throws IOException {
     return fs.rename(src, dst);
+  }
+
+  @Override
+  protected void rename(Path src, Path dst, Rename... options)
+      throws IOException {
+    fs.rename(src, dst, options);
   }
 
   @Override

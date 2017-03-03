@@ -62,7 +62,8 @@ public final class DiskValidatorFactory {
 
   /**
    * Returns {@link DiskValidator} instance corresponding to its name.
-   * The diskValidator parameter can be "basic" for {@link BasicDiskValidator}.
+   * The diskValidator parameter can be "basic" for {@link BasicDiskValidator}
+   * or "read-write" for {@link ReadWriteDiskValidator}.
    * @param diskValidator canonical class name, for example, "basic"
    * @throws DiskErrorException if the class cannot be located
    */
@@ -74,6 +75,8 @@ public final class DiskValidatorFactory {
 
     if (diskValidator.equalsIgnoreCase(BasicDiskValidator.NAME)) {
       clazz = BasicDiskValidator.class;
+    } else if (diskValidator.equalsIgnoreCase(ReadWriteDiskValidator.NAME)) {
+      clazz = ReadWriteDiskValidator.class;
     } else {
       try {
         clazz = Class.forName(diskValidator);

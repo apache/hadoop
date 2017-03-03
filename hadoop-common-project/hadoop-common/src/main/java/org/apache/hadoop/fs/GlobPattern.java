@@ -153,7 +153,7 @@ public class GlobPattern {
     if (curlyOpen > 0) {
       error("Unclosed group", glob, len);
     }
-    compiled = Pattern.compile(regex.toString());
+    compiled = Pattern.compile(regex.toString(), Pattern.DOTALL);
   }
 
   /**

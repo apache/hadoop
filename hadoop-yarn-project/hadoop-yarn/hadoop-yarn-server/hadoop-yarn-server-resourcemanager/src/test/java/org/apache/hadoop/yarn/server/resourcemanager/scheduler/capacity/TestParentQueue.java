@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.SchedulerC
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSet;
+import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -96,11 +97,9 @@ public class TestParentQueue {
         Resources.createResource(16*GB, 32));
     when(csContext.getClusterResource()).
         thenReturn(Resources.createResource(100 * 16 * GB, 100 * 32));
-    when(csContext.getNonPartitionedQueueComparator()).
-    thenReturn(CapacityScheduler.nonPartitionedQueueComparator);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
     when(csContext.getResourceCalculator()).
-    thenReturn(resourceComparator);
+        thenReturn(resourceComparator);
     when(csContext.getRMContext()).thenReturn(rmContext);
   }
   
@@ -172,11 +171,11 @@ public class TestParentQueue {
         final Resource allocatedResource = Resources.createResource(allocation);
         if (queue instanceof ParentQueue) {
           ((ParentQueue)queue).allocateResource(clusterResource, 
-              allocatedResource, RMNodeLabelsManager.NO_LABEL, false);
+              allocatedResource, RMNodeLabelsManager.NO_LABEL);
         } else {
           FiCaSchedulerApp app1 = getMockApplication(0, "");
           ((LeafQueue)queue).allocateResource(clusterResource, app1, 
-              allocatedResource, null, null, false);
+              allocatedResource, null, null);
         }
         
         // Next call - nothing
@@ -231,7 +230,7 @@ public class TestParentQueue {
     
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CSQueue root =
-        CapacityScheduler.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues, 
             TestUtils.spyHook);
 
@@ -346,7 +345,7 @@ public class TestParentQueue {
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     boolean exceptionOccured = false;
     try {
-      CapacityScheduler.parseQueue(csContext, csConf, null,
+      CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
     } catch (IllegalArgumentException ie) {
@@ -360,7 +359,7 @@ public class TestParentQueue {
     exceptionOccured = false;
     queues.clear();
     try {
-      CapacityScheduler.parseQueue(csContext, csConf, null,
+      CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
     } catch (IllegalArgumentException ie) {
@@ -374,7 +373,7 @@ public class TestParentQueue {
     exceptionOccured = false;
     queues.clear();
     try {
-      CapacityScheduler.parseQueue(csContext, csConf, null,
+      CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
     } catch (IllegalArgumentException ie) {
@@ -467,7 +466,7 @@ public class TestParentQueue {
     
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CSQueue root =
-        CapacityScheduler.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues,
             TestUtils.spyHook);
     
@@ -623,8 +622,8 @@ public class TestParentQueue {
     csConf.setCapacity(Q_B + "." + B3, 0);
     
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>(); 
-    CapacityScheduler.parseQueue(csContext, csConf, null, 
-        CapacitySchedulerConfiguration.ROOT, queues, queues, 
+    CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerConfiguration.ROOT, queues, queues,
         TestUtils.spyHook);
   }
   
@@ -640,8 +639,8 @@ public class TestParentQueue {
     csConf.setCapacity(Q_A, 60);
 
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>(); 
-    CapacityScheduler.parseQueue(csContext, csConf, null, 
-        CapacitySchedulerConfiguration.ROOT, queues, queues, 
+    CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerConfiguration.ROOT, queues, queues,
         TestUtils.spyHook);
   }
   
@@ -662,8 +661,8 @@ public class TestParentQueue {
 
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>(); 
     try {
-      CapacityScheduler.parseQueue(csContext, csConf, null, 
-          CapacitySchedulerConfiguration.ROOT, queues, queues, 
+      CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+          CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
     } catch (IllegalArgumentException e) {
       fail("Failed to create queues with 0 capacity: " + e);
@@ -678,7 +677,7 @@ public class TestParentQueue {
 
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CSQueue root =
-        CapacityScheduler.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues,
             TestUtils.spyHook);
 
@@ -754,8 +753,8 @@ public class TestParentQueue {
     //B3
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CSQueue root = 
-        CapacityScheduler.parseQueue(csContext, csConf, null, 
-            CapacitySchedulerConfiguration.ROOT, queues, queues, 
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+            CapacitySchedulerConfiguration.ROOT, queues, queues,
             TestUtils.spyHook);
 
     // Setup some nodes
@@ -850,12 +849,15 @@ public class TestParentQueue {
 
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CSQueue root = 
-        CapacityScheduler.parseQueue(csContext, csConf, null, 
-            CapacitySchedulerConfiguration.ROOT, queues, queues, 
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+            CapacitySchedulerConfiguration.ROOT, queues, queues,
             TestUtils.spyHook);
     YarnAuthorizationProvider authorizer =
         YarnAuthorizationProvider.getInstance(conf);
-    CapacityScheduler.setQueueAcls(authorizer, queues);
+    AppPriorityACLsManager appPriorityACLManager = new AppPriorityACLsManager(
+        conf);
+    CapacitySchedulerQueueManager.setQueueAcls(authorizer,
+        appPriorityACLManager, queues);
 
     UserGroupInformation user = UserGroupInformation.getCurrentUser();
     // Setup queue configs

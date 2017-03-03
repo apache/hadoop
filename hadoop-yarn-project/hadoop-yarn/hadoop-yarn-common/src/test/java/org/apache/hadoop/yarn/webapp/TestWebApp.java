@@ -27,14 +27,16 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.webapp.view.HtmlPage;
 import org.apache.hadoop.yarn.webapp.view.JQueryUI;
@@ -261,6 +263,35 @@ public class TestWebApp {
     }
   }
 
+  @Test public void testEncodedUrl() throws Exception {
+    WebApp app =
+        WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
+          @Override
+          public void setup() {
+            bind(MyTestJAXBContextResolver.class);
+            bind(MyTestWebService.class);
+
+            route("/:foo", FooController.class);
+          }
+        });
+    String baseUrl = baseUrl(app);
+
+    try {
+      // Test encoded url
+      String rawPath = "localhost:8080";
+      String encodedUrl = baseUrl + "test/" +
+          URLEncoder.encode(rawPath, "UTF-8");
+      assertEquals("foo" + rawPath, getContent(encodedUrl).trim());
+
+      rawPath = "@;%$";
+      encodedUrl = baseUrl + "test/" +
+          URLEncoder.encode(rawPath, "UTF-8");
+      assertEquals("foo" + rawPath, getContent(encodedUrl).trim());
+    } finally {
+      app.stop();
+    }
+  }
+
   @Test public void testRobotsText() throws Exception {
     WebApp app =
         WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
@@ -304,6 +335,50 @@ public class TestWebApp {
       assertEquals("foo", getContent(baseUrl).trim());
     } finally {
       app.stop();
+    }
+  }
+
+  private static void stopWebApp(WebApp app) {
+    if (app != null) {
+      app.stop();
+    }
+  }
+
+  @Test
+  public void testPortRanges() throws Exception {
+    WebApp app = WebApps.$for("test", this).start();
+    String baseUrl = baseUrl(app);
+    WebApp app1 = null;
+    WebApp app2 = null;
+    WebApp app3 = null;
+    WebApp app4 = null;
+    WebApp app5 = null;
+    try {
+      int port =  ServerSocketUtil.waitForPort(48000, 60);
+      assertEquals("foo", getContent(baseUrl +"test/foo").trim());
+      app1 = WebApps.$for("test", this).at(port).start();
+      assertEquals(port, app1.getListenerAddress().getPort());
+      app2 = WebApps.$for("test", this).at("0.0.0.0",port, true).start();
+      assertTrue(app2.getListenerAddress().getPort() > port);
+      Configuration conf = new Configuration();
+      port =  ServerSocketUtil.waitForPort(47000, 60);
+      app3 = WebApps.$for("test", this).at(port).withPortRange(conf, "abc").
+          start();
+      assertEquals(port, app3.getListenerAddress().getPort());
+      ServerSocketUtil.waitForPort(46000, 60);
+      conf.set("abc", "46000-46500");
+      app4 = WebApps.$for("test", this).at(port).withPortRange(conf, "abc").
+          start();
+      assertEquals(46000, app4.getListenerAddress().getPort());
+      app5 = WebApps.$for("test", this).withPortRange(conf, "abc").start();
+      assertTrue(app5.getListenerAddress().getPort() > 46000);
+    } finally {
+      stopWebApp(app);
+      stopWebApp(app1);
+      stopWebApp(app2);
+      stopWebApp(app3);
+      stopWebApp(app4);
+      stopWebApp(app5);
     }
   }
 

@@ -94,10 +94,12 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestAuxServices.ServiceA;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -143,17 +145,9 @@ public class TestContainerManager extends BaseContainerManagerTest {
           .getKeyId()));
         return ugi;
       }
-
-      @Override
-      protected void authorizeGetAndStopContainerRequest(ContainerId containerId,
-          Container container, boolean stopRequest, NMTokenIdentifier identifier) throws YarnException {
-        if(container == null || container.getUser().equals("Fail")){
-          throw new YarnException("Reject this container");
-        }
-      }
     };
   }
-  
+
   @Test
   public void testContainerManagerInitialization() throws IOException {
 
@@ -1263,13 +1257,12 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
     List<ContainerId> containerIds = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
-      ContainerId cId = createContainerId(i);
-      String user = null;
+      ContainerId cId;
       if ((i & 1) == 0) {
-        // container with even id fail
-        user = "Fail";
+        // Containers with even id belong to an unauthorized app
+        cId = createContainerId(i, 1);
       } else {
-        user = "Pass";
+        cId = createContainerId(i, 0);
       }
       Token containerToken =
           createContainerToken(cId, DUMMY_RM_IDENTIFIER, context.getNodeId(),
@@ -1302,7 +1295,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
       // Containers with even id should fail.
       Assert.assertEquals(0, entry.getKey().getContainerId() & 1);
       Assert.assertTrue(entry.getValue().getMessage()
-        .contains("Reject this container"));
+          .contains("attempted to get status for non-application container"));
     }
 
     // stop containers
@@ -1322,8 +1315,68 @@ public class TestContainerManager extends BaseContainerManagerTest {
       // Containers with even id should fail.
       Assert.assertEquals(0, entry.getKey().getContainerId() & 1);
       Assert.assertTrue(entry.getValue().getMessage()
-        .contains("Reject this container"));
+          .contains("attempted to stop non-application container"));
     }
+  }
+
+  @Test
+  public void testUnauthorizedRequests() throws IOException, YarnException {
+    containerManager.start();
+
+    // Create a containerId that belongs to an unauthorized appId
+    ContainerId cId = createContainerId(0, 1);
+
+    // startContainers()
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    StartContainerRequest scRequest =
+        StartContainerRequest.newInstance(containerLaunchContext,
+            createContainerToken(cId, DUMMY_RM_IDENTIFIER, context.getNodeId(),
+                user, context.getContainerTokenSecretManager()));
+    List<StartContainerRequest> list = new ArrayList<>();
+    list.add(scRequest);
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+    StartContainersResponse startResponse =
+        containerManager.startContainers(allRequests);
+
+    Assert.assertFalse("Should not be authorized to start container",
+        startResponse.getSuccessfullyStartedContainers().contains(cId));
+    Assert.assertTrue("Start container request should fail",
+        startResponse.getFailedRequests().containsKey(cId));
+
+    // Insert the containerId into context, make it as if it is running
+    ContainerTokenIdentifier containerTokenIdentifier =
+        BuilderUtils.newContainerTokenIdentifier(scRequest.getContainerToken());
+    Container container = new ContainerImpl(conf, null, containerLaunchContext,
+        null, metrics, containerTokenIdentifier, context);
+    context.getContainers().put(cId, container);
+
+    // stopContainers()
+    List<ContainerId> containerIds = new ArrayList<>();
+    containerIds.add(cId);
+    StopContainersRequest stopRequest =
+        StopContainersRequest.newInstance(containerIds);
+    StopContainersResponse stopResponse =
+        containerManager.stopContainers(stopRequest);
+
+    Assert.assertFalse("Should not be authorized to stop container",
+        stopResponse.getSuccessfullyStoppedContainers().contains(cId));
+    Assert.assertTrue("Stop container request should fail",
+        stopResponse.getFailedRequests().containsKey(cId));
+
+    // getContainerStatuses()
+    containerIds = new ArrayList<>();
+    containerIds.add(cId);
+    GetContainerStatusesRequest request =
+        GetContainerStatusesRequest.newInstance(containerIds);
+    GetContainerStatusesResponse response =
+        containerManager.getContainerStatuses(request);
+
+    Assert.assertEquals("Should not be authorized to get container status",
+        response.getContainerStatuses().size(), 0);
+    Assert.assertTrue("Get status request should fail",
+        response.getFailedRequests().containsKey(cId));
   }
 
   @Test

@@ -261,10 +261,10 @@ public class TestReservationInputValidator {
     } catch (YarnException e) {
       Assert.assertNull(plan);
       String message = e.getMessage();
-      Assert
-          .assertTrue(message
-              .startsWith("The size of the largest gang in the reservation refinition"));
-      Assert.assertTrue(message.contains("exceed the capacity available "));
+      Assert.assertTrue(message.startsWith(
+          "The size of the largest gang in the reservation definition"));
+      Assert.assertTrue(message.contains(
+          "exceed the capacity available "));
       LOG.info(message);
     }
   }
@@ -493,10 +493,10 @@ public class TestReservationInputValidator {
     } catch (YarnException e) {
       Assert.assertNull(plan);
       String message = e.getMessage();
-      Assert
-          .assertTrue(message
-              .startsWith("The size of the largest gang in the reservation refinition"));
-      Assert.assertTrue(message.contains("exceed the capacity available "));
+      Assert.assertTrue(message.startsWith(
+          "The size of the largest gang in the reservation definition"));
+      Assert.assertTrue(message.contains(
+          "exceed the capacity available "));
       LOG.info(message);
     }
   }

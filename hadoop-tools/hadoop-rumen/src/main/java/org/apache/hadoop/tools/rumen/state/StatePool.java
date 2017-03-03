@@ -21,6 +21,7 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -184,27 +185,23 @@ public class StatePool {
     if (reload) {
       // Reload persisted entries
       Path stateFilename = new Path(persistDirPath, COMMIT_STATE_FILENAME);
-      FileSystem fs = stateFilename.getFileSystem(conf);
-      if (fs.exists(stateFilename)) {
-        reloadState(stateFilename, conf);
-      } else {
-        throw new RuntimeException("No latest state persist directory found!" 
+      if (!reloadState(stateFilename, conf)) {
+        throw new RuntimeException("No latest state persist directory found!"
                                    + " Disable persistence and run.");
       }
     }
   }
   
-  private void reloadState(Path stateFile, Configuration conf) 
-  throws Exception {
-    FileSystem fs = stateFile.getFileSystem(conf);
-    if (fs.exists(stateFile)) {
+  private boolean reloadState(Path stateFile, Configuration configuration)
+      throws Exception {
+    FileSystem fs = stateFile.getFileSystem(configuration);
+    try (FSDataInputStream in = fs.open(stateFile)) {
       System.out.println("Reading state from " + stateFile.toString());
-      FSDataInputStream in = fs.open(stateFile);
-      
       read(in);
-      in.close();
-    } else {
+      return true;
+    } catch (FileNotFoundException e) {
       System.out.println("No state information found for " + stateFile);
+      return false;
     }
   }
   

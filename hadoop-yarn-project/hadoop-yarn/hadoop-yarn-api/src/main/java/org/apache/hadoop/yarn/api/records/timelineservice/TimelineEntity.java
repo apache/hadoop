@@ -32,7 +32,8 @@ import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.util.TimelineServiceHelper;
-import org.codehaus.jackson.annotate.JsonSetter;
+
+import com.fasterxml.jackson.annotation.JsonSetter;
 
 /**
  * The basic timeline entity data structure for timeline service v2. Timeline

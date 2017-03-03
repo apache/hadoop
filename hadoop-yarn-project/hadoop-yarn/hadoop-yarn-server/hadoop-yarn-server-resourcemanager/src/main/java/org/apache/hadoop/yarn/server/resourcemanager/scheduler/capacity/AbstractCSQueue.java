@@ -32,8 +32,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -41,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueStatistics;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AccessRequest;
@@ -67,6 +70,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import com.google.common.collect.Sets;
 
 public abstract class AbstractCSQueue implements CSQueue {
+
   private static final Log LOG = LogFactory.getLog(AbstractCSQueue.class);  
   volatile CSQueue parent;
   final String queueName;
@@ -74,7 +78,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   
   final Resource minimumAllocation;
   volatile Resource maximumAllocation;
-  volatile QueueState state;
+  private volatile QueueState state = null;
   final CSQueueMetrics metrics;
   protected final PrivilegedEntity queueEntity;
 
@@ -104,6 +108,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   protected ReentrantReadWriteLock.ReadLock readLock;
   protected ReentrantReadWriteLock.WriteLock writeLock;
+
+  volatile Priority priority = Priority.newInstance(0);
 
   public AbstractCSQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
@@ -289,9 +295,16 @@ public abstract class AbstractCSQueue implements CSQueue {
           csContext.getConfiguration().getMaximumAllocationPerQueue(
               getQueuePath());
 
+      // initialized the queue state based on previous state, configured state
+      // and its parent state.
+      QueueState previous = getState();
+      QueueState configuredState = csContext.getConfiguration()
+          .getConfiguredState(getQueuePath());
+      QueueState parentState = (parent == null) ? null : parent.getState();
+      initializeQueueState(previous, configuredState, parentState);
+
       authorizer = YarnAuthorizationProvider.getInstance(csContext.getConf());
 
-      this.state = csContext.getConfiguration().getState(getQueuePath());
       this.acls = csContext.getConfiguration().getAcls(getQueuePath());
 
       // Update metrics
@@ -325,8 +338,61 @@ public abstract class AbstractCSQueue implements CSQueue {
           csContext.getConfiguration().getReservationContinueLook();
 
       this.preemptionDisabled = isQueueHierarchyPreemptionDisabled(this);
+
+      this.priority = csContext.getConfiguration().getQueuePriority(
+          getQueuePath());
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  private void initializeQueueState(QueueState previousState,
+      QueueState configuredState, QueueState parentState) {
+    // verify that we can not any value for State other than RUNNING/STOPPED
+    if (configuredState != null && configuredState != QueueState.RUNNING
+        && configuredState != QueueState.STOPPED) {
+      throw new IllegalArgumentException("Invalid queue state configuration."
+          + " We can only use RUNNING or STOPPED.");
+    }
+    // If we did not set state in configuration, use Running as default state
+    QueueState defaultState = QueueState.RUNNING;
+
+    if (previousState == null) {
+      // If current state of the queue is null, we would inherit the state
+      // from its parent. If this queue does not has parent, such as root queue,
+      // we would use the configured state.
+      if (parentState == null) {
+        updateQueueState((configuredState == null) ? defaultState
+            : configuredState);
+      } else {
+        if (configuredState == null) {
+          updateQueueState((parentState == QueueState.DRAINING) ?
+              QueueState.STOPPED : parentState);
+        } else if (configuredState == QueueState.RUNNING
+            && parentState != QueueState.RUNNING) {
+          throw new IllegalArgumentException(
+              "The parent queue:" + parent.getQueueName()
+              + " state is STOPPED, child queue:" + queueName
+              + " state cannot be RUNNING.");
+        } else {
+          updateQueueState(configuredState);
+        }
+      }
+    } else {
+      // when we get a refreshQueue request from AdminService,
+      if (previousState == QueueState.RUNNING) {
+        if (configuredState == QueueState.STOPPED) {
+          stopQueue();
+        }
+      } else {
+        if (configuredState == QueueState.RUNNING) {
+          try {
+            activeQueue();
+          } catch (YarnException ex) {
+            throw new IllegalArgumentException(ex.getMessage());
+          }
+        }
+      }
     }
   }
 
@@ -340,7 +406,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     queueInfo.setAccessibleNodeLabels(accessibleLabels);
     queueInfo.setCapacity(queueCapacities.getCapacity());
     queueInfo.setMaximumCapacity(queueCapacities.getMaximumCapacity());
-    queueInfo.setQueueState(state);
+    queueInfo.setQueueState(getState());
     queueInfo.setDefaultNodeLabelExpression(defaultLabelExpression);
     queueInfo.setCurrentCapacity(getUsedCapacity());
     queueInfo.setQueueStatistics(getQueueStatistics());
@@ -387,14 +453,13 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
   
   void allocateResource(Resource clusterResource,
-      Resource resource, String nodePartition, boolean changeContainerResource) {
+      Resource resource, String nodePartition) {
     try {
       writeLock.lock();
       queueUsage.incUsed(nodePartition, resource);
 
-      if (!changeContainerResource) {
-        ++numContainers;
-      }
+      ++numContainers;
+
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
           minimumAllocation, this, labelManager, nodePartition);
     } finally {
@@ -403,7 +468,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
   
   protected void releaseResource(Resource clusterResource,
-      Resource resource, String nodePartition, boolean changeContainerResource) {
+      Resource resource, String nodePartition) {
     try {
       writeLock.lock();
       queueUsage.decUsed(nodePartition, resource);
@@ -411,9 +476,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
           minimumAllocation, this, labelManager, nodePartition);
 
-      if (!changeContainerResource) {
-        --numContainers;
-      }
+      --numContainers;
     } finally {
       writeLock.unlock();
     }
@@ -432,7 +495,6 @@ public abstract class AbstractCSQueue implements CSQueue {
     } finally {
       readLock.unlock();
     }
-
   }
 
   @Private
@@ -448,6 +510,11 @@ public abstract class AbstractCSQueue implements CSQueue {
   @Private
   public ResourceUsage getQueueResourceUsage() {
     return queueUsage;
+  }
+
+  @Override
+  public ReentrantReadWriteLock.ReadLock getReadLock() {
+    return readLock;
   }
 
   /**
@@ -567,30 +634,41 @@ public abstract class AbstractCSQueue implements CSQueue {
           if (Resources.lessThan(resourceCalculator, clusterResource,
               newTotalWithoutReservedResource, currentLimitResource)) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug(
-                  "try to use reserved: " + getQueueName() + " usedResources: "
-                      + queueUsage.getUsed() + ", clusterResources: "
-                      + clusterResource + ", reservedResources: "
-                      + resourceCouldBeUnreserved
-                      + ", capacity-without-reserved: "
-                      + newTotalWithoutReservedResource + ", maxLimitCapacity: "
-                      + currentLimitResource);
+              LOG.debug("try to use reserved: " + getQueueName()
+                  + " usedResources: " + queueUsage.getUsed()
+                  + ", clusterResources: " + clusterResource
+                  + ", reservedResources: " + resourceCouldBeUnreserved
+                  + ", capacity-without-reserved: "
+                  + newTotalWithoutReservedResource
+                  + ", maxLimitCapacity: " + currentLimitResource);
             }
             return true;
           }
         }
+
+        // Can not assign to this queue
         if (LOG.isDebugEnabled()) {
-          LOG.debug(getQueueName() + "Check assign to queue, nodePartition="
-              + nodePartition + " usedResources: " + queueUsage
-              .getUsed(nodePartition) + " clusterResources: " + clusterResource
-              + " currentUsedCapacity " + Resources
-              .divide(resourceCalculator, clusterResource,
-                  queueUsage.getUsed(nodePartition), labelManager
-                      .getResourceByLabel(nodePartition, clusterResource))
-              + " max-capacity: " + queueCapacities
-              .getAbsoluteMaximumCapacity(nodePartition) + ")");
+          LOG.debug("Failed to assign to queue: " + getQueueName()
+              + " nodePatrition: " + nodePartition
+              + ", usedResources: " + queueUsage.getUsed(nodePartition)
+              + ", clusterResources: " + clusterResource
+              + ", reservedResources: " + resourceCouldBeUnreserved
+              + ", maxLimitCapacity: " + currentLimitResource
+              + ", currTotalUsed:" + usedExceptKillable);
         }
         return false;
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Check assign to queue: " + getQueueName()
+            + " nodePartition: " + nodePartition
+            + ", usedResources: " + queueUsage.getUsed(nodePartition)
+            + ", clusterResources: " + clusterResource
+            + ", currentUsedCapacity: " + Resources
+            .divide(resourceCalculator, clusterResource,
+                queueUsage.getUsed(nodePartition), labelManager
+                    .getResourceByLabel(nodePartition, clusterResource))
+            + ", max-capacity: " + queueCapacities
+            .getAbsoluteMaximumCapacity(nodePartition));
       }
       return true;
     } finally {
@@ -808,5 +886,59 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
 
     return true;
+  }
+
+  @Override
+  public void validateSubmitApplication(ApplicationId applicationId,
+      String userName, String queue) throws AccessControlException {
+    // Dummy implementation
+  }
+
+  @Override
+  public void updateQueueState(QueueState queueState) {
+    this.state = queueState;
+  }
+
+  @Override
+  public void activeQueue() throws YarnException {
+    try {
+      this.writeLock.lock();
+      if (getState() == QueueState.RUNNING) {
+        LOG.info("The specified queue:" + queueName
+            + " is already in the RUNNING state.");
+      } else if (getState() == QueueState.DRAINING) {
+        throw new YarnException(
+            "The queue:" + queueName + " is in the Stopping process. "
+            + "Please wait for the queue getting fully STOPPED.");
+      } else {
+        CSQueue parent = getParent();
+        if (parent == null || parent.getState() == QueueState.RUNNING) {
+          updateQueueState(QueueState.RUNNING);
+        } else {
+          throw new YarnException("The parent Queue:" + parent.getQueueName()
+              + " is not running. Please activate the parent queue first");
+        }
+      }
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+
+  protected void appFinished() {
+    try {
+      this.writeLock.lock();
+      if (getState() == QueueState.DRAINING) {
+        if (getNumApplications() == 0) {
+          updateQueueState(QueueState.STOPPED);
+        }
+      }
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+
+  @Override
+  public Priority getPriority() {
+    return this.priority;
   }
 }

@@ -203,12 +203,18 @@ public abstract class NodeReport {
    */
   @Public
   @Stable
-  public abstract ResourceUtilization getAggregatedContainersUtilization();
+  public ResourceUtilization getAggregatedContainersUtilization() {
+    throw new UnsupportedOperationException(
+        "subclass must implement this method");
+  }
 
   @Private
   @Unstable
-  public abstract void setAggregatedContainersUtilization(ResourceUtilization
-      containersUtilization);
+  public void setAggregatedContainersUtilization(ResourceUtilization
+      containersUtilization) {
+    throw new UnsupportedOperationException(
+        "subclass must implement this method");
+  }
 
   /**
    * Get node resource utilization

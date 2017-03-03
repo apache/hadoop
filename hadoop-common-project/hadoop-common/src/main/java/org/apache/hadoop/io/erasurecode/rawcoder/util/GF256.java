@@ -221,7 +221,7 @@ public final class GF256 {
         }
         if (j == n) {
           // Couldn't find means it's singular
-          throw new RuntimeException("Not invertble");
+          throw new RuntimeException("Not invertible");
         }
 
         for (int k = 0; k < n; k++) {

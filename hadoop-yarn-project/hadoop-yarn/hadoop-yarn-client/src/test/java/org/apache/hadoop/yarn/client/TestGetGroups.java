@@ -20,16 +20,21 @@ package org.apache.hadoop.yarn.client;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.service.ServiceStateChangeListener;
 import org.apache.hadoop.tools.GetGroupsTestBase;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
@@ -42,30 +47,37 @@ public class TestGetGroups extends GetGroupsTestBase {
   private static Configuration conf;
   
   @BeforeClass
-  public static void setUpResourceManager() throws IOException, InterruptedException {
+  public static void setUpResourceManager() throws InterruptedException {
     conf = new YarnConfiguration();
     resourceManager = new ResourceManager() {
       @Override
       protected void doSecureLogin() throws IOException {
       };
     };
+
+    // a reliable way to wait for resource manager to start
+    CountDownLatch rmStartedSignal = new CountDownLatch(1);
+    ServiceStateChangeListener rmStateChangeListener =
+        new ServiceStateChangeListener() {
+          @Override
+          public void stateChanged(Service service) {
+            if (service.getServiceState() == STATE.STARTED) {
+              rmStartedSignal.countDown();
+            }
+          }
+        };
+    resourceManager.registerServiceListener(rmStateChangeListener);
+
     resourceManager.init(conf);
     new Thread() {
       public void run() {
         resourceManager.start();
       };
     }.start();
-    int waitCount = 0;
-    while (resourceManager.getServiceState() == STATE.INITED
-        && waitCount++ < 10) {
-      LOG.info("Waiting for RM to start...");
-      Thread.sleep(1000);
-    }
-    if (resourceManager.getServiceState() != STATE.STARTED) {
-      throw new IOException(
-          "ResourceManager failed to start. Final state is "
-              + resourceManager.getServiceState());
-    }
+
+    boolean rmStarted = rmStartedSignal.await(60000L, TimeUnit.MILLISECONDS);
+    Assert.assertTrue("ResourceManager failed to start up.", rmStarted);
+
     LOG.info("ResourceManager RMAdmin address: " +
         conf.get(YarnConfiguration.RM_ADMIN_ADDRESS));
   }

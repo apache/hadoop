@@ -15,21 +15,7 @@
 MapReduce Application Master REST API's.
 ========================================
 
-* [MapReduce Application Master REST API's.](#MapReduce_Application_Master_REST_APIs.)
-    * [Overview](#Overview)
-    * [Mapreduce Application Master Info API](#Mapreduce_Application_Master_Info_API)
-    * [Jobs API](#Jobs_API)
-    * [Job API](#Job_API)
-    * [Job Attempts API](#Job_Attempts_API)
-    * [Job Counters API](#Job_Counters_API)
-    * [Job Conf API](#Job_Conf_API)
-    * [Tasks API](#Tasks_API)
-    * [Task API](#Task_API)
-    * [Task Counters API](#Task_Counters_API)
-    * [Task Attempts API](#Task_Attempts_API)
-    * [Task Attempt API](#Task_Attempt_API)
-    * [Task Attempt State API](#Task_Attempt_State_API)
-    * [Task Attempt Counters API](#Task_Attempt_Counters_API)
+<!-- MACRO{toc|fromDepth=0|toDepth=1} -->
 
 Overview
 --------

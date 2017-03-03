@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -184,7 +185,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private boolean forceRegistration = false;
 
   // A system administrator can tune the balancer bandwidth parameter
-  // (dfs.balance.bandwidthPerSec) dynamically by calling
+  // (dfs.datanode.balance.bandwidthPerSec) dynamically by calling
   // "dfsadmin -setBalanacerBandwidth <newbandwidth>", at which point the
   // following 'bandwidth' variable gets updated with the new value for each
   // node. Once the heartbeat command is issued to update the value on the
@@ -281,6 +282,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   @VisibleForTesting
+  public boolean isHeartbeatedSinceRegistration() {
+   return heartbeatedSinceRegistration;
+  }
+
+  @VisibleForTesting
   public DatanodeStorageInfo getStorageInfo(String storageID) {
     synchronized (storageMap) {
       return storageMap.get(storageID);
@@ -293,6 +299,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
       final Collection<DatanodeStorageInfo> storages = storageMap.values();
       return storages.toArray(new DatanodeStorageInfo[storages.size()]);
     }
+  }
+
+  public EnumSet<StorageType> getStorageTypes() {
+    EnumSet<StorageType> storageTypes = EnumSet.noneOf(StorageType.class);
+    for (DatanodeStorageInfo dsi : getStorageInfos()) {
+      storageTypes.add(dsi.getStorageType());
+    }
+    return storageTypes;
   }
 
   public StorageReport[] getStorageReports() {
@@ -725,7 +739,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     // Super implementation is sufficient
     return super.hashCode();
   }
-  
+
   @Override
   public boolean equals(Object obj) {
     // Sufficient to use super equality as datanodes are uniquely identified
@@ -740,14 +754,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
     private int underReplicatedInOpenFiles;
     private long startTime;
     
-    synchronized void set(int underRep,
-        int onlyRep, int underConstruction) {
+    synchronized void set(int underRepInOpenFiles, int underRepBlocks,
+        int outOfServiceOnlyRep) {
       if (!isDecommissionInProgress() && !isEnteringMaintenance()) {
         return;
       }
-      underReplicatedBlocks = underRep;
-      outOfServiceOnlyReplicas = onlyRep;
-      underReplicatedInOpenFiles = underConstruction;
+      underReplicatedInOpenFiles = underRepInOpenFiles;
+      underReplicatedBlocks = underRepBlocks;
+      outOfServiceOnlyReplicas = outOfServiceOnlyRep;
     }
 
     /** @return the number of under-replicated blocks */

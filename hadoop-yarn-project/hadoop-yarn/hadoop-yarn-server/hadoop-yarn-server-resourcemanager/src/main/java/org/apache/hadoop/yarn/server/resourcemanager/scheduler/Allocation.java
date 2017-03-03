@@ -36,6 +36,8 @@ public class Allocation {
   final List<NMToken> nmTokens;
   final List<Container> increasedContainers;
   final List<Container> decreasedContainers;
+  final List<Container> promotedContainers;
+  final List<Container> demotedContainers;
   private Resource resourceLimit;
 
 
@@ -50,13 +52,23 @@ public class Allocation {
       Set<ContainerId> strictContainers, Set<ContainerId> fungibleContainers,
       List<ResourceRequest> fungibleResources, List<NMToken> nmTokens) {
     this(containers,  resourceLimit,strictContainers,  fungibleContainers,
-      fungibleResources, nmTokens, null, null);
+      fungibleResources, nmTokens, null, null, null, null);
   }
-  
+
   public Allocation(List<Container> containers, Resource resourceLimit,
       Set<ContainerId> strictContainers, Set<ContainerId> fungibleContainers,
       List<ResourceRequest> fungibleResources, List<NMToken> nmTokens,
       List<Container> increasedContainers, List<Container> decreasedContainer) {
+    this(containers,  resourceLimit,strictContainers,  fungibleContainers,
+        fungibleResources, nmTokens, increasedContainers, decreasedContainer,
+        null, null);
+  }
+
+  public Allocation(List<Container> containers, Resource resourceLimit,
+      Set<ContainerId> strictContainers, Set<ContainerId> fungibleContainers,
+      List<ResourceRequest> fungibleResources, List<NMToken> nmTokens,
+      List<Container> increasedContainers, List<Container> decreasedContainer,
+      List<Container> promotedContainers, List<Container> demotedContainer) {
     this.containers = containers;
     this.resourceLimit = resourceLimit;
     this.strictContainers = strictContainers;
@@ -65,6 +77,8 @@ public class Allocation {
     this.nmTokens = nmTokens;
     this.increasedContainers = increasedContainers;
     this.decreasedContainers = decreasedContainer;
+    this.promotedContainers = promotedContainers;
+    this.demotedContainers = demotedContainer;
   }
 
   public List<Container> getContainers() {
@@ -97,6 +111,14 @@ public class Allocation {
   
   public List<Container> getDecreasedContainers() {
     return decreasedContainers;
+  }
+
+  public List<Container> getPromotedContainers() {
+    return promotedContainers;
+  }
+
+  public List<Container> getDemotedContainers() {
+    return demotedContainers;
   }
 
   @VisibleForTesting

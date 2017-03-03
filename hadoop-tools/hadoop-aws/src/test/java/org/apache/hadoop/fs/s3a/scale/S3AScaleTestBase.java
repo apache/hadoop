@@ -28,8 +28,6 @@ import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 
-import org.junit.Assert;
-import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,14 +90,13 @@ public class S3AScaleTestBase extends AbstractS3ATestBase {
     super.setup();
     testPath = path("/tests3ascale");
     LOG.debug("Scale test operation count = {}", getOperationCount());
-    // multipart purges are disabled on the scale tests
-    // check for the test being enabled
     enabled = getTestPropertyBool(
         getConf(),
         KEY_SCALE_TESTS_ENABLED,
         DEFAULT_SCALE_TESTS_ENABLED);
-    Assume.assumeTrue("Scale test disabled: to enable set property " +
-        KEY_SCALE_TESTS_ENABLED, isEnabled());
+    assume("Scale test disabled: to enable set property " +
+        KEY_SCALE_TESTS_ENABLED,
+        isEnabled());
   }
 
   /**
@@ -163,14 +160,23 @@ public class S3AScaleTestBase extends AbstractS3ATestBase {
    */
   protected S3AInstrumentation.InputStreamStatistics getInputStreamStatistics(
       FSDataInputStream in) {
+    return getS3AInputStream(in).getS3AStreamStatistics();
+  }
+
+  /**
+   * Get the inner stream of an input stream.
+   * Raises an exception if the inner stream is not an S3A input stream
+   * @param in wrapper
+   * @return the inner stream
+   * @throws AssertionError if the inner stream is of the wrong type
+   */
+  protected S3AInputStream getS3AInputStream(
+      FSDataInputStream in) {
     InputStream inner = in.getWrappedStream();
     if (inner instanceof S3AInputStream) {
-      S3AInputStream s3a = (S3AInputStream) inner;
-      return s3a.getS3AStreamStatistics();
+      return (S3AInputStream) inner;
     } else {
-      Assert.fail("Not an S3AInputStream: " + inner);
-      // never reached
-      return null;
+      throw new AssertionError("Not an S3AInputStream: " + inner);
     }
   }
 

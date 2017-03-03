@@ -190,6 +190,9 @@ public class ResourceCalculatorPlugin extends Configured {
     }
     try {
       return new ResourceCalculatorPlugin();
+    } catch (UnsupportedOperationException ue) {
+      LOG.warn("Failed to instantiate default resource calculator. "
+          + ue.getMessage());
     } catch (Throwable t) {
       LOG.warn(t + ": Failed to instantiate default resource calculator.", t);
     }

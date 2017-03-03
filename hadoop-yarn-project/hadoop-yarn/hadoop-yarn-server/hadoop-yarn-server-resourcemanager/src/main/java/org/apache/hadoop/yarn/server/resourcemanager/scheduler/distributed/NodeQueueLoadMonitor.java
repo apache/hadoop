@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -61,9 +60,9 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
     @Override
     public int compare(ClusterNode o1, ClusterNode o2) {
       if (getMetric(o1) == getMetric(o2)) {
-        return o1.timestamp < o2.timestamp ? +1 : -1;
+        return (int)(o2.timestamp - o1.timestamp);
       }
-      return getMetric(o1) > getMetric(o2) ? +1 : -1;
+      return getMetric(o1) - getMetric(o2);
     }
 
     public int getMetric(ClusterNode c) {
@@ -115,8 +114,13 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
       ReentrantReadWriteLock.WriteLock writeLock = sortedNodesLock.writeLock();
       writeLock.lock();
       try {
-        sortedNodes.clear();
-        sortedNodes.addAll(sortNodes());
+        try {
+          List<NodeId> nodeIds = sortNodes();
+          sortedNodes.clear();
+          sortedNodes.addAll(nodeIds);
+        } catch (Exception ex) {
+          LOG.warn("Got Exception while sorting nodes..", ex);
+        }
         if (thresholdCalculator != null) {
           thresholdCalculator.update();
         }
@@ -165,9 +169,11 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
   }
 
   @Override
-  public void addNode(List<NMContainerStatus> containerStatuses, RMNode
-      rmNode) {
-    LOG.debug("Node added event from: " + rmNode.getNode().getName());
+  public void addNode(List<NMContainerStatus> containerStatuses,
+      RMNode rmNode) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Node added event from: " + rmNode.getNode().getName());
+    }
     // Ignoring this currently : at least one NODE_UPDATE heartbeat is
     // required to ensure node eligibility.
   }
@@ -271,7 +277,7 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
       List<NodeId> retVal = ((k < this.sortedNodes.size()) && (k >= 0)) ?
           new ArrayList<>(this.sortedNodes).subList(0, k) :
           new ArrayList<>(this.sortedNodes);
-      return Collections.unmodifiableList(retVal);
+      return retVal;
     } finally {
       readLock.unlock();
     }

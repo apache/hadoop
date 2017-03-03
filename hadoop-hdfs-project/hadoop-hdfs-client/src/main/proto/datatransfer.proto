@@ -243,6 +243,7 @@ enum Status {
   OOB_RESERVED2 = 10;         // Reserved
   OOB_RESERVED3 = 11;         // Reserved
   IN_PROGRESS = 12;
+  ERROR_BLOCK_PINNED = 13;
 }
 
 enum ShortCircuitFdResponse {

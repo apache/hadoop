@@ -18,6 +18,14 @@
 # hadoop-env.sh is read prior to this file.
 #
 
+# KMS config directory
+#
+# export KMS_CONFIG=${HADOOP_CONF_DIR}
+
+# KMS log directory
+#
+# export KMS_LOG=${HADOOP_LOG_DIR}
+
 # KMS temporary directory
 #
 # export KMS_TEMP=${HADOOP_HOME}/temp
@@ -26,53 +34,22 @@
 #
 # export KMS_HTTP_PORT=9600
 
-# The Admin port used by KMS
-#
-# export KMS_ADMIN_PORT=$((KMS_HTTP_PORT + 1))
-
-# The maximum number of Tomcat handler threads
+# The maximum number of HTTP handler threads
 #
 # export KMS_MAX_THREADS=1000
 
-# The maximum size of Tomcat HTTP header
+# The maximum size of HTTP header
 #
 # export KMS_MAX_HTTP_HEADER_SIZE=65536
+
+# Whether SSL is enabled
+#
+# export KMS_SSL_ENABLED=false
 
 # The location of the SSL keystore if using SSL
 #
 # export KMS_SSL_KEYSTORE_FILE=${HOME}/.keystore
 
-#
 # The password of the SSL keystore if using SSL
 #
 # export KMS_SSL_KEYSTORE_PASS=password
-
-#
-# The password of the truststore
-#
-# export KMS_SSL_TRUSTSTORE_PASS=
-
-
-##
-## Tomcat specific settings
-##
-#
-# Location of tomcat
-#
-# export KMS_CATALINA_HOME=${HADOOP_HOME}/share/hadoop/kms/tomcat
-
-# Java System properties for KMS should be specified in this variable.
-# The java.library.path and hadoop.home.dir properties are automatically
-# configured.  In order to supplement java.library.path,
-# one should add to the JAVA_LIBRARY_PATH env var.
-#
-# export CATALINA_OPTS=
-
-# PID file
-#
-# export CATALINA_PID=${HADOOP_PID_DIR}/hadoop-${HADOOP_IDENT_STRING}-kms.pid
-
-# Output file
-#
-# export CATALINA_OUT=${KMS_LOG}/hadoop-${HADOOP_IDENT_STRING}-kms-${HOSTNAME}.out
-

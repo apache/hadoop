@@ -66,6 +66,7 @@ public class RMAuditLogger {
         "Update Application Priority";
     public static final String UPDATE_APP_TIMEOUTS =
         "Update Application Timeouts";
+    public static final String GET_APP_TIMEOUTS = "Get Application Timeouts";
     public static final String CHANGE_CONTAINER_RESOURCE =
         "AM Changed Container Resource";
     public static final String SIGNAL_CONTAINER = "Signal Container Request";

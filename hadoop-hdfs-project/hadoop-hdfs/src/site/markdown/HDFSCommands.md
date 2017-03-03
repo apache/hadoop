@@ -15,43 +15,7 @@
 HDFS Commands Guide
 ===================
 
-* [Overview](#Overview)
-* [User Commands](#User_Commands)
-    * [classpath](#classpath)
-    * [dfs](#dfs)
-    * [envvars](#envvars)
-    * [fetchdt](#fetchdt)
-    * [fsck](#fsck)
-    * [getconf](#getconf)
-    * [groups](#groups)
-    * [lsSnapshottableDir](#lsSnapshottableDir)
-    * [jmxget](#jmxget)
-    * [oev](#oev)
-    * [oiv](#oiv)
-    * [oiv\_legacy](#oiv_legacy)
-    * [snapshotDiff](#snapshotDiff)
-    * [version](#version)
-* [Administration Commands](#Administration_Commands)
-    * [balancer](#balancer)
-    * [cacheadmin](#cacheadmin)
-    * [crypto](#crypto)
-    * [datanode](#datanode)
-    * [dfsadmin](#dfsadmin)
-    * [diskbalancer](#diskbalancer)
-    * [erasurecode](#erasurecode)
-    * [haadmin](#haadmin)
-    * [journalnode](#journalnode)
-    * [mover](#mover)
-    * [namenode](#namenode)
-    * [nfs3](#nfs3)
-    * [portmap](#portmap)
-    * [secondarynamenode](#secondarynamenode)
-    * [storagepolicies](#storagepolicies)
-    * [zkfc](#zkfc)
-* [Debug Commands](#Debug_Commands)
-    * [verifyMeta](#verifyMeta)
-    * [computeMeta](#computeMeta)
-    * [recoverLease](#recoverLease)
+<!-- MACRO{toc|fromDepth=0|toDepth=2} -->
 
 Overview
 --------
@@ -121,7 +85,8 @@ Usage:
               [-move | -delete | -openforwrite]
               [-files [-blocks [-locations | -racks | -replicaDetails | -upgradedomains]]]
               [-includeSnapshots] [-showprogress]
-              [-storagepolicies] [-blockId <blk_Id>]
+              [-storagepolicies] [-maintenance]
+              [-blockId <blk_Id>]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -139,6 +104,7 @@ Usage:
 | `-openforwrite` | Print out files opened for write. |
 | `-showprogress` | Print out dots for progress in output. Default is OFF (no progress). |
 | `-storagepolicies` | Print out storage policy summary for the blocks. |
+| `-maintenance` | Print out maintenance state node details. |
 | `-blockId` | Print out information about the block. |
 
 Runs the HDFS filesystem checking utility. See [fsck](./HdfsUserGuide.html#fsck) for more info.
@@ -172,6 +138,12 @@ Gets configuration information from the configuration directory, post-processing
 Usage: `hdfs groups [username ...]`
 
 Returns the group information given one or more usernames.
+
+### `httpfs`
+
+Usage: `hdfs httpfs`
+
+Run HttpFS server, the HDFS HTTP Gateway.
 
 ### `lsSnapshottableDir`
 
@@ -422,7 +394,7 @@ Usage:
 | `-printTopology` | Print a tree of the racks and their nodes as reported by the Namenode |
 | `-refreshNamenodes` datanodehost:port | For the given datanode, reloads the configuration files, stops serving the removed block-pools and starts serving new block-pools. |
 | `-deleteBlockPool` datanode-host:port blockpoolId [force] | If force is passed, block pool directory for the given blockpool id on the given datanode is deleted along with its contents, otherwise the directory is deleted only if it is empty. The command will fail if datanode is still serving the block pool. Refer to refreshNamenodes to shutdown a block pool service on a datanode. |
-| `-setBalancerBandwidth` \<bandwidth in bytes per second\> | Changes the network bandwidth used by each datanode during HDFS block balancing. \<bandwidth\> is the maximum number of bytes per second that will be used by each datanode. This value overrides the dfs.balance.bandwidthPerSec parameter. NOTE: The new value is not persistent on the DataNode. |
+| `-setBalancerBandwidth` \<bandwidth in bytes per second\> | Changes the network bandwidth used by each datanode during HDFS block balancing. \<bandwidth\> is the maximum number of bytes per second that will be used by each datanode. This value overrides the dfs.datanode.balance.bandwidthPerSec parameter. NOTE: The new value is not persistent on the DataNode. |
 | `-getBalancerBandwidth` \<datanode\_host:ipc\_port\> | Get the network bandwidth(in bytes per second) for the given datanode. This is the maximum network bandwidth used by the datanode during HDFS block balancing.|
 | `-fetchImage` \<local directory\> | Downloads the most recent fsimage from the NameNode and saves it in the specified local directory. |
 | `-allowSnapshot` \<snapshotDir\> | Allowing snapshots of a directory to be created. If the operation completes successfully, the directory becomes snapshottable. See the [HDFS Snapshot Documentation](./HdfsSnapshots.html) for more information. |
@@ -459,13 +431,14 @@ Usage:
 
 Runs the diskbalancer CLI. See [HDFS Diskbalancer](./HDFSDiskbalancer.html) for more information on this command.
 
-### `erasurecode`
+### `ec`
 
 Usage:
 
-       hdfs erasurecode [generic options]
-         [-setPolicy [-p <policyName>] <path>]
-         [-getPolicy <path>]
+       hdfs ec [generic options]
+         [-setPolicy -policy <policyName> -path <path>]
+         [-getPolicy -path <path>]
+         [-unsetPolicy -path <path>]
          [-listPolicies]
          [-usage [cmd ...]]
          [-help [cmd ...]]
@@ -474,6 +447,7 @@ Usage:
 |:---- |:---- |
 |-setPolicy| Set a specified ErasureCoding policy to a directory|
 |-getPolicy| Get ErasureCoding policy information about a specified path|
+|-unsetPolicy| Unset an ErasureCoding policy set by a previous call to "setPolicy" on a directory |
 |-listPolicies| Lists all supported ErasureCoding policies|
 
 Runs the ErasureCoding CLI. See [HDFS ErasureCoding](./HDFSErasureCoding.html#Administrative_commands) for more information on this command.
@@ -486,6 +460,7 @@ Usage:
         hdfs haadmin -transitionToStandby <serviceId>
         hdfs haadmin -failover [--forcefence] [--forceactive] <serviceId> <serviceId>
         hdfs haadmin -getServiceState <serviceId>
+        hdfs haadmin -getAllServiceState
         hdfs haadmin -checkHealth <serviceId>
         hdfs haadmin -help <command>
 
@@ -495,6 +470,7 @@ Usage:
 | `-checkHealth` | check the health of the given NameNode |
 | `-failover` | initiate a failover between two NameNodes |
 | `-getServiceState` | determine whether the given NameNode is Active or Standby |
+| `-getAllServiceState` | returns the state of all the NameNodes | |
 | `-transitionToActive` | transition the state of the given NameNode to Active (Warning: No fencing is done) |
 | `-transitionToStandby` | transition the state of the given NameNode to Standby (Warning: No fencing is done) |
 | `-help` [cmd] | Displays help for the given command or all commands if none is specified. |
@@ -535,7 +511,7 @@ Usage:
               [-rollingUpgrade <rollback |started> ] |
               [-importCheckpoint] |
               [-initializeSharedEdits] |
-              [-bootstrapStandby] |
+              [-bootstrapStandby [-force] [-nonInteractive] [-skipSharedEditsCheck] ] |
               [-recover [-force] ] |
               [-metadataVersion ]
 
@@ -550,7 +526,7 @@ Usage:
 | `-rollingUpgrade` \<rollback\|started\> | See [Rolling Upgrade document](./HdfsRollingUpgrade.html#NameNode_Startup_Options) for the detail. |
 | `-importCheckpoint` | Loads image from a checkpoint directory and save it into the current one. Checkpoint dir is read from property dfs.namenode.checkpoint.dir |
 | `-initializeSharedEdits` | Format a new shared edits dir and copy in enough edit log segments so that the standby NameNode can start up. |
-| `-bootstrapStandby` | Allows the standby NameNode's storage directories to be bootstrapped by copying the latest namespace snapshot from the active NameNode. This is used when first configuring an HA cluster. |
+| `-bootstrapStandby` `[-force]` `[-nonInteractive]` `[-skipSharedEditsCheck]` | Allows the standby NameNode's storage directories to be bootstrapped by copying the latest namespace snapshot from the active NameNode. This is used when first configuring an HA cluster. The option -force or -nonInteractive has the same meaning as that described in namenode -format command. -skipSharedEditsCheck option skips edits check which ensures that we have enough edits already in the shared directory to start up from the last checkpoint on the active. |
 | `-recover` `[-force]` | Recover lost metadata on a corrupt filesystem. See [HDFS User Guide](./HdfsUserGuide.html#Recovery_Mode) for the detail. |
 | `-metadataVersion` | Verify that configured directories exist, then print the metadata versions of the software and the image. |
 
@@ -599,7 +575,7 @@ Usage: `hdfs zkfc [-formatZK [-force] [-nonInteractive]]`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-| `-formatZK` | Format the Zookeeper instance |
+| `-formatZK` | Format the Zookeeper instance. -force: formats the znode if the znode exists. -nonInteractive: formats the znode aborts if the znode exists, unless -force option is specified. |
 | `-h` | Display help |
 
 This comamnd starts a Zookeeper Failover Controller process for use with [HDFS HA with QJM](./HDFSHighAvailabilityWithQJM.html#Administrative_commands).

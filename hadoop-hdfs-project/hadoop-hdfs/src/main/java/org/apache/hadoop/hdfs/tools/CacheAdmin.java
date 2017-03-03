@@ -45,6 +45,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 
 import com.google.common.base.Joiner;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * This class implements command-line operations on the HDFS Cache.
@@ -64,6 +65,7 @@ public class CacheAdmin extends Configured implements Tool {
   public int run(String[] args) throws IOException {
     if (args.length == 0) {
       AdminHelper.printUsage(false, "cacheadmin", COMMANDS);
+      ToolRunner.printGenericCommandUsage(System.err);
       return 1;
     }
     AdminHelper.Command command = AdminHelper.determineCommand(args[0],
@@ -74,6 +76,7 @@ public class CacheAdmin extends Configured implements Tool {
         System.err.println("Command names must start with dashes.");
       }
       AdminHelper.printUsage(false, "cacheadmin", COMMANDS);
+      ToolRunner.printGenericCommandUsage(System.err);
       return 1;
     }
     List<String> argsList = new LinkedList<String>();
@@ -88,9 +91,10 @@ public class CacheAdmin extends Configured implements Tool {
     }
   }
 
-  public static void main(String[] argsArray) throws IOException {
+  public static void main(String[] argsArray) throws Exception {
     CacheAdmin cacheAdmin = new CacheAdmin(new Configuration());
-    System.exit(cacheAdmin.run(argsArray));
+    int res = ToolRunner.run(cacheAdmin, argsArray);
+    System.exit(res);
   }
 
   private static CacheDirectiveInfo.Expiration parseExpirationString(String ttlString)
@@ -185,8 +189,9 @@ public class CacheAdmin extends Configured implements Tool {
         System.err.println("Can't understand argument: " + args.get(0));
         return 1;
       }
-        
-      DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+
+      DistributedFileSystem dfs =
+          AdminHelper.getDFS(new Path(path).toUri(), conf);
       CacheDirectiveInfo directive = builder.build();
       EnumSet<CacheFlag> flags = EnumSet.noneOf(CacheFlag.class);
       if (force) {
@@ -405,7 +410,8 @@ public class CacheAdmin extends Configured implements Tool {
       }
       int exitCode = 0;
       try {
-        DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+        DistributedFileSystem dfs =
+            AdminHelper.getDFS(new Path(path).toUri(), conf);
         RemoteIterator<CacheDirectiveEntry> iter =
             dfs.listCacheDirectives(
                 new CacheDirectiveInfo.Builder().

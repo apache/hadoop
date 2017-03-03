@@ -634,9 +634,12 @@ public class DecommissionManager {
         final List<BlockInfo> insufficientList,
         boolean pruneReliableBlocks) {
       boolean firstReplicationLog = true;
-      int lowRedundancyBlocks = 0;
-      int outOfServiceOnlyReplicas = 0;
+      // Low redundancy in UC Blocks only
       int lowRedundancyInOpenFiles = 0;
+      // All low redundancy blocks. Includes lowRedundancyInOpenFiles.
+      int lowRedundancyBlocks = 0;
+      // All maintenance and decommission replicas.
+      int outOfServiceOnlyReplicas = 0;
       while (it.hasNext()) {
         if (insufficientList == null
             && numBlocksCheckedPerLock >= numBlocksPerCheck) {
@@ -726,8 +729,8 @@ public class DecommissionManager {
         }
       }
 
-      datanode.getLeavingServiceStatus().set(lowRedundancyBlocks,
-          outOfServiceOnlyReplicas, lowRedundancyInOpenFiles);
+      datanode.getLeavingServiceStatus().set(lowRedundancyInOpenFiles,
+          lowRedundancyBlocks, outOfServiceOnlyReplicas);
     }
   }
 

@@ -102,7 +102,6 @@ import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.Assert;
@@ -216,6 +215,14 @@ public class TestJobImpl {
 
     JobImpl job = createRunningStubbedJob(conf, dispatcher, 2, null);
     completeJobTasks(job);
+    assertJobState(job, JobStateInternal.COMMITTING);
+
+    job.handle(new JobEvent(job.getID(),
+        JobEventType.JOB_TASK_ATTEMPT_COMPLETED));
+    assertJobState(job, JobStateInternal.COMMITTING);
+
+    job.handle(new JobEvent(job.getID(),
+        JobEventType.JOB_MAP_TASK_RESCHEDULED));
     assertJobState(job, JobStateInternal.COMMITTING);
 
     // let the committer complete and verify the job succeeds
@@ -490,9 +497,10 @@ public class TestJobImpl {
   public void testKilledDuringKillAbort() throws Exception {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
+    // not initializing dispatcher to avoid potential race condition between
+    // the dispatcher thread & test thread - see MAPREDUCE-6831
     AsyncDispatcher dispatcher = new AsyncDispatcher();
-    dispatcher.init(conf);
-    dispatcher.start();
+
     OutputCommitter committer = new StubbedOutputCommitter() {
       @Override
       public synchronized void abortJob(JobContext jobContext, State state)

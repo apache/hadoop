@@ -15,30 +15,7 @@
 Centralized Cache Management in HDFS
 ====================================
 
-* [Overview](#Overview)
-* [Use Cases](#Use_Cases)
-* [Architecture](#Architecture)
-* [Concepts](#Concepts)
-    * [Cache directive](#Cache_directive)
-    * [Cache pool](#Cache_pool)
-* [cacheadmin command-line interface](#cacheadmin_command-line_interface)
-    * [Cache directive commands](#Cache_directive_commands)
-        * [addDirective](#addDirective)
-        * [removeDirective](#removeDirective)
-        * [removeDirectives](#removeDirectives)
-        * [listDirectives](#listDirectives)
-    * [Cache pool commands](#Cache_pool_commands)
-        * [addPool](#addPool)
-        * [modifyPool](#modifyPool)
-        * [removePool](#removePool)
-        * [listPools](#listPools)
-        * [help](#help)
-* [Configuration](#Configuration)
-    * [Native Libraries](#Native_Libraries)
-    * [Configuration Properties](#Configuration_Properties)
-        * [Required](#Required)
-        * [Optional](#Optional)
-  * [OS Limits](#OS_Limits)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------

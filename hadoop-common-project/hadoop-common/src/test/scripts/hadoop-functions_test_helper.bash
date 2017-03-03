@@ -16,9 +16,9 @@
 
 setup() {
 
-  TMP="${BATS_TEST_DIRNAME}/../../../target/test-dir/bats.$$.${RANDOM}"
-  mkdir -p ${TMP}
-  TMP=$(cd -P -- "${TMP}" >/dev/null && pwd -P)
+  RELTMP="${BATS_TEST_DIRNAME}/../../../target/test-dir/bats.$$.${RANDOM}"
+  mkdir -p ${RELTMP}
+  TMP=$(cd -P -- "${RELTMP}" >/dev/null && pwd -P)
   export TMP
   TESTBINDIR=$(cd -P -- "$(pwd)" >/dev/null && pwd -P)
   HADOOP_LIBEXEC_DIR=${TESTBINDIR}/../../main/bin

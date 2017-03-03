@@ -78,6 +78,7 @@ Get the status of a path
         if isFile(FS, p) :
             stat.length = len(FS.Files[p])
             stat.isdir = False
+            stat.blockSize > 0
         elif isDir(FS, p) :
             stat.length = 0
             stat.isdir = True
@@ -418,7 +419,7 @@ If the filesystem is not location aware, it SHOULD return
         BlockLocation(["localhost:9866"] ,
                   ["localhost"],
                   ["/default/localhost"]
-                   0, F.getLen())
+                   0, f.getLen())
        ] ;
 
 
@@ -451,13 +452,13 @@ split calculations to divide work optimally across a set of worker processes.
 
 #### Postconditions
 
-    result = integer >= 0
+    result = integer > 0
 
 Although there is no defined minimum value for this result, as it
 is used to partition work during job submission, a block size
-that is too small will result in either too many jobs being submitted
-for efficient work, or the `JobSubmissionClient` running out of memory.
-
+that is too small will result in badly partitioned workload,
+or even the `JobSubmissionClient` and equivalent
+running out of memory as it calculates the partitions.
 
 Any FileSystem that does not actually break files into blocks SHOULD
 return a number for this that results in efficient processing.
@@ -503,12 +504,12 @@ on the filesystem.
 
 #### Postconditions
 
-
+    if len(FS, P) > 0:  getFileStatus(P).getBlockSize() > 0
     result == getFileStatus(P).getBlockSize()
 
-The outcome of this operation MUST be identical to that contained in
-the `FileStatus` returned from `getFileStatus(P)`.
-
+1. The outcome of this operation MUST be identical to the value of
+   `getFileStatus(P).getBlockSize()`.
+1. By inference, it MUST be > 0 for any file of length > 0.
 
 ## State Changing Operations
 

@@ -215,4 +215,19 @@ public class MockContainer implements Container {
   public void commitUpgrade() {
 
   }
+
+  @Override
+  public boolean isMarkedForKilling() {
+    return false;
+  }
+
+  @Override
+  public void sendLaunchEvent() {
+
+  }
+
+  @Override
+  public void sendKillEvent(int exitStatus, String description) {
+
+  }
 }

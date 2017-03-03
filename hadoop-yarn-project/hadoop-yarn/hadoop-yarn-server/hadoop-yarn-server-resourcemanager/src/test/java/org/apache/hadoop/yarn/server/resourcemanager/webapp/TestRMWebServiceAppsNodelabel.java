@@ -156,7 +156,7 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
     assertEquals("incorrect number of elements", 1, apps.length());
     try {
       apps.getJSONArray("app").getJSONObject(0).getJSONObject("resourceInfo");
-      fail("resourceInfo object shouldnt be available for finished apps");
+      fail("resourceInfo object shouldn't be available for finished apps");
     } catch (Exception e) {
       assertTrue("resourceInfo shouldn't be available for finished apps",
           true);

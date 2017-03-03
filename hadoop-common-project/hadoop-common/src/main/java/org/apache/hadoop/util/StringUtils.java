@@ -178,6 +178,17 @@ public class StringUtils {
   }
 
   /**
+   * Convert a byte to a hex string.
+   * @see #byteToHexString(byte[])
+   * @see #byteToHexString(byte[], int, int)
+   * @param b byte
+   * @return byte's hex value as a String
+   */
+  public static String byteToHexString(byte b) {
+    return byteToHexString(new byte[] {b});
+  }
+
+  /**
    * Given a hexstring this will return the byte array corresponding to the
    * string
    * @param hex the hex String array

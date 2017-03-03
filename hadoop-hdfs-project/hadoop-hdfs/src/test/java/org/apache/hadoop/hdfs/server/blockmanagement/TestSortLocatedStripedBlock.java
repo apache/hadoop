@@ -27,13 +27,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Time;
@@ -51,10 +52,14 @@ import org.slf4j.LoggerFactory;
 public class TestSortLocatedStripedBlock {
   static final Logger LOG = LoggerFactory
       .getLogger(TestSortLocatedStripedBlock.class);
-  static final int BLK_GROUP_WIDTH = StripedFileTestUtil.NUM_DATA_BLOCKS
-      + StripedFileTestUtil.NUM_PARITY_BLOCKS;
-  static final int NUM_DATA_BLOCKS = StripedFileTestUtil.NUM_DATA_BLOCKS;
-  static final int NUM_PARITY_BLOCKS = StripedFileTestUtil.NUM_PARITY_BLOCKS;
+
+  private final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private final int cellSize = ecPolicy.getCellSize();
+  private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
+  private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
+  private final int groupSize = dataBlocks + parityBlocks;
+
   static DatanodeManager dm;
   static final long STALE_INTERVAL = 30 * 1000 * 60;
 
@@ -100,7 +105,7 @@ public class TestSortLocatedStripedBlock {
     HashMap<Integer, List<String>> decommissionedNodes = new HashMap<>(
         lbsCount * decommnNodeIndices.size());
     List<LocatedBlock> lbs = createLocatedStripedBlocks(lbsCount,
-        NUM_DATA_BLOCKS, NUM_PARITY_BLOCKS, decommnNodeIndices,
+        dataBlocks, parityBlocks, decommnNodeIndices,
         targetNodeIndices, decommissionedNodes);
 
     // prepare expected block index and token list.
@@ -111,7 +116,7 @@ public class TestSortLocatedStripedBlock {
 
     dm.sortLocatedBlocks(null, lbs);
 
-    assertDecommnNodePosition(BLK_GROUP_WIDTH, decommissionedNodes, lbs);
+    assertDecommnNodePosition(groupSize, decommissionedNodes, lbs);
     assertBlockIndexAndTokenPosition(lbs, locToIndexList, locToTokenList);
   }
 
@@ -156,7 +161,7 @@ public class TestSortLocatedStripedBlock {
     HashMap<Integer, List<String>> decommissionedNodes = new HashMap<>(
         lbsCount * decommnNodeIndices.size());
     List<LocatedBlock> lbs = createLocatedStripedBlocks(lbsCount,
-        NUM_DATA_BLOCKS, NUM_PARITY_BLOCKS, decommnNodeIndices,
+        dataBlocks, parityBlocks, decommnNodeIndices,
         targetNodeIndices, decommissionedNodes);
 
     // prepare expected block index and token list.
@@ -166,7 +171,7 @@ public class TestSortLocatedStripedBlock {
     prepareBlockIndexAndTokenList(lbs, locToIndexList, locToTokenList);
 
     dm.sortLocatedBlocks(null, lbs);
-    assertDecommnNodePosition(BLK_GROUP_WIDTH, decommissionedNodes, lbs);
+    assertDecommnNodePosition(groupSize, decommissionedNodes, lbs);
     assertBlockIndexAndTokenPosition(lbs, locToIndexList, locToTokenList);
   }
 
@@ -209,9 +214,9 @@ public class TestSortLocatedStripedBlock {
     // which will be used for assertions
     HashMap<Integer, List<String>> decommissionedNodes = new HashMap<>(
         lbsCount * decommnNodeIndices.size());
-    int dataBlksNum = NUM_DATA_BLOCKS - 2;
+    int dataBlksNum = dataBlocks - 2;
     List<LocatedBlock> lbs = createLocatedStripedBlocks(lbsCount, dataBlksNum,
-        NUM_PARITY_BLOCKS, decommnNodeIndices, targetNodeIndices,
+        parityBlocks, decommnNodeIndices, targetNodeIndices,
         decommissionedNodes);
 
     // prepare expected block index and token list.
@@ -223,7 +228,7 @@ public class TestSortLocatedStripedBlock {
     dm.sortLocatedBlocks(null, lbs);
 
     // After this index all are decommissioned nodes.
-    int blkGrpWidth = dataBlksNum + NUM_PARITY_BLOCKS;
+    int blkGrpWidth = dataBlksNum + parityBlocks;
     assertDecommnNodePosition(blkGrpWidth, decommissionedNodes, lbs);
     assertBlockIndexAndTokenPosition(lbs, locToIndexList, locToTokenList);
   }
@@ -275,7 +280,7 @@ public class TestSortLocatedStripedBlock {
     HashMap<Integer, List<String>> decommissionedNodes = new HashMap<>(
         lbsCount * decommnNodeIndices.size());
     List<LocatedBlock> lbs = createLocatedStripedBlocks(lbsCount,
-        NUM_DATA_BLOCKS, NUM_PARITY_BLOCKS, decommnNodeIndices,
+        dataBlocks, parityBlocks, decommnNodeIndices,
         targetNodeIndices, decommissionedNodes);
 
     // prepare expected block index and token list.
@@ -288,7 +293,7 @@ public class TestSortLocatedStripedBlock {
 
     // After this index all are decommissioned nodes. Needs to reconstruct two
     // more block indices.
-    int blkGrpWidth = NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS - 2;
+    int blkGrpWidth = dataBlocks + parityBlocks - 2;
     assertDecommnNodePosition(blkGrpWidth, decommissionedNodes, lbs);
     assertBlockIndexAndTokenPosition(lbs, locToIndexList, locToTokenList);
   }
@@ -336,7 +341,7 @@ public class TestSortLocatedStripedBlock {
     HashMap<Integer, List<String>> decommissionedNodes = new HashMap<>(
         lbsCount * decommnNodeIndices.size());
     List<LocatedBlock> lbs = createLocatedStripedBlocks(lbsCount,
-        NUM_DATA_BLOCKS, NUM_PARITY_BLOCKS, decommnNodeIndices,
+        dataBlocks, parityBlocks, decommnNodeIndices,
         targetNodeIndices, decommissionedNodes);
     List <DatanodeInfo> staleDns = new ArrayList<>();
     for (LocatedBlock lb : lbs) {
@@ -355,7 +360,7 @@ public class TestSortLocatedStripedBlock {
 
     dm.sortLocatedBlocks(null, lbs);
 
-    assertDecommnNodePosition(BLK_GROUP_WIDTH + 1, decommissionedNodes, lbs);
+    assertDecommnNodePosition(groupSize + 1, decommissionedNodes, lbs);
     assertBlockIndexAndTokenPosition(lbs, locToIndexList, locToTokenList);
 
     for (LocatedBlock lb : lbs) {
@@ -452,7 +457,7 @@ public class TestSortLocatedStripedBlock {
       }
     }
     // Adding parity blocks after data blocks
-    index = NUM_DATA_BLOCKS;
+    index = dataBlocks;
     for (int j = numDataBlk; j < numDataBlk + numParityBlk; j++, index++) {
       blkIndices[j] = (byte) index;
       // Location port always equal to logical index of a block,
@@ -471,7 +476,7 @@ public class TestSortLocatedStripedBlock {
       }
     }
     // Add extra target nodes to storage list after the parity blocks
-    int basePortValue = NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS;
+    int basePortValue = dataBlocks + parityBlocks;
     index = numDataBlk + numParityBlk;
     for (int i = 0; i < targetNodeIndices.size(); i++, index++) {
       int blkIndexPos = targetNodeIndices.get(i);
@@ -494,7 +499,7 @@ public class TestSortLocatedStripedBlock {
     }
     return new LocatedStripedBlock(
         new ExtendedBlock("pool", blockGroupID,
-            StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE, 1001),
+            cellSize, 1001),
         locs, storageIDs, storageTypes, blkIndices, 0, false, null);
   }
 

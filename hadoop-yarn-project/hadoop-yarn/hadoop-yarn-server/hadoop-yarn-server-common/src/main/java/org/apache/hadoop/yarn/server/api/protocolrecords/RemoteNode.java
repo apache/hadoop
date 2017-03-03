@@ -87,4 +87,11 @@ public abstract class RemoteNode implements Comparable<RemoteNode> {
   public int compareTo(RemoteNode other) {
     return this.getNodeId().compareTo(other.getNodeId());
   }
+
+  @Override
+  public String toString() {
+    return "RemoteNode{" +
+        "nodeId=" + getNodeId() + ", " +
+        "httpAddress=" + getHttpAddress() + "}";
+  }
 }

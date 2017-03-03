@@ -43,7 +43,7 @@ done < <(find "$HADOOP_HOME/hadoop-client" -name "*.jar" -print0)
 while IFS= read -r -d '' file
 do
   export CLASSPATH=$CLASSPATH:$file
-done < <(find "$HADOOP_HOME/hhadoop-hdfs-project" -name "*.jar" -print0)
+done < <(find "$HADOOP_HOME/hadoop-hdfs-project" -name "*.jar" -print0)
 
 export CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH
 export PATH=$FUSEDFS_PATH:$PATH

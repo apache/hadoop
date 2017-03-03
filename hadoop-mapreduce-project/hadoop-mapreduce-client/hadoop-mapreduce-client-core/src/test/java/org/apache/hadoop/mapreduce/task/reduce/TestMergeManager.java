@@ -207,6 +207,13 @@ public class TestMergeManager {
     }
   }
 
+  @Test
+  public void testIoSortDefaults() {
+    final JobConf jobConf = new JobConf();
+    assertEquals(10, jobConf.getInt(MRJobConfig.IO_SORT_FACTOR, 100));
+    assertEquals(100, jobConf.getInt(MRJobConfig.IO_SORT_MB, 10));
+  }
+
   @SuppressWarnings({ "unchecked", "deprecation" })
   @Test(timeout=10000)
   public void testOnDiskMerger() throws IOException, URISyntaxException,

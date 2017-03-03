@@ -21,6 +21,9 @@ cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../../../../hadoop-common-project/hadoop-common/)
 include(HadoopCommon)
 
+# Set gtest path
+set(GTEST_SRC_DIR ${CMAKE_SOURCE_DIR}/../../../../hadoop-common-project/hadoop-common/src/main/native/gtest)
+
 # Add extra compiler and linker flags.
 # -Wno-sign-compare
 hadoop_add_compiler_flags("-DNDEBUG -DSIMPLE_MEMCPY -fno-strict-aliasing")
@@ -94,11 +97,14 @@ include_directories(
     ${CMAKE_BINARY_DIR}
     ${JNI_INCLUDE_DIRS}
     ${SNAPPY_INCLUDE_DIR}
+    ${GTEST_SRC_DIR}/include
 )
 # add gtest as system library to suppress gcc warnings
-include_directories(SYSTEM ${SRC}/gtest/include)
+include_directories(SYSTEM ${GTEST_SRC_DIR}/include)
 
+set(CMAKE_MACOSX_RPATH TRUE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
     # macosx does not have -lrt
@@ -153,7 +159,7 @@ hadoop_add_dual_library(nativetask
 
 target_link_libraries(nativetask ${NT_DEPEND_LIBRARY})
 
-add_library(gtest ${SRC}/gtest/gtest-all.cc)
+add_library(gtest ${GTEST_SRC_DIR}/gtest-all.cc)
 set_target_properties(gtest PROPERTIES COMPILE_FLAGS "-w")
 add_executable(nttest
     ${SRC}/test/lib/TestByteArray.cc

@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.HATestUtil;
 import org.junit.Assert;
 import org.junit.Test;
+import java.io.IOException;
 
 public class TestMiniYarnCluster {
 
@@ -41,21 +42,17 @@ public class TestMiniYarnCluster {
      */
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, false);
     enableAHS = false;
-    MiniYARNCluster cluster = null;
-    try {
-      cluster = new MiniYARNCluster(TestMiniYarnCluster.class.getSimpleName(),
-          numNodeManagers, numLocalDirs, numLogDirs, numLogDirs, enableAHS);
+    try (MiniYARNCluster cluster =
+        new MiniYARNCluster(TestMiniYarnCluster.class.getSimpleName(),
+            numNodeManagers, numLocalDirs, numLogDirs, numLogDirs,
+                enableAHS)) {
+
       cluster.init(conf);
       cluster.start();
 
       //verify that the timeline service is not started.
       Assert.assertNull("Timeline Service should not have been started",
           cluster.getApplicationHistoryServer());
-    }
-    finally {
-      if(cluster != null) {
-        cluster.stop();
-      }
     }
 
     /*
@@ -64,10 +61,10 @@ public class TestMiniYarnCluster {
      */
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     enableAHS = false;
-    cluster = null;
-    try {
-      cluster = new MiniYARNCluster(TestMiniYarnCluster.class.getSimpleName(),
-          numNodeManagers, numLocalDirs, numLogDirs, numLogDirs, enableAHS);
+    try (MiniYARNCluster cluster =
+        new MiniYARNCluster(TestMiniYarnCluster.class.getSimpleName(),
+            numNodeManagers, numLocalDirs, numLogDirs, numLogDirs,
+                enableAHS)) {
       cluster.init(conf);
 
       // Verify that the timeline-service starts on ephemeral ports by default
@@ -87,21 +84,16 @@ public class TestMiniYarnCluster {
       Assert.assertNotNull("Timeline Service should have been started",
           cluster.getApplicationHistoryServer());
     }
-    finally {
-      if(cluster != null) {
-        cluster.stop();
-      }
-    }
     /*
      * Timeline service should start if TIMELINE_SERVICE_ENABLED == false
      * and enableAHS == true
      */
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, false);
     enableAHS = true;
-    cluster = null;
-    try {
-      cluster = new MiniYARNCluster(TestMiniYarnCluster.class.getSimpleName(),
-          numNodeManagers, numLocalDirs, numLogDirs, numLogDirs, enableAHS);
+    try (MiniYARNCluster cluster =
+        new MiniYARNCluster(TestMiniYarnCluster.class.getSimpleName(),
+            numNodeManagers, numLocalDirs, numLogDirs, numLogDirs,
+                enableAHS)) {
       cluster.init(conf);
       cluster.start();
 
@@ -115,15 +107,10 @@ public class TestMiniYarnCluster {
       Assert.assertNotNull("Timeline Service should have been started",
           cluster.getApplicationHistoryServer());
     }
-    finally {
-      if(cluster != null) {
-        cluster.stop();
-      }
-    }
   }
 
   @Test
-  public void testMultiRMConf() {
+  public void testMultiRMConf() throws IOException {
     String RM1_NODE_ID = "rm1", RM2_NODE_ID = "rm2";
     int RM1_PORT_BASE = 10000, RM2_PORT_BASE = 20000;
     Configuration conf = new YarnConfiguration();
@@ -137,23 +124,28 @@ public class TestMiniYarnCluster {
     conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS, true);
     conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_USE_RPC, true);
 
-    MiniYARNCluster cluster =
+    try (MiniYARNCluster cluster =
         new MiniYARNCluster(TestMiniYarnCluster.class.getName(),
-            2, 0, 1, 1);
-    cluster.init(conf);
-    Configuration conf1 = cluster.getResourceManager(0).getConfig(),
-        conf2 = cluster.getResourceManager(1).getConfig();
-    Assert.assertFalse(conf1 == conf2);
-    Assert.assertEquals("0.0.0.0:18032",
-        conf1.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, RM1_NODE_ID)));
-    Assert.assertEquals("0.0.0.0:28032",
-        conf1.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, RM2_NODE_ID)));
-    Assert.assertEquals("rm1", conf1.get(YarnConfiguration.RM_HA_ID));
+            2, 0, 1, 1)) {
+      cluster.init(conf);
+      Configuration conf1 = cluster.getResourceManager(0).getConfig(),
+          conf2 = cluster.getResourceManager(1).getConfig();
+      Assert.assertFalse(conf1 == conf2);
+      Assert.assertEquals("0.0.0.0:18032",
+          conf1.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS,
+              RM1_NODE_ID)));
+      Assert.assertEquals("0.0.0.0:28032",
+          conf1.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS,
+              RM2_NODE_ID)));
+      Assert.assertEquals("rm1", conf1.get(YarnConfiguration.RM_HA_ID));
 
-    Assert.assertEquals("0.0.0.0:18032",
-        conf2.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, RM1_NODE_ID)));
-    Assert.assertEquals("0.0.0.0:28032",
-        conf2.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, RM2_NODE_ID)));
-    Assert.assertEquals("rm2", conf2.get(YarnConfiguration.RM_HA_ID));
+      Assert.assertEquals("0.0.0.0:18032",
+          conf2.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS,
+              RM1_NODE_ID)));
+      Assert.assertEquals("0.0.0.0:28032",
+          conf2.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS,
+              RM2_NODE_ID)));
+      Assert.assertEquals("rm2", conf2.get(YarnConfiguration.RM_HA_ID));
+    }
   }
 }

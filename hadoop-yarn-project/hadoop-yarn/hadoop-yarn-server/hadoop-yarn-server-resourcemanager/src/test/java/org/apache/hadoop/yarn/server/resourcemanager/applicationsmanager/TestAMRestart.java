@@ -411,7 +411,6 @@ public class TestAMRestart {
     MockAM am2 =
         rm1.waitForNewAMToLaunchAndRegister(app1.getApplicationId(), 2, nm1);
     RMAppAttempt attempt2 = app1.getCurrentAppAttempt();
-    Assert.assertTrue(((RMAppAttemptImpl) attempt2).mayBeLastAttempt());
 
     // Preempt the second attempt.
     ContainerId amContainer2 =
@@ -427,7 +426,6 @@ public class TestAMRestart {
     MockAM am3 =
         rm1.waitForNewAMToLaunchAndRegister(app1.getApplicationId(), 3, nm1);
     RMAppAttempt attempt3 = app1.getCurrentAppAttempt();
-    Assert.assertTrue(((RMAppAttemptImpl) attempt3).mayBeLastAttempt());
 
     // mimic NM disk_failure
     ContainerStatus containerStatus = Records.newRecord(ContainerStatus.class);
@@ -454,7 +452,6 @@ public class TestAMRestart {
     MockAM am4 =
         rm1.waitForNewAMToLaunchAndRegister(app1.getApplicationId(), 4, nm1);
     RMAppAttempt attempt4 = app1.getCurrentAppAttempt();
-    Assert.assertTrue(((RMAppAttemptImpl) attempt4).mayBeLastAttempt());
 
     // create second NM, and register to rm1
     MockNM nm2 =
@@ -475,7 +472,6 @@ public class TestAMRestart {
     MockAM am5 =
         rm1.waitForNewAMToLaunchAndRegister(app1.getApplicationId(), 5, nm2);
     RMAppAttempt attempt5 = app1.getCurrentAppAttempt();
-    Assert.assertTrue(((RMAppAttemptImpl) attempt5).mayBeLastAttempt());
     // fail the AM normally
     nm2
       .nodeHeartbeat(am5.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
@@ -584,7 +580,6 @@ public class TestAMRestart {
     // AM should be restarted even though max-am-attempt is 1.
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
-    Assert.assertTrue(((RMAppAttemptImpl) attempt1).mayBeLastAttempt());
 
     // Restart rm.
     MockRM rm2 = new MockRM(conf, memStore);
@@ -645,7 +640,7 @@ public class TestAMRestart {
     // set window size to a larger number : 60s
     // we will verify the app should be failed if
     // two continuous attempts failed in 60s.
-    RMApp app = rm1.submitApp(200, 60000);
+    RMApp app = rm1.submitApp(200, 60000, false);
     
     MockAM am = MockRM.launchAM(app, rm1, nm1);
     // Fail current attempt normally
@@ -655,8 +650,7 @@ public class TestAMRestart {
     // launch the second attempt
     rm1.waitForState(app.getApplicationId(), RMAppState.ACCEPTED);
     Assert.assertEquals(2, app.getAppAttempts().size());
-    Assert.assertTrue(((RMAppAttemptImpl) app.getCurrentAppAttempt())
-      .mayBeLastAttempt());
+
     MockAM am_2 = MockRM.launchAndRegisterAM(app, rm1, nm1);
     rm1.waitForState(am_2.getApplicationAttemptId(), RMAppAttemptState.RUNNING);
     nm1.nodeHeartbeat(am_2.getApplicationAttemptId(),
@@ -667,7 +661,7 @@ public class TestAMRestart {
 
     ControlledClock clock = new ControlledClock();
     // set window size to 10s
-    RMAppImpl app1 = (RMAppImpl)rm1.submitApp(200, 10000);
+    RMAppImpl app1 = (RMAppImpl)rm1.submitApp(200, 10000, false);
     app1.setSystemClock(clock);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
@@ -684,7 +678,6 @@ public class TestAMRestart {
     Assert.assertEquals(2, app1.getAppAttempts().size());
 
     RMAppAttempt attempt2 = app1.getCurrentAppAttempt();
-    Assert.assertTrue(((RMAppAttemptImpl) attempt2).mayBeLastAttempt());
     MockAM am2 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     rm1.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.RUNNING);
 
@@ -861,6 +854,77 @@ public class TestAMRestart {
       Assert.fail();
     }
 
+    rm1.stop();
+  }
+
+  // Test restarting AM launched with the KeepContainers and AM reset window.
+  // after AM reset window, even if AM who was the last is failed,
+  // all containers are launched by previous AM should be kept.
+  @Test (timeout = 20000)
+  public void testAMRestartNotLostContainerAfterAttemptFailuresValidityInterval()
+      throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    // explicitly set max-am-retry count as 2.
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
+
+    MockRM rm1 = new MockRM(conf);
+    rm1.start();
+    MockNM nm1 =
+            new MockNM("127.0.0.1:1234", 8000, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // set window size to 10s and enable keepContainers
+    RMAppImpl app1 = (RMAppImpl)rm1.submitApp(200, 10000, true);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+    int NUM_CONTAINERS = 2;
+    allocateContainers(nm1, am1, NUM_CONTAINERS);
+
+    // launch the 2nd container, for testing running container transferred.
+    nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 2, ContainerState.RUNNING);
+    ContainerId containerId2 =
+            ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
+    rm1.waitForState(nm1, containerId2, RMContainerState.RUNNING);
+
+    // Fail attempt1 normally
+    nm1.nodeHeartbeat(am1.getApplicationAttemptId(),
+            1, ContainerState.COMPLETE);
+    rm1.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+
+    // launch the second attempt
+    rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
+    Assert.assertEquals(2, app1.getAppAttempts().size());
+
+    // It will be the last attempt.
+    RMAppAttempt attempt2 = app1.getCurrentAppAttempt();
+    MockAM am2 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+    rm1.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.RUNNING);
+
+    // wait for 10 seconds to reset AM failure count
+    Thread.sleep(10 * 1000);
+
+    // Fail attempt2 normally
+    nm1.nodeHeartbeat(am2.getApplicationAttemptId(),
+            1, ContainerState.COMPLETE);
+    rm1.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+
+    // can launch the third attempt successfully
+    rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
+    Assert.assertEquals(3, app1.getAppAttempts().size());
+    MockAM am3 = rm1.launchAM(app1, rm1, nm1);
+    RegisterApplicationMasterResponse registerResponse =
+            am3.registerAppAttempt();
+
+    // keepContainers is applied, even if attempt2 was the last attempt.
+    Assert.assertEquals(1, registerResponse.getContainersFromPreviousAttempts()
+            .size());
+    boolean containerId2Exists = false;
+    Container container = registerResponse.getContainersFromPreviousAttempts().get(0);
+    if (container.getId().equals(containerId2)) {
+      containerId2Exists = true;
+    }
+    Assert.assertTrue(containerId2Exists);
+
+    rm1.waitForState(app1.getApplicationId(), RMAppState.RUNNING);
     rm1.stop();
   }
 }

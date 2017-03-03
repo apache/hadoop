@@ -24,10 +24,10 @@ export default AbstractAdapter.extend({
   restNameSpace: "node",
   serverName: "NM",
 
-  urlForFindRecord(id, modelName, snapshot) {
+  urlForFindRecord(id/*, modelName, snapshot*/) {
     var url = this._buildURL();
     url = url.replace("{nodeAddress}", id);
     return url;
-  },
+  }
 
 });

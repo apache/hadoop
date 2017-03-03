@@ -29,6 +29,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
@@ -461,12 +462,12 @@ public class TestApplicationMasterService {
     AllocateResponse response1 = am1.allocate(allocateRequest);
     Assert.assertEquals(appPriority1, response1.getApplicationPriority());
 
-    // get scheduler
-    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
-
     // Change the priority of App1 to 8
     Priority appPriority2 = Priority.newInstance(8);
-    cs.updateApplicationPriority(appPriority2, app1.getApplicationId());
+    UserGroupInformation ugi = UserGroupInformation
+        .createRemoteUser(app1.getUser());
+    rm.getRMAppManager().updateApplicationPriority(ugi, app1.getApplicationId(),
+        appPriority2);
 
     AllocateResponse response2 = am1.allocate(allocateRequest);
     Assert.assertEquals(appPriority2, response2.getApplicationPriority());

@@ -18,18 +18,21 @@
 
 package org.apache.hadoop.io.compress;
 
-import java.io.*;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.zip.GZIPOutputStream;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.compress.DefaultCodec;
-import org.apache.hadoop.io.compress.zlib.*;
-import org.apache.hadoop.io.compress.zlib.ZlibDecompressor.ZlibDirectDecompressor;
-
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
-import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
+import org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor;
+import org.apache.hadoop.io.compress.zlib.ZlibCompressor;
+import org.apache.hadoop.io.compress.zlib.ZlibDecompressor;
+import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 
 /**
  * This class creates gzip compressors/decompressors. 
@@ -45,10 +48,6 @@ public class GzipCodec extends DefaultCodec {
   protected static class GzipOutputStream extends CompressorStream {
 
     private static class ResetableGZIPOutputStream extends GZIPOutputStream {
-      private static final int TRAILER_SIZE = 8;
-      public static final String JVMVersion= System.getProperty("java.version");
-      private static final boolean HAS_BROKEN_FINISH =
-          (IBM_JAVA && JVMVersion.contains("1.6.0"));
 
       public ResetableGZIPOutputStream(OutputStream out) throws IOException {
         super(out);
@@ -56,61 +55,6 @@ public class GzipCodec extends DefaultCodec {
 
       public void resetState() throws IOException {
         def.reset();
-      }
-
-      /**
-       * Override this method for HADOOP-8419.
-       * Override because IBM implementation calls def.end() which
-       * causes problem when reseting the stream for reuse.
-       *
-       */
-      @Override
-      public void finish() throws IOException {
-        if (HAS_BROKEN_FINISH) {
-          if (!def.finished()) {
-            def.finish();
-            while (!def.finished()) {
-              int i = def.deflate(this.buf, 0, this.buf.length);
-              if ((def.finished()) && (i <= this.buf.length - TRAILER_SIZE)) {
-                writeTrailer(this.buf, i);
-                i += TRAILER_SIZE;
-                out.write(this.buf, 0, i);
-
-                return;
-              }
-              if (i > 0) {
-                out.write(this.buf, 0, i);
-              }
-            }
-
-            byte[] arrayOfByte = new byte[TRAILER_SIZE];
-            writeTrailer(arrayOfByte, 0);
-            out.write(arrayOfByte);
-          }
-        } else {
-          super.finish();
-        }
-      }
-
-      /** re-implement for HADOOP-8419 because the relative method in jdk is invisible */
-      private void writeTrailer(byte[] paramArrayOfByte, int paramInt)
-        throws IOException {
-        writeInt((int)this.crc.getValue(), paramArrayOfByte, paramInt);
-        writeInt(this.def.getTotalIn(), paramArrayOfByte, paramInt + 4);
-      }
-
-      /** re-implement for HADOOP-8419 because the relative method in jdk is invisible */
-      private void writeInt(int paramInt1, byte[] paramArrayOfByte, int paramInt2)
-        throws IOException {
-        writeShort(paramInt1 & 0xFFFF, paramArrayOfByte, paramInt2);
-        writeShort(paramInt1 >> 16 & 0xFFFF, paramArrayOfByte, paramInt2 + 2);
-      }
-
-      /** re-implement for HADOOP-8419 because the relative method in jdk is invisible */
-      private void writeShort(int paramInt1, byte[] paramArrayOfByte, int paramInt2)
-        throws IOException {
-        paramArrayOfByte[paramInt2] = (byte)(paramInt1 & 0xFF);
-        paramArrayOfByte[(paramInt2 + 1)] = (byte)(paramInt1 >> 8 & 0xFF);
       }
     }
 

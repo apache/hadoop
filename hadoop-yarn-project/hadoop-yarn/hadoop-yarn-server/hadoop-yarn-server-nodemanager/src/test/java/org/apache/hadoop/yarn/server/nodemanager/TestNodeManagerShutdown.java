@@ -28,6 +28,7 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -255,7 +256,9 @@ public class TestNodeManagerShutdown {
         GetContainerStatusesRequest.newInstance(containerIds);
     ContainerStatus containerStatus =
         containerManager.getContainerStatuses(request).getContainerStatuses().get(0);
-    Assert.assertEquals(ContainerState.RUNNING, containerStatus.getState());
+    Assert.assertTrue(
+        EnumSet.of(ContainerState.RUNNING, ContainerState.SCHEDULED)
+            .contains(containerStatus.getState()));
   }
   
   public static ContainerId createContainerId() {

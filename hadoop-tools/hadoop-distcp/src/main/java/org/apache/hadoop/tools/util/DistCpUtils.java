@@ -356,9 +356,7 @@ public class DistCpUtils {
       CopyListingFileStatus.class, conf);
     Path output = new Path(sourceListing.toString() +  "_sorted");
 
-    if (fs.exists(output)) {
-      fs.delete(output, false);
-    }
+    fs.delete(output, false);
 
     sorter.sort(sourceListing, output);
     return output;

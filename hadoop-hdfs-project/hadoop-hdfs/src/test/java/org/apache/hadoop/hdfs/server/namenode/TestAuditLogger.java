@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger;
@@ -58,6 +59,14 @@ import java.util.List;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY;
+import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
+import static org.apache.hadoop.fs.permission.AclEntryScope.DEFAULT;
+import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
+import static org.apache.hadoop.fs.permission.AclEntryType.OTHER;
+import static org.apache.hadoop.fs.permission.AclEntryType.USER;
+import static org.apache.hadoop.fs.permission.FsAction.ALL;
+import static org.apache.hadoop.fs.permission.FsAction.EXECUTE;
+import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.NNTOP_ENABLED_KEY;
@@ -442,6 +451,70 @@ public class TestAuditLogger {
       cluster.shutdown();
     }
   }
+
+  /**
+   * Verify Audit log entries for the successful ACL API calls and ACL commands
+   * over FS Shell.
+   */
+  @Test (timeout = 60000)
+  public void testAuditLogForAcls() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    conf.set(DFS_NAMENODE_AUDIT_LOGGERS_KEY,
+        DummyAuditLogger.class.getName());
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      cluster.waitClusterUp();
+      assertTrue(DummyAuditLogger.initialized);
+
+      final FileSystem fs = cluster.getFileSystem();
+      final Path p = new Path("/debug.log");
+      DFSTestUtil.createFile(fs, p, 1024, (short)1, 0L);
+
+      DummyAuditLogger.resetLogCount();
+      fs.getAclStatus(p);
+      assertEquals(1, DummyAuditLogger.logCount);
+
+      // FS shell command '-getfacl' additionally calls getFileInfo() and then
+      // followed by getAclStatus() only if the ACL bit is set. Since the
+      // initial permission didn't have the ACL bit set, getAclStatus() is
+      // skipped.
+      DFSTestUtil.FsShellRun("-getfacl " + p.toUri().getPath(), 0, null, conf);
+      assertEquals(2, DummyAuditLogger.logCount);
+
+      final List<AclEntry> acls = Lists.newArrayList();
+      acls.add(AclTestHelpers.aclEntry(ACCESS, USER, ALL));
+      acls.add(AclTestHelpers.aclEntry(ACCESS, USER, "user1", ALL));
+      acls.add(AclTestHelpers.aclEntry(ACCESS, GROUP, READ_EXECUTE));
+      acls.add(AclTestHelpers.aclEntry(ACCESS, OTHER, EXECUTE));
+
+      fs.setAcl(p, acls);
+      assertEquals(3, DummyAuditLogger.logCount);
+
+      // Since the file has ACL bit set, FS shell command '-getfacl' should now
+      // call getAclStatus() additionally after getFileInfo().
+      DFSTestUtil.FsShellRun("-getfacl " + p.toUri().getPath(), 0, null, conf);
+      assertEquals(5, DummyAuditLogger.logCount);
+
+      fs.removeAcl(p);
+      assertEquals(6, DummyAuditLogger.logCount);
+
+      List<AclEntry> aclsToRemove = Lists.newArrayList();
+      aclsToRemove.add(AclTestHelpers.aclEntry(DEFAULT, USER, "user1", ALL));
+      fs.removeAclEntries(p, aclsToRemove);
+      fs.removeDefaultAcl(p);
+      assertEquals(8, DummyAuditLogger.logCount);
+
+      // User ACL has been removed, FS shell command '-getfacl' should now
+      // skip call to getAclStatus() after getFileInfo().
+      DFSTestUtil.FsShellRun("-getfacl " + p.toUri().getPath(), 0, null, conf);
+      assertEquals(9, DummyAuditLogger.logCount);
+      assertEquals(0, DummyAuditLogger.unsuccessfulCount);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
 
   /**
    * Tests that a broken audit logger causes requests to fail.

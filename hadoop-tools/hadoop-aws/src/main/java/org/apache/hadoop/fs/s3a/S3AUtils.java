@@ -35,25 +35,26 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.security.ProviderUtils;
+
+import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
+import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
-import static org.apache.hadoop.fs.s3a.Constants.ACCESS_KEY;
-import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
-import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
-import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
-import static org.apache.hadoop.fs.s3a.Constants.SECRET_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.*;
 
 /**
  * Utility methods for S3A code.
@@ -72,6 +73,13 @@ public final class S3AUtils {
   static final String ABSTRACT_PROVIDER =
       "is abstract and therefore cannot be created";
   static final String ENDPOINT_KEY = "Endpoint";
+
+  /**
+   * Core property for provider path. Duplicated here for consistent
+   * code across Hadoop version: {@value}.
+   */
+  static final String CREDENTIAL_PROVIDER_PATH =
+      "hadoop.security.credential.provider.path";
 
   private S3AUtils() {
   }
@@ -113,6 +121,10 @@ public final class S3AUtils {
         path != null ? (" on " + path) : "",
         exception);
     if (!(exception instanceof AmazonServiceException)) {
+      if (containsInterruptedException(exception)) {
+        return (IOException)new InterruptedIOException(message)
+            .initCause(exception);
+      }
       return new AWSClientIOException(message, exception);
     } else {
 
@@ -192,6 +204,24 @@ public final class S3AUtils {
       ioe = new IOException(operation + " failed: " + cause, cause);
     }
     return ioe;
+  }
+
+  /**
+   * Recurse down the exception loop looking for any inner details about
+   * an interrupted exception.
+   * @param thrown exception thrown
+   * @return true if down the execution chain the operation was an interrupt
+   */
+  static boolean containsInterruptedException(Throwable thrown) {
+    if (thrown == null) {
+      return false;
+    }
+    if (thrown instanceof InterruptedException ||
+        thrown instanceof InterruptedIOException) {
+      return true;
+    }
+    // tail recurse
+    return containsInterruptedException(thrown.getCause());
   }
 
   /**
@@ -486,6 +516,7 @@ public final class S3AUtils {
     Preconditions.checkArgument(v >= min,
         String.format("Value of %s: %d is below the minimum value %d",
             key, v, min));
+    LOG.debug("Value of {} is {}", key, v);
     return v;
   }
 
@@ -506,6 +537,7 @@ public final class S3AUtils {
     Preconditions.checkArgument(v >= min,
         String.format("Value of %s: %d is below the minimum value %d",
             key, v, min));
+    LOG.debug("Value of {} is {}", key, v);
     return v;
   }
 
@@ -527,6 +559,7 @@ public final class S3AUtils {
     Preconditions.checkArgument(v >= min,
             String.format("Value of %s: %d is below the minimum value %d",
                     key, v, min));
+    LOG.debug("Value of {} is {}", key, v);
     return v;
   }
 
@@ -610,4 +643,120 @@ public final class S3AUtils {
       return null;
     }
   }
+
+  /**
+   * Propagates bucket-specific settings into generic S3A configuration keys.
+   * This is done by propagating the values of the form
+   * {@code fs.s3a.bucket.${bucket}.key} to
+   * {@code fs.s3a.key}, for all values of "key" other than a small set
+   * of unmodifiable values.
+   *
+   * The source of the updated property is set to the key name of the bucket
+   * property, to aid in diagnostics of where things came from.
+   *
+   * Returns a new configuration. Why the clone?
+   * You can use the same conf for different filesystems, and the original
+   * values are not updated.
+   *
+   * The {@code fs.s3a.impl} property cannot be set, nor can
+   * any with the prefix {@code fs.s3a.bucket}.
+   *
+   * This method does not propagate security provider path information from
+   * the S3A property into the Hadoop common provider: callers must call
+   * {@link #patchSecurityCredentialProviders(Configuration)} explicitly.
+   * @param source Source Configuration object.
+   * @param bucket bucket name. Must not be empty.
+   * @return a (potentially) patched clone of the original.
+   */
+  public static Configuration propagateBucketOptions(Configuration source,
+      String bucket) {
+
+    Preconditions.checkArgument(StringUtils.isNotEmpty(bucket), "bucket");
+    final String bucketPrefix = FS_S3A_BUCKET_PREFIX + bucket +'.';
+    LOG.debug("Propagating entries under {}", bucketPrefix);
+    final Configuration dest = new Configuration(source);
+    for (Map.Entry<String, String> entry : source) {
+      final String key = entry.getKey();
+      // get the (unexpanded) value.
+      final String value = entry.getValue();
+      if (!key.startsWith(bucketPrefix) || bucketPrefix.equals(key)) {
+        continue;
+      }
+      // there's a bucket prefix, so strip it
+      final String stripped = key.substring(bucketPrefix.length());
+      if (stripped.startsWith("bucket.") || "impl".equals(stripped)) {
+        //tell user off
+        LOG.debug("Ignoring bucket option {}", key);
+      }  else {
+        // propagate the value, building a new origin field.
+        // to track overwrites, the generic key is overwritten even if
+        // already matches the new one.
+        final String generic = FS_S3A_PREFIX + stripped;
+        LOG.debug("Updating {}", generic);
+        dest.set(generic, value, key);
+      }
+    }
+    return dest;
+  }
+
+  /**
+   * Patch the security credential provider information in
+   * {@link #CREDENTIAL_PROVIDER_PATH}
+   * with the providers listed in
+   * {@link Constants#S3A_SECURITY_CREDENTIAL_PROVIDER_PATH}.
+   *
+   * This allows different buckets to use different credential files.
+   * @param conf configuration to patch
+   */
+  static void patchSecurityCredentialProviders(Configuration conf) {
+    Collection<String> customCredentials = conf.getStringCollection(
+        S3A_SECURITY_CREDENTIAL_PROVIDER_PATH);
+    Collection<String> hadoopCredentials = conf.getStringCollection(
+        CREDENTIAL_PROVIDER_PATH);
+    if (!customCredentials.isEmpty()) {
+      List<String> all = Lists.newArrayList(customCredentials);
+      all.addAll(hadoopCredentials);
+      String joined = StringUtils.join(all, ',');
+      LOG.debug("Setting {} to {}", CREDENTIAL_PROVIDER_PATH,
+          joined);
+      conf.set(CREDENTIAL_PROVIDER_PATH, joined,
+          "patch of " + S3A_SECURITY_CREDENTIAL_PROVIDER_PATH);
+    }
+  }
+
+  static String getServerSideEncryptionKey(Configuration conf) {
+    try {
+      return getPassword(conf, Constants.SERVER_SIDE_ENCRYPTION_KEY,
+        conf.getTrimmed(SERVER_SIDE_ENCRYPTION_KEY));
+    } catch (IOException e) {
+      LOG.error("Cannot retrieve SERVER_SIDE_ENCRYPTION_KEY", e);
+    }
+    return null;
+  }
+
+  /**
+   * Close the Closeable objects and <b>ignore</b> any Exception or
+   * null pointers.
+   * (This is the SLF4J equivalent of that in {@code IOUtils}).
+   * @param log the log to log at debug level. Can be null.
+   * @param closeables the objects to close
+   */
+  public static void closeAll(Logger log,
+      java.io.Closeable... closeables) {
+    for (java.io.Closeable c : closeables) {
+      if (c != null) {
+        try {
+          if (log != null) {
+            log.debug("Closing {}", c);
+          }
+          c.close();
+        } catch (Exception e) {
+          if (log != null && log.isDebugEnabled()) {
+            log.debug("Exception in closing {}", c, e);
+          }
+        }
+      }
+    }
+  }
+
 }

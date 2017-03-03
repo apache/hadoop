@@ -45,11 +45,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HAServiceTarget;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.api.records.DecommissionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
@@ -67,13 +69,13 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsReque
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -88,6 +90,8 @@ public class TestRMAdminCLI {
   private RMAdminCLI rmAdminCLIWithHAEnabled;
   private CommonNodeLabelsManager dummyNodeLabelsManager;
   private boolean remoteAdminServiceAccessed = false;
+  private static final String HOST_A = "1.2.3.1";
+  private static final String HOST_B = "1.2.3.2";
 
   @SuppressWarnings("static-access")
   @Before
@@ -130,6 +134,14 @@ public class TestRMAdminCLI {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2");
+    conf.set(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, "rm1"), HOST_A
+        + ":12345");
+    conf.set(HAUtil.addSuffix(YarnConfiguration.RM_ADMIN_ADDRESS, "rm1"),
+        HOST_A + ":12346");
+    conf.set(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, "rm2"), HOST_B
+        + ":12345");
+    conf.set(HAUtil.addSuffix(YarnConfiguration.RM_ADMIN_ADDRESS, "rm2"),
+        HOST_B + ":12346");
     rmAdminCLIWithHAEnabled = new RMAdminCLI(conf) {
 
       @Override
@@ -140,7 +152,17 @@ public class TestRMAdminCLI {
 
       @Override
       protected HAServiceTarget resolveTarget(String rmId) {
-        return haServiceTarget;
+        HAServiceTarget target = super.resolveTarget(rmId);
+        HAServiceTarget spy = Mockito.spy(target);
+        // Override the target to return our mock protocol
+        try {
+          Mockito.doReturn(haadmin).when(spy)
+              .getProxy(Mockito.<Configuration> any(), Mockito.anyInt());
+          Mockito.doReturn(false).when(spy).isAutoFailoverEnabled();
+        } catch (IOException e) {
+          throw new AssertionError(e); // mock setup doesn't really throw
+        }
+        return spy;
       }
     };
   }
@@ -424,6 +446,24 @@ public class TestRMAdminCLI {
     verify(haadmin).getServiceStatus();
   }
 
+  @Test
+  public void testGetAllServiceState() throws Exception {
+    HAServiceStatus standbyStatus = new HAServiceStatus(
+        HAServiceState.STANDBY).setReadyToBecomeActive();
+    Mockito.doReturn(standbyStatus).when(haadmin).getServiceStatus();
+    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+    rmAdminCLIWithHAEnabled.setOut(new PrintStream(dataOut));
+    String[] args = {"-getAllServiceState"};
+    assertEquals(0, rmAdminCLIWithHAEnabled.run(args));
+    assertTrue(dataOut.toString().contains(
+        String.format("%-50s %-10s", (HOST_A + ":" + 12346),
+            standbyStatus.getState())));
+    assertTrue(dataOut.toString().contains(
+        String.format("%-50s %-10s", (HOST_B + ":" + 12346),
+            standbyStatus.getState())));
+    rmAdminCLIWithHAEnabled.setOut(System.out);
+  }
+
   @Test(timeout = 500)
   public void testCheckHealth() throws Exception {
     String[] args = {"-checkHealth", "rm1"};
@@ -572,7 +612,8 @@ public class TestRMAdminCLI {
               + "([OvercommitTimeout]) "
               + "[-transitionToActive [--forceactive] <serviceId>] "
               + "[-transitionToStandby <serviceId>] "
-              + "[-getServiceState <serviceId>] [-checkHealth <serviceId>] [-help [cmd]]";
+              + "[-getServiceState <serviceId>] [-getAllServiceState] "
+              + "[-checkHealth <serviceId>] [-help [cmd]]";
       String actualHelpMsg = dataOut.toString();
       assertTrue(String.format("Help messages: %n " + actualHelpMsg + " %n doesn't include expected " +
           "messages: %n" + expectedHelpMsg), actualHelpMsg.contains(expectedHelpMsg

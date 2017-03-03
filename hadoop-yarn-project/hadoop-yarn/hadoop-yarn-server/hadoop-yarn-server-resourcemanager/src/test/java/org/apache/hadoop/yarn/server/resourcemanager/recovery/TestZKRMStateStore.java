@@ -53,7 +53,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.data.ACL;
@@ -79,15 +78,26 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
   private TestingServer curatorTestingServer;
   private CuratorFramework curatorFramework;
 
-  @Before
-  public void setupCuratorServer() throws Exception {
-    curatorTestingServer = new TestingServer();
+  public static TestingServer setupCuratorServer() throws Exception {
+    TestingServer curatorTestingServer = new TestingServer();
     curatorTestingServer.start();
-    curatorFramework = CuratorFrameworkFactory.builder()
+    return curatorTestingServer;
+  }
+
+  public static CuratorFramework setupCuratorFramework(
+      TestingServer curatorTestingServer) throws Exception {
+    CuratorFramework curatorFramework = CuratorFrameworkFactory.builder()
         .connectString(curatorTestingServer.getConnectString())
         .retryPolicy(new RetryNTimes(100, 100))
         .build();
     curatorFramework.start();
+    return curatorFramework;
+  }
+
+  @Before
+  public void setupCurator() throws Exception {
+    curatorTestingServer = setupCuratorServer();
+    curatorFramework = setupCuratorFramework(curatorTestingServer);
   }
 
   @After
@@ -243,19 +253,21 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     Assert.assertEquals(defaultVersion, store.loadVersion());
   }
 
-  private Configuration createHARMConf(
-      String rmIds, String rmId, int adminPort) {
+  public static Configuration createHARMConf(String rmIds, String rmId,
+      int adminPort, boolean autoFailoverEnabled,
+      TestingServer curatorTestServer) {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     conf.set(YarnConfiguration.RM_HA_IDS, rmIds);
     conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     conf.set(YarnConfiguration.RM_STORE, ZKRMStateStore.class.getName());
     conf.set(YarnConfiguration.RM_ZK_ADDRESS,
-        curatorTestingServer.getConnectString());
+        curatorTestServer.getConnectString());
     conf.setInt(YarnConfiguration.RM_ZK_TIMEOUT_MS, ZK_TIMEOUT_MS);
     conf.set(YarnConfiguration.RM_HA_ID, rmId);
     conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS, "localhost:0");
-
+    conf.setBoolean(
+        YarnConfiguration.AUTO_FAILOVER_ENABLED, autoFailoverEnabled);
     for (String rpcAddress : YarnConfiguration.getServiceAddressConfKeys(conf)) {
       for (String id : HAUtil.getRMHAIds(conf)) {
         conf.set(HAUtil.addSuffix(rpcAddress, id), "localhost:0");
@@ -293,8 +305,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
             ZKRMStateStore.ROOT_ZNODE_NAME;
 
     // Start RM with HA enabled
-    Configuration conf = createHARMConf("rm1,rm2", "rm1", 1234);
-    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    Configuration conf =
+        createHARMConf("rm1,rm2", "rm1", 1234, false, curatorTestingServer);
     ResourceManager rm = new MockRM(conf);
     rm.start();
     rm.getRMContext().getRMAdminService().transitionToActive(req);
@@ -336,8 +348,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     StateChangeRequestInfo req = new StateChangeRequestInfo(
         HAServiceProtocol.RequestSource.REQUEST_BY_USER);
 
-    Configuration conf1 = createHARMConf("rm1,rm2", "rm1", 1234);
-    conf1.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    Configuration conf1 =
+        createHARMConf("rm1,rm2", "rm1", 1234, false, curatorTestingServer);
     ResourceManager rm1 = new MockRM(conf1);
     rm1.start();
     rm1.getRMContext().getRMAdminService().transitionToActive(req);
@@ -347,8 +359,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
         HAServiceProtocol.HAServiceState.ACTIVE,
         rm1.getRMContext().getRMAdminService().getServiceStatus().getState());
 
-    Configuration conf2 = createHARMConf("rm1,rm2", "rm2", 5678);
-    conf2.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    Configuration conf2 =
+        createHARMConf("rm1,rm2", "rm2", 5678, false, curatorTestingServer);
     ResourceManager rm2 = new MockRM(conf2);
     rm2.start();
     rm2.getRMContext().getRMAdminService().transitionToActive(req);

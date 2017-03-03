@@ -222,9 +222,20 @@ class ChRootedFileSystem extends FilterFileSystem {
   }
 
   @Override
+  public FileChecksum getFileChecksum(final Path f, final long length)
+      throws IOException {
+    return super.getFileChecksum(fullPath(f), length);
+  }
+
+  @Override
   public FileStatus getFileStatus(final Path f) 
       throws IOException {
     return super.getFileStatus(fullPath(f));
+  }
+
+  @Override
+  public Path getLinkTarget(Path f) throws IOException {
+    return super.getLinkTarget(fullPath(f));
   }
 
   @Override

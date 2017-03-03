@@ -33,19 +33,26 @@ public class SimpleUdpClient {
   protected final XDR request;
   protected final boolean oneShot;
   protected final DatagramSocket clientSocket;
+  private int udpTimeoutMillis;
 
   public SimpleUdpClient(String host, int port, XDR request,
       DatagramSocket clientSocket) {
-    this(host, port, request, true, clientSocket);
+    this(host, port, request, true, clientSocket, 500);
   }
 
   public SimpleUdpClient(String host, int port, XDR request, Boolean oneShot,
       DatagramSocket clientSocket) {
+    this(host, port, request, oneShot, clientSocket, 500);
+  }
+
+  public SimpleUdpClient(String host, int port, XDR request, Boolean oneShot,
+                         DatagramSocket clientSocket, int udpTimeoutMillis) {
     this.host = host;
     this.port = port;
     this.request = request;
     this.oneShot = oneShot;
     this.clientSocket = clientSocket;
+    this.udpTimeoutMillis = udpTimeoutMillis;
   }
 
   public void run() throws IOException {
@@ -60,7 +67,7 @@ public class SimpleUdpClient {
       DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length,
           IPAddress, port);
       socket.send(sendPacket);
-      socket.setSoTimeout(500);
+      socket.setSoTimeout(udpTimeoutMillis);
       DatagramPacket receivePacket = new DatagramPacket(receiveData,
           receiveData.length);
       socket.receive(receivePacket);

@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -37,9 +38,16 @@ import org.apache.hadoop.yarn.api.records.QueueStatistics;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.security.AccessRequest;
+import org.apache.hadoop.yarn.security.PrivilegedEntity;
+import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
+import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import com.google.common.annotations.VisibleForTesting;
 
 @Private
 @Unstable
@@ -51,6 +59,8 @@ public abstract class FSQueue implements Queue, Schedulable {
   private Resource steadyFairShare = Resources.createResource(0, 0);
   private final String name;
   protected final FairScheduler scheduler;
+  private final YarnAuthorizationProvider authorizer;
+  private final PrivilegedEntity queueEntity;
   private final FSQueueMetrics metrics;
   
   protected final FSParentQueue parent;
@@ -76,46 +86,58 @@ public abstract class FSQueue implements Queue, Schedulable {
   public FSQueue(String name, FairScheduler scheduler, FSParentQueue parent) {
     this.name = name;
     this.scheduler = scheduler;
+    this.authorizer =
+        YarnAuthorizationProvider.getInstance(scheduler.getConf());
+    this.queueEntity = new PrivilegedEntity(EntityType.QUEUE, name);
     this.metrics = FSQueueMetrics.forQueue(getName(), parent, true, scheduler.getConf());
     this.parent = parent;
+    setPolicy(scheduler.getAllocationConfiguration().getSchedulingPolicy(name));
+    reinit(false);
   }
 
   /**
    * Initialize a queue by setting its queue-specific properties and its
-   * metrics.
-   * This function is invoked when a new queue is created or reloading the
-   * allocation configuration.
+   * metrics. This method is invoked when creating a new queue or reloading
+   * the allocation file.
+   * This method does not set policies for queues when reloading the allocation
+   * file since we need to either set all new policies or nothing, which is
+   * handled by method {@link #verifyAndSetPolicyFromConf}.
+   *
+   * @param recursive whether child queues should be reinitialized recursively
    */
-  public void init() {
+  public void reinit(boolean recursive) {
     AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
-    allocConf.initFSQueue(this, scheduler);
+    allocConf.initFSQueue(this);
+    updatePreemptionVariables();
+
+    if (recursive) {
+      for (FSQueue child : getChildQueues()) {
+        child.reinit(recursive);
+      }
+    }
   }
 
   public String getName() {
     return name;
   }
-  
+
   @Override
   public String getQueueName() {
     return name;
   }
-  
+
   public SchedulingPolicy getPolicy() {
     return policy;
   }
-  
+
   public FSParentQueue getParent() {
     return parent;
   }
 
-  protected void throwPolicyDoesnotApplyException(SchedulingPolicy policy)
-      throws AllocationConfigurationException {
-    throw new AllocationConfigurationException("SchedulingPolicy " + policy
-        + " does not apply to queue " + getName());
+  public void setPolicy(SchedulingPolicy policy) {
+    policy.initialize(scheduler.getContext());
+    this.policy = policy;
   }
-
-  public abstract void setPolicy(SchedulingPolicy policy)
-      throws AllocationConfigurationException;
 
   public void setWeights(ResourceWeights weights){
     this.weights = weights;
@@ -158,6 +180,11 @@ public abstract class FSQueue implements Queue, Schedulable {
 
   public int getMaxRunningApps() {
     return maxRunningApps;
+  }
+
+  @VisibleForTesting
+  protected float getMaxAMShare() {
+    return maxAMShare;
   }
 
   public void setMaxAMShare(float maxAMShare){
@@ -253,54 +280,66 @@ public abstract class FSQueue implements Queue, Schedulable {
     return steadyFairShare;
   }
 
-  public void setSteadyFairShare(Resource steadyFairShare) {
+  void setSteadyFairShare(Resource steadyFairShare) {
     this.steadyFairShare = steadyFairShare;
     metrics.setSteadyFairShare(steadyFairShare);
   }
 
   public boolean hasAccess(QueueACL acl, UserGroupInformation user) {
-    return scheduler.getAllocationConfiguration().hasAccess(name, acl, user);
+    return authorizer.checkPermission(
+        new AccessRequest(queueEntity, user,
+            SchedulerUtils.toAccessType(acl), null, null,
+            Server.getRemoteAddress(), null));
   }
 
-  public long getFairSharePreemptionTimeout() {
+  long getFairSharePreemptionTimeout() {
     return fairSharePreemptionTimeout;
   }
 
-  public void setFairSharePreemptionTimeout(long fairSharePreemptionTimeout) {
+  void setFairSharePreemptionTimeout(long fairSharePreemptionTimeout) {
     this.fairSharePreemptionTimeout = fairSharePreemptionTimeout;
   }
 
-  public long getMinSharePreemptionTimeout() {
+  long getMinSharePreemptionTimeout() {
     return minSharePreemptionTimeout;
   }
 
-  public void setMinSharePreemptionTimeout(long minSharePreemptionTimeout) {
+  void setMinSharePreemptionTimeout(long minSharePreemptionTimeout) {
     this.minSharePreemptionTimeout = minSharePreemptionTimeout;
   }
 
-  public float getFairSharePreemptionThreshold() {
+  float getFairSharePreemptionThreshold() {
     return fairSharePreemptionThreshold;
   }
 
-  public void setFairSharePreemptionThreshold(float fairSharePreemptionThreshold) {
+  void setFairSharePreemptionThreshold(float fairSharePreemptionThreshold) {
     this.fairSharePreemptionThreshold = fairSharePreemptionThreshold;
   }
 
+  @Override
   public boolean isPreemptable() {
     return preemptable;
   }
 
   /**
    * Recomputes the shares for all child queues and applications based on this
-   * queue's current share
+   * queue's current share, and checks for starvation.
+   *
+   * @param checkStarvation whether to check for fairshare or minshare
+   *                        starvation on update
    */
-  public abstract void recomputeShares();
+  abstract void updateInternal(boolean checkStarvation);
+
+  public void update(Resource fairShare, boolean checkStarvation) {
+    setFairShare(fairShare);
+    updateInternal(checkStarvation);
+  }
 
   /**
    * Update the min/fair share preemption timeouts, threshold and preemption
    * disabled flag for this queue.
    */
-  public void updatePreemptionVariables() {
+  private void updatePreemptionVariables() {
     // For min share timeout
     minSharePreemptionTimeout = scheduler.getAllocationConfiguration()
         .getMinSharePreemptionTimeout(getName());
@@ -319,9 +358,15 @@ public abstract class FSQueue implements Queue, Schedulable {
     if (fairSharePreemptionThreshold < 0 && parent != null) {
       fairSharePreemptionThreshold = parent.getFairSharePreemptionThreshold();
     }
-    // For option whether allow preemption from this queue
-    preemptable = scheduler.getAllocationConfiguration()
-        .isPreemptable(getName());
+    // For option whether allow preemption from this queue.
+    // If the parent is non-preemptable, this queue is non-preemptable as well,
+    // otherwise get the value from the allocation file.
+    if (parent != null && !parent.isPreemptable()) {
+      preemptable = false;
+    } else {
+      preemptable = scheduler.getAllocationConfiguration()
+          .isPreemptable(getName());
+    }
   }
 
   /**
@@ -347,7 +392,7 @@ public abstract class FSQueue implements Queue, Schedulable {
    * 
    * @return true if check passes (can assign) or false otherwise
    */
-  protected boolean assignContainerPreCheck(FSSchedulerNode node) {
+  boolean assignContainerPreCheck(FSSchedulerNode node) {
     if (!Resources.fitsIn(getResourceUsage(), maxShare)
         || node.getReservedContainer() != null) {
       return false;
@@ -403,7 +448,7 @@ public abstract class FSQueue implements Queue, Schedulable {
     return null;
   }
 
-  public boolean fitsInMaxShare(Resource additionalResource) {
+  boolean fitsInMaxShare(Resource additionalResource) {
     Resource usagePlusAddition =
         Resources.add(getResourceUsage(), additionalResource);
 
@@ -415,6 +460,35 @@ public abstract class FSQueue implements Queue, Schedulable {
     if (parentQueue != null) {
       return parentQueue.fitsInMaxShare(additionalResource);
     }
+    return true;
+  }
+
+  /**
+   * Recursively check policies for queues in pre-order. Get queue policies
+   * from the allocation file instead of properties of {@link FSQueue} objects.
+   * Set the policy for current queue if there is no policy violation for its
+   * children. This method is invoked while reloading the allocation file.
+   *
+   * @param queueConf allocation configuration
+   * @return true if no policy violation and successfully set polices
+   *         for queues; false otherwise
+   */
+  public boolean verifyAndSetPolicyFromConf(AllocationConfiguration queueConf) {
+    SchedulingPolicy queuePolicy = queueConf.getSchedulingPolicy(getName());
+
+    for (FSQueue child : getChildQueues()) {
+      if (!queuePolicy.isChildPolicyAllowed(
+          queueConf.getSchedulingPolicy(child.getName()))) {
+        return false;
+      }
+      boolean success = child.verifyAndSetPolicyFromConf(queueConf);
+      if (!success) {
+        return false;
+      }
+    }
+
+    // Set the policy if no policy violation for all children
+    setPolicy(queuePolicy);
     return true;
   }
 }

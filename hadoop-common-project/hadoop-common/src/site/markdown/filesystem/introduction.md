@@ -30,10 +30,10 @@ are places where HDFS diverges from the expected behaviour of a POSIX
 filesystem.
 
 The behaviour of other Hadoop filesystems are not as rigorously tested.
-The bundled S3 FileSystem makes Amazon's S3 Object Store ("blobstore")
+The bundled S3N and S3A FileSystem clients make Amazon's S3 Object Store ("blobstore")
 accessible through the FileSystem API. The Swift FileSystem driver provides similar
 functionality for the OpenStack Swift blobstore. The Azure object storage
-FileSystem in branch-1-win talks to Microsoft's Azure equivalent. All of these
+FileSystem talks to Microsoft's Azure equivalent. All of these
 bind to object stores, which do have different behaviors, especially regarding
 consistency guarantees, and atomicity of operations.
 

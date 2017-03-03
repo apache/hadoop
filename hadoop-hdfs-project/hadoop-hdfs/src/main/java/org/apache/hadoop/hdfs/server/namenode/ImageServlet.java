@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.server.common.Util;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.net.HttpURLConnection;
@@ -304,11 +305,12 @@ public class ImageServlet extends HttpServlet {
    */
   public static void setVerificationHeadersForGet(HttpServletResponse response,
       File file) throws IOException {
-    response.setHeader(TransferFsImage.CONTENT_LENGTH,
+    response.setHeader(
+        Util.CONTENT_LENGTH,
         String.valueOf(file.length()));
     MD5Hash hash = MD5FileUtils.readStoredMd5ForFile(file);
     if (hash != null) {
-      response.setHeader(TransferFsImage.MD5_HEADER, hash.toString());
+      response.setHeader(Util.MD5_HEADER, hash.toString());
     }
   }
   
@@ -437,12 +439,13 @@ public class ImageServlet extends HttpServlet {
    */
   static void setVerificationHeadersForPut(HttpURLConnection connection,
       File file) throws IOException {
-    connection.setRequestProperty(TransferFsImage.CONTENT_LENGTH,
+    connection.setRequestProperty(
+        Util.CONTENT_LENGTH,
         String.valueOf(file.length()));
     MD5Hash hash = MD5FileUtils.readStoredMd5ForFile(file);
     if (hash != null) {
       connection
-          .setRequestProperty(TransferFsImage.MD5_HEADER, hash.toString());
+          .setRequestProperty(Util.MD5_HEADER, hash.toString());
     }
   }
 
@@ -462,7 +465,7 @@ public class ImageServlet extends HttpServlet {
     params.put(STORAGEINFO_PARAM, storage.toColonSeparatedString());
     // setting the length of the file to be uploaded in separate property as
     // Content-Length only supports up to 2GB
-    params.put(TransferFsImage.FILE_LENGTH, Long.toString(imageFileSize));
+    params.put(Util.FILE_LENGTH, Long.toString(imageFileSize));
     params.put(IMAGE_FILE_TYPE, nnf.name());
     return params;
   }
@@ -586,7 +589,7 @@ public class ImageServlet extends HttpServlet {
       txId = ServletUtil.parseLongParam(request, TXID_PARAM);
       storageInfoString = ServletUtil.getParameter(request, STORAGEINFO_PARAM);
       fileSize = ServletUtil.parseLongParam(request,
-          TransferFsImage.FILE_LENGTH);
+          Util.FILE_LENGTH);
       String imageType = ServletUtil.getParameter(request, IMAGE_FILE_TYPE);
       nnf = imageType == null ? NameNodeFile.IMAGE : NameNodeFile
           .valueOf(imageType);

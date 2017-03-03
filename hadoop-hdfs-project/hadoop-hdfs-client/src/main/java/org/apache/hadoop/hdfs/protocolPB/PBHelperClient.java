@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
@@ -120,8 +121,11 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmI
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmSlotProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.EncryptionZoneProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.AccessModeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockStoragePolicyProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTypeProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenSecretProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ContentSummaryProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CorruptFileBlocksProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CryptoProtocolVersionProto;
@@ -580,6 +584,55 @@ public class PBHelperClient {
     }
 
     return blockTokens;
+  }
+
+  public static AccessModeProto convert(BlockTokenIdentifier.AccessMode aMode) {
+    switch (aMode) {
+    case READ: return AccessModeProto.READ;
+    case WRITE: return AccessModeProto.WRITE;
+    case COPY: return AccessModeProto.COPY;
+    case REPLACE: return AccessModeProto.REPLACE;
+    default:
+      throw new IllegalArgumentException("Unexpected AccessMode: " + aMode);
+    }
+  }
+
+  public static BlockTokenIdentifier.AccessMode convert(
+      AccessModeProto accessModeProto) {
+    switch (accessModeProto) {
+    case READ: return BlockTokenIdentifier.AccessMode.READ;
+    case WRITE: return BlockTokenIdentifier.AccessMode.WRITE;
+    case COPY: return BlockTokenIdentifier.AccessMode.COPY;
+    case REPLACE: return BlockTokenIdentifier.AccessMode.REPLACE;
+    default:
+      throw new IllegalArgumentException("Unexpected AccessModeProto: " +
+          accessModeProto);
+    }
+  }
+
+  public static BlockTokenSecretProto convert(
+      BlockTokenIdentifier blockTokenSecret) {
+    BlockTokenSecretProto.Builder builder =
+        BlockTokenSecretProto.newBuilder();
+    builder.setExpiryDate(blockTokenSecret.getExpiryDate());
+    builder.setKeyId(blockTokenSecret.getKeyId());
+    String userId = blockTokenSecret.getUserId();
+    if (userId != null) {
+      builder.setUserId(userId);
+    }
+
+    String blockPoolId = blockTokenSecret.getBlockPoolId();
+    if (blockPoolId != null) {
+      builder.setBlockPoolId(blockPoolId);
+    }
+
+    builder.setBlockId(blockTokenSecret.getBlockId());
+
+    for (BlockTokenIdentifier.AccessMode aMode :
+        blockTokenSecret.getAccessModes()) {
+      builder.addModes(convert(aMode));
+    }
+    return builder.build();
   }
 
   static public DatanodeInfo convert(DatanodeInfoProto di) {
@@ -1773,6 +1826,24 @@ public class PBHelperClient {
 
   public static Block convert(BlockProto b) {
     return new Block(b.getBlockId(), b.getNumBytes(), b.getGenStamp());
+  }
+
+  public static BlockTypeProto convert(BlockType blockType) {
+    switch (blockType) {
+    case CONTIGUOUS: return BlockTypeProto.CONTIGUOUS;
+    case STRIPED: return BlockTypeProto.STRIPED;
+    default:
+      throw new IllegalArgumentException("Unexpected block type: " + blockType);
+    }
+  }
+
+  public static BlockType convert(BlockTypeProto blockType) {
+    switch (blockType.getNumber()) {
+    case BlockTypeProto.CONTIGUOUS_VALUE: return BlockType.CONTIGUOUS;
+    case BlockTypeProto.STRIPED_VALUE: return BlockType.STRIPED;
+    default:
+      throw new IllegalArgumentException("Unexpected block type: " + blockType);
+    }
   }
 
   static public DatanodeInfo[] convert(DatanodeInfoProto di[]) {

@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import Ember from 'ember';
 import DS from 'ember-data';
 import Converter from 'yarn-ui/utils/converter';
 
@@ -45,8 +46,8 @@ export default DS.Model.extend({
   attemptStartedTime: function() {
     var startTime = this.get("startTime");
     // If startTime variable is not present, get from startedTime
-    if (startTime == undefined ||
-      startTime == "Invalid date") {
+    if (startTime === undefined ||
+      startTime === "Invalid date") {
       startTime = this.get("startedTime");
     }
 
@@ -80,7 +81,7 @@ export default DS.Model.extend({
   appMasterContainerId: function() {
     var id = this.get("containerId");
     // If containerId variable is not present, get from amContainerId
-    if (id == undefined) {
+    if (id === undefined) {
       id = this.get("amContainerId");
     }
     return id;
@@ -89,16 +90,16 @@ export default DS.Model.extend({
   IsAmNodeUrl: function() {
     var url = this.get("nodeHttpAddress");
       // If nodeHttpAddress variable is not present, hardcode it.
-    if (url == undefined) {
+    if (url === undefined) {
       url = "Not Available";
     }
-    return url != "Not Available";
+    return url !== "Not Available";
   }.property("nodeHttpAddress"),
 
   amNodeId : function() {
     var id = this.get("nodeId");
     // If nodeId variable is not present, get from host
-    if (id == undefined) {
+    if (id === undefined) {
       id = this.get("hosts");
     }
     return id;
@@ -107,10 +108,10 @@ export default DS.Model.extend({
   IsLinkAvailable: function() {
     var url = this.get("logsLink");
     // If logsLink variable is not present, hardcode its.
-    if (url == undefined) {
+    if (url === undefined) {
       url = "Not Available";
     }
-    return url != "Not Available";
+    return url !== "Not Available";
   }.property("logsLink"),
 
   elapsedTime: function() {

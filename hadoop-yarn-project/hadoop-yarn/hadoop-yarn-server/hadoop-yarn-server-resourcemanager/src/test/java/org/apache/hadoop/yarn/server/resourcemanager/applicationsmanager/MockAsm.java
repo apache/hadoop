@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -233,6 +234,16 @@ public abstract class MockAsm extends MockApps {
 
     @Override
     public Map<ApplicationTimeoutType, Long> getApplicationTimeouts() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Priority getApplicationPriority() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean isAppInCompletedStates() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
   }

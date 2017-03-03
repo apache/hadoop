@@ -148,7 +148,7 @@ public class ReservationInputValidator {
         plan.getTotalCapacity(), maxGangSize, plan.getTotalCapacity())
         && type != ReservationRequestInterpreter.R_ANY) {
       message =
-          "The size of the largest gang in the reservation refinition ("
+          "The size of the largest gang in the reservation definition ("
               + maxGangSize + ") exceed the capacity available ("
               + plan.getTotalCapacity() + " )";
       RMAuditLogger.logFailure("UNKNOWN", auditConstant,

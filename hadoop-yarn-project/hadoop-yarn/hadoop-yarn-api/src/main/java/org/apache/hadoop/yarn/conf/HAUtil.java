@@ -208,7 +208,7 @@ public class HAUtil {
 
   @VisibleForTesting
   static String getNeedToSetValueMessage(String confKey) {
-    return confKey + " needs to be set in a HA configuration.";
+    return confKey + " needs to be set in an HA configuration.";
   }
 
   @VisibleForTesting
@@ -223,7 +223,7 @@ public class HAUtil {
                                                         String rmId) {
     return YarnConfiguration.RM_HA_IDS + "("
       + ids +  ") need to contain " + YarnConfiguration.RM_HA_ID + "("
-      + rmId + ") in a HA configuration.";
+      + rmId + ") in an HA configuration.";
   }
 
   @VisibleForTesting

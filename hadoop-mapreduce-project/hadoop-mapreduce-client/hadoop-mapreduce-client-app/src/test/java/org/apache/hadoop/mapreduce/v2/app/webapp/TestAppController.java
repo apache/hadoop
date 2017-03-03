@@ -24,6 +24,7 @@ import java.util.Iterator;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
@@ -59,6 +60,8 @@ public class TestAppController {
     Task task = mock(Task.class);
 
     when(job.getTask(any(TaskId.class))).thenReturn(task);
+    when(job.loadConfFile()).thenReturn(new Configuration());
+    when(job.getConfFile()).thenReturn(new Path("/"));
 
     JobId jobID = MRApps.toJobID("job_01_01");
     when(context.getJob(jobID)).thenReturn(job);
@@ -263,6 +266,17 @@ public class TestAppController {
     appController.conf();
 
     assertEquals(JobConfPage.class, appController.getClazz());
+  }
+
+  /**
+   * Test downloadConf request handling.
+   */
+  @Test
+  public void testDownloadConfiguration() {
+    appController.downloadConf();
+    String jobConfXml = appController.getData();
+    assertTrue("Error downloading the job configuration file.",
+        !jobConfXml.contains("Error"));
   }
 
   /**

@@ -626,15 +626,16 @@ import java.util.regex.Pattern;
       try {
         File tcCmds = File.createTempFile(TMP_FILE_PREFIX, TMP_FILE_SUFFIX, new
             File(tmpDirPath));
-        Writer writer = new OutputStreamWriter(new FileOutputStream(tcCmds),
-            "UTF-8");
-        PrintWriter printWriter = new PrintWriter(writer);
 
-        for (String command : commands) {
-          printWriter.println(command);
+        try (
+            Writer writer = new OutputStreamWriter(new FileOutputStream(tcCmds),
+                "UTF-8");
+            PrintWriter printWriter = new PrintWriter(writer)) {
+          for (String command : commands) {
+            printWriter.println(command);
+          }
         }
 
-        printWriter.close();
         operation.appendArgs(tcCmds.getAbsolutePath());
 
         return operation;

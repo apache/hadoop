@@ -113,19 +113,18 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
     if (isCompressed) {
       Class<? extends CompressionCodec> codecClass = 
         getOutputCompressorClass(job, GzipCodec.class);
-      codec = (CompressionCodec) ReflectionUtils.newInstance(codecClass, conf);
+      codec = ReflectionUtils.newInstance(codecClass, conf);
       extension = codec.getDefaultExtension();
     }
     Path file = getDefaultWorkFile(job, extension);
     FileSystem fs = file.getFileSystem(conf);
-    if (!isCompressed) {
-      FSDataOutputStream fileOut = fs.create(file, false);
-      return new LineRecordWriter<K, V>(fileOut, keyValueSeparator);
+    FSDataOutputStream fileOut = fs.create(file, false);
+    if (isCompressed) {
+      return new LineRecordWriter<>(
+          new DataOutputStream(codec.createOutputStream(fileOut)),
+          keyValueSeparator);
     } else {
-      FSDataOutputStream fileOut = fs.create(file, false);
-      return new LineRecordWriter<K, V>(new DataOutputStream
-                                        (codec.createOutputStream(fileOut)),
-                                        keyValueSeparator);
+      return new LineRecordWriter<>(fileOut, keyValueSeparator);
     }
   }
 }

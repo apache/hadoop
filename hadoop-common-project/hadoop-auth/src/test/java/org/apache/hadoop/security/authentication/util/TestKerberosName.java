@@ -83,6 +83,28 @@ public class TestKerberosName {
   }
 
   @Test
+  public void testParsing() throws Exception {
+    final String principalNameFull = "HTTP/abc.com@EXAMPLE.COM";
+    final String principalNameWoRealm = "HTTP/abc.com";
+    final String principalNameWoHost = "HTTP@EXAMPLE.COM";
+
+    final KerberosName kerbNameFull = new KerberosName(principalNameFull);
+    Assert.assertEquals("HTTP", kerbNameFull.getServiceName());
+    Assert.assertEquals("abc.com", kerbNameFull.getHostName());
+    Assert.assertEquals("EXAMPLE.COM", kerbNameFull.getRealm());
+
+    final KerberosName kerbNamewoRealm = new KerberosName(principalNameWoRealm);
+    Assert.assertEquals("HTTP", kerbNamewoRealm.getServiceName());
+    Assert.assertEquals("abc.com", kerbNamewoRealm.getHostName());
+    Assert.assertEquals(null, kerbNamewoRealm.getRealm());
+
+    final KerberosName kerbNameWoHost = new KerberosName(principalNameWoHost);
+    Assert.assertEquals("HTTP", kerbNameWoHost.getServiceName());
+    Assert.assertEquals(null, kerbNameWoHost.getHostName());
+    Assert.assertEquals("EXAMPLE.COM", kerbNameWoHost.getRealm());
+  }
+
+  @Test
   public void testToLowerCase() throws Exception {
     String rules =
         "RULE:[1:$1]/L\n" +

@@ -20,14 +20,15 @@
 package org.apache.hadoop.fs.adl.live;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractConcatTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.junit.Before;
 import org.junit.Test;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+
 /**
- * Verify Adls CONCAT semantics compliance with Hadoop.
+ * Test concat on Adl file system.
  */
 public class TestAdlContractConcatLive extends AbstractContractConcatTest {
 
@@ -36,17 +37,13 @@ public class TestAdlContractConcatLive extends AbstractContractConcatTest {
     return new AdlStorageContract(configuration);
   }
 
-  @Before
-  @Override
-  public void setup() throws Exception {
-    org.junit.Assume
-        .assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
-    super.setup();
-  }
-
   @Test
   public void testConcatMissingTarget() throws Throwable {
-    ContractTestUtils.unsupported("BUG : Adl to support expectation from "
-        + "concat on missing targets.");
+    Path testPath = path("test");
+    Path zeroByteFile = new Path(testPath, "zero.txt");
+    Path target = new Path(testPath, "target");
+    touch(getFileSystem(), zeroByteFile);
+    // Concat on missing target is allowed on Adls file system.
+    getFileSystem().concat(target, new Path[] {zeroByteFile});
   }
 }

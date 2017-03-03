@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.Clock;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.event.Event;
 
 public class DefaultSpeculator extends AbstractService implements
     Speculator {
@@ -106,7 +107,7 @@ public class DefaultSpeculator extends AbstractService implements
 
   private final Clock clock;
 
-  private final EventHandler<TaskEvent> eventHandler;
+  private final EventHandler<Event> eventHandler;
 
   public DefaultSpeculator(Configuration conf, AppContext context) {
     this(conf, context, context.getClock());

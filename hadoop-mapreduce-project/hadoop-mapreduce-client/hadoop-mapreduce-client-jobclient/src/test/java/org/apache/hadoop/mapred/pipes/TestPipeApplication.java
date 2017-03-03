@@ -300,28 +300,27 @@ public class TestPipeApplication {
       assertTrue(out.toString().contains(
               "[-lazyOutput <true/false>] // createOutputLazily"));
 
-      assertTrue(out
-              .toString()
-              .contains(
-                      "-conf <configuration file>     specify an application configuration file"));
       assertTrue(out.toString().contains(
-              "-D <property=value>            use value for given property"));
+          "-conf <configuration file>        specify an application "
+              + "configuration file"));
       assertTrue(out.toString().contains(
-              "-fs <local|namenode:port>      specify a namenode"));
+          "-D <property=value>               define a value for a given "
+              + "property"));
+      assertTrue(out.toString()
+          .contains("-fs <file:///|hdfs://namenode:port> "
+              + "specify default filesystem URL to use, overrides "
+              + "'fs.defaultFS' property from configurations."));
       assertTrue(out.toString().contains(
-              "-jt <local|resourcemanager:port>    specify a ResourceManager"));
-      assertTrue(out
-              .toString()
-              .contains(
-                      "-files <comma separated list of files>    specify comma separated files to be copied to the map reduce cluster"));
-      assertTrue(out
-              .toString()
-              .contains(
-                      "-libjars <comma separated list of jars>    specify comma separated jar files to include in the classpath."));
-      assertTrue(out
-              .toString()
-              .contains(
-                      "-archives <comma separated list of archives>    specify comma separated archives to be unarchived on the compute machines."));
+          "-jt <local|resourcemanager:port>  specify a ResourceManager"));
+      assertTrue(out.toString().contains(
+          "-files <file1,...>                specify a comma-separated list of "
+              + "files to be copied to the map reduce cluster"));
+      assertTrue(out.toString().contains(
+          "-libjars <jar1,...>               specify a comma-separated list of "
+              + "jar files to be included in the classpath"));
+      assertTrue(out.toString().contains(
+          "-archives <archive1,...>          specify a comma-separated list of "
+              + "archives to be unarchived on the compute machines"));
     } finally {
       System.setOut(oldps);
       // restore

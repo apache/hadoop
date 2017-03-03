@@ -15,19 +15,7 @@
 Hadoop: Fair Scheduler
 ======================
 
-* [Purpose](#Purpose)
-* [Introduction](#Introduction)
-* [Hierarchical queues with pluggable policies](#Hierarchical_queues_with_pluggable_policies)
-* [Automatically placing applications in queues](#Automatically_placing_applications_in_queues)
-* [Installation](#Installation)
-* [Configuration](#Configuration)
-    * [Properties that can be placed in yarn-site.xml](#Properties_that_can_be_placed_in_yarn-site.xml)
-    * [Allocation file format](#Allocation_file_format)
-    * [Queue Access Control Lists](#Queue_Access_Control_Lists)
-* [Administration](#Administration)
-    * [Modifying configuration at runtime](#Modifying_configuration_at_runtime)
-    * [Monitoring through web UI](#Monitoring_through_web_UI)
-    * [Moving applications between queues](#Moving_applications_between_queues)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 ##Purpose
 
@@ -119,6 +107,8 @@ The allocation file must be in XML format. The format contains five types of ele
 
     * fairSharePreemptionThreshold: the fair share preemption threshold for the queue. If the queue waits fairSharePreemptionTimeout without receiving fairSharePreemptionThreshold\*fairShare resources, it is allowed to preempt containers to take resources from other queues. If not set, the queue will inherit the value from its parent queue.
 
+    * allowPreemptionFrom: determines whether the scheduler is allowed to preempt resources from the queue. The default is true. If a queue has this property set to false, this property will apply recursively to all child queues.
+
 * **User elements**: which represent settings governing the behavior of individual users. They can contain a single property: maxRunningApps, a limit on the number of running apps for a particular user.
 
 * **A userMaxAppsDefault element**: which sets the default running app limit for any users whose limit is not otherwise specified.
@@ -129,13 +119,13 @@ The allocation file must be in XML format. The format contains five types of ele
 
 * **A defaultFairSharePreemptionThreshold element**: which sets the fair share preemption threshold for the root queue; overridden by fairSharePreemptionThreshold element in root queue.
 
-* **A queueMaxAppsDefault element**: which sets the default running app limit for queues; overriden by maxRunningApps element in each queue.
+* **A queueMaxAppsDefault element**: which sets the default running app limit for queues; overridden by maxRunningApps element in each queue.
 
-* **A queueMaxResourcesDefault element**: which sets the default max resource limit for queue; overriden by maxResources element in each queue.
+* **A queueMaxResourcesDefault element**: which sets the default max resource limit for queue; overridden by maxResources element in each queue.
 
-* **A queueMaxAMShareDefault element**: which sets the default AM resource limit for queue; overriden by maxAMShare element in each queue.
+* **A queueMaxAMShareDefault element**: which sets the default AM resource limit for queue; overridden by maxAMShare element in each queue.
 
-* **A defaultQueueSchedulingPolicy element**: which sets the default scheduling policy for queues; overriden by the schedulingPolicy element in each queue if specified. Defaults to "fair".
+* **A defaultQueueSchedulingPolicy element**: which sets the default scheduling policy for queues; overridden by the schedulingPolicy element in each queue if specified. Defaults to "fair".
 
 * **A queuePlacementPolicy element**: which contains a list of rule elements that tell the scheduler how to place incoming apps into queues. Rules are applied in the order that they are listed. Rules may take arguments. All rules accept the "create" argument, which indicates whether the rule can create a new queue. "Create" defaults to true; if set to false and the rule would place the app in a queue that is not configured in the allocations file, we continue on to the next rule. The last rule must be one that can never issue a continue. Valid rules are:
 

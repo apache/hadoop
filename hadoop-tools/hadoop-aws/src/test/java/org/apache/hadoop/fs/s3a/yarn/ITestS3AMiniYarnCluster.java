@@ -24,13 +24,14 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.examples.WordCount;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -117,6 +118,9 @@ public class ITestS3AMiniYarnCluster extends AbstractS3ATestBase {
     Map<String, Integer> result = new HashMap<>();
     for (String line : outputAsStr.split("\n")) {
       String[] tokens = line.split("\t");
+      assertTrue("Not enough tokens in in string \" "+ line
+            + "\" from output \"" + outputAsStr + "\"",
+          tokens.length > 1);
       result.put(tokens[0], Integer.parseInt(tokens[1]));
     }
     return result;
@@ -137,8 +141,12 @@ public class ITestS3AMiniYarnCluster extends AbstractS3ATestBase {
    * helper method.
    */
   private String readStringFromFile(Path path) throws IOException {
-    return ContractTestUtils.readBytesToString(fs, path,
-        (int) fs.getFileStatus(path).getLen());
+    try (FSDataInputStream in = fs.open(path)) {
+      long bytesLen = fs.getFileStatus(path).getLen();
+      byte[] buffer = new byte[(int) bytesLen];
+      IOUtils.readFully(in, buffer, 0, buffer.length);
+      return new String(buffer);
+    }
   }
 
 }

@@ -142,7 +142,9 @@ public class MRClientService extends AbstractService implements ClientService {
       // running in user-land.
       webApp =
           WebApps.$for("mapreduce", AppContext.class, appContext, "ws")
-            .withHttpPolicy(conf, Policy.HTTP_ONLY).start(new AMWebApp());
+            .withHttpPolicy(conf, Policy.HTTP_ONLY)
+            .withPortRange(conf, MRJobConfig.MR_AM_WEBAPP_PORT_RANGE)
+            .start(new AMWebApp());
     } catch (Exception e) {
       LOG.error("Webapps failed to start. Ignoring for now:", e);
     }

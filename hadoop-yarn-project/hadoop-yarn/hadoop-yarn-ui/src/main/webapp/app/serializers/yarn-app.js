@@ -20,12 +20,20 @@ import DS from 'ember-data';
 import Converter from 'yarn-ui/utils/converter';
 
 export default DS.JSONAPISerializer.extend({
-    internalNormalizeSingleResponse(store, primaryModelClass, payload, id,
-      requestType) {
+    internalNormalizeSingleResponse(store, primaryModelClass, payload, id) {
       if (payload.app) {
-        payload = payload.app;  
+        payload = payload.app;
       }
-      
+
+      var timeoutInSecs = -1;
+      var appExpiryTime = Converter.timeStampToDate(payload.finishedTime);
+      if (payload.timeouts && payload.timeouts.timeout && payload.timeouts.timeout[0]) {
+        timeoutInSecs = payload.timeouts.timeout[0].remainingTimeInSeconds;
+        if (timeoutInSecs > -1) {
+          appExpiryTime = Converter.isoDateToDate(payload.timeouts.timeout[0].expiryTime);
+        }
+      }
+
       var fixedPayload = {
         id: id,
         type: primaryModelClass.modelName, // yarn-app
@@ -35,18 +43,19 @@ export default DS.JSONAPISerializer.extend({
           queue: payload.queue,
           state: payload.state,
           startTime: Converter.timeStampToDate(payload.startedTime),
-          elapsedTime: Converter.msToElapsedTime(payload.elapsedTime),
+          //elapsedTime: Converter.msToElapsedTime(payload.elapsedTime),
+          elapsedTime: payload.elapsedTime,
           finishedTime: Converter.timeStampToDate(payload.finishedTime),
           finalStatus: payload.finalStatus,
           progress: payload.progress,
           applicationType: payload.applicationType,
-          diagnostics: payload.diagnostics,
+          diagnostics: (payload.diagnostics && payload.diagnostics !== 'null')? payload.diagnostics : '',
           amContainerLogs: payload.amContainerLogs,
           amHostHttpAddress: payload.amHostHttpAddress,
           logAggregationStatus: payload.logAggregationStatus,
-          unmanagedApplication: payload.unmanagedApplication,
+          unmanagedApplication: payload.unmanagedApplication || 'N/A',
           amNodeLabelExpression: payload.amNodeLabelExpression,
-          priority: payload.priority,
+          priority: payload.priority || 'N/A',
           allocatedMB: payload.allocatedMB,
           allocatedVCores: payload.allocatedVCores,
           runningContainers: payload.runningContainers,
@@ -58,22 +67,22 @@ export default DS.JSONAPISerializer.extend({
           numAMContainerPreempted: payload.numAMContainerPreempted,
           clusterUsagePercentage: payload.clusterUsagePercentage,
           queueUsagePercentage: payload.queueUsagePercentage,
-          currentAppAttemptId: payload.currentAppAttemptId
+          currentAppAttemptId: payload.currentAppAttemptId,
+          remainingTimeoutInSeconds: timeoutInSecs,
+          applicationExpiryTime: appExpiryTime
         }
       };
 
       return fixedPayload;
     },
 
-    normalizeSingleResponse(store, primaryModelClass, payload, id,
-      requestType) {
-      var p = this.internalNormalizeSingleResponse(store, 
-        primaryModelClass, payload, id, requestType);
+    normalizeSingleResponse(store, primaryModelClass, payload, id/*, requestType*/) {
+      var p = this.internalNormalizeSingleResponse(store,
+        primaryModelClass, payload, id);
       return { data: p };
     },
 
-    normalizeArrayResponse(store, primaryModelClass, payload, id,
-      requestType) {
+    normalizeArrayResponse(store, primaryModelClass, payload/*, id, requestType*/) {
       // return expected is { data: [ {}, {} ] }
       var normalizedArrayResponse = {};
 
@@ -82,7 +91,7 @@ export default DS.JSONAPISerializer.extend({
       if(payload.apps && payload.apps.app) {
         normalizedArrayResponse.data = payload.apps.app.map(singleApp => {
           return this.internalNormalizeSingleResponse(store, primaryModelClass,
-          singleApp, singleApp.id, requestType);
+            singleApp, singleApp.id);
           }, this);
       } else {
         normalizedArrayResponse.data = [];

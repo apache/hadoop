@@ -16,6 +16,10 @@
  */
 package org.apache.hadoop.yarn.server.timeline;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.util.MinimalPrettyPrinter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
@@ -30,10 +34,6 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonGenerator;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.util.MinimalPrettyPrinter;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -232,7 +232,7 @@ public class TestLogInfo {
       throws IOException {
     if (outStream == null) {
       outStream = PluginStoreTestUtils.createLogFile(logPath, fs);
-      jsonGenerator = (new JsonFactory()).createJsonGenerator(outStream);
+      jsonGenerator = new JsonFactory().createGenerator(outStream);
       jsonGenerator.setPrettyPrinter(new MinimalPrettyPrinter("\n"));
     }
     for (TimelineEntity entity : entities.getEntities()) {
@@ -248,7 +248,7 @@ public class TestLogInfo {
     }
     // Write domain uses its own json generator to isolate from entity writers
     JsonGenerator jsonGeneratorLocal
-        = (new JsonFactory()).createJsonGenerator(outStreamDomain);
+        = new JsonFactory().createGenerator(outStreamDomain);
     jsonGeneratorLocal.setPrettyPrinter(new MinimalPrettyPrinter("\n"));
     objMapper.writeValue(jsonGeneratorLocal, domain);
     outStreamDomain.hflush();

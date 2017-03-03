@@ -80,7 +80,7 @@ public class TestPreemptableFileOutputCommitter {
     foc.cleanUpPartialOutputForTask(context);
     verify(fs).delete(eq(p0), eq(true));
     verify(fs).delete(eq(p1), eq(true));
-    verify(fs, never()).delete(eq(p3), eq(true));
+    verify(fs, times(1)).delete(eq(p3), eq(true));
     verify(fs, never()).delete(eq(p2), eq(true));
   }
 

@@ -72,8 +72,6 @@ public class TestRenameWhileOpen {
       doNothing().when(spyLog).endCurrentLogSegment(Mockito.anyBoolean());
       DFSTestUtil.setEditLogForTesting(cluster.getNamesystem(), spyLog);
 
-      final int nnport = cluster.getNameNodePort();
-
       // create file1.
       Path dir1 = new Path("/user/a+b/dir1");
       Path file1 = new Path(dir1, "file1");
@@ -111,22 +109,18 @@ public class TestRenameWhileOpen {
       // for file3, since we just added a block to that file.
       cluster.getNameNode().stop();
 
-      // Restart cluster with the same namenode port as before.
+      // Restart cluster.
       cluster.shutdown();
 
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                                .format(false)
-                                                .build();
+      cluster = new MiniDFSCluster.Builder(conf).format(false).build();
       cluster.waitActive();
 
       // restart cluster yet again. This triggers the code to read in
       // persistent leases from the edit log.
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                                .format(false)
-                                                .build();
+      cluster = new MiniDFSCluster.Builder(conf).format(false).build();
       cluster.waitActive();
       fs = cluster.getFileSystem();
 
@@ -161,7 +155,6 @@ public class TestRenameWhileOpen {
     try {
       cluster.waitActive();
       fs = cluster.getFileSystem();
-      final int nnport = cluster.getNameNodePort();
 
       // create file1.
       Path dir1 = new Path("/user/dir1");
@@ -185,22 +178,18 @@ public class TestRenameWhileOpen {
       Path dir3 = new Path("/user/dir3");
       fs.rename(dir1, dir3);
 
-      // restart cluster with the same namenode port as before.
+      // restart cluster.
       // This ensures that leases are persisted in fsimage.
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                                .format(false)
-                                                .build();
+      cluster = new MiniDFSCluster.Builder(conf).format(false).build();
       cluster.waitActive();
 
       // restart cluster yet again. This triggers the code to read in
       // persistent leases from fsimage.
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                                .format(false)
-                                                .build();
+      cluster = new MiniDFSCluster.Builder(conf).format(false).build();
       cluster.waitActive();
       fs = cluster.getFileSystem();
 
@@ -236,7 +225,6 @@ public class TestRenameWhileOpen {
     try {
       cluster.waitActive();
       fs = cluster.getFileSystem();
-      final int nnport = cluster.getNameNodePort();
 
       // create file1.
       Path dir1 = new Path("/user/dir1");
@@ -252,22 +240,18 @@ public class TestRenameWhileOpen {
 
       fs.rename(file1, dir2);
 
-      // restart cluster with the same namenode port as before.
+      // restart cluster.
       // This ensures that leases are persisted in fsimage.
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                                .format(false)
-                                                .build();
+      cluster = new MiniDFSCluster.Builder(conf).format(false).build();
       cluster.waitActive();
 
       // restart cluster yet again. This triggers the code to read in
       // persistent leases from fsimage.
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                                .format(false)
-                                                .build();
+      cluster = new MiniDFSCluster.Builder(conf).format(false).build();
       cluster.waitActive();
       fs = cluster.getFileSystem();
 
@@ -301,7 +285,6 @@ public class TestRenameWhileOpen {
     try {
       cluster.waitActive();
       fs = cluster.getFileSystem();
-      final int nnport = cluster.getNameNodePort();
 
       // create file1.
       Path dir1 = new Path("/user/dir1");
@@ -316,22 +299,18 @@ public class TestRenameWhileOpen {
 
       fs.rename(file1, dir2);
 
-      // restart cluster with the same namenode port as before.
+      // restart cluster.
       // This ensures that leases are persisted in fsimage.
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                                .format(false)
-                                                .build();
+      cluster = new MiniDFSCluster.Builder(conf).format(false).build();
       cluster.waitActive();
 
       // restart cluster yet again. This triggers the code to read in
       // persistent leases from fsimage.
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                                .format(false)
-                                                .build();
+      cluster = new MiniDFSCluster.Builder(conf).format(false).build();
       cluster.waitActive();
       fs = cluster.getFileSystem();
 

@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Random;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hdfs.web.resources.NamenodeAddressParam;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -528,6 +530,44 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       } finally {
         conn.disconnect();
       }
+    }
+  }
+
+  public void testDatanodeCreateMissingParameter() throws IOException {
+    final WebHdfsFileSystem webhdfs = (WebHdfsFileSystem) fs;
+    final Path testDir = new Path(MessageFormat.format("/test/{0}/{1}",
+        TestWebHdfsFileSystemContract.class,
+        GenericTestUtils.getMethodName()));
+    assertTrue(webhdfs.mkdirs(testDir));
+
+    for (String dnCreateParam : new String[]{
+        CreateFlagParam.NAME,
+        CreateParentParam.NAME,
+        OverwriteParam.NAME
+    }) {
+      final HttpOpParam.Op op = PutOpParam.Op.CREATE;
+      final Path newfile = new Path(testDir, "newfile_" + dnCreateParam);
+      final URL url = webhdfs.toUrl(op, newfile);
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.setRequestMethod(op.getType().toString());
+      conn.setDoOutput(false);
+      conn.setInstanceFollowRedirects(false);
+      conn.connect();
+      final String redirect = conn.getHeaderField("Location");
+      conn.disconnect();
+
+      //remove createparent
+      WebHdfsFileSystem.LOG.info("redirect = " + redirect);
+      String re = "&" + dnCreateParam + "=[^&]*";
+      String modified = redirect.replaceAll(re, "");
+      WebHdfsFileSystem.LOG.info("modified = " + modified);
+
+      //connect to datanode
+      conn = (HttpURLConnection)new URL(modified).openConnection();
+      conn.setRequestMethod(op.getType().toString());
+      conn.setDoOutput(op.getDoOutput());
+      conn.connect();
+      assertEquals(HttpServletResponse.SC_CREATED, conn.getResponseCode());
     }
   }
 

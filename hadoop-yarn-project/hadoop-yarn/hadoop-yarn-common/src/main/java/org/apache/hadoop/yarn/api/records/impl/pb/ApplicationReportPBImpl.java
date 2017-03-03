@@ -25,16 +25,20 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeout;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.proto.YarnProtos.AppTimeoutsMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationTimeoutProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LogAggregationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
@@ -42,7 +46,11 @@ import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 
 import com.google.protobuf.TextFormat;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Private
@@ -58,6 +66,7 @@ public class ApplicationReportPBImpl extends ApplicationReport {
   private Token amRmToken = null;
   private Set<String> applicationTags = null;
   private Priority priority = null;
+  private Map<ApplicationTimeoutType, ApplicationTimeout> applicationTimeouts = null;
 
   public ApplicationReportPBImpl() {
     builder = ApplicationReportProto.newBuilder();
@@ -492,6 +501,9 @@ public class ApplicationReportPBImpl extends ApplicationReport {
             builder.getPriority())) {
       builder.setPriority(convertToProtoFormat(this.priority));
     }
+    if (this.applicationTimeouts != null) {
+      addApplicationTimeouts();
+    }
   }
 
   private void mergeLocalToProto() {
@@ -668,4 +680,88 @@ public class ApplicationReportPBImpl extends ApplicationReport {
     }
     builder.setAmNodeLabelExpression((amNodeLabelExpression));
   }
+
+  @Override
+  public Map<ApplicationTimeoutType, ApplicationTimeout> getApplicationTimeouts() {
+    initApplicationTimeout();
+    return this.applicationTimeouts;
+  }
+
+  @Override
+  public void setApplicationTimeouts(
+      Map<ApplicationTimeoutType, ApplicationTimeout> timeouts) {
+    if (timeouts == null) {
+      return;
+    }
+    initApplicationTimeout();
+    this.applicationTimeouts.clear();
+    this.applicationTimeouts.putAll(timeouts);
+  }
+
+  private void initApplicationTimeout() {
+    if (this.applicationTimeouts != null) {
+      return;
+    }
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    List<AppTimeoutsMapProto> lists = p.getAppTimeoutsList();
+    this.applicationTimeouts =
+        new HashMap<ApplicationTimeoutType, ApplicationTimeout>(lists.size());
+    for (AppTimeoutsMapProto timeoutProto : lists) {
+      this.applicationTimeouts.put(
+          ProtoUtils
+              .convertFromProtoFormat(timeoutProto.getApplicationTimeoutType()),
+          convertFromProtoFormat(timeoutProto.getApplicationTimeout()));
+    }
+  }
+
+  private ApplicationTimeoutPBImpl convertFromProtoFormat(
+      ApplicationTimeoutProto p) {
+    return new ApplicationTimeoutPBImpl(p);
+  }
+
+  private ApplicationTimeoutProto convertToProtoFormat(ApplicationTimeout t) {
+    return ((ApplicationTimeoutPBImpl) t).getProto();
+  }
+
+  private void addApplicationTimeouts() {
+    maybeInitBuilder();
+    builder.clearAppTimeouts();
+    if (applicationTimeouts == null) {
+      return;
+    }
+    Iterable<? extends AppTimeoutsMapProto> values =
+        new Iterable<AppTimeoutsMapProto>() {
+
+          @Override
+          public Iterator<AppTimeoutsMapProto> iterator() {
+            return new Iterator<AppTimeoutsMapProto>() {
+              private Iterator<ApplicationTimeoutType> iterator =
+                  applicationTimeouts.keySet().iterator();
+
+              @Override
+              public boolean hasNext() {
+                return iterator.hasNext();
+              }
+
+              @Override
+              public AppTimeoutsMapProto next() {
+                ApplicationTimeoutType key = iterator.next();
+                return AppTimeoutsMapProto.newBuilder()
+                    .setApplicationTimeout(
+                        convertToProtoFormat(applicationTimeouts.get(key)))
+                    .setApplicationTimeoutType(
+                        ProtoUtils.convertToProtoFormat(key))
+                    .build();
+              }
+
+              @Override
+              public void remove() {
+                throw new UnsupportedOperationException();
+              }
+            };
+          }
+        };
+    this.builder.addAllAppTimeouts(values);
+  }
+
 }

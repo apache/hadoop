@@ -89,7 +89,8 @@ public class FifoCandidatesSelector
               .getResToObtainByPartitionForLeafQueue(preemptionContext,
                   queueName, clusterResource);
 
-      synchronized (leafQueue) {
+      try {
+        leafQueue.getReadLock().lock();
         // go through all ignore-partition-exclusivity containers first to make
         // sure such containers will be preemptionCandidates first
         Map<String, TreeSet<RMContainer>> ignorePartitionExclusivityContainers =
@@ -147,6 +148,8 @@ public class FifoCandidatesSelector
         preemptAMContainers(clusterResource, selectedCandidates, skippedAMContainerlist,
             resToObtainByPartition, skippedAMSize, maxAMCapacityForThisQueue,
             totalPreemptionAllowed);
+      } finally {
+        leafQueue.getReadLock().unlock();
       }
     }
 

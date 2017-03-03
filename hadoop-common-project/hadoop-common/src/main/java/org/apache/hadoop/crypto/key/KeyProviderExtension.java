@@ -118,6 +118,11 @@ public abstract class KeyProviderExtension
   }
 
   @Override
+  public void invalidateCache(String name) throws IOException {
+    keyProvider.invalidateCache(name);
+  }
+
+  @Override
   public void flush() throws IOException {
     keyProvider.flush();
   }

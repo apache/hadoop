@@ -46,8 +46,8 @@ public class TestProportionalCapacityPreemptionPolicyMockFramework
         "root(=[200 200 100 100],red=[100 100 100 100],blue=[200 200 200 200]);" + //root
             "-a(=[100 200 100 100],red=[0 0 0 0],blue=[200 200 200 200]);" + // a
             "--a1(=[50 100 50 100],red=[0 0 0 0],blue=[100 200 200 0]);" + // a1
-            "--a2(=[50 200 50 0],red=[0 0 0 0],blue=[100 200 0 200]);" + // a2
-            "-b(=[100 200 0 0],red=[100 100 100 100],blue=[0 0 0 0])";
+            "--a2(=[50 200 50 0],red=[0 0 0 0],blue=[100 200 0 200]){priority=2};" + // a2
+            "-b(=[100 200 0 0],red=[100 100 100 100],blue=[0 0 0 0]){priority=1,disable_preemption=true}";
     String appsConfig=
         //queueName\t(priority,resource,host,expression,#repeat,reserved)
         // app1 in a1, , 50 in n2 (reserved), 50 in n2 (allocated)
@@ -75,6 +75,7 @@ public class TestProportionalCapacityPreemptionPolicyMockFramework
     checkPendingResource(cs.getQueue("root"), "red", 100);
     checkAbsCapacities(cs.getQueue("root"), "blue", 1f, 1f, 1f);
     checkPendingResource(cs.getQueue("root"), "blue", 200);
+    checkPriority(cs.getQueue("root"), 0); // default
 
     // a
     checkAbsCapacities(cs.getQueue("a"), "", 0.5f, 1f, 0.5f);
@@ -83,6 +84,7 @@ public class TestProportionalCapacityPreemptionPolicyMockFramework
     checkPendingResource(cs.getQueue("a"), "red", 0);
     checkAbsCapacities(cs.getQueue("a"), "blue", 1f, 1f, 1f);
     checkPendingResource(cs.getQueue("a"), "blue", 200);
+    checkPriority(cs.getQueue("a"), 0); // default
 
     // a1
     checkAbsCapacities(cs.getQueue("a1"), "", 0.25f, 0.5f, 0.25f);
@@ -91,6 +93,7 @@ public class TestProportionalCapacityPreemptionPolicyMockFramework
     checkPendingResource(cs.getQueue("a1"), "red", 0);
     checkAbsCapacities(cs.getQueue("a1"), "blue", 0.5f, 1f, 1f);
     checkPendingResource(cs.getQueue("a1"), "blue", 0);
+    checkPriority(cs.getQueue("a1"), 0); // default
 
     // a2
     checkAbsCapacities(cs.getQueue("a2"), "", 0.25f, 1f, 0.25f);
@@ -99,14 +102,18 @@ public class TestProportionalCapacityPreemptionPolicyMockFramework
     checkPendingResource(cs.getQueue("a2"), "red", 0);
     checkAbsCapacities(cs.getQueue("a2"), "blue", 0.5f, 1f, 0f);
     checkPendingResource(cs.getQueue("a2"), "blue", 200);
+    checkPriority(cs.getQueue("a2"), 2);
+    Assert.assertFalse(cs.getQueue("a2").getPreemptionDisabled());
 
-    // b1
+    // b
     checkAbsCapacities(cs.getQueue("b"), "", 0.5f, 1f, 0f);
     checkPendingResource(cs.getQueue("b"), "", 0);
     checkAbsCapacities(cs.getQueue("b"), "red", 1f, 1f, 1f);
     checkPendingResource(cs.getQueue("b"), "red", 100);
     checkAbsCapacities(cs.getQueue("b"), "blue", 0f, 0f, 0f);
     checkPendingResource(cs.getQueue("b"), "blue", 0);
+    checkPriority(cs.getQueue("b"), 1);
+    Assert.assertTrue(cs.getQueue("b").getPreemptionDisabled());
 
     // Check ignored partitioned containers in queue
     Assert.assertEquals(100, ((LeafQueue) cs.getQueue("a1"))

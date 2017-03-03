@@ -25,9 +25,12 @@ import static org.junit.Assert.*;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.nio.file.AccessDeniedException;
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
@@ -124,4 +127,39 @@ public class TestS3AExceptionTranslation {
     return verifyExceptionClass(clazz,
         translateException("test", "/", exception));
   }
+
+  private void assertContainsInterrupted(boolean expected, Throwable thrown)
+      throws Throwable {
+    if (containsInterruptedException(thrown) != expected) {
+      throw thrown;
+    }
+  }
+
+  @Test
+  public void testInterruptExceptionDetecting() throws Throwable {
+    InterruptedException interrupted = new InterruptedException("irq");
+    assertContainsInterrupted(true, interrupted);
+    IOException ioe = new IOException("ioe");
+    assertContainsInterrupted(false, ioe);
+    assertContainsInterrupted(true, ioe.initCause(interrupted));
+    assertContainsInterrupted(true,
+        new InterruptedIOException("ioirq"));
+  }
+
+  @Test(expected = InterruptedIOException.class)
+  public void testExtractInterrupted() throws Throwable {
+    throw extractException("", "",
+        new ExecutionException(
+            new AmazonClientException(
+                new InterruptedException(""))));
+  }
+
+  @Test(expected = InterruptedIOException.class)
+  public void testExtractInterruptedIO() throws Throwable {
+    throw extractException("", "",
+        new ExecutionException(
+            new AmazonClientException(
+              new InterruptedIOException(""))));
+  }
+
 }

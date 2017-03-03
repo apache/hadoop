@@ -219,6 +219,9 @@ else
   exit 1
 fi
 
+# now that we have support code, let's abs MYNAME so we can use it later
+MYNAME=$(hadoop_abs "${MYNAME}")
+
 # if no args specified, show usage
 if [[ $# = 0 ]]; then
   hadoop_exit_with_usage 1
@@ -227,6 +230,14 @@ fi
 # get arguments
 HADOOP_SUBCMD=$1
 shift
+
+if hadoop_need_reexec yarn "${HADOOP_SUBCMD}"; then
+  hadoop_uservar_su yarn "${HADOOP_SUBCMD}" \
+    "${MYNAME}" \
+    "--reexec" \
+    "${HADOOP_USER_PARAMS[@]}"
+  exit $?
+fi
 
 hadoop_verify_user "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
 

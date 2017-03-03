@@ -172,7 +172,7 @@ public class StandbyCheckpointer {
       FSImage img = namesystem.getFSImage();
 
       long prevCheckpointTxId = img.getStorage().getMostRecentCheckpointTxId();
-      long thisCheckpointTxId = img.getLastAppliedOrWrittenTxId();
+      long thisCheckpointTxId = img.getCorrectLastAppliedOrWrittenTxId();
       assert thisCheckpointTxId >= prevCheckpointTxId;
       if (thisCheckpointTxId == prevCheckpointTxId) {
         LOG.info("A checkpoint was triggered but the Standby Node has not " +
@@ -315,7 +315,7 @@ public class StandbyCheckpointer {
 
   private long countUncheckpointedTxns() {
     FSImage img = namesystem.getFSImage();
-    return img.getLastAppliedOrWrittenTxId() -
+    return img.getCorrectLastAppliedOrWrittenTxId() -
       img.getStorage().getMostRecentCheckpointTxId();
   }
 

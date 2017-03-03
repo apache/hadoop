@@ -22,31 +22,14 @@ package org.apache.hadoop.fs.adl.live;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractCreateTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.junit.Before;
-import org.junit.Test;
 
 /**
- * Verify Adls CREATE semantics compliance with Hadoop.
+ * Test creating files, overwrite options.
  */
 public class TestAdlContractCreateLive extends AbstractContractCreateTest {
 
   @Override
   protected AbstractFSContract createContract(Configuration configuration) {
     return new AdlStorageContract(configuration);
-  }
-
-  @Before
-  @Override
-  public void setup() throws Exception {
-    org.junit.Assume
-        .assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
-    super.setup();
-  }
-
-  @Test
-  public void testOverwriteEmptyDirectory() throws Throwable {
-    ContractTestUtils
-        .unsupported("BUG : Adl to support override empty " + "directory.");
   }
 }

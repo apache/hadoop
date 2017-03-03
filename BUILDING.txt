@@ -83,6 +83,8 @@ Optional packages:
   $ sudo apt-get install libjansson-dev
 * Linux FUSE
   $ sudo apt-get install fuse libfuse-dev
+* ZStandard compression
+    $ sudo apt-get install zstd
 
 ----------------------------------------------------------------------------------
 Maven main modules:
@@ -131,6 +133,8 @@ Maven build goals:
   * Use -Dtar to create a TAR with the distribution (using -Pdist)
   * Use -Preleasedocs to include the changelog and release docs (requires Internet connectivity)
   * Use -Pyarn-ui to build YARN UI v2. (Requires Internet connectivity)
+  * Use -DskipShade to disable client jar shading to speed up build times (in
+    development environments only, not to build release artifacts)
 
  Snappy build options:
 
@@ -153,6 +157,29 @@ Maven build goals:
   * Use -Dbundle.snappy to copy the contents of the snappy.lib directory into
     the final tar file. This option requires that -Dsnappy.lib is also given,
     and it ignores the -Dsnappy.prefix option. If -Dsnappy.lib isn't given, the
+    bundling and building will fail.
+
+
+ ZStandard build options:
+
+   ZStandard is a compression library that can be utilized by the native code.
+   It is currently an optional component, meaning that Hadoop can be built with
+   or without this dependency.
+
+  * Use -Drequire.zstd to fail the build if libzstd.so is not found.
+    If this option is not specified and the zstd library is missing.
+
+  * Use -Dzstd.prefix to specify a nonstandard location for the libzstd
+    header files and library files. You do not need this option if you have
+    installed zstandard using a package manager.
+
+  * Use -Dzstd.lib to specify a nonstandard location for the libzstd library
+    files.  Similarly to zstd.prefix, you do not need this option if you have
+    installed using a package manager.
+
+  * Use -Dbundle.zstd to copy the contents of the zstd.lib directory into
+    the final tar file. This option requires that -Dzstd.lib is also given,
+    and it ignores the -Dzstd.prefix option. If -Dzstd.lib isn't given, the
     bundling and building will fail.
 
  OpenSSL build options:
@@ -390,7 +417,7 @@ http://www.zlib.net/
 ----------------------------------------------------------------------------------
 Building distributions:
 
- * Build distribution with native code    : mvn package [-Pdist][-Pdocs][-Psrc][-Dtar]
+ * Build distribution with native code    : mvn package [-Pdist][-Pdocs][-Psrc][-Dtar][-Dmaven.javadoc.skip=true]
 
 ----------------------------------------------------------------------------------
 Running compatibility checks with checkcompatibility.py
@@ -402,3 +429,12 @@ managers to compare the compatibility of a previous and current release.
 As an example, this invocation will check the compatibility of interfaces annotated as Public or LimitedPrivate:
 
 ./dev-support/bin/checkcompatibility.py --annotation org.apache.hadoop.classification.InterfaceAudience.Public --annotation org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate --include "hadoop.*" branch-2.7.2 trunk
+
+----------------------------------------------------------------------------------
+Changing the Hadoop version declared returned by VersionInfo
+
+If for compatibility reasons the version of Hadoop has to be declared as a 2.x release in the information returned by
+org.apache.hadoop.util.VersionInfo, set the property declared.hadoop.version to the desired version.
+For example: mvn package -Pdist -Ddeclared.hadoop.version=2.11
+
+If unset, the project version declared in the POM file is used.

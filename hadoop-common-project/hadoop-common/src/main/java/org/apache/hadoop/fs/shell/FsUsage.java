@@ -20,19 +20,24 @@ package org.apache.hadoop.fs.shell;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.viewfs.ViewFileSystem;
+import org.apache.hadoop.fs.viewfs.ViewFileSystemUtil;
 import org.apache.hadoop.util.StringUtils;
 
-/** Base class for commands related to viewing filesystem usage, such as
- * du and df
+/**
+ * Base class for commands related to viewing filesystem usage,
+ * such as du and df.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -44,13 +49,25 @@ class FsUsage extends FsCommand {
     factory.addClass(Dus.class, "-dus");
   }
 
-  protected boolean humanReadable = false;
-  protected TableBuilder usagesTable;
-  
+  private boolean humanReadable = false;
+  private TableBuilder usagesTable;
+
   protected String formatSize(long size) {
     return humanReadable
         ? StringUtils.TraditionalBinaryPrefix.long2String(size, "", 1)
         : String.valueOf(size);
+  }
+
+  public TableBuilder getUsagesTable() {
+    return usagesTable;
+  }
+
+  public void setUsagesTable(TableBuilder usagesTable) {
+    this.usagesTable = usagesTable;
+  }
+
+  public void setHumanReadable(boolean humanReadable) {
+    this.humanReadable = humanReadable;
   }
 
   /** Show the size of a partition in the filesystem */
@@ -70,38 +87,74 @@ class FsUsage extends FsCommand {
     throws IOException {
       CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "h");
       cf.parse(args);
-      humanReadable = cf.getOpt("h");
+      setHumanReadable(cf.getOpt("h"));
       if (args.isEmpty()) args.add(Path.SEPARATOR);
     }
 
     @Override
     protected void processArguments(LinkedList<PathData> args)
     throws IOException {
-      usagesTable = new TableBuilder(
-          "Filesystem", "Size", "Used", "Available", "Use%");
-      usagesTable.setRightAlign(1, 2, 3, 4);
-      
+      setUsagesTable(new TableBuilder(
+          "Filesystem", "Size", "Used", "Available", "Use%", "Mounted on"));
+      getUsagesTable().setRightAlign(1, 2, 3, 4);
+
       super.processArguments(args);
-      if (!usagesTable.isEmpty()) {
-        usagesTable.printToStream(out);
+      if (!getUsagesTable().isEmpty()) {
+        getUsagesTable().printToStream(out);
       }
+    }
+
+    /**
+     * Add a new row to the usages table for the given FileSystem URI.
+     *
+     * @param uri - FileSystem URI
+     * @param fsStatus - FileSystem status
+     * @param mountedOnPath - FileSystem mounted on path
+     */
+    private void addToUsagesTable(URI uri, FsStatus fsStatus,
+        String mountedOnPath) {
+      long size = fsStatus.getCapacity();
+      long used = fsStatus.getUsed();
+      long free = fsStatus.getRemaining();
+      getUsagesTable().addRow(
+          uri,
+          formatSize(size),
+          formatSize(used),
+          formatSize(free),
+          StringUtils.formatPercent((double) used / (double) size, 0),
+          mountedOnPath
+      );
     }
 
     @Override
     protected void processPath(PathData item) throws IOException {
-      FsStatus fsStats = item.fs.getStatus(item.path);
-      long size = fsStats.getCapacity();
-      long used = fsStats.getUsed();
-      long free = fsStats.getRemaining();
+      if (ViewFileSystemUtil.isViewFileSystem(item.fs)) {
+        ViewFileSystem viewFileSystem = (ViewFileSystem) item.fs;
+        Map<ViewFileSystem.MountPoint, FsStatus>  fsStatusMap =
+            ViewFileSystemUtil.getStatus(viewFileSystem, item.path);
 
-      usagesTable.addRow(
-          item.fs.getUri(),
-          formatSize(size),
-          formatSize(used),
-          formatSize(free),
-          StringUtils.formatPercent((double)used/(double)size, 0)
-      );
+        for (Map.Entry<ViewFileSystem.MountPoint, FsStatus> entry :
+            fsStatusMap.entrySet()) {
+          ViewFileSystem.MountPoint viewFsMountPoint = entry.getKey();
+          FsStatus fsStatus = entry.getValue();
+
+          // Add the viewfs mount point status to report
+          URI[] mountPointFileSystemURIs =
+              viewFsMountPoint.getTargetFileSystemURIs();
+          // Since LinkMerge is not supported yet, we
+          // should ideally see mountPointFileSystemURIs
+          // array with only one element.
+          addToUsagesTable(mountPointFileSystemURIs[0],
+              fsStatus, viewFsMountPoint.getMountedOnPath().toString());
+        }
+      } else {
+        // Hide the columns specific to ViewFileSystem
+        getUsagesTable().setColumnHide(5, true);
+        FsStatus fsStatus = item.fs.getStatus(item.path);
+        addToUsagesTable(item.fs.getUri(), fsStatus, "/");
+      }
     }
+
   }
 
   /** show disk usage */
@@ -128,7 +181,7 @@ class FsUsage extends FsCommand {
     protected void processOptions(LinkedList<String> args) throws IOException {
       CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "h", "s", "x");
       cf.parse(args);
-      humanReadable = cf.getOpt("h");
+      setHumanReadable(cf.getOpt("h"));
       summary = cf.getOpt("s");
       excludeSnapshots = cf.getOpt("x");
       if (args.isEmpty()) args.add(Path.CUR_DIR);
@@ -137,10 +190,10 @@ class FsUsage extends FsCommand {
     @Override
     protected void processArguments(LinkedList<PathData> args)
         throws IOException {
-      usagesTable = new TableBuilder(3);
+      setUsagesTable(new TableBuilder(3));
       super.processArguments(args);
-      if (!usagesTable.isEmpty()) {
-        usagesTable.printToStream(out);
+      if (!getUsagesTable().isEmpty()) {
+        getUsagesTable().printToStream(out);
       }
     }
 
@@ -163,7 +216,8 @@ class FsUsage extends FsCommand {
         length -= contentSummary.getSnapshotLength();
         spaceConsumed -= contentSummary.getSnapshotSpaceConsumed();
       }
-      usagesTable.addRow(formatSize(length), formatSize(spaceConsumed), item);
+      getUsagesTable().addRow(formatSize(length),
+          formatSize(spaceConsumed), item);
     }
   }
   /** show disk usage summary */
@@ -191,6 +245,7 @@ class FsUsage extends FsCommand {
     protected List<String[]> rows;
     protected int[] widths;
     protected boolean[] rightAlign;
+    private boolean[] hide;
     
     /**
      * Create a table w/o headers
@@ -200,6 +255,7 @@ class FsUsage extends FsCommand {
       rows = new ArrayList<String[]>();
       widths = new int[columns];
       rightAlign = new boolean[columns];
+      hide = new boolean[columns];
     }
 
     /**
@@ -219,7 +275,14 @@ class FsUsage extends FsCommand {
     public void setRightAlign(int ... indexes) {
       for (int i : indexes) rightAlign[i] = true;
     }
-    
+
+    /**
+     * Hide the given column index
+     */
+    public void setColumnHide(int columnIndex, boolean hideCol) {
+      hide[columnIndex] = hideCol;
+    }
+
     /**
      * Add a row of objects to the table
      * @param objects the values
@@ -234,7 +297,7 @@ class FsUsage extends FsCommand {
     }
 
     /**
-     * Render the table to a stream 
+     * Render the table to a stream.
      * @param out PrintStream for output
      */
     public void printToStream(PrintStream out) {
@@ -242,6 +305,9 @@ class FsUsage extends FsCommand {
 
       StringBuilder fmt = new StringBuilder();      
       for (int i=0; i < widths.length; i++) {
+        if (hide[i]) {
+          continue;
+        }
         if (fmt.length() != 0) fmt.append("  ");
         if (rightAlign[i]) {
           fmt.append("%"+widths[i]+"s");

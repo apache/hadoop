@@ -20,7 +20,6 @@ package org.apache.hadoop.tools;
 
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -149,9 +148,7 @@ public class HadoopArchives implements Tool {
   IOException {
     for (Path p : paths) {
       FileSystem fs = p.getFileSystem(conf);
-      if (!fs.exists(p)) {
-        throw new FileNotFoundException("Source " + p + " does not exist.");
-      }
+      fs.getFileStatus(p);
     }
   }
 
@@ -619,9 +616,7 @@ public class HadoopArchives implements Tool {
       try {
         destFs = tmpOutput.getFileSystem(conf);
         //this was a stale copy
-        if (destFs.exists(tmpOutput)) {
-          destFs.delete(tmpOutput, false);
-        } 
+        destFs.delete(tmpOutput, false);
         partStream = destFs.create(tmpOutput, false, conf.getInt("io.file.buffer.size", 4096), 
             destFs.getDefaultReplication(tmpOutput), blockSize);
       } catch(IOException ie) {
@@ -747,12 +742,8 @@ public class HadoopArchives implements Tool {
       replication = conf.getInt(HAR_REPLICATION_LABEL, 3);
       try {
         fs = masterIndex.getFileSystem(conf);
-        if (fs.exists(masterIndex)) {
-          fs.delete(masterIndex, false);
-        }
-        if (fs.exists(index)) {
-          fs.delete(index, false);
-        }
+        fs.delete(masterIndex, false);
+        fs.delete(index, false);
         indexStream = fs.create(index);
         outStream = fs.create(masterIndex);
         String version = VERSION + " \n";

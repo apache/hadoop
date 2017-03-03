@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.PreemptionContainer;
 import org.apache.hadoop.yarn.api.records.PreemptionContract;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
+import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -112,7 +113,8 @@ public class TestKillAMPreemptionPolicy {
 
   private RunningAppContext getRunningAppContext() {
     RunningAppContext mActxt = mock(RunningAppContext.class);
-    EventHandler<?> eventHandler = mock(EventHandler.class);
+    @SuppressWarnings("unchecked")
+    EventHandler<Event> eventHandler = mock(EventHandler.class);
     when(mActxt.getEventHandler()).thenReturn(eventHandler);
     return mActxt;
   }

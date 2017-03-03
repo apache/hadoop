@@ -110,7 +110,8 @@ public class ITestS3AAWSCredentialsProvider {
     @SuppressWarnings("unused")
     public GoodCredentialsProvider(URI name, Configuration conf) {
       super(new BasicAWSCredentialsProvider(conf.get(ACCESS_KEY),
-          conf.get(SECRET_KEY)), new InstanceProfileCredentialsProvider());
+          conf.get(SECRET_KEY)),
+          InstanceProfileCredentialsProvider.getInstance());
     }
   }
 
@@ -128,7 +129,6 @@ public class ITestS3AAWSCredentialsProvider {
         AnonymousAWSCredentialsProvider.class.getName());
     Path testFile = new Path(
         conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE));
-    S3ATestUtils.useCSVDataEndpoint(conf);
     FileSystem fs = FileSystem.newInstance(testFile.toUri(), conf);
     assertNotNull(fs);
     assertTrue(fs instanceof S3AFileSystem);

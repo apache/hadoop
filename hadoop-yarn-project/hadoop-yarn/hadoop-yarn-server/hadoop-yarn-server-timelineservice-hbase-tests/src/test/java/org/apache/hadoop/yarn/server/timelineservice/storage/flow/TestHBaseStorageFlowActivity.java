@@ -52,7 +52,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineReader
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -119,7 +119,7 @@ public class TestHBaseStorageFlowActivity {
         .getEntityMinStartTime(minStartTs);
 
     try {
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
 
@@ -172,7 +172,7 @@ public class TestHBaseStorageFlowActivity {
     assertEquals(cluster, flowActivityRowKey.getClusterId());
     assertEquals(user, flowActivityRowKey.getUserId());
     assertEquals(flow, flowActivityRowKey.getFlowName());
-    Long dayTs = TimelineStorageUtils.getTopOfTheDayTimestamp(minStartTs);
+    Long dayTs = HBaseTimelineStorageUtils.getTopOfTheDayTimestamp(minStartTs);
     assertEquals(dayTs, flowActivityRowKey.getDayTimestamp());
     assertEquals(1, values.size());
     checkFlowActivityRunId(runid, flowVersion, values);
@@ -228,7 +228,7 @@ public class TestHBaseStorageFlowActivity {
     HBaseTimelineWriterImpl hbi = null;
     Configuration c1 = util.getConfiguration();
     try {
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       String appName = "application_1111999999_1234";
       hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
@@ -303,7 +303,8 @@ public class TestHBaseStorageFlowActivity {
       assertEquals(cluster, flowActivityRowKey.getClusterId());
       assertEquals(user, flowActivityRowKey.getUserId());
       assertEquals(flow, flowActivityRowKey.getFlowName());
-      Long dayTs = TimelineStorageUtils.getTopOfTheDayTimestamp(appCreatedTime);
+      Long dayTs = HBaseTimelineStorageUtils.getTopOfTheDayTimestamp(
+          appCreatedTime);
       assertEquals(dayTs, flowActivityRowKey.getDayTimestamp());
       assertEquals(1, values.size());
       checkFlowActivityRunId(runid, flowVersion, values);
@@ -341,7 +342,7 @@ public class TestHBaseStorageFlowActivity {
     HBaseTimelineWriterImpl hbi = null;
     Configuration c1 = util.getConfiguration();
     try {
-      hbi = new HBaseTimelineWriterImpl(c1);
+      hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
       String appName = "application_11888888888_1111";
       hbi.write(cluster, user, flow, flowVersion1, runid1, appName, te);
@@ -388,7 +389,7 @@ public class TestHBaseStorageFlowActivity {
         assertEquals(user, flowActivity.getUser());
         assertEquals(flow, flowActivity.getFlowName());
         long dayTs =
-            TimelineStorageUtils.getTopOfTheDayTimestamp(appCreatedTime);
+            HBaseTimelineStorageUtils.getTopOfTheDayTimestamp(appCreatedTime);
         assertEquals(dayTs, flowActivity.getDate().getTime());
         Set<FlowRunEntity> flowRuns = flowActivity.getFlowRuns();
         assertEquals(3, flowRuns.size());
@@ -443,7 +444,8 @@ public class TestHBaseStorageFlowActivity {
       assertEquals(cluster, flowActivityRowKey.getClusterId());
       assertEquals(user, flowActivityRowKey.getUserId());
       assertEquals(flow, flowActivityRowKey.getFlowName());
-      Long dayTs = TimelineStorageUtils.getTopOfTheDayTimestamp(appCreatedTime);
+      Long dayTs = HBaseTimelineStorageUtils.getTopOfTheDayTimestamp(
+          appCreatedTime);
       assertEquals(dayTs, flowActivityRowKey.getDayTimestamp());
 
       Map<byte[], byte[]> values = result

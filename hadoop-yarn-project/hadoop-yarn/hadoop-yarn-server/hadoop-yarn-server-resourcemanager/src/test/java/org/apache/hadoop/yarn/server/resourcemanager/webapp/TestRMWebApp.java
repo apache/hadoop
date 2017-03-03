@@ -268,7 +268,7 @@ public class TestRMWebApp {
       when(clientRMService.getApplications(any(GetApplicationsRequest.class)))
           .thenReturn(response);
     } catch (YarnException e) {
-      Assert.fail("Exception is not expteced.");
+      Assert.fail("Exception is not expected.");
     }
     return clientRMService;
   }

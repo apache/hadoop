@@ -49,7 +49,6 @@ class JNStorage extends Storage {
   private final FileJournalManager fjm;
   private final StorageDirectory sd;
   private StorageState state;
-  
 
   private static final List<Pattern> CURRENT_DIR_PURGE_REGEXES =
       ImmutableList.of(
@@ -121,6 +120,14 @@ class JNStorage extends Storage {
     return new File(sd.getCurrentDir(), name);
   }
 
+  File getTemporaryEditsFile(long startTxId, long endTxId, long timestamp) {
+    return NNStorage.getTemporaryEditsFile(sd, startTxId, endTxId, timestamp);
+  }
+
+  File getFinalizedEditsFile(long startTxId, long endTxId) {
+    return NNStorage.getFinalizedEditsFile(sd, startTxId, endTxId);
+  }
+
   /**
    * @return the path for the file which contains persisted data for the
    * paxos-like recovery process for the given log segment.
@@ -180,7 +187,14 @@ class JNStorage extends Storage {
   }
 
   void format(NamespaceInfo nsInfo) throws IOException {
+    unlockAll();
+    try {
+      sd.analyzeStorage(StartupOption.FORMAT, this, true);
+    } finally {
+      sd.unlock();
+    }
     setStorageInfo(nsInfo);
+
     LOG.info("Formatting journal " + sd + " with nsid: " + getNamespaceID());
     // Unlock the directory before formatting, because we will
     // re-analyze it after format(). The analyzeStorage() call

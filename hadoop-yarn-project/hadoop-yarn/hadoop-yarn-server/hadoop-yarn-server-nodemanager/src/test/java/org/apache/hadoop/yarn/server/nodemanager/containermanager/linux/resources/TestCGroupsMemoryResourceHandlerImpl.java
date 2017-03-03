@@ -52,7 +52,7 @@ public class TestCGroupsMemoryResourceHandlerImpl {
     List<PrivilegedOperation> ret =
         cGroupsMemoryResourceHandler.bootstrap(conf);
     verify(mockCGroupsHandler, times(1))
-        .mountCGroupController(CGroupsHandler.CGroupController.MEMORY);
+        .initializeCGroupController(CGroupsHandler.CGroupController.MEMORY);
     Assert.assertNull(ret);
     Assert.assertEquals("Default swappiness value incorrect", 0,
         cGroupsMemoryResourceHandler.getSwappiness());

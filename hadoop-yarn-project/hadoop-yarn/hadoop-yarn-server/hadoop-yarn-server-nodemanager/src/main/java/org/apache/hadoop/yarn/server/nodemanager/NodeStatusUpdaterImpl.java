@@ -47,7 +47,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionUtil;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -62,7 +61,6 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factories.impl.pb.RecordFactoryPBImpl;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
-import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ResourceManagerConstants;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.ServerRMProxy;
@@ -89,7 +87,6 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
@@ -570,9 +567,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       }
     }
 
-    // Account for all containers that got killed while they were still queued.
-    pendingCompletedContainers.putAll(getKilledQueuedContainerStatuses());
-
     containerStatuses.addAll(pendingCompletedContainers.values());
 
     if (LOG.isDebugEnabled()) {
@@ -580,43 +574,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           + " container statuses: " + containerStatuses);
     }
     return containerStatuses;
-  }
-
-  /**
-   * Add to the container statuses the status of the containers that got killed
-   * while they were queued.
-   */
-  private Map<ContainerId, ContainerStatus> getKilledQueuedContainerStatuses() {
-    Map<ContainerId, ContainerStatus> killedQueuedContainerStatuses =
-        new HashMap<>();
-    for (Map.Entry<ContainerTokenIdentifier, String> killedQueuedContainer :
-        this.context.getQueuingContext().
-            getKilledQueuedContainers().entrySet()) {
-      ContainerTokenIdentifier containerTokenId = killedQueuedContainer
-          .getKey();
-      ContainerId containerId = containerTokenId.getContainerID();
-      ContainerStatus containerStatus = BuilderUtils.newContainerStatus(
-          containerId, ContainerState.COMPLETE,
-          killedQueuedContainer.getValue(), ContainerExitStatus.ABORTED,
-          containerTokenId.getResource(), containerTokenId.getExecutionType());
-      ApplicationId applicationId = containerId.getApplicationAttemptId()
-          .getApplicationId();
-      if (isApplicationStopped(applicationId)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(applicationId + " is completing, " + " remove "
-              + containerId + " from NM context.");
-        }
-        this.context.getQueuingContext().getKilledQueuedContainers()
-            .remove(containerTokenId);
-        killedQueuedContainerStatuses.put(containerId, containerStatus);
-      } else {
-        if (!isContainerRecentlyStopped(containerId)) {
-          killedQueuedContainerStatuses.put(containerId, containerStatus);
-        }
-      }
-      addCompletedContainer(containerId);
-    }
-    return killedQueuedContainerStatuses;
   }
 
   private List<ApplicationId> getRunningApplications() {
@@ -700,17 +657,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         context.getContainers().remove(containerId);
         removedContainers.add(containerId);
         iter.remove();
-      }
-    }
-
-    // Remove null containers from queuing context for killed queued containers.
-    Iterator<ContainerTokenIdentifier> killedQueuedContIter =
-        context.getQueuingContext().getKilledQueuedContainers().keySet().
-            iterator();
-    while (killedQueuedContIter.hasNext()) {
-      if (removedNullContainers.contains(
-          killedQueuedContIter.next().getContainerID())) {
-        killedQueuedContIter.remove();
       }
     }
 

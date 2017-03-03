@@ -54,6 +54,7 @@ import javax.ws.rs.core.StreamingOutput;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -66,6 +67,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -414,14 +416,16 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(CreateFlagParam.NAME) @DefaultValue(CreateFlagParam.DEFAULT)
           final CreateFlagParam createFlagParam,
       @QueryParam(NoRedirectParam.NAME) @DefaultValue(NoRedirectParam.DEFAULT)
-          final NoRedirectParam noredirect
+          final NoRedirectParam noredirect,
+      @QueryParam(StoragePolicyParam.NAME) @DefaultValue(StoragePolicyParam
+          .DEFAULT) final StoragePolicyParam policyName
       ) throws IOException, InterruptedException {
     return put(ugi, delegation, username, doAsUser, ROOT, op, destination,
         owner, group, permission, unmaskedPermission, overwrite, bufferSize,
         replication, blockSize, modificationTime, accessTime, renameOptions,
         createParent, delegationTokenArgument, aclPermission, xattrName,
         xattrValue, xattrSetFlag, snapshotName, oldSnapshotName,
-        excludeDatanodes, createFlagParam, noredirect);
+        excludeDatanodes, createFlagParam, noredirect, policyName);
   }
 
   /** Validate all required params. */
@@ -499,7 +503,9 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(CreateFlagParam.NAME) @DefaultValue(CreateFlagParam.DEFAULT)
           final CreateFlagParam createFlagParam,
       @QueryParam(NoRedirectParam.NAME) @DefaultValue(NoRedirectParam.DEFAULT)
-          final NoRedirectParam noredirect
+          final NoRedirectParam noredirect,
+      @QueryParam(StoragePolicyParam.NAME) @DefaultValue(StoragePolicyParam
+          .DEFAULT) final StoragePolicyParam policyName
       ) throws IOException, InterruptedException {
 
     init(ugi, delegation, username, doAsUser, path, op, destination, owner,
@@ -507,7 +513,7 @@ public class NamenodeWebHdfsMethods {
         replication, blockSize, modificationTime, accessTime, renameOptions,
         delegationTokenArgument, aclPermission, xattrName, xattrValue,
         xattrSetFlag, snapshotName, oldSnapshotName, excludeDatanodes,
-        createFlagParam, noredirect);
+        createFlagParam, noredirect, policyName);
 
     return doAs(ugi, new PrivilegedExceptionAction<Response>() {
       @Override
@@ -519,7 +525,7 @@ public class NamenodeWebHdfsMethods {
               renameOptions, createParent, delegationTokenArgument,
               aclPermission, xattrName, xattrValue, xattrSetFlag,
               snapshotName, oldSnapshotName, excludeDatanodes,
-              createFlagParam, noredirect);
+              createFlagParam, noredirect, policyName);
       }
     });
   }
@@ -553,7 +559,8 @@ public class NamenodeWebHdfsMethods {
       final OldSnapshotNameParam oldSnapshotName,
       final ExcludeDatanodesParam exclDatanodes,
       final CreateFlagParam createFlagParam,
-      final NoRedirectParam noredirectParam
+      final NoRedirectParam noredirectParam,
+      final StoragePolicyParam policyName
       ) throws IOException, URISyntaxException {
 
     final Configuration conf = (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
@@ -706,6 +713,13 @@ public class NamenodeWebHdfsMethods {
       np.disallowSnapshot(fullpath);
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
+    case SETSTORAGEPOLICY: {
+      if (policyName.getValue() == null) {
+        throw new IllegalArgumentException("Storage policy name is empty.");
+      }
+      np.setStoragePolicy(fullpath, policyName.getValue());
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+    }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
@@ -828,6 +842,10 @@ public class NamenodeWebHdfsMethods {
           "DFSClient_" + DFSUtil.getSecureRandom().nextLong());
       final String js = JsonUtil.toJsonString("boolean", b);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case UNSETSTORAGEPOLICY: {
+      np.unsetStoragePolicy(fullpath);
+      return Response.ok().build();
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
@@ -975,6 +993,21 @@ public class NamenodeWebHdfsMethods {
         return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       }
     }
+    case GETFILEBLOCKLOCATIONS:
+    {
+      final long offsetValue = offset.getValue();
+      final Long lengthValue = length.getValue();
+
+      FileSystem fs = FileSystem.get(conf != null ?
+          conf : new Configuration());
+      BlockLocation[] locations = fs.getFileBlockLocations(
+          new org.apache.hadoop.fs.Path(fullpath),
+          offsetValue,
+          lengthValue != null? lengthValue: Long.MAX_VALUE);
+      final String js = JsonUtil.toJsonString("BlockLocations",
+          JsonUtil.toJsonMap(locations));
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
     case GET_BLOCK_LOCATIONS:
     {
       final long offsetValue = offset.getValue();
@@ -1092,6 +1125,16 @@ public class NamenodeWebHdfsMethods {
       }
       final DirectoryListing listing = getDirectoryListing(np, fullpath, start);
       final String js = JsonUtil.toJsonString(listing);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETALLSTORAGEPOLICY: {
+      BlockStoragePolicy[] storagePolicies = np.getStoragePolicies();
+      final String js = JsonUtil.toJsonString(storagePolicies);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETSTORAGEPOLICY: {
+      BlockStoragePolicy storagePolicy = np.getStoragePolicy(fullpath);
+      final String js = JsonUtil.toJsonString(storagePolicy);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     default:

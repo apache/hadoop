@@ -917,7 +917,7 @@ public class TestRMNodeTransitions {
 
     Assert.assertEquals(NodeState.REBOOTED, node.getState());
     Assert.assertEquals("Active Nodes", initialActive, cm.getNumActiveNMs());
-    Assert.assertEquals("Unhelathy Nodes", initialUnHealthy,
+    Assert.assertEquals("Unhealthy Nodes", initialUnHealthy,
         cm.getUnhealthyNMs());
     Assert.assertEquals("Decommissioning Nodes", initialDecommissioning,
         cm.getNumDecommissioningNMs());

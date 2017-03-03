@@ -36,6 +36,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -46,11 +47,14 @@ import java.util.regex.Pattern;
 import org.apache.commons.cli.Options;
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeout;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -124,6 +128,11 @@ public class TestYarnCLI {
           null, null, false, Priority.newInstance(0), "high-mem", "high-mem");
       newApplicationReport.setLogAggregationStatus(LogAggregationStatus.SUCCEEDED);
       newApplicationReport.setPriority(Priority.newInstance(0));
+      ApplicationTimeout timeout = ApplicationTimeout
+          .newInstance(ApplicationTimeoutType.LIFETIME, "UNLIMITED", -1);
+      newApplicationReport.setApplicationTimeouts(
+          Collections.singletonMap(timeout.getTimeoutType(), timeout));
+
       when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
           newApplicationReport);
       int result = cli.run(new String[] { "application", "-status", applicationId.toString() });
@@ -155,6 +164,10 @@ public class TestYarnCLI {
       pw.println("\tUnmanaged Application : false");
       pw.println("\tApplication Node Label Expression : high-mem");
       pw.println("\tAM container Node Label Expression : high-mem");
+      pw.print("\tTimeoutType : LIFETIME");
+      pw.print("\tExpiryTime : UNLIMITED");
+      pw.println("\tRemainingTime : -1seconds");
+      pw.println();
       pw.close();
       String appReportStr = baos.toString("UTF-8");
       Assert.assertEquals(appReportStr, sysOutStream.toString());
@@ -1199,6 +1212,59 @@ public class TestYarnCLI {
   }
 
   @Test
+  public void testMoveApplicationAcrossQueuesWithNewCommand() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+
+    ApplicationReport newApplicationReport2 = ApplicationReport.newInstance(
+        applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
+        "user", "queue", "appname", "host", 124, null,
+        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
+        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
+    when(client.getApplicationReport(any(ApplicationId.class)))
+        .thenReturn(newApplicationReport2);
+    int result = cli.run(new String[]{"application", "-appId",
+        applicationId.toString(), "-changeQueue", "targetqueue"});
+    assertEquals(0, result);
+    verify(client, times(0)).moveApplicationAcrossQueues(
+        any(ApplicationId.class), any(String.class));
+    verify(sysOut)
+        .println("Application " + applicationId + " has already finished ");
+
+    ApplicationReport newApplicationReport = ApplicationReport.newInstance(
+        applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
+        "user", "queue", "appname", "host", 124, null,
+        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
+        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
+    when(client.getApplicationReport(any(ApplicationId.class)))
+        .thenReturn(newApplicationReport);
+    result = cli.run(new String[]{"application", "-appId",
+        applicationId.toString(), "-changeQueue", "targetqueue"});
+    assertEquals(0, result);
+    verify(client).moveApplicationAcrossQueues(any(ApplicationId.class),
+        any(String.class));
+    verify(sysOut).println(
+        "Moving application application_1234_0005 to queue targetqueue");
+    verify(sysOut).println("Successfully completed move.");
+
+    doThrow(new ApplicationNotFoundException(
+        "Application with id '" + applicationId + "' doesn't exist in RM."))
+            .when(client)
+            .moveApplicationAcrossQueues(applicationId, "targetqueue");
+    cli = createAndGetAppCLI();
+    try {
+      result = cli.run(new String[]{"application", "-appId",
+          applicationId.toString(), "-changeQueue", "targetqueue"});
+      Assert.fail();
+    } catch (Exception ex) {
+      Assert.assertTrue(ex instanceof ApplicationNotFoundException);
+      Assert.assertEquals(
+          "Application with id '" + applicationId + "' doesn't exist in RM.",
+          ex.getMessage());
+    }
+  }
+
+  @Test
   public void testListClusterNodes() throws Exception {
     List<NodeReport> nodeReports = new ArrayList<NodeReport>();
     nodeReports.addAll(getNodeReports(1, NodeState.NEW));
@@ -1708,15 +1774,13 @@ public class TestYarnCLI {
         + "ProportionalCapacityPreemptionPolicy");
     conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
     conf.setBoolean(PREFIX + "root.a.a1.disable_preemption", true);
-    MiniYARNCluster cluster =
-        new MiniYARNCluster("testReservationAPIs", 2, 1, 1);
 
-    YarnClient yarnClient = null;
-    try {
+    try (MiniYARNCluster cluster =
+        new MiniYARNCluster("testReservationAPIs", 2, 1, 1);
+         YarnClient yarnClient = YarnClient.createYarnClient()) {
       cluster.init(conf);
       cluster.start();
       final Configuration yarnConf = cluster.getConfig();
-      yarnClient = YarnClient.createYarnClient();
       yarnClient.init(yarnConf);
       yarnClient.start();
 
@@ -1729,13 +1793,6 @@ public class TestYarnCLI {
       assertEquals(0, result);
       Assert.assertTrue(sysOutStream.toString()
           .contains("Preemption : disabled"));
-    } finally {
-      // clean-up
-      if (yarnClient != null) {
-        yarnClient.stop();
-      }
-      cluster.stop();
-      cluster.close();
     }
   }
   
@@ -1968,6 +2025,12 @@ public class TestYarnCLI {
     pw.println(" -appTypes <Types>               Works with -list to filter applications");
     pw.println("                                 based on input comma-separated list of");
     pw.println("                                 application types.");
+    pw.println(" -changeQueue <Queue Name>       Moves application to a new queue.");
+    pw.println("                                 ApplicationId can be passed using 'appId'");
+    pw.println("                                 option. 'movetoqueue' command is");
+    pw.println("                                 deprecated, this new command");
+    pw.println("                                 'changeQueue' performs same");
+    pw.println("                                 functionality.");
     pw.println(" -help                           Displays help for all commands.");
     pw.println(" -kill <Application ID>          Kills the application. Set of");
     pw.println("                                 applications can be provided separated");
@@ -1979,11 +2042,16 @@ public class TestYarnCLI {
     pw.println("                                 and -appTags to filter applications based");
     pw.println("                                 on application tag.");
     pw.println(" -movetoqueue <Application ID>   Moves the application to a different");
-    pw.println("                                 queue.");
+    pw.println("                                 queue. Deprecated command. Use");
+    pw.println("                                 'changeQueue' instead.");
     pw.println(" -queue <Queue Name>             Works with the movetoqueue command to");
     pw.println("                                 specify which queue to move an");
     pw.println("                                 application to.");
     pw.println(" -status <Application ID>        Prints the status of the application.");
+    pw.println(" -updateLifetime <Timeout>       update timeout of an application from");
+    pw.println("                                 NOW. ApplicationId can be passed using");
+    pw.println("                                 'appId' option. Timeout value is in");
+    pw.println("                                 seconds.");
     pw.println(" -updatePriority <Priority>      update priority of an application.");
     pw.println("                                 ApplicationId can be passed using 'appId'");
     pw.println("                                 option.");
@@ -2073,5 +2141,29 @@ public class TestYarnCLI {
         cli.run(new String[] { "applicationattempt", "-list",
             applicationId.toString() });
     assertEquals(0, result);
+  }
+
+  @Test(timeout = 60000)
+  public void testUpdateApplicationTimeout() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 6);
+
+    ApplicationReport appReport = ApplicationReport.newInstance(applicationId,
+        ApplicationAttemptId.newInstance(applicationId, 1), "user", "queue",
+        "appname", "host", 124, null, YarnApplicationState.RUNNING,
+        "diagnostics", "url", 0, 0, FinalApplicationStatus.UNDEFINED, null,
+        "N/A", 0.53789f, "YARN", null);
+    ApplicationTimeout timeout = ApplicationTimeout
+        .newInstance(ApplicationTimeoutType.LIFETIME, "N/A", -1);
+    appReport.setApplicationTimeouts(
+        Collections.singletonMap(timeout.getTimeoutType(), timeout));
+    when(client.getApplicationReport(any(ApplicationId.class)))
+        .thenReturn(appReport);
+
+    int result = cli.run(new String[] { "application", "-appId",
+        applicationId.toString(), "-updateLifetime", "10" });
+    Assert.assertEquals(result, 0);
+    verify(client)
+        .updateApplicationTimeouts(any(UpdateApplicationTimeoutsRequest.class));
   }
 }

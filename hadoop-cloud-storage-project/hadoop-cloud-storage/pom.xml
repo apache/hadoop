@@ -18,12 +18,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-alpha2-SNAPSHOT</version>
+    <version>3.0.0-alpha3-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
-  <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-cloud-storage</artifactId>
-  <version>3.0.0-alpha2-SNAPSHOT</version>
+  <version>3.0.0-alpha3-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <description>Apache Hadoop Cloud Storage</description>
@@ -93,10 +92,6 @@
         <exclusion>
           <groupId>net.sf.kosmosfs</groupId>
           <artifactId>kfs</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>net.java.dev.jets3t</groupId>
-          <artifactId>jets3t</artifactId>
         </exclusion>
         <exclusion>
           <groupId>com.jcraft</groupId>

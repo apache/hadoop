@@ -12,6 +12,17 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 <configuration>
+  <!--
+  To run live tests:
+  # Create a file auth-keys.xml  - DO NOT ADD TO REVISION CONTROL
+  # Add property test.fs.adl.name to point to an ADLS filesystem URL
+  # Add property dfs.adl.test.contract.enable with value set to true
+  # Add the credentials for the service you are testing against
+  -->
+  <include xmlns="http://www.w3.org/2001/XInclude" href="auth-keys.xml">
+    <fallback/>
+  </include>
+
   <property>
     <name>fs.contract.test.root-tests-enabled</name>
     <value>true</value>
@@ -39,22 +50,22 @@
 
   <property>
     <name>fs.contract.rename-returns-true-if-dest-exists</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
     <name>fs.contract.rename-returns-true-if-source-missing</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
     <name>fs.contract.rename-creates-dest-dirs</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
     <name>fs.contract.rename-remove-dest-if-empty-dir</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
@@ -119,7 +130,7 @@
 
   <property>
     <name>fs.contract.rename-overwrites-dest</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
@@ -136,4 +147,5 @@
     <name>fs.contract.supports-getfilestatus</name>
     <value>true</value>
   </property>
+
 </configuration>

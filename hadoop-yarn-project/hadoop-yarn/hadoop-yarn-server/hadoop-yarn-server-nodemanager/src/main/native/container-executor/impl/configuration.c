@@ -156,6 +156,7 @@ char* trim(char* input)
     }
 
     strncpy(ret, val_begin, val_end - val_begin);
+    ret[val_end - val_begin] = '\0';
     return ret;
 }
 

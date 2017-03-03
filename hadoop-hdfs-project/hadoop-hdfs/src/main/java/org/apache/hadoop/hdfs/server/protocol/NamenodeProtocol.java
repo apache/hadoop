@@ -193,5 +193,13 @@ public interface NamenodeProtocol {
   @Idempotent
   public boolean isUpgradeFinalized() throws IOException;
 
+  /**
+   * return whether the Namenode is rolling upgrade in progress (true) or
+   * not (false).
+   * @return
+   * @throws IOException
+   */
+  @Idempotent
+  boolean isRollingUpgrade() throws IOException;
 }
 

@@ -20,8 +20,7 @@
 package org.apache.hadoop.fs.adl;
 
 /**
- * This class overrides AdlFileSystem to change transport scheme to http instead
- * of https to run against Mock Server.
+ * Mock adl file storage subclass to mock adl storage on local http service.
  */
 public class TestableAdlFileSystem extends AdlFileSystem {
   @Override

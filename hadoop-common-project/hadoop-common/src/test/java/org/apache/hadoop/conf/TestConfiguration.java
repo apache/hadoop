@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import static java.util.concurrent.TimeUnit.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import junit.framework.TestCase;
 import static org.junit.Assert.assertArrayEquals;
 
@@ -52,7 +53,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
-import org.codehaus.jackson.map.ObjectMapper;
 import org.mockito.Mockito;
 
 public class TestConfiguration extends TestCase {
@@ -69,6 +69,9 @@ public class TestConfiguration extends TestCase {
   final static String XMLHEADER = 
             IBM_JAVA?"<?xml version=\"1.0\" encoding=\"UTF-8\"?><configuration>":
   "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><configuration>";
+
+  /** Four apostrophes. */
+  public static final String ESCAPED = "&apos;&#39;&#0039;&#x27;";
 
   @Override
   protected void setUp() throws Exception {
@@ -402,7 +405,18 @@ public class TestConfiguration extends TestCase {
     //two spaces one after "this", one before "contains"
     assertEquals("this  contains a comment", conf.get("my.comment"));
   }
-  
+
+  public void testEscapedCharactersInValue() throws IOException {
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("my.comment", ESCAPED);
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    //two spaces one after "this", one before "contains"
+    assertEquals("''''", conf.get("my.comment"));
+  }
+
   public void testTrim() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();

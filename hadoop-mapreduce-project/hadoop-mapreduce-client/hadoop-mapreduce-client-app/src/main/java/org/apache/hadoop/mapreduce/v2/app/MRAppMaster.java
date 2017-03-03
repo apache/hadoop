@@ -38,6 +38,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.crypto.KeyGenerator;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -123,6 +125,7 @@ import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
@@ -140,6 +143,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
+import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -150,11 +154,8 @@ import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.apache.log4j.LogManager;
 
 import com.google.common.annotations.VisibleForTesting;
-
-import javax.crypto.KeyGenerator;
 
 /**
  * The Map-Reduce Application Master.
@@ -1066,6 +1067,7 @@ public class MRAppMaster extends CompositeService {
     private final ClusterInfo clusterInfo = new ClusterInfo();
     private final ClientToAMTokenSecretManager clientToAMTokenSecretManager;
     private TimelineClient timelineClient = null;
+    private TimelineV2Client timelineV2Client = null;
 
     private final TaskAttemptFinishingMonitor taskAttemptFinishingMonitor;
 
@@ -1081,7 +1083,7 @@ public class MRAppMaster extends CompositeService {
 
         if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
           // create new version TimelineClient
-          timelineClient = TimelineClient.createTimelineClient(
+          timelineV2Client = TimelineV2Client.createTimelineClient(
               appAttemptID.getApplicationId());
         } else {
           timelineClient = TimelineClient.createTimelineClient();
@@ -1120,7 +1122,7 @@ public class MRAppMaster extends CompositeService {
     }
 
     @Override
-    public EventHandler getEventHandler() {
+    public EventHandler<Event> getEventHandler() {
       return dispatcher.getEventHandler();
     }
 
@@ -1177,9 +1179,13 @@ public class MRAppMaster extends CompositeService {
       return taskAttemptFinishingMonitor;
     }
 
-    // Get Timeline Collector's address (get sync from RM)
     public TimelineClient getTimelineClient() {
       return timelineClient;
+    }
+
+    // Get Timeline Collector's address (get sync from RM)
+    public TimelineV2Client getTimelineV2Client() {
+      return timelineV2Client;
     }
   }
 
@@ -1276,14 +1282,9 @@ public class MRAppMaster extends CompositeService {
     }
   }
 
-  protected void shutdownTaskLog() {
-    TaskLog.syncLogsShutdown(logSyncer);
-  }
-
   @Override
   public void stop() {
     super.stop();
-    shutdownTaskLog();
   }
 
   private boolean isRecoverySupported() throws IOException {
@@ -1690,6 +1691,8 @@ public class MRAppMaster extends CompositeService {
       final JobConf conf, String jobUserName) throws IOException,
       InterruptedException {
     UserGroupInformation.setConfiguration(conf);
+    // MAPREDUCE-6565: need to set configuration for SecurityUtil.
+    SecurityUtil.setConfiguration(conf);
     // Security framework already loaded the tokens into current UGI, just use
     // them
     Credentials credentials =
@@ -1821,14 +1824,9 @@ public class MRAppMaster extends CompositeService {
     T call(Configuration conf) throws Exception;
   }
 
-  protected void shutdownLogManager() {
-    LogManager.shutdown();
-  }
-
   @Override
   protected void serviceStop() throws Exception {
     super.serviceStop();
-    shutdownLogManager();
   }
 
   public ClientService getClientService() {

@@ -110,8 +110,6 @@ public class TestApplicationLimits {
         thenReturn(Resources.createResource(16*GB, 32));
     when(csContext.getClusterResource()).
         thenReturn(Resources.createResource(10 * 16 * GB, 10 * 32));
-    when(csContext.getNonPartitionedQueueComparator()).
-        thenReturn(CapacityScheduler.nonPartitionedQueueComparator);
     when(csContext.getResourceCalculator()).
         thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
@@ -123,9 +121,9 @@ public class TestApplicationLimits {
         containerTokenSecretManager);
 
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
-    CSQueue root = 
-        CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
-            queues, queues, 
+    CSQueue root = CapacitySchedulerQueueManager
+        .parseQueue(csContext, csConf, null, "root",
+            queues, queues,
             TestUtils.spyHook);
 
     
@@ -194,7 +192,7 @@ public class TestApplicationLimits {
         clusterResource));
     
     ActiveUsersManager activeUsersManager = mock(ActiveUsersManager.class);
-    when(queue.getActiveUsersManager()).thenReturn(activeUsersManager);
+    when(queue.getAbstractUsersManager()).thenReturn(activeUsersManager);
 
     assertEquals(Resource.newInstance(8 * GB, 1),
         queue.calculateAndGetAMResourceLimit());
@@ -275,8 +273,6 @@ public class TestApplicationLimits {
         thenReturn(Resources.createResource(GB, 1));
     when(csContext.getMaximumResourceCapability()).
         thenReturn(Resources.createResource(16*GB, 16));
-    when(csContext.getNonPartitionedQueueComparator()).
-        thenReturn(CapacityScheduler.nonPartitionedQueueComparator);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
@@ -288,8 +284,8 @@ public class TestApplicationLimits {
     
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CSQueue root = 
-        CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
-            queues, queues, TestUtils.spyHook);
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+            "root", queues, queues, TestUtils.spyHook);
 
     LeafQueue queue = (LeafQueue)queues.get(A);
     
@@ -356,9 +352,9 @@ public class TestApplicationLimits {
         + ".maximum-am-resource-percent", 0.5f);
     // Re-create queues to get new configs.
     queues = new HashMap<String, CSQueue>();
-    root = 
-        CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
-            queues, queues, TestUtils.spyHook);
+    root = CapacitySchedulerQueueManager.parseQueue(
+        csContext, csConf, null, "root",
+        queues, queues, TestUtils.spyHook);
     clusterResource = Resources.createResource(100 * 16 * GB);
 
     queue = (LeafQueue)queues.get(A);
@@ -378,9 +374,9 @@ public class TestApplicationLimits {
         9999);
     // Re-create queues to get new configs.
     queues = new HashMap<String, CSQueue>();
-    root = 
-        CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
-            queues, queues, TestUtils.spyHook);
+    root = CapacitySchedulerQueueManager.parseQueue(
+        csContext, csConf, null, "root",
+        queues, queues, TestUtils.spyHook);
 
     queue = (LeafQueue)queues.get(A);
     assertEquals(9999, (int)csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
@@ -579,8 +575,6 @@ public class TestApplicationLimits {
         thenReturn(Resources.createResource(GB));
     when(csContext.getMaximumResourceCapability()).
         thenReturn(Resources.createResource(16*GB));
-    when(csContext.getNonPartitionedQueueComparator()).
-        thenReturn(CapacityScheduler.nonPartitionedQueueComparator);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
     
@@ -589,8 +583,8 @@ public class TestApplicationLimits {
     when(csContext.getClusterResource()).thenReturn(clusterResource);
     
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
-    CSQueue rootQueue = CapacityScheduler.parseQueue(csContext, csConf, null,
-        "root", queues, queues, TestUtils.spyHook);
+    CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(csContext,
+        csConf, null, "root", queues, queues, TestUtils.spyHook);
 
     ResourceUsage queueCapacities = rootQueue.getQueueResourceUsage();
     when(csContext.getClusterResourceUsage())
@@ -638,7 +632,7 @@ public class TestApplicationLimits {
         TestUtils.getMockApplicationAttemptId(0, 0); 
     FiCaSchedulerApp app_0_0 = new FiCaSchedulerApp(
       appAttemptId_0_0, user_0, queue, 
-            queue.getActiveUsersManager(), spyRMContext);
+            queue.getAbstractUsersManager(), spyRMContext);
     queue.submitApplicationAttempt(app_0_0, user_0);
 
     List<ResourceRequest> app_0_0_requests = new ArrayList<ResourceRequest>();
@@ -650,7 +644,7 @@ public class TestApplicationLimits {
     // Schedule to compute 
     queue.assignContainers(clusterResource, node_0, new ResourceLimits(
         clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    Resource expectedHeadroom = Resources.createResource(10*16*GB, 1);
+    Resource expectedHeadroom = Resources.createResource(5*16*GB, 1);
     assertEquals(expectedHeadroom, app_0_0.getHeadroom());
 
     // Submit second application from user_0, check headroom
@@ -658,7 +652,7 @@ public class TestApplicationLimits {
         TestUtils.getMockApplicationAttemptId(1, 0); 
     FiCaSchedulerApp app_0_1 = new FiCaSchedulerApp(
       appAttemptId_0_1, user_0, queue, 
-            queue.getActiveUsersManager(), spyRMContext);
+            queue.getAbstractUsersManager(), spyRMContext);
     queue.submitApplicationAttempt(app_0_1, user_0);
     
     List<ResourceRequest> app_0_1_requests = new ArrayList<ResourceRequest>();
@@ -678,7 +672,7 @@ public class TestApplicationLimits {
         TestUtils.getMockApplicationAttemptId(2, 0); 
     FiCaSchedulerApp app_1_0 = new FiCaSchedulerApp(
       appAttemptId_1_0, user_1, queue, 
-            queue.getActiveUsersManager(), spyRMContext);
+            queue.getAbstractUsersManager(), spyRMContext);
     queue.submitApplicationAttempt(app_1_0, user_1);
 
     List<ResourceRequest> app_1_0_requests = new ArrayList<ResourceRequest>();
@@ -697,6 +691,11 @@ public class TestApplicationLimits {
 
     // Now reduce cluster size and check for the smaller headroom
     clusterResource = Resources.createResource(90*16*GB);
+
+    // Any change is cluster resource needs to enforce user-limit recomputation.
+    // In existing code, LeafQueue#updateClusterResource handled this. However
+    // here that method was not used.
+    queue.getUsersManager().userLimitNeedsRecompute();
     queue.assignContainers(clusterResource, node_0, new ResourceLimits(
         clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY); // Schedule to compute
     expectedHeadroom = Resources.createResource(9*16*GB / 2, 1); // changes

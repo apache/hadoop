@@ -435,9 +435,11 @@ class JobResourceUploader {
     LOG.debug("default FileSystem: " + jtFs.getUri());
     FsPermission mapredSysPerms =
         new FsPermission(JobSubmissionFiles.JOB_DIR_PERMISSION);
-    if (!jtFs.exists(submitJobDir)) {
+    try {
+      jtFs.getFileStatus(submitJobDir);
+    } catch (FileNotFoundException e) {
       throw new IOException("Cannot find job submission directory! "
-          + "It should just be created, so something wrong here.");
+          + "It should just be created, so something wrong here.", e);
     }
 
     Path fileDir = JobSubmissionFiles.getJobLog4jFile(submitJobDir);
@@ -488,9 +490,7 @@ class JobResourceUploader {
     if (pathURI.getScheme() == null) {
       // default to the local file system
       // check if the file exists or not first
-      if (!localFs.exists(path)) {
-        throw new FileNotFoundException("File " + file + " does not exist.");
-      }
+      localFs.getFileStatus(path);
       finalPath =
           path.makeQualified(localFs.getUri(), localFs.getWorkingDirectory())
               .toString();
@@ -500,9 +500,7 @@ class JobResourceUploader {
       // these files to the file system ResourceManager is running
       // on.
       FileSystem fs = path.getFileSystem(conf);
-      if (!fs.exists(path)) {
-        throw new FileNotFoundException("File " + file + " does not exist.");
-      }
+      fs.getFileStatus(path);
       finalPath =
           path.makeQualified(fs.getUri(), fs.getWorkingDirectory()).toString();
     }

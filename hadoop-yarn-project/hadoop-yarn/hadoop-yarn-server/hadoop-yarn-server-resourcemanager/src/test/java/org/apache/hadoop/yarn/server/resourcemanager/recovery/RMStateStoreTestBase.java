@@ -117,7 +117,7 @@ public class RMStateStoreTestBase {
 
     @SuppressWarnings("rawtypes")
     @Override
-    public EventHandler getEventHandler() {
+    public EventHandler<Event> getEventHandler() {
       return this;
     }
 

@@ -15,19 +15,7 @@
 Memory Storage Support in HDFS
 ==============================
 
-* [Introduction](#Introduction)
-* [Administrator Configuration](#Administrator_Configuration)
-    * [Limit RAM used for replicas in Memory](#Limit_RAM_used_for_replicas_in_Memory)
-    * [Setup RAM Disks on Data Nodes](#Setup_RAM_Disks_on_Data_Nodes)
-        * [Choosing `tmpfs` \(vs `ramfs`\)](#Choosing_`tmpfs`_\(vs_`ramfs`\))
-        * [Mount RAM Disks](#Mount_RAM_Disks)
-        * [Tag `tmpfs` volume with the RAM\_DISK Storage Type](#Tag_`tmpfs`_volume_with_the_RAM\_DISK_Storage_Type)
-        * [Ensure Storage Policies are enabled](#Ensure_Storage_Policies_are_enabled)
-* [Application Usage](#Application_Usage)
-    * [Use the LAZY\_PERSIST Storage Policy](#Use_the_LAZY\_PERSIST_Storage_Policy)
-        * [Invoke `hdfs storagepolicies` command for directories](#Invoke_hdfs_storagepolicies_command_for_directories)
-        * [Call `setStoragePolicy` method for directories](#Call_`setStoragePolicy`_method_for_directories)
-        * [Pass `LAZY_PERSIST` `CreateFlag` for new files](#Pass_`LAZY_PERSIST`_`CreateFlag`_for_new_files)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Introduction
 ------------

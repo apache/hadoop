@@ -88,6 +88,40 @@ documentation. Power users will also be pleased by the
 documentation, which describes much of the new functionality, particularly
 related to extensibility.
 
+Shaded client jars
+------------------
+
+The `hadoop-client` Maven artifact available in 2.x releases pulls
+Hadoop's transitive dependencies onto a Hadoop application's classpath.
+This can be problematic if the versions of these transitive dependencies
+conflict with the versions used by the application.
+
+[HADOOP-11804](https://issues.apache.org/jira/browse/HADOOP-11804) adds
+new `hadoop-client-api` and `hadoop-client-runtime` artifacts that
+shade Hadoop's dependencies into a single jar. This avoids leaking
+Hadoop's dependencies onto the application's classpath.
+
+Support for Opportunistic Containers and Distributed Scheduling.
+--------------------
+
+A notion of `ExecutionType` has been introduced, whereby Applications can
+now request for containers with an execution type of `Opportunistic`.
+Containers of this type can be dispatched for execution at an NM even if
+there are no resources available at the moment of scheduling. In such a
+case, these containers will be queued at the NM, waiting for resources to
+be available for it to start. Opportunistic containers are of lower priority
+than the default `Guaranteed` containers and are therefore preempted,
+if needed, to make room for Guaranteed containers. This should
+improve cluster utilization.
+
+Opportunistic containers are by default allocated by the central RM, but
+support has also been added to allow opportunistic containers to be
+allocated by a distributed scheduler which is implemented as an
+AMRMProtocol interceptor.
+
+Please see [documentation](./hadoop-yarn/hadoop-yarn-site/OpportunisticContainers.html)
+for more details.
+
 MapReduce task-level native optimization
 --------------------
 
@@ -132,11 +166,11 @@ notes for [HDFS-9427](https://issues.apache.org/jira/browse/HDFS-9427) and
 [HADOOP-12811](https://issues.apache.org/jira/browse/HADOOP-12811)
 for a list of port changes.
 
-Support for Microsoft Azure Data Lake filesystem connector
+Support for Microsoft Azure Data Lake and Aliyun Object Storage System filesystem connectors
 ---------------------
 
-Hadoop now supports integration with Microsoft Azure Data Lake as
-an alternative Hadoop-compatible filesystem.
+Hadoop now supports integration with Microsoft Azure Data Lake and
+Aliyun Object Storage System as alternative Hadoop-compatible filesystems.
 
 Intra-datanode balancer
 -------------------

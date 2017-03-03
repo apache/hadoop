@@ -39,6 +39,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -58,11 +60,13 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt
     .RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
@@ -73,7 +77,6 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.Times;
-import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -81,7 +84,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  */
 public class RMServerUtils {
 
-  private static final String UPDATE_OUTSTANDING_ERROR =
+  public static final String UPDATE_OUTSTANDING_ERROR =
       "UPDATE_OUTSTANDING_ERROR";
   private static final String INCORRECT_CONTAINER_VERSION_ERROR =
       "INCORRECT_CONTAINER_VERSION_ERROR";
@@ -125,74 +128,99 @@ public class RMServerUtils {
 
   /**
    * Check if we have:
-   * - Request for same containerId and different target resource
-   * - If targetResources violates maximum/minimumAllocation
-   * @param rmContext RM context
-   * @param request Allocate Request
-   * @param maximumAllocation Maximum Allocation
-   * @param increaseResourceReqs Increase Resource Request
-   * @param decreaseResourceReqs Decrease Resource Request
-   * @return List of container Errors
+   * - Request for same containerId and different target resource.
+   * - If targetResources violates maximum/minimumAllocation.
+   * @param rmContext RM context.
+   * @param request Allocate Request.
+   * @param maximumAllocation Maximum Allocation.
+   * @param updateErrors Container update errors.
+   * @return ContainerUpdateRequests.
    */
-  public static List<UpdateContainerError>
+  public static ContainerUpdates
       validateAndSplitUpdateResourceRequests(RMContext rmContext,
       AllocateRequest request, Resource maximumAllocation,
-      List<UpdateContainerRequest> increaseResourceReqs,
-      List<UpdateContainerRequest> decreaseResourceReqs) {
-    List<UpdateContainerError> errors = new ArrayList<>();
+      List<UpdateContainerError> updateErrors) {
+    ContainerUpdates updateRequests =
+        new ContainerUpdates();
     Set<ContainerId> outstandingUpdate = new HashSet<>();
     for (UpdateContainerRequest updateReq : request.getUpdateRequests()) {
       RMContainer rmContainer = rmContext.getScheduler().getRMContainer(
           updateReq.getContainerId());
-      String msg = null;
-      if (rmContainer == null) {
-        msg = INVALID_CONTAINER_ID;
-      }
-      // Only allow updates if the requested version matches the current
-      // version
-      if (msg == null && updateReq.getContainerVersion() !=
-          rmContainer.getContainer().getVersion()) {
-        msg = INCORRECT_CONTAINER_VERSION_ERROR + "|"
-            + updateReq.getContainerVersion() + "|"
-            + rmContainer.getContainer().getVersion();
-      }
-      // No more than 1 container update per request.
-      if (msg == null &&
-          outstandingUpdate.contains(updateReq.getContainerId())) {
-        msg = UPDATE_OUTSTANDING_ERROR;
-      }
+      String msg = validateContainerIdAndVersion(outstandingUpdate,
+          updateReq, rmContainer);
+      ContainerUpdateType updateType = updateReq.getContainerUpdateType();
       if (msg == null) {
-        Resource original = rmContainer.getContainer().getResource();
-        Resource target = updateReq.getCapability();
-        if (Resources.fitsIn(target, original)) {
-          // This is a decrease request
-          if (validateIncreaseDecreaseRequest(rmContext, updateReq,
-              maximumAllocation, false)) {
-            decreaseResourceReqs.add(updateReq);
+        if ((updateType != ContainerUpdateType.PROMOTE_EXECUTION_TYPE) &&
+            (updateType !=ContainerUpdateType.DEMOTE_EXECUTION_TYPE)) {
+          if (validateIncreaseDecreaseRequest(
+              rmContext, updateReq, maximumAllocation)) {
+            if (ContainerUpdateType.INCREASE_RESOURCE == updateType) {
+              updateRequests.getIncreaseRequests().add(updateReq);
+            } else {
+              updateRequests.getDecreaseRequests().add(updateReq);
+            }
             outstandingUpdate.add(updateReq.getContainerId());
           } else {
             msg = RESOURCE_OUTSIDE_ALLOWED_RANGE;
           }
         } else {
-          // This is an increase request
-          if (validateIncreaseDecreaseRequest(rmContext, updateReq,
-              maximumAllocation, true)) {
-            increaseResourceReqs.add(updateReq);
-            outstandingUpdate.add(updateReq.getContainerId());
-          } else {
-            msg = RESOURCE_OUTSIDE_ALLOWED_RANGE;
+          ExecutionType original = rmContainer.getExecutionType();
+          ExecutionType target = updateReq.getExecutionType();
+          if (target != original) {
+            if (target == ExecutionType.GUARANTEED &&
+                original == ExecutionType.OPPORTUNISTIC) {
+              updateRequests.getPromotionRequests().add(updateReq);
+              outstandingUpdate.add(updateReq.getContainerId());
+            } else if (target == ExecutionType.OPPORTUNISTIC &&
+                original == ExecutionType.GUARANTEED) {
+              updateRequests.getDemotionRequests().add(updateReq);
+              outstandingUpdate.add(updateReq.getContainerId());
+            }
           }
         }
       }
-      if (msg != null) {
-        UpdateContainerError updateError = RECORD_FACTORY
-            .newRecordInstance(UpdateContainerError.class);
-        updateError.setReason(msg);
-        updateError.setUpdateContainerRequest(updateReq);
-        errors.add(updateError);
-      }
+      checkAndcreateUpdateError(updateErrors, updateReq, rmContainer, msg);
     }
-    return errors;
+    return updateRequests;
+  }
+
+  private static void checkAndcreateUpdateError(
+      List<UpdateContainerError> errors, UpdateContainerRequest updateReq,
+      RMContainer rmContainer, String msg) {
+    if (msg != null) {
+      UpdateContainerError updateError = RECORD_FACTORY
+          .newRecordInstance(UpdateContainerError.class);
+      updateError.setReason(msg);
+      updateError.setUpdateContainerRequest(updateReq);
+      if (rmContainer != null) {
+        updateError.setCurrentContainerVersion(
+            rmContainer.getContainer().getVersion());
+      } else {
+        updateError.setCurrentContainerVersion(-1);
+      }
+      errors.add(updateError);
+    }
+  }
+
+  private static String validateContainerIdAndVersion(
+      Set<ContainerId> outstandingUpdate, UpdateContainerRequest updateReq,
+      RMContainer rmContainer) {
+    String msg = null;
+    if (rmContainer == null) {
+      msg = INVALID_CONTAINER_ID;
+    }
+    // Only allow updates if the requested version matches the current
+    // version
+    if (msg == null && updateReq.getContainerVersion() !=
+        rmContainer.getContainer().getVersion()) {
+      msg = INCORRECT_CONTAINER_VERSION_ERROR;
+    }
+    // No more than 1 container update per request.
+    if (msg == null &&
+        outstandingUpdate.contains(updateReq.getContainerId())) {
+      msg = UPDATE_OUTSTANDING_ERROR;
+    }
+    return msg;
   }
 
   /**
@@ -291,8 +319,7 @@ public class RMServerUtils {
 
   // Sanity check and normalize target resource
   private static boolean validateIncreaseDecreaseRequest(RMContext rmContext,
-      UpdateContainerRequest request, Resource maximumAllocation,
-      boolean increase) {
+      UpdateContainerRequest request, Resource maximumAllocation) {
     if (request.getCapability().getMemorySize() < 0
         || request.getCapability().getMemorySize() > maximumAllocation
         .getMemorySize()) {
@@ -304,13 +331,7 @@ public class RMServerUtils {
       return false;
     }
     ResourceScheduler scheduler = rmContext.getScheduler();
-    ResourceCalculator rc = scheduler.getResourceCalculator();
-    Resource targetResource = Resources.normalize(rc, request.getCapability(),
-        scheduler.getMinimumResourceCapability(),
-        scheduler.getMaximumResourceCapability(),
-        scheduler.getMinimumResourceCapability());
-    // Update normalized target resource
-    request.setCapability(targetResource);
+    request.setCapability(scheduler.getNormalizedResource(request.getCapability()));
     return true;
   }
 
@@ -514,8 +535,9 @@ public class RMServerUtils {
         } catch (ParseException ex) {
           String message =
               "Expire time is not in ISO8601 format. ISO8601 supported "
-                  + "format is yyyy-MM-dd'T'HH:mm:ss.SSSZ";
-          throw new YarnException(message);
+                  + "format is yyyy-MM-dd'T'HH:mm:ss.SSSZ. Configured "
+                  + "timeout value is " + timeout.getValue();
+          throw new YarnException(message, ex);
         }
         if (expireTime < currentTimeMillis) {
           String message =
@@ -528,5 +550,26 @@ public class RMServerUtils {
       }
     }
     return newApplicationTimeout;
+  }
+
+  /**
+   * Get applicable Node count for AM.
+   *
+   * @param rmContext context
+   * @param conf configuration
+   * @param amreq am resource request
+   * @return applicable node count
+   */
+  public static int getApplicableNodeCountForAM(RMContext rmContext,
+      Configuration conf, ResourceRequest amreq) {
+    if (YarnConfiguration.areNodeLabelsEnabled(conf)) {
+      RMNodeLabelsManager labelManager = rmContext.getNodeLabelManager();
+      String amNodeLabelExpression = amreq.getNodeLabelExpression();
+      amNodeLabelExpression = (amNodeLabelExpression == null
+          || amNodeLabelExpression.trim().isEmpty())
+              ? RMNodeLabelsManager.NO_LABEL : amNodeLabelExpression;
+      return labelManager.getActiveNMCountPerLabel(amNodeLabelExpression);
+    }
+    return rmContext.getScheduler().getNumClusterNodes();
   }
 }

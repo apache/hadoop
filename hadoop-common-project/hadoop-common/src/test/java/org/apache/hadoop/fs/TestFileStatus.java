@@ -26,6 +26,8 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -215,6 +217,23 @@ public class TestFileStatus {
     FileStatus fileStatus = new FileStatus(LENGTH, isdir, REPLICATION, BLKSIZE,
         MTIME, ATIME, PERMISSION, OWNER, GROUP, symlink, PATH);  
     validateToString(fileStatus);
+  }
+
+  @Test
+  public void testSerializable() throws Exception {
+    Path p = new Path("uqsf://ybpnyubfg:8020/sbb/one/onm");
+    FsPermission perm = FsPermission.getFileDefault();
+    FileStatus stat = new FileStatus(4344L, false, 4, 512L << 20, 12345678L,
+        87654321L, perm, "yak", "dingo", p);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);
+    try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+      oos.writeObject(stat);
+    }
+    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+    try (ObjectInputStream ois = new ObjectInputStream(bais)) {
+      FileStatus deser = (FileStatus) ois.readObject();
+      assertEquals(stat, deser);
+    }
   }
   
   /**

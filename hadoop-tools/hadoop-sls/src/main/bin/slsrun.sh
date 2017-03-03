@@ -71,8 +71,8 @@ function parse_args()
 function calculate_classpath
 {
   hadoop_add_to_classpath_tools hadoop-sls
-  hadoop_debug "Injecting ${HADOOP_TOOLS_DIR}/sls/html into CLASSPATH"
-  hadoop_add_classpath "${HADOOP_TOOLS_DIR}/sls/html"
+  hadoop_debug "Injecting ${HADOOP_TOOLS_HOME}/${HADOOP_TOOLS_DIR}/sls/html into CLASSPATH"
+  hadoop_add_classpath "${HADOOP_TOOLS_HOME}/${HADOOP_TOOLS_DIR}/sls/html"
 }
 
 function run_simulation() {

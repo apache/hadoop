@@ -51,7 +51,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   private long lastUpdate;
   private long lastUpdateMonotonic;
   private int xceiverCount;
-  private String location = NetworkTopology.DEFAULT_RACK;
+  private volatile String location = NetworkTopology.DEFAULT_RACK;
   private String softwareVersion;
   private List<String> dependentHostNames = new LinkedList<>();
   private String upgradeDomain;
@@ -293,11 +293,11 @@ public class DatanodeInfo extends DatanodeID implements Node {
 
   /** network location */
   @Override
-  public synchronized String getNetworkLocation() {return location;}
+  public String getNetworkLocation() {return location;}
 
   /** Sets the network location */
   @Override
-  public synchronized void setNetworkLocation(String location) {
+  public void setNetworkLocation(String location) {
     this.location = NodeBase.normalize(location);
   }
 
@@ -511,7 +511,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   }
 
   public static boolean maintenanceNotExpired(long maintenanceExpireTimeInMS) {
-    return Time.monotonicNow() < maintenanceExpireTimeInMS;
+    return Time.now() < maintenanceExpireTimeInMS;
   }
   /**
    * Returns true if the node is is entering_maintenance

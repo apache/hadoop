@@ -136,7 +136,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
 
     boolean requireClientCert =
       conf.getBoolean(SSLFactory.SSL_REQUIRE_CLIENT_CERT_KEY,
-          SSLFactory.DEFAULT_SSL_REQUIRE_CLIENT_CERT);
+          SSLFactory.SSL_REQUIRE_CLIENT_CERT_DEFAULT);
 
     // certificate store
     String keystoreType =
@@ -202,8 +202,10 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
           SSL_TRUSTSTORE_PASSWORD_TPL_KEY);
       String truststorePassword = getPassword(conf, passwordProperty, "");
       if (truststorePassword.isEmpty()) {
-        throw new GeneralSecurityException("The property '" + passwordProperty +
-            "' has not been set in the ssl configuration file.");
+        // An empty trust store password is legal; the trust store password
+        // is only required when writing to a trust store. Otherwise it's
+        // an optional integrity check.
+        truststorePassword = null;
       }
       long truststoreReloadInterval =
           conf.getLong(

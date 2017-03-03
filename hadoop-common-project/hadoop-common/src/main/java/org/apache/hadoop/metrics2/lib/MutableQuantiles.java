@@ -144,6 +144,16 @@ public class MutableQuantiles extends MutableMetric {
     scheduledTask = null;
   }
 
+  /**
+   * Get the quantile estimator.
+   *
+   * @return the quantile estimator
+   */
+  @VisibleForTesting
+  public synchronized QuantileEstimator getEstimator() {
+    return estimator;
+  }
+
   public synchronized void setEstimator(QuantileEstimator quantileEstimator) {
     this.estimator = quantileEstimator;
   }

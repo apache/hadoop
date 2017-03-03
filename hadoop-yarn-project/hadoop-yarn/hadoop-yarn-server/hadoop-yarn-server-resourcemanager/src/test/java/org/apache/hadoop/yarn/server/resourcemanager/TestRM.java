@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.junit.Before;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.doNothing;
@@ -56,8 +57,8 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AbstractEvent;
-import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -559,9 +560,9 @@ public class TestRM extends ParameterizedSchedulerTestBase {
   @Test (timeout = 60000)
   public void testApplicationKillAtAcceptedState() throws Exception {
 
-    final Dispatcher dispatcher = new AsyncDispatcher() {
+    final Dispatcher dispatcher = new DrainDispatcher() {
       @Override
-      public EventHandler getEventHandler() {
+      public EventHandler<Event> getEventHandler() {
 
         class EventArgMatcher extends ArgumentMatcher<AbstractEvent> {
           @Override
@@ -640,9 +641,9 @@ public class TestRM extends ParameterizedSchedulerTestBase {
   public void testKillFinishingApp() throws Exception{
 
     // this dispatcher ignores RMAppAttemptEventType.KILL event
-    final Dispatcher dispatcher = new AsyncDispatcher() {
+    final Dispatcher dispatcher = new DrainDispatcher() {
       @Override
-      public EventHandler getEventHandler() {
+      public EventHandler<Event> getEventHandler() {
 
         class EventArgMatcher extends ArgumentMatcher<AbstractEvent> {
           @Override
@@ -694,9 +695,9 @@ public class TestRM extends ParameterizedSchedulerTestBase {
   public void testKillFailingApp() throws Exception{
 
     // this dispatcher ignores RMAppAttemptEventType.KILL event
-    final Dispatcher dispatcher = new AsyncDispatcher() {
+    final Dispatcher dispatcher = new DrainDispatcher() {
       @Override
-      public EventHandler getEventHandler() {
+      public EventHandler<Event> getEventHandler() {
 
         class EventArgMatcher extends ArgumentMatcher<AbstractEvent> {
           @Override

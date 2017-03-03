@@ -188,6 +188,19 @@
 </property>
 
 <property>
+  <name>hadoop.security.groups.shell.command.timeout</name>
+  <value>0s</value>
+  <description>
+    Used by the ShellBasedUnixGroupsMapping class, this property controls how
+    long to wait for the underlying shell command that is run to fetch groups.
+    Expressed in seconds (e.g. 10s, 1m, etc.), if the running command takes
+    longer than the value configured, the command is aborted and the groups
+    resolver would return a result of no groups found. A value of 0s (default)
+    would mean an infinite wait (i.e. wait until the command exits on its own).
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.connection.timeout.ms</name>
   <value>60000</value>
   <description>
@@ -644,10 +657,10 @@
 </property>
 
 <property>
-  <name>io.erasurecode.codec.rs-default.rawcoder</name>
+  <name>io.erasurecode.codec.rs.rawcoder</name>
   <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory</value>
   <description>
-    Raw coder implementation for the rs-default codec. The default value is a
+    Raw coder implementation for the rs codec. The default value is a
     pure Java implementation. There is also a native implementation. Its value
     is org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory.
   </description>
@@ -779,6 +792,24 @@
   <value>21</value>
   <description>
     FTP filesystem connects to fs.ftp.host on this port
+  </description>
+</property>
+
+<property>
+  <name>fs.ftp.data.connection.mode</name>
+  <value>ACTIVE_LOCAL_DATA_CONNECTION_MODE</value>
+  <description>Set the FTPClient's data connection mode based on configuration.
+    Valid values are ACTIVE_LOCAL_DATA_CONNECTION_MODE,
+    PASSIVE_LOCAL_DATA_CONNECTION_MODE and PASSIVE_REMOTE_DATA_CONNECTION_MODE.
+  </description>
+</property>
+
+<property>
+  <name>fs.ftp.transfer.mode</name>
+  <value>BLOCK_TRANSFER_MODE</value>
+  <description>
+    Set FTP's transfer mode based on configuration. Valid values are
+    STREAM_TRANSFER_MODE, BLOCK_TRANSFER_MODE and COMPRESSED_TRANSFER_MODE.
   </description>
 </property>
 
@@ -933,6 +964,15 @@
   <name>fs.s3a.session.token</name>
   <description>Session token, when using org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider
     as one of the providers.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.security.credential.provider.path</name>
+  <value />
+  <description>
+    Optional comma separated list of credential providers, a list
+    which is prepended to that set in hadoop.security.credential.provider.path
   </description>
 </property>
 
@@ -1222,27 +1262,43 @@
   <description>The implementation class of the S3A AbstractFileSystem.</description>
 </property>
 
+<!-- Azure file system properties -->
+<property>
+  <name>fs.azure.secure.mode</name>
+  <value>false</value>
+  <description>
+    Config flag to identify the mode in which fs.azure.NativeAzureFileSystem needs
+    to run under. Setting it "true" would make fs.azure.NativeAzureFileSystem use
+    SAS keys to communicate with Azure storage.
+  </description>
+</property>
+<property>
+  <name>fs.azure.local.sas.key.mode</name>
+  <value>false</value>
+  <description>
+    Works in conjuction with fs.azure.secure.mode. Setting this config to true
+    results in fs.azure.NativeAzureFileSystem using the local SAS key generation
+    where the SAS keys are generating in the same process as fs.azure.NativeAzureFileSystem.
+    If fs.azure.secure.mode flag is set to false, this flag has no effect.
+  </description>
+</property>
+<property>
+  <name>fs.azure.sas.expiry.period</name>
+  <value>90d</value>
+  <description>
+    The default value to be used for expiration period for SAS keys generated.
+    Can use the following suffix (case insensitive):
+    ms(millis), s(sec), m(min), h(hour), d(day)
+    to specify the time (such as 2s, 2m, 1h, etc.).
+  </description>
+</property>
+
+
 <property>
   <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>
   <description>The minimum block size for compression in block compressed
           SequenceFiles.
-  </description>
-</property>
-
-<property>
-  <name>io.seqfile.lazydecompress</name>
-  <value>true</value>
-  <description>Should values of block-compressed SequenceFiles be decompressed
-          only when necessary.
-  </description>
-</property>
-
-<property>
-  <name>io.seqfile.sorter.recordlimit</name>
-  <value>1000000</value>
-  <description>The limit on number of records to be kept in memory in a spill
-          in SequenceFiles.Sorter
   </description>
 </property>
 
@@ -2382,53 +2438,6 @@
 
 
   <!-- Azure Data Lake File System Configurations -->
-
-  <property>
-    <name>adl.feature.override.readahead</name>
-    <value>true</value>
-    <description>
-      Enables read aheads in the ADL client, the feature is used to
-      improve read throughput.
-      This works in conjunction with the value set in
-      adl.feature.override.readahead.max.buffersize.
-      When set to false the read ahead feature is turned off.
-      Default : True if not configured.
-    </description>
-  </property>
-
-  <property>
-    <name>adl.feature.override.readahead.max.buffersize</name>
-    <value>8388608</value>
-    <description>
-      Define maximum buffer size to cache read ahead data, this is
-      allocated per process to
-      cache read ahead data. Applicable only when
-      adl.feature.override.readahead is set to true.
-      Default : 8388608 Byte i.e. 8MB if not configured.
-    </description>
-  </property>
-
-  <property>
-    <name>adl.feature.override.readahead.max.concurrent.connection</name>
-    <value>2</value>
-    <description>
-      Define maximum concurrent connection can be established to
-      read ahead. If the data size is less than 4MB then only 1 read n/w
-      connection
-      is set. If the data size is less than 4MB but less than 8MB then 2 read
-      n/w connection
-      is set. Data greater than 8MB then value set under the property would
-      take
-      effect. Applicable only when adl.feature.override.readahead is set
-      to true and buffer size is greater than 8MB.
-      It is recommended to reset this property if the
-      adl.feature.override.readahead.max.buffersize
-      is less than 8MB to gain performance. Application has to consider
-      throttling limit for the account as well before configuring large
-      buffer size.
-    </description>
-  </property>
-
   <property>
     <name>fs.adl.impl</name>
     <value>org.apache.hadoop.fs.adl.AdlFileSystem</value>
@@ -2438,6 +2447,7 @@
     <name>fs.AbstractFileSystem.adl.impl</name>
     <value>org.apache.hadoop.fs.adl.Adl</value>
   </property>
+  <!-- Azure Data Lake File System Configurations Ends Here-->
 
   <property>
     <name>hadoop.caller.context.enabled</name>
@@ -2466,5 +2476,23 @@
       in audit logs.
     </description>
   </property>
-
+<!-- SequenceFile's Sorter properties -->
+  <property>
+    <name>seq.io.sort.mb</name>
+    <value>100</value>
+    <description>
+      The total amount of buffer memory to use while sorting files,
+      while using SequenceFile.Sorter, in megabytes. By default,
+      gives each merge stream 1MB, which should minimize seeks.
+    </description>
+  </property>
+  <property>
+    <name>seq.io.sort.factor</name>
+    <value>100</value>
+    <description>
+      The number of streams to merge at once while sorting
+      files using SequenceFile.Sorter.
+      This determines the number of open file handles.
+    </description>
+  </property>
 </configuration>

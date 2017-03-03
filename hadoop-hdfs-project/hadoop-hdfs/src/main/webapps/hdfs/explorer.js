@@ -192,13 +192,40 @@
       var download_url = '/webhdfs/v1' + abs_path + '?op=OPEN';
 
       $('#file-info-download').attr('href', download_url);
-      $('#file-info-preview').click(function() {
+
+      var processPreview = function(url) {
+        url += "&noredirect=true";
+        $.ajax({
+          type: 'GET',
+          url: url,
+          processData: false,
+          crossDomain: true
+        }).done(function(data) {
+          url = data.Location;
+          $.ajax({
+            type: 'GET',
+            url: url,
+            processData: false,
+            crossDomain: true
+          }).complete(function(data) {
+            $('#file-info-preview-body').val(data.responseText);
+            $('#file-info-tail').show();
+          }).error(function(jqXHR, textStatus, errorThrown) {
+            show_err_msg("Couldn't preview the file. " + errorThrown);
+          });
+        }).error(function(jqXHR, textStatus, errorThrown) {
+          show_err_msg("Couldn't find datanode to read file from. " + errorThrown);
+        });
+      }
+
+      $('#file-info-preview-tail').click(function() {
         var offset = d.fileLength - TAIL_CHUNK_SIZE;
         var url = offset > 0 ? download_url + '&offset=' + offset : download_url;
-        $.get(url, function(t) {
-          $('#file-info-preview-body').val(t);
-          $('#file-info-tail').show();
-        }, "text").error(network_error_handler(url));
+        processPreview(url);
+      });
+      $('#file-info-preview-head').click(function() {
+        var url = d.fileLength > TAIL_CHUNK_SIZE ? download_url + '&length=' + TAIL_CHUNK_SIZE : download_url;
+        processPreview(url);
       });
 
       if (d.fileLength > 0) {

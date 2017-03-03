@@ -171,6 +171,10 @@ Each metrics record contains tags such as ProcessName, SessionId, and Hostname a
 | `PutImageAvgTime` | Average fsimage upload time in milliseconds |
 | `TotalFileOps`| Total number of file operations performed |
 | `NNStartedTimeInMillis`| NameNode start time in milliseconds |
+| `GenerateEDEKTimeNumOps` | Total number of generating EDEK |
+| `GenerateEDEKTimeAvgTime` | Average time of generating EDEK in milliseconds |
+| `WarmUpEDEKTimeNumOps` | Total number of warming up EDEK |
+| `WarmUpEDEKTimeAvgTime` | Average time of warming up EDEK in milliseconds |
 
 FSNamesystem
 ------------
@@ -219,6 +223,8 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `TotalSyncTimes` | Total number of milliseconds spent by various edit logs in sync operation|
 | `NameDirSize` | NameNode name directories size in bytes |
 | `NumTimedOutPendingReconstructions` | The number of timed out reconstructions. Not the number of unique blocks that timed out. |
+| `FSN(Read|Write)Lock`*OperationName*`NumOps` | Total number of acquiring lock by operations |
+| `FSN(Read|Write)Lock`*OperationName*`AvgTime` | Average time of holding the lock by operations in milliseconds |
 
 JournalNode
 -----------
@@ -316,6 +322,43 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `RemoteBytesRead` | Number of bytes read by remote clients |
 | `RemoteBytesWritten` | Number of bytes written by remote clients |
 | `BPServiceActorInfo` | The information about a block pool service actor |
+| `EcReconstructionTasks` | Total number of erasure coding reconstruction tasks |
+| `EcFailedReconstructionTasks` | Total number of erasure coding failed reconstruction tasks |
+| `EcDecodingTimeNanos` | Total number of nanoseconds spent by decoding tasks |
+| `EcReconstructionBytesRead` | Total number of bytes read by erasure coding worker |
+| `EcReconstructionBytesWritten` | Total number of bytes written by erasure coding worker |
+| `EcReconstructionRemoteBytesRead` | Total number of bytes remote read by erasure coding worker |
+
+FsVolume
+--------
+
+Per-volume metrics contain Datanode Volume IO related statistics. Per-volume metrics are off by default. They can be enbabled by setting `dfs.datanode.enable.fileio.profiling` to **true**, but enabling per-volume metrics may have a performance impact. Each metrics record contains tags such as Hostname as additional information along with metrics.
+
+| Name | Description |
+|:---- |:---- |
+| `TotalMetadataOperations` | Total number (monotonically increasing) of metadata operations. Metadata operations include stat, list, mkdir, delete, move, open and posix_fadvise. |
+| `MetadataOperationRateNumOps` | The number of metadata operations within an interval time of metric |
+| `MetadataOperationRateAvgTime` | Mean time of metadata operations in milliseconds |
+| `MetadataOperationLatency`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of metadata operations latency in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `TotalDataFileIos` | Total number (monotonically increasing) of data file io operations |
+| `DataFileIoRateNumOps` | The number of data file io operations within an interval time of metric |
+| `DataFileIoRateAvgTime` | Mean time of data file io operations in milliseconds |
+| `DataFileIoLatency`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of data file io operations latency in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `FlushIoRateNumOps` | The number of file flush io operations within an interval time of metric |
+| `FlushIoRateAvgTime` | Mean time of file flush io operations in milliseconds |
+| `FlushIoLatency`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of file flush io operations latency in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `SyncIoRateNumOps` | The number of file sync io operations within an interval time of metric |
+| `SyncIoRateAvgTime` | Mean time of file sync io operations in milliseconds |
+| `SyncIoLatency`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of file sync io operations latency in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `ReadIoRateNumOps` | The number of file read io operations within an interval time of metric |
+| `ReadIoRateAvgTime` | Mean time of file read io operations in milliseconds |
+| `ReadIoLatency`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of file read io operations latency in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `WriteIoRateNumOps` | The number of file write io operations within an interval time of metric |
+| `WriteIoRateAvgTime` | Mean time of file write io operations in milliseconds |
+| `WriteIoLatency`*num*`s(50|75|90|95|99)thPercentileLatency` | The 50/75/90/95/99th percentile of file write io operations latency in milliseconds. Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `TotalFileIoErrors` | Total number (monotonically increasing) of file io error operations |
+| `FileIoErrorRateNumOps` | The number of file io error operations within an interval time of metric |
+| `FileIoErrorRateAvgTime` | It measures the mean time in milliseconds from the start of an operation to hitting a failure |
 
 yarn context
 ============
@@ -409,6 +452,57 @@ NodeManagerMetrics shows the statistics of the containers in the node. Each metr
 | `goodLocalDirsDiskUtilizationPerc` | Current disk utilization percentage across all good local directories |
 | `goodLogDirsDiskUtilizationPerc` | Current disk utilization percentage across all good log directories |
 
+ContainerMetrics
+------------------
+
+ContainerMetrics shows the resource utilization statistics of a container. Each metrics record contains tags such as ContainerPid and Hostname as additional information along with metrics.
+
+| Name | Description |
+|:---- |:---- |
+| `pMemLimitMBs` | Physical memory limit of the container in MB |
+| `vMemLimitMBs` | Virtual memory limit of the container in MB |
+| `vCoreLimit` | CPU limit of the container in number of vcores |
+| `launchDurationMs` | Container launch duration in msec  |
+| `localizationDurationMs` | Container localization duration in msec |
+| `StartTime` | Time in msec when container starts |
+| `FinishTime` | Time in msec when container finishes |
+| `ExitCode` | Container's exit code |
+| `PMemUsageMBsNumUsage` | Total number of physical memory used metrics |
+| `PMemUsageMBsAvgMBs` | Average physical memory used in MB |
+| `PMemUsageMBsStdevMBs` | Standard deviation of the physical memory used in MB |
+| `PMemUsageMBsMinMBs` | Minimum physical memory used in MB |
+| `PMemUsageMBsMaxMBs` | Maximum physical memory used in MB |
+| `PMemUsageMBsIMinMBs` | Minimum physical memory used in MB of current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `PMemUsageMBsIMaxMBs` | Maximum physical memory used in MB of current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `PMemUsageMBsINumUsage` | Total number of physical memory used metrics in current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `PCpuUsagePercentNumUsage` | Total number of physical CPU cores percent used metrics |
+| `PCpuUsagePercentAvgPercents` | Average physical CPU cores percent used |
+| `PCpuUsagePercentStdevPercents` | Standard deviation of physical CPU cores percent used |
+| `PCpuUsagePercentMinPercents` | Minimum physical CPU cores percent used|
+| `PCpuUsagePercentMaxPercents` | Maximum physical CPU cores percent used |
+| `PCpuUsagePercentIMinPercents` | Minimum physical CPU cores percent used in current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `PCpuUsagePercentIMaxPercents` | Maximum physical CPU cores percent used in current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `PCpuUsagePercentINumUsage` | Total number of physical CPU cores used metrics in current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `MilliVcoreUsageNumUsage` | Total number of vcores used metrics |
+| `MilliVcoreUsageAvgMilliVcores` | 1000 times the average vcores used |
+| `MilliVcoreUsageStdevMilliVcores` | 1000 times the standard deviation of vcores used |
+| `MilliVcoreUsageMinMilliVcores` | 1000 times the minimum vcores used |
+| `MilliVcoreUsageMaxMilliVcores` | 1000 times the maximum vcores used |
+| `MilliVcoreUsageIMinMilliVcores` | 1000 times the average vcores used in current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `MilliVcoreUsageIMaxMilliVcores` | 1000 times the maximum vcores used in current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `MilliVcoreUsageINumUsage` | Total number of vcores used metrics in current _interval_ (the time of _interval_ is specified by yarn.nodemanager.container-metrics.period-ms) |
+| `PMemUsageMBHistogramNumUsage` | Total number of physical memory used metrics (1 second granularity) |
+| `PMemUsageMBHistogram50thPercentileMBs` | The 50th percentile of physical memory used in MB (1 second granularity) |
+| `PMemUsageMBHistogram75thPercentileMBs` | The 75th percentile of physical memory used in MB (1 second granularity) |
+| `PMemUsageMBHistogram90thPercentileMBs` | The 90th percentile of physical memory used in MB (1 second granularity) |
+| `PMemUsageMBHistogram95thPercentileMBs` | The 95th percentile of physical memory used in MB (1 second granularity) |
+| `PMemUsageMBHistogram99thPercentileMBs` | The 99th percentile of physical memory used in MB (1 second granularity) |
+| `PCpuUsagePercentHistogramNumUsage` | Total number of physical CPU cores used metrics (1 second granularity) |
+| `PCpuUsagePercentHistogram50thPercentilePercents` | The 50th percentile of physical CPU cores percent used (1 second granularity) |
+| `PCpuUsagePercentHistogram75thPercentilePercents` | The 75th percentile of physical CPU cores percent used (1 second granularity) |
+| `PCpuUsagePercentHistogram90thPercentilePercents` | The 90th percentile of physical CPU cores percent used (1 second granularity) |
+| `PCpuUsagePercentHistogram95thPercentilePercents` | The 95th percentile of physical CPU cores percent used (1 second granularity) |
+| `PCpuUsagePercentHistogram99thPercentilePercents` | The 99th percentile of physical CPU cores percent used (1 second granularity) |
 
 ugi context
 ===========
@@ -473,5 +567,3 @@ StartupProgress metrics shows the statistics of NameNode startup. Four metrics a
 | *phase*`ElapsedTime` | Total elapsed time in the phase in milliseconds |
 | *phase*`Total` | Total number of steps in the phase |
 | *phase*`PercentComplete` | Current rate completed in the phase  (The max value is not 100 but 1.0) |
-
-

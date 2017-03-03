@@ -19,7 +19,9 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
@@ -46,7 +48,7 @@ public class GetClusterNodeLabelsResponsePBImpl extends
     viaProto = true;
   }
 
-  public GetClusterNodeLabelsResponseProto getProto() {
+  public synchronized GetClusterNodeLabelsResponseProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -70,11 +72,15 @@ public class GetClusterNodeLabelsResponsePBImpl extends
   private void addNodeLabelsToProto() {
     maybeInitBuilder();
     builder.clearNodeLabels();
+    builder.clearDeprecatedNodeLabels();
     List<NodeLabelProto> protoList = new ArrayList<NodeLabelProto>();
+    List<String> protoListString = new ArrayList<String>();
     for (NodeLabel r : this.updatedNodeLabels) {
       protoList.add(convertToProtoFormat(r));
+      protoListString.add(r.getName());
     }
     builder.addAllNodeLabels(protoList);
+    builder.addAllDeprecatedNodeLabels(protoListString);
   }
 
   @Override
@@ -101,14 +107,43 @@ public class GetClusterNodeLabelsResponsePBImpl extends
   }
 
   @Override
-  public void setNodeLabels(List<NodeLabel> updatedNodeLabels) {
+  public synchronized void setNodeLabelList(List<NodeLabel> nodeLabels) {
     maybeInitBuilder();
     this.updatedNodeLabels = new ArrayList<>();
-    if (updatedNodeLabels == null) {
+    if (nodeLabels == null) {
       builder.clearNodeLabels();
       return;
     }
-    this.updatedNodeLabels.addAll(updatedNodeLabels);
+    this.updatedNodeLabels.addAll(nodeLabels);
+  }
+
+  /**
+   * @deprecated Use {@link #getNodeLabelList()} instead.
+   */
+  @Override
+  @Deprecated
+  public synchronized Set<String> getNodeLabels() {
+    Set<String> set = new HashSet<>();
+    List<NodeLabel> labelList = getNodeLabelList();
+    if (labelList != null) {
+      for (NodeLabel label : labelList) {
+        set.add(label.getName());
+      }
+    }
+    return set;
+  }
+
+  /**
+   * @deprecated Use {@link #setNodeLabelList(List)} instead.
+   */
+  @Override
+  @Deprecated
+  public void setNodeLabels(Set<String> labels) {
+    List<NodeLabel> list = new ArrayList<>();
+    for (String s : labels) {
+      list.add(NodeLabel.newInstance(s));
+    }
+    setNodeLabelList(list);
   }
 
   private void initLocalNodeLabels() {
@@ -121,7 +156,7 @@ public class GetClusterNodeLabelsResponsePBImpl extends
   }
 
   @Override
-  public List<NodeLabel> getNodeLabels() {
+  public synchronized List<NodeLabel> getNodeLabelList() {
     if (this.updatedNodeLabels != null) {
       return this.updatedNodeLabels;
     }

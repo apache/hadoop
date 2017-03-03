@@ -87,9 +87,10 @@ public class TestDNFencing {
   public void setupCluster() throws Exception {
     conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, SMALL_BLOCK);
-    // Bump up replication interval so that we only run replication
+    // Bump up redundancy interval so that we only run low redundancy
     // checks explicitly.
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 600);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
+        600);
     // Increase max streams so that we re-replicate quickly.
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 1000);
     // See RandomDeleterPolicy javadoc.
@@ -167,7 +168,7 @@ public class TestDNFencing {
     // The blocks should no longer be postponed.
     assertEquals(0, nn2.getNamesystem().getPostponedMisreplicatedBlocks());
     
-    // Wait for NN2 to enact its deletions (replication monitor has to run, etc)
+    // Wait for NN2 to enact its deletions (redundancy monitor has to run, etc)
     BlockManagerTestUtil.computeInvalidationWork(
         nn2.getNamesystem().getBlockManager());
     cluster.triggerHeartbeats();
@@ -258,7 +259,7 @@ public class TestDNFencing {
     // The block should no longer be postponed.
     assertEquals(0, nn2.getNamesystem().getPostponedMisreplicatedBlocks());
     
-    // Wait for NN2 to enact its deletions (replication monitor has to run, etc)
+    // Wait for NN2 to enact its deletions (redundancy monitor has to run, etc)
     BlockManagerTestUtil.computeInvalidationWork(
         nn2.getNamesystem().getBlockManager());
 
@@ -358,7 +359,7 @@ public class TestDNFencing {
     // The block should no longer be postponed.
     assertEquals(0, nn2.getNamesystem().getPostponedMisreplicatedBlocks());
     
-    // Wait for NN2 to enact its deletions (replication monitor has to run, etc)
+    // Wait for NN2 to enact its deletions (redundancy monitor has to run, etc)
     BlockManagerTestUtil.computeInvalidationWork(
         nn2.getNamesystem().getBlockManager());
 

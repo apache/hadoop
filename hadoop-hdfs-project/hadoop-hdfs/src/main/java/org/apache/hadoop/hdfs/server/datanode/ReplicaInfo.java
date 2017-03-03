@@ -45,6 +45,10 @@ abstract public class ReplicaInfo extends Block
   /** volume where the replica belongs. */
   private FsVolumeSpi volume;
 
+  /** This is used by some tests and FsDatasetUtil#computeChecksum. */
+  private static final FileIoProvider DEFAULT_FILE_IO_PROVIDER =
+      new FileIoProvider(null, null);
+
   /**
   * Constructor
   * @param vol volume where replica is located
@@ -64,7 +68,18 @@ abstract public class ReplicaInfo extends Block
   public FsVolumeSpi getVolume() {
     return volume;
   }
-  
+
+  /**
+   * Get the {@link FileIoProvider} for disk IO operations.
+   */
+  public FileIoProvider getFileIoProvider() {
+    // In tests and when invoked via FsDatasetUtil#computeChecksum, the
+    // target volume for this replica may be unknown and hence null.
+    // Use the DEFAULT_FILE_IO_PROVIDER with no-op hooks.
+    return (volume != null) ? volume.getFileIoProvider()
+        : DEFAULT_FILE_IO_PROVIDER;
+  }
+
   /**
    * Set the volume where this replica is located on disk.
    */

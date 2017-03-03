@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
@@ -40,6 +41,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
@@ -99,8 +101,8 @@ public class AppBlock extends HtmlBlock {
       final GetApplicationReportRequest request =
           GetApplicationReportRequest.newInstance(appID);
       if (callerUGI == null) {
-        appReport =
-            appBaseProt.getApplicationReport(request).getApplicationReport();
+        throw new AuthenticationException(
+            "Failed to get user name from request");
       } else {
         appReport = callerUGI.doAs(
             new PrivilegedExceptionAction<ApplicationReport> () {
@@ -164,77 +166,21 @@ public class AppBlock extends HtmlBlock {
     String schedulerPath = WebAppUtils.getResolvedRMWebAppURLWithScheme(conf) +
         "/cluster/scheduler?openQueues=" + app.getQueue();
 
-    ResponseInfo overviewTable = info("Application Overview")
-      ._("User:", schedulerPath, app.getUser())
-      ._("Name:", app.getName())
-      ._("Application Type:", app.getType())
-      ._("Application Tags:",
-        app.getApplicationTags() == null ? "" : app.getApplicationTags())
-      ._("Application Priority:", clarifyAppPriority(app.getPriority()))
-      ._(
-        "YarnApplicationState:",
-        app.getAppState() == null ? UNAVAILABLE : clarifyAppState(app
-          .getAppState()))
-      ._("Queue:", schedulerPath, app.getQueue())
-      ._("FinalStatus Reported by AM:",
-        clairfyAppFinalStatus(app.getFinalAppStatus()))
-      ._("Started:", Times.format(app.getStartedTime()))
-      ._(
-        "Elapsed:",
-        StringUtils.formatTime(Times.elapsed(app.getStartedTime(),
-          app.getFinishedTime())))
-      ._(
-        "Tracking URL:",
-        app.getTrackingUrl() == null
-            || app.getTrackingUrl().equals(UNAVAILABLE) ? null : root_url(app
-          .getTrackingUrl()),
-        app.getTrackingUrl() == null
-            || app.getTrackingUrl().equals(UNAVAILABLE) ? "Unassigned" : app
-          .getAppState() == YarnApplicationState.FINISHED
-            || app.getAppState() == YarnApplicationState.FAILED
-            || app.getAppState() == YarnApplicationState.KILLED ? "History"
-            : "ApplicationMaster");
-    if (webUiType != null
-        && webUiType.equals(YarnWebParams.RM_WEB_UI)) {
-      LogAggregationStatus status = getLogAggregationStatus();
-      if (status == null) {
-        overviewTable._("Log Aggregation Status:", "N/A");
-      } else if (status == LogAggregationStatus.DISABLED
-          || status == LogAggregationStatus.NOT_START
-          || status == LogAggregationStatus.SUCCEEDED) {
-        overviewTable._("Log Aggregation Status:", status.name());
-      } else {
-        overviewTable._("Log Aggregation Status:",
-            root_url("logaggregationstatus", app.getAppId()), status.name());
-      }
-    }
-    overviewTable._("Diagnostics:",
-        app.getDiagnosticsInfo() == null ? "" : app.getDiagnosticsInfo());
-    overviewTable._("Unmanaged Application:", app.isUnmanagedApp());
-    overviewTable._("Application Node Label expression:",
-        app.getAppNodeLabelExpression() == null ? "<Not set>"
-            : app.getAppNodeLabelExpression());
-    overviewTable._("AM container Node Label expression:",
-        app.getAmNodeLabelExpression() == null ? "<Not set>"
-            : app.getAmNodeLabelExpression());
+    generateOverviewTable(app, schedulerPath, webUiType, appReport);
 
     Collection<ApplicationAttemptReport> attempts;
     try {
       final GetApplicationAttemptsRequest request =
           GetApplicationAttemptsRequest.newInstance(appID);
-      if (callerUGI == null) {
-        attempts = appBaseProt.getApplicationAttempts(request)
-            .getApplicationAttemptList();
-      } else {
-        attempts = callerUGI.doAs(
-            new PrivilegedExceptionAction<Collection<ApplicationAttemptReport>> () {
-          @Override
-          public Collection<ApplicationAttemptReport> run() throws Exception {
-            return appBaseProt.getApplicationAttempts(request)
-                .getApplicationAttemptList();
-          }
-        });
-      }
+      attempts = callerUGI.doAs(
+          new PrivilegedExceptionAction<Collection<
+              ApplicationAttemptReport>>() {
+            @Override
+            public Collection<ApplicationAttemptReport> run() throws Exception {
+              return appBaseProt.getApplicationAttempts(request)
+                  .getApplicationAttemptList();
+            }
+          });
     } catch (Exception e) {
       String message =
           "Failed to read the attempts of the application " + appID + ".";
@@ -249,6 +195,78 @@ public class AppBlock extends HtmlBlock {
 
     generateApplicationTable(html, callerUGI, attempts);
 
+  }
+
+  /**
+   * Generate overview table for app web page.
+   * @param app app info.
+   * @param schedulerPath schedule path.
+   * @param webUiType web ui type.
+   * @param appReport app report.
+   */
+  private void generateOverviewTable(AppInfo app, String schedulerPath,
+      String webUiType, ApplicationReport appReport) {
+    ResponseInfo overviewTable = info("Application Overview")
+        ._("User:", schedulerPath, app.getUser())
+        ._("Name:", app.getName())
+        ._("Application Type:", app.getType())
+        ._("Application Tags:",
+            app.getApplicationTags() == null ? "" : app.getApplicationTags())
+        ._("Application Priority:", clarifyAppPriority(app.getPriority()))
+        ._(
+            "YarnApplicationState:",
+            app.getAppState() == null ? UNAVAILABLE : clarifyAppState(app
+                .getAppState()))
+        ._("Queue:", schedulerPath, app.getQueue())
+        ._("FinalStatus Reported by AM:",
+            clairfyAppFinalStatus(app.getFinalAppStatus()))
+        ._("Started:", Times.format(app.getStartedTime()))
+        ._(
+            "Elapsed:",
+            StringUtils.formatTime(Times.elapsed(app.getStartedTime(),
+                app.getFinishedTime())))
+        ._(
+            "Tracking URL:",
+            app.getTrackingUrl() == null
+                || app.getTrackingUrl().equals(UNAVAILABLE) ? null : root_url(app
+                .getTrackingUrl()),
+            app.getTrackingUrl() == null
+                || app.getTrackingUrl().equals(UNAVAILABLE) ? "Unassigned" : app
+                .getAppState() == YarnApplicationState.FINISHED
+                || app.getAppState() == YarnApplicationState.FAILED
+                || app.getAppState() == YarnApplicationState.KILLED ? "History"
+                : "ApplicationMaster");
+    if (webUiType != null
+        && webUiType.equals(YarnWebParams.RM_WEB_UI)) {
+      LogAggregationStatus status = getLogAggregationStatus();
+      if (status == null) {
+        overviewTable._("Log Aggregation Status:", "N/A");
+      } else if (status == LogAggregationStatus.DISABLED
+          || status == LogAggregationStatus.NOT_START
+          || status == LogAggregationStatus.SUCCEEDED) {
+        overviewTable._("Log Aggregation Status:", status.name());
+      } else {
+        overviewTable._("Log Aggregation Status:",
+            root_url("logaggregationstatus", app.getAppId()), status.name());
+      }
+      long timeout = appReport.getApplicationTimeouts()
+          .get(ApplicationTimeoutType.LIFETIME).getRemainingTime();
+      if (timeout < 0) {
+        overviewTable._("Application Timeout (Remaining Time):", "Unlimited");
+      } else {
+        overviewTable._("Application Timeout (Remaining Time):",
+            String.format("%d seconds", timeout));
+      }
+    }
+    overviewTable._("Diagnostics:",
+        app.getDiagnosticsInfo() == null ? "" : app.getDiagnosticsInfo());
+    overviewTable._("Unmanaged Application:", app.isUnmanagedApp());
+    overviewTable._("Application Node Label expression:",
+        app.getAppNodeLabelExpression() == null ? "<Not set>"
+            : app.getAppNodeLabelExpression());
+    overviewTable._("AM container Node Label expression:",
+        app.getAmNodeLabelExpression() == null ? "<Not set>"
+            : app.getAmNodeLabelExpression());
   }
 
   protected void generateApplicationTable(Block html,

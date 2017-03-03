@@ -66,4 +66,21 @@ public class TestQuorumCall {
       // expected
     }
   }
+  @Test(timeout=10000)
+  public void testQuorumFailsWithoutResponse() throws Exception {
+    Map<String, SettableFuture<String>> futures = ImmutableMap.of(
+        "f1", SettableFuture.<String>create());
+
+    QuorumCall<String, String> q = QuorumCall.create(futures);
+    assertEquals("The number of quorum calls for which a response has been"
+            + " received should be 0", 0, q.countResponses());
+
+    try {
+      q.waitFor(0, 1, 100, 10, "test");
+      fail("Didn't time out waiting for more responses than came back");
+    } catch (TimeoutException te) {
+      // expected
+    }
+  }
+
 }

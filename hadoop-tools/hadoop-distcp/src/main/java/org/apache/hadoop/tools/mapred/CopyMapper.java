@@ -113,8 +113,9 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
             DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH));
     targetFS = targetFinalPath.getFileSystem(conf);
 
-    if (targetFS.exists(targetFinalPath) && targetFS.isFile(targetFinalPath)) {
-      overWrite = true; // When target is an existing file, overwrite it.
+    try {
+      overWrite = overWrite || targetFS.getFileStatus(targetFinalPath).isFile();
+    } catch (FileNotFoundException ignored) {
     }
 
     startEpoch = System.currentTimeMillis();

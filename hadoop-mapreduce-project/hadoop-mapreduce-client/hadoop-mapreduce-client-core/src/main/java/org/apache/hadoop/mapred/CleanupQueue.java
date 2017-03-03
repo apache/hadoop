@@ -136,7 +136,12 @@ class CleanupQueue {
             LOG.debug("DELETED " + context.fullPath);
           }
         } catch (InterruptedException t) {
-          LOG.warn("Interrupted deletion of " + context.fullPath);
+          if (context == null) {
+            LOG.warn("Interrupted deletion of an invalid path: Path deletion "
+                + "context is null.");
+          } else {
+            LOG.warn("Interrupted deletion of " + context.fullPath);
+          }
           return;
         } catch (Exception e) {
           LOG.warn("Error deleting path " + context.fullPath + ": " + e);

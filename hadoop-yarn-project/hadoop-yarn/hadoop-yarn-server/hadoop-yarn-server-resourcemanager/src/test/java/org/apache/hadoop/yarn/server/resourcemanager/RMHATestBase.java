@@ -108,13 +108,13 @@ public abstract class RMHATestBase extends ClientBaseWithFixes{
   }
 
   protected void startRMs() throws IOException {
-    rm1 = new MockRM(confForRM1, null, false){
+    rm1 = new MockRM(confForRM1, null, false, false){
       @Override
       protected Dispatcher createDispatcher() {
         return new DrainDispatcher();
       }
     };
-    rm2 = new MockRM(confForRM2, null, false){
+    rm2 = new MockRM(confForRM2, null, false, false){
       @Override
       protected Dispatcher createDispatcher() {
         return new DrainDispatcher();

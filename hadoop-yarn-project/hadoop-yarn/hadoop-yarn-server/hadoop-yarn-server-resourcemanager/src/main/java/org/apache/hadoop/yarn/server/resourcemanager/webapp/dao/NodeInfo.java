@@ -51,7 +51,7 @@ public class NodeInfo {
   protected long usedVirtualCores;
   protected long availableVirtualCores;
   private int numRunningOpportContainers;
-  private long usedMemoryOpport;    // Memory in bytes.
+  private long usedMemoryOpportGB;
   private long usedVirtualCoresOpport;
   private int numQueuedContainers;
   protected ArrayList<String> nodeLabels = new ArrayList<String>();
@@ -85,7 +85,7 @@ public class NodeInfo {
 
     // Status of opportunistic containers.
     this.numRunningOpportContainers = 0;
-    this.usedMemoryOpport = 0;
+    this.usedMemoryOpportGB = 0;
     this.usedVirtualCoresOpport = 0;
     this.numQueuedContainers = 0;
     OpportunisticContainersStatus opportStatus =
@@ -93,7 +93,7 @@ public class NodeInfo {
     if (opportStatus != null) {
       this.numRunningOpportContainers =
           opportStatus.getRunningOpportContainers();
-      this.usedMemoryOpport = opportStatus.getOpportMemoryUsed();
+      this.usedMemoryOpportGB = opportStatus.getOpportMemoryUsed();
       this.usedVirtualCoresOpport = opportStatus.getOpportCoresUsed();
       this.numQueuedContainers = opportStatus.getQueuedOpportContainers();
     }
@@ -165,8 +165,8 @@ public class NodeInfo {
     return numRunningOpportContainers;
   }
 
-  public long getUsedMemoryOpport() {
-    return usedMemoryOpport;
+  public long getUsedMemoryOpportGB() {
+    return usedMemoryOpportGB;
   }
 
   public long getUsedVirtualCoresOpport() {

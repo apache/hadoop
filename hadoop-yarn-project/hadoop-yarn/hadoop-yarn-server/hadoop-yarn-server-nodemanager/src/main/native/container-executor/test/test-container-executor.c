@@ -1013,43 +1013,6 @@ void test_recursive_unlink_children() {
   }
 }
 
-/**
- * This test is used to verify that app and container directories can be
- * created with required permissions when umask has been set to a restrictive
- * value of 077.
- */
-void test_dir_permissions() {
-  printf("\nTesting dir permissions\n");
-
-  // Set umask to 077
-  umask(077);
-
-  // Change user to the yarn user. This only takes effect when we're
-  // running as root.
-  if (seteuid(user_detail->pw_uid) != 0) {
-    printf("FAIL: failed to seteuid to user - %s\n", strerror(errno));
-    exit(1);
-  }
-
-  // Create container directories for "app_5"
-  char* container_dir = get_container_work_directory(TEST_ROOT "/local-1",
-                                     yarn_username, "app_5", "container_1");
-  create_log_dirs("app_5", log_dirs);
-  create_container_directories(yarn_username, "app_5", "container_1",
-                               local_dirs, log_dirs, container_dir);
-
-  // Verify directories have been created with required permissions
-  mode_t container_dir_perm = S_IRWXU | S_IRGRP | S_IXGRP;
-  struct stat sb;
-  if (stat(container_dir, &sb) != 0 ||
-      check_dir(container_dir, sb.st_mode, container_dir_perm, 1) != 0) {
-    printf("FAIL: failed to create container directory %s "
-           "with required permissions\n", container_dir);
-    exit(1);
-  }
-
-  free(container_dir);
-}
 
 /**
  * This test is used to verify that trim() works correctly
@@ -1252,10 +1215,6 @@ int main(int argc, char **argv) {
     test_init_app();
     test_run_container();
   }
-
-  // This test needs to be run in a subshell, so that when it changes umask
-  // and user, it doesn't give up our privs.
-  run_test_in_child("test_dir_permissions", test_dir_permissions);
 
   /*
    * try to seteuid(0).  if it doesn't work, carry on anyway.

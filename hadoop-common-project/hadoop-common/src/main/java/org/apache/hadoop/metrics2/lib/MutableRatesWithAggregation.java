@@ -21,7 +21,6 @@ package org.apache.hadoop.metrics2.lib;
 import com.google.common.collect.Sets;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -50,7 +49,8 @@ import org.apache.hadoop.metrics2.util.SampleStat;
 @InterfaceStability.Evolving
 public class MutableRatesWithAggregation extends MutableMetric {
   static final Log LOG = LogFactory.getLog(MutableRatesWithAggregation.class);
-  private final Map<String, MutableRate> globalMetrics = new HashMap<>();
+  private final Map<String, MutableRate> globalMetrics =
+      new ConcurrentHashMap<>();
   private final Set<Class<?>> protocolCache = Sets.newHashSet();
 
   private final ConcurrentLinkedDeque<WeakReference<ConcurrentMap<String, ThreadSafeSampleStat>>>
@@ -107,17 +107,41 @@ public class MutableRatesWithAggregation extends MutableMetric {
         // Thread has died; clean up its state
         iter.remove();
       } else {
-        // Aggregate the thread's local samples into the global metrics
-        for (Map.Entry<String, ThreadSafeSampleStat> entry : map.entrySet()) {
-          String name = entry.getKey();
-          MutableRate globalMetric = addMetricIfNotExists(name);
-          entry.getValue().snapshotInto(globalMetric);
-        }
+        aggregateLocalStatesToGlobalMetrics(map);
       }
     }
     for (MutableRate globalMetric : globalMetrics.values()) {
       globalMetric.snapshot(rb, all);
     }
+  }
+
+  /**
+   * Collects states maintained in {@link ThreadLocal}, if any.
+   */
+  synchronized void collectThreadLocalStates() {
+    final ConcurrentMap<String, ThreadSafeSampleStat> localStats =
+        threadLocalMetricsMap.get();
+    if (localStats != null) {
+      aggregateLocalStatesToGlobalMetrics(localStats);
+    }
+  }
+
+  /**
+   * Aggregates the thread's local samples into the global metrics. The caller
+   * should ensure its thread safety.
+   */
+  private void aggregateLocalStatesToGlobalMetrics(
+      final ConcurrentMap<String, ThreadSafeSampleStat> localStats) {
+    for (Map.Entry<String, ThreadSafeSampleStat> entry : localStats
+        .entrySet()) {
+      String name = entry.getKey();
+      MutableRate globalMetric = addMetricIfNotExists(name);
+      entry.getValue().snapshotInto(globalMetric);
+    }
+  }
+
+  Map<String, MutableRate> getGlobalMetrics() {
+    return globalMetrics;
   }
 
   private synchronized MutableRate addMetricIfNotExists(String name) {

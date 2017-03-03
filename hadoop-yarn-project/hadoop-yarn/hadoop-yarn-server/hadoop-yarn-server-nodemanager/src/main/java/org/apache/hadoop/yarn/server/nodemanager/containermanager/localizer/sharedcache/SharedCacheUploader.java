@@ -192,10 +192,12 @@ class SharedCacheUploader implements Callable<Boolean> {
 
   private void deleteTempFile(Path tempPath) {
     try {
-      if (tempPath != null && fs.exists(tempPath)) {
+      if (tempPath != null) {
         fs.delete(tempPath, false);
       }
-    } catch (IOException ignore) {}
+    } catch (IOException ioe) {
+      LOG.debug("Exception received while deleting temp files", ioe);
+    }
   }
 
   /**

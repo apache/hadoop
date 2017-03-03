@@ -261,7 +261,9 @@ public class AllocateResponsePBImpl extends AllocateResponse {
   public synchronized void setUpdateErrors(
       List<UpdateContainerError> updateErrors) {
     if (updateErrors == null) {
-      this.updateErrors.clear();
+      if (this.updateErrors != null) {
+        this.updateErrors.clear();
+      }
       return;
     }
     this.updateErrors = new ArrayList<>(
@@ -280,8 +282,8 @@ public class AllocateResponsePBImpl extends AllocateResponse {
       final List<Container> containers) {
     if (containers == null)
       return;
-    // this looks like a bug because it results in append and not set
     initLocalNewContainerList();
+    allocatedContainers.clear();
     allocatedContainers.addAll(containers);
   }
 
@@ -297,6 +299,7 @@ public class AllocateResponsePBImpl extends AllocateResponse {
     if (containers == null)
       return;
     initLocalUpdatedContainerList();
+    updatedContainers.clear();
     updatedContainers.addAll(containers);
   }
 
@@ -313,6 +316,7 @@ public class AllocateResponsePBImpl extends AllocateResponse {
     if (containers == null)
       return;
     initLocalFinishedContainerList();
+    completedContainersStatuses.clear();
     completedContainersStatuses.addAll(containers);
   }
 

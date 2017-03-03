@@ -32,6 +32,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
@@ -41,6 +43,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -376,6 +380,30 @@ public abstract class YarnClient extends AbstractService {
       Set<String> users, Set<String> applicationTypes,
       EnumSet<YarnApplicationState> applicationStates) throws YarnException,
       IOException;
+
+  /**
+   * <p>
+   * Get a list of ApplicationReports that match the given
+   * {@link GetApplicationsRequest}.
+   *</p>
+   *
+   * <p>
+   * If the user does not have <code>VIEW_APP</code> access for an application
+   * then the corresponding report will be filtered as described in
+   * {@link #getApplicationReport(ApplicationId)}.
+   * </p>
+   *
+   * @param request the request object to get the list of applications.
+   * @return The list of ApplicationReports that match the request
+   * @throws YarnException Exception specific to YARN.
+   * @throws IOException Exception mostly related to connection errors.
+   */
+  public List<ApplicationReport> getApplications(GetApplicationsRequest request)
+      throws YarnException, IOException {
+    throw new UnsupportedOperationException(
+        "The sub-class extending " + YarnClient.class.getName()
+            + " is expected to implement this !");
+  }
 
   /**
    * <p>
@@ -739,7 +767,7 @@ public abstract class YarnClient extends AbstractService {
    */
   @Public
   @Unstable
-  public abstract Map<NodeId, Set<NodeLabel>> getNodeToLabels()
+  public abstract Map<NodeId, Set<String>> getNodeToLabels()
       throws YarnException, IOException;
 
   /**
@@ -754,7 +782,7 @@ public abstract class YarnClient extends AbstractService {
    */
   @Public
   @Unstable
-  public abstract Map<NodeLabel, Set<NodeId>> getLabelsToNodes()
+  public abstract Map<String, Set<NodeId>> getLabelsToNodes()
       throws YarnException, IOException;
 
   /**
@@ -770,7 +798,7 @@ public abstract class YarnClient extends AbstractService {
    */
   @Public
   @Unstable
-  public abstract Map<NodeLabel, Set<NodeId>> getLabelsToNodes(
+  public abstract Map<String, Set<NodeId>> getLabelsToNodes(
       Set<String> labels) throws YarnException, IOException;
 
   /**
@@ -818,4 +846,13 @@ public abstract class YarnClient extends AbstractService {
    */
   public abstract void signalToContainer(ContainerId containerId,
       SignalContainerCommand command) throws YarnException, IOException;
+
+  @Public
+  @Unstable
+  public UpdateApplicationTimeoutsResponse updateApplicationTimeouts(
+      UpdateApplicationTimeoutsRequest request)
+      throws YarnException, IOException {
+    throw new UnsupportedOperationException("The sub-class extending "
+        + YarnClient.class.getName() + " is expected to implement this !");
+  }
 }

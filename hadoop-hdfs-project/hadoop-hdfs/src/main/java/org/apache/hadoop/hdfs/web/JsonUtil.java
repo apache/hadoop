@@ -436,4 +436,64 @@ public class JsonUtil {
     return MAPPER.writeValueAsString(obj);
   }
 
+  public static String toJsonString(BlockStoragePolicy[] storagePolicies) {
+    final Map<String, Object> blockStoragePolicies = new TreeMap<>();
+    Object[] a = null;
+    if (storagePolicies != null && storagePolicies.length > 0) {
+      a = new Object[storagePolicies.length];
+      for (int i = 0; i < storagePolicies.length; i++) {
+        a[i] = toJsonMap(storagePolicies[i]);
+      }
+    }
+    blockStoragePolicies.put("BlockStoragePolicy", a);
+    return toJsonString("BlockStoragePolicies", blockStoragePolicies);
+  }
+
+  private static Object toJsonMap(BlockStoragePolicy blockStoragePolicy) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("id", blockStoragePolicy.getId());
+    m.put("name", blockStoragePolicy.getName());
+    m.put("storageTypes", blockStoragePolicy.getStorageTypes());
+    m.put("creationFallbacks", blockStoragePolicy.getCreationFallbacks());
+    m.put("replicationFallbacks", blockStoragePolicy.getReplicationFallbacks());
+    m.put("copyOnCreateFile", blockStoragePolicy.isCopyOnCreateFile());
+    return m;
+  }
+
+  public static String toJsonString(BlockStoragePolicy storagePolicy) {
+    return toJsonString(BlockStoragePolicy.class, toJsonMap(storagePolicy));
+  }
+
+  public static Map<String, Object> toJsonMap(BlockLocation[] locations)
+      throws IOException {
+    if(locations == null) {
+      return null;
+    }
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    Object[] blockLocations = new Object[locations.length];
+    for(int i=0; i<locations.length; i++) {
+      blockLocations[i] = toJsonMap(locations[i]);
+    }
+    m.put(BlockLocation.class.getSimpleName(), blockLocations);
+    return m;
+  }
+
+  public static Map<String, Object> toJsonMap(
+      final BlockLocation blockLocation) throws IOException {
+    if (blockLocation == null) {
+      return null;
+    }
+
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("length", blockLocation.getLength());
+    m.put("offset", blockLocation.getOffset());
+    m.put("corrupt", blockLocation.isCorrupt());
+    m.put("storageTypes", toJsonArray(blockLocation.getStorageTypes()));
+    m.put("storageIds", blockLocation.getStorageIds());
+    m.put("cachedHosts", blockLocation.getCachedHosts());
+    m.put("hosts", blockLocation.getHosts());
+    m.put("names", blockLocation.getNames());
+    m.put("topologyPaths", blockLocation.getTopologyPaths());
+    return m;
+  }
 }

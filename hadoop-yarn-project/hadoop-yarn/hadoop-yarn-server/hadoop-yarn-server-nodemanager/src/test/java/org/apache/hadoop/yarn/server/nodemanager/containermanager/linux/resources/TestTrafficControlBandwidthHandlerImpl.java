@@ -99,7 +99,7 @@ public class TestTrafficControlBandwidthHandlerImpl {
 
     try {
       handlerImpl.bootstrap(conf);
-      verify(cGroupsHandlerMock).mountCGroupController(
+      verify(cGroupsHandlerMock).initializeCGroupController(
           eq(CGroupsHandler.CGroupController.NET_CLS));
       verifyNoMoreInteractions(cGroupsHandlerMock);
       verify(trafficControllerMock).bootstrap(eq(device),

@@ -78,7 +78,8 @@ import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.RequestInterceptor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.queuing.QueuingContainerManagerImpl;
+
+
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
@@ -384,7 +385,7 @@ public class MiniYARNCluster extends CompositeService {
   }
 
   /**
-   * In a HA cluster, go through all the RMs and find the Active RM. In a
+   * In an HA cluster, go through all the RMs and find the Active RM. In a
    * non-HA cluster, return the index of the only RM.
    *
    * @return index of the active RM or -1 if none of them turn active
@@ -551,13 +552,16 @@ public class MiniYARNCluster extends CompositeService {
           .setNMWebAppHostNameAndPort(config,
               MiniYARNCluster.getHostname(), 0);
 
+      config.setBoolean(
+          YarnConfiguration.NM_ENABLE_HARDWARE_CAPABILITY_DETECTION, false);
       // Disable resource checks by default
       if (!config.getBoolean(
           YarnConfiguration.YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING,
           YarnConfiguration.
               DEFAULT_YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING)) {
-        config.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, false);
-        config.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, false);
+        config.setBoolean(
+            YarnConfiguration.NM_CONTAINER_MONITOR_ENABLED, false);
+        config.setLong(YarnConfiguration.NM_RESOURCE_MON_INTERVAL_MS, 0);
       }
 
       LOG.info("Starting NM: " + index);
@@ -723,8 +727,9 @@ public class MiniYARNCluster extends CompositeService {
         ContainerExecutor exec, DeletionService del,
         NodeStatusUpdater nodeStatusUpdater, ApplicationACLsManager aclsManager,
         LocalDirsHandlerService dirsHandler) {
-      if (getConfig().getBoolean(YarnConfiguration.NM_CONTAINER_QUEUING_ENABLED,
-          YarnConfiguration.NM_CONTAINER_QUEUING_ENABLED_DEFAULT)) {
+      if (getConfig().getInt(
+          YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH, 0)
+          > 0) {
         return new CustomQueueingContainerManagerImpl(context, exec, del,
             nodeStatusUpdater, metrics, dirsHandler);
       } else {
@@ -847,7 +852,9 @@ public class MiniYARNCluster extends CompositeService {
     protected void createAMRMProxyService(Configuration conf) {
       this.amrmProxyEnabled =
           conf.getBoolean(YarnConfiguration.AMRM_PROXY_ENABLED,
-              YarnConfiguration.DEFAULT_AMRM_PROXY_ENABLED);
+              YarnConfiguration.DEFAULT_AMRM_PROXY_ENABLED) ||
+              conf.getBoolean(YarnConfiguration.DIST_SCHEDULING_ENABLED,
+                  YarnConfiguration.DEFAULT_DIST_SCHEDULING_ENABLED);
 
       if (this.amrmProxyEnabled) {
         LOG.info("CustomAMRMProxyService is enabled. "
@@ -864,7 +871,7 @@ public class MiniYARNCluster extends CompositeService {
   }
 
   private class CustomQueueingContainerManagerImpl extends
-      QueuingContainerManagerImpl {
+      ContainerManagerImpl {
 
     public CustomQueueingContainerManagerImpl(Context context,
         ContainerExecutor exec, DeletionService del, NodeStatusUpdater
@@ -874,29 +881,12 @@ public class MiniYARNCluster extends CompositeService {
     }
 
     @Override
-    protected ContainersMonitor createContainersMonitor(ContainerExecutor
-        exec) {
-      return new ContainersMonitorImpl(exec, dispatcher, this.context) {
-
-        @Override
-        public void increaseContainersAllocation(ProcessTreeInfo pti) { }
-
-        @Override
-        public void decreaseContainersAllocation(ProcessTreeInfo pti) { }
-
-        @Override
-        public boolean hasResourcesAvailable(
-            ContainersMonitorImpl.ProcessTreeInfo pti) {
-          return true;
-        }
-      };
-    }
-
-    @Override
     protected void createAMRMProxyService(Configuration conf) {
       this.amrmProxyEnabled =
           conf.getBoolean(YarnConfiguration.AMRM_PROXY_ENABLED,
-              YarnConfiguration.DEFAULT_AMRM_PROXY_ENABLED);
+              YarnConfiguration.DEFAULT_AMRM_PROXY_ENABLED) ||
+              conf.getBoolean(YarnConfiguration.DIST_SCHEDULING_ENABLED,
+                  YarnConfiguration.DEFAULT_DIST_SCHEDULING_ENABLED);
 
       if (this.amrmProxyEnabled) {
         LOG.info("CustomAMRMProxyService is enabled. "
@@ -909,6 +899,32 @@ public class MiniYARNCluster extends CompositeService {
       } else {
         LOG.info("CustomAMRMProxyService is disabled");
       }
+    }
+
+    @Override
+    protected ContainersMonitor createContainersMonitor(ContainerExecutor
+        exec) {
+      return new ContainersMonitorImpl(exec, dispatcher, this.context) {
+        @Override
+        public float getVmemRatio() {
+          return 2.0f;
+        }
+
+        @Override
+        public long getVmemAllocatedForContainers() {
+          return 16 * 1024L * 1024L * 1024L;
+        }
+
+        @Override
+        public long getPmemAllocatedForContainers() {
+          return 8 * 1024L * 1024L * 1024L;
+        }
+
+        @Override
+        public long getVCoresAllocatedForContainers() {
+          return 10;
+        }
+      };
     }
   }
 

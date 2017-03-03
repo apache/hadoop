@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -55,12 +56,14 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.sls.appmaster.AMSimulator;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.sls.nodemanager.NMSimulator;
+import org.apache.hadoop.yarn.sls.resourcemanager.MockAMLauncher;
 import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
 import org.apache.hadoop.yarn.sls.scheduler.ResourceSchedulerWrapper;
 import org.apache.hadoop.yarn.sls.scheduler.SLSCapacityScheduler;
@@ -119,10 +122,10 @@ public class SLSRunner {
     this.printSimulation = printsimulation;
     metricsOutputDir = outputDir;
     
-    nmMap = new HashMap<NodeId, NMSimulator>();
-    queueAppNumMap = new HashMap<String, Integer>();
-    amMap = new HashMap<String, AMSimulator>();
-    amClassMap = new HashMap<String, Class>();
+    nmMap = new HashMap<>();
+    queueAppNumMap = new HashMap<>();
+    amMap = new ConcurrentHashMap<>();
+    amClassMap = new HashMap<>();
     
     // runner configuration
     conf = new Configuration(false);
@@ -179,7 +182,14 @@ public class SLSRunner {
     }
 
     rmConf.set(SLSConfiguration.METRICS_OUTPUT_DIR, metricsOutputDir);
-    rm = new ResourceManager();
+
+    final SLSRunner se = this;
+    rm = new ResourceManager() {
+      @Override
+      protected ApplicationMasterLauncher createAMLauncher() {
+        return new MockAMLauncher(se, this.rmContext, amMap);
+      }
+    };
     rm.init(rmConf);
     rm.start();
   }

@@ -29,7 +29,7 @@ export default StackedBarchart.extend({
     containers.forEach(function(c) {
       var nodeId = c.get("assignedNodeId");
       var n = nodeToContainers[nodeId];
-      if (undefined != n) {
+      if (undefined !== n) {
         nodeToContainers[nodeId] += 1;
       }
     });
@@ -64,4 +64,4 @@ export default StackedBarchart.extend({
     this.show(
       data, this.get("title"), ["Running containers from this app"]);
   },
-})
+});

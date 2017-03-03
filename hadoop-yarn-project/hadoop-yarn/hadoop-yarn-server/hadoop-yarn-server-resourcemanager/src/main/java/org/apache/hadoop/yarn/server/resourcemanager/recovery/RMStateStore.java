@@ -86,7 +86,8 @@ import org.apache.hadoop.yarn.state.StateMachineFactory;
 public abstract class RMStateStore extends AbstractService {
 
   // constants for RM App state and RMDTSecretManagerState.
-  protected static final String RM_APP_ROOT = "RMAppRoot";
+  @VisibleForTesting
+  public static final String RM_APP_ROOT = "RMAppRoot";
   protected static final String RM_DT_SECRET_MANAGER_ROOT = "RMDTSecretManagerRoot";
   protected static final String DELEGATION_KEY_PREFIX = "DelegationKey_";
   protected static final String DELEGATION_TOKEN_PREFIX = "RMDelegationToken_";
@@ -670,14 +671,18 @@ public abstract class RMStateStore extends AbstractService {
   }
   
   AsyncDispatcher dispatcher;
+  @SuppressWarnings("rawtypes")
+  @VisibleForTesting
+  protected EventHandler rmStateStoreEventHandler;
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception{
     // create async handler
-    dispatcher = new AsyncDispatcher();
+    dispatcher = new AsyncDispatcher("RM StateStore dispatcher");
     dispatcher.init(conf);
+    rmStateStoreEventHandler = new ForwardingEventHandler();
     dispatcher.register(RMStateStoreEventType.class, 
-                        new ForwardingEventHandler());
+                        rmStateStoreEventHandler);
     dispatcher.setDrainEventsOnStop();
     initInternal(conf);
   }
@@ -789,12 +794,12 @@ public abstract class RMStateStore extends AbstractService {
         ApplicationStateData.newInstance(app.getSubmitTime(),
             app.getStartTime(), context, app.getUser(), app.getCallerContext());
     appState.setApplicationTimeouts(app.getApplicationTimeouts());
-    dispatcher.getEventHandler().handle(new RMStateStoreAppEvent(appState));
+    getRMStateStoreEventHandler().handle(new RMStateStoreAppEvent(appState));
   }
 
   @SuppressWarnings("unchecked")
   public void updateApplicationState(ApplicationStateData appState) {
-    dispatcher.getEventHandler().handle(new RMStateUpdateAppEvent(appState));
+    getRMStateStoreEventHandler().handle(new RMStateUpdateAppEvent(appState));
   }
 
   public void updateApplicationStateSynchronously(ApplicationStateData appState,
@@ -841,14 +846,14 @@ public abstract class RMStateStore extends AbstractService {
             attempMetrics.getPreemptedVcore()
             );
 
-    dispatcher.getEventHandler().handle(
+    getRMStateStoreEventHandler().handle(
       new RMStateStoreAppAttemptEvent(attemptState));
   }
 
   @SuppressWarnings("unchecked")
   public void updateApplicationAttemptState(
       ApplicationAttemptStateData attemptState) {
-    dispatcher.getEventHandler().handle(
+    getRMStateStoreEventHandler().handle(
       new RMStateUpdateAppAttemptEvent(attemptState));
   }
 
@@ -1020,7 +1025,8 @@ public abstract class RMStateStore extends AbstractService {
       appState.attempts.put(appAttempt.getAppAttemptId(), null);
     }
     
-    dispatcher.getEventHandler().handle(new RMStateStoreRemoveAppEvent(appState));
+    getRMStateStoreEventHandler().handle(
+        new RMStateStoreRemoveAppEvent(appState));
   }
 
   /**
@@ -1041,7 +1047,7 @@ public abstract class RMStateStore extends AbstractService {
   @SuppressWarnings("unchecked")
   public synchronized void removeApplicationAttempt(
       ApplicationAttemptId applicationAttemptId) {
-    dispatcher.getEventHandler().handle(
+    getRMStateStoreEventHandler().handle(
         new RMStateStoreRemoveAppAttemptEvent(applicationAttemptId));
   }
 
@@ -1126,10 +1132,7 @@ public abstract class RMStateStore extends AbstractService {
     if (HAUtil.isHAEnabled(getConfig())) {
       LOG.warn("State-store fenced ! Transitioning RM to standby");
       isFenced = true;
-      Thread standByTransitionThread =
-          new Thread(new StandByTransitionThread());
-      standByTransitionThread.setName("StandByTransitionThread Handler");
-      standByTransitionThread.start();
+      resourceManager.handleTransitionToStandByInNewThread();
     } else if (YarnConfiguration.shouldRMFailFast(getConfig())) {
       LOG.fatal("Fail RM now due to state-store error!");
       rmDispatcher.getEventHandler().handle(
@@ -1194,14 +1197,6 @@ public abstract class RMStateStore extends AbstractService {
     this.resourceManager = rm;
   }
 
-  private class StandByTransitionThread implements Runnable {
-    @Override
-    public void run() {
-      LOG.info("RMStateStore has been fenced");
-      resourceManager.handleTransitionToStandBy();
-    }
-  }
-
   public RMStateStoreState getRMStateStoreState() {
     this.readLock.lock();
     try {
@@ -1209,5 +1204,10 @@ public abstract class RMStateStore extends AbstractService {
     } finally {
       this.readLock.unlock();
     }
+  }
+
+  @SuppressWarnings("rawtypes")
+  protected EventHandler getRMStateStoreEventHandler() {
+    return dispatcher.getEventHandler();
   }
 }

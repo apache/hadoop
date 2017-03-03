@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CacheFlag;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -464,13 +465,15 @@ public class HdfsAdmin {
    * Set the source path to the specified erasure coding policy.
    *
    * @param path The source path referring to a directory.
-   * @param ecPolicy The erasure coding policy for the directory.
-   *                 If null, the default will be used.
+   * @param ecPolicyName The erasure coding policy name for the directory.
+   *
    * @throws IOException
+   * @throws HadoopIllegalArgumentException if the specified EC policy is not
+   * enabled on the cluster
    */
   public void setErasureCodingPolicy(final Path path,
-      final ErasureCodingPolicy ecPolicy) throws IOException {
-    dfs.setErasureCodingPolicy(path, ecPolicy);
+      final String ecPolicyName) throws IOException {
+    dfs.setErasureCodingPolicy(path, ecPolicyName);
   }
 
   /**
@@ -495,6 +498,16 @@ public class HdfsAdmin {
     return dfs.getClient().getErasureCodingPolicies();
   }
 
+  /**
+   * Unset erasure coding policy from the directory.
+   *
+   * @param path The source path referring to a directory.
+   * @throws IOException
+   */
+  public void unsetErasureCodingPolicy(final Path path) throws IOException {
+    dfs.unsetErasureCodingPolicy(path);
+  }
+
   private void provisionEZTrash(Path path) throws IOException {
     // make sure the path is an EZ
     EncryptionZone ez = dfs.getEZForPath(path);
@@ -512,10 +525,10 @@ public class HdfsAdmin {
 
     Path trashPath = new Path(ez.getPath(), FileSystem.TRASH_PREFIX);
 
-    if (dfs.exists(trashPath)) {
+    try {
+      FileStatus trashFileStatus = dfs.getFileStatus(trashPath);
       String errMessage = "Will not provision new trash directory for " +
           "encryption zone " + ez.getPath() + ". Path already exists.";
-      FileStatus trashFileStatus = dfs.getFileStatus(trashPath);
       if (!trashFileStatus.isDirectory()) {
         errMessage += "\r\n" +
             "Warning: " + trashPath.toString() + " is not a directory";
@@ -525,7 +538,9 @@ public class HdfsAdmin {
             "Warning: the permission of " +
             trashPath.toString() + " is not " + TRASH_PERMISSION;
       }
-      throw new IOException(errMessage);
+      throw new FileAlreadyExistsException(errMessage);
+    } catch (FileNotFoundException ignored) {
+      // no trash path
     }
 
     // Update the permission bits

@@ -162,7 +162,7 @@ public class MemoryRMStateStore extends RMStateStore {
     ApplicationStateData removed = state.appState.remove(appId);
 
     if (removed == null) {
-      throw new YarnRuntimeException("Removing non-exsisting application state");
+      throw new YarnRuntimeException("Removing non-existing application state");
     }
   }
 

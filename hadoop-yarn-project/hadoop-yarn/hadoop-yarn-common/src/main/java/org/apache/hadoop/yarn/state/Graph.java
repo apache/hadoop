@@ -189,7 +189,7 @@ public class Graph {
 
   public void save(String filepath) throws IOException {
     try (OutputStreamWriter fout = new OutputStreamWriter(
-        new FileOutputStream(filepath), Charset.forName("UTF-8"));) {
+        new FileOutputStream(filepath), Charset.forName("UTF-8"))) {
       fout.write(generateGraphViz());
     }
   }

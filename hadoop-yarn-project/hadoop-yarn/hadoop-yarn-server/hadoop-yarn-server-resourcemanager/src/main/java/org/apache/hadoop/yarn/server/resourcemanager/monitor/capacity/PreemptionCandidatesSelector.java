@@ -48,7 +48,8 @@ public abstract class PreemptionCandidatesSelector {
    * @param selectedCandidates already selected candidates from previous policies
    * @param clusterResource total resource
    * @param totalPreemptedResourceAllowed how many resources allowed to be
-   *                                      preempted in this round
+   *                                      preempted in this round. Should be
+   *                                      updated(in-place set) after the call
    * @return merged selected candidates.
    */
   public abstract Map<ApplicationAttemptId, Set<RMContainer>> selectCandidates(

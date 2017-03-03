@@ -173,7 +173,18 @@ public class TestDFSHAAdmin {
     assertEquals(0, runTool("-help", "transitionToActive"));
     assertOutputContains("Transitions the service into Active");
   }
-  
+
+  @Test
+  public void testGetAllServiceState() throws Exception {
+    Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol)
+        .getServiceStatus();
+    assertEquals(0, runTool("-getAllServiceState"));
+    assertOutputContains(String.format("%-50s %-10s", (HOST_A + ":" + 12345),
+        STANDBY_READY_RESULT.getState()));
+    assertOutputContains(String.format("%-50s %-10s", (HOST_B + ":" + 12345),
+        STANDBY_READY_RESULT.getState()));
+  }
+
   @Test
   public void testTransitionToActive() throws Exception {
     Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol).getServiceStatus();

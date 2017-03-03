@@ -77,7 +77,7 @@ import java.util.TreeSet;
  */
 public abstract class Command extends Configured implements Closeable {
   private static final ObjectReader READER =
-      new ObjectMapper().reader(HashMap.class);
+      new ObjectMapper().readerFor(HashMap.class);
   static final Logger LOG = LoggerFactory.getLogger(Command.class);
   private Map<String, String> validArgs = new HashMap<>();
   private URI clusterURI;

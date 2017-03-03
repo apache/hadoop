@@ -329,7 +329,7 @@ public class LeaseManager {
               needSync = checkLeases();
             }
           } finally {
-            fsnamesystem.writeUnlock();
+            fsnamesystem.writeUnlock("leaseManager");
             // lease reassignments should to be sync'ed.
             if (needSync) {
               fsnamesystem.getEditLog().logSync();

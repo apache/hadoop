@@ -24,12 +24,14 @@ import java.net.InetAddress;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.hdfs.nfs.mount.RpcProgramMountd;
 import org.apache.hadoop.hdfs.nfs.nfs3.Nfs3;
 import org.apache.hadoop.hdfs.nfs.nfs3.RpcProgramNfs3;
 import org.apache.hadoop.oncrpc.XDR;
 import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 
 public class TestMountd {
 
@@ -47,6 +49,14 @@ public class TestMountd {
     config.setInt("nfs3.mountd.port", 0);
     config.setInt("nfs3.server.port", 0);
     
+    int newTimeoutMillis = 1000; // 1s
+    // Set the new portmap rpc timeout values and check
+    config.setInt(NfsConfigKeys.NFS_UDP_CLIENT_PORTMAP_TIMEOUT_MILLIS_KEY,
+                  newTimeoutMillis);
+    assertTrue(config.getInt(
+                      NfsConfigKeys.NFS_UDP_CLIENT_PORTMAP_TIMEOUT_MILLIS_KEY,
+          0) == newTimeoutMillis);
+
     // Start nfs
     Nfs3 nfs3 = new Nfs3(config);
     nfs3.startServiceInternal(false);
@@ -54,9 +64,10 @@ public class TestMountd {
     RpcProgramMountd mountd = (RpcProgramMountd) nfs3.getMountd()
         .getRpcProgram();
     mountd.nullOp(new XDR(), 1234, InetAddress.getByName("localhost"));
-    
+    assertTrue(mountd.getPortmapUdpTimeoutMillis() == newTimeoutMillis);
     RpcProgramNfs3 nfsd = (RpcProgramNfs3) nfs3.getRpcProgram();
     nfsd.nullProcedure();
+    assertTrue(nfsd.getPortmapUdpTimeoutMillis() == newTimeoutMillis);
     
     cluster.shutdown();
   }

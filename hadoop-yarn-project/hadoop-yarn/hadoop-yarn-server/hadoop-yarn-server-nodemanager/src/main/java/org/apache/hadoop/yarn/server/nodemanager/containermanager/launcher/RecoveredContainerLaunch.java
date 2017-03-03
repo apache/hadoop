@@ -39,7 +39,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReacquisitionContext;
-import org.apache.hadoop.yarn.util.ConverterUtils;
+
 
 /**
  * This is a ContainerLaunch which has been recovered after an NM restart (for
@@ -57,7 +57,7 @@ public class RecoveredContainerLaunch extends ContainerLaunch {
   {
     super(context, configuration, dispatcher, exec, app, container, dirsHandler,
       containerManager);
-    this.shouldLaunchContainer.set(true);
+    this.containerAlreadyLaunched.set(true);
   }
 
   /**

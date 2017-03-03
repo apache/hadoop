@@ -29,8 +29,8 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 
 import org.apache.commons.logging.Log;
@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
+import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
@@ -563,11 +564,9 @@ public class TestJobHistoryEventHandler {
     TestParams t = new TestParams(RunningAppContext.class, false);
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
-    MiniYARNCluster yarnCluster = null;
     long currentTime = System.currentTimeMillis();
-    try {
-      yarnCluster = new MiniYARNCluster(
-            TestJobHistoryEventHandler.class.getSimpleName(), 1, 1, 1, 1);
+    try (MiniYARNCluster yarnCluster = new MiniYARNCluster(
+        TestJobHistoryEventHandler.class.getSimpleName(), 1, 1, 1, 1)) {
       yarnCluster.init(conf);
       yarnCluster.start();
       Configuration confJHEH = new YarnConfiguration(conf);
@@ -720,10 +719,6 @@ public class TestJobHistoryEventHandler {
               tEntity.getEvents().get(0).getEventInfo().get("TASK_TYPE"));
       Assert.assertEquals(TaskType.MAP.toString(),
               tEntity.getEvents().get(1).getEventInfo().get("TASK_TYPE"));
-    } finally {
-      if (yarnCluster != null) {
-        yarnCluster.stop();
-      }
     }
   }
 
@@ -835,6 +830,9 @@ public class TestJobHistoryEventHandler {
     if (mockContext instanceof RunningAppContext) {
       when(((RunningAppContext)mockContext).getTimelineClient()).
           thenReturn(TimelineClient.createTimelineClient());
+      when(((RunningAppContext) mockContext).getTimelineV2Client())
+          .thenReturn(TimelineV2Client
+              .createTimelineClient(ApplicationId.newInstance(0, 1)));
     }
     return mockContext;
   }
@@ -943,6 +941,8 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
   protected void serviceStart() {
     if (timelineClient != null) {
       timelineClient.start();
+    } else if (timelineV2Client != null) {
+      timelineV2Client.start();
     }
   }
 

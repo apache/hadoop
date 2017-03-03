@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
@@ -42,6 +43,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIOException;
 import org.apache.hadoop.util.ToolRunner;
@@ -122,9 +124,10 @@ public abstract class Storage extends StorageInfo {
     public StorageDirType getStorageDirType();
     public boolean isOfType(StorageDirType type);
   }
-  
-  protected List<StorageDirectory> storageDirs = new ArrayList<StorageDirectory>();
-  
+
+  private final List<StorageDirectory> storageDirs =
+      new CopyOnWriteArrayList<>();
+
   private class DirIterator implements Iterator<StorageDirectory> {
     final StorageDirType dirType;
     final boolean includeShared;
@@ -548,7 +551,7 @@ public abstract class Storage extends StorageInfo {
           Files.newDirectoryStream(currentDir.toPath())) {
         if (dirStream.iterator().hasNext()) {
           throw new InconsistentFSStateException(root,
-              "Can't format the storage directory because the current/ "
+              "Can't format the storage directory because the current "
                   + "directory is not empty.");
         }
       }
@@ -936,7 +939,11 @@ public abstract class Storage extends StorageInfo {
   public int getNumStorageDirs() {
     return storageDirs.size();
   }
-  
+
+  public List<StorageDirectory> getStorageDirs() {
+    return storageDirs;
+  }
+
   public StorageDirectory getStorageDir(int idx) {
     return storageDirs.get(idx);
   }
@@ -1002,6 +1009,14 @@ public abstract class Storage extends StorageInfo {
       }
     }
     return false;
+  }
+
+  public NamespaceInfo getNamespaceInfo() {
+    return new NamespaceInfo(
+        getNamespaceID(),
+        getClusterID(),
+        null,
+        getCTime());
   }
 
   /**

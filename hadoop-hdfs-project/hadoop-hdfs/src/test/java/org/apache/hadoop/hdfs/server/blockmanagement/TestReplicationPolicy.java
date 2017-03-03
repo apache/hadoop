@@ -836,7 +836,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     int DFS_NAMENODE_REPLICATION_INTERVAL = 1000;
     int HIGH_PRIORITY = 0;
     Configuration conf = new Configuration();
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
         .format(true).build();
     try {
@@ -950,24 +950,31 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     List<DatanodeStorageInfo> replicaList = new ArrayList<>();
     final Map<String, List<DatanodeStorageInfo>> rackMap
         = new HashMap<String, List<DatanodeStorageInfo>>();
-    
-    dataNodes[0].setRemaining(4*1024*1024);
+
+    storages[0].setRemainingForTests(4*1024*1024);
+    dataNodes[0].setRemaining(calculateRemaining(dataNodes[0]));
     replicaList.add(storages[0]);
-    
-    dataNodes[1].setRemaining(3*1024*1024);
+
+    storages[1].setRemainingForTests(3*1024*1024);
+    dataNodes[1].setRemaining(calculateRemaining(dataNodes[1]));
     replicaList.add(storages[1]);
-    
-    dataNodes[2].setRemaining(2*1024*1024);
+
+    storages[2].setRemainingForTests(2*1024*1024);
+    dataNodes[2].setRemaining(calculateRemaining(dataNodes[2]));
     replicaList.add(storages[2]);
-    
-    dataNodes[5].setRemaining(1*1024*1024);
+
+    //Even if this node has the most space, because the storage[5] has
+    //the lowest it should be chosen in case of block delete.
+    storages[4].setRemainingForTests(100 * 1024 * 1024);
+    storages[5].setRemainingForTests(512 * 1024);
+    dataNodes[5].setRemaining(calculateRemaining(dataNodes[5]));
     replicaList.add(storages[5]);
-    
+
     // Refresh the last update time for all the datanodes
     for (int i = 0; i < dataNodes.length; i++) {
       DFSTestUtil.resetLastUpdatesWithOffset(dataNodes[i], 0);
     }
-    
+
     List<DatanodeStorageInfo> first = new ArrayList<>();
     List<DatanodeStorageInfo> second = new ArrayList<>();
     replicator.splitNodesWithRack(replicaList, replicaList, rackMap, first,
@@ -997,6 +1004,14 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     chosen = ((BlockPlacementPolicyDefault) replicator).chooseReplicaToDelete(
         first, second, excessTypes, rackMap);
     assertEquals(chosen, storages[1]);
+  }
+
+  private long calculateRemaining(DatanodeDescriptor dataNode) {
+    long sum = 0;
+    for (DatanodeStorageInfo storageInfo: dataNode.getStorageInfos()){
+      sum += storageInfo.getRemaining();
+    }
+    return sum;
   }
 
   @Test

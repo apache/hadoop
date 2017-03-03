@@ -15,41 +15,7 @@
 HDFS Architecture
 =================
 
-* [HDFS Architecture](#HDFS_Architecture)
-    * [Introduction](#Introduction)
-    * [Assumptions and Goals](#Assumptions_and_Goals)
-        * [Hardware Failure](#Hardware_Failure)
-        * [Streaming Data Access](#Streaming_Data_Access)
-        * [Large Data Sets](#Large_Data_Sets)
-        * [Simple Coherency Model](#Simple_Coherency_Model)
-        * ["Moving Computation is Cheaper than Moving Data"](#aMoving_Computation_is_Cheaper_than_Moving_Data)
-        * [Portability Across Heterogeneous Hardware and Software Platforms](#Portability_Across_Heterogeneous_Hardware_and_Software_Platforms)
-    * [NameNode and DataNodes](#NameNode_and_DataNodes)
-    * [The File System Namespace](#The_File_System_Namespace)
-    * [Data Replication](#Data_Replication)
-        * [Replica Placement: The First Baby Steps](#Replica_Placement:_The_First_Baby_Steps)
-        * [Replica Selection](#Replica_Selection)
-        * [Safemode](#Safemode)
-    * [The Persistence of File System Metadata](#The_Persistence_of_File_System_Metadata)
-    * [The Communication Protocols](#The_Communication_Protocols)
-    * [Robustness](#Robustness)
-        * [Data Disk Failure, Heartbeats and Re-Replication](#Data_Disk_Failure_Heartbeats_and_Re-Replication)
-        * [Cluster Rebalancing](#Cluster_Rebalancing)
-        * [Data Integrity](#Data_Integrity)
-        * [Metadata Disk Failure](#Metadata_Disk_Failure)
-        * [Snapshots](#Snapshots)
-    * [Data Organization](#Data_Organization)
-        * [Data Blocks](#Data_Blocks)
-        * [Staging](#Staging)
-        * [Replication Pipelining](#Replication_Pipelining)
-    * [Accessibility](#Accessibility)
-        * [FS Shell](#FS_Shell)
-        * [DFSAdmin](#DFSAdmin)
-        * [Browser Interface](#Browser_Interface)
-    * [Space Reclamation](#Space_Reclamation)
-        * [File Deletes and Undeletes](#File_Deletes_and_Undeletes)
-        * [Decrease Replication Factor](#Decrease_Replication_Factor)
-    * [References](#References)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Introduction
 ------------

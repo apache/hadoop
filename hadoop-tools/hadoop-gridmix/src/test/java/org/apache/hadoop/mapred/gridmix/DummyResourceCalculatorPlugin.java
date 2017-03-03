@@ -31,6 +31,10 @@ import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 @InterfaceAudience.Private
 public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
+  DummyResourceCalculatorPlugin() {
+    super(null);
+  }
+
   /** max vmem on the TT */
   public static final String MAXVMEM_TESTING_PROPERTY =
       "mapred.tasktracker.maxvmem.testing";

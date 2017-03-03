@@ -959,7 +959,7 @@ public final class CacheManager {
       processCacheReportImpl(datanode, blockIds);
     } finally {
       endTime = Time.monotonicNow();
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("processCacheReport");
     }
 
     // Log the block report processing stats from Namenode perspective

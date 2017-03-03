@@ -362,6 +362,7 @@ public class TestSystemMetricsPublisherForV2 {
     when(appSubmissionContext.getPriority())
         .thenReturn(Priority.newInstance(0));
 
+    when(app.getApplicationPriority()).thenReturn(Priority.newInstance(10));
     ContainerLaunchContext containerLaunchContext =
         mock(ContainerLaunchContext.class);
     when(containerLaunchContext.getCommands())

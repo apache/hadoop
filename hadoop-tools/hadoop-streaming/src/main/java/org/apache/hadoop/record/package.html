@@ -204,8 +204,8 @@ type := (ptype / ctype)
 ptype := ("byte" / "boolean" / "int" |
           "long" / "float" / "double"
           "ustring" / "buffer")
-ctype := (("vector" "<" type ">") /
-          ("map" "<" type "," type ">" ) ) / name)
+ctype := (("vector" "&lt;" type "&gt;") /
+          ("map" "&lt;" type "," type "&gt;" ) ) / name)
 </code></pre>
 
 A DDL file describes one or more record types. It begins with zero or
@@ -255,7 +255,7 @@ include "links.jr"
 module outlinks {
     class OutLinks {
         ustring baseURL;
-        vector<links.Link> outLinks;
+        vector&lt;links.Link&gt; outLinks;
     };
 }
 </code></pre>
@@ -269,7 +269,7 @@ record description files as a mandatory argument and an
 optional language argument (the default is Java) --language or
 -l. Thus a typical invocation would look like:
 <pre><code>
-$ rcc -l C++ <filename> ...
+$ rcc -l C++ &lt;filename&gt; ...
 </code></pre>
 
 
@@ -306,7 +306,7 @@ namespace hadoop {
 
   class IOError : public runtime_error {
   public:
-    explicit IOError(const std::string& msg);
+    explicit IOError(const std::string&amp; msg);
   };
 
   class IArchive;
@@ -314,18 +314,18 @@ namespace hadoop {
 
   class RecordReader {
   public:
-    RecordReader(InStream& in, RecFormat fmt);
+    RecordReader(InStream&amp; in, RecFormat fmt);
     virtual ~RecordReader(void);
 
-    virtual void read(Record& rec);
+    virtual void read(Record&amp; rec);
   };
 
   class RecordWriter {
   public:
-    RecordWriter(OutStream& out, RecFormat fmt);
+    RecordWriter(OutStream&amp; out, RecFormat fmt);
     virtual ~RecordWriter(void);
 
-    virtual void write(Record& rec);
+    virtual void write(Record&amp; rec);
   };
 
 
@@ -337,10 +337,10 @@ namespace hadoop {
     virtual bool validate(void) const = 0;
 
     virtual void
-    serialize(OArchive& oa, const std::string& tag) const = 0;
+    serialize(OArchive&amp; oa, const std::string&amp; tag) const = 0;
 
     virtual void
-    deserialize(IArchive& ia, const std::string& tag) = 0;
+    deserialize(IArchive&amp; ia, const std::string&amp; tag) = 0;
   };
 }
 </code></pre>
@@ -445,11 +445,11 @@ private:
   ...
 public:
 
-  std::string& getMyBuf() {
+  std::string&amp; getMyBuf() {
     return mMyBuf;
   };
 
-  const std::string& getMyBuf() const {
+  const std::string&amp; getMyBuf() const {
     return mMyBuf;
   };
   ...
@@ -474,7 +474,7 @@ and the testrec.jr file contains:
 include "inclrec.jr"
 module testrec {
     class R {
-        vector<float> VF;
+        vector&lt;float&gt; VF;
         RI            Rec;
         buffer        Buf;
     };
@@ -511,8 +511,8 @@ namespace inclrec {
     RI(void);
     virtual ~RI(void);
 
-    virtual bool operator==(const RI& peer) const;
-    virtual bool operator<(const RI& peer) const;
+    virtual bool operator==(const RI&amp; peer) const;
+    virtual bool operator&lt;(const RI&amp; peer) const;
 
     virtual int32_t getI32(void) const { return I32; }
     virtual void setI32(int32_t v) { I32 = v; }
@@ -520,16 +520,16 @@ namespace inclrec {
     virtual double getD(void) const { return D; }
     virtual void setD(double v) { D = v; }
 
-    virtual std::string& getS(void) const { return S; }
-    virtual const std::string& getS(void) const { return S; }
+    virtual std::string&amp; getS(void) const { return S; }
+    virtual const std::string&amp; getS(void) const { return S; }
 
     virtual std::string type(void) const;
     virtual std::string signature(void) const;
 
   protected:
 
-    virtual void serialize(hadoop::OArchive& a) const;
-    virtual void deserialize(hadoop::IArchive& a);
+    virtual void serialize(hadoop::OArchive&amp; a) const;
+    virtual void deserialize(hadoop::IArchive&amp; a);
   };
 } // end namespace inclrec
 
@@ -552,7 +552,7 @@ namespace testrec {
 
   private:
 
-    std::vector<float> VF;
+    std::vector&lt;float&gt; VF;
     inclrec::RI        Rec;
     std::string        Buf;
 
@@ -561,20 +561,20 @@ namespace testrec {
     R(void);
     virtual ~R(void);
 
-    virtual bool operator==(const R& peer) const;
-    virtual bool operator<(const R& peer) const;
+    virtual bool operator==(const R&amp; peer) const;
+    virtual bool operator&lt;(const R&amp; peer) const;
 
-    virtual std::vector<float>& getVF(void) const;
-    virtual const std::vector<float>& getVF(void) const;
+    virtual std::vector&lt;float&gt;&amp; getVF(void) const;
+    virtual const std::vector&lt;float&gt;&amp; getVF(void) const;
 
-    virtual std::string& getBuf(void) const ;
-    virtual const std::string& getBuf(void) const;
+    virtual std::string&amp; getBuf(void) const ;
+    virtual const std::string&amp; getBuf(void) const;
 
-    virtual inclrec::RI& getRec(void) const;
-    virtual const inclrec::RI& getRec(void) const;
+    virtual inclrec::RI&amp; getRec(void) const;
+    virtual const inclrec::RI&amp; getRec(void) const;
     
-    virtual bool serialize(hadoop::OutArchive& a) const;
-    virtual bool deserialize(hadoop::InArchive& a);
+    virtual bool serialize(hadoop::OutArchive&amp; a) const;
+    virtual bool deserialize(hadoop::InArchive&amp; a);
     
     virtual std::string type(void) const;
     virtual std::string signature(void) const;
@@ -619,8 +619,8 @@ double          double              double
 ustring         std::string         java.lang.String
 buffer          std::string         org.apache.hadoop.record.Buffer
 class type      class type          class type
-vector<type>    std::vector<type>   java.util.ArrayList<type>
-map<type,type>  std::map<type,type> java.util.TreeMap<type,type>
+vector&lt;type&gt;    std::vector&lt;type&gt;   java.util.ArrayList&lt;type&gt;
+map&lt;type,type&gt;  std::map&lt;type,type&gt; java.util.TreeMap&lt;type,type&gt;
 </code></pre>
 
 <h2>Data encodings</h2>
@@ -651,7 +651,7 @@ Primitive types are serialized as follows:
 <li> byte: Represented by 1 byte, as is.
 <li> boolean: Represented by 1-byte (0 or 1)
 <li> int/long: Integers and longs are serialized zero compressed.
-Represented as 1-byte if -120 <= value < 128. Otherwise, serialized as a
+Represented as 1-byte if -120 &lt;= value &lt; 128. Otherwise, serialized as a
 sequence of 2-5 bytes for ints, 2-9 bytes for longs. The first byte represents
 the number of trailing bytes, N, as the negative number (-120-N). For example,
 the number 1024 (0x400) is represented by the byte sequence 'x86 x04 x00'.
@@ -741,7 +741,7 @@ replace CRLF sequences with line feeds. Programming languages that we work
 with do not impose these restrictions on string types. To work around these
 restrictions, disallowed characters and CRs are percent escaped in strings.
 The '%' character is also percent escaped.
-<li> buffer: XML tag &lt;string&&gt;. Values: Arbitrary binary
+<li> buffer: XML tag &lt;string&gt;. Values: Arbitrary binary
 data. Represented as hexBinary, each byte is replaced by its 2-byte
 hexadecimal representation.
 </ul>
@@ -755,7 +755,7 @@ element and a &lt;value&gt; element. The &lt;name&gt; is a string that must
 match /[a-zA-Z][a-zA-Z0-9_]*/. The value of the member is represented
 by a &lt;value&gt; element.
 
-<li> vector: XML tag &lt;array&lt;. An &lt;array&gt; contains a
+<li> vector: XML tag &lt;array&gt;. An &lt;array&gt; contains a
 single &lt;data&gt; element. The &lt;data&gt; element is a sequence of
 &lt;value&gt; elements each of which represents an element of the vector.
 
@@ -768,7 +768,7 @@ For example:
 <pre><code>
 class {
   int           MY_INT;            // value 5
-  vector<float> MY_VEC;            // values 0.1, -0.89, 2.45e4
+  vector&lt;float&gt; MY_VEC;            // values 0.1, -0.89, 2.45e4
   buffer        MY_BUF;            // value '\00\n\tabc%'
 }
 </code></pre>

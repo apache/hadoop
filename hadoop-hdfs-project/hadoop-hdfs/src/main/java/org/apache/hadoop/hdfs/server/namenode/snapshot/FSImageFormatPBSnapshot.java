@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTypeProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
@@ -232,12 +233,18 @@ public class FSImageFormatPBSnapshot {
                 fileInPb.getXAttrs(), state.getStringTable()));
           }
 
+          boolean isStriped =
+              (fileInPb.getBlockType() == BlockTypeProto .STRIPED);
+          Short replication =
+              (!isStriped ? (short)fileInPb.getReplication() : null);
+          Byte ecPolicyID =
+              (isStriped ? (byte)fileInPb.getErasureCodingPolicyID() : null);
           copy = new INodeFileAttributes.SnapshotCopy(pbf.getName()
               .toByteArray(), permission, acl, fileInPb.getModificationTime(),
-              fileInPb.getAccessTime(), (short) fileInPb.getReplication(),
+              fileInPb.getAccessTime(), replication, ecPolicyID,
               fileInPb.getPreferredBlockSize(),
               (byte)fileInPb.getStoragePolicyID(), xAttrs,
-              fileInPb.getIsStriped());
+              PBHelperClient.convert(fileInPb.getBlockType()));
         }
 
         FileDiff diff = new FileDiff(pbf.getSnapshotId(), copy, null,

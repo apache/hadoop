@@ -111,6 +111,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
@@ -135,6 +136,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.TestTransferRbw;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -171,8 +173,6 @@ import org.mockito.internal.util.reflection.Whitebox;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.annotations.VisibleForTesting;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_DATA_BLOCKS;
 
 /** Utilities for HDFS tests */
 public class DFSTestUtil {
@@ -1889,21 +1889,42 @@ public class DFSTestUtil {
    * Creates the metadata of a file in striped layout. This method only
    * manipulates the NameNode state without injecting data to DataNode.
    * You should disable periodical heartbeat before use this.
-   *  @param file Path of the file to create
+   * @param file Path of the file to create
    * @param dir Parent path of the file
    * @param numBlocks Number of striped block groups to add to the file
    * @param numStripesPerBlk Number of striped cells in each block
    * @param toMkdir
    */
-  public static void createStripedFile(MiniDFSCluster cluster, Path file, Path dir,
-      int numBlocks, int numStripesPerBlk, boolean toMkdir) throws Exception {
+  public static void createStripedFile(MiniDFSCluster cluster, Path file,
+      Path dir, int numBlocks, int numStripesPerBlk, boolean toMkdir)
+      throws Exception {
+    createStripedFile(cluster, file, dir, numBlocks, numStripesPerBlk,
+        toMkdir, ErasureCodingPolicyManager.getSystemDefaultPolicy());
+  }
+
+  /**
+   * Creates the metadata of a file in striped layout. This method only
+   * manipulates the NameNode state without injecting data to DataNode.
+   * You should disable periodical heartbeat before use this.
+   * @param file Path of the file to create
+   * @param dir Parent path of the file
+   * @param numBlocks Number of striped block groups to add to the file
+   * @param numStripesPerBlk Number of striped cells in each block
+   * @param toMkdir
+   * @param ecPolicy erasure coding policy apply to created file. A null value
+   *                 means using default erasure coding policy.
+   */
+  public static void createStripedFile(MiniDFSCluster cluster, Path file,
+      Path dir, int numBlocks, int numStripesPerBlk, boolean toMkdir,
+      ErasureCodingPolicy ecPolicy) throws Exception {
     DistributedFileSystem dfs = cluster.getFileSystem();
     // If outer test already set EC policy, dir should be left as null
     if (toMkdir) {
       assert dir != null;
       dfs.mkdirs(dir);
       try {
-        dfs.getClient().setErasureCodingPolicy(dir.toString(), null);
+        dfs.getClient()
+            .setErasureCodingPolicy(dir.toString(), ecPolicy.getName());
       } catch (IOException e) {
         if (!e.getMessage().contains("non-empty directory")) {
           throw e;
@@ -1971,9 +1992,11 @@ public class DFSTestUtil {
       }
     }
 
+    final ErasureCodingPolicy ecPolicy =
+        fs.getErasureCodingPolicy(new Path(file));
     // 2. RECEIVED_BLOCK IBR
     long blockSize = isStripedBlock ?
-        numStripes * BLOCK_STRIPED_CELL_SIZE : len;
+        numStripes * ecPolicy.getCellSize() : len;
     for (int i = 0; i < groupSize; i++) {
       DataNode dn = dataNodes.get(i);
       final Block block = new Block(lastBlock.getBlockId() + i,
@@ -1987,7 +2010,7 @@ public class DFSTestUtil {
       }
     }
     long bytes = isStripedBlock ?
-        numStripes * BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS : len;
+        numStripes * ecPolicy.getCellSize() * ecPolicy.getNumDataUnits() : len;
     lastBlock.setNumBytes(bytes);
     return lastBlock;
   }

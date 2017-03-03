@@ -19,6 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,6 +34,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.PriorityUtilizationQueueOrderingPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.QueueOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
@@ -935,5 +940,58 @@ public class TestQueueParsing {
     } finally {
       IOUtils.closeStream(rm);
     }
+  }
+
+
+  @Test
+  public void testQueueOrderingPolicyUpdatedAfterReinitialize()
+      throws IOException {
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration();
+    setupQueueConfigurationWithoutLabels(csConf);
+    YarnConfiguration conf = new YarnConfiguration(csConf);
+
+    CapacityScheduler capacityScheduler = new CapacityScheduler();
+    RMContextImpl rmContext =
+        new RMContextImpl(null, null, null, null, null, null,
+            new RMContainerTokenSecretManager(conf),
+            new NMTokenSecretManagerInRM(conf),
+            new ClientToAMTokenSecretManagerInRM(), null);
+    rmContext.setNodeLabelManager(nodeLabelManager);
+    capacityScheduler.setConf(conf);
+    capacityScheduler.setRMContext(rmContext);
+    capacityScheduler.init(conf);
+    capacityScheduler.start();
+
+    // Add a new b4 queue
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT + ".b",
+        new String[] { "b1", "b2", "b3", "b4" });
+    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".b.b4", 0f);
+    ParentQueue bQ = (ParentQueue) capacityScheduler.getQueue("b");
+    checkEqualsToQueueSet(bQ.getChildQueues(),
+        new String[] { "b1", "b2", "b3" });
+    capacityScheduler.reinitialize(new YarnConfiguration(csConf), rmContext);
+
+    // Check child queue of b
+    checkEqualsToQueueSet(bQ.getChildQueues(),
+        new String[] { "b1", "b2", "b3", "b4" });
+
+    PriorityUtilizationQueueOrderingPolicy queueOrderingPolicy =
+        (PriorityUtilizationQueueOrderingPolicy) bQ.getQueueOrderingPolicy();
+    checkEqualsToQueueSet(queueOrderingPolicy.getQueues(),
+        new String[] { "b1", "b2", "b3", "b4" });
+
+    ServiceOperations.stopQuietly(capacityScheduler);
+  }
+
+  private void checkEqualsToQueueSet(List<CSQueue> queues, String[] queueNames) {
+    Set<String> existedQueues = new HashSet<>();
+    for (CSQueue q : queues) {
+      existedQueues.add(q.getQueueName());
+    }
+    for (String q : queueNames) {
+      Assert.assertTrue(existedQueues.remove(q));
+    }
+    Assert.assertTrue(existedQueues.isEmpty());
   }
 }

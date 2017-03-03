@@ -69,8 +69,12 @@ public class KeyManager implements Closeable, DataEncryptionKeyFactory {
           + ", token lifetime=" + StringUtils.formatTime(tokenLifetime));
       String encryptionAlgorithm = conf.get(
           DFSConfigKeys.DFS_DATA_ENCRYPTION_ALGORITHM_KEY);
+      final boolean enableProtobuf = conf.getBoolean(
+          DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_PROTOBUF_ENABLE,
+          DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_PROTOBUF_ENABLE_DEFAULT);
       this.blockTokenSecretManager = new BlockTokenSecretManager(
-          updateInterval, tokenLifetime, blockpoolID, encryptionAlgorithm);
+          updateInterval, tokenLifetime, blockpoolID, encryptionAlgorithm,
+          enableProtobuf);
       this.blockTokenSecretManager.addKeys(keys);
 
       // sync block keys with NN more frequently than NN updates its block keys

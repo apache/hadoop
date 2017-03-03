@@ -26,13 +26,14 @@ export default AbstractRoute.extend({
       selected : param.queue_name,
       queues: this.store.query('yarn-queue', {}),
       selectedQueue : undefined,
-      apps: undefined, // apps of selected queue
+      apps: this.store.query('yarn-app', {
+        queue: param.queue_name
+      })
     });
   },
 
   afterModel(model) {
     model.selectedQueue = this.store.peekRecord('yarn-queue', model.selected);
-    model.apps = this.store.findAll('yarn-app');
   },
 
   unloadAll() {

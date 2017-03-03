@@ -26,9 +26,13 @@ import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -48,6 +52,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class Shell {
+  private static final Map<Shell, Object> CHILD_SHELLS =
+      Collections.synchronizedMap(new WeakHashMap<Shell, Object>());
   public static final Logger LOG = LoggerFactory.getLogger(Shell.class);
 
   /**
@@ -816,6 +822,7 @@ public abstract class Shell {
   private File dir;
   private Process process; // sub process used to execute the command
   private int exitCode;
+  private Thread waitingThread;
 
   /** Flag to indicate whether or not the script has finished executing. */
   private final AtomicBoolean completed = new AtomicBoolean(false);
@@ -917,6 +924,9 @@ public abstract class Shell {
       process = builder.start();
     }
 
+    waitingThread = Thread.currentThread();
+    CHILD_SHELLS.put(this, null);
+
     if (timeOutInterval > 0) {
       timeOutTimer = new Timer("Shell command timeout");
       timeoutTimerTask = new ShellTimeoutTimerTask(
@@ -945,7 +955,15 @@ public abstract class Shell {
             line = errReader.readLine();
           }
         } catch(IOException ioe) {
-          LOG.warn("Error reading the error stream", ioe);
+          // Its normal to observe a "Stream closed" I/O error on
+          // command timeouts destroying the underlying process
+          // so only log a WARN if the command didn't time out
+          if (!isTimedOut()) {
+            LOG.warn("Error reading the error stream", ioe);
+          } else {
+            LOG.debug("Error reading the error stream due to shell "
+                + "command timeout", ioe);
+          }
         }
       }
     };
@@ -1012,6 +1030,8 @@ public abstract class Shell {
         LOG.warn("Error while closing the error stream", ioe);
       }
       process.destroy();
+      waitingThread = null;
+      CHILD_SHELLS.remove(this);
       lastTime = Time.monotonicNow();
     }
   }
@@ -1058,6 +1078,15 @@ public abstract class Shell {
   public int getExitCode() {
     return exitCode;
   }
+
+  /** get the thread that is waiting on this instance of <code>Shell</code>.
+   * @return the thread that ran runCommand() that spawned this shell
+   * or null if no thread is waiting for this shell to complete
+   */
+  public Thread getWaitingThread() {
+    return waitingThread;
+  }
+
 
   /**
    * This is an IOException with exit code added.
@@ -1157,6 +1186,15 @@ public abstract class Shell {
       }
       timeOutInterval = timeout;
       this.inheritParentEnv = inheritParentEnv;
+    }
+
+    /**
+     * Returns the timeout value set for the executor's sub-commands.
+     * @return The timeout value in seconds
+     */
+    @VisibleForTesting
+    public long getTimeoutInterval() {
+      return timeOutInterval;
     }
 
     /**
@@ -1308,6 +1346,31 @@ public abstract class Shell {
           p.destroy();
         }
       }
+    }
+  }
+
+  /**
+   * Static method to destroy all running <code>Shell</code> processes.
+   * Iterates through a map of all currently running <code>Shell</code>
+   * processes and destroys them one by one. This method is thread safe
+   */
+  public static void destroyAllShellProcesses() {
+    synchronized (CHILD_SHELLS) {
+      for (Shell shell : CHILD_SHELLS.keySet()) {
+        if (shell.getProcess() != null) {
+          shell.getProcess().destroy();
+        }
+      }
+      CHILD_SHELLS.clear();
+    }
+  }
+
+  /**
+   * Static method to return a Set of all <code>Shell</code> objects.
+   */
+  public static Set<Shell> getAllShells() {
+    synchronized (CHILD_SHELLS) {
+      return new HashSet<>(CHILD_SHELLS.keySet());
     }
   }
 }

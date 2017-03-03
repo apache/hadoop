@@ -27,6 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.atLeastOnce;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -90,6 +91,11 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.eve
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEventType;
+
+
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerScheduler;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
@@ -143,7 +149,7 @@ public class TestContainer {
       Map<Path, List<String>> localPaths = wc.localizeResources();
 
       // all resources should be localized
-      assertEquals(ContainerState.LOCALIZED, wc.c.getContainerState());
+      assertEquals(ContainerState.SCHEDULED, wc.c.getContainerState());
       assertNotNull(wc.c.getLocalizedResources());
       for (Entry<Path, List<String>> loc : wc.c.getLocalizedResources()
           .entrySet()) {
@@ -421,7 +427,7 @@ public class TestContainer {
       wc = new WrappedContainer(17, 314159265358979L, 4344, "yak");
       wc.initContainer();
       wc.localizeResources();
-      assertEquals(ContainerState.LOCALIZED, wc.c.getContainerState());
+      assertEquals(ContainerState.SCHEDULED, wc.c.getContainerState());
       ContainerLaunch launcher = wc.launcher.running.get(wc.c.getContainerId());
       wc.killContainer();
       assertEquals(ContainerState.KILLING, wc.c.getContainerState());
@@ -452,7 +458,7 @@ public class TestContainer {
       wc = new WrappedContainer(17, 314159265358979L, 4344, "yak");
       wc.initContainer();
       wc.localizeResources();
-      assertEquals(ContainerState.LOCALIZED, wc.c.getContainerState());
+      assertEquals(ContainerState.SCHEDULED, wc.c.getContainerState());
       wc.killContainer();
       assertEquals(ContainerState.KILLING, wc.c.getContainerState());
       wc.containerSuccessful();
@@ -480,7 +486,7 @@ public class TestContainer {
       wc = new WrappedContainer(17, 314159265358979L, 4344, "yak");
       wc.initContainer();
       wc.localizeResources();
-      assertEquals(ContainerState.LOCALIZED, wc.c.getContainerState());
+      assertEquals(ContainerState.SCHEDULED, wc.c.getContainerState());
       wc.killContainer();
       assertEquals(ContainerState.KILLING, wc.c.getContainerState());
       wc.containerFailed(ExitCode.FORCE_KILLED.getExitCode());
@@ -507,7 +513,7 @@ public class TestContainer {
       wc = new WrappedContainer(17, 314159265358979L, 4344, "yak");
       wc.initContainer();
       wc.localizeResources();
-      assertEquals(ContainerState.LOCALIZED, wc.c.getContainerState());
+      assertEquals(ContainerState.SCHEDULED, wc.c.getContainerState());
       ContainerLaunch launcher = wc.launcher.running.get(wc.c.getContainerId());
       launcher.call();
       wc.drainDispatcherEvents();
@@ -764,7 +770,7 @@ public class TestContainer {
         new ResourcesReleasedMatcher(wc.localResources, EnumSet.of(
             LocalResourceVisibility.PUBLIC, LocalResourceVisibility.PRIVATE,
             LocalResourceVisibility.APPLICATION));
-    verify(wc.localizerBus).handle(argThat(matchesReq));
+    verify(wc.localizerBus, atLeastOnce()).handle(argThat(matchesReq));
   }
 
   private void verifyOutofBandHeartBeat(WrappedContainer wc) {
@@ -890,6 +896,7 @@ public class TestContainer {
     final EventHandler<AuxServicesEvent> auxBus;
     final EventHandler<ApplicationEvent> appBus;
     final EventHandler<LogHandlerEvent> LogBus;
+    final EventHandler<ContainerSchedulerEvent> schedBus;
     final ContainersLauncher launcher;
 
     final ContainerLaunchContext ctxt;
@@ -927,9 +934,16 @@ public class TestContainer {
       auxBus = mock(EventHandler.class);
       appBus = mock(EventHandler.class);
       LogBus = mock(EventHandler.class);
+      schedBus = new ContainerScheduler(context, dispatcher, metrics, 0) {
+        @Override
+        protected void scheduleContainer(Container container) {
+          container.sendLaunchEvent();
+        }
+      };
       dispatcher.register(LocalizationEventType.class, localizerBus);
       dispatcher.register(ContainersLauncherEventType.class, launcherBus);
       dispatcher.register(ContainersMonitorEventType.class, monitorBus);
+      dispatcher.register(ContainerSchedulerEventType.class, schedBus);
       dispatcher.register(AuxServicesEventType.class, auxBus);
       dispatcher.register(ApplicationEventType.class, appBus);
       dispatcher.register(LogHandlerEventType.class, LogBus);

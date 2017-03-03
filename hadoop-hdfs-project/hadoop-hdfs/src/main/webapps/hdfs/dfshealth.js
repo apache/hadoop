@@ -212,28 +212,34 @@
           var n = nodes[i];
           n.usedPercentage = Math.round((n.used + n.nonDfsUsedSpace) * 1.0 / n.capacity * 100);
 
-          var addr = n.infoSecureAddr;
-          var position = addr.lastIndexOf(":");
-          var port = addr.substring(position + 1, addr.length);
-          n.secureMode = "off";
-          if (port != 0) {
-            n.secureMode = "on";
+          var port = n.infoAddr.split(":")[1];
+          var securePort = n.infoSecureAddr.split(":")[1];
+          var dnHost = n.name.split(":")[0];
+          n.dnWebAddress = dnHost + ":" + port;
+          if (securePort != 0) {
+            n.dnWebAddress = dnHost + ":" + securePort;
           }
 
           if (n.adminState === "In Service") {
             n.state = "alive";
           } else if (nodes[i].adminState === "Decommission In Progress") {
-            n.state = "decommisioning";
+            n.state = "decommissioning";
           } else if (nodes[i].adminState === "Decommissioned") {
             n.state = "decommissioned";
+          } else if (nodes[i].adminState === "Entering Maintenance") {
+            n.state = "entering-maintenance";
+          } else if (nodes[i].adminState === "In Maintenance") {
+            n.state = "in-maintenance";
           }
         }
       }
 
       function augment_dead_nodes(nodes) {
         for (var i = 0, e = nodes.length; i < e; ++i) {
-          if (nodes[i].decommissioned) {
+          if (nodes[i].adminState === "Decommissioned") {
             nodes[i].state = "down-decommissioned";
+          } else if (nodes[i].adminState === "In Maintenance") {
+            nodes[i].state = "down-maintenance";
           } else {
             nodes[i].state = "down";
           }
@@ -245,7 +251,72 @@
       r.DeadNodes = node_map_to_array(JSON.parse(r.DeadNodes));
       augment_dead_nodes(r.DeadNodes);
       r.DecomNodes = node_map_to_array(JSON.parse(r.DecomNodes));
+      r.EnteringMaintenanceNodes = node_map_to_array(JSON.parse(r.EnteringMaintenanceNodes));
       return r;
+    }
+
+    function renderHistogram(dnData) {
+      var data = dnData.LiveNodes.map(function(dn) {
+        return (dn.usedSpace / dn.capacity) * 100.0;
+      });
+
+      var formatCount = d3.format(",.0f");
+
+      var widthCap = $("div.container").width();
+      var heightCap = 150;
+
+      var margin = {top: 10, right: 60, bottom: 30, left: 30},
+          width = widthCap * 0.9,
+          height = heightCap - margin.top - margin.bottom;
+
+      var x = d3.scaleLinear()
+          .domain([0.0, 100.0])
+          .range([0, width]);
+
+      var bins = d3.histogram()
+          .domain(x.domain())
+          .thresholds(x.ticks(20))
+          (data);
+
+      var y = d3.scaleLinear()
+          .domain([0, d3.max(bins, function(d) { return d.length; })])
+          .range([height, 0]);
+
+      var svg = d3.select("#datanode-usage-histogram").append("svg")
+          .attr("width", width + 50.0)
+          .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      svg.append("text")
+          .attr("x", (width / 2))
+          .attr("y", heightCap - 6 - (margin.top / 2))
+          .attr("text-anchor", "middle")
+          .style("font-size", "15px")
+          .text("Disk usage of each DataNode (%)");
+
+      var bar = svg.selectAll(".bar")
+          .data(bins)
+          .enter().append("g")
+          .attr("class", "bar")
+          .attr("transform", function(d) { return "translate(" + x(d.x0) + "," + y(d.length) + ")"; });
+
+      bar.append("rect")
+          .attr("x", 1)
+          .attr("width", x(bins[0].x1) - x(bins[0].x0) - 1)
+          .attr("height", function(d) { return height - y(d.length); });
+
+      bar.append("text")
+          .attr("dy", ".75em")
+          .attr("y", 6)
+          .attr("x", (x(bins[0].x1) - x(bins[0].x0)) / 2)
+          .attr("text-anchor", "middle")
+          .text(function(d) { return formatCount(d.length); });
+
+      svg.append("g")
+          .attr("class", "axis axis--x")
+          .attr("transform", "translate(0," + height + ")")
+          .call(d3.axisBottom(x));
     }
 
     $.get(
@@ -266,6 +337,7 @@
               { 'orderDataType': 'ng-value', 'type': 'numeric'},
               { 'orderData': 5 }
             ]});
+          renderHistogram(data);
           $('#ui-tabs a[href="#tab-datanode"]').tab('show');
         });
       })).error(ajax_error_handler);

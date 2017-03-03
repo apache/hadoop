@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheD
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SectionName;
@@ -130,7 +131,7 @@ public final class PBImageXmlWriter {
   public static final String INODE_SECTION_XATTRS = "xattrs";
   public static final String INODE_SECTION_STORAGE_POLICY_ID =
       "storagePolicyId";
-  public static final String INODE_SECTION_IS_STRIPED = "isStriped";
+  public static final String INODE_SECTION_BLOCK_TYPE = "blockType";
   public static final String INODE_SECTION_NS_QUOTA = "nsquota";
   public static final String INODE_SECTION_DS_QUOTA = "dsquota";
   public static final String INODE_SECTION_TYPE_QUOTA = "typeQuota";
@@ -189,6 +190,8 @@ public final class PBImageXmlWriter {
       "childrenSize";
   public static final String SNAPSHOT_DIFF_SECTION_IS_SNAPSHOT_ROOT =
       "isSnapshotRoot";
+  public static final String SNAPSHOT_DIFF_SECTION_SNAPSHOT_COPY =
+      "snapshotCopy";
   public static final String SNAPSHOT_DIFF_SECTION_CREATED_LIST_SIZE =
       "createdListSize";
   public static final String SNAPSHOT_DIFF_SECTION_DELETED_INODE =
@@ -492,8 +495,8 @@ public final class PBImageXmlWriter {
     if (f.hasStoragePolicyID()) {
       o(INODE_SECTION_STORAGE_POLICY_ID, f.getStoragePolicyID());
     }
-    if (f.getIsStriped()) {
-      out.print("<" + INODE_SECTION_IS_STRIPED + "/>");
+    if (f.getBlockType() != BlockTypeProto.CONTIGUOUS) {
+      o(INODE_SECTION_BLOCK_TYPE, f.getBlockType().name());
     }
 
     if (f.hasFileUC()) {
@@ -664,6 +667,23 @@ public final class PBImageXmlWriter {
           o(SNAPSHOT_DIFF_SECTION_SNAPSHOT_ID, f.getSnapshotId())
               .o(SNAPSHOT_DIFF_SECTION_SIZE, f.getFileSize())
               .o(SECTION_NAME, f.getName().toStringUtf8());
+          INodeSection.INodeFile snapshotCopy = f.getSnapshotCopy();
+          if (snapshotCopy != null) {
+            out.print("<" + SNAPSHOT_DIFF_SECTION_SNAPSHOT_COPY + ">");
+            dumpINodeFile(snapshotCopy);
+            out.print("</" + SNAPSHOT_DIFF_SECTION_SNAPSHOT_COPY + ">\n");
+          }
+          if (f.getBlocksCount() > 0) {
+            out.print("<" + INODE_SECTION_BLOCKS + ">");
+            for (BlockProto b : f.getBlocksList()) {
+              out.print("<" + INODE_SECTION_BLOCK + ">");
+              o(SECTION_ID, b.getBlockId())
+                  .o(INODE_SECTION_GEMSTAMP, b.getGenStamp())
+                  .o(INODE_SECTION_NUM_BYTES, b.getNumBytes());
+              out.print("</" + INODE_SECTION_BLOCK + ">\n");
+            }
+            out.print("</" + INODE_SECTION_BLOCKS + ">\n");
+          }
           out.print("</" + SNAPSHOT_DIFF_SECTION_FILE_DIFF + ">\n");
         }
       }
@@ -676,9 +696,14 @@ public final class PBImageXmlWriter {
           o(SNAPSHOT_DIFF_SECTION_SNAPSHOT_ID, d.getSnapshotId())
               .o(SNAPSHOT_DIFF_SECTION_CHILDREN_SIZE, d.getChildrenSize())
               .o(SNAPSHOT_DIFF_SECTION_IS_SNAPSHOT_ROOT, d.getIsSnapshotRoot())
-              .o(SECTION_NAME, d.getName().toStringUtf8())
-              .o(SNAPSHOT_DIFF_SECTION_CREATED_LIST_SIZE,
-                  d.getCreatedListSize());
+              .o(SECTION_NAME, d.getName().toStringUtf8());
+          INodeDirectory snapshotCopy = d.getSnapshotCopy();
+          if (snapshotCopy != null) {
+            out.print("<" + SNAPSHOT_DIFF_SECTION_SNAPSHOT_COPY + ">");
+            dumpINodeDirectory(snapshotCopy);
+            out.print("</" + SNAPSHOT_DIFF_SECTION_SNAPSHOT_COPY + ">\n");
+          }
+          o(SNAPSHOT_DIFF_SECTION_CREATED_LIST_SIZE, d.getCreatedListSize());
           for (long did : d.getDeletedINodeList()) {
             o(SNAPSHOT_DIFF_SECTION_DELETED_INODE, did);
           }

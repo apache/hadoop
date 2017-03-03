@@ -199,4 +199,22 @@ public class TestReloadingX509TrustManager {
     }, reloadInterval, 10 * 1000);
   }
 
+  /** No password when accessing a trust store is legal. */
+  @Test
+  public void testNoPassword() throws Exception {
+    KeyPair kp = generateKeyPair("RSA");
+    cert1 = generateCertificate("CN=Cert1", kp, 30, "SHA1withRSA");
+    cert2 = generateCertificate("CN=Cert2", kp, 30, "SHA1withRSA");
+    String truststoreLocation = BASEDIR + "/testreload.jks";
+    createTrustStore(truststoreLocation, "password", "cert1", cert1);
+
+    final ReloadingX509TrustManager tm =
+        new ReloadingX509TrustManager("jks", truststoreLocation, null, 10);
+    try {
+      tm.init();
+      assertEquals(1, tm.getAcceptedIssuers().length);
+    } finally {
+      tm.destroy();
+    }
+  }
 }

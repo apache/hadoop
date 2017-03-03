@@ -95,7 +95,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
   }
 
   @Test
-  public void testNodePartitionPreemptionRespectMaximumCapacity()
+  public void testNodePartitionPreemptionNotHappenBetweenSatisfiedQueues()
       throws IOException {
     /**
      * Queue structure is:
@@ -114,8 +114,8 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
      * 2 apps in cluster.
      * app1 in b and app2 in c.
      *
-     * app1 uses 90x, and app2 use 10x. After preemption, app2 will preempt 10x
-     * from app1 because of max capacity.
+     * app1 uses 90x, and app2 use 10x. We don't expect preemption happen
+     * between them because all of them are satisfied
      */
     String labelsConfig =
         "=100,true;" + // default partition
@@ -139,9 +139,8 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    // 30 preempted from app1, 30 preempted from app4, and nothing preempted
-    // from app2/app3
-    verify(mDisp, times(20)).handle(
+    // No preemption happens
+    verify(mDisp, never()).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(1))));
     verify(mDisp, never()).handle(
         argThat(new IsPreemptionRequestFor(getAppAttemptId(2))));

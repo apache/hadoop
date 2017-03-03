@@ -56,7 +56,7 @@ import static org.apache.hadoop.hdfs.web.oauth2.Utils.notNull;
 public abstract class CredentialBasedAccessTokenProvider
     extends AccessTokenProvider {
   private static final ObjectReader READER =
-      new ObjectMapper().reader(Map.class);
+      new ObjectMapper().readerFor(Map.class);
 
   public static final String OAUTH_CREDENTIAL_KEY
       = "dfs.webhdfs.oauth2.credential";

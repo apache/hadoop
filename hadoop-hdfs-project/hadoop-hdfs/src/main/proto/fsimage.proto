@@ -128,7 +128,7 @@ message INodeSection {
   message XAttrFeatureProto {
     repeated XAttrCompactProto xAttrs = 1;
   }
-  
+
   message INodeFile {
     optional uint32 replication = 1;
     optional uint64 modificationTime = 2;
@@ -140,7 +140,8 @@ message INodeSection {
     optional AclFeatureProto acl = 8;
     optional XAttrFeatureProto xAttrs = 9;
     optional uint32 storagePolicyID = 10;
-    optional bool isStriped = 11;
+    optional BlockTypeProto blockType = 11;
+    optional uint32 erasureCodingPolicyID = 12;
   }
 
   message QuotaByStorageTypeEntryProto {

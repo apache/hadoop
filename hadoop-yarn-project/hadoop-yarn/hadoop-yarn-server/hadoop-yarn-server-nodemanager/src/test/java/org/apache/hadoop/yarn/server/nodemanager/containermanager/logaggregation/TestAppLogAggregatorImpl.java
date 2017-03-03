@@ -343,8 +343,8 @@ public class TestAppLogAggregatorImpl {
   private static Dispatcher createNullDispatcher() {
     return new Dispatcher() {
       @Override
-      public EventHandler getEventHandler() {
-        return new EventHandler() {
+      public EventHandler<Event> getEventHandler() {
+        return new EventHandler<Event>() {
           @Override
           public void handle(Event event) {
             // do nothing

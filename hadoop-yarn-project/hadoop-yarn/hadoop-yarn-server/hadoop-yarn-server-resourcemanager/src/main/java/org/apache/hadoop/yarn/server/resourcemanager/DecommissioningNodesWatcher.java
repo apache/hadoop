@@ -385,9 +385,9 @@ public class DecommissioningNodesWatcher {
     if (!LOG.isDebugEnabled() || decomNodes.size() == 0) {
       return;
     }
-    StringBuilder sb = new StringBuilder();
     long now = mclock.getTime();
     for (DecommissioningNodeContext d : decomNodes.values()) {
+      StringBuilder sb = new StringBuilder();
       DecommissioningNodeStatus s = checkDecommissioningStatus(d.nodeId);
       sb.append(String.format(
           "%n  %-34s %4ds fresh:%3ds containers:%2d %14s",
@@ -413,8 +413,8 @@ public class DecommissioningNodesWatcher {
               (mclock.getTime() - rmApp.getStartTime()) / 1000));
         }
       }
+      LOG.debug("Decommissioning node: " + sb.toString());
     }
-    LOG.info("Decommissioning Nodes: " + sb.toString());
   }
 
   // Read possible new DECOMMISSIONING_TIMEOUT_KEY from yarn-site.xml.

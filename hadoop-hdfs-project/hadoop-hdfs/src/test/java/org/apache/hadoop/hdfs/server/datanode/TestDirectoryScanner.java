@@ -54,6 +54,8 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -589,8 +591,15 @@ public class TestDirectoryScanner {
           100);
       DataNode dataNode = cluster.getDataNodes().get(0);
 
-      createFile(GenericTestUtils.getMethodName(),
-          BLOCK_LENGTH * blocks, false);
+      final int maxBlocksPerFile = (int) DFSConfigKeys
+          .DFS_NAMENODE_MAX_BLOCKS_PER_FILE_DEFAULT;
+      int numBlocksToCreate = blocks;
+      while (numBlocksToCreate > 0) {
+        final int toCreate = Math.min(maxBlocksPerFile, numBlocksToCreate);
+        createFile(GenericTestUtils.getMethodName() + numBlocksToCreate,
+            BLOCK_LENGTH * toCreate, false);
+        numBlocksToCreate -= toCreate;
+      }
 
       float ratio = 0.0f;
       int retries = maxRetries;
@@ -891,12 +900,34 @@ public class TestDirectoryScanner {
     }
 
     @Override
+    public byte[] loadLastPartialChunkChecksum(
+        File blockFile, File metaFile) throws IOException {
+      return null;
+    }
+
+    @Override
     public LinkedList<ScanInfo> compileReport(String bpid,
         LinkedList<ScanInfo> report, ReportCompiler reportCompiler)
         throws InterruptedException, IOException {
       return null;
     }
 
+    @Override
+    public FileIoProvider getFileIoProvider() {
+      return null;
+    }
+
+    @Override
+    public DataNodeVolumeMetrics getMetrics() {
+      return null;
+    }
+
+
+    @Override
+    public VolumeCheckResult check(VolumeCheckContext context)
+        throws Exception {
+      return VolumeCheckResult.HEALTHY;
+    }
   }
 
   private final static TestFsVolumeSpi TEST_VOLUME = new TestFsVolumeSpi();

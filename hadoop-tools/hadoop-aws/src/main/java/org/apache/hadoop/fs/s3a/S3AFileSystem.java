@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.Objects;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -44,6 +46,7 @@ import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
@@ -52,6 +55,8 @@ import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
+import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.Copy;
@@ -129,14 +134,15 @@ public class S3AFileSystem extends FileSystem {
   private long partSize;
   private boolean enableMultiObjectsDelete;
   private TransferManager transfers;
-  private ListeningExecutorService threadPoolExecutor;
+  private ListeningExecutorService boundedThreadPool;
+  private ExecutorService unboundedThreadPool;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
   private static final Logger PROGRESS =
       LoggerFactory.getLogger("org.apache.hadoop.fs.s3a.S3AFileSystem.Progress");
   private LocalDirAllocator directoryAllocator;
   private CannedAccessControlList cannedACL;
-  private String serverSideEncryptionAlgorithm;
+  private S3AEncryptionMethods serverSideEncryptionAlgorithm;
   private S3AInstrumentation instrumentation;
   private S3AStorageStatistics storageStatistics;
   private long readAhead;
@@ -153,21 +159,28 @@ public class S3AFileSystem extends FileSystem {
   /** Called after a new FileSystem instance is constructed.
    * @param name a uri whose authority section names the host, port, etc.
    *   for this FileSystem
-   * @param conf the configuration
+   * @param originalConf the configuration to use for the FS. The
+   * bucket-specific options are patched over the base ones before any use is
+   * made of the config.
    */
-  public void initialize(URI name, Configuration conf) throws IOException {
+  public void initialize(URI name, Configuration originalConf)
+      throws IOException {
+    uri = S3xLoginHelper.buildFSURI(name);
+    // get the host; this is guaranteed to be non-null, non-empty
+    bucket = name.getHost();
+    // clone the configuration into one with propagated bucket options
+    Configuration conf = propagateBucketOptions(originalConf, bucket);
+    patchSecurityCredentialProviders(conf);
     super.initialize(name, conf);
     setConf(conf);
     try {
       instrumentation = new S3AInstrumentation(name);
 
-      uri = S3xLoginHelper.buildFSURI(name);
       // Username is the current user at the time the FS was instantiated.
       username = UserGroupInformation.getCurrentUser().getShortUserName();
       workingDir = new Path("/user", username)
           .makeQualified(this.uri, this.getWorkingDirectory());
 
-      bucket = name.getHost();
 
       Class<? extends S3ClientFactory> s3ClientFactoryClass = conf.getClass(
           S3_CLIENT_FACTORY_IMPL, DEFAULT_S3_CLIENT_FACTORY_IMPL,
@@ -207,11 +220,17 @@ public class S3AFileSystem extends FileSystem {
           MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS, 1);
       long keepAliveTime = longOption(conf, KEEPALIVE_TIME,
           DEFAULT_KEEPALIVE_TIME, 0);
-      threadPoolExecutor = BlockingThreadPoolExecutorService.newInstance(
+      boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
           maxThreads,
           maxThreads + totalTasks,
           keepAliveTime, TimeUnit.SECONDS,
           "s3a-transfer-shared");
+      unboundedThreadPool = new ThreadPoolExecutor(
+          maxThreads, Integer.MAX_VALUE,
+          keepAliveTime, TimeUnit.SECONDS,
+          new LinkedBlockingQueue<Runnable>(),
+          BlockingThreadPoolExecutorService.newDaemonThreadFactory(
+              "s3a-transfer-unbounded"));
 
       initTransferManager();
 
@@ -221,8 +240,17 @@ public class S3AFileSystem extends FileSystem {
 
       initMultipartUploads(conf);
 
-      serverSideEncryptionAlgorithm =
-          conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM);
+      serverSideEncryptionAlgorithm = S3AEncryptionMethods.getMethod(
+          conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM));
+      if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
+          StringUtils.isBlank(getServerSideEncryptionKey(getConf()))) {
+        throw new IOException(Constants.SSE_C_NO_KEY_ERROR);
+      }
+      if(S3AEncryptionMethods.SSE_S3.equals(serverSideEncryptionAlgorithm) &&
+          StringUtils.isNotBlank(getServerSideEncryptionKey(
+            getConf()))) {
+        throw new IOException(Constants.SSE_S3_WITH_KEY_ERROR);
+      }
       LOG.debug("Using encryption {}", serverSideEncryptionAlgorithm);
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
@@ -289,7 +317,7 @@ public class S3AFileSystem extends FileSystem {
     transferConfiguration.setMultipartCopyPartSize(partSize);
     transferConfiguration.setMultipartCopyThreshold(multiPartThreshold);
 
-    transfers = new TransferManager(s3, threadPoolExecutor);
+    transfers = new TransferManager(s3, unboundedThreadPool);
     transfers.setConfiguration(transferConfiguration);
   }
 
@@ -508,9 +536,18 @@ public class S3AFileSystem extends FileSystem {
           + " because it is a directory");
     }
 
-    return new FSDataInputStream(new S3AInputStream(bucket, pathToKey(f),
-      fileStatus.getLen(), s3, statistics, instrumentation, readAhead,
-        inputPolicy));
+    return new FSDataInputStream(
+        new S3AInputStream(new S3ObjectAttributes(
+          bucket,
+          pathToKey(f),
+          serverSideEncryptionAlgorithm,
+          getServerSideEncryptionKey(getConf())),
+            fileStatus.getLen(),
+            s3,
+            statistics,
+            instrumentation,
+            readAhead,
+            inputPolicy));
   }
 
   /**
@@ -558,7 +595,7 @@ public class S3AFileSystem extends FileSystem {
       output = new FSDataOutputStream(
           new S3ABlockOutputStream(this,
               key,
-              new SemaphoredDelegatingExecutor(threadPoolExecutor,
+              new SemaphoredDelegatingExecutor(boundedThreadPool,
                   blockOutputActiveBlocks, true),
               progress,
               partSize,
@@ -630,10 +667,12 @@ public class S3AFileSystem extends FileSystem {
    * there is no Progressable passed in, this can time out jobs.
    *
    * Note: This implementation differs with other S3 drivers. Specifically:
+   * <pre>
    *       Fails if src is a file and dst is a directory.
    *       Fails if src is a directory and dst is a file.
    *       Fails if the parent of dst does not exist or is a file.
    *       Fails if dst is a directory that is not empty.
+   * </pre>
    *
    * @param src path to be renamed
    * @param dst new path after rename
@@ -645,58 +684,86 @@ public class S3AFileSystem extends FileSystem {
       return innerRename(src, dst);
     } catch (AmazonClientException e) {
       throw translateException("rename(" + src +", " + dst + ")", src, e);
+    } catch (RenameFailedException e) {
+      LOG.debug(e.getMessage());
+      return e.getExitCode();
+    } catch (FileNotFoundException e) {
+      LOG.debug(e.toString());
+      return false;
     }
   }
 
   /**
    * The inner rename operation. See {@link #rename(Path, Path)} for
    * the description of the operation.
+   * This operation throws an exception on any failure which needs to be
+   * reported and downgraded to a failure. That is: if a rename
    * @param src path to be renamed
    * @param dst new path after rename
-   * @return true if rename is successful
+   * @throws RenameFailedException if some criteria for a state changing
+   * rename was not met. This means work didn't happen; it's not something
+   * which is reported upstream to the FileSystem APIs, for which the semantics
+   * of "false" are pretty vague.
+   * @throws FileNotFoundException there's no source file.
    * @throws IOException on IO failure.
    * @throws AmazonClientException on failures inside the AWS SDK
    */
-  private boolean innerRename(Path src, Path dst) throws IOException,
-      AmazonClientException {
+  private boolean innerRename(Path src, Path dst)
+      throws RenameFailedException, FileNotFoundException, IOException,
+        AmazonClientException {
     LOG.debug("Rename path {} to {}", src, dst);
     incrementStatistic(INVOCATION_RENAME);
 
     String srcKey = pathToKey(src);
     String dstKey = pathToKey(dst);
 
-    if (srcKey.isEmpty() || dstKey.isEmpty()) {
-      LOG.debug("rename: source {} or dest {}, is empty", srcKey, dstKey);
-      return false;
+    if (srcKey.isEmpty()) {
+      throw new RenameFailedException(src, dst, "source is root directory");
+    }
+    if (dstKey.isEmpty()) {
+      throw new RenameFailedException(src, dst, "dest is root directory");
     }
 
-    S3AFileStatus srcStatus;
-    try {
-      srcStatus = getFileStatus(src);
-    } catch (FileNotFoundException e) {
-      LOG.error("rename: src not found {}", src);
-      return false;
-    }
+    // get the source file status; this raises a FNFE if there is no source
+    // file.
+    S3AFileStatus srcStatus = getFileStatus(src);
 
     if (srcKey.equals(dstKey)) {
-      LOG.debug("rename: src and dst refer to the same file or directory: {}",
+      LOG.debug("rename: src and dest refer to the same file or directory: {}",
           dst);
-      return srcStatus.isFile();
+      throw new RenameFailedException(src, dst,
+          "source and dest refer to the same file or directory")
+          .withExitCode(srcStatus.isFile());
     }
 
     S3AFileStatus dstStatus = null;
     try {
       dstStatus = getFileStatus(dst);
-
-      if (srcStatus.isDirectory() && dstStatus.isFile()) {
-        LOG.debug("rename: src {} is a directory and dst {} is a file",
-            src, dst);
-        return false;
+      // if there is no destination entry, an exception is raised.
+      // hence this code sequence can assume that there is something
+      // at the end of the path; the only detail being what it is and
+      // whether or not it can be the destination of the rename.
+      if (srcStatus.isDirectory()) {
+        if (dstStatus.isFile()) {
+          throw new RenameFailedException(src, dst,
+              "source is a directory and dest is a file")
+              .withExitCode(srcStatus.isFile());
+        } else if (!dstStatus.isEmptyDirectory()) {
+          throw new RenameFailedException(src, dst,
+              "Destination is a non-empty directory")
+              .withExitCode(false);
+        }
+        // at this point the destination is an empty directory
+      } else {
+        // source is a file. The destination must be a directory,
+        // empty or not
+        if (dstStatus.isFile()) {
+          throw new RenameFailedException(src, dst,
+              "Cannot rename onto an existing file")
+              .withExitCode(false);
+        }
       }
 
-      if (dstStatus.isDirectory() && !dstStatus.isEmptyDirectory()) {
-        return false;
-      }
     } catch (FileNotFoundException e) {
       LOG.debug("rename: destination path {} not found", dst);
       // Parent must exist
@@ -705,12 +772,12 @@ public class S3AFileSystem extends FileSystem {
         try {
           S3AFileStatus dstParentStatus = getFileStatus(dst.getParent());
           if (!dstParentStatus.isDirectory()) {
-            return false;
+            throw new RenameFailedException(src, dst,
+                "destination parent is not a directory");
           }
         } catch (FileNotFoundException e2) {
-          LOG.debug("rename: destination path {} has no parent {}",
-              dst, parent);
-          return false;
+          throw new RenameFailedException(src, dst,
+              "destination has no parent ");
         }
       }
     }
@@ -745,9 +812,8 @@ public class S3AFileSystem extends FileSystem {
 
       //Verify dest is not a child of the source directory
       if (dstKey.startsWith(srcKey)) {
-        LOG.debug("cannot rename a directory {}" +
-              " to a subdirectory of self: {}", srcKey, dstKey);
-        return false;
+        throw new RenameFailedException(srcKey, dstKey,
+            "cannot rename a directory to a subdirectory o fitself ");
       }
 
       List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>();
@@ -857,7 +923,14 @@ public class S3AFileSystem extends FileSystem {
    */
   protected ObjectMetadata getObjectMetadata(String key) {
     incrementStatistic(OBJECT_METADATA_REQUESTS);
-    ObjectMetadata meta = s3.getObjectMetadata(bucket, key);
+    GetObjectMetadataRequest request =
+        new GetObjectMetadataRequest(bucket, key);
+    //SSE-C requires to be filled in if enabled for object metadata
+    if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
+        StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))){
+      request.setSSECustomerKey(generateSSECustomerKey());
+    }
+    ObjectMetadata meta = s3.getObjectMetadata(request);
     incrementReadOperations();
     return meta;
   }
@@ -949,8 +1022,10 @@ public class S3AFileSystem extends FileSystem {
    */
   public PutObjectRequest newPutObjectRequest(String key,
       ObjectMetadata metadata, File srcfile) {
+    Preconditions.checkNotNull(srcfile);
     PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key,
         srcfile);
+    setOptionalPutRequestParameters(putObjectRequest);
     putObjectRequest.setCannedAcl(cannedACL);
     putObjectRequest.setMetadata(metadata);
     return putObjectRequest;
@@ -965,10 +1040,12 @@ public class S3AFileSystem extends FileSystem {
    * @param inputStream source data.
    * @return the request
    */
-  PutObjectRequest newPutObjectRequest(String key,
+  private PutObjectRequest newPutObjectRequest(String key,
       ObjectMetadata metadata, InputStream inputStream) {
+    Preconditions.checkNotNull(inputStream);
     PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key,
         inputStream, metadata);
+    setOptionalPutRequestParameters(putObjectRequest);
     putObjectRequest.setCannedAcl(cannedACL);
     return putObjectRequest;
   }
@@ -981,9 +1058,7 @@ public class S3AFileSystem extends FileSystem {
    */
   public ObjectMetadata newObjectMetadata() {
     final ObjectMetadata om = new ObjectMetadata();
-    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
-      om.setSSEAlgorithm(serverSideEncryptionAlgorithm);
-    }
+    setOptionalObjectMetadata(om);
     return om;
   }
 
@@ -1004,12 +1079,16 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-   * PUT an object, incrementing the put requests and put bytes
+   * Start a transfer-manager managed async PUT of an object,
+   * incrementing the put requests and put bytes
    * counters.
    * It does not update the other counters,
    * as existing code does that as progress callbacks come in.
    * Byte length is calculated from the file length, or, if there is no
    * file, from the content length of the header.
+   * Because the operation is async, any stream supplied in the request
+   * must reference data (files, buffers) which stay valid until the upload
+   * completes.
    * @param putObjectRequest the request
    * @return the upload initiated
    */
@@ -1035,6 +1114,7 @@ public class S3AFileSystem extends FileSystem {
    * PUT an object directly (i.e. not via the transfer manager).
    * Byte length is calculated from the file length, or, if there is no
    * file, from the content length of the header.
+   * <i>Important: this call will close any input stream in the request.</i>
    * @param putObjectRequest the request
    * @return the upload initiated
    * @throws AmazonClientException on problems
@@ -1060,7 +1140,8 @@ public class S3AFileSystem extends FileSystem {
 
   /**
    * Upload part of a multi-partition file.
-   * Increments the write and put counters
+   * Increments the write and put counters.
+   * <i>Important: this call does not close any input stream in the request.</i>
    * @param request request
    * @return the result of the operation.
    * @throws AmazonClientException on problems
@@ -1717,11 +1798,10 @@ public class S3AFileSystem extends FileSystem {
     try {
       ObjectMetadata srcom = getObjectMetadata(srcKey);
       ObjectMetadata dstom = cloneObjectMetadata(srcom);
-      if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
-        dstom.setSSEAlgorithm(serverSideEncryptionAlgorithm);
-      }
+      setOptionalObjectMetadata(dstom);
       CopyObjectRequest copyObjectRequest =
           new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
+      setOptionalCopyObjectRequestParameters(copyObjectRequest);
       copyObjectRequest.setCannedAccessControlList(cannedACL);
       copyObjectRequest.setNewObjectMetadata(dstom);
 
@@ -1751,6 +1831,83 @@ public class S3AFileSystem extends FileSystem {
       throw translateException("copyFile("+ srcKey+ ", " + dstKey + ")",
           srcKey, e);
     }
+  }
+
+  protected void setOptionalMultipartUploadRequestParameters(
+      InitiateMultipartUploadRequest req) {
+    switch (serverSideEncryptionAlgorithm) {
+    case SSE_KMS:
+      req.setSSEAwsKeyManagementParams(generateSSEAwsKeyParams());
+      break;
+    case SSE_C:
+      if (StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))) {
+        //at the moment, only supports copy using the same key
+        req.setSSECustomerKey(generateSSECustomerKey());
+      }
+      break;
+    default:
+    }
+  }
+
+
+  protected void setOptionalCopyObjectRequestParameters(
+      CopyObjectRequest copyObjectRequest) throws IOException {
+    switch (serverSideEncryptionAlgorithm) {
+    case SSE_KMS:
+      copyObjectRequest.setSSEAwsKeyManagementParams(
+          generateSSEAwsKeyParams()
+      );
+      break;
+    case SSE_C:
+      if (StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))) {
+        //at the moment, only supports copy using the same key
+        SSECustomerKey customerKey = generateSSECustomerKey();
+        copyObjectRequest.setSourceSSECustomerKey(customerKey);
+        copyObjectRequest.setDestinationSSECustomerKey(customerKey);
+      }
+      break;
+    default:
+    }
+  }
+
+  protected void setOptionalPutRequestParameters(PutObjectRequest request) {
+    switch (serverSideEncryptionAlgorithm) {
+    case SSE_KMS:
+      request.setSSEAwsKeyManagementParams(generateSSEAwsKeyParams());
+      break;
+    case SSE_C:
+      if (StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))) {
+        request.setSSECustomerKey(generateSSECustomerKey());
+      }
+      break;
+    default:
+    }
+  }
+
+  private void setOptionalObjectMetadata(ObjectMetadata metadata) {
+    if (S3AEncryptionMethods.SSE_S3.equals(serverSideEncryptionAlgorithm)) {
+      metadata.setSSEAlgorithm(serverSideEncryptionAlgorithm.getMethod());
+    }
+  }
+
+  private SSEAwsKeyManagementParams generateSSEAwsKeyParams() {
+    //Use specified key, otherwise default to default master aws/s3 key by AWS
+    SSEAwsKeyManagementParams sseAwsKeyManagementParams =
+        new SSEAwsKeyManagementParams();
+    if (StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))) {
+      sseAwsKeyManagementParams =
+        new SSEAwsKeyManagementParams(
+          getServerSideEncryptionKey(getConf())
+        );
+    }
+    return sseAwsKeyManagementParams;
+  }
+
+  private SSECustomerKey generateSSECustomerKey() {
+    SSECustomerKey customerKey = new SSECustomerKey(
+        getServerSideEncryptionKey(getConf())
+    );
+    return customerKey;
   }
 
   /**
@@ -1921,7 +2078,8 @@ public class S3AFileSystem extends FileSystem {
     if (blockFactory != null) {
       sb.append(", blockFactory=").append(blockFactory);
     }
-    sb.append(", executor=").append(threadPoolExecutor);
+    sb.append(", boundedExecutor=").append(boundedThreadPool);
+    sb.append(", unboundedExecutor=").append(unboundedThreadPool);
     sb.append(", statistics {")
         .append(statistics)
         .append("}");
@@ -1992,6 +2150,7 @@ public class S3AFileSystem extends FileSystem {
    * {@inheritDoc}
    */
   @Override
+  @SuppressWarnings("deprecation")
   public boolean isDirectory(Path f) throws IOException {
     incrementStatistic(INVOCATION_IS_DIRECTORY);
     return super.isDirectory(f);
@@ -2002,6 +2161,7 @@ public class S3AFileSystem extends FileSystem {
    * {@inheritDoc}
    */
   @Override
+  @SuppressWarnings("deprecation")
   public boolean isFile(Path f) throws IOException {
     incrementStatistic(INVOCATION_IS_FILE);
     return super.isFile(f);
@@ -2157,14 +2317,28 @@ public class S3AFileSystem extends FileSystem {
 
     /**
      * Create a {@link PutObjectRequest} request.
-     * The metadata is assumed to have been configured with the size of the
-     * operation.
+     * If {@code length} is set, the metadata is configured with the size of
+     * the upload.
      * @param inputStream source data.
      * @param length size, if known. Use -1 for not known
      * @return the request
      */
     PutObjectRequest newPutRequest(InputStream inputStream, long length) {
-      return newPutObjectRequest(key, newObjectMetadata(length), inputStream);
+      PutObjectRequest request = newPutObjectRequest(key,
+          newObjectMetadata(length), inputStream);
+      return request;
+    }
+
+    /**
+     * Create a {@link PutObjectRequest} request to upload a file.
+     * @param sourceFile source file
+     * @return the request
+     */
+    PutObjectRequest newPutRequest(File sourceFile) {
+      int length = (int) sourceFile.length();
+      PutObjectRequest request = newPutObjectRequest(key,
+          newObjectMetadata(length), sourceFile);
+      return request;
     }
 
     /**
@@ -2205,6 +2379,7 @@ public class S3AFileSystem extends FileSystem {
               key,
               newObjectMetadata(-1));
       initiateMPURequest.setCannedACL(cannedACL);
+      setOptionalMultipartUploadRequestParameters(initiateMPURequest);
       try {
         return s3.initiateMultipartUpload(initiateMPURequest)
             .getUploadId();
@@ -2226,6 +2401,8 @@ public class S3AFileSystem extends FileSystem {
       Preconditions.checkNotNull(partETags);
       Preconditions.checkArgument(!partETags.isEmpty(),
           "No partitions have been uploaded");
+      LOG.debug("Completing multipart upload {} with {} parts",
+          uploadId, partETags.size());
       return s3.completeMultipartUpload(
           new CompleteMultipartUploadRequest(bucket,
               key,
@@ -2236,42 +2413,51 @@ public class S3AFileSystem extends FileSystem {
     /**
      * Abort a multipart upload operation.
      * @param uploadId multipart operation Id
-     * @return the result
      * @throws AmazonClientException on problems.
      */
     void abortMultipartUpload(String uploadId) throws AmazonClientException {
+      LOG.debug("Aborting multipart upload {}", uploadId);
       s3.abortMultipartUpload(
           new AbortMultipartUploadRequest(bucket, key, uploadId));
     }
 
     /**
      * Create and initialize a part request of a multipart upload.
+     * Exactly one of: {@code uploadStream} or {@code sourceFile}
+     * must be specified.
      * @param uploadId ID of ongoing upload
-     * @param uploadStream source of data to upload
      * @param partNumber current part number of the upload
      * @param size amount of data
+     * @param uploadStream source of data to upload
+     * @param sourceFile optional source file.
      * @return the request.
      */
     UploadPartRequest newUploadPartRequest(String uploadId,
-        InputStream uploadStream,
-        int partNumber,
-        int size) {
+        int partNumber, int size, InputStream uploadStream, File sourceFile) {
       Preconditions.checkNotNull(uploadId);
-      Preconditions.checkNotNull(uploadStream);
+      // exactly one source must be set; xor verifies this
+      Preconditions.checkArgument((uploadStream != null) ^ (sourceFile != null),
+          "Data source");
       Preconditions.checkArgument(size > 0, "Invalid partition size %s", size);
-      Preconditions.checkArgument(partNumber> 0 && partNumber <=10000,
+      Preconditions.checkArgument(partNumber > 0 && partNumber <= 10000,
           "partNumber must be between 1 and 10000 inclusive, but is %s",
           partNumber);
 
       LOG.debug("Creating part upload request for {} #{} size {}",
           uploadId, partNumber, size);
-      return new UploadPartRequest()
+      UploadPartRequest request = new UploadPartRequest()
           .withBucketName(bucket)
           .withKey(key)
           .withUploadId(uploadId)
-          .withInputStream(uploadStream)
           .withPartNumber(partNumber)
           .withPartSize(size);
+      if (uploadStream != null) {
+        // there's an upload stream. Bind to it.
+        request.setInputStream(uploadStream);
+      } else {
+        request.setFile(sourceFile);
+      }
+      return request;
     }
 
     /**
@@ -2285,6 +2471,21 @@ public class S3AFileSystem extends FileSystem {
       sb.append(", key='").append(key).append('\'');
       sb.append('}');
       return sb.toString();
+    }
+
+    /**
+     * PUT an object directly (i.e. not via the transfer manager).
+     * @param putObjectRequest the request
+     * @return the upload initiated
+     * @throws IOException on problems
+     */
+    PutObjectResult putObject(PutObjectRequest putObjectRequest)
+        throws IOException {
+      try {
+        return putObjectDirect(putObjectRequest);
+      } catch (AmazonClientException e) {
+        throw translateException("put", putObjectRequest.getKey(), e);
+      }
     }
   }
 

@@ -47,6 +47,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -99,6 +100,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Layout;
@@ -106,6 +108,7 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.SimpleLayout;
 import org.apache.log4j.WriterAppender;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -674,5 +677,41 @@ public class TestYARNRunner {
 
     return yarnRunner.createApplicationSubmissionContext(jobConf,
         testWorkDir.toString(), new Credentials());
+  }
+
+  // Test configs that match regex expression should be set in
+  // containerLaunchContext
+  @Test
+  public void testSendJobConf() throws IOException {
+    JobConf jobConf = new JobConf();
+    jobConf.set("dfs.nameservices", "mycluster1,mycluster2");
+    jobConf.set("dfs.namenode.rpc-address.mycluster2.nn1", "123.0.0.1");
+    jobConf.set("dfs.namenode.rpc-address.mycluster2.nn2", "123.0.0.2");
+    jobConf.set("dfs.ha.namenodes.mycluster2", "nn1,nn2");
+    jobConf.set("dfs.client.failover.proxy.provider.mycluster2", "provider");
+    jobConf.set("hadoop.tmp.dir", "testconfdir");
+    jobConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "kerberos");
+    jobConf.set("mapreduce.job.send-token-conf",
+        "dfs.nameservices|^dfs.namenode.rpc-address.*$|^dfs.ha.namenodes.*$"
+            + "|^dfs.client.failover.proxy.provider.*$"
+            + "|dfs.namenode.kerberos.principal");
+    UserGroupInformation.setConfiguration(jobConf);
+
+    YARNRunner yarnRunner = new YARNRunner(jobConf);
+    ApplicationSubmissionContext submissionContext =
+        buildSubmitContext(yarnRunner, jobConf);
+    Configuration confSent = BuilderUtils.parseTokensConf(submissionContext);
+
+    // configs that match regex should be included
+    Assert.assertTrue(confSent.get("dfs.namenode.rpc-address.mycluster2.nn1")
+        .equals("123.0.0.1"));
+    Assert.assertTrue(confSent.get("dfs.namenode.rpc-address.mycluster2.nn2")
+        .equals("123.0.0.2"));
+
+    // configs that aren't matching regex should not be included
+    Assert.assertTrue(confSent.get("hadoop.tmp.dir") == null || !confSent
+        .get("hadoop.tmp.dir").equals("testconfdir"));
+    UserGroupInformation.reset();
   }
 }

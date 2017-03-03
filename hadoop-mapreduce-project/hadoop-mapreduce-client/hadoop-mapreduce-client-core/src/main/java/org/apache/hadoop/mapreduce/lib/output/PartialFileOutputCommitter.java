@@ -97,7 +97,7 @@ public class PartialFileOutputCommitter
     for (int i = 0; i < taid.getId(); ++i) {
       TaskAttemptID oldId = new TaskAttemptID(tid, i);
       Path pTask = new Path(pCommit, oldId.toString());
-      if (fs.exists(pTask) && !fs.delete(pTask, true)) {
+      if (!fs.delete(pTask, true) && fs.exists(pTask)) {
         throw new IOException("Failed to delete " + pTask);
       }
     }

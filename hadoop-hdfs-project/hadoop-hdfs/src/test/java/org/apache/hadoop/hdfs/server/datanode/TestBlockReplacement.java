@@ -208,6 +208,67 @@ public class TestBlockReplacement {
     }
   }
 
+  /**
+   * Test to verify that the copying of pinned block to a different destination
+   * datanode will throw IOException with error code Status.ERROR_BLOCK_PINNED.
+   *
+   */
+  @Test(timeout = 90000)
+  public void testBlockReplacementWithPinnedBlocks() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+
+    // create only one datanode in the cluster with DISK and ARCHIVE storage
+    // types.
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
+        .storageTypes(
+            new StorageType[] {StorageType.DISK, StorageType.ARCHIVE})
+        .build();
+
+    try {
+      cluster.waitActive();
+
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      String fileName = "/testBlockReplacementWithPinnedBlocks/file";
+      final Path file = new Path(fileName);
+      DFSTestUtil.createFile(dfs, file, 1024, (short) 1, 1024);
+
+      LocatedBlock lb = dfs.getClient().getLocatedBlocks(fileName, 0).get(0);
+      DatanodeInfo[] oldNodes = lb.getLocations();
+      assertEquals("Wrong block locations", oldNodes.length, 1);
+      DatanodeInfo source = oldNodes[0];
+      ExtendedBlock b = lb.getBlock();
+
+      DatanodeInfo[] datanodes = dfs.getDataNodeStats();
+      DatanodeInfo destin = null;
+      for (DatanodeInfo datanodeInfo : datanodes) {
+        // choose different destination node
+        if (!oldNodes[0].equals(datanodeInfo)) {
+          destin = datanodeInfo;
+          break;
+        }
+      }
+
+      assertNotNull("Failed to choose destination datanode!", destin);
+
+      assertFalse("Source and destin datanode should be different",
+          source.equals(destin));
+
+      // Mock FsDatasetSpi#getPinning to show that the block is pinned.
+      for (int i = 0; i < cluster.getDataNodes().size(); i++) {
+        DataNode dn = cluster.getDataNodes().get(i);
+        LOG.info("Simulate block pinning in datanode " + dn);
+        DataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
+      }
+
+      // Block movement to a different datanode should fail as the block is
+      // pinned.
+      assertTrue("Status code mismatches!", replaceBlock(b, source, source,
+          destin, StorageType.ARCHIVE, Status.ERROR_BLOCK_PINNED));
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   @Test
   public void testBlockMoveAcrossStorageInSameNode() throws Exception {
     final Configuration conf = new HdfsConfiguration();
@@ -236,7 +297,7 @@ public class TestBlockReplacement {
       // move block to ARCHIVE by using same DataNodeInfo for source, proxy and
       // destination so that movement happens within datanode 
       assertTrue(replaceBlock(block, source, source, source,
-          StorageType.ARCHIVE));
+          StorageType.ARCHIVE, Status.SUCCESS));
       
       // wait till namenode notified
       Thread.sleep(3000);
@@ -311,7 +372,7 @@ public class TestBlockReplacement {
   private boolean replaceBlock( ExtendedBlock block, DatanodeInfo source,
       DatanodeInfo sourceProxy, DatanodeInfo destination) throws IOException {
     return replaceBlock(block, source, sourceProxy, destination,
-        StorageType.DEFAULT);
+        StorageType.DEFAULT, Status.SUCCESS);
   }
 
   /*
@@ -322,7 +383,8 @@ public class TestBlockReplacement {
       DatanodeInfo source,
       DatanodeInfo sourceProxy,
       DatanodeInfo destination,
-      StorageType targetStorageType) throws IOException, SocketException {
+      StorageType targetStorageType,
+      Status opStatus) throws IOException, SocketException {
     Socket sock = new Socket();
     try {
       sock.connect(NetUtils.createSocketAddr(destination.getXferAddr()),
@@ -342,7 +404,7 @@ public class TestBlockReplacement {
       while (proto.getStatus() == Status.IN_PROGRESS) {
         proto = BlockOpResponseProto.parseDelimitedFrom(reply);
       }
-      return proto.getStatus() == Status.SUCCESS;
+      return proto.getStatus() == opStatus;
     } finally {
       sock.close();
     }

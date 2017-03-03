@@ -21,7 +21,7 @@ package org.apache.hadoop.metrics2.filter;
 import java.util.Map;
 
 import com.google.common.collect.Maps;
-import org.apache.commons.configuration.SubsetConfiguration;
+import org.apache.commons.configuration2.SubsetConfiguration;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsException;

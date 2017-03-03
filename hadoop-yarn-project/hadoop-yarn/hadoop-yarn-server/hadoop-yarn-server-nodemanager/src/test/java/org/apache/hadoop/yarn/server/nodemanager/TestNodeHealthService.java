@@ -163,7 +163,7 @@ public class TestNodeHealthService {
     LOG.info("Checking Healthy--->timeout");
     Assert.assertFalse("Node health status reported healthy even after timeout",
         healthStatus.getIsNodeHealthy());
-    Assert.assertTrue("Node script time out message not propogated",
+    Assert.assertTrue("Node script time out message not propagated",
         healthStatus.getHealthReport().equals(
             NodeHealthScriptRunner.NODE_HEALTH_SCRIPT_TIMED_OUT_MSG
             + NodeHealthCheckerService.SEPARATOR

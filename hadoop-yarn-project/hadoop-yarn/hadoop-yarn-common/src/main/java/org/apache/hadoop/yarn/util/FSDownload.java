@@ -259,7 +259,7 @@ public class FSDownload implements Callable<Path> {
     if (resource.getVisibility() == LocalResourceVisibility.PUBLIC) {
       if (!isPublic(sourceFs, sCopy, sStat, statCache)) {
         throw new IOException("Resource " + sCopy +
-            " is not publicly accessable and as such cannot be part of the" +
+            " is not publicly accessible and as such cannot be part of the" +
             " public cache.");
       }
     }

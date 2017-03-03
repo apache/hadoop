@@ -90,6 +90,33 @@ public class FairSchedulerPage extends RmView {
     }
   }
   
+  static class ParentQueueBlock extends HtmlBlock {
+	    final FairSchedulerQueueInfo qinfo;
+
+    @Inject ParentQueueBlock(ViewContext ctx, FSQInfo info) {
+      super(ctx);
+      qinfo = (FairSchedulerQueueInfo)info.qinfo;
+    }
+
+    @Override
+    protected void render(Block html) {
+      ResponseInfo ri = info("\'" + qinfo.getQueueName() + "\' Queue Status").
+          _("Used Resources:", qinfo.getUsedResources().toString()).
+          _("Min Resources:", qinfo.getMinResources().toString()).
+          _("Max Resources:", qinfo.getMaxResources().toString());
+      int maxApps = qinfo.getMaxApplications();
+      if (maxApps < Integer.MAX_VALUE) {
+          ri._("Max Running Applications:", qinfo.getMaxApplications());
+      }
+      ri._(STEADY_FAIR_SHARE + ":", qinfo.getSteadyFairShare().toString());
+      ri._(INSTANTANEOUS_FAIR_SHARE + ":", qinfo.getFairShare().toString());
+      html._(InfoBlock.class);
+
+      // clear the info contents so this queue's info doesn't accumulate into another queue's info
+      ri.clear();
+    }
+  }
+
   static class QueueBlock extends HtmlBlock {
     final FSQInfo fsqinfo;
 
@@ -127,6 +154,7 @@ public class FairSchedulerPage extends RmView {
         if (info instanceof FairSchedulerLeafQueueInfo) {
           li.ul("#lq").li()._(LeafQueueBlock.class)._()._();
         } else {
+          li.ul("#lq").li()._(ParentQueueBlock.class)._()._();
           li._(QueueBlock.class);
         }
         li._();

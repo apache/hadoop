@@ -279,8 +279,8 @@ public class CopyCommitter extends FileOutputCommitter {
         if (srcAvailable && trgtRelPath.equals(srcRelPath)) continue;
 
         // Target doesn't exist at source. Delete.
-        boolean result = (!targetFS.exists(trgtFileStatus.getPath()) ||
-            targetFS.delete(trgtFileStatus.getPath(), true));
+        boolean result = targetFS.delete(trgtFileStatus.getPath(), true)
+            || !targetFS.exists(trgtFileStatus.getPath());
         if (result) {
           LOG.info("Deleted " + trgtFileStatus.getPath() + " - Missing at source");
           deletedEntries++;

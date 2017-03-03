@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.datanode.metrics;
 
 import static org.apache.hadoop.metrics2.impl.MsInfo.SessionId;
-import static org.apache.hadoop.metrics2.lib.Interns.info;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -135,8 +134,14 @@ public class DataNodeMetrics {
   MutableCounterLong ecReconstructionTasks;
   @Metric("Count of erasure coding failed reconstruction tasks")
   MutableCounterLong ecFailedReconstructionTasks;
-  // Nanoseconds spent by decoding tasks.
+  @Metric("Nanoseconds spent by decoding tasks")
   MutableCounterLong ecDecodingTimeNanos;
+  @Metric("Bytes read by erasure coding worker")
+  MutableCounterLong ecReconstructionBytesRead;
+  @Metric("Bytes written by erasure coding worker")
+  MutableCounterLong ecReconstructionBytesWritten;
+  @Metric("Bytes remote read by erasure coding worker")
+  MutableCounterLong ecReconstructionRemoteBytesRead;
 
   final MetricsRegistry registry = new MetricsRegistry("datanode");
   final String name;
@@ -156,9 +161,6 @@ public class DataNodeMetrics {
     sendDataPacketTransferNanosQuantiles = new MutableQuantiles[len];
     ramDiskBlocksEvictionWindowMsQuantiles = new MutableQuantiles[len];
     ramDiskBlocksLazyPersistWindowMsQuantiles = new MutableQuantiles[len];
-    ecDecodingTimeNanos = registry.newCounter(
-        info("ecDecodingTimeNanos", "Nanoseconds spent by decoding tasks"),
-        (long) 0);
 
     for (int i = 0; i < len; i++) {
       int interval = intervals[i];
@@ -453,5 +455,17 @@ public class DataNodeMetrics {
 
   public void incrECDecodingTime(long decodingTimeNanos) {
     ecDecodingTimeNanos.incr(decodingTimeNanos);
+  }
+
+  public void incrECReconstructionBytesRead(long bytes) {
+    ecReconstructionBytesRead.incr(bytes);
+  }
+
+  public void incrECReconstructionRemoteBytesRead(long bytes) {
+    ecReconstructionRemoteBytesRead.incr(bytes);
+  }
+
+  public void incrECReconstructionBytesWritten(long bytes) {
+    ecReconstructionBytesWritten.incr(bytes);
   }
 }

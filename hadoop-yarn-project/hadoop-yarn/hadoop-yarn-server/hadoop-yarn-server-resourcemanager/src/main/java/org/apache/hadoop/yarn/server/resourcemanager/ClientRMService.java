@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.security.AccessControlException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -152,7 +153,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSyst
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppKillByClientEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMoveEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
@@ -174,8 +174,6 @@ import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.UTCClock;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.SettableFuture;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 
@@ -361,7 +359,8 @@ public class ClientRMService extends AbstractService implements
       // If the RM doesn't have the application, throw
       // ApplicationNotFoundException and let client to handle.
       throw new ApplicationNotFoundException("Application with id '"
-          + applicationId + "' doesn't exist in RM.");
+          + applicationId + "' doesn't exist in RM. Please check "
+          + "that the job submission was successful.");
     }
 
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
@@ -395,7 +394,8 @@ public class ClientRMService extends AbstractService implements
       // ApplicationNotFoundException and let client to handle.
       throw new ApplicationNotFoundException("Application with id '"
           + request.getApplicationAttemptId().getApplicationId()
-          + "' doesn't exist in RM.");
+          + "' doesn't exist in RM. Please check that the job "
+          + "submission was successful.");
     }
 
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
@@ -413,7 +413,7 @@ public class ClientRMService extends AbstractService implements
       response = GetApplicationAttemptReportResponse.newInstance(attemptReport);
     }else{
       throw new YarnException("User " + callerUGI.getShortUserName()
-          + " does not have privilage to see this attempt " + appAttemptId);
+          + " does not have privilege to see this attempt " + appAttemptId);
     }
     return response;
   }
@@ -434,7 +434,8 @@ public class ClientRMService extends AbstractService implements
       // If the RM doesn't have the application, throw
       // ApplicationNotFoundException and let client to handle.
       throw new ApplicationNotFoundException("Application with id '" + appId
-          + "' doesn't exist in RM.");
+          + "' doesn't exist in RM. Please check that the job submission "
+          + "was successful.");
     }
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
         ApplicationAccessType.VIEW_APP, application);
@@ -453,7 +454,7 @@ public class ClientRMService extends AbstractService implements
       response = GetApplicationAttemptsResponse.newInstance(listAttempts);
     } else {
       throw new YarnException("User " + callerUGI.getShortUserName()
-          + " does not have privilage to see this application " + appId);
+          + " does not have privilege to see this application " + appId);
     }
     return response;
   }
@@ -482,7 +483,8 @@ public class ClientRMService extends AbstractService implements
       // If the RM doesn't have the application, throw
       // ApplicationNotFoundException and let client to handle.
       throw new ApplicationNotFoundException("Application with id '" + appId
-          + "' doesn't exist in RM.");
+          + "' doesn't exist in RM. Please check that the job submission "
+          + "was successful.");
     }
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
         ApplicationAccessType.VIEW_APP, application);
@@ -504,7 +506,7 @@ public class ClientRMService extends AbstractService implements
           .createContainerReport());
     } else {
       throw new YarnException("User " + callerUGI.getShortUserName()
-          + " does not have privilage to see this application " + appId);
+          + " does not have privilege to see this application " + appId);
     }
     return response;
   }
@@ -532,7 +534,8 @@ public class ClientRMService extends AbstractService implements
       // If the RM doesn't have the application, throw
       // ApplicationNotFoundException and let client to handle.
       throw new ApplicationNotFoundException("Application with id '" + appId
-          + "' doesn't exist in RM.");
+          + "' doesn't exist in RM. Please check that the job submission "
+          + "was successful.");
     }
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
         ApplicationAccessType.VIEW_APP, application);
@@ -557,7 +560,7 @@ public class ClientRMService extends AbstractService implements
       response = GetContainersResponse.newInstance(listContainers);
     } else {
       throw new YarnException("User " + callerUGI.getShortUserName()
-          + " does not have privilage to see this application " + appId);
+          + " does not have privilege to see this application " + appId);
     }
     return response;
   }
@@ -617,6 +620,21 @@ public class ClientRMService extends AbstractService implements
       return SubmitApplicationResponse.newInstance();
     }
 
+    ByteBuffer tokenConf =
+        submissionContext.getAMContainerSpec().getTokensConf();
+    if (tokenConf != null) {
+      int maxSize = getConfig()
+          .getInt(YarnConfiguration.RM_DELEGATION_TOKEN_MAX_CONF_SIZE,
+              YarnConfiguration.DEFAULT_RM_DELEGATION_TOKEN_MAX_CONF_SIZE_BYTES);
+      LOG.info("Using app provided configurations for delegation token renewal,"
+          + " total size = " + tokenConf.capacity());
+      if (tokenConf.capacity() > maxSize) {
+        throw new YarnException(
+            "Exceed " + YarnConfiguration.RM_DELEGATION_TOKEN_MAX_CONF_SIZE
+                + " = " + maxSize + " bytes, current conf size = "
+                + tokenConf.capacity() + " bytes.");
+      }
+    }
     if (submissionContext.getQueue() == null) {
       submissionContext.setQueue(YarnConfiguration.DEFAULT_QUEUE_NAME);
     }
@@ -651,8 +669,7 @@ public class ClientRMService extends AbstractService implements
       RMAuditLogger.logSuccess(user, AuditConstants.SUBMIT_APP_REQUEST,
           "ClientRMService", applicationId, callerContext);
     } catch (YarnException e) {
-      LOG.info("Exception in submitting application with id " +
-          applicationId.getId(), e);
+      LOG.info("Exception in submitting " + applicationId, e);
       RMAuditLogger.logFailure(user, AuditConstants.SUBMIT_APP_REQUEST,
           e.getMessage(), "ClientRMService",
           "Exception in submitting application", applicationId, callerContext);
@@ -1189,25 +1206,36 @@ public class ClientRMService extends AbstractService implements
           + callerUGI.getShortUserName() + " cannot perform operation "
           + ApplicationAccessType.MODIFY_APP.name() + " on " + applicationId));
     }
-    
+
+    String targetQueue = request.getTargetQueue();
+    if (!accessToTargetQueueAllowed(callerUGI, application, targetQueue)) {
+      RMAuditLogger.logFailure(callerUGI.getShortUserName(),
+          AuditConstants.MOVE_APP_REQUEST, "Target queue doesn't exist or user"
+              + " doesn't have permissions to submit to target queue: "
+              + targetQueue, "ClientRMService",
+          AuditConstants.UNAUTHORIZED_USER, applicationId);
+      throw RPCUtil.getRemoteException(new AccessControlException("User "
+          + callerUGI.getShortUserName() + " cannot submit applications to"
+          + " target queue or the target queue doesn't exist: "
+          + targetQueue + " while moving " + applicationId));
+    }
+
     // Moves only allowed when app is in a state that means it is tracked by
-    // the scheduler
-    if (EnumSet.of(RMAppState.NEW, RMAppState.NEW_SAVING, RMAppState.FAILED,
-        RMAppState.FINAL_SAVING, RMAppState.FINISHING, RMAppState.FINISHED,
-        RMAppState.KILLED, RMAppState.KILLING, RMAppState.FAILED)
-        .contains(application.getState())) {
-      String msg = "App in " + application.getState() + " state cannot be moved.";
+    // the scheduler. Introducing SUBMITTED state also to this list as there
+    // could be a corner scenario that app may not be in Scheduler in SUBMITTED
+    // state.
+    if (!ACTIVE_APP_STATES.contains(application.getState())) {
+      String msg = "App in " + application.getState() +
+          " state cannot be moved.";
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
           AuditConstants.MOVE_APP_REQUEST, "UNKNOWN", "ClientRMService", msg);
       throw new YarnException(msg);
     }
 
-    SettableFuture<Object> future = SettableFuture.create();
-    this.rmContext.getDispatcher().getEventHandler().handle(
-        new RMAppMoveEvent(applicationId, request.getTargetQueue(), future));
-    
     try {
-      Futures.get(future, YarnException.class);
+      this.rmAppManager.moveApplicationAcrossQueue(
+          application.getApplicationId(),
+          request.getTargetQueue());
     } catch (YarnException ex) {
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
           AuditConstants.MOVE_APP_REQUEST, "UNKNOWN", "ClientRMService",
@@ -1220,6 +1248,24 @@ public class ClientRMService extends AbstractService implements
     MoveApplicationAcrossQueuesResponse response = recordFactory
         .newRecordInstance(MoveApplicationAcrossQueuesResponse.class);
     return response;
+  }
+
+  /**
+   * Check if the submission of an application to the target queue is allowed.
+   * @param callerUGI the caller UGI
+   * @param application the application to move
+   * @param targetQueue the queue to move the application to
+   * @return true if submission is allowed, false otherwise
+   */
+  private boolean accessToTargetQueueAllowed(UserGroupInformation callerUGI,
+      RMApp application, String targetQueue) {
+    return
+        queueACLsManager.checkAccess(callerUGI,
+            QueueACL.SUBMIT_APPLICATIONS, application,
+            Server.getRemoteAddress(), null, targetQueue) ||
+        queueACLsManager.checkAccess(callerUGI,
+            QueueACL.ADMINISTER_QUEUE, application,
+            Server.getRemoteAddress(), null, targetQueue);
   }
 
   private String getRenewerForToken(Token<RMDelegationTokenIdentifier> token)
@@ -1246,7 +1292,7 @@ public class ClientRMService extends AbstractService implements
           .contains(UserGroupInformation.getCurrentUser()
                   .getRealAuthenticationMethod());
     } else {
-      return false;
+      return true;
     }
   }
 
@@ -1450,7 +1496,7 @@ public class ClientRMService extends AbstractService implements
       GetNodesToLabelsRequest request) throws YarnException, IOException {
     RMNodeLabelsManager labelsMgr = rmContext.getNodeLabelManager();
     GetNodesToLabelsResponse response =
-        GetNodesToLabelsResponse.newInstance(labelsMgr.getNodeLabelsInfo());
+        GetNodesToLabelsResponse.newInstance(labelsMgr.getNodeLabels());
     return response;
   }
 
@@ -1460,10 +1506,10 @@ public class ClientRMService extends AbstractService implements
     RMNodeLabelsManager labelsMgr = rmContext.getNodeLabelManager();
     if (request.getNodeLabels() == null || request.getNodeLabels().isEmpty()) {
       return GetLabelsToNodesResponse.newInstance(
-          labelsMgr.getLabelsInfoToNodes());
+          labelsMgr.getLabelsToNodes());
     } else {
       return GetLabelsToNodesResponse.newInstance(
-          labelsMgr.getLabelsInfoToNodes(request.getNodeLabels()));
+          labelsMgr.getLabelsToNodes(request.getNodeLabels()));
     }
   }
 
@@ -1602,14 +1648,14 @@ public class ClientRMService extends AbstractService implements
         .newRecordInstance(UpdateApplicationPriorityResponse.class);
     // Update priority only when app is tracked by the scheduler
     if (!ACTIVE_APP_STATES.contains(application.getState())) {
-      if (COMPLETED_APP_STATES.contains(application.getState())) {
+      if (application.isAppInCompletedStates()) {
         // If Application is in any of the final states, change priority
         // can be skipped rather throwing exception.
         RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
             AuditConstants.UPDATE_APP_PRIORITY, "ClientRMService",
             applicationId);
         response.setApplicationPriority(application
-            .getApplicationSubmissionContext().getPriority());
+            .getApplicationPriority());
         return response;
       }
       String msg = "Application in " + application.getState()
@@ -1622,8 +1668,9 @@ public class ClientRMService extends AbstractService implements
     }
 
     try {
-      rmContext.getScheduler().updateApplicationPriority(newAppPriority,
-          applicationId);
+      rmAppManager.updateApplicationPriority(callerUGI,
+          application.getApplicationId(),
+          newAppPriority);
     } catch (YarnException ex) {
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
           AuditConstants.UPDATE_APP_PRIORITY, "UNKNOWN", "ClientRMService",
@@ -1633,8 +1680,7 @@ public class ClientRMService extends AbstractService implements
 
     RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
         AuditConstants.UPDATE_APP_PRIORITY, "ClientRMService", applicationId);
-    response.setApplicationPriority(application
-        .getApplicationSubmissionContext().getPriority());
+    response.setApplicationPriority(application.getApplicationPriority());
     return response;
   }
 
@@ -1754,7 +1800,7 @@ public class ClientRMService extends AbstractService implements
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
           AuditConstants.UPDATE_APP_TIMEOUTS, "UNKNOWN", "ClientRMService",
           ex.getMessage());
-      throw RPCUtil.getRemoteException(ex);
+      throw ex;
     }
 
     RMAuditLogger.logSuccess(callerUGI.getShortUserName(),

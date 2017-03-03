@@ -105,6 +105,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     testRootDir.mkdirs();
     httpSpnegoKeytabFile.deleteOnExit();
     getKdc().createPrincipal(httpSpnegoKeytabFile, httpSpnegoPrincipal);
+    UserGroupInformation.setConfiguration(conf);
 
     yarnCluster =
         new MiniYARNCluster(TestContainerManagerSecurity.class.getName(), 1, 1,
@@ -148,7 +149,6 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
   
   public TestContainerManagerSecurity(Configuration conf) {
     conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 100000L);
-    UserGroupInformation.setConfiguration(conf);
     this.conf = conf;
   }
   

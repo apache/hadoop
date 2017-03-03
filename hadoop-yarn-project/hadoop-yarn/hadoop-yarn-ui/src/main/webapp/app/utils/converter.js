@@ -91,6 +91,9 @@ export default {
       return ts;
     }
   },
+  isoDateToDate: function(isoDate) {
+    return moment(isoDate).format("YYYY/MM/DD HH:mm:ss");
+  },
   splitForContainerLogs: function(id) {
     if (id) {
       var splits = id.split(Constants.PARAM_SEPARATOR);
@@ -107,7 +110,7 @@ export default {
     }
   },
   memoryToSimpliedUnit: function(mb) {
-    var unit = "MB"
+    var unit = "MB";
     var value = mb;
     if (value / 1024 >= 0.9) {
       value = value / 1024;

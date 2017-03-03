@@ -482,6 +482,7 @@ public class TestSafeMode {
    * Tests some utility methods that surround the SafeMode's state.
    * @throws IOException when there's an issue connecting to the test DFS.
    */
+  @Test
   public void testSafeModeUtils() throws IOException {
     dfs = cluster.getFileSystem();
 

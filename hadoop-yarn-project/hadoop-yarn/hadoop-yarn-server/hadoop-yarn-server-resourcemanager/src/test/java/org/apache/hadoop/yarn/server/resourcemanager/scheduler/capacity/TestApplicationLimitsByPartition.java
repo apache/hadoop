@@ -594,8 +594,6 @@ public class TestApplicationLimitsByPartition {
         .thenReturn(Resources.createResource(GB));
     when(csContext.getMaximumResourceCapability())
         .thenReturn(Resources.createResource(16 * GB));
-    when(csContext.getNonPartitionedQueueComparator())
-        .thenReturn(CapacityScheduler.nonPartitionedQueueComparator);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     RMContext rmContext = TestUtils.getMockRMContext();
     RMContext spyRMContext = spy(rmContext);
@@ -614,8 +612,8 @@ public class TestApplicationLimitsByPartition {
     when(csContext.getClusterResource()).thenReturn(clusterResource);
 
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
-    CSQueue rootQueue = CapacityScheduler.parseQueue(csContext, csConf, null,
-        "root", queues, queues, TestUtils.spyHook);
+    CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(csContext,
+        csConf, null, "root", queues, queues, TestUtils.spyHook);
 
     ResourceUsage queueResUsage = rootQueue.getQueueResourceUsage();
     when(csContext.getClusterResourceUsage())
@@ -659,7 +657,7 @@ public class TestApplicationLimitsByPartition {
     final ApplicationAttemptId appAttemptId_0_0 =
         TestUtils.getMockApplicationAttemptId(0, 0);
     FiCaSchedulerApp app_0_0 = new FiCaSchedulerApp(appAttemptId_0_0, user_0,
-        queue, queue.getActiveUsersManager(), spyRMContext);
+        queue, queue.getAbstractUsersManager(), spyRMContext);
     queue.submitApplicationAttempt(app_0_0, user_0);
 
     List<ResourceRequest> app_0_0_requests = new ArrayList<ResourceRequest>();
@@ -671,21 +669,24 @@ public class TestApplicationLimitsByPartition {
     queue.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource),
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    //head room = queue capacity = 50 % 90% 160 GB
+    //head room = queue capacity = 50 % 90% 160 GB * 0.25 (UL)
     Resource expectedHeadroom =
-        Resources.createResource((int) (0.5 * 0.9 * 160) * GB, 1);
+        Resources.createResource((int) (0.5 * 0.9 * 160 * 0.25) * GB, 1);
     assertEquals(expectedHeadroom, app_0_0.getHeadroom());
 
     // Submit second application from user_0, check headroom
     final ApplicationAttemptId appAttemptId_0_1 =
         TestUtils.getMockApplicationAttemptId(1, 0);
     FiCaSchedulerApp app_0_1 = new FiCaSchedulerApp(appAttemptId_0_1, user_0,
-        queue, queue.getActiveUsersManager(), spyRMContext);
+        queue, queue.getAbstractUsersManager(), spyRMContext);
     queue.submitApplicationAttempt(app_0_1, user_0);
 
     List<ResourceRequest> app_0_1_requests = new ArrayList<ResourceRequest>();
     app_0_1_requests.add(TestUtils.createResourceRequest(ResourceRequest.ANY,
         1 * GB, 2, true, priority_1, recordFactory));
+    app_0_1.updateResourceRequests(app_0_1_requests);
+
+    app_0_1_requests.clear();
     app_0_1_requests.add(TestUtils.createResourceRequest(ResourceRequest.ANY,
         1 * GB, 2, true, priority_1, recordFactory, "y"));
     app_0_1.updateResourceRequests(app_0_1_requests);
@@ -700,20 +701,24 @@ public class TestApplicationLimitsByPartition {
     assertEquals(expectedHeadroom, app_0_0.getHeadroom());// no change
     //head room for default label + head room for y partition
     //head room for y partition = 100% 50%(b queue capacity ) *  160 * GB
-    Resource expectedHeadroomWithReqInY =
-        Resources.add(Resources.createResource((int) (0.5 * 160) * GB, 1), expectedHeadroom);
+    Resource expectedHeadroomWithReqInY = Resources.add(
+        Resources.createResource((int) (0.25 * 0.5 * 160) * GB, 1),
+        expectedHeadroom);
     assertEquals(expectedHeadroomWithReqInY, app_0_1.getHeadroom());
 
     // Submit first application from user_1, check for new headroom
     final ApplicationAttemptId appAttemptId_1_0 =
         TestUtils.getMockApplicationAttemptId(2, 0);
     FiCaSchedulerApp app_1_0 = new FiCaSchedulerApp(appAttemptId_1_0, user_1,
-        queue, queue.getActiveUsersManager(), spyRMContext);
+        queue, queue.getAbstractUsersManager(), spyRMContext);
     queue.submitApplicationAttempt(app_1_0, user_1);
 
     List<ResourceRequest> app_1_0_requests = new ArrayList<ResourceRequest>();
     app_1_0_requests.add(TestUtils.createResourceRequest(ResourceRequest.ANY,
         1 * GB, 2, true, priority_1, recordFactory));
+    app_1_0.updateResourceRequests(app_1_0_requests);
+
+    app_1_0_requests.clear();
     app_1_0_requests.add(TestUtils.createResourceRequest(ResourceRequest.ANY,
         1 * GB, 2, true, priority_1, recordFactory, "y"));
     app_1_0.updateResourceRequests(app_1_0_requests);
@@ -724,12 +729,12 @@ public class TestApplicationLimitsByPartition {
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY); // Schedule to compute
     //head room = queue capacity = (50 % 90% 160 GB)/2 (for 2 users)
     expectedHeadroom =
-        Resources.createResource((int) (0.5 * 0.9 * 160 * 0.5) * GB, 1);
+        Resources.createResource((int) (0.5 * 0.9 * 160 * 0.25) * GB, 1);
     //head room for default label + head room for y partition
     //head room for y partition = 100% 50%(b queue capacity ) *  160 * GB
-    expectedHeadroomWithReqInY =
-        Resources.add(Resources.createResource((int) (0.5 * 0.5 * 160) * GB, 1),
-            expectedHeadroom);
+    expectedHeadroomWithReqInY = Resources.add(
+        Resources.createResource((int) (0.25 * 0.5 * 160) * GB, 1),
+        expectedHeadroom);
     assertEquals(expectedHeadroom, app_0_0.getHeadroom());
     assertEquals(expectedHeadroomWithReqInY, app_0_1.getHeadroom());
     assertEquals(expectedHeadroomWithReqInY, app_1_0.getHeadroom());

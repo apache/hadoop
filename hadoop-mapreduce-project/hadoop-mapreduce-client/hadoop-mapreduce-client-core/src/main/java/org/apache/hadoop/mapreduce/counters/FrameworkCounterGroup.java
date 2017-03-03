@@ -100,7 +100,11 @@ public abstract class FrameworkCounterGroup<T extends Enum<T>,
 
     @Override
     public void increment(long incr) {
-      value += incr;
+      if (key.name().endsWith("_MAX")) {
+        value = value > incr ? value : incr;
+      } else {
+        value += incr;
+      }
     }
 
     @Override

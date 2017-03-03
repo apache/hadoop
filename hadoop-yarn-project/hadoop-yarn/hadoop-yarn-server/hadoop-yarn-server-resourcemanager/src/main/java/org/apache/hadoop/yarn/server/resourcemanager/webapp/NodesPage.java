@@ -49,6 +49,7 @@ class NodesPage extends RmView {
   static class NodesBlock extends HtmlBlock {
     final ResourceManager rm;
     private static final long BYTES_IN_MB = 1024 * 1024;
+    private static final long BYTES_IN_GB = 1024 * 1024 * 1024;
     private static boolean opportunisticContainersEnabled;
 
     @Inject
@@ -181,8 +182,9 @@ class NodesPage extends RmView {
           nodeTableData
               .append(String.valueOf(info.getNumRunningOpportContainers()))
               .append("\",\"").append("<br title='")
-              .append(String.valueOf(info.getUsedMemoryOpport())).append("'>")
-              .append(StringUtils.byteDesc(info.getUsedMemoryOpport()))
+              .append(String.valueOf(info.getUsedMemoryOpportGB())).append("'>")
+              .append(StringUtils.byteDesc(
+                  info.getUsedMemoryOpportGB() * BYTES_IN_GB))
               .append("\",\"")
               .append(String.valueOf(info.getUsedVirtualCoresOpport()))
               .append("\",\"")

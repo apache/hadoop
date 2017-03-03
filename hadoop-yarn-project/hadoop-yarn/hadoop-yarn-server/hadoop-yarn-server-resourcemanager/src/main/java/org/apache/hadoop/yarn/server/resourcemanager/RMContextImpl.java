@@ -76,10 +76,13 @@ public class RMContextImpl implements RMContext {
 
   private RMApplicationHistoryWriter rmApplicationHistoryWriter;
   private SystemMetricsPublisher systemMetricsPublisher;
-  private LeaderElectorService elector;
+  private EmbeddedElector elector;
 
   private QueueLimitCalculator queueLimitCalculator;
 
+  private final Object haServiceStateLock = new Object();
+
+  private ResourceManager resourceManager;
   /**
    * Default constructor. To be used in conjunction with setter methods for
    * individual fields.
@@ -141,12 +144,12 @@ public class RMContextImpl implements RMContext {
   }
 
   @Override
-  public void setLeaderElectorService(LeaderElectorService elector) {
+  public void setLeaderElectorService(EmbeddedElector elector) {
     this.elector = elector;
   }
 
   @Override
-  public LeaderElectorService getLeaderElectorService() {
+  public EmbeddedElector getLeaderElectorService() {
     return this.elector;
   }
 
@@ -254,9 +257,9 @@ public class RMContextImpl implements RMContext {
     this.isHAEnabled = isHAEnabled;
   }
 
-  void setHAServiceState(HAServiceState haServiceState) {
-    synchronized (haServiceState) {
-      this.haServiceState = haServiceState;
+  void setHAServiceState(HAServiceState serviceState) {
+    synchronized (haServiceStateLock) {
+      this.haServiceState = serviceState;
     }
   }
 
@@ -352,7 +355,7 @@ public class RMContextImpl implements RMContext {
 
   @Override
   public HAServiceState getHAServiceState() {
-    synchronized (haServiceState) {
+    synchronized (haServiceStateLock) {
       return haServiceState;
     }
   }
@@ -510,5 +513,23 @@ public class RMContextImpl implements RMContext {
   @Override
   public RMAppLifetimeMonitor getRMAppLifetimeMonitor() {
     return this.activeServiceContext.getRMAppLifetimeMonitor();
+  }
+
+  public String getHAZookeeperConnectionState() {
+    if (elector == null) {
+      return "Could not find leader elector. Verify both HA and automatic " +
+          "failover are enabled.";
+    } else {
+      return elector.getZookeeperConnectionState();
+    }
+  }
+
+  @Override
+  public ResourceManager getResourceManager() {
+    return resourceManager;
+  }
+
+  public void setResourceManager(ResourceManager rm) {
+    this.resourceManager = rm;
   }
 }

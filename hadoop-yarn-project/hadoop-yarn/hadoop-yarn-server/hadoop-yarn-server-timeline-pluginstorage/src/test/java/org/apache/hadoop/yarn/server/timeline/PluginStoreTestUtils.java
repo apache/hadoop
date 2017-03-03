@@ -17,6 +17,13 @@
  */
 package org.apache.hadoop.yarn.server.timeline;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.util.MinimalPrettyPrinter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -30,13 +37,6 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonGenerator;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
-import org.codehaus.jackson.map.annotate.JsonSerialize;
-import org.codehaus.jackson.util.MinimalPrettyPrinter;
-import org.codehaus.jackson.xc.JaxbAnnotationIntrospector;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -108,9 +108,9 @@ public class PluginStoreTestUtils {
 
   static ObjectMapper createObjectMapper() {
     ObjectMapper mapper = new ObjectMapper();
-    mapper.setAnnotationIntrospector(new JaxbAnnotationIntrospector());
-    mapper.setSerializationInclusion(JsonSerialize.Inclusion.NON_NULL);
-    mapper.configure(SerializationConfig.Feature.CLOSE_CLOSEABLE, false);
+    mapper.setAnnotationIntrospector(
+        new JaxbAnnotationIntrospector(TypeFactory.defaultInstance()));
+    mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     return mapper;
   }
 
@@ -232,7 +232,7 @@ public class PluginStoreTestUtils {
       FileSystem fs) throws IOException {
     FSDataOutputStream outStream = createLogFile(logPath, fs);
     JsonGenerator jsonGenerator
-        = (new JsonFactory()).createJsonGenerator(outStream);
+        = new JsonFactory().createGenerator(outStream);
     jsonGenerator.setPrettyPrinter(new MinimalPrettyPrinter("\n"));
     ObjectMapper objMapper = createObjectMapper();
     for (TimelineEntity entity : entities.getEntities()) {

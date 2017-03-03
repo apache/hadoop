@@ -55,7 +55,7 @@ public class TestDataNodeUUID {
       "hdfs://" + NN_ADDR.getHostName() + ":" + NN_ADDR.getPort());
     ArrayList<StorageLocation> locations = new ArrayList<>();
 
-    DataNode dn = new DataNode(conf, locations, null);
+    DataNode dn = new DataNode(conf, locations, null, null);
 
     //Assert that Node iD is null
     String nullString = null;

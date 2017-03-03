@@ -82,7 +82,7 @@ enum ContainerStateProto {
   C_NEW = 1;
   C_RUNNING = 2;
   C_COMPLETE = 3;
-  C_QUEUED = 4;
+  C_SCHEDULED = 4;
 }
 
 message ContainerProto {
@@ -214,6 +214,18 @@ message ApplicationReportProto {
   optional PriorityProto priority = 23;
   optional string appNodeLabelExpression = 24;
   optional string amNodeLabelExpression = 25;
+  repeated AppTimeoutsMapProto appTimeouts = 26;
+}
+
+message AppTimeoutsMapProto {
+  optional ApplicationTimeoutTypeProto application_timeout_type = 1;
+  optional ApplicationTimeoutProto application_timeout = 2;
+}
+
+message ApplicationTimeoutProto {
+  required ApplicationTimeoutTypeProto application_timeout_type = 1;
+  optional string expire_time = 2;
+  optional int64 remaining_time = 3;
 }
 
 enum LogAggregationStatusProto {
@@ -270,13 +282,13 @@ message NodeReportProto {
   optional ResourceUtilizationProto node_utilization = 12;
 }
 
-message NodeIdToLabelsInfoProto {
+message NodeIdToLabelsProto {
   optional NodeIdProto nodeId = 1;
-  repeated NodeLabelProto nodeLabels = 2;
+  repeated string nodeLabels = 2;
 }
 
 message LabelsToNodeIdsProto {
-  optional NodeLabelProto nodeLabels = 1;
+  optional string nodeLabels = 1;
   repeated NodeIdProto nodeId = 2;
 }
 
@@ -415,6 +427,7 @@ message YarnClusterMetricsProto {
 enum QueueStateProto {
   Q_STOPPED = 1;
   Q_RUNNING = 2;
+  Q_DRAINING = 3;
 }
 
 message QueueStatisticsProto {
@@ -535,6 +548,8 @@ message ContainerLaunchContextProto {
   repeated string command = 5;
   repeated ApplicationACLMapProto application_ACLs = 6;
   optional ContainerRetryContextProto container_retry_context = 7;
+  optional bytes tokens_conf = 8;
+
 }
 
 message ContainerStatusProto {

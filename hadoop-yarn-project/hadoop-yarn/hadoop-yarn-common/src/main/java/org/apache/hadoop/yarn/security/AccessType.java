@@ -30,4 +30,6 @@ public enum AccessType {
   // queue
   SUBMIT_APP,
   ADMINISTER_QUEUE,
+  // application
+  APPLICATION_MAX_PRIORITY,
 }

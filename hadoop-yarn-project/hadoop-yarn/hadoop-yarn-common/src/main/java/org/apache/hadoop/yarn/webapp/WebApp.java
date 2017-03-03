@@ -210,6 +210,19 @@ public abstract class WebApp extends ServletModule {
                res.subList(R_PARAMS, res.size()));
   }
 
+  /**
+   * Setup of a webapp serving route without default views added to the page.
+   * @param pathSpec  the path spec in the form of /controller/action/:args etc.
+   * @param cls the controller class
+   * @param action the controller method
+   */
+  public void routeWithoutDefaultView(String pathSpec,
+                    Class<? extends Controller> cls, String action) {
+    List<String> res = parseRoute(pathSpec);
+    router.addWithoutDefaultView(HTTP.GET, res.get(R_PATH), cls, action,
+        res.subList(R_PARAMS, res.size()));
+  }
+
   public void route(String pathSpec, Class<? extends Controller> cls,
                     String action) {
     route(HTTP.GET, pathSpec, cls, action);

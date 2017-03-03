@@ -29,7 +29,7 @@ import org.apache.hadoop.security.AccessControlException;
  * 
  * This class <em>does not</em> provide the stack trace for security purposes.
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce", "YARN"})
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class AuthorizationException extends AccessControlException {
   private static final long serialVersionUID = 1L;

@@ -28,19 +28,23 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -52,7 +56,8 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     AbstractService {
   private static final Log LOG = LogFactory.getLog(AMRMClient.class);
 
-  private TimelineClient timelineClient;
+  private TimelineV2Client timelineV2Client;
+  private boolean timelineServiceV2Enabled;
 
   /**
    * Create a new instance of AMRMClient.
@@ -75,6 +80,12 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
   protected AMRMClient(String name) {
     super(name);
     nmTokenCache = NMTokenCache.getSingleton();
+  }
+
+  @Override
+  protected void serviceInit(Configuration conf) throws Exception {
+    super.serviceInit(conf);
+    timelineServiceV2Enabled = YarnConfiguration.timelineServiceV2Enabled(conf);
   }
 
   /**
@@ -106,14 +117,14 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    * All getters return immutable values.
    */
   public static class ContainerRequest {
-    final Resource capability;
-    final List<String> nodes;
-    final List<String> racks;
-    final Priority priority;
-    final long allocationRequestId;
-    final boolean relaxLocality;
-    final String nodeLabelsExpression;
-    final ExecutionTypeRequest executionTypeRequest;
+    private Resource capability;
+    private List<String> nodes;
+    private List<String> racks;
+    private Priority priority;
+    private long allocationRequestId;
+    private boolean relaxLocality;
+    private String nodeLabelsExpression;
+    private ExecutionTypeRequest executionTypeRequest;
     
     /**
      * Instantiates a {@link ContainerRequest} with the given constraints and
@@ -306,17 +317,6 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
         Priority priority, long allocationRequestId, boolean relaxLocality,
         String nodeLabelsExpression,
         ExecutionTypeRequest executionTypeRequest) {
-      // Validate request
-      Preconditions.checkArgument(capability != null,
-          "The Resource to be requested for each container " +
-              "should not be null ");
-      Preconditions.checkArgument(priority != null,
-          "The priority at which to request containers should not be null ");
-      Preconditions.checkArgument(
-              !(!relaxLocality && (racks == null || racks.length == 0) 
-                  && (nodes == null || nodes.length == 0)),
-              "Can't turn off locality relaxation on a " + 
-              "request with no location constraints");
       this.allocationRequestId = allocationRequestId;
       this.capability = capability;
       this.nodes = (nodes != null ? ImmutableList.copyOf(nodes) : null);
@@ -325,8 +325,25 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
       this.relaxLocality = relaxLocality;
       this.nodeLabelsExpression = nodeLabelsExpression;
       this.executionTypeRequest = executionTypeRequest;
+      sanityCheck();
+    }
+
+    // Validate request
+    private void sanityCheck() {
+      Preconditions.checkArgument(capability != null,
+          "The Resource to be requested for each container " +
+              "should not be null ");
+      Preconditions.checkArgument(priority != null,
+          "The priority at which to request containers should not be null ");
+      Preconditions.checkArgument(
+              !(!relaxLocality && (racks == null || racks.size() == 0)
+                  && (nodes == null || nodes.size() == 0)),
+              "Can't turn off locality relaxation on a " +
+              "request with no location constraints");
     }
     
+    private ContainerRequest() {};
+
     public Resource getCapability() {
       return capability;
     }
@@ -368,8 +385,70 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
           .append("]");
       return sb.toString();
     }
+
+    public static ContainerRequestBuilder newBuilder() {
+      return new ContainerRequestBuilder();
+    }
+
+    /**
+     * Class to construct instances of {@link ContainerRequest} with specific
+     * options.
+     */
+    public static final class ContainerRequestBuilder {
+      private ContainerRequest containerRequest = new ContainerRequest();
+
+      public ContainerRequestBuilder capability(Resource capability) {
+        containerRequest.capability = capability;
+        return this;
+      }
+
+      public ContainerRequestBuilder nodes(String[] nodes) {
+        containerRequest.nodes =
+            (nodes != null ? ImmutableList.copyOf(nodes): null);
+        return this;
+      }
+
+      public ContainerRequestBuilder racks(String[] racks) {
+        containerRequest.racks =
+            (racks != null ? ImmutableList.copyOf(racks) : null);
+        return this;
+      }
+
+      public ContainerRequestBuilder priority(Priority priority) {
+        containerRequest.priority = priority;
+        return this;
+      }
+
+      public ContainerRequestBuilder allocationRequestId(
+          long allocationRequestId) {
+        containerRequest.allocationRequestId = allocationRequestId;
+        return this;
+      }
+
+      public ContainerRequestBuilder relaxLocality(boolean relaxLocality) {
+        containerRequest.relaxLocality = relaxLocality;
+        return this;
+      }
+
+      public ContainerRequestBuilder nodeLabelsExpression(
+          String nodeLabelsExpression) {
+        containerRequest.nodeLabelsExpression = nodeLabelsExpression;
+        return this;
+      }
+
+      public ContainerRequestBuilder executionTypeRequest(
+          ExecutionTypeRequest executionTypeRequest) {
+        containerRequest.executionTypeRequest = executionTypeRequest;
+        return this;
+      }
+
+      public ContainerRequest build() {
+        containerRequest.sanityCheck();
+        return containerRequest;
+      }
+    }
   }
- 
+
   /**
    * Register the application master. This must be called before any 
    * other interaction
@@ -451,12 +530,38 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    * ResourceManager to change the existing resource allocation to the target
    * resource allocation.
    *
+   * @deprecated use
+   * {@link #requestContainerUpdate(Container, UpdateContainerRequest)}
+   *
    * @param container The container returned from the last successful resource
    *                  allocation or resource change
    * @param capability  The target resource capability of the container
    */
-  public abstract void requestContainerResourceChange(
-      Container container, Resource capability);
+  @Deprecated
+  public void requestContainerResourceChange(
+      Container container, Resource capability) {
+    Preconditions.checkNotNull(container, "Container cannot be null!!");
+    Preconditions.checkNotNull(capability,
+        "UpdateContainerRequest cannot be null!!");
+    requestContainerUpdate(container, UpdateContainerRequest.newInstance(
+        container.getVersion(), container.getId(),
+        Resources.fitsIn(capability, container.getResource()) ?
+            ContainerUpdateType.DECREASE_RESOURCE :
+            ContainerUpdateType.INCREASE_RESOURCE,
+        capability, null));
+  }
+
+  /**
+   * Request a container update before calling <code>allocate</code>.
+   * Any previous pending update request of the same container will be
+   * removed.
+   *
+   * @param container The container returned from the last successful resource
+   *                  allocation or update
+   * @param updateContainerRequest The <code>UpdateContainerRequest</code>.
+   */
+  public abstract void requestContainerUpdate(
+      Container container, UpdateContainerRequest updateContainerRequest);
 
   /**
    * Release containers assigned by the Resource Manager. If the app cannot use
@@ -586,19 +691,30 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
   }
 
   /**
-   * Register TimelineClient to AMRMClient.
-   * @param client the timeline client to register
+   * Register TimelineV2Client to AMRMClient. Writer's address for the timeline
+   * V2 client will be updated dynamically if registered.
+   *
+   * @param client the timeline v2 client to register
+   * @throws YarnException when this method is invoked even when ATS V2 is not
+   *           configured.
    */
-  public void registerTimelineClient(TimelineClient client) {
-    this.timelineClient = client;
+  public void registerTimelineV2Client(TimelineV2Client client)
+      throws YarnException {
+    if (timelineServiceV2Enabled) {
+      timelineV2Client = client;
+    } else {
+      LOG.error("Trying to register timeline v2 client when not configured.");
+      throw new YarnException(
+          "register timeline v2 client when not configured.");
+    }
   }
 
   /**
-   * Get registered timeline client.
-   * @return the registered timeline client
+   * Get registered timeline v2 client.
+   * @return the registered timeline v2 client
    */
-  public TimelineClient getRegisteredTimelineClient() {
-    return this.timelineClient;
+  public TimelineV2Client getRegisteredTimelineV2Client() {
+    return this.timelineV2Client;
   }
 
   /**

@@ -22,8 +22,11 @@ import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -37,6 +40,8 @@ import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
+import java.util.ArrayList;
+import java.util.List;
 
 public class WebServer extends AbstractService {
 
@@ -57,10 +62,11 @@ public class WebServer extends AbstractService {
 
   @Override
   protected void serviceStart() throws Exception {
-    String bindAddress = WebAppUtils.getWebAppBindURL(getConfig(),
+    Configuration conf = getConfig();
+    String bindAddress = WebAppUtils.getWebAppBindURL(conf,
                           YarnConfiguration.NM_BIND_HOST,
-                          WebAppUtils.getNMWebAppURLWithoutScheme(getConfig()));
-    boolean enableCors = getConfig()
+                          WebAppUtils.getNMWebAppURLWithoutScheme(conf));
+    boolean enableCors = conf
         .getBoolean(YarnConfiguration.NM_WEBAPP_ENABLE_CORS_FILTER,
             YarnConfiguration.DEFAULT_NM_WEBAPP_ENABLE_CORS_FILTER);
     if (enableCors) {
@@ -68,13 +74,34 @@ public class WebServer extends AbstractService {
           + HttpCrossOriginFilterInitializer.ENABLED_SUFFIX, true);
     }
 
+    // Always load pseudo authentication filter to parse "user.name" in an URL
+    // to identify a HTTP request's user.
+    boolean hasHadoopAuthFilterInitializer = false;
+    String filterInitializerConfKey = "hadoop.http.filter.initializers";
+    Class<?>[] initializersClasses =
+            conf.getClasses(filterInitializerConfKey);
+    List<String> targets = new ArrayList<String>();
+    if (initializersClasses != null) {
+      for (Class<?> initializer : initializersClasses) {
+        if (initializer.getName().equals(
+            AuthenticationFilterInitializer.class.getName())) {
+          hasHadoopAuthFilterInitializer = true;
+          break;
+        }
+        targets.add(initializer.getName());
+      }
+    }
+    if (!hasHadoopAuthFilterInitializer) {
+      targets.add(AuthenticationFilterInitializer.class.getName());
+      conf.set(filterInitializerConfKey, StringUtils.join(",", targets));
+    }
     LOG.info("Instantiating NMWebApp at " + bindAddress);
     try {
       this.webApp =
           WebApps
             .$for("node", Context.class, this.nmContext, "ws")
             .at(bindAddress)
-            .with(getConfig())
+            .with(conf)
             .withHttpSpnegoPrincipalKey(
               YarnConfiguration.NM_WEBAPP_SPNEGO_USER_NAME_KEY)
             .withHttpSpnegoKeytabKey(

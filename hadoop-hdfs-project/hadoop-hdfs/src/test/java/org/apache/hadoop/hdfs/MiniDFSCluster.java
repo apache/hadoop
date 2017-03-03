@@ -807,6 +807,14 @@ public class MiniDFSCluster implements AutoCloseable {
     
       int replication = conf.getInt(DFS_REPLICATION_KEY, 3);
       conf.setInt(DFS_REPLICATION_KEY, Math.min(replication, numDataNodes));
+      int maintenanceMinReplication = conf.getInt(
+          DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY,
+          DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_DEFAULT);
+      if (maintenanceMinReplication ==
+          DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_DEFAULT) {
+        conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY,
+            Math.min(maintenanceMinReplication, numDataNodes));
+      }
       int safemodeExtension = conf.getInt(
           DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY, 0);
       conf.setInt(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, safemodeExtension);
@@ -1977,11 +1985,18 @@ public class MiniDFSCluster implements AutoCloseable {
    */
   public void shutdownDataNodes() {
     for (int i = dataNodes.size()-1; i >= 0; i--) {
-      LOG.info("Shutting down DataNode " + i);
-      DataNode dn = dataNodes.remove(i).datanode;
-      dn.shutdown();
-      numDataNodes--;
+      shutdownDataNode(i);
     }
+  }
+
+  /**
+   * Shutdown the datanode at a given index.
+   */
+  public void shutdownDataNode(int dnIndex) {
+    LOG.info("Shutting down DataNode " + dnIndex);
+    DataNode dn = dataNodes.remove(dnIndex).datanode;
+    dn.shutdown();
+    numDataNodes--;
   }
 
   /**

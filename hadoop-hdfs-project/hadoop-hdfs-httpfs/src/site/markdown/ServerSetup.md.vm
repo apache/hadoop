@@ -50,76 +50,148 @@ IMPORTANT: Replace `#HTTPFSUSER#` with the Unix user that will start the HttpFS 
 Restart Hadoop
 --------------
 
-You need to restart Hadoop for the proxyuser configuration ot become active.
+You need to restart Hadoop for the proxyuser configuration to become active.
 
 Start/Stop HttpFS
 -----------------
 
-To start/stop HttpFS use HttpFS's sbin/httpfs.sh script. For example:
+To start/stop HttpFS, use `hdfs --daemon start|stop httpfs`. For example:
 
-    $ sbin/httpfs.sh start
+    hadoop-${project.version} $ hdfs --daemon start httpfs
 
-NOTE: Invoking the script without any parameters list all possible parameters (start, stop, run, etc.). The `httpfs.sh` script is a wrapper for Tomcat's `catalina.sh` script that sets the environment variables and Java System properties required to run HttpFS server.
+NOTE: The script `httpfs.sh` is deprecated. It is now just a wrapper of
+`hdfs httpfs`.
 
 Test HttpFS is working
 ----------------------
 
-    ~ $ curl -i "http://<HTTPFSHOSTNAME>:14000?user.name=babu&op=homedir"
-    HTTP/1.1 200 OK
-    Content-Type: application/json
-    Transfer-Encoding: chunked
-
-    {"homeDir":"http:\/\/<HTTPFS_HOST>:14000\/user\/babu"}
-
-Embedded Tomcat Configuration
------------------------------
-
-To configure the embedded Tomcat go to the `tomcat/conf`.
-
-HttpFS preconfigures the HTTP and Admin ports in Tomcat's `server.xml` to 14000 and 14001.
-
-Tomcat logs are also preconfigured to go to HttpFS's `logs/` directory.
-
-HttpFS default value for the maxHttpHeaderSize parameter in Tomcat's `server.xml` is set to 65536 by default.
-
-The following environment variables (which can be set in HttpFS's `etc/hadoop/httpfs-env.sh` script) can be used to alter those values:
-
-* HTTPFS\_HTTP\_PORT
-
-* HTTPFS\_ADMIN\_PORT
-
-* HADOOP\_LOG\_DIR
-
-* HTTPFS\_MAX\_HTTP\_HEADER\_SIZE
+    $ curl -sS 'http://<HTTPFSHOSTNAME>:14000/webhdfs/v1?op=gethomedirectory&user.name=hdfs'
+    {"Path":"\/user\/hdfs"}
 
 HttpFS Configuration
 --------------------
+
+HttpFS preconfigures the HTTP port to 14000.
 
 HttpFS supports the following [configuration properties](./httpfs-default.html) in the HttpFS's `etc/hadoop/httpfs-site.xml` configuration file.
 
 HttpFS over HTTPS (SSL)
 -----------------------
 
-To configure HttpFS to work over SSL edit the [httpfs-env.sh](#httpfs-env.sh) script in the configuration directory setting the [HTTPFS\_SSL\_ENABLED](#HTTPFS_SSL_ENABLED) to [true](#true).
+Enable SSL in `etc/hadoop/httpfs-site.xml`:
 
-In addition, the following 2 properties may be defined (shown with default values):
+```xml
+  <property>
+    <name>hadoop.httpfs.ssl.enabled</name>
+    <value>true</value>
+    <description>
+      Whether SSL is enabled. Default is false, i.e. disabled.
+    </description>
+  </property>
+```
 
-* HTTPFS\_SSL\_KEYSTORE\_FILE=$HOME/.keystore
+Configure `etc/hadoop/ssl-server.xml` with proper values, for example:
 
-* HTTPFS\_SSL\_KEYSTORE\_PASS=password
+```xml
+  <property>
+    <name>ssl.server.keystore.location</name>
+    <value>${user.home}/.keystore</value>
+    <description>Keystore to be used. Must be specified.
+    </description>
+  </property>
 
-In the HttpFS `tomcat/conf` directory, replace the `server.xml` file with the `ssl-server.xml` file.
+  <property>
+    <name>ssl.server.keystore.password</name>
+    <value></value>
+    <description>Must be specified.</description>
+  </property>
+
+  <property>
+    <name>ssl.server.keystore.keypassword</name>
+    <value></value>
+    <description>Must be specified.</description>
+  </property>
+```
+
+The SSL passwords can be secured by a credential provider. See
+[Credential Provider API](../../../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
 
 You need to create an SSL certificate for the HttpFS server. As the `httpfs` Unix user, using the Java `keytool` command to create the SSL certificate:
 
-    $ keytool -genkey -alias tomcat -keyalg RSA
+    $ keytool -genkey -alias jetty -keyalg RSA
 
 You will be asked a series of questions in an interactive prompt. It will create the keystore file, which will be named **.keystore** and located in the `httpfs` user home directory.
 
-The password you enter for "keystore password" must match the value of the `HTTPFS_SSL_KEYSTORE_PASS` environment variable set in the `httpfs-env.sh` script in the configuration directory.
+The password you enter for "keystore password" must match the value of the
+property `ssl.server.keystore.password` set in the `ssl-server.xml` in the
+configuration directory.
 
 The answer to "What is your first and last name?" (i.e. "CN") must be the hostname of the machine where the HttpFS Server will be running.
 
 Start HttpFS. It should work over HTTPS.
 
 Using the Hadoop `FileSystem` API or the Hadoop FS shell, use the `swebhdfs://` scheme. Make sure the JVM is picking up the truststore containing the public key of the SSL certificate if using a self-signed certificate.
+
+NOTE: Some old SSL clients may use weak ciphers that are not supported by the HttpFS server. It is recommended to upgrade the SSL client.
+
+Deprecated Environment Variables
+--------------------------------
+
+The following environment variables are deprecated. Set the corresponding
+configuration properties instead.
+
+Environment Variable        | Configuration Property       | Configuration File
+----------------------------|------------------------------|--------------------
+HTTPFS_TEMP                 | hadoop.http.temp.dir         | httpfs-site.xml
+HTTPFS_HTTP_PORT            | hadoop.httpfs.http.port      | httpfs-site.xml
+HTTPFS_MAX_HTTP_HEADER_SIZE | hadoop.http.max.request.header.size and hadoop.http.max.response.header.size | httpfs-site.xml
+HTTPFS_MAX_THREADS          | hadoop.http.max.threads      | httpfs-site.xml
+HTTPFS_SSL_ENABLED          | hadoop.httpfs.ssl.enabled    | httpfs-site.xml
+HTTPFS_SSL_KEYSTORE_FILE    | ssl.server.keystore.location | ssl-server.xml
+HTTPFS_SSL_KEYSTORE_PASS    | ssl.server.keystore.password | ssl-server.xml
+
+HTTP Default Services
+---------------------
+
+Name               | Description
+-------------------|------------------------------------
+/conf              | Display configuration properties
+/jmx               | Java JMX management interface
+/logLevel          | Get or set log level per class
+/logs              | Display log files
+/stacks            | Display JVM stacks
+/static/index.html | The static home page
+
+To control the access to servlet `/conf`, `/jmx`, `/logLevel`, `/logs`,
+and `/stacks`, configure the following properties in `httpfs-site.xml`:
+
+```xml
+  <property>
+    <name>hadoop.security.authorization</name>
+    <value>true</value>
+    <description>Is service-level authorization enabled?</description>
+  </property>
+
+  <property>
+    <name>hadoop.security.instrumentation.requires.admin</name>
+    <value>true</value>
+    <description>
+      Indicates if administrator ACLs are required to access
+      instrumentation servlets (JMX, METRICS, CONF, STACKS).
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.httpfs.http.administrators</name>
+    <value></value>
+    <description>ACL for the admins, this configuration is used to control
+      who can access the default servlets for HttpFS server. The value
+      should be a comma separated list of users and groups. The user list
+      comes first and is separated by a space followed by the group list,
+      e.g. "user1,user2 group1,group2". Both users and groups are optional,
+      so "user1", " group1", "", "user1 group1", "user1,user2 group1,group2"
+      are all valid (note the leading space in " group1"). '*' grants access
+      to all users and groups, e.g. '*', '* ' and ' *' are all valid.
+    </description>
+  </property>
+```

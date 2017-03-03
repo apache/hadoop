@@ -124,7 +124,7 @@ public class RMAdminCLI extends HAAdmin {
               "Refresh acls for administration of ResourceManager"))
           .put("-refreshServiceAcl", new UsageInfo("",
               "Reload the service-level authorization policy file. \n\t\t" +
-                  "ResoureceManager will reload the authorization policy file."))
+                  "ResourceManager will reload the authorization policy file."))
           .put("-getGroups", new UsageInfo("[username]",
               "Get the groups which given user belongs to."))
           .put("-addToClusterNodeLabels",
@@ -174,6 +174,10 @@ public class RMAdminCLI extends HAAdmin {
     this.errOut = errOut;
   }
 
+  protected void setOut(PrintStream out) {
+    this.out = out;
+  }
+
   private static void appendHAUsage(final StringBuilder usageBuilder) {
     for (Map.Entry<String,UsageInfo> cmdEntry : USAGE.entrySet()) {
       if (cmdEntry.getKey().equals("-help")
@@ -181,7 +185,12 @@ public class RMAdminCLI extends HAAdmin {
         continue;
       }
       UsageInfo usageInfo = cmdEntry.getValue();
-      usageBuilder.append(" [" + cmdEntry.getKey() + " " + usageInfo.args + "]");
+      if (usageInfo.args == null) {
+        usageBuilder.append(" [" + cmdEntry.getKey() + "]");
+      } else {
+        usageBuilder.append(" [" + cmdEntry.getKey() + " " + usageInfo.args
+            + "]");
+      }
     }
   }
 
@@ -193,9 +202,13 @@ public class RMAdminCLI extends HAAdmin {
         return;
       }
     }
-    String space = (usageInfo.args == "") ? "" : " ";
-    builder.append("   " + cmd + space + usageInfo.args + ": " +
-        usageInfo.help);
+    if (usageInfo.args == null) {
+      builder.append("   " + cmd + ": " + usageInfo.help);
+    } else {
+      String space = (usageInfo.args == "") ? "" : " ";
+      builder.append("   " + cmd + space + usageInfo.args + ": "
+          + usageInfo.help);
+    }
   }
 
   private static void buildIndividualUsageMsg(String cmd,
@@ -209,10 +222,13 @@ public class RMAdminCLI extends HAAdmin {
       }
       isHACommand = true;
     }
-    String space = (usageInfo.args == "") ? "" : " ";
-    builder.append("Usage: yarn rmadmin ["
-        + cmd + space + usageInfo.args
-        + "]\n");
+    if (usageInfo.args == null) {
+      builder.append("Usage: yarn rmadmin [" + cmd + "]\n");
+    } else {
+      String space = (usageInfo.args == "") ? "" : " ";
+      builder.append("Usage: yarn rmadmin [" + cmd + space + usageInfo.args
+          + "]\n");
+    }
     if (isHACommand) {
       builder.append(cmd + " can only be used when RM HA is enabled");
     }
@@ -230,7 +246,11 @@ public class RMAdminCLI extends HAAdmin {
         String cmdKey = cmdEntry.getKey();
         if (!cmdKey.equals("-help")) {
           UsageInfo usageInfo = cmdEntry.getValue();
-          builder.append("   " + cmdKey + " " + usageInfo.args + "\n");
+          if (usageInfo.args == null) {
+            builder.append("   " + cmdKey + "\n");
+          } else {
+            builder.append("   " + cmdKey + " " + usageInfo.args + "\n");
+          }
         }
       }
     }
@@ -379,7 +399,7 @@ public class RMAdminCLI extends HAAdmin {
     }
     if (nodesDecommissioning) {
       System.out.println("Graceful decommissioning not completed in " + timeout
-          + " seconds, issueing forceful decommissioning command.");
+          + " seconds, issuing forceful decommissioning command.");
       RefreshNodesRequest forcefulRequest = RefreshNodesRequest
           .newInstance(DecommissionType.FORCEFUL);
       adminProtocol.refreshNodes(forcefulRequest);
@@ -685,7 +705,7 @@ public class RMAdminCLI extends HAAdmin {
       }
       
       int nLabels = map.get(nodeId).size();
-      Preconditions.checkArgument(nLabels <= 1, "%d labels specified on host=%s"
+      Preconditions.checkArgument(nLabels <= 1, "%s labels specified on host=%s"
           + ", please note that we do not support specifying multiple"
           + " labels on a single host for now.", nLabels, nodeIdStr);
     }

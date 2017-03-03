@@ -39,16 +39,17 @@ public class TestErasureCodingPolicyWithSnapshot {
   private DistributedFileSystem fs;
   private Configuration conf;
 
-  private final static short GROUP_SIZE = (short) (StripedFileTestUtil.
-      NUM_DATA_BLOCKS + StripedFileTestUtil.NUM_PARITY_BLOCKS);
   private final static int SUCCESS = 0;
   private final ErasureCodingPolicy sysDefaultPolicy =
-      StripedFileTestUtil.TEST_EC_POLICY;
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private final short groupSize = (short) (
+      sysDefaultPolicy.getNumDataUnits() +
+          sysDefaultPolicy.getNumParityUnits());
 
   @Before
   public void setupCluster() throws IOException {
     conf = new HdfsConfiguration();
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(GROUP_SIZE).build();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
   }
@@ -74,7 +75,7 @@ public class TestErasureCodingPolicyWithSnapshot {
     fs.mkdirs(ecDir);
     fs.allowSnapshot(ecDirParent);
     // set erasure coding policy
-    fs.setErasureCodingPolicy(ecDir, sysDefaultPolicy);
+    fs.setErasureCodingPolicy(ecDir, sysDefaultPolicy.getName());
     DFSTestUtil.createFile(fs, ecFile, len, (short) 1, 0xFEED);
     String contents = DFSTestUtil.readFile(fs, ecFile);
     final Path snap1 = fs.createSnapshot(ecDirParent, "snap1");
@@ -92,7 +93,7 @@ public class TestErasureCodingPolicyWithSnapshot {
         fs.getErasureCodingPolicy(snap2ECDir));
 
     // Make dir again with system default ec policy
-    fs.setErasureCodingPolicy(ecDir, sysDefaultPolicy);
+    fs.setErasureCodingPolicy(ecDir, sysDefaultPolicy.getName());
     final Path snap3 = fs.createSnapshot(ecDirParent, "snap3");
     final Path snap3ECDir = new Path(snap3, ecDir.getName());
     // Check that snap3's ECPolicy has the correct settings
@@ -133,7 +134,7 @@ public class TestErasureCodingPolicyWithSnapshot {
     fs.mkdirs(ecDir);
     fs.allowSnapshot(ecDir);
 
-    fs.setErasureCodingPolicy(ecDir, sysDefaultPolicy);
+    fs.setErasureCodingPolicy(ecDir, sysDefaultPolicy.getName());
     final Path snap1 = fs.createSnapshot(ecDir, "snap1");
     assertEquals("Got unexpected erasure coding policy", sysDefaultPolicy,
         fs.getErasureCodingPolicy(snap1));
@@ -149,7 +150,7 @@ public class TestErasureCodingPolicyWithSnapshot {
     fs.allowSnapshot(ecDir);
 
     // set erasure coding policy
-    fs.setErasureCodingPolicy(ecDir, sysDefaultPolicy);
+    fs.setErasureCodingPolicy(ecDir, sysDefaultPolicy.getName());
     final Path snap1 = fs.createSnapshot(ecDir, "snap1");
     ErasureCodingPolicy ecSnap = fs.getErasureCodingPolicy(snap1);
     assertEquals("Got unexpected erasure coding policy", sysDefaultPolicy,
@@ -181,7 +182,7 @@ public class TestErasureCodingPolicyWithSnapshot {
     fs.allowSnapshot(ecDir);
 
     // set erasure coding policy
-    fs.setErasureCodingPolicy(ecDir, sysDefaultPolicy);
+    fs.setErasureCodingPolicy(ecDir, sysDefaultPolicy.getName());
     DFSTestUtil.createFile(fs, ecFile, len, (short) 1, 0xFEED);
     final Path snap1 = fs.createSnapshot(ecDir, "snap1");
 

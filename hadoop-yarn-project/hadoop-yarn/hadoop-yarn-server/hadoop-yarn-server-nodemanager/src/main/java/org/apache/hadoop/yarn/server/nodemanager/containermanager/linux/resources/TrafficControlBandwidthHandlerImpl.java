@@ -31,7 +31,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
-import org.apache.hadoop.yarn.util.SystemClock;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -88,7 +87,7 @@ public class TrafficControlBandwidthHandlerImpl
     //operation. At some point, LCE code can be refactored to batch mount
     //operations across multiple controllers - cpu, net_cls, blkio etc
     cGroupsHandler
-        .mountCGroupController(CGroupsHandler.CGroupController.NET_CLS);
+        .initializeCGroupController(CGroupsHandler.CGroupController.NET_CLS);
     device = conf.get(YarnConfiguration.NM_NETWORK_RESOURCE_INTERFACE,
         YarnConfiguration.DEFAULT_NM_NETWORK_RESOURCE_INTERFACE);
     strictMode = configuration.getBoolean(YarnConfiguration

@@ -41,6 +41,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -211,10 +212,11 @@ public class GenericOptionsParser {
    */
   @SuppressWarnings("static-access")
   private static synchronized Options buildGeneralOptions(Options opts) {
-    Option fs = OptionBuilder.withArgName("local|namenode:port")
-    .hasArg()
-    .withDescription("specify a namenode")
-    .create("fs");
+    Option fs = OptionBuilder.withArgName("file:///|hdfs://namenode:port")
+        .hasArg()
+        .withDescription("specify default filesystem URL to use, "
+        + "overrides 'fs.defaultFS' property from configurations.")
+        .create("fs");
     Option jt = OptionBuilder.withArgName("local|resourcemanager:port")
     .hasArg()
     .withDescription("specify a ResourceManager")
@@ -328,9 +330,7 @@ public class GenericOptionsParser {
       // check if the local file exists
       FileSystem localFs = FileSystem.getLocal(conf);
       Path p = localFs.makeQualified(new Path(fileName));
-      if (!localFs.exists(p)) {
-          throw new FileNotFoundException("File "+fileName+" does not exist.");
-      }
+      localFs.getFileStatus(p);
       if(LOG.isDebugEnabled()) {
         LOG.debug("setting conf tokensFile: " + fileName);
       }
@@ -437,9 +437,7 @@ public class GenericOptionsParser {
       if (pathURI.getScheme() == null) {
         //default to the local file system
         //check if the file exists or not first
-        if (!localFs.exists(path)) {
-          throw new FileNotFoundException("File " + tmp + " does not exist.");
-        }
+        localFs.getFileStatus(path);
         if (isWildcard) {
           expandWildcard(finalPaths, path, localFs);
         } else {
@@ -452,9 +450,8 @@ public class GenericOptionsParser {
         // these files to the file system ResourceManager is running
         // on.
         FileSystem fs = path.getFileSystem(conf);
-        if (!fs.exists(path)) {
-          throw new FileNotFoundException("File " + tmp + " does not exist.");
-        }
+        // existence check
+        fs.getFileStatus(path);
         if (isWildcard) {
           expandWildcard(finalPaths, path, fs);
         } else {
@@ -476,7 +473,8 @@ public class GenericOptionsParser {
 
   private void expandWildcard(List<String> finalPaths, Path path, FileSystem fs)
       throws IOException {
-    if (!fs.isDirectory(path)) {
+    FileStatus status = fs.getFileStatus(path);
+    if (!status.isDirectory()) {
       throw new FileNotFoundException(path + " is not a directory.");
     }
     // get all the jars in the directory
@@ -572,8 +570,9 @@ public class GenericOptionsParser {
         + "specify an application configuration file");
     out.println("-D <property=value>               "
         + "define a value for a given property");
-    out.println("-fs <local|namenode:port>         "
-        + "specify a namenode");
+    out.println("-fs <file:///|hdfs://namenode:port> "
+        + "specify default filesystem URL to use, overrides "
+        + "'fs.defaultFS' property from configurations.");
     out.println("-jt <local|resourcemanager:port>  "
         + "specify a ResourceManager");
     out.println("-files <file1,...>                "

@@ -1599,7 +1599,7 @@ public class DistributedFileSystem extends FileSystem {
 
   /**
    * Requests the namenode to tell all datanodes to use a new, non-persistent
-   * bandwidth value for dfs.balance.bandwidthPerSec.
+   * bandwidth value for dfs.datanode.balance.bandwidthPerSec.
    * The bandwidth parameter is the max number of bytes per second of network
    * bandwidth to be used by a datanode during balancing.
    *
@@ -2397,17 +2397,18 @@ public class DistributedFileSystem extends FileSystem {
    * Set the source path to the specified erasure coding policy.
    *
    * @param path     The directory to set the policy
-   * @param ecPolicy The erasure coding policy. If not specified default will
-   *                 be used.
+   * @param ecPolicyName The erasure coding policy name.
    * @throws IOException
    */
   public void setErasureCodingPolicy(final Path path,
-      final ErasureCodingPolicy ecPolicy) throws IOException {
+      final String ecPolicyName) throws IOException {
     Path absF = fixRelativePart(path);
+    Preconditions.checkNotNull(ecPolicyName, "Erasure coding policy cannot be" +
+        " null.");
     new FileSystemLinkResolver<Void>() {
       @Override
       public Void doCall(final Path p) throws IOException {
-        dfs.setErasureCodingPolicy(getPathName(p), ecPolicy);
+        dfs.setErasureCodingPolicy(getPathName(p), ecPolicyName);
         return null;
       }
 
@@ -2415,7 +2416,7 @@ public class DistributedFileSystem extends FileSystem {
       public Void next(final FileSystem fs, final Path p) throws IOException {
         if (fs instanceof DistributedFileSystem) {
           DistributedFileSystem myDfs = (DistributedFileSystem) fs;
-          myDfs.setErasureCodingPolicy(p, ecPolicy);
+          myDfs.setErasureCodingPolicy(p, ecPolicyName);
           return null;
         }
         throw new UnsupportedOperationException(
@@ -2465,6 +2466,35 @@ public class DistributedFileSystem extends FileSystem {
   public Collection<ErasureCodingPolicy> getAllErasureCodingPolicies()
       throws IOException {
     return Arrays.asList(dfs.getErasureCodingPolicies());
+  }
+
+  /**
+   * Unset the erasure coding policy from the source path.
+   *
+   * @param path     The directory to unset the policy
+   * @throws IOException
+   */
+  public void unsetErasureCodingPolicy(final Path path) throws IOException {
+    Path absF = fixRelativePart(path);
+    new FileSystemLinkResolver<Void>() {
+      @Override
+      public Void doCall(final Path p) throws IOException {
+        dfs.unsetErasureCodingPolicy(getPathName(p));
+        return null;
+      }
+
+      @Override
+      public Void next(final FileSystem fs, final Path p) throws IOException {
+        if (fs instanceof DistributedFileSystem) {
+          DistributedFileSystem myDfs = (DistributedFileSystem) fs;
+          myDfs.unsetErasureCodingPolicy(p);
+          return null;
+        }
+        throw new UnsupportedOperationException(
+            "Cannot unsetErasureCodingPolicy through a symlink to a "
+                + "non-DistributedFileSystem: " + path + " -> " + p);
+      }
+    }.resolve(this, absF);
   }
 
   /**
@@ -2530,8 +2560,9 @@ public class DistributedFileSystem extends FileSystem {
         } else {
           Path userTrash = new Path(ezTrashRoot, System.getProperty(
               "user.name"));
-          if (exists(userTrash)) {
+          try {
             ret.add(getFileStatus(userTrash));
+          } catch (FileNotFoundException ignored) {
           }
         }
       }

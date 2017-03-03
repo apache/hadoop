@@ -15,11 +15,7 @@
 Reservation System
 ==================
 
-
-* [Purpose](#Purpose)
-* [Overview](#Overview)
-* [Flow of a Reservation](#Flow_of_a_Reservation)
-* [Configuring the Reservation System](#Configuring_the_Reservation_System)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Purpose
 -------

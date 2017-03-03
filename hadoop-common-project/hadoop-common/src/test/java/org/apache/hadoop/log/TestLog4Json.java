@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.log;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ContainerNode;
 import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,10 +33,6 @@ import org.apache.log4j.spi.HierarchyEventListener;
 import org.apache.log4j.spi.LoggerFactory;
 import org.apache.log4j.spi.LoggerRepository;
 import org.apache.log4j.spi.ThrowableInformation;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.MappingJsonFactory;
-import org.codehaus.jackson.node.ContainerNode;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -47,7 +45,6 @@ import java.util.Vector;
 public class TestLog4Json extends TestCase {
 
   private static final Log LOG = LogFactory.getLog(TestLog4Json.class);
-  private static final JsonFactory factory = new MappingJsonFactory();
 
   @Test
   public void testConstruction() throws Throwable {
@@ -106,7 +103,7 @@ public class TestLog4Json extends TestCase {
     //rather than try and make assertions about the format of the text
     //message equalling another ISO date, this test asserts that the hypen
     //and colon characters are in the string.
-    String dateText = node.getTextValue();
+    String dateText = node.textValue();
     assertTrue("No '-' in " + dateText, dateText.contains("-"));
     assertTrue("No '-' in " + dateText, dateText.contains(":"));
 
@@ -141,7 +138,7 @@ public class TestLog4Json extends TestCase {
 
   void assertEntryEquals(ContainerNode rootNode, String key, String value) {
     JsonNode node = assertNodeContains(rootNode, key);
-    assertEquals(value, node.getTextValue());
+    assertEquals(value, node.textValue());
   }
 
   private JsonNode assertNodeContains(ContainerNode rootNode, String key) {
@@ -154,7 +151,7 @@ public class TestLog4Json extends TestCase {
 
   void assertEntryEquals(ContainerNode rootNode, String key, long value) {
     JsonNode node = assertNodeContains(rootNode, key);
-    assertEquals(value, node.getNumberValue());
+    assertEquals(value, node.numberValue());
   }
 
   /**

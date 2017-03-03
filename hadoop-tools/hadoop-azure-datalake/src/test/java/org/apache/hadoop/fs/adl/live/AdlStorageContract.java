@@ -27,20 +27,16 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
-/**
- * Extension of AbstractFSContract representing a filesystem contract that
- * a Adls filesystem implementation is expected implement.
- */
-public class AdlStorageContract extends AbstractFSContract {
+class AdlStorageContract extends AbstractFSContract {
   private FileSystem fs;
 
   protected AdlStorageContract(Configuration conf) {
     super(conf);
     try {
-      fs = AdlStorageConfiguration.createAdlStorageConnector();
+      fs = AdlStorageConfiguration.createStorageConnector();
     } catch (URISyntaxException e) {
       throw new IllegalStateException("Can not initialize ADL FileSystem. "
-          + "Please check fs.defaultFS property.", e);
+          + "Please check test.fs.adl.name property.", e);
     } catch (IOException e) {
       throw new IllegalStateException("Can not initialize ADL FileSystem.", e);
     }
@@ -59,7 +55,12 @@ public class AdlStorageContract extends AbstractFSContract {
 
   @Override
   public Path getTestPath() {
-    Path path = new Path("/test");
-    return path;
+    return new Path("/test");
   }
+
+  @Override
+  public boolean isEnabled() {
+    return AdlStorageConfiguration.isContractTestEnabled();
+  }
+
 }

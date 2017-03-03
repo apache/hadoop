@@ -33,10 +33,9 @@ import javax.management.ObjectName;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.annotations.VisibleForTesting;
-import java.util.Locale;
 import static com.google.common.base.Preconditions.*;
 
-import org.apache.commons.configuration.PropertiesConfiguration;
+import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math3.util.ArithmeticUtils;
@@ -347,7 +346,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     PropertiesConfiguration saver = new PropertiesConfiguration();
     StringWriter writer = new StringWriter();
     saver.copy(config);
-    try { saver.save(writer); }
+    try { saver.write(writer); }
     catch (Exception e) {
       throw new MetricsConfigException("Error stringify config", e);
     }
@@ -372,7 +371,8 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
             }
           }
         }, millis, millis);
-    LOG.info("Scheduled snapshot period at "+ (period/1000) +" second(s).");
+    LOG.info("Scheduled Metric snapshot period at " + (period / 1000)
+        + " second(s).");
   }
 
   synchronized void onTimerEvent() {

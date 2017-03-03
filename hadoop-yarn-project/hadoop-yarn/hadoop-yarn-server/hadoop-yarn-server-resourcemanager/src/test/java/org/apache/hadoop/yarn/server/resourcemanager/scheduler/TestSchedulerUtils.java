@@ -75,8 +75,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
@@ -112,37 +110,37 @@ public class TestSchedulerUtils {
 
     // case negative memory
     ask.setCapability(Resources.createResource(-1024));
-    SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource,
+    SchedulerUtils.normalizeRequest(ask, resourceCalculator, minResource,
         maxResource);
     assertEquals(minMemory, ask.getCapability().getMemorySize());
 
     // case zero memory
     ask.setCapability(Resources.createResource(0));
-    SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource,
+    SchedulerUtils.normalizeRequest(ask, resourceCalculator, minResource,
         maxResource);
     assertEquals(minMemory, ask.getCapability().getMemorySize());
 
     // case memory is a multiple of minMemory
     ask.setCapability(Resources.createResource(2 * minMemory));
-    SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource,
+    SchedulerUtils.normalizeRequest(ask, resourceCalculator, minResource,
         maxResource);
     assertEquals(2 * minMemory, ask.getCapability().getMemorySize());
 
     // case memory is not a multiple of minMemory
     ask.setCapability(Resources.createResource(minMemory + 10));
-    SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource,
+    SchedulerUtils.normalizeRequest(ask, resourceCalculator, minResource,
         maxResource);
     assertEquals(2 * minMemory, ask.getCapability().getMemorySize());
 
     // case memory is equal to max allowed
     ask.setCapability(Resources.createResource(maxMemory));
-    SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource,
+    SchedulerUtils.normalizeRequest(ask, resourceCalculator, minResource,
         maxResource);
     assertEquals(maxMemory, ask.getCapability().getMemorySize());
 
     // case memory is just less than max
     ask.setCapability(Resources.createResource(maxMemory - 10));
-    SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource,
+    SchedulerUtils.normalizeRequest(ask, resourceCalculator, minResource,
         maxResource);
     assertEquals(maxMemory, ask.getCapability().getMemorySize());
 
@@ -150,14 +148,14 @@ public class TestSchedulerUtils {
     maxResource = Resources.createResource(maxMemory - 10, 0);
     ask.setCapability(Resources.createResource(maxMemory - 100));
     // multiple of minMemory > maxMemory, then reduce to maxMemory
-    SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource,
+    SchedulerUtils.normalizeRequest(ask, resourceCalculator, minResource,
         maxResource);
     assertEquals(maxResource.getMemorySize(), ask.getCapability().getMemorySize());
 
     // ask is more than max
     maxResource = Resources.createResource(maxMemory, 0);
     ask.setCapability(Resources.createResource(maxMemory + 100));
-    SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource,
+    SchedulerUtils.normalizeRequest(ask, resourceCalculator, minResource,
         maxResource);
     assertEquals(maxResource.getMemorySize(), ask.getCapability().getMemorySize());
   }
@@ -175,13 +173,13 @@ public class TestSchedulerUtils {
     // case negative memory/vcores
     ask.setCapability(Resources.createResource(-1024, -1));
     SchedulerUtils.normalizeRequest(
-        ask, resourceCalculator, clusterResource, minResource, maxResource);
+        ask, resourceCalculator, minResource, maxResource);
     assertEquals(minResource, ask.getCapability());
 
     // case zero memory/vcores
     ask.setCapability(Resources.createResource(0, 0));
     SchedulerUtils.normalizeRequest(
-        ask, resourceCalculator, clusterResource, minResource, maxResource);
+        ask, resourceCalculator, minResource, maxResource);
     assertEquals(minResource, ask.getCapability());
     assertEquals(1, ask.getCapability().getVirtualCores());
     assertEquals(1024, ask.getCapability().getMemorySize());
@@ -189,7 +187,7 @@ public class TestSchedulerUtils {
     // case non-zero memory & zero cores
     ask.setCapability(Resources.createResource(1536, 0));
     SchedulerUtils.normalizeRequest(
-        ask, resourceCalculator, clusterResource, minResource, maxResource);
+        ask, resourceCalculator, minResource, maxResource);
     assertEquals(Resources.createResource(2048, 1), ask.getCapability());
     assertEquals(1, ask.getCapability().getVirtualCores());
     assertEquals(2048, ask.getCapability().getMemorySize());
@@ -777,9 +775,11 @@ public class TestSchedulerUtils {
     }
   }
 
-  public static void waitSchedulerApplicationAttemptStopped(CapacityScheduler cs,
+  public static void waitSchedulerApplicationAttemptStopped(
+      AbstractYarnScheduler ys,
       ApplicationAttemptId attemptId) throws InterruptedException {
-    FiCaSchedulerApp schedulerApp = cs.getApplicationAttempt(attemptId);
+    SchedulerApplicationAttempt schedulerApp =
+        ys.getApplicationAttempt(attemptId);
     if (null == schedulerApp) {
       return;
     }

@@ -13,99 +13,52 @@
 #  limitations under the License.
 #
 
-MYNAME="${BASH_SOURCE-$0}"
+MYNAME="${0##*/}"
 
-function hadoop_usage
+## @description  Print usage
+## @audience     private
+## @stability    stable
+## @replaceable  no
+function print_usage
 {
-  hadoop_add_subcommand "run" "Start kms in the current window"
-  hadoop_add_subcommand "run -security" "Start in the current window with security manager"
-  hadoop_add_subcommand "start" "Start kms in a separate window"
-  hadoop_add_subcommand "start -security" "Start in a separate window with security manager"
-  hadoop_add_subcommand "status" "Return the LSB compliant status"
-  hadoop_add_subcommand "stop" "Stop kms, waiting up to 5 seconds for the process to end"
-  hadoop_add_subcommand "top n" "Stop kms, waiting up to n seconds for the process to end"
-  hadoop_add_subcommand "stop -force" "Stop kms, wait up to 5 seconds and then use kill -KILL if still running"
-  hadoop_add_subcommand "stop n -force" "Stop kms, wait up to n seconds and then use kill -KILL if still running"
-  hadoop_generate_usage "${MYNAME}" false
+  cat <<EOF
+Usage: ${MYNAME} run|start|status|stop
+commands:
+  run     Run KMS, the Key Management Server
+  start   Start KMS as a daemon
+  status  Return the status of the KMS daemon
+  stop    Stop the KMS daemon
+EOF
 }
 
-# let's locate libexec...
-if [[ -n "${HADOOP_HOME}" ]]; then
-  HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_HOME}/libexec"
-else
-  bin=$(cd -P -- "$(dirname -- "${MYNAME}")" >/dev/null && pwd -P)
-  HADOOP_DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
-fi
-
-HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$HADOOP_DEFAULT_LIBEXEC_DIR}"
-# shellcheck disable=SC2034
-HADOOP_NEW_CONFIG=true
-if [[ -f "${HADOOP_LIBEXEC_DIR}/kms-config.sh" ]]; then
-  . "${HADOOP_LIBEXEC_DIR}/kms-config.sh"
-else
-  echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/kms-config.sh." 2>&1
-  exit 1
-fi
-
-# The Java System property 'kms.http.port' it is not used by Kms,
-# it is used in Tomcat's server.xml configuration file
-#
-
-# Mask the trustStorePassword
-# shellcheck disable=SC2086
-CATALINA_OPTS_DISP="$(echo ${CATALINA_OPTS} | sed -e 's/trustStorePassword=[^ ]*/trustStorePassword=***/')"
-
-hadoop_debug "Using   CATALINA_OPTS:       ${CATALINA_OPTS_DISP}"
-
-# We're using hadoop-common, so set up some stuff it might need:
-hadoop_finalize
-
-hadoop_verify_logdir
+echo "WARNING: ${MYNAME} is deprecated," \
+  "please use 'hadoop [--daemon start|status|stop] kms'." >&2
 
 if [[ $# = 0 ]]; then
-  case "${HADOOP_DAEMON_MODE}" in
-    status)
-      hadoop_status_daemon "${CATALINA_PID}"
-      exit
-    ;;
-    start)
-      set -- "start"
-    ;;
-    stop)
-      set -- "stop"
-    ;;
-  esac
+  print_usage
+  exit
 fi
 
-hadoop_finalize_catalina_opts
-export CATALINA_OPTS
+case $1 in
+  run)
+    args=("kms")
+  ;;
+  start|stop|status)
+    args=("--daemon" "$1" "kms")
+  ;;
+  *)
+    echo "Unknown sub-command \"$1\"."
+    print_usage
+    exit 1
+  ;;
+esac
 
-# A bug in catalina.sh script does not use CATALINA_OPTS for stopping the server
-#
-if [[ "${1}" = "stop" ]]; then
-  export JAVA_OPTS=${CATALINA_OPTS}
+# Locate bin
+if [[ -n "${HADOOP_HOME}" ]]; then
+  bin="${HADOOP_HOME}/bin"
+else
+  sbin=$(cd -P -- "$(dirname -- "$0")" >/dev/null && pwd -P)
+  bin=$(cd -P -- "${sbin}/../bin" >/dev/null && pwd -P)
 fi
 
-# If ssl, the populate the passwords into ssl-server.xml before starting tomcat
-#
-# KMS_SSL_KEYSTORE_PASS is a bit odd.
-# if undefined, then the if test will not enable ssl on its own
-# if "", set it to "password".
-# if custom, use provided password
-#
-if [[ -f "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml.conf" ]]; then
-  if [[ -n "${KMS_SSL_KEYSTORE_PASS+x}" ]] || [[ -n "${KMS_SSL_TRUSTSTORE_PASS}" ]]; then
-      export KMS_SSL_KEYSTORE_PASS=${KMS_SSL_KEYSTORE_PASS:-password}
-      KMS_SSL_KEYSTORE_PASS_ESCAPED=$(hadoop_xml_escape \
-        "$(hadoop_sed_escape "$KMS_SSL_KEYSTORE_PASS")")
-      KMS_SSL_TRUSTSTORE_PASS_ESCAPED=$(hadoop_xml_escape \
-        "$(hadoop_sed_escape "$KMS_SSL_TRUSTSTORE_PASS")")
-      sed -e 's/"_kms_ssl_keystore_pass_"/'"\"${KMS_SSL_KEYSTORE_PASS_ESCAPED}\""'/g' \
-          -e 's/"_kms_ssl_truststore_pass_"/'"\"${KMS_SSL_TRUSTSTORE_PASS_ESCAPED}\""'/g' \
-        "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml.conf" \
-        > "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml"
-      chmod 700 "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml" >/dev/null 2>&1
-  fi
-fi
-
-exec "${HADOOP_CATALINA_HOME}/bin/catalina.sh" "$@"
+exec "${bin}/hadoop" "${args[@]}"

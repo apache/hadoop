@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 import Ember from 'ember';
+import DS from 'ember-data';
 
 export default DS.JSONAPIAdapter.extend({
   address: null, //Must be set by inheriting classes

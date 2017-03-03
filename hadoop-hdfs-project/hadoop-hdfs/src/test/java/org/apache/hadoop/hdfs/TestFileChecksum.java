@@ -22,9 +22,11 @@ import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -44,16 +46,17 @@ import java.io.IOException;
 public class TestFileChecksum {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestFileChecksum.class);
-
-  private int dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
-  private int parityBlocks = StripedFileTestUtil.NUM_PARITY_BLOCKS;
+  private final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private int dataBlocks = ecPolicy.getNumDataUnits();
+  private int parityBlocks = ecPolicy.getNumParityUnits();
 
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
   private Configuration conf;
   private DFSClient client;
 
-  private int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
+  private int cellSize = ecPolicy.getCellSize();
   private int stripesPerBlock = 6;
   private int blockSize = cellSize * stripesPerBlock;
   private int numBlockGroups = 10;
@@ -72,13 +75,14 @@ public class TestFileChecksum {
     int numDNs = dataBlocks + parityBlocks + 2;
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY,
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     Path ecPath = new Path(ecDir);
     cluster.getFileSystem().mkdir(ecPath, FsPermission.getDirDefault());
-    cluster.getFileSystem().getClient().setErasureCodingPolicy(ecDir, null);
+    cluster.getFileSystem().getClient().setErasureCodingPolicy(ecDir,
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
     fs = cluster.getFileSystem();
     client = fs.getClient();
 

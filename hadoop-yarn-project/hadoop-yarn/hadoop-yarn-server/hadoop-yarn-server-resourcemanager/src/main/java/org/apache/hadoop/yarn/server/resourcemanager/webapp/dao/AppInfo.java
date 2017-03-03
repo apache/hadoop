@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -29,6 +30,7 @@ import javax.xml.bind.annotation.XmlTransient;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
@@ -114,6 +116,7 @@ public class AppInfo {
   protected String amNodeLabelExpression;
 
   protected ResourcesInfo resourceInfo = null;
+  protected AppTimeoutsInfo timeouts = new AppTimeoutsInfo();
 
   public AppInfo() {
   } // JAXB needs this
@@ -148,10 +151,9 @@ public class AppInfo {
       this.name = app.getName().toString();
       this.queue = app.getQueue().toString();
       this.priority = 0;
-      ApplicationSubmissionContext appSubmissionContext =
-          app.getApplicationSubmissionContext();
-      if (appSubmissionContext.getPriority() != null) {
-        this.priority = appSubmissionContext.getPriority()
+
+      if (app.getApplicationPriority() != null) {
+        this.priority = app.getApplicationPriority()
             .getPriority();
       }
       this.progress = app.getProgress() * 100;
@@ -220,6 +222,8 @@ public class AppInfo {
       vcoreSeconds = appMetrics.getVcoreSeconds();
       preemptedMemorySeconds = appMetrics.getPreemptedMemorySeconds();
       preemptedVcoreSeconds = appMetrics.getPreemptedVcoreSeconds();
+      ApplicationSubmissionContext appSubmissionContext =
+          app.getApplicationSubmissionContext();
       unmanagedApplication =
           appSubmissionContext.getUnmanagedAM();
       appNodeLabelExpression =
@@ -237,6 +241,31 @@ public class AppInfo {
           resourceInfo = null != ficaAppAttempt
               ? new ResourcesInfo(ficaAppAttempt.getSchedulingResourceUsage())
               : null;
+        }
+      }
+
+      Map<ApplicationTimeoutType, Long> applicationTimeouts =
+          app.getApplicationTimeouts();
+      if (applicationTimeouts.isEmpty()) {
+        // If application is not set timeout, lifetime should be sent as default
+        // with expiryTime=UNLIMITED and remainingTime=-1
+        AppTimeoutInfo timeoutInfo = new AppTimeoutInfo();
+        timeoutInfo.setTimeoutType(ApplicationTimeoutType.LIFETIME);
+        timeouts.add(timeoutInfo);
+      } else {
+        for (Map.Entry<ApplicationTimeoutType, Long> entry : app
+            .getApplicationTimeouts().entrySet()) {
+          AppTimeoutInfo timeout = new AppTimeoutInfo();
+          timeout.setTimeoutType(entry.getKey());
+          long timeoutInMillis = entry.getValue().longValue();
+          timeout.setExpiryTime(Times.formatISO8601(timeoutInMillis));
+          if (app.isAppInCompletedStates()) {
+            timeout.setRemainingTime(0);
+          } else {
+            timeout.setRemainingTime(Math
+                .max((timeoutInMillis - System.currentTimeMillis()) / 1000, 0));
+          }
+          timeouts.add(timeout);
         }
       }
     }

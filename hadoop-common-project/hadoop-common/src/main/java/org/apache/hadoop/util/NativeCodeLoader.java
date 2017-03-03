@@ -85,6 +85,11 @@ public final class NativeCodeLoader {
   public static native boolean buildSupportsIsal();
 
   /**
+  * Returns true only if this build was compiled with support for ZStandard.
+   */
+  public static native boolean buildSupportsZstd();
+
+  /**
    * Returns true only if this build was compiled with support for openssl.
    */
   public static native boolean buildSupportsOpenssl();

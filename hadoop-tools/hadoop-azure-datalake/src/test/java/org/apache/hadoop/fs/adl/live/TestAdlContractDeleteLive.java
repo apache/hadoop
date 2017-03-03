@@ -22,23 +22,14 @@ package org.apache.hadoop.fs.adl.live;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractDeleteTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.junit.Before;
 
 /**
- * Verify Adls DELETE semantics compliance with Hadoop.
+ * Test delete contract test.
  */
 public class TestAdlContractDeleteLive extends AbstractContractDeleteTest {
 
   @Override
   protected AbstractFSContract createContract(Configuration configuration) {
     return new AdlStorageContract(configuration);
-  }
-
-  @Before
-  @Override
-  public void setup() throws Exception {
-    org.junit.Assume
-        .assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
-    super.setup();
   }
 }

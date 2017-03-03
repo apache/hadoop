@@ -15,50 +15,7 @@
 MapReduce Tutorial
 ==================
 
-* [MapReduce Tutorial](#MapReduce_Tutorial)
-    * [Purpose](#Purpose)
-    * [Prerequisites](#Prerequisites)
-    * [Overview](#Overview)
-    * [Inputs and Outputs](#Inputs_and_Outputs)
-    * [Example: WordCount v1.0](#Example:_WordCount_v1.0)
-        * [Source Code](#Source_Code)
-        * [Usage](#Usage)
-        * [Walk-through](#Walk-through)
-    * [MapReduce - User Interfaces](#MapReduce_-_User_Interfaces)
-        * [Payload](#Payload)
-            * [Mapper](#Mapper)
-            * [Reducer](#Reducer)
-            * [Partitioner](#Partitioner)
-            * [Counter](#Counter)
-        * [Job Configuration](#Job_Configuration)
-        * [Task Execution & Environment](#Task_Execution__Environment)
-            * [Memory Management](#Memory_Management)
-            * [Map Parameters](#Map_Parameters)
-            * [Shuffle/Reduce Parameters](#ShuffleReduce_Parameters)
-            * [Configured Parameters](#Configured_Parameters)
-            * [Task Logs](#Task_Logs)
-            * [Distributing Libraries](#Distributing_Libraries)
-        * [Job Submission and Monitoring](#Job_Submission_and_Monitoring)
-            * [Job Control](#Job_Control)
-        * [Job Input](#Job_Input)
-            * [InputSplit](#InputSplit)
-            * [RecordReader](#RecordReader)
-        * [Job Output](#Job_Output)
-            * [OutputCommitter](#OutputCommitter)
-            * [Task Side-Effect Files](#Task_Side-Effect_Files)
-            * [RecordWriter](#RecordWriter)
-        * [Other Useful Features](#Other_Useful_Features)
-            * [Submitting Jobs to Queues](#Submitting_Jobs_to_Queues)
-            * [Counters](#Counters)
-            * [DistributedCache](#DistributedCache)
-            * [Profiling](#Profiling)
-            * [Debugging](#Debugging)
-            * [Data Compression](#Data_Compression)
-            * [Skipping Bad Records](#Skipping_Bad_Records)
-        * [Example: WordCount v2.0](#Example:_WordCount_v2.0)
-            * [Source Code](#Source_Code)
-            * [Sample Runs](#Sample_Runs)
-            * [Highlights](#Highlights)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Purpose
 -------
@@ -460,7 +417,7 @@ indicates the set of input files
 [FileInputFormat.addInputPath(Job, Path)](../../api/org/apache/hadoop/mapreduce/lib/input/FileInputFormat.html)) and
 ([FileInputFormat.setInputPaths(Job, String...)](../../api/org/apache/hadoop/mapreduce/lib/input/FileInputFormat.html)/
 [FileInputFormat.addInputPaths(Job, String))](../../api/org/apache/hadoop/mapreduce/lib/input/FileInputFormat.html) and where the output files should be written
-([FileOutputFormat.setOutputPath(Path)](../../api/org/apache/hadoop/mapreduce/lib/input/FileOutputFormat.html)).
+([FileOutputFormat.setOutputPath(Path)](../../api/org/apache/hadoop/mapreduce/lib/output/FileOutputFormat.html)).
 
 Optionally, `Job` is used to specify other advanced facets of the job such as the `Comparator` to be used, files to be put in the `DistributedCache`, whether intermediate and/or job outputs are to be compressed (and how), whether job tasks can be executed in a *speculative* manner
 ([setMapSpeculativeExecution(boolean)](../../api/org/apache/hadoop/mapreduce/Job.html))/

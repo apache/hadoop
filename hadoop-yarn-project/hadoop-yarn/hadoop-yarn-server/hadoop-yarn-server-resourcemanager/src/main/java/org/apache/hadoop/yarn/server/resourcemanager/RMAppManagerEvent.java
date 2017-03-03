@@ -24,13 +24,24 @@ import org.apache.hadoop.yarn.event.AbstractEvent;
 public class RMAppManagerEvent extends AbstractEvent<RMAppManagerEventType> {
 
   private final ApplicationId appId;
+  private final String targetQueueForMove;
 
   public RMAppManagerEvent(ApplicationId appId, RMAppManagerEventType type) {
+    this(appId, "", type);
+  }
+
+  public RMAppManagerEvent(ApplicationId appId, String targetQueueForMove,
+      RMAppManagerEventType type) {
     super(type);
     this.appId = appId;
+    this.targetQueueForMove = targetQueueForMove;
   }
 
   public ApplicationId getApplicationId() {
     return this.appId;
+  }
+
+  public String getTargetQueueForMove() {
+    return this.targetQueueForMove;
   }
 }

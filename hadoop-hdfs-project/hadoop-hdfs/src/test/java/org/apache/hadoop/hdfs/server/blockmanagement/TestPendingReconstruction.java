@@ -374,7 +374,7 @@ public class TestPendingReconstruction {
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
     CONF.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
         DFS_REPLICATION_INTERVAL);
-    CONF.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY,
+    CONF.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
         DFS_REPLICATION_INTERVAL);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(
         DATANODE_COUNT).build();

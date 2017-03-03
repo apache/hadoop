@@ -19,13 +19,12 @@
 package org.apache.hadoop.metrics2.impl;
 
 import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.net.URL;
 import java.net.URLClassLoader;
 import static java.security.AccessController.*;
 import java.security.PrivilegedAction;
 import java.util.Iterator;
-import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,10 +34,13 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
-import org.apache.commons.configuration.Configuration;
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
-import org.apache.commons.configuration.SubsetConfiguration;
+import org.apache.commons.configuration2.Configuration;
+import org.apache.commons.configuration2.PropertiesConfiguration;
+import org.apache.commons.configuration2.SubsetConfiguration;
+import org.apache.commons.configuration2.builder.fluent.Configurations;
+import org.apache.commons.configuration2.builder.fluent.Parameters;
+import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler;
+import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.metrics2.MetricsFilter;
@@ -110,15 +112,20 @@ class MetricsConfig extends SubsetConfiguration {
   static MetricsConfig loadFirst(String prefix, String... fileNames) {
     for (String fname : fileNames) {
       try {
-        Configuration cf = new PropertiesConfiguration(fname)
-            .interpolatedConfiguration();
+        Configuration cf = new Configurations().propertiesBuilder(fname)
+            .configure(new Parameters().properties()
+                .setFileName(fname)
+                .setListDelimiterHandler(new DefaultListDelimiterHandler(',')))
+              .getConfiguration()
+              .interpolatedConfiguration();
         LOG.info("loaded properties from "+ fname);
         LOG.debug(toString(cf));
         MetricsConfig mc = new MetricsConfig(cf, prefix);
         LOG.debug(mc);
         return mc;
       } catch (ConfigurationException e) {
-        if (e.getMessage().startsWith("Cannot locate configuration")) {
+        // Commons Configuration defines the message text when file not found
+        if (e.getMessage().startsWith("Could not locate")) {
           continue;
         }
         throw new MetricsConfigException(e);
@@ -175,8 +182,8 @@ class MetricsConfig extends SubsetConfiguration {
    * @return  the value or null
    */
   @Override
-  public Object getProperty(String key) {
-    Object value = super.getProperty(key);
+  public Object getPropertyInternal(String key) {
+    Object value = super.getPropertyInternal(key);
     if (value == null) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("poking parent '"+ getParent().getClass().getSimpleName() +
@@ -249,11 +256,6 @@ class MetricsConfig extends SubsetConfiguration {
     return defaultLoader;
   }
 
-  @Override public void clear() {
-    super.clear();
-    // pluginLoader.close(); // jdk7 is saner
-  }
-
   MetricsFilter getFilter(String prefix) {
     // don't create filter instances without out options
     MetricsConfig conf = subset(prefix);
@@ -274,10 +276,10 @@ class MetricsConfig extends SubsetConfiguration {
   static String toString(Configuration c) {
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     try {
-      PrintStream ps = new PrintStream(buffer, false, "UTF-8");
+      PrintWriter pw = new PrintWriter(buffer, false);
       PropertiesConfiguration tmp = new PropertiesConfiguration();
       tmp.copy(c);
-      tmp.save(ps);
+      tmp.write(pw);
       return buffer.toString("UTF-8");
     } catch (Exception e) {
       throw new MetricsConfigException(e);

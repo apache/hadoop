@@ -100,6 +100,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeFinishedContainersPulledByAMEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -326,10 +327,10 @@ public class TestRMAppAttemptTransitions {
     application = mock(RMAppImpl.class);
     applicationAttempt =
         new RMAppAttemptImpl(applicationAttemptId, spyRMContext, scheduler,
-            masterService, submissionContext, new Configuration(), false,
+            masterService, submissionContext, new Configuration(),
             BuilderUtils.newResourceRequest(
                 RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
-                submissionContext.getResource(), 1));
+                submissionContext.getResource(), 1), application);
 
     when(application.getCurrentAppAttempt()).thenReturn(applicationAttempt);
     when(application.getApplicationId()).thenReturn(applicationId);
@@ -478,7 +479,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(expectedState, applicationAttempt.getAppAttemptState());
     verify(scheduler, times(expectedAllocateCount)).allocate(
         any(ApplicationAttemptId.class), any(List.class), any(List.class),
-        any(List.class), any(List.class), any(List.class), any(List.class));
+        any(List.class), any(List.class), any(ContainerUpdates.class));
 
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
     assertNull(applicationAttempt.getMasterContainer());
@@ -499,7 +500,7 @@ public class TestRMAppAttemptTransitions {
     verify(applicationMasterLauncher).handle(any(AMLauncherEvent.class));
     verify(scheduler, times(2)).allocate(any(ApplicationAttemptId.class),
         any(List.class), any(List.class), any(List.class), any(List.class),
-        any(List.class), any(List.class));
+        any(ContainerUpdates.class));
     verify(nmTokenManager).clearNodeSetForAttempt(
       applicationAttempt.getAppAttemptId());
   }
@@ -526,7 +527,7 @@ public class TestRMAppAttemptTransitions {
   }
 
   /**
-   * {@link RMAppAttemptState#LAUNCH}
+   * {@link RMAppAttemptState#LAUNCHED}
    */
   private void testAppAttemptLaunchedState(Container container) {
     assertEquals(RMAppAttemptState.LAUNCHED, 
@@ -649,8 +650,8 @@ public class TestRMAppAttemptTransitions {
     when(allocation.getContainers()).
         thenReturn(Collections.singletonList(container));
     when(scheduler.allocate(any(ApplicationAttemptId.class), any(List.class),
-        any(List.class), any(List.class), any(List.class), any(List.class),
-        any(List.class))).
+        any(List.class), any(List.class), any(List.class),
+        any(ContainerUpdates.class))).
     thenReturn(allocation);
     RMContainer rmContainer = mock(RMContainerImpl.class);
     when(scheduler.getRMContainer(container.getId())).
@@ -1106,10 +1107,10 @@ public class TestRMAppAttemptTransitions {
     RMAppAttempt  myApplicationAttempt =
         new RMAppAttemptImpl(applicationAttempt.getAppAttemptId(),
             spyRMContext, scheduler,masterService,
-            submissionContext, myConf, false,
+            submissionContext, myConf,
             BuilderUtils.newResourceRequest(
                 RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
-                submissionContext.getResource(), 1));
+                submissionContext.getResource(), 1), application);
 
     //submit, schedule and allocate app attempt
     myApplicationAttempt.handle(
@@ -1129,8 +1130,9 @@ public class TestRMAppAttemptTransitions {
     when(allocation.getContainers()).
         thenReturn(Collections.singletonList(amContainer));
     when(scheduler.allocate(any(ApplicationAttemptId.class), any(List.class),
-        any(List.class), any(List.class), any(List.class), any(List.class),
-        any(List.class))).thenReturn(allocation);
+        any(List.class), any(List.class), any(List.class),
+        any(ContainerUpdates.class)))
+        .thenReturn(allocation);
     RMContainer rmContainer = mock(RMContainerImpl.class);
     when(scheduler.getRMContainer(amContainer.getId())).thenReturn(rmContainer);
 
@@ -1534,6 +1536,9 @@ public class TestRMAppAttemptTransitions {
     // create a failed attempt.
     when(submissionContext.getKeepContainersAcrossApplicationAttempts())
       .thenReturn(true);
+    when(application.getMaxAppAttempts()).thenReturn(2);
+    when(application.getNumFailedAppAttempts()).thenReturn(1);
+
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
@@ -1579,9 +1584,9 @@ public class TestRMAppAttemptTransitions {
     applicationAttempt =
         new RMAppAttemptImpl(applicationAttempt.getAppAttemptId(), spyRMContext,
           scheduler, masterService, submissionContext, new Configuration(),
-          true, BuilderUtils.newResourceRequest(
+          BuilderUtils.newResourceRequest(
               RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
-              submissionContext.getResource(), 1));
+              submissionContext.getResource(), 1), application);
     when(submissionContext.getKeepContainersAcrossApplicationAttempts())
       .thenReturn(true);
     when(submissionContext.getMaxAppAttempts()).thenReturn(1);
@@ -1610,7 +1615,8 @@ public class TestRMAppAttemptTransitions {
     YarnScheduler mockScheduler = mock(YarnScheduler.class);
     when(mockScheduler.allocate(any(ApplicationAttemptId.class),
         any(List.class), any(List.class), any(List.class), any(List.class),
-        any(List.class), any(List.class))).thenAnswer(new Answer<Allocation>() {
+        any(ContainerUpdates.class)))
+        .thenAnswer(new Answer<Allocation>() {
 
           @SuppressWarnings("rawtypes")
           @Override
@@ -1639,9 +1645,9 @@ public class TestRMAppAttemptTransitions {
     applicationAttempt =
         new RMAppAttemptImpl(applicationAttempt.getAppAttemptId(),
             spyRMContext, scheduler, masterService, submissionContext,
-            new Configuration(), true, ResourceRequest.newInstance(
+            new Configuration(), ResourceRequest.newInstance(
                 Priority.UNDEFINED, "host1", Resource.newInstance(3333, 1), 3,
-                false, "label-expression"));
+                false, "label-expression"), application);
     new RMAppAttemptImpl.ScheduleTransition().transition(
         (RMAppAttemptImpl) applicationAttempt, null);
   }

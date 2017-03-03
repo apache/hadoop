@@ -50,11 +50,11 @@ public class TestGlobPattern {
   }
 
   @Test public void testValidPatterns() {
-    assertMatch(true, "*", "^$", "foo", "bar");
+    assertMatch(true, "*", "^$", "foo", "bar", "\n");
     assertMatch(true, "?", "?", "^", "[", "]", "$");
-    assertMatch(true, "foo*", "foo", "food", "fool");
-    assertMatch(true, "f*d", "fud", "food");
-    assertMatch(true, "*d", "good", "bad");
+    assertMatch(true, "foo*", "foo", "food", "fool", "foo\n", "foo\nbar");
+    assertMatch(true, "f*d", "fud", "food", "foo\nd");
+    assertMatch(true, "*d", "good", "bad", "\nd");
     assertMatch(true, "\\*\\?\\[\\{\\\\", "*?[{\\");
     assertMatch(true, "[]^-]", "]", "-", "^");
     assertMatch(true, "]", "]");

@@ -263,7 +263,7 @@ public class InMemoryPlan implements Plan {
       reservationTable.put(inMemReservation.getReservationId(),
           inMemReservation);
       incrementAllocation(inMemReservation);
-      LOG.info("Sucessfully added reservation: {} to plan.",
+      LOG.info("Successfully added reservation: {} to plan.",
           inMemReservation.getReservationId());
       return true;
     } finally {
@@ -301,7 +301,7 @@ public class InMemoryPlan implements Plan {
             reservation.getReservationId(), e.getMessage());
       }
       if (result) {
-        LOG.info("Sucessfully updated reservation: {} in plan.",
+        LOG.info("Successfully updated reservation: {} in plan.",
             reservation.getReservationId());
         return result;
       } else {

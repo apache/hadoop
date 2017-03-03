@@ -37,7 +37,7 @@ export default DS.Model.extend({
   amNodeLabelExpression: DS.attr('string'),
   applicationTags: DS.attr('string'),
   applicationType: DS.attr('string'),
-  priority: DS.attr('number'),
+  priority: DS.attr('string'),
   allocatedMB: DS.attr('number'),
   allocatedVCores: DS.attr('number'),
   runningContainers: DS.attr('number'),
@@ -50,9 +50,11 @@ export default DS.Model.extend({
   clusterUsagePercentage: DS.attr('number'),
   queueUsagePercentage: DS.attr('number'),
   currentAppAttemptId: DS.attr('string'),
+  remainingTimeoutInSeconds: DS.attr('number'),
+  applicationExpiryTime: DS.attr('string'),
 
   isFailed: function() {
-    return this.get('finalStatus') == "FAILED"
+    return this.get('finalStatus') === "FAILED";
   }.property("finalStatus"),
 
   validatedFinishedTs: function() {
@@ -89,11 +91,11 @@ export default DS.Model.extend({
     var finalStatus = this.get("finalStatus");
     var style = "";
 
-    if (finalStatus == "KILLED") {
+    if (finalStatus === "KILLED") {
       style = "warning";
-    } else if (finalStatus == "FAILED") {
+    } else if (finalStatus === "FAILED") {
       style = "danger";
-    } else if (finalStatus == "SUCCEEDED") {
+    } else if (finalStatus === "SUCCEEDED") {
       style = "success";
     } else {
       style = "default";

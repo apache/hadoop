@@ -247,8 +247,8 @@ public class TestLocalContainerAllocator {
       ApplicationAttemptId attemptId =
           ApplicationAttemptId.newInstance(appId, 1);
       Job job = mock(Job.class);
-      @SuppressWarnings("rawtypes")
-      EventHandler eventHandler = mock(EventHandler.class);
+      @SuppressWarnings("unchecked")
+      EventHandler<Event> eventHandler = mock(EventHandler.class);
       AppContext ctx = mock(AppContext.class);
       when(ctx.getApplicationID()).thenReturn(appId);
       when(ctx.getApplicationAttemptId()).thenReturn(attemptId);

@@ -29,6 +29,8 @@ import static org.junit.Assert.assertFalse;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -797,5 +799,25 @@ abstract public class ViewFsBaseTest {
   @Test(expected = AccessControlException.class)
   public void testInternalDeleteSnapshot() throws IOException {
     fcView.deleteSnapshot(new Path("/internalDir"), "snap1");
+  }
+
+  @Test
+  public void testOwnerForInternalDir()
+      throws IOException, InterruptedException, URISyntaxException {
+    final UserGroupInformation userUgi = UserGroupInformation
+        .createUserForTesting("user@HADOOP.COM", new String[]{"hadoop"});
+    userUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Object run() throws IOException, URISyntaxException {
+        UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+        String doAsUserName = ugi.getUserName();
+        assertEquals(doAsUserName, "user@HADOOP.COM");
+        FileContext
+            viewFS = FileContext.getFileContext(FsConstants.VIEWFS_URI, conf);
+        FileStatus stat = viewFS.getFileStatus(new Path("/internalDir"));
+        assertEquals(userUgi.getShortUserName(), stat.getOwner());
+        return null;
+      }
+    });
   }
 }

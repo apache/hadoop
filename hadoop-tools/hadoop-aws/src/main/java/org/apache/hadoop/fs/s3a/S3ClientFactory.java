@@ -180,7 +180,7 @@ interface S3ClientFactory {
         userAgent = userAgentPrefix + ", " + userAgent;
       }
       LOG.debug("Using User-Agent: {}", userAgent);
-      awsConf.setUserAgent(userAgent);
+      awsConf.setUserAgentPrefix(userAgent);
     }
 
     /**
@@ -225,7 +225,9 @@ interface S3ClientFactory {
       final boolean pathStyleAccess = conf.getBoolean(PATH_STYLE_ACCESS, false);
       if (pathStyleAccess) {
         LOG.debug("Enabling path style access!");
-        s3.setS3ClientOptions(new S3ClientOptions().withPathStyleAccess(true));
+        s3.setS3ClientOptions(S3ClientOptions.builder()
+            .setPathStyleAccess(true)
+            .build());
       }
     }
   }

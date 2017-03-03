@@ -22,34 +22,13 @@ package org.apache.hadoop.fs.adl.live;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractMkdirTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.junit.Before;
-import org.junit.Test;
 
 /**
- * Verify Adls MKDIR semantics compliance with Hadoop.
+ * Test Mkdir contract on Adl storage file system.
  */
 public class TestAdlContractMkdirLive extends AbstractContractMkdirTest {
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new AdlStorageContract(conf);
-  }
-
-  @Before
-  @Override
-  public void setup() throws Exception {
-    org.junit.Assume
-        .assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
-    super.setup();
-  }
-
-  @Test
-  public void testMkdirOverParentFile() throws Throwable {
-    ContractTestUtils.unsupported("Not supported by Adl");
-  }
-
-  @Test
-  public void testNoMkdirOverFile() throws Throwable {
-    ContractTestUtils.unsupported("Not supported by Adl");
   }
 }

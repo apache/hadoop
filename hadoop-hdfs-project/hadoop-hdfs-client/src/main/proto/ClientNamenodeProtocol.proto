@@ -898,6 +898,8 @@ service ClientNamenodeProtocol {
       returns(GetEZForPathResponseProto);
   rpc setErasureCodingPolicy(SetErasureCodingPolicyRequestProto)
       returns(SetErasureCodingPolicyResponseProto);
+  rpc unsetErasureCodingPolicy(UnsetErasureCodingPolicyRequestProto)
+      returns(UnsetErasureCodingPolicyResponseProto);
   rpc getCurrentEditLogTxid(GetCurrentEditLogTxidRequestProto)
       returns(GetCurrentEditLogTxidResponseProto);
   rpc getEditsFromTxid(GetEditsFromTxidRequestProto)

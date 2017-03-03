@@ -31,12 +31,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.datanode.checker.Checkable;
+import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.StringUtils;
 
@@ -48,8 +50,10 @@ import org.apache.hadoop.util.StringUtils;
  *
  */
 @InterfaceAudience.Private
-public class StorageLocation implements Comparable<StorageLocation>{
-  final StorageType storageType;
+public class StorageLocation
+    implements Checkable<StorageLocation.CheckContext, VolumeCheckResult>,
+               Comparable<StorageLocation> {
+  private final StorageType storageType;
   private final URI baseURI;
   /** Regular expression that describes a storage uri with a storage type.
    *  e.g. [Disk]/storages/storage1/
@@ -204,6 +208,29 @@ public class StorageLocation implements Comparable<StorageLocation>{
     } catch (IOException e) {
       DataStorage.LOG.warn("Invalid directory in: " + data.getCanonicalPath() +
           ": " + e.getMessage());
+    }
+  }
+
+  @Override  // Checkable
+  public VolumeCheckResult check(CheckContext context) throws IOException {
+    DiskChecker.checkDir(
+        context.localFileSystem,
+        new Path(baseURI),
+        context.expectedPermission);
+    return VolumeCheckResult.HEALTHY;
+  }
+
+  /**
+   * Class to hold the parameters for running a {@link #check}.
+   */
+  public static final class CheckContext {
+    private final LocalFileSystem localFileSystem;
+    private final FsPermission expectedPermission;
+
+    public CheckContext(LocalFileSystem localFileSystem,
+                        FsPermission expectedPermission) {
+      this.localFileSystem = localFileSystem;
+      this.expectedPermission = expectedPermission;
     }
   }
 }
