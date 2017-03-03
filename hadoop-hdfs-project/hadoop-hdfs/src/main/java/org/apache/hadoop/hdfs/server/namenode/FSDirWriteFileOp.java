@@ -190,7 +190,8 @@ class FSDirWriteFileOp {
     blockType = pendingFile.getBlockType();
     ErasureCodingPolicy ecPolicy = null;
     if (blockType == BlockType.STRIPED) {
-      ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicy(fsn, src);
+      ecPolicy =
+          FSDirErasureCodingOp.unprotectedGetErasureCodingPolicy(fsn, iip);
       numTargets = (short) (ecPolicy.getSchema().getNumDataUnits()
           + ecPolicy.getSchema().getNumParityUnits());
     } else {
@@ -418,7 +419,7 @@ class FSDirWriteFileOp {
       // check if the file has an EC policy
       boolean isStriped = false;
       ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.
-          getErasureCodingPolicy(fsd.getFSNamesystem(), existing);
+          unprotectedGetErasureCodingPolicy(fsd.getFSNamesystem(), existing);
       if (ecPolicy != null) {
         isStriped = true;
       }
@@ -475,8 +476,9 @@ class FSDirWriteFileOp {
       // associate new last block for the file
       final BlockInfo blockInfo;
       if (blockType == BlockType.STRIPED) {
-        ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicy(
-            fsd.getFSNamesystem(), inodesInPath);
+        ErasureCodingPolicy ecPolicy =
+            FSDirErasureCodingOp.unprotectedGetErasureCodingPolicy(
+                fsd.getFSNamesystem(), inodesInPath);
         short numDataUnits = (short) ecPolicy.getNumDataUnits();
         short numParityUnits = (short) ecPolicy.getNumParityUnits();
         short numLocations = (short) (numDataUnits + numParityUnits);
@@ -529,7 +531,7 @@ class FSDirWriteFileOp {
     try {
       boolean isStriped = false;
       ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.
-          getErasureCodingPolicy(fsd.getFSNamesystem(), existing);
+          unprotectedGetErasureCodingPolicy(fsd.getFSNamesystem(), existing);
       if (ecPolicy != null) {
         isStriped = true;
       }

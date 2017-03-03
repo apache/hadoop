@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -30,12 +31,17 @@ import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -50,6 +56,9 @@ public class TestErasureCodingPolicies {
   private static final ErasureCodingPolicy EC_POLICY =
       ErasureCodingPolicyManager.getSystemDefaultPolicy();
   private FSNamesystem namesystem;
+
+  @Rule
+  public Timeout timeout = new Timeout(60 * 1000);
 
   @Before
   public void setupCluster() throws IOException {
@@ -74,7 +83,7 @@ public class TestErasureCodingPolicies {
    * for pre-existing files (with replicated blocks) in an EC dir, getListing
    * should report them as non-ec.
    */
-  @Test(timeout=60000)
+  @Test
   public void testReplicatedFileUnderECDir() throws IOException {
     final Path dir = new Path("/ec");
     final Path replicatedFile = new Path(dir, "replicatedFile");
@@ -128,7 +137,7 @@ public class TestErasureCodingPolicies {
     assertNotNull(files[1].getErasureCodingPolicy());
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testBasicSetECPolicy()
       throws IOException, InterruptedException {
     final Path testDir = new Path("/ec");
@@ -182,7 +191,7 @@ public class TestErasureCodingPolicies {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testMoveValidity() throws IOException, InterruptedException {
     final Path srcECDir = new Path("/srcEC");
     final Path dstECDir = new Path("/dstEC");
@@ -219,7 +228,7 @@ public class TestErasureCodingPolicies {
     fs.rename(nonECFile, dstECDir);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testReplication() throws IOException {
     final Path testDir = new Path("/ec");
     fs.mkdir(testDir, FsPermission.getDirDefault());
@@ -237,7 +246,7 @@ public class TestErasureCodingPolicies {
     assertEquals(policy, fs.getErasureCodingPolicy(fooFile));
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testGetErasureCodingPolicyWithSystemDefaultECPolicy() throws Exception {
     String src = "/ec";
     final Path ecDir = new Path(src);
@@ -254,7 +263,7 @@ public class TestErasureCodingPolicies {
     verifyErasureCodingInfo(src + "/child1", sysDefaultECPolicy);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testGetErasureCodingPolicy() throws Exception {
     ErasureCodingPolicy[] sysECPolicies =
         ErasureCodingPolicyManager.getSystemPolicies();
@@ -284,13 +293,13 @@ public class TestErasureCodingPolicies {
         usingECPolicy, ecPolicy);
   }
 
-  @Test(timeout = 60000)
-  public void testCreationErasureCodingZoneWithInvalidPolicy()
+  @Test
+  public void testSetInvalidPolicy()
       throws IOException {
     ECSchema rsSchema = new ECSchema("rs", 4, 2);
     String policyName = "RS-4-2-128k";
     int cellSize = 128 * 1024;
-    ErasureCodingPolicy ecPolicy=
+    ErasureCodingPolicy ecPolicy =
         new ErasureCodingPolicy(policyName, rsSchema, cellSize, (byte) -1);
     String src = "/ecDir4-2";
     final Path ecDir = new Path(src);
@@ -305,7 +314,7 @@ public class TestErasureCodingPolicies {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testGetAllErasureCodingPolicies() throws Exception {
     ErasureCodingPolicy[] sysECPolicies = ErasureCodingPolicyManager
         .getSystemPolicies();
@@ -315,7 +324,7 @@ public class TestErasureCodingPolicies {
         allECPolicies.containsAll(Arrays.asList(sysECPolicies)));
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testGetErasureCodingPolicyOnANonExistentFile() throws Exception {
     Path path = new Path("/ecDir");
     try {
@@ -335,7 +344,7 @@ public class TestErasureCodingPolicies {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testMultiplePoliciesCoExist() throws Exception {
     ErasureCodingPolicy[] sysPolicies =
         ErasureCodingPolicyManager.getSystemPolicies();
@@ -354,5 +363,125 @@ public class TestErasureCodingPolicies {
             iNode.asFile().getFileReplication());
       }
     }
+  }
+
+  @Test
+  public void testPermissions() throws Exception {
+    UserGroupInformation user =
+        UserGroupInformation.createUserForTesting("ecuser",
+            new String[]{"ecgroup"});
+    FileSystem userfs = user.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
+      public FileSystem run() throws Exception {
+        return FileSystem.get(conf);
+      }
+    });
+    HdfsAdmin useradmin = user.doAs(new PrivilegedExceptionAction<HdfsAdmin>() {
+      @Override
+      public HdfsAdmin run() throws Exception {
+        return new HdfsAdmin(userfs.getUri(), conf);
+      }
+    });
+
+    // Create dir and set an EC policy, create an EC file
+    Path ecdir = new Path("/ecdir");
+    Path ecfile = new Path(ecdir, "ecfile");
+    fs.setPermission(new Path("/"), new FsPermission((short)0777));
+    userfs.mkdirs(ecdir);
+    final String ecPolicyName =
+        ErasureCodingPolicyManager.getSystemPolicies()[0].getName();
+    useradmin.setErasureCodingPolicy(ecdir, ecPolicyName);
+    assertEquals("Policy not present on dir",
+        ecPolicyName,
+        useradmin.getErasureCodingPolicy(ecdir).getName());
+    userfs.create(ecfile).close();
+    assertEquals("Policy not present on file",
+        ecPolicyName,
+        useradmin.getErasureCodingPolicy(ecfile).getName());
+
+    // Unset and re-set
+    useradmin.unsetErasureCodingPolicy(ecdir);
+    useradmin.setErasureCodingPolicy(ecdir, ecPolicyName);
+
+    // Change write permissions and make sure set and unset are denied
+    userfs.setPermission(ecdir, new FsPermission((short)0555));
+    try {
+      useradmin.setErasureCodingPolicy(ecdir, ecPolicyName);
+      fail("Should not be able to setECPolicy without write permissions");
+    } catch (AccessControlException e) {
+      // pass
+    }
+    try {
+      useradmin.unsetErasureCodingPolicy(ecdir);
+      fail("Should not be able to unsetECPolicy without write permissions");
+    } catch (AccessControlException e) {
+      // pass
+    }
+
+    // Change the permissions again, check that set and unset work
+    userfs.setPermission(ecdir, new FsPermission((short)0640));
+    useradmin.unsetErasureCodingPolicy(ecdir);
+    useradmin.setErasureCodingPolicy(ecdir, ecPolicyName);
+
+    // Set, unset, and get with another user should be unauthorized
+    UserGroupInformation nobody =
+        UserGroupInformation.createUserForTesting("nobody",
+            new String[]{"nogroup"});
+    HdfsAdmin noadmin = nobody.doAs(new PrivilegedExceptionAction<HdfsAdmin>() {
+      @Override
+      public HdfsAdmin run() throws Exception {
+        return new HdfsAdmin(userfs.getUri(), conf);
+      }
+    });
+    try {
+      noadmin.setErasureCodingPolicy(ecdir, ecPolicyName);
+      fail("Should not be able to setECPolicy without write permissions");
+    } catch (AccessControlException e) {
+      // pass
+    }
+    try {
+      noadmin.unsetErasureCodingPolicy(ecdir);
+      fail("Should not be able to unsetECPolicy without write permissions");
+    } catch (AccessControlException e) {
+      // pass
+    }
+    try {
+      noadmin.getErasureCodingPolicy(ecdir);
+      fail("Should not be able to getECPolicy without write permissions");
+    } catch (AccessControlException e) {
+      // pass
+    }
+
+    // superuser can do whatever it wants
+    userfs.setPermission(ecdir, new FsPermission((short)0000));
+    HdfsAdmin superadmin = new HdfsAdmin(fs.getUri(), conf);
+    superadmin.unsetErasureCodingPolicy(ecdir);
+    superadmin.setErasureCodingPolicy(ecdir, ecPolicyName);
+    superadmin.getErasureCodingPolicy(ecdir);
+
+    // Normal user no longer has access
+    try {
+      useradmin.getErasureCodingPolicy(ecdir);
+      fail("Normal user should not have access");
+    } catch (AccessControlException e) {
+      // pass
+    }
+    try {
+      useradmin.setErasureCodingPolicy(ecfile, ecPolicyName);
+      fail("Normal user should not have access");
+    } catch (AccessControlException e) {
+      // pass
+    }
+    try {
+      useradmin.unsetErasureCodingPolicy(ecfile);
+      fail("Normal user should not have access");
+    } catch (AccessControlException e) {
+      // pass
+    }
+
+    // Everyone has access to getting the list of EC policies
+    useradmin.getErasureCodingPolicies();
+    noadmin.getErasureCodingPolicies();
+    superadmin.getErasureCodingPolicies();
   }
 }
