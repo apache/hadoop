@@ -330,6 +330,40 @@ The service is expected to return a response in JSON format:
   "sasKey" : Requested SAS Key <String>
 }
 ```
+
+## <a name="WASB Authorization" />Authorization Support in WASB.
+
+Authorization support can be enabled in WASB using the following configuration:
+
+```
+    <property>
+      <name>fs.azure.authorization</name>
+      <value>true</value>
+    </property>
+```
+  The current implementation of authorization relies on the presence of an external service that can enforce
+  the authorization. The service is expected to be running on a URL provided by the following config.
+
+```
+    <property>
+      <name>fs.azure.authorization.remote.service.url</name>
+      <value>{URL}</value>
+    </property>
+```
+
+  The remote service is expected to provide support for the following REST call: ```{URL}/CHECK_AUTHORIZATION```
+  An example request:
+  ```{URL}/CHECK_AUTHORIZATION?wasb_absolute_path=<absolute_path>&operation_type=<operation type>&delegation_token=<delegation token>```
+
+  The service is expected to return a response in JSON format:
+  ```
+  {
+    "responseCode" : 0 or non-zero <int>,
+    "responseMessage" : relavant message on failure <String>,
+    "authorizationResult" : true/false <boolean>
+  }
+  ```
+
 ## <a name="Testing_the_hadoop-azure_Module" />Testing the hadoop-azure Module
 
 The hadoop-azure module includes a full suite of unit tests.  Most of the tests
