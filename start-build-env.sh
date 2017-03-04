@@ -31,7 +31,7 @@ else # boot2docker uid and gid
   GROUP_ID=50
 fi
 
-docker build -t "hadoop-build-${USER_NAME}" - <<UserSpecificDocker
+docker build -t "hadoop-build-${USER_ID}" - <<UserSpecificDocker
 FROM hadoop-build
 RUN groupadd --non-unique -g ${GROUP_ID} ${USER_NAME}
 RUN useradd -g ${GROUP_ID} -u ${USER_ID} -k /root -m ${USER_NAME}
@@ -47,4 +47,4 @@ docker run --rm=true -t -i \
   -w "/home/${USER_NAME}/hadoop" \
   -v "${HOME}/.m2:/home/${USER_NAME}/.m2" \
   -u "${USER_NAME}" \
-  "hadoop-build-${USER_NAME}"
+  "hadoop-build-${USER_ID}"
