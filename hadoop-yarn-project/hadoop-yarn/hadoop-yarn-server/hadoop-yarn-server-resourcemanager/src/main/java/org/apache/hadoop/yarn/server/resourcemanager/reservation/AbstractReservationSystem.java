@@ -451,12 +451,16 @@ public abstract class AbstractReservationSystem extends AbstractService
     try {
       Class<?> agentClazz = conf.getClassByName(agentClassName);
       if (ReservationAgent.class.isAssignableFrom(agentClazz)) {
-        return (ReservationAgent) ReflectionUtils.newInstance(agentClazz, conf);
+        ReservationAgent resevertionAgent =
+            (ReservationAgent) agentClazz.newInstance();
+        resevertionAgent.init(conf);
+        return resevertionAgent;
       } else {
         throw new YarnRuntimeException("Class: " + agentClassName
             + " not instance of " + ReservationAgent.class.getCanonicalName());
       }
-    } catch (ClassNotFoundException e) {
+    } catch (ClassNotFoundException | InstantiationException
+        | IllegalAccessException e) {
       throw new YarnRuntimeException("Could not instantiate Agent: "
           + agentClassName + " for queue: " + queueName, e);
     }

@@ -81,7 +81,8 @@ public class TestAddOverReplicatedStripedBlocks {
     cluster.waitActive();
     fs = cluster.getFileSystem();
     fs.mkdirs(dirPath);
-    fs.getClient().setErasureCodingPolicy(dirPath.toString(), null);
+    fs.getClient().setErasureCodingPolicy(dirPath.toString(),
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
   }
 
   @After

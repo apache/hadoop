@@ -68,16 +68,32 @@ public class NetworkTopology {
    * @return an instance of NetworkTopology
    */
   public static NetworkTopology getInstance(Configuration conf){
-    return ReflectionUtils.newInstance(
-        conf.getClass(CommonConfigurationKeysPublic.NET_TOPOLOGY_IMPL_KEY,
-        NetworkTopology.class, NetworkTopology.class), conf);
+    return getInstance(conf, InnerNodeImpl.FACTORY);
   }
 
-  InnerNode.Factory factory = InnerNodeImpl.FACTORY;
+  public static NetworkTopology getInstance(Configuration conf,
+      InnerNode.Factory factory) {
+    NetworkTopology nt = ReflectionUtils.newInstance(
+        conf.getClass(CommonConfigurationKeysPublic.NET_TOPOLOGY_IMPL_KEY,
+            NetworkTopology.class, NetworkTopology.class), conf);
+    return nt.init(factory);
+  }
+
+  protected NetworkTopology init(InnerNode.Factory factory) {
+    if (!factory.equals(this.factory)) {
+      // the constructor has initialized the factory to default. So only init
+      // again if another factory is specified.
+      this.factory = factory;
+      this.clusterMap = factory.newInnerNode(NodeBase.ROOT);
+    }
+    return this;
+  }
+
+  InnerNode.Factory factory;
   /**
    * the root cluster map
    */
-  InnerNode clusterMap = factory.newInnerNode(NodeBase.ROOT);
+  InnerNode clusterMap;
   /** Depth of all leaf nodes */
   private int depthOfAllLeaves = -1;
   /** rack counter */
@@ -92,7 +108,10 @@ public class NetworkTopology {
   /** the lock used to manage access */
   protected ReadWriteLock netlock = new ReentrantReadWriteLock();
 
+  // keeping the constructor because other components like MR still uses this.
   public NetworkTopology() {
+    this.factory = InnerNodeImpl.FACTORY;
+    this.clusterMap = factory.newInnerNode(NodeBase.ROOT);
   }
 
   /** Add a leaf node

@@ -190,6 +190,7 @@ public class FairSchedulerTestBase {
 
     scheduler.allocate(id, ask, new ArrayList<ContainerId>(),
         null, null, NULL_UPDATE_REQUESTS);
+    scheduler.update();
     return id;
   }
   
@@ -240,6 +241,7 @@ public class FairSchedulerTestBase {
     ask.add(request);
     scheduler.allocate(attId, ask,  new ArrayList<ContainerId>(),
         null, null, NULL_UPDATE_REQUESTS);
+    scheduler.update();
   }
 
   protected void createApplicationWithAMResource(ApplicationAttemptId attId,

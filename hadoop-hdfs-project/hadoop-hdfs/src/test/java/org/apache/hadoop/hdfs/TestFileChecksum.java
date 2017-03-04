@@ -81,7 +81,8 @@ public class TestFileChecksum {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     Path ecPath = new Path(ecDir);
     cluster.getFileSystem().mkdir(ecPath, FsPermission.getDirDefault());
-    cluster.getFileSystem().getClient().setErasureCodingPolicy(ecDir, null);
+    cluster.getFileSystem().getClient().setErasureCodingPolicy(ecDir,
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
     fs = cluster.getFileSystem();
     client = fs.getClient();
 

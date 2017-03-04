@@ -329,17 +329,19 @@ public final class FSImageFormatPBINode {
       assert n.getType() == INodeSection.INode.Type.FILE;
       INodeSection.INodeFile f = n.getFile();
       List<BlockProto> bp = f.getBlocksList();
-      short replication = (short) f.getReplication();
       BlockType blockType = PBHelperClient.convert(f.getBlockType());
       LoaderContext state = parent.getLoaderContext();
-      ErasureCodingPolicy ecPolicy = (blockType == BlockType.STRIPED) ?
-          ErasureCodingPolicyManager.getPolicyByPolicyID((byte) replication) :
-          null;
+      boolean isStriped = f.hasErasureCodingPolicyID();
+      Short replication = (!isStriped ? (short) f.getReplication() : null);
+      ErasureCodingPolicy ecPolicy = isStriped ?
+          ErasureCodingPolicyManager.getPolicyByPolicyID(
+              (byte) f.getErasureCodingPolicyID()) : null;
+      Byte ecPolicyID = (isStriped ? ecPolicy.getId() : null);
 
       BlockInfo[] blocks = new BlockInfo[bp.size()];
       for (int i = 0; i < bp.size(); ++i) {
         BlockProto b = bp.get(i);
-        if (blockType == BlockType.STRIPED) {
+        if (isStriped) {
           blocks[i] = new BlockInfoStriped(PBHelperClient.convert(b), ecPolicy);
         } else {
           blocks[i] = new BlockInfoContiguous(PBHelperClient.convert(b),
@@ -352,8 +354,8 @@ public final class FSImageFormatPBINode {
 
       final INodeFile file = new INodeFile(n.getId(),
           n.getName().toByteArray(), permissions, f.getModificationTime(),
-          f.getAccessTime(), blocks, replication, f.getPreferredBlockSize(),
-          (byte)f.getStoragePolicyID(), blockType);
+          f.getAccessTime(), blocks, replication, ecPolicyID,
+          f.getPreferredBlockSize(), (byte)f.getStoragePolicyID(), blockType);
 
       if (f.hasAcl()) {
         int[] entries = AclEntryStatusFormat.toInt(loadAclEntries(
@@ -376,7 +378,7 @@ public final class FSImageFormatPBINode {
           BlockInfo lastBlk = file.getLastBlock();
           // replace the last block of file
           final BlockInfo ucBlk;
-          if (blockType == BlockType.STRIPED) {
+          if (isStriped) {
             BlockInfoStriped striped = (BlockInfoStriped) lastBlk;
             ucBlk = new BlockInfoStriped(striped, ecPolicy);
           } else {
@@ -503,9 +505,14 @@ public final class FSImageFormatPBINode {
           .setModificationTime(file.getModificationTime())
           .setPermission(buildPermissionStatus(file, state.getStringMap()))
           .setPreferredBlockSize(file.getPreferredBlockSize())
-          .setReplication(file.getFileReplication())
           .setStoragePolicyID(file.getLocalStoragePolicyID())
           .setBlockType(PBHelperClient.convert(file.getBlockType()));
+
+      if (file.isStriped()) {
+        b.setErasureCodingPolicyID(file.getErasureCodingPolicyID());
+      } else {
+        b.setReplication(file.getFileReplication());
+      }
 
       AclFeature f = file.getAclFeature();
       if (f != null) {

@@ -136,6 +136,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.TestTransferRbw;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -1898,7 +1899,7 @@ public class DFSTestUtil {
       Path dir, int numBlocks, int numStripesPerBlk, boolean toMkdir)
       throws Exception {
     createStripedFile(cluster, file, dir, numBlocks, numStripesPerBlk,
-        toMkdir, null);
+        toMkdir, ErasureCodingPolicyManager.getSystemDefaultPolicy());
   }
 
   /**
@@ -1922,7 +1923,8 @@ public class DFSTestUtil {
       assert dir != null;
       dfs.mkdirs(dir);
       try {
-        dfs.getClient().setErasureCodingPolicy(dir.toString(), ecPolicy);
+        dfs.getClient()
+            .setErasureCodingPolicy(dir.toString(), ecPolicy.getName());
       } catch (IOException e) {
         if (!e.getMessage().contains("non-empty directory")) {
           throw e;

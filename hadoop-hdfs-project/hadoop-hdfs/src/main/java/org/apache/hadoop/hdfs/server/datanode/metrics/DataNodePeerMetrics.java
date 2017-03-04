@@ -52,8 +52,9 @@ public class DataNodePeerMetrics {
    * Threshold in milliseconds below which a DataNode is definitely not slow.
    */
   private static final long LOW_THRESHOLD_MS = 5;
+  private static final long MIN_OUTLIER_DETECTION_NODES = 10;
 
-  private final SlowNodeDetector slowNodeDetector;
+  private final OutlierDetector slowNodeDetector;
 
   /**
    * Minimum number of packet send samples which are required to qualify
@@ -68,7 +69,8 @@ public class DataNodePeerMetrics {
       final long windowSizeMs,
       final int numWindows) {
     this.name = name;
-    this.slowNodeDetector = new SlowNodeDetector(LOW_THRESHOLD_MS);
+    this.slowNodeDetector = new OutlierDetector(MIN_OUTLIER_DETECTION_NODES,
+        LOW_THRESHOLD_MS);
     sendPacketDownstreamRollingAvgerages = new RollingAverages(
         windowSizeMs, numWindows);
   }

@@ -61,7 +61,7 @@ public class TestReadStripedFileWithMissingBlocks {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.getFileSystem().getClient().setErasureCodingPolicy(
-        "/", ecPolicy);
+        "/", ecPolicy.getName());
     fs = cluster.getFileSystem();
   }
 

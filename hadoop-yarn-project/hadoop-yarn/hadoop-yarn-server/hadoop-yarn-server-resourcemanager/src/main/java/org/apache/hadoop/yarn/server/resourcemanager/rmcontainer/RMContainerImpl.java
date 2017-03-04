@@ -131,8 +131,6 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
     .addTransition(RMContainerState.RUNNING, RMContainerState.RUNNING,
         RMContainerEventType.RESERVED, new ContainerReservedTransition())
     .addTransition(RMContainerState.RUNNING, RMContainerState.RUNNING,
-        RMContainerEventType.CHANGE_RESOURCE, new ChangeResourceTransition())
-    .addTransition(RMContainerState.RUNNING, RMContainerState.RUNNING,
         RMContainerEventType.ACQUIRE_UPDATED_CONTAINER, 
         new ContainerAcquiredWhileRunningTransition())
     .addTransition(RMContainerState.RUNNING, RMContainerState.RUNNING,
@@ -183,7 +181,6 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
   private boolean isAMContainer;
   private List<ResourceRequest> resourceRequests;
 
-  private volatile boolean hasIncreaseReservation = false;
   // Only used for container resource increase and decrease. This is the
   // resource to rollback to should container resource increase token expires.
   private Resource lastConfirmedResource;
@@ -561,12 +558,6 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
       if (c != null) {
         c.setNodeId(container.reservedNode);
       }
-
-      if (!EnumSet.of(RMContainerState.NEW, RMContainerState.RESERVED)
-          .contains(container.getState())) {
-        // When container's state != NEW/RESERVED, it is an increase reservation
-        container.hasIncreaseReservation = true;
-      }
     }
   }
 
@@ -679,33 +670,6 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
             container.nodeId, container.getContainerId()));
 
       }
-    }
-  }
-  
-  private static final class ChangeResourceTransition extends BaseTransition {
-
-    @Override
-    public void transition(RMContainerImpl container, RMContainerEvent event) {
-      RMContainerChangeResourceEvent changeEvent = (RMContainerChangeResourceEvent)event;
-
-      Resource targetResource = changeEvent.getTargetResource();
-      Resource lastConfirmedResource = container.lastConfirmedResource;
-
-      if (!changeEvent.isIncrease()) {
-        // Only unregister from the containerAllocationExpirer when target
-        // resource is less than or equal to the last confirmed resource.
-        if (Resources.fitsIn(targetResource, lastConfirmedResource)) {
-          container.lastConfirmedResource = targetResource;
-          container.containerAllocationExpirer.unregister(
-              new AllocationExpirationInfo(event.getContainerId()));
-        }
-      }
-
-      container.container.setResource(targetResource);
-
-      // We reach here means we either allocated increase reservation OR
-      // decreased container, reservation will be cancelled anyway. 
-      container.hasIncreaseReservation = false;
     }
   }
 
@@ -855,16 +819,6 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
       return getContainerId().compareTo(o.getContainerId());
     }
     return -1;
-  }
-
-  @Override
-  public boolean hasIncreaseReservation() {
-    return hasIncreaseReservation;
-  }
-
-  @Override
-  public void cancelIncreaseReservation() {
-    hasIncreaseReservation = false;
   }
 
   public void setQueueName(String queueName) {

@@ -726,8 +726,11 @@ public class TestAlignedPlanner {
     QueueMetrics queueMetrics = mock(QueueMetrics.class);
     RMContext context = ReservationSystemTestUtil.createMockRMContext();
 
+    conf.setInt(AlignedPlannerWithGreedy.SMOOTHNESS_FACTOR,
+        AlignedPlannerWithGreedy.DEFAULT_SMOOTHNESS_FACTOR);
     // Set planning agent
     agent = new AlignedPlannerWithGreedy();
+    agent.init(conf);
 
     // Create Plan
     plan =

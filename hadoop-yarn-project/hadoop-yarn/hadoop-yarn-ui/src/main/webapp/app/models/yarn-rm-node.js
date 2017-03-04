@@ -96,4 +96,12 @@ export default DS.Model.extend({
            "<p>Used Memory: " + Math.round(this.get("usedMemoryMB")) + ' MB</p>' +
            "<p>Available Memory: " + Math.round(this.get("availMemoryMB")) + ' MB</p>';
   }.property(),
+
+  usedMemoryBytes: function() {
+    return this.get("usedMemoryMB") * 1024 * 1024;
+  }.property("usedMemoryMB"),
+
+  availMemoryBytes: function() {
+    return this.get("availMemoryMB") * 1024 * 1024;
+  }.property("availMemoryMB"),
 });

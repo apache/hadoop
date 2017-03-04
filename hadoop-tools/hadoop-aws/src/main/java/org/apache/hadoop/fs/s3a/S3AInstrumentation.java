@@ -36,6 +36,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 
@@ -428,7 +429,7 @@ public class S3AInstrumentation {
     if (gauge != null) {
       gauge.decr(count);
     } else {
-      LOG.debug("No Gauge: " + op);
+      LOG.debug("No Gauge: {}", op);
     }
   }
 
@@ -676,11 +677,27 @@ public class S3AInstrumentation {
     private final AtomicLong transferDuration = new AtomicLong(0);
     private final AtomicLong queueDuration = new AtomicLong(0);
     private final AtomicLong exceptionsInMultipartFinalize = new AtomicLong(0);
+    private final AtomicInteger blocksAllocated = new AtomicInteger(0);
+    private final AtomicInteger blocksReleased = new AtomicInteger(0);
 
     private Statistics statistics;
 
     public OutputStreamStatistics(Statistics statistics){
       this.statistics = statistics;
+    }
+
+    /**
+     * A block has been allocated.
+     */
+    void blockAllocated() {
+      blocksAllocated.incrementAndGet();
+    }
+
+    /**
+     * A block has been released.
+     */
+    void blockReleased() {
+      blocksReleased.incrementAndGet();
     }
 
     /**
@@ -778,6 +795,24 @@ public class S3AInstrumentation {
       return queueDuration.get() + transferDuration.get();
     }
 
+    public int blocksAllocated() {
+      return blocksAllocated.get();
+    }
+
+    public int blocksReleased() {
+      return blocksReleased.get();
+    }
+
+    /**
+     * Get counters of blocks actively allocated; my be inaccurate
+     * if the numbers change during the (non-synchronized) calculation.
+     * @return the number of actively allocated blocks.
+     */
+    public int blocksActivelyAllocated() {
+      return blocksAllocated.get() - blocksReleased.get();
+    }
+
+
     @Override
     public String toString() {
       final StringBuilder sb = new StringBuilder(
@@ -789,6 +824,9 @@ public class S3AInstrumentation {
       sb.append(", blockUploadsFailed=").append(blockUploadsFailed);
       sb.append(", bytesPendingUpload=").append(bytesPendingUpload);
       sb.append(", bytesUploaded=").append(bytesUploaded);
+      sb.append(", blocksAllocated=").append(blocksAllocated);
+      sb.append(", blocksReleased=").append(blocksReleased);
+      sb.append(", blocksActivelyAllocated=").append(blocksActivelyAllocated());
       sb.append(", exceptionsInMultipartFinalize=").append(
           exceptionsInMultipartFinalize);
       sb.append(", transferDuration=").append(transferDuration).append(" ms");

@@ -63,7 +63,8 @@ public class TestOfflineImageViewerWithStripedBlocks {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.waitActive();
-    cluster.getFileSystem().getClient().setErasureCodingPolicy("/", null);
+    cluster.getFileSystem().getClient().setErasureCodingPolicy("/",
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
     fs = cluster.getFileSystem();
     Path eczone = new Path("/eczone");
     fs.mkdirs(eczone);
@@ -143,6 +144,8 @@ public class TestOfflineImageViewerWithStripedBlocks {
     // Verify space consumed present in BlockInfoStriped
     FSDirectory fsdir = cluster.getNamesystem().getFSDirectory();
     INodeFile fileNode = fsdir.getINode4Write(file.toString()).asFile();
+    assertEquals(ErasureCodingPolicyManager.getSystemDefaultPolicy().getId(),
+        fileNode.getErasureCodingPolicyID());
     assertTrue("Invalid block size", fileNode.getBlocks().length > 0);
     long actualFileSize = 0;
     for (BlockInfo blockInfo : fileNode.getBlocks()) {

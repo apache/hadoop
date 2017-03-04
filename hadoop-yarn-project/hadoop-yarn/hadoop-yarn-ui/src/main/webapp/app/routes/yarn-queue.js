@@ -26,7 +26,9 @@ export default AbstractRoute.extend({
       selected : param.queue_name,
       queues: this.store.query('yarn-queue', {}),
       selectedQueue : undefined,
-      apps: this.store.findAll('yarn-app', {reload: true})
+      apps: this.store.query('yarn-app', {
+        queue: param.queue_name
+      })
     });
   },
 

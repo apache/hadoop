@@ -71,7 +71,8 @@ public class TestQuotaWithStripedBlocks {
     dfs = cluster.getFileSystem();
 
     dfs.mkdirs(ecDir);
-    dfs.getClient().setErasureCodingPolicy(ecDir.toString(), ecPolicy);
+    dfs.getClient()
+        .setErasureCodingPolicy(ecDir.toString(), ecPolicy.getName());
     dfs.setQuota(ecDir, Long.MAX_VALUE - 1, DISK_QUOTA);
     dfs.setQuotaByStorageType(ecDir, StorageType.DISK, DISK_QUOTA);
     dfs.setStoragePolicy(ecDir, HdfsConstants.HOT_STORAGE_POLICY_NAME);

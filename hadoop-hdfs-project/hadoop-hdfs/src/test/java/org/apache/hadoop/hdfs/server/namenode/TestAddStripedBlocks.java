@@ -86,7 +86,8 @@ public class TestAddStripedBlocks {
         .numDataNodes(groupSize).build();
     cluster.waitActive();
     dfs = cluster.getFileSystem();
-    dfs.getClient().setErasureCodingPolicy("/", null);
+    dfs.getClient().setErasureCodingPolicy("/", ErasureCodingPolicyManager
+        .getSystemDefaultPolicy().getName());
   }
 
   @After

@@ -104,6 +104,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 
 /**
  * A scheduler that schedules resources between a set of queues. The scheduler
@@ -348,7 +349,8 @@ public class FairScheduler extends
    * fair shares, deficits, minimum slot allocations, and amount of used and
    * required resources per job.
    */
-  protected void update() {
+  @VisibleForTesting
+  public void update() {
     try {
       writeLock.lock();
 
@@ -818,9 +820,7 @@ public class FairScheduler extends
     }
 
     // Handle promotions and demotions
-    handleExecutionTypeUpdates(
-        application, updateRequests.getPromotionRequests(),
-        updateRequests.getDemotionRequests());
+    handleContainerUpdates(application, updateRequests);
 
     // Sanity check
     normalizeRequests(ask);
@@ -1768,18 +1768,15 @@ public class FairScheduler extends
     return targetQueueName;
   }
 
-  @Override
-  protected void decreaseContainer(
-      SchedContainerChangeRequest decreaseRequest,
-      SchedulerApplicationAttempt attempt) {
-    // TODO Auto-generated method stub    
-  }
-
   public float getReservableNodesRatio() {
     return reservableNodesRatio;
   }
 
   long getNMHeartbeatInterval() {
     return nmHeartbeatInterval;
+  }
+
+  ReadLock getSchedulerReadLock() {
+    return this.readLock;
   }
 }

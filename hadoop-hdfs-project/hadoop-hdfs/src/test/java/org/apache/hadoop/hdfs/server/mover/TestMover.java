@@ -537,7 +537,8 @@ public class TestMover {
       client.setStoragePolicy(barDir,
           HdfsConstants.HOT_STORAGE_POLICY_NAME);
       // set an EC policy on "/bar" directory
-      client.setErasureCodingPolicy(barDir, null);
+      client.setErasureCodingPolicy(barDir,
+          ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
 
       // write file to barDir
       final String fooFile = "/bar/foo";

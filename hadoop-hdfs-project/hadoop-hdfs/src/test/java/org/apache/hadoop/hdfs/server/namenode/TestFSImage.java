@@ -155,37 +155,38 @@ public class TestFSImage {
 
   private void testSaveAndLoadStripedINodeFile(FSNamesystem fsn, Configuration conf,
                                                boolean isUC) throws IOException{
-    // contruct a INode with StripedBlock for saving and loading
-    fsn.setErasureCodingPolicy("/", testECPolicy, false);
+    // Construct an INode with StripedBlock for saving and loading
+    fsn.setErasureCodingPolicy("/", testECPolicy.getName(), false);
     long id = 123456789;
     byte[] name = "testSaveAndLoadInodeFile_testfile".getBytes();
     PermissionStatus permissionStatus = new PermissionStatus("testuser_a",
             "testuser_groups", new FsPermission((short)0x755));
     long mtime = 1426222916-3600;
     long atime = 1426222916;
-    BlockInfoContiguous[] blks = new BlockInfoContiguous[0];
-    short replication = testECPolicy.getId();
+    BlockInfoContiguous[] blocks = new BlockInfoContiguous[0];
+    byte erasureCodingPolicyID = testECPolicy.getId();
     long preferredBlockSize = 128*1024*1024;
     INodeFile file = new INodeFile(id, name, permissionStatus, mtime, atime,
-        blks, replication, preferredBlockSize, (byte) 0, BlockType.STRIPED);
+        blocks, null, erasureCodingPolicyID, preferredBlockSize,
+        (byte) 0, BlockType.STRIPED);
     ByteArrayOutputStream bs = new ByteArrayOutputStream();
 
-    //construct StripedBlocks for the INode
-    BlockInfoStriped[] stripedBlks = new BlockInfoStriped[3];
+    // Construct StripedBlocks for the INode
+    BlockInfoStriped[] stripedBlocks = new BlockInfoStriped[3];
     long stripedBlkId = 10000001;
     long timestamp = mtime+3600;
-    for (int i = 0; i < stripedBlks.length; i++) {
-      stripedBlks[i] = new BlockInfoStriped(
+    for (int i = 0; i < stripedBlocks.length; i++) {
+      stripedBlocks[i] = new BlockInfoStriped(
               new Block(stripedBlkId + i, preferredBlockSize, timestamp),
               testECPolicy);
-      file.addBlock(stripedBlks[i]);
+      file.addBlock(stripedBlocks[i]);
     }
 
     final String client = "testClient";
     final String clientMachine = "testClientMachine";
     final String path = "testUnderConstructionPath";
 
-    //save the INode to byte array
+    // Save the INode to byte array
     DataOutput out = new DataOutputStream(bs);
     if (isUC) {
       file.toUnderConstruction(client, clientMachine);
@@ -471,8 +472,8 @@ public class TestFSImage {
       // Create directories and files
       fs.mkdirs(parentDir);
       fs.mkdirs(childDir);
-      fs.setErasureCodingPolicy(parentDir, testECPolicy);
-      fs.setErasureCodingPolicy(childDir, ec32Policy);
+      fs.setErasureCodingPolicy(parentDir, testECPolicy.getName());
+      fs.setErasureCodingPolicy(childDir, ec32Policy.getName());
       Path file_10_4 = new Path(parentDir, "striped_file_10_4");
       Path file_3_2 = new Path(childDir, "striped_file_3_2");
 
@@ -495,6 +496,7 @@ public class TestFSImage {
       FSNamesystem fsn = cluster.getNamesystem();
       INodeFile inode = fsn.dir.getINode(file_10_4.toString()).asFile();
       assertTrue(inode.isStriped());
+      assertEquals(testECPolicy.getId(), inode.getErasureCodingPolicyID());
       BlockInfo[] blks = inode.getBlocks();
       assertEquals(1, blks.length);
       assertTrue(blks[0].isStriped());
@@ -513,6 +515,9 @@ public class TestFSImage {
       // check the information of file_3_2
       inode = fsn.dir.getINode(file_3_2.toString()).asFile();
       assertTrue(inode.isStriped());
+      assertEquals(ErasureCodingPolicyManager.getPolicyByPolicyID(
+          HdfsConstants.RS_3_2_POLICY_ID).getId(),
+          inode.getErasureCodingPolicyID());
       blks = inode.getBlocks();
       assertEquals(1, blks.length);
       assertTrue(blks[0].isStriped());

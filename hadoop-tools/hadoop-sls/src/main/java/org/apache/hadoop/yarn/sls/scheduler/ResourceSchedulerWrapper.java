@@ -969,12 +969,4 @@ final public class ResourceSchedulerWrapper
     return Priority.newInstance(0);
   }
 
-  @Override
-  protected void decreaseContainer(
-      SchedContainerChangeRequest decreaseRequest,
-      SchedulerApplicationAttempt attempt) {
-    // TODO Auto-generated method stub
-    
-  }
-
 }

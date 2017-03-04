@@ -89,7 +89,8 @@ public class TestDFSStripedOutputStream {
           NativeRSRawErasureCoderFactory.class.getCanonicalName());
     }
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
-    cluster.getFileSystem().getClient().setErasureCodingPolicy("/", ecPolicy);
+    cluster.getFileSystem().getClient().setErasureCodingPolicy("/", ecPolicy
+        .getName());
     fs = cluster.getFileSystem();
   }
 

@@ -425,7 +425,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // event to be logged
   public static final String  DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY =
       "dfs.namenode.write-lock-reporting-threshold-ms";
-  public static final long    DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_DEFAULT = 1000L;
+  public static final long    DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_DEFAULT = 5000L;
   public static final String  DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY =
       "dfs.namenode.read-lock-reporting-threshold-ms";
   public static final long    DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_DEFAULT = 5000L;
@@ -677,9 +677,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT = "dfs.block.misreplication.processing.limit";
   public static final int     DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT_DEFAULT = 10000;
 
-  public static final String DFS_DATANODE_SLOW_PEERS_REPORT_INTERVAL_KEY =
-      "dfs.datanode.slow.peers.report.interval";
-  public static final String DFS_DATANODE_SLOW_PEERS_REPORT_INTERVAL_DEFAULT =
+  public static final String DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY =
+      "dfs.datanode.outliers.report.interval";
+  public static final String DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_DEFAULT =
       "30m";
 
   // property for fsimage compression

@@ -484,12 +484,12 @@ public class BlockManager implements BlockStatsMXBean {
           + DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY
           + " = " + minMaintenanceR + " < 0");
     }
-    if (minMaintenanceR > minR) {
+    if (minMaintenanceR > defaultReplication) {
       throw new IOException("Unexpected configuration parameters: "
           + DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY
           + " = " + minMaintenanceR + " > "
-          + DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY
-          + " = " + minR);
+          + DFSConfigKeys.DFS_REPLICATION_KEY
+          + " = " + defaultReplication);
     }
     this.minReplicationToBeInMaintenance = (short)minMaintenanceR;
 
@@ -825,7 +825,8 @@ public class BlockManager implements BlockStatsMXBean {
     if (block.isStriped()) {
       return ((BlockInfoStriped) block).getRealDataBlockNum();
     } else {
-      return minReplicationToBeInMaintenance;
+      return (short) Math.min(minReplicationToBeInMaintenance,
+          block.getReplication());
     }
   }
 

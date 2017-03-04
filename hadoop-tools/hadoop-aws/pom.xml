@@ -330,6 +330,11 @@
       <type>test-jar</type>
     </dependency>
     <dependency>
+      <groupId>net.java.dev.jets3t</groupId>
+      <artifactId>jets3t</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-bundle</artifactId>
       <scope>compile</scope>

@@ -250,18 +250,43 @@ public class CommonConfigurationKeysPublic {
    * @deprecated Moved to mapreduce, see mapreduce.task.io.sort.mb
    * in mapred-default.xml
    * See https://issues.apache.org/jira/browse/HADOOP-6801
+   *
+   * For {@link org.apache.hadoop.io.SequenceFile.Sorter} control
+   * instead, see {@link #SEQ_IO_SORT_MB_KEY}.
    */
   public static final String  IO_SORT_MB_KEY = "io.sort.mb";
-  /** Default value for IO_SORT_MB_DEFAULT */
+  /** Default value for {@link #IO_SORT_MB_KEY}. */
   public static final int     IO_SORT_MB_DEFAULT = 100;
   /**
    * @deprecated Moved to mapreduce, see mapreduce.task.io.sort.factor
    * in mapred-default.xml
    * See https://issues.apache.org/jira/browse/HADOOP-6801
+   *
+   * For {@link org.apache.hadoop.io.SequenceFile.Sorter} control
+   * instead, see {@link #SEQ_IO_SORT_FACTOR_KEY}.
    */
   public static final String  IO_SORT_FACTOR_KEY = "io.sort.factor";
-  /** Default value for IO_SORT_FACTOR_DEFAULT */
+  /** Default value for {@link #IO_SORT_FACTOR_KEY}. */
   public static final int     IO_SORT_FACTOR_DEFAULT = 100;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String  SEQ_IO_SORT_MB_KEY = "seq.io.sort.mb";
+  /** Default value for {@link #SEQ_IO_SORT_MB_KEY}. */
+  public static final int     SEQ_IO_SORT_MB_DEFAULT = 100;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String  SEQ_IO_SORT_FACTOR_KEY = "seq.io.sort.factor";
+  /** Default value for {@link #SEQ_IO_SORT_FACTOR_KEY}. */
+  public static final int     SEQ_IO_SORT_FACTOR_DEFAULT = 100;
+
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">

@@ -141,6 +141,7 @@ message INodeSection {
     optional XAttrFeatureProto xAttrs = 9;
     optional uint32 storagePolicyID = 10;
     optional BlockTypeProto blockType = 11;
+    optional uint32 erasureCodingPolicyID = 12;
   }
 
   message QuotaByStorageTypeEntryProto {

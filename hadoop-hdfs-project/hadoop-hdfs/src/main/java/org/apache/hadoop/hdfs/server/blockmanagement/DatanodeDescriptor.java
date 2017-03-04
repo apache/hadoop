@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -298,6 +299,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
       final Collection<DatanodeStorageInfo> storages = storageMap.values();
       return storages.toArray(new DatanodeStorageInfo[storages.size()]);
     }
+  }
+
+  public EnumSet<StorageType> getStorageTypes() {
+    EnumSet<StorageType> storageTypes = EnumSet.noneOf(StorageType.class);
+    for (DatanodeStorageInfo dsi : getStorageInfos()) {
+      storageTypes.add(dsi.getStorageType());
+    }
+    return storageTypes;
   }
 
   public StorageReport[] getStorageReports() {
@@ -678,6 +687,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
       }
     }
     if (requiredSize > remaining - scheduledSize) {
+      LOG.debug(
+          "The node {} does not have enough {} space (required={},"
+          + " scheduled={}, remaining={}).",
+          this, t, requiredSize, scheduledSize, remaining);
       return null;
     }
     return storage;

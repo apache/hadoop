@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
+import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
@@ -51,6 +54,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
 
 /**
@@ -76,8 +80,20 @@ public class TestStripedINodeFile {
 
   private static INodeFile createStripedINodeFile() {
     return new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
-        null, (short)0, 1024L, HdfsConstants.COLD_STORAGE_POLICY_ID,
-        BlockType.STRIPED);
+        null, null, HdfsConstants.RS_6_3_POLICY_ID, 1024L,
+        HdfsConstants.COLD_STORAGE_POLICY_ID, BlockType.STRIPED);
+  }
+
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
+
+  @Test
+  public void testInvalidECPolicy() throws IllegalArgumentException {
+    thrown.expect(IllegalArgumentException.class);
+    thrown.expectMessage("Could not find EC policy with ID 0xbb");
+    new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
+        null, null, (byte) 0xBB, 1024L,
+        HdfsConstants.COLD_STORAGE_POLICY_ID, BlockType.STRIPED);
   }
 
   @Test
@@ -93,6 +109,61 @@ public class TestStripedINodeFile {
     BlockInfoStriped blockInfoStriped
         = new BlockInfoStriped(blk, testECPolicy);
     assertEquals(9, blockInfoStriped.getTotalBlockNum());
+  }
+
+  @Test
+  public void testStripedLayoutRedundancy() {
+    INodeFile inodeFile;
+    try {
+      new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID,
+          null, perm, 0L, 0L, null, new Short((short) 3) /*replication*/,
+          HdfsConstants.RS_6_3_POLICY_ID /*ec policy*/,
+          1024L, HdfsConstants.WARM_STORAGE_POLICY_ID, STRIPED);
+      fail("INodeFile construction should fail when both replication and " +
+          "ECPolicy requested!");
+    } catch (IllegalArgumentException iae) {
+      LOG.info("Expected exception: ", iae);
+    }
+
+    try {
+      new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID,
+          null, perm, 0L, 0L, null, null /*replication*/, null /*ec policy*/,
+          1024L, HdfsConstants.WARM_STORAGE_POLICY_ID, STRIPED);
+      fail("INodeFile construction should fail when EC Policy param not " +
+          "provided for striped layout!");
+    } catch (IllegalArgumentException iae) {
+      LOG.info("Expected exception: ", iae);
+    }
+
+    try {
+      new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID,
+          null, perm, 0L, 0L, null, null /*replication*/,
+          Byte.MAX_VALUE /*ec policy*/, 1024L,
+          HdfsConstants.WARM_STORAGE_POLICY_ID, STRIPED);
+      fail("INodeFile construction should fail when EC Policy is " +
+          "not in the supported list!");
+    } catch (IllegalArgumentException iae) {
+      LOG.info("Expected exception: ", iae);
+    }
+
+    final Byte ecPolicyID = HdfsConstants.RS_6_3_POLICY_ID;
+    try {
+      new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID,
+          null, perm, 0L, 0L, null, null /*replication*/, ecPolicyID,
+          1024L, HdfsConstants.WARM_STORAGE_POLICY_ID, CONTIGUOUS);
+      fail("INodeFile construction should fail when replication param is " +
+          "provided for striped layout!");
+    } catch (IllegalArgumentException iae) {
+      LOG.info("Expected exception: ", iae);
+    }
+
+    inodeFile = new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID,
+        null, perm, 0L, 0L, null, null /*replication*/, ecPolicyID,
+        1024L, HdfsConstants.WARM_STORAGE_POLICY_ID, STRIPED);
+
+    Assert.assertTrue(inodeFile.isStriped());
+    Assert.assertEquals(ecPolicyID.byteValue(),
+        inodeFile.getErasureCodingPolicyID());
   }
 
   @Test
@@ -249,7 +320,8 @@ public class TestStripedINodeFile {
       dfs.mkdirs(ecDir);
 
       // set erasure coding policy
-      dfs.setErasureCodingPolicy(ecDir, null);
+      dfs.setErasureCodingPolicy(ecDir,
+          ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
       DFSTestUtil.createFile(dfs, ecFile, len, (short) 1, 0xFEED);
       DFSTestUtil.createFile(dfs, contiguousFile, len, (short) 1, 0xFEED);
       final FSDirectory fsd = fsn.getFSDirectory();
@@ -350,7 +422,8 @@ public class TestStripedINodeFile {
       client.mkdirs(fooDir, new FsPermission((short) 777), true);
       client.setStoragePolicy(fooDir, HdfsConstants.ONESSD_STORAGE_POLICY_NAME);
       // set an EC policy on "/foo" directory
-      client.setErasureCodingPolicy(fooDir, null);
+      client.setErasureCodingPolicy(fooDir,
+          ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
 
       // write file to fooDir
       final String barFile = "/foo/bar";

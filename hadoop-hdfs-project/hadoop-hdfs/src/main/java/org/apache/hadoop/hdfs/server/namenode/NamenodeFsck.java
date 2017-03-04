@@ -1311,11 +1311,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
 
   @VisibleForTesting
   static class ErasureCodingResult extends Result {
-    final String defaultECPolicy;
 
     ErasureCodingResult(Configuration conf) {
-      defaultECPolicy = ErasureCodingPolicyManager.getSystemDefaultPolicy()
-          .getName();
     }
 
     @Override
@@ -1392,8 +1389,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
             ((float) (numMisReplicatedBlocks * 100) / (float) totalBlocks))
             .append(" %)");
       }
-      res.append("\n Default ecPolicy:\t\t").append(defaultECPolicy)
-          .append("\n Average block group size:\t").append(
+      res.append("\n Average block group size:\t").append(
           getReplicationFactor()).append("\n Missing block groups:\t\t").append(
           missingIds.size()).append("\n Corrupt block groups:\t\t").append(
           corruptBlocks).append("\n Missing internal blocks:\t").append(

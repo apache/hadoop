@@ -25,7 +25,7 @@ import "hdfs.proto";
 
 message SetErasureCodingPolicyRequestProto {
   required string src = 1;
-  optional ErasureCodingPolicyProto ecPolicy = 2;
+  required string ecPolicyName = 2;
 }
 
 message SetErasureCodingPolicyResponseProto {

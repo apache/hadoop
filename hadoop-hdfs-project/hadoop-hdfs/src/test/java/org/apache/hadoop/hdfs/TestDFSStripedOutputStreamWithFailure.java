@@ -221,7 +221,7 @@ public class TestDFSStripedOutputStreamWithFailure {
     cluster.waitActive();
     dfs = cluster.getFileSystem();
     dfs.mkdirs(dir);
-    dfs.setErasureCodingPolicy(dir, ecPolicy);
+    dfs.setErasureCodingPolicy(dir, ecPolicy.getName());
   }
 
   private void tearDown() {

@@ -94,7 +94,7 @@ public class TestLeaseRecoveryStriped {
     cluster.waitActive();
     dfs = cluster.getFileSystem();
     dfs.mkdirs(dir);
-    dfs.setErasureCodingPolicy(dir, ecPolicy);
+    dfs.setErasureCodingPolicy(dir, ecPolicy.getName());
   }
 
   @After

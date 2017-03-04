@@ -19,4 +19,15 @@
 import Ember from 'ember';
 
 export default Ember.Route.extend({
+  model() {
+      return Ember.RSVP.hash({
+        apps: this.store.query('yarn-app', {
+          applicationTypes: "org-apache-slider"
+      }),
+    });
+  },
+
+  unloadAll() {
+    this.store.unloadAll('yarn-app');
+  }
 });

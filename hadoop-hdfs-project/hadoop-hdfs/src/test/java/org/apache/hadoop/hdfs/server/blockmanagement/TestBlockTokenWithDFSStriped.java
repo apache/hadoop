@@ -83,8 +83,8 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
         .nameNodeHttpPort(ServerSocketUtil.getPort(19870, 100))
         .numDataNodes(numDNs)
         .build();
-    cluster.getFileSystem().getClient()
-        .setErasureCodingPolicy("/", null);
+    cluster.getFileSystem().getClient().setErasureCodingPolicy("/",
+        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
     try {
       cluster.waitActive();
       doTestRead(conf, cluster, true);
