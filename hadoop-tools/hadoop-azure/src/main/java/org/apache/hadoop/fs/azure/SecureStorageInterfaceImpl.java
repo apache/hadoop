@@ -69,19 +69,17 @@ public class SecureStorageInterfaceImpl extends StorageInterface {
   public static final String SAS_ERROR_CODE = "SAS Error";
   private SASKeyGeneratorInterface sasKeyGenerator;
   private String storageAccount;
-  private String delegationToken;
 
   public SecureStorageInterfaceImpl(boolean useLocalSASKeyMode,
-      Configuration conf, String delegationToken)
+      Configuration conf)
           throws SecureModeException {
 
-    this.delegationToken = delegationToken;
     if (useLocalSASKeyMode) {
       this.sasKeyGenerator = new LocalSASKeyGeneratorImpl(conf);
     } else {
       RemoteSASKeyGeneratorImpl remoteSasKeyGenerator =
           new RemoteSASKeyGeneratorImpl(conf);
-      if (!remoteSasKeyGenerator.initialize(conf, this.delegationToken)) {
+      if (!remoteSasKeyGenerator.initialize(conf)) {
         throw new SecureModeException("Remote SAS Key mode could"
             + " not be initialized");
       }
