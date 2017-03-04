@@ -966,7 +966,9 @@ public class UsersManager implements AbstractUsersManager {
       this.writeLock.lock();
 
       // For UT case: We might need to add the user to users list.
-      User user = getUserAndAddIfAbsent(userName);
+      User user = getUser(userName);
+      if (user == null) return;
+
       ResourceUsage resourceUsage = user.getResourceUsage();
       // If User is moved to non-active list, moved resource usage from
       // non-active to active list.
