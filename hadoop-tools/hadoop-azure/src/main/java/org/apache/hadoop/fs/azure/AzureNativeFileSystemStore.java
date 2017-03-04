@@ -303,7 +303,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private boolean useSecureMode = false;
   private boolean useLocalSasKeyMode = false;
 
-  private String delegationToken;
+
   /**
    * A test hook interface that can modify the operation context we use for
    * Azure Storage operations, e.g. to inject errors.
@@ -478,7 +478,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         this.storageInteractionLayer = new StorageInterfaceImpl();
       } else {
         this.storageInteractionLayer = new SecureStorageInterfaceImpl(
-            useLocalSasKeyMode, conf, delegationToken);
+            useLocalSasKeyMode, conf);
       }
     }
 
