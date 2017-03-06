@@ -60,4 +60,8 @@
     <Field name="cachingStrategy" />
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
+
+  <Match>
+    <Package name="org.apache.hadoop.hdfs.ozone.protocol.proto" />
+  </Match>
 </FindBugsFilter>
