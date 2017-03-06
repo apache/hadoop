@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.SettableFuture;
+import org.apache.hadoop.yarn.util.StringHelper;
 
 /**
  * This class manages the list of applications for the resource manager. 
@@ -188,7 +189,12 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           .add("preemptedAMContainers", metrics.getNumAMContainersPreempted())
           .add("preemptedNonAMContainers", metrics.getNumNonAMContainersPreempted())
           .add("preemptedResources", metrics.getResourcePreempted())
-          .add("applicationType", app.getApplicationType());
+          .add("applicationType", app.getApplicationType())
+          .add("resourceSeconds", StringHelper
+              .getResourceSecondsString(metrics.getResourceSecondsMap()))
+          .add("preemptedResourceSeconds", StringHelper
+              .getResourceSecondsString(
+                  metrics.getPreemptedResourceSecondsMap()));
       return summary;
     }
 

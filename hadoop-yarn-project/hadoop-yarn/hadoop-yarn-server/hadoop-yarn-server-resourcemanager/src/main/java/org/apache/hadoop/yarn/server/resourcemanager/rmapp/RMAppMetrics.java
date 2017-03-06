@@ -19,27 +19,27 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
+
+import java.util.Map;
 
 public class RMAppMetrics {
   final Resource resourcePreempted;
   final int numNonAMContainersPreempted;
   final int numAMContainersPreempted;
-  final long memorySeconds;
-  final long vcoreSeconds;
-  private final long preemptedMemorySeconds;
-  private final long preemptedVcoreSeconds;
+  private final Map<String, Long> resourceSecondsMap;
+  private final Map<String, Long> preemptedResourceSecondsMap;
 
   public RMAppMetrics(Resource resourcePreempted,
       int numNonAMContainersPreempted, int numAMContainersPreempted,
-      long memorySeconds, long vcoreSeconds, long preemptedMemorySeconds,
-      long preemptedVcoreSeconds) {
+      Map<String, Long> resourceSecondsMap,
+      Map<String, Long> preemptedResourceSecondsMap) {
     this.resourcePreempted = resourcePreempted;
     this.numNonAMContainersPreempted = numNonAMContainersPreempted;
     this.numAMContainersPreempted = numAMContainersPreempted;
-    this.memorySeconds = memorySeconds;
-    this.vcoreSeconds = vcoreSeconds;
-    this.preemptedMemorySeconds = preemptedMemorySeconds;
-    this.preemptedVcoreSeconds = preemptedVcoreSeconds;
+    this.resourceSecondsMap = resourceSecondsMap;
+    this.preemptedResourceSecondsMap = preemptedResourceSecondsMap;
   }
 
   public Resource getResourcePreempted() {
@@ -55,19 +55,32 @@ public class RMAppMetrics {
   }
 
   public long getMemorySeconds() {
-    return memorySeconds;
+    return RMServerUtils.getOrDefault(resourceSecondsMap,
+        ResourceInformation.MEMORY_MB.getName(), 0L);
   }
 
   public long getVcoreSeconds() {
-    return vcoreSeconds;
+    return RMServerUtils
+        .getOrDefault(resourceSecondsMap, ResourceInformation.VCORES.getName(),
+            0L);
   }
 
   public long getPreemptedMemorySeconds() {
-    return preemptedMemorySeconds;
+    return RMServerUtils.getOrDefault(preemptedResourceSecondsMap,
+        ResourceInformation.MEMORY_MB.getName(), 0L);
   }
 
   public long getPreemptedVcoreSeconds() {
-    return preemptedVcoreSeconds;
+    return RMServerUtils.getOrDefault(preemptedResourceSecondsMap,
+        ResourceInformation.VCORES.getName(), 0L);
+  }
+
+  public Map<String, Long> getResourceSecondsMap() {
+    return resourceSecondsMap;
+  }
+
+  public Map<String, Long> getPreemptedResourceSecondsMap() {
+    return preemptedResourceSecondsMap;
   }
 
 }

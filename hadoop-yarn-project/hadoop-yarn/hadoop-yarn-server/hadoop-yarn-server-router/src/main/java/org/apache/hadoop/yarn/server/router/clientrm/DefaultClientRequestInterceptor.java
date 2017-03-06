@@ -27,6 +27,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
@@ -59,6 +61,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
@@ -301,6 +305,18 @@ public class DefaultClientRequestInterceptor
       UpdateApplicationTimeoutsRequest request)
       throws YarnException, IOException {
     return clientRMProxy.updateApplicationTimeouts(request);
+  }
+
+  @Override
+  public GetAllResourceProfilesResponse getResourceProfiles(
+      GetAllResourceProfilesRequest request) throws YarnException, IOException {
+    return clientRMProxy.getResourceProfiles(request);
+  }
+
+  @Override
+  public GetResourceProfileResponse getResourceProfile(
+      GetResourceProfileRequest request) throws YarnException, IOException {
+    return clientRMProxy.getResourceProfile(request);
   }
 
   @VisibleForTesting
