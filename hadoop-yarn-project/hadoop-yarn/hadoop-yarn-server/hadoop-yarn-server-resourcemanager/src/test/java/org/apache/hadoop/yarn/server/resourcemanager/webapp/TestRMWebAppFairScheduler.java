@@ -51,6 +51,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
@@ -136,8 +137,8 @@ public class TestRMWebAppFairScheduler {
       MockRMApp app = new MockRMApp(i, i, state) {
         @Override
         public RMAppMetrics getRMAppMetrics() {
-          return new RMAppMetrics(Resource.newInstance(0, 0),
-              0, 0, 0, 0, 0, 0);
+          return new RMAppMetrics(Resource.newInstance(0, 0), 0, 0,
+              new HashMap<>(), new HashMap<>());
         }
         @Override
         public YarnApplicationState createApplicationState() {

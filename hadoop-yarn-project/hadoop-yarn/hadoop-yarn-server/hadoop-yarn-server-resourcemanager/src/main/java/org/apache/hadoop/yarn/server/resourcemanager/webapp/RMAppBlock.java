@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.AppBlock;
+import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.DIV;
@@ -106,15 +107,12 @@ public class RMAppBlock extends AppBlock{
           attemptResourcePreempted)
         .__("Number of Non-AM Containers Preempted from Current Attempt:",
           attemptNumNonAMContainerPreempted)
-        .__("Aggregate Resource Allocation:",
-          String.format("%d MB-seconds, %d vcore-seconds",
-              appMetrics == null ? "N/A" : appMetrics.getMemorySeconds(),
-              appMetrics == null ? "N/A" : appMetrics.getVcoreSeconds()))
+        .__("Aggregate Resource Allocation:", appMetrics == null ? "N/A" :
+            StringHelper
+                .getResourceSecondsString(appMetrics.getResourceSecondsMap()))
         .__("Aggregate Preempted Resource Allocation:",
-          String.format("%d MB-seconds, %d vcore-seconds",
-            appMetrics == null ? "N/A" : appMetrics.getPreemptedMemorySeconds(),
-            appMetrics == null ? "N/A" :
-                appMetrics.getPreemptedVcoreSeconds()));
+            appMetrics == null ? "N/A" : StringHelper.getResourceSecondsString(
+                appMetrics.getPreemptedResourceSecondsMap()));
 
     pdiv.__();
   }

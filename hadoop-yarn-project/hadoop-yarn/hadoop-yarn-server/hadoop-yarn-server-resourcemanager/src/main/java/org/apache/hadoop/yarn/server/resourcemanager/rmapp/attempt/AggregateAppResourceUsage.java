@@ -19,42 +19,38 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Private
 public class AggregateAppResourceUsage {
-  long memorySeconds;
-  long vcoreSeconds;
+  private Map<String, Long> resourceSecondsMap = new HashMap<>();
 
-  public AggregateAppResourceUsage(long memorySeconds, long vcoreSeconds) {
-    this.memorySeconds = memorySeconds;
-    this.vcoreSeconds = vcoreSeconds;
+  public AggregateAppResourceUsage(Map<String, Long> resourceSecondsMap) {
+    this.resourceSecondsMap.putAll(resourceSecondsMap);
   }
 
   /**
    * @return the memorySeconds
    */
   public long getMemorySeconds() {
-    return memorySeconds;
-  }
-
-  /**
-   * @param memorySeconds the memorySeconds to set
-   */
-  public void setMemorySeconds(long memorySeconds) {
-    this.memorySeconds = memorySeconds;
+    return RMServerUtils.getOrDefault(resourceSecondsMap,
+        ResourceInformation.MEMORY_MB.getName(), 0L);
   }
 
   /**
    * @return the vcoreSeconds
    */
   public long getVcoreSeconds() {
-    return vcoreSeconds;
+    return RMServerUtils
+        .getOrDefault(resourceSecondsMap, ResourceInformation.VCORES.getName(),
+            0L);
   }
 
-  /**
-   * @param vcoreSeconds the vcoreSeconds to set
-   */
-  public void setVcoreSeconds(long vcoreSeconds) {
-    this.vcoreSeconds = vcoreSeconds;
+  public Map<String, Long> getResourceUsageSecondsMap() {
+    return resourceSecondsMap;
   }
 }
