@@ -69,6 +69,7 @@ public class MiniHadoopClusterManager {
   private int numNodeManagers;
   private int numDataNodes;
   private int nnPort;
+  private int nnHttpPort;
   private int rmPort;
   private int jhsPort;
   private StartupOption dfsOpts;
@@ -92,6 +93,8 @@ public class MiniHadoopClusterManager {
         .addOption("datanodes", true, "How many datanodes to start (default 1)")
         .addOption("format", false, "Format the DFS (default false)")
         .addOption("nnport", true, "NameNode port (default 0--we choose)")
+        .addOption("nnhttpport", true,
+            "NameNode HTTP port (default 0--we choose)")
         .addOption(
             "namenode",
             true,
@@ -152,7 +155,8 @@ public class MiniHadoopClusterManager {
       URISyntaxException {
     if (!noDFS) {
       dfs = new MiniDFSCluster.Builder(conf).nameNodePort(nnPort)
-          .numDataNodes(numDataNodes).startupOption(dfsOpts).build();
+          .nameNodeHttpPort(nnHttpPort).numDataNodes(numDataNodes)
+          .startupOption(dfsOpts).build();
       LOG.info("Started MiniDFSCluster -- namenode on port "
           + dfs.getNameNodePort());
     }
@@ -254,6 +258,7 @@ public class MiniHadoopClusterManager {
     noDFS = cli.hasOption("nodfs");
     numDataNodes = intArgument(cli, "datanodes", 1);
     nnPort = intArgument(cli, "nnport", 0);
+    nnHttpPort = intArgument(cli, "nnhttpport", 0);
     dfsOpts = cli.hasOption("format") ? StartupOption.FORMAT
         : StartupOption.REGULAR;
 
