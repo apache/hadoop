@@ -107,7 +107,16 @@ public class PutOpParam extends HttpOpParam<PutOpParam.Op> {
    * @param str a string representation of the parameter value.
    */
   public PutOpParam(final String str) {
-    super(DOMAIN, DOMAIN.parse(str));
+    super(DOMAIN, getOp(str));
+  }
+
+  private static Op getOp(String str) {
+    try {
+      return DOMAIN.parse(str);
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException(str + " is not a valid " + Type.PUT
+          + " operation.");
+    }
   }
 
   @Override
