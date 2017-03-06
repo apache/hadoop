@@ -140,7 +140,7 @@ public class FairScheduler extends
 
   private static final Log LOG = LogFactory.getLog(FairScheduler.class);
   private static final Log STATE_DUMP_LOG =
-      LogFactory.getLog(FairScheduler.class + ".statedump");
+      LogFactory.getLog(FairScheduler.class.getName() + ".statedump");
 
   private static final ResourceCalculator RESOURCE_CALCULATOR =
       new DefaultResourceCalculator();
