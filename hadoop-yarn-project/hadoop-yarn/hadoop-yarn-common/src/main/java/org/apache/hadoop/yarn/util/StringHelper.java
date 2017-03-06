@@ -20,9 +20,15 @@ package org.apache.hadoop.yarn.util;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 /**
  * Common string manipulation helpers
@@ -173,5 +179,35 @@ public final class StringHelper {
       sb.append('/');
     }
     sb.append(part);
+  }
+
+  public static String getResourceSecondsString(Map<String, Long> targetMap) {
+    List<String> strings = new ArrayList<>(targetMap.size());
+    //completed app report in the timeline server doesn't have usage report
+    Long memorySeconds = 0L;
+    Long vcoreSeconds = 0L;
+    if (targetMap.containsKey(ResourceInformation.MEMORY_MB.getName())) {
+      memorySeconds = targetMap.get(ResourceInformation.MEMORY_MB.getName());
+    }
+    if (targetMap.containsKey(ResourceInformation.VCORES.getName())) {
+      vcoreSeconds = targetMap.get(ResourceInformation.VCORES.getName());
+    }
+    strings.add(memorySeconds + " MB-seconds");
+    strings.add(vcoreSeconds + " vcore-seconds");
+    Map<String, ResourceInformation> tmp = ResourceUtils.getResourceTypes();
+    if (targetMap.size() > 2) {
+      for (Map.Entry<String, Long> entry : targetMap.entrySet()) {
+        if (!entry.getKey().equals(ResourceInformation.MEMORY_MB.getName())
+            && !entry.getKey().equals(ResourceInformation.VCORES.getName())) {
+          String units = "";
+          if (tmp.containsKey(entry.getKey())) {
+            units = tmp.get(entry.getKey()).getUnits();
+          }
+          strings.add(entry.getValue() + " " + entry.getKey() + "-" + units
+              + "seconds");
+        }
+      }
+    }
+    return String.join(", ", strings);
   }
 }

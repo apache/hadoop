@@ -73,7 +73,7 @@ public class SchedulerInfo {
   }
 
   public String getSchedulerResourceTypes() {
-    return this.schedulingResourceTypes.toString();
+    return minAllocResource.getResource().getResources().keySet().toString();
   }
 
   public int getMaxClusterLevelAppPriority() {

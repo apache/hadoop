@@ -22,6 +22,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.HashMap;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -62,9 +63,10 @@ public class TestAppPage {
     when(app.getStartTime()).thenReturn(0L);
     when(app.getFinishTime()).thenReturn(0L);
     when(app.createApplicationState()).thenReturn(YarnApplicationState.FAILED);
-    
-    RMAppMetrics appMetrics = new RMAppMetrics(
-        Resource.newInstance(0, 0), 0, 0, 0, 0, 0, 0);
+
+    RMAppMetrics appMetrics =
+        new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, new HashMap<>(),
+            new HashMap<>());
     when(app.getRMAppMetrics()).thenReturn(appMetrics);
     
     // initialize RM Context, and create RMApp, without creating RMAppAttempt

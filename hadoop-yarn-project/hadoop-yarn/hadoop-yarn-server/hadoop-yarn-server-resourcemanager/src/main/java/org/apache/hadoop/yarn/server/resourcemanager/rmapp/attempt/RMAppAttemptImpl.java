@@ -937,12 +937,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       }
       AggregateAppResourceUsage resUsage =
           this.attemptMetrics.getAggregateAppResourceUsage();
-      report.setMemorySeconds(resUsage.getMemorySeconds());
-      report.setVcoreSeconds(resUsage.getVcoreSeconds());
-      report.setPreemptedMemorySeconds(
-          this.attemptMetrics.getPreemptedMemory());
-      report.setPreemptedVcoreSeconds(
-          this.attemptMetrics.getPreemptedVcore());
+      report.setResourceSecondsMap(resUsage.getResourceUsageSecondsMap());
+      report.setPreemptedResourceSecondsMap(
+          this.attemptMetrics.getPreemptedResourceSecondsMap());
       return report;
     } finally {
       this.readLock.unlock();
@@ -979,11 +976,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.finalStatus = attemptState.getFinalApplicationStatus();
     this.startTime = attemptState.getStartTime();
     this.finishTime = attemptState.getFinishTime();
-    this.attemptMetrics.updateAggregateAppResourceUsage(
-        attemptState.getMemorySeconds(), attemptState.getVcoreSeconds());
+    this.attemptMetrics
+        .updateAggregateAppResourceUsage(attemptState.getResourceSecondsMap());
     this.attemptMetrics.updateAggregatePreemptedAppResourceUsage(
-        attemptState.getPreemptedMemorySeconds(),
-        attemptState.getPreemptedVcoreSeconds());
+        attemptState.getPreemptedResourceSecondsMap());
   }
 
   public void transferStateFromAttempt(RMAppAttempt attempt) {
@@ -1358,16 +1354,12 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     RMStateStore rmStore = rmContext.getStateStore();
     setFinishTime(System.currentTimeMillis());
 
-    ApplicationAttemptStateData attemptState =
-        ApplicationAttemptStateData.newInstance(
-            applicationAttemptId,  getMasterContainer(),
-            rmStore.getCredentialsFromAppAttempt(this),
-            startTime, stateToBeStored, finalTrackingUrl, diags.toString(),
-            finalStatus, exitStatus,
-          getFinishTime(), resUsage.getMemorySeconds(),
-          resUsage.getVcoreSeconds(),
-          this.attemptMetrics.getPreemptedMemory(),
-          this.attemptMetrics.getPreemptedVcore());
+    ApplicationAttemptStateData attemptState = ApplicationAttemptStateData
+        .newInstance(applicationAttemptId, getMasterContainer(),
+            rmStore.getCredentialsFromAppAttempt(this), startTime,
+            stateToBeStored, finalTrackingUrl, diags.toString(), finalStatus, exitStatus,
+            getFinishTime(), resUsage.getResourceUsageSecondsMap(),
+            this.attemptMetrics.getPreemptedResourceSecondsMap());
     LOG.info("Updating application attempt " + applicationAttemptId
         + " with final state: " + targetedFinalState + ", and exit status: "
         + exitStatus);

@@ -25,7 +25,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -715,20 +714,15 @@ public class RMContainerImpl implements RMContainer {
 
       if (rmAttempt != null) {
         long usedMillis = container.finishTime - container.creationTime;
-        long memorySeconds = resource.getMemorySize()
-                              * usedMillis / DateUtils.MILLIS_PER_SECOND;
-        long vcoreSeconds = resource.getVirtualCores()
-                             * usedMillis / DateUtils.MILLIS_PER_SECOND;
         rmAttempt.getRMAppAttemptMetrics()
-                  .updateAggregateAppResourceUsage(memorySeconds,vcoreSeconds);
+            .updateAggregateAppResourceUsage(resource, usedMillis);
         // If this is a preempted container, update preemption metrics
         if (ContainerExitStatus.PREEMPTED == container.finishedStatus
-                .getExitStatus()) {
-          rmAttempt.getRMAppAttemptMetrics().updatePreemptionInfo(resource,
-                  container);
+            .getExitStatus()) {
           rmAttempt.getRMAppAttemptMetrics()
-                  .updateAggregatePreemptedAppResourceUsage(memorySeconds,
-                          vcoreSeconds);
+              .updatePreemptionInfo(resource, container);
+          rmAttempt.getRMAppAttemptMetrics()
+              .updateAggregatePreemptedAppResourceUsage(resource, usedMillis);
         }
       }
     }
