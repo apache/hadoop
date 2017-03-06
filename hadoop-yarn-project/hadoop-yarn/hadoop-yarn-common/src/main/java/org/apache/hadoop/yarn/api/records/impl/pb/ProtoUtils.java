@@ -19,6 +19,10 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -46,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.UpdateContainerError;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
@@ -461,6 +466,35 @@ public class ProtoUtils {
 
   public static ResourceTypes convertFromProtoFormat(ResourceTypesProto e) {
     return ResourceTypes.valueOf(e.name());
+  }
+
+  public static Map<String, Long> convertStringLongMapProtoListToMap(
+      List<YarnProtos.StringLongMapProto> pList) {
+    Resource tmp = Resource.newInstance(0, 0);
+    Map<String, Long> ret = new HashMap<>();
+    for (Map.Entry<String, ResourceInformation> entry : tmp.getResources()
+        .entrySet()) {
+      ret.put(entry.getKey(), 0L);
+    }
+    if (pList != null) {
+      for (YarnProtos.StringLongMapProto p : pList) {
+        ret.put(p.getKey(), p.getValue());
+      }
+    }
+    return ret;
+  }
+
+  public static List<YarnProtos.StringLongMapProto> convertMapToStringLongMapProtoList(
+      Map<String, Long> map) {
+    List<YarnProtos.StringLongMapProto> ret = new ArrayList<>();
+    for (Map.Entry<String, Long> entry : map.entrySet()) {
+      YarnProtos.StringLongMapProto.Builder tmp =
+          YarnProtos.StringLongMapProto.newBuilder();
+      tmp.setKey(entry.getKey());
+      tmp.setValue(entry.getValue());
+      ret.add(tmp.build());
+    }
+    return ret;
   }
 }
 

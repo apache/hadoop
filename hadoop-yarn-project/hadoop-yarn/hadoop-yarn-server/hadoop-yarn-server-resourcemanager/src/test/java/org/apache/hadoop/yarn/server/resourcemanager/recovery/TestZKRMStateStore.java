@@ -33,12 +33,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.conf.HAUtil;
@@ -548,7 +543,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     when(mockAttempt.getRMAppAttemptMetrics())
         .thenReturn(mockRmAppAttemptMetrics);
     when(mockRmAppAttemptMetrics.getAggregateAppResourceUsage())
-        .thenReturn(new AggregateAppResourceUsage(0,0));
+        .thenReturn(new AggregateAppResourceUsage(new HashMap<>()));
     store.storeNewApplicationAttempt(mockAttempt);
     assertEquals("RMStateStore should have been in fenced state",
             true, store.isFencedState());
@@ -560,7 +555,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
             store.getCredentialsFromAppAttempt(mockAttempt),
             startTime, RMAppAttemptState.FINISHED, "testUrl", 
             "test", FinalApplicationStatus.SUCCEEDED, 100, 
-            finishTime, 0, 0, 0, 0);
+            finishTime, new HashMap<>(), new HashMap<>());
     store.updateApplicationAttemptState(newAttemptState);
     assertEquals("RMStateStore should have been in fenced state",
             true, store.isFencedState());
@@ -797,10 +792,20 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
   private static ApplicationAttemptStateData createFinishedAttempt(
       ApplicationAttemptId attemptId, Container container, long startTime,
       int amExitStatus) {
+    Map<String, Long> resourceSecondsMap = new HashMap<>();
+    Map<String, Long> preemptedResoureSecondsMap = new HashMap<>();
+    resourceSecondsMap
+        .put(ResourceInformation.MEMORY_MB.getName(), 0L);
+    resourceSecondsMap
+        .put(ResourceInformation.VCORES.getName(), 0L);
+    preemptedResoureSecondsMap.put(ResourceInformation.MEMORY_MB.getName(),
+        0L);
+    preemptedResoureSecondsMap
+        .put(ResourceInformation.VCORES.getName(), 0L);
     return ApplicationAttemptStateData.newInstance(attemptId,
         container, null, startTime, RMAppAttemptState.FINISHED,
         "myTrackingUrl", "attemptDiagnostics", FinalApplicationStatus.SUCCEEDED,
-        amExitStatus, 0, 0, 0, 0, 0);
+        amExitStatus, 0, resourceSecondsMap, preemptedResoureSecondsMap);
   }
 
   private ApplicationAttemptId storeAttempt(RMStateStore store,

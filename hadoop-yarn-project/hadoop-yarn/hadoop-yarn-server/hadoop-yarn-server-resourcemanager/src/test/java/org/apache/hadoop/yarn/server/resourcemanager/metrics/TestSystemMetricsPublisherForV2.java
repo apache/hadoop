@@ -29,6 +29,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -46,6 +48,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
@@ -357,15 +360,20 @@ public class TestSystemMetricsPublisherForV2 {
     when(app.getDiagnostics()).thenReturn(
         new StringBuilder("test diagnostics info"));
     RMAppAttempt appAttempt = mock(RMAppAttempt.class);
-    when(appAttempt.getAppAttemptId()).thenReturn(
-        ApplicationAttemptId.newInstance(appId, 1));
+    when(appAttempt.getAppAttemptId())
+        .thenReturn(ApplicationAttemptId.newInstance(appId, 1));
     when(app.getCurrentAppAttempt()).thenReturn(appAttempt);
-    when(app.getFinalApplicationStatus()).thenReturn(
-        FinalApplicationStatus.UNDEFINED);
+    when(app.getFinalApplicationStatus())
+        .thenReturn(FinalApplicationStatus.UNDEFINED);
+    Map<String, Long> resourceSecondsMap = new HashMap<>();
+    resourceSecondsMap
+        .put(ResourceInformation.MEMORY_MB.getName(), (long) Integer.MAX_VALUE);
+    resourceSecondsMap
+        .put(ResourceInformation.VCORES.getName(), Long.MAX_VALUE);
     when(app.getRMAppMetrics()).thenReturn(
-        new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, Integer.MAX_VALUE,
-            Long.MAX_VALUE, 0, 0));
-    when(app.getApplicationTags()).thenReturn(Collections.<String> emptySet());
+        new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, resourceSecondsMap,
+            new HashMap<>()));
+    when(app.getApplicationTags()).thenReturn(Collections.<String>emptySet());
     ApplicationSubmissionContext appSubmissionContext =
         mock(ApplicationSubmissionContext.class);
     when(appSubmissionContext.getPriority())
