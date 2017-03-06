@@ -15,430 +15,166 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef LIB_RPC_RPC_CONNECTION_H_
-#define LIB_RPC_RPC_CONNECTION_H_
+#ifndef LIB_RPC_RPC_CONNECTION_H
+#define LIB_RPC_RPC_CONNECTION_H
 
-#include "rpc_engine.h"
+/*
+ * Encapsulates a persistent connection to the NameNode, and the sending of
+ * RPC requests and evaluating their responses.
+ *
+ * Can have multiple RPC requests in-flight simultaneously, but they are
+ * evaluated in-order on the server side in a blocking manner.
+ *
+ * Threading model: public interface is thread-safe
+ * All handlers passed in to method calls will be called from an asio thread,
+ *   and will not be holding any internal RpcConnection locks.
+ */
 
+#include "request.h"
 #include "common/auth_info.h"
-#include "common/logging.h"
-#include "common/util.h"
 #include "common/libhdfs_events_impl.h"
-#include "sasl_protocol.h"
+#include "common/new_delete.h"
+#include "hdfspp/status.h"
 
-#include <asio/connect.hpp>
-#include <asio/read.hpp>
-#include <asio/write.hpp>
-
-#include <system_error>
+#include <functional>
+#include <memory>
+#include <vector>
+#include <deque>
+#include <unordered_map>
 
 namespace hdfs {
 
-template <class Socket>
-class RpcConnectionImpl : public RpcConnection {
-public:
-  MEMCHECKED_CLASS(RpcConnectionImpl);
+typedef const std::function<void(const Status &)> RpcCallback;
 
-  RpcConnectionImpl(RpcEngine *engine);
-  virtual ~RpcConnectionImpl() override;
+class LockFreeRpcEngine;
+class SaslProtocol;
 
+class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
+ public:
+  MEMCHECKED_CLASS(RpcConnection)
+  RpcConnection(LockFreeRpcEngine *engine);
+  virtual ~RpcConnection();
+
+  // Note that a single server can have multiple endpoints - especially both
+  //   an ipv4 and ipv6 endpoint
   virtual void Connect(const std::vector<::asio::ip::tcp::endpoint> &server,
                        const AuthInfo & auth_info,
-                       RpcCallback &handler);
-  virtual void ConnectAndFlush(
-      const std::vector<::asio::ip::tcp::endpoint> &server) override;
-  virtual void SendHandshake(RpcCallback &handler) override;
-  virtual void SendContext(RpcCallback &handler) override;
-  virtual void Disconnect() override;
+                       RpcCallback &handler) = 0;
+  virtual void ConnectAndFlush(const std::vector<::asio::ip::tcp::endpoint> &server) = 0;
+  virtual void Disconnect() = 0;
+
+  void StartReading();
+  void AsyncRpc(const std::string &method_name,
+                const ::google::protobuf::MessageLite *req,
+                std::shared_ptr<::google::protobuf::MessageLite> resp,
+                const RpcCallback &handler);
+
+  void AsyncRpc(const std::vector<std::shared_ptr<Request> > & requests);
+
+  // Enqueue requests before the connection is connected.  Will be flushed
+  //   on connect
+  void PreEnqueueRequests(std::vector<std::shared_ptr<Request>> requests);
+
+  // Put requests at the front of the current request queue
+  void PrependRequests_locked(std::vector<std::shared_ptr<Request>> requests);
+
+  void SetEventHandlers(std::shared_ptr<LibhdfsEvents> event_handlers);
+  void SetClusterName(std::string cluster_name);
+
+  LockFreeRpcEngine *engine() { return engine_; }
+  ::asio::io_service &io_service();
+
+ protected:
+  struct Response {
+    enum ResponseState {
+      kReadLength,
+      kReadContent,
+      kParseResponse,
+    } state_;
+    unsigned length_;
+    std::vector<char> data_;
+
+    std::unique_ptr<::google::protobuf::io::ArrayInputStream> ar;
+    std::unique_ptr<::google::protobuf::io::CodedInputStream> in;
+
+    Response() : state_(kReadLength), length_(0) {}
+  };
+
+
+  // Initial handshaking protocol: connect->handshake-->(auth)?-->context->connected
+  virtual void SendHandshake(RpcCallback &handler) = 0;
+  void HandshakeComplete(const Status &s);
+  void AuthComplete(const Status &s, const AuthInfo & new_auth_info);
+  void AuthComplete_locked(const Status &s, const AuthInfo & new_auth_info);
+  virtual void SendContext(RpcCallback &handler) = 0;
+  void ContextComplete(const Status &s);
+
   virtual void OnSendCompleted(const ::asio::error_code &ec,
-                               size_t transferred) override;
+                               size_t transferred) = 0;
   virtual void OnRecvCompleted(const ::asio::error_code &ec,
-                               size_t transferred) override;
-  virtual void FlushPendingRequests() override;
+                               size_t transferred) = 0;
+  virtual void FlushPendingRequests()=0;      // Synchronously write the next request
+
+  void AsyncRpc_locked(
+                const std::string &method_name,
+                const ::google::protobuf::MessageLite *req,
+                std::shared_ptr<::google::protobuf::MessageLite> resp,
+                const RpcCallback &handler);
+  void SendRpcRequests(const std::vector<std::shared_ptr<Request> > & requests);
+  void AsyncFlushPendingRequests(); // Queue requests to be flushed at a later time
 
 
-  Socket &TEST_get_mutable_socket() { return socket_; }
 
-  void TEST_set_connected(bool connected) { connected_ = connected ? kConnected : kNotYetConnected; }
+  std::shared_ptr<std::string> PrepareHandshakePacket();
+  std::shared_ptr<std::string> PrepareContextPacket();
+  static std::string SerializeRpcRequest(const std::string &method_name,
+                                         const ::google::protobuf::MessageLite *req);
 
- private:
-  const Options options_;
-  ::asio::ip::tcp::endpoint current_endpoint_;
-  std::vector<::asio::ip::tcp::endpoint> additional_endpoints_;
-  Socket socket_;
-  ::asio::deadline_timer connect_timer_;
+  Status HandleRpcResponse(std::shared_ptr<Response> response);
+  void HandleRpcTimeout(std::shared_ptr<Request> req,
+                        const ::asio::error_code &ec);
+  void CommsError(const Status &status);
 
-  void ConnectComplete(const ::asio::error_code &ec, const ::asio::ip::tcp::endpoint &remote);
+  void ClearAndDisconnect(const ::asio::error_code &ec);
+  std::shared_ptr<Request> RemoveFromRunningQueue(int call_id);
+
+  LockFreeRpcEngine *const engine_;
+  std::shared_ptr<Response> current_response_state_;
+  AuthInfo auth_info_;
+
+  // Connection can have deferred connection, especially when we're pausing
+  //   during retry
+  enum ConnectedState {
+      kNotYetConnected,
+      kConnecting,
+      kHandshaking,
+      kAuthenticating,
+      kConnected,
+      kDisconnected
+  };
+  static std::string ToString(ConnectedState connected);
+  ConnectedState connected_;
+
+  // State machine for performing a SASL handshake
+  std::shared_ptr<SaslProtocol> sasl_protocol_;
+  // The request being sent over the wire; will also be in requests_on_fly_
+  std::shared_ptr<Request> request_over_the_wire_;
+  // Requests to be sent over the wire
+  std::deque<std::shared_ptr<Request>> pending_requests_;
+  // Requests to be sent over the wire during authentication; not retried if
+  //   there is a connection error
+  std::deque<std::shared_ptr<Request>> auth_requests_;
+  // Requests that are waiting for responses
+  typedef std::unordered_map<int, std::shared_ptr<Request>> RequestOnFlyMap;
+  RequestOnFlyMap requests_on_fly_;
+  std::shared_ptr<LibhdfsEvents> event_handlers_;
+  std::string cluster_name_;
+
+  // Lock for mutable parts of this class that need to be thread safe
+  std::mutex connection_state_lock_;
+
+  friend class SaslProtocol;
 };
 
-template <class Socket>
-RpcConnectionImpl<Socket>::RpcConnectionImpl(RpcEngine *engine)
-    : RpcConnection(engine),
-      options_(engine->options()),
-      socket_(engine->io_service()),
-      connect_timer_(engine->io_service())
-{
-      LOG_TRACE(kRPC, << "RpcConnectionImpl::RpcConnectionImpl called &" << (void*)this);
-}
-
-template <class Socket>
-RpcConnectionImpl<Socket>::~RpcConnectionImpl() {
-  LOG_DEBUG(kRPC, << "RpcConnectionImpl::~RpcConnectionImpl called &" << (void*)this);
-
-  if (pending_requests_.size() > 0)
-    LOG_WARN(kRPC, << "RpcConnectionImpl::~RpcConnectionImpl called with items in the pending queue");
-  if (requests_on_fly_.size() > 0)
-    LOG_WARN(kRPC, << "RpcConnectionImpl::~RpcConnectionImpl called with items in the requests_on_fly queue");
-}
-
-template <class Socket>
-void RpcConnectionImpl<Socket>::Connect(
-    const std::vector<::asio::ip::tcp::endpoint> &server,
-    const AuthInfo & auth_info,
-    RpcCallback &handler) {
-  LOG_TRACE(kRPC, << "RpcConnectionImpl::Connect called");
-
-  this->auth_info_ = auth_info;
-
-  auto connectionSuccessfulReq = std::make_shared<Request>(
-      engine_, [handler](::google::protobuf::io::CodedInputStream *is,
-                         const Status &status) {
-        (void)is;
-        handler(status);
-      });
-  pending_requests_.push_back(connectionSuccessfulReq);
-  this->ConnectAndFlush(server);  // need "this" so compiler can infer type of CAF
-}
-
-template <class Socket>
-void RpcConnectionImpl<Socket>::ConnectAndFlush(
-    const std::vector<::asio::ip::tcp::endpoint> &server) {
-
-  LOG_INFO(kRPC, << "ConnectAndFlush called");
-  std::lock_guard<std::mutex> state_lock(connection_state_lock_);
-
-  if (server.empty()) {
-    Status s = Status::InvalidArgument("No endpoints provided");
-    CommsError(s);
-    return;
-  }
-
-  if (connected_ == kConnected) {
-    FlushPendingRequests();
-    return;
-  }
-  if (connected_ != kNotYetConnected) {
-    LOG_WARN(kRPC, << "RpcConnectionImpl::ConnectAndFlush called while connected=" << ToString(connected_));
-    return;
-  }
-  connected_ = kConnecting;
-
-  // Take the first endpoint, but remember the alternatives for later
-  additional_endpoints_ = server;
-  ::asio::ip::tcp::endpoint first_endpoint = additional_endpoints_.front();
-  additional_endpoints_.erase(additional_endpoints_.begin());
-  current_endpoint_ = first_endpoint;
-
-  auto shared_this = shared_from_this();
-  socket_.async_connect(first_endpoint, [shared_this, this, first_endpoint](const ::asio::error_code &ec) {
-    ConnectComplete(ec, first_endpoint);
-  });
-
-  // Prompt the timer to timeout
-  auto weak_this = std::weak_ptr<RpcConnection>(shared_this);
-  connect_timer_.expires_from_now(
-        std::chrono::milliseconds(options_.rpc_connect_timeout));
-  connect_timer_.async_wait([shared_this, this, first_endpoint](const ::asio::error_code &ec) {
-      if (ec)
-        ConnectComplete(ec, first_endpoint);
-      else
-        ConnectComplete(make_error_code(asio::error::host_unreachable), first_endpoint);
-  });
-}
-
-template <class Socket>
-void RpcConnectionImpl<Socket>::ConnectComplete(const ::asio::error_code &ec, const ::asio::ip::tcp::endpoint & remote) {
-  auto shared_this = RpcConnectionImpl<Socket>::shared_from_this();
-  std::lock_guard<std::mutex> state_lock(connection_state_lock_);
-  connect_timer_.cancel();
-
-  LOG_TRACE(kRPC, << "RpcConnectionImpl::ConnectComplete called");
-
-  // Could be an old async connect returning a result after we've moved on
-  if (remote != current_endpoint_) {
-      LOG_DEBUG(kRPC, << "Got ConnectComplete for " << remote << " but current_endpoint_ is " << current_endpoint_);
-      return;
-  }
-  if (connected_ != kConnecting) {
-      LOG_DEBUG(kRPC, << "Got ConnectComplete but current state is " << connected_);;
-      return;
-  }
-
-  Status status = ToStatus(ec);
-  if(event_handlers_) {
-    event_response event_resp = event_handlers_->call(FS_NN_CONNECT_EVENT, cluster_name_.c_str(), 0);
-#ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
-    if (event_resp.response() == event_response::kTest_Error) {
-      status = event_resp.status();
-    }
-#endif
-  }
-
-  if (status.ok()) {
-    StartReading();
-    SendHandshake([shared_this, this](const Status & s) {
-      HandshakeComplete(s);
-    });
-  } else {
-    LOG_DEBUG(kRPC, << "Rpc connection failed; err=" << status.ToString());;
-    std::string err = SafeDisconnect(get_asio_socket_ptr(&socket_));
-    if(!err.empty()) {
-      LOG_INFO(kRPC, << "Rpc connection failed to connect to endpoint, error closing connection: " << err);
-    }
-
-    if (!additional_endpoints_.empty()) {
-      // If we have additional endpoints, keep trying until we either run out or
-      //    hit one
-      ::asio::ip::tcp::endpoint next_endpoint = additional_endpoints_.front();
-      additional_endpoints_.erase(additional_endpoints_.begin());
-      current_endpoint_ = next_endpoint;
-
-      socket_.async_connect(next_endpoint, [shared_this, this, next_endpoint](const ::asio::error_code &ec) {
-        ConnectComplete(ec, next_endpoint);
-      });
-      connect_timer_.expires_from_now(
-            std::chrono::milliseconds(options_.rpc_connect_timeout));
-      connect_timer_.async_wait([shared_this, this, next_endpoint](const ::asio::error_code &ec) {
-          if (ec)
-            ConnectComplete(ec, next_endpoint);
-          else
-            ConnectComplete(make_error_code(asio::error::host_unreachable), next_endpoint);
-        });
-    } else {
-      CommsError(status);
-    }
-  }
-}
-
-template <class Socket>
-void RpcConnectionImpl<Socket>::SendHandshake(RpcCallback &handler) {
-  assert(lock_held(connection_state_lock_));  // Must be holding lock before calling
-
-  LOG_TRACE(kRPC, << "RpcConnectionImpl::SendHandshake called");
-  connected_ = kHandshaking;
-
-  auto shared_this = shared_from_this();
-  auto handshake_packet = PrepareHandshakePacket();
-  ::asio::async_write(socket_, asio::buffer(*handshake_packet),
-                      [handshake_packet, handler, shared_this, this](
-                          const ::asio::error_code &ec, size_t) {
-                        Status status = ToStatus(ec);
-                        handler(status);
-                      });
-}
-
-template <class Socket>
-void RpcConnectionImpl<Socket>::SendContext(RpcCallback &handler) {
-  assert(lock_held(connection_state_lock_));  // Must be holding lock before calling
-
-  LOG_TRACE(kRPC, << "RpcConnectionImpl::SendContext called");
-
-  auto shared_this = shared_from_this();
-  auto context_packet = PrepareContextPacket();
-  ::asio::async_write(socket_, asio::buffer(*context_packet),
-                      [context_packet, handler, shared_this, this](
-                          const ::asio::error_code &ec, size_t) {
-                        Status status = ToStatus(ec);
-                        handler(status);
-                      });
-}
-
-template <class Socket>
-void RpcConnectionImpl<Socket>::OnSendCompleted(const ::asio::error_code &ec,
-                                                   size_t) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  std::lock_guard<std::mutex> state_lock(connection_state_lock_);
-
-  LOG_TRACE(kRPC, << "RpcConnectionImpl::OnSendCompleted called");
-
-  request_over_the_wire_.reset();
-  if (ec) {
-    LOG_WARN(kRPC, << "Network error during RPC write: " << ec.message());
-    CommsError(ToStatus(ec));
-    return;
-  }
-
-  FlushPendingRequests();
-}
-
-template <class Socket>
-void RpcConnectionImpl<Socket>::FlushPendingRequests() {
-  using namespace ::std::placeholders;
-
-  // Lock should be held
-  assert(lock_held(connection_state_lock_));
-
-  LOG_TRACE(kRPC, << "RpcConnectionImpl::FlushPendingRequests called");
-
-  // Don't send if we don't need to
-  if (request_over_the_wire_) {
-    return;
-  }
-
-  std::shared_ptr<Request> req;
-  switch (connected_) {
-  case kNotYetConnected:
-    return;
-  case kConnecting:
-    return;
-  case kHandshaking:
-    return;
-  case kAuthenticating:
-    if (auth_requests_.empty()) {
-      return;
-    }
-    req = auth_requests_.front();
-    auth_requests_.erase(auth_requests_.begin());
-    break;
-  case kConnected:
-    if (pending_requests_.empty()) {
-      return;
-    }
-    req = pending_requests_.front();
-    pending_requests_.erase(pending_requests_.begin());
-    break;
-  case kDisconnected:
-    LOG_DEBUG(kRPC, << "RpcConnectionImpl::FlushPendingRequests attempted to flush a " << ToString(connected_) << " connection");
-    return;
-  default:
-    LOG_DEBUG(kRPC, << "RpcConnectionImpl::FlushPendingRequests invalid state: " << ToString(connected_));
-    return;
-  }
-
-  std::shared_ptr<RpcConnection> shared_this = shared_from_this();
-  auto weak_this = std::weak_ptr<RpcConnection>(shared_this);
-  auto weak_req = std::weak_ptr<Request>(req);
-
-  std::shared_ptr<std::string> payload = std::make_shared<std::string>();
-  req->GetPacket(payload.get());
-  if (!payload->empty()) {
-    assert(requests_on_fly_.find(req->call_id()) == requests_on_fly_.end());
-    requests_on_fly_[req->call_id()] = req;
-    request_over_the_wire_ = req;
-
-    req->timer().expires_from_now(
-        std::chrono::milliseconds(options_.rpc_timeout));
-    req->timer().async_wait([weak_this, weak_req, this](const ::asio::error_code &ec) {
-        auto timeout_this = weak_this.lock();
-        auto timeout_req = weak_req.lock();
-        if (timeout_this && timeout_req)
-          this->HandleRpcTimeout(timeout_req, ec);
-    });
-
-    asio::async_write(socket_, asio::buffer(*payload),
-                      [shared_this, this, payload](const ::asio::error_code &ec,
-                                                   size_t size) {
-                        OnSendCompleted(ec, size);
-                      });
-  } else {  // Nothing to send for this request, inform the handler immediately
-    io_service().post(
-        // Never hold locks when calling a callback
-        [req]() { req->OnResponseArrived(nullptr, Status::OK()); }
-    );
-
-    // Reschedule to flush the next one
-    AsyncFlushPendingRequests();
-  }
-}
-
-
-template <class Socket>
-void RpcConnectionImpl<Socket>::OnRecvCompleted(const ::asio::error_code &original_ec,
-                                                   size_t) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  std::lock_guard<std::mutex> state_lock(connection_state_lock_);
-
-  ::asio::error_code my_ec(original_ec);
-
-  LOG_TRACE(kRPC, << "RpcConnectionImpl::OnRecvCompleted called");
-
-  std::shared_ptr<RpcConnection> shared_this = shared_from_this();
-
-  if(event_handlers_) {
-    event_response event_resp = event_handlers_->call(FS_NN_READ_EVENT, cluster_name_.c_str(), 0);
-#ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
-    if (event_resp.response() == event_response::kTest_Error) {
-      my_ec = std::make_error_code(std::errc::network_down);
-    }
-#endif
-  }
-
-  switch (my_ec.value()) {
-    case 0:
-      // No errors
-      break;
-    case asio::error::operation_aborted:
-      // The event loop has been shut down. Ignore the error.
-      return;
-    default:
-      LOG_WARN(kRPC, << "Network error during RPC read: " << my_ec.message());
-      CommsError(ToStatus(my_ec));
-      return;
-  }
-
-  if (!current_response_state_) { /* start a new one */
-    current_response_state_ = std::make_shared<Response>();
-  }
-
-  if (current_response_state_->state_ == Response::kReadLength) {
-    current_response_state_->state_ = Response::kReadContent;
-    auto buf = ::asio::buffer(reinterpret_cast<char *>(&current_response_state_->length_),
-                              sizeof(current_response_state_->length_));
-    asio::async_read(
-        socket_, buf,
-        [shared_this, this](const ::asio::error_code &ec, size_t size) {
-          OnRecvCompleted(ec, size);
-        });
-  } else if (current_response_state_->state_ == Response::kReadContent) {
-    current_response_state_->state_ = Response::kParseResponse;
-    current_response_state_->length_ = ntohl(current_response_state_->length_);
-    current_response_state_->data_.resize(current_response_state_->length_);
-    asio::async_read(
-        socket_, ::asio::buffer(current_response_state_->data_),
-        [shared_this, this](const ::asio::error_code &ec, size_t size) {
-          OnRecvCompleted(ec, size);
-        });
-  } else if (current_response_state_->state_ == Response::kParseResponse) {
-    // Check return status from the RPC response.  We may have received a msg
-    // indicating a server side error.
-
-    Status stat = HandleRpcResponse(current_response_state_);
-
-    if(stat.get_server_exception_type() == Status::kStandbyException) {
-      // May need to bail out, connect to new NN, and restart loop
-      LOG_INFO(kRPC, << "Communicating with standby NN, attempting to reconnect");
-    }
-
-    current_response_state_ = nullptr;
-    StartReading();
-  }
-}
-
-template <class Socket>
-void RpcConnectionImpl<Socket>::Disconnect() {
-  assert(lock_held(connection_state_lock_));  // Must be holding lock before calling
-
-  LOG_INFO(kRPC, << "RpcConnectionImpl::Disconnect called");
-
-  request_over_the_wire_.reset();
-  if (connected_ == kConnecting || connected_ == kHandshaking || connected_ == kAuthenticating || connected_ == kConnected) {
-    // Don't print out errors, we were expecting a disconnect here
-    SafeDisconnect(get_asio_socket_ptr(&socket_));
-  }
-  connected_ = kDisconnected;
-}
-}
-
-#endif
+} // end namespace hdfs
+#endif // end include Guard

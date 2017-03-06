@@ -19,7 +19,7 @@
 #include "mock_connection.h"
 #include "test.pb.h"
 #include "RpcHeader.pb.h"
-#include "rpc/rpc_connection.h"
+#include "rpc/rpc_connection_impl.h"
 #include "common/namenode_info.h"
 
 #include <google/protobuf/io/coded_stream.h>
