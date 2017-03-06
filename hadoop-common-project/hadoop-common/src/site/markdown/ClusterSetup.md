@@ -146,7 +146,7 @@ This section deals with important parameters to be specified in the given config
 | `yarn.resourcemanager.admin.address` | `ResourceManager` host:port for administrative commands. | *host:port* If set, overrides the hostname set in `yarn.resourcemanager.hostname`. |
 | `yarn.resourcemanager.webapp.address` | `ResourceManager` web-ui host:port. | *host:port* If set, overrides the hostname set in `yarn.resourcemanager.hostname`. |
 | `yarn.resourcemanager.hostname` | `ResourceManager` host. | *host* Single hostname that can be set in place of setting all `yarn.resourcemanager*address` resources. Results in default ports for ResourceManager components. |
-| `yarn.resourcemanager.scheduler.class` | `ResourceManager` Scheduler class. | `CapacityScheduler` (recommended), `FairScheduler` (also recommended), or `FifoScheduler` |
+| `yarn.resourcemanager.scheduler.class` | `ResourceManager` Scheduler class. | `CapacityScheduler` (recommended), `FairScheduler` (also recommended), or `FifoScheduler`. Use a fully qualified class name, e.g., `org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler`. |
 | `yarn.scheduler.minimum-allocation-mb` | Minimum limit of memory to allocate to each container request at the `Resource Manager`. | In MBs |
 | `yarn.scheduler.maximum-allocation-mb` | Maximum limit of memory to allocate to each container request at the `Resource Manager`. | In MBs |
 | `yarn.resourcemanager.nodes.include-path` / `yarn.resourcemanager.nodes.exclude-path` | List of permitted/excluded NodeManagers. | If necessary, use these files to control the list of allowable NodeManagers. |
