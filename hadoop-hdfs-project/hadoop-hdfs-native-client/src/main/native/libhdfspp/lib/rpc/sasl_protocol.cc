@@ -17,6 +17,7 @@
  */
 
 #include "rpc_engine.h"
+#include "rpc_connection.h"
 #include "common/logging.h"
 
 #include "sasl_engine.h"

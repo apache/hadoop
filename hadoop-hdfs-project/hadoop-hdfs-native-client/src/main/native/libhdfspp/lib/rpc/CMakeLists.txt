@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-list(APPEND rpc_object_items rpc_connection.cc rpc_engine.cc sasl_protocol.cc sasl_engine.cc)
+list(APPEND rpc_object_items rpc_connection_impl.cc rpc_engine.cc namenode_tracker.cc request.cc sasl_protocol.cc sasl_engine.cc)
 if (CMAKE_USING_CYRUS_SASL)
   list(APPEND rpc_object_items cyrus_sasl_engine.cc)
 endif (CMAKE_USING_CYRUS_SASL)

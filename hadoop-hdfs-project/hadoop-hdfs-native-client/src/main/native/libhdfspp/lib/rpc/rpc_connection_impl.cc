@@ -16,16 +16,12 @@
  * limitations under the License.
  */
 #include "rpc_engine.h"
+#include "rpc_connection_impl.h"
 #include "sasl_protocol.h"
 
 #include "RpcHeader.pb.h"
 #include "ProtobufRpcEngine.pb.h"
 #include "IpcConnectionContext.pb.h"
-
-#include "common/logging.h"
-#include "common/util.h"
-
-#include <asio/read.hpp>
 
 namespace hdfs {
 
@@ -70,120 +66,7 @@ static void AddHeadersToPacket(
   }
 }
 
-static void ConstructPayload(std::string *res, const pb::MessageLite *header) {
-  int len = DelimitedPBMessageSize(header);
-  res->reserve(len);
-  pbio::StringOutputStream ss(res);
-  pbio::CodedOutputStream os(&ss);
-  uint8_t *buf = os.GetDirectBufferForNBytesAndAdvance(len);
-  assert(buf);
-  buf = pbio::CodedOutputStream::WriteVarint32ToArray(header->ByteSize(), buf);
-  buf = header->SerializeWithCachedSizesToArray(buf);
-}
-
-static void ConstructPayload(std::string *res, const std::string *request) {
-  int len =
-      pbio::CodedOutputStream::VarintSize32(request->size()) + request->size();
-  res->reserve(len);
-  pbio::StringOutputStream ss(res);
-  pbio::CodedOutputStream os(&ss);
-  uint8_t *buf = os.GetDirectBufferForNBytesAndAdvance(len);
-  assert(buf);
-  buf = pbio::CodedOutputStream::WriteVarint32ToArray(request->size(), buf);
-  buf = os.WriteStringToArray(*request, buf);
-}
-
-static void SetRequestHeader(LockFreeRpcEngine *engine, int call_id,
-                             const std::string &method_name, int retry_count,
-                             RpcRequestHeaderProto *rpc_header,
-                             RequestHeaderProto *req_header) {
-  rpc_header->set_rpckind(RPC_PROTOCOL_BUFFER);
-  rpc_header->set_rpcop(RpcRequestHeaderProto::RPC_FINAL_PACKET);
-  rpc_header->set_callid(call_id);
-  if (retry_count != kNoRetry)
-    rpc_header->set_retrycount(retry_count);
-  rpc_header->set_clientid(engine->client_id());
-
-  req_header->set_methodname(method_name);
-  req_header->set_declaringclassprotocolname(engine->protocol_name());
-  req_header->set_clientprotocolversion(engine->protocol_version());
-}
-
 RpcConnection::~RpcConnection() {}
-
-Request::Request(LockFreeRpcEngine *engine, const std::string &method_name, int call_id,
-                 const std::string &request, Handler &&handler)
-    : engine_(engine),
-      method_name_(method_name),
-      call_id_(call_id),
-      timer_(engine->io_service()),
-      handler_(std::move(handler)),
-      retry_count_(engine->retry_policy() ? 0 : kNoRetry),
-      failover_count_(0) {
-  ConstructPayload(&payload_, &request);
-}
-
-Request::Request(LockFreeRpcEngine *engine, const std::string &method_name, int call_id,
-                 const pb::MessageLite *request, Handler &&handler)
-    : engine_(engine),
-      method_name_(method_name),
-      call_id_(call_id),
-      timer_(engine->io_service()),
-      handler_(std::move(handler)),
-      retry_count_(engine->retry_policy() ? 0 : kNoRetry),
-      failover_count_(0) {
-  ConstructPayload(&payload_, request);
-}
-
-Request::Request(LockFreeRpcEngine *engine, Handler &&handler)
-    : engine_(engine),
-      call_id_(-1),
-      timer_(engine->io_service()),
-      handler_(std::move(handler)),
-      retry_count_(engine->retry_policy() ? 0 : kNoRetry),
-      failover_count_(0) {
-}
-
-void Request::GetPacket(std::string *res) const {
-  LOG_TRACE(kRPC, << "Request::GetPacket called");
-
-  if (payload_.empty())
-    return;
-
-  RpcRequestHeaderProto rpc_header;
-  RequestHeaderProto req_header;
-  SetRequestHeader(engine_, call_id_, method_name_, retry_count_, &rpc_header,
-                   &req_header);
-
-  // SASL messages don't have a request header
-  if (method_name_ != SASL_METHOD_NAME)
-    AddHeadersToPacket(res, {&rpc_header, &req_header}, &payload_);
-  else
-    AddHeadersToPacket(res, {&rpc_header}, &payload_);
-}
-
-void Request::OnResponseArrived(pbio::CodedInputStream *is,
-                                const Status &status) {
-  LOG_TRACE(kRPC, << "Request::OnResponseArrived called");
-  handler_(is, status);
-}
-
-std::string Request::GetDebugString() const {
-  // Basic description of this object, aimed at debugging
-  std::stringstream ss;
-  ss << "\nRequest Object:\n";
-  ss << "\tMethod name    = \"" << method_name_ << "\"\n";
-  ss << "\tCall id        = " << call_id_ << "\n";
-  ss << "\tRetry Count    = " << retry_count_ << "\n";
-  ss << "\tFailover count = " << failover_count_ << "\n";
-  return ss.str();
-}
-
-int Request::IncrementFailoverCount() {
-  // reset retry count when failing over
-  retry_count_ = 0;
-  return failover_count_++;
-}
 
 RpcConnection::RpcConnection(LockFreeRpcEngine *engine)
     : engine_(engine),
@@ -551,13 +434,13 @@ std::shared_ptr<Request> RpcConnection::RemoveFromRunningQueue(int call_id) {
 std::string RpcConnection::ToString(ConnectedState connected) {
   switch(connected) {
     case kNotYetConnected: return "NotYetConnected";
-    case kConnecting: return "Connecting";
-    case kHandshaking: return "Handshaking";
-    case kAuthenticating: return "Authenticating";
-    case kConnected: return "Connected";
-    case kDisconnected: return "Disconnected";
-    default: return "Invalid ConnectedState";
+    case kConnecting:      return "Connecting";
+    case kHandshaking:     return "Handshaking";
+    case kAuthenticating:  return "Authenticating";
+    case kConnected:       return "Connected";
+    case kDisconnected:    return "Disconnected";
+    default:               return "Invalid ConnectedState";
   }
 }
 
-}
+}// end namespace hdfs
