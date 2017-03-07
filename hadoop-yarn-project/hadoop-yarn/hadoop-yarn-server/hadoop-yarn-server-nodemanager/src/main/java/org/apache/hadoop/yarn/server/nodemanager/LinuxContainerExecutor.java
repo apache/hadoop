@@ -30,6 +30,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
@@ -109,6 +110,58 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   private boolean containerLimitUsers;
   private ResourceHandler resourceHandlerChain;
   private LinuxContainerRuntime linuxContainerRuntime;
+
+  /**
+   * The container exit code.
+   */
+  public enum LinuxContainerExecutorExitCode {
+    SUCCESS(0),
+    INVALID_ARGUMENT_NUMBER(1),
+    INVALID_COMMAND_PROVIDED(3),
+    INVALID_NM_ROOT_DIRS(5),
+    SETUID_OPER_FAILED(6),
+    UNABLE_TO_EXECUTE_CONTAINER_SCRIPT(7),
+    UNABLE_TO_SIGNAL_CONTAINER(8),
+    INVALID_CONTAINER_PID(9),
+    OUT_OF_MEMORY(18),
+    INITIALIZE_USER_FAILED(20),
+    PATH_TO_DELETE_IS_NULL(21),
+    INVALID_CONTAINER_EXEC_PERMISSIONS(22),
+    INVALID_CONFIG_FILE(24),
+    SETSID_OPER_FAILED(25),
+    WRITE_PIDFILE_FAILED(26),
+    WRITE_CGROUP_FAILED(27),
+    TRAFFIC_CONTROL_EXECUTION_FAILED(28),
+    DOCKER_RUN_FAILED(29),
+    ERROR_OPENING_DOCKER_FILE(30),
+    ERROR_READING_DOCKER_FILE(31),
+    FEATURE_DISABLED(32),
+    COULD_NOT_CREATE_SCRIPT_COPY(33),
+    COULD_NOT_CREATE_CREDENTIALS_FILE(34),
+    COULD_NOT_CREATE_WORK_DIRECTORIES(35),
+    COULD_NOT_CREATE_APP_LOG_DIRECTORIES(36),
+    COULD_NOT_CREATE_TMP_DIRECTORIES(37),
+    ERROR_CREATE_CONTAINER_DIRECTORIES_ARGUMENTS(38);
+
+    private final int code;
+
+    private LinuxContainerExecutorExitCode(int exitCode) {
+      this.code = exitCode;
+    }
+
+    /**
+     * Get the exit code as an int.
+     * @return the exit code as an int
+     */
+    public int getExitCode() {
+      return code;
+    }
+
+    @Override
+    public String toString() {
+      return String.valueOf(code);
+    }
+  }
 
   /**
    * Default constructor to allow for creation through reflection.
@@ -525,6 +578,23 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         logOutput(diagnostics);
         container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
             diagnostics));
+        if (exitCode == LinuxContainerExecutorExitCode.
+                INVALID_CONTAINER_EXEC_PERMISSIONS.getExitCode() ||
+            exitCode == LinuxContainerExecutorExitCode.
+                INVALID_CONFIG_FILE.getExitCode() ||
+            exitCode == LinuxContainerExecutorExitCode.
+                COULD_NOT_CREATE_SCRIPT_COPY.getExitCode() ||
+            exitCode == LinuxContainerExecutorExitCode.
+                COULD_NOT_CREATE_CREDENTIALS_FILE.getExitCode() ||
+            exitCode == LinuxContainerExecutorExitCode.
+                COULD_NOT_CREATE_WORK_DIRECTORIES.getExitCode() ||
+            exitCode == LinuxContainerExecutorExitCode.
+                COULD_NOT_CREATE_APP_LOG_DIRECTORIES.getExitCode() ||
+            exitCode == LinuxContainerExecutorExitCode.
+                COULD_NOT_CREATE_TMP_DIRECTORIES.getExitCode()) {
+          throw new YarnRuntimeException(
+              "Linux Container Executor reached unrecoverable exception", e);
+        }
       } else {
         container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
             "Container killed on request. Exit code is " + exitCode));
