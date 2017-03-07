@@ -118,23 +118,12 @@ public class TestDatanodeStateMachine {
   @Test
   public void testDatanodeStateMachineStartThread() throws IOException,
       InterruptedException, TimeoutException {
-    final DatanodeStateMachine stateMachine = new DatanodeStateMachine(conf);
-    Runnable startStateMachineTask = () -> {
-      try {
-        stateMachine.start();
-      } catch (Exception ex) {
-      }
-    };
-    Thread thread1 = new Thread(startStateMachineTask);
-    thread1.setDaemon(true);
-    thread1.start();
-
+    DatanodeStateMachine stateMachine =
+        DatanodeStateMachine.initStateMachine(conf);
     SCMConnectionManager connectionManager =
         stateMachine.getConnectionManager();
-
-    GenericTestUtils.waitFor(() -> connectionManager.getValues().size() == 3 ,
-        100, 1000);
-
+    GenericTestUtils.waitFor(() -> connectionManager.getValues().size() == 3,
+        1000, 30000);
     stateMachine.close();
   }
 
