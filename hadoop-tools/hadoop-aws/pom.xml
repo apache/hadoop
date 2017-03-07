@@ -184,7 +184,7 @@
                     <exclude>**/ITest*Root*.java</exclude>
                     <exclude>**/ITestS3AFileContextStatistics.java</exclude>
                     <exclude>**/ITestS3AEncryptionSSE*.java</exclude>
-                    <include>**/ITestS3AHuge*.java</include>
+                    <exclude>**/ITestS3AHuge*.java</exclude>
                   </excludes>
                 </configuration>
               </execution>
