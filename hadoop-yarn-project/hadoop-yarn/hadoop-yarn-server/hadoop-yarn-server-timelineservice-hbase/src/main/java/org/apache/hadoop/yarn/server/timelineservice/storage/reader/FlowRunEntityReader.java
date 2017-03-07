@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderUtils;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
@@ -217,11 +218,17 @@ class FlowRunEntityReader extends TimelineEntityReader {
           context.getUserId(), context.getFlowName());
       scan.setRowPrefixFilter(flowRunRowKeyPrefix.getRowKeyPrefix());
     } else {
-
-      FlowRunRowKey flowRunRowKey =
-          new FlowRunRowKey(context.getClusterId(), context.getUserId(),
-              context.getFlowName(), Long.parseLong(getFilters().getFromId()));
-
+      FlowRunRowKey flowRunRowKey = null;
+      try {
+        flowRunRowKey =
+            FlowRunRowKey.parseRowKeyFromString(getFilters().getFromId());
+      } catch (IllegalArgumentException e) {
+        throw new BadRequestException("Invalid filter fromid is provided.");
+      }
+      if (!context.getClusterId().equals(flowRunRowKey.getClusterId())) {
+        throw new BadRequestException(
+            "fromid doesn't belong to clusterId=" + context.getClusterId());
+      }
       // set start row
       scan.setStartRow(flowRunRowKey.getRowKey());
 
@@ -247,16 +254,11 @@ class FlowRunEntityReader extends TimelineEntityReader {
 
   @Override
   protected TimelineEntity parseEntity(Result result) throws IOException {
-    TimelineReaderContext context = getContext();
     FlowRunEntity flowRun = new FlowRunEntity();
-    flowRun.setUser(context.getUserId());
-    flowRun.setName(context.getFlowName());
-    if (isSingleEntityRead()) {
-      flowRun.setRunId(context.getFlowRunId());
-    } else {
-      FlowRunRowKey rowKey = FlowRunRowKey.parseRowKey(result.getRow());
-      flowRun.setRunId(rowKey.getFlowRunId());
-    }
+    FlowRunRowKey rowKey = FlowRunRowKey.parseRowKey(result.getRow());
+    flowRun.setRunId(rowKey.getFlowRunId());
+    flowRun.setUser(rowKey.getUserId());
+    flowRun.setName(rowKey.getFlowName());
 
     // read the start time
     Long startTime = (Long) FlowRunColumn.MIN_START_TIME.readResult(result);
@@ -285,6 +287,8 @@ class FlowRunEntityReader extends TimelineEntityReader {
 
     // set the id
     flowRun.setId(flowRun.getId());
+    flowRun.getInfo().put(TimelineReaderUtils.FROMID_KEY,
+        rowKey.getRowKeyAsString());
     return flowRun;
   }
 }

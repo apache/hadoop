@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderUtils;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
@@ -56,6 +57,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
+import org.apache.hadoop.yarn.webapp.BadRequestException;
 
 import com.google.common.base.Preconditions;
 
@@ -475,19 +477,27 @@ class GenericEntityReader extends TimelineEntityReader {
     TimelineReaderContext context = getContext();
     RowKeyPrefix<EntityRowKey> entityRowKeyPrefix = null;
     // default mode, will always scans from beginning of entity type.
-    if (getFilters() == null || getFilters().getFromIdPrefix() == null) {
+    if (getFilters() == null || getFilters().getFromId() == null) {
       entityRowKeyPrefix = new EntityRowKeyPrefix(context.getClusterId(),
           context.getUserId(), context.getFlowName(), context.getFlowRunId(),
           context.getAppId(), context.getEntityType(), null, null);
       scan.setRowPrefixFilter(entityRowKeyPrefix.getRowKeyPrefix());
     } else { // pagination mode, will scan from given entityIdPrefix!enitityId
-      entityRowKeyPrefix = new EntityRowKeyPrefix(context.getClusterId(),
-          context.getUserId(), context.getFlowName(), context.getFlowRunId(),
-          context.getAppId(), context.getEntityType(),
-          getFilters().getFromIdPrefix(), getFilters().getFromId());
+
+      EntityRowKey entityRowKey = null;
+      try {
+        entityRowKey =
+            EntityRowKey.parseRowKeyFromString(getFilters().getFromId());
+      } catch (IllegalArgumentException e) {
+        throw new BadRequestException("Invalid filter fromid is provided.");
+      }
+      if (!context.getClusterId().equals(entityRowKey.getClusterId())) {
+        throw new BadRequestException(
+            "fromid doesn't belong to clusterId=" + context.getClusterId());
+      }
 
       // set start row
-      scan.setStartRow(entityRowKeyPrefix.getRowKeyPrefix());
+      scan.setStartRow(entityRowKey.getRowKey());
 
       // get the bytes for stop row
       entityRowKeyPrefix = new EntityRowKeyPrefix(context.getClusterId(),
@@ -599,6 +609,9 @@ class GenericEntityReader extends TimelineEntityReader {
     if (hasField(fieldsToRetrieve, Field.METRICS)) {
       readMetrics(entity, result, EntityColumnPrefix.METRIC);
     }
+
+    entity.getInfo().put(TimelineReaderUtils.FROMID_KEY,
+        parseRowKey.getRowKeyAsString());
     return entity;
   }
 

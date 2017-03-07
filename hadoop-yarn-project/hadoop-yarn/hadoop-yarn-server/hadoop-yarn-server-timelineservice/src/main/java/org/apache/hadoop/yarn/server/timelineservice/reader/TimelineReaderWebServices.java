@@ -264,20 +264,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
-   * @param fromIdPrefix If specified, retrieve entities with an id prefix
-   *     greater than or equal to the specified fromIdPrefix. If fromIdPrefix
-   *     is same for all entities of a given entity type, then the user must
-   *     provide fromId as a filter to denote the start entity from which
-   *     further entities will be fetched. fromIdPrefix is mandatory even
-   *     in the case the entity id prefix is not used and should be set to 0.
-   * @param fromId If specified along with fromIdPrefix, retrieve entities with
-   *     an id prefix greater than or equal to specified id prefix in
-   *     fromIdPrefix and entity id lexicographically greater than or equal
-   *     to entity id specified in fromId. Please note than fromIdPrefix is
-   *     mandatory if fromId is specified, otherwise, the filter will be
-   *     ignored. It is recommended to provide both fromIdPrefix and fromId
-   *     filters for more accurate results as id prefix may not be unique
-   *     for an entity.
+   * @param fromId If specified, retrieve the next set of entities from the
+   *     given fromId. The set of entities retrieved is inclusive of specified
+   *     fromId. fromId should be taken from the value associated with FROM_ID
+   *     info key in entity response which was sent earlier.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances of the given entity type
@@ -309,7 +299,6 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
-      @QueryParam("fromidprefix") String fromIdPrefix,
       @QueryParam("fromid") String fromId) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
@@ -334,7 +323,7 @@ public class TimelineReaderWebServices {
           TimelineReaderWebServicesUtils.createTimelineEntityFilters(
           limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
               infofilters, conffilters, metricfilters, eventfilters,
-              fromIdPrefix, fromId),
+              fromId),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
           confsToRetrieve, metricsToRetrieve, fields, metricsLimit));
     } catch (Exception e) {
@@ -417,20 +406,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
-   * @param fromIdPrefix If specified, retrieve entities with an id prefix
-   *     greater than or equal to the specified fromIdPrefix. If fromIdPrefix
-   *     is same for all entities of a given entity type, then the user must
-   *     provide fromId as a filter to denote the start entity from which
-   *     further entities will be fetched. fromIdPrefix is mandatory even
-   *     in the case the entity id prefix is not used and should be set to 0.
-   * @param fromId If specified along with fromIdPrefix, retrieve entities with
-   *     an id prefix greater than or equal to specified id prefix in
-   *     fromIdPrefix and entity id lexicographically greater than or equal
-   *     to entity id specified in fromId. Please note than fromIdPrefix is
-   *     mandatory if fromId is specified, otherwise, the filter will be
-   *     ignored. It is recommended to provide both fromIdPrefix and fromId
-   *     filters for more accurate results as id prefix may not be unique
-   *     for an entity.
+   * @param fromId If specified, retrieve the next set of entities from the
+   *     given fromId. The set of entities retrieved is inclusive of specified
+   *     fromId. fromId should be taken from the value associated with FROM_ID
+   *     info key in entity response which was sent earlier.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances of the given entity type
@@ -467,12 +446,11 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
-      @QueryParam("fromidprefix") String fromIdPrefix,
       @QueryParam("fromid") String fromId) {
     return getEntities(req, res, null, appId, entityType, userId, flowName,
         flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
-        confsToRetrieve, metricsToRetrieve, fields, metricsLimit, fromIdPrefix,
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
         fromId);
   }
 
@@ -544,20 +522,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
-   * @param fromIdPrefix If specified, retrieve entities with an id prefix
-   *     greater than or equal to the specified fromIdPrefix. If fromIdPrefix
-   *     is same for all entities of a given entity type, then the user must
-   *     provide fromId as a filter to denote the start entity from which
-   *     further entities will be fetched. fromIdPrefix is mandatory even
-   *     in the case the entity id prefix is not used and should be set to 0.
-   * @param fromId If specified along with fromIdPrefix, retrieve entities with
-   *     an id prefix greater than or equal to specified id prefix in
-   *     fromIdPrefix and entity id lexicographically greater than or equal
-   *     to entity id specified in fromId. Please note than fromIdPrefix is
-   *     mandatory if fromId is specified, otherwise, the filter will be
-   *     ignored. It is recommended to provide both fromIdPrefix and fromId
-   *     filters for more accurate results as id prefix may not be unique
-   *     for an entity.
+   * @param fromId If specified, retrieve the next set of entities from the
+   *     given fromId. The set of entities retrieved is inclusive of specified
+   *     fromId. fromId should be taken from the value associated with FROM_ID
+   *     info key in entity response which was sent earlier.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances of the given entity type
@@ -595,7 +563,6 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
-      @QueryParam("fromidprefix") String fromIdPrefix,
       @QueryParam("fromid") String fromId) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
@@ -616,7 +583,7 @@ public class TimelineReaderWebServices {
           TimelineReaderWebServicesUtils.createTimelineEntityFilters(
           limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
               infofilters, conffilters, metricfilters, eventfilters,
-              fromIdPrefix, fromId),
+              fromId),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
           confsToRetrieve, metricsToRetrieve, fields, metricsLimit));
     } catch (Exception e) {
@@ -1097,9 +1064,10 @@ public class TimelineReaderWebServices {
    *     METRICS makes sense for flow runs hence only ALL or METRICS are
    *     supported as fields for fetching flow runs. Other fields will lead to
    *     HTTP 400 (Bad Request) response. (Optional query param).
-   * @param fromId Defines the flow run id. If specified, retrieve the next
-   *     set of flow runs from the given id. The set of flow runs retrieved
-   *     is inclusive of specified fromId.
+   * @param fromId If specified, retrieve the next set of flow run entities
+   *     from the given fromId. The set of entities retrieved is inclusive of
+   *     specified fromId. fromId should be taken from the value associated
+   *     with FROM_ID info key in entity response which was sent earlier.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     set of <cite>FlowRunEntity</cite> instances for the given flow are
@@ -1144,7 +1112,7 @@ public class TimelineReaderWebServices {
       entities = timelineReaderManager.getEntities(context,
           TimelineReaderWebServicesUtils.createTimelineEntityFilters(
           limit, createdTimeStart, createdTimeEnd, null, null, null,
-              null, null, null, null, fromId),
+              null, null, null, fromId),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
           null, metricsToRetrieve, fields, null));
     } catch (Exception e) {
@@ -1187,9 +1155,10 @@ public class TimelineReaderWebServices {
    *     METRICS makes sense for flow runs hence only ALL or METRICS are
    *     supported as fields for fetching flow runs. Other fields will lead to
    *     HTTP 400 (Bad Request) response. (Optional query param).
-   * @param fromId Defines the flow run id. If specified, retrieve the next
-   *     set of flow runs from the given id. The set of flow runs retrieved
-   *     is inclusive of specified fromId.
+   * @param fromId If specified, retrieve the next set of flow run entities
+   *     from the given fromId. The set of entities retrieved is inclusive of
+   *     specified fromId. fromId should be taken from the value associated
+   *     with FROM_ID info key in entity response which was sent earlier.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     set of <cite>FlowRunEntity</cite> instances for the given flow are
@@ -1246,9 +1215,10 @@ public class TimelineReaderWebServices {
    *     METRICS makes sense for flow runs hence only ALL or METRICS are
    *     supported as fields for fetching flow runs. Other fields will lead to
    *     HTTP 400 (Bad Request) response. (Optional query param).
-   * @param fromId Defines the flow run id. If specified, retrieve the next
-   *     set of flow runs from the given id. The set of flow runs retrieved
-   *     is inclusive of specified fromId.
+   * @param fromId If specified, retrieve the next set of flow run entities
+   *     from the given fromId. The set of entities retrieved is inclusive of
+   *     specified fromId. fromId should be taken from the value associated
+   *     with FROM_ID info key in entity response which was sent earlier.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     set of <cite>FlowRunEntity</cite> instances for the given flow are
@@ -1292,7 +1262,7 @@ public class TimelineReaderWebServices {
               TimelineEntityType.YARN_FLOW_RUN.toString(), null, null),
           TimelineReaderWebServicesUtils.createTimelineEntityFilters(
           limit, createdTimeStart, createdTimeEnd, null, null, null,
-              null, null, null, null, fromId),
+              null, null, null, fromId),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
           null, metricsToRetrieve, fields, null));
     } catch (Exception e) {
@@ -1422,7 +1392,7 @@ public class TimelineReaderWebServices {
       DateRange range = parseDateRange(dateRange);
       TimelineEntityFilters entityFilters =
           TimelineReaderWebServicesUtils.createTimelineEntityFilters(
-              limit, null, null, null, null, null, null, null, null, null,
+              limit, null, null, null, null, null, null, null, null,
               fromId);
       entityFilters.setCreatedTimeBegin(range.dateStart);
       entityFilters.setCreatedTimeEnd(range.dateEnd);
@@ -1743,9 +1713,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
-   * @param fromId Defines the application id. If specified, retrieve the next
-   *     set of applications from the given id. The set of applications
-   *     retrieved is inclusive of specified fromId.
+   * @param fromId If specified, retrieve the next set of applications
+   *     from the given fromId. The set of applications retrieved is inclusive
+   *     of specified fromId. fromId should be taken from the value associated
+   *     with FROM_ID info key in entity response which was sent earlier.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances representing apps is
@@ -1798,7 +1769,7 @@ public class TimelineReaderWebServices {
       entities = timelineReaderManager.getEntities(context,
           TimelineReaderWebServicesUtils.createTimelineEntityFilters(
           limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
-              infofilters, conffilters, metricfilters, eventfilters, null,
+              infofilters, conffilters, metricfilters, eventfilters,
               fromId),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
           confsToRetrieve, metricsToRetrieve, fields, metricsLimit));
@@ -1875,9 +1846,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
-   * @param fromId Defines the application id. If specified, retrieve the next
-   *     set of applications from the given id. The set of applications
-   *     retrieved is inclusive of specified fromId.
+   * @param fromId If specified, retrieve the next set of applications
+   *     from the given fromId. The set of applications retrieved is inclusive
+   *     of specified fromId. fromId should be taken from the value associated
+   *     with FROM_ID info key in entity response which was sent earlier.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances representing apps is
@@ -1915,7 +1887,7 @@ public class TimelineReaderWebServices {
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
         flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
-        confsToRetrieve, metricsToRetrieve, fields, metricsLimit, null, fromId);
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit, fromId);
   }
 
   /**
@@ -1979,9 +1951,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
-   * @param fromId Defines the application id. If specified, retrieve the next
-   *     set of applications from the given id. The set of applications
-   *     retrieved is inclusive of specified fromId.
+   * @param fromId If specified, retrieve the next set of applications
+   *     from the given fromId. The set of applications retrieved is inclusive
+   *     of specified fromId. fromId should be taken from the value associated
+   *     with FROM_ID info key in entity response which was sent earlier.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances representing apps is
@@ -2021,7 +1994,7 @@ public class TimelineReaderWebServices {
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
         flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
-        confsToRetrieve, metricsToRetrieve, fields, metricsLimit, null, fromId);
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit, fromId);
   }
 
   /**
@@ -2082,9 +2055,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
-   * @param fromId Defines the application id. If specified, retrieve the next
-   *     set of applications from the given id. The set of applications
-   *     retrieved is inclusive of specified fromId.
+   * @param fromId If specified, retrieve the next set of applications
+   *     from the given fromId. The set of applications retrieved is inclusive
+   *     of specified fromId. fromId should be taken from the value associated
+   *     with FROM_ID info key in entity response which was sent earlier.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances representing apps is
@@ -2121,7 +2095,7 @@ public class TimelineReaderWebServices {
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
         null, limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
         infofilters, conffilters, metricfilters, eventfilters,
-        confsToRetrieve, metricsToRetrieve, fields, metricsLimit, null, fromId);
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit, fromId);
   }
 
   /**
@@ -2183,9 +2157,10 @@ public class TimelineReaderWebServices {
    *     or has a value less than 1, and metrics have to be retrieved, then
    *     metricsLimit will be considered as 1 i.e. latest single value of
    *     metric(s) will be returned. (Optional query param).
-   * @param fromId Defines the application id. If specified, retrieve the next
-   *     set of applications from the given id. The set of applications
-   *     retrieved is inclusive of specified fromId.
+   * @param fromId If specified, retrieve the next set of applications
+   *     from the given fromId. The set of applications retrieved is inclusive
+   *     of specified fromId. fromId should be taken from the value associated
+   *     with FROM_ID info key in entity response which was sent earlier.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances representing apps is
@@ -2223,7 +2198,7 @@ public class TimelineReaderWebServices {
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
         null, limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
         infofilters, conffilters, metricfilters, eventfilters,
-        confsToRetrieve, metricsToRetrieve, fields, metricsLimit, null, fromId);
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit, fromId);
   }
 
   /**
@@ -2294,21 +2269,11 @@ public class TimelineReaderWebServices {
    *          have to be retrieved, then metricsLimit will be considered as 1
    *          i.e. latest single value of metric(s) will be returned. (Optional
    *          query param).
-   * @param fromIdPrefix If specified, retrieve entities with an id prefix
-   *          greater than or equal to the specified fromIdPrefix. If
-   *          fromIdPrefix is same for all entities of a given entity type, then
-   *          the user must provide fromId as a filter to denote the start
-   *          entity from which further entities will be fetched. fromIdPrefix
-   *          is mandatory even in the case the entity id prefix is not used and
-   *          should be set to 0.
-   * @param fromId If specified along with fromIdPrefix, retrieve entities with
-   *          an id prefix greater than or equal to specified id prefix in
-   *          fromIdPrefix and entity id lexicographically greater than or equal
-   *          to entity id specified in fromId. Please note than fromIdPrefix is
-   *          mandatory if fromId is specified, otherwise, the filter will be
-   *          ignored. It is recommended to provide both fromIdPrefix and fromId
-   *          filters for more accurate results as id prefix may not be unique
-   *          for an entity.
+   * @param fromId If specified, retrieve the next set of application-attempt
+   *         entities from the given fromId. The set of application-attempt
+   *         entities retrieved is inclusive of specified fromId. fromId should
+   *         be taken from the value associated with FROM_ID info key in
+   *         entity response which was sent earlier.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *         set of <cite>TimelineEntity</cite> instances of the app-attempt
@@ -2342,13 +2307,12 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
-      @QueryParam("fromidprefix") String fromIdPrefix,
       @QueryParam("fromid") String fromId) {
 
     return getAppAttempts(req, res, null, appId, userId, flowName, flowRunId,
         limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
         infofilters, conffilters, metricfilters, eventfilters, confsToRetrieve,
-        metricsToRetrieve, fields, metricsLimit, fromIdPrefix, fromId);
+        metricsToRetrieve, fields, metricsLimit, fromId);
   }
 
   /**
@@ -2420,21 +2384,11 @@ public class TimelineReaderWebServices {
    *          have to be retrieved, then metricsLimit will be considered as 1
    *          i.e. latest single value of metric(s) will be returned. (Optional
    *          query param).
-   * @param fromIdPrefix If specified, retrieve entities with an id prefix
-   *          greater than or equal to the specified fromIdPrefix. If
-   *          fromIdPrefix is same for all entities of a given entity type, then
-   *          the user must provide fromId as a filter to denote the start
-   *          entity from which further entities will be fetched. fromIdPrefix
-   *          is mandatory even in the case the entity id prefix is not used and
-   *          should be set to 0.
-   * @param fromId If specified along with fromIdPrefix, retrieve entities with
-   *          an id prefix greater than or equal to specified id prefix in
-   *          fromIdPrefix and entity id lexicographically greater than or equal
-   *          to entity id specified in fromId. Please note than fromIdPrefix is
-   *          mandatory if fromId is specified, otherwise, the filter will be
-   *          ignored. It is recommended to provide both fromIdPrefix and fromId
-   *          filters for more accurate results as id prefix may not be unique
-   *          for an entity.
+   * @param fromId If specified, retrieve the next set of application-attempt
+   *         entities from the given fromId. The set of application-attempt
+   *         entities retrieved is inclusive of specified fromId. fromId should
+   *         be taken from the value associated with FROM_ID info key in
+   *         entity response which was sent earlier.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *         set of <cite>TimelineEntity</cite> instances of the app-attempts
@@ -2469,7 +2423,6 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
-      @QueryParam("fromidprefix") String fromIdPrefix,
       @QueryParam("fromid") String fromId) {
 
     return getEntities(req, res, clusterId, appId,
@@ -2477,7 +2430,7 @@ public class TimelineReaderWebServices {
         flowName, flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
         confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
-        fromIdPrefix, fromId);
+        fromId);
   }
 
   /**
@@ -2699,21 +2652,11 @@ public class TimelineReaderWebServices {
    *          have to be retrieved, then metricsLimit will be considered as 1
    *          i.e. latest single value of metric(s) will be returned. (Optional
    *          query param).
-   * @param fromIdPrefix If specified, retrieve entities with an id prefix
-   *          greater than or equal to the specified fromIdPrefix. If
-   *          fromIdPrefix is same for all entities of a given entity type, then
-   *          the user must provide fromId as a filter to denote the start
-   *          entity from which further entities will be fetched. fromIdPrefix
-   *          is mandatory even in the case the entity id prefix is not used and
-   *          should be set to 0.
-   * @param fromId If specified along with fromIdPrefix, retrieve entities with
-   *          an id prefix greater than or equal to specified id prefix in
-   *          fromIdPrefix and entity id lexicographically greater than or equal
-   *          to entity id specified in fromId. Please note than fromIdPrefix is
-   *          mandatory if fromId is specified, otherwise, the filter will be
-   *          ignored. It is recommended to provide both fromIdPrefix and fromId
-   *          filters for more accurate results as id prefix may not be unique
-   *          for an entity.
+   * @param fromId If specified, retrieve the next set of container
+   *         entities from the given fromId. The set of container
+   *         entities retrieved is inclusive of specified fromId. fromId should
+   *         be taken from the value associated with FROM_ID info key in
+   *         entity response which was sent earlier.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *         set of <cite>TimelineEntity</cite> instances of the containers
@@ -2748,12 +2691,11 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
-      @QueryParam("fromidprefix") String fromIdPrefix,
       @QueryParam("fromid") String fromId) {
     return getContainers(req, res, null, appId, appattemptId, userId, flowName,
         flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
-        confsToRetrieve, metricsToRetrieve, fields, metricsLimit, fromIdPrefix,
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
         fromId);
   }
 
@@ -2828,21 +2770,11 @@ public class TimelineReaderWebServices {
    *          have to be retrieved, then metricsLimit will be considered as 1
    *          i.e. latest single value of metric(s) will be returned. (Optional
    *          query param).
-   * @param fromIdPrefix If specified, retrieve entities with an id prefix
-   *          greater than or equal to the specified fromIdPrefix. If
-   *          fromIdPrefix is same for all entities of a given entity type, then
-   *          the user must provide fromId as a filter to denote the start
-   *          entity from which further entities will be fetched. fromIdPrefix
-   *          is mandatory even in the case the entity id prefix is not used and
-   *          should be set to 0.
-   * @param fromId If specified along with fromIdPrefix, retrieve entities with
-   *          an id prefix greater than or equal to specified id prefix in
-   *          fromIdPrefix and entity id lexicographically greater than or equal
-   *          to entity id specified in fromId. Please note than fromIdPrefix is
-   *          mandatory if fromId is specified, otherwise, the filter will be
-   *          ignored. It is recommended to provide both fromIdPrefix and fromId
-   *          filters for more accurate results as id prefix may not be unique
-   *          for an entity.
+   * @param fromId If specified, retrieve the next set of container
+   *         entities from the given fromId. The set of container
+   *         entities retrieved is inclusive of specified fromId. fromId should
+   *         be taken from the value associated with FROM_ID info key in
+   *         entity response which was sent earlier.
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *         set of <cite>TimelineEntity</cite> instances of the containers
@@ -2879,7 +2811,6 @@ public class TimelineReaderWebServices {
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
       @QueryParam("fields") String fields,
       @QueryParam("metricslimit") String metricsLimit,
-      @QueryParam("fromidprefix") String fromIdPrefix,
       @QueryParam("fromid") String fromId) {
 
     String entityType = TimelineEntityType.YARN_CONTAINER.toString();
@@ -2898,7 +2829,7 @@ public class TimelineReaderWebServices {
     return getEntities(req, res, clusterId, appId, entityType, userId, flowName,
         flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilter, conffilters, metricfilters, eventfilters,
-        confsToRetrieve, metricsToRetrieve, fields, metricsLimit, fromIdPrefix,
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
         fromId);
   }
 
