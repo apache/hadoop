@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.yarn.server.timelineservice.storage.entity;
 
+import java.util.List;
+
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.AppIdKeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverterToString;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 
@@ -35,7 +39,7 @@ public class EntityRowKey {
   private final String entityType;
   private final Long entityIdPrefix;
   private final String entityId;
-  private final KeyConverter<EntityRowKey> entityRowKeyConverter =
+  private final EntityRowKeyConverter entityRowKeyConverter =
       new EntityRowKeyConverter();
 
   public EntityRowKey(String clusterId, String userId, String flowName,
@@ -96,12 +100,32 @@ public class EntityRowKey {
 
   /**
    * Given the raw row key as bytes, returns the row key as an object.
-   *
    * @param rowKey byte representation of row key.
    * @return An <cite>EntityRowKey</cite> object.
    */
   public static EntityRowKey parseRowKey(byte[] rowKey) {
     return new EntityRowKeyConverter().decode(rowKey);
+  }
+
+  /**
+   * Constructs a row key for the entity table as follows:
+   * <p>
+   * {@code userName!clusterId!flowName!flowRunId!AppId!
+   * entityType!entityIdPrefix!entityId}.
+   * </p>
+   * @return String representation of row key.
+   */
+  public String getRowKeyAsString() {
+    return entityRowKeyConverter.encodeAsString(this);
+  }
+
+  /**
+   * Given the encoded row key as string, returns the row key as an object.
+   * @param encodedRowKey String representation of row key.
+   * @return A <cite>EntityRowKey</cite> object.
+   */
+  public static EntityRowKey parseRowKeyFromString(String encodedRowKey) {
+    return new EntityRowKeyConverter().decodeFromString(encodedRowKey);
   }
 
   /**
@@ -112,7 +136,7 @@ public class EntityRowKey {
    * <p>
    */
   final private static class EntityRowKeyConverter implements
-      KeyConverter<EntityRowKey> {
+      KeyConverter<EntityRowKey>, KeyConverterToString<EntityRowKey> {
 
     private final AppIdKeyConverter appIDKeyConverter = new AppIdKeyConverter();
 
@@ -244,6 +268,32 @@ public class EntityRowKey {
               Separator.QUALIFIERS, Separator.TAB, Separator.SPACE);
       return new EntityRowKey(clusterId, userId, flowName, flowRunId, appId,
           entityType, entityPrefixId, entityId);
+    }
+
+    @Override
+    public String encodeAsString(EntityRowKey key) {
+      if (key.clusterId == null || key.userId == null || key.flowName == null
+          || key.flowRunId == null || key.appId == null
+          || key.entityType == null || key.entityIdPrefix == null
+          || key.entityId == null) {
+        throw new IllegalArgumentException();
+      }
+      return TimelineReaderUtils
+          .joinAndEscapeStrings(new String[] {key.clusterId, key.userId,
+              key.flowName, key.flowRunId.toString(), key.appId, key.entityType,
+              key.entityIdPrefix.toString(), key.entityId});
+    }
+
+    @Override
+    public EntityRowKey decodeFromString(String encodedRowKey) {
+      List<String> split = TimelineReaderUtils.split(encodedRowKey);
+      if (split == null || split.size() != 8) {
+        throw new IllegalArgumentException("Invalid row key for entity table.");
+      }
+      Long flowRunId = Long.valueOf(split.get(3));
+      Long entityIdPrefix = Long.valueOf(split.get(6));
+      return new EntityRowKey(split.get(0), split.get(1), split.get(2),
+          flowRunId, split.get(4), split.get(5), entityIdPrefix, split.get(7));
     }
   }
 }

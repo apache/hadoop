@@ -99,19 +99,10 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyVa
  * filter list, event filters can be evaluated with logical AND/OR and we can
  * create a hierarchy of these {@link TimelineExistsFilter} objects. If null or
  * empty, the filter is not applied.</li>
- * <li><b>fromIdPrefix</b> - If specified, retrieve entities with an id prefix
- * greater than or equal to the specified fromIdPrefix. If fromIdPrefix is same
- * for all entities of a given entity type, then the user must provide fromId as
- * a filter to denote the start entity from which further entities will be
- * fetched. fromIdPrefix is mandatory even in the case the entity id prefix is
- * not used and should be set to 0.</li>
- * <li><b>fromId</b> - If specified along with fromIdPrefix, retrieve entities
- * with an id prefix greater than or equal to specified id prefix in
- * fromIdPrefix and entity id lexicographically greater than or equal to entity
- * id specified in fromId. Please note than fromIdPrefix is mandatory if fromId
- * is specified, otherwise, the filter will be ignored. It is recommended to
- * provide both fromIdPrefix and fromId filters for more accurate results as id
- * prefix may not be unique for an entity.</li>
+ * <li><b>fromId</b> - If specified, retrieve the next set of entities from the
+ * given fromId. The set of entities retrieved is inclusive of specified fromId.
+ * fromId should be taken from the value associated with FROM_ID info key in
+ * entity response which was sent earlier.</li>
  * </ul>
  */
 @Private
@@ -126,7 +117,6 @@ public class TimelineEntityFilters {
   private TimelineFilterList configFilters;
   private TimelineFilterList metricFilters;
   private TimelineFilterList eventFilters;
-  private Long fromIdPrefix;
   private String fromId;
   private static final long DEFAULT_BEGIN_TIME = 0L;
   private static final long DEFAULT_END_TIME = Long.MAX_VALUE;
@@ -146,11 +136,10 @@ public class TimelineEntityFilters {
       TimelineFilterList entityInfoFilters,
       TimelineFilterList entityConfigFilters,
       TimelineFilterList entityMetricFilters,
-      TimelineFilterList entityEventFilters, Long fromidprefix, String fromid) {
+      TimelineFilterList entityEventFilters, String fromid) {
     this(entityLimit, timeBegin, timeEnd, entityRelatesTo, entityIsRelatedTo,
         entityInfoFilters, entityConfigFilters, entityMetricFilters,
         entityEventFilters);
-    this.fromIdPrefix = fromidprefix;
     this.fromId = fromid;
   }
 
@@ -275,13 +264,5 @@ public class TimelineEntityFilters {
 
   public void setFromId(String fromId) {
     this.fromId = fromId;
-  }
-
-  public Long getFromIdPrefix() {
-    return fromIdPrefix;
-  }
-
-  public void setFromIdPrefix(Long fromIdPrefix) {
-    this.fromIdPrefix = fromIdPrefix;
   }
 }
