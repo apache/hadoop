@@ -174,6 +174,7 @@ public class TestNameNodeMXBean {
         assertTrue(((Long)liveNode.get("capacity")) > 0);
         assertTrue(liveNode.containsKey("numBlocks"));
         assertTrue(((Long)liveNode.get("numBlocks")) == 0);
+        assertTrue(liveNode.containsKey("lastBlockReport"));
         // a. By default the upgrade domain isn't defined on any DN.
         // b. If the upgrade domain is set on a DN, JMX should have the same
         // value.
