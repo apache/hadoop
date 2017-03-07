@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
-import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowRowKey;
@@ -223,26 +222,6 @@ public class TestRowKeys {
     assertEquals(ts,
         (Long) LongConverter.invertLong(Bytes.toLong(splits[1])));
     verifyRowPrefixBytes(byteRowKeyPrefix);
-  }
-
-  @Test
-  public void testFlowActivityRowKeyAsString() {
-    String cluster = "cl" + TimelineReaderUtils.DEFAULT_DELIMITER_CHAR + "uster"
-        + TimelineReaderUtils.DEFAULT_ESCAPE_CHAR;
-    String user = TimelineReaderUtils.DEFAULT_ESCAPE_CHAR + "user";
-    String fName = "dummy_" + TimelineReaderUtils.DEFAULT_DELIMITER_CHAR
-        + TimelineReaderUtils.DEFAULT_ESCAPE_CHAR + "flow"
-        + TimelineReaderUtils.DEFAULT_DELIMITER_CHAR;
-    Long ts = 1459900830000L;
-    Long dayTimestamp = HBaseTimelineStorageUtils.getTopOfTheDayTimestamp(ts);
-    String rowKeyAsString =
-        new FlowActivityRowKey(cluster, ts, user, fName).getRowKeyAsString();
-    FlowActivityRowKey rowKey =
-        FlowActivityRowKey.parseRowKeyFromString(rowKeyAsString);
-    assertEquals(cluster, rowKey.getClusterId());
-    assertEquals(dayTimestamp, rowKey.getDayTimestamp());
-    assertEquals(user, rowKey.getUserId());
-    assertEquals(fName, rowKey.getFlowName());
   }
 
   @Test
