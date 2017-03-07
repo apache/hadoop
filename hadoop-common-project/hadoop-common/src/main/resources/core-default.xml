@@ -1300,16 +1300,6 @@
     to specify the time (such as 2s, 2m, 1h, etc.).
   </description>
 </property>
-<property>
-  <name>fs.azure.authorization</name>
-  <value>false</value>
-  <description>
-    Config flag to enable authorization support in WASB. Setting it to "true" enables
-    authorization support to WASB. Currently WASB authorization requires a remote service
-    to provide authorization that needs to be specified via fs.azure.authorization.remote.service.url
-    configuration
-  </description>
-</property>
 
 
 <property>

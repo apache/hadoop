@@ -177,8 +177,6 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("io.compression.codec.bzip2.library");
     // - org.apache.hadoop.io.SequenceFile
     xmlPropsToSkipCompare.add("io.seqfile.local.dir");
-    // - org.apache.hadoop.fs.azure.NativeAzureFileSystem
-    xmlPropsToSkipCompare.add("fs.azure.authorization");
 
 
   }
