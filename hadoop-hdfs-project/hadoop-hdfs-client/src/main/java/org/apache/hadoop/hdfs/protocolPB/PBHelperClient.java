@@ -294,6 +294,8 @@ public class PBHelperClient {
         .setLastUpdateMonotonic(info.getLastUpdateMonotonic())
         .setXceiverCount(info.getXceiverCount())
         .setAdminState(convert(info.getAdminState()))
+        .setLastBlockReportTime(info.getLastBlockReportTime())
+        .setLastBlockReportMonotonic(info.getLastBlockReportMonotonic())
         .build();
     return builder.build();
   }
@@ -563,7 +565,11 @@ public class PBHelperClient {
             .setLastUpdateMonotonic(di.getLastUpdateMonotonic())
             .setXceiverCount(di.getXceiverCount())
             .setAdminState(convert(di.getAdminState())).setUpgradeDomain(
-            di.hasUpgradeDomain() ? di.getUpgradeDomain() : null);
+            di.hasUpgradeDomain() ? di.getUpgradeDomain() : null)
+            .setLastBlockReportTime(di.hasLastBlockReportTime() ?
+                di.getLastBlockReportTime() : 0)
+            .setLastBlockReportMonotonic(di.hasLastBlockReportMonotonic() ?
+                di.getLastBlockReportMonotonic() : 0);
     if (di.hasNonDfsUsed()) {
       dinfo.setNonDfsUsed(di.getNonDfsUsed());
     } else {

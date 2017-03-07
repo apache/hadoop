@@ -295,6 +295,8 @@ class JsonUtilClient {
             DatanodeInfo.AdminStates
                 .valueOf(getString(m, "adminState", "NORMAL")))
         .setUpgradeDomain(getString(m, "upgradeDomain", ""))
+        .setLastBlockReportTime(getLong(m, "lastBlockReportTime", 0L))
+        .setLastBlockReportMonotonic(getLong(m, "lastBlockReportMonotonic", 0L))
         .build();
   }
 

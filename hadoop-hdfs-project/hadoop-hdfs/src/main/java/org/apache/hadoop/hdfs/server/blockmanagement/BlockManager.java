@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.util.ExitUtil.terminate;
+import static org.apache.hadoop.util.Time.now;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -2158,6 +2159,8 @@ public class BlockManager implements BlockStatsMXBean {
           long leaseId = this.getBlockReportLeaseManager().removeLease(node);
           BlockManagerFaultInjector.getInstance().
               removeBlockReportLease(node, leaseId);
+          node.setLastBlockReportTime(now());
+          node.setLastBlockReportMonotonic(Time.monotonicNow());
         }
         LOG.debug("Processing RPC with index {} out of total {} RPCs in "
                 + "processReport 0x{}", context.getCurRpc(),

@@ -181,6 +181,9 @@ public class JsonUtil {
     if (datanodeinfo.getUpgradeDomain() != null) {
       m.put("upgradeDomain", datanodeinfo.getUpgradeDomain());
     }
+    m.put("lastBlockReportTime", datanodeinfo.getLastBlockReportTime());
+    m.put("lastBlockReportMonotonic",
+        datanodeinfo.getLastBlockReportMonotonic());
     return m;
   }
 
