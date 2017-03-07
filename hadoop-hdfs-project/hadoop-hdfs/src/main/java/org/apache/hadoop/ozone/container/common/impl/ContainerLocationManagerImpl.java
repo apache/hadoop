@@ -124,7 +124,7 @@ public class ContainerLocationManagerImpl implements ContainerLocationManager {
       StorageLocationReport r = new StorageLocationReport(
           loc.getStorageUuId(), false, loc.getCapacity(),
           scmUsed, remaining);
-      reports[idx++] = r;
+      reports[idx] = r;
     }
     return reports;
   }
