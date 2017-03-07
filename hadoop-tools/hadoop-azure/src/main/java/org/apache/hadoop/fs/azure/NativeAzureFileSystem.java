@@ -566,6 +566,16 @@ public class NativeAzureFileSystem extends FileSystem {
         // Remove the source folder. Don't check explicitly if it exists,
         // to avoid triggering redo recursively.
         try {
+          // Rename the source folder 0-byte root file
+          // as destination folder 0-byte root file.
+          FileMetadata srcMetaData = this.getSourceMetadata();
+          if (srcMetaData.getBlobMaterialization() == BlobMaterialization.Explicit) {
+            // We already have a lease. So let's just rename the source blob
+            // as destination blob under same lease.
+            fs.getStoreInterface().rename(this.getSrcKey(), this.getDstKey(), false, lease);
+          }
+
+          // Now we can safely delete the source folder.
           fs.getStoreInterface().delete(srcKey, lease);
         } catch (Exception e) {
           LOG.info("Unable to delete source folder during folder rename redo. "
