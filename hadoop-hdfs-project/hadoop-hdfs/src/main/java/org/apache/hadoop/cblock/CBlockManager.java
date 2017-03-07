@@ -30,12 +30,13 @@ import org.apache.hadoop.cblock.protocolPB.CBlockClientServerProtocolPB;
 import org.apache.hadoop.cblock.protocolPB.CBlockClientServerProtocolServerSideTranslatorPB;
 import org.apache.hadoop.cblock.protocolPB.CBlockServiceProtocolPB;
 import org.apache.hadoop.cblock.protocolPB.CBlockServiceProtocolServerSideTranslatorPB;
-import org.apache.hadoop.cblock.storage.IStorageClient;
+import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.cblock.storage.StorageManager;
 import org.apache.hadoop.cblock.util.KeyUtil;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.utils.LevelDBStore;
 import org.iq80.leveldb.DBIterator;
 import org.slf4j.Logger;
@@ -88,9 +89,9 @@ public class CBlockManager implements CBlockServiceProtocol,
 
   private Charset encoding = Charset.forName("UTF-8");
 
-  public CBlockManager(CBlockConfiguration conf, IStorageClient storageClient
-  ) throws IOException {
-    storageManager = new StorageManager(storageClient);
+  public CBlockManager(OzoneConfiguration conf,
+      ScmClient storageClient) throws IOException {
+    storageManager = new StorageManager(storageClient, conf);
 
     dbPath = conf.getTrimmed(DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY,
         DFS_CBLOCK_SERVICE_LEVELDB_PATH_DEFAULT);
@@ -177,7 +178,7 @@ public class CBlockManager implements CBlockServiceProtocol,
    * @return RPC server, or null if addr is null
    * @throws IOException if there is an I/O error while creating RPC server
    */
-  private static RPC.Server startRpcServer(CBlockConfiguration conf,
+  private static RPC.Server startRpcServer(OzoneConfiguration conf,
       Class<?> protocol, BlockingService instance,
       InetSocketAddress addr, String bindHostKey,
       String handlerCountKey, int handlerCountDefault) throws IOException {
@@ -211,7 +212,7 @@ public class CBlockManager implements CBlockServiceProtocol,
   public synchronized void createVolume(String userName, String volumeName,
       long volumeSize, int blockSize) throws IOException {
     LOG.info("Create volume received: userName: {} volumeName: {} " +
-        "volumeSize: {} blockSize: {}", userName, volumeName,
+            "volumeSize: {} blockSize: {}", userName, volumeName,
         volumeSize, blockSize);
     // It is important to create in-memory representation of the
     // volume first, then writes to persistent storage (levelDB)
@@ -279,6 +280,10 @@ public class CBlockManager implements CBlockServiceProtocol,
   @VisibleForTesting
   public synchronized List<VolumeDescriptor> getAllVolumes() {
     return storageManager.getAllVolume(null);
+  }
+
+  public synchronized List<VolumeDescriptor> getAllVolumes(String userName) {
+    return storageManager.getAllVolume(userName);
   }
 
   public synchronized void close() {

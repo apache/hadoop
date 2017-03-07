@@ -26,6 +26,11 @@ public final class KeyUtil {
     return userName + ":" + volumeName;
   }
 
+  public static String getContainerName(String userName, String volumeName,
+      int containerID) {
+    return getVolumeKey(userName, volumeName) + "#" + containerID;
+  }
+
   private KeyUtil() {
 
   }

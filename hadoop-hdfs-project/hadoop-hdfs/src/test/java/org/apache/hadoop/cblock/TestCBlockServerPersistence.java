@@ -18,10 +18,15 @@
 package org.apache.hadoop.cblock;
 
 import org.apache.hadoop.cblock.meta.VolumeDescriptor;
-import org.apache.hadoop.cblock.storage.IStorageClient;
+import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.cblock.util.MockStorageClient;
+import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
 import java.util.List;
 
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY;
@@ -40,6 +45,7 @@ public class TestCBlockServerPersistence {
    */
   @Test
   public void testWriteToPersistentStore() throws Exception {
+    OzoneConfiguration conf = new OzoneConfiguration();
     String userName = "testWriteToPersistentStore";
     String volumeName1 = "testVolume1";
     String volumeName2 = "testVolume2";
@@ -48,11 +54,17 @@ public class TestCBlockServerPersistence {
     int blockSize = 4096;
     CBlockManager cBlockManager = null;
     CBlockManager cBlockManager1 = null;
-    String dbPath = "/tmp/testCblockPersistence.dat";
+    URL p = conf.getClass().getResource("");
+    String path = p.getPath().concat(
+        TestOzoneContainer.class.getSimpleName());
+    File filePath = new File(path);
+    if(!filePath.exists() && !filePath.mkdirs()) {
+      throw new IOException("Unable to create test DB dir");
+    }
+    conf.set(DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY, path.concat(
+        "/testCblockPersistence.dat"));
     try {
-      IStorageClient storageClient = new MockStorageClient();
-      CBlockConfiguration conf = new CBlockConfiguration();
-      conf.set(DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY, dbPath);
+      ScmClient storageClient = new MockStorageClient();
       cBlockManager = new CBlockManager(conf, storageClient);
       cBlockManager.createVolume(userName, volumeName1, volumeSize1, blockSize);
       cBlockManager.createVolume(userName, volumeName2, volumeSize2, blockSize);
@@ -69,9 +81,10 @@ public class TestCBlockServerPersistence {
 
       // create a new cblock server instance. This is just the
       // same as restarting cblock server.
-      IStorageClient storageClient1 = new MockStorageClient();
-      CBlockConfiguration conf1 = new CBlockConfiguration();
-      conf1.set(DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY, dbPath);
+      ScmClient storageClient1 = new MockStorageClient();
+      OzoneConfiguration conf1 = new OzoneConfiguration();
+      conf1.set(DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY, path.concat(
+          "/testCblockPersistence.dat"));
       cBlockManager1 = new CBlockManager(conf1, storageClient1);
       List<VolumeDescriptor> allVolumes1 = cBlockManager1.getAllVolumes();
       assertEquals(2, allVolumes1.size());
@@ -85,11 +98,15 @@ public class TestCBlockServerPersistence {
       // here.
       if (volumeDescriptor1.getVolumeName().equals(
           newvolumeDescriptor1.getVolumeName())) {
-        assertEquals(volumeDescriptor1, newvolumeDescriptor1);
-        assertEquals(volumeDescriptor2, newvolumeDescriptor2);
+        assertEquals(volumeDescriptor1.toString(),
+            newvolumeDescriptor1.toString());
+        assertEquals(volumeDescriptor2.toString(),
+            newvolumeDescriptor2.toString());
       } else {
-        assertEquals(volumeDescriptor1, newvolumeDescriptor2);
-        assertEquals(volumeDescriptor2, newvolumeDescriptor1);
+        assertEquals(volumeDescriptor1.toString(),
+            newvolumeDescriptor2.toString());
+        assertEquals(volumeDescriptor2.toString(),
+            newvolumeDescriptor1.toString());
       }
     } finally {
       if (cBlockManager != null) {

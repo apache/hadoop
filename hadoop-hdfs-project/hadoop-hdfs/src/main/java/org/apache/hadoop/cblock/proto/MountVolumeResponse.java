@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.cblock.proto;
 
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -30,17 +33,20 @@ public class MountVolumeResponse {
   private final String volumeName;
   private final long volumeSize;
   private final int blockSize;
-  private List<String> containerList;
+  private List<Pipeline> containerList;
+  private HashMap<String, Pipeline> pipelineMap;
 
   public MountVolumeResponse(boolean isValid, String userName,
       String volumeName, long volumeSize, int blockSize,
-      List<String> containerList) {
+      List<Pipeline> containerList,
+      HashMap<String, Pipeline> pipelineMap) {
     this.isValid = isValid;
     this.userName = userName;
     this.volumeName = volumeName;
     this.volumeSize = volumeSize;
     this.blockSize = blockSize;
     this.containerList = containerList;
+    this.pipelineMap = pipelineMap;
   }
 
   public boolean getIsValid() {
@@ -63,7 +69,11 @@ public class MountVolumeResponse {
     return blockSize;
   }
 
-  public List<String> getContainerList() {
+  public List<Pipeline> getContainerList() {
     return containerList;
+  }
+
+  public HashMap<String, Pipeline> getPipelineMap() {
+    return pipelineMap;
   }
 }

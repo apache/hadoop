@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.scm.protocol;
 
-import java.util.Set;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+
+import java.util.Set;
 
 /**
  * Holds the nodes that currently host the container for an object key hash.

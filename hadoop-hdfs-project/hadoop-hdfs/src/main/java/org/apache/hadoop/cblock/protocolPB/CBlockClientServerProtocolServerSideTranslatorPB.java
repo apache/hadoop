@@ -23,8 +23,10 @@ import org.apache.hadoop.cblock.proto.CBlockClientServerProtocol;
 import org.apache.hadoop.cblock.proto.MountVolumeResponse;
 import org.apache.hadoop.cblock.protocol.proto.CBlockClientServerProtocolProtos;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -61,12 +63,18 @@ public class CBlockClientServerProtocolServerSideTranslatorPB implements
         resp.setVolumeName(result.getVolumeName());
         resp.setVolumeSize(result.getVolumeSize());
         resp.setBlockSize(result.getBlockSize());
-        List<String> containers = result.getContainerList();
+        List<Pipeline> containers = result.getContainerList();
+        HashMap<String, Pipeline> pipelineMap = result.getPipelineMap();
+
         for (int i=0; i<containers.size(); i++) {
           CBlockClientServerProtocolProtos.ContainerIDProto.Builder id =
               CBlockClientServerProtocolProtos.ContainerIDProto.newBuilder();
-          id.setContainerID(containers.get(i));
+          String containerName = containers.get(i).getContainerName();
+          id.setContainerID(containerName);
           id.setIndex(i);
+          if (pipelineMap.containsKey(containerName)) {
+            id.setPipeline(pipelineMap.get(containerName).getProtobufMessage());
+          }
           resp.addAllContainerIDs(id.build());
         }
       }

@@ -23,6 +23,10 @@ import org.apache.hadoop.cblock.meta.ContainerDescriptor;
 import org.apache.hadoop.cblock.meta.VolumeDescriptor;
 import org.apache.hadoop.cblock.meta.VolumeInfo;
 import org.apache.hadoop.cblock.proto.MountVolumeResponse;
+import org.apache.hadoop.cblock.util.KeyUtil;
+import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.scm.client.ScmClient;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +54,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class StorageManager {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(StorageManager.class);
-  private final IStorageClient storageClient;
+  private final ScmClient storageClient;
   /**
    * We will NOT have the situation where same kv pair getting
    * processed, but it is possible to have multiple kv pair being
@@ -68,10 +72,11 @@ public class StorageManager {
   // TODO : assuming all containers are of the same size
   private long containerSizeB;
 
-  public StorageManager(IStorageClient storageClient) throws IOException {
+  public StorageManager(ScmClient storageClient,
+      OzoneConfiguration ozoneConfig) throws IOException {
     this.storageClient = storageClient;
     this.user2VolumeMap = new ConcurrentHashMap<>();
-    this.containerSizeB = storageClient.getContainerSize();
+    this.containerSizeB = storageClient.getContainerSize(null);
   }
 
   /**
@@ -128,8 +133,10 @@ public class StorageManager {
 
     for (String containerId : containerIds) {
       try {
+        Pipeline pipeline = storageClient.getContainer(containerId);
         ContainerDescriptor containerDescriptor =
-            storageClient.getContainer(containerId);
+            new ContainerDescriptor(containerId);
+        containerDescriptor.setPipeline(pipeline);
         volumeDescriptor.addContainer(containerDescriptor);
       } catch (IOException e) {
         LOGGER.error("Getting container failed! Container:{} error:{}",
@@ -172,7 +179,11 @@ public class StorageManager {
       long allocatedSize = 0;
       ArrayList<String> containerIds = new ArrayList<>();
       while (allocatedSize < volumeSize) {
-        ContainerDescriptor container = storageClient.createContainer();
+        Pipeline pipeline = storageClient.createContainer(
+            KeyUtil.getContainerName(userName, volumeName, containerIdx));
+        ContainerDescriptor container =
+            new ContainerDescriptor(pipeline.getContainerName());
+        container.setPipeline(pipeline);
         container.setContainerIndex(containerIdx);
         volume.addContainer(container);
         containerIds.add(container.getContainerID());
@@ -203,7 +214,7 @@ public class StorageManager {
     if (!user2VolumeMap.containsKey(userName)
         || !user2VolumeMap.get(userName).containsKey(volumeName)) {
       throw new CBlockException("Deleting non-exist volume "
-        + userName + ":" + volumeName);
+          + userName + ":" + volumeName);
     }
     if (!force && !user2VolumeMap.get(userName).get(volumeName).isEmpty()) {
       throw new CBlockException("Deleting a non-empty volume without force!");
@@ -211,7 +222,8 @@ public class StorageManager {
     VolumeDescriptor volume = user2VolumeMap.get(userName).remove(volumeName);
     for (String containerID : volume.getContainerIDsList()) {
       try {
-        storageClient.deleteContainer(containerID);
+        Pipeline pipeline = storageClient.getContainer(containerID);
+        storageClient.deleteContainer(pipeline);
       } catch (IOException e) {
         LOGGER.error("Error deleting container Container:{} error:{}",
             containerID, e);
@@ -261,12 +273,12 @@ public class StorageManager {
         || !user2VolumeMap.get(userName).containsKey(volumeName)) {
       // in the case of invalid volume, no need to set any value other than
       // isValid flag.
-      return new MountVolumeResponse(false, null, null, 0, 0, null);
+      return new MountVolumeResponse(false, null, null, 0, 0, null, null);
     }
     VolumeDescriptor volume = user2VolumeMap.get(userName).get(volumeName);
     return new MountVolumeResponse(true, userName,
         volumeName, volume.getVolumeSize(), volume.getBlockSize(),
-        volume.getContainerIDsList());
+        volume.getContainerPipelines(), volume.getPipelines());
   }
 
   /**

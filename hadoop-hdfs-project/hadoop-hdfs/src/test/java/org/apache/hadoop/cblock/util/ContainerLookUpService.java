@@ -18,7 +18,10 @@
 package org.apache.hadoop.cblock.util;
 
 import org.apache.hadoop.cblock.meta.ContainerDescriptor;
+import org.apache.hadoop.ozone.container.ContainerTestHelper;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
+import java.io.IOException;
 import java.util.HashMap;
 
 /**
@@ -42,19 +45,26 @@ public final class ContainerLookUpService {
    *
    * found
    * @param containerID
-   * @return
+   * @return the corresponding pipeline instance (create if not exist)
    */
-  public static ContainerDescriptor lookUp(String containerID) {
+  public static ContainerDescriptor lookUp(String containerID)
+      throws IOException {
     if (!containers.containsKey(containerID)) {
-      System.err.println("A container id never seen, return a new one " +
-          "for testing purpose:" + containerID);
-      containers.put(containerID, new ContainerDescriptor(containerID));
+      Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline(
+          containerID);
+      ContainerDescriptor cd = new ContainerDescriptor(containerID);
+      cd.setPipeline(pipeline);
+      containers.put(containerID, cd);
     }
     return containers.get(containerID);
   }
 
-  public static void addContainer(String containerID) {
-    containers.put(containerID, new ContainerDescriptor(containerID));
+  public static void addContainer(String containerID) throws IOException {
+    Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline(
+        containerID);
+    ContainerDescriptor cd = new ContainerDescriptor(containerID);
+    cd.setPipeline(pipeline);
+    containers.put(containerID, cd);
   }
 
   private ContainerLookUpService() {
