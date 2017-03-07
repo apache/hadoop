@@ -39,7 +39,8 @@ public class CommandQueue {
 
   private final Map<DatanodeID, List<SCMCommand>> commandMap;
   private final Lock lock;
-  private final List<SCMCommand> nullList;
+  // This map is used as default return value containing one null command.
+  private static final List<SCMCommand> DEFAULT_LIST = new LinkedList<>();
 
   /**
    * Constructs a Command Queue.
@@ -47,8 +48,7 @@ public class CommandQueue {
   public CommandQueue() {
     commandMap = new HashMap<>();
     lock = new ReentrantLock();
-    nullList = new LinkedList<>();
-    nullList.add(NullCommand.newBuilder().build());
+    DEFAULT_LIST.add(NullCommand.newBuilder().build());
   }
 
   /**
@@ -75,7 +75,7 @@ public class CommandQueue {
     } finally {
       lock.unlock();
     }
-    return nullList;
+    return DEFAULT_LIST;
   }
 
   /**

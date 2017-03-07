@@ -73,7 +73,7 @@ public  class SCMConnectionManager {
    *
    * @return - Return RPC timeout.
    */
-  public long getRpcTimeout() {
+  public int getRpcTimeout() {
     return rpcTimeout;
   }
 
@@ -128,7 +128,7 @@ public  class SCMConnectionManager {
       StorageContainerDatanodeProtocolPB rpcProxy = RPC.getProxy(
           StorageContainerDatanodeProtocolPB.class, version,
           address, UserGroupInformation.getCurrentUser(), conf,
-          NetUtils.getDefaultSocketFactory(conf), rpcTimeout);
+          NetUtils.getDefaultSocketFactory(conf), getRpcTimeout());
 
       StorageContainerDatanodeProtocolClientSideTranslatorPB rpcClient =
           new StorageContainerDatanodeProtocolClientSideTranslatorPB(rpcProxy);

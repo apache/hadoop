@@ -47,15 +47,80 @@ import "DatanodeContainerProtocol.proto";
 */
 message SCMHeartbeatRequestProto {
   required DatanodeIDProto datanodeID = 1;
-  optional SCMNodeReport nodeReport= 2;
+  optional SCMNodeReport nodeReport = 2;
+  optional ReportState containerReportState = 3;
 }
+
+enum ContainerState {
+  closed = 0;
+  open = 1;
+}
+
+/**
+NodeState contains messages from datanode to SCM saying that it has
+some information that SCM might be interested in.*/
+message ReportState {
+  enum states {
+    noContainerReports = 0;
+    completeContinerReport = 1;
+    deltaContainerReport = 2;
+  }
+  required states state = 1;
+  required int64 count = 2 [default = 0];
+}
+
+
+/**
+This message is used to persist the information about a container in the
+SCM database, This information allows SCM to startup faster and avoid having
+all container info in memory all the time.
+  */
+message ContainerPersistanceProto {
+  required ContainerState state = 1;
+  required hadoop.hdfs.ozone.Pipeline pipeline = 2;
+  required ContainerInfo info = 3;
+}
+
+/**
+This message is used to do a quick look up of which containers are effected
+if a node goes down
+*/
+message NodeContianerMapping {
+  repeated string contianerName = 1;
+}
+
+
+
+/**
+A container report contains the following information.
+*/
+message ContainerInfo {
+  required string containerName = 1;
+  repeated bytes finalhash = 2;
+  optional int64 size = 3;
+  optional int64 keycount = 4;
+}
+
+/**
+A set of container reports, max count is generally set to
+8192 since that keeps the size of the reports under 1 MB.
+*/
+message ContainerReports {
+  enum reportType {
+    fullReport = 0;
+    deltaReport = 1;
+  }
+  repeated ContainerInfo reports = 1;
+  required reportType type = 2;
+}
+
 
 /**
 * This message is send along with the heart beat to report datanode
 * storage utilization by SCM.
 */
 message SCMNodeReport {
-  repeated SCMStorageReport storageReport= 1;
+  repeated SCMStorageReport storageReport = 1;
 }
 
 message SCMStorageReport {
@@ -124,12 +189,19 @@ message NullCmdResponseProto {
 }
 
 /**
+This command tells the data node to send in the container report when possible
+*/
+message SendContainerReportProto {
+}
+
+/**
 Type of commands supported by SCM to datanode protocol.
 */
 enum Type {
   nullCmd = 1;
   versionCommand = 2;
   registeredCommand = 3;
+  sendContainerReport = 4;
 }
 
 /*
@@ -138,6 +210,10 @@ enum Type {
 message SCMCommandResponseProto {
   required Type cmdType = 2; // Type of the command
   optional NullCmdResponseProto nullCommand = 3;
+  optional SCMRegisteredCmdResponseProto registeredProto = 4;
+  optional SCMVersionResponseProto versionProto = 5;
+  optional SendContainerReportProto sendReport = 6;
+
 }
 
 
@@ -157,9 +233,9 @@ message SCMHeartbeatResponseProto {
  * Here is a simple state diagram that shows how a datanode would boot up and
  * communicate with SCM.
  *
- *          +-----------------------+
+ *           ----------------------- 
  *          |         Start         |
- *          +----------+------------+
+ *           ---------- ------------ 
  *                     |
  *                     |
  *                     |
@@ -167,19 +243,19 @@ message SCMHeartbeatResponseProto {
  *                     |
  *                     |
  *                     |
- *          +----------v-------------+
- *          |   Searching for  SCM   +------------+
- *          +----------+-------------+            |
+ *           ----------v------------- 
+ *          |   Searching for  SCM    ------------ 
+ *           ---------- -------------             |
  *                     |                          |
  *                     |                          |
- *                     |               +----------v-------------+
+ *                     |                ----------v------------- 
  *                     |               | Register if needed     |
- *                     |               +-----------+------------+
+ *                     |                ----------- ------------ 
  *                     |                           |
  *                     v                           |
- *           +-----------+----------------+        |
- * +---------+  Heartbeat state           <--------+
- * |         +--------^-------------------+
+ *            ----------- ----------------         |
+ *  ---------   Heartbeat state           <-------- 
+ * |          --------^------------------- 
  * |                  |
  * |                  |
  * |                  |
@@ -187,7 +263,7 @@ message SCMHeartbeatResponseProto {
  * |                  |
  * |                  |
  * |                  |
- * +------------------+
+ *  ------------------ 
  *
  *
  *

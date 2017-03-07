@@ -20,10 +20,9 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.NullCommand;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.scm.VersionInfo;
 
 import java.io.IOException;
@@ -37,6 +36,7 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   private int rpcResponseDelay;
   private AtomicInteger heartbeatCount = new AtomicInteger(0);
   private AtomicInteger rpcCount = new AtomicInteger(0);
+  private ReportState reportState;
 
   /**
    * Returns the number of heartbeats made to this class.
@@ -112,10 +112,11 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
    */
   @Override
   public StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto
-      sendHeartbeat(DatanodeID datanodeID, SCMNodeReport nodeReport)
-      throws IOException {
+      sendHeartbeat(DatanodeID datanodeID, SCMNodeReport nodeReport,
+      ReportState reportState) throws IOException {
     rpcCount.incrementAndGet();
     heartbeatCount.incrementAndGet();
+    this.reportState = reportState;
     sleepIfNeeded();
     StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto
         cmdResponse = StorageContainerDatanodeProtocolProtos
@@ -152,5 +153,9 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
         .setDatanodeUUID(datanodeID.getDatanodeUuid()).setErrorCode(
             StorageContainerDatanodeProtocolProtos
                 .SCMRegisteredCmdResponseProto.ErrorCode.success).build();
+  }
+
+  public ReportState getReportState() {
+    return this.reportState;
   }
 }

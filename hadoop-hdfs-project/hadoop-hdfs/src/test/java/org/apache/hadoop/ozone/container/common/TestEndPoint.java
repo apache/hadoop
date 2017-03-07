@@ -20,7 +20,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine
+    .DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine
     .EndpointStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
@@ -31,15 +32,17 @@ import org.apache.hadoop.ozone.container.common.states.endpoint
 import org.apache.hadoop.ozone.container.common.states.endpoint
     .VersionEndpointTask;
 import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
-import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
 import org.apache.hadoop.ozone.protocol.proto
@@ -58,6 +61,9 @@ import java.net.InetSocketAddress;
 import java.util.UUID;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ReportState.states
+    .noContainerReports;
 
 /**
  * Tests the endpoints.
@@ -67,6 +73,27 @@ public class TestEndPoint {
   private static RPC.Server scmServer;
   private static ScmTestMock scmServerImpl;
   private static File testDir;
+  private static StorageContainerDatanodeProtocolProtos.ReportState
+      defaultReportState;
+
+  @AfterClass
+  public static void tearDown() throws Exception {
+    if (scmServer != null) {
+      scmServer.stop();
+    }
+    FileUtil.fullyDelete(testDir);
+  }
+
+  @BeforeClass
+  public static void setUp() throws Exception {
+    serverAddress = SCMTestUtils.getReuseableAddress();
+    scmServerImpl = new ScmTestMock();
+    scmServer = SCMTestUtils.startScmRpcServer(SCMTestUtils.getConf(),
+        scmServerImpl, serverAddress, 10);
+    testDir = PathUtils.getTestDir(TestEndPoint.class);
+    defaultReportState = StorageContainerDatanodeProtocolProtos.ReportState.
+        newBuilder().setState(noContainerReports).build();
+  }
 
   @Test
   /**
@@ -255,7 +282,7 @@ public class TestEndPoint {
       srb.setCapacity(2000).setScmUsed(500).setRemaining(1500).build();
       nrb.addStorageReport(srb);
       SCMHeartbeatResponseProto responseProto = rpcEndPoint.getEndPoint()
-          .sendHeartbeat(dataNode, nrb.build());
+          .sendHeartbeat(dataNode, nrb.build(), defaultReportState);
       Assert.assertNotNull(responseProto);
       Assert.assertEquals(1, responseProto.getCommandsCount());
       Assert.assertNotNull(responseProto.getCommandsList().get(0));
@@ -321,22 +348,5 @@ public class TestEndPoint {
     long end = Time.monotonicNow();
     scmServerImpl.setRpcResponseDelay(0);
     Assert.assertThat(end - start, new LessOrEqual<>(rpcTimeout + tolerance));
-  }
-
-  @AfterClass
-  public static void tearDown() throws Exception {
-    if (scmServer != null) {
-      scmServer.stop();
-    }
-    FileUtil.fullyDelete(testDir);
-  }
-
-  @BeforeClass
-  public static void setUp() throws Exception {
-    serverAddress = SCMTestUtils.getReuseableAddress();
-    scmServerImpl = new ScmTestMock();
-    scmServer = SCMTestUtils.startScmRpcServer(SCMTestUtils.getConf(),
-        scmServerImpl, serverAddress, 10);
-    testDir = PathUtils.getTestDir(TestEndPoint.class);
   }
 }

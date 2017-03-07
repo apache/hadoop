@@ -49,7 +49,7 @@ public class ContainerMapping implements Mapping {
   private final long cacheSize;
   private final Lock lock;
   private final Charset encoding = Charset.forName("UTF-8");
-  private final LevelDBStore store;
+  private final LevelDBStore containerStore;
   private final Random rand;
 
   /**
@@ -75,11 +75,14 @@ public class ContainerMapping implements Mapping {
       throw
           new IllegalArgumentException("SCM metadata directory is not valid.");
     }
-    File dbPath = new File(scmMetaDataDir, "SCM.db");
     Options options = new Options();
     options.cacheSize(this.cacheSize * (1024L * 1024L));
     options.createIfMissing();
-    store = new LevelDBStore(dbPath, options);
+
+    // Write the container name to pipeline mapping.
+    File containerDBPath = new File(scmMetaDataDir, "container.db");
+    containerStore = new LevelDBStore(containerDBPath, options);
+
     this.lock = new ReentrantLock();
     rand = new Random();
   }
@@ -103,6 +106,8 @@ public class ContainerMapping implements Mapping {
     return pipeline;
   }
 
+
+
   /**
    * Returns the Pipeline from the container name.
    *
@@ -114,7 +119,8 @@ public class ContainerMapping implements Mapping {
     Pipeline pipeline = null;
     lock.lock();
     try {
-      byte[] pipelineBytes = store.get(containerName.getBytes(encoding));
+      byte[] pipelineBytes =
+          containerStore.get(containerName.getBytes(encoding));
       if (pipelineBytes == null) {
         throw new IOException("Specified key does not exist. key : " +
             containerName);
@@ -145,7 +151,8 @@ public class ContainerMapping implements Mapping {
 
     lock.lock();
     try {
-      byte[] pipelineBytes = store.get(containerName.getBytes(encoding));
+      byte[] pipelineBytes =
+          containerStore.get(containerName.getBytes(encoding));
       if (pipelineBytes != null) {
         throw new IOException("Specified container already exists. key : " +
             containerName);
@@ -153,7 +160,7 @@ public class ContainerMapping implements Mapping {
       DatanodeID id = getDatanodeID();
       if (id != null) {
         pipeline = newPipelineFromNodes(id, containerName);
-        store.put(containerName.getBytes(encoding),
+        containerStore.put(containerName.getBytes(encoding),
             pipeline.getProtobufMessage().toByteArray());
       }
     } finally {
@@ -193,8 +200,8 @@ public class ContainerMapping implements Mapping {
    */
   @Override
   public void close() throws IOException {
-    if (store != null) {
-      store.close();
+    if (containerStore != null) {
+      containerStore.close();
     }
   }
 }
