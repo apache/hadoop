@@ -275,10 +275,21 @@ public class ClientDistributedCacheManager {
       FsAction action, Map<URI, FileStatus> statCache) throws IOException {
     FileStatus status = getFileStatus(fs, path.toUri(), statCache);
     FsPermission perms = status.getPermission();
-    FsAction otherAction = perms.getOtherAction();
-    if (otherAction.implies(action)) {
-      return true;
+
+    // Encrypted files are always treated as private. This stance has two
+    // important side effects.  The first is that the encrypted files will be
+    // downloaded as the job owner instead of the YARN user, which is required
+    // for the KMS ACLs to work as expected.  Second, it prevent a file with
+    // world readable permissions that is stored in an encryption zone from
+    // being localized as a publicly shared file with world readable
+    // permissions.
+    if (!perms.getEncryptedBit()) {
+      FsAction otherAction = perms.getOtherAction();
+      if (otherAction.implies(action)) {
+        return true;
+      }
     }
+
     return false;
   }
 
