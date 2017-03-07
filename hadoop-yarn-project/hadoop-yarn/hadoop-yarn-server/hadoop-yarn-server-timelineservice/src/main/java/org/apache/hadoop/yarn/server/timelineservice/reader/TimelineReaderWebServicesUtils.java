@@ -74,14 +74,14 @@ final class TimelineReaderWebServicesUtils {
   static TimelineEntityFilters createTimelineEntityFilters(String limit,
       String createdTimeStart, String createdTimeEnd, String relatesTo,
       String isRelatedTo, String infofilters, String conffilters,
-      String metricfilters, String eventfilters, String fromidprefix,
+      String metricfilters, String eventfilters,
       String fromid) throws TimelineParseException {
     return new TimelineEntityFilters(parseLongStr(limit),
         parseLongStr(createdTimeStart), parseLongStr(createdTimeEnd),
         parseRelationFilters(relatesTo), parseRelationFilters(isRelatedTo),
         parseKVFilters(infofilters, false), parseKVFilters(conffilters, true),
         parseMetricFilters(metricfilters), parseEventFilters(eventfilters),
-        parseLongStr(fromidprefix), parseStr(fromid));
+        parseStr(fromid));
   }
 
   /**

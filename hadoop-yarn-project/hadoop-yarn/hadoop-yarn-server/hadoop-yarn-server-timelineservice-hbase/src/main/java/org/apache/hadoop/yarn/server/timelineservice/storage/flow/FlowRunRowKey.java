@@ -17,8 +17,12 @@
  */
 package org.apache.hadoop.yarn.server.timelineservice.storage.flow;
 
+import java.util.List;
+
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverterToString;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 
@@ -70,12 +74,29 @@ public class FlowRunRowKey {
 
   /**
    * Given the raw row key as bytes, returns the row key as an object.
-   *
    * @param rowKey Byte representation of row key.
    * @return A <cite>FlowRunRowKey</cite> object.
    */
   public static FlowRunRowKey parseRowKey(byte[] rowKey) {
     return new FlowRunRowKeyConverter().decode(rowKey);
+  }
+
+  /**
+   * Constructs a row key for the flow run table as follows:
+   * {@code clusterId!userId!flowName!Flow Run Id}.
+   * @return String representation of row key
+   */
+  public String getRowKeyAsString() {
+    return flowRunRowKeyConverter.encodeAsString(this);
+  }
+
+  /**
+   * Given the encoded row key as string, returns the row key as an object.
+   * @param encodedRowKey String representation of row key.
+   * @return A <cite>FlowRunRowKey</cite> object.
+   */
+  public static FlowRunRowKey parseRowKeyFromString(String encodedRowKey) {
+    return new FlowRunRowKeyConverter().decodeFromString(encodedRowKey);
   }
 
   /**
@@ -101,7 +122,7 @@ public class FlowRunRowKey {
    * <p>
    */
   final private static class FlowRunRowKeyConverter implements
-      KeyConverter<FlowRunRowKey> {
+      KeyConverter<FlowRunRowKey>, KeyConverterToString<FlowRunRowKey> {
 
     private FlowRunRowKeyConverter() {
     }
@@ -185,6 +206,28 @@ public class FlowRunRowKey {
       Long flowRunId =
           LongConverter.invertLong(Bytes.toLong(rowKeyComponents[3]));
       return new FlowRunRowKey(clusterId, userId, flowName, flowRunId);
+    }
+
+    @Override
+    public String encodeAsString(FlowRunRowKey key) {
+      if (key.clusterId == null || key.userId == null || key.flowName == null
+          || key.flowRunId == null) {
+        throw new IllegalArgumentException();
+      }
+      return TimelineReaderUtils.joinAndEscapeStrings(new String[] {
+          key.clusterId, key.userId, key.flowName, key.flowRunId.toString()});
+    }
+
+    @Override
+    public FlowRunRowKey decodeFromString(String encodedRowKey) {
+      List<String> split = TimelineReaderUtils.split(encodedRowKey);
+      if (split == null || split.size() != 4) {
+        throw new IllegalArgumentException(
+            "Invalid row key for flow run table.");
+      }
+      Long flowRunId = Long.valueOf(split.get(3));
+      return new FlowRunRowKey(split.get(0), split.get(1), split.get(2),
+          flowRunId);
     }
   }
 }

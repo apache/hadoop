@@ -388,6 +388,8 @@ public class TestHBaseTimelineStorageApps {
           e1.getType());
       assertEquals(cTime, e1.getCreatedTime());
       Map<String, Object> infoMap2 = e1.getInfo();
+      // fromid key is added by storage. Remove it for comparision.
+      infoMap2.remove("FROM_ID");
       assertEquals(infoMap, infoMap2);
 
       Map<String, Set<String>> isRelatedTo2 = e1.getIsRelatedToEntities();
@@ -447,6 +449,9 @@ public class TestHBaseTimelineStorageApps {
       assertEquals(TimelineEntityType.YARN_APPLICATION.toString(),
           e1.getType());
       assertEquals(cTime, e1.getCreatedTime());
+      infoMap2 = e1.getInfo();
+      // fromid key is added by storage. Remove it for comparison.
+      infoMap2.remove("FROM_ID");
       assertEquals(infoMap, e1.getInfo());
       assertEquals(isRelatedTo, e1.getIsRelatedToEntities());
       assertEquals(relatesTo, e1.getRelatesToEntities());
@@ -678,7 +683,7 @@ public class TestHBaseTimelineStorageApps {
     }
     assertEquals(5, cfgCnt);
     assertEquals(3, metricCnt);
-    assertEquals(5, infoCnt);
+    assertEquals(8, infoCnt);
     assertEquals(4, eventCnt);
     assertEquals(4, relatesToCnt);
     assertEquals(4, isRelatedToCnt);
@@ -742,7 +747,8 @@ public class TestHBaseTimelineStorageApps {
         TimelineEntityType.YARN_APPLICATION.toString(), null),
         new TimelineDataToRetrieve());
     assertNotNull(e1);
-    assertTrue(e1.getInfo().isEmpty() && e1.getConfigs().isEmpty() &&
+    assertEquals(1, e1.getInfo().size());
+    assertTrue(e1.getConfigs().isEmpty() &&
         e1.getMetrics().isEmpty() && e1.getIsRelatedToEntities().isEmpty() &&
         e1.getRelatesToEntities().isEmpty());
     Set<TimelineEntity> es1 = reader.getEntities(
@@ -753,7 +759,8 @@ public class TestHBaseTimelineStorageApps {
         new TimelineDataToRetrieve());
     assertEquals(3, es1.size());
     for (TimelineEntity e : es1) {
-      assertTrue(e.getInfo().isEmpty() && e.getConfigs().isEmpty() &&
+      assertEquals(1, e1.getInfo().size());
+      assertTrue(e.getConfigs().isEmpty() &&
           e.getMetrics().isEmpty() && e.getIsRelatedToEntities().isEmpty() &&
           e.getRelatesToEntities().isEmpty());
     }
@@ -786,7 +793,7 @@ public class TestHBaseTimelineStorageApps {
       isRelatedToCnt += entity.getIsRelatedToEntities().size();
       infoCnt += entity.getInfo().size();
     }
-    assertEquals(0, infoCnt);
+    assertEquals(3, infoCnt);
     assertEquals(4, isRelatedToCnt);
     assertEquals(3, metricsCnt);
   }
@@ -1768,7 +1775,7 @@ public class TestHBaseTimelineStorageApps {
     for (TimelineEntity entity : entities) {
       infoCnt += entity.getInfo().size();
     }
-    assertEquals(5, infoCnt);
+    assertEquals(7, infoCnt);
 
     TimelineFilterList infoFilterList1 = new TimelineFilterList(
         new TimelineKeyValueFilter(
@@ -1785,7 +1792,7 @@ public class TestHBaseTimelineStorageApps {
     for (TimelineEntity entity : entities) {
       infoCnt += entity.getInfo().size();
     }
-    assertEquals(3, infoCnt);
+    assertEquals(4, infoCnt);
 
     TimelineFilterList infoFilterList2 = new TimelineFilterList(
         new TimelineKeyValueFilter(
