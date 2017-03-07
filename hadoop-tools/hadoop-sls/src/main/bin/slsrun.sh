@@ -103,12 +103,16 @@ function run_simulation() {
   hadoop_java_exec sls org.apache.hadoop.yarn.sls.SLSRunner ${args}
 }
 
+this="${BASH_SOURCE-$0}"
+bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
+
+# copy 'html' directory to current directory to make sure web sever can access
+cp -r "${bin}/../html" "$(pwd)"
+
 # let's locate libexec...
 if [[ -n "${HADOOP_HOME}" ]]; then
   HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_HOME}/libexec"
 else
-  this="${BASH_SOURCE-$0}"
-  bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
   HADOOP_DEFAULT_LIBEXEC_DIR="${bin}/../../../../../libexec"
 fi
 
