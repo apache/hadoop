@@ -26,6 +26,7 @@ import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManage
 import org.apache.hadoop.ozone.container.common.states.DatanodeState;
 import org.apache.hadoop.ozone.container.common.states.datanode.InitDatanodeState;
 import org.apache.hadoop.ozone.container.common.states.datanode.RunningDatanodeState;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.junit.After;
@@ -48,6 +49,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_SCM_HEARTBEAT_RPC_TIMEOUT;
 
 /**
  * Tests the datanode state machine class and its states.
@@ -65,6 +68,7 @@ public class TestDatanodeStateMachine {
   @Before
   public void setUp() throws Exception {
     conf = SCMTestUtils.getConf();
+    conf.setInt(OZONE_SCM_HEARTBEAT_RPC_TIMEOUT, 500);
     serverAddresses = new LinkedList<>();
     scmServers = new LinkedList<>();
     mockServers = new LinkedList<>();
@@ -194,9 +198,9 @@ public class TestDatanodeStateMachine {
 
     // This execute will invoke getVersion calls against all SCM endpoints
     // that we know of.
-    task.execute(executorService);
-    newState = task.await(2, TimeUnit.SECONDS);
 
+    task.execute(executorService);
+    newState = task.await(10, TimeUnit.SECONDS);
     // If we are in running state, we should be in running.
     Assert.assertEquals(DatanodeStateMachine.DatanodeStates.RUNNING,
         newState);
@@ -246,8 +250,14 @@ public class TestDatanodeStateMachine {
     Assert.assertEquals(DatanodeStateMachine.DatanodeStates.RUNNING,
         newState);
 
+
     for (ScmTestMock mock : mockServers) {
       Assert.assertEquals(1, mock.getHeartbeatCount());
+      // Assert that heartbeat did indeed carry that State that we said
+      // have in the datanode.
+      Assert.assertEquals(mock.getReportState().getState().getNumber(),
+          StorageContainerDatanodeProtocolProtos.ReportState.states
+              .noContainerReports.getNumber());
     }
   }
 

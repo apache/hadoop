@@ -18,6 +18,7 @@ package org.apache.hadoop.ozone.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
@@ -43,11 +44,12 @@ public interface StorageContainerDatanodeProtocol {
    * Used by data node to send a Heartbeat.
    * @param datanodeID - Datanode ID.
    * @param nodeReport - node report state
+   * @param reportState - container report state.
    * @return - SCMHeartbeatResponseProto
    * @throws IOException
    */
   SCMHeartbeatResponseProto sendHeartbeat(DatanodeID datanodeID,
-      SCMNodeReport nodeReport) throws IOException;
+      SCMNodeReport nodeReport, ReportState reportState) throws IOException;
 
   /**
    * Register Datanode.

@@ -37,6 +37,8 @@ import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ReportState;
+import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.NullCmdResponseProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto;
@@ -391,12 +393,14 @@ public class StorageContainerManager
    * Used by data node to send a Heartbeat.
    *
    * @param datanodeID - Datanode ID.
+   * @param nodeReport - Node Report
+   * @param reportState - Container report ready info.
    * @return - SCMHeartbeatResponseProto
    * @throws IOException
    */
   @Override
   public SCMHeartbeatResponseProto sendHeartbeat(DatanodeID datanodeID,
-      SCMNodeReport nodeReport) throws IOException {
+      SCMNodeReport nodeReport, ReportState reportState) throws IOException {
     List<SCMCommand> commands =
         getScmNodeManager().sendHeartbeat(datanodeID, nodeReport);
     List<SCMCommandResponseProto> cmdReponses = new LinkedList<>();

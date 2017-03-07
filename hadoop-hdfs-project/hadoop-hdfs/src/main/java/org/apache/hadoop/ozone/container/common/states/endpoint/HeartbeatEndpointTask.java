@@ -26,6 +26,13 @@ import org.apache.hadoop.ozone.container.common.statemachine
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto;
+import org.apache.hadoop.ozone.protocol.commands.SendContainerCommand;
+import org.apache.hadoop.ozone.protocol.proto
+     .StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto
+     .StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,12 +96,13 @@ public class HeartbeatEndpointTask
       DatanodeID datanodeID = DatanodeID.getFromProtoBuf(this
           .containerNodeIDProto.getDatanodeID());
 
-      rpcEndpoint.getEndPoint().sendHeartbeat(datanodeID,
-          this.context.getNodeReport());
+      SCMHeartbeatResponseProto reponse = rpcEndpoint.getEndPoint()
+          .sendHeartbeat(datanodeID, this.context.getNodeReport(),
+              this.context.getContainerReportState());
+      processResponse(reponse);
       rpcEndpoint.zeroMissedCount();
     } catch (IOException ex) {
-      rpcEndpoint.logIfNeeded(ex
-      );
+      rpcEndpoint.logIfNeeded(ex);
     } finally {
       rpcEndpoint.unlock();
     }
@@ -107,6 +115,27 @@ public class HeartbeatEndpointTask
    */
   public static Builder newBuilder() {
     return new Builder();
+  }
+
+  /**
+   * Add this command to command processing Queue.
+   *
+   * @param response - SCMHeartbeat response.
+   */
+  private void processResponse(SCMHeartbeatResponseProto response) {
+    for (SCMCommandResponseProto commandResponseProto : response
+        .getCommandsList()) {
+      if (commandResponseProto.getCmdType() ==
+          StorageContainerDatanodeProtocolProtos.Type.nullCmd) {
+        //this.context.addCommand(NullCommand.newBuilder().build());
+        LOG.debug("Discarding a null command from SCM.");
+      }
+      if (commandResponseProto.getCmdType() ==
+          StorageContainerDatanodeProtocolProtos.Type.sendContainerReport) {
+        this.context.addCommand(SendContainerCommand.getFromProtobuf(
+            commandResponseProto.getSendReport()));
+      }
+    }
   }
 
   /**
@@ -138,8 +167,8 @@ public class HeartbeatEndpointTask
     /**
      * Sets the Config.
      *
-     * @param config  - config
-     * @return  Builder
+     * @param config - config
+     * @return Builder
      */
     public Builder setConfig(Configuration config) {
       this.conf = config;

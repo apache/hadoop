@@ -24,6 +24,8 @@ import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ReportState;
+import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
@@ -121,11 +123,12 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
 
   @Override
   public SCMHeartbeatResponseProto sendHeartbeat(DatanodeID datanodeID,
-      SCMNodeReport nodeReport) throws IOException {
+      SCMNodeReport nodeReport, ReportState reportState) throws IOException {
     SCMHeartbeatRequestProto.Builder req = SCMHeartbeatRequestProto
         .newBuilder();
     req.setDatanodeID(datanodeID.getProtoBufMessage());
     req.setNodeReport(nodeReport);
+    req.setContainerReportState(reportState);
     final SCMHeartbeatResponseProto resp;
     try {
       resp = rpcProxy.sendHeartbeat(NULL_RPC_CONTROLLER, req.build());
