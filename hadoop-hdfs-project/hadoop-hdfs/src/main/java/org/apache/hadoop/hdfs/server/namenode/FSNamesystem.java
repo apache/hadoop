@@ -5472,7 +5472,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("blockScheduled", node.getBlocksScheduled())
           .put("blockPoolUsed", node.getBlockPoolUsed())
           .put("blockPoolUsedPercent", node.getBlockPoolUsedPercent())
-          .put("volfails", node.getVolumeFailures());
+          .put("volfails", node.getVolumeFailures())
+          // Block report time in minutes
+          .put("lastBlockReport", getLastBlockReport(node));
       VolumeFailureSummary volumeFailureSummary = node.getVolumeFailureSummary();
       if (volumeFailureSummary != null) {
         innerinfo
@@ -5569,6 +5571,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private long getLastContact(DatanodeDescriptor alivenode) {
     return (monotonicNow() - alivenode.getLastUpdateMonotonic())/1000;
+  }
+
+  private Object getLastBlockReport(DatanodeDescriptor node) {
+    return (monotonicNow() - node.getLastBlockReportMonotonic()) / 60000;
   }
 
   private long getDfsUsed(DatanodeDescriptor alivenode) {
