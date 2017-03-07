@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.cblock.util;
 
-import org.apache.hadoop.cblock.meta.ContainerDescriptor;
-import org.apache.hadoop.cblock.storage.IStorageClient;
+import org.apache.hadoop.scm.client.ScmClient;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.IOException;
 
@@ -30,7 +30,7 @@ import java.io.IOException;
  * replaced with actual container look up calls.
  *
  */
-public class MockStorageClient implements IStorageClient {
+public class MockStorageClient implements ScmClient {
   private static long currentContainerId = -1;
 
   /**
@@ -39,20 +39,22 @@ public class MockStorageClient implements IStorageClient {
    * @return A container descriptor object to locate this container
    * @throws Exception
    */
-  public ContainerDescriptor createContainer() throws IOException {
+  @Override
+  public Pipeline createContainer(String containerId)
+      throws IOException {
     currentContainerId += 1;
     ContainerLookUpService.addContainer(Long.toString(currentContainerId));
-    return ContainerLookUpService.lookUp(Long.toString(currentContainerId));
+    return ContainerLookUpService.lookUp(Long.toString(currentContainerId))
+        .getPipeline();
   }
 
   /**
    * As this is only a testing class, with all "container" maintained in
    * memory, no need to really delete anything for now.
-   * @param containerId
    * @throws IOException
    */
   @Override
-  public void deleteContainer(String containerId) throws IOException {
+  public void deleteContainer(Pipeline pipeline) throws IOException {
 
   }
 
@@ -63,13 +65,13 @@ public class MockStorageClient implements IStorageClient {
    * @return
    * @throws IOException
    */
-  public ContainerDescriptor getContainer(String containerId)
+  public Pipeline getContainer(String containerId)
       throws IOException {
-    return ContainerLookUpService.lookUp(containerId);
+    return ContainerLookUpService.lookUp(containerId).getPipeline();
   }
 
   @Override
-  public long getContainerSize() throws IOException {
+  public long getContainerSize(Pipeline pipeline) throws IOException {
     // just return a constant value for now
     return 5L*1024*1024*1024; // 5GB
   }

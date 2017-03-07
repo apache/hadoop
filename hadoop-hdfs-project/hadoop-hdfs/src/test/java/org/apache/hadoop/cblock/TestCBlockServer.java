@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.cblock;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.cblock.meta.VolumeInfo;
-import org.apache.hadoop.cblock.storage.IStorageClient;
+import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.cblock.util.MockStorageClient;
+import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -36,12 +38,12 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestCBlockServer {
   private static CBlockManager cBlockManager;
-  private static CBlockConfiguration conf;
+  private static OzoneConfiguration conf;
 
   @BeforeClass
   public static void setup() throws Exception {
-    IStorageClient storageClient = new MockStorageClient();
-    conf = new CBlockConfiguration();
+    ScmClient storageClient = new MockStorageClient();
+    conf = new OzoneConfiguration();
     cBlockManager = new CBlockManager(conf, storageClient);
   }
 
@@ -51,10 +53,10 @@ public class TestCBlockServer {
    */
   @Test
   public void testCreateVolume() throws Exception {
-    String userName1 = "testCreateUser1";
-    String userName2 = "testCreateUser2";
-    String volumeName1 = "testVolume1";
-    String volumeName2 = "testVolume2";
+    String userName1 = "user" + RandomStringUtils.randomNumeric(5);
+    String userName2 = "user" + RandomStringUtils.randomNumeric(5);
+    String volumeName1 = "volume" +  RandomStringUtils.randomNumeric(5);
+    String volumeName2 = "volume" +   RandomStringUtils.randomNumeric(5);
     long volumeSize = 1L*1024*1024;
     int blockSize = 4096;
     cBlockManager.createVolume(userName1, volumeName1, volumeSize, blockSize);
@@ -80,9 +82,9 @@ public class TestCBlockServer {
    */
   @Test
   public void testDeleteVolume() throws Exception {
-    String userName = "testDeleteUser";
-    String volumeName1 = "testVolume1";
-    String volumeName2 = "testVolume2";
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String volumeName1 = "volume" +  RandomStringUtils.randomNumeric(5);
+    String volumeName2 = "volume" +  RandomStringUtils.randomNumeric(5);
     long volumeSize = 1L*1024*1024;
     int blockSize = 4096;
     cBlockManager.createVolume(userName, volumeName1, volumeSize, blockSize);
@@ -106,8 +108,8 @@ public class TestCBlockServer {
    */
   @Test
   public void testInfoVolume() throws Exception {
-    String userName = "testInfoUser";
-    String volumeName = "testVolume";
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String volumeName = "volume" +  RandomStringUtils.randomNumeric(5);
     long volumeSize = 1L*1024*1024;
     int blockSize = 4096;
     cBlockManager.createVolume(userName, volumeName, volumeSize, blockSize);
@@ -124,8 +126,8 @@ public class TestCBlockServer {
    */
   @Test
   public void testListVolume() throws Exception {
-    String userName = "testListUser";
-    String volumeName = "testVolume";
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String volumeName ="volume" +  RandomStringUtils.randomNumeric(5);
     long volumeSize = 1L*1024*1024;
     int blockSize = 4096;
     int volumeNum = 100;

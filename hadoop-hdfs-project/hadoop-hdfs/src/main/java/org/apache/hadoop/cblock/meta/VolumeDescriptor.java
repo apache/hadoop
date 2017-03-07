@@ -19,6 +19,7 @@ package org.apache.hadoop.cblock.meta;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.cblock.protocol.proto.CBlockClientServerProtocolProtos;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,6 +127,16 @@ public class VolumeDescriptor {
         containerDescriptor);
   }
 
+
+  public HashMap<String, Pipeline> getPipelines() {
+    HashMap<String, Pipeline> pipelines = new HashMap<>();
+    for (Map.Entry<String, ContainerDescriptor> entry :
+        containerMap.entrySet()) {
+      pipelines.put(entry.getKey(), entry.getValue().getPipeline());
+    }
+    return pipelines;
+  }
+
   public boolean isEmpty() {
     VolumeInfo info = getInfo();
     return info.getUsage() == 0;
@@ -152,6 +163,15 @@ public class VolumeDescriptor {
 
   public List<String> getContainerIDsList() {
     return new ArrayList<>(containerIdOrdered);
+  }
+
+  public List<Pipeline> getContainerPipelines() {
+    Map<String, Pipeline> tmp = getPipelines();
+    List<Pipeline> pipelineList = new LinkedList<>();
+    for (String containerIDString : containerIdOrdered) {
+      pipelineList.add(tmp.get(containerIDString));
+    }
+    return pipelineList;
   }
 
   @Override
@@ -204,6 +224,10 @@ public class VolumeDescriptor {
       ContainerDescriptor containerDescriptor = new ContainerDescriptor(
           containerProto.getContainerID(),
           (int)containerProto.getIndex());
+      if(containerProto.hasPipeline()) {
+        containerDescriptor.setPipeline(
+            Pipeline.getFromProtoBuf(containerProto.getPipeline()));
+      }
       volumeDescriptor.addContainer(containerDescriptor);
       containerOrdering[containerDescriptor.getContainerIndex()] =
           containerDescriptor.getContainerID();

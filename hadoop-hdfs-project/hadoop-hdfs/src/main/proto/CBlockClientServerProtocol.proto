@@ -27,6 +27,8 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 package hadoop.cblock;
 
+import "DatanodeContainerProtocol.proto";
+
 /**
 * This message is sent from CBlock client side to CBlock server to
 * mount a volume specified by owner name and volume name.
@@ -66,6 +68,8 @@ message MountVolumeResponseProto {
 message ContainerIDProto {
     required string containerID = 1;
     required uint64 index = 2;
+    // making pipeline optional to be compatible with exisiting tests
+    optional hadoop.hdfs.ozone.Pipeline pipeline = 3;
 }
 
 service CBlockClientServerProtocolService {

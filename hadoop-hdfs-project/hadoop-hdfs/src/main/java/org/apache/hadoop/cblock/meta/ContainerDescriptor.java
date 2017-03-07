@@ -19,6 +19,7 @@ package org.apache.hadoop.cblock.meta;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.cblock.protocol.proto.CBlockClientServerProtocolProtos;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 /**
  *
@@ -35,6 +36,7 @@ public class ContainerDescriptor {
   // on creation, there may be no way to know the index of the container
   // as it is a volume specific information
   private int containerIndex;
+  private Pipeline pipeline;
 
   public ContainerDescriptor(String containerID) {
     this.containerID = containerID;
@@ -53,6 +55,14 @@ public class ContainerDescriptor {
     return containerID;
   }
 
+  public void setPipeline(Pipeline pipeline) {
+    this.pipeline = pipeline;
+  }
+
+  public Pipeline getPipeline() {
+    return pipeline;
+  }
+
   public int getContainerIndex() {
     return containerIndex;
   }
@@ -63,18 +73,21 @@ public class ContainerDescriptor {
 
   public CBlockClientServerProtocolProtos.ContainerIDProto toProtobuf() {
     CBlockClientServerProtocolProtos.ContainerIDProto.Builder builder =
-            CBlockClientServerProtocolProtos.ContainerIDProto.newBuilder();
+        CBlockClientServerProtocolProtos.ContainerIDProto.newBuilder();
     builder.setContainerID(containerID);
     builder.setIndex(containerIndex);
+    if (pipeline != null) {
+      builder.setPipeline(pipeline.getProtobufMessage());
+    }
     return builder.build();
   }
 
   public static ContainerDescriptor fromProtobuf(byte[] data)
       throws InvalidProtocolBufferException {
     CBlockClientServerProtocolProtos.ContainerIDProto id =
-            CBlockClientServerProtocolProtos.ContainerIDProto.parseFrom(data);
+        CBlockClientServerProtocolProtos.ContainerIDProto.parseFrom(data);
     return new ContainerDescriptor(id.getContainerID(),
-            (int)id.getIndex());
+        (int)id.getIndex());
   }
 
   @Override
