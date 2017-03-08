@@ -146,7 +146,7 @@ public class TestAppLogAggregatorImpl {
 
     verifyLogAggregationWithExpectedFiles2DeleteAndUpload(applicationId,
         containerId, logRententionSec, recoveredLogInitedTimeMillis,
-        logFiles, new HashSet<File>());
+        logFiles, logFiles);
   }
 
   @Test
@@ -170,7 +170,7 @@ public class TestAppLogAggregatorImpl {
 
     final long week = 7 * 24 * 60 * 60;
     final long recoveredLogInitedTimeMillis = System.currentTimeMillis() -
-        2*week;
+        2 * week * 1000;
     verifyLogAggregationWithExpectedFiles2DeleteAndUpload(
         applicationId, containerId, week, recoveredLogInitedTimeMillis,
         logFiles, new HashSet<File>());
@@ -257,7 +257,7 @@ public class TestAppLogAggregatorImpl {
       Set<String> filesExpected) {
     final String errMsgPrefix = "The set of files uploaded are not the same " +
         "as expected";
-    if(filesUploaded.size() != filesUploaded.size()) {
+    if(filesUploaded.size() != filesExpected.size()) {
       fail(errMsgPrefix + ": actual size: " + filesUploaded.size() + " vs " +
           "expected size: " + filesExpected.size());
     }
@@ -413,7 +413,7 @@ public class TestAppLogAggregatorImpl {
         FileContext lfs, long recoveredLogInitedTime) throws IOException {
       super(dispatcher, deletionService, conf, appId, ugi, nodeId,
           dirsHandler, remoteNodeLogFileForApp, appAcls,
-          logAggregationContext, context, lfs, recoveredLogInitedTime);
+          logAggregationContext, context, lfs, -1, recoveredLogInitedTime);
       this.applicationId = appId;
       this.deletionService = deletionService;
 
