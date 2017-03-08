@@ -216,7 +216,15 @@ public class DynamoDBMetadataStore implements MetadataStore {
         "DynamoDBMetadataStore only supports S3A filesystem.");
     final S3AFileSystem s3afs = (S3AFileSystem) fs;
     final String bucket = s3afs.getBucket();
-    region = s3afs.getBucketLocation();
+    String confRegion = s3afs.getConf().getTrimmed(S3GUARD_DDB_REGION_KEY);
+    if (!StringUtils.isEmpty(confRegion)) {
+      region = confRegion;
+      LOG.debug("Overriding S3 region with configured DynamoDB region: {}",
+          region);
+    } else {
+      region = s3afs.getBucketLocation();
+      LOG.debug("Inferring DynamoDB region from S3 bucket: {}", region);
+    }
     username = s3afs.getUsername();
     conf = s3afs.getConf();
     dynamoDB = createDynamoDB(conf, region);
