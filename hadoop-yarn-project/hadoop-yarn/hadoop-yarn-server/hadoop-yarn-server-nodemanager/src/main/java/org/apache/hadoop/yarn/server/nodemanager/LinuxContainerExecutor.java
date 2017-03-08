@@ -30,6 +30,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
@@ -439,7 +440,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public int launchContainer(ContainerStartContext ctx) throws IOException {
+  public int launchContainer(ContainerStartContext ctx)
+      throws IOException, ConfigurationException {
     Container container = ctx.getContainer();
     Path nmPrivateContainerScriptPath = ctx.getNmPrivateContainerScriptPath();
     Path nmPrivateTokensPath = ctx.getNmPrivateTokensPath();
@@ -592,7 +594,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
                 COULD_NOT_CREATE_APP_LOG_DIRECTORIES.getExitCode() ||
             exitCode == LinuxContainerExecutorExitCode.
                 COULD_NOT_CREATE_TMP_DIRECTORIES.getExitCode()) {
-          throw new YarnRuntimeException(
+          throw new ConfigurationException(
               "Linux Container Executor reached unrecoverable exception", e);
         }
       } else {

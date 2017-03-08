@@ -50,7 +50,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
@@ -151,7 +151,8 @@ public class TestLinuxContainerExecutorWithMocks {
   }
   
   @Test
-  public void testContainerLaunch() throws IOException {
+  public void testContainerLaunch()
+      throws IOException, ConfigurationException {
     String appSubmitter = "nobody";
     String cmd = String.valueOf(
         PrivilegedOperation.RunAsUserCommand.LAUNCH_CONTAINER.getValue());
@@ -202,7 +203,8 @@ public class TestLinuxContainerExecutorWithMocks {
   }
 
   @Test (timeout = 5000)
-  public void testContainerLaunchWithPriority() throws IOException {
+  public void testContainerLaunchWithPriority()
+      throws IOException, ConfigurationException {
 
     // set the scheduler priority to make sure still works with nice -n prio
     Configuration conf = new Configuration();
@@ -385,7 +387,7 @@ public class TestLinuxContainerExecutorWithMocks {
 
         assertNotEquals("Expected YarnRuntimeException",
             MOCK_EXECUTOR_WITH_CONFIG_ERROR, executor[i]);
-      } catch (YarnRuntimeException ex) {
+      } catch (ConfigurationException ex) {
         assertEquals(MOCK_EXECUTOR_WITH_CONFIG_ERROR, executor[i]);
         Assert.assertEquals("Linux Container Executor reached unrecoverable " +
             "exception", ex.getMessage());

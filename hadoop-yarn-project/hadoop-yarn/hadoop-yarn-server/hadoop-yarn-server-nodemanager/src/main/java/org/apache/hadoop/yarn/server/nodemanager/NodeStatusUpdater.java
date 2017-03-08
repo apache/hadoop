@@ -53,4 +53,9 @@ public interface NodeStatusUpdater extends Service {
    * Clear the list of recently completed containers
    */
   public void clearFinishedContainersFromCache();
+
+  /**
+   * Request a node manager shutdown.
+   */
+  void requestShutdown();
 }

@@ -20,11 +20,9 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.junit.Assert.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.*;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -47,6 +45,7 @@ import java.util.StringTokenizer;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -82,21 +81,22 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
-import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
+import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch.ShellScriptBuilder;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
@@ -115,7 +115,7 @@ import org.junit.Test;
 public class TestContainerLaunch extends BaseContainerManagerTest {
 
   private static final String INVALID_JAVA_HOME = "/no/jvm/here";
-  private Context distContext =
+  private NMContext distContext =
       new NMContext(new NMContainerTokenSecretManager(conf),
           new NMTokenSecretManagerInNM(), null,
           new ApplicationACLsManager(conf), new NMNullStateStoreService(),
@@ -1479,5 +1479,55 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         tempFile.delete();
       }
     }
+  }
+
+  /**
+   * Test container launch fault.
+   * @throws Exception
+   */
+  @Test
+  public void testContainerLaunchOnConfigurationError() throws Exception {
+    Dispatcher dispatcher = mock(Dispatcher.class);
+    EventHandler handler = mock(EventHandler.class);
+    when(dispatcher.getEventHandler()).thenReturn(handler);
+    Application app = mock(Application.class);
+    ApplicationId appId = mock(ApplicationId.class);
+    when(appId.toString()).thenReturn("1");
+    when(app.getAppId()).thenReturn(appId);
+    Container container = mock(Container.class);
+    ContainerId id = mock(ContainerId.class);
+    when(id.toString()).thenReturn("1");
+    when(container.getContainerId()).thenReturn(id);
+    when(container.getUser()).thenReturn("user");
+    ContainerLaunchContext clc = mock(ContainerLaunchContext.class);
+    when(clc.getCommands()).thenReturn(Lists.newArrayList());
+    when(container.getLaunchContext()).thenReturn(clc);
+    Credentials credentials = mock(Credentials.class);
+    when(container.getCredentials()).thenReturn(credentials);
+
+    // Configuration errors should result in node shutdown...
+    ContainerExecutor returnConfigError = mock(ContainerExecutor.class);
+    when(returnConfigError.launchContainer(any())).
+        thenThrow(new ConfigurationException("Mock configuration error"));
+    ContainerLaunch launchConfigError = new ContainerLaunch(
+        distContext, conf, dispatcher,
+        returnConfigError, app, container, dirsHandler, containerManager);
+    NodeStatusUpdater updater = mock(NodeStatusUpdater.class);
+    distContext.setNodeStatusUpdater(updater);
+    launchConfigError.call();
+    verify(updater, atLeastOnce()).requestShutdown();
+
+    // ... any other error should continue.
+    ContainerExecutor returnOtherError = mock(ContainerExecutor.class);
+    when(returnOtherError.launchContainer(any())).
+        thenThrow(new IOException("Mock configuration error"));
+    ContainerLaunch launchOtherError = new ContainerLaunch(
+        distContext, conf, dispatcher,
+        returnOtherError, app, container, dirsHandler, containerManager);
+    NodeStatusUpdater updaterNoCall = mock(NodeStatusUpdater.class);
+    distContext.setNodeStatusUpdater(updaterNoCall);
+    launchOtherError.call();
+    verify(updaterNoCall, never()).requestShutdown();
+
   }
 }

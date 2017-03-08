@@ -990,6 +990,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     return false;
   }
 
+  public void requestShutdown() {
+    context.setDecommissioned(true);
+    dispatcher.getEventHandler().handle(
+        new NodeManagerEvent(NodeManagerEventType.SHUTDOWN));
+  }
+
   private List<LogAggregationReport> getLogAggregationReportsForApps(
       ConcurrentLinkedQueue<LogAggregationReport> lastestLogAggregationStatus) {
     LogAggregationReport status;
