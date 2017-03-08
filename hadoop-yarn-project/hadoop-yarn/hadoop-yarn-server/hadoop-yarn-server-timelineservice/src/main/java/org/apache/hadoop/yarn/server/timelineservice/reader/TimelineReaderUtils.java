@@ -47,6 +47,9 @@ public final class TimelineReaderUtils {
 
   public static final String FROMID_KEY = "FROM_ID";
 
+  @VisibleForTesting
+  public static final String UID_KEY = "UID";
+
   /**
    * Split the passed string along the passed delimiter character while looking
    * for escape char to interpret the splitted parts correctly. For delimiter or
