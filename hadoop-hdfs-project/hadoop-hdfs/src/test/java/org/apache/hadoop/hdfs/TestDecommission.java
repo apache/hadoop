@@ -33,6 +33,7 @@ import java.util.concurrent.ExecutionException;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -645,6 +646,56 @@ public class TestDecommission extends AdminStatesBaseTest {
     }
 
     fdos.close();
+  }
+
+  @Test(timeout = 150000L)
+  public void testDecommissionWithOpenFileAndDatanodeFailing()
+    throws IOException, InterruptedException {
+    startCluster(1, 6);
+    getCluster().waitActive();
+
+    Path file = new Path("/testRecoveryDecommission");
+
+    // Create a file and never close the output stream to trigger recovery
+    DistributedFileSystem dfs = getCluster().getFileSystem();
+    FSDataOutputStream out = dfs.create(file, true,
+      getConf().getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
+      (short) 3, blockSize);
+
+    // Write data to the file
+    long writtenBytes = 0;
+    while (writtenBytes < fileSize) {
+      out.writeLong(writtenBytes);
+      writtenBytes += 8;
+    }
+    out.hsync();
+
+    // Get locations of the last block
+    DatanodeInfo[] lastBlockLocations = NameNodeAdapter.getBlockLocations(
+      getCluster().getNameNode(), "/testRecoveryDecommission", 0, fileSize)
+      .getLastLocatedBlock().getLocations();
+
+    // Kill one of the datanodes of the last block
+    getCluster().stopDataNode(lastBlockLocations[0].getName());
+
+    // Make sure hard lease expires
+    getCluster().setLeasePeriod(300L, 300L);
+    Thread.sleep(2 * BLOCKREPORT_INTERVAL_MSEC);
+
+    ArrayList<String> toDecom = new ArrayList<>();
+
+    // Decommission all nodes of the last block
+    for (DatanodeInfo dnDecom : lastBlockLocations) {
+      toDecom.add(dnDecom.getXferAddr());
+      initExcludeHosts(toDecom);
+      refreshNodes(0);
+
+      DatanodeInfo datanode = NameNodeAdapter.getDatanode(
+        getCluster().getNamesystem(), dnDecom);
+      waitNodeState(datanode, AdminStates.DECOMMISSIONED);
+    }
+
+    assertEquals(dfs.getFileStatus(file).getLen(), writtenBytes);
   }
   
   /**
