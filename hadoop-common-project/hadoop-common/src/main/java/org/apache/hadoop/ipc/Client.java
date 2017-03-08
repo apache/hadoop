@@ -71,7 +71,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.apache.hadoop.ipc.RpcConstants.CONNECTION_CONTEXT_CALL_ID;
 import static org.apache.hadoop.ipc.RpcConstants.PING_CALL_ID;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
@@ -1767,7 +1766,9 @@ public class Client implements AutoCloseable {
     }
 
     void setSaslClient(SaslRpcClient client) throws IOException {
-      setInputStream(client.getInputStream(in));
+      // Wrap the input stream in a BufferedInputStream to fill the buffer
+      // before reading its length (HADOOP-14062).
+      setInputStream(new BufferedInputStream(client.getInputStream(in)));
       setOutputStream(client.getOutputStream(out));
     }
 
