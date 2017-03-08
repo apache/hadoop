@@ -342,6 +342,9 @@ public final class FSImageFormatPBINode {
       for (int i = 0; i < bp.size(); ++i) {
         BlockProto b = bp.get(i);
         if (isStriped) {
+          Preconditions.checkState(ecPolicy.getId() > 0,
+              "File with ID " + n.getId() +
+              " has an invalid erasure coding policy ID " + ecPolicy.getId());
           blocks[i] = new BlockInfoStriped(PBHelperClient.convert(b), ecPolicy);
         } else {
           blocks[i] = new BlockInfoContiguous(PBHelperClient.convert(b),
