@@ -718,10 +718,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long DFS_EDIT_LOG_TRANSFER_RATE_DEFAULT = 0; //no throttling
 
   // Datanode File IO Stats
-  public static final String DFS_DATANODE_ENABLE_FILEIO_PROFILING_KEY =
-      "dfs.datanode.enable.fileio.profiling";
-  public static final boolean DFS_DATANODE_ENABLE_FILEIO_PROFILING_DEFAULT =
-      false;
   public static final String DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_KEY =
       "dfs.datanode.enable.fileio.fault.injection";
   public static final boolean
@@ -730,7 +726,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY =
       "dfs.datanode.fileio.profiling.sampling.fraction";
   public static final double
-      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEAFULT = 1.0;
+      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEFAULT = 0.0;
 
   //Keys with no defaults
   public static final String  DFS_DATANODE_PLUGINS_KEY = "dfs.datanode.plugins";

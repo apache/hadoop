@@ -25,12 +25,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.charset.Charset;
-import java.security.PrivilegedExceptionAction;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -64,15 +61,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
-import org.apache.hadoop.fs.azure.security.Constants;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
-import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator;
-import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticator;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -92,6 +84,7 @@ import com.microsoft.azure.storage.StorageException;
 @InterfaceStability.Stable
 public class NativeAzureFileSystem extends FileSystem {
   private static final int USER_WX_PERMISION = 0300;
+  private static final String USER_HOME_DIR_PREFIX_DEFAULT = "/user";
   /**
    * A description of a folder rename operation, including the source and
    * destination keys, and descriptions of the files in the source folder.
@@ -566,6 +559,16 @@ public class NativeAzureFileSystem extends FileSystem {
         // Remove the source folder. Don't check explicitly if it exists,
         // to avoid triggering redo recursively.
         try {
+          // Rename the source folder 0-byte root file
+          // as destination folder 0-byte root file.
+          FileMetadata srcMetaData = this.getSourceMetadata();
+          if (srcMetaData.getBlobMaterialization() == BlobMaterialization.Explicit) {
+            // We already have a lease. So let's just rename the source blob
+            // as destination blob under same lease.
+            fs.getStoreInterface().rename(this.getSrcKey(), this.getDstKey(), false, lease);
+          }
+
+          // Now we can safely delete the source folder.
           fs.getStoreInterface().delete(srcKey, lease);
         } catch (Exception e) {
           LOG.info("Unable to delete source folder during folder rename redo. "
@@ -1104,9 +1107,6 @@ public class NativeAzureFileSystem extends FileSystem {
   // A counter to create unique (within-process) names for my metrics sources.
   private static AtomicInteger metricsSourceNameCounter = new AtomicInteger();
   private boolean appendSupportEnabled = false;
-  private DelegationTokenAuthenticatedURL authURL;
-  private DelegationTokenAuthenticatedURL.Token authToken = new DelegationTokenAuthenticatedURL.Token();
-  private String credServiceUrl;
 
   /**
    * Configuration key to enable authorization support in WASB.
@@ -1125,15 +1125,12 @@ public class NativeAzureFileSystem extends FileSystem {
   private boolean azureAuthorization = false;
 
   /**
-   * Flag controlling Kerberos support in WASB.
-   */
-  private boolean kerberosSupportEnabled = false;
-
-  /**
    * Authorizer to use when authorization support is enabled in
    * WASB.
    */
   private WasbAuthorizerInterface authorizer = null;
+
+  private UserGroupInformation ugi;
 
   private String delegationToken = null;
 
@@ -1176,11 +1173,11 @@ public class NativeAzureFileSystem extends FileSystem {
       return baseName + number;
     }
   }
-  
+
   /**
    * Checks if the given URI scheme is a scheme that's affiliated with the Azure
    * File System.
-   * 
+   *
    * @param scheme
    *          The URI scheme.
    * @return true iff it's an Azure File System URI scheme.
@@ -1197,7 +1194,7 @@ public class NativeAzureFileSystem extends FileSystem {
   /**
    * Puts in the authority of the default file system if it is a WASB file
    * system and the given URI's authority is null.
-   * 
+   *
    * @return The URI with reconstructed authority if necessary and possible.
    */
   private static URI reconstructAuthorityIfNeeded(URI uri, Configuration conf) {
@@ -1253,6 +1250,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
     store.initialize(uri, conf, instrumentation);
     setConf(conf);
+    this.ugi = UserGroupInformation.getCurrentUser();
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.workingDir = new Path("/user", UserGroupInformation.getCurrentUser()
         .getShortUserName()).makeQualified(getUri(), getWorkingDirectory());
@@ -1268,10 +1266,11 @@ public class NativeAzureFileSystem extends FileSystem {
     deleteThreadCount = conf.getInt(AZURE_DELETE_THREADS, DEFAULT_AZURE_DELETE_THREADS);
     renameThreadCount = conf.getInt(AZURE_RENAME_THREADS, DEFAULT_AZURE_RENAME_THREADS);
 
-    this.azureAuthorization = conf.getBoolean(KEY_AZURE_AUTHORIZATION,
-        DEFAULT_AZURE_AUTHORIZATION);
-    this.kerberosSupportEnabled = conf.getBoolean(
-        Constants.AZURE_KERBEROS_SUPPORT_PROPERTY_NAME, false);
+    boolean useSecureMode = conf.getBoolean(AzureNativeFileSystemStore.KEY_USE_SECURE_MODE,
+        AzureNativeFileSystemStore.DEFAULT_USE_SECURE_MODE);
+
+    this.azureAuthorization = useSecureMode &&
+        conf.getBoolean(KEY_AZURE_AUTHORIZATION, DEFAULT_AZURE_AUTHORIZATION);
 
     if (this.azureAuthorization) {
 
@@ -1279,14 +1278,12 @@ public class NativeAzureFileSystem extends FileSystem {
           new RemoteWasbAuthorizerImpl();
       authorizer.init(conf);
     }
-    if (UserGroupInformation.isSecurityEnabled() && kerberosSupportEnabled) {
-      DelegationTokenAuthenticator authenticator = new KerberosDelegationTokenAuthenticator();
-      authURL = new DelegationTokenAuthenticatedURL(authenticator);
-      credServiceUrl = conf.get(Constants.KEY_CRED_SERVICE_URL, String
-          .format("http://%s:%s",
-              InetAddress.getLocalHost().getCanonicalHostName(),
-              Constants.DEFAULT_CRED_SERVICE_PORT));
-    }
+  }
+
+  @Override
+  public Path getHomeDirectory() {
+    return makeQualified(new Path(
+        USER_HOME_DIR_PREFIX_DEFAULT + "/" + this.ugi.getShortUserName()));
   }
 
   @VisibleForTesting
@@ -1393,14 +1390,14 @@ public class NativeAzureFileSystem extends FileSystem {
   /**
    * For unit test purposes, retrieves the AzureNativeFileSystemStore store
    * backing this file system.
-   * 
+   *
    * @return The store object.
    */
   @VisibleForTesting
   public AzureNativeFileSystemStore getStore() {
     return actualStore;
   }
-  
+
   NativeFileSystemStore getStoreInterface() {
     return store;
   }
@@ -1408,7 +1405,8 @@ public class NativeAzureFileSystem extends FileSystem {
   private void performAuthCheck(String path, String accessType,
       String operation) throws WasbAuthorizationException, IOException {
 
-    if (azureAuthorization && !this.authorizer.authorize(path, accessType)) {
+    if (azureAuthorization && this.authorizer != null &&
+        !this.authorizer.authorize(path, accessType, delegationToken)) {
       throw new WasbAuthorizationException(operation
           + " operation for Path : " + path + " not allowed");
     }
@@ -1502,6 +1500,7 @@ public class NativeAzureFileSystem extends FileSystem {
    * Get a self-renewing lease on the specified file.
    * @param path path whose lease to be renewed.
    * @return Lease
+   * @throws AzureException when not being able to acquire a lease on the path
    */
   public SelfRenewingLease acquireLease(Path path) throws AzureException {
     String fullKey = pathToKey(makeAbsolute(path));
@@ -1724,10 +1723,10 @@ public class NativeAzureFileSystem extends FileSystem {
     // Construct the data output stream from the buffered output stream.
     FSDataOutputStream fsOut = new FSDataOutputStream(bufOutStream, statistics);
 
-    
+
     // Increment the counter
     instrumentation.fileCreated();
-    
+
     // Return data output stream to caller.
     return fsOut;
   }
@@ -2312,7 +2311,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
   /**
    * Applies the applicable UMASK's on the given permission.
-   * 
+   *
    * @param permission
    *          The permission to mask.
    * @param applyMode
@@ -2334,7 +2333,7 @@ public class NativeAzureFileSystem extends FileSystem {
   /**
    * Creates the PermissionStatus object to use for the given permission, based
    * on the current user in context.
-   * 
+   *
    * @param permission
    *          The permission for the file.
    * @return The permission status object to use.
@@ -2898,42 +2897,6 @@ public class NativeAzureFileSystem extends FileSystem {
     LOG.debug("Submitting metrics when file system closed took {} ms.",
         (System.currentTimeMillis() - startTime));
     isClosed = true;
-  }
-
-  @Override
-  public Token<?> getDelegationToken(final String renewer) throws IOException {
-    if(kerberosSupportEnabled) {
-      try {
-        final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-        UserGroupInformation connectUgi = ugi.getRealUser();
-        final UserGroupInformation proxyUser = connectUgi;
-        if (connectUgi == null) {
-          connectUgi = ugi;
-        }
-        if(!connectUgi.hasKerberosCredentials()){
-          connectUgi = UserGroupInformation.getLoginUser();
-        }
-        connectUgi.checkTGTAndReloginFromKeytab();
-        return connectUgi.doAs(new PrivilegedExceptionAction<Token<?>>() {
-          @Override
-          public Token<?> run() throws Exception {
-            return authURL.getDelegationToken(new URL(credServiceUrl
-                    + Constants.DEFAULT_DELEGATION_TOKEN_MANAGER_ENDPOINT),
-                authToken, renewer, (proxyUser != null)? ugi.getShortUserName(): null);
-          }
-        });
-      } catch (Exception ex) {
-        LOG.error("Error in fetching the delegation token from remote service",
-            ex);
-        if (ex instanceof IOException) {
-          throw (IOException) ex;
-        } else {
-          throw new IOException(ex);
-        }
-      }
-    } else {
-      return super.getDelegationToken(renewer);
-    }
   }
 
   /**

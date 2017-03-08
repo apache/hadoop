@@ -38,7 +38,7 @@ public enum WasbAuthorizationOperations {
         return "execute";
       default:
         throw new IllegalArgumentException(
-            "Invalid Auhtorization Operation");
+            "Invalid Authorization Operation");
     }
   }
 }

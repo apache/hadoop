@@ -249,7 +249,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * Default values to control SAS Key mode.
    * By default we set the values to false.
    */
-  private static final boolean DEFAULT_USE_SECURE_MODE = false;
+  public static final boolean DEFAULT_USE_SECURE_MODE = false;
   private static final boolean DEFAULT_USE_LOCAL_SAS_KEY_MODE = false;
 
   /**
@@ -303,7 +303,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private boolean useSecureMode = false;
   private boolean useLocalSasKeyMode = false;
 
-
+  private String delegationToken;
   /**
    * A test hook interface that can modify the operation context we use for
    * Azure Storage operations, e.g. to inject errors.
@@ -478,7 +478,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         this.storageInteractionLayer = new StorageInterfaceImpl();
       } else {
         this.storageInteractionLayer = new SecureStorageInterfaceImpl(
-            useLocalSasKeyMode, conf);
+            useLocalSasKeyMode, conf, delegationToken);
       }
     }
 
@@ -849,6 +849,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     rootDirectory = container.getDirectoryReference("");
 
     canCreateOrModifyContainer = true;
+
+    configureAzureStorageSession();
+    tolerateOobAppends = false;
   }
 
   /**

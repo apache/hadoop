@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.scheduler.FairSchedulerMetrics;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerMetrics;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerWrapper;
+import org.eclipse.jetty.http.MimeTypes;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -118,6 +119,7 @@ public class SLSWebApp extends HttpServlet {
   public void start() throws Exception {
     // static files
     final ResourceHandler staticHandler = new ResourceHandler();
+    staticHandler.setMimeTypes(new MimeTypes());
     staticHandler.setResourceBase("html");
 
     Handler handler = new AbstractHandler() {

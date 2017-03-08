@@ -159,9 +159,7 @@ public class TestRecovery {
     app.waitForState(task1Attempt1, TaskAttemptState.RUNNING);
     app.waitForState(task2Attempt, TaskAttemptState.RUNNING);
     
-    // reduces must be in NEW state
-    Assert.assertEquals("Reduce Task state not correct",
-        TaskState.RUNNING, reduceTask.getReport().getTaskState());
+    app.waitForState(reduceTask, TaskState.RUNNING);
 
     /////////// Play some games with the TaskAttempts of the first task //////
     //send the fail signal to the 1st map task attempt
@@ -1301,9 +1299,7 @@ public class TestRecovery {
     app.waitForState(task1Attempt2, TaskAttemptState.RUNNING);
     app.waitForState(task2Attempt, TaskAttemptState.RUNNING);
 
-    // reduces must be in NEW state
-    Assert.assertEquals("Reduce Task state not correct",
-        TaskState.RUNNING, reduceTask.getReport().getTaskState());
+    app.waitForState(reduceTask, TaskState.RUNNING);
 
     //send the done signal to the map 1 attempt 1
     app.getContext().getEventHandler().handle(
@@ -1431,9 +1427,7 @@ public class TestRecovery {
     app.waitForState(task1Attempt, TaskAttemptState.RUNNING);
     app.waitForState(task2Attempt, TaskAttemptState.RUNNING);
 
-    // reduces must be in NEW state
-    Assert.assertEquals("Reduce Task state not correct",
-        TaskState.RUNNING, reduceTask.getReport().getTaskState());
+    app.waitForState(reduceTask, TaskState.RUNNING);
 
     //send the done signal to the 1st map attempt
     app.getContext().getEventHandler().handle(

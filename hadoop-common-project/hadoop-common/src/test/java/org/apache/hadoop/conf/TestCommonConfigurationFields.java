@@ -114,6 +114,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.azure.sas.expiry.period");
     xmlPropsToSkipCompare.add("fs.azure.local.sas.key.mode");
     xmlPropsToSkipCompare.add("fs.azure.secure.mode");
+    xmlPropsToSkipCompare.add("fs.azure.authorization");
 
     // Deprecated properties.  These should eventually be removed from the
     // class.
@@ -181,8 +182,6 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("io.compression.codec.bzip2.library");
     // - org.apache.hadoop.io.SequenceFile
     xmlPropsToSkipCompare.add("io.seqfile.local.dir");
-    // - org.apache.hadoop.fs.azure.NativeAzureFileSystem
-    xmlPropsToSkipCompare.add("fs.azure.authorization");
 
 
   }

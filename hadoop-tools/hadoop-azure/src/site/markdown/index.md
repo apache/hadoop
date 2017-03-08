@@ -362,7 +362,7 @@ Authorization support can be enabled in WASB using the following configuration:
   ```
   {
     "responseCode" : 0 or non-zero <int>,
-    "responseMessage" : relavant message on failure <String>,
+    "responseMessage" : relevant message on failure <String>,
     "authorizationResult" : true/false <boolean>
   }
   ```

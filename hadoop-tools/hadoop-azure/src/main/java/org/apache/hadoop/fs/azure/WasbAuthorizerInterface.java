@@ -32,16 +32,22 @@ public interface WasbAuthorizerInterface {
   /**
    * Initializer method
    * @param conf - Configuration object
+   * @throws WasbAuthorizationException - On authorization exceptions
+   * @throws IOException - When not able to reach the authorizer
    */
   public void init(Configuration conf)
       throws WasbAuthorizationException, IOException;
 
   /**
    * Authorizer API to authorize access in WASB.
-   * @param wasbAbsolutePath : Absolute WASB Path used for access.
+
+   * @param wasbAbolutePath : Absolute WASB Path used for access.
    * @param accessType : Type of access
+   * @param delegationToken : The user information.
    * @return : true - If access allowed false - If access is not allowed.
+   * @throws WasbAuthorizationException - On authorization exceptions
+   * @throws IOException - When not able to reach the authorizer
    */
-  public boolean authorize(String wasbAbsolutePath, String accessType)
-      throws WasbAuthorizationException, IOException;
+  public boolean authorize(String wasbAbolutePath, String accessType,
+      String delegationToken) throws WasbAuthorizationException, IOException;
 }
