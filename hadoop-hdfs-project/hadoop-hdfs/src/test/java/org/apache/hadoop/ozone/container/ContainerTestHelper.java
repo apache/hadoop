@@ -44,8 +44,14 @@ import java.util.UUID;
 /**
  * Helpers for container tests.
  */
-public class ContainerTestHelper {
+public final class ContainerTestHelper {
   private static Random r = new Random();
+
+  /**
+   * Never constructed.
+   */
+  private ContainerTestHelper() {
+  }
 
   /**
    * Create a pipeline with single node replica.
@@ -291,8 +297,7 @@ public class ContainerTestHelper {
    * @return ContainerCommandRequestProto.
    */
   public static ContainerCommandResponseProto
-  getCreateContainerResponse(ContainerCommandRequestProto request) throws
-      IOException {
+      getCreateContainerResponse(ContainerCommandRequestProto request) {
     ContainerProtos.CreateContainerResponseProto.Builder createResponse =
         ContainerProtos.CreateContainerResponseProto.newBuilder();
 

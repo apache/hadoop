@@ -19,18 +19,23 @@ package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkUtils;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.container.common.interfaces.ChunkManager;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ExecutionException;
+
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.CONTAINER_INTERNAL_ERROR;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.UNSUPPORTED_REQUEST;
 
 /**
  * An implementation of ChunkManager that is used by default in ozone.
@@ -54,34 +59,36 @@ public class ChunkManagerImpl implements ChunkManager {
    * writes a given chunk.
    *
    * @param pipeline - Name and the set of machines that make this container.
-   * @param keyName  - Name of the Key.
-   * @param info     - ChunkInfo.
-   * @throws IOException
+   * @param keyName - Name of the Key.
+   * @param info - ChunkInfo.
+   * @throws StorageContainerException
    */
   @Override
   public void writeChunk(Pipeline pipeline, String keyName, ChunkInfo info,
-                         byte[] data)
-      throws IOException {
+      byte[] data)
+      throws StorageContainerException {
 
     // we don't want container manager to go away while we are writing chunks.
     containerManager.readLock();
 
     // TODO : Take keyManager Write lock here.
     try {
-      Preconditions.checkNotNull(pipeline);
-      Preconditions.checkNotNull(pipeline.getContainerName());
+      Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
+      Preconditions.checkNotNull(pipeline.getContainerName(),
+          "Container name cannot be null");
       File chunkFile = ChunkUtils.validateChunk(pipeline,
           containerManager.readContainer(pipeline.getContainerName()), info);
       ChunkUtils.writeData(chunkFile, info, data);
 
-    } catch (ExecutionException |
-        NoSuchAlgorithmException e) {
+    } catch (ExecutionException | NoSuchAlgorithmException e) {
       LOG.error("write data failed. error: {}", e);
-      throw new IOException("Internal error: ", e);
+      throw new StorageContainerException("Internal error: ", e,
+          CONTAINER_INTERNAL_ERROR);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       LOG.error("write data failed. error: {}", e);
-      throw new IOException("Internal error: ", e);
+      throw new StorageContainerException("Internal error: ", e,
+          CONTAINER_INTERNAL_ERROR);
     } finally {
       containerManager.readUnlock();
     }
@@ -91,16 +98,16 @@ public class ChunkManagerImpl implements ChunkManager {
    * reads the data defined by a chunk.
    *
    * @param pipeline - container pipeline.
-   * @param keyName  - Name of the Key
-   * @param info     - ChunkInfo.
+   * @param keyName - Name of the Key
+   * @param info - ChunkInfo.
    * @return byte array
-   * @throws IOException TODO: Right now we do not support partial reads and
-   *                     writes of chunks. TODO: Explore if we need to do that
-   *                     for ozone.
+   * @throws StorageContainerException
+   * TODO: Right now we do not support partial reads and writes of chunks.
+   * TODO: Explore if we need to do that for ozone.
    */
   @Override
   public byte[] readChunk(Pipeline pipeline, String keyName, ChunkInfo info)
-      throws IOException {
+      throws StorageContainerException {
     containerManager.readLock();
     try {
       File chunkFile = ChunkUtils.getChunkFile(pipeline, containerManager
@@ -108,11 +115,13 @@ public class ChunkManagerImpl implements ChunkManager {
       return ChunkUtils.readData(chunkFile, info).array();
     } catch (ExecutionException | NoSuchAlgorithmException e) {
       LOG.error("read data failed. error: {}", e);
-      throw new IOException("Internal error: ", e);
+      throw new StorageContainerException("Internal error: ",
+          e, CONTAINER_INTERNAL_ERROR);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       LOG.error("read data failed. error: {}", e);
-      throw new IOException("Internal error: ", e);
+      throw new StorageContainerException("Internal error: ",
+          e, CONTAINER_INTERNAL_ERROR);
     } finally {
       containerManager.readUnlock();
     }
@@ -122,13 +131,13 @@ public class ChunkManagerImpl implements ChunkManager {
    * Deletes a given chunk.
    *
    * @param pipeline - Pipeline.
-   * @param keyName  - Key Name
-   * @param info     - Chunk Info
-   * @throws IOException
+   * @param keyName - Key Name
+   * @param info - Chunk Info
+   * @throws StorageContainerException
    */
   @Override
   public void deleteChunk(Pipeline pipeline, String keyName, ChunkInfo info)
-      throws IOException {
+      throws StorageContainerException {
 
     containerManager.readLock();
     try {
@@ -139,8 +148,9 @@ public class ChunkManagerImpl implements ChunkManager {
       } else {
         LOG.error("Not Supported Operation. Trying to delete a " +
             "chunk that is in shared file. chunk info : " + info.toString());
-        throw new IOException("Not Supported Operation. Trying to delete a " +
-            "chunk that is in shared file. chunk info : " + info.toString());
+        throw new StorageContainerException("Not Supported Operation. " +
+            "Trying to delete a chunk that is in shared file. chunk info : "
+            + info.toString(), UNSUPPORTED_REQUEST);
       }
     } finally {
       containerManager.readUnlock();

@@ -25,6 +25,7 @@ import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
@@ -121,8 +122,8 @@ public class TestContainerPersistence {
 
   @Before
   public void setupPaths() throws IOException {
-    if (!new File(path).exists()) {
-      new File(path).mkdirs();
+    if (!new File(path).exists() && !new File(path).mkdirs()) {
+      throw new IOException("Unable to create paths. " + path);
     }
     pathLists.clear();
     containerManager.getContainerMap().clear();
@@ -157,11 +158,8 @@ public class TestContainerPersistence {
     Assert.assertTrue(new File(status.getContainer().getContainerPath())
         .exists());
 
-    String containerPathString = ContainerUtils.getContainerNameFromFile(new
-        File(status.getContainer().getContainerPath()));
-
     Path meta = Paths.get(status.getContainer().getDBPath()).getParent();
-    Assert.assertTrue(Files.exists(meta));
+    Assert.assertTrue(meta != null && Files.exists(meta));
 
 
     String dbPath = status.getContainer().getDBPath();
@@ -363,8 +361,7 @@ public class TestContainerPersistence {
         sha.update(FileUtils.readFileToByteArray(fname.toFile()));
         String val = Hex.encodeHexString(sha.digest());
         Assert.assertEquals(fileHashMap.get(fname.getFileName().toString())
-                .getChecksum(),
-            val);
+                .getChecksum(), val);
         count++;
         sha.reset();
       }
@@ -486,7 +483,7 @@ public class TestContainerPersistence {
     setDataChecksum(info, data);
     chunkManager.writeChunk(pipeline, keyName, info, data);
     chunkManager.deleteChunk(pipeline, keyName, info);
-    exception.expect(IOException.class);
+    exception.expect(StorageContainerException.class);
     exception.expectMessage("Unable to find the chunk file.");
     chunkManager.readChunk(pipeline, keyName, info);
   }
@@ -572,7 +569,7 @@ public class TestContainerPersistence {
     keyData.setChunks(chunkList);
     keyManager.putKey(pipeline, keyData);
     keyManager.deleteKey(pipeline, keyName);
-    exception.expect(IOException.class);
+    exception.expect(StorageContainerException.class);
     exception.expectMessage("Unable to find the key.");
     keyManager.getKey(keyData);
   }
@@ -596,7 +593,7 @@ public class TestContainerPersistence {
     keyData.setChunks(chunkList);
     keyManager.putKey(pipeline, keyData);
     keyManager.deleteKey(pipeline, keyName);
-    exception.expect(IOException.class);
+    exception.expect(StorageContainerException.class);
     exception.expectMessage("Unable to find the key.");
     keyManager.deleteKey(pipeline, keyName);
   }

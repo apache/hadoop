@@ -18,13 +18,7 @@
 
 package org.apache.hadoop.scm.storage;
 
-import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
-
-import java.io.IOException;
-
 import com.google.protobuf.ByteString;
-
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
@@ -35,9 +29,15 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .GetKeyRequestProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .GetKeyResponseProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .GetSmallFileRequestProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .GetSmallFileResponseProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.KeyData;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .PutKeyRequestProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .PutSmallFileRequestProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .ReadChunkRequestProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
@@ -45,13 +45,10 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Type;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .WriteChunkRequestProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
-    .PutSmallFileRequestProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
-    .GetSmallFileResponseProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
-    .GetSmallFileRequestProto;
 import org.apache.hadoop.scm.XceiverClient;
+import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
+
+import java.io.IOException;
 
 /**
  * Implementation of all container protocol calls performed by Container
@@ -87,7 +84,7 @@ public final class ContainerProtocolCalls {
         .setGetKey(readKeyRequest)
         .build();
     ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
-    validateContainerResponse(response, traceID);
+    validateContainerResponse(response);
     return response.getGetKey();
   }
 
@@ -112,7 +109,7 @@ public final class ContainerProtocolCalls {
         .setPutKey(createKeyRequest)
         .build();
     ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
-    validateContainerResponse(response, traceID);
+    validateContainerResponse(response);
   }
 
   /**
@@ -140,7 +137,7 @@ public final class ContainerProtocolCalls {
         .setReadChunk(readChunkRequest)
         .build();
     ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
-    validateContainerResponse(response, traceID);
+    validateContainerResponse(response);
     return response.getReadChunk();
   }
 
@@ -170,7 +167,7 @@ public final class ContainerProtocolCalls {
         .setWriteChunk(writeChunkRequest)
         .build();
     ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
-    validateContainerResponse(response, traceID);
+    validateContainerResponse(response);
   }
 
   /**
@@ -218,7 +215,7 @@ public final class ContainerProtocolCalls {
         .setPutSmallFile(putSmallFileRequest)
         .build();
     ContainerCommandResponseProto response = client.sendCommand(request);
-    validateContainerResponse(response, traceID);
+    validateContainerResponse(response);
   }
 
   /**
@@ -245,7 +242,7 @@ public final class ContainerProtocolCalls {
     request.setTraceID(traceID);
     ContainerCommandResponseProto response = client.sendCommand(
         request.build());
-    validateContainerResponse(response, traceID);
+    validateContainerResponse(response);
   }
 
   /**
@@ -280,7 +277,7 @@ public final class ContainerProtocolCalls {
         .setGetSmallFile(getSmallFileRequest)
         .build();
     ContainerCommandResponseProto response = client.sendCommand(request);
-    validateContainerResponse(response, traceID);
+    validateContainerResponse(response);
     return response.getGetSmallFile();
   }
 
@@ -289,28 +286,15 @@ public final class ContainerProtocolCalls {
    * return code is mapped to a corresponding exception and thrown.
    *
    * @param response container protocol call response
-   * @param traceID container protocol call args
    * @throws IOException if the container protocol call failed
    */
   private static void validateContainerResponse(
-      ContainerCommandResponseProto response, String traceID
-  ) throws IOException {
-    // TODO : throw the right type of exception
-    switch (response.getResult()) {
-    case SUCCESS:
-      break;
-    case MALFORMED_REQUEST:
-      throw new IOException(HTTP_BAD_REQUEST +
-          ":Bad container request: " + traceID);
-    case UNSUPPORTED_REQUEST:
-      throw new IOException(HTTP_INTERNAL_ERROR +
-          "Unsupported container request: " + traceID);
-    case CONTAINER_INTERNAL_ERROR:
-      throw new IOException(HTTP_INTERNAL_ERROR +
-          "Container internal error:" + traceID);
-    default:
-      throw new IOException(HTTP_INTERNAL_ERROR +
-          "Unrecognized container response:" + traceID);
+      ContainerCommandResponseProto response
+  ) throws StorageContainerException {
+    if (response.getResult() == ContainerProtos.Result.SUCCESS) {
+      return;
     }
+    throw new StorageContainerException(
+        response.getMessage(), response.getResult());
   }
 }

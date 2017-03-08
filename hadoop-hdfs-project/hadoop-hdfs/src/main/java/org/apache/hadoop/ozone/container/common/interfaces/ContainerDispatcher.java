@@ -21,8 +21,6 @@ package org.apache.hadoop.ozone.container.common.interfaces;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
 
-import java.io.IOException;
-
 /**
  * Dispatcher acts as the bridge between the transport layer and
  * the actual container layer. This layer is capable of transforming
@@ -36,10 +34,8 @@ public interface ContainerDispatcher {
    * Dispatches commands to container layer.
    * @param msg - Command Request
    * @return Command Response
-   * @throws IOException
    */
-  ContainerCommandResponseProto dispatch(ContainerCommandRequestProto msg)
-      throws IOException;
+  ContainerCommandResponseProto dispatch(ContainerCommandRequestProto msg);
 
   /**
    * Initialize the Dispatcher.

@@ -49,6 +49,8 @@ public class TestAllocateContainer {
     conf = new OzoneConfiguration();
     cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1)
         .setHandlerType("distributed").build();
+    storageContainerLocationClient =
+        cluster.createStorageContainerLocationClient();
   }
 
   @AfterClass
@@ -61,8 +63,6 @@ public class TestAllocateContainer {
 
   @Test
   public void testAllocate() throws Exception {
-    storageContainerLocationClient =
-        cluster.createStorageContainerLocationClient();
     Pipeline pipeline = storageContainerLocationClient.allocateContainer(
         "container0");
     Assert.assertNotNull(pipeline);
@@ -72,8 +72,6 @@ public class TestAllocateContainer {
 
   @Test
   public void testAllocateNull() throws Exception {
-    storageContainerLocationClient =
-        cluster.createStorageContainerLocationClient();
     thrown.expect(NullPointerException.class);
     storageContainerLocationClient.allocateContainer(null);
   }
@@ -81,12 +79,9 @@ public class TestAllocateContainer {
   @Test
   public void testAllocateDuplicate() throws Exception {
     String containerName = RandomStringUtils.randomAlphanumeric(10);
-    storageContainerLocationClient =
-        cluster.createStorageContainerLocationClient();
     thrown.expect(IOException.class);
     thrown.expectMessage("Specified container already exists");
     storageContainerLocationClient.allocateContainer(containerName);
     storageContainerLocationClient.allocateContainer(containerName);
-
   }
 }

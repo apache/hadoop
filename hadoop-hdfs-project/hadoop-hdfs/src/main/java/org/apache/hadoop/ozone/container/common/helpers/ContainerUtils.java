@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
 import org.apache.hadoop.utils.LevelDBStore;
+import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +35,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static org.apache.commons.io.FilenameUtils.removeExtension;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.INVALID_ARGUMENT;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.UNABLE_TO_FIND_DATA_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_EXTENSION;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_META;
 
@@ -41,6 +46,10 @@ import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_META;
  * A set of helper functions to create proper responses.
  */
 public final class ContainerUtils {
+
+  private ContainerUtils() {
+    //never constructed.
+  }
 
   /**
    * Returns a CreateContainer Response. This call is used by create and delete
@@ -59,13 +68,13 @@ public final class ContainerUtils {
   /**
    * Returns a ReadContainer Response.
    *
-   * @param msg           Request
+   * @param msg Request
    * @param containerData - data
    * @return Response.
    */
   public static ContainerProtos.ContainerCommandResponseProto
       getReadContainerResponse(ContainerProtos.ContainerCommandRequestProto msg,
-                           ContainerData containerData) {
+      ContainerData containerData) {
     Preconditions.checkNotNull(containerData);
 
     ContainerProtos.ReadContainerResponseProto.Builder response =
@@ -82,20 +91,51 @@ public final class ContainerUtils {
    * We found a command type but no associated payload for the command. Hence
    * return malformed Command as response.
    *
-   * @param msg     - Protobuf message.
-   * @param result  - result
+   * @param msg - Protobuf message.
+   * @param result - result
    * @param message - Error message.
    * @return ContainerCommandResponseProto - MALFORMED_REQUEST.
    */
   public static ContainerProtos.ContainerCommandResponseProto.Builder
       getContainerResponse(ContainerProtos.ContainerCommandRequestProto msg,
-                       ContainerProtos.Result result, String message) {
+      ContainerProtos.Result result, String message) {
     return
         ContainerProtos.ContainerCommandResponseProto.newBuilder()
             .setCmdType(msg.getCmdType())
             .setTraceID(msg.getTraceID())
             .setResult(result)
             .setMessage(message);
+  }
+
+  /**
+   * Logs the error and returns a response to the caller.
+   *
+   * @param log - Logger
+   * @param ex - Exception
+   * @param msg - Request Object
+   * @return Response
+   */
+  public static ContainerProtos.ContainerCommandResponseProto logAndReturnError(
+      Logger log, StorageContainerException ex,
+      ContainerProtos.ContainerCommandRequestProto msg) {
+    log.info("Trace ID: {} : Message: {} : Result: {}", msg.getTraceID(),
+        ex.getMessage(), ex.getResult().getValueDescriptor().getName());
+    return getContainerResponse(msg, ex.getResult(), ex.getMessage()).build();
+  }
+
+  /**
+   * Logs the error and returns a response to the caller.
+   *
+   * @param log - Logger
+   * @param ex - Exception
+   * @param msg - Request Object
+   * @return Response
+   */
+  public static ContainerProtos.ContainerCommandResponseProto logAndReturnError(
+      Logger log, RuntimeException ex,
+      ContainerProtos.ContainerCommandRequestProto msg) {
+    log.info("Trace ID: {} : Message: {} ", msg.getTraceID(), ex.getMessage());
+    return getContainerResponse(msg, INVALID_ARGUMENT, ex.getMessage()).build();
   }
 
   /**
@@ -133,14 +173,13 @@ public final class ContainerUtils {
     Preconditions.checkNotNull(containerFile);
     return Paths.get(containerFile.getParent()).resolve(
         removeExtension(containerFile.getName())).toString();
-
   }
 
   /**
    * Verifies that this in indeed a new container.
    *
    * @param containerFile - Container File to verify
-   * @param metadataFile  - metadata File to verify
+   * @param metadataFile - metadata File to verify
    * @throws IOException
    */
   public static void verifyIsNewContainer(File containerFile, File metadataFile)
@@ -227,11 +266,11 @@ public final class ContainerUtils {
    * Returns Metadata location.
    *
    * @param containerData - Data
-   * @param location      - Path
+   * @param location - Path
    * @return Path
    */
   public static File getMetadataFile(ContainerData containerData,
-                                     Path location) {
+      Path location) {
     return location.resolve(containerData
         .getContainerName().concat(CONTAINER_META))
         .toFile();
@@ -239,12 +278,13 @@ public final class ContainerUtils {
 
   /**
    * Returns container file location.
-   * @param containerData  - Data
+   *
+   * @param containerData - Data
    * @param location - Root path
    * @return Path
    */
   public static File getContainerFile(ContainerData containerData,
-                                      Path location) {
+      Path location) {
     return location.resolve(containerData
         .getContainerName().concat(CONTAINER_EXTENSION))
         .toFile();
@@ -252,6 +292,7 @@ public final class ContainerUtils {
 
   /**
    * Container metadata directory -- here is where the level DB lives.
+   *
    * @param cData - cData.
    * @return Path to the parent directory where the DB lives.
    */
@@ -264,19 +305,22 @@ public final class ContainerUtils {
 
   /**
    * Returns the path where data or chunks live for a given container.
+   *
    * @param cData - cData container
    * @return - Path
+   * @throws StorageContainerException
    */
-  public static Path getDataDirectory(ContainerData cData) throws IOException {
+  public static Path getDataDirectory(ContainerData cData)
+      throws StorageContainerException {
     Path path = getMetadataDirectory(cData);
     Preconditions.checkNotNull(path);
-    path = path.getParent();
-    if(path == null) {
-      throw new IOException("Unable to get Data directory. null path found");
+    Path parentPath = path.getParent();
+    if (parentPath == null) {
+      throw new StorageContainerException("Unable to get Data directory."
+          + path, UNABLE_TO_FIND_DATA_DIR);
     }
-    return path.resolve(OzoneConsts.CONTAINER_DATA_PATH);
+    return parentPath.resolve(OzoneConsts.CONTAINER_DATA_PATH);
   }
-
 
   /**
    * remove Container if it is empty.
@@ -322,9 +366,5 @@ public final class ContainerUtils {
 
     FileUtils.forceDelete(containerPath.toFile());
     FileUtils.forceDelete(metaPath.toFile());
-  }
-
-  private ContainerUtils() {
-    //never constructed.
   }
 }

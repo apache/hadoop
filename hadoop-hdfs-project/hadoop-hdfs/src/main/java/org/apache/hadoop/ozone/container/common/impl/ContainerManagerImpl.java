@@ -22,8 +22,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
+import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.protocol.proto
@@ -60,6 +60,20 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.CONTAINER_EXISTS;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.CONTAINER_INTERNAL_ERROR;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.CONTAINER_NOT_FOUND;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.INVALID_CONFIG;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.IO_EXCEPTION;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.NO_SUCH_ALGORITHM;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.UNABLE_TO_READ_METADATA_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_EXTENSION;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_META;
 
@@ -85,7 +99,7 @@ public class ContainerManagerImpl implements ContainerManager {
   /**
    * Init call that sets up a container Manager.
    *
-   * @param config        - Configuration.
+   * @param config - Configuration.
    * @param containerDirs - List of Metadata Container locations.
    * @throws IOException
    */
@@ -93,26 +107,32 @@ public class ContainerManagerImpl implements ContainerManager {
   public void init(
       Configuration config, List<StorageLocation> containerDirs)
       throws IOException {
-    Preconditions.checkNotNull(config);
-    Preconditions.checkNotNull(containerDirs);
-    Preconditions.checkState(containerDirs.size() > 0);
+    Preconditions.checkNotNull(config, "Config must not be null");
+    Preconditions.checkNotNull(containerDirs, "Container directories cannot " +
+        "be null");
+    Preconditions.checkState(containerDirs.size() > 0, "Number of container" +
+        " directories must be greater than zero.");
 
     readLock();
     try {
       for (StorageLocation path : containerDirs) {
         File directory = Paths.get(path.getNormalizedUri()).toFile();
+        // TODO: This will fail if any directory is invalid.
+        // We should fix this to handle invalid directories and continue.
+        // Leaving it this way to fail fast for time being.
         if (!directory.isDirectory()) {
           LOG.error("Invalid path to container metadata directory. path: {}",
               path.toString());
-          throw new IOException("Invalid path to container metadata directory" +
-              ". " + path);
+          throw new StorageContainerException("Invalid path to container " +
+              "metadata directory." + path, INVALID_CONFIG);
         }
         File[] files = directory.listFiles(new ContainerFilter());
         if (files != null) {
           for (File containerFile : files) {
             String containerPath =
                 ContainerUtils.getContainerNameFromFile(containerFile);
-            Preconditions.checkNotNull(containerPath);
+            Preconditions.checkNotNull(containerPath, "Container path cannot" +
+                " be null");
             readContainerInfo(containerPath);
           }
         }
@@ -136,10 +156,12 @@ public class ContainerManagerImpl implements ContainerManager {
    * the checksums match, then that file is added to containerMap.
    *
    * @param containerName - Name which points to the persisted container.
+   * @throws StorageContainerException
    */
   private void readContainerInfo(String containerName)
-      throws IOException {
-    Preconditions.checkState(containerName.length() > 0);
+      throws StorageContainerException {
+    Preconditions.checkState(containerName.length() > 0,
+        "Container name length cannot be zero.");
     FileInputStream containerStream = null;
     DigestInputStream dis = null;
     FileInputStream metaStream = null;
@@ -148,7 +170,8 @@ public class ContainerManagerImpl implements ContainerManager {
     if (cPath != null) {
       keyName = cPath.toString();
     }
-    Preconditions.checkNotNull(keyName);
+    Preconditions.checkNotNull(keyName,
+        "Container Name  to container key mapping is null");
 
     try {
       String containerFileName = containerName.concat(CONTAINER_EXTENSION);
@@ -169,21 +192,31 @@ public class ContainerManagerImpl implements ContainerManager {
       ContainerProtos.ContainerMeta meta = ContainerProtos.ContainerMeta
           .parseDelimitedFrom(metaStream);
 
-      if (meta != null && !DigestUtils.sha256Hex(sha.digest()).equals(meta
-          .getHash())) {
-        throw new IOException("Invalid SHA found for file.");
+      if (meta != null &&
+          !DigestUtils.sha256Hex(sha.digest()).equals(meta.getHash())) {
+        // This means we were not able read data from the disk when booted the
+        // datanode. We are going to rely on SCM understanding that we don't
+        // have
+        // valid data for this container when we send container reports.
+        // Hopefully SCM will ask us to delete this container and rebuild it.
+        LOG.error("Invalid SHA found for container data. Name :{}" +
+            "cowardly refusing to read invalid data", containerName);
+        containerMap.put(keyName, new ContainerStatus(null, false));
+        return;
       }
 
       containerMap.put(keyName, new ContainerStatus(containerData, true));
 
     } catch (IOException | NoSuchAlgorithmException ex) {
-      LOG.error("read failed for file: {} ex: {}",
-          containerName, ex.getMessage());
+      LOG.error("read failed for file: {} ex: {}", containerName,
+          ex.getMessage());
 
       // TODO : Add this file to a recovery Queue.
 
       // Remember that this container is busted and we cannot use it.
       containerMap.put(keyName, new ContainerStatus(null, false));
+      throw new StorageContainerException("Unable to read container info",
+          UNABLE_TO_READ_METADATA_DB);
     } finally {
       IOUtils.closeStream(dis);
       IOUtils.closeStream(containerStream);
@@ -194,19 +227,20 @@ public class ContainerManagerImpl implements ContainerManager {
   /**
    * Creates a container with the given name.
    *
-   * @param pipeline      -- Nodes which make up this container.
+   * @param pipeline -- Nodes which make up this container.
    * @param containerData - Container Name and metadata.
-   * @throws IOException
+   * @throws StorageContainerException - Exception
    */
   @Override
   public void createContainer(Pipeline pipeline, ContainerData containerData)
-      throws IOException {
-    Preconditions.checkNotNull(containerData);
-
+      throws StorageContainerException {
+    Preconditions.checkNotNull(containerData, "Container data cannot be null");
     writeLock();
     try {
       if (containerMap.containsKey(containerData.getName())) {
-        throw new FileAlreadyExistsException("container already exists.");
+        LOG.debug("container already exists. {}", containerData.getName());
+        throw new StorageContainerException("container already exists.",
+            CONTAINER_EXISTS);
       }
 
       // This is by design. We first write and close the
@@ -218,8 +252,10 @@ public class ContainerManagerImpl implements ContainerManager {
       File cFile = new File(containerData.getContainerPath());
       readContainerInfo(ContainerUtils.getContainerNameFromFile(cFile));
     } catch (NoSuchAlgorithmException ex) {
-      throw new IOException("failed to create container", ex);
-
+      LOG.error("Internal error: We seem to be running a JVM without a " +
+          "needed hash algorithm.");
+      throw new StorageContainerException("failed to create container",
+          NO_SUCH_ALGORITHM);
     } finally {
       writeUnlock();
     }
@@ -244,22 +280,25 @@ public class ContainerManagerImpl implements ContainerManager {
    * }
    *
    * @param containerData - container Data
+   * @throws StorageContainerException, NoSuchAlgorithmException
    */
   private void writeContainerInfo(ContainerData containerData)
-      throws IOException, NoSuchAlgorithmException {
+      throws StorageContainerException, NoSuchAlgorithmException {
 
-    Preconditions.checkNotNull(this.locationManager);
+    Preconditions.checkNotNull(this.locationManager,
+        "Internal error: location manager cannot be null");
 
     FileOutputStream containerStream = null;
     DigestOutputStream dos = null;
     FileOutputStream metaStream = null;
-    Path location = locationManager.getContainerPath();
-
-    File containerFile = ContainerUtils.getContainerFile(containerData,
-        location);
-    File metadataFile = ContainerUtils.getMetadataFile(containerData, location);
 
     try {
+      Path location = locationManager.getContainerPath();
+      File containerFile = ContainerUtils.getContainerFile(containerData,
+          location);
+      File metadataFile = ContainerUtils.getMetadataFile(containerData,
+          location);
+
       ContainerUtils.verifyIsNewContainer(containerFile, metadataFile);
 
       Path metadataPath = this.locationManager.getDataPath(
@@ -287,7 +326,6 @@ public class ContainerManagerImpl implements ContainerManager {
       protoMeta.writeDelimitedTo(metaStream);
 
     } catch (IOException ex) {
-
       // TODO : we need to clean up partially constructed files
       // The proper way to do would be for a thread
       // to read all these 3 artifacts and make sure they are
@@ -296,10 +334,15 @@ public class ContainerManagerImpl implements ContainerManager {
 
       // In case of ozone this is *not* a deal breaker since
       // SCM is guaranteed to generate unique container names.
+      // The saving grace is that we check if we have residue files
+      // lying around when creating a new container. We need to queue
+      // this information to a cleaner thread.
 
-      LOG.error("creation of container failed. Name: {} ",
-          containerData.getContainerName());
-      throw ex;
+      LOG.error("Creation of container failed. Name: {}, we might need to " +
+              "cleanup partially created artifacts. ",
+          containerData.getContainerName(), ex);
+      throw new StorageContainerException("Container creation failed. ",
+          ex, CONTAINER_INTERNAL_ERROR);
     } finally {
       IOUtils.closeStream(dos);
       IOUtils.closeStream(containerStream);
@@ -307,32 +350,37 @@ public class ContainerManagerImpl implements ContainerManager {
     }
   }
 
-
-
   /**
    * Deletes an existing container.
    *
-   * @param pipeline      - nodes that make this container.
+   * @param pipeline - nodes that make this container.
    * @param containerName - name of the container.
-   * @throws IOException
+   * @throws StorageContainerException
    */
   @Override
   public void deleteContainer(Pipeline pipeline, String containerName) throws
-      IOException {
-    Preconditions.checkState(containerName.length() > 0);
+      StorageContainerException {
+    Preconditions.checkNotNull(containerName, "Container name cannot be null");
+    Preconditions.checkState(containerName.length() > 0,
+        "Container name length cannot be zero.");
     writeLock();
     try {
       ContainerStatus status = containerMap.get(containerName);
       if (status == null) {
-        LOG.info("No such container. Name: {}", containerName);
-        throw new IOException("No such container. Name : " + containerName);
+        LOG.debug("No such container. Name: {}", containerName);
+        throw new StorageContainerException("No such container. Name : " +
+            containerName, CONTAINER_NOT_FOUND);
       }
       ContainerUtils.removeContainer(status.containerData);
       containerMap.remove(containerName);
+    } catch (IOException e) {
+      // TODO : An I/O error during delete can leave partial artifacts on the
+      // disk. We will need the cleaner thread to cleanup this information.
+      LOG.error("Failed to cleanup container. Name: {}", containerName, e);
+      throw new StorageContainerException(containerName, e, IO_EXCEPTION);
     } finally {
       writeUnlock();
     }
-
   }
 
   /**
@@ -343,20 +391,21 @@ public class ContainerManagerImpl implements ContainerManager {
    * time. It is possible that using this iteration you can miss certain
    * container from the listing.
    *
-   * @param prefix  -  Return keys that match this prefix.
-   * @param count   - how many to return
+   * @param prefix -  Return keys that match this prefix.
+   * @param count - how many to return
    * @param prevKey - Previous Key Value or empty String.
-   * @param data    - Actual containerData
-   * @throws IOException
+   * @param data - Actual containerData
+   * @throws StorageContainerException
    */
   @Override
   public void listContainer(String prefix, long count, String prevKey,
-                            List<ContainerData> data) throws IOException {
+      List<ContainerData> data) throws StorageContainerException {
     // TODO : Support list with Prefix and PrevKey
-    Preconditions.checkNotNull(data);
+    Preconditions.checkNotNull(data,
+        "Internal assertion: data cannot be null");
     readLock();
     try {
-      ConcurrentNavigableMap<String, ContainerStatus> map = null;
+      ConcurrentNavigableMap<String, ContainerStatus> map;
       if (prevKey == null || prevKey.isEmpty()) {
         map = containerMap.tailMap(containerMap.firstKey(), true);
       } else {
@@ -382,13 +431,17 @@ public class ContainerManagerImpl implements ContainerManager {
    *
    * @param containerName - Name of the container
    * @return ContainerData - Container Data.
-   * @throws IOException
+   * @throws StorageContainerException
    */
   @Override
-  public ContainerData readContainer(String containerName) throws IOException {
-    if(!containerMap.containsKey(containerName)) {
-      throw new IOException("Unable to find the container. Name: "
-          + containerName);
+  public ContainerData readContainer(String containerName) throws
+      StorageContainerException {
+    Preconditions.checkNotNull(containerName, "Container name cannot be null");
+    Preconditions.checkState(containerName.length() > 0,
+        "Container name length cannot be zero.");
+    if (!containerMap.containsKey(containerName)) {
+      throw new StorageContainerException("Unable to find the container. Name: "
+          + containerName, CONTAINER_NOT_FOUND);
     }
     return containerMap.get(containerName).getContainer();
   }
@@ -400,7 +453,8 @@ public class ContainerManagerImpl implements ContainerManager {
    */
   @Override
   public void shutdown() throws IOException {
-    Preconditions.checkState(this.hasWriteLock());
+    Preconditions.checkState(this.hasWriteLock(),
+        "Assumption that we are holding the lock violated.");
     this.containerMap.clear();
     this.locationManager.shutdown();
   }
@@ -470,26 +524,17 @@ public class ContainerManagerImpl implements ContainerManager {
     return this.lock.writeLock().isHeldByCurrentThread();
   }
 
-  /**
-   * Sets the chunk Manager.
-   * @param chunkManager
-   */
-  public void setChunkManager(ChunkManager chunkManager) {
-    this.chunkManager = chunkManager;
-  }
-
   public ChunkManager getChunkManager() {
     return this.chunkManager;
   }
 
   /**
-   * Sets the Key Manager.
+   * Sets the chunk Manager.
    *
-   * @param keyManager - Key Manager.
+   * @param chunkManager - Chunk Manager
    */
-  @Override
-  public void setKeyManager(KeyManager keyManager) {
-    this.keyManager = keyManager;
+  public void setChunkManager(ChunkManager chunkManager) {
+    this.chunkManager = chunkManager;
   }
 
   /**
@@ -522,13 +567,23 @@ public class ContainerManagerImpl implements ContainerManager {
   }
 
   /**
+   * Sets the Key Manager.
+   *
+   * @param keyManager - Key Manager.
+   */
+  @Override
+  public void setKeyManager(KeyManager keyManager) {
+    this.keyManager = keyManager;
+  }
+
+  /**
    * Filter out only container files from the container metadata dir.
    */
   private static class ContainerFilter implements FilenameFilter {
     /**
      * Tests if a specified file should be included in a file list.
      *
-     * @param dir  the directory in which the file was found.
+     * @param dir the directory in which the file was found.
      * @param name the name of the file.
      * @return <code>true</code> if and only if the name should be included in
      * the file list; <code>false</code> otherwise.
@@ -557,7 +612,7 @@ public class ContainerManagerImpl implements ContainerManager {
      * Creates a Container Status class.
      *
      * @param containerData - ContainerData.
-     * @param active        - Active or not active.
+     * @param active - Active or not active.
      */
     ContainerStatus(ContainerData containerData, boolean active) {
       this.containerData = containerData;
@@ -580,7 +635,7 @@ public class ContainerManagerImpl implements ContainerManager {
     /**
      * Indicates if a container is Active.
      *
-     * @return
+     * @return true if it is active.
      */
     public boolean isActive() {
       return active;

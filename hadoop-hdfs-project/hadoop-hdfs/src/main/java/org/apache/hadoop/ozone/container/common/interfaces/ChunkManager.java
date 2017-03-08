@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.ozone.container.common.interfaces;
 
+import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
-
-import java.io.IOException;
 
 /**
  * Chunk Manager allows read, write, delete and listing of chunks in
@@ -34,10 +33,10 @@ public interface ChunkManager {
    * @param pipeline - Name and the set of machines that make this container.
    * @param keyName - Name of the Key.
    * @param info - ChunkInfo.
-   * @throws IOException
+   * @throws StorageContainerException
    */
   void writeChunk(Pipeline pipeline, String keyName,
-                  ChunkInfo info, byte[] data) throws IOException;
+                  ChunkInfo info, byte[] data) throws StorageContainerException;
 
   /**
    * reads the data defined by a chunk.
@@ -45,23 +44,23 @@ public interface ChunkManager {
    * @param keyName - Name of the Key
    * @param info - ChunkInfo.
    * @return  byte array
-   * @throws IOException
+   * @throws StorageContainerException
    *
    * TODO: Right now we do not support partial reads and writes of chunks.
    * TODO: Explore if we need to do that for ozone.
    */
   byte[] readChunk(Pipeline pipeline, String keyName, ChunkInfo info) throws
-      IOException;
+      StorageContainerException;
 
   /**
    * Deletes a given chunk.
    * @param pipeline  - Pipeline.
    * @param keyName   - Key Name
    * @param info  - Chunk Info
-   * @throws IOException
+   * @throws StorageContainerException
    */
   void deleteChunk(Pipeline pipeline, String keyName, ChunkInfo info) throws
-      IOException;
+      StorageContainerException;
 
   // TODO : Support list operations.
 

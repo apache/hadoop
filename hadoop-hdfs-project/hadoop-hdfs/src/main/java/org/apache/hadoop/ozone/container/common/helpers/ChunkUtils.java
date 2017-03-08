@@ -24,6 +24,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.impl.ChunkManagerImpl;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.slf4j.Logger;
@@ -38,6 +39,23 @@ import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ExecutionException;
+
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.CHECKSUM_MISMATCH;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.CONTAINER_INTERNAL_ERROR;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.CONTAINER_NOT_FOUND;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.INVALID_WRITE_SIZE;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.IO_EXCEPTION;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.OVERWRITE_FLAG_REQUIRED;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.UNABLE_TO_FIND_CHUNK;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.UNABLE_TO_FIND_DATA_DIR;
 
 /**
  * Set of utility functions used by the chunk Manager.
@@ -87,13 +105,13 @@ public final class ChunkUtils {
    * expected to write data to.
    *
    * @param pipeline - pipeline.
-   * @param data     - container data.
-   * @param info     - chunk info.
+   * @param data - container data.
+   * @param info - chunk info.
    * @return File
-   * @throws IOException
+   * @throws StorageContainerException
    */
   public static File validateChunk(Pipeline pipeline, ContainerData data,
-                                   ChunkInfo info) throws IOException {
+      ChunkInfo info) throws StorageContainerException {
 
     Logger log = LoggerFactory.getLogger(ChunkManagerImpl.class);
 
@@ -102,8 +120,9 @@ public final class ChunkUtils {
       if (!ChunkUtils.isOverWritePermitted(info)) {
         log.error("Rejecting write chunk request. Chunk overwrite " +
             "without explicit request. {}", info.toString());
-        throw new IOException("Rejecting write chunk request. OverWrite " +
-            "flag required." + info.toString());
+        throw new StorageContainerException("Rejecting write chunk request. " +
+            "OverWrite flag required." + info.toString(),
+            OVERWRITE_FLAG_REQUIRED);
       }
     }
     return chunkFile;
@@ -113,25 +132,27 @@ public final class ChunkUtils {
    * Validates that Path to chunk file exists.
    *
    * @param pipeline - Container Info.
-   * @param data     - Container Data
-   * @param info     - Chunk info
+   * @param data - Container Data
+   * @param info - Chunk info
    * @return - File.
-   * @throws IOException
+   * @throws StorageContainerException
    */
   public static File getChunkFile(Pipeline pipeline, ContainerData data,
-                                  ChunkInfo info) throws IOException {
+      ChunkInfo info) throws StorageContainerException {
 
     Logger log = LoggerFactory.getLogger(ChunkManagerImpl.class);
     if (data == null) {
       log.error("Invalid container Name: {}", pipeline.getContainerName());
-      throw new IOException("Unable to find the container Name: " +
-          pipeline.getContainerName());
+      throw new StorageContainerException("Unable to find the container Name:" +
+          " " +
+          pipeline.getContainerName(), CONTAINER_NOT_FOUND);
     }
 
     File dataDir = ContainerUtils.getDataDirectory(data).toFile();
     if (!dataDir.exists()) {
       log.error("Unable to find the data directory: {}", dataDir);
-      throw new IOException("Unable to find the data directory: " + dataDir);
+      throw new StorageContainerException("Unable to find the data directory:" +
+          " " + dataDir, UNABLE_TO_FIND_DATA_DIR);
     }
 
     return dataDir.toPath().resolve(info.getChunkName()).toFile();
@@ -143,11 +164,12 @@ public final class ChunkUtils {
    *
    * @param chunkFile - File to write data to.
    * @param chunkInfo - Data stream to write.
-   * @throws IOException
+   * @param data - The data buffer.
+   * @throws StorageContainerException
    */
   public static void writeData(File chunkFile, ChunkInfo chunkInfo,
-                               byte[] data)
-      throws IOException, ExecutionException, InterruptedException,
+      byte[] data) throws
+      StorageContainerException, ExecutionException, InterruptedException,
       NoSuchAlgorithmException {
 
     Logger log = LoggerFactory.getLogger(ChunkManagerImpl.class);
@@ -156,7 +178,7 @@ public final class ChunkUtils {
               "specified. DataLen: %d Byte Array: %d",
           chunkInfo.getLen(), data.length);
       log.error(err);
-      throw new IOException(err);
+      throw new StorageContainerException(err, INVALID_WRITE_SIZE);
     }
 
     AsynchronousFileChannel file = null;
@@ -175,15 +197,24 @@ public final class ChunkUtils {
         verifyChecksum(chunkInfo, data, log);
       }
       int size = file.write(ByteBuffer.wrap(data), chunkInfo.getOffset()).get();
-      if(size != data.length) {
-        log.error("Invalid write size found. Size:{}  Expected: {} " , size,
+      if (size != data.length) {
+        log.error("Invalid write size found. Size:{}  Expected: {} ", size,
             data.length);
-        throw new IOException("Invalid write size found. Size: " + size
-            + " Expected: " + data.length);
+        throw new StorageContainerException("Invalid write size found. " +
+            "Size: " + size + " Expected: " + data.length, INVALID_WRITE_SIZE);
       }
+    } catch (IOException e) {
+      throw new StorageContainerException(e, IO_EXCEPTION);
+
     } finally {
       if (lock != null) {
-        lock.release();
+        try {
+          lock.release();
+        } catch (IOException e) {
+          log.error("Unable to release lock ??, Fatal Error.");
+          throw new StorageContainerException(e, CONTAINER_INTERNAL_ERROR);
+
+        }
       }
       if (file != null) {
         IOUtils.closeStream(file);
@@ -195,22 +226,22 @@ public final class ChunkUtils {
    * Verifies the checksum of a chunk against the data buffer.
    *
    * @param chunkInfo - Chunk Info.
-   * @param data      - data buffer
-   * @param log       - log
+   * @param data - data buffer
+   * @param log - log
    * @throws NoSuchAlgorithmException
-   * @throws IOException
+   * @throws StorageContainerException
    */
   private static void verifyChecksum(ChunkInfo chunkInfo, byte[] data, Logger
-      log) throws NoSuchAlgorithmException, IOException {
+      log) throws NoSuchAlgorithmException, StorageContainerException {
     MessageDigest sha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
     sha.update(data);
     if (!Hex.encodeHexString(sha.digest()).equals(
         chunkInfo.getChecksum())) {
       log.error("Checksum mismatch. Provided: {} , computed: {}",
           chunkInfo.getChecksum(), DigestUtils.sha256Hex(sha.digest()));
-      throw new IOException("Checksum mismatch. Provided: " +
+      throw new StorageContainerException("Checksum mismatch. Provided: " +
           chunkInfo.getChecksum() + " , computed: " +
-          DigestUtils.sha256Hex(sha.digest()));
+          DigestUtils.sha256Hex(sha.digest()), CHECKSUM_MISMATCH);
     }
   }
 
@@ -218,22 +249,25 @@ public final class ChunkUtils {
    * Reads data from an existing chunk file.
    *
    * @param chunkFile - file where data lives.
-   * @param data      - chunk definition.
+   * @param data - chunk definition.
+   *
    * @return ByteBuffer
-   * @throws IOException
+   *
+   * @throws StorageContainerException
    * @throws ExecutionException
    * @throws InterruptedException
    */
   public static ByteBuffer readData(File chunkFile, ChunkInfo data) throws
-      IOException, ExecutionException, InterruptedException,
+      StorageContainerException, ExecutionException, InterruptedException,
       NoSuchAlgorithmException {
     Logger log = LoggerFactory.getLogger(ChunkManagerImpl.class);
 
     if (!chunkFile.exists()) {
       log.error("Unable to find the chunk file. chunk info : {}",
           data.toString());
-      throw new IOException("Unable to find the chunk file. chunk info " +
-          data.toString());
+      throw new StorageContainerException("Unable to find the chunk file. " +
+          "chunk info " +
+          data.toString(), UNABLE_TO_FIND_CHUNK);
     }
 
     AsynchronousFileChannel file = null;
@@ -252,9 +286,15 @@ public final class ChunkUtils {
       }
 
       return buf;
+    } catch (IOException e) {
+      throw new StorageContainerException(e, IO_EXCEPTION);
     } finally {
       if (lock != null) {
-        lock.release();
+        try {
+          lock.release();
+        } catch (IOException e) {
+          log.error("I/O error is lock release.");
+        }
       }
       if (file != null) {
         IOUtils.closeStream(file);
@@ -276,14 +316,15 @@ public final class ChunkUtils {
 
   /**
    * Gets a response to the read chunk calls.
+   *
    * @param msg - Msg
-   * @param data  - Data
-   * @param info  - Info
-   * @return    Response.
+   * @param data - Data
+   * @param info - Info
+   * @return Response.
    */
   public static ContainerProtos.ContainerCommandResponseProto
       getReadChunkResponse(ContainerProtos.ContainerCommandRequestProto msg,
-                           byte[] data, ChunkInfo info) {
+      byte[] data, ChunkInfo info) {
     Preconditions.checkNotNull(msg);
 
     ContainerProtos.ReadChunkResponseProto.Builder response =

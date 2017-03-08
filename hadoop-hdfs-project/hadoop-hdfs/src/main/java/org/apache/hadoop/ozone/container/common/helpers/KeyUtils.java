@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.container.common.helpers;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
+import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.impl.KeyManagerImpl;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
 import org.apache.hadoop.utils.LevelDBStore;
@@ -28,6 +29,9 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.UNABLE_TO_READ_METADATA_DB;
 
 /**
  * Utils functions to help key functions.
@@ -60,18 +64,25 @@ public final class KeyUtils {
    * @param container - container.
    * @param cache     - cache
    * @return LevelDB handle.
-   * @throws IOException
+   * @throws StorageContainerException
    */
   public static LevelDBStore getDB(ContainerData container,
-                                   ContainerCache cache) throws IOException {
+                                   ContainerCache cache)
+      throws StorageContainerException {
     Preconditions.checkNotNull(container);
     Preconditions.checkNotNull(cache);
-    LevelDBStore db = cache.getDB(container.getContainerName());
-    if (db == null) {
-      db = getDB(container.getDBPath());
-      cache.putDB(container.getContainerName(), db);
+    try {
+      LevelDBStore db = cache.getDB(container.getContainerName());
+      if (db == null) {
+        db = getDB(container.getDBPath());
+        cache.putDB(container.getContainerName(), db);
+      }
+      return db;
+    } catch (IOException ex) {
+      String message = "Unable to open DB. DB Name: %s, Path: %s. ex: %s"
+          .format(container.getContainerName(), container.getDBPath(), ex);
+      throw new StorageContainerException(message, UNABLE_TO_READ_METADATA_DB);
     }
-    return db;
   }
 
   /**
@@ -107,8 +118,8 @@ public final class KeyUtils {
 
 
   public static ContainerProtos.ContainerCommandResponseProto
-      getKeyDataResponse(ContainerProtos.ContainerCommandRequestProto msg
-                       , KeyData data) {
+      getKeyDataResponse(ContainerProtos.ContainerCommandRequestProto msg,
+      KeyData data) {
     ContainerProtos.GetKeyResponseProto.Builder getKey = ContainerProtos
         .GetKeyResponseProto.newBuilder();
     getKey.setKeyData(data.getProtoBufMessage());

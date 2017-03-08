@@ -41,6 +41,9 @@ import java.io.IOException;
 
 import static org.mockito.Mockito.mock;
 
+/**
+ * Test Containers.
+ */
 public class TestContainerServer {
 
   @Test
@@ -69,8 +72,8 @@ public class TestContainerServer {
     XceiverClient client = null;
     String containerName = OzoneUtils.getRequestID();
     try {
-      Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline
-          (containerName);
+      Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline(
+          containerName);
       OzoneConfiguration conf = new OzoneConfiguration();
       conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
           pipeline.getLeader().getContainerPort());
@@ -102,8 +105,8 @@ public class TestContainerServer {
     String containerName = OzoneUtils.getRequestID();
 
     try {
-      Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline
-          (containerName);
+      Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline(
+          containerName);
       OzoneConfiguration conf = new OzoneConfiguration();
       conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
           pipeline.getLeader().getContainerPort());
@@ -136,17 +139,16 @@ public class TestContainerServer {
     }
   }
 
-  private class TestContainerDispatcher implements ContainerDispatcher {
+  private static class TestContainerDispatcher implements ContainerDispatcher {
     /**
      * Dispatches commands to container layer.
      *
      * @param msg - Command Request
      * @return Command Response
-     * @throws IOException
      */
     @Override
     public ContainerCommandResponseProto
-    dispatch(ContainerCommandRequestProto msg) throws IOException {
+        dispatch(ContainerCommandRequestProto msg)  {
       return ContainerTestHelper.getCreateContainerResponse(msg);
     }
 
