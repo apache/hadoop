@@ -57,7 +57,12 @@ public class TestContainerServer {
           ContainerTestHelper.getCreateContainerRequest(containerName);
       channel.writeInbound(request);
       Assert.assertTrue(channel.finish());
-      ContainerCommandResponseProto response = channel.readOutbound();
+
+      Object responseObject = channel.readOutbound();
+      Assert.assertTrue(responseObject instanceof
+          ContainerCommandResponseProto);
+      ContainerCommandResponseProto  response =
+          (ContainerCommandResponseProto) responseObject;
       Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
     } finally {
       if (channel != null) {

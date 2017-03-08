@@ -102,6 +102,6 @@ class URLDispatcher extends SimpleChannelInboundHandler<HttpRequest> {
    * @return true if the request is to be handled by WebHDFS
    */
   private boolean isWebHdfsRequest(HttpRequest req) {
-    return req.uri().startsWith(WEBHDFS_PREFIX);
+    return req.getUri().startsWith(WEBHDFS_PREFIX);
   }
 }
