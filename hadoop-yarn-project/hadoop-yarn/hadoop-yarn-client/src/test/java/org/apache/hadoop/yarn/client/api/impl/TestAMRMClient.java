@@ -159,11 +159,6 @@ public class TestAMRMClient {
     // set the minimum allocation so that resource decrease can go under 1024
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 512);
     conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
-    createClientAndCluster(conf);
-  }
-
-  private static void createClientAndCluster(Configuration conf)
-      throws Exception {
     yarnCluster = new MiniYARNCluster(TestAMRMClient.class.getName(), nodeCount, 1, 1);
     yarnCluster.init(conf);
     yarnCluster.start();
@@ -870,25 +865,6 @@ public class TestAMRMClient {
   @Test (timeout=60000)
   public void testAMRMClient() throws YarnException, IOException {
     initAMRMClientAndTest(false);
-  }
-
-  @Test (timeout=60000)
-  public void testAMRMClientWithSaslEncryption() throws Exception {
-    conf.set("hadoop.rpc.protection", "privacy");
-    // we have to create a new instance of MiniYARNCluster to avoid SASL qop
-    // mismatches between client and server
-    tearDown();
-    createClientAndCluster(conf);
-    startApp();
-    initAMRMClientAndTest(false);
-
-    // recreate the original MiniYARNCluster and YarnClient for other tests
-    conf.unset("hadoop.rpc.protection");
-    tearDown();
-    createClientAndCluster(conf);
-    // unless we start an application the cancelApp() method will fail when
-    // it runs after this test
-    startApp();
   }
 
   @Test (timeout=60000)
