@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.util.RwLock;
+import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
@@ -43,7 +44,7 @@ public interface ContainerManager extends RwLock {
    *
    * @param config        - Configuration.
    * @param containerDirs - List of Metadata Container locations.
-   * @throws IOException
+   * @throws StorageContainerException
    */
   void init(Configuration config, List<StorageLocation> containerDirs)
       throws IOException;
@@ -53,20 +54,20 @@ public interface ContainerManager extends RwLock {
    *
    * @param pipeline      -- Nodes which make up this container.
    * @param containerData - Container Name and metadata.
-   * @throws IOException
+   * @throws StorageContainerException
    */
   void createContainer(Pipeline pipeline, ContainerData containerData)
-      throws IOException;
+      throws StorageContainerException;
 
   /**
    * Deletes an existing container.
    *
    * @param pipeline      - nodes that make this container.
    * @param containerName - name of the container.
-   * @throws IOException
+   * @throws StorageContainerException
    */
   void deleteContainer(Pipeline pipeline, String containerName)
-      throws IOException;
+      throws StorageContainerException;
 
   /**
    * As simple interface for container Iterations.
@@ -75,25 +76,26 @@ public interface ContainerManager extends RwLock {
    * @param count   - how many to return
    * @param prevKey - Previous key - Server returns results from this point.
    * @param data    - Actual containerData
-   * @throws IOException
+   * @throws StorageContainerException
    */
   void listContainer(String prefix, long count, String prevKey,
                      List<ContainerData> data)
-      throws IOException;
+      throws StorageContainerException;
 
   /**
    * Get metadata about a specific container.
    *
    * @param containerName - Name of the container
    * @return ContainerData - Container Data.
-   * @throws IOException
+   * @throws StorageContainerException
    */
-  ContainerData readContainer(String containerName) throws IOException;
+  ContainerData readContainer(String containerName)
+      throws StorageContainerException;
 
   /**
    * Supports clean shutdown of container.
    *
-   * @throws IOException
+   * @throws StorageContainerException
    */
   void shutdown() throws IOException;
 

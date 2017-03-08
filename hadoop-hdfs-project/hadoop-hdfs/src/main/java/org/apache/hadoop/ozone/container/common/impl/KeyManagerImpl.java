@@ -25,19 +25,31 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.utils.LevelDBStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
+
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.IO_EXCEPTION;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.NO_SUCH_KEY;
+
 
 /**
  * Key Manager impl.
  */
 public class KeyManagerImpl implements KeyManager {
+  static final Logger LOG =
+      LoggerFactory.getLogger(KeyManagerImpl.class);
+
   private static final float LOAD_FACTOR = 0.75f;
   private final ContainerManager containerManager;
   private final ContainerCache containerCache;
@@ -48,8 +60,9 @@ public class KeyManagerImpl implements KeyManager {
    * @param containerManager - Container Manager.
    */
   public KeyManagerImpl(ContainerManager containerManager, Configuration conf) {
-    Preconditions.checkNotNull(containerManager);
-    Preconditions.checkNotNull(conf);
+    Preconditions.checkNotNull(containerManager, "Container manager cannot be" +
+        " null");
+    Preconditions.checkNotNull(conf, "Config cannot be null");
     int cacheSize = conf.getInt(OzoneConfigKeys.OZONE_KEY_CACHE,
         OzoneConfigKeys.OZONE_KEY_CACHE_DEFAULT);
     this.containerManager = containerManager;
@@ -60,17 +73,22 @@ public class KeyManagerImpl implements KeyManager {
    * {@inheritDoc}
    */
   @Override
-  public void putKey(Pipeline pipeline, KeyData data) throws IOException {
+  public void putKey(Pipeline pipeline, KeyData data)
+      throws StorageContainerException {
     containerManager.readLock();
     try {
       // We are not locking the key manager since LevelDb serializes all actions
       // against a single DB. We rely on DB level locking to avoid conflicts.
-      Preconditions.checkNotNull(pipeline);
-      Preconditions.checkNotNull(pipeline.getContainerName());
+      Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
+      Preconditions.checkNotNull(pipeline.getContainerName(),
+          "Container name cannot be null");
       ContainerData cData = containerManager.readContainer(
           pipeline.getContainerName());
       LevelDBStore db = KeyUtils.getDB(cData, containerCache);
-      Preconditions.checkNotNull(db);
+
+      // This is a post condition that acts as a hint to the user.
+      // Should never fail.
+      Preconditions.checkNotNull(db, "DB cannot be null here");
       db.put(data.getKeyName().getBytes(KeyUtils.ENCODING), data
           .getProtoBufMessage().toByteArray());
     } finally {
@@ -83,22 +101,30 @@ public class KeyManagerImpl implements KeyManager {
    * {@inheritDoc}
    */
   @Override
-  public KeyData getKey(KeyData data) throws IOException {
+  public KeyData getKey(KeyData data) throws StorageContainerException {
     containerManager.readLock();
     try {
-      Preconditions.checkNotNull(data);
-      Preconditions.checkNotNull(data.getContainerName());
+      Preconditions.checkNotNull(data, "Key data cannot be null");
+      Preconditions.checkNotNull(data.getContainerName(),
+          "Container name cannot be null");
       ContainerData cData = containerManager.readContainer(data
           .getContainerName());
       LevelDBStore db = KeyUtils.getDB(cData, containerCache);
-      Preconditions.checkNotNull(db);
+
+      // This is a post condition that acts as a hint to the user.
+      // Should never fail.
+      Preconditions.checkNotNull(db, "DB cannot be null here");
+
       byte[] kData = db.get(data.getKeyName().getBytes(KeyUtils.ENCODING));
-      if(kData == null) {
-        throw new IOException("Unable to find the key.");
+      if (kData == null) {
+        throw new StorageContainerException("Unable to find the key.",
+            NO_SUCH_KEY);
       }
       ContainerProtos.KeyData keyData =
           ContainerProtos.KeyData.parseFrom(kData);
       return KeyData.getFromProtoBuf(keyData);
+    } catch (IOException ex) {
+      throw new StorageContainerException(ex, IO_EXCEPTION);
     } finally {
       containerManager.readUnlock();
     }
@@ -108,24 +134,29 @@ public class KeyManagerImpl implements KeyManager {
    * {@inheritDoc}
    */
   @Override
-  public void deleteKey(Pipeline pipeline, String keyName) throws IOException {
+  public void deleteKey(Pipeline pipeline, String keyName)
+      throws StorageContainerException {
     containerManager.readLock();
     try {
-      Preconditions.checkNotNull(pipeline);
-      Preconditions.checkNotNull(pipeline.getContainerName());
+      Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
+      Preconditions.checkNotNull(pipeline.getContainerName(),
+          "Container name cannot be null");
       ContainerData cData = containerManager.readContainer(pipeline
           .getContainerName());
       LevelDBStore db = KeyUtils.getDB(cData, containerCache);
-      Preconditions.checkNotNull(db);
 
+      // This is a post condition that acts as a hint to the user.
+      // Should never fail.
+      Preconditions.checkNotNull(db, "DB cannot be null here");
       // Note : There is a race condition here, since get and delete
       // are not atomic. Leaving it here since the impact is refusing
       // to delete a key which might have just gotten inserted after
       // the get check.
 
       byte[] kData = db.get(keyName.getBytes(KeyUtils.ENCODING));
-      if(kData == null) {
-        throw new IOException("Unable to find the key.");
+      if (kData == null) {
+        throw new StorageContainerException("Unable to find the key.",
+            NO_SUCH_KEY);
       }
       db.delete(keyName.getBytes(KeyUtils.ENCODING));
     } finally {
@@ -139,7 +170,7 @@ public class KeyManagerImpl implements KeyManager {
   @Override
   public List<KeyData> listKey(Pipeline pipeline, String prefix, String
       prevKey, int count) {
-    // TODO :
+    // TODO : Implement listKey function.
     return null;
   }
 
@@ -148,7 +179,8 @@ public class KeyManagerImpl implements KeyManager {
    */
   @Override
   public void shutdown() {
-    Preconditions.checkState(this.containerManager.hasWriteLock());
+    Preconditions.checkState(this.containerManager.hasWriteLock(), "asserts " +
+        "that we are holding the container manager lock when shutting down.");
     KeyUtils.shutdownCache(containerCache);
   }
 }
