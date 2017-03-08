@@ -1107,6 +1107,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       QueueMetrics newMetrics = newQueue.getMetrics();
       String newQueueName = newQueue.getQueueName();
       String user = getUser();
+
       for (RMContainer liveContainer : liveContainers.values()) {
         Resource resource = liveContainer.getContainer().getResource();
         ((RMContainerImpl) liveContainer).setQueueName(newQueueName);
@@ -1122,7 +1123,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         }
       }
 
-      appSchedulingInfo.move(newQueue);
+      if (!isStopped) {
+        appSchedulingInfo.move(newQueue);
+      }
       this.queue = newQueue;
     } finally {
       writeLock.unlock();

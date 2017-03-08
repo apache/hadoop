@@ -2042,36 +2042,47 @@ public class CapacityScheduler extends
       String targetQueueName) throws YarnException {
     try {
       writeLock.lock();
-      FiCaSchedulerApp app = getApplicationAttempt(
-          ApplicationAttemptId.newInstance(appId, 0));
-      String sourceQueueName = app.getQueue().getQueueName();
-      LeafQueue source = this.queueManager.getAndCheckLeafQueue(
-          sourceQueueName);
+      SchedulerApplication<FiCaSchedulerApp> application =
+          applications.get(appId);
+      if (application == null) {
+        throw new YarnException("App to be moved " + appId + " not found.");
+      }
+      String sourceQueueName = application.getQueue().getQueueName();
+      LeafQueue source =
+          this.queueManager.getAndCheckLeafQueue(sourceQueueName);
       String destQueueName = handleMoveToPlanQueue(targetQueueName);
       LeafQueue dest = this.queueManager.getAndCheckLeafQueue(destQueueName);
 
-      String user = app.getUser();
+      String user = application.getUser();
       try {
         dest.submitApplication(appId, user, destQueueName);
       } catch (AccessControlException e) {
         throw new YarnException(e);
       }
-      // Move all live containers
-      for (RMContainer rmContainer : app.getLiveContainers()) {
-        source.detachContainer(getClusterResource(), app, rmContainer);
-        // attach the Container to another queue
-        dest.attachContainer(getClusterResource(), app, rmContainer);
+
+      FiCaSchedulerApp app = application.getCurrentAppAttempt();
+      if (app != null) {
+        // Move all live containers even when stopped.
+        // For transferStateFromPreviousAttempt required
+        for (RMContainer rmContainer : app.getLiveContainers()) {
+          source.detachContainer(getClusterResource(), app, rmContainer);
+          // attach the Container to another queue
+          dest.attachContainer(getClusterResource(), app, rmContainer);
+        }
+        if (!app.isStopped()) {
+          source.finishApplicationAttempt(app, sourceQueueName);
+          // Submit to a new queue
+          dest.submitApplicationAttempt(app, user);
+        }
+        // Finish app & update metrics
+        app.move(dest);
       }
+      source.appFinished();
       // Detach the application..
-      source.finishApplicationAttempt(app, sourceQueueName);
-      source.getParent().finishApplication(appId, app.getUser());
-      // Finish app & update metrics
-      app.move(dest);
-      // Submit to a new queue
-      dest.submitApplicationAttempt(app, user);
-      applications.get(appId).setQueue(dest);
-      LOG.info("App: " + app.getApplicationId() + " successfully moved from "
-          + sourceQueueName + " to: " + destQueueName);
+      source.getParent().finishApplication(appId, user);
+      application.setQueue(dest);
+      LOG.info("App: " + appId + " successfully moved from " + sourceQueueName
+          + " to: " + destQueueName);
       return targetQueueName;
     } finally {
       writeLock.unlock();
@@ -2083,15 +2094,23 @@ public class CapacityScheduler extends
       throws YarnException {
     try {
       writeLock.lock();
-      FiCaSchedulerApp app = getApplicationAttempt(
-          ApplicationAttemptId.newInstance(appId, 0));
-      String sourceQueueName = app.getQueue().getQueueName();
+      SchedulerApplication<FiCaSchedulerApp> application =
+          applications.get(appId);
+      if (application == null) {
+        throw new YarnException("App to be moved " + appId + " not found.");
+      }
+      String sourceQueueName = application.getQueue().getQueueName();
       this.queueManager.getAndCheckLeafQueue(sourceQueueName);
       String destQueueName = handleMoveToPlanQueue(newQueue);
       LeafQueue dest = this.queueManager.getAndCheckLeafQueue(destQueueName);
       // Validation check - ACLs, submission limits for user & queue
-      String user = app.getUser();
-      checkQueuePartition(app, dest);
+      String user = application.getUser();
+      // Check active partition only when attempt is available
+      FiCaSchedulerApp appAttempt =
+          getApplicationAttempt(ApplicationAttemptId.newInstance(appId, 0));
+      if (null != appAttempt) {
+        checkQueuePartition(appAttempt, dest);
+      }
       try {
         dest.validateSubmitApplication(appId, user, destQueueName);
       } catch (AccessControlException e) {
