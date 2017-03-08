@@ -92,7 +92,7 @@ public class TestEndPoint {
         scmServerImpl, serverAddress, 10);
     testDir = PathUtils.getTestDir(TestEndPoint.class);
     defaultReportState = StorageContainerDatanodeProtocolProtos.ReportState.
-        newBuilder().setState(noContainerReports).build();
+        newBuilder().setState(noContainerReports).setCount(0).build();
   }
 
   @Test
