@@ -990,10 +990,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     return false;
   }
 
-  public void requestShutdown() {
-    context.setDecommissioned(true);
-    dispatcher.getEventHandler().handle(
-        new NodeManagerEvent(NodeManagerEventType.SHUTDOWN));
+  @Override
+  public void reportException(Exception ex) {
+    healthChecker.reportException(ex);
+    sendOutofBandHeartBeat();
   }
 
   private List<LogAggregationReport> getLogAggregationReportsForApps(

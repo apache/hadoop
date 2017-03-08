@@ -1515,7 +1515,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     NodeStatusUpdater updater = mock(NodeStatusUpdater.class);
     distContext.setNodeStatusUpdater(updater);
     launchConfigError.call();
-    verify(updater, atLeastOnce()).requestShutdown();
+    verify(updater, atLeastOnce()).reportException(any());
 
     // ... any other error should continue.
     ContainerExecutor returnOtherError = mock(ContainerExecutor.class);
@@ -1527,7 +1527,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     NodeStatusUpdater updaterNoCall = mock(NodeStatusUpdater.class);
     distContext.setNodeStatusUpdater(updaterNoCall);
     launchOtherError.call();
-    verify(updaterNoCall, never()).requestShutdown();
+    verify(updaterNoCall, never()).reportException(any());
 
   }
 }

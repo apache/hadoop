@@ -300,7 +300,8 @@ public class ContainerLaunch implements Callable<Integer> {
       dispatcher.getEventHandler().handle(new ContainerExitEvent(
           containerID, ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
           e.getMessage()));
-      context.getNodeStatusUpdater().requestShutdown();
+      // Mark the node as unhealthy
+      context.getNodeStatusUpdater().reportException(e);
       return ret;
     } catch (Throwable e) {
       LOG.warn("Failed to launch container.", e);

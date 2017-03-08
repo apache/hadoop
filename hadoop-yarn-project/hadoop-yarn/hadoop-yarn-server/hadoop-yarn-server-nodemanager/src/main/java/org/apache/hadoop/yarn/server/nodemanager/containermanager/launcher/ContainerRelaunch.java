@@ -121,7 +121,8 @@ public class ContainerRelaunch extends ContainerLaunch {
       dispatcher.getEventHandler().handle(new ContainerExitEvent(
           containerId, ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
           e.getMessage()));
-      getContext().getNodeStatusUpdater().requestShutdown();
+      // Mark the node as unhealthy
+      getContext().getNodeStatusUpdater().reportException(e);
       return ret;
     } catch (Throwable e) {
       LOG.warn("Failed to relaunch container.", e);

@@ -55,7 +55,8 @@ public interface NodeStatusUpdater extends Service {
   public void clearFinishedContainersFromCache();
 
   /**
-   * Request a node manager shutdown.
+   * Report an unrecoverable exception.
+   * @param ex exception that makes the node unhealthy
    */
-  void requestShutdown();
+  void reportException(Exception ex);
 }

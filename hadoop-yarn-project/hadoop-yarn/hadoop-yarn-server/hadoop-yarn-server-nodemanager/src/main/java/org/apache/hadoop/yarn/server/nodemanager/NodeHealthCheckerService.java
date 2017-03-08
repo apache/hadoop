@@ -31,6 +31,8 @@ public class NodeHealthCheckerService extends CompositeService {
 
   private NodeHealthScriptRunner nodeHealthScriptRunner;
   private LocalDirsHandlerService dirsHandler;
+  private Exception nodeHealthException;
+  long nodeHealthExceptionReportTime;
 
   static final String SEPARATOR = ";";
 
@@ -39,6 +41,8 @@ public class NodeHealthCheckerService extends CompositeService {
     super(NodeHealthCheckerService.class.getName());
     nodeHealthScriptRunner = scriptRunner;
     dirsHandler = dirHandlerService;
+    nodeHealthException = null;
+    nodeHealthExceptionReportTime = 0;
   }
 
   @Override
@@ -54,22 +58,35 @@ public class NodeHealthCheckerService extends CompositeService {
    * @return the reporting string of health of the node
    */
   String getHealthReport() {
+    String healthReport = "";
     String scriptReport = (nodeHealthScriptRunner == null) ? ""
         : nodeHealthScriptRunner.getHealthReport();
-    if (scriptReport.equals("")) {
-      return dirsHandler.getDisksHealthReport(false);
-    } else {
-      return scriptReport.concat(SEPARATOR + dirsHandler.getDisksHealthReport(false));
+    String discReport = dirsHandler.getDisksHealthReport(false);
+    String exceptionReport = nodeHealthException != null ?
+        nodeHealthException.getMessage() : "";
+
+    if (!scriptReport.equals("")) {
+      healthReport = scriptReport;
     }
+    if (!discReport.equals("")) {
+      healthReport = healthReport.equals("") ? discReport :
+          healthReport.concat(SEPARATOR + discReport);
+    }
+    if (!exceptionReport.equals("")) {
+      healthReport = healthReport.equals("") ? exceptionReport :
+          healthReport.concat(SEPARATOR + exceptionReport);
+    }
+    return healthReport;
   }
 
   /**
    * @return <em>true</em> if the node is healthy
    */
   boolean isHealthy() {
-    boolean scriptHealthStatus = (nodeHealthScriptRunner == null) ? true
-        : nodeHealthScriptRunner.isHealthy();
-    return scriptHealthStatus && dirsHandler.areDisksHealthy();
+    boolean scriptHealthStatus = nodeHealthScriptRunner == null ||
+        nodeHealthScriptRunner.isHealthy();
+    return nodeHealthException == null &&
+        scriptHealthStatus && dirsHandler.areDisksHealthy();
   }
 
   /**
@@ -80,6 +97,7 @@ public class NodeHealthCheckerService extends CompositeService {
     long lastReportTime = (nodeHealthScriptRunner == null)
         ? diskCheckTime
         : Math.max(nodeHealthScriptRunner.getLastReportedTime(), diskCheckTime);
+    lastReportTime = Math.max(lastReportTime, nodeHealthExceptionReportTime);
     return lastReportTime;
   }
 
@@ -95,5 +113,14 @@ public class NodeHealthCheckerService extends CompositeService {
    */
   NodeHealthScriptRunner getNodeHealthScriptRunner() {
     return nodeHealthScriptRunner;
+  }
+
+  /**
+   * Report an exception to mark the node as unhealthy.
+   * @param ex the exception that makes the node unhealthy
+   */
+  void reportException(Exception ex) {
+    nodeHealthException = ex;
+    nodeHealthExceptionReportTime = System.currentTimeMillis();
   }
 }
