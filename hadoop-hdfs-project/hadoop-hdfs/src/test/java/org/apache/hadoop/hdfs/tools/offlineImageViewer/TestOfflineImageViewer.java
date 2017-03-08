@@ -76,11 +76,13 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.IOUtils;
@@ -91,9 +93,8 @@ import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -112,7 +113,6 @@ public class TestOfflineImageViewer {
   // namespace as written to dfs, to be compared with viewer's output
   final static HashMap<String, FileStatus> writtenFiles = Maps.newHashMap();
   static int dirCount = 0;
-
   private static File tempDir;
 
   // Create a populated namespace for later testing. Save its contents to a
@@ -358,6 +358,96 @@ public class TestOfflineImageViewer {
     assertEquals(0, status);
   }
 
+  /**
+   *  SAX handler to verify EC Files and their policies.
+   */
+  class ECXMLHandler extends DefaultHandler {
+
+    private boolean isInode = false;
+    private boolean isAttrRepl = false;
+    private boolean isAttrName = false;
+    private boolean isXAttrs = false;
+    private boolean isAttrECPolicy = false;
+    private boolean isAttrBlockType = false;
+    private String currentInodeName;
+    private String currentECPolicy;
+    private String currentBlockType;
+    private String currentRepl;
+
+    @Override
+    public void startElement(String uri, String localName, String qName,
+        Attributes attributes) throws SAXException {
+      super.startElement(uri, localName, qName, attributes);
+      if (qName.equalsIgnoreCase(PBImageXmlWriter.INODE_SECTION_INODE)) {
+        isInode = true;
+      } else if (isInode && !isXAttrs && qName.equalsIgnoreCase(
+          PBImageXmlWriter.SECTION_NAME)) {
+        isAttrName = true;
+      } else if (isInode && qName.equalsIgnoreCase(
+          PBImageXmlWriter.SECTION_REPLICATION)) {
+        isAttrRepl = true;
+      } else if (isInode &&
+          qName.equalsIgnoreCase(PBImageXmlWriter.INODE_SECTION_EC_POLICY_ID)) {
+        isAttrECPolicy = true;
+      } else if (isInode && qName.equalsIgnoreCase(
+          PBImageXmlWriter.INODE_SECTION_BLOCK_TYPE)) {
+        isAttrBlockType = true;
+      } else if (isInode && qName.equalsIgnoreCase(
+          PBImageXmlWriter.INODE_SECTION_XATTRS)) {
+        isXAttrs = true;
+      }
+    }
+
+    @Override
+    public void endElement(String uri, String localName, String qName)
+        throws SAXException {
+      super.endElement(uri, localName, qName);
+      if (qName.equalsIgnoreCase(PBImageXmlWriter.INODE_SECTION_INODE)) {
+        if (currentInodeName != null && currentInodeName.length() > 0) {
+          if (currentBlockType != null && currentBlockType.equalsIgnoreCase(
+              BlockType.STRIPED.name())) {
+            Assert.assertEquals("INode '"
+                    + currentInodeName + "' has unexpected EC Policy!",
+                Byte.parseByte(currentECPolicy),
+                ErasureCodingPolicyManager.getPolicyByPolicyID(
+                    HdfsConstants.XOR_2_1_POLICY_ID).getId());
+            Assert.assertEquals("INode '"
+                    + currentInodeName + "' has unexpected replication!",
+                currentRepl,
+                Short.toString(INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS));
+          }
+        }
+        isInode = false;
+        currentInodeName = "";
+        currentECPolicy = "";
+        currentRepl = "";
+      } else if (qName.equalsIgnoreCase(
+          PBImageXmlWriter.INODE_SECTION_XATTRS)) {
+        isXAttrs = false;
+      }
+    }
+
+    @Override
+    public void characters(char[] ch, int start, int length)
+        throws SAXException {
+      super.characters(ch, start, length);
+      String value = new String(ch, start, length);
+      if (isAttrName) {
+        currentInodeName = value;
+        isAttrName = false;
+      } else if (isAttrRepl) {
+        currentRepl = value;
+        isAttrRepl = false;
+      } else if (isAttrECPolicy) {
+        currentECPolicy = value;
+        isAttrECPolicy = false;
+      } else if (isAttrBlockType) {
+        currentBlockType = value;
+        isAttrBlockType = false;
+      }
+    }
+  }
+
   @Test
   public void testPBImageXmlWriter() throws IOException, SAXException,
       ParserConfigurationException {
@@ -368,7 +458,8 @@ public class TestOfflineImageViewer {
     SAXParserFactory spf = SAXParserFactory.newInstance();
     SAXParser parser = spf.newSAXParser();
     final String xml = output.toString();
-    parser.parse(new InputSource(new StringReader(xml)), new DefaultHandler());
+    ECXMLHandler ecxmlHandler = new ECXMLHandler();
+    parser.parse(new InputSource(new StringReader(xml)), ecxmlHandler);
   }
 
   @Test

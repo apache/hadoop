@@ -647,6 +647,10 @@ class OfflineImageReconstructor {
         break;
       case "STRIPED":
         bld.setBlockType(HdfsProtos.BlockTypeProto.STRIPED);
+        ival = node.removeChildInt(INODE_SECTION_EC_POLICY_ID);
+        if (ival != null) {
+          bld.setErasureCodingPolicyID(ival);
+        }
         break;
       default:
         throw new IOException("INode XML found with unknown <blocktype> " +

@@ -223,6 +223,7 @@ public class TestFSImage {
     // blocks to/from legacy fsimage
     assertEquals(3, fileByLoaded.getBlocks().length);
     assertEquals(preferredBlockSize, fileByLoaded.getPreferredBlockSize());
+    assertEquals(file.getFileReplication(), fileByLoaded.getFileReplication());
 
     if (isUC) {
       assertEquals(client,
