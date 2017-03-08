@@ -233,7 +233,7 @@ public class TestTimelineReaderWebServices {
       assertEquals(3, entity.getConfigs().size());
       assertEquals(3, entity.getMetrics().size());
       assertTrue("UID should be present",
-          entity.getInfo().containsKey(TimelineReaderManager.UID_KEY));
+          entity.getInfo().containsKey(TimelineReaderUtils.UID_KEY));
       // Includes UID.
       assertEquals(3, entity.getInfo().size());
       // No events will be returned as events are not part of fields.
@@ -259,7 +259,7 @@ public class TestTimelineReaderWebServices {
       assertEquals(3, entity.getConfigs().size());
       assertEquals(3, entity.getMetrics().size());
       assertTrue("UID should be present",
-          entity.getInfo().containsKey(TimelineReaderManager.UID_KEY));
+          entity.getInfo().containsKey(TimelineReaderUtils.UID_KEY));
       // Includes UID.
       assertEquals(3, entity.getInfo().size());
       assertEquals(2, entity.getEvents().size());

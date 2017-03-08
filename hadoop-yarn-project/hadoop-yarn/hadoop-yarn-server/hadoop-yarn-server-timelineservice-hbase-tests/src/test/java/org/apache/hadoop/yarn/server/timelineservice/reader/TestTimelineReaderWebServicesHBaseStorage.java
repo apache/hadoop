@@ -648,7 +648,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
       List<String> listFlowUIDs = new ArrayList<String>();
       for (FlowActivityEntity entity : flowEntities) {
         String flowUID =
-            (String)entity.getInfo().get(TimelineReaderManager.UID_KEY);
+            (String) entity.getInfo().get(TimelineReaderUtils.UID_KEY);
         listFlowUIDs.add(flowUID);
         assertEquals(TimelineUIDConverter.FLOW_UID.encodeUID(
             new TimelineReaderContext(entity.getCluster(), entity.getUser(),
@@ -672,7 +672,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
         assertNotNull(frEntities);
         for (FlowRunEntity entity : frEntities) {
           String flowRunUID =
-              (String)entity.getInfo().get(TimelineReaderManager.UID_KEY);
+              (String) entity.getInfo().get(TimelineReaderUtils.UID_KEY);
           listFlowRunUIDs.add(flowRunUID);
           assertEquals(TimelineUIDConverter.FLOWRUN_UID.encodeUID(
               new TimelineReaderContext("cluster1", entity.getUser(),
@@ -704,7 +704,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
         assertNotNull(appEntities);
         for (TimelineEntity entity : appEntities) {
           String appUID =
-              (String)entity.getInfo().get(TimelineReaderManager.UID_KEY);
+              (String) entity.getInfo().get(TimelineReaderUtils.UID_KEY);
           listAppUIDs.add(appUID);
           assertEquals(TimelineUIDConverter.APPLICATION_UID.encodeUID(
               new TimelineReaderContext(context.getClusterId(),
@@ -737,7 +737,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
         assertNotNull(entities);
         for (TimelineEntity entity : entities) {
           String entityUID =
-              (String)entity.getInfo().get(TimelineReaderManager.UID_KEY);
+              (String) entity.getInfo().get(TimelineReaderUtils.UID_KEY);
           listEntityUIDs.add(entityUID);
           assertEquals(TimelineUIDConverter.GENERIC_ENTITY_UID.encodeUID(
               new TimelineReaderContext(context.getClusterId(),
@@ -818,7 +818,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
         assertNotNull(entity.getInfo());
         assertEquals(2, entity.getInfo().size());
         String uid =
-            (String) entity.getInfo().get(TimelineReaderManager.UID_KEY);
+            (String) entity.getInfo().get(TimelineReaderUtils.UID_KEY);
         assertNotNull(uid);
         assertTrue(uid.equals(appUIDWithFlowInfo + "!type1!0!entity1")
             || uid.equals(appUIDWithFlowInfo + "!type1!0!entity2"));
@@ -846,7 +846,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
         assertNotNull(entity.getInfo());
         assertEquals(2, entity.getInfo().size());
         String uid =
-            (String) entity.getInfo().get(TimelineReaderManager.UID_KEY);
+            (String) entity.getInfo().get(TimelineReaderUtils.UID_KEY);
         assertNotNull(uid);
         assertTrue(uid.equals(appUIDWithoutFlowInfo + "!type1!0!entity1")
             || uid.equals(appUIDWithoutFlowInfo + "!type1!0!entity2"));

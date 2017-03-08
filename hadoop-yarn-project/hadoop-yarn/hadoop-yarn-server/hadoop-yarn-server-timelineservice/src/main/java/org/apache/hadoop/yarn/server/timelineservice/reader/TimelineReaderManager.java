@@ -32,8 +32,6 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * This class wraps over the timeline reader store implementation. It does some
  * non trivial manipulation of the timeline data before or after getting
@@ -43,8 +41,6 @@ import com.google.common.annotations.VisibleForTesting;
 @Unstable
 public class TimelineReaderManager extends AbstractService {
 
-  @VisibleForTesting
-  public static final String UID_KEY = "UID";
   private TimelineReader reader;
 
   public TimelineReaderManager(TimelineReader timelineReader) {
@@ -94,18 +90,18 @@ public class TimelineReaderManager extends AbstractService {
         FlowActivityEntity activityEntity = (FlowActivityEntity)entity;
         context.setUserId(activityEntity.getUser());
         context.setFlowName(activityEntity.getFlowName());
-        entity.setUID(UID_KEY,
+        entity.setUID(TimelineReaderUtils.UID_KEY,
             TimelineUIDConverter.FLOW_UID.encodeUID(context));
         return;
       case YARN_FLOW_RUN:
         FlowRunEntity runEntity = (FlowRunEntity)entity;
         context.setFlowRunId(runEntity.getRunId());
-        entity.setUID(UID_KEY,
+        entity.setUID(TimelineReaderUtils.UID_KEY,
             TimelineUIDConverter.FLOWRUN_UID.encodeUID(context));
         return;
       case YARN_APPLICATION:
         context.setAppId(entity.getId());
-        entity.setUID(UID_KEY,
+        entity.setUID(TimelineReaderUtils.UID_KEY,
             TimelineUIDConverter.APPLICATION_UID.encodeUID(context));
         return;
       default:
@@ -115,7 +111,7 @@ public class TimelineReaderManager extends AbstractService {
     context.setEntityType(entity.getType());
     context.setEntityIdPrefix(entity.getIdPrefix());
     context.setEntityId(entity.getId());
-    entity.setUID(UID_KEY,
+    entity.setUID(TimelineReaderUtils.UID_KEY,
         TimelineUIDConverter.GENERIC_ENTITY_UID.encodeUID(context));
   }
 
