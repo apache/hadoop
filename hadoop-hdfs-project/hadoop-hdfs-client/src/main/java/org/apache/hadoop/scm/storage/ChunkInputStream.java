@@ -29,7 +29,7 @@ import com.google.protobuf.ByteString;
 
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ReadChunkResponseProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ChunkInfo;
-import org.apache.hadoop.scm.XceiverClient;
+import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.XceiverClientManager;
 
 /**
@@ -47,7 +47,7 @@ public class ChunkInputStream extends InputStream {
   private final String key;
   private final String traceID;
   private XceiverClientManager xceiverClientManager;
-  private XceiverClient xceiverClient;
+  private XceiverClientSpi xceiverClient;
   private List<ChunkInfo> chunks;
   private int chunkOffset;
   private List<ByteBuffer> buffers;
@@ -63,7 +63,7 @@ public class ChunkInputStream extends InputStream {
    * @param traceID container protocol call traceID
    */
   public ChunkInputStream(String key, XceiverClientManager xceiverClientManager,
-      XceiverClient xceiverClient, List<ChunkInfo> chunks, String traceID) {
+      XceiverClientSpi xceiverClient, List<ChunkInfo> chunks, String traceID) {
     this.key = key;
     this.traceID = traceID;
     this.xceiverClientManager = xceiverClientManager;

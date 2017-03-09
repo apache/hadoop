@@ -33,14 +33,13 @@ import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 /**
  * A Client for the storageContainer protocol.
  */
-public class XceiverClient implements Closeable {
+public class XceiverClient implements XceiverClientSpi {
   static final Logger LOG = LoggerFactory.getLogger(XceiverClient.class);
   private final Pipeline pipeline;
   private final Configuration config;
@@ -61,9 +60,7 @@ public class XceiverClient implements Closeable {
     this.config = config;
   }
 
-  /**
-   * Connects to the leader in the pipeline.
-   */
+  @Override
   public void connect() throws Exception {
     if (channelFuture != null
         && channelFuture.channel() != null
@@ -90,9 +87,6 @@ public class XceiverClient implements Closeable {
     channelFuture = b.connect(leader.getHostName(), port).sync();
   }
 
-  /**
-   * Close the client.
-   */
   @Override
   public void close() {
     if(group != null) {
@@ -104,22 +98,12 @@ public class XceiverClient implements Closeable {
     }
   }
 
-  /**
-   * Returns the pipeline of machines that host the container used by this
-   * client.
-   *
-   * @return pipeline of machines that host the container
-   */
+  @Override
   public Pipeline getPipeline() {
     return pipeline;
   }
 
-  /**
-   * Sends a given command to server and gets the reply back.
-   * @param request Request
-   * @return Response to the command
-   * @throws IOException
-   */
+  @Override
   public ContainerProtos.ContainerCommandResponseProto sendCommand(
       ContainerProtos.ContainerCommandRequestProto request)
       throws IOException {

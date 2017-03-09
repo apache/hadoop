@@ -31,6 +31,7 @@ import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +52,7 @@ public class OzoneContainer {
   private final Configuration ozoneConfig;
   private final ContainerDispatcher dispatcher;
   private final ContainerManager manager;
-  private final XceiverServer server;
+  private final XceiverServerSpi server;
   private final ChunkManager chunkManager;
   private final KeyManager keyManager;
 

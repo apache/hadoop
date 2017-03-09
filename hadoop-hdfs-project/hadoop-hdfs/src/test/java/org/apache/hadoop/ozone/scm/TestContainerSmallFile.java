@@ -23,8 +23,8 @@ import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.scm.XceiverClient;
 import org.apache.hadoop.scm.XceiverClientManager;
+import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.scm.storage.ContainerProtocolCalls;
@@ -75,7 +75,7 @@ public class TestContainerSmallFile {
     String containerName = "container0";
     Pipeline pipeline =
         storageContainerLocationClient.allocateContainer(containerName);
-    XceiverClient client = xceiverClientManager.acquireClient(pipeline);
+    XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     ContainerProtocolCalls.createContainer(client, traceID);
 
     ContainerProtocolCalls.writeSmallFile(client, containerName,
@@ -93,7 +93,7 @@ public class TestContainerSmallFile {
     String containerName = "container1";
     Pipeline pipeline =
         storageContainerLocationClient.allocateContainer(containerName);
-    XceiverClient client = xceiverClientManager.acquireClient(pipeline);
+    XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     ContainerProtocolCalls.createContainer(client, traceID);
 
     thrown.expect(StorageContainerException.class);
@@ -112,7 +112,7 @@ public class TestContainerSmallFile {
     String containerName = "container2";
     Pipeline pipeline =
         storageContainerLocationClient.allocateContainer(containerName);
-    XceiverClient client = xceiverClientManager.acquireClient(pipeline);
+    XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     ContainerProtocolCalls.createContainer(client, traceID);
     ContainerProtocolCalls.writeSmallFile(client, containerName,
         "key", "data123".getBytes(), traceID);

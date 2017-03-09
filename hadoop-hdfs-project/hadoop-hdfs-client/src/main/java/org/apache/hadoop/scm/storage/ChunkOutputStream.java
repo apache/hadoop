@@ -32,8 +32,8 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.KeyData;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.KeyValue;
 import org.apache.hadoop.scm.ScmConfigKeys;
-import org.apache.hadoop.scm.XceiverClient;
 import org.apache.hadoop.scm.XceiverClientManager;
+import org.apache.hadoop.scm.XceiverClientSpi;
 
 /**
  * An {@link OutputStream} used by the REST service in combination with the
@@ -58,7 +58,7 @@ public class ChunkOutputStream extends OutputStream {
   private final String traceID;
   private final KeyData.Builder containerKeyData;
   private XceiverClientManager xceiverClientManager;
-  private XceiverClient xceiverClient;
+  private XceiverClientSpi xceiverClient;
   private ByteBuffer buffer;
   private final String streamId;
   private int chunkIndex;
@@ -73,7 +73,7 @@ public class ChunkOutputStream extends OutputStream {
    * @param traceID container protocol call args
    */
   public ChunkOutputStream(String containerKey, String key,
-      XceiverClientManager xceiverClientManager, XceiverClient xceiverClient,
+      XceiverClientManager xceiverClientManager, XceiverClientSpi xceiverClient,
       String traceID) {
     this.containerKey = containerKey;
     this.key = key;
