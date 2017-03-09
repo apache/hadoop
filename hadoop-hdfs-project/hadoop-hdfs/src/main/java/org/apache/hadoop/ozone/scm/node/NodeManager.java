@@ -46,8 +46,8 @@ import java.util.List;
  * DECOMMISSIONED - Someone told us to remove this node from the tracking
  * list, by calling removeNode. We will throw away this nodes info soon.
  */
-public interface NodeManager extends StorageContainerNodeProtocol, Closeable,
-    Runnable {
+public interface NodeManager extends StorageContainerNodeProtocol,
+    NodeManagerMXBean, Closeable, Runnable {
   /**
    * Removes a data node from the management of this Node Manager.
    *
@@ -79,20 +79,6 @@ public interface NodeManager extends StorageContainerNodeProtocol, Closeable,
   List<DatanodeID> getAllNodes();
 
   /**
-   * Get the minimum number of nodes to get out of chill mode.
-   *
-   * @return int
-   */
-  int getMinimumChillModeNodes();
-
-  /**
-   * Reports if we have exited out of chill mode by discovering enough nodes.
-   *
-   * @return True if we are out of Node layer chill mode, false otherwise.
-   */
-  boolean isOutOfNodeChillMode();
-
-  /**
    * Chill mode is the period when node manager waits for a minimum
    * configured number of datanodes to report in. This is called chill mode
    * to indicate the period before node manager gets into action.
@@ -111,19 +97,6 @@ public interface NodeManager extends StorageContainerNodeProtocol, Closeable,
    * Clears the manual chill mode flag.
    */
   void clearChillModeFlag();
-
-  /**
-   * Returns a chill mode status string.
-   * @return String
-   */
-  String getChillModeStatus();
-
-  /**
-   * Returns the status of manual chill mode flag.
-   * @return true if forceEnterChillMode has been called,
-   * false if forceExitChillMode or status is not set. eg. clearChillModeFlag.
-   */
-  boolean isInManualChillMode();
 
   /**
    * Enum that represents the Node State. This is used in calls to getNodeList
