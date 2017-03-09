@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.shell.CommandFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
@@ -59,7 +60,12 @@ public abstract class S3GuardTool extends Configured implements Tool {
   private static final String NAME = "s3guard";
   private static final String COMMON_USAGE =
       "When possible and not overridden by more specific options, metadata\n" +
-      "repository information will be inferred from the S3A URL (if provided)";
+      "repository information will be inferred from the S3A URL (if provided)" +
+      "\n\n" +
+      "Generic options supported are:\n" +
+      "  -conf <config file> - specify an application configuration file\n" +
+      "  -D <property=value> - define a value for a given property\n";
+
   private static final String USAGE = NAME +
       " [command] [OPTIONS] [s3a://BUCKET]\n\n" +
       "Commands: \n" +
@@ -168,10 +174,10 @@ public abstract class S3GuardTool extends Configured implements Tool {
   /**
    * Parse metadata store from command line option or HDFS configuration.
    *
-   * @param create create the metadata store if it does not exist.
+   * @param forceCreate override the auto-creation setting to true.
    * @return a initialized metadata store.
    */
-  MetadataStore initMetadataStore(boolean create) throws IOException {
+  MetadataStore initMetadataStore(boolean forceCreate) throws IOException {
     if (ms != null) {
       return ms;
     }
@@ -193,7 +199,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
       case "dynamodb":
         ms = new DynamoDBMetadataStore();
         conf.set(S3GUARD_DDB_TABLE_NAME_KEY, uri.getAuthority());
-        conf.setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, create);
+        if (forceCreate) {
+          conf.setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, true);
+        }
         break;
       default:
         throw new IOException(
@@ -203,7 +211,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
       // CLI does not specify metadata store URI, it uses default metadata store
       // DynamoDB instead.
       ms = new DynamoDBMetadataStore();
-      conf.setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, create);
+      if (forceCreate) {
+        conf.setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, true);
+      }
     }
 
     if (s3a == null) {
@@ -813,12 +823,17 @@ public abstract class S3GuardTool extends Configured implements Tool {
    * @return exit code.
    * @throws Exception on I/O errors.
    */
-  public static int run(String[] args, Configuration conf) throws Exception {
-    if (args.length == 0) {
+  public static int run(String[] args, Configuration conf) throws
+      Exception {
+    /* ToolRunner.run does this too, but we must do it before looking at
+    subCommand or instantiating the cmd object below */
+    String[] otherArgs = new GenericOptionsParser(conf, args)
+        .getRemainingArgs();
+    if (otherArgs.length == 0) {
       printHelp();
       return INVALID_ARGUMENT;
     }
-    final String subCommand = args[0];
+    final String subCommand = otherArgs[0];
     switch (subCommand) {
     case Init.NAME:
       cmd = new Init(conf);
@@ -839,7 +854,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       printHelp();
       return INVALID_ARGUMENT;
     }
-    return ToolRunner.run(conf, cmd, args);
+    return ToolRunner.run(conf, cmd, otherArgs);
   }
 
   public static void main(String[] args) throws Exception {
