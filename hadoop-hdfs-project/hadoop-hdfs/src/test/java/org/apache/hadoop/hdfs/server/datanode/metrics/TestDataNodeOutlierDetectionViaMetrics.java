@@ -54,13 +54,14 @@ public class TestDataNodeOutlierDetectionViaMetrics {
   private static final int ROLLING_AVERAGE_WINDOWS = 10;
   private static final int SLOW_NODE_LATENCY_MS = 20_000;
   private static final int FAST_NODE_MAX_LATENCY_MS = 5;
+  private static final long MIN_OUTLIER_DETECTION_PEERS = 10;
 
   private Random random = new Random(System.currentTimeMillis());
 
   @Before
   public void setup() {
     GenericTestUtils.setLogLevel(DataNodePeerMetrics.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(SlowNodeDetector.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(OutlierDetector.LOG, Level.ALL);
   }
 
   /**
@@ -111,8 +112,7 @@ public class TestDataNodeOutlierDetectionViaMetrics {
    */
   public void injectFastNodesSamples(DataNodePeerMetrics peerMetrics) {
     for (int nodeIndex = 0;
-         nodeIndex < SlowNodeDetector.getMinOutlierDetectionPeers();
-         ++nodeIndex) {
+         nodeIndex < MIN_OUTLIER_DETECTION_PEERS; ++nodeIndex) {
       final String nodeName = "FastNode-" + nodeIndex;
       LOG.info("Generating stats for node {}", nodeName);
       for (int i = 0;

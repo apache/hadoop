@@ -1930,7 +1930,7 @@
 </property>
 
 <property>
-  <name>dfs.datanode.slow.peers.report.interval</name>
+  <name>dfs.datanode.outliers.report.interval</name>
   <value>30m</value>
   <description>
     This setting controls how frequently DataNodes will report their peer

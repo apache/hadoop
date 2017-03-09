@@ -39,7 +39,7 @@ import java.util.Set;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Unit tests for {@link SlowNodeDetector}.
+ * Unit tests for {@link OutlierDetector}.
  */
 public class TestSlowNodeDetector {
   public static final Logger LOG =
@@ -182,7 +182,7 @@ public class TestSlowNodeDetector {
           .put(ImmutableMap.of(
               "n1", LOW_THRESHOLD + 0.1,
               "n2", LOW_THRESHOLD + 0.1,
-              "n3", LOW_THRESHOLD * SlowNodeDetector.MEDIAN_MULTIPLIER - 0.1),
+              "n3", LOW_THRESHOLD * OutlierDetector.MEDIAN_MULTIPLIER - 0.1),
               ImmutableSet.<String>of())
 
           // A statistical outlier must be returned if it is outside a
@@ -191,7 +191,7 @@ public class TestSlowNodeDetector {
               "n1", LOW_THRESHOLD + 0.1,
               "n2", LOW_THRESHOLD + 0.1,
               "n3", (LOW_THRESHOLD + 0.1) *
-                  SlowNodeDetector.MEDIAN_MULTIPLIER + 0.1),
+                  OutlierDetector.MEDIAN_MULTIPLIER + 0.1),
               ImmutableSet.of("n3"))
 
           // Only the statistical outliers n3 and n11 should be returned.
@@ -232,13 +232,13 @@ public class TestSlowNodeDetector {
           .build();
 
 
-  private SlowNodeDetector slowNodeDetector;
+  private OutlierDetector slowNodeDetector;
 
   @Before
   public void setup() {
-    slowNodeDetector = new SlowNodeDetector((long) LOW_THRESHOLD);
-    SlowNodeDetector.setMinOutlierDetectionPeers(MIN_OUTLIER_DETECTION_PEERS);
-    GenericTestUtils.setLogLevel(SlowNodeDetector.LOG, Level.ALL);
+    slowNodeDetector = new OutlierDetector(MIN_OUTLIER_DETECTION_PEERS,
+        (long) LOW_THRESHOLD);
+    GenericTestUtils.setLogLevel(OutlierDetector.LOG, Level.ALL);
   }
 
   @Test
@@ -258,7 +258,7 @@ public class TestSlowNodeDetector {
   }
 
   /**
-   * Unit test for {@link SlowNodeDetector#computeMedian(List)}.
+   * Unit test for {@link OutlierDetector#computeMedian(List)}.
    */
   @Test
   public void testMediansFromTestMatrix() {
@@ -266,7 +266,7 @@ public class TestSlowNodeDetector {
         medianTestMatrix.entrySet()) {
       final List<Double> inputList = new ArrayList<>(entry.getKey());
       Collections.sort(inputList);
-      final Double median = SlowNodeDetector.computeMedian(inputList);
+      final Double median = OutlierDetector.computeMedian(inputList);
       final Double expectedMedian = entry.getValue().getLeft();
 
       // Ensure that the median is within 0.001% of expected.
@@ -282,7 +282,7 @@ public class TestSlowNodeDetector {
   }
 
   /**
-   * Unit test for {@link SlowNodeDetector#computeMad(List)}.
+   * Unit test for {@link OutlierDetector#computeMad(List)}.
    */
   @Test
   public void testMadsFromTestMatrix() {
@@ -290,7 +290,7 @@ public class TestSlowNodeDetector {
         medianTestMatrix.entrySet()) {
       final List<Double> inputList = new ArrayList<>(entry.getKey());
       Collections.sort(inputList);
-      final Double mad = SlowNodeDetector.computeMad(inputList);
+      final Double mad = OutlierDetector.computeMad(inputList);
       final Double expectedMad = entry.getValue().getRight();
 
       // Ensure that the MAD is within 0.001% of expected.
@@ -315,21 +315,21 @@ public class TestSlowNodeDetector {
   }
 
   /**
-   * Verify that {@link SlowNodeDetector#computeMedian(List)} throws when
+   * Verify that {@link OutlierDetector#computeMedian(List)} throws when
    * passed an empty list.
    */
   @Test(expected=IllegalArgumentException.class)
   public void testMedianOfEmptyList() {
-    SlowNodeDetector.computeMedian(Collections.<Double>emptyList());
+    OutlierDetector.computeMedian(Collections.<Double>emptyList());
   }
 
   /**
-   * Verify that {@link SlowNodeDetector#computeMad(List)} throws when
+   * Verify that {@link OutlierDetector#computeMad(List)} throws when
    * passed an empty list.
    */
   @Test(expected=IllegalArgumentException.class)
   public void testMadOfEmptyList() {
-    SlowNodeDetector.computeMedian(Collections.<Double>emptyList());
+    OutlierDetector.computeMedian(Collections.<Double>emptyList());
   }
   
   private static class Pair<L, R> {

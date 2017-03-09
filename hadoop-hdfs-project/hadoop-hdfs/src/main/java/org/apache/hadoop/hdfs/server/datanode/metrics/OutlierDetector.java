@@ -33,8 +33,8 @@ import java.util.Map;
 
 
 /**
- * A utility class to help detect nodes whose aggregate latency
- * is an outlier within a given set.
+ * A utility class to help detect resources (nodes/ disks) whose aggregate
+ * latency is an outlier within a given set.
  *
  * We use the median absolute deviation for outlier detection as
  * described in the following publication:
@@ -47,20 +47,20 @@ import java.util.Map;
  * more conservative:
  *
  *  1. Skip outlier detection if the sample size is too small.
- *  2. Never flag nodes whose aggregate latency is below a low threshold.
- *  3. Never flag nodes whose aggregate latency is less than a small
+ *  2. Never flag resources whose aggregate latency is below a low threshold.
+ *  3. Never flag resources whose aggregate latency is less than a small
  *     multiple of the median.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class SlowNodeDetector {
+public class OutlierDetector {
   public static final Logger LOG =
-      LoggerFactory.getLogger(SlowNodeDetector.class);
+      LoggerFactory.getLogger(OutlierDetector.class);
 
   /**
-   * Minimum number of peers to run outlier detection.
+   * Minimum number of resources to run outlier detection.
    */
-  private static long minOutlierDetectionPeers = 10;
+  private final long minNumResources;
 
   /**
    * The multiplier is from Leys, C. et al.
@@ -68,7 +68,7 @@ public class SlowNodeDetector {
   private static final double MAD_MULTIPLIER = (double) 1.4826;
 
   /**
-   * Threshold in milliseconds below which a DataNode is definitely not slow.
+   * Threshold in milliseconds below which a node/ disk is definitely not slow.
    */
   private final long lowThresholdMs;
 
@@ -87,13 +87,14 @@ public class SlowNodeDetector {
   @VisibleForTesting
   static final int MEDIAN_MULTIPLIER = 3;
 
-  public SlowNodeDetector(long lowThresholdMs) {
+  public OutlierDetector(long minNumResources, long lowThresholdMs) {
+    this.minNumResources = minNumResources;
     this.lowThresholdMs = lowThresholdMs;
   }
 
   /**
-   * Return a set of DataNodes whose latency is much higher than
-   * their peers. The input is a map of (node -> aggregate latency)
+   * Return a set of nodes/ disks whose latency is much higher than
+   * their counterparts. The input is a map of (resource -> aggregate latency)
    * entries.
    *
    * The aggregate may be an arithmetic mean or a percentile e.g.
@@ -106,10 +107,10 @@ public class SlowNodeDetector {
    * @return
    */
   public Map<String, Double> getOutliers(Map<String, Double> stats) {
-    if (stats.size() < minOutlierDetectionPeers) {
+    if (stats.size() < minNumResources) {
       LOG.debug("Skipping statistical outlier detection as we don't have " +
-              "latency data for enough peers. Have {}, need at least {}",
-          stats.size(), minOutlierDetectionPeers);
+              "latency data for enough resources. Have {}, need at least {}",
+          stats.size(), minNumResources);
       return ImmutableMap.of();
     }
     // Compute the median absolute deviation of the aggregates.
@@ -122,20 +123,20 @@ public class SlowNodeDetector {
     upperLimitLatency = Math.max(
         upperLimitLatency, median + (DEVIATION_MULTIPLIER * mad));
 
-    final Map<String, Double> slowNodes = new HashMap<>();
+    final Map<String, Double> slowResources = new HashMap<>();
 
     LOG.trace("getOutliers: List={}, MedianLatency={}, " +
         "MedianAbsoluteDeviation={}, upperLimitLatency={}",
         sorted, median, mad, upperLimitLatency);
 
-    // Find nodes whose latency exceeds the threshold.
+    // Find resources whose latency exceeds the threshold.
     for (Map.Entry<String, Double> entry : stats.entrySet()) {
       if (entry.getValue() > upperLimitLatency) {
-        slowNodes.put(entry.getKey(), entry.getValue());
+        slowResources.put(entry.getKey(), entry.getValue());
       }
     }
 
-    return slowNodes;
+    return slowResources;
   }
 
   /**
@@ -177,18 +178,5 @@ public class SlowNodeDetector {
       median /= 2;
     }
     return median;
-  }
-
-  /**
-   * This method *must not* be used outside of unit tests.
-   */
-  @VisibleForTesting
-  static void setMinOutlierDetectionPeers(long minOutlierDetectionPeers) {
-    SlowNodeDetector.minOutlierDetectionPeers = minOutlierDetectionPeers;
-  }
-
-  @VisibleForTesting
-  static long getMinOutlierDetectionPeers() {
-    return minOutlierDetectionPeers;
   }
 }
