@@ -18,20 +18,6 @@
 
 package org.apache.hadoop.ozone.web.storage;
 
-import static org.apache.hadoop.scm.storage.ContainerProtocolCalls.*;
-import static org.apache.hadoop.ozone.web.storage.OzoneContainerTranslation.*;
-
-import java.io.IOException;
-import java.io.OutputStream;
-import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.TimeZone;
-
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.GetKeyResponseProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.KeyData;
@@ -40,7 +26,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.scm.XceiverClient;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.protocol.LocatedContainer;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
@@ -50,16 +35,20 @@ import org.apache.hadoop.ozone.web.handlers.KeyArgs;
 import org.apache.hadoop.ozone.web.handlers.ListArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
-import org.apache.hadoop.ozone.web.response.BucketInfo;
-import org.apache.hadoop.ozone.web.response.KeyInfo;
-import org.apache.hadoop.ozone.web.response.ListBuckets;
-import org.apache.hadoop.ozone.web.response.ListKeys;
-import org.apache.hadoop.ozone.web.response.ListVolumes;
-import org.apache.hadoop.ozone.web.response.VolumeInfo;
-import org.apache.hadoop.ozone.web.response.VolumeOwner;
+import org.apache.hadoop.ozone.web.response.*;
+import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.storage.ChunkInputStream;
 import org.apache.hadoop.scm.storage.ChunkOutputStream;
 import org.apache.hadoop.util.StringUtils;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+import static org.apache.hadoop.ozone.web.storage.OzoneContainerTranslation.*;
+import static org.apache.hadoop.scm.storage.ContainerProtocolCalls.getKey;
+import static org.apache.hadoop.scm.storage.ContainerProtocolCalls.putKey;
 
 /**
  * A {@link StorageHandler} implementation that distributes object storage
@@ -87,7 +76,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public void createVolume(VolumeArgs args) throws IOException, OzoneException {
     String containerKey = buildContainerKey(args.getVolumeName());
-    XceiverClient xceiverClient = acquireXceiverClient(containerKey);
+    XceiverClientSpi xceiverClient = acquireXceiverClient(containerKey);
     try {
       VolumeInfo volume = new VolumeInfo();
       volume.setVolumeName(args.getVolumeName());
@@ -137,7 +126,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   public VolumeInfo getVolumeInfo(VolumeArgs args)
       throws IOException, OzoneException {
     String containerKey = buildContainerKey(args.getVolumeName());
-    XceiverClient xceiverClient = acquireXceiverClient(containerKey);
+    XceiverClientSpi xceiverClient = acquireXceiverClient(containerKey);
     try {
       KeyData containerKeyData = containerKeyDataForRead(
           xceiverClient.getPipeline().getContainerName(), containerKey);
@@ -155,7 +144,7 @@ public final class DistributedStorageHandler implements StorageHandler {
       throws IOException, OzoneException {
     String containerKey = buildContainerKey(args.getVolumeName(),
         args.getBucketName());
-    XceiverClient xceiverClient = acquireXceiverClient(containerKey);
+    XceiverClientSpi xceiverClient = acquireXceiverClient(containerKey);
     try {
       BucketInfo bucket = new BucketInfo();
       bucket.setVolumeName(args.getVolumeName());
@@ -215,7 +204,7 @@ public final class DistributedStorageHandler implements StorageHandler {
       throws IOException, OzoneException {
     String containerKey = buildContainerKey(args.getVolumeName(),
         args.getBucketName());
-    XceiverClient xceiverClient = acquireXceiverClient(containerKey);
+    XceiverClientSpi xceiverClient = acquireXceiverClient(containerKey);
     try {
       KeyData containerKeyData = containerKeyDataForRead(
           xceiverClient.getPipeline().getContainerName(), containerKey);
@@ -236,7 +225,7 @@ public final class DistributedStorageHandler implements StorageHandler {
     KeyInfo key = new KeyInfo();
     key.setKeyName(args.getKeyName());
     key.setCreatedOn(dateToString(new Date()));
-    XceiverClient xceiverClient = acquireXceiverClient(containerKey);
+    XceiverClientSpi xceiverClient = acquireXceiverClient(containerKey);
     return new ChunkOutputStream(containerKey, key.getKeyName(),
         xceiverClientManager, xceiverClient, args.getRequestID());
   }
@@ -252,7 +241,7 @@ public final class DistributedStorageHandler implements StorageHandler {
       OzoneException {
     String containerKey = buildContainerKey(args.getVolumeName(),
         args.getBucketName(), args.getKeyName());
-    XceiverClient xceiverClient = acquireXceiverClient(containerKey);
+    XceiverClientSpi xceiverClient = acquireXceiverClient(containerKey);
     boolean success = false;
     try {
       KeyData containerKeyData = containerKeyDataForRead(
@@ -286,7 +275,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   }
 
   /**
-   * Acquires an {@link XceiverClient} connected to a {@link Pipeline} of nodes
+   * Acquires an {@link XceiverClientSpi} connected to a {@link Pipeline} of nodes
    * capable of serving container protocol operations.  The container is
    * selected based on the specified container key.
    *
@@ -294,7 +283,7 @@ public final class DistributedStorageHandler implements StorageHandler {
    * @return XceiverClient connected to a container
    * @throws IOException if an XceiverClient cannot be acquired
    */
-  private XceiverClient acquireXceiverClient(String containerKey)
+  private XceiverClientSpi acquireXceiverClient(String containerKey)
       throws IOException {
     Set<LocatedContainer> locatedContainers =
         storageContainerLocation.getStorageContainerLocations(

@@ -96,7 +96,7 @@ public class XceiverClientManager {
    * @return XceiverClient connected to a container
    * @throws IOException if an XceiverClient cannot be acquired
    */
-  public XceiverClient acquireClient(Pipeline pipeline) throws IOException {
+  public XceiverClientSpi acquireClient(Pipeline pipeline) throws IOException {
     Preconditions.checkNotNull(pipeline);
     Preconditions.checkArgument(pipeline.getMachines() != null);
     Preconditions.checkArgument(!pipeline.getMachines().isEmpty());
@@ -109,7 +109,7 @@ public class XceiverClientManager {
       return info.getXceiverClient();
     } else {
       // connection not found, create new, add reference and return
-      XceiverClient xceiverClient = new XceiverClient(pipeline, conf);
+      XceiverClientSpi xceiverClient = new XceiverClient(pipeline, conf);
       try {
         xceiverClient.connect();
       } catch (Exception e) {
@@ -129,7 +129,7 @@ public class XceiverClientManager {
    *
    * @param xceiverClient client to release
    */
-  public void releaseClient(XceiverClient xceiverClient) {
+  public void releaseClient(XceiverClientSpi xceiverClient) {
     Preconditions.checkNotNull(xceiverClient);
     String containerName = xceiverClient.getPipeline().getContainerName();
     XceiverClientWithAccessInfo info;
@@ -147,10 +147,10 @@ public class XceiverClientManager {
    * - a reference count, +1 when acquire, -1 when release
    */
   private static class XceiverClientWithAccessInfo {
-    final private XceiverClient xceiverClient;
+    final private XceiverClientSpi xceiverClient;
     final private AtomicInteger referenceCount;
 
-    XceiverClientWithAccessInfo(XceiverClient xceiverClient) {
+    XceiverClientWithAccessInfo(XceiverClientSpi xceiverClient) {
       this.xceiverClient = xceiverClient;
       this.referenceCount = new AtomicInteger(0);
     }
@@ -167,7 +167,7 @@ public class XceiverClientManager {
       return this.referenceCount.get() != 0;
     }
 
-    XceiverClient getXceiverClient() {
+    XceiverClientSpi getXceiverClient() {
       return xceiverClient;
     }
   }

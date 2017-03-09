@@ -36,7 +36,7 @@ import java.io.IOException;
  * Creates a netty server endpoint that acts as the communication layer for
  * Ozone containers.
  */
-public final class XceiverServer {
+public final class XceiverServer implements XceiverServerSpi {
   private final int port;
   private final ContainerDispatcher storageContainer;
 
@@ -57,11 +57,7 @@ public final class XceiverServer {
     this.storageContainer = dispatcher;
   }
 
-  /**
-   * Starts running the server.
-   *
-   * @throws IOException
-   */
+  @Override
   public void start() throws IOException {
     bossGroup = new NioEventLoopGroup();
     workerGroup = new NioEventLoopGroup();
@@ -75,11 +71,7 @@ public final class XceiverServer {
         .channel();
   }
 
-  /**
-   * Stops a running server.
-   *
-   * @throws Exception
-   */
+  @Override
   public void stop() {
     if (bossGroup != null) {
       bossGroup.shutdownGracefully();

@@ -45,10 +45,10 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Type;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .WriteChunkRequestProto;
-import org.apache.hadoop.scm.XceiverClient;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 
 import java.io.IOException;
+import org.apache.hadoop.scm.XceiverClientSpi;
 
 /**
  * Implementation of all container protocol calls performed by Container
@@ -71,7 +71,7 @@ public final class ContainerProtocolCalls {
    * @return container protocol get key response
    * @throws IOException if there is an I/O error while performing the call
    */
-  public static GetKeyResponseProto getKey(XceiverClient xceiverClient,
+  public static GetKeyResponseProto getKey(XceiverClientSpi xceiverClient,
       KeyData containerKeyData, String traceID) throws IOException {
     GetKeyRequestProto.Builder readKeyRequest = GetKeyRequestProto
         .newBuilder()
@@ -96,7 +96,7 @@ public final class ContainerProtocolCalls {
    * @param traceID container protocol call args
    * @throws IOException if there is an I/O error while performing the call
    */
-  public static void putKey(XceiverClient xceiverClient,
+  public static void putKey(XceiverClientSpi xceiverClient,
       KeyData containerKeyData, String traceID) throws IOException {
     PutKeyRequestProto.Builder createKeyRequest = PutKeyRequestProto
         .newBuilder()
@@ -122,7 +122,7 @@ public final class ContainerProtocolCalls {
    * @return container protocol read chunk response
    * @throws IOException if there is an I/O error while performing the call
    */
-  public static ReadChunkResponseProto readChunk(XceiverClient xceiverClient,
+  public static ReadChunkResponseProto readChunk(XceiverClientSpi xceiverClient,
       ChunkInfo chunk, String key, String traceID)
       throws IOException {
     ReadChunkRequestProto.Builder readChunkRequest = ReadChunkRequestProto
@@ -151,7 +151,7 @@ public final class ContainerProtocolCalls {
    * @param traceID container protocol call args
    * @throws IOException if there is an I/O error while performing the call
    */
-  public static void writeChunk(XceiverClient xceiverClient, ChunkInfo chunk,
+  public static void writeChunk(XceiverClientSpi xceiverClient, ChunkInfo chunk,
       String key, ByteString data, String traceID)
       throws IOException {
     WriteChunkRequestProto.Builder writeChunkRequest = WriteChunkRequestProto
@@ -183,7 +183,7 @@ public final class ContainerProtocolCalls {
    * @param traceID - Trace ID for logging purpose.
    * @throws IOException
    */
-  public static void writeSmallFile(XceiverClient client, String containerName,
+  public static void writeSmallFile(XceiverClientSpi client, String containerName,
       String key, byte[] data, String traceID) throws IOException {
 
     KeyData containerKeyData = KeyData
@@ -224,7 +224,7 @@ public final class ContainerProtocolCalls {
    * @param traceID - traceID
    * @throws IOException
    */
-  public static void createContainer(XceiverClient client, String traceID)
+  public static void createContainer(XceiverClientSpi client, String traceID)
       throws IOException {
     ContainerProtos.CreateContainerRequestProto.Builder createRequest =
         ContainerProtos.CreateContainerRequestProto
@@ -255,7 +255,7 @@ public final class ContainerProtocolCalls {
    * @return GetSmallFileResponseProto
    * @throws IOException
    */
-  public static GetSmallFileResponseProto readSmallFile(XceiverClient client,
+  public static GetSmallFileResponseProto readSmallFile(XceiverClientSpi client,
       String containerName, String key, String traceID) throws IOException {
     KeyData containerKeyData = KeyData
         .newBuilder()

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.scm.client;
 
+import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.scm.XceiverClient;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.storage.ContainerProtocolCalls;
@@ -75,7 +75,7 @@ public class ContainerOperationClient implements ScmClient {
   @Override
   public Pipeline createContainer(String containerId)
       throws IOException {
-    XceiverClient client = null;
+    XceiverClientSpi client = null;
     try {
       Pipeline pipeline =
           storageContainerLocationClient.allocateContainer(containerId);
