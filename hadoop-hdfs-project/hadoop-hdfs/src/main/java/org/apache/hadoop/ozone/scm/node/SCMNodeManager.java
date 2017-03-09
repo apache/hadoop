@@ -25,6 +25,7 @@ import org.apache.commons.collections.map.HashedMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
@@ -46,6 +47,7 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.management.ObjectName;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -123,7 +125,8 @@ public class SCMNodeManager
   private final VersionInfo version;
   private Optional<Boolean> inManualChillMode;
   private final CommandQueue commandQueue;
-
+  // Node manager MXBean
+  private ObjectName nmInfoBean;
   /**
    * Constructs SCM machine Manager.
    */
@@ -162,6 +165,20 @@ public class SCMNodeManager
     Preconditions.checkState(heartbeatCheckerIntervalMs > 0);
     executorService.schedule(this, heartbeatCheckerIntervalMs,
         TimeUnit.MILLISECONDS);
+
+    registerMXBean();
+  }
+
+  private void registerMXBean() {
+    this.nmInfoBean = MBeans.register("SCMNodeManager",
+        "SCMNodeManagerInfo", this);
+  }
+
+  private void unregisterMXBean() {
+    if(this.nmInfoBean != null) {
+      MBeans.unregister(this.nmInfoBean);
+      this.nmInfoBean = null;
+    }
   }
 
   /**
@@ -595,6 +612,7 @@ public class SCMNodeManager
   @Override
   public void close() throws IOException {
     executorService.shutdown();
+    unregisterMXBean();
     try {
       if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
         executorService.shutdownNow();
@@ -728,5 +746,14 @@ public class SCMNodeManager
   public List<SCMNodeStat> getNodeStats(){
     return nodeStats.entrySet().stream().map(
         entry -> nodeStats.get(entry.getKey())).collect(Collectors.toList());
+  }
+
+  @Override
+  public Map<String, Integer> getNodeCount() {
+    Map<String, Integer> nodeCountMap = new HashMap<String, Integer>();
+    for(NodeManager.NODESTATE state : NodeManager.NODESTATE.values()) {
+      nodeCountMap.put(state.toString(), getNodeCount(state));
+    }
+    return nodeCountMap;
   }
 }

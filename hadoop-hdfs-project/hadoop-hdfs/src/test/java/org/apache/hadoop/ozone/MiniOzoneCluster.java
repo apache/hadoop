@@ -106,6 +106,10 @@ public class MiniOzoneCluster extends MiniDFSCluster implements Closeable {
     scm.join();
   }
 
+  public StorageContainerManager getStorageContainerManager() {
+    return this.scm;
+  }
+
   /**
    * Creates an {@link OzoneClient} connected to this cluster's REST service.
    * Callers take ownership of the client and must close it when done.

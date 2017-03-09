@@ -30,8 +30,10 @@ import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.node.SCMNodeStat;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Test Helper for testing container Mapping.
@@ -262,5 +264,14 @@ public class MockNodeManager implements NodeManager {
   public List<SCMCommand> sendHeartbeat(DatanodeID datanodeID,
       SCMNodeReport nodeReport) {
     return null;
+  }
+
+  @Override
+  public Map<String, Integer> getNodeCount() {
+    Map<String, Integer> nodeCountMap = new HashMap<String, Integer>();
+    for(NodeManager.NODESTATE state : NodeManager.NODESTATE.values()) {
+      nodeCountMap.put(state.toString(), getNodeCount(state));
+    }
+    return nodeCountMap;
   }
 }
