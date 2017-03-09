@@ -1931,7 +1931,7 @@
 
 <property>
   <name>dfs.datanode.outliers.report.interval</name>
-  <value>30m</value>
+  <value>1800000</value>
   <description>
     This setting controls how frequently DataNodes will report their peer
     latencies to the NameNode via heartbeats.  This setting supports

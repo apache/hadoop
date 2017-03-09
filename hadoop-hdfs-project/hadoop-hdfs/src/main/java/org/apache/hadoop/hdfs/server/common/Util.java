@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.common;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -24,10 +29,6 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
 public final class Util {
@@ -101,5 +102,22 @@ public final class Util {
       }
     }
     return uris;
+  }
+
+  public static boolean isDiskStatsEnabled(double fileIOSamplingFraction) {
+    final boolean isEnabled;
+    if (fileIOSamplingFraction < 0.000001) {
+      LOG.info(DFSConfigKeys
+          .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY + " set to "
+          + fileIOSamplingFraction + ". Disabling file IO profiling");
+      isEnabled = false;
+    } else {
+      LOG.info(DFSConfigKeys
+          .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY + " set to "
+          + fileIOSamplingFraction + ". Enabling file IO profiling");
+      isEnabled = true;
+    }
+
+    return isEnabled;
   }
 }

@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.security.SaslPropertiesResolver;
 
 import java.util.concurrent.TimeUnit;
@@ -171,9 +172,9 @@ public class DNConf {
     this.peerStatsEnabled = getConf().getBoolean(
         DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY,
         DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT);
-    this.diskStatsEnabled = getConf().getBoolean(
-        DFSConfigKeys.DFS_DATANODE_ENABLE_FILEIO_PROFILING_KEY,
-        DFSConfigKeys.DFS_DATANODE_ENABLE_FILEIO_PROFILING_DEFAULT);
+    this.diskStatsEnabled = Util.isDiskStatsEnabled(getConf().getDouble(
+        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY,
+        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEFAULT));
     this.outliersReportIntervalMs = getConf().getTimeDuration(
         DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY,
         DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_DEFAULT,

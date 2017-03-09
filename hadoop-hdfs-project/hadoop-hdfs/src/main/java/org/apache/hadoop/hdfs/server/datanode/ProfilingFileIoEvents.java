@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.util.Time;
@@ -43,13 +44,11 @@ class ProfilingFileIoEvents {
 
   public ProfilingFileIoEvents(@Nullable Configuration conf) {
     if (conf != null) {
-      isEnabled = conf.getBoolean(DFSConfigKeys
-          .DFS_DATANODE_ENABLE_FILEIO_PROFILING_KEY, DFSConfigKeys
-          .DFS_DATANODE_ENABLE_FILEIO_PROFILING_DEFAULT);
-      double fileIOSamplingFraction = conf.getDouble(DFSConfigKeys
-              .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY,
+      double fileIOSamplingFraction = conf.getDouble(
+          DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY,
           DFSConfigKeys
-              .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEAFULT);
+              .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEFAULT);
+      isEnabled = Util.isDiskStatsEnabled(fileIOSamplingFraction);
       if (fileIOSamplingFraction > 1) {
         LOG.warn(DFSConfigKeys
             .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY +
