@@ -153,7 +153,7 @@ public class FairScheduler extends
 
   // How often fair shares are re-calculated (ms)
   protected long updateInterval;
-  private final int UPDATE_DEBUG_FREQUENCY = 5;
+  private final int UPDATE_DEBUG_FREQUENCY = 25;
   private int updatesToSkipForDebug = UPDATE_DEBUG_FREQUENCY;
 
   @VisibleForTesting
