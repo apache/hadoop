@@ -72,6 +72,7 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODER_KEY,
           NativeRSRawErasureCoderFactory.class.getCanonicalName());
     }
+    DFSTestUtil.enableAllECPolicies(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
         dataBlocks + parityBlocks).build();
     cluster.waitActive();
@@ -139,7 +140,7 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
     final Path ec32FilePath = new Path(childDir, "ec_3_2_file");
     final Path ec63FilePath2 = new Path(childDir, "ec_6_3_file_2");
     final ErasureCodingPolicy ec32Policy = ErasureCodingPolicyManager
-        .getPolicyByPolicyID(HdfsConstants.RS_3_2_POLICY_ID);
+        .getPolicyByID(HdfsConstants.RS_3_2_POLICY_ID);
 
     fs.mkdirs(parentDir);
     fs.setErasureCodingPolicy(parentDir, ecPolicy.getName());
@@ -237,7 +238,7 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
     final Path ec63FilePath = new Path(rootPath, "ec_6_3_file");
     final Path ec32FilePath = new Path(rootPath, "ec_3_2_file");
     final ErasureCodingPolicy ec32Policy = ErasureCodingPolicyManager
-        .getPolicyByPolicyID(HdfsConstants.RS_3_2_POLICY_ID);
+        .getPolicyByID(HdfsConstants.RS_3_2_POLICY_ID);
 
     fs.unsetErasureCodingPolicy(rootPath);
     fs.setErasureCodingPolicy(rootPath, ecPolicy.getName());

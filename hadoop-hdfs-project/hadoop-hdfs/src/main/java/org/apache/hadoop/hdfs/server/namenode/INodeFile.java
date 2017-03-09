@@ -192,7 +192,7 @@ public class INodeFile extends INodeWithAdditionalFields
         Preconditions.checkArgument(replication == null &&
             erasureCodingPolicyID != null);
         Preconditions.checkArgument(ErasureCodingPolicyManager
-            .getPolicyByPolicyID(erasureCodingPolicyID) != null,
+            .getPolicyByID(erasureCodingPolicyID) != null,
             "Could not find EC policy with ID 0x" + StringUtils
                 .byteToHexString(erasureCodingPolicyID));
         layoutRedundancy |= BLOCK_TYPE_MASK_STRIPED;
@@ -514,7 +514,7 @@ public class INodeFile extends INodeWithAdditionalFields
     }
 
     ErasureCodingPolicy ecPolicy =
-        ErasureCodingPolicyManager.getPolicyByPolicyID(
+        ErasureCodingPolicyManager.getPolicyByID(
             getErasureCodingPolicyID());
     Preconditions.checkNotNull(ecPolicy, "Could not find EC policy with ID 0x"
         + StringUtils.byteToHexString(getErasureCodingPolicyID()));

@@ -124,6 +124,10 @@ public class TestOfflineImageViewer {
     tempDir = Files.createTempDir();
     MiniDFSCluster cluster = null;
     try {
+      final ErasureCodingPolicy ecPolicy =
+          ErasureCodingPolicyManager.getPolicyByID(
+              HdfsConstants.XOR_2_1_POLICY_ID);
+
       Configuration conf = new Configuration();
       conf.setLong(
           DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY, 10000);
@@ -134,6 +138,8 @@ public class TestOfflineImageViewer {
       conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL,
           "RULE:[2:$1@$0](JobTracker@.*FOO.COM)s/@.*//" + "DEFAULT");
+      conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+          ecPolicy.getName());
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
       cluster.waitActive();
       DistributedFileSystem hdfs = cluster.getFileSystem();
@@ -233,9 +239,6 @@ public class TestOfflineImageViewer {
       Path ecDir = new Path("/ec");
       hdfs.mkdirs(ecDir);
       dirCount++;
-      ErasureCodingPolicy ecPolicy =
-          ErasureCodingPolicyManager.getPolicyByPolicyID(
-              HdfsConstants.XOR_2_1_POLICY_ID);
       hdfs.getClient().setErasureCodingPolicy(ecDir.toString(),
           ecPolicy.getName());
       writtenFiles.put(ecDir.toString(), hdfs.getFileStatus(ecDir));
@@ -409,7 +412,7 @@ public class TestOfflineImageViewer {
             Assert.assertEquals("INode '"
                     + currentInodeName + "' has unexpected EC Policy!",
                 Byte.parseByte(currentECPolicy),
-                ErasureCodingPolicyManager.getPolicyByPolicyID(
+                ErasureCodingPolicyManager.getPolicyByID(
                     HdfsConstants.XOR_2_1_POLICY_ID).getId());
             Assert.assertEquals("INode '"
                     + currentInodeName + "' has unexpected replication!",

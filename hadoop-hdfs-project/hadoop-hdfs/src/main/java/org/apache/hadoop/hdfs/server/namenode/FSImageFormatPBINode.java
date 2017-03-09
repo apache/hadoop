@@ -335,7 +335,7 @@ public final class FSImageFormatPBINode {
       assert ((!isStriped) || (isStriped && !f.hasReplication()));
       Short replication = (!isStriped ? (short) f.getReplication() : null);
       ErasureCodingPolicy ecPolicy = isStriped ?
-          ErasureCodingPolicyManager.getPolicyByPolicyID(
+          ErasureCodingPolicyManager.getPolicyByID(
               (byte) f.getErasureCodingPolicyID()) : null;
       Byte ecPolicyID = (isStriped ? ecPolicy.getId() : null);
 
