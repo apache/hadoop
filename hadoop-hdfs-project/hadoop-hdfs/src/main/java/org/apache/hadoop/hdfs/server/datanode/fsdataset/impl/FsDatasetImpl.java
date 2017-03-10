@@ -523,9 +523,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * @param clearFailure set true to clear failure information.
    */
   @Override
-  public void removeVolumes(Set<File> volumesToRemove, boolean clearFailure) {
+  public void removeVolumes(Set<File> storageLocsToRemove,
+      boolean clearFailure) {
+    Collection<File> storageLocationsToRemove =
+        new ArrayList<>(storageLocsToRemove);
     // Make sure that all volumes are absolute path.
-    for (File vol : volumesToRemove) {
+    for (File vol : storageLocationsToRemove) {
       Preconditions.checkArgument(vol.isAbsolute(),
           String.format("%s is not absolute path.", vol.getPath()));
     }
@@ -536,7 +539,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       for (int idx = 0; idx < dataStorage.getNumStorageDirs(); idx++) {
         Storage.StorageDirectory sd = dataStorage.getStorageDir(idx);
         final File absRoot = sd.getRoot().getAbsoluteFile();
-        if (volumesToRemove.contains(absRoot)) {
+        if (storageLocationsToRemove.contains(absRoot)) {
           LOG.info("Removing " + absRoot + " from FsDataset.");
 
           // Disable the volume from the service.
@@ -563,6 +566,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           }
 
           storageToRemove.add(sd.getStorageUuid());
+          storageLocationsToRemove.remove(absRoot);
+        }
+      }
+
+      // A reconfigure can remove the storage location which is already
+      // removed when the failure was detected by DataNode#checkDiskErrorAsync.
+      // Now, lets remove this from the failed volume list.
+      if (clearFailure) {
+        for (File storageLocToRemove : storageLocationsToRemove) {
+          volumes.removeVolumeFailureInfo(storageLocToRemove);
         }
       }
       setupAsyncLazyPersistThreads();
