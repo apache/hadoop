@@ -242,6 +242,13 @@ public class Resources {
     out.setVirtualCores((int)(lhs.getVirtualCores() * by));
     return out;
   }
+
+  public static Resource multiplyAndRoundUp(Resource lhs, double by) {
+    Resource out = clone(lhs);
+    out.setMemorySize((long)Math.ceil(lhs.getMemorySize() * by));
+    out.setVirtualCores((int)Math.ceil(lhs.getVirtualCores() * by));
+    return out;
+  }
   
   public static Resource normalize(
       ResourceCalculator calculator, Resource lhs, Resource min,

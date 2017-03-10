@@ -660,15 +660,13 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // case, we use maxShare, since it is smaller than available resource.
     assertEquals("QueueFSZeroWithMax's fair share should be zero",
         0, queueFSZeroWithMax.getFairShare().getMemorySize());
+    Resource expectedAMResource = Resources.multiplyAndRoundUp(
+        queueFSZeroWithMax.getMaxShare(), queueFSZeroWithMax.getMaxAMShare());
     assertEquals("QueueFSZeroWithMax's maximum AM resource should be "
-        + "maxShare * maxAMShare",
-        (long)(queueFSZeroWithMax.getMaxShare().getMemorySize() *
-            queueFSZeroWithMax.getMaxAMShare()),
+        + "maxShare * maxAMShare", expectedAMResource.getMemorySize(),
         queueFSZeroWithMax.getMetrics().getMaxAMShareMB());
     assertEquals("QueueFSZeroWithMax's maximum AM resource should be "
-        + "maxShare * maxAMShare",
-        (long)(queueFSZeroWithMax.getMaxShare().getVirtualCores() *
-            queueFSZeroWithMax.getMaxAMShare()),
+        + "maxShare * maxAMShare", expectedAMResource.getVirtualCores(),
         queueFSZeroWithMax.getMetrics().getMaxAMShareVCores());
     assertEquals("QueueFSZeroWithMax's AM resource usage should be the same to "
         + "AM resource request",
@@ -690,17 +688,19 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // the min(maxShare, available resource) to compute maxAMShare, in this
     // case, we use available resource since it is smaller than the
     // default maxShare.
+    expectedAMResource = Resources.multiplyAndRoundUp(
+        Resources.createResource(memCapacity - amResource.getMemorySize(),
+            cpuCapacity - amResource.getVirtualCores()),
+        queueFSZeroWithAVL.getMaxAMShare());
     assertEquals("QueueFSZeroWithAVL's fair share should be zero",
         0, queueFSZeroWithAVL.getFairShare().getMemorySize());
     assertEquals("QueueFSZeroWithAVL's maximum AM resource should be "
         + " available resource * maxAMShare",
-        (long) ((memCapacity - amResource.getMemorySize()) *
-        queueFSZeroWithAVL.getMaxAMShare()),
+        expectedAMResource.getMemorySize(),
         queueFSZeroWithAVL.getMetrics().getMaxAMShareMB());
     assertEquals("QueueFSZeroWithAVL's maximum AM resource should be "
         + " available resource * maxAMShare",
-        (long) ((cpuCapacity - amResource.getVirtualCores()) *
-        queueFSZeroWithAVL.getMaxAMShare()),
+        expectedAMResource.getVirtualCores(),
         queueFSZeroWithAVL.getMetrics().getMaxAMShareVCores());
     assertEquals("QueueFSZeroWithMax's AM resource usage should be the same to "
         + "AM resource request",
@@ -722,13 +722,13 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // fair share to compute maxAMShare
     assertNotEquals("QueueFSNonZero's fair share shouldn't be zero",
         0, queueFSNonZero.getFairShare().getMemorySize());
+    expectedAMResource = Resources.multiplyAndRoundUp(
+        queueFSNonZero.getFairShare(), queueFSNonZero.getMaxAMShare());
     assertEquals("QueueFSNonZero's maximum AM resource should be "
-        + " fair share * maxAMShare",
-        (long)(memCapacity * queueFSNonZero.getMaxAMShare()),
+        + " fair share * maxAMShare", expectedAMResource.getMemorySize(),
         queueFSNonZero.getMetrics().getMaxAMShareMB());
     assertEquals("QueueFSNonZero's maximum AM resource should be "
-        + " fair share * maxAMShare",
-        (long)(cpuCapacity * queueFSNonZero.getMaxAMShare()),
+        + " fair share * maxAMShare", expectedAMResource.getVirtualCores(),
         queueFSNonZero.getMetrics().getMaxAMShareVCores());
     assertEquals("QueueFSNonZero's AM resource usage should be the same to "
         + "AM resource request",
