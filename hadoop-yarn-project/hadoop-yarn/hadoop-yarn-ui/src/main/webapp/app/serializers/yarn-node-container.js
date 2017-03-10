@@ -30,7 +30,7 @@ export default DS.JSONAPISerializer.extend({
         containerId: payload.id,
         state: payload.state,
         user: payload.user,
-        diagnostics: payload.diagnostics,
+        diagnostics: payload.diagnostics || 'N/A',
         exitCode: payload.exitCode,
         totalMemoryNeeded: payload.totalMemoryNeededMB,
         totalVCoresNeeded: payload.totalVCoresNeeded,
