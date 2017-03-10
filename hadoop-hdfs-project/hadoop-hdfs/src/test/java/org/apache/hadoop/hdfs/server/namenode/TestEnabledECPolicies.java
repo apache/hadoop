@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
@@ -73,11 +74,11 @@ public class TestEnabledECPolicies {
     // Test first with an invalid policy
     expectInvalidPolicy("not-a-policy");
     // Test with an invalid policy and a valid policy
-    expectInvalidPolicy("not-a-policy," + ErasureCodingPolicyManager
-        .getSystemDefaultPolicy().getName());
+    expectInvalidPolicy("not-a-policy," +
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     // Test with a valid and an invalid policy
-    expectInvalidPolicy(ErasureCodingPolicyManager
-        .getSystemDefaultPolicy().getName() + ", not-a-policy");
+    expectInvalidPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName() + ", not-a-policy");
     // Some more invalid values
     expectInvalidPolicy("not-a-policy, ");
     expectInvalidPolicy("     ,not-a-policy, ");
@@ -85,8 +86,7 @@ public class TestEnabledECPolicies {
 
   @Test
   public void testValid() throws Exception {
-    String ecPolicyName = ErasureCodingPolicyManager.getSystemDefaultPolicy()
-        .getName();
+    String ecPolicyName = StripedFileTestUtil.getDefaultECPolicy().getName();
     expectValidPolicy(ecPolicyName, 1);
     expectValidPolicy(ecPolicyName + ", ", 1);
     expectValidPolicy(",", 0);

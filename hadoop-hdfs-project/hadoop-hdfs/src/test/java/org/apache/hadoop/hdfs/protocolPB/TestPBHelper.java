@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -77,7 +78,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
@@ -228,7 +228,7 @@ public class TestPBHelper {
         datanodeUuids, storageIDs, storageTypes);
     if (isStriped) {
       blkLocs = new StripedBlockWithLocations(blkLocs, indices, dataBlkNum,
-          ErasureCodingPolicyManager.getSystemDefaultPolicy().getCellSize());
+          StripedFileTestUtil.getDefaultECPolicy().getCellSize());
     }
     return blkLocs;
   }
@@ -720,7 +720,7 @@ public class TestPBHelper {
     byte[] liveBlkIndices0 = new byte[2];
     BlockECReconstructionInfo blkECRecoveryInfo0 = new BlockECReconstructionInfo(
         new ExtendedBlock("bp1", 1234), dnInfos0, targetDnInfos0,
-        liveBlkIndices0, ErasureCodingPolicyManager.getSystemDefaultPolicy());
+        liveBlkIndices0, StripedFileTestUtil.getDefaultECPolicy());
     DatanodeInfo[] dnInfos1 = new DatanodeInfo[] {
         DFSTestUtil.getLocalDatanodeInfo(), DFSTestUtil.getLocalDatanodeInfo() };
     DatanodeStorageInfo targetDnInfos_2 = BlockManagerTestUtil
@@ -734,7 +734,7 @@ public class TestPBHelper {
     byte[] liveBlkIndices1 = new byte[2];
     BlockECReconstructionInfo blkECRecoveryInfo1 = new BlockECReconstructionInfo(
         new ExtendedBlock("bp2", 3256), dnInfos1, targetDnInfos1,
-        liveBlkIndices1, ErasureCodingPolicyManager.getSystemDefaultPolicy());
+        liveBlkIndices1, StripedFileTestUtil.getDefaultECPolicy());
     List<BlockECReconstructionInfo> blkRecoveryInfosList = new ArrayList<BlockECReconstructionInfo>();
     blkRecoveryInfosList.add(blkECRecoveryInfo0);
     blkRecoveryInfosList.add(blkECRecoveryInfo1);
@@ -823,8 +823,8 @@ public class TestPBHelper {
     ErasureCodingPolicy ecPolicy2 = blkECRecoveryInfo2.getErasureCodingPolicy();
     // Compare ECPolicies same as default ECPolicy as we used system default
     // ECPolicy used in this test
-    compareECPolicies(ErasureCodingPolicyManager.getSystemDefaultPolicy(), ecPolicy1);
-    compareECPolicies(ErasureCodingPolicyManager.getSystemDefaultPolicy(), ecPolicy2);
+    compareECPolicies(StripedFileTestUtil.getDefaultECPolicy(), ecPolicy1);
+    compareECPolicies(StripedFileTestUtil.getDefaultECPolicy(), ecPolicy2);
   }
 
   private void compareECPolicies(ErasureCodingPolicy ecPolicy1, ErasureCodingPolicy ecPolicy2) {

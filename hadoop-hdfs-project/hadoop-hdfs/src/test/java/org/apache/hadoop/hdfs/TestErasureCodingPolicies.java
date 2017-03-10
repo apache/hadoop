@@ -56,7 +56,7 @@ public class TestErasureCodingPolicies {
   private DistributedFileSystem fs;
   private static final int BLOCK_SIZE = 1024;
   private static final ErasureCodingPolicy EC_POLICY =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private FSNamesystem namesystem;
 
   @Rule
@@ -95,7 +95,7 @@ public class TestErasureCodingPolicies {
 
     // set ec policy on dir
     fs.setErasureCodingPolicy(dir,
-        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     // create a file which should be using ec
     final Path ecSubDir = new Path(dir, "ecSubDir");
     final Path ecFile = new Path(ecSubDir, "ecFile");
@@ -270,7 +270,7 @@ public class TestErasureCodingPolicies {
     final Path testDir = new Path("/ec");
     fs.mkdir(testDir, FsPermission.getDirDefault());
     fs.setErasureCodingPolicy(testDir,
-        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     final Path fooFile = new Path(testDir, "foo");
     // create ec file with replication=0
     fs.create(fooFile, FsPermission.getFileDefault(), true,
@@ -292,7 +292,7 @@ public class TestErasureCodingPolicies {
     assertNull(fs.getClient().getFileInfo(src).getErasureCodingPolicy());
     // dir EC policy after setting
     ErasureCodingPolicy sysDefaultECPolicy =
-        ErasureCodingPolicyManager.getSystemDefaultPolicy();
+        StripedFileTestUtil.getDefaultECPolicy();
     fs.getClient().setErasureCodingPolicy(src, sysDefaultECPolicy.getName());
     verifyErasureCodingInfo(src, sysDefaultECPolicy);
     fs.create(new Path(ecDir, "child1")).close();

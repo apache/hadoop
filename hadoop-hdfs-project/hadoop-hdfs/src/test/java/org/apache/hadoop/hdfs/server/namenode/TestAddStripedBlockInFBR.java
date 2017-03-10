@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
@@ -45,7 +46,7 @@ import java.io.IOException;
 
 public class TestAddStripedBlockInFBR {
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private final int cellSize = ecPolicy.getCellSize();
   private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
   private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
@@ -88,7 +89,7 @@ public class TestAddStripedBlockInFBR {
     dfs.mkdirs(ecDir);
     dfs.mkdirs(repDir);
     dfs.getClient().setErasureCodingPolicy(ecDir.toString(),
-        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
+        StripedFileTestUtil.getDefaultECPolicy().getName());
 
     // create several non-EC files and one EC file
     final Path[] repFiles = new Path[groupSize];

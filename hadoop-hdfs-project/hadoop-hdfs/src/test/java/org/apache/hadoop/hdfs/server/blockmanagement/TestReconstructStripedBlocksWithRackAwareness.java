@@ -23,13 +23,13 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.net.NetworkTopology;
@@ -59,7 +59,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
   }
 
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private final int cellSize = ecPolicy.getCellSize();
   private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
   private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
@@ -151,7 +151,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     cluster.waitActive();
     fs = cluster.getFileSystem();
     fs.setErasureCodingPolicy(new Path("/"),
-        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     FSNamesystem fsn = cluster.getNamesystem();
     BlockManager bm = fsn.getBlockManager();
 
@@ -222,7 +222,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     cluster.waitActive();
     fs = cluster.getFileSystem();
     fs.setErasureCodingPolicy(new Path("/"),
-        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
+        StripedFileTestUtil.getDefaultECPolicy().getName());
 
     MiniDFSCluster.DataNodeProperties lastHost = stopDataNode(
         hosts[hosts.length - 1]);
@@ -276,7 +276,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     cluster.waitActive();
     fs = cluster.getFileSystem();
     fs.setErasureCodingPolicy(new Path("/"),
-        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
+        StripedFileTestUtil.getDefaultECPolicy().getName());
 
     final BlockManager bm = cluster.getNamesystem().getBlockManager();
     final DatanodeManager dm = bm.getDatanodeManager();

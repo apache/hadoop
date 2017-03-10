@@ -1910,7 +1910,7 @@ public class DFSTestUtil {
       Path dir, int numBlocks, int numStripesPerBlk, boolean toMkdir)
       throws Exception {
     createStripedFile(cluster, file, dir, numBlocks, numStripesPerBlk,
-        toMkdir, ErasureCodingPolicyManager.getSystemDefaultPolicy());
+        toMkdir, StripedFileTestUtil.getDefaultECPolicy());
   }
 
   /**

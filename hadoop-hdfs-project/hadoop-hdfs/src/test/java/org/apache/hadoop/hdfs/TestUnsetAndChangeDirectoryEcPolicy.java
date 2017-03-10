@@ -51,8 +51,7 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
   private MiniDFSCluster cluster;
   private Configuration conf = new Configuration();
   private DistributedFileSystem fs;
-  private ErasureCodingPolicy ecPolicy = ErasureCodingPolicyManager
-      .getSystemDefaultPolicy();
+  private ErasureCodingPolicy ecPolicy = StripedFileTestUtil.getDefaultECPolicy();
   private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
   private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
   private final int cellSize = ecPolicy.getCellSize();

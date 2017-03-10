@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -43,7 +43,7 @@ public class TestBlockInfoStriped {
   private static final long BASE_ID = -1600;
   private final Block baseBlock = new Block(BASE_ID);
   private final ErasureCodingPolicy testECPolicy
-      = ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      = StripedFileTestUtil.getDefaultECPolicy();
   private final int totalBlocks = testECPolicy.getNumDataUnits() +
       testECPolicy.getNumParityUnits();
   private final BlockInfoStriped info = new BlockInfoStriped(baseBlock,
