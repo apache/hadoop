@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
@@ -126,8 +127,12 @@ public class TestAMRMClient {
 
   @Before
   public void setup() throws Exception {
-    // start minicluster
     conf = new YarnConfiguration();
+    createClusterAndStartApplication();
+  }
+
+  private void createClusterAndStartApplication() throws Exception {
+    // start minicluster
     conf.set(YarnConfiguration.RM_SCHEDULER, schedulerName);
     conf.setLong(
       YarnConfiguration.RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS,
@@ -864,6 +869,17 @@ public class TestAMRMClient {
   @Test (timeout=60000)
   public void testAMRMClientAllocReqId() throws YarnException, IOException {
     initAMRMClientAndTest(true);
+  }
+
+  @Test (timeout=60000)
+  public void testAMRMClientWithSaslEncryption() throws Exception {
+    // we have to create a new instance of MiniYARNCluster to avoid SASL qop
+    // mismatches between client and server
+    teardown();
+    conf = new YarnConfiguration();
+    conf.set(CommonConfigurationKeysPublic.HADOOP_RPC_PROTECTION, "privacy");
+    createClusterAndStartApplication();
+    initAMRMClientAndTest(false);
   }
 
   private void initAMRMClientAndTest(boolean useAllocReqId)
