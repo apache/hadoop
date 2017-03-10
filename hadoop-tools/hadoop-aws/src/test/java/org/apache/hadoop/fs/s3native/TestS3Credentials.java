@@ -28,7 +28,6 @@ import java.io.File;
 import java.net.URI;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -127,21 +126,4 @@ public class TestS3Credentials {
         s3Credentials.getSecretAccessKey());
   }
 
-  @Test(expected=IllegalArgumentException.class)
-  @Ignore
-  public void noSecretShouldThrow() throws Exception {
-    S3Credentials s3Credentials = new S3Credentials();
-    Configuration conf = new Configuration();
-    conf.set(S3_NATIVE_AWS_ACCESS_KEY_ID, EXAMPLE_ID);
-    s3Credentials.initialize(new URI("s3n://foobar"), conf);
-  }
-
-  @Test(expected=IllegalArgumentException.class)
-  @Ignore
-  public void noAccessIdShouldThrow() throws Exception {
-    S3Credentials s3Credentials = new S3Credentials();
-    Configuration conf = new Configuration();
-    conf.set(S3_NATIVE_AWS_SECRET_ACCESS_KEY, EXAMPLE_KEY);
-    s3Credentials.initialize(new URI("s3n://foobar"), conf);
-  }
 }
