@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.util.resource;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class TestResources {
@@ -46,5 +48,25 @@ public class TestResources {
     assertTrue(Resources.none().compareTo(
         createResource(0, 1)) < 0);
   }
-  
+
+  @Test
+  public void testMultipleRoundUp() {
+    final double by = 0.5;
+    final String memoryErrorMsg = "Invalid memory size.";
+    final String vcoreErrorMsg = "Invalid virtual core number.";
+    Resource resource = Resources.createResource(1, 1);
+    Resource result = Resources.multiplyAndRoundUp(resource, by);
+    assertEquals(memoryErrorMsg, result.getMemorySize(), 1);
+    assertEquals(vcoreErrorMsg, result.getVirtualCores(), 1);
+
+    resource = Resources.createResource(2, 2);
+    result = Resources.multiplyAndRoundUp(resource, by);
+    assertEquals(memoryErrorMsg, result.getMemorySize(), 1);
+    assertEquals(vcoreErrorMsg, result.getVirtualCores(), 1);
+
+    resource = Resources.createResource(0, 0);
+    result = Resources.multiplyAndRoundUp(resource, by);
+    assertEquals(memoryErrorMsg, result.getMemorySize(), 0);
+    assertEquals(vcoreErrorMsg, result.getVirtualCores(), 0);
+  }
 }

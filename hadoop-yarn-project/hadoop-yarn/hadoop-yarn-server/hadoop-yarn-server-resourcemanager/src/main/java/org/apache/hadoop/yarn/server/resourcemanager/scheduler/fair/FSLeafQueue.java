@@ -515,7 +515,8 @@ public class FSLeafQueue extends FSQueue {
           getMaxShare().getVirtualCores()));
     }
 
-    return Resources.multiply(maxResource, maxAMShare);
+    // Round up to allow AM to run when there is only one vcore on the cluster
+    return Resources.multiplyAndRoundUp(maxResource, maxAMShare);
   }
 
   /**
