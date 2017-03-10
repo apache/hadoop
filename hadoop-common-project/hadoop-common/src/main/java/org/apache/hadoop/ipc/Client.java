@@ -1770,7 +1770,9 @@ public class Client implements AutoCloseable {
     }
 
     void setSaslClient(SaslRpcClient client) throws IOException {
-      setInputStream(client.getInputStream(in));
+      // Wrap the input stream in a BufferedInputStream to fill the buffer
+      // before reading its length (HADOOP-14062).
+      setInputStream(new BufferedInputStream(client.getInputStream(in)));
       setOutputStream(client.getOutputStream(out));
     }
 
