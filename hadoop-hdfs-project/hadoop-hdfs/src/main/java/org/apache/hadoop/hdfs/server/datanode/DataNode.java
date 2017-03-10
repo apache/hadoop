@@ -652,45 +652,81 @@ public class DataNode extends ReconfigurableBase
   ChangedVolumes parseChangedVolumes(String newVolumes) throws IOException {
     Configuration conf = new Configuration();
     conf.set(DFS_DATANODE_DATA_DIR_KEY, newVolumes);
-    List<StorageLocation> locations = getStorageLocations(conf);
+    List<StorageLocation> newStorageLocations = getStorageLocations(conf);
 
-    if (locations.isEmpty()) {
+    if (newStorageLocations.isEmpty()) {
       throw new IOException("No directory is specified.");
     }
 
-    // Use the existing StorageLocation to detect storage type changes.
-    Map<String, StorageLocation> existingLocations = new HashMap<>();
+    // Use the existing storage locations from the current conf
+    // to detect new storage additions or removals.
+    Map<String, StorageLocation> existingStorageLocations = new HashMap<>();
     for (StorageLocation loc : getStorageLocations(getConf())) {
-      existingLocations.put(loc.getNormalizedUri().toString(), loc);
+      existingStorageLocations.put(loc.getNormalizedUri().toString(), loc);
     }
 
     ChangedVolumes results = new ChangedVolumes();
-    results.newLocations.addAll(locations);
+    results.newLocations.addAll(newStorageLocations);
 
     for (Iterator<Storage.StorageDirectory> it = storage.dirIterator();
          it.hasNext(); ) {
       Storage.StorageDirectory dir = it.next();
       boolean found = false;
-      for (Iterator<StorageLocation> sl = results.newLocations.iterator();
-           sl.hasNext(); ) {
-        StorageLocation location = sl.next();
-        if (location.matchesStorageDirectory(dir)) {
-          sl.remove();
-          StorageLocation old = existingLocations.get(
-              location.getNormalizedUri().toString());
-          if (old != null &&
-              old.getStorageType() != location.getStorageType()) {
+      for (Iterator<StorageLocation> newLocationItr =
+           results.newLocations.iterator(); newLocationItr.hasNext();) {
+        StorageLocation newLocation = newLocationItr.next();
+        if (newLocation.matchesStorageDirectory(dir)) {
+          StorageLocation oldLocation = existingStorageLocations.get(
+              newLocation.getNormalizedUri().toString());
+          if (oldLocation != null &&
+              oldLocation.getStorageType() != newLocation.getStorageType()) {
             throw new IOException("Changing storage type is not allowed.");
           }
-          results.unchangedLocations.add(location);
+          // Update the unchanged locations as this location
+          // from the new conf is really not a new one.
+          newLocationItr.remove();
+          results.unchangedLocations.add(newLocation);
           found = true;
           break;
         }
       }
 
+      // New conf doesn't have the storage location which available in
+      // the current storage locations. Add to the deactivateLocations list.
       if (!found) {
+        LOG.info("Deactivation request received for active volume: "
+            + dir.getRoot().toString());
         results.deactivateLocations.add(
             StorageLocation.parse(dir.getRoot().toString()));
+      }
+    }
+
+    // Use the failed storage locations from the current conf
+    // to detect removals in the new conf.
+    if (getFSDataset().getNumFailedVolumes() > 0) {
+      for (String failedStorageLocation : getFSDataset()
+          .getVolumeFailureSummary().getFailedStorageLocations()) {
+        boolean found = false;
+        for (Iterator<StorageLocation> newLocationItr =
+             results.newLocations.iterator(); newLocationItr.hasNext();) {
+          StorageLocation newLocation = newLocationItr.next();
+          if (newLocation.getNormalizedUri().toString().equals(
+              failedStorageLocation)) {
+            // The failed storage is being re-added. DataNode#refreshVolumes()
+            // will take care of re-assessing it.
+            found = true;
+            break;
+          }
+        }
+
+        // New conf doesn't have this failed storage location.
+        // Add to the deactivate locations list.
+        if (!found) {
+          LOG.info("Deactivation request received for failed volume: "
+              + failedStorageLocation);
+          results.deactivateLocations.add(StorageLocation.parse(
+              failedStorageLocation));
+        }
       }
     }
 
@@ -716,8 +752,9 @@ public class DataNode extends ReconfigurableBase
     }
 
     try {
-      if (numOldDataDirs + changedVolumes.newLocations.size() -
-          changedVolumes.deactivateLocations.size() <= 0) {
+      if (numOldDataDirs + getFSDataset().getNumFailedVolumes()
+          + changedVolumes.newLocations.size()
+          - changedVolumes.deactivateLocations.size() <= 0) {
         throw new IOException("Attempt to remove all volumes.");
       }
       if (!changedVolumes.newLocations.isEmpty()) {
