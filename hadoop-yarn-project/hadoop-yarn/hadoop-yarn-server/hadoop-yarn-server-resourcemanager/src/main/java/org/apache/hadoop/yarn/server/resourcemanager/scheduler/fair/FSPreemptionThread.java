@@ -134,7 +134,7 @@ class FSPreemptionThread extends Thread {
 
         if (bestContainers != null && bestContainers.containers.size() > 0) {
           containersToPreempt.addAll(bestContainers.containers);
-          trackPreemptionsAgainstNode(bestContainers.containers);
+          trackPreemptionsAgainstNode(bestContainers.containers, starvedApp);
         }
       }
     } // End of iteration over RRs
@@ -195,10 +195,11 @@ class FSPreemptionThread extends Thread {
     return nodeReservedApp != null && !nodeReservedApp.equals(app);
   }
 
-  private void trackPreemptionsAgainstNode(List<RMContainer> containers) {
+  private void trackPreemptionsAgainstNode(List<RMContainer> containers,
+                                           FSAppAttempt app) {
     FSSchedulerNode node = (FSSchedulerNode) scheduler.getNodeTracker()
         .getNode(containers.get(0).getNodeId());
-    node.addContainersForPreemption(containers);
+    node.addContainersForPreemption(containers, app);
   }
 
   private void preemptContainers(List<RMContainer> containers) {

@@ -23,15 +23,19 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 @Private
 @Unstable
@@ -40,8 +44,10 @@ public class FSSchedulerNode extends SchedulerNode {
   private static final Log LOG = LogFactory.getLog(FSSchedulerNode.class);
 
   private FSAppAttempt reservedAppSchedulable;
-  private final Set<RMContainer> containersForPreemption =
-      new ConcurrentSkipListSet<>();
+  private final Map<RMContainer, FSAppAttempt> containersForPreemption =
+      new ConcurrentSkipListMap<>();
+  private Map<FSAppAttempt, Resource> reservedApp =
+      new LinkedHashMap<>();
 
   public FSSchedulerNode(RMNode node, boolean usePortForNodeName) {
     super(node, usePortForNodeName);
@@ -110,6 +116,28 @@ public class FSSchedulerNode extends SchedulerNode {
   }
 
   /**
+   * List reserved resources after preemption and assign them to the
+   * appropriate applications.
+   * @return if any resources were allocated
+   */
+  synchronized boolean assignContainersToPreemptionRequestors() {
+    boolean assignedContainers = false;
+    for (FSAppAttempt app : reservedApp.keySet()) {
+      Resource assigned = app.assignContainer(this);
+      if (!Resources.isNone(assigned)) {
+        assignedContainers = true;
+        Resource remaining =
+            Resources.subtractFrom(reservedApp.get(app), assigned);
+        if (remaining.getMemorySize() <= 0 &&
+            remaining.getVirtualCores() <= 0) {
+          reservedApp.remove(app);
+        }
+      }
+    }
+    return assignedContainers;
+  }
+
+  /**
    * Mark {@code containers} as being considered for preemption so they are
    * not considered again. A call to this requires a corresponding call to
    * {@link #removeContainerForPreemption} to ensure we do not mark a
@@ -118,23 +146,39 @@ public class FSSchedulerNode extends SchedulerNode {
    *
    * @param containers container to mark
    */
-  void addContainersForPreemption(Collection<RMContainer> containers) {
-    containersForPreemption.addAll(containers);
+  void addContainersForPreemption(Collection<RMContainer> containers,
+                                  FSAppAttempt appAttempt) {
+    for(RMContainer container : containers) {
+      containersForPreemption.put(container, appAttempt);
+    }
   }
 
   /**
    * @return set of containers marked for preemption.
    */
   Set<RMContainer> getContainersForPreemption() {
-    return containersForPreemption;
+    return containersForPreemption.keySet();
   }
 
   /**
    * Remove container from the set of containers marked for preemption.
+   * Reserve the preempted resources for the app that requested
+   * the preemption.
    *
    * @param container container to remove
    */
-  void removeContainerForPreemption(RMContainer container) {
+  synchronized void removeContainerForPreemption(RMContainer container) {
+    FSAppAttempt app = containersForPreemption.get(container);
+    if (app != null) {
+      Resource containerSize =
+          Resources.clone(container.getAllocatedResource());
+      if (!reservedApp.containsKey(app)) {
+        reservedApp.put(app, containerSize);
+      } else {
+        Resources.addTo(reservedApp.get(app),
+            Resources.clone(containerSize));
+      }
+    }
     containersForPreemption.remove(container);
   }
 }

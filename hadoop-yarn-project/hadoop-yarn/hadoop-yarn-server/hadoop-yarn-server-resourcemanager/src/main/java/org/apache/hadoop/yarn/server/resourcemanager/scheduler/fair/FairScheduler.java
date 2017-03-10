@@ -996,6 +996,13 @@ public class FairScheduler extends
         validReservation = reservedAppSchedulable.assignReservedContainer(node);
       }
       if (!validReservation) {
+        // Apps may wait for preempted containers
+        // We have to satisfy these first to avoid cases, when we preempt
+        // a container for A from B and C gets the preempted containers,
+        // when C does not qualify for preemption itself.
+        validReservation = node.assignContainersToPreemptionRequestors();
+      }
+      if (!validReservation) {
         // No reservation, schedule at queue which is farthest below fair share
         int assignedContainers = 0;
         Resource assignedResource = Resources.clone(Resources.none());

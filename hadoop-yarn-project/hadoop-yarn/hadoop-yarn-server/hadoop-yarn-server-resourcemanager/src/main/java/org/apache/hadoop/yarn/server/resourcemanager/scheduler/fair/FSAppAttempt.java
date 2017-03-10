@@ -841,7 +841,11 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     }
 
     // The desired container won't fit here, so reserve
-    if (isReservable(capability) &&
+    // Important: Do not enable this kind of reservation in case of preemption,
+    // since the preempted application will re-reserve the preempted resources
+    // and prevent the starving application to get them
+    if (!scheduler.getConf().getPreemptionEnabled() &&
+        isReservable(capability) &&
         reserve(pendingAsk.getPerAllocationResource(), node, reservedContainer,
             type, schedulerKey)) {
       updateAMDiagnosticMsg(capability, " exceeds the available resources of "
