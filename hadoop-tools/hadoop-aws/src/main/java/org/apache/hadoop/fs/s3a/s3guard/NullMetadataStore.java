@@ -62,6 +62,12 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
+  public PathMetadata get(Path path, boolean wantEmptyDirectoryFlag)
+      throws IOException {
+    return null;
+  }
+
+  @Override
   public DirListingMetadata listChildren(Path path) throws IOException {
     return null;
   }

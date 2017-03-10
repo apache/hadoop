@@ -28,6 +28,7 @@ import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.FileStatus;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -138,8 +139,7 @@ public class TestPathMetadataDynamoDBTranslation {
    */
   private static void verify(Item item, PathMetadata meta) {
     assertNotNull(meta);
-    assert meta.getFileStatus() instanceof S3AFileStatus;
-    final S3AFileStatus status = (S3AFileStatus) meta.getFileStatus();
+    final FileStatus status = meta.getFileStatus();
     final Path path = status.getPath();
     assertEquals(item.get(PARENT), pathToParentKey(path.getParent()));
     assertEquals(item.get(CHILD), path.getName());

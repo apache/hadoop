@@ -424,14 +424,15 @@ public abstract class S3GuardTool extends Configured implements Tool {
      * @param f the file or an empty directory.
      * @throws IOException on I/O errors.
      */
-    private void putParentsIfNotPresent(S3AFileStatus f) throws IOException {
+    private void putParentsIfNotPresent(FileStatus f) throws IOException {
       Preconditions.checkNotNull(f);
       Path parent = f.getPath().getParent();
       while (parent != null) {
         if (dirCache.contains(parent)) {
           return;
         }
-        S3AFileStatus dir = new S3AFileStatus(false, parent, f.getOwner());
+        FileStatus dir = DynamoDBMetadataStore.makeDirStatus(parent,
+            f.getOwner());
         ms.put(new PathMetadata(dir));
         dirCache.add(parent);
         parent = parent.getParent();
@@ -441,21 +442,16 @@ public abstract class S3GuardTool extends Configured implements Tool {
     /**
      * Recursively import every path under path
      */
-    private void importDir(S3AFileStatus status) throws IOException {
+    private void importDir(FileStatus status) throws IOException {
       Preconditions.checkArgument(status.isDirectory());
       RemoteIterator<LocatedFileStatus> it =
           s3a.listFiles(status.getPath(), true);
 
       while (it.hasNext()) {
         LocatedFileStatus located = it.next();
-        S3AFileStatus child;
+        FileStatus child;
         if (located.isDirectory()) {
-          // Note that {@link S3AFileStatus#isEmptyDirectory} is erased in
-          // {@link LocatedFileStatus}, the metadata store impl can choose
-          // how to set isEmptyDir when we import the subfiles after creating
-          // the directory in the metadata store.
-          final boolean isEmptyDir = true;
-          child = new S3AFileStatus(isEmptyDir, located.getPath(),
+          child = DynamoDBMetadataStore.makeDirStatus(located.getPath(),
               located.getOwner());
           dirCache.add(child.getPath());
         } else {
@@ -493,7 +489,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         filePath = "/";
       }
       Path path = new Path(filePath);
-      S3AFileStatus status = s3a.getFileStatus(path);
+      FileStatus status = s3a.getFileStatus(path);
 
       initMetadataStore(false);
 
@@ -557,7 +553,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
      * @param status the status to print.
      * @return the string of output.
      */
-    private static String formatFileStatus(S3AFileStatus status) {
+    private static String formatFileStatus(FileStatus status) {
       return String.format("%s%s%s",
           status.isDirectory() ? "D" : "F",
           SEP,
@@ -571,8 +567,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
      * @param statusFromS3 file status from S3.
      * @param out output stream.
      */
-    private static void printDiff(S3AFileStatus statusFromMS,
-                                  S3AFileStatus statusFromS3,
+    private static void printDiff(FileStatus statusFromMS,
+                                  FileStatus statusFromS3,
                                   PrintStream out) {
       Preconditions.checkArgument(
           !(statusFromMS == null && statusFromS3 == null));
@@ -599,7 +595,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
      * @param out the output stream to generate diff results.
      * @throws IOException
      */
-    private void compareDir(S3AFileStatus msDir, S3AFileStatus s3Dir,
+    private void compareDir(FileStatus msDir, FileStatus s3Dir,
                             PrintStream out) throws IOException {
       if (msDir == null && s3Dir == null) {
         return;
@@ -656,7 +652,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
      */
     private void compare(Path path, PrintStream out) throws IOException {
       Path qualified = s3a.qualify(path);
-      S3AFileStatus s3Status = null;
+      FileStatus s3Status = null;
       try {
         s3Status = s3a.getFileStatus(qualified);
       } catch (FileNotFoundException e) {

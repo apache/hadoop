@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.After;
@@ -133,7 +134,7 @@ public class ITestS3ACredentialsInURL extends Assert {
     conf.set(TEST_FS_S3A_NAME, testURI.toString());
     try {
       fs = S3ATestUtils.createTestFileSystem(conf);
-      S3AFileStatus status = fs.getFileStatus(new Path("/"));
+      FileStatus status = fs.getFileStatus(new Path("/"));
       fail("Expected an AccessDeniedException, got " + status);
     } catch (AccessDeniedException e) {
       // expected

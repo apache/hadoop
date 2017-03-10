@@ -312,7 +312,7 @@ public class Listing {
       for (String prefix : objects.getCommonPrefixes()) {
         Path keyPath = owner.keyToQualifiedPath(prefix);
         if (acceptor.accept(keyPath, prefix) && filter.accept(keyPath)) {
-          FileStatus status = new S3AFileStatus(false, keyPath,
+          FileStatus status = new S3AFileStatus(Tristate.FALSE, keyPath,
               owner.getUsername());
           LOG.debug("Adding directory: {}", status);
           added++;

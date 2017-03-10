@@ -39,7 +39,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
-import org.apache.hadoop.fs.s3a.S3AFileStatus;
 
 /**
  * Defines methods for translating between domain model objects and their
@@ -126,12 +125,13 @@ final class PathMetadataDynamoDBTranslation {
     boolean isDir = item.hasAttribute(IS_DIR) && item.getBoolean(IS_DIR);
     final FileStatus fileStatus;
     if (isDir) {
-      fileStatus = new S3AFileStatus(true, path, username);
+      fileStatus = DynamoDBMetadataStore.makeDirStatus(path, username);
     } else {
       long len = item.hasAttribute(FILE_LENGTH) ? item.getLong(FILE_LENGTH) : 0;
       long modTime = item.hasAttribute(MOD_TIME) ? item.getLong(MOD_TIME) : 0;
       long block = item.hasAttribute(BLOCK_SIZE) ? item.getLong(BLOCK_SIZE) : 0;
-      fileStatus = new S3AFileStatus(len, modTime, path, block, username);
+      fileStatus = new FileStatus(len, false, 1, block, modTime, 0, null,
+          username, username, path);
     }
 
     return new PathMetadata(fileStatus);

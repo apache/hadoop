@@ -84,6 +84,21 @@ public interface MetadataStore extends Closeable {
   PathMetadata get(Path path) throws IOException;
 
   /**
+   * Gets metadata for a path.  Alternate method that includes a hint
+   * whether or not the MetadataStore should do work to compute the value for
+   * {@link PathMetadata#isEmptyDirectory()}.  Since determining emptiness
+   * may be an expensive operation, this can save wasted work.
+   *
+   * @param path the path to get
+   * @param wantEmptyDirectoryFlag Set to true to give a hint to the
+   *   MetadataStore that it should try to compute the empty directory flag.
+   * @return metadata for {@code path}, {@code null} if not found
+   * @throws IOException if there is an error
+   */
+  PathMetadata get(Path path, boolean wantEmptyDirectoryFlag)
+      throws IOException;
+
+  /**
    * Lists metadata for all direct children of a path.
    *
    * @param path the path to list

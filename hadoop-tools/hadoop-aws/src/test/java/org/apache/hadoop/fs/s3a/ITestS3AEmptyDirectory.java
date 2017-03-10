@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.junit.Test;
@@ -40,13 +39,21 @@ public class ITestS3AEmptyDirectory extends AbstractS3ATestBase {
     mkdirs(child);
 
     S3AFileStatus status = getS3AFileStatus(fs, dir);
-    assertFalse("Dir status should not be empty", status.isEmptyDirectory());
+    assertEmptyDirectory(false, status);
 
     // 2. Make testEmptyDir empty
     assertDeleted(child, false);
     status = getS3AFileStatus(fs, dir);
 
-    assertTrue("Dir status should be empty", status.isEmptyDirectory());
+    assertEmptyDirectory(true, status);
+  }
+
+  private static void assertEmptyDirectory(boolean isEmpty, S3AFileStatus s) {
+    String msg = "dir is empty";
+    // Should *not* be Tristate.UNKNOWN since we request a definitive value
+    // in getS3AFileStatus() below
+    Tristate expected = Tristate.fromBool(isEmpty);
+    assertEquals(msg, expected, s.isEmptyDirectory());
   }
 
   @Test
@@ -58,21 +65,19 @@ public class ITestS3AEmptyDirectory extends AbstractS3ATestBase {
     mkdirs(dir);
 
     S3AFileStatus status = getS3AFileStatus(fs, dir);
-    assertTrue("Dir status should be empty", status.isEmptyDirectory());
+    assertEmptyDirectory(true, status);
 
     // 2. Make testEmptyDir non-empty
 
     ContractTestUtils.touch(fs, path("testEmptyDir/file1"));
     status = getS3AFileStatus(fs, dir);
 
-    assertFalse("Dir status should not be empty", status.isEmptyDirectory());
+    assertEmptyDirectory(false, status);
   }
 
   private S3AFileStatus getS3AFileStatus(S3AFileSystem fs, Path p) throws
       IOException {
-    FileStatus s = fs.getFileStatus(p);
-    assertTrue(s instanceof S3AFileStatus);
-    return (S3AFileStatus)s;
+    return fs.innerGetFileStatus(p, true /* want isEmptyDirectory value */);
   }
 
 }

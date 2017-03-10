@@ -24,8 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.S3AFileStatus;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.Tristate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +63,6 @@ public class LocalMetadataStore implements MetadataStore {
   private LruHashMap<Path, DirListingMetadata> dirHash;
 
   private FileSystem fs;
-  private boolean isS3A;
   /* Null iff this FS does not have an associated URI host. */
   private String uriHost;
 
@@ -72,14 +70,6 @@ public class LocalMetadataStore implements MetadataStore {
   public void initialize(FileSystem fileSystem) throws IOException {
     Preconditions.checkNotNull(fileSystem);
     fs = fileSystem;
-
-    // Hate to take a dependency on S3A, but if the MetadataStore has to
-    // maintain S3AFileStatus#isEmptyDirectory, best to be able to to that
-    // under our own lock.
-    if (fs instanceof S3AFileSystem) {
-      isS3A = true;
-    }
-
     URI fsURI = fs.getUri();
     uriHost = fsURI.getHost();
     if (uriHost != null && uriHost.equals("")) {
@@ -105,7 +95,6 @@ public class LocalMetadataStore implements MetadataStore {
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "LocalMetadataStore{");
-    sb.append("isS3A=").append(isS3A);
     sb.append(", uriHost='").append(uriHost).append('\'');
     sb.append('}');
     return sb.toString();
@@ -140,10 +129,35 @@ public class LocalMetadataStore implements MetadataStore {
 
   @Override
   public synchronized PathMetadata get(Path p) throws IOException {
+    return get(p, false);
+  }
+
+  @Override
+  public PathMetadata get(Path p, boolean wantEmptyDirectoryFlag)
+      throws IOException {
     Path path = standardize(p);
-    PathMetadata m = fileHash.mruGet(path);
-    LOG.debug("get({}) -> {}", path, m == null ? "null" : m.prettyPrint());
-    return m;
+    synchronized (this) {
+      PathMetadata m = fileHash.mruGet(path);
+
+      if (wantEmptyDirectoryFlag && m != null &&
+          m.getFileStatus().isDirectory()) {
+        m.setIsEmptyDirectory(isEmptyDirectory(p));
+      }
+
+      LOG.debug("get({}) -> {}", path, m == null ? "null" : m.prettyPrint());
+      return m;
+    }
+  }
+
+  /**
+   * Determine if directory is empty.
+   * Call with lock held.
+   * @param p a Path, already filtered through standardize()
+   * @return TRUE / FALSE if known empty / not-empty, UNKNOWN otherwise.
+   */
+  private Tristate isEmptyDirectory(Path p) {
+    DirListingMetadata dirMeta = dirHash.get(p);
+    return dirMeta.isEmpty();
   }
 
   @Override
@@ -240,11 +254,6 @@ public class LocalMetadataStore implements MetadataStore {
           parent = new DirListingMetadata(parentPath,
               DirListingMetadata.EMPTY_DIR, false);
           dirHash.put(parentPath, parent);
-        } else {
-          // S3A-specific logic to maintain S3AFileStatus#isEmptyDirectory()
-          if (isS3A) {
-            setS3AIsEmpty(parentPath, false);
-          }
         }
         parent.put(status);
       }
@@ -360,69 +369,6 @@ public class LocalMetadataStore implements MetadataStore {
       if (dir != null) {
         LOG.debug("removing parent's entry for {} ", path);
         dir.remove(path);
-
-        // S3A-specific logic dealing with S3AFileStatus#isEmptyDirectory()
-        if (isS3A) {
-          if (dir.isAuthoritative() && dir.numEntries() == 0) {
-            setS3AIsEmpty(parent, true);
-          } else if (dir.numEntries() == 0) {
-            // We do not know of any remaining entries in parent directory.
-            // However, we do not have authoritative listing, so there may
-            // still be some entries in the dir.  Since we cannot know the
-            // proper state of the parent S3AFileStatus#isEmptyDirectory, we
-            // will invalidate our entries for it.
-            // Better than deleting entries would be marking them as "missing
-            // metadata".  Deleting them means we lose consistent listing and
-            // ability to retry for eventual consistency for the parent path.
-
-            // TODO implement missing metadata feature
-            invalidateFileStatus(parent);
-          }
-          // else parent directory still has entries in it, isEmptyDirectory
-          // does not change
-        }
-
-      }
-    }
-  }
-
-  /**
-   * Invalidate any stored FileStatus's for path.  Call with lock held.
-   * @param path path to invalidate
-   */
-  private void invalidateFileStatus(Path path) {
-    // TODO implement missing metadata feature
-    fileHash.remove(path);
-    Path parent = path.getParent();
-    if (parent != null) {
-      DirListingMetadata parentListing = dirHash.get(parent);
-      if (parentListing != null) {
-        parentListing.remove(path);
-      }
-    }
-  }
-
-  private void setS3AIsEmpty(Path path, boolean isEmpty) {
-    // Update any file statuses in fileHash
-    PathMetadata meta = fileHash.get(path);
-    if (meta != null) {
-      S3AFileStatus s3aStatus =  (S3AFileStatus)meta.getFileStatus();
-      LOG.debug("Setting S3AFileStatus is empty dir ({}) for key {}, {}",
-          isEmpty, path, s3aStatus.getPath());
-      s3aStatus.setIsEmptyDirectory(isEmpty);
-    }
-    // Update any file statuses in dirHash
-    Path parent = path.getParent();
-    if (parent != null) {
-      DirListingMetadata dirMeta = dirHash.get(parent);
-      if (dirMeta != null) {
-        PathMetadata entry = dirMeta.get(path);
-        if (entry != null) {
-          S3AFileStatus s3aStatus =  (S3AFileStatus)entry.getFileStatus();
-          LOG.debug("Setting S3AFileStatus is empty dir ({}) for key " +
-                  "{}, {}", isEmpty, path, s3aStatus.getPath());
-          s3aStatus.setIsEmptyDirectory(isEmpty);
-        }
       }
     }
   }

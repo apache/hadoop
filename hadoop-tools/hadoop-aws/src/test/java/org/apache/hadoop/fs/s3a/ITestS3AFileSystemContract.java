@@ -27,6 +27,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 
+import java.io.IOException;
+
 /**
  *  Tests a live S3 system. If your keys and bucket aren't specified, all tests
  *  are marked as passed.
@@ -78,7 +80,12 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
   @Override
   protected void tearDown() throws Exception {
     if (fs != null) {
-      fs.delete(basePath, true);
+      try {
+        LOG.info("Deleting {}", basePath);
+        fs.delete(basePath, true);
+      } catch (IOException e) {
+        LOG.info("Failed to delete {}", basePath);
+      }
     }
     super.tearDown();
   }

@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.s3a.Tristate;
 
 /**
  * {@code PathMetadata} models path metadata stored in the
@@ -32,18 +33,24 @@ import org.apache.hadoop.fs.FileStatus;
 public class PathMetadata {
 
   private final FileStatus fileStatus;
+  private Tristate isEmptyDirectory;
 
   /**
    * Creates a new {@code PathMetadata} containing given {@code FileStatus}.
    * @param fileStatus file status containing an absolute path.
    */
   public PathMetadata(FileStatus fileStatus) {
+    this(fileStatus, Tristate.UNKNOWN);
+  }
+
+  public PathMetadata(FileStatus fileStatus, Tristate isEmptyDir) {
     Preconditions.checkNotNull(fileStatus, "fileStatus must be non-null");
     Preconditions.checkNotNull(fileStatus.getPath(), "fileStatus path must be" +
         " non-null");
     Preconditions.checkArgument(fileStatus.getPath().isAbsolute(), "path must" +
         " be absolute");
     this.fileStatus = fileStatus;
+    this.isEmptyDirectory = isEmptyDir;
   }
 
   /**
@@ -51,6 +58,19 @@ public class PathMetadata {
    */
   public final FileStatus getFileStatus() {
     return fileStatus;
+  }
+
+  /**
+   * @return Tristate.TRUE if this is known to be an empty directory,
+   * Tristate.FALSE if known to not be empty, and Tristate.UNKNOWN if the
+   * MetadataStore does have enough information to determine either way.
+   */
+  public Tristate isEmptyDirectory() {
+    return isEmptyDirectory;
+  }
+
+  void setIsEmptyDirectory(Tristate isEmptyDirectory) {
+    this.isEmptyDirectory = isEmptyDirectory;
   }
 
   @Override
@@ -70,6 +90,7 @@ public class PathMetadata {
   public String toString() {
     return "PathMetadata{" +
         "fileStatus=" + fileStatus +
+        "; isEmptyDirectory=" + isEmptyDirectory +
         '}';
   }
 
@@ -78,9 +99,10 @@ public class PathMetadata {
    * @param sb target StringBuilder
    */
   public void prettyPrint(StringBuilder sb) {
-    sb.append(String.format("%-5s %-20s %-7d",
+    sb.append(String.format("%-5s %-20s %-7d %s",
         fileStatus.isDirectory() ? "dir" : "file",
-        fileStatus.getPath().toString(), fileStatus.getLen()));
+        fileStatus.getPath().toString(), fileStatus.getLen(),
+        isEmptyDirectory.name()));
     sb.append(fileStatus);
   }
 

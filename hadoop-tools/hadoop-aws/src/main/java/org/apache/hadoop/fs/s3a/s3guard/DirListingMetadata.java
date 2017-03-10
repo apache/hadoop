@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.s3a.Tristate;
 
 /**
  * {@code DirListingMetadata} models a directory listing stored in a
@@ -108,6 +109,26 @@ public class DirListingMetadata {
    */
   public boolean isAuthoritative() {
     return isAuthoritative;
+  }
+
+
+  /**
+   * Is the underlying directory known to be empty?
+   * @return FALSE if directory is known to have a child entry, TRUE if
+   * directory is known to be empty, UNKNOWN otherwise.
+   */
+  public Tristate isEmpty() {
+    if (getListing().isEmpty()) {
+      if (isAuthoritative()) {
+        return Tristate.TRUE;
+      } else {
+        // This listing is empty, but may not be full list of underlying dir.
+        return Tristate.UNKNOWN;
+      }
+    } else { // not empty listing
+      // There exists at least one child, dir not empty.
+      return Tristate.FALSE;
+    }
   }
 
   /**

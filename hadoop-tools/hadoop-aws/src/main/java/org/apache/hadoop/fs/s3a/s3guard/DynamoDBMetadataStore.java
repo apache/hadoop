@@ -55,7 +55,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.slf4j.Logger;
@@ -66,7 +68,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -316,6 +317,12 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
   @Override
   public PathMetadata get(Path path) throws IOException {
+    return get(path, false);
+  }
+
+  @Override
+  public PathMetadata get(Path path, boolean wantEmptyDirectoryFlag)
+      throws IOException {
     path = checkPath(path);
     LOG.debug("Get from table {} in region {}: {}", tableName, region, path);
 
@@ -323,7 +330,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
       final PathMetadata meta;
       if (path.isRoot()) {
         // Root does not persist in the table
-        meta = new PathMetadata(new S3AFileStatus(true, path, username));
+        meta = new PathMetadata(makeDirStatus(username, path));
       } else {
         final GetItemSpec spec = new GetItemSpec()
             .withPrimaryKey(pathToKey(path))
@@ -334,8 +341,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
             tableName, region, path, meta);
       }
 
-      if (meta != null) {
-        final S3AFileStatus status = (S3AFileStatus) meta.getFileStatus();
+      if (wantEmptyDirectoryFlag && meta != null) {
+        final FileStatus status = meta.getFileStatus();
         // for directory, we query its direct children to determine isEmpty bit
         if (status.isDirectory()) {
           final QuerySpec spec = new QuerySpec()
@@ -343,7 +350,13 @@ public class DynamoDBMetadataStore implements MetadataStore {
               .withConsistentRead(true)
               .withMaxResultSize(1); // limit 1
           final ItemCollection<QueryOutcome> items = table.query(spec);
-          status.setIsEmptyDirectory(!(items.iterator().hasNext()));
+          boolean hasChildren = items.iterator().hasNext();
+          // When this class has support for authoritative
+          // (fully-cached) directory listings, we may also be able to answer
+          // TRUE here.  Until then, we don't know if we have full listing or
+          // not, thus the UNKNOWN here:
+          meta.setIsEmptyDirectory(
+              hasChildren ? Tristate.FALSE : Tristate.UNKNOWN);
         }
       }
 
@@ -351,6 +364,19 @@ public class DynamoDBMetadataStore implements MetadataStore {
     } catch (AmazonClientException e) {
       throw translateException("get", path, e);
     }
+  }
+
+  /**
+   * Make a FileStatus object for a directory at given path.  The FileStatus
+   * only contains what S3A needs, and omits mod time since S3A uses its own
+   * implementation which returns current system time.
+   * @param owner  username of owner
+   * @param path   path to dir
+   * @return new FileStatus
+   */
+  private FileStatus makeDirStatus(String owner, Path path) {
+    return new FileStatus(0, true, 1, 0, 0, 0, null,
+            owner, null, path);
   }
 
   @Override
@@ -507,8 +533,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
           .withConsistentRead(true); // strictly consistent read
       final Item item = table.getItem(spec);
       if (item == null) {
-        final S3AFileStatus status = new S3AFileStatus(false, path, username);
-        metasToPut.add(new PathMetadata(status));
+        final FileStatus status = makeDirStatus(path, username);
+        metasToPut.add(new PathMetadata(status, Tristate.FALSE));
         path = path.getParent();
       } else {
         break;
@@ -517,14 +543,25 @@ public class DynamoDBMetadataStore implements MetadataStore {
     return metasToPut;
   }
 
+  /** Create a directory FileStatus using current system time as mod time. */
+  static FileStatus makeDirStatus(Path f, String owner) {
+    return  new FileStatus(0, true, 1, 0, System.currentTimeMillis(), 0,
+        null, owner, owner, f);
+  }
+
   @Override
   public void put(DirListingMetadata meta) throws IOException {
     LOG.debug("Saving to table {} in region {}: {}", tableName, region, meta);
 
     // directory path
-    final Collection<PathMetadata> metasToPut = fullPathsToPut(
-        new PathMetadata(new S3AFileStatus(false, meta.getPath(), username)));
-    // all children of the directory
+    PathMetadata p = new PathMetadata(
+        makeDirStatus(meta.getPath(), username),
+        meta.isEmpty());
+
+    // First add any missing ancestors...
+    final Collection<PathMetadata> metasToPut = fullPathsToPut(p);
+
+    // next add all children of the directory
     metasToPut.addAll(meta.getListing());
 
     try {

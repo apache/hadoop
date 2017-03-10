@@ -603,7 +603,7 @@ public class S3AFileSystem extends FileSystem {
       boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
     String key = pathToKey(f);
-    S3AFileStatus status = null;
+    FileStatus status = null;
     try {
       // get the status or throw an FNFE
       status = getFileStatus(f);
@@ -762,7 +762,7 @@ public class S3AFileSystem extends FileSystem {
 
     // get the source file status; this raises a FNFE if there is no source
     // file.
-    S3AFileStatus srcStatus = getFileStatus(src);
+    S3AFileStatus srcStatus = innerGetFileStatus(src, true);
 
     if (srcKey.equals(dstKey)) {
       LOG.debug("rename: src and dest refer to the same file or directory: {}",
@@ -774,7 +774,7 @@ public class S3AFileSystem extends FileSystem {
 
     S3AFileStatus dstStatus = null;
     try {
-      dstStatus = getFileStatus(dst);
+      dstStatus = innerGetFileStatus(dst, true);
       // if there is no destination entry, an exception is raised.
       // hence this code sequence can assume that there is something
       // at the end of the path; the only detail being what it is and
@@ -784,7 +784,7 @@ public class S3AFileSystem extends FileSystem {
           throw new RenameFailedException(src, dst,
               "source is a directory and dest is a file")
               .withExitCode(srcStatus.isFile());
-        } else if (!dstStatus.isEmptyDirectory()) {
+        } else if (dstStatus.isEmptyDirectory() != Tristate.TRUE) {
           throw new RenameFailedException(src, dst,
               "Destination is a non-empty directory")
               .withExitCode(false);
@@ -806,7 +806,8 @@ public class S3AFileSystem extends FileSystem {
       Path parent = dst.getParent();
       if (!pathToKey(parent).isEmpty()) {
         try {
-          S3AFileStatus dstParentStatus = getFileStatus(dst.getParent());
+          S3AFileStatus dstParentStatus = innerGetFileStatus(dst.getParent(),
+              false);
           if (!dstParentStatus.isDirectory()) {
             throw new RenameFailedException(src, dst,
                 "destination parent is not a directory");
@@ -869,7 +870,7 @@ public class S3AFileSystem extends FileSystem {
       }
 
       List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>();
-      if (dstStatus != null && dstStatus.isEmptyDirectory()) {
+      if (dstStatus != null && dstStatus.isEmptyDirectory() == Tristate.TRUE) {
         // delete unnecessary fake directory.
         keysToDelete.add(new DeleteObjectsRequest.KeyVersion(dstKey));
       }
@@ -947,6 +948,17 @@ public class S3AFileSystem extends FileSystem {
    */
   public boolean hasMetadataStore() {
     return !S3Guard.isNullMetadataStore(metadataStore);
+  }
+
+  @VisibleForTesting
+  MetadataStore getMetadataStore() {
+    return metadataStore;
+  }
+
+  /** For testing only.  See ITestS3GuardEmptyDirs. */
+  @VisibleForTesting
+  void setMetadataStore(MetadataStore ms) {
+    metadataStore = ms;
   }
 
   /**
@@ -1338,7 +1350,7 @@ public class S3AFileSystem extends FileSystem {
    */
   public boolean delete(Path f, boolean recursive) throws IOException {
     try {
-      return innerDelete(getFileStatus(f), recursive);
+      return innerDelete(innerGetFileStatus(f, true), recursive);
     } catch (FileNotFoundException e) {
       LOG.debug("Couldn't delete {} - does not exist", f);
       instrumentation.errorIgnored();
@@ -1368,6 +1380,9 @@ public class S3AFileSystem extends FileSystem {
 
     if (status.isDirectory()) {
       LOG.debug("delete: Path is a directory: {}", f);
+      Preconditions.checkArgument(
+          status.isEmptyDirectory() != Tristate.UNKNOWN,
+          "File status must have directory emptiness computed");
 
       if (!key.endsWith("/")) {
         key = key + "/";
@@ -1377,11 +1392,11 @@ public class S3AFileSystem extends FileSystem {
         return rejectRootDirectoryDelete(status, recursive);
       }
 
-      if (!recursive && !status.isEmptyDirectory()) {
+      if (!recursive && status.isEmptyDirectory() == Tristate.FALSE) {
         throw new PathIsNotEmptyDirectoryException(f.toString());
       }
 
-      if (status.isEmptyDirectory()) {
+      if (status.isEmptyDirectory() == Tristate.TRUE) {
         LOG.debug("Deleting fake empty directory {}", key);
         // HADOOP-13761 s3guard: retries here
         deleteObject(key);
@@ -1446,7 +1461,7 @@ public class S3AFileSystem extends FileSystem {
   private boolean rejectRootDirectoryDelete(S3AFileStatus status,
       boolean recursive) throws IOException {
     LOG.info("s3a delete the {} root directory of {}", bucket, recursive);
-    boolean emptyRoot = status.isEmptyDirectory();
+    boolean emptyRoot = status.isEmptyDirectory() == Tristate.TRUE;
     if (emptyRoot) {
       return true;
     }
@@ -1461,7 +1476,7 @@ public class S3AFileSystem extends FileSystem {
   private void createFakeDirectoryIfNecessary(Path f)
       throws IOException, AmazonClientException {
     String key = pathToKey(f);
-    if (!key.isEmpty() && !exists(f)) {
+    if (!key.isEmpty() && !s3Exists(f)) {
       LOG.debug("Creating new fake directory at {}", f);
       createFakeDirectory(key);
     }
@@ -1678,35 +1693,72 @@ public class S3AFileSystem extends FileSystem {
    * @throws java.io.FileNotFoundException when the path does not exist;
    * @throws IOException on other problems.
    */
-  public S3AFileStatus getFileStatus(final Path f) throws IOException {
+  public FileStatus getFileStatus(final Path f) throws IOException {
+    return innerGetFileStatus(f, false);
+  }
+
+  /**
+   * Internal version of getFileStatus().
+   * @param f The path we want information from
+   * @param needEmptyDirectoryFlag if true, implementation will calculate
+   *        a TRUE or FALSE value for {@link S3AFileStatus#isEmptyDirectory()}
+   * @return a S3AFileStatus object
+   * @throws java.io.FileNotFoundException when the path does not exist;
+   * @throws IOException on other problems.
+   */
+  @VisibleForTesting
+  S3AFileStatus innerGetFileStatus(final Path f,
+      boolean needEmptyDirectoryFlag) throws IOException {
     incrementStatistic(INVOCATION_GET_FILE_STATUS);
     final Path path = qualify(f);
     String key = pathToKey(path);
-    LOG.debug("Getting path status for {}  ({})", path , key);
+    LOG.debug("Getting path status for {}  ({})", path, key);
 
     // Check MetadataStore, if any.
-    PathMetadata pm = metadataStore.get(path);
+    PathMetadata pm = metadataStore.get(path, needEmptyDirectoryFlag);
     if (pm != null) {
       // HADOOP-13760: handle deleted files, i.e. PathMetadata#isDeleted() here
-      return (S3AFileStatus)pm.getFileStatus();
-    }
 
+      FileStatus msStatus = pm.getFileStatus();
+      if (needEmptyDirectoryFlag && msStatus.isDirectory()) {
+        if (pm.isEmptyDirectory() != Tristate.UNKNOWN) {
+          // We have a definitive true / false from MetadataStore, we are done.
+          return S3AFileStatus.fromFileStatus(msStatus, pm.isEmptyDirectory());
+        } else {
+          LOG.debug("MetadataStore doesn't know if dir is empty, using S3.");
+        }
+      } else {
+        // Either this is not a directory, or we don't care if it is empty
+        return S3AFileStatus.fromFileStatus(msStatus, pm.isEmptyDirectory());
+      }
+    }
+    return S3Guard.putAndReturn(metadataStore, s3GetFileStatus(path, key));
+  }
+
+  /**
+   * Raw get file status that only uses S3.  Used to implement
+   * innerGetFileStatus, and for direct management of empty directory blobs.
+   * @param path Qualified path
+   * @param key  Key string for the path
+   * @return Status
+   * @throws IOException
+   */
+  private S3AFileStatus s3GetFileStatus(final Path path, String key)
+      throws IOException {
     if (!key.isEmpty()) {
       try {
         ObjectMetadata meta = getObjectMetadata(key);
 
         if (objectRepresentsDirectory(key, meta.getContentLength())) {
           LOG.debug("Found exact file: fake directory");
-          return S3Guard.putAndReturn(metadataStore,
-              new S3AFileStatus(true, path, username));
+          return new S3AFileStatus(Tristate.TRUE, path, username);
         } else {
           LOG.debug("Found exact file: normal file");
-          return S3Guard.putAndReturn(metadataStore,
-              new S3AFileStatus(meta.getContentLength(),
+          return new S3AFileStatus(meta.getContentLength(),
                   dateToLong(meta.getLastModified()),
                   path,
                   getDefaultBlockSize(path),
-                  username));
+                  username);
         }
       } catch (AmazonServiceException e) {
         if (e.getStatusCode() != 404) {
@@ -1724,18 +1776,16 @@ public class S3AFileSystem extends FileSystem {
 
           if (objectRepresentsDirectory(newKey, meta.getContentLength())) {
             LOG.debug("Found file (with /): fake directory");
-            return S3Guard.putAndReturn(metadataStore,
-                new S3AFileStatus(true, path, username));
+            return new S3AFileStatus(Tristate.TRUE, path, username);
           } else {
             LOG.warn("Found file (with /): real file? should not happen: {}",
                 key);
 
-            return S3Guard.putAndReturn(metadataStore,
-                new S3AFileStatus(meta.getContentLength(),
+            return new S3AFileStatus(meta.getContentLength(),
                     dateToLong(meta.getLastModified()),
                     path,
                     getDefaultBlockSize(path),
-                    username));
+                    username);
           }
         } catch (AmazonServiceException e) {
           if (e.getStatusCode() != 404) {
@@ -1772,12 +1822,10 @@ public class S3AFileSystem extends FileSystem {
           }
         }
 
-        return S3Guard.putAndReturn(metadataStore,
-            new S3AFileStatus(false, path, username));
+        return new S3AFileStatus(Tristate.FALSE, path, username);
       } else if (key.isEmpty()) {
         LOG.debug("Found root directory");
-        return S3Guard.putAndReturn(metadataStore,
-            new S3AFileStatus(true, path, username));
+        return new S3AFileStatus(Tristate.TRUE, path, username);
       }
     } catch (AmazonServiceException e) {
       if (e.getStatusCode() != 404) {
@@ -1789,6 +1837,21 @@ public class S3AFileSystem extends FileSystem {
 
     LOG.debug("Not Found: {}", path);
     throw new FileNotFoundException("No such file or directory: " + path);
+  }
+
+  /**
+   * Raw version of {@link FileSystem#exists(Path)} which uses S3 only:
+   * S3Guard MetadataStore, if any, will be skipped.
+   * @return true if path exists in S3
+   */
+  private boolean s3Exists(final Path f) throws IOException {
+    Path path = qualify(f);
+    String key = pathToKey(path);
+    try {
+      return s3GetFileStatus(path, key) != null;
+    } catch (FileNotFoundException e) {
+      return false;
+    }
   }
 
   /**

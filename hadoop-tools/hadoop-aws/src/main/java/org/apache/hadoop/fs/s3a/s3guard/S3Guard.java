@@ -246,13 +246,13 @@ public final class S3Guard {
      *    [/a/b/file0, /a/b/file1, /a/b/file2, /a/b/file3], isAuthoritative =
      *    true
      */
-    S3AFileStatus prevStatus = null;
+    FileStatus prevStatus = null;
     // Iterate from leaf to root
     for (int i = 0; i < dirs.size(); i++) {
       boolean isLeaf = (prevStatus == null);
       Path f = dirs.get(i);
       assertQualified(f);
-      S3AFileStatus status = new S3AFileStatus(isLeaf, f, owner);
+      FileStatus status = S3AUtils.createUploadFileStatus(f, true, 0, 0, owner);
       Collection<PathMetadata> children;
       if (isLeaf) {
         children = DirListingMetadata.EMPTY_DIR;
@@ -291,7 +291,8 @@ public final class S3Guard {
     }
     assertQualified(srcPath);
     assertQualified(dstPath);
-    S3AFileStatus dstStatus = new S3AFileStatus(true, dstPath, owner);
+    FileStatus dstStatus = S3AUtils.createUploadFileStatus(dstPath, true, 0,
+        0, owner);
     addMoveStatus(srcPaths, dstMetas, srcPath, dstStatus);
   }
 
@@ -316,13 +317,13 @@ public final class S3Guard {
     }
     assertQualified(srcPath);
     assertQualified(dstPath);
-    S3AFileStatus dstStatus = S3AUtils.createUploadFileStatus(dstPath, false,
+    FileStatus dstStatus = S3AUtils.createUploadFileStatus(dstPath, false,
         size, blockSize, owner);
     addMoveStatus(srcPaths, dstMetas, srcPath, dstStatus);
   }
 
   private static void addMoveStatus(Collection<Path> srcPaths,
-      Collection<PathMetadata> dstMetas, Path srcPath, S3AFileStatus dstStatus)
+      Collection<PathMetadata> dstMetas, Path srcPath, FileStatus dstStatus)
   {
     srcPaths.add(srcPath);
     dstMetas.add(new PathMetadata(dstStatus));

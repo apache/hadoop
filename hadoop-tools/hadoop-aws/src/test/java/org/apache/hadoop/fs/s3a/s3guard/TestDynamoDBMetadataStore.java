@@ -40,6 +40,7 @@ import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -460,10 +461,17 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
   private void verifyRootDirectory(PathMetadata rootMeta, boolean isEmpty) {
     assertNotNull(rootMeta);
-    final S3AFileStatus status = (S3AFileStatus) rootMeta.getFileStatus();
+    final FileStatus status = rootMeta.getFileStatus();
     assertNotNull(status);
     assertTrue(status.isDirectory());
-    assertEquals(isEmpty, status.isEmptyDirectory());
+    // UNKNOWN is always a valid option, but true / false should not contradict
+    if (isEmpty) {
+      assertTrue("Should not be marked non-empty",
+          rootMeta.isEmptyDirectory() != Tristate.FALSE);
+    } else {
+      assertTrue("Should not be marked empty",
+          rootMeta.isEmptyDirectory() != Tristate.TRUE);
+    }
   }
 
   @Test

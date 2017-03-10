@@ -54,12 +54,22 @@ public abstract class FileSystemContractBaseTest extends TestCase {
 
   @Override
   protected void tearDown() throws Exception {
+    if (fs != null) {
+      // some cases use this absolute path
+      cleanupDir(path("/test"));
+      // others use this relative path
+      cleanupDir(path("test"));
+    }
+  }
+
+  private void cleanupDir(Path p) {
     try {
       if (fs != null) {
-        fs.delete(path("/test"), true);
+        LOG.info("Deleting " + p);
+        fs.delete(p, true);
       }
     } catch (IOException e) {
-      LOG.error("Error deleting /test: " + e, e);
+      LOG.error("Error deleting test dir: " + p, e);
     }
   }
   

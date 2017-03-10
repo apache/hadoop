@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.IOUtils;
 
 import com.google.common.collect.Sets;
@@ -350,6 +351,68 @@ public abstract class MetadataStoreTestBase extends Assert {
     assertNull("Don't get non-existent file", meta);
   }
 
+  @Test
+  public void testGetEmptyDir() throws Exception {
+    final String dirPath = "/a1/b1/c1/d1";
+    // Creates /a1/b1/c1/d1 as an empty dir
+    setupListStatus();
+
+    // 1. Tell MetadataStore (MS) that there are zero children
+    putListStatusFiles(dirPath, true /* authoritative */
+        /* zero children */);
+
+    // 2. Request a file status for dir, including whether or not the dir
+    // is empty.
+    PathMetadata meta = ms.get(strToPath(dirPath), true);
+
+    // 3. Check that either (a) the MS doesn't track whether or not it is
+    // empty (which is allowed), or (b) the MS knows the dir is empty.
+    if (!allowMissing() || meta != null) {
+      assertNotNull("Get should find meta for dir", meta);
+      assertNotEquals("Dir is empty or unknown", Tristate.FALSE,
+          meta.isEmptyDirectory());
+    }
+  }
+
+  @Test
+  public void testGetNonEmptyDir() throws Exception {
+    final String dirPath = "/a1/b1/c1";
+    // Creates /a1/b1/c1 as an non-empty dir
+    setupListStatus();
+
+    // Request a file status for dir, including whether or not the dir
+    // is empty.
+    PathMetadata meta = ms.get(strToPath(dirPath), true);
+
+    // MetadataStore knows /a1/b1/c1 has at least one child.  It is valid
+    // for it to answer either (a) UNKNOWN: the MS doesn't track whether
+    // or not the dir is empty, or (b) the MS knows the dir is non-empty.
+    if (!allowMissing() || meta != null) {
+      assertNotNull("Get should find meta for dir", meta);
+      assertNotEquals("Dir is non-empty or unknown", Tristate.TRUE,
+          meta.isEmptyDirectory());
+    }
+  }
+
+  @Test
+  public void testGetDirUnknownIfEmpty() throws Exception {
+    final String dirPath = "/a1/b1/c1/d1";
+    // 1. Create /a1/b1/c1/d1 as an empty dir, but do not tell MetadataStore
+    // (MS) whether or not it has any children.
+    setupListStatus();
+
+    // 2. Request a file status for dir, including whether or not the dir
+    // is empty.
+    PathMetadata meta = ms.get(strToPath(dirPath), true);
+
+    // 3. Assert MS reports isEmptyDir as UNKONWN: We haven't told MS
+    // whether or not the directory has any children.
+    if (!allowMissing() || meta != null) {
+      assertNotNull("Get should find meta for dir", meta);
+      assertEquals("Dir empty is unknown", Tristate.UNKNOWN,
+          meta.isEmptyDirectory());
+    }
+  }
 
   @Test
   public void testListChildren() throws Exception {

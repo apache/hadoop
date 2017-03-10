@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -62,7 +63,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     touch(fs, simpleFile);
     resetMetricDiffs();
-    S3AFileStatus status = fs.getFileStatus(simpleFile);
+    FileStatus status = fs.getFileStatus(simpleFile);
     assertTrue("not a file: " + status, status.isFile());
     if (!fs.hasMetadataStore()) {
       metadataRequests.assertDiffEquals(1);
@@ -81,8 +82,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path dir = path("empty");
     fs.mkdirs(dir);
     resetMetricDiffs();
-    S3AFileStatus status = fs.getFileStatus(dir);
-    assertTrue("not empty: " + status, status.isEmptyDirectory());
+    S3AFileStatus status = fs.innerGetFileStatus(dir, true);
+    assertTrue("not empty: " + status,
+        status.isEmptyDirectory() == Tristate.TRUE);
 
     if (!fs.hasMetadataStore()) {
       metadataRequests.assertDiffEquals(2);
@@ -97,7 +99,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path path = path("missing");
     resetMetricDiffs();
     try {
-      S3AFileStatus status = fs.getFileStatus(path);
+      FileStatus status = fs.getFileStatus(path);
       fail("Got a status back from a missing file path " + status);
     } catch (FileNotFoundException expected) {
       // expected
@@ -113,7 +115,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path path = path("missingdir/missingpath");
     resetMetricDiffs();
     try {
-      S3AFileStatus status = fs.getFileStatus(path);
+      FileStatus status = fs.getFileStatus(path);
       fail("Got a status back from a missing file path " + status);
     } catch (FileNotFoundException expected) {
       // expected
@@ -131,8 +133,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path simpleFile = new Path(dir, "simple.txt");
     touch(fs, simpleFile);
     resetMetricDiffs();
-    S3AFileStatus status = fs.getFileStatus(dir);
-    if (status.isEmptyDirectory()) {
+    S3AFileStatus status = fs.innerGetFileStatus(dir, true);
+    if (status.isEmptyDirectory() == Tristate.TRUE) {
       // erroneous state
       String fsState = fs.toString();
       fail("FileStatus says directory isempty: " + status

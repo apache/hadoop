@@ -306,7 +306,7 @@ public final class S3AUtils {
   private static S3AFileStatus createFileStatus(Path keyPath, boolean isDir,
       long size, Date modified, long blockSize, String owner) {
     if (isDir) {
-      return new S3AFileStatus(true, keyPath, owner);
+      return new S3AFileStatus(Tristate.UNKNOWN, keyPath, owner);
     } else {
       return new S3AFileStatus(size, dateToLong(modified), keyPath, blockSize,
           owner);
