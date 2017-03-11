@@ -121,9 +121,9 @@ public abstract class BaseAMRMProxyTest {
             + MockRequestInterceptor.class.getName());
 
     this.dispatcher = new AsyncDispatcher();
-    this.dispatcher.init(conf);
+    this.dispatcher.init(this.conf);
     this.dispatcher.start();
-    this.amrmProxyService = createAndStartAMRMProxyService();
+    createAndStartAMRMProxyService(this.conf);
   }
 
   @After
@@ -137,12 +137,19 @@ public abstract class BaseAMRMProxyTest {
     return threadpool;
   }
 
-  protected MockAMRMProxyService createAndStartAMRMProxyService() {
-    MockAMRMProxyService svc =
+  protected Configuration getConf() {
+    return this.conf;
+  }
+
+  protected void createAndStartAMRMProxyService(Configuration config) {
+    // Stop the existing instance first if not null
+    if (this.amrmProxyService != null) {
+      this.amrmProxyService.stop();
+    }
+    this.amrmProxyService =
         new MockAMRMProxyService(new NullContext(), dispatcher);
-    svc.init(conf);
-    svc.start();
-    return svc;
+    this.amrmProxyService.init(config);
+    this.amrmProxyService.start();
   }
 
   /**

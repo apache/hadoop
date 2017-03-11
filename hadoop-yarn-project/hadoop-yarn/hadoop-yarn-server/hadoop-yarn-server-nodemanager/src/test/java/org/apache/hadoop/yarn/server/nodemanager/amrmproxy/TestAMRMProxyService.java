@@ -21,9 +21,11 @@ package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
@@ -34,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.AMRMProxyService.RequestInterceptorChainWrapper;
 import org.apache.hadoop.yarn.util.Records;
@@ -92,6 +95,32 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
         registerApplicationMaster(testAppId);
     Assert.assertNotNull(response1);
     Assert.assertEquals(Integer.toString(testAppId), response1.getQueue());
+  }
+
+  /**
+   * Tests the case when interceptor pipeline initialization fails.
+   */
+  @Test
+  public void testInterceptorInitFailure() {
+    Configuration conf = this.getConf();
+    // Override with a bad interceptor configuration
+    conf.set(YarnConfiguration.AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE,
+        "class.that.does.not.exist");
+
+    // Reinitialize instance with the new config
+    createAndStartAMRMProxyService(conf);
+    int testAppId = 1;
+    try {
+      registerApplicationMaster(testAppId);
+      Assert.fail("Should not reach here. Expecting an exception thrown");
+    } catch (Exception e) {
+      Map<ApplicationId, RequestInterceptorChainWrapper> pipelines =
+          getAMRMProxyService().getPipelines();
+      ApplicationId id = getApplicationId(testAppId);
+      Assert.assertTrue(
+          "The interceptor pipeline should be removed if initializtion fails",
+          pipelines.get(id) == null);
+    }
   }
 
   /**
