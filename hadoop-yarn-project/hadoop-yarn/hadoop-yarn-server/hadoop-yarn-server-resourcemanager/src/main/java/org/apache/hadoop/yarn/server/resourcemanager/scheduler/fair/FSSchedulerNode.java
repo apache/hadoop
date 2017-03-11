@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -32,6 +34,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -42,11 +46,23 @@ import java.util.concurrent.ConcurrentSkipListMap;
 public class FSSchedulerNode extends SchedulerNode {
 
   private static final Log LOG = LogFactory.getLog(FSSchedulerNode.class);
-
+  private static final Comparator<RMContainer> comparator =
+      new Comparator<RMContainer>() {
+    @Override
+    public int compare(RMContainer o1, RMContainer o2) {
+      return Long.compare(o1.getContainerId().getContainerId(),
+          o2.getContainerId().getContainerId());
+    }
+  };
   private FSAppAttempt reservedAppSchedulable;
-  private final Map<RMContainer, FSAppAttempt> containersForPreemption =
-      new ConcurrentSkipListMap<>();
-  private Map<FSAppAttempt, Resource> reservedApp =
+  // Stores preemption list until the container is completed
+  @VisibleForTesting
+  final Map<RMContainer, FSAppAttempt> containersForPreemption =
+      new ConcurrentSkipListMap<>(comparator);
+
+  // Stores preemption list after the container is completed before assigned
+  @VisibleForTesting
+  Map<FSAppAttempt, Resource> reservedApp =
       new LinkedHashMap<>();
 
   public FSSchedulerNode(RMNode node, boolean usePortForNodeName) {
@@ -120,9 +136,11 @@ public class FSSchedulerNode extends SchedulerNode {
    * appropriate applications.
    * @return if any resources were allocated
    */
-  synchronized boolean assignContainersToPreemptionRequestors() {
+  synchronized boolean assignContainersToPreemptionReservees() {
     boolean assignedContainers = false;
-    for (FSAppAttempt app : reservedApp.keySet()) {
+    Iterator<FSAppAttempt> iterator = reservedApp.keySet().iterator();
+    while (iterator.hasNext()) {
+      FSAppAttempt app = iterator.next();
       Resource assigned = app.assignContainer(this);
       if (!Resources.isNone(assigned)) {
         assignedContainers = true;
@@ -130,7 +148,7 @@ public class FSSchedulerNode extends SchedulerNode {
             Resources.subtractFrom(reservedApp.get(app), assigned);
         if (remaining.getMemorySize() <= 0 &&
             remaining.getVirtualCores() <= 0) {
-          reservedApp.remove(app);
+          iterator.remove();
         }
       }
     }
@@ -167,7 +185,7 @@ public class FSSchedulerNode extends SchedulerNode {
    *
    * @param container container to remove
    */
-  synchronized void removeContainerForPreemption(RMContainer container) {
+  private synchronized void removeContainerForPreemption(RMContainer container) {
     FSAppAttempt app = containersForPreemption.get(container);
     if (app != null) {
       Resource containerSize =
@@ -180,5 +198,22 @@ public class FSSchedulerNode extends SchedulerNode {
       }
     }
     containersForPreemption.remove(container);
+  }
+
+  /**
+   * Release an allocated container on this node.
+   * It also releases from the reservation list to trigger preemption
+   * allocations.
+   * @param containerId ID of container to be released.
+   * @param releasedByNode whether the release originates from a node update.
+   */
+  @Override
+  public synchronized void releaseContainer(ContainerId containerId,
+                                            boolean releasedByNode) {
+    RMContainer container = getContainer(containerId);
+    super.releaseContainer(containerId, releasedByNode);
+    if (container != null) {
+      removeContainerForPreemption(container);
+    }
   }
 }

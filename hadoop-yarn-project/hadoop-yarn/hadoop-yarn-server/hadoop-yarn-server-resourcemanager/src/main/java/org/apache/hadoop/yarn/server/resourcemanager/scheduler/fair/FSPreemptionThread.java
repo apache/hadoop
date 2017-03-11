@@ -233,10 +233,6 @@ class FSPreemptionThread extends Thread {
         LOG.info("Killing container " + container);
         scheduler.completedContainer(
             container, status, RMContainerEventType.KILL);
-
-        FSSchedulerNode containerNode = (FSSchedulerNode)
-            scheduler.getNodeTracker().getNode(container.getAllocatedNode());
-        containerNode.removeContainerForPreemption(container);
       }
     }
   }
