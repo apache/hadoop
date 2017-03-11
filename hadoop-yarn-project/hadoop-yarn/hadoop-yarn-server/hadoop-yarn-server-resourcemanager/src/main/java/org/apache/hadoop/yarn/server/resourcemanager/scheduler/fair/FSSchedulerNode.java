@@ -141,6 +141,7 @@ public class FSSchedulerNode extends SchedulerNode {
     Iterator<FSAppAttempt> iterator = reservedApp.keySet().iterator();
     while (iterator.hasNext()) {
       FSAppAttempt app = iterator.next();
+      boolean removeApp = false;
       if (!app.isStopped()) {
         Resource assigned = app.assignContainer(this);
         if (!Resources.isNone(assigned)) {
@@ -149,10 +150,19 @@ public class FSSchedulerNode extends SchedulerNode {
               Resources.subtractFrom(reservedApp.get(app), assigned);
           if (remaining.getMemorySize() <= 0 &&
               remaining.getVirtualCores() <= 0) {
-            iterator.remove();
+            // No more preempted containers
+            removeApp = true;
           }
         }
       } else {
+        // App is stopped
+        removeApp = true;
+      }
+      if (Resources.equals(app.getPendingDemand(), Resources.none())) {
+        // App does not need more resources
+        removeApp = true;
+      }
+      if (removeApp) {
         iterator.remove();
       }
     }

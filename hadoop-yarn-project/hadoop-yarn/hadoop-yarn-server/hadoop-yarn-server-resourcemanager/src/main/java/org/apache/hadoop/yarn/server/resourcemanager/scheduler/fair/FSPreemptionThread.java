@@ -113,11 +113,6 @@ class FSPreemptionThread extends Thread {
         List<FSSchedulerNode> potentialNodes = scheduler.getNodeTracker()
             .getNodesByResourceName(rr.getResourceName());
         for (FSSchedulerNode node : potentialNodes) {
-          // TODO (YARN-5829): Attempt to reserve the node for starved app.
-          if (isNodeAlreadyReserved(node, starvedApp)) {
-            continue;
-          }
-
           int maxAMContainers = bestContainers == null ?
               Integer.MAX_VALUE : bestContainers.numAMContainers;
           PreemptableContainers preemptableContainers =
@@ -134,6 +129,7 @@ class FSPreemptionThread extends Thread {
 
         if (bestContainers != null && bestContainers.containers.size() > 0) {
           containersToPreempt.addAll(bestContainers.containers);
+          // Reserve the containers for the starved app
           trackPreemptionsAgainstNode(bestContainers.containers, starvedApp);
         }
       }
@@ -182,8 +178,6 @@ class FSPreemptionThread extends Thread {
       // Check if we have already identified enough containers
       if (Resources.fitsIn(request, potential)) {
         return preemptableContainers;
-      } else {
-        // TODO (YARN-5829): Unreserve the node for the starved app.
       }
     }
     return null;
