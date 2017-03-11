@@ -37,4 +37,90 @@ public final class ScmConfigKeys {
 
   // TODO : this is copied from OzoneConsts, may need to move to a better place
   public static final int CHUNK_SIZE = 1 * 1024 * 1024; // 1 MB
+
+  public static final int OZONE_SCM_CLIENT_PORT_DEFAULT = 9860;
+  public static final int OZONE_SCM_DATANODE_PORT_DEFAULT = 9861;
+
+  public static final String OZONE_SCM_CLIENT_ADDRESS_KEY =
+      "ozone.scm.client.address";
+  public static final String OZONE_SCM_CLIENT_BIND_HOST_KEY =
+      "ozone.scm.client.bind.host";
+  public static final String OZONE_SCM_CLIENT_BIND_HOST_DEFAULT =
+      "0.0.0.0";
+
+  public static final String OZONE_SCM_DATANODE_ADDRESS_KEY =
+      "ozone.scm.datanode.address";
+  public static final String OZONE_SCM_DATANODE_BIND_HOST_KEY =
+      "ozone.scm.datanode.bind.host";
+  public static final String OZONE_SCM_DATANODE_BIND_HOST_DEFAULT =
+      "0.0.0.0";
+
+  public static final String OZONE_SCM_HANDLER_COUNT_KEY =
+      "ozone.scm.handler.count.key";
+  public static final int OZONE_SCM_HANDLER_COUNT_DEFAULT = 10;
+
+  public static final String OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS =
+      "ozone.scm.heartbeat.interval.seconds";
+  public static final int OZONE_SCM_HEARBEAT_INTERVAL_SECONDS_DEFAULT =
+      30;
+
+  public static final String OZONE_SCM_DEADNODE_INTERVAL_MS =
+      "ozone.scm.dead.node.interval.ms";
+  public static final long OZONE_SCM_DEADNODE_INTERVAL_DEFAULT =
+      OZONE_SCM_HEARBEAT_INTERVAL_SECONDS_DEFAULT * 1000L * 20L;
+
+  public static final String OZONE_SCM_MAX_HB_COUNT_TO_PROCESS =
+      "ozone.scm.max.hb.count.to.process";
+  public static final int OZONE_SCM_MAX_HB_COUNT_TO_PROCESS_DEFAULT = 5000;
+
+  public static final String OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS =
+      "ozone.scm.heartbeat.thread.interval.ms";
+  public static final long OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS_DEFAULT =
+      3000;
+
+  public static final String OZONE_SCM_STALENODE_INTERVAL_MS =
+      "ozone.scm.stale.node.interval.ms";
+  public static final long OZONE_SCM_STALENODE_INTERVAL_DEFAULT =
+      OZONE_SCM_HEARBEAT_INTERVAL_SECONDS_DEFAULT * 1000L * 3L;
+
+  public static final String OZONE_SCM_HEARTBEAT_RPC_TIMEOUT =
+      "ozone.scm.heartbeat.rpc-timeout";
+  public static final long OZONE_SCM_HEARTBEAT_RPC_TIMEOUT_DEFAULT =
+      100;
+
+  /**
+   * Defines how frequently we will log the missing of heartbeat to a specific
+   * SCM. In the default case we will write a warning message for each 10
+   * sequential heart beats that we miss to a specific SCM. This is to avoid
+   * overrunning the log with lots of HB missed Log statements.
+   */
+  public static final String OZONE_SCM_HEARTBEAT_LOG_WARN_INTERVAL_COUNT =
+      "ozone.scm.heartbeat.log.warn.interval.count";
+  public static final int OZONE_SCM_HEARTBEAT_LOG_WARN_DEFAULT =
+      10;
+
+  // ozone.scm.names key is a set of DNS | DNS:PORT | IP Address | IP:PORT.
+  // Written as a comma separated string. e.g. scm1, scm2:8020, 7.7.7.7:7777
+  //
+  // If this key is not specified datanodes will not be able to find
+  // SCM. The SCM membership can be dynamic, so this key should contain
+  // all possible SCM names. Once the SCM leader is discovered datanodes will
+  // get the right list of SCMs to heartbeat to from the leader.
+  // While it is good for the datanodes to know the names of all SCM nodes,
+  // it is sufficient to actually know the name of on working SCM. That SCM
+  // will be able to return the information about other SCMs that are part of
+  // the SCM replicated Log.
+  //
+  //In case of a membership change, any one of the SCM machines will be
+  // able to send back a new list to the datanodes.
+  public static final String OZONE_SCM_NAMES = "ozone.scm.names";
+
+  public static final int OZONE_SCM_DEFAULT_PORT = 9862;
+  // File Name and path where datanode ID is to written to.
+  // if this value is not set then container startup will fail.
+  public static final String OZONE_SCM_DATANODE_ID = "ozone.scm.datanode.id";
+
+  public static final String OZONE_SCM_DB_CACHE_SIZE_MB =
+      "ozone.scm.db.cache.size.mb";
+  public static final int OZONE_SCM_DB_CACHE_SIZE_DEFAULT = 128;
 }

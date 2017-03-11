@@ -19,12 +19,12 @@ package org.apache.hadoop.ozone.container.common.states.endpoint;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.statemachine
     .EndpointStateMachine;
 
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,7 +99,7 @@ public final class RegisterEndpointTask implements
 
       // TODO : Add responses to the command Queue.
       rpcEndPoint.getEndPoint().register(dnNodeID,
-          conf.getStrings(OzoneConfigKeys.OZONE_SCM_NAMES));
+          conf.getStrings(ScmConfigKeys.OZONE_SCM_NAMES));
       EndpointStateMachine.EndPointStates nextState =
           rpcEndPoint.getState().getNextState();
       rpcEndPoint.setState(nextState);

@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
@@ -30,7 +31,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys.*;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -67,14 +67,14 @@ public class TestOzoneClientUtils {
 
     // First try a client address with just a host name. Verify it falls
     // back to the default port.
-    conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4");
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4");
     InetSocketAddress addr = OzoneClientUtils.getScmAddressForClients(conf);
     assertThat(addr.getHostString(), is("1.2.3.4"));
-    assertThat(addr.getPort(), is(OZONE_SCM_CLIENT_PORT_DEFAULT));
+    assertThat(addr.getPort(), is(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT));
 
     // Next try a client address with a host name and port. Verify both
     // are used correctly.
-    conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
     addr = OzoneClientUtils.getScmAddressForClients(conf);
     assertThat(addr.getHostString(), is("1.2.3.4"));
     assertThat(addr.getPort(), is(100));
@@ -102,31 +102,31 @@ public class TestOzoneClientUtils {
 
     // First try a client address with just a host name. Verify it falls
     // back to the default port.
-    conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4");
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4");
     InetSocketAddress addr = OzoneClientUtils.getScmAddressForDataNodes(conf);
     assertThat(addr.getHostString(), is("1.2.3.4"));
-    assertThat(addr.getPort(), is(OZONE_SCM_DATANODE_PORT_DEFAULT));
+    assertThat(addr.getPort(), is(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT));
 
     // Next try a client address with just a host name and port. Verify the port
     // is ignored and the default DataNode port is used.
-    conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
     addr = OzoneClientUtils.getScmAddressForDataNodes(conf);
     assertThat(addr.getHostString(), is("1.2.3.4"));
-    assertThat(addr.getPort(), is(OZONE_SCM_DATANODE_PORT_DEFAULT));
+    assertThat(addr.getPort(), is(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT));
 
     // Set both OZONE_SCM_CLIENT_ADDRESS_KEY and OZONE_SCM_DATANODE_ADDRESS_KEY.
     // Verify that the latter overrides and the port number is still the default.
-    conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
-    conf.set(OZONE_SCM_DATANODE_ADDRESS_KEY, "5.6.7.8");
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
+    conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "5.6.7.8");
     addr = OzoneClientUtils.getScmAddressForDataNodes(conf);
     assertThat(addr.getHostString(), is("5.6.7.8"));
-    assertThat(addr.getPort(), is(OZONE_SCM_DATANODE_PORT_DEFAULT));
+    assertThat(addr.getPort(), is(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT));
 
     // Set both OZONE_SCM_CLIENT_ADDRESS_KEY and OZONE_SCM_DATANODE_ADDRESS_KEY.
     // Verify that the latter overrides and the port number from the latter is
     // used.
-    conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
-    conf.set(OZONE_SCM_DATANODE_ADDRESS_KEY, "5.6.7.8:200");
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
+    conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "5.6.7.8:200");
     addr = OzoneClientUtils.getScmAddressForDataNodes(conf);
     assertThat(addr.getHostString(), is("5.6.7.8"));
     assertThat(addr.getPort(), is(200));
@@ -142,16 +142,16 @@ public class TestOzoneClientUtils {
 
     // The bind host should be 0.0.0.0 unless OZONE_SCM_CLIENT_BIND_HOST_KEY
     // is set differently.
-    conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4");
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4");
     InetSocketAddress addr = OzoneClientUtils.getScmClientBindAddress(conf);
     assertThat(addr.getHostString(), is("0.0.0.0"));
-    assertThat(addr.getPort(), is(OZONE_SCM_CLIENT_PORT_DEFAULT));
+    assertThat(addr.getPort(), is(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT));
 
     // The bind host should be 0.0.0.0 unless OZONE_SCM_CLIENT_BIND_HOST_KEY
     // is set differently. The port number from OZONE_SCM_CLIENT_ADDRESS_KEY
     // should be respected.
-    conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
-    conf.set(OZONE_SCM_DATANODE_ADDRESS_KEY, "1.2.3.4:200");
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
+    conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "1.2.3.4:200");
     addr = OzoneClientUtils.getScmClientBindAddress(conf);
     assertThat(addr.getHostString(), is("0.0.0.0"));
     assertThat(addr.getPort(), is(100));
@@ -159,19 +159,19 @@ public class TestOzoneClientUtils {
     // OZONE_SCM_CLIENT_BIND_HOST_KEY should be respected.
     // Port number should be default if none is specified via
     // OZONE_SCM_DATANODE_ADDRESS_KEY.
-    conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4");
-    conf.set(OZONE_SCM_DATANODE_ADDRESS_KEY, "1.2.3.4");
-    conf.set(OZONE_SCM_CLIENT_BIND_HOST_KEY, "5.6.7.8");
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4");
+    conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "1.2.3.4");
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_BIND_HOST_KEY, "5.6.7.8");
     addr = OzoneClientUtils.getScmClientBindAddress(conf);
     assertThat(addr.getHostString(), is("5.6.7.8"));
-    assertThat(addr.getPort(), is(OZONE_SCM_CLIENT_PORT_DEFAULT));
+    assertThat(addr.getPort(), is(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT));
 
     // OZONE_SCM_CLIENT_BIND_HOST_KEY should be respected.
     // Port number from OZONE_SCM_CLIENT_ADDRESS_KEY should be
     // respected.
-    conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
-    conf.set(OZONE_SCM_DATANODE_ADDRESS_KEY, "1.2.3.4:200");
-    conf.set(OZONE_SCM_CLIENT_BIND_HOST_KEY, "5.6.7.8");
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
+    conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "1.2.3.4:200");
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_BIND_HOST_KEY, "5.6.7.8");
     addr = OzoneClientUtils.getScmClientBindAddress(conf);
     assertThat(addr.getHostString(), is("5.6.7.8"));
     assertThat(addr.getPort(), is(100));
@@ -187,16 +187,16 @@ public class TestOzoneClientUtils {
 
     // The bind host should be 0.0.0.0 unless OZONE_SCM_DATANODE_BIND_HOST_KEY
     // is set differently.
-    conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4");
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4");
     InetSocketAddress addr = OzoneClientUtils.getScmDataNodeBindAddress(conf);
     assertThat(addr.getHostString(), is("0.0.0.0"));
-    assertThat(addr.getPort(), is(OZONE_SCM_DATANODE_PORT_DEFAULT));
+    assertThat(addr.getPort(), is(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT));
 
     // The bind host should be 0.0.0.0 unless OZONE_SCM_DATANODE_BIND_HOST_KEY
     // is set differently. The port number from OZONE_SCM_DATANODE_ADDRESS_KEY
     // should be respected.
-    conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
-    conf.set(OZONE_SCM_DATANODE_ADDRESS_KEY, "1.2.3.4:200");
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
+    conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "1.2.3.4:200");
     addr = OzoneClientUtils.getScmDataNodeBindAddress(conf);
     assertThat(addr.getHostString(), is("0.0.0.0"));
     assertThat(addr.getPort(), is(200));
@@ -204,19 +204,19 @@ public class TestOzoneClientUtils {
     // OZONE_SCM_DATANODE_BIND_HOST_KEY should be respected.
     // Port number should be default if none is specified via
     // OZONE_SCM_DATANODE_ADDRESS_KEY.
-    conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
-    conf.set(OZONE_SCM_DATANODE_ADDRESS_KEY, "1.2.3.4");
-    conf.set(OZONE_SCM_DATANODE_BIND_HOST_KEY, "5.6.7.8");
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
+    conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "1.2.3.4");
+    conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_BIND_HOST_KEY, "5.6.7.8");
     addr = OzoneClientUtils.getScmDataNodeBindAddress(conf);
     assertThat(addr.getHostString(), is("5.6.7.8"));
-    assertThat(addr.getPort(), is(OZONE_SCM_DATANODE_PORT_DEFAULT));
+    assertThat(addr.getPort(), is(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT));
 
     // OZONE_SCM_DATANODE_BIND_HOST_KEY should be respected.
     // Port number from OZONE_SCM_DATANODE_ADDRESS_KEY should be
     // respected.
-    conf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
-    conf.set(OZONE_SCM_DATANODE_ADDRESS_KEY, "1.2.3.4:200");
-    conf.set(OZONE_SCM_DATANODE_BIND_HOST_KEY, "5.6.7.8");
+    conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "1.2.3.4:100");
+    conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "1.2.3.4:200");
+    conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_BIND_HOST_KEY, "5.6.7.8");
     addr = OzoneClientUtils.getScmDataNodeBindAddress(conf);
     assertThat(addr.getHostString(), is("5.6.7.8"));
     assertThat(addr.getPort(), is(200));
@@ -230,23 +230,23 @@ public class TestOzoneClientUtils {
     Iterator<InetSocketAddress> it = null;
 
     // Verify valid IP address setup
-    conf.setStrings(OZONE_SCM_NAMES, "1.2.3.4");
+    conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES, "1.2.3.4");
     addresses = OzoneClientUtils.getSCMAddresses(conf);
     assertThat(addresses.size(), is(1));
     addr = addresses.iterator().next();
     assertThat(addr.getHostName(), is("1.2.3.4"));
-    assertThat(addr.getPort(), is(OZONE_SCM_DEFAULT_PORT));
+    assertThat(addr.getPort(), is(ScmConfigKeys.OZONE_SCM_DEFAULT_PORT));
 
     // Verify valid hostname setup
-    conf.setStrings(OZONE_SCM_NAMES, "scm1");
+    conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES, "scm1");
     addresses = OzoneClientUtils.getSCMAddresses(conf);
     assertThat(addresses.size(), is(1));
     addr = addresses.iterator().next();
     assertThat(addr.getHostName(), is("scm1"));
-    assertThat(addr.getPort(), is(OZONE_SCM_DEFAULT_PORT));
+    assertThat(addr.getPort(), is(ScmConfigKeys.OZONE_SCM_DEFAULT_PORT));
 
     // Verify valid hostname and port
-    conf.setStrings(OZONE_SCM_NAMES, "scm1:1234");
+    conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES, "scm1:1234");
     addresses = OzoneClientUtils.getSCMAddresses(conf);
     assertThat(addresses.size(), is(1));
     addr = addresses.iterator().next();
@@ -260,7 +260,7 @@ public class TestOzoneClientUtils {
     hostsAndPorts.put("scm3", 3456);
 
     // Verify multiple hosts and port
-    conf.setStrings(OZONE_SCM_NAMES, "scm1:1234,scm2:2345,scm3:3456");
+    conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES, "scm1:1234,scm2:2345,scm3:3456");
     addresses = OzoneClientUtils.getSCMAddresses(conf);
     assertThat(addresses.size(), is(3));
     it = addresses.iterator();
@@ -273,7 +273,7 @@ public class TestOzoneClientUtils {
     assertTrue(expected1.isEmpty());
 
     // Verify names with spaces
-    conf.setStrings(OZONE_SCM_NAMES, " scm1:1234, scm2:2345 , scm3:3456 ");
+    conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES, " scm1:1234, scm2:2345 , scm3:3456 ");
     addresses = OzoneClientUtils.getSCMAddresses(conf);
     assertThat(addresses.size(), is(3));
     it = addresses.iterator();
@@ -286,7 +286,7 @@ public class TestOzoneClientUtils {
     assertTrue(expected2.isEmpty());
 
     // Verify empty value
-    conf.setStrings(OZONE_SCM_NAMES, "");
+    conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES, "");
     try {
       addresses = OzoneClientUtils.getSCMAddresses(conf);
       fail("Empty value should cause an IllegalArgumentException");
@@ -295,7 +295,7 @@ public class TestOzoneClientUtils {
     }
 
     // Verify invalid hostname
-    conf.setStrings(OZONE_SCM_NAMES, "s..x..:1234");
+    conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES, "s..x..:1234");
     try {
       addresses = OzoneClientUtils.getSCMAddresses(conf);
       fail("An invalid hostname should cause an IllegalArgumentException");
@@ -304,7 +304,7 @@ public class TestOzoneClientUtils {
     }
 
     // Verify invalid port
-    conf.setStrings(OZONE_SCM_NAMES, "scm:xyz");
+    conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES, "scm:xyz");
     try {
       addresses = OzoneClientUtils.getSCMAddresses(conf);
       fail("An invalid port should cause an IllegalArgumentException");
@@ -313,7 +313,7 @@ public class TestOzoneClientUtils {
     }
 
     // Verify a mixed case (valid and invalid value both appears)
-    conf.setStrings(OZONE_SCM_NAMES, "scm1:1234, scm:xyz");
+    conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES, "scm1:1234, scm:xyz");
     try {
       addresses = OzoneClientUtils.getSCMAddresses(conf);
       fail("An invalid value should cause an IllegalArgumentException");

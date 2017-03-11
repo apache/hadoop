@@ -21,7 +21,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.OzoneClientUtils;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.EndpointStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
@@ -31,6 +30,7 @@ import org.apache.hadoop.ozone.container.common.states.endpoint.HeartbeatEndpoin
 import org.apache.hadoop.ozone.container.common.states.endpoint.RegisterEndpointTask;
 import org.apache.hadoop.ozone.container.common.states.endpoint.VersionEndpointTask;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -151,10 +151,10 @@ public class RunningDatanodeState implements DatanodeState {
    */
   private StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto
       getContainerNodeID() {
-    String dataNodeIDPath = conf.get(OzoneConfigKeys.OZONE_SCM_DATANODE_ID);
+    String dataNodeIDPath = conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID);
     if (dataNodeIDPath == null || dataNodeIDPath.isEmpty()) {
       LOG.error("A valid file path is needed for config setting {}",
-          OzoneConfigKeys.OZONE_SCM_DATANODE_ID);
+          ScmConfigKeys.OZONE_SCM_DATANODE_ID);
 
       // This is an unrecoverable error.
       this.context.setState(DatanodeStateMachine.DatanodeStates.SHUTDOWN);
