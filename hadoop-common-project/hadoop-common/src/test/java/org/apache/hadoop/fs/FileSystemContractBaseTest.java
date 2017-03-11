@@ -24,8 +24,9 @@ import java.util.ArrayList;
 
 import junit.framework.TestCase;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
@@ -45,8 +46,8 @@ import org.apache.hadoop.util.StringUtils;
  * </p>
  */
 public abstract class FileSystemContractBaseTest extends TestCase {
-  private static final Log LOG =
-    LogFactory.getLog(FileSystemContractBaseTest.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FileSystemContractBaseTest.class);
 
   protected final static String TEST_UMASK = "062";
   protected FileSystem fs;
@@ -54,15 +55,46 @@ public abstract class FileSystemContractBaseTest extends TestCase {
 
   @Override
   protected void tearDown() throws Exception {
-    try {
-      if (fs != null) {
-        fs.delete(path("/test"), true);
+    if (fs != null) {
+      // some cases use this absolute path
+      if (rootDirTestEnabled()) {
+        cleanupDir(path("/FileSystemContractBaseTest"));
       }
+      // others use this relative path against test base directory
+      cleanupDir(getTestBaseDir());
+    }
+    super.tearDown();
+  }
+
+  private void cleanupDir(Path p) {
+    try {
+      LOG.info("Deleting " + p);
+      fs.delete(p, true);
     } catch (IOException e) {
-      LOG.error("Error deleting /test: " + e, e);
+      LOG.error("Error deleting test dir: " + p, e);
     }
   }
-  
+
+  /**
+   * Test base directory for resolving relative test paths.
+   *
+   * The default value is /user/$USER/FileSystemContractBaseTest. Subclass may
+   * set specific test base directory.
+   */
+  protected Path getTestBaseDir() {
+    return new Path(fs.getWorkingDirectory(), "FileSystemContractBaseTest");
+  }
+
+  /**
+   * For absolute path return the fully qualified path while for relative path
+   * return the fully qualified path against {@link #getTestBaseDir()}.
+   */
+  protected final Path path(String pathString) {
+    Path p = new Path(pathString).makeQualified(fs.getUri(), getTestBaseDir());
+    LOG.info("Resolving {} -> {}", pathString, p);
+    return p;
+  }
+
   protected int getBlockSize() {
     return 1024;
   }
@@ -77,6 +109,17 @@ public abstract class FileSystemContractBaseTest extends TestCase {
    * should be run
    */
   protected boolean renameSupported() {
+    return true;
+  }
+
+  /**
+   * Override this if the filesystem does not enable testing root directories.
+   *
+   * If this returns true, the test will create and delete test directories and
+   * files under root directory, which may have side effects, e.g. fail tests
+   * with PermissionDenied exceptions.
+   */
+  protected boolean rootDirTestEnabled() {
     return true;
   }
 
@@ -102,24 +145,24 @@ public abstract class FileSystemContractBaseTest extends TestCase {
     Path workDir = path(getDefaultWorkingDirectory());
     assertEquals(workDir, fs.getWorkingDirectory());
 
-    fs.setWorkingDirectory(path("."));
+    fs.setWorkingDirectory(fs.makeQualified(new Path(".")));
     assertEquals(workDir, fs.getWorkingDirectory());
 
-    fs.setWorkingDirectory(path(".."));
+    fs.setWorkingDirectory(fs.makeQualified(new Path("..")));
     assertEquals(workDir.getParent(), fs.getWorkingDirectory());
 
-    Path relativeDir = path("hadoop");
+    Path relativeDir = fs.makeQualified(new Path("testWorkingDirectory"));
     fs.setWorkingDirectory(relativeDir);
     assertEquals(relativeDir, fs.getWorkingDirectory());
     
-    Path absoluteDir = path("/test/hadoop");
+    Path absoluteDir = path("/FileSystemContractBaseTest/testWorkingDirectory");
     fs.setWorkingDirectory(absoluteDir);
     assertEquals(absoluteDir, fs.getWorkingDirectory());
 
   }
   
   public void testMkdirs() throws Exception {
-    Path testDir = path("/test/hadoop");
+    Path testDir = path("testMkdirs");
     assertFalse(fs.exists(testDir));
     assertFalse(fs.isFile(testDir));
 
@@ -145,14 +188,15 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   }
 
   public void testMkdirsFailsForSubdirectoryOfExistingFile() throws Exception {
-    Path testDir = path("/test/hadoop");
+    Path testDir = path("testMkdirsFailsForSubdirectoryOfExistingFile");
     assertFalse(fs.exists(testDir));
     assertTrue(fs.mkdirs(testDir));
     assertTrue(fs.exists(testDir));
 
-    createFile(path("/test/hadoop/file"));
+    createFile(path("testMkdirsFailsForSubdirectoryOfExistingFile/file"));
 
-    Path testSubDir = path("/test/hadoop/file/subdir");
+    Path testSubDir = path(
+        "testMkdirsFailsForSubdirectoryOfExistingFile/file/subdir");
     try {
       fs.mkdirs(testSubDir);
       fail("Should throw IOException.");
@@ -167,7 +211,8 @@ public abstract class FileSystemContractBaseTest extends TestCase {
       // file missing execute permission.
     }
 
-    Path testDeepSubDir = path("/test/hadoop/file/deep/sub/dir");
+    Path testDeepSubDir = path(
+        "testMkdirsFailsForSubdirectoryOfExistingFile/file/deep/sub/dir");
     try {
       fs.mkdirs(testDeepSubDir);
       fail("Should throw IOException.");
@@ -190,7 +235,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
       String oldUmask = conf.get(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY);
       try {
         conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, TEST_UMASK);
-        final Path dir = path("/test/newDir");
+        final Path dir = path("newDir");
         assertTrue(fs.mkdirs(dir, new FsPermission((short) 0777)));
         FileStatus status = fs.getFileStatus(dir);
         assertTrue(status.isDirectory());
@@ -223,7 +268,8 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   public void testGetFileStatusThrowsExceptionForNonExistentFile() 
     throws Exception {
     try {
-      fs.getFileStatus(path("/test/hadoop/file"));
+      fs.getFileStatus(
+          path("testGetFileStatusThrowsExceptionForNonExistentFile/file"));
       fail("Should throw FileNotFoundException");
     } catch (FileNotFoundException e) {
       // expected
@@ -232,7 +278,8 @@ public abstract class FileSystemContractBaseTest extends TestCase {
 
   public void testListStatusThrowsExceptionForNonExistentFile() throws Exception {
     try {
-      fs.listStatus(path("/test/hadoop/file"));
+      fs.listStatus(
+          path("testListStatusThrowsExceptionForNonExistentFile/file"));
       fail("Should throw FileNotFoundException");
     } catch (FileNotFoundException fnfe) {
       // expected
@@ -240,30 +287,32 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   }
 
   public void testListStatus() throws Exception {
-    Path[] testDirs = { path("/test/hadoop/a"),
-                        path("/test/hadoop/b"),
-                        path("/test/hadoop/c/1"), };
+    final Path[] testDirs = {
+        path("testListStatus/a"),
+        path("testListStatus/b"),
+        path("testListStatus/c/1")
+    };
     assertFalse(fs.exists(testDirs[0]));
 
     for (Path path : testDirs) {
       assertTrue(fs.mkdirs(path));
     }
 
-    FileStatus[] paths = fs.listStatus(path("/test"));
+    FileStatus[] paths = fs.listStatus(path("."));
     assertEquals(1, paths.length);
-    assertEquals(path("/test/hadoop"), paths[0].getPath());
+    assertEquals(path("testListStatus"), paths[0].getPath());
 
-    paths = fs.listStatus(path("/test/hadoop"));
+    paths = fs.listStatus(path("testListStatus"));
     assertEquals(3, paths.length);
     ArrayList<Path> list = new ArrayList<Path>();
     for (FileStatus fileState : paths) {
       list.add(fileState.getPath());
     }
-    assertTrue(list.contains(path("/test/hadoop/a")));
-    assertTrue(list.contains(path("/test/hadoop/b")));
-    assertTrue(list.contains(path("/test/hadoop/c")));
+    assertTrue(list.contains(path("testListStatus/a")));
+    assertTrue(list.contains(path("testListStatus/b")));
+    assertTrue(list.contains(path("testListStatus/c")));
 
-    paths = fs.listStatus(path("/test/hadoop/a"));
+    paths = fs.listStatus(path("testListStatus/a"));
     assertEquals(0, paths.length);
   }
 
@@ -294,12 +343,12 @@ public abstract class FileSystemContractBaseTest extends TestCase {
    * @throws IOException on IO failures
    */
   protected void writeReadAndDelete(int len) throws IOException {
-    Path path = path("/test/hadoop/file");
+    Path path = path("writeReadAndDelete/file");
     writeAndRead(path, data, len, false, true);
   }
   
   public void testOverwrite() throws IOException {
-    Path path = path("/test/hadoop/file");
+    Path path = path("testOverwrite/file");
     
     fs.mkdirs(path.getParent());
 
@@ -325,7 +374,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   }
   
   public void testWriteInNonExistentDirectory() throws IOException {
-    Path path = path("/test/hadoop/file");
+    Path path = path("testWriteInNonExistentDirectory/file");
     assertFalse("Parent exists", fs.exists(path.getParent()));
     createFile(path);
     
@@ -335,15 +384,15 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   }
 
   public void testDeleteNonExistentFile() throws IOException {
-    Path path = path("/test/hadoop/file");    
+    Path path = path("testDeleteNonExistentFile/file");
     assertFalse("Path exists: " + path, fs.exists(path));
     assertFalse("No deletion", fs.delete(path, true));
   }
   
   public void testDeleteRecursively() throws IOException {
-    Path dir = path("/test/hadoop");
-    Path file = path("/test/hadoop/file");
-    Path subdir = path("/test/hadoop/subdir");
+    Path dir = path("testDeleteRecursively");
+    Path file = path("testDeleteRecursively/file");
+    Path subdir = path("testDeleteRecursively/subdir");
     
     createFile(file);
     assertTrue("Created subdir", fs.mkdirs(subdir));
@@ -369,7 +418,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   }
   
   public void testDeleteEmptyDirectory() throws IOException {
-    Path dir = path("/test/hadoop");
+    Path dir = path("testDeleteEmptyDirectory");
     assertTrue(fs.mkdirs(dir));
     assertTrue("Dir exists", fs.exists(dir));
     assertTrue("Deleted", fs.delete(dir, false));
@@ -379,26 +428,26 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   public void testRenameNonExistentPath() throws Exception {
     if (!renameSupported()) return;
     
-    Path src = path("/test/hadoop/path");
-    Path dst = path("/test/new/newpath");
+    Path src = path("testRenameNonExistentPath/path");
+    Path dst = path("testRenameNonExistentPathNew/newpath");
     rename(src, dst, false, false, false);
   }
 
   public void testRenameFileMoveToNonExistentDirectory() throws Exception {
     if (!renameSupported()) return;
     
-    Path src = path("/test/hadoop/file");
+    Path src = path("testRenameFileMoveToNonExistentDirectory/file");
     createFile(src);
-    Path dst = path("/test/new/newfile");
+    Path dst = path("testRenameFileMoveToNonExistentDirectoryNew/newfile");
     rename(src, dst, false, true, false);
   }
 
   public void testRenameFileMoveToExistingDirectory() throws Exception {
     if (!renameSupported()) return;
     
-    Path src = path("/test/hadoop/file");
+    Path src = path("testRenameFileMoveToExistingDirectory/file");
     createFile(src);
-    Path dst = path("/test/new/newfile");
+    Path dst = path("testRenameFileMoveToExistingDirectoryNew/newfile");
     fs.mkdirs(dst.getParent());
     rename(src, dst, true, false, true);
   }
@@ -406,9 +455,9 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   public void testRenameFileAsExistingFile() throws Exception {
     if (!renameSupported()) return;
     
-    Path src = path("/test/hadoop/file");
+    Path src = path("testRenameFileAsExistingFile/file");
     createFile(src);
-    Path dst = path("/test/new/newfile");
+    Path dst = path("testRenameFileAsExistingFileNew/newfile");
     createFile(dst);
     rename(src, dst, false, true, true);
   }
@@ -416,83 +465,84 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   public void testRenameFileAsExistingDirectory() throws Exception {
     if (!renameSupported()) return;
     
-    Path src = path("/test/hadoop/file");
+    Path src = path("testRenameFileAsExistingDirectory/file");
     createFile(src);
-    Path dst = path("/test/new/newdir");
+    Path dst = path("testRenameFileAsExistingDirectoryNew/newdir");
     fs.mkdirs(dst);
     rename(src, dst, true, false, true);
-    assertIsFile(path("/test/new/newdir/file"));
+    assertIsFile(path("testRenameFileAsExistingDirectoryNew/newdir/file"));
   }
   
   public void testRenameDirectoryMoveToNonExistentDirectory() 
     throws Exception {
     if (!renameSupported()) return;
     
-    Path src = path("/test/hadoop/dir");
+    Path src = path("testRenameDirectoryMoveToNonExistentDirectory/dir");
     fs.mkdirs(src);
-    Path dst = path("/test/new/newdir");
+    Path dst = path("testRenameDirectoryMoveToNonExistentDirectoryNew/newdir");
     rename(src, dst, false, true, false);
   }
   
   public void testRenameDirectoryMoveToExistingDirectory() throws Exception {
     if (!renameSupported()) return;
+    final String testDir = "testRenameDirectoryMoveToExistingDirectory";
     
-    Path src = path("/test/hadoop/dir");
+    Path src = path(testDir + "/dir");
     fs.mkdirs(src);
-    createFile(path("/test/hadoop/dir/file1"));
-    createFile(path("/test/hadoop/dir/subdir/file2"));
+    createFile(path(testDir + "/dir/file1"));
+    createFile(path(testDir + "/dir/subdir/file2"));
     
-    Path dst = path("/test/new/newdir");
+    Path dst = path(testDir + "New/newdir");
     fs.mkdirs(dst.getParent());
     rename(src, dst, true, false, true);
     
     assertFalse("Nested file1 exists",
-        fs.exists(path("/test/hadoop/dir/file1")));
+        fs.exists(path(testDir + "/dir/file1")));
     assertFalse("Nested file2 exists",
-        fs.exists(path("/test/hadoop/dir/subdir/file2")));
+        fs.exists(path(testDir + "/dir/subdir/file2")));
     assertTrue("Renamed nested file1 exists",
-        fs.exists(path("/test/new/newdir/file1")));
+        fs.exists(path(testDir + "New/newdir/file1")));
     assertTrue("Renamed nested exists",
-        fs.exists(path("/test/new/newdir/subdir/file2")));
+        fs.exists(path(testDir + "New/newdir/subdir/file2")));
   }
   
   public void testRenameDirectoryAsExistingFile() throws Exception {
     if (!renameSupported()) return;
     
-    Path src = path("/test/hadoop/dir");
+    Path src = path("testRenameDirectoryAsExistingFile/dir");
     fs.mkdirs(src);
-    Path dst = path("/test/new/newfile");
+    Path dst = path("testRenameDirectoryAsExistingFileNew/newfile");
     createFile(dst);
     rename(src, dst, false, true, true);
   }
   
   public void testRenameDirectoryAsExistingDirectory() throws Exception {
     if (!renameSupported()) return;
-    
-    Path src = path("/test/hadoop/dir");
+    final String testDir = "testRenameDirectoryAsExistingDirectory";
+    Path src = path(testDir + "/dir");
     fs.mkdirs(src);
-    createFile(path("/test/hadoop/dir/file1"));
-    createFile(path("/test/hadoop/dir/subdir/file2"));
-    
-    Path dst = path("/test/new/newdir");
+    createFile(path(testDir + "/file1"));
+    createFile(path(testDir + "/subdir/file2"));
+
+    Path dst = path(testDir + "New/newdir");
     fs.mkdirs(dst);
     rename(src, dst, true, false, true);
     assertTrue("Destination changed",
-        fs.exists(path("/test/new/newdir/dir")));    
+        fs.exists(path(testDir + "New/newdir/dir")));
     assertFalse("Nested file1 exists",
-        fs.exists(path("/test/hadoop/dir/file1")));
+        fs.exists(path(testDir + "/dir/file1")));
     assertFalse("Nested file2 exists",
-        fs.exists(path("/test/hadoop/dir/subdir/file2")));
+        fs.exists(path(testDir + "/dir/subdir/file2")));
     assertTrue("Renamed nested file1 exists",
-        fs.exists(path("/test/new/newdir/dir/file1")));
+        fs.exists(path(testDir + "New/newdir/dir/file1")));
     assertTrue("Renamed nested exists",
-        fs.exists(path("/test/new/newdir/dir/subdir/file2")));
+        fs.exists(path(testDir + "New/newdir/dir/subdir/file2")));
   }
 
   public void testInputStreamClosedTwice() throws IOException {
     //HADOOP-4760 according to Closeable#close() closing already-closed 
     //streams should have no effect. 
-    Path src = path("/test/hadoop/file");
+    Path src = path("testInputStreamClosedTwice/file");
     createFile(src);
     FSDataInputStream in = fs.open(src);
     in.close();
@@ -502,18 +552,13 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   public void testOutputStreamClosedTwice() throws IOException {
     //HADOOP-4760 according to Closeable#close() closing already-closed 
     //streams should have no effect. 
-    Path src = path("/test/hadoop/file");
+    Path src = path("testOutputStreamClosedTwice/file");
     FSDataOutputStream out = fs.create(src);
     out.writeChar('H'); //write some data
     out.close();
     out.close();
   }
-  
-  protected Path path(String pathString) {
-    return new Path(pathString).makeQualified(fs.getUri(),
-        fs.getWorkingDirectory());
-  }
-  
+
   protected void createFile(Path path) throws IOException {
     FSDataOutputStream out = fs.create(path);
     out.write(data, 0, data.length);
@@ -541,7 +586,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
 
     byte[] filedata1 = dataset(blockSize * 2, 'A', 26);
     byte[] filedata2 = dataset(blockSize * 2, 'a', 26);
-    Path path = path("/test/hadoop/file-overwrite");
+    Path path = path("testOverWriteAndRead/file-overwrite");
     writeAndRead(path, filedata1, blockSize, true, false);
     writeAndRead(path, filedata2, blockSize, true, false);
     writeAndRead(path, filedata1, blockSize * 2, true, false);
@@ -561,7 +606,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
       LOG.info("Skipping test");
       return;
     }
-    String mixedCaseFilename = "/test/UPPER.TXT";
+    String mixedCaseFilename = "testFilesystemIsCaseSensitive";
     Path upper = path(mixedCaseFilename);
     Path lower = path(StringUtils.toLowerCase(mixedCaseFilename));
     assertFalse("File exists" + upper, fs.exists(upper));
@@ -592,7 +637,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
    * @throws Exception on failures
    */
   public void testZeroByteFilesAreFiles() throws Exception {
-    Path src = path("/test/testZeroByteFilesAreFiles");
+    Path src = path("testZeroByteFilesAreFiles");
     //create a zero byte file
     FSDataOutputStream out = fs.create(src);
     out.close();
@@ -605,7 +650,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
    * @throws Exception on failures
    */
   public void testMultiByteFilesAreFiles() throws Exception {
-    Path src = path("/test/testMultiByteFilesAreFiles");
+    Path src = path("testMultiByteFilesAreFiles");
     FSDataOutputStream out = fs.create(src);
     out.writeUTF("testMultiByteFilesAreFiles");
     out.close();
@@ -629,10 +674,14 @@ public abstract class FileSystemContractBaseTest extends TestCase {
    * @throws Exception on failures
    */
   public void testRenameRootDirForbidden() throws Exception {
+    if (!rootDirTestEnabled()) {
+      return;
+    }
+
     if (!renameSupported()) return;
 
     rename(path("/"),
-           path("/test/newRootDir"),
+           path("testRenameRootDirForbidden"),
            false, true, false);
   }
 
@@ -644,7 +693,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   public void testRenameChildDirForbidden() throws Exception {
     if (!renameSupported()) return;
     LOG.info("testRenameChildDirForbidden");
-    Path parentdir = path("/test/parentdir");
+    Path parentdir = path("testRenameChildDirForbidden");
     fs.mkdirs(parentdir);
     Path childFile = new Path(parentdir, "childfile");
     createFile(childFile);
@@ -663,9 +712,9 @@ public abstract class FileSystemContractBaseTest extends TestCase {
    */
   public void testRenameToDirWithSamePrefixAllowed() throws Throwable {
     if (!renameSupported()) return;
-    Path parentdir = path("test/parentdir");
+    final Path parentdir = path("testRenameToDirWithSamePrefixAllowed");
     fs.mkdirs(parentdir);
-    Path dest = path("test/parentdirdest");
+    final Path dest = path("testRenameToDirWithSamePrefixAllowedDest");
     rename(parentdir, dest, true, false, true);
   }
 
@@ -677,7 +726,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
     if (!renameSupported()) {
       return;
     }
-    Path parentdir = path("test/parentdir");
+    Path parentdir = path("testRenameDirToSelf");
     fs.mkdirs(parentdir);
     Path child = new Path(parentdir, "child");
     createFile(child);
@@ -696,7 +745,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
     if (!renameSupported()) {
       return;
     }
-    Path testdir = path("test/dir");
+    Path testdir = path("testMoveDirUnderParent");
     fs.mkdirs(testdir);
     Path parent = testdir.getParent();
     //the outcome here is ambiguous, so is not checked
@@ -711,7 +760,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
    */
   public void testRenameFileToSelf() throws Throwable {
     if (!renameSupported()) return;
-    Path filepath = path("test/file");
+    Path filepath = path("testRenameFileToSelf");
     createFile(filepath);
     //HDFS expects rename src, src -> true
     rename(filepath, filepath, true, true, true);
@@ -725,7 +774,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
    */
   public void testMoveFileUnderParent() throws Throwable {
     if (!renameSupported()) return;
-    Path filepath = path("test/file");
+    Path filepath = path("testMoveFileUnderParent");
     createFile(filepath);
     //HDFS expects rename src, src -> true
     rename(filepath, filepath, true, true, true);
@@ -734,15 +783,23 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   }
 
   public void testLSRootDir() throws Throwable {
+    if (!rootDirTestEnabled()) {
+      return;
+    }
+
     Path dir = path("/");
-    Path child = path("/test");
+    Path child = path("/FileSystemContractBaseTest");
     createFile(child);
     assertListFilesFinds(dir, child);
   }
 
   public void testListStatusRootDir() throws Throwable {
+    if (!rootDirTestEnabled()) {
+      return;
+    }
+
     Path dir = path("/");
-    Path child  = path("/test");
+    Path child  = path("/FileSystemContractBaseTest");
     createFile(child);
     assertListStatusFinds(dir, child);
   }
