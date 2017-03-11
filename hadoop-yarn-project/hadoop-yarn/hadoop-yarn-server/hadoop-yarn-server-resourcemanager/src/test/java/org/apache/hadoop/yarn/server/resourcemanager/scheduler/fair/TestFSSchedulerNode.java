@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -266,6 +267,45 @@ public class TestFSSchedulerNode {
 
     // Release all containers
     for (int i = 3; i < containerNum; ++i) {
+      schedulerNode.releaseContainer(containers.get(i).getContainerId(), true);
+    }
+    finalValidation(schedulerNode);
+  }
+
+  /**
+   * Allocate and release a single container and delete the app in between.
+   */
+  @Test
+  public void testPreemptionToCompletedApp() {
+    RMNode node = createNode();
+    FSSchedulerNode schedulerNode = new FSSchedulerNode(node, false);
+
+    // Launch containers and saturate the cluster
+    saturateCluster(schedulerNode);
+    assertEquals("Container should be allocated",
+        Resources.multiply(containers.get(0).getContainer().getResource(),
+            containerNum),
+        schedulerNode.getAllocatedResource());
+
+    // Preempt a container
+    FSAppAttempt starvingApp = createStarvingApp(schedulerNode,
+        Resource.newInstance(1024, 1));
+    schedulerNode.addContainersForPreemption(
+        Collections.singletonList(containers.get(0)), starvingApp);
+
+    schedulerNode.releaseContainer(containers.get(0).getContainerId(), true);
+
+    // Stop the application then try to satisfy the reservation
+    // and observe that there are still free resources not allocated to
+    // the deleted app
+    when(starvingApp.isStopped()).thenReturn(true);
+    schedulerNode.assignContainersToPreemptionReservees();
+    assertNotEquals("Container should be allocated",
+        schedulerNode.getTotalResource(),
+        schedulerNode.getAllocatedResource());
+
+    // Release all containers
+    for (int i = 1; i < containerNum; ++i) {
       schedulerNode.releaseContainer(containers.get(i).getContainerId(), true);
     }
     finalValidation(schedulerNode);

@@ -133,7 +133,7 @@ public class FSSchedulerNode extends SchedulerNode {
 
   /**
    * List reserved resources after preemption and assign them to the
-   * appropriate applications.
+   * appropriate applications in a FIFO order.
    * @return if any resources were allocated
    */
   synchronized boolean assignContainersToPreemptionReservees() {
@@ -141,15 +141,19 @@ public class FSSchedulerNode extends SchedulerNode {
     Iterator<FSAppAttempt> iterator = reservedApp.keySet().iterator();
     while (iterator.hasNext()) {
       FSAppAttempt app = iterator.next();
-      Resource assigned = app.assignContainer(this);
-      if (!Resources.isNone(assigned)) {
-        assignedContainers = true;
-        Resource remaining =
-            Resources.subtractFrom(reservedApp.get(app), assigned);
-        if (remaining.getMemorySize() <= 0 &&
-            remaining.getVirtualCores() <= 0) {
-          iterator.remove();
+      if (!app.isStopped()) {
+        Resource assigned = app.assignContainer(this);
+        if (!Resources.isNone(assigned)) {
+          assignedContainers = true;
+          Resource remaining =
+              Resources.subtractFrom(reservedApp.get(app), assigned);
+          if (remaining.getMemorySize() <= 0 &&
+              remaining.getVirtualCores() <= 0) {
+            iterator.remove();
+          }
         }
+      } else {
+        iterator.remove();
       }
     }
     return assignedContainers;
