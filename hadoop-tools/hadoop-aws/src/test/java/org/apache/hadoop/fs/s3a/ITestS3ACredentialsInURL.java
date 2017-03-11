@@ -38,7 +38,7 @@ import java.net.URLEncoder;
 import java.nio.file.AccessDeniedException;
 
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.TEST_FS_S3A_NAME;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeS3GuardNotEnabled;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeS3GuardState;
 
 /**
  * Tests that credentials can go into the URL. This includes a valid
@@ -68,7 +68,7 @@ public class ITestS3ACredentialsInURL extends Assert {
 
     // Skip in the case of S3Guard with DynamoDB because it cannot get
     // credentials for its own use if they're only in S3 URLs
-    assumeS3GuardNotEnabled(conf);
+    assumeS3GuardState(false, conf);
 
     String accessKey = conf.get(Constants.ACCESS_KEY);
     String secretKey = conf.get(Constants.SECRET_KEY);
@@ -127,7 +127,7 @@ public class ITestS3ACredentialsInURL extends Assert {
     Configuration conf = new Configuration();
     String fsname = conf.getTrimmed(TEST_FS_S3A_NAME, "");
     Assume.assumeNotNull(fsname);
-    assumeS3GuardNotEnabled(conf);
+    assumeS3GuardState(false, conf);
     URI original = new URI(fsname);
     URI testURI = createUriWithEmbeddedSecrets(original, "user", "//");
 

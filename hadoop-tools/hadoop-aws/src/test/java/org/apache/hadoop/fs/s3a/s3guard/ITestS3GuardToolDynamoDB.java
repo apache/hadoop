@@ -30,11 +30,6 @@ import java.io.IOException;
 import java.util.Random;
 
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * Test S3Guard related CLI commands against DynamoDB.

@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.hamcrest.core.Is;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.internal.AssumptionViolatedException;
@@ -327,17 +328,23 @@ public final class S3ATestUtils {
   /**
    * Assume testing S3Guard is not enabled.
    */
-  public static void assumeS3GuardNotEnabled(Configuration originalConf)
-      throws URISyntaxException {
-    Assume.assumeFalse(getTestPropertyBool(originalConf, TEST_S3GUARD_ENABLED,
-        originalConf.getBoolean(TEST_S3GUARD_ENABLED, false)));
+  public static void assumeS3GuardState(boolean shouldBeEnabled,
+      Configuration originalConf) throws URISyntaxException {
+    boolean isEnabled = getTestPropertyBool(originalConf, TEST_S3GUARD_ENABLED,
+        originalConf.getBoolean(TEST_S3GUARD_ENABLED, false));
+    Assume.assumeThat("Unexpected S3Guard test state: shouldBeEnabled=" +
+        shouldBeEnabled + " and isEnabled =" + isEnabled,
+        shouldBeEnabled, Is.is(isEnabled));
 
     final String fsname = originalConf.getTrimmed(TEST_FS_S3A_NAME);
     Assume.assumeNotNull(fsname);
     final String bucket = new URI(fsname).getHost();
     final Configuration conf = propagateBucketOptions(originalConf, bucket);
-    Assume.assumeTrue(S3GUARD_METASTORE_NULL.equals(
-        conf.getTrimmed(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL)));
+    boolean usingNullImpl = S3GUARD_METASTORE_NULL.equals(
+        conf.getTrimmed(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL));
+    Assume.assumeThat("Unexpected S3Guard test state: shouldBeEnabled=" +
+        shouldBeEnabled + " but usingNullImpl=" + usingNullImpl,
+        shouldBeEnabled, Is.is(!usingNullImpl));
   }
 
   /**

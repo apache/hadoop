@@ -66,7 +66,7 @@ public abstract class S3GuardToolTestBase extends AbstractS3ATestBase {
   public void setUp() throws Exception {
     conf = new Configuration();
     fs = S3ATestUtils.createTestFileSystem(conf);
-
+    S3ATestUtils.assumeS3GuardState(true, getConf());
     ms = newMetadataStore();
     ms.initialize(fs);
   }
