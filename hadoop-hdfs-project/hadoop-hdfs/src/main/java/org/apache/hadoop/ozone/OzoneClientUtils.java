@@ -35,28 +35,27 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys.*;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
+import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_DEADNODE_INTERVAL_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
+import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_DEADNODE_INTERVAL_MS;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
+import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys
+import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_HEARTBEAT_LOG_WARN_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
+import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_HEARTBEAT_LOG_WARN_INTERVAL_COUNT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
+import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys
+import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_HEARTBEAT_RPC_TIMEOUT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
+import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_HEARTBEAT_RPC_TIMEOUT_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
+import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_STALENODE_INTERVAL_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
+import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_STALENODE_INTERVAL_MS;
 
 /**
@@ -96,15 +95,15 @@ public final class OzoneClientUtils {
     Collection<InetSocketAddress> addresses =
         new HashSet<InetSocketAddress>();
     Collection<String> names =
-        conf.getTrimmedStringCollection(OzoneConfigKeys.OZONE_SCM_NAMES);
+        conf.getTrimmedStringCollection(ScmConfigKeys.OZONE_SCM_NAMES);
     if (names == null || names.isEmpty()) {
-      throw new IllegalArgumentException(OzoneConfigKeys.OZONE_SCM_NAMES
+      throw new IllegalArgumentException(ScmConfigKeys.OZONE_SCM_NAMES
           + " need to be a set of valid DNS names or IP addresses."
           + " Null or empty address list found.");
     }
 
     final com.google.common.base.Optional<Integer>
-        defaultPort =  com.google.common.base.Optional.of(OzoneConfigKeys
+        defaultPort =  com.google.common.base.Optional.of(ScmConfigKeys
         .OZONE_SCM_DEFAULT_PORT);
     for (String address : names) {
       com.google.common.base.Optional<String> hostname =
@@ -131,20 +130,21 @@ public final class OzoneClientUtils {
    */
   public static InetSocketAddress getScmAddressForClients(Configuration conf) {
     final Optional<String> host = getHostNameFromConfigKeys(conf,
-        OZONE_SCM_CLIENT_ADDRESS_KEY);
+        ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
 
     if (!host.isPresent()) {
-      throw new IllegalArgumentException(OZONE_SCM_CLIENT_ADDRESS_KEY +
+      throw new IllegalArgumentException(
+          ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY +
           " must be defined. See" +
           " https://wiki.apache.org/hadoop/Ozone#Configuration for details" +
           " on configuring Ozone.");
     }
 
     final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
-        OZONE_SCM_CLIENT_ADDRESS_KEY);
+        ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
 
     return NetUtils.createSocketAddr(host.get() + ":" +
-        port.or(OZONE_SCM_CLIENT_PORT_DEFAULT));
+        port.or(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT));
   }
 
   /**
@@ -162,10 +162,12 @@ public final class OzoneClientUtils {
     // - OZONE_SCM_CLIENT_ADDRESS_KEY
     //
     final Optional<String> host = getHostNameFromConfigKeys(conf,
-        OZONE_SCM_DATANODE_ADDRESS_KEY, OZONE_SCM_CLIENT_ADDRESS_KEY);
+        ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY,
+        ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
 
     if (!host.isPresent()) {
-      throw new IllegalArgumentException(OZONE_SCM_CLIENT_ADDRESS_KEY +
+      throw new IllegalArgumentException(
+          ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY +
           " must be defined. See" +
           " https://wiki.apache.org/hadoop/Ozone#Configuration for details" +
           " on configuring Ozone.");
@@ -173,10 +175,10 @@ public final class OzoneClientUtils {
 
     // If no port number is specified then we'll just try the defaultBindPort.
     final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
-        OZONE_SCM_DATANODE_ADDRESS_KEY);
+        ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY);
 
     InetSocketAddress addr = NetUtils.createSocketAddr(host.get() + ":" +
-        port.or(OZONE_SCM_DATANODE_PORT_DEFAULT));
+        port.or(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT));
 
     return addr;
   }
@@ -191,14 +193,14 @@ public final class OzoneClientUtils {
   public static InetSocketAddress getScmClientBindAddress(
       Configuration conf) {
     final Optional<String> host = getHostNameFromConfigKeys(conf,
-        OZONE_SCM_CLIENT_BIND_HOST_KEY);
+        ScmConfigKeys.OZONE_SCM_CLIENT_BIND_HOST_KEY);
 
     final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
-        OZONE_SCM_CLIENT_ADDRESS_KEY);
+        ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
 
     return NetUtils.createSocketAddr(
-        host.or(OZONE_SCM_CLIENT_BIND_HOST_DEFAULT) + ":" +
-            port.or(OZONE_SCM_CLIENT_PORT_DEFAULT));
+        host.or(ScmConfigKeys.OZONE_SCM_CLIENT_BIND_HOST_DEFAULT) + ":" +
+            port.or(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT));
   }
 
   /**
@@ -211,15 +213,15 @@ public final class OzoneClientUtils {
   public static InetSocketAddress getScmDataNodeBindAddress(
       Configuration conf) {
     final Optional<String> host = getHostNameFromConfigKeys(conf,
-        OZONE_SCM_DATANODE_BIND_HOST_KEY);
+        ScmConfigKeys.OZONE_SCM_DATANODE_BIND_HOST_KEY);
 
     // If no port number is specified then we'll just try the defaultBindPort.
     final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
-        OZONE_SCM_DATANODE_ADDRESS_KEY);
+        ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY);
 
     return NetUtils.createSocketAddr(
-        host.or(OZONE_SCM_DATANODE_BIND_HOST_DEFAULT) + ":" +
-            port.or(OZONE_SCM_DATANODE_PORT_DEFAULT));
+        host.or(ScmConfigKeys.OZONE_SCM_DATANODE_BIND_HOST_DEFAULT) + ":" +
+            port.or(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT));
   }
 
   /**
@@ -351,7 +353,7 @@ public final class OzoneClientUtils {
    */
   public static long getScmheartbeatCheckerInterval(Configuration conf) {
     return conf.getLong(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS,
-        OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS_DEFAULT);
+        ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS_DEFAULT);
   }
 
   /**
@@ -362,8 +364,10 @@ public final class OzoneClientUtils {
    * @return - HB interval in seconds.
    */
   public static long getScmHeartbeatInterval(Configuration conf) {
-    return conf.getTimeDuration(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS,
-        OZONE_SCM_HEARBEAT_INTERVAL_SECONDS_DEFAULT, TimeUnit.SECONDS);
+    return conf.getTimeDuration(
+        OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS,
+        ScmConfigKeys.OZONE_SCM_HEARBEAT_INTERVAL_SECONDS_DEFAULT,
+        TimeUnit.SECONDS);
   }
 
   /**
@@ -444,8 +448,8 @@ public final class OzoneClientUtils {
    * @return - int -- Number of HBs to process
    */
   public static int getMaxHBToProcessPerLoop(Configuration conf) {
-    return conf.getInt(OZONE_SCM_MAX_HB_COUNT_TO_PROCESS,
-        OZONE_SCM_MAX_HB_COUNT_TO_PROCESS_DEFAULT);
+    return conf.getInt(ScmConfigKeys.OZONE_SCM_MAX_HB_COUNT_TO_PROCESS,
+        ScmConfigKeys.OZONE_SCM_MAX_HB_COUNT_TO_PROCESS_DEFAULT);
   }
 
   /**

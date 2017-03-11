@@ -19,7 +19,7 @@ package org.apache.hadoop.ozone.container.common;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.EndpointStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
@@ -49,7 +49,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
+import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_HEARTBEAT_RPC_TIMEOUT;
 
 /**
@@ -83,7 +83,7 @@ public class TestDatanodeStateMachine {
       mockServers.add(mock);
     }
 
-    conf.setStrings(OzoneConfigKeys.OZONE_SCM_NAMES,
+    conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES,
         serverAddresses.toArray(new String[0]));
 
     URL p = this.getClass().getResource("");
@@ -96,7 +96,7 @@ public class TestDatanodeStateMachine {
     conf.set(DFS_DATANODE_DATA_DIR_KEY, path);
     path = Paths.get(path.toString(),
         TestDatanodeStateMachine.class.getSimpleName() + ".id").toString();
-    conf.set(OzoneConfigKeys.OZONE_SCM_DATANODE_ID, path);
+    conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ID, path);
     executorService = HadoopExecutors.newCachedThreadPool(
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("Test Data Node State Machine Thread - %d").build());
@@ -275,7 +275,7 @@ public class TestDatanodeStateMachine {
         "scm:xyz",   // Invalid port
         "scm:123456" // Port out of range
     }) {
-      conf.setStrings(OzoneConfigKeys.OZONE_SCM_NAMES, name);
+      conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES, name);
       final DatanodeStateMachine stateMachine =
           new DatanodeStateMachine(conf);
       DatanodeStateMachine.DatanodeStates currentState =

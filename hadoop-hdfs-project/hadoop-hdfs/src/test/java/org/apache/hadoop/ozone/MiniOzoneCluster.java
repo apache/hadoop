@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.ozone.scm.StorageContainerManager;
@@ -298,15 +299,15 @@ public class MiniOzoneCluster extends MiniDFSCluster implements Closeable {
       configureSCMheartbeat();
       configScmMetadata();
 
-      conf.set(OzoneConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
-      conf.set(OzoneConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
 
 
       StorageContainerManager scm = new StorageContainerManager(conf);
       scm.start();
       String addressString =  scm.getDatanodeRpcAddress().getHostString() +
           ":" + scm.getDatanodeRpcAddress().getPort();
-      conf.setStrings(OzoneConfigKeys.OZONE_SCM_NAMES, addressString);
+      conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES, addressString);
 
       MiniOzoneCluster cluster = new MiniOzoneCluster(this, scm);
       try {
@@ -344,7 +345,7 @@ public class MiniOzoneCluster extends MiniDFSCluster implements Closeable {
       // TODO : Fix this, we need a more generic mechanism to map
       // different datanode ID for different datanodes when we have lots of
       // datanodes in the cluster.
-      conf.setStrings(OzoneConfigKeys.OZONE_SCM_DATANODE_ID,
+      conf.setStrings(ScmConfigKeys.OZONE_SCM_DATANODE_ID,
           scmPath.toString() + "/datanode.id");
 
     }
@@ -368,19 +369,19 @@ public class MiniOzoneCluster extends MiniDFSCluster implements Closeable {
 
     private void configureSCMheartbeat() {
       if (hbSeconds.isPresent()) {
-        conf.setInt(OzoneConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS,
+        conf.setInt(ScmConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS,
             hbSeconds.get());
 
       } else {
-        conf.setInt(OzoneConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS,
+        conf.setInt(ScmConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS,
             defaultHBSeconds);
       }
 
       if (hbProcessorInterval.isPresent()) {
-        conf.setInt(OzoneConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS,
+        conf.setInt(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS,
             hbProcessorInterval.get());
       } else {
-        conf.setInt(OzoneConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS,
+        conf.setInt(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS,
             defaultProcessorMs);
       }
 

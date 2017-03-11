@@ -84,17 +84,17 @@ import java.util.UUID;
 import java.util.Map;
 import java.util.HashMap;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys
+import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_CLIENT_ADDRESS_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
+import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_DATANODE_ADDRESS_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
+import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_DB_CACHE_SIZE_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
+import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_DB_CACHE_SIZE_MB;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
+import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_HANDLER_COUNT_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
+import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
