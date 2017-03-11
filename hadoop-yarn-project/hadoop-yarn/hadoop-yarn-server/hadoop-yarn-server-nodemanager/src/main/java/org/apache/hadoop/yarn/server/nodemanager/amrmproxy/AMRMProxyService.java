@@ -319,11 +319,16 @@ public class AMRMProxyService extends AbstractService implements
         + " ApplicationId:" + applicationAttemptId + " for the user: "
         + user);
 
-    RequestInterceptor interceptorChain =
-        this.createRequestInterceptorChain();
-    interceptorChain.init(createApplicationMasterContext(
-        applicationAttemptId, user, amrmToken, localToken));
-    chainWrapper.init(interceptorChain, applicationAttemptId);
+    try {
+      RequestInterceptor interceptorChain =
+          this.createRequestInterceptorChain();
+      interceptorChain.init(createApplicationMasterContext(this.nmContext,
+          applicationAttemptId, user, amrmToken, localToken));
+      chainWrapper.init(interceptorChain, applicationAttemptId);
+    } catch (Exception e) {
+      this.applPipelineMap.remove(applicationAttemptId.getApplicationId());
+      throw e;
+    }
   }
 
   /**
@@ -339,8 +344,10 @@ public class AMRMProxyService extends AbstractService implements
         this.applPipelineMap.remove(applicationId);
 
     if (pipeline == null) {
-      LOG.info("Request to stop an application that does not exist. Id:"
-          + applicationId);
+      LOG.info(
+          "No interceptor pipeline for application {},"
+              + " likely because its AM is not run in this node.",
+          applicationId);
     } else {
       // Remove the appAttempt in AMRMTokenSecretManager
       this.secretManager
@@ -413,11 +420,11 @@ public class AMRMProxyService extends AbstractService implements
   }
 
   private AMRMProxyApplicationContext createApplicationMasterContext(
-      ApplicationAttemptId applicationAttemptId, String user,
+      Context context, ApplicationAttemptId applicationAttemptId, String user,
       Token<AMRMTokenIdentifier> amrmToken,
       Token<AMRMTokenIdentifier> localToken) {
     AMRMProxyApplicationContextImpl appContext =
-        new AMRMProxyApplicationContextImpl(this.nmContext, getConfig(),
+        new AMRMProxyApplicationContextImpl(context, getConfig(),
             applicationAttemptId, user, amrmToken, localToken);
     return appContext;
   }
