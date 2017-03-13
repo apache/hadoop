@@ -96,7 +96,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdate
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
@@ -119,7 +118,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.xml.sax.SAXException;
 
@@ -130,8 +128,6 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   private final int GB = 1024;
   private final static String ALLOC_FILE =
       new File(TEST_DIR, "test-queues").getAbsolutePath();
-  private final static ContainerUpdates NULL_UPDATE_REQUESTS =
-      new ContainerUpdates();
 
   @Before
   public void setUp() throws IOException {
@@ -663,15 +659,13 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // case, we use maxShare, since it is smaller than available resource.
     assertEquals("QueueFSZeroWithMax's fair share should be zero",
         0, queueFSZeroWithMax.getFairShare().getMemorySize());
+    Resource expectedAMResource = Resources.multiplyAndRoundUp(
+        queueFSZeroWithMax.getMaxShare(), queueFSZeroWithMax.getMaxAMShare());
     assertEquals("QueueFSZeroWithMax's maximum AM resource should be "
-        + "maxShare * maxAMShare",
-        (long)(queueFSZeroWithMax.getMaxShare().getMemorySize() *
-            queueFSZeroWithMax.getMaxAMShare()),
+        + "maxShare * maxAMShare", expectedAMResource.getMemorySize(),
         queueFSZeroWithMax.getMetrics().getMaxAMShareMB());
     assertEquals("QueueFSZeroWithMax's maximum AM resource should be "
-        + "maxShare * maxAMShare",
-        (long)(queueFSZeroWithMax.getMaxShare().getVirtualCores() *
-            queueFSZeroWithMax.getMaxAMShare()),
+        + "maxShare * maxAMShare", expectedAMResource.getVirtualCores(),
         queueFSZeroWithMax.getMetrics().getMaxAMShareVCores());
     assertEquals("QueueFSZeroWithMax's AM resource usage should be the same to "
         + "AM resource request",
@@ -693,17 +687,19 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // the min(maxShare, available resource) to compute maxAMShare, in this
     // case, we use available resource since it is smaller than the
     // default maxShare.
+    expectedAMResource = Resources.multiplyAndRoundUp(
+        Resources.createResource(memCapacity - amResource.getMemorySize(),
+            cpuCapacity - amResource.getVirtualCores()),
+        queueFSZeroWithAVL.getMaxAMShare());
     assertEquals("QueueFSZeroWithAVL's fair share should be zero",
         0, queueFSZeroWithAVL.getFairShare().getMemorySize());
     assertEquals("QueueFSZeroWithAVL's maximum AM resource should be "
         + " available resource * maxAMShare",
-        (long) ((memCapacity - amResource.getMemorySize()) *
-        queueFSZeroWithAVL.getMaxAMShare()),
+        expectedAMResource.getMemorySize(),
         queueFSZeroWithAVL.getMetrics().getMaxAMShareMB());
     assertEquals("QueueFSZeroWithAVL's maximum AM resource should be "
         + " available resource * maxAMShare",
-        (long) ((cpuCapacity - amResource.getVirtualCores()) *
-        queueFSZeroWithAVL.getMaxAMShare()),
+        expectedAMResource.getVirtualCores(),
         queueFSZeroWithAVL.getMetrics().getMaxAMShareVCores());
     assertEquals("QueueFSZeroWithMax's AM resource usage should be the same to "
         + "AM resource request",
@@ -725,13 +721,13 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // fair share to compute maxAMShare
     assertNotEquals("QueueFSNonZero's fair share shouldn't be zero",
         0, queueFSNonZero.getFairShare().getMemorySize());
+    expectedAMResource = Resources.multiplyAndRoundUp(
+        queueFSNonZero.getFairShare(), queueFSNonZero.getMaxAMShare());
     assertEquals("QueueFSNonZero's maximum AM resource should be "
-        + " fair share * maxAMShare",
-        (long)(memCapacity * queueFSNonZero.getMaxAMShare()),
+        + " fair share * maxAMShare", expectedAMResource.getMemorySize(),
         queueFSNonZero.getMetrics().getMaxAMShareMB());
     assertEquals("QueueFSNonZero's maximum AM resource should be "
-        + " fair share * maxAMShare",
-        (long)(cpuCapacity * queueFSNonZero.getMaxAMShare()),
+        + " fair share * maxAMShare", expectedAMResource.getVirtualCores(),
         queueFSNonZero.getMetrics().getMaxAMShareVCores());
     assertEquals("QueueFSNonZero's AM resource usage should be the same to "
         + "AM resource request",
@@ -5149,5 +5145,76 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertTrue("Demand of child queue not updated ",
         Resources.equals(aQueue.getDemand(), maxResource) &&
         Resources.equals(bQueue.getDemand(), maxResource));
+  }
+
+  @Test
+  public void testDumpState() throws IOException {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"parent\">");
+    out.println("  <queue name=\"child1\">");
+    out.println("    <weight>1</weight>");
+    out.println("  </queue>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    ControlledClock clock = new ControlledClock();
+    scheduler.setClock(clock);
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    FSLeafQueue child1 =
+        scheduler.getQueueManager().getLeafQueue("parent.child1", false);
+    Resource resource = Resource.newInstance(4 * GB, 4);
+    child1.setMaxShare(resource);
+    FSAppAttempt app = mock(FSAppAttempt.class);
+    Mockito.when(app.getDemand()).thenReturn(resource);
+    Mockito.when(app.getResourceUsage()).thenReturn(resource);
+    child1.addAppSchedulable(app);
+    child1.updateDemand();
+
+    String childQueueString = "{Name: root.parent.child1,"
+        + " Weight: <memory weight=1.0, cpu weight=1.0>,"
+        + " Policy: fair,"
+        + " FairShare: <memory:0, vCores:0>,"
+        + " SteadyFairShare: <memory:0, vCores:0>,"
+        + " MaxShare: <memory:4096, vCores:4>,"
+        + " MinShare: <memory:0, vCores:0>,"
+        + " ResourceUsage: <memory:4096, vCores:4>,"
+        + " Demand: <memory:4096, vCores:4>,"
+        + " Runnable: 1,"
+        + " NumPendingApps: 0,"
+        + " NonRunnable: 0,"
+        + " MaxAMShare: 0.5,"
+        + " MaxAMResource: <memory:0, vCores:0>,"
+        + " AMResourceUsage: <memory:0, vCores:0>,"
+        + " LastTimeAtMinShare: " + clock.getTime()
+        + "}";
+
+    assertTrue(child1.dumpState().equals(childQueueString));
+    FSParentQueue parent =
+        scheduler.getQueueManager().getParentQueue("parent", false);
+    parent.setMaxShare(resource);
+
+    String parentQueueString = "{Name: root.parent,"
+        + " Weight: <memory weight=1.0, cpu weight=1.0>,"
+        + " Policy: fair,"
+        + " FairShare: <memory:0, vCores:0>,"
+        + " SteadyFairShare: <memory:0, vCores:0>,"
+        + " MaxShare: <memory:4096, vCores:4>,"
+        + " MinShare: <memory:0, vCores:0>,"
+        + " ResourceUsage: <memory:4096, vCores:4>,"
+        + " Demand: <memory:0, vCores:0>,"
+        + " MaxAMShare: 0.5,"
+        + " Runnable: 0}";
+
+    assertTrue(parent.dumpState().equals(
+        parentQueueString + ", " + childQueueString));
   }
 }

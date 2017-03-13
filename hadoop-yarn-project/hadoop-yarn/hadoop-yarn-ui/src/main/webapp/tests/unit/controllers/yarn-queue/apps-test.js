@@ -16,29 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
+import { moduleFor, test } from 'ember-qunit';
 
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.Resource;
+moduleFor('controller:yarn-queue/apps', 'Unit | Controller | yarn queue/apps', {
+  // Specify the other units that are required for this test.
+  // needs: ['controller:foo']
+});
 
-public class RMContainerChangeResourceEvent extends RMContainerEvent {
-  
-  final Resource targetResource;
-  final boolean increase;
-
-  public RMContainerChangeResourceEvent(ContainerId containerId,
-      Resource targetResource, boolean increase) {
-    super(containerId, RMContainerEventType.CHANGE_RESOURCE);
-
-    this.targetResource = targetResource;
-    this.increase = increase;
-  }
-  
-  public Resource getTargetResource() {
-    return targetResource;
-  }
-  
-  public boolean isIncrease() {
-    return increase;
-  }
-}
+// Replace this with your real tests.
+test('it exists', function(assert) {
+  let controller = this.subject();
+  assert.ok(controller);
+});

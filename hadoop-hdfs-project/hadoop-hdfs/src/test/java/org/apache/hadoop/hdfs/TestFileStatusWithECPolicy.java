@@ -26,7 +26,6 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.After;
 import org.junit.Before;
@@ -71,9 +70,9 @@ public class TestFileStatusWithECPolicy {
     assertNull(client.getFileInfo(file.toString()).getErasureCodingPolicy());
     fs.delete(file, true);
 
-    final ErasureCodingPolicy ecPolicy1 = ErasureCodingPolicyManager.getSystemDefaultPolicy();
+    final ErasureCodingPolicy ecPolicy1 = StripedFileTestUtil.getDefaultECPolicy();
     // set EC policy on dir
-    fs.setErasureCodingPolicy(dir, ecPolicy1);
+    fs.setErasureCodingPolicy(dir, ecPolicy1.getName());
     final ErasureCodingPolicy ecPolicy2 = client.getFileInfo(dir.toUri().getPath()).getErasureCodingPolicy();
     assertNotNull(ecPolicy2);
     assertTrue(ecPolicy1.equals(ecPolicy2));

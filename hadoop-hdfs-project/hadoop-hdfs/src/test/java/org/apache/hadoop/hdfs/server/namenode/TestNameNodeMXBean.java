@@ -174,6 +174,7 @@ public class TestNameNodeMXBean {
         assertTrue(((Long)liveNode.get("capacity")) > 0);
         assertTrue(liveNode.containsKey("numBlocks"));
         assertTrue(((Long)liveNode.get("numBlocks")) == 0);
+        assertTrue(liveNode.containsKey("lastBlockReport"));
         // a. By default the upgrade domain isn't defined on any DN.
         // b. If the upgrade domain is set on a DN, JMX should have the same
         // value.
@@ -724,12 +725,10 @@ public class TestNameNodeMXBean {
     DistributedFileSystem fs = null;
     try {
       Configuration conf = new HdfsConfiguration();
-      int dataBlocks = ErasureCodingPolicyManager
-          .getSystemDefaultPolicy().getNumDataUnits();
-      int parityBlocks = ErasureCodingPolicyManager
-          .getSystemDefaultPolicy().getNumParityUnits();
-      int cellSize = ErasureCodingPolicyManager
-          .getSystemDefaultPolicy().getCellSize();
+      int dataBlocks = StripedFileTestUtil.getDefaultECPolicy().getNumDataUnits();
+      int parityBlocks =
+          StripedFileTestUtil.getDefaultECPolicy().getNumParityUnits();
+      int cellSize = StripedFileTestUtil.getDefaultECPolicy().getCellSize();
       int totalSize = dataBlocks + parityBlocks;
       cluster = new MiniDFSCluster.Builder(conf)
           .numDataNodes(totalSize).build();
@@ -738,7 +737,8 @@ public class TestNameNodeMXBean {
       // create file
       Path ecDirPath = new Path("/striped");
       fs.mkdir(ecDirPath, FsPermission.getDirDefault());
-      fs.getClient().setErasureCodingPolicy(ecDirPath.toString(), null);
+      fs.getClient().setErasureCodingPolicy(ecDirPath.toString(),
+          StripedFileTestUtil.getDefaultECPolicy().getName());
       Path file = new Path(ecDirPath, "corrupted");
       final int length = cellSize * dataBlocks;
       final byte[] bytes = StripedFileTestUtil.generateBytes(length);

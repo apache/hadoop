@@ -55,6 +55,7 @@ There are a number of command line arguments that the users can use to control w
     $ -namenode <arg>        URL of the namenode (default is either the DFS
     $                        cluster or a temporary dir)
     $ -nnport <arg>          NameNode port (default 0--we choose)
+    $ -nnhttpport <arg>      NameNode HTTP port (default 0--we choose)
     $ -nodemanagers <arg>    How many nodemanagers to start (default 1)
     $ -nodfs                 Don't start a mini DFS cluster
     $ -nomr                  Don't start a mini MR cluster

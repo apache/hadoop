@@ -40,7 +40,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheD
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SectionName;
@@ -59,6 +58,7 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.util.LimitInputStream;
 import com.google.common.collect.ImmutableList;
@@ -132,6 +132,8 @@ public final class PBImageXmlWriter {
   public static final String INODE_SECTION_STORAGE_POLICY_ID =
       "storagePolicyId";
   public static final String INODE_SECTION_BLOCK_TYPE = "blockType";
+  public static final String INODE_SECTION_EC_POLICY_ID =
+      "erasureCodingPolicyId";
   public static final String INODE_SECTION_NS_QUOTA = "nsquota";
   public static final String INODE_SECTION_DS_QUOTA = "dsquota";
   public static final String INODE_SECTION_TYPE_QUOTA = "typeQuota";
@@ -472,8 +474,12 @@ public final class PBImageXmlWriter {
   }
 
   private void dumpINodeFile(INodeSection.INodeFile f) {
-    o(SECTION_REPLICATION, f.getReplication())
-        .o(INODE_SECTION_MTIME, f.getModificationTime())
+    if (f.hasErasureCodingPolicyID()) {
+      o(SECTION_REPLICATION, INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS);
+    } else {
+      o(SECTION_REPLICATION, f.getReplication());
+    }
+    o(INODE_SECTION_MTIME, f.getModificationTime())
         .o(INODE_SECTION_ATIME, f.getAccessTime())
         .o(INODE_SECTION_PREFERRED_BLOCK_SIZE, f.getPreferredBlockSize())
         .o(INODE_SECTION_PERMISSION, dumpPermission(f.getPermission()));
@@ -495,10 +501,9 @@ public final class PBImageXmlWriter {
     if (f.hasStoragePolicyID()) {
       o(INODE_SECTION_STORAGE_POLICY_ID, f.getStoragePolicyID());
     }
-    if (f.getBlockType() != BlockTypeProto.CONTIGUOUS) {
-      out.print("<" + INODE_SECTION_BLOCK_TYPE + ">");
-      o(SECTION_NAME, f.getBlockType().name());
-      out.print("</" + INODE_SECTION_BLOCK_TYPE + ">\n");
+    if (f.hasErasureCodingPolicyID()) {
+      o(INODE_SECTION_BLOCK_TYPE, f.getBlockType().name());
+      o(INODE_SECTION_EC_POLICY_ID, f.getErasureCodingPolicyID());
     }
 
     if (f.hasFileUC()) {

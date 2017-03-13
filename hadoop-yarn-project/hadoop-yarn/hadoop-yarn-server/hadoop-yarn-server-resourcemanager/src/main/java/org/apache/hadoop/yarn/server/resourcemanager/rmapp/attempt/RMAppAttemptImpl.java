@@ -143,6 +143,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private final EventHandler eventHandler;
   private final YarnScheduler scheduler;
   private final ApplicationMasterService masterService;
+  private final RMApp rmApp;
 
   private final ReadLock readLock;
   private final WriteLock writeLock;
@@ -179,12 +180,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private int amContainerExitStatus = ContainerExitStatus.INVALID;
 
   private Configuration conf;
-  // Since AM preemption, hardware error and NM resync are not counted towards
-  // AM failure count, even if this flag is true, a new attempt can still be
-  // re-created if this attempt is eventually failed because of preemption,
-  // hardware error or NM resync. So this flag indicates that this may be
-  // last attempt.
-  private final boolean maybeLastAttempt;
   private static final ExpiredTransition EXPIRED_TRANSITION =
       new ExpiredTransition();
   private static final AttemptFailedTransition FAILED_TRANSITION =
@@ -490,16 +485,16 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       RMContext rmContext, YarnScheduler scheduler,
       ApplicationMasterService masterService,
       ApplicationSubmissionContext submissionContext,
-      Configuration conf, boolean maybeLastAttempt, ResourceRequest amReq) {
+      Configuration conf, ResourceRequest amReq, RMApp rmApp) {
     this(appAttemptId, rmContext, scheduler, masterService, submissionContext,
-        conf, maybeLastAttempt, amReq, new DisabledBlacklistManager());
+        conf, amReq, rmApp, new DisabledBlacklistManager());
   }
 
   public RMAppAttemptImpl(ApplicationAttemptId appAttemptId,
       RMContext rmContext, YarnScheduler scheduler,
       ApplicationMasterService masterService,
       ApplicationSubmissionContext submissionContext,
-      Configuration conf, boolean maybeLastAttempt, ResourceRequest amReq,
+      Configuration conf, ResourceRequest amReq, RMApp rmApp,
       BlacklistManager amBlacklistManager) {
     this.conf = conf;
     this.applicationAttemptId = appAttemptId;
@@ -514,7 +509,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.writeLock = lock.writeLock();
 
     this.proxiedTrackingUrl = generateProxyUriWithScheme();
-    this.maybeLastAttempt = maybeLastAttempt;
     this.stateMachine = stateMachineFactory.make(this);
 
     this.attemptMetrics =
@@ -531,6 +525,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     }
 
     this.diagnostics = new BoundedAppender(diagnosticsLimitKC * 1024);
+    this.rmApp = rmApp;
   }
 
   private int getDiagnosticsLimitKCOrThrow(final Configuration configuration) {
@@ -1215,8 +1210,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     @Override
     public RMAppAttemptState transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {
-      RMApp rmApp = appAttempt.rmContext.getRMApps().get(
-          appAttempt.getAppAttemptId().getApplicationId());
+      RMApp rmApp = appAttempt.rmApp;
 
       /*
        * If last attempt recovered final state is null .. it means attempt was
@@ -1462,14 +1456,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           if (appAttempt.submissionContext
             .getKeepContainersAcrossApplicationAttempts()
               && !appAttempt.submissionContext.getUnmanagedAM()) {
-            // See if we should retain containers for non-unmanaged applications
-            if (!appAttempt.shouldCountTowardsMaxAttemptRetry()) {
-              // Premption, hardware failures, NM resync doesn't count towards
-              // app-failures and so we should retain containers.
-              keepContainersAcrossAppAttempts = true;
-            } else if (!appAttempt.maybeLastAttempt) {
-              // Not preemption, hardware failures or NM resync.
-              // Not last-attempt too - keep containers.
+            int numberOfFailure = ((RMAppImpl)appAttempt.rmApp)
+                .getNumFailedAppAttempts();
+            if (numberOfFailure < appAttempt.rmApp.getMaxAppAttempts()) {
               keepContainersAcrossAppAttempts = true;
             }
           }
@@ -1496,9 +1485,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           .applicationAttemptFinished(appAttempt, finalAttemptState);
       appAttempt.rmContext.getSystemMetricsPublisher()
           .appAttemptFinished(appAttempt, finalAttemptState,
-              appAttempt.rmContext.getRMApps().get(
-                  appAttempt.applicationAttemptId.getApplicationId()),
-              System.currentTimeMillis());
+              appAttempt.rmApp, System.currentTimeMillis());
     }
   }
 
@@ -1545,6 +1532,14 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
   @Override
   public boolean shouldCountTowardsMaxAttemptRetry() {
+    long attemptFailuresValidityInterval = this.submissionContext
+        .getAttemptFailuresValidityInterval();
+    long end = System.currentTimeMillis();
+    if (attemptFailuresValidityInterval > 0
+        && this.getFinishTime() > 0
+        && this.getFinishTime() < (end - attemptFailuresValidityInterval)) {
+        return false;
+    }
     try {
       this.readLock.lock();
       int exitStatus = getAMContainerExitStatus();
@@ -2220,11 +2215,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       this.readLock.unlock();
     }
     return attemptReport;
-  }
-
-  // for testing
-  public boolean mayBeLastAttempt() {
-    return maybeLastAttempt;
   }
 
   @Override

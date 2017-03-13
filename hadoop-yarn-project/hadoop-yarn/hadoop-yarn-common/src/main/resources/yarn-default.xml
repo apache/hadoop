@@ -1584,6 +1584,32 @@
   </property>
 
   <property>
+    <description>The mode in which the Java Container Sandbox should run detailed by
+      the JavaSandboxLinuxContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.sandbox-mode</name>
+    <value>disabled</value>
+  </property>
+
+  <property>
+    <description>Permissions for application local directories.</description>
+    <name>yarn.nodemanager.runtime.linux.sandbox-mode.local-dirs.permissions</name>
+    <value>read</value>
+  </property>
+
+  <property>
+    <description>Location for non-default java policy file.</description>
+    <name>yarn.nodemanager.runtime.linux.sandbox-mode.policy</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>The group which will run by default without the java security
+      manager.</description>
+    <name>yarn.nodemanager.runtime.linux.sandbox-mode.whitelist-group</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>This flag determines whether memory limit will be set for the Windows Job
     Object of the containers launched by the default container executor.</description>
     <name>yarn.nodemanager.windows-container.memory-limit.enabled</name>
@@ -3040,6 +3066,17 @@
     </description>
     <name>yarn.app.attempt.diagnostics.limit.kc</name>
     <value>64</value>
+  </property>
+
+  <property>
+    <description>
+      Flag to enable cross-origin (CORS) support for timeline service v1.x or
+      Timeline Reader in timeline service v2. For timeline service v2, also add
+      org.apache.hadoop.security.HttpCrossOriginFilterInitializer to the
+      configuration hadoop.http.filter.initializers in core-site.xml.
+    </description>
+    <name>yarn.timeline-service.http-cross-origin.enabled</name>
+    <value>false</value>
   </property>
 
 </configuration>

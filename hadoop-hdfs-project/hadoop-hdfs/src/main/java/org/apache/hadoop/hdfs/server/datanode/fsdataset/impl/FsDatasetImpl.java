@@ -502,8 +502,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    */
   @Override
   public void removeVolumes(
-      Collection<StorageLocation> storageLocationsToRemove,
+      final Collection<StorageLocation> storageLocsToRemove,
       boolean clearFailure) {
+    Collection<StorageLocation> storageLocationsToRemove =
+        new ArrayList<>(storageLocsToRemove);
     Map<String, List<ReplicaInfo>> blkToInvalidate = new HashMap<>();
     List<String> storageToRemove = new ArrayList<>();
     try (AutoCloseableLock lock = datasetLock.acquire()) {
@@ -541,6 +543,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           }
 
           storageToRemove.add(sd.getStorageUuid());
+          storageLocationsToRemove.remove(sdLocation);
+        }
+      }
+
+      // A reconfigure can remove the storage location which is already
+      // removed when the failure was detected by DataNode#checkDiskErrorAsync.
+      // Now, lets remove this from the failed volume list.
+      if (clearFailure) {
+        for (StorageLocation storageLocToRemove : storageLocationsToRemove) {
+          volumes.removeVolumeFailureInfo(storageLocToRemove);
         }
       }
       setupAsyncLazyPersistThreads();
@@ -2282,12 +2294,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       if (memBlockInfo.getGenerationStamp() != diskGS) {
         File memMetaFile = FsDatasetUtil.getMetaFile(diskFile, 
             memBlockInfo.getGenerationStamp());
-        if (memMetaFile.exists()) {
-          if (memMetaFile.compareTo(diskMetaFile) != 0) {
-            LOG.warn("Metadata file in memory "
-                + memMetaFile.getAbsolutePath()
-                + " does not match file found by scan "
-                + (diskMetaFile == null? null: diskMetaFile.getAbsolutePath()));
+        if (fileIoProvider.exists(vol, memMetaFile)) {
+          String warningPrefix = "Metadata file in memory "
+              + memMetaFile.getAbsolutePath()
+              + " does not match file found by scan ";
+          if (!diskMetaFileExists) {
+            LOG.warn(warningPrefix + "null");
+          } else if (memMetaFile.compareTo(diskMetaFile) != 0) {
+            LOG.warn(warningPrefix + diskMetaFile.getAbsolutePath());
           }
         } else {
           // Metadata file corresponding to block in memory is missing

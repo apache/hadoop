@@ -618,15 +618,15 @@ public class MockRM extends ResourceManager {
         false, null, 0, null, true, Priority.newInstance(0));
   }
 
-  public RMApp submitApp(int masterMemory, long attemptFailuresValidityInterval)
-      throws Exception {
+  public RMApp submitApp(int masterMemory, long attemptFailuresValidityInterval,
+      boolean keepContainers) throws Exception {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemorySize(masterMemory);
     Priority priority = Priority.newInstance(0);
     return submitApp(resource, "", UserGroupInformation.getCurrentUser()
       .getShortUserName(), null, false, null,
       super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-      YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true, false,
+      YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true, keepContainers,
       false, null, attemptFailuresValidityInterval, null, true, priority);
   }
 

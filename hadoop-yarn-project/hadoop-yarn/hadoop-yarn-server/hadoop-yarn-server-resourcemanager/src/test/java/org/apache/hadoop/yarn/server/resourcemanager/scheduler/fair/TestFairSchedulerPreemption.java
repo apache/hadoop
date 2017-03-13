@@ -284,14 +284,20 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
       Thread.sleep(10);
     }
 
-    // Verify the right amount of containers are preempted from greedyApp
-    assertEquals("Incorrect number of containers on the greedy app",
+    // Post preemption, verify the greedyApp has the correct # of containers.
+    assertEquals("Incorrect # of containers on the greedy app",
         2 * numStarvedAppContainers, greedyApp.getLiveContainers().size());
+
+    // Verify the queue metrics are set appropriately. The greedyApp started
+    // with 8 1GB, 1vcore containers.
+    assertEquals("Incorrect # of preempted containers in QueueMetrics",
+        8 - 2 * numStarvedAppContainers,
+        greedyApp.getQueue().getMetrics().getAggregatePreemptedContainers());
 
     sendEnoughNodeUpdatesToAssignFully();
 
     // Verify the preempted containers are assigned to starvingApp
-    assertEquals("Starved app is not assigned the right number of containers",
+    assertEquals("Starved app is not assigned the right # of containers",
         numStarvedAppContainers, starvingApp.getLiveContainers().size());
   }
 

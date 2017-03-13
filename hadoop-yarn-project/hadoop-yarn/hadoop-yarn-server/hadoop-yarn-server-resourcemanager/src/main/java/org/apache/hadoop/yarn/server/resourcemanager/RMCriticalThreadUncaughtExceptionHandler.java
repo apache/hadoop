@@ -37,7 +37,7 @@ public class RMCriticalThreadUncaughtExceptionHandler
     implements UncaughtExceptionHandler {
   private static final Log LOG = LogFactory.getLog(
       RMCriticalThreadUncaughtExceptionHandler.class);
-  private RMContext rmContext;
+  private final RMContext rmContext;
 
   public RMCriticalThreadUncaughtExceptionHandler(RMContext rmContext) {
     this.rmContext = rmContext;

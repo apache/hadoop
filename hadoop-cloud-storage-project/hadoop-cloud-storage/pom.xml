@@ -94,10 +94,6 @@
           <artifactId>kfs</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>net.java.dev.jets3t</groupId>
-          <artifactId>jets3t</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>com.jcraft</groupId>
           <artifactId>jsch</artifactId>
         </exclusion>

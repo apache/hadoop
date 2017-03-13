@@ -194,7 +194,7 @@
                     <exclude>**/ITest*Root*.java</exclude>
                     <exclude>**/ITestS3AFileContextStatistics.java</exclude>
                     <exclude>**/ITestS3AEncryptionSSE*.java</exclude>
-                    <include>**/ITestS3AHuge*.java</include>
+                    <exclude>**/ITestS3AHuge*.java</exclude>
                   </excludes>
                 </configuration>
               </execution>
@@ -424,6 +424,11 @@
       <artifactId>hadoop-common</artifactId>
       <scope>test</scope>
       <type>test-jar</type>
+    </dependency>
+    <dependency>
+      <groupId>net.java.dev.jets3t</groupId>
+      <artifactId>jets3t</artifactId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>com.amazonaws</groupId>

@@ -48,6 +48,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Random;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -75,8 +76,13 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.BlockType;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.IOUtils;
@@ -87,9 +93,8 @@ import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -103,11 +108,11 @@ public class TestOfflineImageViewer {
   private static final int FILES_PER_DIR = 4;
   private static final String TEST_RENEWER = "JobTracker";
   private static File originalFsimage = null;
+  private static int filesECCount = 0;
 
   // namespace as written to dfs, to be compared with viewer's output
   final static HashMap<String, FileStatus> writtenFiles = Maps.newHashMap();
   static int dirCount = 0;
-
   private static File tempDir;
 
   // Create a populated namespace for later testing. Save its contents to a
@@ -119,6 +124,10 @@ public class TestOfflineImageViewer {
     tempDir = Files.createTempDir();
     MiniDFSCluster cluster = null;
     try {
+      final ErasureCodingPolicy ecPolicy =
+          ErasureCodingPolicyManager.getPolicyByID(
+              HdfsConstants.XOR_2_1_POLICY_ID);
+
       Configuration conf = new Configuration();
       conf.setLong(
           DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY, 10000);
@@ -129,7 +138,9 @@ public class TestOfflineImageViewer {
       conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL,
           "RULE:[2:$1@$0](JobTracker@.*FOO.COM)s/@.*//" + "DEFAULT");
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+          ecPolicy.getName());
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
       cluster.waitActive();
       DistributedFileSystem hdfs = cluster.getFileSystem();
 
@@ -224,9 +235,36 @@ public class TestOfflineImageViewer {
               aclEntry(ACCESS, GROUP, "bar", READ_EXECUTE),
               aclEntry(ACCESS, OTHER, EXECUTE)));
 
+      // Create an Erasure Coded dir
+      Path ecDir = new Path("/ec");
+      hdfs.mkdirs(ecDir);
+      dirCount++;
+      hdfs.getClient().setErasureCodingPolicy(ecDir.toString(),
+          ecPolicy.getName());
+      writtenFiles.put(ecDir.toString(), hdfs.getFileStatus(ecDir));
+
+      // Create an empty Erasure Coded file
+      Path emptyECFile = new Path(ecDir, "EmptyECFile.txt");
+      hdfs.create(emptyECFile).close();
+      writtenFiles.put(emptyECFile.toString(),
+          pathToFileEntry(hdfs, emptyECFile.toString()));
+      filesECCount++;
+
+      // Create a small Erasure Coded file
+      Path smallECFile = new Path(ecDir, "SmallECFile.txt");
+      FSDataOutputStream out = hdfs.create(smallECFile);
+      Random r = new Random();
+      byte[] bytes = new byte[1024 * 10];
+      r.nextBytes(bytes);
+      out.write(bytes);
+      writtenFiles.put(smallECFile.toString(),
+          pathToFileEntry(hdfs, smallECFile.toString()));
+      filesECCount++;
+
       // Write results to the fsimage file
       hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
       hdfs.saveNamespace();
+      hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
 
       // Determine location of fsimage file
       originalFsimage = FSImageTestUtil.findLatestImageFile(FSImageTestUtil
@@ -292,7 +330,7 @@ public class TestOfflineImageViewer {
     Matcher matcher = p.matcher(outputString);
     assertTrue(matcher.find() && matcher.groupCount() == 1);
     int totalFiles = Integer.parseInt(matcher.group(1));
-    assertEquals(NUM_DIRS * FILES_PER_DIR + 1, totalFiles);
+    assertEquals(NUM_DIRS * FILES_PER_DIR + filesECCount + 1, totalFiles);
 
     p = Pattern.compile("totalDirectories = (\\d+)\n");
     matcher = p.matcher(outputString);
@@ -323,6 +361,96 @@ public class TestOfflineImageViewer {
     assertEquals(0, status);
   }
 
+  /**
+   *  SAX handler to verify EC Files and their policies.
+   */
+  class ECXMLHandler extends DefaultHandler {
+
+    private boolean isInode = false;
+    private boolean isAttrRepl = false;
+    private boolean isAttrName = false;
+    private boolean isXAttrs = false;
+    private boolean isAttrECPolicy = false;
+    private boolean isAttrBlockType = false;
+    private String currentInodeName;
+    private String currentECPolicy;
+    private String currentBlockType;
+    private String currentRepl;
+
+    @Override
+    public void startElement(String uri, String localName, String qName,
+        Attributes attributes) throws SAXException {
+      super.startElement(uri, localName, qName, attributes);
+      if (qName.equalsIgnoreCase(PBImageXmlWriter.INODE_SECTION_INODE)) {
+        isInode = true;
+      } else if (isInode && !isXAttrs && qName.equalsIgnoreCase(
+          PBImageXmlWriter.SECTION_NAME)) {
+        isAttrName = true;
+      } else if (isInode && qName.equalsIgnoreCase(
+          PBImageXmlWriter.SECTION_REPLICATION)) {
+        isAttrRepl = true;
+      } else if (isInode &&
+          qName.equalsIgnoreCase(PBImageXmlWriter.INODE_SECTION_EC_POLICY_ID)) {
+        isAttrECPolicy = true;
+      } else if (isInode && qName.equalsIgnoreCase(
+          PBImageXmlWriter.INODE_SECTION_BLOCK_TYPE)) {
+        isAttrBlockType = true;
+      } else if (isInode && qName.equalsIgnoreCase(
+          PBImageXmlWriter.INODE_SECTION_XATTRS)) {
+        isXAttrs = true;
+      }
+    }
+
+    @Override
+    public void endElement(String uri, String localName, String qName)
+        throws SAXException {
+      super.endElement(uri, localName, qName);
+      if (qName.equalsIgnoreCase(PBImageXmlWriter.INODE_SECTION_INODE)) {
+        if (currentInodeName != null && currentInodeName.length() > 0) {
+          if (currentBlockType != null && currentBlockType.equalsIgnoreCase(
+              BlockType.STRIPED.name())) {
+            Assert.assertEquals("INode '"
+                    + currentInodeName + "' has unexpected EC Policy!",
+                Byte.parseByte(currentECPolicy),
+                ErasureCodingPolicyManager.getPolicyByID(
+                    HdfsConstants.XOR_2_1_POLICY_ID).getId());
+            Assert.assertEquals("INode '"
+                    + currentInodeName + "' has unexpected replication!",
+                currentRepl,
+                Short.toString(INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS));
+          }
+        }
+        isInode = false;
+        currentInodeName = "";
+        currentECPolicy = "";
+        currentRepl = "";
+      } else if (qName.equalsIgnoreCase(
+          PBImageXmlWriter.INODE_SECTION_XATTRS)) {
+        isXAttrs = false;
+      }
+    }
+
+    @Override
+    public void characters(char[] ch, int start, int length)
+        throws SAXException {
+      super.characters(ch, start, length);
+      String value = new String(ch, start, length);
+      if (isAttrName) {
+        currentInodeName = value;
+        isAttrName = false;
+      } else if (isAttrRepl) {
+        currentRepl = value;
+        isAttrRepl = false;
+      } else if (isAttrECPolicy) {
+        currentECPolicy = value;
+        isAttrECPolicy = false;
+      } else if (isAttrBlockType) {
+        currentBlockType = value;
+        isAttrBlockType = false;
+      }
+    }
+  }
+
   @Test
   public void testPBImageXmlWriter() throws IOException, SAXException,
       ParserConfigurationException {
@@ -333,7 +461,8 @@ public class TestOfflineImageViewer {
     SAXParserFactory spf = SAXParserFactory.newInstance();
     SAXParser parser = spf.newSAXParser();
     final String xml = output.toString();
-    parser.parse(new InputSource(new StringReader(xml)), new DefaultHandler());
+    ECXMLHandler ecxmlHandler = new ECXMLHandler();
+    parser.parse(new InputSource(new StringReader(xml)), ecxmlHandler);
   }
 
   @Test
@@ -374,6 +503,24 @@ public class TestOfflineImageViewer {
       // LISTSTATUS operation to a invalid prefix
       url = new URL("http://localhost:" + port + "/foo");
       verifyHttpResponseCode(HttpURLConnection.HTTP_NOT_FOUND, url);
+
+      // Verify the Erasure Coded empty file status
+      Path emptyECFilePath = new Path("/ec/EmptyECFile.txt");
+      FileStatus actualEmptyECFileStatus =
+          webhdfs.getFileStatus(new Path(emptyECFilePath.toString()));
+      FileStatus expectedEmptyECFileStatus = writtenFiles.get(
+          emptyECFilePath.toString());
+      System.out.println(webhdfs.getFileStatus(new Path(emptyECFilePath
+              .toString())));
+      compareFile(expectedEmptyECFileStatus, actualEmptyECFileStatus);
+
+      // Verify the Erasure Coded small file status
+      Path smallECFilePath = new Path("/ec/SmallECFile.txt");
+      FileStatus actualSmallECFileStatus =
+          webhdfs.getFileStatus(new Path(smallECFilePath.toString()));
+      FileStatus expectedSmallECFileStatus = writtenFiles.get(
+          smallECFilePath.toString());
+      compareFile(expectedSmallECFileStatus, actualSmallECFileStatus);
 
       // GETFILESTATUS operation
       status = webhdfs.getFileStatus(new Path("/dir0/file0"));

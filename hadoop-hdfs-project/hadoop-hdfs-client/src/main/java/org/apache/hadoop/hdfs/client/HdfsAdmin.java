@@ -465,13 +465,15 @@ public class HdfsAdmin {
    * Set the source path to the specified erasure coding policy.
    *
    * @param path The source path referring to a directory.
-   * @param ecPolicy The erasure coding policy for the directory.
-   *                 If null, the default will be used.
+   * @param ecPolicyName The erasure coding policy name for the directory.
+   *
    * @throws IOException
+   * @throws HadoopIllegalArgumentException if the specified EC policy is not
+   * enabled on the cluster
    */
   public void setErasureCodingPolicy(final Path path,
-      final ErasureCodingPolicy ecPolicy) throws IOException {
-    dfs.setErasureCodingPolicy(path, ecPolicy);
+      final String ecPolicyName) throws IOException {
+    dfs.setErasureCodingPolicy(path, ecPolicyName);
   }
 
   /**

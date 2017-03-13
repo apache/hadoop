@@ -28,17 +28,19 @@ import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.UpdateContainerError;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer
+    .RMContainerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement
+    .SchedulingPlacementSet;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -58,43 +60,37 @@ public class ContainerUpdateContext {
   private final Map<SchedulerRequestKey, Map<Resource,
       Map<NodeId, Set<ContainerId>>>> outstandingIncreases = new HashMap<>();
 
-  private final Set<ContainerId> outstandingDecreases = new HashSet<>();
+  private final Map<ContainerId, Resource> outstandingDecreases =
+      new HashMap<>();
   private final AppSchedulingInfo appSchedulingInfo;
 
   ContainerUpdateContext(AppSchedulingInfo appSchedulingInfo) {
     this.appSchedulingInfo = appSchedulingInfo;
   }
 
-  private synchronized boolean isBeingIncreased(Container container) {
-    Map<Resource, Map<NodeId, Set<ContainerId>>> resourceMap =
-        outstandingIncreases.get(
-            new SchedulerRequestKey(container.getPriority(),
-                container.getAllocationRequestId(), container.getId()));
-    if (resourceMap != null) {
-      Map<NodeId, Set<ContainerId>> locationMap =
-          resourceMap.get(container.getResource());
-      if (locationMap != null) {
-        Set<ContainerId> containerIds = locationMap.get(container.getNodeId());
-        if (containerIds != null && !containerIds.isEmpty()) {
-          return containerIds.contains(container.getId());
-        }
-      }
-    }
-    return false;
-  }
-
   /**
    * Add the container to outstanding decreases.
+   * @param updateReq UpdateContainerRequest.
+   * @param schedulerNode SchedulerNode.
    * @param container Container.
-   * @return true if updated to outstanding decreases was successful.
+   * @return If it was possible to decrease the container.
    */
   public synchronized boolean checkAndAddToOutstandingDecreases(
+      UpdateContainerRequest updateReq, SchedulerNode schedulerNode,
       Container container) {
-    if (isBeingIncreased(container)
-        || outstandingDecreases.contains(container.getId())) {
+    if (outstandingDecreases.containsKey(container.getId())) {
       return false;
     }
-    outstandingDecreases.add(container.getId());
+    if (ContainerUpdateType.DECREASE_RESOURCE ==
+        updateReq.getContainerUpdateType()) {
+      SchedulerRequestKey updateKey = new SchedulerRequestKey
+          (container.getPriority(),
+              container.getAllocationRequestId(), container.getId());
+      cancelPreviousRequest(schedulerNode, updateKey);
+      outstandingDecreases.put(container.getId(), updateReq.getCapability());
+    } else {
+      outstandingDecreases.put(container.getId(), container.getResource());
+    }
     return true;
   }
 
@@ -117,33 +113,61 @@ public class ContainerUpdateContext {
     if (resourceMap == null) {
       resourceMap = new HashMap<>();
       outstandingIncreases.put(schedulerKey, resourceMap);
+    } else {
+      // Updating Resource for and existing increase container
+      if (ContainerUpdateType.INCREASE_RESOURCE ==
+          updateRequest.getContainerUpdateType()) {
+        cancelPreviousRequest(schedulerNode, schedulerKey);
+      } else {
+        return false;
+      }
     }
+    Resource resToIncrease = getResourceToIncrease(updateRequest, rmContainer);
     Map<NodeId, Set<ContainerId>> locationMap =
-        resourceMap.get(container.getResource());
+        resourceMap.get(resToIncrease);
     if (locationMap == null) {
       locationMap = new HashMap<>();
-      resourceMap.put(container.getResource(), locationMap);
+      resourceMap.put(resToIncrease, locationMap);
     }
     Set<ContainerId> containerIds = locationMap.get(container.getNodeId());
     if (containerIds == null) {
       containerIds = new HashSet<>();
       locationMap.put(container.getNodeId(), containerIds);
     }
-    if (containerIds.contains(container.getId())
-        || outstandingDecreases.contains(container.getId())) {
+    if (outstandingDecreases.containsKey(container.getId())) {
       return false;
     }
-    containerIds.add(container.getId());
 
-    Map<SchedulerRequestKey, Map<String, ResourceRequest>> updateResReqs =
-        new HashMap<>();
-    Resource resToIncrease = getResourceToIncrease(updateRequest, rmContainer);
-    Map<String, ResourceRequest> resMap =
-        createResourceRequests(rmContainer, schedulerNode,
-            schedulerKey, resToIncrease);
-    updateResReqs.put(schedulerKey, resMap);
-    appSchedulingInfo.addToPlacementSets(false, updateResReqs);
+    containerIds.add(container.getId());
+    if (!Resources.isNone(resToIncrease)) {
+      Map<SchedulerRequestKey, Map<String, ResourceRequest>> updateResReqs =
+          new HashMap<>();
+      Map<String, ResourceRequest> resMap =
+          createResourceRequests(rmContainer, schedulerNode,
+              schedulerKey, resToIncrease);
+      updateResReqs.put(schedulerKey, resMap);
+      appSchedulingInfo.addToPlacementSets(false, updateResReqs);
+    }
     return true;
+  }
+
+  private void cancelPreviousRequest(SchedulerNode schedulerNode,
+      SchedulerRequestKey schedulerKey) {
+    SchedulingPlacementSet<SchedulerNode> schedulingPlacementSet =
+        appSchedulingInfo.getSchedulingPlacementSet(schedulerKey);
+    if (schedulingPlacementSet != null) {
+      Map<String, ResourceRequest> resourceRequests = schedulingPlacementSet
+          .getResourceRequests();
+      ResourceRequest prevReq = resourceRequests.get(ResourceRequest.ANY);
+      // Decrement the pending using a dummy RR with
+      // resource = prev update req capability
+      if (prevReq != null) {
+        appSchedulingInfo.allocate(NodeType.OFF_SWITCH, schedulerNode,
+            schedulerKey, Container.newInstance(UNDEFINED,
+                schedulerNode.getNodeID(), "host:port",
+                prevReq.getCapability(), schedulerKey.getPriority(), null));
+      }
+    }
   }
 
   private Map<String, ResourceRequest> createResourceRequests(
@@ -171,10 +195,16 @@ public class ContainerUpdateContext {
         ContainerUpdateType.PROMOTE_EXECUTION_TYPE) {
       return rmContainer.getContainer().getResource();
     }
-    // TODO: Fix this for container increase..
-    //       This has to equal the Resources in excess of fitsIn()
-    //       for container increase and is equal to the container total
-    //       resource for Promotion.
+    if (updateReq.getContainerUpdateType() ==
+        ContainerUpdateType.INCREASE_RESOURCE) {
+      //       This has to equal the Resources in excess of fitsIn()
+      //       for container increase and is equal to the container total
+      //       resource for Promotion.
+      Resource maxCap = Resources.componentwiseMax(updateReq.getCapability(),
+          rmContainer.getContainer().getResource());
+      return Resources.add(maxCap,
+          Resources.negate(rmContainer.getContainer().getResource()));
+    }
     return null;
   }
 
@@ -228,6 +258,7 @@ public class ContainerUpdateContext {
   /**
    * Check if a new container is to be matched up against an outstanding
    * Container increase request.
+   * @param node SchedulerNode.
    * @param schedulerKey SchedulerRequestKey.
    * @param rmContainer RMContainer.
    * @return ContainerId.
@@ -263,5 +294,81 @@ public class ContainerUpdateContext {
       return UNDEFINED;
     }
     return retVal;
+  }
+
+  /**
+   * Swaps the existing RMContainer's and the temp RMContainers internal
+   * container references after adjusting the resources in each.
+   * @param tempRMContainer Temp RMContainer.
+   * @param existingRMContainer Existing RMContainer.
+   * @param updateType Update Type.
+   * @return Existing RMContainer after swapping the container references.
+   */
+  public RMContainer swapContainer(RMContainer tempRMContainer,
+      RMContainer existingRMContainer, ContainerUpdateType updateType) {
+    ContainerId matchedContainerId = existingRMContainer.getContainerId();
+    // Swap updated container with the existing container
+    Container tempContainer = tempRMContainer.getContainer();
+
+    Resource updatedResource = createUpdatedResource(
+        tempContainer, existingRMContainer.getContainer(), updateType);
+    Resource resourceToRelease = createResourceToRelease(
+        existingRMContainer.getContainer(), updateType);
+    Container newContainer = Container.newInstance(matchedContainerId,
+        existingRMContainer.getContainer().getNodeId(),
+        existingRMContainer.getContainer().getNodeHttpAddress(),
+        updatedResource,
+        existingRMContainer.getContainer().getPriority(), null,
+        tempContainer.getExecutionType());
+    newContainer.setAllocationRequestId(
+        existingRMContainer.getContainer().getAllocationRequestId());
+    newContainer.setVersion(existingRMContainer.getContainer().getVersion());
+
+    tempRMContainer.getContainer().setResource(resourceToRelease);
+    tempRMContainer.getContainer().setExecutionType(
+        existingRMContainer.getContainer().getExecutionType());
+
+    ((RMContainerImpl)existingRMContainer).setContainer(newContainer);
+    return existingRMContainer;
+  }
+
+  /**
+   * Returns the resource that the container will finally be assigned with
+   * at the end of the update operation.
+   * @param tempContainer Temporary Container created for the operation.
+   * @param existingContainer Existing Container.
+   * @param updateType Update Type.
+   * @return Final Resource.
+   */
+  private Resource createUpdatedResource(Container tempContainer,
+      Container existingContainer, ContainerUpdateType updateType) {
+    if (ContainerUpdateType.INCREASE_RESOURCE == updateType) {
+      return Resources.add(existingContainer.getResource(),
+          tempContainer.getResource());
+    } else if (ContainerUpdateType.DECREASE_RESOURCE == updateType) {
+      return outstandingDecreases.get(existingContainer.getId());
+    } else {
+      return existingContainer.getResource();
+    }
+  }
+
+  /**
+   * Returns the resources that need to be released at the end of the update
+   * operation.
+   * @param existingContainer Existing Container.
+   * @param updateType Updated type.
+   * @return Resources to be released.
+   */
+  private Resource createResourceToRelease(Container existingContainer,
+      ContainerUpdateType updateType) {
+    if (ContainerUpdateType.INCREASE_RESOURCE == updateType) {
+      return Resources.none();
+    } else if (ContainerUpdateType.DECREASE_RESOURCE == updateType){
+      return Resources.add(existingContainer.getResource(),
+          Resources.negate(
+              outstandingDecreases.get(existingContainer.getId())));
+    } else {
+      return existingContainer.getResource();
+    }
   }
 }

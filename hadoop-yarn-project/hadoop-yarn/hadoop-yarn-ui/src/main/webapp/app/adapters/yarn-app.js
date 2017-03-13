@@ -25,9 +25,7 @@ export default AbstractAdapter.extend({
 
   urlForQuery(query/*, modelName*/) {
     var url = this._buildURL();
-    if (query.state) {
-      url = url + '/apps/?state=' + query.state;
-    }
+    url = url + '/apps';
     return url;
   },
 

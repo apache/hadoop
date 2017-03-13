@@ -172,7 +172,7 @@ class FSDirStatAndListingOp {
       final FileEncryptionInfo feInfo =
           FSDirEncryptionZoneOp.getFileEncryptionInfo(fsd, iip);
       final ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.
-          getErasureCodingPolicy(fsd.getFSNamesystem(), iip);
+          unprotectedGetErasureCodingPolicy(fsd.getFSNamesystem(), iip);
 
       final LocatedBlocks blocks = bm.createLocatedBlocks(
           inode.getBlocks(iip.getPathSnapshotId()), fileSize, isUc, offset,
@@ -413,7 +413,7 @@ class FSDirStatAndListingOp {
     FileEncryptionInfo feInfo = null;
 
     final ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp
-        .getErasureCodingPolicy(fsd.getFSNamesystem(), iip);
+        .unprotectedGetErasureCodingPolicy(fsd.getFSNamesystem(), iip);
 
     if (node.isFile()) {
       final INodeFile fileNode = node.asFile();

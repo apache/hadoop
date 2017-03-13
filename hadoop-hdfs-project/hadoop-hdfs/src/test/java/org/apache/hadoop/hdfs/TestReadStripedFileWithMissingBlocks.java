@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.Rule;
@@ -43,7 +42,7 @@ public class TestReadStripedFileWithMissingBlocks {
   private DistributedFileSystem fs;
   private Configuration conf = new HdfsConfiguration();
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
   private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
   private final int cellSize = ecPolicy.getCellSize();
@@ -61,7 +60,7 @@ public class TestReadStripedFileWithMissingBlocks {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.getFileSystem().getClient().setErasureCodingPolicy(
-        "/", ecPolicy);
+        "/", ecPolicy.getName());
     fs = cluster.getFileSystem();
   }
 

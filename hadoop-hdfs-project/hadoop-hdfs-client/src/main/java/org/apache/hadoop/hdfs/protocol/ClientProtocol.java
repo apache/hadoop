@@ -1510,11 +1510,10 @@ public interface ClientProtocol {
   /**
    * Set an erasure coding policy on a specified path.
    * @param src The path to set policy on.
-   * @param ecPolicy The erasure coding policy. If null, default policy will
-   *                 be used
+   * @param ecPolicyName The erasure coding policy name.
    */
   @AtMostOnce
-  void setErasureCodingPolicy(String src, ErasureCodingPolicy ecPolicy)
+  void setErasureCodingPolicy(String src, String ecPolicyName)
       throws IOException;
 
   /**

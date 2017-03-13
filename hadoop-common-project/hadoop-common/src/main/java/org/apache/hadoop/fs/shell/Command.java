@@ -101,7 +101,17 @@ abstract public class Command extends Configured {
    * @throws IOException if any error occurs
    */
   abstract protected void run(Path path) throws IOException;
-  
+
+  /**
+   * Execute the command on the input path data. Commands can override to make
+   * use of the resolved filesystem.
+   * @param pathData The input path with resolved filesystem
+   * @throws IOException
+   */
+  protected void run(PathData pathData) throws IOException {
+    run(pathData.path);
+  }
+
   /** 
    * For each source path, execute the command
    * 
@@ -113,7 +123,7 @@ abstract public class Command extends Configured {
       try {
         PathData[] srcs = PathData.expandAsGlob(src, getConf());
         for (PathData s : srcs) {
-          run(s.path);
+          run(s);
         }
       } catch (IOException e) {
         exitCode = -1;

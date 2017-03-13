@@ -989,7 +989,7 @@ public class TestDFSIO implements Tool {
         ((DistributedFileSystem) fs).getAllErasureCodingPolicies();
     for (ErasureCodingPolicy ec : list) {
       if (erasureCodePolicyName.equals(ec.getName())) {
-        ((DistributedFileSystem) fs).setErasureCodingPolicy(path, ec);
+        ((DistributedFileSystem) fs).setErasureCodingPolicy(path, ec.getName());
         LOG.info("enable erasureCodePolicy = " + erasureCodePolicyName  +
             " on " + path.toString());
         break;

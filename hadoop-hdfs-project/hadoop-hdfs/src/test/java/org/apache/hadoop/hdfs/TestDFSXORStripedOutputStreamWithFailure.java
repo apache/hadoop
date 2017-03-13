@@ -30,7 +30,7 @@ public class TestDFSXORStripedOutputStreamWithFailure
 
   @Override
   public ErasureCodingPolicy getEcPolicy() {
-    return ErasureCodingPolicyManager.getPolicyByPolicyID(
+    return ErasureCodingPolicyManager.getPolicyByID(
         HdfsConstants.XOR_2_1_POLICY_ID);
   }
 }

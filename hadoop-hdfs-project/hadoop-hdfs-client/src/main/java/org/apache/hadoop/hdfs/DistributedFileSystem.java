@@ -2397,17 +2397,18 @@ public class DistributedFileSystem extends FileSystem {
    * Set the source path to the specified erasure coding policy.
    *
    * @param path     The directory to set the policy
-   * @param ecPolicy The erasure coding policy. If not specified default will
-   *                 be used.
+   * @param ecPolicyName The erasure coding policy name.
    * @throws IOException
    */
   public void setErasureCodingPolicy(final Path path,
-      final ErasureCodingPolicy ecPolicy) throws IOException {
+      final String ecPolicyName) throws IOException {
     Path absF = fixRelativePart(path);
+    Preconditions.checkNotNull(ecPolicyName, "Erasure coding policy cannot be" +
+        " null.");
     new FileSystemLinkResolver<Void>() {
       @Override
       public Void doCall(final Path p) throws IOException {
-        dfs.setErasureCodingPolicy(getPathName(p), ecPolicy);
+        dfs.setErasureCodingPolicy(getPathName(p), ecPolicyName);
         return null;
       }
 
@@ -2415,7 +2416,7 @@ public class DistributedFileSystem extends FileSystem {
       public Void next(final FileSystem fs, final Path p) throws IOException {
         if (fs instanceof DistributedFileSystem) {
           DistributedFileSystem myDfs = (DistributedFileSystem) fs;
-          myDfs.setErasureCodingPolicy(p, ecPolicy);
+          myDfs.setErasureCodingPolicy(p, ecPolicyName);
           return null;
         }
         throw new UnsupportedOperationException(

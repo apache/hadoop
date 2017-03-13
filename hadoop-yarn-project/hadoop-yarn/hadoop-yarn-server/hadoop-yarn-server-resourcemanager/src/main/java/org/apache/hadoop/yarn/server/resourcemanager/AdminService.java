@@ -572,6 +572,15 @@ public class AdminService extends CompositeService implements
 
   @Override
   public String[] getGroupsForUser(String user) throws IOException {
+    String operation = "getGroupsForUser";
+    UserGroupInformation ugi;
+    try {
+      ugi = checkAcls(operation);
+    } catch (YarnException e) {
+      // The interface is from hadoop-common which does not accept YarnException
+      throw new IOException(e);
+    }
+    checkRMStatus(ugi.getShortUserName(), operation, "get groups for user");
     return UserGroupInformation.createRemoteUser(user).getGroupNames();
   }
 

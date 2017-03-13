@@ -139,12 +139,12 @@ public class CryptoAdmin extends Configured implements Tool {
         System.err.println("Can't understand argument: " + args.get(0));
         return 1;
       }
-
-      HdfsAdmin admin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+      Path p = new Path(path);
+      HdfsAdmin admin = new HdfsAdmin(p.toUri(), conf);
       EnumSet<CreateEncryptionZoneFlag> flags =
           EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
       try {
-        admin.createEncryptionZone(new Path(path), keyName, flags);
+        admin.createEncryptionZone(p, keyName, flags);
         System.out.println("Added encryption zone " + path);
       } catch (IOException e) {
         System.err.println(prettifyException(e));
@@ -226,12 +226,12 @@ public class CryptoAdmin extends Configured implements Tool {
         System.err.println("Can't understand argument: " + args.get(0));
         return 1;
       }
-
+      Path p = new Path(path);
       final HdfsAdmin admin =
-          new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+          new HdfsAdmin(p.toUri(), conf);
       try {
         final FileEncryptionInfo fei =
-            admin.getFileEncryptionInfo(new Path(path));
+            admin.getFileEncryptionInfo(p);
         if (fei == null) {
           System.out.println("No FileEncryptionInfo found for path " + path);
           return 2;
@@ -273,10 +273,10 @@ public class CryptoAdmin extends Configured implements Tool {
         System.err.println("Can't understand argument: " + args.get(0));
         return 1;
       }
-
-      HdfsAdmin admin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+      Path p = new Path(path);
+      HdfsAdmin admin = new HdfsAdmin(p.toUri(), conf);
       try {
-        admin.provisionEncryptionZoneTrash(new Path(path));
+        admin.provisionEncryptionZoneTrash(p);
         System.out.println("Created a trash directory for " + path);
       } catch (IOException ioe) {
         System.err.println(prettifyException(ioe));

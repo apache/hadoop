@@ -29,7 +29,7 @@ public class TestDFSRSDefault10x4StripedInputStream extends
     TestDFSStripedInputStream {
 
   public ErasureCodingPolicy getEcPolicy() {
-    return ErasureCodingPolicyManager.getPolicyByPolicyID(
+    return ErasureCodingPolicyManager.getPolicyByID(
         HdfsConstants.RS_10_4_POLICY_ID);
   }
 }

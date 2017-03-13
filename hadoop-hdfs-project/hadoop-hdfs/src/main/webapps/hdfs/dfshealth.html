@@ -309,6 +309,7 @@
       <th>Node</th>
       <th>Http Address</th>
       <th>Last contact</th>
+      <th>Last Block Report</th>
       <th style="width:180px; text-align:center">Capacity</th>
       <th>Blocks</th>
       <th>Block pool used</th>
@@ -320,6 +321,7 @@
     <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{name} ({xferaddr})</td>
     <td ng-value="{state}-{name}"><a href='//{dnWebAddress}'>{dnWebAddress}</a></td>
     <td ng-value="{lastContact}">{lastContact}s</td>
+    <td ng-value="{lastBlockReport}">{lastBlockReport}m</td>
     <td ng-value="{usedPercentage}">
       <div>
         <div style="display:inline-block; float: left; padding-right: 10px;">{capacity|fmt_bytes}</div>

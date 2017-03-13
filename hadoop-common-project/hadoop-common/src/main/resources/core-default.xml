@@ -850,6 +850,12 @@
 </property>
 
 <property>
+  <name>fs.swift.impl</name>
+  <value>org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem</value>
+  <description>The implementation class of the OpenStack Swift Filesystem</description>
+</property>
+
+<property>
   <name>fs.automatic.close</name>
   <value>true</value>
   <description>By default, FileSystem instances are automatically closed at program
@@ -1398,6 +1404,16 @@
     Can use the following suffix (case insensitive):
     ms(millis), s(sec), m(min), h(hour), d(day)
     to specify the time (such as 2s, 2m, 1h, etc.).
+  </description>
+</property>
+<property>
+  <name>fs.azure.authorization</name>
+  <value>false</value>
+  <description>
+    Config flag to enable authorization support in WASB. Setting it to "true" enables
+    authorization support to WASB. Currently WASB authorization requires a remote service
+    to provide authorization that needs to be specified via fs.azure.authorization.remote.service.url
+    configuration
   </description>
 </property>
 
@@ -2582,6 +2598,25 @@
       signature exceeds the maximum allowed bytes in server, the caller context
       will be abandoned, in which case the caller context will not be recorded
       in audit logs.
+    </description>
+  </property>
+<!-- SequenceFile's Sorter properties -->
+  <property>
+    <name>seq.io.sort.mb</name>
+    <value>100</value>
+    <description>
+      The total amount of buffer memory to use while sorting files,
+      while using SequenceFile.Sorter, in megabytes. By default,
+      gives each merge stream 1MB, which should minimize seeks.
+    </description>
+  </property>
+  <property>
+    <name>seq.io.sort.factor</name>
+    <value>100</value>
+    <description>
+      The number of streams to merge at once while sorting
+      files using SequenceFile.Sorter.
+      This determines the number of open file handles.
     </description>
   </property>
 </configuration>

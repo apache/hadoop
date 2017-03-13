@@ -425,7 +425,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // event to be logged
   public static final String  DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY =
       "dfs.namenode.write-lock-reporting-threshold-ms";
-  public static final long    DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_DEFAULT = 1000L;
+  public static final long    DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_DEFAULT = 5000L;
   public static final String  DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY =
       "dfs.namenode.read-lock-reporting-threshold-ms";
   public static final long    DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_DEFAULT = 5000L;
@@ -562,6 +562,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_DATANODE_DISK_CHECK_TIMEOUT_DEFAULT =
       "10m";
 
+  public static final String  DFS_NAMENODE_EC_POLICIES_ENABLED_KEY = "dfs.namenode.ec.policies.enabled";
+  public static final String  DFS_NAMENODE_EC_POLICIES_ENABLED_DEFAULT = "RS-6-3-64k";
   public static final String  DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_THREADS_KEY = "dfs.datanode.ec.reconstruction.stripedread.threads";
   public static final int     DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_THREADS_DEFAULT = 20;
   public static final String  DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_BUFFER_SIZE_KEY = "dfs.datanode.ec.reconstruction.stripedread.buffer.size";
@@ -677,9 +679,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT = "dfs.block.misreplication.processing.limit";
   public static final int     DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT_DEFAULT = 10000;
 
-  public static final String DFS_DATANODE_SLOW_PEERS_REPORT_INTERVAL_KEY =
-      "dfs.datanode.slow.peers.report.interval";
-  public static final String DFS_DATANODE_SLOW_PEERS_REPORT_INTERVAL_DEFAULT =
+  public static final String DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY =
+      "dfs.datanode.outliers.report.interval";
+  public static final String DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_DEFAULT =
       "30m";
 
   // property for fsimage compression
@@ -718,10 +720,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long DFS_EDIT_LOG_TRANSFER_RATE_DEFAULT = 0; //no throttling
 
   // Datanode File IO Stats
-  public static final String DFS_DATANODE_ENABLE_FILEIO_PROFILING_KEY =
-      "dfs.datanode.enable.fileio.profiling";
-  public static final boolean DFS_DATANODE_ENABLE_FILEIO_PROFILING_DEFAULT =
-      false;
   public static final String DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_KEY =
       "dfs.datanode.enable.fileio.fault.injection";
   public static final boolean
@@ -730,7 +728,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY =
       "dfs.datanode.fileio.profiling.sampling.fraction";
   public static final double
-      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEAFULT = 1.0;
+      DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEFAULT = 0.0;
 
   //Keys with no defaults
   public static final String  DFS_DATANODE_PLUGINS_KEY = "dfs.datanode.plugins";

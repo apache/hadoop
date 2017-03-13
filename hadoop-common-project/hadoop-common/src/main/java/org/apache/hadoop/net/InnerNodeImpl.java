@@ -25,9 +25,9 @@ import java.util.Map;
 /** InnerNode represents a switch/router of a data center or rack.
  * Different from a leaf node, it has non-null children.
  */
-class InnerNodeImpl extends NodeBase implements InnerNode {
-  static class Factory implements InnerNode.Factory<InnerNodeImpl> {
-    private Factory() {}
+public class InnerNodeImpl extends NodeBase implements InnerNode {
+  protected static class Factory implements InnerNode.Factory<InnerNodeImpl> {
+    protected Factory() {}
 
     @Override
     public InnerNodeImpl newInnerNode(String path) {
@@ -37,18 +37,18 @@ class InnerNodeImpl extends NodeBase implements InnerNode {
 
   static final Factory FACTORY = new Factory();
 
-  private final List<Node> children = new ArrayList<>();
-  private final Map<String, Node> childrenMap = new HashMap<>();
-  private int numOfLeaves;
+  protected final List<Node> children = new ArrayList<>();
+  protected final Map<String, Node> childrenMap = new HashMap<>();
+  protected int numOfLeaves;
 
   /** Construct an InnerNode from a path-like string */
-  InnerNodeImpl(String path) {
+  protected InnerNodeImpl(String path) {
     super(path);
   }
 
   /** Construct an InnerNode
    * from its name, its network location, its parent, and its level */
-  InnerNodeImpl(String name, String location, InnerNode parent, int level) {
+  protected InnerNodeImpl(String name, String location, InnerNode parent, int level) {
     super(name, location, parent, level);
   }
 
@@ -81,7 +81,7 @@ class InnerNodeImpl extends NodeBase implements InnerNode {
    * @param n a node
    * @return true if this node is an ancestor of <i>n</i>
    */
-  boolean isAncestor(Node n) {
+  protected boolean isAncestor(Node n) {
     return getPath(this).equals(NodeBase.PATH_SEPARATOR_STR) ||
       (n.getNetworkLocation()+NodeBase.PATH_SEPARATOR_STR).
       startsWith(getPath(this)+NodeBase.PATH_SEPARATOR_STR);
@@ -92,12 +92,12 @@ class InnerNodeImpl extends NodeBase implements InnerNode {
    * @param n a node
    * @return true if this node is the parent of <i>n</i>
    */
-  boolean isParent(Node n) {
+  protected boolean isParent(Node n) {
     return n.getNetworkLocation().equals(getPath(this));
   }
 
   /* Return a child name of this node who is an ancestor of node <i>n</i> */
-  private String getNextAncestorName(Node n) {
+  protected String getNextAncestorName(Node n) {
     if (!isAncestor(n)) {
       throw new IllegalArgumentException(
                                          this + "is not an ancestor of " + n);

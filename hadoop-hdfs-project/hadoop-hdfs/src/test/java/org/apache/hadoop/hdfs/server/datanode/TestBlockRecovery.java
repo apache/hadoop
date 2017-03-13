@@ -65,6 +65,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -137,7 +138,7 @@ public class TestBlockRecovery {
   public TestName currentTestName = new TestName();
 
   private final int cellSize =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy().getCellSize();
+      StripedFileTestUtil.getDefaultECPolicy().getCellSize();
   private final int bytesPerChecksum = 512;
   private final int[][][] blockLengthsSuite = {
       {{11 * cellSize, 10 * cellSize, 9 * cellSize, 8 * cellSize,

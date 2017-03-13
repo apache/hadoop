@@ -453,14 +453,13 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
   
   void allocateResource(Resource clusterResource,
-      Resource resource, String nodePartition, boolean changeContainerResource) {
+      Resource resource, String nodePartition) {
     try {
       writeLock.lock();
       queueUsage.incUsed(nodePartition, resource);
 
-      if (!changeContainerResource) {
-        ++numContainers;
-      }
+      ++numContainers;
+
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
           minimumAllocation, this, labelManager, nodePartition);
     } finally {
@@ -469,7 +468,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
   
   protected void releaseResource(Resource clusterResource,
-      Resource resource, String nodePartition, boolean changeContainerResource) {
+      Resource resource, String nodePartition) {
     try {
       writeLock.lock();
       queueUsage.decUsed(nodePartition, resource);
@@ -477,9 +476,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
           minimumAllocation, this, labelManager, nodePartition);
 
-      if (!changeContainerResource) {
-        --numContainers;
-      }
+      --numContainers;
     } finally {
       writeLock.unlock();
     }

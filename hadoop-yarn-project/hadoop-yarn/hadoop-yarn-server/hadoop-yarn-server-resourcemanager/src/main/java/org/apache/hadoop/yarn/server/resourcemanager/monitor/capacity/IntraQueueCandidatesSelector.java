@@ -112,6 +112,11 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
           continue;
         }
 
+        // Don't preempt if disabled for this queue.
+        if (leafQueue.getPreemptionDisabled()) {
+          continue;
+        }
+
         // 5. Calculate the resource to obtain per partition
         Map<String, Resource> resToObtainByPartition = fifoPreemptionComputePlugin
             .getResourceDemandFromAppsPerQueue(queueName, partition);

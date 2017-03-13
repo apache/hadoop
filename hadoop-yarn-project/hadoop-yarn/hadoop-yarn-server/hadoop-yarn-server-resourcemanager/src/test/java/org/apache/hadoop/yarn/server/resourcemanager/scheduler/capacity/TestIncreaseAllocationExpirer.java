@@ -200,6 +200,7 @@ public class TestIncreaseAllocationExpirer {
     // back action to complete
     Thread.sleep(10000);
     // Verify container size is 1G
+    am1.allocate(null, null);
     Assert.assertEquals(
         1 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
             .getAllocatedResource().getMemorySize());
@@ -304,6 +305,8 @@ public class TestIncreaseAllocationExpirer {
     // Wait long enough for the second token (5G) to expire, and verify that
     // the roll back action is completed as expected
     Thread.sleep(10000);
+    am1.allocate(null, null);
+    Thread.sleep(2000);
     // Verify container size is rolled back to 3G
     Assert.assertEquals(
         3 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
@@ -400,13 +403,13 @@ public class TestIncreaseAllocationExpirer {
     // Decrease containers
     List<UpdateContainerRequest> decreaseRequests = new ArrayList<>();
     decreaseRequests.add(UpdateContainerRequest.newInstance(1, containerId2,
-        ContainerUpdateType.INCREASE_RESOURCE,
+        ContainerUpdateType.DECREASE_RESOURCE,
         Resources.createResource(2 * GB), null));
     decreaseRequests.add(UpdateContainerRequest.newInstance(1, containerId3,
-        ContainerUpdateType.INCREASE_RESOURCE,
+        ContainerUpdateType.DECREASE_RESOURCE,
         Resources.createResource(4 * GB), null));
     decreaseRequests.add(UpdateContainerRequest.newInstance(1, containerId4,
-        ContainerUpdateType.INCREASE_RESOURCE,
+        ContainerUpdateType.DECREASE_RESOURCE,
         Resources.createResource(4 * GB), null));
     AllocateResponse response =
         am1.sendContainerResizingRequest(decreaseRequests);
@@ -418,6 +421,9 @@ public class TestIncreaseAllocationExpirer {
         rm1, containerId4, Resources.createResource(6 * GB)));
     // Wait for containerId3 token to expire,
     Thread.sleep(10000);
+
+    am1.allocate(null, null);
+
     Assert.assertEquals(
         2 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
             .getAllocatedResource().getMemorySize());

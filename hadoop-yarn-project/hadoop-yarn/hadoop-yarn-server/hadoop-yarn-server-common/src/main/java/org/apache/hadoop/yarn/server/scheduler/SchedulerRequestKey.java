@@ -116,7 +116,17 @@ public final class SchedulerRequestKey implements
     if (priorityCompare != 0) {
       return priorityCompare;
     }
-    return Long.compare(allocationRequestId, o.getAllocationRequestId());
+    int allocReqCompare = Long.compare(
+        allocationRequestId, o.getAllocationRequestId());
+
+    if (allocReqCompare != 0) {
+      return allocReqCompare;
+    }
+
+    if (this.containerToUpdate != null && o.containerToUpdate != null) {
+      return (this.containerToUpdate.compareTo(o.containerToUpdate));
+    }
+    return 0;
   }
 
   @Override
