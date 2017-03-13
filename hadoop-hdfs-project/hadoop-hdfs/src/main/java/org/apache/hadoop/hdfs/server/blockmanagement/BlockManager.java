@@ -640,7 +640,12 @@ public class BlockManager {
     
     final boolean b = commitBlock(
         (BlockInfoContiguousUnderConstruction) lastBlock, commitBlock);
-    if(countNodes(lastBlock).liveReplicas() >= minReplication)
+
+    // Count replicas on decommissioning nodes, as these will not be
+    // decommissioned unless recovery/completing last block has finished
+    NumberReplicas numReplicas = countNodes(lastBlock);
+    if(numReplicas.liveReplicas() + numReplicas.decommissioning() >=
+        minReplication)
       completeBlock(bc, bc.numBlocks()-1, iip, false);
     return b;
   }

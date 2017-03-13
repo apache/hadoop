@@ -229,6 +229,9 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-11379. DFSInputStream may infinite loop requesting block locations. Contributed by Daryn Sharp.
 
+    HDFS-11499. Decommissioning stuck because of failing recovery.
+    Contributed by Lukas Majercak and Manoj Govindassamy.
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
