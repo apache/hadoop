@@ -515,7 +515,8 @@ public class FSLeafQueue extends FSQueue {
           getMaxShare().getVirtualCores()));
     }
 
-    return Resources.multiply(maxResource, maxAMShare);
+    // Round up to allow AM to run when there is only one vcore on the cluster
+    return Resources.multiplyAndRoundUp(maxResource, maxAMShare);
   }
 
   /**
@@ -615,5 +616,26 @@ public class FSLeafQueue extends FSQueue {
   @VisibleForTesting
   boolean isStarved() {
     return isStarvedForMinShare() || isStarvedForFairShare();
+  }
+
+  @Override
+  protected void dumpStateInternal(StringBuilder sb) {
+    sb.append("{Name: " + getName() +
+        ", Weight: " + weights +
+        ", Policy: " + policy.getName() +
+        ", FairShare: " + getFairShare() +
+        ", SteadyFairShare: " + getSteadyFairShare() +
+        ", MaxShare: " + maxShare +
+        ", MinShare: " + minShare +
+        ", ResourceUsage: " + getResourceUsage() +
+        ", Demand: " + getDemand() +
+        ", Runnable: " + getNumRunnableApps() +
+        ", NumPendingApps: " + getNumPendingApps() +
+        ", NonRunnable: " + getNumNonRunnableApps() +
+        ", MaxAMShare: " + maxAMShare +
+        ", MaxAMResource: " + computeMaxAMResource() +
+        ", AMResourceUsage: " + getAmResourceUsage() +
+        ", LastTimeAtMinShare: " + lastTimeAtMinShare +
+        "}");
   }
 }

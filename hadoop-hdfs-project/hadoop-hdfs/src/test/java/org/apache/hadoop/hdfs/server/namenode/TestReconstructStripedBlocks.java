@@ -60,7 +60,7 @@ public class TestReconstructStripedBlocks {
   public static final Logger LOG = LoggerFactory.getLogger(
       TestReconstructStripedBlocks.class);
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private final int cellSize = ecPolicy.getCellSize();
   private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
   private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
@@ -202,7 +202,7 @@ public class TestReconstructStripedBlocks {
       DistributedFileSystem fs = cluster.getFileSystem();
       BlockManager bm = cluster.getNamesystem().getBlockManager();
       fs.getClient().setErasureCodingPolicy("/",
-          ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
+          StripedFileTestUtil.getDefaultECPolicy().getName());
       int fileLen = dataBlocks * blockSize;
       Path p = new Path("/test2RecoveryTasksForSameBlockGroup");
       final byte[] data = new byte[fileLen];
@@ -268,7 +268,7 @@ public class TestReconstructStripedBlocks {
     try {
       fs.mkdirs(dirPath);
       fs.setErasureCodingPolicy(dirPath,
-          ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
+          StripedFileTestUtil.getDefaultECPolicy().getName());
       DFSTestUtil.createFile(fs, filePath,
           cellSize * dataBlocks * 2, (short) 1, 0L);
 

@@ -16,12 +16,13 @@
   limitations under the License.
 --}}
 <div class="row">
-
-  {{#if model.nodes}}
-    {{em-table columns=columns rows=model.nodes}}
-  {{else}}
-    <h4 align="center">No nodes found on this cluster</h4>
-  {{/if}}
+  <div class="col-md-12">
+    {{#if model.nodes}}
+      {{em-table columns=columns rows=model.nodes}}
+    {{else}}
+      <h4 align="center">No nodes found on this cluster</h4>
+    {{/if}}
+  </div>
 </div>
 
 {{outlet}}

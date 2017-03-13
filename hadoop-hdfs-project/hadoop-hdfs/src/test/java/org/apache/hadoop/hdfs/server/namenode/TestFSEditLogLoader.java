@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -99,7 +100,7 @@ public class TestFSEditLogLoader {
   private static final int NUM_DATA_NODES = 0;
 
   private final ErasureCodingPolicy testECPolicy
-      = ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      = StripedFileTestUtil.getDefaultECPolicy();
 
   @Test
   public void testDisplayRecentEditLogOpCodes() throws IOException {

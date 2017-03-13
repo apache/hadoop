@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -34,6 +35,7 @@ import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -54,7 +56,7 @@ public class TestErasureCodingPolicies {
   private DistributedFileSystem fs;
   private static final int BLOCK_SIZE = 1024;
   private static final ErasureCodingPolicy EC_POLICY =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private FSNamesystem namesystem;
 
   @Rule
@@ -64,6 +66,7 @@ public class TestErasureCodingPolicies {
   public void setupCluster() throws IOException {
     conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
+    DFSTestUtil.enableAllECPolicies(conf);
     cluster = new MiniDFSCluster.Builder(conf).
         numDataNodes(1).build();
     cluster.waitActive();
@@ -92,7 +95,7 @@ public class TestErasureCodingPolicies {
 
     // set ec policy on dir
     fs.setErasureCodingPolicy(dir,
-        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     // create a file which should be using ec
     final Path ecSubDir = new Path(dir, "ecSubDir");
     final Path ecFile = new Path(ecSubDir, "ecFile");
@@ -189,6 +192,40 @@ public class TestErasureCodingPolicies {
     } catch (IOException e) {
       assertExceptionContains("erasure coding policy for a file", e);
     }
+
+    // Verify that policies are successfully loaded even when policies
+    // are disabled
+    cluster.getConfiguration(0).set(
+        DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY, "");
+    cluster.restartNameNodes();
+    cluster.waitActive();
+
+    // No policies should be enabled after restart
+    Assert.assertTrue("No policies should be enabled after restart",
+        fs.getAllErasureCodingPolicies().isEmpty());
+
+    // Already set directory-level policies should still be in effect
+    Path disabledPolicy = new Path(dir1, "afterDisabled");
+    Assert.assertEquals("Dir does not have policy set",
+        EC_POLICY,
+        fs.getErasureCodingPolicy(dir1));
+    fs.create(disabledPolicy).close();
+    Assert.assertEquals("File did not inherit dir's policy",
+        EC_POLICY,
+        fs.getErasureCodingPolicy(disabledPolicy));
+
+    // Also check loading disabled EC policies from fsimage
+    fs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+    fs.saveNamespace();
+    fs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+    cluster.restartNameNodes();
+
+    Assert.assertEquals("Dir does not have policy set",
+        EC_POLICY,
+        fs.getErasureCodingPolicy(dir1));
+    Assert.assertEquals("File does not have policy set",
+        EC_POLICY,
+        fs.getErasureCodingPolicy(disabledPolicy));
   }
 
   @Test
@@ -233,7 +270,7 @@ public class TestErasureCodingPolicies {
     final Path testDir = new Path("/ec");
     fs.mkdir(testDir, FsPermission.getDirDefault());
     fs.setErasureCodingPolicy(testDir,
-        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     final Path fooFile = new Path(testDir, "foo");
     // create ec file with replication=0
     fs.create(fooFile, FsPermission.getFileDefault(), true,
@@ -255,7 +292,7 @@ public class TestErasureCodingPolicies {
     assertNull(fs.getClient().getFileInfo(src).getErasureCodingPolicy());
     // dir EC policy after setting
     ErasureCodingPolicy sysDefaultECPolicy =
-        ErasureCodingPolicyManager.getSystemDefaultPolicy();
+        StripedFileTestUtil.getDefaultECPolicy();
     fs.getClient().setErasureCodingPolicy(src, sysDefaultECPolicy.getName());
     verifyErasureCodingInfo(src, sysDefaultECPolicy);
     fs.create(new Path(ecDir, "child1")).close();
@@ -310,7 +347,7 @@ public class TestErasureCodingPolicies {
           + "setting an invalid erasure coding policy");
     } catch (Exception e) {
       assertExceptionContains("Policy 'RS-4-2-128k' does not match " +
-          "any supported erasure coding policies",e);
+          "any enabled erasure coding policies", e);
     }
   }
 
@@ -320,7 +357,7 @@ public class TestErasureCodingPolicies {
         .getSystemPolicies();
     Collection<ErasureCodingPolicy> allECPolicies = fs
         .getAllErasureCodingPolicies();
-    assertTrue("All system policies should be active",
+    assertTrue("All system policies should be enabled",
         allECPolicies.containsAll(Arrays.asList(sysECPolicies)));
   }
 

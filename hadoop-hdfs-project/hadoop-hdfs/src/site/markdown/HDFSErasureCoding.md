@@ -56,19 +56,26 @@ Architecture
 
       3. _Transfer the generated data blocks to target nodes:_ Once decoding is finished, the recovered blocks are transferred to target DataNodes.
 
- *  **ErasureCoding policy**
-    To accommodate heterogeneous workloads, we allow files and directories in an HDFS cluster to have different replication and EC policies.
-    Information on how to encode/decode a file is encapsulated in an ErasureCodingPolicy class. Each policy is defined by the following 2 pieces of information:
+ *  **Erasure coding policies**
+    To accommodate heterogeneous workloads, we allow files and directories in an HDFS cluster to have different replication and erasure coding policies.
+    The erasure coding policy encapsulates how to encode/decode a file. Each policy is defined by the following pieces of information:
 
-      1. _The ECSchema:_ This includes the numbers of data and parity blocks in an EC group (e.g., 6+3), as well as the codec algorithm (e.g., Reed-Solomon).
+      1. _The EC schema:_ This includes the numbers of data and parity blocks in an EC group (e.g., 6+3), as well as the codec algorithm (e.g., Reed-Solomon, XOR).
 
       2. _The size of a striping cell._ This determines the granularity of striped reads and writes, including buffer sizes and encoding work.
 
-    Five policies are currently supported: RS-3-2-64k, RS-6-3-64k, RS-10-4-64k, RS-LEGACY-6-3-64k, and XOR-2-1-64k. All with default cell size of 64KB. The system default policy is RS-6-3-64k which use the default schema RS_6_3_SCHEMA with a cell size of 64KB.
+    Policies are named *codec*-*num data blocks*-*num parity blocks*-*cell size*. Currently, five built-in policies are supported: `RS-3-2-64k`, `RS-6-3-64k`, `RS-10-4-64k`, `RS-LEGACY-6-3-64k`, and `XOR-2-1-64k`.
+
+    By default, only `RS-6-3-64k` is enabled.
+
+    Similar to HDFS storage policies, erasure coding policies are set on a directory. When a file is created, it inherits the EC policy of its nearest ancestor directory.
+
+    Directory-level EC policies only affect new files created within the directory. Once a file has been created, its erasure coding policy can be queried but not changed. If an erasure coded file is renamed to a directory with a different EC policy, the file retains its existing EC policy. Converting a file to a different EC policy requires rewriting its data; do this by copying the file (e.g. via distcp) rather than renaming it.
 
  *  **Intel ISA-L**
-    Intel ISA-L stands for Intel Intelligent Storage Acceleration Library. ISA-L is a collection of optimized low-level functions used primarily in storage applications. It includes a fast block Reed-Solomon type erasure codes optimized for Intel AVX and AVX2 instruction sets.
-    HDFS EC can leverage this open-source library to accelerate encoding and decoding calculation. ISA-L supports most of major operating systems, including Linux and Windows. By default, ISA-L is not enabled in HDFS.
+    Intel ISA-L stands for Intel Intelligent Storage Acceleration Library. ISA-L is an open-source collection of optimized low-level functions designed for storage applications. It includes fast block Reed-Solomon type erasure codes optimized for Intel AVX and AVX2 instruction sets.
+    HDFS erasure coding can leverage ISA-L to accelerate encoding and decoding calculation. ISA-L supports most major operating systems, including Linux and Windows.
+    ISA-L is not enabled by default. See the instructions below for how to enable ISA-L.
 
 Deployment
 ----------
@@ -90,6 +97,10 @@ Deployment
 
 ### Configuration keys
 
+  The set of enabled erasure coding policies can be configured on the NameNode via `dfs.namenode.ec.policies.enabled`. This restricts what EC policies can be set by clients. It does not affect the behavior of already set file or directory-level EC policies.
+
+  By default, only the `RS-6-3-64k` policy is enabled. Typically, the cluster administrator will configure the set of enabled policies based on the size of the cluster and the desired fault-tolerance properties. For instance, for a cluster with 9 racks, a policy like `RS-10-4-64k` will not preserve rack-level fault-tolerance, and `RS-6-3-64k` or `RS-3-2-64k` might be more appropriate. If the administrator only cares about node-level fault-tolerance, `RS-10-4-64k` would still be appropriate as long as there are at least 14 DataNodes in the cluster.
+
   The codec implementation for Reed-Solomon and XOR can be configured with the following client and DataNode configuration keys:
   `io.erasurecode.codec.rs.rawcoder` for the default RS codec,
   `io.erasurecode.codec.rs-legacy.rawcoder` for the legacy RS codec,
@@ -106,13 +117,13 @@ Deployment
 ### Enable Intel ISA-L
 
   HDFS native implementation of default RS codec leverages Intel ISA-L library to improve the encoding and decoding calculation. To enable and use Intel ISA-L, there are three steps.
-  1. Build ISA-L library. Please refer to the offical site "https://github.com/01org/isa-l/" for detail information.
-  2. Build Hadoop with ISA-L support. Please refer to "Intel ISA-L build options" section in "Build instructions for Hadoop"(BUILDING.txt) document. Use -Dbundle.isal to copy the contents of the isal.lib directory into the final tar file. Deploy hadoop with the tar file. Make sure ISA-L library is available on both HDFS client and DataNodes.
-  3. Configure the `io.erasurecode.codec.rs.rawcoder` key with value `org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory` on HDFS client and DataNodes.
+  1. Build ISA-L library. Please refer to the official site "https://github.com/01org/isa-l/" for detail information.
+  2. Build Hadoop with ISA-L support. Please refer to "Intel ISA-L build options" section in "Build instructions for Hadoop" in (BUILDING.txt) in the source code. Use `-Dbundle.isal` to copy the contents of the `isal.lib` directory into the final tar file. Deploy Hadoop with the tar file. Make sure ISA-L is available on HDFS clients and DataNodes.
+  3. Configure the `io.erasurecode.codec.rs.rawcoder` key with value `org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory` on HDFS clients and DataNodes.
 
-  To check ISA-L library enable state, try "Hadoop checknative" command. It will tell you if ISA-L library is enabled or not.
+  To verify that ISA-L is correctly detected by Hadoop, run the `hadoop checknative` command.
 
-  It also requires three steps to enable the native implementation of XOR codec. The first two steps are the same as the above step 1 and step 2. In step 3, configure the `io.erasurecode.codec.xor.rawcoder` key with `org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawErasureCoderFactory` on both HDFS client and DataNodes.
+  To enable the native implementation of the XOR codec, perform the same first two steps as above to build and deploy Hadoop with ISA-L support. Afterwards, configure the `io.erasurecode.codec.xor.rawcoder` key with `org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawErasureCoderFactory` on both HDFS client and DataNodes.
 
 ### Administrative commands
 
@@ -130,20 +141,20 @@ Below are the details about each command.
 
  *  `[-setPolicy -policy <policyName> -path <path>]`
 
-    Sets an ErasureCoding policy on a directory at the specified path.
+    Sets an erasure coding policy on a directory at the specified path.
 
       `path`: An directory in HDFS. This is a mandatory parameter. Setting a policy only affects newly created files, and does not affect existing files.
 
-      `policyName`: The ErasureCoding policy to be used for files under this directory.
+      `policyName`: The erasure coding policy to be used for files under this directory.
 
  *  `[-getPolicy -path <path>]`
 
-     Get details of the ErasureCoding policy of a file or directory at the specified path.
+     Get details of the erasure coding policy of a file or directory at the specified path.
 
  *  `[-unsetPolicy -path <path>]`
 
-     Unset an ErasureCoding policy set by a previous call to "setPolicy" on a directory. If the directory inherits the ErasureCoding policy from an ancestor directory, "unsetPolicy" is a no-op. Unsetting the policy on a directory which doesn't have an explicit policy set will not return an error.
+     Unset an erasure coding policy set by a previous call to `setPolicy` on a directory. If the directory inherits the erasure coding policy from an ancestor directory, `unsetPolicy` is a no-op. Unsetting the policy on a directory which doesn't have an explicit policy set will not return an error.
 
  *  `[-listPolicies]`
 
-     Lists all supported ErasureCoding policies. These names are suitable for use with the `setPolicy` command.
+     Lists the set of enabled erasure coding policies. These names are suitable for use with the `setPolicy` command.

@@ -37,9 +37,9 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
@@ -58,7 +58,7 @@ public class TestSequentialBlockGroupId {
       .getLog("TestSequentialBlockGroupId");
 
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private final short REPLICATION = 1;
   private final long SEED = 0;
   private final int dataBlocks = ecPolicy.getNumDataUnits();
@@ -89,7 +89,7 @@ public class TestSequentialBlockGroupId {
         .getBlockIdManager().getBlockGroupIdGenerator();
     fs.mkdirs(ecDir);
     cluster.getFileSystem().getClient().setErasureCodingPolicy("/ecDir",
-        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
+        StripedFileTestUtil.getDefaultECPolicy().getName());
   }
 
   @After

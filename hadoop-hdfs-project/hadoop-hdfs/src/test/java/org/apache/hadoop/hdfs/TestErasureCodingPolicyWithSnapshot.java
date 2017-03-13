@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Before;
@@ -41,7 +40,7 @@ public class TestErasureCodingPolicyWithSnapshot {
 
   private final static int SUCCESS = 0;
   private final ErasureCodingPolicy sysDefaultPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private final short groupSize = (short) (
       sysDefaultPolicy.getNumDataUnits() +
           sysDefaultPolicy.getNumParityUnits());

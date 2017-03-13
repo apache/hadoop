@@ -23,9 +23,10 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -34,6 +35,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -82,11 +84,23 @@ final class FSDirErasureCodingOp {
     fsd.writeLock();
     try {
       ErasureCodingPolicy ecPolicy = fsn.getErasureCodingPolicyManager()
-          .getPolicyByName(ecPolicyName);
+          .getEnabledPolicyByName(ecPolicyName);
       if (ecPolicy == null) {
-        throw new HadoopIllegalArgumentException("Policy '" +
-            ecPolicyName + "' does not match any supported erasure coding " +
-            "policies.");
+        final String sysPolicies =
+            Arrays.asList(
+                fsn.getErasureCodingPolicyManager().getEnabledPolicies())
+                .stream()
+                .map(ErasureCodingPolicy::getName)
+                .collect(Collectors.joining(", "));
+        final String message = String.format("Policy '%s' does not match any " +
+            "enabled erasure" +
+            " coding policies: [%s]. The set of enabled erasure coding " +
+            "policies can be configured at '%s'.",
+            ecPolicyName,
+            sysPolicies,
+            DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY
+            );
+        throw new HadoopIllegalArgumentException(message);
       }
       iip = fsd.resolvePath(pc, src, DirOp.WRITE_LINK);
       // Write access is required to set erasure coding policy
@@ -116,26 +130,6 @@ final class FSDirErasureCodingOp {
     if (!inode.isDirectory()) {
       throw new IOException("Attempt to set an erasure coding policy " +
           "for a file " + src);
-    }
-
-    // Check that the EC policy is one of the active policies.
-    boolean validPolicy = false;
-    ErasureCodingPolicy[] activePolicies =
-        FSDirErasureCodingOp.getErasureCodingPolicies(fsd.getFSNamesystem());
-    for (ErasureCodingPolicy activePolicy : activePolicies) {
-      if (activePolicy.equals(ecPolicy)) {
-        validPolicy = true;
-        break;
-      }
-    }
-    if (!validPolicy) {
-      List<String> ecPolicyNames = new ArrayList<String>();
-      for (ErasureCodingPolicy activePolicy : activePolicies) {
-        ecPolicyNames.add(activePolicy.getName());
-      }
-      throw new HadoopIllegalArgumentException("Policy [ " +
-          ecPolicy.getName() + " ] does not match any of the " +
-          "supported policies. Please select any one of " + ecPolicyNames);
     }
 
     final XAttr ecXAttr;
@@ -291,7 +285,7 @@ final class FSDirErasureCodingOp {
   static ErasureCodingPolicy[] getErasureCodingPolicies(final FSNamesystem fsn)
       throws IOException {
     assert fsn.hasReadLock();
-    return fsn.getErasureCodingPolicyManager().getPolicies();
+    return fsn.getErasureCodingPolicyManager().getEnabledPolicies();
   }
 
   private static ErasureCodingPolicy getErasureCodingPolicyForPath(
@@ -307,8 +301,8 @@ final class FSDirErasureCodingOp {
         }
         if (inode.isFile()) {
           byte id = inode.asFile().getErasureCodingPolicyID();
-          return id < 0 ? null : fsd.getFSNamesystem().
-              getErasureCodingPolicyManager().getPolicyByID(id);
+          return id < 0 ? null :
+              ErasureCodingPolicyManager.getPolicyByID(id);
         }
         // We don't allow setting EC policies on paths with a symlink. Thus
         // if a symlink is encountered, the dir shouldn't have EC policy.
@@ -323,8 +317,8 @@ final class FSDirErasureCodingOp {
             ByteArrayInputStream bIn = new ByteArrayInputStream(xattr.getValue());
             DataInputStream dIn = new DataInputStream(bIn);
             String ecPolicyName = WritableUtils.readString(dIn);
-            return fsd.getFSNamesystem().getErasureCodingPolicyManager().
-                getPolicyByName(ecPolicyName);
+            return ErasureCodingPolicyManager
+                .getPolicyByName(ecPolicyName);
           }
         }
       }

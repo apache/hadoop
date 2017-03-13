@@ -30,7 +30,7 @@ public class TestDFSRSDefault10x4StripedOutputStreamWithFailure
 
   @Override
   public ErasureCodingPolicy getEcPolicy() {
-    return ErasureCodingPolicyManager.getPolicyByPolicyID(
+    return ErasureCodingPolicyManager.getPolicyByID(
         HdfsConstants.RS_10_4_POLICY_ID);
   }
 }

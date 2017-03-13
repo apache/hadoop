@@ -77,7 +77,7 @@ public class TestFSImage {
   private static final String HADOOP_2_7_ZER0_BLOCK_SIZE_TGZ =
       "image-with-zero-block-size.tar.gz";
   private static final ErasureCodingPolicy testECPolicy =
-      ErasureCodingPolicyManager.getPolicyByPolicyID(
+      ErasureCodingPolicyManager.getPolicyByID(
           HdfsConstants.RS_10_4_POLICY_ID);
 
   @Test
@@ -223,6 +223,7 @@ public class TestFSImage {
     // blocks to/from legacy fsimage
     assertEquals(3, fileByLoaded.getBlocks().length);
     assertEquals(preferredBlockSize, fileByLoaded.getPreferredBlockSize());
+    assertEquals(file.getFileReplication(), fileByLoaded.getFileReplication());
 
     if (isUC) {
       assertEquals(client,
@@ -239,6 +240,7 @@ public class TestFSImage {
   @Test
   public void testSaveAndLoadStripedINodeFile() throws IOException{
     Configuration conf = new Configuration();
+    DFSTestUtil.enableAllECPolicies(conf);
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
@@ -259,6 +261,7 @@ public class TestFSImage {
   public void testSaveAndLoadStripedINodeFileUC() throws IOException {
     // construct a INode with StripedBlock for saving and loading
     Configuration conf = new Configuration();
+    DFSTestUtil.enableAllECPolicies(conf);
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
@@ -458,6 +461,7 @@ public class TestFSImage {
     final int BLOCK_SIZE = 8 * 1024 * 1024;
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
+    DFSTestUtil.enableAllECPolicies(conf);
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(GROUP_SIZE)
@@ -467,7 +471,7 @@ public class TestFSImage {
       Path parentDir = new Path("/ec-10-4");
       Path childDir = new Path(parentDir, "ec-3-2");
       ErasureCodingPolicy ec32Policy = ErasureCodingPolicyManager
-          .getPolicyByPolicyID(HdfsConstants.RS_3_2_POLICY_ID);
+          .getPolicyByID(HdfsConstants.RS_3_2_POLICY_ID);
 
       // Create directories and files
       fs.mkdirs(parentDir);
@@ -515,7 +519,7 @@ public class TestFSImage {
       // check the information of file_3_2
       inode = fsn.dir.getINode(file_3_2.toString()).asFile();
       assertTrue(inode.isStriped());
-      assertEquals(ErasureCodingPolicyManager.getPolicyByPolicyID(
+      assertEquals(ErasureCodingPolicyManager.getPolicyByID(
           HdfsConstants.RS_3_2_POLICY_ID).getId(),
           inode.getErasureCodingPolicyID());
       blks = inode.getBlocks();

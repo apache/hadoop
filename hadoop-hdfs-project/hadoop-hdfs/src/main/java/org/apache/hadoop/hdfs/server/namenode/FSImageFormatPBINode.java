@@ -332,9 +332,10 @@ public final class FSImageFormatPBINode {
       BlockType blockType = PBHelperClient.convert(f.getBlockType());
       LoaderContext state = parent.getLoaderContext();
       boolean isStriped = f.hasErasureCodingPolicyID();
+      assert ((!isStriped) || (isStriped && !f.hasReplication()));
       Short replication = (!isStriped ? (short) f.getReplication() : null);
       ErasureCodingPolicy ecPolicy = isStriped ?
-          ErasureCodingPolicyManager.getPolicyByPolicyID(
+          ErasureCodingPolicyManager.getPolicyByID(
               (byte) f.getErasureCodingPolicyID()) : null;
       Byte ecPolicyID = (isStriped ? ecPolicy.getId() : null);
 
@@ -342,6 +343,9 @@ public final class FSImageFormatPBINode {
       for (int i = 0; i < bp.size(); ++i) {
         BlockProto b = bp.get(i);
         if (isStriped) {
+          Preconditions.checkState(ecPolicy.getId() > 0,
+              "File with ID " + n.getId() +
+              " has an invalid erasure coding policy ID " + ecPolicy.getId());
           blocks[i] = new BlockInfoStriped(PBHelperClient.convert(b), ecPolicy);
         } else {
           blocks[i] = new BlockInfoContiguous(PBHelperClient.convert(b),

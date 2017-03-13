@@ -725,12 +725,10 @@ public class TestNameNodeMXBean {
     DistributedFileSystem fs = null;
     try {
       Configuration conf = new HdfsConfiguration();
-      int dataBlocks = ErasureCodingPolicyManager
-          .getSystemDefaultPolicy().getNumDataUnits();
-      int parityBlocks = ErasureCodingPolicyManager
-          .getSystemDefaultPolicy().getNumParityUnits();
-      int cellSize = ErasureCodingPolicyManager
-          .getSystemDefaultPolicy().getCellSize();
+      int dataBlocks = StripedFileTestUtil.getDefaultECPolicy().getNumDataUnits();
+      int parityBlocks =
+          StripedFileTestUtil.getDefaultECPolicy().getNumParityUnits();
+      int cellSize = StripedFileTestUtil.getDefaultECPolicy().getCellSize();
       int totalSize = dataBlocks + parityBlocks;
       cluster = new MiniDFSCluster.Builder(conf)
           .numDataNodes(totalSize).build();
@@ -740,7 +738,7 @@ public class TestNameNodeMXBean {
       Path ecDirPath = new Path("/striped");
       fs.mkdir(ecDirPath, FsPermission.getDirDefault());
       fs.getClient().setErasureCodingPolicy(ecDirPath.toString(),
-          ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
+          StripedFileTestUtil.getDefaultECPolicy().getName());
       Path file = new Path(ecDirPath, "corrupted");
       final int length = cellSize * dataBlocks;
       final byte[] bytes = StripedFileTestUtil.generateBytes(length);
