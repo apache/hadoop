@@ -17,6 +17,15 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -30,17 +39,12 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationCom
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationOperation;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
 
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
 /**
  * A bunch of utility functions used in HBase TimelineService backend.
  */
 public final class HBaseTimelineStorageUtils {
+  private static final Log LOG =
+      LogFactory.getLog(HBaseTimelineStorageUtils.class);
 
   /** milliseconds in one day. */
   public static final long MILLIS_ONE_DAY = 86400000L;
@@ -225,8 +229,8 @@ public final class HBaseTimelineStorageUtils {
 
   /**
    * @param conf Yarn configuration. Used to see if there is an explicit config
-   *          pointing to the HBase config file to read. If null then a new
-   *          HBase configuration will be returned.
+   *          pointing to the HBase config file to read. It should not be null
+   *          or a NullPointerException will be thrown.
    * @return a configuration with the HBase configuration from the classpath,
    *         optionally overwritten by the timeline service configuration URL if
    *         specified.
@@ -235,16 +239,17 @@ public final class HBaseTimelineStorageUtils {
    */
   public static Configuration getTimelineServiceHBaseConf(Configuration conf)
       throws MalformedURLException {
-    Configuration hbaseConf;
-
     if (conf == null) {
-      return HBaseConfiguration.create();
+      throw new NullPointerException();
     }
 
+    Configuration hbaseConf;
     String timelineServiceHBaseConfFileURL =
         conf.get(YarnConfiguration.TIMELINE_SERVICE_HBASE_CONFIGURATION_FILE);
     if (timelineServiceHBaseConfFileURL != null
         && timelineServiceHBaseConfFileURL.length() > 0) {
+      LOG.info("Using hbase configuration at " +
+          timelineServiceHBaseConfFileURL);
       // create a clone so that we don't mess with out input one
       hbaseConf = new Configuration(conf);
       Configuration plainHBaseConf = new Configuration(false);
