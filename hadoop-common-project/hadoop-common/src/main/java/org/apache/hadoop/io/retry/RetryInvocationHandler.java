@@ -240,12 +240,15 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
     private final long delay;
     private final RetryAction action;
     private final long expectedFailoverCount;
+    private final Exception failException;
 
-    RetryInfo(long delay, RetryAction action, long expectedFailoverCount) {
+    RetryInfo(long delay, RetryAction action, long expectedFailoverCount,
+        Exception failException) {
       this.delay = delay;
       this.retryTime = Time.monotonicNow() + delay;
       this.action = action;
       this.expectedFailoverCount = expectedFailoverCount;
+      this.failException = failException;
     }
 
     boolean isFailover() {
@@ -258,11 +261,16 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
           && action.action ==  RetryAction.RetryDecision.FAIL;
     }
 
+    Exception getFailException() {
+      return failException;
+    }
+
     static RetryInfo newRetryInfo(RetryPolicy policy, Exception e,
         Counters counters, boolean idempotentOrAtMostOnce,
         long expectedFailoverCount) throws Exception {
       RetryAction max = null;
       long maxRetryDelay = 0;
+      Exception ex = null;
 
       final Iterable<Exception> exceptions = e instanceof MultiException ?
           ((MultiException) e).getExceptions().values()
@@ -279,10 +287,13 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
 
         if (max == null || max.action.compareTo(a.action) < 0) {
           max = a;
+          if (a.action == RetryAction.RetryDecision.FAIL) {
+            ex = exception;
+          }
         }
       }
 
-      return new RetryInfo(maxRetryDelay, max, expectedFailoverCount);
+      return new RetryInfo(maxRetryDelay, max, expectedFailoverCount, ex);
     }
   }
 
@@ -359,7 +370,7 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
               + ". Not retrying because " + retryInfo.action.reason, e);
         }
       }
-      throw e;
+      throw retryInfo.getFailException();
     }
 
     log(method, retryInfo.isFailover(), counters.failovers, retryInfo.delay, e);

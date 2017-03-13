@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -122,7 +121,7 @@ public class RequestHedgingProxyProvider<T> extends
           } catch (Exception ex) {
             ProxyInfo<T> tProxyInfo = proxyMap.get(callResultFuture);
             logProxyException(ex, tProxyInfo.proxyInfo);
-            badResults.put(tProxyInfo.proxyInfo, ex);
+            badResults.put(tProxyInfo.proxyInfo, unwrapException(ex));
             LOG.trace("Unsuccessful invocation on [{}]", tProxyInfo.proxyInfo);
             numAttempts--;
           }
@@ -207,16 +206,36 @@ public class RequestHedgingProxyProvider<T> extends
    * @return If the exception is caused by an standby namenode.
    */
   private boolean isStandbyException(Exception ex) {
-    Throwable cause = ex.getCause();
-    if (cause != null) {
-      Throwable cause2 = cause.getCause();
-      if (cause2 instanceof RemoteException) {
-        RemoteException remoteException = (RemoteException)cause2;
-        IOException unwrapRemoteException =
-            remoteException.unwrapRemoteException();
-        return unwrapRemoteException instanceof StandbyException;
-      }
+    Exception exception = unwrapException(ex);
+    if (exception instanceof RemoteException) {
+      return ((RemoteException) exception).unwrapRemoteException()
+          instanceof StandbyException;
     }
     return false;
+  }
+
+  /**
+   * Unwraps the exception. <p>
+   * Example:
+   * <blockquote><pre>
+   * if ex is
+   * ExecutionException(InvocationTargetExeption(SomeException))
+   * returns SomeException
+   * </pre></blockquote>
+   *
+   * @return unwrapped exception
+   */
+  private Exception unwrapException(Exception ex) {
+    if (ex != null) {
+      Throwable cause = ex.getCause();
+      if (cause instanceof Exception) {
+        Throwable innerCause = cause.getCause();
+        if (innerCause instanceof Exception) {
+          return (Exception) innerCause;
+        }
+        return (Exception) cause;
+      }
+    }
+    return ex;
   }
 }

@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import java.io.EOFException;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -30,6 +33,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider.ProxyFactory;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.retry.MultiException;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -38,6 +43,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -198,7 +204,7 @@ public class TestRequestHedgingProxyProvider {
     Assert.assertTrue(stats.length == 1);
     Assert.assertEquals(2, stats[0]);
 
-    // Counter shuodl update only once
+    // Counter should update only once
     Assert.assertEquals(5, counter.get());
 
     stats = provider.getProxy().proxy.getStats();
@@ -345,6 +351,106 @@ public class TestRequestHedgingProxyProvider {
 
     // Counter updates only once now
     Assert.assertEquals(12, counter.get());
+  }
+
+  @Test
+  public void testHedgingWhenFileNotFoundException() throws Exception {
+    NamenodeProtocols active = Mockito.mock(NamenodeProtocols.class);
+    Mockito
+        .when(active.getBlockLocations(Matchers.anyString(),
+            Matchers.anyLong(), Matchers.anyLong()))
+        .thenThrow(new RemoteException("java.io.FileNotFoundException",
+            "File does not exist!"));
+
+    NamenodeProtocols standby = Mockito.mock(NamenodeProtocols.class);
+    Mockito
+        .when(standby.getBlockLocations(Matchers.anyString(),
+            Matchers.anyLong(), Matchers.anyLong()))
+        .thenThrow(
+            new RemoteException("org.apache.hadoop.ipc.StandbyException",
+            "Standby NameNode"));
+
+    RequestHedgingProxyProvider<NamenodeProtocols> provider =
+        new RequestHedgingProxyProvider<>(conf, nnUri,
+            NamenodeProtocols.class, createFactory(active, standby));
+    try {
+      provider.getProxy().proxy.getBlockLocations("/tmp/test.file", 0L, 20L);
+      Assert.fail("Should fail since the active namenode throws"
+          + " FileNotFoundException!");
+    } catch (MultiException me) {
+      for (Exception ex : me.getExceptions().values()) {
+        Exception rEx = ((RemoteException) ex).unwrapRemoteException();
+        if (rEx instanceof StandbyException) {
+          continue;
+        }
+        Assert.assertTrue(rEx instanceof FileNotFoundException);
+      }
+    }
+    Mockito.verify(active).getBlockLocations(Matchers.anyString(),
+        Matchers.anyLong(), Matchers.anyLong());
+    Mockito.verify(standby).getBlockLocations(Matchers.anyString(),
+        Matchers.anyLong(), Matchers.anyLong());
+  }
+
+  @Test
+  public void testHedgingWhenConnectException() throws Exception {
+    NamenodeProtocols active = Mockito.mock(NamenodeProtocols.class);
+    Mockito.when(active.getStats()).thenThrow(new ConnectException());
+
+    NamenodeProtocols standby = Mockito.mock(NamenodeProtocols.class);
+    Mockito.when(standby.getStats())
+        .thenThrow(
+            new RemoteException("org.apache.hadoop.ipc.StandbyException",
+            "Standby NameNode"));
+
+    RequestHedgingProxyProvider<NamenodeProtocols> provider =
+        new RequestHedgingProxyProvider<>(conf, nnUri,
+            NamenodeProtocols.class, createFactory(active, standby));
+    try {
+      provider.getProxy().proxy.getStats();
+      Assert.fail("Should fail since the active namenode throws"
+          + " ConnectException!");
+    } catch (MultiException me) {
+      for (Exception ex : me.getExceptions().values()) {
+        if (ex instanceof RemoteException) {
+          Exception rEx = ((RemoteException) ex)
+              .unwrapRemoteException();
+          Assert.assertTrue("Unexpected RemoteException: " + rEx.getMessage(),
+              rEx instanceof StandbyException);
+        } else {
+          Assert.assertTrue(ex instanceof ConnectException);
+        }
+      }
+    }
+    Mockito.verify(active).getStats();
+    Mockito.verify(standby).getStats();
+  }
+
+  @Test
+  public void testHedgingWhenConnectAndEOFException() throws Exception {
+    NamenodeProtocols active = Mockito.mock(NamenodeProtocols.class);
+    Mockito.when(active.getStats()).thenThrow(new EOFException());
+
+    NamenodeProtocols standby = Mockito.mock(NamenodeProtocols.class);
+    Mockito.when(standby.getStats()).thenThrow(new ConnectException());
+
+    RequestHedgingProxyProvider<NamenodeProtocols> provider =
+        new RequestHedgingProxyProvider<>(conf, nnUri,
+            NamenodeProtocols.class, createFactory(active, standby));
+    try {
+      provider.getProxy().proxy.getStats();
+      Assert.fail("Should fail since both active and standby namenodes throw"
+          + " Exceptions!");
+    } catch (MultiException me) {
+      for (Exception ex : me.getExceptions().values()) {
+        if (!(ex instanceof ConnectException) &&
+            !(ex instanceof EOFException)) {
+          Assert.fail("Unexpected Exception " + ex.getMessage());
+        }
+      }
+    }
+    Mockito.verify(active).getStats();
+    Mockito.verify(standby).getStats();
   }
 
   private ProxyFactory<NamenodeProtocols> createFactory(
