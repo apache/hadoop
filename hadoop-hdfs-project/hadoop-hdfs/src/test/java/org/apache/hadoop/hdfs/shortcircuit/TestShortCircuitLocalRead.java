@@ -388,7 +388,7 @@ public class TestShortCircuitLocalRead {
     }
   }
 
-  @Test(timeout=10000)
+  @Test(timeout=60000)
   public void testSkipWithVerifyChecksum() throws IOException {
     int size = blockSize;
     Configuration conf = new Configuration();
