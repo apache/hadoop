@@ -17,8 +17,13 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -37,7 +42,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTable;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -241,16 +245,17 @@ public final class HBaseTimelineStorageUtils {
    */
   public static Configuration getTimelineServiceHBaseConf(Configuration conf)
       throws MalformedURLException {
-    Configuration hbaseConf;
-
     if (conf == null) {
-      return HBaseConfiguration.create();
+      throw new NullPointerException();
     }
 
+    Configuration hbaseConf;
     String timelineServiceHBaseConfFileURL =
         conf.get(YarnConfiguration.TIMELINE_SERVICE_HBASE_CONFIGURATION_FILE);
     if (timelineServiceHBaseConfFileURL != null
         && timelineServiceHBaseConfFileURL.length() > 0) {
+      LOG.info("Using hbase configuration at " +
+          timelineServiceHBaseConfFileURL);
       // create a clone so that we don't mess with out input one
       hbaseConf = new Configuration(conf);
       Configuration plainHBaseConf = new Configuration(false);
