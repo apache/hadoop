@@ -20,16 +20,22 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.List;
+
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
+import static org.junit.Assert.assertFalse;
 
 /**
  * Test persistence of satisfying files/directories.
@@ -72,7 +78,16 @@ public class TestPersistentStoragePolicySatisfier {
    * @throws IOException
    */
   public void clusterSetUp() throws Exception {
-    clusterSetUp(false);
+    clusterSetUp(false, new HdfsConfiguration());
+  }
+
+  /**
+   * Setup environment for every test case.
+   * @param hdfsConf hdfs conf.
+   * @throws Exception
+   */
+  public void clusterSetUp(Configuration hdfsConf) throws Exception {
+    clusterSetUp(false, hdfsConf);
   }
 
   /**
@@ -80,8 +95,9 @@ public class TestPersistentStoragePolicySatisfier {
    * @param isHAEnabled if true, enable simple HA.
    * @throws IOException
    */
-  private void clusterSetUp(boolean isHAEnabled) throws Exception {
-    conf = new HdfsConfiguration();
+  private void clusterSetUp(boolean isHAEnabled, Configuration newConf)
+      throws Exception {
+    conf = newConf;
     final int dnNumber = storageTypes.length;
     final short replication = 3;
     MiniDFSCluster.Builder clusterBuilder = new MiniDFSCluster.Builder(conf)
@@ -188,7 +204,7 @@ public class TestPersistentStoragePolicySatisfier {
   public void testWithHA() throws Exception {
     try {
       // Enable HA env for testing.
-      clusterSetUp(true);
+      clusterSetUp(true, new HdfsConfiguration());
 
       fs.setStoragePolicy(testFile, ALL_SSD);
       fs.satisfyStoragePolicy(testFile);
@@ -295,6 +311,94 @@ public class TestPersistentStoragePolicySatisfier {
     } finally {
       clusterShutdown();
     }
+  }
+
+  /**
+   * Tests to verify SPS xattr will be removed if the satisfy work has
+   * been finished, expect that the method satisfyStoragePolicy can be
+   * invoked on the same file again after the block movement has been
+   * finished:
+   * 1. satisfy storage policy of file1.
+   * 2. wait until storage policy is satisfied.
+   * 3. satisfy storage policy of file1 again
+   * 4. make sure step 3 works as expected.
+   * @throws Exception
+   */
+  @Test(timeout = 300000)
+  public void testMultipleSatisfyStoragePolicy() throws Exception {
+    try {
+      // Lower block movement check for testing.
+      conf = new HdfsConfiguration();
+      final long minCheckTimeout = 500; // minimum value
+      conf.setLong(
+          DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
+          minCheckTimeout);
+      clusterSetUp(conf);
+      fs.setStoragePolicy(testFile, ONE_SSD);
+      fs.satisfyStoragePolicy(testFile);
+      DFSTestUtil.waitExpectedStorageType(
+          testFileName, StorageType.SSD, 1, timeout, fs);
+      DFSTestUtil.waitExpectedStorageType(
+          testFileName, StorageType.DISK, 2, timeout, fs);
+
+      // Make sure that SPS xattr has been removed.
+      int retryTime = 0;
+      while (retryTime < 30) {
+        if (!fileContainsSPSXAttr(testFile)) {
+          break;
+        }
+        Thread.sleep(minCheckTimeout);
+        retryTime += 1;
+      }
+
+      fs.setStoragePolicy(testFile, COLD);
+      fs.satisfyStoragePolicy(testFile);
+      DFSTestUtil.waitExpectedStorageType(
+          testFileName, StorageType.ARCHIVE, 3, timeout, fs);
+    } finally {
+      clusterShutdown();
+    }
+  }
+
+  /**
+   * Tests to verify SPS xattr is removed after SPS is dropped,
+   * expect that if the SPS is disabled/dropped, the SPS
+   * xattr should be removed accordingly:
+   * 1. satisfy storage policy of file1.
+   * 2. drop SPS thread in block manager.
+   * 3. make sure sps xattr is removed.
+   * @throws Exception
+   */
+  @Test(timeout = 300000)
+  public void testDropSPS() throws Exception {
+    try {
+      clusterSetUp();
+      fs.setStoragePolicy(testFile, ONE_SSD);
+      fs.satisfyStoragePolicy(testFile);
+
+      cluster.getNamesystem().getBlockManager().deactivateSPS();
+
+      // Make sure satisfy xattr has been removed.
+      assertFalse(fileContainsSPSXAttr(testFile));
+
+    } finally {
+      clusterShutdown();
+    }
+  }
+
+  /**
+   * Check whether file contains SPS xattr.
+   * @param fileName file name.
+   * @return true if file contains SPS xattr.
+   * @throws IOException
+   */
+  private boolean fileContainsSPSXAttr(Path fileName) throws IOException {
+    final INode inode = cluster.getNamesystem()
+        .getFSDirectory().getINode(fileName.toString());
+    final XAttr satisfyXAttr =
+        XAttrHelper.buildXAttr(XATTR_SATISFY_STORAGE_POLICY);
+    List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
+    return existingXAttrs.contains(satisfyXAttr);
   }
 
   /**

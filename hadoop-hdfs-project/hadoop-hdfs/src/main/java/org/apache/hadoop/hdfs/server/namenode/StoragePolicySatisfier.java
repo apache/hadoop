@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -91,7 +92,8 @@ public class StoragePolicySatisfier implements Runnable {
         conf.getLong(
             DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_KEY,
             DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_DEFAULT),
-        storageMovementNeeded);
+        storageMovementNeeded,
+        this);
   }
 
   /**
@@ -119,12 +121,6 @@ public class StoragePolicySatisfier implements Runnable {
    */
   public synchronized void stop(boolean reconfigStop) {
     isRunning = false;
-    if (reconfigStop) {
-      LOG.info("Stopping StoragePolicySatisfier, as admin requested to "
-          + "deactivate it.");
-    } else {
-      LOG.info("Stopping StoragePolicySatisfier.");
-    }
     if (storagePolicySatisfierThread == null) {
       return;
     }
@@ -135,8 +131,12 @@ public class StoragePolicySatisfier implements Runnable {
     }
     this.storageMovementsMonitor.stop();
     if (reconfigStop) {
-      this.clearQueues();
+      LOG.info("Stopping StoragePolicySatisfier, as admin requested to "
+          + "deactivate it.");
+      this.clearQueuesWithNotification();
       this.blockManager.getDatanodeManager().addDropSPSWorkCommandsToAllDNs();
+    } else {
+      LOG.info("Stopping StoragePolicySatisfier.");
     }
   }
 
@@ -716,5 +716,34 @@ public class StoragePolicySatisfier implements Runnable {
     LOG.warn("Clearing all the queues from StoragePolicySatisfier. So, "
         + "user requests on satisfying block storages would be discarded.");
     storageMovementNeeded.clearAll();
+  }
+
+  /**
+   * Clean all the movements in storageMovementNeeded and notify
+   * to clean up required resources.
+   * @throws IOException
+   */
+  private void clearQueuesWithNotification() {
+    Long id;
+    while ((id = storageMovementNeeded.get()) != null) {
+      try {
+        notifyBlkStorageMovementFinished(id);
+      } catch (IOException ie) {
+        LOG.warn("Failed to remove SPS "
+            + "xattr for collection id " + id, ie);
+      }
+    }
+  }
+
+  /**
+   * When block movement has been finished successfully, some additional
+   * operations should be notified, for example, SPS xattr should be
+   * removed.
+   * @param trackId track id i.e., block collection id.
+   * @throws IOException
+   */
+  public void notifyBlkStorageMovementFinished(long trackId)
+      throws IOException {
+    this.namesystem.getFSDirectory().removeSPSXattr(trackId);
   }
 }

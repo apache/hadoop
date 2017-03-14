@@ -534,6 +534,14 @@ public class FSDirAttrOp {
     return false;
   }
 
+  static void unprotectedRemoveSPSXAttr(INode inode, XAttr spsXAttr)
+      throws IOException{
+    List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
+    existingXAttrs.remove(spsXAttr);
+    XAttrStorage.updateINodeXAttrs(inode, existingXAttrs,
+        INodesInPath.fromINode(inode).getLatestSnapshotId());
+  }
+
   private static void setDirStoragePolicy(
       FSDirectory fsd, INodesInPath iip, byte policyId) throws IOException {
     INode inode = FSDirectory.resolveLastINode(iip);

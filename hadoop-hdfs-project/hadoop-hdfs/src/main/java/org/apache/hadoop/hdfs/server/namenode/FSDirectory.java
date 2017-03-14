@@ -1418,6 +1418,22 @@ public class FSDirectory implements Closeable {
     getBlockManager().satisfyStoragePolicy(inode.getId());
   }
 
+  /**
+   * Remove the SPS xattr from the inode, retrieve the inode from the
+   * block collection id.
+   * @param id
+   *           - file block collection id.
+   */
+  public void removeSPSXattr(long id) throws IOException {
+    final INode inode = getInode(id);
+    final XAttrFeature xaf = inode.getXAttrFeature();
+    final XAttr spsXAttr = xaf.getXAttr(XATTR_SATISFY_STORAGE_POLICY);
+
+    if (spsXAttr != null) {
+      FSDirAttrOp.unprotectedRemoveSPSXAttr(inode, spsXAttr);
+    }
+  }
+
   private void addEncryptionZone(INodeWithAdditionalFields inode,
       XAttrFeature xaf) {
     if (xaf == null) {

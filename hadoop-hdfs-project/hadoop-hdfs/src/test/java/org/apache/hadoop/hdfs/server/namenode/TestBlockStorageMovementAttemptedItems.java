@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * Tests that block storage movement attempt failures are reported from DN and
@@ -36,10 +37,11 @@ public class TestBlockStorageMovementAttemptedItems {
   private final int selfRetryTimeout = 500;
 
   @Before
-  public void setup() {
+  public void setup() throws Exception {
     unsatisfiedStorageMovementFiles = new BlockStorageMovementNeeded();
+    StoragePolicySatisfier sps = Mockito.mock(StoragePolicySatisfier.class);
     bsmAttemptedItems = new BlockStorageMovementAttemptedItems(100,
-        selfRetryTimeout, unsatisfiedStorageMovementFiles);
+        selfRetryTimeout, unsatisfiedStorageMovementFiles, sps);
   }
 
   @After

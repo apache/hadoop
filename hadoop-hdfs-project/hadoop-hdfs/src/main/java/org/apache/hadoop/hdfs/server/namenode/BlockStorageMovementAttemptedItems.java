@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.util.Time.monotonicNow;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -54,6 +55,7 @@ public class BlockStorageMovementAttemptedItems {
   private final List<BlocksStorageMovementResult> storageMovementAttemptedResults;
   private volatile boolean monitorRunning = true;
   private Daemon timerThread = null;
+  private final StoragePolicySatisfier sps;
   //
   // It might take anywhere between 30 to 60 minutes before
   // a request is timed out.
@@ -69,7 +71,8 @@ public class BlockStorageMovementAttemptedItems {
 
   public BlockStorageMovementAttemptedItems(long recheckTimeout,
       long selfRetryTimeout,
-      BlockStorageMovementNeeded unsatisfiedStorageMovementFiles) {
+      BlockStorageMovementNeeded unsatisfiedStorageMovementFiles,
+      StoragePolicySatisfier sps) {
     if (recheckTimeout > 0) {
       this.minCheckTimeout = Math.min(minCheckTimeout, recheckTimeout);
     }
@@ -78,6 +81,7 @@ public class BlockStorageMovementAttemptedItems {
     this.blockStorageMovementNeeded = unsatisfiedStorageMovementFiles;
     storageMovementAttemptedItems = new HashMap<>();
     storageMovementAttemptedResults = new ArrayList<>();
+    this.sps = sps;
   }
 
   /**
@@ -200,6 +204,9 @@ public class BlockStorageMovementAttemptedItems {
         } catch (InterruptedException ie) {
           LOG.info("BlocksStorageMovementAttemptResultMonitor thread "
               + "is interrupted.", ie);
+        } catch (IOException ie) {
+          LOG.warn("BlocksStorageMovementAttemptResultMonitor thread "
+              + "received exception and exiting.", ie);
         }
       }
     }
@@ -248,7 +255,7 @@ public class BlockStorageMovementAttemptedItems {
   }
 
   @VisibleForTesting
-  void blockStorageMovementResultCheck() {
+  void blockStorageMovementResultCheck() throws IOException {
     synchronized (storageMovementAttemptedResults) {
       Iterator<BlocksStorageMovementResult> resultsIter =
           storageMovementAttemptedResults.iterator();
@@ -295,6 +302,9 @@ public class BlockStorageMovementAttemptedItems {
               LOG.info("Blocks storage movement is SUCCESS for the track id: {}"
                   + " reported from co-ordinating datanode. But the trackID "
                   + "doesn't exists in storageMovementAttemptedItems list",
+                  storageMovementAttemptedResult.getTrackId());
+              // Remove xattr for the track id.
+              this.sps.notifyBlkStorageMovementFinished(
                   storageMovementAttemptedResult.getTrackId());
             }
           }
