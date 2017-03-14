@@ -196,7 +196,7 @@ public final class OzoneMetadataManager {
           metadataDB.get(args.getVolumeName().getBytes(encoding));
 
       if (volumeName != null) {
-        LOG.debug("Volume already exists.");
+        LOG.debug("Volume {} already exists.", volumeName);
         throw ErrorTable.newError(ErrorTable.VOLUME_ALREADY_EXISTS, args);
       }
 

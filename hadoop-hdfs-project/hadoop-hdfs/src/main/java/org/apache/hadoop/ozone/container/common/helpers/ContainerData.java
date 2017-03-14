@@ -190,10 +190,10 @@ public class ContainerData {
 
   /**
    * Set container Path.
-   * @param containerFilePath - File path.
+   * @param containerPath - File path.
    */
-  public void setContainerPath(String containerFilePath) {
-    this.containerFilePath = containerFilePath;
+  public void setContainerPath(String containerPath) {
+    this.containerFilePath = containerPath;
   }
 
 }

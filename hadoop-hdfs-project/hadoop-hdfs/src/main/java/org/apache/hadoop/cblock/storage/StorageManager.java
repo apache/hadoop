@@ -180,7 +180,8 @@ public class StorageManager {
       ArrayList<String> containerIds = new ArrayList<>();
       while (allocatedSize < volumeSize) {
         Pipeline pipeline = storageClient.createContainer(
-            KeyUtil.getContainerName(userName, volumeName, containerIdx));
+            KeyUtil.getContainerName(userName, volumeName, containerIdx),
+            ScmClient.ReplicationFactor.ONE);
         ContainerDescriptor container =
             new ContainerDescriptor(pipeline.getContainerName());
         container.setPipeline(pipeline);

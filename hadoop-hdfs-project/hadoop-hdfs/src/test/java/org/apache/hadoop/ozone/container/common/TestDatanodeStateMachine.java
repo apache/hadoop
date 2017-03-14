@@ -105,7 +105,21 @@ public class TestDatanodeStateMachine {
   @After
   public void tearDown() throws Exception {
     try {
-      executorService.shutdownNow();
+      if (executorService != null) {
+        executorService.shutdown();
+        try {
+          if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+            executorService.shutdownNow();
+          }
+
+          if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+            LOG.error("Unable to shutdown properly.");
+          }
+        } catch (InterruptedException e) {
+          LOG.error("Error attempting to shutdown.", e);
+          executorService.shutdownNow();
+        }
+      }
       for (RPC.Server s : scmServers) {
         s.stop();
       }
@@ -122,13 +136,13 @@ public class TestDatanodeStateMachine {
   @Test
   public void testDatanodeStateMachineStartThread() throws IOException,
       InterruptedException, TimeoutException {
-    DatanodeStateMachine stateMachine =
-        DatanodeStateMachine.initStateMachine(conf);
-    SCMConnectionManager connectionManager =
-        stateMachine.getConnectionManager();
-    GenericTestUtils.waitFor(() -> connectionManager.getValues().size() == 3,
-        1000, 30000);
-    stateMachine.close();
+    try (DatanodeStateMachine stateMachine =
+        DatanodeStateMachine.initStateMachine(conf)) {
+      SCMConnectionManager connectionManager =
+          stateMachine.getConnectionManager();
+      GenericTestUtils.waitFor(() -> connectionManager.getValues().size() == 3,
+          1000, 30000);
+    }
   }
 
   /**
@@ -164,100 +178,101 @@ public class TestDatanodeStateMachine {
   @Test
   public void testDatanodeStateContext() throws IOException,
       InterruptedException, ExecutionException, TimeoutException {
-    final DatanodeStateMachine stateMachine = new DatanodeStateMachine(conf);
-    DatanodeStateMachine.DatanodeStates currentState =
-        stateMachine.getContext().getState();
-    Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
-        currentState);
+    try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(conf)) {
+      DatanodeStateMachine.DatanodeStates currentState =
+          stateMachine.getContext().getState();
+      Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
+          currentState);
 
-    DatanodeState<DatanodeStateMachine.DatanodeStates> task =
-        stateMachine.getContext().getTask();
-    Assert.assertEquals(InitDatanodeState.class, task.getClass());
+      DatanodeState<DatanodeStateMachine.DatanodeStates> task =
+          stateMachine.getContext().getTask();
+      Assert.assertEquals(InitDatanodeState.class, task.getClass());
 
-    task.execute(executorService);
-    DatanodeStateMachine.DatanodeStates newState =
-        task.await(2, TimeUnit.SECONDS);
+      task.execute(executorService);
+      DatanodeStateMachine.DatanodeStates newState =
+          task.await(2, TimeUnit.SECONDS);
 
-    for (EndpointStateMachine endpoint :
-        stateMachine.getConnectionManager().getValues()) {
-      // We assert that each of the is in State GETVERSION.
-      Assert.assertEquals(EndpointStateMachine.EndPointStates.GETVERSION,
-          endpoint.getState());
-    }
+      for (EndpointStateMachine endpoint :
+          stateMachine.getConnectionManager().getValues()) {
+        // We assert that each of the is in State GETVERSION.
+        Assert.assertEquals(EndpointStateMachine.EndPointStates.GETVERSION,
+            endpoint.getState());
+      }
 
-    // The Datanode has moved into Running State, since endpoints are created.
-    // We move to running state when we are ready to issue RPC calls to SCMs.
-    Assert.assertEquals(DatanodeStateMachine.DatanodeStates.RUNNING,
-        newState);
+      // The Datanode has moved into Running State, since endpoints are created.
+      // We move to running state when we are ready to issue RPC calls to SCMs.
+      Assert.assertEquals(DatanodeStateMachine.DatanodeStates.RUNNING,
+          newState);
 
-    // If we had called context.execute instead of calling into each state
-    // this would have happened automatically.
-    stateMachine.getContext().setState(newState);
-    task = stateMachine.getContext().getTask();
-    Assert.assertEquals(RunningDatanodeState.class, task.getClass());
+      // If we had called context.execute instead of calling into each state
+      // this would have happened automatically.
+      stateMachine.getContext().setState(newState);
+      task = stateMachine.getContext().getTask();
+      Assert.assertEquals(RunningDatanodeState.class, task.getClass());
 
-    // This execute will invoke getVersion calls against all SCM endpoints
-    // that we know of.
+      // This execute will invoke getVersion calls against all SCM endpoints
+      // that we know of.
 
-    task.execute(executorService);
-    newState = task.await(10, TimeUnit.SECONDS);
-    // If we are in running state, we should be in running.
-    Assert.assertEquals(DatanodeStateMachine.DatanodeStates.RUNNING,
-        newState);
+      task.execute(executorService);
+      newState = task.await(10, TimeUnit.SECONDS);
+      // If we are in running state, we should be in running.
+      Assert.assertEquals(DatanodeStateMachine.DatanodeStates.RUNNING,
+          newState);
 
-    for (EndpointStateMachine endpoint :
-        stateMachine.getConnectionManager().getValues()) {
+      for (EndpointStateMachine endpoint :
+          stateMachine.getConnectionManager().getValues()) {
 
-      // Since the earlier task.execute called into GetVersion, the
-      // endPointState Machine should move to REGISTER state.
-      Assert.assertEquals(EndpointStateMachine.EndPointStates.REGISTER,
-          endpoint.getState());
+        // Since the earlier task.execute called into GetVersion, the
+        // endPointState Machine should move to REGISTER state.
+        Assert.assertEquals(EndpointStateMachine.EndPointStates.REGISTER,
+            endpoint.getState());
 
-      // We assert that each of the end points have gotten a version from the
-      // SCM Server.
-      Assert.assertNotNull(endpoint.getVersion());
-    }
+        // We assert that each of the end points have gotten a version from the
+        // SCM Server.
+        Assert.assertNotNull(endpoint.getVersion());
+      }
 
-    // We can also assert that all mock servers have received only one RPC
-    // call at this point of time.
-    for (ScmTestMock mock : mockServers) {
-      Assert.assertEquals(1, mock.getRpcCount());
-    }
+      // We can also assert that all mock servers have received only one RPC
+      // call at this point of time.
+      for (ScmTestMock mock : mockServers) {
+        Assert.assertEquals(1, mock.getRpcCount());
+      }
 
-    // This task is the Running task, but running task executes tasks based
-    // on the state of Endpoints, hence this next call will be a Register at
-    // the endpoint RPC level.
-    task = stateMachine.getContext().getTask();
-    task.execute(executorService);
-    newState = task.await(2, TimeUnit.SECONDS);
+      // This task is the Running task, but running task executes tasks based
+      // on the state of Endpoints, hence this next call will be a Register at
+      // the endpoint RPC level.
+      task = stateMachine.getContext().getTask();
+      task.execute(executorService);
+      newState = task.await(2, TimeUnit.SECONDS);
 
-    // If we are in running state, we should be in running.
-    Assert.assertEquals(DatanodeStateMachine.DatanodeStates.RUNNING,
-        newState);
+      // If we are in running state, we should be in running.
+      Assert.assertEquals(DatanodeStateMachine.DatanodeStates.RUNNING,
+          newState);
 
-    for (ScmTestMock mock : mockServers) {
-      Assert.assertEquals(2, mock.getRpcCount());
-    }
+      for (ScmTestMock mock : mockServers) {
+        Assert.assertEquals(2, mock.getRpcCount());
+      }
 
-    // This task is the Running task, but running task executes tasks based
-    // on the state of Endpoints, hence this next call will be a
-    // HeartbeatTask at the endpoint RPC level.
-    task = stateMachine.getContext().getTask();
-    task.execute(executorService);
-    newState = task.await(2, TimeUnit.SECONDS);
+      // This task is the Running task, but running task executes tasks based
+      // on the state of Endpoints, hence this next call will be a
+      // HeartbeatTask at the endpoint RPC level.
+      task = stateMachine.getContext().getTask();
+      task.execute(executorService);
+      newState = task.await(2, TimeUnit.SECONDS);
 
-    // If we are in running state, we should be in running.
-    Assert.assertEquals(DatanodeStateMachine.DatanodeStates.RUNNING,
-        newState);
+      // If we are in running state, we should be in running.
+      Assert.assertEquals(DatanodeStateMachine.DatanodeStates.RUNNING,
+          newState);
 
 
-    for (ScmTestMock mock : mockServers) {
-      Assert.assertEquals(1, mock.getHeartbeatCount());
-      // Assert that heartbeat did indeed carry that State that we said
-      // have in the datanode.
-      Assert.assertEquals(mock.getReportState().getState().getNumber(),
-          StorageContainerDatanodeProtocolProtos.ReportState.states
-              .noContainerReports.getNumber());
+      for (ScmTestMock mock : mockServers) {
+        Assert.assertEquals(1, mock.getHeartbeatCount());
+        // Assert that heartbeat did indeed carry that State that we said
+        // have in the datanode.
+        Assert.assertEquals(mock.getReportState().getState().getNumber(),
+            StorageContainerDatanodeProtocolProtos.ReportState.states
+                .noContainerReports.getNumber());
+      }
     }
   }
 
@@ -276,20 +291,20 @@ public class TestDatanodeStateMachine {
         "scm:123456" // Port out of range
     }) {
       conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES, name);
-      final DatanodeStateMachine stateMachine =
-          new DatanodeStateMachine(conf);
-      DatanodeStateMachine.DatanodeStates currentState =
-          stateMachine.getContext().getState();
-      Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
-          currentState);
-
-      DatanodeState<DatanodeStateMachine.DatanodeStates> task =
-          stateMachine.getContext().getTask();
-      task.execute(executorService);
-      DatanodeStateMachine.DatanodeStates newState =
-          task.await(2, TimeUnit.SECONDS);
-      Assert.assertEquals(DatanodeStateMachine.DatanodeStates.SHUTDOWN,
-          newState);
+      try (DatanodeStateMachine stateMachine =
+          new DatanodeStateMachine(conf)) {
+        DatanodeStateMachine.DatanodeStates currentState =
+            stateMachine.getContext().getState();
+        Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
+            currentState);
+        DatanodeState<DatanodeStateMachine.DatanodeStates> task =
+            stateMachine.getContext().getTask();
+        task.execute(executorService);
+        DatanodeStateMachine.DatanodeStates newState =
+            task.await(2, TimeUnit.SECONDS);
+        Assert.assertEquals(DatanodeStateMachine.DatanodeStates.SHUTDOWN,
+            newState);
+      }
     }
   }
 }

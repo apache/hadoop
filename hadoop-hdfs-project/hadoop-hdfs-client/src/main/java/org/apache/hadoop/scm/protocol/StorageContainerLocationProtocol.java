@@ -21,6 +21,7 @@ package org.apache.hadoop.scm.protocol;
 import java.io.IOException;
 import java.util.Set;
 
+import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 /**
@@ -49,4 +50,16 @@ public interface StorageContainerLocationProtocol {
    * @throws IOException
    */
   Pipeline allocateContainer(String containerName) throws IOException;
+
+  /**
+   * Asks SCM where a container should be allocated. SCM responds with the
+   * set of datanodes that should be used creating this container.
+   * @param containerName - Name of the container.
+   * @param replicationFactor - replication factor.
+   * @return Pipeline.
+   * @throws IOException
+   */
+  Pipeline allocateContainer(String containerName,
+      ScmClient.ReplicationFactor replicationFactor) throws IOException;
+
 }

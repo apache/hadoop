@@ -21,6 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -29,6 +30,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.protocol.LocatedContainer;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
@@ -130,7 +132,7 @@ public class StorageContainerManager
   private final RPC.Server clientRpcServer;
   private final InetSocketAddress clientRpcAddress;
 
-  /** SCM mxbean*/
+  /** SCM mxbean. */
   private ObjectName scmInfoBeanName;
 
   /**
@@ -341,7 +343,24 @@ public class StorageContainerManager
    */
   @Override
   public Pipeline allocateContainer(String containerName) throws IOException {
-    return scmContainerManager.allocateContainer(containerName);
+    return scmContainerManager.allocateContainer(containerName,
+        ScmClient.ReplicationFactor.ONE);
+  }
+
+  /**
+   * Asks SCM where a container should be allocated. SCM responds with the set
+   * of datanodes that should be used creating this container.
+   *
+   * @param containerName - Name of the container.
+   * @param replicationFactor - replication factor.
+   * @return Pipeline.
+   * @throws IOException
+   */
+  @Override
+  public Pipeline allocateContainer(String containerName,
+      ScmClient.ReplicationFactor replicationFactor) throws IOException {
+    return scmContainerManager.allocateContainer(containerName,
+        replicationFactor);
   }
 
   /**
@@ -396,6 +415,7 @@ public class StorageContainerManager
     LOG.info("Stopping the RPC server for DataNodes");
     datanodeRpcServer.stop();
     unregisterMXBean();
+    IOUtils.closeQuietly(scmContainerManager);
   }
 
   /**

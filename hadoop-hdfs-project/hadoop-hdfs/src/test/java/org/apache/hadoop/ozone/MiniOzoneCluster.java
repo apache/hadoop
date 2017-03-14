@@ -60,7 +60,8 @@ import static org.junit.Assert.assertFalse;
  * convenient reuse of logic for starting DataNodes.
  */
 @InterfaceAudience.Private
-public class MiniOzoneCluster extends MiniDFSCluster implements Closeable {
+public final class MiniOzoneCluster extends MiniDFSCluster
+    implements Closeable {
   private static final Logger LOG =
       LoggerFactory.getLogger(MiniOzoneCluster.class);
   private static final String USER_AUTH = "hdfs";
@@ -198,6 +199,16 @@ public class MiniOzoneCluster extends MiniDFSCluster implements Closeable {
     }, 100, 45000);
   }
 
+  public void waitForHeartbeatProcessed() throws TimeoutException,
+      InterruptedException {
+    GenericTestUtils.waitFor(() ->
+            scm.getScmNodeManager().waitForHeartbeatProcessed(), 100,
+        4 * 1000);
+    GenericTestUtils.waitFor(() ->
+            scm.getScmNodeManager().getStats().getCapacity() > 0, 100,
+        4 * 1000);
+  }
+
   /**
    * Builder for configuring the MiniOzoneCluster to run.
    */
@@ -239,6 +250,12 @@ public class MiniOzoneCluster extends MiniDFSCluster implements Closeable {
     @Override
     public Builder numDataNodes(int val) {
       super.numDataNodes(val);
+      return this;
+    }
+
+    @Override
+    public Builder storageCapacities(long[] capacities) {
+      super.storageCapacities(capacities);
       return this;
     }
 
@@ -347,7 +364,6 @@ public class MiniOzoneCluster extends MiniDFSCluster implements Closeable {
       // datanodes in the cluster.
       conf.setStrings(ScmConfigKeys.OZONE_SCM_DATANODE_ID,
           scmPath.toString() + "/datanode.id");
-
     }
 
     private void configureHandler() {

@@ -377,7 +377,8 @@ public class SCMNodeManager
    * @return true if the HB check is done.
    */
   @VisibleForTesting
-  public boolean waitForHeartbeatThead() {
+  @Override
+  public boolean waitForHeartbeatProcessed() {
     return lastHBcheckFinished != 0;
   }
 
@@ -611,8 +612,8 @@ public class SCMNodeManager
    */
   @Override
   public void close() throws IOException {
-    executorService.shutdown();
     unregisterMXBean();
+    executorService.shutdown();
     try {
       if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
         executorService.shutdownNow();
@@ -739,13 +740,22 @@ public class SCMNodeManager
   }
 
   /**
-   * Return a list of node stats.
-   * @return a list of individual node stats (live/stale but not dead).
+   * Return a map of node stats.
+   * @return a map of individual node stats (live/stale but not dead).
    */
   @Override
-  public List<SCMNodeStat> getNodeStats(){
-    return nodeStats.entrySet().stream().map(
-        entry -> nodeStats.get(entry.getKey())).collect(Collectors.toList());
+  public Map<String, SCMNodeStat> getNodeStats() {
+    return Collections.unmodifiableMap(nodeStats);
+  }
+
+  /**
+   * Return the node stat of the specified datanode.
+   * @param datanodeID - datanode ID.
+   * @return node stat if it is live/stale, null if it is dead or does't exist.
+   */
+  @Override
+  public SCMNodeStat getNodeStat(DatanodeID datanodeID) {
+    return nodeStats.get(datanodeID.getDatanodeUuid());
   }
 
   @Override

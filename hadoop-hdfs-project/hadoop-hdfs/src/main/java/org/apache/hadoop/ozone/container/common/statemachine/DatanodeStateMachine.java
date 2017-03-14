@@ -126,6 +126,7 @@ public class DatanodeStateMachine implements Closeable {
    */
   @Override
   public void close() throws IOException {
+    context.setState(DatanodeStates.getLastState());
     executorService.shutdown();
     try {
       if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {

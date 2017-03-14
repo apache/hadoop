@@ -188,12 +188,32 @@ public class MockNodeManager implements NodeManager {
   }
 
   /**
-   * Return a list of node stats.
+   * Return a map of nodes to their stats.
    * @return a list of individual node stats (live/stale but not dead).
    */
   @Override
-  public List<SCMNodeStat> getNodeStats() {
+  public Map<String, SCMNodeStat> getNodeStats() {
     return null;
+  }
+
+  /**
+   * Return the node stat of the specified datanode.
+   * @param datanodeID - datanode ID.
+   * @return node stat if it is live/stale, null if it is dead or does't exist.
+   */
+  @Override
+  public SCMNodeStat getNodeStat(DatanodeID datanodeID) {
+    return null;
+  }
+
+  /**
+   * Used for testing.
+   *
+   * @return true if the HB check is done.
+   */
+  @Override
+  public boolean waitForHeartbeatProcessed() {
+    return false;
   }
 
   /**

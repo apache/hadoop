@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.protocol.LocatedContainer;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerRequestProto;
@@ -108,15 +109,31 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
    */
   @Override
   public Pipeline allocateContainer(String containerName) throws IOException {
+    return allocateContainer(containerName, ScmClient.ReplicationFactor.ONE);
+  }
+
+  /**
+   * Asks SCM where a container should be allocated. SCM responds with the set
+   * of datanodes that should be used creating this container. Ozone/SCM only
+   * supports replication factor of either 1 or 3.
+   *
+   * @param containerName - Name of the container.
+   * @param replicationFactor - replication factor.
+   * @return Pipeline.
+   * @throws IOException
+   */
+  @Override
+  public Pipeline allocateContainer(String containerName,
+      ScmClient.ReplicationFactor replicationFactor) throws IOException {
 
     Preconditions.checkNotNull(containerName, "Container Name cannot be Null");
     Preconditions.checkState(!containerName.isEmpty(), "Container name cannot" +
         " be empty");
-
     ContainerRequestProto request = ContainerRequestProto.newBuilder()
-        .setContainerName(containerName).build();
+        .setContainerName(containerName).setReplicationFactor(PBHelperClient
+            .convertReplicationFactor(replicationFactor)).build();
 
-    final  ContainerResponseProto response;
+    final ContainerResponseProto response;
     try {
       response = rpcProxy.allocateContainer(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {

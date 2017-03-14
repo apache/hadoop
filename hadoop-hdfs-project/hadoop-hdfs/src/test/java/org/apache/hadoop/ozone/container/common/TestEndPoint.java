@@ -291,20 +291,21 @@ public class TestEndPoint {
     }
   }
 
-  private EndpointStateMachine heartbeatTaskHelper(InetSocketAddress scmAddress,
+  private void heartbeatTaskHelper(InetSocketAddress scmAddress,
       int rpcTimeout) throws Exception {
     Configuration conf = SCMTestUtils.getConf();
-    EndpointStateMachine rpcEndPoint = SCMTestUtils.createEndpoint(
-        conf, scmAddress, rpcTimeout);
+    conf.set(DFS_DATANODE_DATA_DIR_KEY, testDir.getAbsolutePath());
+
+    // Create a datanode state machine for stateConext used by endpoint task
+    try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(conf);
+        EndpointStateMachine rpcEndPoint = SCMTestUtils.createEndpoint(conf,
+            scmAddress, rpcTimeout)) {
     ContainerNodeIDProto containerNodeID = ContainerNodeIDProto.newBuilder()
         .setClusterID(UUID.randomUUID().toString())
         .setDatanodeID(SCMTestUtils.getDatanodeID().getProtoBufMessage())
         .build();
     rpcEndPoint.setState(EndpointStateMachine.EndPointStates.HEARTBEAT);
 
-    // Create a datanode state machine for stateConext used by endpoint task
-    conf.set(DFS_DATANODE_DATA_DIR_KEY, testDir.getAbsolutePath());
-    final DatanodeStateMachine stateMachine = new DatanodeStateMachine(conf);
     final StateContext stateContext = new StateContext(conf,
         DatanodeStateMachine.DatanodeStates.RUNNING,
         stateMachine);
@@ -314,27 +315,21 @@ public class TestEndPoint {
     endpointTask.setContainerNodeIDProto(containerNodeID);
     endpointTask.call();
     Assert.assertNotNull(endpointTask.getContainerNodeIDProto());
-    return rpcEndPoint;
-  }
 
-  private void heartbeatTaskHelper(InetSocketAddress address)
-      throws Exception {
-    try (EndpointStateMachine rpcEndpoint =
-             heartbeatTaskHelper(address, 1000)) {
-      Assert.assertEquals(EndpointStateMachine.EndPointStates.HEARTBEAT,
-          rpcEndpoint.getState());
+    Assert.assertEquals(EndpointStateMachine.EndPointStates.HEARTBEAT,
+        rpcEndPoint.getState());
     }
   }
 
   @Test
   public void testHeartbeatTask() throws Exception {
-    heartbeatTaskHelper(serverAddress);
+    heartbeatTaskHelper(serverAddress, 1000);
   }
 
   @Test
   public void testHeartbeatTaskToInvalidNode() throws Exception {
     InetSocketAddress invalidAddress = SCMTestUtils.getReuseableAddress();
-    heartbeatTaskHelper(invalidAddress);
+    heartbeatTaskHelper(invalidAddress, 1000);
   }
 
   @Test
@@ -344,7 +339,7 @@ public class TestEndPoint {
     scmServerImpl.setRpcResponseDelay(1500);
     long start = Time.monotonicNow();
     InetSocketAddress invalidAddress = SCMTestUtils.getReuseableAddress();
-    heartbeatTaskHelper(invalidAddress);
+    heartbeatTaskHelper(invalidAddress, 1000);
     long end = Time.monotonicNow();
     scmServerImpl.setRpcResponseDelay(0);
     Assert.assertThat(end - start, new LessOrEqual<>(rpcTimeout + tolerance));
