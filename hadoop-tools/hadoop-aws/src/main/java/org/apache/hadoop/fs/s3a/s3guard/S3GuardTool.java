@@ -79,8 +79,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
   // Exit codes
   static final int SUCCESS = 0;
-  static final int INVALID_ARGUMENT = -1;
-  static final int ERROR = -99;
+  static final int INVALID_ARGUMENT = 1;
+  static final int ERROR = 99;
 
   protected S3AFileSystem s3a;
   protected MetadataStore ms;

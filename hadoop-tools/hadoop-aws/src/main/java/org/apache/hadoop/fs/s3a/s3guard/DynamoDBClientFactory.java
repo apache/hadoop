@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.google.common.base.Preconditions;
@@ -80,8 +81,14 @@ interface DynamoDBClientFactory extends Configurable {
       if (StringUtils.isEmpty(region)) {
         region = defaultRegion;
       }
-      Preconditions.checkState(StringUtils.isNotEmpty(region),
-          "No DynamoDB region is provided!");
+      try {
+        Regions.fromName(region);
+      } catch (IllegalArgumentException | NullPointerException e) {
+        throw new IOException("Invalid region specified: " + region + "; " +
+            "Region can be configured with " + S3GUARD_DDB_REGION_KEY +": " +
+            validRegionsString());
+      }
+
       LOG.debug("Creating DynamoDB client in region {}", region);
 
       return AmazonDynamoDBClientBuilder.standard()
@@ -89,6 +96,20 @@ interface DynamoDBClientFactory extends Configurable {
           .withClientConfiguration(awsConf)
           .withRegion(region)
           .build();
+    }
+
+    private static String validRegionsString() {
+      final String DELIMITER = ", ";
+      Regions[] regions = Regions.values();
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; i < regions.length; i++) {
+        if (i > 0) {
+          sb.append(DELIMITER);
+        }
+        sb.append(regions[i].getName());
+      }
+      return sb.toString();
+
     }
   }
 

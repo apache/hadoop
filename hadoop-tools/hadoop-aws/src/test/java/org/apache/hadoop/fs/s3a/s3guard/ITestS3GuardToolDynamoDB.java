@@ -29,6 +29,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Random;
 
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.INVALID_ARGUMENT;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
 
 /**
@@ -53,6 +54,26 @@ public class ITestS3GuardToolDynamoDB extends S3GuardToolTestBase {
       return false;
     }
     return true;
+  }
+
+  @Test
+  public void testInvalidRegion() throws Exception {
+    String testTableName = "testInvalidRegion" + new Random().nextInt();
+    String testRegion = "invalidRegion";
+    // Initialize MetadataStore
+    Init initCmd = new Init(getFs().getConf());
+    try {
+      initCmd.run(new String[]{
+          "init",
+          "-region", testRegion,
+          "-meta", "dynamodb://" + testTableName
+      });
+    } catch (IOException e) {
+      // Expected
+      return;
+    }
+    fail("Use of invalid region did not fail - table may have been " +
+        "created and not cleaned up: " + testTableName);
   }
 
   @Test
