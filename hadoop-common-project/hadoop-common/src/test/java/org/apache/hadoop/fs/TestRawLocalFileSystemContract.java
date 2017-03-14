@@ -33,8 +33,6 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRawLocalFileSystemContract.class);
-  private final static Path TEST_BASE_DIR =
-      new Path(GenericTestUtils.getTempPath(""));
 
   @Before
   public void setUp() throws Exception {
@@ -53,25 +51,21 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
     return false;
   }
 
-  /**
-   * Disabling testing root operation.
-   *
-   * Writing to root directory on the local file system may get permission
-   * denied exception, or even worse, delete/overwrite files accidentally.
-   */
-  @Override
-  protected boolean rootDirTestEnabled() {
-    return false;
-  }
-
   @Override
   public String getDefaultWorkingDirectory() {
     return fs.getWorkingDirectory().toUri().getPath();
   }
 
   @Override
-  protected Path getTestBaseDir() {
-    return TEST_BASE_DIR;
+  protected Path path(String pathString) {
+    // For testWorkingDirectory
+    if (pathString.equals(getDefaultWorkingDirectory()) ||
+        pathString.equals(".") || pathString.equals("..")) {
+      return super.path(pathString);
+    }
+
+    return new Path(GenericTestUtils.getTempPath(pathString)).
+        makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
 
   @Override
