@@ -1731,10 +1731,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     checkOpen();
     Preconditions.checkArgument(length >= 0);
 
-    LocatedBlocks blockLocations = getBlockLocations(src, length);
+    LocatedBlocks blockLocations = null;
+    FileChecksumHelper.FileChecksumComputer maker = null;
+    ErasureCodingPolicy ecPolicy = null;
+    if (length > 0) {
+      blockLocations = getBlockLocations(src, length);
+      ecPolicy = blockLocations.getErasureCodingPolicy();
+    }
 
-    FileChecksumHelper.FileChecksumComputer maker;
-    ErasureCodingPolicy ecPolicy = blockLocations.getErasureCodingPolicy();
     maker = ecPolicy != null ?
         new FileChecksumHelper.StripedFileNonStripedChecksumComputer(src,
             length, blockLocations, namenode, this, ecPolicy) :
