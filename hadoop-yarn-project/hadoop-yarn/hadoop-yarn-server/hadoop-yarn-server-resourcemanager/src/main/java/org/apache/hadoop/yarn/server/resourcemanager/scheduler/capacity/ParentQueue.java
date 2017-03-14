@@ -343,10 +343,12 @@ public class ParentQueue extends AbstractCSQueue {
       }
 
       // remove the deleted queue in the refreshed xml.
-      for (Map.Entry<String, CSQueue> e : currentChildQueues.entrySet()) {
+      for (Iterator<Map.Entry<String, CSQueue>> itr = currentChildQueues
+          .entrySet().iterator(); itr.hasNext();) {
+        Map.Entry<String, CSQueue> e = itr.next();
         String queueName = e.getKey();
         if (!newChildQueues.containsKey(queueName)) {
-          currentChildQueues.remove(queueName);
+          itr.remove();
         }
       }
 
