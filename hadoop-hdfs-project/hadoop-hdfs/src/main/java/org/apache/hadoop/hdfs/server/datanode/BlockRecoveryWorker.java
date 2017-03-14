@@ -152,9 +152,8 @@ public class BlockRecoveryWorker {
           return;
         } catch (IOException e) {
           ++errorCount;
-          InterDatanodeProtocol.LOG.warn(
-              "Failed to obtain replica info for block (=" + block
-                  + ") from datanode (=" + id + ")", e);
+          InterDatanodeProtocol.LOG.warn("Failed to recover block (block="
+              + block + ", datanode=" + id + ")", e);
         }
       }
 
