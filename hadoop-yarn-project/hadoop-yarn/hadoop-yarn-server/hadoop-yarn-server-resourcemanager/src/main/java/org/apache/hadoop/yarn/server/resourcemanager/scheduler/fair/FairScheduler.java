@@ -140,7 +140,9 @@ public class FairScheduler extends
   private boolean usePortForNodeName;
 
   private static final Log LOG = LogFactory.getLog(FairScheduler.class);
-  
+  private static final Log STATE_DUMP_LOG =
+      LogFactory.getLog(FairScheduler.class.getName() + ".statedump");
+
   private static final ResourceCalculator RESOURCE_CALCULATOR =
       new DefaultResourceCalculator();
   private static final ResourceCalculator DOMINANT_RESOURCE_CALCULATOR =
@@ -152,7 +154,7 @@ public class FairScheduler extends
 
   // How often fair shares are re-calculated (ms)
   protected long updateInterval;
-  private final int UPDATE_DEBUG_FREQUENCY = 5;
+  private final int UPDATE_DEBUG_FREQUENCY = 25;
   private int updatesToSkipForDebug = UPDATE_DEBUG_FREQUENCY;
 
   @VisibleForTesting
@@ -349,6 +351,21 @@ public class FairScheduler extends
   }
 
   /**
+   * Dump scheduler state including states of all queues.
+   */
+  private void dumpSchedulerState() {
+    FSQueue rootQueue = queueMgr.getRootQueue();
+    Resource clusterResource = getClusterResource();
+    LOG.debug("FairScheduler state: Cluster Capacity: " + clusterResource +
+        "  Allocations: " + rootMetrics.getAllocatedResources() +
+        "  Availability: " + Resource.newInstance(
+        rootMetrics.getAvailableMB(), rootMetrics.getAvailableVirtualCores()) +
+        "  Demand: " + rootQueue.getDemand());
+
+    STATE_DUMP_LOG.debug(rootQueue.dumpState());
+  }
+
+  /**
    * Recompute the internal variables used by the scheduler - per-job weights,
    * fair shares, deficits, minimum slot allocations, and amount of used and
    * required resources per job.
@@ -372,12 +389,7 @@ public class FairScheduler extends
       if (LOG.isDebugEnabled()) {
         if (--updatesToSkipForDebug < 0) {
           updatesToSkipForDebug = UPDATE_DEBUG_FREQUENCY;
-          LOG.debug("Cluster Capacity: " + clusterResource +
-              "  Allocations: " + rootMetrics.getAllocatedResources() +
-              "  Availability: " + Resource.newInstance(
-              rootMetrics.getAvailableMB(),
-              rootMetrics.getAvailableVirtualCores()) +
-              "  Demand: " + rootQueue.getDemand());
+          dumpSchedulerState();
         }
       }
     } finally {

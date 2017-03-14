@@ -5148,4 +5148,76 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         Resources.equals(aQueue.getDemand(), maxResource) &&
         Resources.equals(bQueue.getDemand(), maxResource));
   }
+
+  @Test
+  public void testDumpState() throws IOException {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"parent\">");
+    out.println("  <queue name=\"child1\">");
+    out.println("    <weight>1</weight>");
+    out.println("  </queue>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    ControlledClock clock = new ControlledClock();
+    scheduler.setClock(clock);
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    FSLeafQueue child1 =
+        scheduler.getQueueManager().getLeafQueue("parent.child1", false);
+    Resource resource = Resource.newInstance(4 * GB, 4);
+    child1.setMaxShare(resource);
+    FSAppAttempt app = mock(FSAppAttempt.class);
+    Mockito.when(app.getDemand()).thenReturn(resource);
+    Mockito.when(app.getResourceUsage()).thenReturn(resource);
+    child1.addAppSchedulable(app);
+    child1.updateDemand();
+
+    String childQueueString = "{Name: root.parent.child1,"
+        + " Weight: <memory weight=1.0, cpu weight=1.0>,"
+        + " Policy: fair,"
+        + " FairShare: <memory:0, vCores:0>,"
+        + " SteadyFairShare: <memory:0, vCores:0>,"
+        + " MaxShare: <memory:4096, vCores:4>,"
+        + " MinShare: <memory:0, vCores:0>,"
+        + " ResourceUsage: <memory:4096, vCores:4>,"
+        + " Demand: <memory:4096, vCores:4>,"
+        + " Runnable: 1,"
+        + " NumPendingApps: 0,"
+        + " NonRunnable: 0,"
+        + " MaxAMShare: 0.5,"
+        + " MaxAMResource: <memory:0, vCores:0>,"
+        + " AMResourceUsage: <memory:0, vCores:0>,"
+        + " LastTimeAtMinShare: " + clock.getTime()
+        + "}";
+
+    assertTrue(child1.dumpState().equals(childQueueString));
+    FSParentQueue parent =
+        scheduler.getQueueManager().getParentQueue("parent", false);
+    parent.setMaxShare(resource);
+    parent.updateDemand();
+
+    String parentQueueString = "{Name: root.parent,"
+        + " Weight: <memory weight=1.0, cpu weight=1.0>,"
+        + " Policy: fair,"
+        + " FairShare: <memory:0, vCores:0>,"
+        + " SteadyFairShare: <memory:0, vCores:0>,"
+        + " MaxShare: <memory:4096, vCores:4>,"
+        + " MinShare: <memory:0, vCores:0>,"
+        + " ResourceUsage: <memory:4096, vCores:4>,"
+        + " Demand: <memory:4096, vCores:4>,"
+        + " MaxAMShare: 0.5,"
+        + " Runnable: 0}";
+
+    assertTrue(parent.dumpState().equals(
+        parentQueueString + ", " + childQueueString));
+  }
 }

@@ -834,24 +834,26 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       return capability;
     }
 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Resource request: " + capability + " exceeds the available"
+          + " resources of the node.");
+    }
+
     // The desired container won't fit here, so reserve
     if (isReservable(capability) &&
         reserve(request, node, reservedContainer, type, schedulerKey)) {
-      if (isWaitingForAMContainer()) {
-        updateAMDiagnosticMsg(capability,
-            " exceed the available resources of the node and the request is"
-                + " reserved");
+      updateAMDiagnosticMsg(capability, " exceeds the available resources of "
+          + "the node and the request is reserved)");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(getName() + "'s resource request is reserved.");
       }
       return FairScheduler.CONTAINER_RESERVED;
     } else {
-      if (isWaitingForAMContainer()) {
-        updateAMDiagnosticMsg(capability,
-            " exceed the available resources of the node and the request cannot"
-                + " be reserved");
-      }
+      updateAMDiagnosticMsg(capability, " exceeds the available resources of "
+          + "the node and the request cannot be reserved)");
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Couldn't creating reservation for " +
-            getName() + ",at priority " +  request.getPriority());
+        LOG.debug("Couldn't create reservation for app:  " + getName()
+            + ", at priority " +  schedulerKey.getPriority());
       }
       return Resources.none();
     }
@@ -1023,10 +1025,9 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       ret = false;
     } else if (!getQueue().fitsInMaxShare(anyRequest.getCapability())) {
       // The requested container must fit in queue maximum share
-      if (isWaitingForAMContainer()) {
-        updateAMDiagnosticMsg(anyRequest.getCapability(),
-            " exceeds current queue or its parents maximum resource allowed).");
-      }
+      updateAMDiagnosticMsg(anyRequest.getCapability(),
+          " exceeds current queue or its parents maximum resource allowed).");
+
       ret = false;
     }
 
@@ -1301,16 +1302,16 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   @Override
   public Resource assignContainer(FSSchedulerNode node) {
     if (isOverAMShareLimit()) {
-      if (isWaitingForAMContainer()) {
-        List<ResourceRequest> ask = appSchedulingInfo.getAllResourceRequests();
-        updateAMDiagnosticMsg(ask.get(0).getCapability(), " exceeds maximum "
-            + "AM resource allowed).");
+      Resource amResourceRequest = appSchedulingInfo.getAllResourceRequests()
+          .get(0).getCapability();
+      updateAMDiagnosticMsg(amResourceRequest,
+          " exceeds maximum AM resource allowed).");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("AM resource request: " + amResourceRequest
+            + " exceeds maximum AM resource allowed, "
+            + getQueue().dumpState());
       }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Skipping allocation because maxAMShare limit would " +
-            "be exceeded");
-      }
       return Resources.none();
     }
     return assignContainer(node, false);
@@ -1323,6 +1324,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
    * @param reason the reason why AM doesn't get the resource
    */
   private void updateAMDiagnosticMsg(Resource resource, String reason) {
+    if (!isWaitingForAMContainer()) {
+      return;
+    }
+
     StringBuilder diagnosticMessageBldr = new StringBuilder();
     diagnosticMessageBldr.append(" (Resource request: ");
     diagnosticMessageBldr.append(resource);

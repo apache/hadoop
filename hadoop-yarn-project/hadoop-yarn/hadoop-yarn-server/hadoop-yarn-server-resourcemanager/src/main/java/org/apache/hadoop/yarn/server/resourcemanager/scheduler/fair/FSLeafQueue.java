@@ -619,4 +619,25 @@ public class FSLeafQueue extends FSQueue {
   boolean isStarved() {
     return isStarvedForMinShare() || isStarvedForFairShare();
   }
+
+  @Override
+  protected void dumpStateInternal(StringBuilder sb) {
+    sb.append("{Name: " + getName() +
+        ", Weight: " + weights +
+        ", Policy: " + policy.getName() +
+        ", FairShare: " + getFairShare() +
+        ", SteadyFairShare: " + getSteadyFairShare() +
+        ", MaxShare: " + maxShare +
+        ", MinShare: " + minShare +
+        ", ResourceUsage: " + getResourceUsage() +
+        ", Demand: " + getDemand() +
+        ", Runnable: " + getNumRunnableApps() +
+        ", NumPendingApps: " + getNumPendingApps() +
+        ", NonRunnable: " + getNumNonRunnableApps() +
+        ", MaxAMShare: " + maxAMShare +
+        ", MaxAMResource: " + computeMaxAMResource() +
+        ", AMResourceUsage: " + getAmResourceUsage() +
+        ", LastTimeAtMinShare: " + lastTimeAtMinShare +
+        "}");
+  }
 }
