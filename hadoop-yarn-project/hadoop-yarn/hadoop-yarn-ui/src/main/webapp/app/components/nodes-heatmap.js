@@ -26,17 +26,18 @@ export default BaseChartComponent.extend({
   CELL_MARGIN: 2,
   RACK_MARGIN: 20,
   filter: "",
+  selectedCategory: 0,
 
-  bindTP: function(element) {
+  bindTP: function(element, cell) {
     element.on("mouseover", function() {
       this.tooltip
         .style("left", (d3.event.pageX) + "px")
         .style("top", (d3.event.pageY - 28) + "px");
-      element.style("opacity", 1.0);
+      cell.style("opacity", 1.0);
     }.bind(this))
       .on("mousemove", function() {
         // Handle pie chart case
-        var text = element.attr("tooltiptext");
+        var text = cell.attr("tooltiptext");
 
         this.tooltip.style("opacity", 0.9);
         this.tooltip.html(text)
@@ -45,8 +46,43 @@ export default BaseChartComponent.extend({
       }.bind(this))
       .on("mouseout", function() {
         this.tooltip.style("opacity", 0);
-        element.style("opacity", 0.8);
+        cell.style("opacity", 0.8);
       }.bind(this));
+  },
+
+  bindSelectCategory: function(element, i) {
+    element.on("click", function() {
+      if (this.selectedCategory == i) {
+        // Remove selection for second click
+        this.selectedCategory = 0;
+      } else {
+        this.selectedCategory = i;
+      }
+      this.didInsertElement();
+    }.bind(this));
+  },
+
+  isNodeSelected: function(node) {
+    if (this.filter) {
+      var rack = node.get("rack");
+      var host = node.get("nodeHostName");
+      if (!rack.includes(this.filter) && !host.includes(this.filter)) {
+        return false;
+      }
+    }
+
+    if (this.selectedCategory === 0) {
+      return true;
+    }
+
+    var usage = node.get("usedMemoryMB") /
+      (node.get("usedMemoryMB") + node.get("availMemoryMB"))
+    var lowerLimit = (this.selectedCategory - 1) * 0.2;
+    var upperLimit = this.selectedCategory * 0.2;
+    if (lowerLimit <= usage && usage <= upperLimit) {
+      return true;
+    }
+    return false;
   },
 
   // data:
@@ -84,18 +120,30 @@ export default BaseChartComponent.extend({
     for (i = 1; i <= 5; i++) {
       var ratio = i * 0.2 - 0.1;
 
-      g.append("rect")
+      var rect = g.append("rect")
         .attr("x", sampleXOffset)
         .attr("y", sampleYOffset)
-        .attr("fill", colorFunc(ratio))
+        .attr("fill", this.selectedCategory === i ? "#2ca02c" : colorFunc(ratio))
         .attr("width", this.SAMPLE_CELL_WIDTH)
-        .attr("height", this.SAMPLE_HEIGHT);
-      g.append("text")
+        .attr("height", this.SAMPLE_HEIGHT)
+        .attr("class", "hyperlink");
+      this.bindSelectCategory(rect, i);
+      var text = g.append("text")
         .text("" + (ratio * 100).toFixed(1) + "% Used")
         .attr("y", sampleYOffset + this.SAMPLE_HEIGHT / 2 + 5)
         .attr("x", sampleXOffset + this.SAMPLE_CELL_WIDTH / 2)
-        .attr("class", "heatmap-cell");
+        .attr("class", "heatmap-cell hyperlink");
+      this.bindSelectCategory(text, i);
       sampleXOffset += this.CELL_MARGIN + this.SAMPLE_CELL_WIDTH;
+    }
+
+    if (this.selectedCategory != 0) {
+      var text = g.append("text")
+        .text("Clear")
+        .attr("y", sampleYOffset + this.SAMPLE_HEIGHT / 2 + 5)
+        .attr("x", sampleXOffset + 20)
+        .attr("class", "heatmap-clear hyperlink");
+      this.bindSelectCategory(text, 0);
     }
 
     var chartXOffset = -1;
@@ -118,22 +166,7 @@ export default BaseChartComponent.extend({
         var host = data[j].get("nodeHostName");
 
         if (rack === racksArray[i]) {
-          if (!rack.includes(this.filter) && !host.includes(this.filter)) {
-            this.addNode(g, xOffset, yOffset, colorFunc, data[j], false);
-            g.append("text")
-              .text(host)
-              .attr("y", yOffset + this.CELL_HEIGHT / 2 + 5)
-              .attr("x", xOffset + this.CELL_WIDTH / 2)
-              .attr("class", "heatmap-cell-notselected");
-          } else {
-            this.addNode(g, xOffset, yOffset, colorFunc, data[j], true);
-            g.append("text")
-              .text(host)
-              .attr("y", yOffset + this.CELL_HEIGHT / 2 + 5)
-              .attr("x", xOffset + this.CELL_WIDTH / 2)
-              .attr("class", "heatmap-cell");
-          }
-
+          this.addNode(g, xOffset, yOffset, colorFunc, data[j]);
           xOffset += this.CELL_MARGIN + this.CELL_WIDTH;
           if (xOffset + this.CELL_MARGIN + this.CELL_WIDTH >= layout.x2 -
             layout.margin) {
@@ -162,7 +195,7 @@ export default BaseChartComponent.extend({
     this.renderTitleAndBG(g, title, layout, false);
   },
 
-  addNode: function (g, xOffset, yOffset, colorFunc, data, selected) {
+  addNode: function (g, xOffset, yOffset, colorFunc, data) {
     var rect = g.append("rect")
       .attr("y", yOffset)
       .attr("x", xOffset)
@@ -171,12 +204,26 @@ export default BaseChartComponent.extend({
         (data.get("usedMemoryMB") + data.get("availMemoryMB"))))
       .attr("width", this.CELL_WIDTH)
       .attr("tooltiptext", data.get("toolTipText"));
-    if (selected) {
+
+    if (this.isNodeSelected(data)) {
       rect.style("opacity", 0.8);
-      this.bindTP(rect);
+      this.bindTP(rect, rect);
     } else {
       rect.style("opacity", 0.8);
       rect.attr("fill", "DimGray");
+    }
+    var node_id = data.get("id"),
+        node_addr = data.get("nodeHTTPAddress"),
+        href = `#/yarn-node/${node_id}/${node_addr}`;
+    var a = g.append("a")
+      .attr("href", href);
+    var text = a.append("text")
+      .text(data.get("nodeHostName"))
+      .attr("y", yOffset + this.CELL_HEIGHT / 2 + 5)
+      .attr("x", xOffset + this.CELL_WIDTH / 2)
+      .attr("class", this.isNodeSelected(data) ? "heatmap-cell" : "heatmap-cell-notselected")
+    if (this.isNodeSelected(data)) {
+      this.bindTP(a, rect);
     }
   },
 
@@ -202,6 +249,7 @@ export default BaseChartComponent.extend({
   actions: {
     applyFilter: function(event) {
       this.filter = event.srcElement.value;
+      this.selectedCategory = 0;
       this.didInsertElement();
     }
   }

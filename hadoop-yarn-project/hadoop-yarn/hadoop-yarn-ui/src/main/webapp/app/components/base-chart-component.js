@@ -141,4 +141,8 @@ export default Ember.Component.extend({
     };
     return layout;
   },
+
+  willDestroy: function() {
+    this.tooltip.remove();
+  }
 });

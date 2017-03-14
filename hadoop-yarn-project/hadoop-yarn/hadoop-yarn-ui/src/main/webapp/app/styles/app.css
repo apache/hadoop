@@ -63,6 +63,18 @@ text.heatmap-cell {
   text-align: center;
 }
 
+.hyperlink {
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.heatmap-clear {
+  fill: #337ab7;
+}
+
 text.heatmap-cell-notselected {
   font: 14px sans-serif;
   font-weight: bold;
