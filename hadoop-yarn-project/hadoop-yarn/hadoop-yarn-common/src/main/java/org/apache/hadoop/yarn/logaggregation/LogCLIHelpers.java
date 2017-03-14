@@ -51,7 +51,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class LogCLIHelpers implements Configurable {
 
   public static final String PER_LOG_FILE_INFO_PATTERN =
-      "%30s\t%30s\t%30s" + System.getProperty("line.separator");
+      "%30s\t%30s\t%30s\t%30s" + System.getProperty("line.separator");
   public static final String CONTAINER_ON_NODE_PATTERN =
       "Container: %s on %s";
 
@@ -164,6 +164,7 @@ public class LogCLIHelpers implements Configurable {
           String containerString = String.format(CONTAINER_ON_NODE_PATTERN,
               containerId, thisNodeFile.getPath().getName());
           out.println(containerString);
+          out.println("LogAggregationType: AGGREGATED");
           out.println(StringUtils.repeat("=", containerString.length()));
           // We have to re-create reader object to reset the stream index
           // after calling getContainerLogsStream which would move the stream
@@ -238,6 +239,7 @@ public class LogCLIHelpers implements Configurable {
           String containerString = String.format(CONTAINER_ON_NODE_PATTERN,
               containerId, thisNodeFile.getPath().getName());
           out.println(containerString);
+          out.println("LogAggregationType: AGGREGATED");
           out.println(StringUtils.repeat("=", containerString.length()));
           if (logType == null || logType.isEmpty()) {
             if (dumpAContainerLogs(containerId, reader, out,
@@ -377,6 +379,7 @@ public class LogCLIHelpers implements Configurable {
                   CONTAINER_ON_NODE_PATTERN, key,
                   thisNodeFile.getPath().getName());
               out.println(containerString);
+              out.println("LogAggregationType: AGGREGATED");
               out.println(StringUtils.repeat("=", containerString.length()));
               while (true) {
                 try {
@@ -454,12 +457,12 @@ public class LogCLIHelpers implements Configurable {
       out.println(containerString);
       out.println(StringUtils.repeat("=", containerString.length()));
       out.printf(PER_LOG_FILE_INFO_PATTERN, "LogFile", "LogLength",
-          "LastModificationTime");
-      out.println(StringUtils.repeat("=", containerString.length()));
+          "LastModificationTime", "LogAggregationType");
+      out.println(StringUtils.repeat("=", containerString.length() * 2));
       for (PerContainerLogFileInfo logMeta : containerLogMeta
           .getContainerLogMeta()) {
         out.printf(PER_LOG_FILE_INFO_PATTERN, logMeta.getFileName(),
-            logMeta.getFileSize(), logMeta.getLastModifiedTime());
+            logMeta.getFileSize(), logMeta.getLastModifiedTime(), "AGGREGATED");
       }
     }
     return 0;
