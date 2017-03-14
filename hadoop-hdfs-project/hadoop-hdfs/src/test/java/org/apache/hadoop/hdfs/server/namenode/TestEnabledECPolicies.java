@@ -70,6 +70,15 @@ public class TestEnabledECPolicies {
   }
 
   @Test
+  public void testDefaultPolicy() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    String defaultECPolicies = conf.get(
+        DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_DEFAULT);
+    expectValidPolicy(defaultECPolicies, 0);
+  }
+
+  @Test
   public void testInvalid() throws Exception {
     // Test first with an invalid policy
     expectInvalidPolicy("not-a-policy");
@@ -90,14 +99,16 @@ public class TestEnabledECPolicies {
     expectValidPolicy(ecPolicyName, 1);
     expectValidPolicy(ecPolicyName + ", ", 1);
     expectValidPolicy(",", 0);
+    expectValidPolicy(", " + ecPolicyName, 1);
+    expectValidPolicy(" ", 0);
+    expectValidPolicy(" , ", 0);
   }
 
   @Test
   public void testGetPolicies() throws Exception {
     ErasureCodingPolicy[] enabledPolicies;
     // Enable no policies
-    enabledPolicies = new ErasureCodingPolicy[]
-        {SYSTEM_POLICIES[1], SYSTEM_POLICIES[2]};
+    enabledPolicies = new ErasureCodingPolicy[] {};
     testGetPolicies(enabledPolicies);
 
     // Enable one policy

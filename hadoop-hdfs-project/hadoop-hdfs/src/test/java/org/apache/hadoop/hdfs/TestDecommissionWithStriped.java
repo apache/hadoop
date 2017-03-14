@@ -131,6 +131,8 @@ public class TestDecommissionWithStriped {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
 
     numDNs = dataBlocks + parityBlocks + 2;
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
