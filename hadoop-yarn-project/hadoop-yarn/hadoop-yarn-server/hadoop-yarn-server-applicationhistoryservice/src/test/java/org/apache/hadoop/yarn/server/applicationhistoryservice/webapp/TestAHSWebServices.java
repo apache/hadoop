@@ -767,6 +767,23 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertTrue(responseText.contains("LogAggregationType: "
         + ContainerLogAggregationType.LOCAL));
     assertTrue(responseText.contains(AHSWebServices.getNoRedirectWarning()));
+
+    // If this is the redirect request, we would not re-direct the request
+    // back and get the aggregated logs.
+    String content1 = "Hello." + containerId1;
+    NodeId nodeId1 = NodeId.fromString(NM_ID);
+    TestContainerLogsUtils.createContainerLogFileInRemoteFS(conf, fs,
+        rootLogDir, containerId1, nodeId1, fileName, user, content1, true);
+    response = r.path("ws").path("v1")
+        .path("applicationhistory").path("containers")
+        .path(containerId1.toString()).path("logs").path(fileName)
+        .queryParam("user.name", user)
+        .queryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE, "true")
+        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+    responseText = response.getEntity(String.class);
+    assertTrue(responseText.contains(content1));
+    assertTrue(responseText.contains("LogAggregationType: "
+        + ContainerLogAggregationType.AGGREGATED));
   }
 
   @Test(timeout = 10000)

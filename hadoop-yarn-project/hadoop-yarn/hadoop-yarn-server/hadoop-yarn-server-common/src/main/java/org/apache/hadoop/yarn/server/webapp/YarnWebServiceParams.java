@@ -34,4 +34,5 @@ public interface YarnWebServiceParams {
   String RESPONSE_CONTENT_FORMAT = "format";
   String RESPONSE_CONTENT_SIZE = "size";
   String NM_ID = "nm.id";
+  String REDIRECTED_FROM_NODE = "redirected_from_node";
 }

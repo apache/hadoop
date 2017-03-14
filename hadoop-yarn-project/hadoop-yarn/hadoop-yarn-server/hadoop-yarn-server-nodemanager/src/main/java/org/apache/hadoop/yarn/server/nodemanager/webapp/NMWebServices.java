@@ -491,7 +491,11 @@ public class NMWebServices {
     String requestParams = WebAppUtils.removeQueryParams(httpRequest,
         YarnWebServiceParams.NM_ID);
     if (requestParams != null && !requestParams.isEmpty()) {
-      redirectPath.append("?" + requestParams);
+      redirectPath.append("?" + requestParams + "&"
+          + YarnWebServiceParams.REDIRECTED_FROM_NODE + "=true");
+    } else {
+      redirectPath.append("?" + YarnWebServiceParams.REDIRECTED_FROM_NODE
+          + "=true");
     }
     ResponseBuilder res = Response.status(
         HttpServletResponse.SC_TEMPORARY_REDIRECT);

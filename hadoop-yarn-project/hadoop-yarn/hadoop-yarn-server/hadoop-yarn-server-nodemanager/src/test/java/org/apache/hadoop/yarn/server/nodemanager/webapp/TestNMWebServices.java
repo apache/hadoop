@@ -376,6 +376,8 @@ public class TestNMWebServices extends JerseyTestBase {
     assertTrue(redirectURL.contains(noExistContainerId.toString()));
     assertTrue(redirectURL.contains("/logs/" + fileName));
     assertTrue(redirectURL.contains("user.name=" + "user"));
+    assertTrue(redirectURL.contains(
+        YarnWebServiceParams.REDIRECTED_FROM_NODE + "=true"));
     assertFalse(redirectURL.contains(YarnWebServiceParams.NM_ID));
 
     // check the new api
@@ -390,6 +392,8 @@ public class TestNMWebServices extends JerseyTestBase {
     assertTrue(redirectURL.contains(noExistContainerId.toString()));
     assertTrue(redirectURL.contains("/logs/" + fileName));
     assertTrue(redirectURL.contains("user.name=" + "user"));
+    assertTrue(redirectURL.contains(
+        YarnWebServiceParams.REDIRECTED_FROM_NODE + "=true"));
     assertFalse(redirectURL.contains(YarnWebServiceParams.NM_ID));
 
     requestURI = r.path("ws").path("v1").path("node")
@@ -402,6 +406,8 @@ public class TestNMWebServices extends JerseyTestBase {
     assertTrue(redirectURL.contains(LOGSERVICEWSADDR));
     assertTrue(redirectURL.contains(noExistContainerId.toString()));
     assertTrue(redirectURL.contains("user.name=" + "user"));
+    assertTrue(redirectURL.contains(
+        YarnWebServiceParams.REDIRECTED_FROM_NODE + "=true"));
     assertFalse(redirectURL.contains(YarnWebServiceParams.NM_ID));
   }
 

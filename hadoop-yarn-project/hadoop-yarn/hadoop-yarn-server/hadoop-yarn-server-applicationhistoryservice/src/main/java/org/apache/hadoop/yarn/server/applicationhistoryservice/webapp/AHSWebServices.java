@@ -28,6 +28,7 @@ import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -226,6 +227,8 @@ public class AHSWebServices extends WebServices {
    *    The container ID
    * @param nmId
    *    The Node Manager NodeId
+   * @param redirected_from_node
+   *    Whether this is a redirected request from NM
    * @return
    *    The log file's name and current file size
    */
@@ -236,7 +239,9 @@ public class AHSWebServices extends WebServices {
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
       @PathParam(YarnWebServiceParams.CONTAINER_ID) String containerIdStr,
-      @QueryParam(YarnWebServiceParams.NM_ID) String nmId) {
+      @QueryParam(YarnWebServiceParams.NM_ID) String nmId,
+      @QueryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE)
+      @DefaultValue("false") boolean redirected_from_node) {
     ContainerId containerId = null;
     init(res);
     try {
@@ -244,6 +249,7 @@ public class AHSWebServices extends WebServices {
     } catch (IllegalArgumentException e) {
       throw new BadRequestException("invalid container id, " + containerIdStr);
     }
+
     ApplicationId appId = containerId.getApplicationAttemptId()
         .getApplicationId();
     AppInfo appInfo;
@@ -288,9 +294,12 @@ public class AHSWebServices extends WebServices {
         // make sure nodeHttpAddress is not null and not empty. Otherwise,
         // we would only get log meta for aggregated logs instead of
         // re-directing the request
-        if (nodeHttpAddress == null || nodeHttpAddress.isEmpty()) {
+        if (nodeHttpAddress == null || nodeHttpAddress.isEmpty()
+            || redirected_from_node) {
           // return log meta for the aggregated logs if exists.
           // It will also return empty log meta for the local logs.
+          // If this is the redirect request from NM, we should not
+          // re-direct the request back. Simply output the aggregated log meta.
           return getContainerLogMeta(appId, appOwner, null,
               containerIdStr, true);
         }
@@ -329,6 +338,8 @@ public class AHSWebServices extends WebServices {
    *    the size of the log file
    * @param nmId
    *    The Node Manager NodeId
+   * @param redirected_from_node
+   *    Whether this is the redirect request from NM
    * @return
    *    The contents of the container's log file
    */
@@ -343,9 +354,11 @@ public class AHSWebServices extends WebServices {
       @PathParam(YarnWebServiceParams.CONTAINER_LOG_FILE_NAME) String filename,
       @QueryParam(YarnWebServiceParams.RESPONSE_CONTENT_FORMAT) String format,
       @QueryParam(YarnWebServiceParams.RESPONSE_CONTENT_SIZE) String size,
-      @QueryParam(YarnWebServiceParams.NM_ID) String nmId) {
+      @QueryParam(YarnWebServiceParams.NM_ID) String nmId,
+      @QueryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE)
+      boolean redirected_from_node) {
     return getLogs(req, res, containerIdStr, filename, format,
-        size, nmId);
+        size, nmId, redirected_from_node);
   }
 
   //TODO: YARN-4993: Refactory ContainersLogsBlock, AggregatedLogsBlock and
@@ -362,7 +375,9 @@ public class AHSWebServices extends WebServices {
       @PathParam(YarnWebServiceParams.CONTAINER_LOG_FILE_NAME) String filename,
       @QueryParam(YarnWebServiceParams.RESPONSE_CONTENT_FORMAT) String format,
       @QueryParam(YarnWebServiceParams.RESPONSE_CONTENT_SIZE) String size,
-      @QueryParam(YarnWebServiceParams.NM_ID) String nmId) {
+      @QueryParam(YarnWebServiceParams.NM_ID) String nmId,
+      @QueryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE)
+      @DefaultValue("false") boolean redirected_from_node) {
     init(res);
     ContainerId containerId;
     try {
@@ -417,8 +432,11 @@ public class AHSWebServices extends WebServices {
         nodeHttpAddress = containerInfo.getNodeHttpAddress();
         // make sure nodeHttpAddress is not null and not empty. Otherwise,
         // we would only get aggregated logs instead of re-directing the
-        // request
-        if (nodeHttpAddress == null || nodeHttpAddress.isEmpty()) {
+        // request.
+        // If this is the redirect request from NM, we should not re-direct the
+        // request back. Simply output the aggregated logs.
+        if (nodeHttpAddress == null || nodeHttpAddress.isEmpty()
+            || redirected_from_node) {
           // output the aggregated logs
           return sendStreamOutputResponse(appId, appOwner, null,
               containerIdStr, filename, format, length, true);
