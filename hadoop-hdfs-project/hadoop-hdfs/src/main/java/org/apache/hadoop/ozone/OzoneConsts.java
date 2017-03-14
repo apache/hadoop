@@ -69,6 +69,10 @@ public final class OzoneConsts {
   public final static String CHUNK_OVERWRITE = "OverWriteRequested";
 
   public static final int CHUNK_SIZE = 1 * 1024 * 1024; // 1 MB
+  public static final long KB = 1024L;
+  public static final long MB = KB * 1024L;
+  public static final long GB = MB * 1024L;
+  public static final long TB = GB * 1024L;
 
   /**
    * Supports Bucket Versioning.

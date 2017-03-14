@@ -53,178 +53,201 @@ public class TestOzoneContainer {
     path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
         OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
+    OzoneContainer container = null;
+    MiniOzoneCluster cluster = null;
+    try {
+      cluster =  new MiniOzoneCluster.Builder(conf)
+          .setHandlerType("distributed").build();
+      // We don't start Ozone Container via data node, we will do it
+      // independently in our test path.
+      Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline(
+          containerName);
+      conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
+          pipeline.getLeader().getContainerPort());
+      container = new OzoneContainer(conf);
+      container.start();
 
-    MiniOzoneCluster cluster = new MiniOzoneCluster.Builder(conf)
-        .setHandlerType("distributed").build();
-
-    // We don't start Ozone Container via data node, we will do it
-    // independently in our test path.
-    Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline(
-        containerName);
-    conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
-        pipeline.getLeader().getContainerPort());
-    OzoneContainer container = new OzoneContainer(conf);
-    container.start();
-
-    XceiverClient client = new XceiverClient(pipeline, conf);
-    client.connect();
-    ContainerProtos.ContainerCommandRequestProto request =
-        ContainerTestHelper.getCreateContainerRequest(containerName);
-    ContainerProtos.ContainerCommandResponseProto response =
-        client.sendCommand(request);
-    Assert.assertNotNull(response);
-    Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
-    container.stop();
-    cluster.shutdown();
-
+      XceiverClient client = new XceiverClient(pipeline, conf);
+      client.connect();
+      ContainerProtos.ContainerCommandRequestProto request =
+          ContainerTestHelper.getCreateContainerRequest(containerName);
+      ContainerProtos.ContainerCommandResponseProto response =
+          client.sendCommand(request);
+      Assert.assertNotNull(response);
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+    } finally {
+      if (container != null) {
+        container.stop();
+      }
+      if(cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 
   @Test
   public void testOzoneContainerViaDataNode() throws Exception {
-    String keyName = OzoneUtils.getRequestID();
-    String containerName = OzoneUtils.getRequestID();
-    OzoneConfiguration conf = new OzoneConfiguration();
-    URL p = conf.getClass().getResource("");
-    String path = p.getPath().concat(
-        TestOzoneContainer.class.getSimpleName());
-    path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
-        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
-    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
+    MiniOzoneCluster cluster = null;
+    XceiverClient client = null;
+    try {
+      String keyName = OzoneUtils.getRequestID();
+      String containerName = OzoneUtils.getRequestID();
+      OzoneConfiguration conf = new OzoneConfiguration();
+      URL p = conf.getClass().getResource("");
+      String path = p.getPath().concat(
+          TestOzoneContainer.class.getSimpleName());
+      path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
+          OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
+      conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
 
-    // Start ozone container Via Datanode create.
+      // Start ozone container Via Datanode create.
 
-    Pipeline pipeline =
-        ContainerTestHelper.createSingleNodePipeline(containerName);
-    conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
-        pipeline.getLeader().getContainerPort());
+      Pipeline pipeline =
+          ContainerTestHelper.createSingleNodePipeline(containerName);
+      conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
+          pipeline.getLeader().getContainerPort());
 
-    MiniOzoneCluster cluster = new MiniOzoneCluster.Builder(conf)
-        .setHandlerType("distributed").build();
+      cluster = new MiniOzoneCluster.Builder(conf)
+          .setHandlerType("distributed").build();
 
-    // This client talks to ozone container via datanode.
-    XceiverClient client = new XceiverClient(pipeline, conf);
-    client.connect();
+      // This client talks to ozone container via datanode.
+      client = new XceiverClient(pipeline, conf);
+      client.connect();
 
-    // Create container
-    ContainerProtos.ContainerCommandRequestProto request =
-        ContainerTestHelper.getCreateContainerRequest(containerName);
-    ContainerProtos.ContainerCommandResponseProto response =
-        client.sendCommand(request);
-    Assert.assertNotNull(response);
-    Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+      // Create container
+      ContainerProtos.ContainerCommandRequestProto request =
+          ContainerTestHelper.getCreateContainerRequest(containerName);
+      pipeline.setContainerName(containerName);
+      ContainerProtos.ContainerCommandResponseProto response =
+          client.sendCommand(request);
+      Assert.assertNotNull(response);
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
 
-    // Write Chunk
-    ContainerProtos.ContainerCommandRequestProto writeChunkRequest =
-        ContainerTestHelper.getWriteChunkRequest(pipeline, containerName,
-            keyName, 1024);
+      // Write Chunk
+      ContainerProtos.ContainerCommandRequestProto writeChunkRequest =
+          ContainerTestHelper.getWriteChunkRequest(pipeline, containerName,
+              keyName, 1024);
 
-    response = client.sendCommand(writeChunkRequest);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
-    Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+      response = client.sendCommand(writeChunkRequest);
+      Assert.assertNotNull(response);
+      Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
 
-    // Read Chunk
-    request = ContainerTestHelper.getReadChunkRequest(writeChunkRequest
-        .getWriteChunk());
+      // Read Chunk
+      request = ContainerTestHelper.getReadChunkRequest(writeChunkRequest
+          .getWriteChunk());
 
-    response = client.sendCommand(request);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
-    Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+      response = client.sendCommand(request);
+      Assert.assertNotNull(response);
+      Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
 
-    // Put Key
-    ContainerProtos.ContainerCommandRequestProto putKeyRequest =
-        ContainerTestHelper.getPutKeyRequest(writeChunkRequest.getWriteChunk());
-
-    response = client.sendCommand(putKeyRequest);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
-    Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
-
-    // Get Key
-    request = ContainerTestHelper.getKeyRequest(putKeyRequest.getPutKey());
-    response = client.sendCommand(request);
-    ContainerTestHelper.verifyGetKey(request, response);
+      // Put Key
+      ContainerProtos.ContainerCommandRequestProto putKeyRequest =
+          ContainerTestHelper.getPutKeyRequest(writeChunkRequest
+              .getWriteChunk());
 
 
-    // Delete Key
-    request =
-        ContainerTestHelper.getDeleteKeyRequest(putKeyRequest.getPutKey());
-    response = client.sendCommand(request);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
-    Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+      response = client.sendCommand(putKeyRequest);
+      Assert.assertNotNull(response);
+      Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
 
-    //Delete Chunk
-    request = ContainerTestHelper.getDeleteChunkRequest(writeChunkRequest
-        .getWriteChunk());
+      // Get Key
+      request = ContainerTestHelper.getKeyRequest(putKeyRequest.getPutKey());
+      response = client.sendCommand(request);
+      ContainerTestHelper.verifyGetKey(request, response);
 
-    response = client.sendCommand(request);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
-    Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
 
-    client.close();
-    cluster.shutdown();
+      // Delete Key
+      request =
+          ContainerTestHelper.getDeleteKeyRequest(putKeyRequest.getPutKey());
+      response = client.sendCommand(request);
+      Assert.assertNotNull(response);
+      Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
 
+      //Delete Chunk
+      request = ContainerTestHelper.getDeleteChunkRequest(writeChunkRequest
+          .getWriteChunk());
+
+      response = client.sendCommand(request);
+      Assert.assertNotNull(response);
+      Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+    } finally {
+      if (client != null) {
+        client.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 
   @Test
   public void testBothGetandPutSmallFile() throws Exception {
-    String keyName = OzoneUtils.getRequestID();
-    String containerName = OzoneUtils.getRequestID();
-    OzoneConfiguration conf = new OzoneConfiguration();
-    URL p = conf.getClass().getResource("");
-    String path = p.getPath().concat(
-        TestOzoneContainer.class.getSimpleName());
-    path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
-        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
-    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
+    MiniOzoneCluster cluster = null;
+    XceiverClient client = null;
+    try {
+      String keyName = OzoneUtils.getRequestID();
+      String containerName = OzoneUtils.getRequestID();
+      OzoneConfiguration conf = new OzoneConfiguration();
+      URL p = conf.getClass().getResource("");
+      String path = p.getPath().concat(
+          TestOzoneContainer.class.getSimpleName());
+      path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
+          OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
+      conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
 
-    // Start ozone container Via Datanode create.
+      // Start ozone container Via Datanode create.
 
-    Pipeline pipeline =
-        ContainerTestHelper.createSingleNodePipeline(containerName);
-    conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
-        pipeline.getLeader().getContainerPort());
+      Pipeline pipeline =
+          ContainerTestHelper.createSingleNodePipeline(containerName);
+      conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
+          pipeline.getLeader().getContainerPort());
 
-    MiniOzoneCluster cluster = new MiniOzoneCluster.Builder(conf)
-        .setHandlerType("distributed").build();
+      cluster = new MiniOzoneCluster.Builder(conf)
+          .setHandlerType("distributed").build();
 
-    // This client talks to ozone container via datanode.
-    XceiverClient client = new XceiverClient(pipeline, conf);
-    client.connect();
+      // This client talks to ozone container via datanode.
+      client = new XceiverClient(pipeline, conf);
+      client.connect();
 
-    // Create container
-    ContainerProtos.ContainerCommandRequestProto request =
-        ContainerTestHelper.getCreateContainerRequest(containerName);
-    ContainerProtos.ContainerCommandResponseProto response =
-        client.sendCommand(request);
-    Assert.assertNotNull(response);
-    Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
-
-
-    ContainerProtos.ContainerCommandRequestProto smallFileRequest =
-        ContainerTestHelper.getWriteSmallFileRequest(pipeline, containerName,
-            keyName, 1024);
+      // Create container
+      ContainerProtos.ContainerCommandRequestProto request =
+          ContainerTestHelper.getCreateContainerRequest(containerName);
+      ContainerProtos.ContainerCommandResponseProto response =
+          client.sendCommand(request);
+      Assert.assertNotNull(response);
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
 
 
-    response = client.sendCommand(smallFileRequest);
-    Assert.assertNotNull(response);
-    Assert.assertTrue(smallFileRequest.getTraceID()
-        .equals(response.getTraceID()));
-
-    ContainerProtos.ContainerCommandRequestProto getSmallFileRequest =
-        ContainerTestHelper.getReadSmallFileRequest(smallFileRequest
-            .getPutSmallFile().getKey());
-    response = client.sendCommand(getSmallFileRequest);
-    Assert.assertArrayEquals(
-        smallFileRequest.getPutSmallFile().getData().toByteArray(),
-        response.getGetSmallFile().getData().getData().toByteArray());
-
-    cluster.shutdown();
+      ContainerProtos.ContainerCommandRequestProto smallFileRequest =
+          ContainerTestHelper.getWriteSmallFileRequest(pipeline, containerName,
+              keyName, 1024);
 
 
+      response = client.sendCommand(smallFileRequest);
+      Assert.assertNotNull(response);
+      Assert.assertTrue(smallFileRequest.getTraceID()
+          .equals(response.getTraceID()));
+
+      ContainerProtos.ContainerCommandRequestProto getSmallFileRequest =
+          ContainerTestHelper.getReadSmallFileRequest(smallFileRequest
+              .getPutSmallFile().getKey());
+      response = client.sendCommand(getSmallFileRequest);
+      Assert.assertArrayEquals(
+          smallFileRequest.getPutSmallFile().getData().toByteArray(),
+          response.getGetSmallFile().getData().getData().toByteArray());
+    } finally {
+      if (client != null) {
+        client.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 
 }

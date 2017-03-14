@@ -420,8 +420,8 @@ public final class OzoneClientUtils {
    * that this value is greater than heartbeat interval and heartbeatProcess
    * Interval.
    *
-   * @param conf
-   * @return
+   * @param conf - Configuration.
+   * @return - the interval for dead node flagging.
    */
   public static long getDeadNodeInterval(Configuration conf) {
     long staleNodeIntervalMs = getStaleNodeInterval(conf);
@@ -444,7 +444,7 @@ public final class OzoneClientUtils {
   /**
    * Returns the maximum number of heartbeat to process per loop of the process
    * thread.
-   * @param conf Configration
+   * @param conf Configuration
    * @return - int -- Number of HBs to process
    */
   public static int getMaxHBToProcessPerLoop(Configuration conf) {

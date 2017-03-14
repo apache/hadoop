@@ -53,6 +53,7 @@ public final class ContainerTestHelper {
   private ContainerTestHelper() {
   }
 
+  // TODO: mock multi-node pipeline
   /**
    * Create a pipeline with single node replica.
    *

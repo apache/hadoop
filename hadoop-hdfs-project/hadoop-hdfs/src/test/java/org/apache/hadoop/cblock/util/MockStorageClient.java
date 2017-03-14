@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.cblock.util;
 
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
@@ -73,6 +74,14 @@ public class MockStorageClient implements ScmClient {
   @Override
   public long getContainerSize(Pipeline pipeline) throws IOException {
     // just return a constant value for now
-    return 5L*1024*1024*1024; // 5GB
+    return 5L * OzoneConsts.GB; // 5GB
   }
+
+  @Override
+  public Pipeline createContainer(String containerId,
+      ScmClient.ReplicationFactor replicationFactor) throws IOException {
+    currentContainerId += 1;
+    ContainerLookUpService.addContainer(Long.toString(currentContainerId));
+    return ContainerLookUpService.lookUp(Long.toString(currentContainerId))
+        .getPipeline();  }
 }

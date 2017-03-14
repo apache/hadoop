@@ -94,6 +94,38 @@ public class ContainerOperationClient implements ScmClient {
   }
 
   /**
+   * Creates a Container on SCM with specified replication factor.
+   * @param containerId - String container ID
+   * @param replicationFactor - replication factor
+   * @return Pipeline
+   * @throws IOException
+   */
+  @Override
+  public Pipeline createContainer(String containerId,
+      ScmClient.ReplicationFactor replicationFactor) throws IOException {
+    XceiverClientSpi client = null;
+    try {
+      // allocate container on SCM.
+      Pipeline pipeline =
+          storageContainerLocationClient.allocateContainer(containerId,
+              replicationFactor);
+      // connect to pipeline leader and allocate container on leader datanode.
+      client = xceiverClientManager.acquireClient(pipeline);
+      String traceID = UUID.randomUUID().toString();
+      ContainerProtocolCalls.createContainer(client, traceID);
+      LOG.info("Created container " + containerId +
+          " leader:" + pipeline.getLeader() +
+          " machines:" + pipeline.getMachines() +
+          " replication factor:" + replicationFactor.getValue());
+      return pipeline;
+    } finally {
+      if (client != null) {
+        xceiverClientManager.releaseClient(client);
+      }
+    }
+  }
+
+  /**
    * Delete the container, this will release any resource it uses.
    * @param pipeline - Pipeline that represents the container.
    * @throws IOException

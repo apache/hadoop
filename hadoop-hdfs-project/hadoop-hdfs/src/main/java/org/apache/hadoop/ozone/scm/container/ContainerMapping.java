@@ -22,7 +22,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
+import org.apache.hadoop.scm.ScmConfigKeys;
+import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.utils.LevelDBStore;
 import org.slf4j.Logger;
@@ -30,9 +33,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.Charset;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.iq80.leveldb.Options;
@@ -50,7 +54,8 @@ public class ContainerMapping implements Mapping {
   private final Lock lock;
   private final Charset encoding = Charset.forName("UTF-8");
   private final LevelDBStore containerStore;
-  private final Random rand;
+  private final ContainerPlacementPolicy placementPolicy;
+  private final long containerSize;
 
   /**
    * Constructs a mapping class that creates mapping between container names and
@@ -61,10 +66,11 @@ public class ContainerMapping implements Mapping {
    * @param cacheSizeMB - Amount of memory reserved for the LSM tree to cache
    * its nodes. This is passed to LevelDB and this memory is allocated in Native
    * code space. CacheSize is specified in MB.
+   * @throws IOException
    */
   @SuppressWarnings("unchecked")
-  public ContainerMapping(Configuration conf, NodeManager nodeManager,
-      int cacheSizeMB) throws IOException {
+  public ContainerMapping(final Configuration conf,
+      final NodeManager nodeManager, final int cacheSizeMB) throws IOException {
     this.nodeManager = nodeManager;
     this.cacheSize = cacheSizeMB;
 
@@ -76,7 +82,7 @@ public class ContainerMapping implements Mapping {
           new IllegalArgumentException("SCM metadata directory is not valid.");
     }
     Options options = new Options();
-    options.cacheSize(this.cacheSize * (1024L * 1024L));
+    options.cacheSize(this.cacheSize * OzoneConsts.MB);
     options.createIfMissing();
 
     // Write the container name to pipeline mapping.
@@ -84,28 +90,63 @@ public class ContainerMapping implements Mapping {
     containerStore = new LevelDBStore(containerDBPath, options);
 
     this.lock = new ReentrantLock();
-    rand = new Random();
+
+    this.containerSize = OzoneConsts.GB * conf.getInt(
+        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_GB,
+        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);
+
+    this.placementPolicy =  createContainerPlacementPolicy(nodeManager, conf);
   }
 
   /**
-   * // TODO : Fix the code to handle multiple nodes.
+   * Create pluggable container placement policy implementation instance.
+   *
+   * @param nodeManager - SCM node manager.
+   * @param conf - configuration.
+   * @return SCM container placement policy implementation instance.
+   */
+  private static ContainerPlacementPolicy createContainerPlacementPolicy(
+      final NodeManager nodeManager, final Configuration conf) {
+    Class<? extends  ContainerPlacementPolicy> implClass =
+        (Class<? extends ContainerPlacementPolicy>) conf.getClass(
+            ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
+            SCMContainerPlacementRandom.class);
+
+    try {
+      Constructor<? extends ContainerPlacementPolicy> ctor =
+          implClass.getDeclaredConstructor(NodeManager.class,
+              Configuration.class);
+      return ctor.newInstance(nodeManager, conf);
+    } catch (RuntimeException e) {
+      throw e;
+    } catch (InvocationTargetException e) {
+      throw new RuntimeException(implClass.getName()
+          + " could not be constructed.", e.getCause());
+    } catch (Exception e) {
+    }
+    return null;
+  }
+
+  /**
    * Translates a list of nodes, ordered such that the first is the leader, into
    * a corresponding {@link Pipeline} object.
-   *
-   * @param node datanode on which we will allocate the contianer.
+   * @param nodes - list of datanodes on which we will allocate the container.
+   *              The first of the list will be the leader node.
    * @param containerName container name
    * @return pipeline corresponding to nodes
    */
-  private static Pipeline newPipelineFromNodes(DatanodeID node, String
-      containerName) {
-    Preconditions.checkNotNull(node);
-    String leaderId = node.getDatanodeUuid();
+  private static Pipeline newPipelineFromNodes(final List<DatanodeID> nodes,
+      final String containerName) {
+    Preconditions.checkNotNull(nodes);
+    Preconditions.checkArgument(nodes.size() > 0);
+    String leaderId = nodes.get(0).getDatanodeUuid();
     Pipeline pipeline = new Pipeline(leaderId);
-    pipeline.addMember(node);
+    for (DatanodeID node : nodes) {
+      pipeline.addMember(node);
+    }
     pipeline.setContainerName(containerName);
     return pipeline;
   }
-
 
 
   /**
@@ -115,7 +156,7 @@ public class ContainerMapping implements Mapping {
    * @return - Pipeline that makes up this container.
    */
   @Override
-  public Pipeline getContainer(String containerName) throws IOException {
+  public Pipeline getContainer(final String containerName) throws IOException {
     Pipeline pipeline = null;
     lock.lock();
     try {
@@ -141,7 +182,22 @@ public class ContainerMapping implements Mapping {
    * @throws IOException
    */
   @Override
-  public Pipeline allocateContainer(String containerName) throws IOException {
+  public Pipeline allocateContainer(final String containerName)
+      throws IOException {
+    return allocateContainer(containerName, ScmClient.ReplicationFactor.ONE);
+  }
+
+  /**
+   * Allocates a new container.
+   *
+   * @param containerName - Name of the container.
+   * @param replicationFactor - replication factor of the container.
+   * @return - Pipeline that makes up this container.
+   * @throws IOException
+   */
+  @Override
+  public Pipeline allocateContainer(final String containerName,
+      final ScmClient.ReplicationFactor replicationFactor) throws IOException {
     Preconditions.checkNotNull(containerName);
     Preconditions.checkState(!containerName.isEmpty());
     Pipeline pipeline = null;
@@ -157,9 +213,11 @@ public class ContainerMapping implements Mapping {
         throw new IOException("Specified container already exists. key : " +
             containerName);
       }
-      DatanodeID id = getDatanodeID();
-      if (id != null) {
-        pipeline = newPipelineFromNodes(id, containerName);
+      List<DatanodeID> datanodes = placementPolicy.chooseDatanodes(
+          replicationFactor.getValue(), containerSize);
+      // TODO: handle under replicated container
+      if (datanodes != null && datanodes.size() > 0) {
+        pipeline = newPipelineFromNodes(datanodes, containerName);
         containerStore.put(containerName.getBytes(encoding),
             pipeline.getProtobufMessage().toByteArray());
       }
@@ -167,24 +225,6 @@ public class ContainerMapping implements Mapping {
       lock.unlock();
     }
     return pipeline;
-  }
-
-  /**
-   * Returns a random Datanode ID from the list of healthy nodes.
-   *
-   * @return Datanode ID
-   * @throws IOException
-   */
-  private DatanodeID getDatanodeID() throws IOException {
-    List<DatanodeID> healthyNodes =
-        nodeManager.getNodes(NodeManager.NODESTATE.HEALTHY);
-
-    if (healthyNodes.size() == 0) {
-      throw new IOException("No healthy node found to allocate container.");
-    }
-
-    int index = rand.nextInt() % healthyNodes.size();
-    return healthyNodes.get(Math.abs(index));
   }
 
   /**

@@ -21,7 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * This class contains constants for configuration keys used in SCM
+ * This class contains constants for configuration keys used in SCM.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
@@ -123,4 +123,18 @@ public final class ScmConfigKeys {
   public static final String OZONE_SCM_DB_CACHE_SIZE_MB =
       "ozone.scm.db.cache.size.mb";
   public static final int OZONE_SCM_DB_CACHE_SIZE_DEFAULT = 128;
+
+  public static final String OZONE_SCM_CONTAINER_SIZE_GB =
+      "ozone.scm.container.size.gb";
+  public static final int OZONE_SCM_CONTAINER_SIZE_DEFAULT = 5;
+
+  public static final String OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY =
+      "ozone.scm.container.placement.impl";
+
+  /**
+   * Never constructed.
+   */
+  private ScmConfigKeys() {
+
+  }
 }

@@ -21,6 +21,10 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.scm.container.ContainerPlacementPolicy;
+import org.apache.hadoop.ozone.scm.container.SCMContainerPlacementCapacity;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.XceiverClientManager;
@@ -35,7 +39,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.io.IOException;
 import java.util.UUID;
 
 /**
@@ -52,13 +55,18 @@ public class TestContainerSmallFile {
   private static XceiverClientManager xceiverClientManager;
 
   @BeforeClass
-  public static void init() throws IOException {
+  public static void init() throws Exception {
+    long datanodeCapacities = 3 * OzoneConsts.TB;
     ozoneConfig = new OzoneConfiguration();
-    cluster = new MiniOzoneCluster.Builder(ozoneConfig)
-        .numDataNodes(1).setHandlerType("distributed").build();
+    ozoneConfig.setClass(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
+        SCMContainerPlacementCapacity.class, ContainerPlacementPolicy.class);
+    cluster = new MiniOzoneCluster.Builder(ozoneConfig).numDataNodes(1)
+        .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})
+        .setHandlerType("distributed").build();
     storageContainerLocationClient = cluster
         .createStorageContainerLocationClient();
     xceiverClientManager = new XceiverClientManager(ozoneConfig);
+    cluster.waitForHeartbeatProcessed();
   }
 
   @AfterClass

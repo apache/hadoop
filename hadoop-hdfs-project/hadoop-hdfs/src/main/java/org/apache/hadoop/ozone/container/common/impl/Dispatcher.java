@@ -170,6 +170,8 @@ public class Dispatcher implements ContainerDispatcher {
       default:
         return ContainerUtils.unsupportedRequest(msg);
       }
+    } catch (StorageContainerException e) {
+      return ContainerUtils.logAndReturnError(LOG, e, msg);
     } catch (IOException ex) {
       LOG.warn("Container operation failed. " +
               "Container: {} Operation: {}  trace ID: {} Error: {}",
@@ -212,6 +214,8 @@ public class Dispatcher implements ContainerDispatcher {
         return ContainerUtils.unsupportedRequest(msg);
 
       }
+    } catch (StorageContainerException e) {
+      return ContainerUtils.logAndReturnError(LOG, e, msg);
     } catch (IOException ex) {
       LOG.warn("Container operation failed. " +
               "Container: {} Operation: {}  trace ID: {} Error: {}",
@@ -253,6 +257,8 @@ public class Dispatcher implements ContainerDispatcher {
       default:
         return ContainerUtils.unsupportedRequest(msg);
       }
+    } catch (StorageContainerException e) {
+      return ContainerUtils.logAndReturnError(LOG, e, msg);
     } catch (IOException ex) {
       LOG.warn("Container operation failed. " +
               "Container: {} Operation: {}  trace ID: {} Error: {}",
@@ -549,6 +555,8 @@ public class Dispatcher implements ContainerDispatcher {
       keyData.setChunks(chunks);
       this.containerManager.getKeyManager().putKey(pipeline, keyData);
       return FileUtils.getPutFileResponse(msg);
+    } catch (StorageContainerException e) {
+      return ContainerUtils.logAndReturnError(LOG, e, msg);
     } catch (IOException e) {
       throw new StorageContainerException("Put Small File Failed.", e,
           PUT_SMALL_FILE_ERROR);
@@ -595,10 +603,11 @@ public class Dispatcher implements ContainerDispatcher {
       metrics.incContainerBytesStats(Type.GetSmallFile, bytes);
       return FileUtils.getGetSmallFileResponse(msg, dataBuf.toByteArray(),
           ChunkInfo.getFromProtoBuf(c));
+    } catch (StorageContainerException e) {
+      return ContainerUtils.logAndReturnError(LOG, e, msg);
     } catch (IOException e) {
-      throw new StorageContainerException("Unable to decode protobuf", e,
+      throw new StorageContainerException("Get Small File Failed", e,
           GET_SMALL_FILE_ERROR);
-
     }
   }
 }

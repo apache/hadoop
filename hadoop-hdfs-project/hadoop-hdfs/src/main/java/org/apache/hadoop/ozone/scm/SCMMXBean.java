@@ -19,7 +19,6 @@
 package org.apache.hadoop.ozone.scm;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.ozone.scm.node.SCMNodeManager;
 
 import java.util.Map;
 
@@ -31,22 +30,21 @@ import java.util.Map;
 public interface SCMMXBean {
 
   /**
-   * Get the number of data nodes that in all states,
-   * valid states are defined by {@link SCMNodeManager.NODESTATE}.
+   * Get the number of data nodes that in all states.
    *
    * @return A state to number of nodes that in this state mapping
    */
-  public Map<String, Integer> getNodeCount();
+  Map<String, Integer> getNodeCount();
 
   /**
    * Get the SCM RPC server port that used to listen to datanode requests.
    * @return SCM datanode RPC server port
    */
-  public String getDatanodeRpcPort();
+  String getDatanodeRpcPort();
 
   /**
    * Get the SCM RPC server port that used to listen to client requests.
    * @return SCM client RPC server port
    */
-  public String getClientRpcPort();
+  String getClientRpcPort();
 }

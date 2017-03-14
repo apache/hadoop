@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.ozone.scm.node;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
 
 import java.io.Closeable;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A node manager supports a simple interface for managing a datanode.
@@ -115,9 +117,22 @@ public interface NodeManager extends StorageContainerNodeProtocol,
   SCMNodeStat getStats();
 
   /**
-   * Return a list of node stats.
-   * @return a list of individual node stats (live/stale but not dead).
+   * Return a map of node stats.
+   * @return a map of individual node stats (live/stale but not dead).
    */
-  List<SCMNodeStat> getNodeStats();
+  Map<String, SCMNodeStat> getNodeStats();
 
+  /**
+   * Return the node stat of the specified datanode.
+   * @param datanodeID - datanode ID.
+   * @return node stat if it is live/stale, null if it is dead or does't exist.
+   */
+  SCMNodeStat getNodeStat(DatanodeID datanodeID);
+
+  /**
+   * Wait for the heartbeat is processed by NodeManager.
+   * @return true if heartbeat has been processed.
+   */
+  @VisibleForTesting
+  boolean waitForHeartbeatProcessed();
 }

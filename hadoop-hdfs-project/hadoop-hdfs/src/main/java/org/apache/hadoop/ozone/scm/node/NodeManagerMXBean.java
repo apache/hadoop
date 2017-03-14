@@ -33,20 +33,20 @@ public interface NodeManagerMXBean {
    *
    * @return int
    */
-  public int getMinimumChillModeNodes();
+  int getMinimumChillModeNodes();
 
   /**
    * Reports if we have exited out of chill mode by discovering enough nodes.
    *
    * @return True if we are out of Node layer chill mode, false otherwise.
    */
-  public boolean isOutOfNodeChillMode();
+  boolean isOutOfNodeChillMode();
 
   /**
    * Returns a chill mode status string.
    * @return String
    */
-  public String getChillModeStatus();
+  String getChillModeStatus();
 
 
   /**
@@ -54,13 +54,12 @@ public interface NodeManagerMXBean {
    * @return true if forceEnterChillMode has been called,
    * false if forceExitChillMode or status is not set. eg. clearChillModeFlag.
    */
-  public boolean isInManualChillMode();
+  boolean isInManualChillMode();
 
   /**
-   * Get the number of data nodes that in all states,
-   * valid states are defined by {@link SCMNodeManager.NODESTATE}.
+   * Get the number of data nodes that in all states.
    *
    * @return A state to number of nodes that in this state mapping
    */
-  public Map<String, Integer> getNodeCount();
+  Map<String, Integer> getNodeCount();
 }

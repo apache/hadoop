@@ -111,11 +111,11 @@ public class TestNodeManager {
       }
 
       // Wait for 4 seconds max.
-      GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatThead(), 100,
-          4 * 1000);
+      GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),
+          100, 4 * 1000);
 
-      assertTrue("Heartbeat thread should have picked up the scheduled " +
-              "heartbeats and transitioned out of chill mode.",
+      assertTrue("Heartbeat thread should have picked up the" +
+              "scheduled heartbeats and transitioned out of chill mode.",
           nodeManager.isOutOfNodeChillMode());
     }
   }
@@ -132,10 +132,10 @@ public class TestNodeManager {
       InterruptedException, TimeoutException {
 
     try (SCMNodeManager nodeManager = createNodeManager(getConf())) {
-      GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatThead(), 100,
-          4 * 1000);
-      assertFalse("No heartbeats, Node manager should have been in chill mode.",
-          nodeManager.isOutOfNodeChillMode());
+      GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),
+          100, 4 * 1000);
+      assertFalse("No heartbeats, Node manager should have been in" +
+              " chill mode.", nodeManager.isOutOfNodeChillMode());
     }
   }
 
@@ -154,10 +154,10 @@ public class TestNodeManager {
       // Need 100 nodes to come out of chill mode, only one node is sending HB.
       nodeManager.setMinimumChillModeNodes(100);
       nodeManager.sendHeartbeat(SCMTestUtils.getDatanodeID(nodeManager), null);
-      GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatThead(), 100,
-          4 * 1000);
-      assertFalse("Not enough heartbeat, Node manager should have been in " +
-          "chillmode.", nodeManager.isOutOfNodeChillMode());
+      GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),
+          100, 4 * 1000);
+      assertFalse("Not enough heartbeat, Node manager should have" +
+          "been in chillmode.", nodeManager.isOutOfNodeChillMode());
     }
   }
 
@@ -182,10 +182,10 @@ public class TestNodeManager {
         nodeManager.sendHeartbeat(datanodeID, null);
       }
 
-      GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatThead(), 100,
-          4 * 1000);
-      assertFalse("Not enough nodes have send heartbeat to node manager.",
-          nodeManager.isOutOfNodeChillMode());
+      GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),
+          100, 4 * 1000);
+      assertFalse("Not enough nodes have send heartbeat to node" +
+              "manager.", nodeManager.isOutOfNodeChillMode());
     }
   }
 
@@ -237,8 +237,8 @@ public class TestNodeManager {
         DatanodeID datanodeID = SCMTestUtils.getDatanodeID(nodeManager);
         nodeManager.sendHeartbeat(datanodeID, null);
       }
-      GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatThead(), 100,
-          4 * 1000);
+      GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),
+          100, 4 * 1000);
       assertEquals(count, nodeManager.getNodeCount(HEALTHY));
     }
   }
@@ -339,9 +339,10 @@ public class TestNodeManager {
 
       List<DatanodeID> staleNodeList = nodeManager.getNodes(NodeManager
           .NODESTATE.STALE);
-      assertEquals("Expected to find 1 stale node", 1, nodeManager
-          .getNodeCount(STALE));
-      assertEquals("Expected to find 1 stale node", 1, staleNodeList.size());
+      assertEquals("Expected to find 1 stale node",
+          1, nodeManager.getNodeCount(STALE));
+      assertEquals("Expected to find 1 stale node",
+          1, staleNodeList.size());
       assertEquals("Stale node is not the expected ID", staleNode
           .getDatanodeUuid(), staleNodeList.get(0).getDatanodeUuid());
     }
@@ -403,7 +404,8 @@ public class TestNodeManager {
       List<DatanodeID> deadNodeList = nodeManager.getNodes(DEAD);
       assertEquals("Expected to find 1 dead node", 1,
           nodeManager.getNodeCount(DEAD));
-      assertEquals("Expected to find 1 dead node", 1, deadNodeList.size());
+      assertEquals("Expected to find 1 dead node",
+          1, deadNodeList.size());
       assertEquals("Dead node is not the expected ID", deadNode
           .getDatanodeUuid(), deadNodeList.get(0).getDatanodeUuid());
     }
@@ -424,8 +426,8 @@ public class TestNodeManager {
           GenericTestUtils.LogCapturer.captureLogs(SCMNodeManager.LOG);
       nodeManager.sendHeartbeat(null, null);
       logCapturer.stopCapturing();
-      assertThat(logCapturer.getOutput(), containsString("Datanode ID in " +
-          "heartbeat is null"));
+      assertThat(logCapturer.getOutput(),
+          containsString("Datanode ID in heartbeat is null"));
     }
   }
 
@@ -569,15 +571,18 @@ public class TestNodeManager {
       assertEquals(1, nodeManager.getNodeCount(STALE));
       assertEquals(1, nodeManager.getNodeCount(DEAD));
 
-      assertEquals("Expected one healthy node", 1, healthyList.size());
+      assertEquals("Expected one healthy node",
+          1, healthyList.size());
       assertEquals("Healthy node is not the expected ID", healthyNode
           .getDatanodeUuid(), healthyList.get(0).getDatanodeUuid());
 
-      assertEquals("Expected one stale node", 1, staleList.size());
+      assertEquals("Expected one stale node",
+          1, staleList.size());
       assertEquals("Stale node is not the expected ID", staleNode
           .getDatanodeUuid(), staleList.get(0).getDatanodeUuid());
 
-      assertEquals("Expected one dead node", 1, deadList.size());
+      assertEquals("Expected one dead node",
+          1, deadList.size());
       assertEquals("Dead node is not the expected ID", deadNode
           .getDatanodeUuid(), deadList.get(0).getDatanodeUuid());
       /**
@@ -781,8 +786,8 @@ public class TestNodeManager {
 
       GenericTestUtils.waitFor(() -> findNodes(nodeManager, staleCount, STALE),
           500, 20 * 1000);
-      assertEquals("Node count mismatch", healthyCount + staleCount, nodeManager
-          .getAllNodes().size());
+      assertEquals("Node count mismatch",
+          healthyCount + staleCount, nodeManager.getAllNodes().size());
 
       thread1.interrupt();
       thread2.interrupt();
@@ -921,8 +926,8 @@ public class TestNodeManager {
         nodeManager.sendHeartbeat(datanodeID,
             nrb.addStorageReport(srb).build());
       }
-      GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatThead(), 100,
-          4 * 1000);
+      GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),
+          100, 4 * 1000);
       assertEquals(nodeCount, nodeManager.getNodeCount(HEALTHY));
       assertEquals(capacity * nodeCount,
           nodeManager.getStats().getCapacity());
@@ -984,11 +989,18 @@ public class TestNodeManager {
 
       // Test NodeManager#getNodeStats
       assertEquals(nodeCount, nodeManager.getNodeStats().size());
-      assertEquals(capacity, nodeManager.getNodeStats().get(0).getCapacity());
+      assertEquals(capacity, nodeManager.getNodeStat(datanodeID).getCapacity());
       assertEquals(expectedScmUsed,
-          nodeManager.getNodeStats().get(0).getScmUsed());
+          nodeManager.getNodeStat(datanodeID).getScmUsed());
       assertEquals(expectedRemaining,
-          nodeManager.getNodeStats().get(0).getRemaining());
+          nodeManager.getNodeStat(datanodeID).getRemaining());
+
+      // Compare the result from
+      // NodeManager#getNodeStats and NodeManager#getNodeStat
+      SCMNodeStat stat1 = nodeManager.getNodeStats().
+          get(datanodeID.getDatanodeUuid());
+      SCMNodeStat stat2 = nodeManager.getNodeStat(datanodeID);
+      assertEquals(stat1, stat2);
 
       // Wait up to 4s so that the node becomes stale
       // Verify the usage info should be unchanged.
@@ -996,11 +1008,11 @@ public class TestNodeManager {
           () -> nodeManager.getNodeCount(NodeManager.NODESTATE.STALE) == 1, 100,
           4 * 1000);
       assertEquals(nodeCount, nodeManager.getNodeStats().size());
-      assertEquals(capacity, nodeManager.getNodeStats().get(0).getCapacity());
+      assertEquals(capacity, nodeManager.getNodeStat(datanodeID).getCapacity());
       assertEquals(expectedScmUsed,
-          nodeManager.getNodeStats().get(0).getScmUsed());
+          nodeManager.getNodeStat(datanodeID).getScmUsed());
       assertEquals(expectedRemaining,
-          nodeManager.getNodeStats().get(0).getRemaining());
+          nodeManager.getNodeStat(datanodeID).getRemaining());
 
       // Wait up to 4 more seconds so the node becomes dead
       // Verify usage info should be updated.
@@ -1031,11 +1043,11 @@ public class TestNodeManager {
           () -> nodeManager.getStats().getScmUsed() == expectedScmUsed, 100,
           4 * 1000);
       assertEquals(nodeCount, nodeManager.getNodeStats().size());
-      assertEquals(capacity, nodeManager.getNodeStats().get(0).getCapacity());
+      assertEquals(capacity, nodeManager.getNodeStat(datanodeID).getCapacity());
       assertEquals(expectedScmUsed,
-          nodeManager.getNodeStats().get(0).getScmUsed());
+          nodeManager.getNodeStat(datanodeID).getScmUsed());
       assertEquals(expectedRemaining,
-          nodeManager.getNodeStats().get(0).getRemaining());
+          nodeManager.getNodeStat(datanodeID).getRemaining());
     }
   }
 }

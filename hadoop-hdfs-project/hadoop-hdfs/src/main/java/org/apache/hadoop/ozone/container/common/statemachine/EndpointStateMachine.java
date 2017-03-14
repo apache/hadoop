@@ -107,10 +107,10 @@ public class EndpointStateMachine implements Closeable {
   /**
    * Sets the endpoint state.
    *
-   * @param state - state.
+   * @param epState - end point state.
    */
-  public EndPointStates setState(EndPointStates state) {
-    this.state = state;
+  public EndPointStates setState(EndPointStates epState) {
+    this.state = epState;
     return this.state;
   }
 

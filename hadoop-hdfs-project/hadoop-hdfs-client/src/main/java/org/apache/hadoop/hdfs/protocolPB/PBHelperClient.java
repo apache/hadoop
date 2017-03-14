@@ -203,6 +203,8 @@ import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerRequestProto;
+import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ChunkedArrayList;
@@ -2771,6 +2773,19 @@ public class PBHelperClient {
       result.add(XAttrSetFlag.REPLACE);
     }
     return result;
+  }
+
+  public static ContainerRequestProto.ReplicationFactor
+      convertReplicationFactor(ScmClient.ReplicationFactor replicationFactor) {
+    switch (replicationFactor) {
+    case ONE:
+      return ContainerRequestProto.ReplicationFactor.ONE;
+    case THREE:
+      return ContainerRequestProto.ReplicationFactor.THREE;
+    default:
+      throw new IllegalArgumentException("Ozone only supports replicaiton" +
+          " factor 1 or 3");
+    }
   }
 
   public static XAttr convertXAttr(XAttrProto a) {

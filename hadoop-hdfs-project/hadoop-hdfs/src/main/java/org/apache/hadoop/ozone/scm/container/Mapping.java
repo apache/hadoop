@@ -17,6 +17,7 @@
 package org.apache.hadoop.ozone.scm.container;
 
 
+import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.Closeable;
@@ -44,4 +45,15 @@ public interface Mapping extends Closeable {
    * @throws IOException
    */
   Pipeline allocateContainer(String containerName) throws IOException;
+
+  /**
+   * Allocates a new container for a given keyName and replication factor.
+   *
+   * @param containerName - Name.
+   * @param replicationFactor - replication factor of the container.
+   * @return - Pipeline that makes up this container.
+   * @throws IOException
+   */
+  Pipeline allocateContainer(String containerName,
+      ScmClient.ReplicationFactor replicationFactor) throws IOException;
 }

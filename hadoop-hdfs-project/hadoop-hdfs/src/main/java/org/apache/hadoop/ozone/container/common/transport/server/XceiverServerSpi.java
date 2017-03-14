@@ -20,7 +20,8 @@ package org.apache.hadoop.ozone.container.common.transport.server;
 
 import java.io.IOException;
 
-/** A server endpoint that acts as the communication layer for Ozone containers. */
+/** A server endpoint that acts as the communication layer for Ozone
+ * containers. */
 public interface XceiverServerSpi {
   /** Starts the server. */
   void start() throws IOException;

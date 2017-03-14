@@ -62,6 +62,12 @@ message LocatedContainerProto {
 */
 message ContainerRequestProto {
   required string containerName = 1;
+  // Ozone only support replciation of either 1 or 3.
+  enum ReplicationFactor {
+    ONE = 1;
+    THREE = 3;
+  }
+  required ReplicationFactor replicationFactor = 2;
 }
 
 /**

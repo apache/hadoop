@@ -64,4 +64,41 @@ public interface ScmClient {
    * @throws IOException
    */
   long getContainerSize(Pipeline pipeline) throws IOException;
+
+  /**
+   * Replication factors supported by Ozone and SCM.
+   */
+  enum ReplicationFactor{
+    ONE(1),
+    THREE(3);
+
+    private final int value;
+    ReplicationFactor(int value) {
+      this.value = value;
+    }
+
+    public int getValue() {
+      return value;
+    }
+
+    public static ReplicationFactor parseReplicationFactor(int i) {
+      switch (i) {
+      case 1: return ONE;
+      case 3: return THREE;
+      default:
+        throw new IllegalArgumentException("Only replication factor 1 or 3" +
+            " is supported by Ozone/SCM.");
+      }
+    }
+  }
+
+  /**
+   * Creates a Container on SCM and returns the pipeline.
+   * @param containerId - String container ID
+   * @param replicationFactor - replication factor (only 1/3 is supported)
+   * @return Pipeline
+   * @throws IOException
+   */
+  Pipeline createContainer(String containerId,
+      ReplicationFactor replicationFactor) throws IOException;
 }

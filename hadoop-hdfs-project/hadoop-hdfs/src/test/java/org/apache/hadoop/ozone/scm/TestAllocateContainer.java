@@ -21,6 +21,7 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.junit.AfterClass;
@@ -45,12 +46,15 @@ public class TestAllocateContainer {
   public ExpectedException thrown = ExpectedException.none();
 
   @BeforeClass
-  public static void init() throws IOException {
+  public static void init() throws Exception {
+    long datanodeCapacities = 3 * OzoneConsts.TB;
     conf = new OzoneConfiguration();
     cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1)
+        .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})
         .setHandlerType("distributed").build();
     storageContainerLocationClient =
         cluster.createStorageContainerLocationClient();
+    cluster.waitForHeartbeatProcessed();
   }
 
   @AfterClass
