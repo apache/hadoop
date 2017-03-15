@@ -2217,7 +2217,7 @@ public class CapacityScheduler extends
 
         // Get the default priority for the Queue. If Queue is non-existent,
         // then
-        // use default priority. Do it only if user doesnt have any default.
+        // use default priority. Do it only if user doesn't have any default.
         if (null == appPriority) {
           appPriority = this.queueManager.getDefaultPriorityForQueue(queueName);
         }
