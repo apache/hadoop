@@ -229,7 +229,6 @@ public class TestDFSNetworkTopology {
     assertEquals(1, (int)l1info.get("d2").get(StorageType.DISK));
     assertEquals(2, (int)l1info.get("d3").get(StorageType.SSD));
 
-
     for (int i = 0; i<4; i++) {
       CLUSTER.remove(newDD[i]);
     }
@@ -445,5 +444,68 @@ public class TestDFSNetworkTopology {
     n = CLUSTER.chooseRandomWithStorageType(
         "/l100/d100/r100", null, null, StorageType.DISK);
     assertNull(n);
+  }
+
+  /**
+   * Tests getting subtree storage counts, and see whether it is correct when
+   * we update subtree.
+   * @throws Exception
+   */
+  @Test
+  public void testGetSubtreeStorageCount() throws Exception {
+    // add and remove a node to rack /l2/d3/r1. So all the inner nodes /l2,
+    // /l2/d3 and /l2/d3/r1 should be affected. /l2/d3/r3 should still be the
+    // same, only checked as a reference
+    Node l2 = CLUSTER.getNode("/l2");
+    Node l2d3 = CLUSTER.getNode("/l2/d3");
+    Node l2d3r1 = CLUSTER.getNode("/l2/d3/r1");
+    Node l2d3r3 = CLUSTER.getNode("/l2/d3/r3");
+
+    assertTrue(l2 instanceof DFSTopologyNodeImpl);
+    assertTrue(l2d3 instanceof DFSTopologyNodeImpl);
+    assertTrue(l2d3r1 instanceof DFSTopologyNodeImpl);
+    assertTrue(l2d3r3 instanceof DFSTopologyNodeImpl);
+
+    DFSTopologyNodeImpl innerl2 = (DFSTopologyNodeImpl)l2;
+    DFSTopologyNodeImpl innerl2d3 = (DFSTopologyNodeImpl)l2d3;
+    DFSTopologyNodeImpl innerl2d3r1 = (DFSTopologyNodeImpl)l2d3r1;
+    DFSTopologyNodeImpl innerl2d3r3 = (DFSTopologyNodeImpl)l2d3r3;
+
+    assertEquals(4,
+        innerl2.getSubtreeStorageCount(StorageType.DISK));
+    assertEquals(2,
+        innerl2d3.getSubtreeStorageCount(StorageType.DISK));
+    assertEquals(1,
+        innerl2d3r1.getSubtreeStorageCount(StorageType.DISK));
+    assertEquals(1,
+        innerl2d3r3.getSubtreeStorageCount(StorageType.DISK));
+
+    DatanodeStorageInfo storageInfo =
+        DFSTestUtil.createDatanodeStorageInfo("StorageID",
+            "1.2.3.4", "/l2/d3/r1", "newhost");
+    DatanodeDescriptor newNode = storageInfo.getDatanodeDescriptor();
+    CLUSTER.add(newNode);
+
+    // after adding a storage to /l2/d3/r1, ancestor inner node should have
+    // DISK count incremented by 1.
+    assertEquals(5,
+        innerl2.getSubtreeStorageCount(StorageType.DISK));
+    assertEquals(3,
+        innerl2d3.getSubtreeStorageCount(StorageType.DISK));
+    assertEquals(2,
+        innerl2d3r1.getSubtreeStorageCount(StorageType.DISK));
+    assertEquals(1,
+        innerl2d3r3.getSubtreeStorageCount(StorageType.DISK));
+
+    CLUSTER.remove(newNode);
+
+    assertEquals(4,
+        innerl2.getSubtreeStorageCount(StorageType.DISK));
+    assertEquals(2,
+        innerl2d3.getSubtreeStorageCount(StorageType.DISK));
+    assertEquals(1,
+        innerl2d3r1.getSubtreeStorageCount(StorageType.DISK));
+    assertEquals(1,
+        innerl2d3r3.getSubtreeStorageCount(StorageType.DISK));
   }
 }
