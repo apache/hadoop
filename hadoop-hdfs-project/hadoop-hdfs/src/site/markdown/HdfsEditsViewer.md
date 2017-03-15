@@ -30,6 +30,8 @@ Input formats supported:
 2.  **xml**: XML format, as produced by xml processor, used if filename
     has `.xml` (case insensitive) extension
 
+Note: XML/Binary format input file is not allowed to be processed by the same type processor.
+
 The Offline Edits Viewer provides several output processors (unless stated otherwise the output of the processor can be converted back to original edits file):
 
 1.  **binary**: native binary format that Hadoop uses internally
