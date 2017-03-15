@@ -669,12 +669,26 @@ public abstract class FileSystemContractBaseTest extends TestCase {
 
   /**
    * This a sanity check to make sure that any filesystem's handling of
-   * renames doesn't cause any regressions
+   * renames empty dirs doesn't cause any regressions.
+   */
+  public void testRenameEmptyToDirWithSamePrefixAllowed() throws Throwable {
+    if (!renameSupported()) return;
+    Path parentdir = path("test/parentdir");
+    fs.mkdirs(parentdir);
+    Path dest = path("test/parentdirdest");
+    rename(parentdir, dest, true, false, true);
+  }
+
+  /**
+   * This a sanity check to make sure that any filesystem's handling of
+   * renames non-empty dirs doesn't cause any regressions.
    */
   public void testRenameToDirWithSamePrefixAllowed() throws Throwable {
     if (!renameSupported()) return;
     Path parentdir = path("test/parentdir");
     fs.mkdirs(parentdir);
+    // Before renaming, we create one file under the source parent directory
+    createFile(new Path(parentdir, "mychild"));
     Path dest = path("test/parentdirdest");
     rename(parentdir, dest, true, false, true);
   }

@@ -918,8 +918,14 @@ public class S3AFileSystem extends FileSystem {
         }
       }
 
-      // We moved all the children, now move the top-level dir.
-      S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas, src, dst, username);
+      // We moved all the children, now move the top-level dir if it's non-empty
+      // Empty directory has been added as the object summary of listObjects
+      if (srcStatus.isEmptyDirectory() == Tristate.FALSE) {
+        LOG.debug("To move the non-empty top-level dir src={} and dst={}",
+            src, dst);
+        S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas, src, dst,
+            username);
+      }
     }
 
     metadataStore.move(srcPaths, dstMetas);
