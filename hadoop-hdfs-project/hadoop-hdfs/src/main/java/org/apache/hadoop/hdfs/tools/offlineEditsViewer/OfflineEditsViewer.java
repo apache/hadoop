@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsLoader.OfflineEditsLoaderFactory;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -55,7 +56,9 @@ public class OfflineEditsViewer extends Configured implements Tool {
       "Required command line arguments:\n" +
       "-i,--inputFile <arg>   edits file to process, xml (case\n" +
       "                       insensitive) extension means XML format,\n" +
-      "                       any other filename means binary format\n" +
+      "                       any other filename means binary format.\n" +
+      "                       XML/Binary format input file is not allowed\n" +
+      "                       to be processed by the same type processor.\n" +
       "-o,--outputFile <arg>  Name of output file. If the specified\n" +
       "                       file exists, it will be overwritten,\n" +
       "                       format of the file is determined\n" +
@@ -132,12 +135,24 @@ public class OfflineEditsViewer extends Configured implements Tool {
       System.out.println("input  [" + inputFileName  + "]");
       System.out.println("output [" + outputFileName + "]");
     }
+
+    boolean xmlInput = StringUtils.toLowerCase(inputFileName).endsWith(".xml");
+    if (xmlInput && StringUtils.equalsIgnoreCase("xml", processor)) {
+      System.err.println("XML format input file is not allowed"
+          + " to be processed by XML processor.");
+      return -1;
+    } else if(!xmlInput && StringUtils.equalsIgnoreCase("binary", processor)) {
+      System.err.println("Binary format input file is not allowed"
+          + " to be processed by Binary processor.");
+      return -1;
+    }
+
     try {
       if (visitor == null) {
         visitor = OfflineEditsVisitorFactory.getEditsVisitor(
             outputFileName, processor, flags.getPrintToScreen());
       }
-      boolean xmlInput = inputFileName.toLowerCase().endsWith(".xml");
+
       OfflineEditsLoader loader = OfflineEditsLoaderFactory.
           createLoader(visitor, inputFileName, xmlInput, flags);
       loader.loadEdits();
