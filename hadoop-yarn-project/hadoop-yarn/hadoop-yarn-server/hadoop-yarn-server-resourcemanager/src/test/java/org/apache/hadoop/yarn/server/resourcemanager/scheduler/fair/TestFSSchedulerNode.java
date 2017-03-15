@@ -1,9 +1,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ExecutionType;
-import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -35,10 +32,11 @@ public class TestFSSchedulerNode {
   }
 
   private RMContainer createDefaultContainer() {
-    return createContainer(Resource.newInstance(1024, 1));
+    return createContainer(Resource.newInstance(1024, 1), null);
   }
 
-  private RMContainer createContainer(Resource request) {
+  private RMContainer createContainer(
+      Resource request, ApplicationAttemptId appAttemptId) {
     RMContainer container = mock(RMContainer.class);
     Container containerInner = mock(Container.class);
     ContainerId id = mock(ContainerId.class);
@@ -48,6 +46,7 @@ public class TestFSSchedulerNode {
     when(containerInner.getId()).thenReturn(id);
     when(containerInner.getExecutionType()).
         thenReturn(ExecutionType.GUARANTEED);
+    when(container.getApplicationAttemptId()).thenReturn(appAttemptId);
     when(container.getContainerId()).thenReturn(id);
     when(container.getContainer()).thenReturn(containerInner);
     when(container.getExecutionType()).thenReturn(ExecutionType.GUARANTEED);
@@ -70,6 +69,9 @@ public class TestFSSchedulerNode {
   private FSAppAttempt createStarvingApp(FSSchedulerNode schedulerNode,
                                          Resource request) {
     FSAppAttempt starvingApp = mock(FSAppAttempt.class);
+    ApplicationAttemptId appAttemptId =
+        mock(ApplicationAttemptId.class);
+    when(starvingApp.getApplicationAttemptId()).thenReturn(appAttemptId);
     when(starvingApp.assignContainer(schedulerNode)).thenAnswer(
         new Answer<Resource>() {
           @Override
@@ -78,7 +80,7 @@ public class TestFSSchedulerNode {
             Resource response = Resource.newInstance(0, 0);
             while (!Resources.isNone(request) &&
                 !Resources.isNone(schedulerNode.getUnallocatedResource())) {
-              RMContainer container = createContainer(request);
+              RMContainer container = createContainer(request, appAttemptId);
               schedulerNode.allocateContainer(container);
               Resources.addTo(response, container.getAllocatedResource());
               Resources.subtractFrom(request,
@@ -97,7 +99,16 @@ public class TestFSSchedulerNode {
     assertTrue("No containers should be reserved for preemption",
         schedulerNode.containersForPreemption.isEmpty());
     assertTrue("No resources should be reserved for preemptees",
-        schedulerNode.reservedApp.isEmpty());
+        schedulerNode.resourcesPreemptedPerApp.isEmpty());
+  }
+
+  private void allocateContainers(FSSchedulerNode schedulerNode) {
+    for (FSAppAttempt app : schedulerNode.getPreemptionList()) {
+      if (!app.isStopped()) {
+        app.assignContainer(schedulerNode);
+      }
+    }
+    schedulerNode.cleanupPreemptionList();
   }
 
   /**
@@ -173,7 +184,7 @@ public class TestFSSchedulerNode {
         Collections.singletonList(containers.get(0)), starvingApp);
 
     schedulerNode.releaseContainer(containers.get(0).getContainerId(), true);
-    schedulerNode.assignContainersToPreemptionReservees();
+    allocateContainers(schedulerNode);
     assertEquals("Container should be allocated",
         schedulerNode.getTotalResource(),
         schedulerNode.getAllocatedResource());
@@ -219,7 +230,7 @@ public class TestFSSchedulerNode {
     schedulerNode.releaseContainer(containers.get(2).getContainerId(), true);
     schedulerNode.releaseContainer(containers.get(1).getContainerId(), true);
 
-    schedulerNode.assignContainersToPreemptionReservees();
+    allocateContainers(schedulerNode);
     assertEquals("Container should be allocated",
         schedulerNode.getTotalResource(),
         schedulerNode.getAllocatedResource());
@@ -261,11 +272,11 @@ public class TestFSSchedulerNode {
 
     // Preemption happens
     schedulerNode.releaseContainer(containers.get(1).getContainerId(), true);
-    schedulerNode.assignContainersToPreemptionReservees();
+    allocateContainers(schedulerNode);
 
     schedulerNode.releaseContainer(containers.get(2).getContainerId(), true);
     schedulerNode.releaseContainer(containers.get(0).getContainerId(), true);
-    schedulerNode.assignContainersToPreemptionReservees();
+    allocateContainers(schedulerNode);
 
     assertEquals("Container should be allocated",
         schedulerNode.getTotalResource(),
@@ -305,7 +316,7 @@ public class TestFSSchedulerNode {
     // and observe that there are still free resources not allocated to
     // the deleted app
     when(starvingApp.isStopped()).thenReturn(true);
-    schedulerNode.assignContainersToPreemptionReservees();
+    allocateContainers(schedulerNode);
     assertNotEquals("Container should be allocated",
         schedulerNode.getTotalResource(),
         schedulerNode.getAllocatedResource());
@@ -343,7 +354,7 @@ public class TestFSSchedulerNode {
     schedulerNode.releaseContainer(containers.get(0).getContainerId(), true);
 
     // Container partially reassigned
-    schedulerNode.assignContainersToPreemptionReservees();
+    allocateContainers(schedulerNode);
     assertEquals("Container should be allocated",
         Resources.subtract(schedulerNode.getTotalResource(),
             Resource.newInstance(512, 0)),

@@ -294,11 +294,29 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
         8 - 2 * numStarvedAppContainers,
         greedyApp.getQueue().getMetrics().getAggregatePreemptedContainers());
 
+    // Verify the node is reserved for the starvingApp
+    for (RMNode rmNode : rmNodes) {
+      FSSchedulerNode node = (FSSchedulerNode)
+          scheduler.getNodeTracker().getNode(rmNode.getNodeID());
+      if (node.getContainersForPreemption().size() > 0) {
+        assertTrue(node.getPreemptionList().contains(starvingApp));
+      }
+    }
+
     sendEnoughNodeUpdatesToAssignFully();
 
     // Verify the preempted containers are assigned to starvingApp
     assertEquals("Starved app is not assigned the right # of containers",
         numStarvedAppContainers, starvingApp.getLiveContainers().size());
+
+    // Verify the node is not reserved for the starvingApp anymore
+    for (RMNode rmNode : rmNodes) {
+      FSSchedulerNode node = (FSSchedulerNode)
+          scheduler.getNodeTracker().getNode(rmNode.getNodeID());
+      if (node.getContainersForPreemption().size() > 0) {
+        assertTrue(!node.getPreemptionList().contains(starvingApp));
+      }
+    }
   }
 
   private void verifyNoPreemption() throws InterruptedException {
