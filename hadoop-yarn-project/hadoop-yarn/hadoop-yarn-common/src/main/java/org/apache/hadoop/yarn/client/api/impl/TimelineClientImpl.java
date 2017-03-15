@@ -24,6 +24,7 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URL;
@@ -243,7 +244,8 @@ public class TimelineClientImpl extends TimelineClient {
           // Only retry on connection exceptions
           return (e instanceof ClientHandlerException)
               && (e.getCause() instanceof ConnectException ||
-                  e.getCause() instanceof SocketTimeoutException);
+                  e.getCause() instanceof SocketTimeoutException ||
+                  e.getCause() instanceof SocketException);
         }
       };
       try {
