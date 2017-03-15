@@ -43,13 +43,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.LinkedList;
 import java.util.List;
 
-import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
-    .Result.PUT_SMALL_FILE_ERROR;
-import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
-    .Result.GET_SMALL_FILE_ERROR;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Result.CLOSED_CONTAINER_IO;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Result.GET_SMALL_FILE_ERROR;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Result.NO_SUCH_ALGORITHM;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Result.PUT_SMALL_FILE_ERROR;
 
 /**
  * Ozone Container dispatcher takes a call from the netty server and routes it
@@ -97,8 +98,9 @@ public class Dispatcher implements ContainerDispatcher {
           (cmdType == Type.DeleteContainer) ||
           (cmdType == Type.ReadContainer) ||
           (cmdType == Type.ListContainer) ||
-          (cmdType == Type.UpdateContainer)) {
-        resp = containerProcessHandler(msg);
+          (cmdType == Type.UpdateContainer) ||
+          (cmdType == Type.CloseContainer)) {
+        return containerProcessHandler(msg);
       }
 
       if ((cmdType == Type.PutKey) ||
@@ -166,6 +168,9 @@ public class Dispatcher implements ContainerDispatcher {
 
       case ReadContainer:
         return handleReadContainer(msg);
+
+      case CloseContainer:
+        return handleCloseContainer(msg);
 
       default:
         return ContainerUtils.unsupportedRequest(msg);
@@ -274,6 +279,12 @@ public class Dispatcher implements ContainerDispatcher {
     }
   }
 
+  /**
+   * Dispatch calls to small file hanlder.
+   * @param msg - request
+   * @return response
+   * @throws StorageContainerException
+   */
   private ContainerCommandResponseProto smallFileHandler(
       ContainerCommandRequestProto msg) throws StorageContainerException {
     switch (msg.getCmdType()) {
@@ -349,14 +360,44 @@ public class Dispatcher implements ContainerDispatcher {
     }
     ContainerData cData = ContainerData.getFromProtBuf(
         msg.getCreateContainer().getContainerData());
-    Preconditions.checkNotNull(cData);
+    Preconditions.checkNotNull(cData, "Container data is null");
 
     Pipeline pipeline = Pipeline.getFromProtoBuf(
         msg.getCreateContainer().getPipeline());
-    Preconditions.checkNotNull(pipeline);
+    Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
 
     this.containerManager.createContainer(pipeline, cData);
     return ContainerUtils.getContainerResponse(msg);
+  }
+
+  /**
+   * closes an open container.
+   *
+   * @param msg -
+   * @return
+   * @throws IOException
+   */
+  private ContainerCommandResponseProto handleCloseContainer(
+      ContainerCommandRequestProto msg) throws IOException {
+    try {
+      if (!msg.hasCloseContainer()) {
+        LOG.debug("Malformed close Container request. trace ID: {}",
+            msg.getTraceID());
+        return ContainerUtils.malformedRequest(msg);
+      }
+      Pipeline pipeline = Pipeline.getFromProtoBuf(msg.getCloseContainer()
+          .getPipeline());
+      Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
+      if (!this.containerManager.isOpen(pipeline.getContainerName())) {
+        throw new StorageContainerException("Attempting to close a closed " +
+            "container.", CLOSED_CONTAINER_IO);
+      }
+      this.containerManager.closeContainer(pipeline.getContainerName());
+      return ContainerUtils.getContainerResponse(msg);
+    } catch (NoSuchAlgorithmException e) {
+      throw new StorageContainerException("No such Algorithm", e,
+          NO_SUCH_ALGORITHM);
+    }
   }
 
   /**
@@ -373,11 +414,14 @@ public class Dispatcher implements ContainerDispatcher {
           msg.getTraceID());
       return ContainerUtils.malformedRequest(msg);
     }
-
     String keyName = msg.getWriteChunk().getKeyName();
     Pipeline pipeline = Pipeline.getFromProtoBuf(
         msg.getWriteChunk().getPipeline());
     Preconditions.checkNotNull(pipeline);
+    if (!this.containerManager.isOpen(pipeline.getContainerName())) {
+      throw new StorageContainerException("Write to closed container.",
+          CLOSED_CONTAINER_IO);
+    }
 
     ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(msg.getWriteChunk()
         .getChunkData());
@@ -437,7 +481,10 @@ public class Dispatcher implements ContainerDispatcher {
     Pipeline pipeline = Pipeline.getFromProtoBuf(
         msg.getDeleteChunk().getPipeline());
     Preconditions.checkNotNull(pipeline);
-
+    if (!this.containerManager.isOpen(pipeline.getContainerName())) {
+      throw new StorageContainerException("Write to closed container.",
+          CLOSED_CONTAINER_IO);
+    }
     ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(msg.getDeleteChunk()
         .getChunkData());
     Preconditions.checkNotNull(chunkInfo);
@@ -463,6 +510,10 @@ public class Dispatcher implements ContainerDispatcher {
     }
     Pipeline pipeline = Pipeline.getFromProtoBuf(msg.getPutKey().getPipeline());
     Preconditions.checkNotNull(pipeline);
+    if (!this.containerManager.isOpen(pipeline.getContainerName())) {
+      throw new StorageContainerException("Write to closed container.",
+          CLOSED_CONTAINER_IO);
+    }
     KeyData keyData = KeyData.getFromProtoBuf(msg.getPutKey().getKeyData());
     Preconditions.checkNotNull(keyData);
     this.containerManager.getKeyManager().putKey(pipeline, keyData);
@@ -508,10 +559,13 @@ public class Dispatcher implements ContainerDispatcher {
           msg.getTraceID());
       return ContainerUtils.malformedRequest(msg);
     }
-
     Pipeline pipeline =
         Pipeline.getFromProtoBuf(msg.getDeleteKey().getPipeline());
     Preconditions.checkNotNull(pipeline);
+    if (!this.containerManager.isOpen(pipeline.getContainerName())) {
+      throw new StorageContainerException("Write to closed container.",
+          CLOSED_CONTAINER_IO);
+    }
     String keyName = msg.getDeleteKey().getName();
     Preconditions.checkNotNull(keyName);
     Preconditions.checkState(!keyName.isEmpty());
@@ -541,6 +595,10 @@ public class Dispatcher implements ContainerDispatcher {
               .getKey().getPipeline());
 
       Preconditions.checkNotNull(pipeline);
+      if (!this.containerManager.isOpen(pipeline.getContainerName())) {
+        throw new StorageContainerException("Write to closed container.",
+            CLOSED_CONTAINER_IO);
+      }
       KeyData keyData = KeyData.getFromProtoBuf(msg.getPutSmallFile().getKey()
           .getKeyData());
       ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(msg.getPutSmallFile()

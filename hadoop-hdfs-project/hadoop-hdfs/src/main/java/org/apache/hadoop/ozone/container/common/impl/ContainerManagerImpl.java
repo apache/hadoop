@@ -248,7 +248,7 @@ public class ContainerManagerImpl implements ContainerManager {
       // Then read back and put that info into the containerMap.
       // This allows us to make sure that our write is consistent.
 
-      writeContainerInfo(containerData);
+      writeContainerInfo(containerData, false);
       File cFile = new File(containerData.getContainerPath());
       readContainerInfo(ContainerUtils.getContainerNameFromFile(cFile));
     } catch (NoSuchAlgorithmException ex) {
@@ -280,9 +280,11 @@ public class ContainerManagerImpl implements ContainerManager {
    * }
    *
    * @param containerData - container Data
+   * @param overwrite - Whether we are overwriting.
    * @throws StorageContainerException, NoSuchAlgorithmException
    */
-  private void writeContainerInfo(ContainerData containerData)
+  private void writeContainerInfo(ContainerData containerData,
+      boolean  overwrite)
       throws StorageContainerException, NoSuchAlgorithmException {
 
     Preconditions.checkNotNull(this.locationManager,
@@ -298,8 +300,9 @@ public class ContainerManagerImpl implements ContainerManager {
           location);
       File metadataFile = ContainerUtils.getMetadataFile(containerData,
           location);
-
-      ContainerUtils.verifyIsNewContainer(containerFile, metadataFile);
+      if(!overwrite) {
+        ContainerUtils.verifyIsNewContainer(containerFile, metadataFile);
+      }
 
       Path metadataPath = this.locationManager.getDataPath(
           containerData.getContainerName());
@@ -444,6 +447,48 @@ public class ContainerManagerImpl implements ContainerManager {
           + containerName, CONTAINER_NOT_FOUND);
     }
     return containerMap.get(containerName).getContainer();
+  }
+
+  /**
+   * Closes a open container, if it is already closed or does not exist a
+   * StorageContainerException is thrown.
+   *
+   * @param containerName - Name of the container.
+   * @throws StorageContainerException
+   */
+  @Override
+  public void closeContainer(String containerName)
+      throws StorageContainerException, NoSuchAlgorithmException {
+    ContainerData containerData = readContainer(containerName);
+    containerData.closeContainer();
+    writeContainerInfo(containerData, true);
+
+    // Active is different from closed. Closed means it is immutable, active
+    // false means we have some internal error that is happening to this
+    // container. This is a way to track damaged containers if we have an
+    // I/O failure, this allows us to take quick action in case of container
+    // issues.
+
+    ContainerStatus status = new ContainerStatus(containerData, true);
+    containerMap.put(containerName, status);
+  }
+
+  /**
+   * Checks if a container exists.
+   *
+   * @param containerName - Name of the container.
+   * @return true if the container is open false otherwise.
+   * @throws StorageContainerException - Throws Exception if we are not able to
+   *                                   find the container.
+   */
+  @Override
+  public boolean isOpen(String containerName) throws StorageContainerException {
+    ContainerData cData = containerMap.get(containerName).getContainer();
+    if (cData == null) {
+      throw new StorageContainerException("Container not found",
+          CONTAINER_NOT_FOUND);
+    }
+    return cData.isOpen();
   }
 
   /**

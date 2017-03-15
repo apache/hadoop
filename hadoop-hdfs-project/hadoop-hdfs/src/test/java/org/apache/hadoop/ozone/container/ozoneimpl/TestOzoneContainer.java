@@ -56,7 +56,7 @@ public class TestOzoneContainer {
     OzoneContainer container = null;
     MiniOzoneCluster cluster = null;
     try {
-      cluster =  new MiniOzoneCluster.Builder(conf)
+      cluster = new MiniOzoneCluster.Builder(conf)
           .setHandlerType("distributed").build();
       // We don't start Ozone Container via data node, we will do it
       // independently in our test path.
@@ -79,7 +79,7 @@ public class TestOzoneContainer {
       if (container != null) {
         container.stop();
       }
-      if(cluster != null) {
+      if (cluster != null) {
         cluster.shutdown();
       }
     }
@@ -240,6 +240,121 @@ public class TestOzoneContainer {
       Assert.assertArrayEquals(
           smallFileRequest.getPutSmallFile().getData().toByteArray(),
           response.getGetSmallFile().getData().getData().toByteArray());
+    } finally {
+      if (client != null) {
+        client.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  private void testCloseContainer() throws Exception {
+    MiniOzoneCluster cluster = null;
+    XceiverClient client = null;
+    try {
+
+      String keyName = OzoneUtils.getRequestID();
+      String containerName = OzoneUtils.getRequestID();
+      OzoneConfiguration conf = new OzoneConfiguration();
+      URL p = conf.getClass().getResource("");
+      String path = p.getPath().concat(
+          TestOzoneContainer.class.getSimpleName());
+      path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
+          OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
+      conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
+
+      // Start ozone container Via Datanode create.
+
+      Pipeline pipeline =
+          ContainerTestHelper.createSingleNodePipeline(containerName);
+      conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
+          pipeline.getLeader().getContainerPort());
+
+      cluster = new MiniOzoneCluster.Builder(conf)
+          .setHandlerType("distributed").build();
+
+      // This client talks to ozone container via datanode.
+      client = new XceiverClient(pipeline, conf);
+      client.connect();
+
+
+      ContainerProtos.ContainerCommandRequestProto writeChunkRequest =
+          ContainerTestHelper.getWriteChunkRequest(pipeline, containerName,
+              keyName, 1024);
+
+      ContainerProtos.ContainerCommandRequestProto request;
+      ContainerProtos.ContainerCommandResponseProto response;
+
+      ContainerProtos.ContainerCommandRequestProto putKeyRequest =
+          ContainerTestHelper.getPutKeyRequest(writeChunkRequest
+              .getWriteChunk());
+
+      // Write Chunk before closing
+      response = client.sendCommand(writeChunkRequest);
+      Assert.assertNotNull(response);
+      Assert.assertEquals(ContainerProtos.Result.SUCCESS,
+          response.getResult());
+      Assert.assertTrue(writeChunkRequest.getTraceID().equals(response
+          .getTraceID()));
+
+
+      // Put key before closing.
+      response = client.sendCommand(putKeyRequest);
+      Assert.assertNotNull(response);
+      Assert.assertEquals(ContainerProtos.Result.SUCCESS,
+          response.getResult());
+      Assert.assertTrue(
+          putKeyRequest.getTraceID().equals(response.getTraceID()));
+
+      // Close the contianer.
+      request = ContainerTestHelper.getCloseContainer(pipeline);
+      response = client.sendCommand(request);
+      Assert.assertNotNull(response);
+      Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+
+
+      // Assert that none of the write  operations are working after close.
+
+      // Write chunks should fail now.
+
+      response = client.sendCommand(writeChunkRequest);
+      Assert.assertNotNull(response);
+      Assert.assertEquals(ContainerProtos.Result.CLOSED_CONTAINER_IO,
+          response.getResult());
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+
+      // Read chunk must work on a closed container.
+      request = ContainerTestHelper.getReadChunkRequest(writeChunkRequest
+          .getWriteChunk());
+      response = client.sendCommand(request);
+      Assert.assertNotNull(response);
+      Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+
+
+      // Put key will fail on a closed container.
+      response = client.sendCommand(putKeyRequest);
+      Assert.assertNotNull(response);
+      Assert.assertEquals(ContainerProtos.Result.CLOSED_CONTAINER_IO,
+          response.getResult());
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+
+      // Get key must work on the closed container.
+      request = ContainerTestHelper.getKeyRequest(putKeyRequest.getPutKey());
+      response = client.sendCommand(request);
+      ContainerTestHelper.verifyGetKey(request, response);
+
+      // Delete Key must fail on a closed container.
+      request =
+          ContainerTestHelper.getDeleteKeyRequest(putKeyRequest.getPutKey());
+      response = client.sendCommand(request);
+      Assert.assertNotNull(response);
+      Assert.assertEquals(ContainerProtos.Result.CLOSED_CONTAINER_IO,
+          response.getResult());
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
     } finally {
       if (client != null) {
         client.close();

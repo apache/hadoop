@@ -67,6 +67,12 @@ import "hdfs.proto";
  *  13. ListChunk - Given a Container/Key returns the list of Chunks.
  *
  *  14. CompactChunk - Re-writes a chunk based on Offsets.
+ *
+ *  15. PutSmallFile - A single RPC that combines both putKey and WriteChunk.
+ *
+ *  16. GetSmallFile - A single RPC that combines both getKey and ReadChunk.
+ *
+ *  17. CloseContainer - Closes an open container and makes it immutable.
  */
 
 enum Type {
@@ -90,6 +96,7 @@ enum Type {
   /** Combines Key and Chunk Operation into Single RPC. */
   PutSmallFile = 15;
   GetSmallFile = 16;
+  CloseContainer = 17;
 
 }
 
@@ -116,6 +123,7 @@ enum Result {
   INVALID_ARGUMENT = 19;
   PUT_SMALL_FILE_ERROR = 20;
   GET_SMALL_FILE_ERROR = 21;
+  CLOSED_CONTAINER_IO = 22;
 }
 
 message ContainerCommandRequestProto {
@@ -147,6 +155,7 @@ message ContainerCommandRequestProto {
 
   optional   PutSmallFileRequestProto putSmallFile = 16;
   optional   GetSmallFileRequestProto getSmallFile = 17;
+  optional   CloseContainerRequestProto closeContainer = 18;
 }
 
 message ContainerCommandResponseProto {
@@ -174,6 +183,7 @@ message ContainerCommandResponseProto {
 
   optional PutSmallFileResponseProto putSmallFile = 19;
   optional GetSmallFileResponseProto getSmallFile = 20;
+  optional CloseContainerResponseProto closeContainer = 21;
 
 }
 
@@ -194,6 +204,8 @@ message ContainerData {
   repeated KeyValue metadata = 2;
   optional string dbPath = 3;
   optional string containerPath = 4;
+  optional bool open = 5 [default = true];
+  optional string hash = 6;
 }
 
 message ContainerMeta {
@@ -246,6 +258,14 @@ message  ListContainerResponseProto {
   repeated ContainerData containerData = 1;
 }
 
+message CloseContainerRequestProto {
+  required Pipeline pipeline = 1;
+}
+
+message CloseContainerResponseProto {
+  optional Pipeline pipeline = 1;
+  optional string hash = 2;
+}
 
 message KeyData {
   required string containerName = 1;
