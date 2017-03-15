@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container;
 
+import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
@@ -392,6 +393,23 @@ public final class ContainerTestHelper {
     request.setCmdType(ContainerProtos.Type.DeleteKey);
     request.setDeleteKey(delRequest);
     return request.build();
+  }
+
+  /**
+   * Returns a close container request.
+   * @param pipeline - pipeline
+   * @return ContainerCommandRequestProto.
+   */
+  public static ContainerCommandRequestProto getCloseContainer(
+      Pipeline pipeline) {
+    Preconditions.checkNotNull(pipeline);
+    ContainerProtos.CloseContainerRequestProto closeReqeuest =
+        ContainerProtos.CloseContainerRequestProto.newBuilder().setPipeline(
+            pipeline.getProtobufMessage()).build();
+    ContainerProtos.ContainerCommandRequestProto cmd =
+        ContainerCommandRequestProto.newBuilder().setCmdType(ContainerProtos
+            .Type.CloseContainer).setCloseContainer(closeReqeuest).build();
+    return cmd;
   }
 
 }

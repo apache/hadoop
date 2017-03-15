@@ -30,6 +30,7 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 
 /**
@@ -91,6 +92,24 @@ public interface ContainerManager extends RwLock {
    */
   ContainerData readContainer(String containerName)
       throws StorageContainerException;
+
+  /**
+   * Closes a open container, if it is already closed or does not exist a
+   * StorageContainerException is thrown.
+   * @param containerName - Name of the container.
+   * @throws StorageContainerException
+   */
+  void closeContainer(String containerName)
+      throws StorageContainerException, NoSuchAlgorithmException;
+
+  /**
+   * Checks if a container exists.
+   * @param containerName - Name of the container.
+   * @return true if the container is open false otherwise.
+   * @throws StorageContainerException  - Throws Exception if we are not
+   * able to find the container.
+   */
+  boolean isOpen(String containerName) throws StorageContainerException;
 
   /**
    * Supports clean shutdown of container.

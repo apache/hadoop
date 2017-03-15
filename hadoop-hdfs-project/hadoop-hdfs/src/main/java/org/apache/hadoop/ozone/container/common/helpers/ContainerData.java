@@ -38,6 +38,8 @@ public class ContainerData {
   private String dbPath;  // Path to Level DB Store.
   // Path to Physical file system where container and checksum are stored.
   private String containerFilePath;
+  private boolean open;
+  private String hash;
 
   /**
    * Constructs a  ContainerData Object.
@@ -71,6 +73,15 @@ public class ContainerData {
       data.setDBPath(protoData.getDbPath());
     }
 
+    if (protoData.hasOpen()) {
+      data.setOpen(protoData.getOpen());
+    } else {
+      data.setOpen(true);
+    }
+
+    if(protoData.hasHash()) {
+      data.setHash(protoData.getHash());
+    }
     return data;
   }
 
@@ -98,6 +109,8 @@ public class ContainerData {
       builder.addMetadata(keyValBuilder.setKey(entry.getKey())
           .setValue(entry.getValue()).build());
     }
+
+
     return builder.build();
   }
 
@@ -194,6 +207,43 @@ public class ContainerData {
    */
   public void setContainerPath(String containerPath) {
     this.containerFilePath = containerPath;
+  }
+
+  /**
+   * checks if the container is open.
+   * @return - boolean
+   */
+  public boolean isOpen() {
+    return open;
+  }
+
+  /**
+   * Marks this container as closed.
+   */
+  public void closeContainer() {
+    this.open = false;
+  }
+
+  /**
+   * Final hash for this container.
+   * @return - Hash
+   */
+  public String getHash() {
+    return hash;
+  }
+
+  public void setHash(String hash) {
+    this.hash = hash;
+  }
+
+
+
+  /**
+   * Sets the open or closed values.
+   * @param open
+   */
+  public void setOpen(boolean open) {
+    this.open = open;
   }
 
 }
