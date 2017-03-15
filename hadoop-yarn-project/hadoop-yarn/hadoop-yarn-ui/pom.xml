@@ -31,7 +31,7 @@
   <properties>
     <packaging.type>pom</packaging.type>
     <webappTgtDir>${basedir}/target/src/main/webapp</webappTgtDir>
-    <node.executable>node</node.executable>
+    <node.executable>${basedir}/target/src/main/webapp/node/node</node.executable>
     <nodeVersion>v4.4.5</nodeVersion>
     <npmVersion>2.15.5</npmVersion>
     <keep-ui-build-cache>false</keep-ui-build-cache>
@@ -169,12 +169,11 @@
                 </goals>
                 <configuration>
                   <workingDirectory>${webappTgtDir}</workingDirectory>
-                  <executable>ember</executable>
+                  <executable>${node.executable}</executable>
                   <arguments>
-                    <argument>build</argument>
-                    <argument>-prod</argument>
-                    <argument>--output-path</argument>
-                    <argument>${basedir}/target/dist</argument>
+                    <argument>node/npm/bin/npm-cli</argument>
+                    <argument>run</argument>
+                    <argument>build:mvn</argument>
                   </arguments>
                 </configuration>
               </execution>
@@ -187,7 +186,7 @@
             <artifactId>maven-war-plugin</artifactId>
             <configuration>
               <webXml>${basedir}/src/main/webapp/WEB-INF/web.xml</webXml>
-              <warSourceDirectory>${basedir}/target/dist</warSourceDirectory>
+              <warSourceDirectory>${webappTgtDir}/dist</warSourceDirectory>
             </configuration>
           </plugin>
 
