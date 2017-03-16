@@ -100,6 +100,10 @@ public class TestFSSchedulerNode {
         schedulerNode.containersForPreemption.isEmpty());
     assertTrue("No resources should be reserved for preemptees",
         schedulerNode.resourcesPreemptedPerApp.isEmpty());
+    assertEquals(
+        "No resource amount should be reserved for preemptees",
+        Resources.none(),
+        schedulerNode.getTotalReserved());
   }
 
   private void allocateContainers(FSSchedulerNode schedulerNode) {
@@ -177,12 +181,17 @@ public class TestFSSchedulerNode {
             containerNum),
         schedulerNode.getAllocatedResource());
 
-    // Preempt a container
+    // Request preemption
     FSAppAttempt starvingApp = createStarvingApp(schedulerNode,
         Resource.newInstance(1024, 1));
     schedulerNode.addContainersForPreemption(
         Collections.singletonList(containers.get(0)), starvingApp);
+    assertEquals(
+        "No resource amount should be reserved for preemptees",
+        containers.get(0).getAllocatedResource(),
+        schedulerNode.getTotalReserved());
 
+    // Preemption occurs
     schedulerNode.releaseContainer(containers.get(0).getContainerId(), true);
     allocateContainers(schedulerNode);
     assertEquals("Container should be allocated",

@@ -32,9 +32,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicat
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.util.resource.TotalResourceMapDecorator;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 @Private
@@ -50,19 +50,29 @@ public class FSSchedulerNode extends SchedulerNode {
           o2.getContainerId().getContainerId());
     }
   };
+
   private FSAppAttempt reservedAppSchedulable;
   // Stores preemption list until the container is completed
   @VisibleForTesting
   final Set<RMContainer> containersForPreemption =
       new ConcurrentSkipListSet<>(comparator);
-
   // Stores preemption list after the container is completed before assigned
   @VisibleForTesting
-  final Map<FSAppAttempt, Resource> resourcesPreemptedPerApp =
-      new LinkedHashMap<>();
+  final TotalResourceMapDecorator<FSAppAttempt, Resource>
+      resourcesPreemptedPerApp =
+      new TotalResourceMapDecorator<>(new LinkedHashMap<>());
 
   public FSSchedulerNode(RMNode node, boolean usePortForNodeName) {
     super(node, usePortForNodeName);
+  }
+
+  /**
+   * Total amount of reserved resources including reservations and preempted
+   * containers.
+   * @return total resources reserved
+   */
+  Resource getTotalReserved() {
+    return resourcesPreemptedPerApp.getTotalResource();
   }
 
   @Override
@@ -167,14 +177,13 @@ public class FSSchedulerNode extends SchedulerNode {
    */
   void addContainersForPreemption(Collection<RMContainer> containers,
                                   FSAppAttempt app) {
-    if (!resourcesPreemptedPerApp.containsKey(app)) {
-      resourcesPreemptedPerApp.put(app, Resource.newInstance(0, 0));
-    }
-    Resource appReserved = resourcesPreemptedPerApp.get(app);
+
+    Resource appReserved = Resource.newInstance(0, 0);
     for(RMContainer container : containers) {
       containersForPreemption.add(container);
       Resources.addTo(appReserved, container.getAllocatedResource());
     }
+    resourcesPreemptedPerApp.putIfAbsent(app, appReserved);
   }
 
   /**
@@ -205,16 +214,16 @@ public class FSSchedulerNode extends SchedulerNode {
   protected synchronized void allocateContainer(RMContainer rmContainer,
                                                 boolean launchedOnNode) {
     super.allocateContainer(rmContainer, launchedOnNode);
-    if (!Resources.isNone(rmContainer.getAllocatedResource())) {
+    Resource allocated = rmContainer.getAllocatedResource();
+    if (!Resources.isNone(allocated)) {
       for (FSAppAttempt app: resourcesPreemptedPerApp.keySet()) {
         if (app.getApplicationAttemptId().equals(
             rmContainer.getApplicationAttemptId())) {
-          Resource remaining =
-              Resources.subtractFrom(
-                  resourcesPreemptedPerApp.get(app),
-                  rmContainer.getAllocatedResource());
-          if (remaining.getMemorySize() <= 0 &&
-              remaining.getVirtualCores() <= 0) {
+          Resource reserved = resourcesPreemptedPerApp.get(app);
+          Resource fulfilled = Resources.componentwiseMin(reserved, allocated);
+          if (Resources.isNone(Resources.subtract(
+              reserved,
+              fulfilled))) {
             // No more preempted containers
             resourcesPreemptedPerApp.remove(app);
           }

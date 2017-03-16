@@ -160,7 +160,10 @@ class FSPreemptionThread extends Thread {
     containersToCheck.removeAll(node.getContainersForPreemption());
 
     // Initialize potential with unallocated resources
-    Resource potential = Resources.clone(node.getUnallocatedResource());
+    Resource potential = Resources.clone(
+        Resources.componentwiseMax(Resources.none(),
+        Resources.subtract(node.getUnallocatedResource(),
+            node.getTotalReserved())));
 
     for (RMContainer container : containersToCheck) {
       FSAppAttempt app =
