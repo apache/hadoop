@@ -1746,4 +1746,12 @@ public class ContainerImpl implements Container {
   public void commitUpgrade() {
     this.reInitContext = null;
   }
+
+  @Override
+  public boolean isRecovering() {
+    boolean isRecovering = (
+        recoveredStatus != RecoveredContainerStatus.REQUESTED &&
+        getContainerState() == ContainerState.NEW);
+    return isRecovering;
+  }
 }

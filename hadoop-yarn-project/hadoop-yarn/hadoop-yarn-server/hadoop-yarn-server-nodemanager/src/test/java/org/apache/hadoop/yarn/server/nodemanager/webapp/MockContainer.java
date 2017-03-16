@@ -224,4 +224,9 @@ public class MockContainer implements Container {
   public void sendKillEvent(int exitStatus, String description) {
 
   }
+
+  @Override
+  public boolean isRecovering() {
+    return false;
+  }
 }

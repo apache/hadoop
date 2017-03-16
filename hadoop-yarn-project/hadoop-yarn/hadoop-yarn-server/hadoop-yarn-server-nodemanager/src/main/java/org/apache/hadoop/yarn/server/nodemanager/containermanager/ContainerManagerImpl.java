@@ -386,15 +386,15 @@ public class ContainerManagerImpl extends CompositeService implements
     LOG.info("Recovering " + containerId + " in state " + rcs.getStatus()
         + " with exit code " + rcs.getExitCode());
 
-    if (context.getApplications().containsKey(appId)) {
+    Application app = context.getApplications().get(appId);
+    if (app != null) {
       Credentials credentials =
           YarnServerSecurityUtils.parseCredentials(launchContext);
       Container container = new ContainerImpl(getConfig(), dispatcher,
           req.getContainerLaunchContext(),
           credentials, metrics, token, context, rcs);
       context.getContainers().put(containerId, container);
-      dispatcher.getEventHandler().handle(
-          new ApplicationContainerInitEvent(container));
+      app.handle(new ApplicationContainerInitEvent(container));
       if (rcs.getRecoveryType() == RecoveredContainerType.KILL) {
         dispatcher.getEventHandler().handle(
             new ContainerKillEvent(containerId, ContainerExitStatus.ABORTED,
@@ -1234,6 +1234,10 @@ public class ContainerManagerImpl extends CompositeService implements
           + " is not handled by this NodeManager");
       }
     } else {
+      if (container.isRecovering()) {
+        throw new NMNotYetReadyException("Container " + containerIDStr
+            + " is recovering, try later");
+      }
       context.getNMStateStore().storeContainerKilled(containerID);
       container.sendKillEvent(ContainerExitStatus.KILLED_BY_APPMASTER,
           "Container killed by the ApplicationMaster.");
@@ -1377,6 +1381,21 @@ public class ContainerManagerImpl extends CompositeService implements
               + " FINISH_APPS event");
           continue;
         }
+
+        boolean shouldDropEvent = false;
+        for (Container container : app.getContainers().values()) {
+          if (container.isRecovering()) {
+            LOG.info("drop FINISH_APPS event to " + appID + " because "
+                + "container " + container.getContainerId()
+                + " is recovering");
+            shouldDropEvent = true;
+            break;
+          }
+        }
+        if (shouldDropEvent) {
+          continue;
+        }
+
         String diagnostic = "";
         if (appsFinishedEvent.getReason() == CMgrCompletedAppsEvent.Reason.ON_SHUTDOWN) {
           diagnostic = "Application killed on shutdown";
@@ -1391,10 +1410,32 @@ public class ContainerManagerImpl extends CompositeService implements
     case FINISH_CONTAINERS:
       CMgrCompletedContainersEvent containersFinishedEvent =
           (CMgrCompletedContainersEvent) event;
-      for (ContainerId container : containersFinishedEvent
+      for (ContainerId containerId : containersFinishedEvent
           .getContainersToCleanup()) {
-          this.dispatcher.getEventHandler().handle(
-              new ContainerKillEvent(container,
+        ApplicationId appId =
+            containerId.getApplicationAttemptId().getApplicationId();
+        Application app = this.context.getApplications().get(appId);
+        if (app == null) {
+          LOG.warn("couldn't find app " + appId + " while processing"
+              + " FINISH_CONTAINERS event");
+          continue;
+        }
+
+        Container container = app.getContainers().get(containerId);
+        if (container == null) {
+          LOG.warn("couldn't find container " + containerId
+              + " while processing FINISH_CONTAINERS event");
+          continue;
+        }
+
+        if (container.isRecovering()) {
+          LOG.info("drop FINISH_CONTAINERS event to " + containerId
+              + " because container is recovering");
+          continue;
+        }
+
+        this.dispatcher.getEventHandler().handle(
+              new ContainerKillEvent(containerId,
                   ContainerExitStatus.KILLED_BY_RESOURCEMANAGER,
                   "Container Killed by ResourceManager"));
       }
