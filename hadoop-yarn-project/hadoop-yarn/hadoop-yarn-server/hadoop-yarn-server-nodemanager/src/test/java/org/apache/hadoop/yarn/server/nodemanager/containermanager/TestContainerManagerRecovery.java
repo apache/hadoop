@@ -87,6 +87,7 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationFinishEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -246,8 +247,8 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     // simulate application completion
     List<ApplicationId> finishedApps = new ArrayList<ApplicationId>();
     finishedApps.add(appId);
-    cm.handle(new CMgrCompletedAppsEvent(finishedApps,
-        CMgrCompletedAppsEvent.Reason.BY_RESOURCEMANAGER));
+    app.handle(new ApplicationFinishEvent(
+        appId, "Application killed by ResourceManager"));
     waitForAppState(app, ApplicationState.APPLICATION_RESOURCES_CLEANINGUP);
 
     // restart and verify app is marked for finishing
@@ -261,8 +262,8 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     assertNotNull(app);
     // no longer saving FINISH_APP event in NM stateStore,
     // simulate by resending FINISH_APP event
-    cm.handle(new CMgrCompletedAppsEvent(finishedApps,
-        CMgrCompletedAppsEvent.Reason.BY_RESOURCEMANAGER));
+    app.handle(new ApplicationFinishEvent(
+        appId, "Application killed by ResourceManager"));
     waitForAppState(app, ApplicationState.APPLICATION_RESOURCES_CLEANINGUP);
     assertTrue(context.getApplicationACLsManager().checkAccess(
         UserGroupInformation.createRemoteUser(modUser),
@@ -333,8 +334,8 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     // simulate application completion
     List<ApplicationId> finishedApps = new ArrayList<ApplicationId>();
     finishedApps.add(appId);
-    cm.handle(new CMgrCompletedAppsEvent(finishedApps,
-        CMgrCompletedAppsEvent.Reason.BY_RESOURCEMANAGER));
+    app.handle(new ApplicationFinishEvent(
+        appId, "Application killed by ResourceManager"));
     waitForAppState(app, ApplicationState.APPLICATION_RESOURCES_CLEANINGUP);
 
     app.handle(new ApplicationEvent(app.getAppId(),
@@ -355,8 +356,9 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
 
     // no longer saving FINISH_APP event in NM stateStore,
     // simulate by resending FINISH_APP event
-    cm.handle(new CMgrCompletedAppsEvent(finishedApps,
-        CMgrCompletedAppsEvent.Reason.BY_RESOURCEMANAGER));
+    app.handle(new ApplicationFinishEvent(
+        appId, "Application killed by ResourceManager"));
+
     waitForAppState(app, ApplicationState.APPLICATION_RESOURCES_CLEANINGUP);
     // TODO need to figure out why additional APPLICATION_RESOURCES_CLEANEDUP
     // is needed.

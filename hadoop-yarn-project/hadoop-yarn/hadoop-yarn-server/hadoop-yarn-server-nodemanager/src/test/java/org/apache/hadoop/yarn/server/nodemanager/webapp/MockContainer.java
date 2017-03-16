@@ -144,4 +144,9 @@ public class MockContainer implements Container {
   public NMContainerStatus getNMContainerStatus() {
     return null;
   }
+
+  @Override
+  public boolean isRecovering() {
+    return false;
+  }
 }

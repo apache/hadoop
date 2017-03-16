@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.application;
 
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -77,7 +77,7 @@ public class ApplicationImpl implements Application {
   private LogAggregationContext logAggregationContext;
 
   Map<ContainerId, Container> containers =
-      new HashMap<ContainerId, Container>();
+      new ConcurrentHashMap<>();
 
   public ApplicationImpl(Dispatcher dispatcher, String user, ApplicationId appId,
       Credentials credentials, Context context) {
