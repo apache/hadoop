@@ -115,6 +115,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -540,6 +541,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private TopMetrics topMetrics;
 
   private INodeAttributeProvider inodeAttributeProvider;
+
+  private String nameNodeHostName = null;
 
   /**
    * Notify that loading of this FSDirectory is complete, and
@@ -1099,6 +1102,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       dir.setINodeAttributeProvider(inodeAttributeProvider);
     }
     snapshotManager.registerMXBean();
+    InetSocketAddress serviceAddress = NameNode.getServiceAddress(conf, true);
+    this.nameNodeHostName = (serviceAddress != null) ?
+        serviceAddress.getHostName() : "";
   }
   
   /** 
@@ -1370,7 +1376,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private SafeModeException newSafemodeException(String errorMsg) {
     return new SafeModeException(errorMsg + ". Name node is in safe " +
-        "mode.\n" + safeMode.getTurnOffTip());
+        "mode.\n" + safeMode.getTurnOffTip() + " NamenodeHostName:" + nameNodeHostName);
   }
 
   boolean isPermissionEnabled() {

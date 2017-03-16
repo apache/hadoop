@@ -304,6 +304,30 @@ public class TestSafeMode {
     }
   }
 
+  @Test
+  public void testSafeModeExceptionText() throws Exception {
+    final Path file1 = new Path("/file1");
+    DFSTestUtil.createFile(fs, file1, 1024, (short)1, 0);
+    assertTrue("Could not enter SM",
+        dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER));
+    try {
+      FSRun fsRun = new FSRun() {
+        @Override
+        public void run(FileSystem fileSystem) throws IOException {
+          ((DistributedFileSystem)fileSystem).setQuota(file1, 1, 1);
+        }
+      };
+      fsRun.run(fs);
+      fail("Should not succeed with no exceptions!");
+    } catch (RemoteException re) {
+      assertEquals(SafeModeException.class.getName(), re.getClassName());
+      GenericTestUtils.assertExceptionContains(
+          NameNode.getServiceAddress(conf, true).getHostName(), re);
+    } catch (IOException ioe) {
+      fail("Encountered exception" + " " + StringUtils.stringifyException(ioe));
+    }
+  }
+
   /**
    * Run various fs operations while the NN is in safe mode,
    * assert that they are either allowed or fail as expected.
