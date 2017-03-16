@@ -110,6 +110,7 @@ final class Portmap {
       }
     });
     tcpServer.setOption("reuseAddress", true);
+    tcpServer.setOption("child.reuseAddress", true);
 
     udpServer = new ConnectionlessBootstrap(new NioDatagramChannelFactory(
         Executors.newCachedThreadPool()));
