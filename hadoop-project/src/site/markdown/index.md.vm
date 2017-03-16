@@ -30,6 +30,9 @@ Here is a short overview of the major features and improvements.
     *   [Specification work](./hadoop-project-dist/hadoop-common/filesystem/index.html)
         related to the Hadoop Compatible Filesystem (HCFS) effort.
 
+    *   Support integration with Azure Data Lake (ADL) as an alternative
+        Hadoop-compatible file system.
+
 *   HDFS
 
     *   Support for POSIX-style filesystem extended attributes. See the
