@@ -81,6 +81,7 @@ public class SimpleTcpServer {
     });
     server.setOption("child.tcpNoDelay", true);
     server.setOption("child.keepAlive", true);
+    server.setOption("child.reuseAddress", true);
     server.setOption("reuseAddress", true);
 
     // Listen to TCP port

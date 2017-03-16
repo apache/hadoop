@@ -308,7 +308,7 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
     }
 
     @Override
-    boolean isRack() {
+    public boolean isRack() {
       // it is node group
       if (getChildren().isEmpty()) {
         return false;

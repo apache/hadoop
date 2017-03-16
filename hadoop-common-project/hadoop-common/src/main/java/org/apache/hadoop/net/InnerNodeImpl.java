@@ -63,7 +63,7 @@ public class InnerNodeImpl extends NodeBase implements InnerNode {
   /** Judge if this node represents a rack
    * @return true if it has no child or its children are not InnerNodes
    */
-  boolean isRack() {
+  public boolean isRack() {
     if (children.isEmpty()) {
       return true;
     }
@@ -81,7 +81,7 @@ public class InnerNodeImpl extends NodeBase implements InnerNode {
    * @param n a node
    * @return true if this node is an ancestor of <i>n</i>
    */
-  protected boolean isAncestor(Node n) {
+  public boolean isAncestor(Node n) {
     return getPath(this).equals(NodeBase.PATH_SEPARATOR_STR) ||
       (n.getNetworkLocation()+NodeBase.PATH_SEPARATOR_STR).
       startsWith(getPath(this)+NodeBase.PATH_SEPARATOR_STR);
@@ -92,12 +92,12 @@ public class InnerNodeImpl extends NodeBase implements InnerNode {
    * @param n a node
    * @return true if this node is the parent of <i>n</i>
    */
-  protected boolean isParent(Node n) {
+  public boolean isParent(Node n) {
     return n.getNetworkLocation().equals(getPath(this));
   }
 
   /* Return a child name of this node who is an ancestor of node <i>n</i> */
-  protected String getNextAncestorName(Node n) {
+  public String getNextAncestorName(Node n) {
     if (!isAncestor(n)) {
       throw new IllegalArgumentException(
                                          this + "is not an ancestor of " + n);

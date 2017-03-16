@@ -146,6 +146,8 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     LOG.info("cluster hosts: {}, racks: {}", Arrays.asList(hosts),
         Arrays.asList(racks));
 
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf).racks(racks).hosts(hosts)
         .numDataNodes(hosts.length).build();
     cluster.waitActive();
@@ -217,6 +219,8 @@ public class TestReconstructStripedBlocksWithRackAwareness {
 
   @Test
   public void testChooseExcessReplicasToDelete() throws Exception {
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf).racks(racks).hosts(hosts)
         .numDataNodes(hosts.length).build();
     cluster.waitActive();
@@ -267,6 +271,8 @@ public class TestReconstructStripedBlocksWithRackAwareness {
    */
   @Test
   public void testReconstructionWithDecommission() throws Exception {
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     final String[] rackNames = getRacks(dataBlocks + parityBlocks + 2,
         dataBlocks);
     final String[] hostNames = getHosts(dataBlocks + parityBlocks + 2);

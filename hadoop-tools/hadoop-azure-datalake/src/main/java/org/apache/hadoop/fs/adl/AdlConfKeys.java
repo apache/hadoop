@@ -66,7 +66,6 @@ public final class AdlConfKeys {
   static final String ADL_HADOOP_CLIENT_NAME = "hadoop-azure-datalake-";
   static final String ADL_HADOOP_CLIENT_VERSION =
       "2.0.0-SNAPSHOT";
-  static final String ADL_EVENTS_TRACKING_SOURCE = "adl.events.tracking.source";
   static final String ADL_EVENTS_TRACKING_CLUSTERNAME =
       "adl.events.tracking.clustername";
 

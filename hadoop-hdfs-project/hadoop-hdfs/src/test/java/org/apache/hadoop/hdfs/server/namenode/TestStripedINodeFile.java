@@ -311,6 +311,8 @@ public class TestStripedINodeFile {
       final short GROUP_SIZE = (short) (testECPolicy.getNumDataUnits() +
           testECPolicy.getNumParityUnits());
       conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY, 2);
+      conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+          StripedFileTestUtil.getDefaultECPolicy().getName());
 
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(GROUP_SIZE)
           .build();
@@ -386,6 +388,8 @@ public class TestStripedINodeFile {
         1L);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
 
     // start 10 datanodes
     int numOfDatanodes = 10;

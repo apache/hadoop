@@ -4179,7 +4179,7 @@ public class BlockManager implements BlockStatsMXBean {
     BlockPlacementPolicy placementPolicy = placementPolicies
         .getPolicy(blockType);
     int numReplicas = blockType == STRIPED ? ((BlockInfoStriped) storedBlock)
-        .getRealDataBlockNum() : storedBlock.getReplication();
+        .getRealTotalBlockNum() : storedBlock.getReplication();
     return placementPolicy.verifyBlockPlacement(locs, numReplicas)
         .isPlacementPolicySatisfied();
   }

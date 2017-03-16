@@ -55,6 +55,8 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
   private Configuration getConf() {
     Configuration conf = super.getConf(numDNs);
     conf.setInt("io.bytes.per.checksum", cellSize);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     return conf;
   }
 
@@ -114,6 +116,8 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
   public void testEnd2End() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     new TestBalancer().integrationTestWithStripedFile(conf);
   }
 

@@ -48,6 +48,8 @@ public class TestErasureCodingPolicyWithSnapshot {
   @Before
   public void setupCluster() throws IOException {
     conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        sysDefaultPolicy.getName());
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();

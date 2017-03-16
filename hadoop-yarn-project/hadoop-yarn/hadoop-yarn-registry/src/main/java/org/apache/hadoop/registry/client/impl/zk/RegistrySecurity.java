@@ -154,6 +154,8 @@ public class RegistrySecurity extends AbstractService {
    */
   private final List<ACL> systemACLs = new ArrayList<ACL>();
 
+  private boolean usesRealm = true;
+
   /**
    * A list of digest ACLs which can be added to permissions
    * —and cleared later.
@@ -232,6 +234,7 @@ public class RegistrySecurity extends AbstractService {
       // System Accounts
       String system = getOrFail(KEY_REGISTRY_SYSTEM_ACCOUNTS,
                                 DEFAULT_REGISTRY_SYSTEM_ACCOUNTS);
+      usesRealm = system.contains("@");
 
       systemACLs.addAll(buildACLs(system, kerberosRealm, ZooDefs.Perms.ALL));
 
@@ -395,7 +398,12 @@ public class RegistrySecurity extends AbstractService {
    * @return a new ACL
    */
   public ACL createSaslACL(UserGroupInformation ugi, int perms) {
-    String userName = ugi.getUserName();
+    String userName = null;
+    if (usesRealm) {
+      userName = ugi.getUserName();
+    } else {
+      userName = ugi.getShortUserName();
+    }
     return new ACL(perms, new Id(SCHEME_SASL, userName));
   }
 
@@ -958,7 +966,7 @@ public class RegistrySecurity extends AbstractService {
    * @return an ACL for the user
    */
   public ACL createACLfromUsername(String username, int perms) {
-    if (!username.contains("@")) {
+    if (usesRealm && !username.contains("@")) {
       username = username + "@" + kerberosRealm;
       if (LOG.isDebugEnabled()) {
         LOG.debug("Appending kerberos realm to make {}", username);

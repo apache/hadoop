@@ -725,6 +725,8 @@ public class TestNameNodeMXBean {
     DistributedFileSystem fs = null;
     try {
       Configuration conf = new HdfsConfiguration();
+      conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+          StripedFileTestUtil.getDefaultECPolicy().getName());
       int dataBlocks = StripedFileTestUtil.getDefaultECPolicy().getNumDataUnits();
       int parityBlocks =
           StripedFileTestUtil.getDefaultECPolicy().getNumParityUnits();

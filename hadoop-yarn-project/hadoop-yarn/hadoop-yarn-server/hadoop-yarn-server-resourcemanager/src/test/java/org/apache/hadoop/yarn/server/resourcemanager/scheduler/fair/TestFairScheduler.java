@@ -5201,6 +5201,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSParentQueue parent =
         scheduler.getQueueManager().getParentQueue("parent", false);
     parent.setMaxShare(resource);
+    parent.updateDemand();
 
     String parentQueueString = "{Name: root.parent,"
         + " Weight: <memory weight=1.0, cpu weight=1.0>,"
@@ -5210,7 +5211,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         + " MaxShare: <memory:4096, vCores:4>,"
         + " MinShare: <memory:0, vCores:0>,"
         + " ResourceUsage: <memory:4096, vCores:4>,"
-        + " Demand: <memory:0, vCores:0>,"
+        + " Demand: <memory:4096, vCores:4>,"
         + " MaxAMShare: 0.5,"
         + " Runnable: 0}";
 

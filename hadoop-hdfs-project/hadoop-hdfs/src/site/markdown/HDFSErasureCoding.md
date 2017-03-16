@@ -66,7 +66,7 @@ Architecture
 
     Policies are named *codec*-*num data blocks*-*num parity blocks*-*cell size*. Currently, five built-in policies are supported: `RS-3-2-64k`, `RS-6-3-64k`, `RS-10-4-64k`, `RS-LEGACY-6-3-64k`, and `XOR-2-1-64k`.
 
-    By default, only `RS-6-3-64k` is enabled.
+    By default, all built-in erasure coding policies are disabled.
 
     Similar to HDFS storage policies, erasure coding policies are set on a directory. When a file is created, it inherits the EC policy of its nearest ancestor directory.
 
@@ -91,15 +91,20 @@ Deployment
   Network bisection bandwidth is thus very important.
 
   For rack fault-tolerance, it is also important to have at least as many racks as the configured EC stripe width.
-  For the default EC policy of RS (6,3), this means minimally 9 racks, and ideally 10 or 11 to handle planned and unplanned outages.
+  For EC policy RS (6,3), this means minimally 9 racks, and ideally 10 or 11 to handle planned and unplanned outages.
   For clusters with fewer racks than the stripe width, HDFS cannot maintain rack fault-tolerance, but will still attempt
   to spread a striped file across multiple nodes to preserve node-level fault-tolerance.
 
 ### Configuration keys
 
-  The set of enabled erasure coding policies can be configured on the NameNode via `dfs.namenode.ec.policies.enabled`. This restricts what EC policies can be set by clients. It does not affect the behavior of already set file or directory-level EC policies.
+  The set of enabled erasure coding policies can be configured on the NameNode via `dfs.namenode.ec.policies.enabled` configuration. This restricts
+  what EC policies can be set by clients. It does not affect the behavior of already set file or directory-level EC policies.
 
-  By default, only the `RS-6-3-64k` policy is enabled. Typically, the cluster administrator will configure the set of enabled policies based on the size of the cluster and the desired fault-tolerance properties. For instance, for a cluster with 9 racks, a policy like `RS-10-4-64k` will not preserve rack-level fault-tolerance, and `RS-6-3-64k` or `RS-3-2-64k` might be more appropriate. If the administrator only cares about node-level fault-tolerance, `RS-10-4-64k` would still be appropriate as long as there are at least 14 DataNodes in the cluster.
+  By default, all built-in erasure coding policies are disabled. Typically, the cluster administrator will enable set of policies by including them
+  in the `dfs .namenode.ec.policies.enabled` configuration based on the size of the cluster and the desired fault-tolerance properties. For instance,
+  for a cluster with 9 racks, a policy like `RS-10-4-64k` will not preserve rack-level fault-tolerance, and `RS-6-3-64k` or `RS-3-2-64k` might
+  be more appropriate. If the administrator only cares about node-level fault-tolerance, `RS-10-4-64k` would still be appropriate as long as
+  there are at least 14 DataNodes in the cluster.
 
   The codec implementation for Reed-Solomon and XOR can be configured with the following client and DataNode configuration keys:
   `io.erasurecode.codec.rs.rawcoder` for the default RS codec,

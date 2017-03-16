@@ -98,12 +98,15 @@ public final class ErasureCodingPolicyManager {
         DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_DEFAULT);
     this.enabledPoliciesByName = new TreeMap<>();
     for (String policyName : policyNames) {
+      if (policyName.trim().isEmpty()) {
+        continue;
+      }
       ErasureCodingPolicy ecPolicy = SYSTEM_POLICIES_BY_NAME.get(policyName);
       if (ecPolicy == null) {
         String sysPolicies = Arrays.asList(SYS_POLICIES).stream()
             .map(ErasureCodingPolicy::getName)
             .collect(Collectors.joining(", "));
-        String msg = String.format("EC policy %s specified at %s is not a " +
+        String msg = String.format("EC policy '%s' specified at %s is not a " +
             "valid policy. Please choose from list of available policies: " +
             "[%s]",
             policyName,

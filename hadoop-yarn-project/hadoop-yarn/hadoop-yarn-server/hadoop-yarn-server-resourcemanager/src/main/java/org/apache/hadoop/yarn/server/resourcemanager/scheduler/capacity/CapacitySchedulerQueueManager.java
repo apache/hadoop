@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -312,10 +313,12 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         existingQueues.put(queueName, queue);
       }
     }
-    for (Map.Entry<String, CSQueue> e : existingQueues.entrySet()) {
+    for (Iterator<Map.Entry<String, CSQueue>> itr = existingQueues.entrySet()
+        .iterator(); itr.hasNext();) {
+      Map.Entry<String, CSQueue> e = itr.next();
       String queueName = e.getKey();
       if (!newQueues.containsKey(queueName)) {
-        existingQueues.remove(queueName);
+        itr.remove();
       }
     }
   }
