@@ -41,6 +41,9 @@ Here is a short overview of the major features and improvements.
 
     *   Add posixGroups support for LDAP groups mapping service.
 
+    *   Support integration with Azure Data Lake (ADL) as an alternative
+        Hadoop-compatible file system.
+
 *   HDFS
 
     *   WebHDFS enhancements: integrate CSRF prevention filter in WebHDFS,
