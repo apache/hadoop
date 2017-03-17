@@ -297,6 +297,11 @@ public class CLITestHelper {
     
     return compareOutput;
   }
+
+  private boolean compareTextExitCode(ComparatorData compdata,
+      Result cmdResult) {
+    return compdata.getExitCode() == cmdResult.getExitCode();
+  }
   
   /***********************************
    ************* TESTS RUNNER
@@ -329,10 +334,17 @@ public class CLITestHelper {
         final String comptype = cd.getComparatorType();
         
         boolean compareOutput = false;
+        boolean compareExitCode = false;
         
         if (! comptype.equalsIgnoreCase("none")) {
           compareOutput = compareTestOutput(cd, cmdResult);
-          overallTCResult &= compareOutput;
+          if (cd.getExitCode() == -1) {
+            // No need to check exit code if not specified
+            compareExitCode = true;
+          } else {
+            compareExitCode = compareTextExitCode(cd, cmdResult);
+          }
+          overallTCResult &= (compareOutput & compareExitCode);
         }
         
         cd.setExitCode(cmdResult.getExitCode());
@@ -390,6 +402,7 @@ public class CLITestHelper {
         testComparators = new ArrayList<ComparatorData>();
       } else if (qName.equals("comparator")) {
         comparatorData = new ComparatorData();
+        comparatorData.setExitCode(-1);
       }
       charString = "";
     }
@@ -421,6 +434,8 @@ public class CLITestHelper {
         comparatorData.setComparatorType(charString);
       } else if (qName.equals("expected-output")) {
         comparatorData.setExpectedOutput(charString);
+      } else if (qName.equals("expected-exit-code")) {
+        comparatorData.setExitCode(Integer.valueOf(charString));
       } else if (qName.equals("test")) {
         if (!Shell.WINDOWS || runOnWindows) {
           testsFromConfigFile.add(td);
