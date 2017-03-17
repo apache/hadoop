@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.metrics;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -52,7 +54,8 @@ public class DataNodeDiskMetrics {
   private volatile boolean shouldRun;
   private OutlierDetector slowDiskDetector;
   private Daemon slowDiskDetectionDaemon;
-  private volatile Map<String, Map<DiskOutlierDetectionOp, Double>> diskOutliersStats;
+  private volatile Map<String, Map<DiskOutlierDetectionOp, Double>>
+      diskOutliersStats = Maps.newHashMap();
 
   public DataNodeDiskMetrics(DataNode dn, long diskOutlierDetectionIntervalMs) {
     this.dn = dn;
@@ -177,5 +180,13 @@ public class DataNodeDiskMetrics {
     } catch (InterruptedException e) {
       LOG.error("Disk Outlier Detection daemon did not shutdown", e);
     }
+  }
+
+  /**
+   * Use only for testing.
+   */
+  @VisibleForTesting
+  public void addSlowDiskForTesting(String slowDiskPath) {
+    diskOutliersStats.put(slowDiskPath, ImmutableMap.of());
   }
 }

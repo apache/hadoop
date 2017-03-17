@@ -132,4 +132,11 @@ public interface DataNodeMXBean {
    * </p>
    */
   String getSendPacketDownstreamAvgInfo();
+
+  /**
+   * Gets the slow disks in the Datanode.
+   *
+   * @return list of slow disks
+   */
+  String getSlowDisks();
 }
