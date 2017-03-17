@@ -101,7 +101,7 @@ public class TestFSSchedulerNode {
     assertTrue("No resources should be reserved for preemptees",
         schedulerNode.resourcesPreemptedPerApp.isEmpty());
     assertEquals(
-        "No resource amount should be reserved for preemptees",
+        "No amount of resource should be reserved for preemptees",
         Resources.none(),
         schedulerNode.getTotalReserved());
   }
