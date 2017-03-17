@@ -233,7 +233,7 @@ public class CryptoAdmin extends Configured implements Tool {
         final FileEncryptionInfo fei =
             admin.getFileEncryptionInfo(p);
         if (fei == null) {
-          System.out.println("No FileEncryptionInfo found for path " + path);
+          System.err.println("No FileEncryptionInfo found for path " + path);
           return 2;
         }
         System.out.println(fei.toStringStable());
