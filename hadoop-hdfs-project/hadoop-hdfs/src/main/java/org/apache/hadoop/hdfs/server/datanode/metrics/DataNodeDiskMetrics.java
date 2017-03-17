@@ -187,6 +187,7 @@ public class DataNodeDiskMetrics {
    */
   @VisibleForTesting
   public void addSlowDiskForTesting(String slowDiskPath) {
-    diskOutliersStats.put(slowDiskPath, ImmutableMap.of());
+    diskOutliersStats.put(slowDiskPath,
+        ImmutableMap.<DiskOutlierDetectionOp, Double>of());
   }
 }
