@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,15 +34,16 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
 /**
  * Test the performance of glob operations.
  */
-public class TestS3AGlobPerformance extends S3AScaleTestBase {
+public class ITestS3AGlobPerformance extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
-      TestS3AGlobPerformance.class);
+      ITestS3AGlobPerformance.class);
 
   @Test
   public void testGlobOperations() throws Throwable {
     describe("Test recursive list operations");
     final Path scaleTestDir = getTestPath();
     final Path listDir = new Path(scaleTestDir, "lists");
+    S3AFileSystem fs = getFileSystem();
 
     // scale factor.
     int scale = getConf().getInt(KEY_DIRECTORY_COUNT, DEFAULT_DIRECTORY_COUNT);
@@ -76,9 +78,7 @@ public class TestS3AGlobPerformance extends S3AScaleTestBase {
         listStatusCalls,
         getFileStatusCalls);
 
-
     try {
-
       // Scan the directory via an explicit tree walk.
       // This is the baseline for any listing speedups.
       describe("Listing files via treewalk");
@@ -120,6 +120,8 @@ public class TestS3AGlobPerformance extends S3AScaleTestBase {
   }
 
   private TreeScanResults compareGlobs(Path globPattern) throws IOException {
+    S3AFileSystem fs = getFileSystem();
+
     MetricDiff metadataRequests = new MetricDiff(fs, OBJECT_METADATA_REQUESTS);
     MetricDiff listRequests = new MetricDiff(fs, OBJECT_LIST_REQUESTS);
     MetricDiff listContinueRequests =
@@ -167,7 +169,7 @@ public class TestS3AGlobPerformance extends S3AScaleTestBase {
       throws IOException {
     NanoTimer timer = new NanoTimer();
     TreeScanResults results = new TreeScanResults(
-        fs.globStatusClassic(globPattern, trueFilter));
+        getFileSystem().globStatusClassic(globPattern, trueFilter));
     timer.end("Classic Glob of %s: %s", globPattern, results);
     return results;
   }
@@ -182,7 +184,7 @@ public class TestS3AGlobPerformance extends S3AScaleTestBase {
       throws IOException {
     NanoTimer timer = new NanoTimer();
     TreeScanResults results = new TreeScanResults(
-        fs.globStatus(globPattern, trueFilter));
+        getFileSystem().globStatus(globPattern, trueFilter));
     timer.end("S3A Glob of %s: %s", globPattern, results);
     return results;
   }
