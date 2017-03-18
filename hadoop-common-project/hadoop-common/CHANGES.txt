@@ -34,6 +34,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-14138. Remove S3A ref from META-INF service discovery, rely on
     existing core-default entry (Steve Loughran via jlowe)
 
+    HADOOP-14169. Implement listStatusIterator, listLocatedStatus for ViewFs.
+    (Erik Krogen via shv)
+
   BUG FIXES
 
     HADOOP-13362. DefaultMetricsSystem leaks the source name when a source

@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
@@ -387,26 +388,32 @@ public class ViewFs extends AbstractFileSystem {
     if (res.isInternalDir()) {
       return fsIter;
     }
-    
-    return new RemoteIterator<FileStatus>() {
-      final RemoteIterator<FileStatus> myIter;
-      final ChRootedFs targetFs;
-      { // Init
-          myIter = fsIter;
-          targetFs = (ChRootedFs) res.targetFileSystem;
-      }
-      
+
+    return new WrappingRemoteIterator<FileStatus>(res, fsIter, f) {
       @Override
-      public boolean hasNext() throws IOException {
-        return myIter.hasNext();
+      public FileStatus getViewFsFileStatus(FileStatus stat, Path newPath) {
+        return new ViewFsFileStatus(stat, newPath);
       }
-      
+    };
+  }
+
+  @Override
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f)
+      throws AccessControlException, FileNotFoundException,
+      UnresolvedLinkException, IOException {
+    final InodeTree.ResolveResult<AbstractFileSystem> res =
+        fsState.resolve(getUriPath(f), true);
+    final RemoteIterator<LocatedFileStatus> fsIter =
+        res.targetFileSystem.listLocatedStatus(res.remainingPath);
+    if (res.isInternalDir()) {
+      return fsIter;
+    }
+
+    return new WrappingRemoteIterator<LocatedFileStatus>(res, fsIter, f) {
       @Override
-      public FileStatus next() throws IOException {
-        FileStatus status =  myIter.next();
-        String suffix = targetFs.stripOutRoot(status.getPath());
-        return new ViewFsFileStatus(status, makeQualified(
-            suffix.length() == 0 ? f : new Path(res.resolvedPath, suffix)));
+      public LocatedFileStatus getViewFsFileStatus(LocatedFileStatus stat,
+          Path newPath) {
+        return new ViewFsLocatedFileStatus(stat, newPath);
       }
     };
   }
@@ -716,8 +723,43 @@ public class ViewFs extends AbstractFileSystem {
         fsState.resolve(getUriPath(path), true);
     res.targetFileSystem.removeXAttr(res.remainingPath, name);
   }
-  
-  
+
+  /**
+   * Helper class to perform some transformation on results returned
+   * from a RemoteIterator.
+   */
+  private abstract class WrappingRemoteIterator<T extends FileStatus>
+      implements RemoteIterator<T> {
+    private final String resolvedPath;
+    private final ChRootedFs targetFs;
+    private final RemoteIterator<T> innerIter;
+    private final Path originalPath;
+
+    WrappingRemoteIterator(InodeTree.ResolveResult<AbstractFileSystem> res,
+        RemoteIterator<T> innerIter, Path originalPath) {
+      this.resolvedPath = res.resolvedPath;
+      this.targetFs = (ChRootedFs)res.targetFileSystem;
+      this.innerIter = innerIter;
+      this.originalPath = originalPath;
+    }
+
+    @Override
+    public boolean hasNext() throws IOException {
+      return innerIter.hasNext();
+    }
+
+    @Override
+    public T next() throws IOException {
+      T status =  innerIter.next();
+      String suffix = targetFs.stripOutRoot(status.getPath());
+      Path newPath = makeQualified(suffix.length() == 0 ? originalPath
+          : new Path(resolvedPath, suffix));
+      return getViewFsFileStatus(status, newPath);
+    }
+
+    protected abstract T getViewFsFileStatus(T status, Path newPath);
+  }
+
   /*
    * An instance of this class represents an internal dir of the viewFs 
    * ie internal dir of the mount table.
