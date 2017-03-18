@@ -231,7 +231,9 @@ class Globber {
         }
         for (FileStatus candidate : candidates) {
           if (globFilter.hasPattern()) {
-            FileStatus[] children = listStatus(candidate.getPath());
+            Path path = candidate.getPath();
+            path.filter = globFilter;
+            FileStatus[] children = listStatus(path);
             if (children.length == 1) {
               // If we get back only one result, this could be either a listing
               // of a directory with one entry, or it could reflect the fact
