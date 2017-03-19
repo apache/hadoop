@@ -32,79 +32,79 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 
 /**
  * Distribute application-specific large, read-only files efficiently.
- * 
+ *
  * <p><code>DistributedCache</code> is a facility provided by the Map-Reduce
  * framework to cache files (text, archives, jars etc.) needed by applications.
  * </p>
- * 
- * <p>Applications specify the files, via urls (hdfs:// or http://) to be cached 
+ *
+ * <p>Applications specify the files, via urls (hdfs:// or http://) to be cached
  * via the {@link org.apache.hadoop.mapred.JobConf}. The
  * <code>DistributedCache</code> assumes that the files specified via urls are
  * already present on the {@link FileSystem} at the path specified by the url
  * and are accessible by every machine in the cluster.</p>
- * 
- * <p>The framework will copy the necessary files on to the slave node before 
- * any tasks for the job are executed on that node. Its efficiency stems from 
- * the fact that the files are only copied once per job and the ability to 
- * cache archives which are un-archived on the slaves.</p> 
+ *
+ * <p>The framework will copy the necessary files on to the worker node before
+ * any tasks for the job are executed on that node. Its efficiency stems from
+ * the fact that the files are only copied once per job and the ability to
+ * cache archives which are un-archived on the workers.</p>
  *
  * <p><code>DistributedCache</code> can be used to distribute simple, read-only
- * data/text files and/or more complex types such as archives, jars etc. 
- * Archives (zip, tar and tgz/tar.gz files) are un-archived at the slave nodes. 
- * Jars may be optionally added to the classpath of the tasks, a rudimentary 
+ * data/text files and/or more complex types such as archives, jars etc.
+ * Archives (zip, tar and tgz/tar.gz files) are un-archived at the worker nodes.
+ * Jars may be optionally added to the classpath of the tasks, a rudimentary
  * software distribution mechanism.  Files have execution permissions.
  * In older version of Hadoop Map/Reduce users could optionally ask for symlinks
- * to be created in the working directory of the child task.  In the current 
- * version symlinks are always created.  If the URL does not have a fragment 
- * the name of the file or directory will be used. If multiple files or 
+ * to be created in the working directory of the child task.  In the current
+ * version symlinks are always created.  If the URL does not have a fragment
+ * the name of the file or directory will be used. If multiple files or
  * directories map to the same link name, the last one added, will be used.  All
  * others will not even be downloaded.</p>
- * 
- * <p><code>DistributedCache</code> tracks modification timestamps of the cache 
- * files. Clearly the cache files should not be modified by the application 
+ *
+ * <p><code>DistributedCache</code> tracks modification timestamps of the cache
+ * files. Clearly the cache files should not be modified by the application
  * or externally while the job is executing.</p>
- * 
- * <p>Here is an illustrative example on how to use the 
+ *
+ * <p>Here is an illustrative example on how to use the
  * <code>DistributedCache</code>:</p>
  * <p><blockquote><pre>
  *     // Setting up the cache for the application
- *     
+ *
  *     1. Copy the requisite files to the <code>FileSystem</code>:
- *     
- *     $ bin/hadoop fs -copyFromLocal lookup.dat /myapp/lookup.dat  
- *     $ bin/hadoop fs -copyFromLocal map.zip /myapp/map.zip  
+ *
+ *     $ bin/hadoop fs -copyFromLocal lookup.dat /myapp/lookup.dat
+ *     $ bin/hadoop fs -copyFromLocal map.zip /myapp/map.zip
  *     $ bin/hadoop fs -copyFromLocal mylib.jar /myapp/mylib.jar
  *     $ bin/hadoop fs -copyFromLocal mytar.tar /myapp/mytar.tar
  *     $ bin/hadoop fs -copyFromLocal mytgz.tgz /myapp/mytgz.tgz
  *     $ bin/hadoop fs -copyFromLocal mytargz.tar.gz /myapp/mytargz.tar.gz
- *     
+ *
  *     2. Setup the application's <code>JobConf</code>:
- *     
+ *
  *     JobConf job = new JobConf();
- *     DistributedCache.addCacheFile(new URI("/myapp/lookup.dat#lookup.dat"), 
+ *     DistributedCache.addCacheFile(new URI("/myapp/lookup.dat#lookup.dat"),
  *                                   job);
- *     DistributedCache.addCacheArchive(new URI("/myapp/map.zip", job);
+ *     DistributedCache.addCacheArchive(new URI("/myapp/map.zip"), job);
  *     DistributedCache.addFileToClassPath(new Path("/myapp/mylib.jar"), job);
- *     DistributedCache.addCacheArchive(new URI("/myapp/mytar.tar", job);
- *     DistributedCache.addCacheArchive(new URI("/myapp/mytgz.tgz", job);
- *     DistributedCache.addCacheArchive(new URI("/myapp/mytargz.tar.gz", job);
- *     
+ *     DistributedCache.addCacheArchive(new URI("/myapp/mytar.tar"), job);
+ *     DistributedCache.addCacheArchive(new URI("/myapp/mytgz.tgz"), job);
+ *     DistributedCache.addCacheArchive(new URI("/myapp/mytargz.tar.gz"), job);
+ *
  *     3. Use the cached files in the {@link org.apache.hadoop.mapred.Mapper}
  *     or {@link org.apache.hadoop.mapred.Reducer}:
- *     
- *     public static class MapClass extends MapReduceBase  
+ *
+ *     public static class MapClass extends MapReduceBase
  *     implements Mapper&lt;K, V, K, V&gt; {
- *     
+ *
  *       private Path[] localArchives;
  *       private Path[] localFiles;
- *       
+ *
  *       public void configure(JobConf job) {
  *         // Get the cached archives/files
  *         File f = new File("./map.zip/some/file/in/zip.txt");
  *       }
- *       
- *       public void map(K key, V value, 
- *                       OutputCollector&lt;K, V&gt; output, Reporter reporter) 
+ *
+ *       public void map(K key, V value,
+ *                       OutputCollector&lt;K, V&gt; output, Reporter reporter)
  *       throws IOException {
  *         // Use data from the cached archives/files here
  *         // ...
@@ -112,7 +112,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
  *         output.collect(k, v);
  *       }
  *     }
- *     
+ *
  * </pre></blockquote>
  *
  * It is also very common to use the DistributedCache by using
