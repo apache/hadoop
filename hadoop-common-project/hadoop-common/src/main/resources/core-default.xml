@@ -1317,6 +1317,19 @@
   </description>
 </property>
 
+  <!-- Azure Data Lake File System Configurations -->
+
+  <property>
+    <name>fs.adl.impl</name>
+    <value>org.apache.hadoop.fs.adl.AdlFileSystem</value>
+  </property>
+
+  <property>
+    <name>fs.AbstractFileSystem.adl.impl</name>
+    <value>org.apache.hadoop.fs.adl.Adl</value>
+  </property>
+
+  <!-- Azure Data Lake File System Configurations Ends Here-->
 
 <property>
   <name>io.seqfile.compress.blocksize</name>

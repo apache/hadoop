@@ -112,6 +112,12 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.azure.secure.mode");
     xmlPropsToSkipCompare.add("fs.azure.authorization");
 
+    // ADL properties are in a different subtree
+    // - org.apache.hadoop.hdfs.web.ADLConfKeys
+    xmlPrefixToSkipCompare.add("adl.");
+    xmlPropsToSkipCompare.add("fs.adl.impl");
+    xmlPropsToSkipCompare.add("fs.AbstractFileSystem.adl.impl");
+
     // Deprecated properties.  These should eventually be removed from the
     // class.
     configurationPropsToSkipCompare
