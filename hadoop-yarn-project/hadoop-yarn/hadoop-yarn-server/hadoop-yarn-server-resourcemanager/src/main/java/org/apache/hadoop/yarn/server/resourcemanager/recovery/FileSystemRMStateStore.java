@@ -321,7 +321,7 @@ public class FileSystemRMStateStore extends RMStateStore {
           }
           break;
         } catch (Exception ex) {
-          LOG.warn("Skipping state loading for " + dir.getPath() + 
+          LOG.warn("Skipping state loading for " + dir.getPath() +
                   " app's directory because of exception" +
                   " to prevent RM restart failure", ex);
           break;

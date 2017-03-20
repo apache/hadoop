@@ -214,9 +214,9 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
             new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     try {
       fsTester = new TestFSRMStateStoreTester(cluster, false);
-      // If the state store is FileSystemRMStateStore 
+      // If the state store is FileSystemRMStateStore
       // then add invalid application data.
-      // It should discard the entry and remove application 
+      // It should discard the entry and remove application
       // with broken data from the file system.
       FileSystemRMStateStore fileSystemRMStateStore =
               (FileSystemRMStateStore) fsTester.getRMStateStore();
@@ -227,9 +227,9 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
               fsTester.store.getAppDir(appId.toString());
       Path tempAppFile =
               new Path(appDir, appId.toString());
-      
+
       // write invalid data
-      try (FSDataOutputStream fsOut = 
+      try (FSDataOutputStream fsOut =
                    fileSystemRMStateStore.fs.create(tempAppFile, false)) {
         fsOut.write("\\00\\00\\00\\00\\00".getBytes());
       }
