@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.container.common.statemachine;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.util.Time;
@@ -44,13 +45,16 @@ public class DatanodeStateMachine implements Closeable {
   private final long heartbeatFrequency;
   private StateContext context;
   private final OzoneContainer container;
+  private DatanodeID datanodeID = null;
 
   /**
    * Constructs a a datanode state machine.
    *
+   * @param datanodeID - DatanodeID used to identify a datanode
    * @param conf - Configration.
    */
-  public DatanodeStateMachine(Configuration conf) throws IOException {
+  public DatanodeStateMachine(DatanodeID datanodeID,
+      Configuration conf) throws IOException {
     this.conf = conf;
     executorService = HadoopExecutors.newCachedThreadPool(
                 new ThreadFactoryBuilder().setDaemon(true)
@@ -60,6 +64,26 @@ public class DatanodeStateMachine implements Closeable {
     heartbeatFrequency = TimeUnit.SECONDS.toMillis(
         OzoneClientUtils.getScmHeartbeatInterval(conf));
     container = new OzoneContainer(conf);
+    this.datanodeID = datanodeID;
+  }
+
+  public DatanodeStateMachine(Configuration conf)
+      throws IOException {
+    this(null, conf);
+  }
+
+  public void setDatanodeID(DatanodeID datanodeID) {
+    this.datanodeID = datanodeID;
+  }
+
+  /**
+   *
+   * Return DatanodeID if set, return null otherwise.
+   *
+   * @return datanodeID
+   */
+  public DatanodeID getDatanodeID() {
+    return this.datanodeID;
   }
 
   /**
@@ -71,10 +95,14 @@ public class DatanodeStateMachine implements Closeable {
     return connectionManager;
   }
 
+  public OzoneContainer getContainer() {
+    return this.container;
+  }
+
   /**
    * Runs the state machine at a fixed frequency.
    */
-  public void start() throws IOException {
+  private void start() throws IOException {
     long now = 0;
     long nextHB = 0;
     container.start();
@@ -216,12 +244,14 @@ public class DatanodeStateMachine implements Closeable {
     }
   }
 
-  public static DatanodeStateMachine initStateMachine(Configuration conf)
-      throws IOException {
-    DatanodeStateMachine stateMachine = new DatanodeStateMachine(conf);
+  /**
+   * Start datanode state machine as a single thread daemon.
+   */
+  public void startDaemon() {
     Runnable startStateMachineTask = () -> {
       try {
-        stateMachine.start();
+        start();
+        LOG.info("Ozone container server started.");
       } catch (Exception ex) {
         LOG.error("Unable to start the DatanodeState Machine", ex);
       }
@@ -231,6 +261,32 @@ public class DatanodeStateMachine implements Closeable {
         .setNameFormat("Datanode State Machine Thread - %d")
         .build().newThread(startStateMachineTask);
     thread.start();
-    return stateMachine;
+  }
+
+  /**
+   * Stop the daemon thread of the datanode state machine.
+   */
+  public synchronized void stopDaemon() {
+    try {
+      context.setState(DatanodeStates.SHUTDOWN);
+      this.close();
+      LOG.info("Ozone container server stopped.");
+    } catch (IOException e) {
+      LOG.error("Stop ozone container server failed.", e);
+    }
+  }
+
+  /**
+   *
+   * Check if the datanode state machine daemon is stopped.
+   *
+   * @return True if datanode state machine daemon is stopped
+   * and false otherwise.
+   */
+  @VisibleForTesting
+  public boolean isDaemonStopped() {
+    return this.executorService.isShutdown()
+        && this.getContext().getExecutionCount() == 0
+        && this.getContext().getState() == DatanodeStates.SHUTDOWN;
   }
 }

@@ -81,6 +81,15 @@ public class StateContext {
   }
 
   /**
+   * Get the container server port.
+   * @return The container server port if available, return -1 if otherwise
+   */
+  public int getContainerPort() {
+    return parent == null ?
+        -1 : parent.getContainer().getContainerServerPort();
+  }
+
+  /**
    * Returns true if we are entering a new state.
    *
    * @return boolean

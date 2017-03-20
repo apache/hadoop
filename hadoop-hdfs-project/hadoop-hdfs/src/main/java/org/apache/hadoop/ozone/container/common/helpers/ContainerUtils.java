@@ -22,6 +22,8 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
 import org.apache.hadoop.utils.LevelDBStore;
@@ -30,9 +32,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.apache.commons.io.FilenameUtils.removeExtension;
 import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
@@ -366,5 +372,84 @@ public final class ContainerUtils {
 
     FileUtils.forceDelete(containerPath.toFile());
     FileUtils.forceDelete(metaPath.toFile());
+  }
+
+  /**
+   * Write datanode ID protobuf messages to an ID file.
+   * The old ID file will be overwritten.
+   *
+   * @param ids A set of {@link DatanodeID}
+   * @param path Local ID file path
+   * @throws IOException When read/write error occurs
+   */
+  private synchronized static void writeDatanodeIDs(List<DatanodeID> ids,
+      File path) throws IOException {
+    if (path.exists()) {
+      if (!path.delete() || !path.createNewFile()) {
+        throw new IOException("Unable to overwrite the datanode ID file.");
+      }
+    } else {
+      if(!path.getParentFile().exists() &&
+          !path.getParentFile().mkdirs()) {
+        throw new IOException("Unable to create datanode ID directories.");
+      }
+    }
+    try (FileOutputStream out = new FileOutputStream(path)) {
+      for (DatanodeID id : ids) {
+        HdfsProtos.DatanodeIDProto dnId = id.getProtoBufMessage();
+        dnId.writeDelimitedTo(out);
+      }
+    }
+  }
+
+  /**
+   * Persistent a {@link DatanodeID} to a local file.
+   * It reads the IDs first and append a new entry only if the ID is new.
+   * This is to avoid on some dirty environment, this file gets too big.
+   *
+   * @throws IOException when read/write error occurs
+   */
+  public synchronized static void writeDatanodeIDTo(DatanodeID dnID,
+      File path) throws IOException {
+    List<DatanodeID> ids = ContainerUtils.readDatanodeIDsFrom(path);
+    // Only create or overwrite the file
+    // if the ID doesn't exist in the ID file
+    for (DatanodeID id : ids) {
+      if (id.getProtoBufMessage()
+          .equals(dnID.getProtoBufMessage())) {
+        return;
+      }
+    }
+    ids.add(dnID);
+    writeDatanodeIDs(ids, path);
+  }
+
+  /**
+   * Read {@link DatanodeID} from a local ID file and return a set of
+   * datanode IDs. If the ID file doesn't exist, an empty set is returned.
+   *
+   * @param path ID file local path
+   * @return A set of {@link DatanodeID}
+   * @throws IOException If the id file is malformed or other I/O exceptions
+   */
+  public synchronized static List<DatanodeID> readDatanodeIDsFrom(File path)
+      throws IOException {
+    List<DatanodeID> ids = new ArrayList<DatanodeID>();
+    if (!path.exists()) {
+      return ids;
+    }
+    try(FileInputStream in = new FileInputStream(path)) {
+      while(in.available() > 0) {
+        try {
+          HdfsProtos.DatanodeIDProto id =
+              HdfsProtos.DatanodeIDProto.parseDelimitedFrom(in);
+          ids.add(DatanodeID.getFromProtoBuf(id));
+        } catch (IOException e) {
+          throw new IOException("Failed to parse Datanode ID from "
+              + path.getAbsolutePath(), e);
+        }
+      }
+    }
+    return ids;
   }
 }

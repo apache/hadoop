@@ -19,8 +19,7 @@ package org.apache.hadoop.ozone.container.common.states.datanode;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.ozone.OzoneClientUtils;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.EndpointStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
@@ -35,16 +34,11 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
@@ -83,63 +77,30 @@ public class RunningDatanodeState implements DatanodeState {
   private StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto
       readPersistedDatanodeID(Path idPath) throws IOException {
     Preconditions.checkNotNull(idPath);
-    StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto
-        containerIDProto;
-    try (FileInputStream stream = new FileInputStream(idPath.toFile())) {
-      containerIDProto = StorageContainerDatanodeProtocolProtos
-          .ContainerNodeIDProto.parseFrom(stream);
-      return containerIDProto;
+    DatanodeID datanodeID = null;
+    List<DatanodeID> datanodeIDs =
+        ContainerUtils.readDatanodeIDsFrom(idPath.toFile());
+    int containerPort = this.context.getContainerPort();
+    for(DatanodeID dnId : datanodeIDs) {
+      if(dnId.getContainerPort() == containerPort) {
+        datanodeID = dnId;
+        break;
+      }
     }
-  }
 
-  /**
-   * Create a DatanodeID from the datanode information.
-   *
-   * @return DatanodeID
-   * @throws UnknownHostException
-   */
-  private DatanodeID createDatanodeID() throws UnknownHostException {
-    DatanodeID temp = new DatanodeID(
-        //TODO : Replace this with proper network and kerberos
-        // support code.
-        InetAddress.getLocalHost().getHostAddress(),
-        DataNode.getHostName(conf),
-        UUID.randomUUID().toString(),
-        0, /** XferPort - SCM does not use this port  */
-        0, /** Info port - SCM does not use this port */
-        0, /** Info Secure Port - SCM does not use this port */
-        0); /** IPC port - SCM does not use this port */
-
-    // TODO: make this dynamically discoverable. SCM can hand out this
-    // port number to calling applications. This makes it easy to run multiple
-    // container endpoints on the same machine.
-    temp.setContainerPort(OzoneClientUtils.getContainerPort(conf));
-    return temp;
-  }
-
-  /**
-   * Creates a new ContainerID that persists both DatanodeID and ClusterID.
-   *
-   * @param idPath Path to the id file.
-   * @return ContainerNodeIDProto
-   * @throws UnknownHostException
-   */
-  private StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto
-      createNewContainerID(Path idPath)
-      throws IOException {
-
-    if(!idPath.getParent().toFile().exists() &&
-        !idPath.getParent().toFile().mkdirs()) {
-      LOG.error("Failed to create container ID locations. Path: {}",
-          idPath.getParent());
-      throw new IOException("Unable to create container ID directories.");
-    }
-    StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto
-        containerIDProto = StorageContainerDatanodeProtocolProtos
-        .ContainerNodeIDProto.newBuilder()
-        .setDatanodeID(createDatanodeID().getProtoBufMessage()).build();
-    try (FileOutputStream stream = new FileOutputStream(idPath.toFile())) {
-      stream.write(containerIDProto.toByteArray());
+    if (datanodeID == null) {
+      throw new IOException("No valid datanode ID found from "
+          + idPath.toFile().getAbsolutePath()
+          + " that matches container port "
+          + containerPort);
+    } else {
+      StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto
+          containerIDProto =
+          StorageContainerDatanodeProtocolProtos
+              .ContainerNodeIDProto
+              .newBuilder()
+              .setDatanodeID(datanodeID.getProtoBufMessage())
+              .build();
       return containerIDProto;
     }
   }
@@ -171,15 +132,7 @@ public class RunningDatanodeState implements DatanodeState {
     } catch (IOException ex) {
       LOG.trace("Not able to find container Node ID, creating it.", ex);
     }
-    // Not found, let us create a new datanode ID, persist it and return that
-    // info to SCM.
-    try {
-      nodeID = createNewContainerID(Paths.get(dataNodeIDPath));
-      LOG.trace("Created Node ID :", nodeID.getDatanodeID().getDatanodeUuid());
-      return nodeID;
-    } catch (IOException ex) {
-      LOG.error("Creating new node ID failed.", ex);
-    }
+    this.context.setState(DatanodeStateMachine.DatanodeStates.SHUTDOWN);
     return null;
   }
 

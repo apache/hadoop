@@ -30,6 +30,20 @@ public final class OzoneConfigKeys {
   public static final String DFS_CONTAINER_IPC_PORT =
       "dfs.container.ipc";
   public static final int DFS_CONTAINER_IPC_PORT_DEFAULT = 50011;
+
+  /**
+   *
+   * When set to true, allocate a random free port for ozone container,
+   * so that a mini cluster is able to launch multiple containers on a node.
+   *
+   * When set to false (default), container port is fixed as specified by
+   * DFS_CONTAINER_IPC_PORT_DEFAULT.
+   */
+  public static final String DFS_CONTAINER_IPC_RANDOM_PORT =
+      "dfs.container.ipc.random.port";
+  public static final boolean DFS_CONTAINER_IPC_RANDOM_PORT_DEFAULT =
+      false;
+
   public static final String OZONE_LOCALSTORAGE_ROOT =
       "ozone.localstorage.root";
   public static final String OZONE_LOCALSTORAGE_ROOT_DEFAULT = "/tmp/ozone";

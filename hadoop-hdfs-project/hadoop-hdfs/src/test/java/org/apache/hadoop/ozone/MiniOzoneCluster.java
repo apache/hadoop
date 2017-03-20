@@ -173,6 +173,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
         LOG.info("Waiting for cluster to be ready. Got {} of {} DN Heartbeats.",
             scm.getNodeCount(SCMNodeManager.NODESTATE.HEALTHY),
             numDataNodes);
+
         return false;
       }
     }, 1000, 5 * 60 * 1000); //wait for 5 mins.
@@ -228,6 +229,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
     private Boolean ozoneEnabled = true;
     private Boolean waitForChillModeFinish = true;
     private int containerWorkerThreadInterval = 1;
+    private Boolean randomContainerPort = true;
 
     /**
      * Creates a new Builder.
@@ -245,6 +247,11 @@ public final class MiniOzoneCluster extends MiniDFSCluster
       path = p.getPath().concat(MiniOzoneCluster.class.getSimpleName() + UUID
           .randomUUID().toString());
       runID = UUID.randomUUID();
+    }
+
+    public Builder setRandomContainerPort(boolean randomPort) {
+      this.randomContainerPort = randomPort;
+      return this;
     }
 
     @Override
@@ -319,6 +326,10 @@ public final class MiniOzoneCluster extends MiniDFSCluster
       conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
       conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
 
+      // Use random ports for ozone containers in mini cluster,
+      // in order to launch multiple container servers per node.
+      conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT,
+          randomContainerPort);
 
       StorageContainerManager scm = new StorageContainerManager(conf);
       scm.start();

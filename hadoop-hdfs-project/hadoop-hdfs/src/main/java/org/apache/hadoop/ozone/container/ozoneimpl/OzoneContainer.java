@@ -167,4 +167,13 @@ public class OzoneContainer {
   public SCMNodeReport getNodeReport() throws IOException {
     return this.manager.getNodeReport();
   }
+
+  /**
+   * Returns the container server IPC port.
+   *
+   * @return Container server IPC port.
+   */
+  public int getContainerServerPort() {
+    return server.getIPCPort();
+  }
 }

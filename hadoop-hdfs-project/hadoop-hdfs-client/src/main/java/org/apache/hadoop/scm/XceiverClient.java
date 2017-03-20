@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.scm;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -85,6 +86,15 @@ public class XceiverClient implements XceiverClientSpi {
     }
     LOG.debug("Connecting to server Port : " + port);
     channelFuture = b.connect(leader.getHostName(), port).sync();
+  }
+
+  /**
+   * Returns if the exceiver client connects to a server.
+   * @return True if the connection is alive, false otherwise.
+   */
+  @VisibleForTesting
+  public boolean isConnected() {
+    return channelFuture.channel().isActive();
   }
 
   @Override

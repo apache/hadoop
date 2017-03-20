@@ -28,4 +28,7 @@ public interface XceiverServerSpi {
 
   /** Stops a running server. */
   void stop();
+
+  /** Get server IPC port. */
+  int getIPCPort();
 }
