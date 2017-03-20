@@ -57,6 +57,7 @@ public class TestOzoneContainer {
     MiniOzoneCluster cluster = null;
     try {
       cluster = new MiniOzoneCluster.Builder(conf)
+          .setRandomContainerPort(false)
           .setHandlerType("distributed").build();
       // We don't start Ozone Container via data node, we will do it
       // independently in our test path.
@@ -108,6 +109,7 @@ public class TestOzoneContainer {
           pipeline.getLeader().getContainerPort());
 
       cluster = new MiniOzoneCluster.Builder(conf)
+          .setRandomContainerPort(false)
           .setHandlerType("distributed").build();
 
       // This client talks to ozone container via datanode.
@@ -208,6 +210,7 @@ public class TestOzoneContainer {
           pipeline.getLeader().getContainerPort());
 
       cluster = new MiniOzoneCluster.Builder(conf)
+          .setRandomContainerPort(false)
           .setHandlerType("distributed").build();
 
       // This client talks to ozone container via datanode.
@@ -273,6 +276,7 @@ public class TestOzoneContainer {
           pipeline.getLeader().getContainerPort());
 
       cluster = new MiniOzoneCluster.Builder(conf)
+          .setRandomContainerPort(false)
           .setHandlerType("distributed").build();
 
       // This client talks to ozone container via datanode.
@@ -364,5 +368,4 @@ public class TestOzoneContainer {
       }
     }
   }
-
 }

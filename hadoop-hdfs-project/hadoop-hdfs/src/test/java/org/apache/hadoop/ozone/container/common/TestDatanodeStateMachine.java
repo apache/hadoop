@@ -18,7 +18,10 @@ package org.apache.hadoop.ozone.container.common;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.EndpointStateMachine;
@@ -51,6 +54,7 @@ import java.util.concurrent.TimeoutException;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_HEARTBEAT_RPC_TIMEOUT;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests the datanode state machine class and its states.
@@ -134,14 +138,18 @@ public class TestDatanodeStateMachine {
    * @throws InterruptedException
    */
   @Test
-  public void testDatanodeStateMachineStartThread() throws IOException,
+  public void testStartStopDatanodeStateMachine() throws IOException,
       InterruptedException, TimeoutException {
     try (DatanodeStateMachine stateMachine =
-        DatanodeStateMachine.initStateMachine(conf)) {
+        new DatanodeStateMachine(conf)) {
+      stateMachine.startDaemon();
       SCMConnectionManager connectionManager =
           stateMachine.getConnectionManager();
       GenericTestUtils.waitFor(() -> connectionManager.getValues().size() == 3,
           1000, 30000);
+
+      stateMachine.stopDaemon();
+      assertTrue(stateMachine.isDaemonStopped());
     }
   }
 
@@ -178,6 +186,15 @@ public class TestDatanodeStateMachine {
   @Test
   public void testDatanodeStateContext() throws IOException,
       InterruptedException, ExecutionException, TimeoutException {
+    // There is no mini cluster started in this test,
+    // create a ID file so that state machine could load a fake datanode ID.
+    File idPath = new File(
+        conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID));
+    idPath.delete();
+    DatanodeID dnID = DFSTestUtil.getLocalDatanodeID();
+    dnID.setContainerPort(ScmConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
+    ContainerUtils.writeDatanodeIDTo(dnID, idPath);
+
     try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(conf)) {
       DatanodeStateMachine.DatanodeStates currentState =
           stateMachine.getContext().getState();

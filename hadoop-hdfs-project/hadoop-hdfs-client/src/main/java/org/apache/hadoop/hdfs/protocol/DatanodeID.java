@@ -318,9 +318,8 @@ public class DatanodeID implements Comparable<DatanodeID> {
   public HdfsProtos.DatanodeIDProto getProtoBufMessage() {
     HdfsProtos.DatanodeIDProto.Builder builder =
         HdfsProtos.DatanodeIDProto.newBuilder();
-
     return builder.setDatanodeUuid(this.getDatanodeUuid())
-        .setIpAddr(this.getIpcAddr())
+        .setIpAddr(this.getIpAddr())
         .setHostName(this.getHostName())
         .setXferPort(this.getXferPort())
         .setInfoPort(this.getInfoPort())

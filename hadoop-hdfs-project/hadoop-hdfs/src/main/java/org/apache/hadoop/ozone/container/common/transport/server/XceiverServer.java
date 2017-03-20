@@ -29,15 +29,20 @@ import io.netty.handler.logging.LoggingHandler;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.ServerSocket;
 
 /**
  * Creates a netty server endpoint that acts as the communication layer for
  * Ozone containers.
  */
 public final class XceiverServer implements XceiverServerSpi {
-  private final int port;
+  private static final Logger
+      LOG = LoggerFactory.getLogger(XceiverServer.class);
+  private int port;
   private final ContainerDispatcher storageContainer;
 
   private EventLoopGroup bossGroup;
@@ -52,9 +57,28 @@ public final class XceiverServer implements XceiverServerSpi {
   public XceiverServer(Configuration conf,
                        ContainerDispatcher dispatcher) {
     Preconditions.checkNotNull(conf);
+
     this.port = conf.getInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
         OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
+    // Get an available port on current node and
+    // use that as the container port
+    if (conf.getBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT,
+        OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT_DEFAULT)) {
+      try (ServerSocket socket = new ServerSocket(0)) {
+        socket.setReuseAddress(true);
+        this.port = socket.getLocalPort();
+        LOG.info("Found a free port for the server : {}", this.port);
+      } catch (IOException e) {
+        LOG.error("Unable find a random free port for the server, "
+            + "fallback to use default port {}", this.port, e);
+      }
+    }
     this.storageContainer = dispatcher;
+  }
+
+  @Override
+  public int getIPCPort() {
+    return this.port;
   }
 
   @Override

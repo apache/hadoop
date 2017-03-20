@@ -18,14 +18,19 @@ package org.apache.hadoop.ozone.container.common.states.datanode;
 
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneClientUtils;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.states.DatanodeState;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.concurrent.Callable;
@@ -87,7 +92,27 @@ public class InitDatanodeState implements DatanodeState,
         connectionManager.addSCMServer(addr);
       }
     }
+
+    // If datanode ID is set, persist it to the ID file.
+    persistContainerDatanodeID();
+
     return this.context.getState().getNextState();
+  }
+
+  /**
+   * Update Ozone container port to the datanode ID,
+   * and persist the ID to a local file.
+   */
+  private void persistContainerDatanodeID() throws IOException {
+    String dataNodeIDPath = conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID);
+    File idPath = new File(dataNodeIDPath);
+    int containerPort = this.context.getContainerPort();
+    DatanodeID datanodeID = this.context.getParent().getDatanodeID();
+    if (datanodeID != null) {
+      datanodeID.setContainerPort(containerPort);
+      ContainerUtils.writeDatanodeIDTo(datanodeID, idPath);
+      LOG.info("Datanode ID is persisted to {}", dataNodeIDPath);
+    }
   }
 
   /**
