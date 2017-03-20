@@ -20,14 +20,29 @@ package org.apache.hadoop.fs.azure;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.Validate;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azure.security.Constants;
+import org.apache.hadoop.fs.azure.security.SecurityUtils;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.client.Authenticator;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticator;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.security.PrivilegedExceptionAction;
+import java.util.Iterator;
 
 import static org.apache.hadoop.fs.azure.WasbRemoteCallHelper.REMOTE_CALL_SUCCESS_CODE;
 
@@ -39,7 +54,10 @@ import static org.apache.hadoop.fs.azure.WasbRemoteCallHelper.REMOTE_CALL_SUCCES
  */
 public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
 
-  private String remoteAuthorizerServiceUrl = "";
+  public static final Logger LOG = LoggerFactory
+      .getLogger(RemoteWasbAuthorizerImpl.class);
+
+  private String remoteAuthorizerServiceUrl = null;
 
   /**
    * Configuration parameter name expected in the Configuration object to
@@ -70,9 +88,12 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
    * Query parameter name for user info {@value}
    */
   private static final String DELEGATION_TOKEN_QUERY_PARAM_NAME =
-      "delegation_token";
+      "delegation";
 
   private WasbRemoteCallHelper remoteCallHelper = null;
+  private String delegationToken;
+  private boolean isSecurityEnabled;
+  private boolean isKerberosSupportEnabled;
 
   @VisibleForTesting
   public void updateWasbRemoteCallHelper(WasbRemoteCallHelper helper) {
@@ -82,55 +103,113 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
   @Override
   public void init(Configuration conf)
       throws WasbAuthorizationException, IOException {
+    LOG.debug("Initializing RemoteWasbAuthorizerImpl instance");
+    Iterator<Token<? extends TokenIdentifier>> tokenIterator = null;
+    try {
+          delegationToken = SecurityUtils.getDelegationTokenFromCredentials();
+    } catch (IOException e) {
+      final String msg = "Error in fetching the WASB delegation token";
+      LOG.error(msg, e);
+      throw new IOException(msg, e);
+    }
 
-    remoteAuthorizerServiceUrl = conf.get(KEY_REMOTE_AUTH_SERVICE_URL);
+    remoteAuthorizerServiceUrl = SecurityUtils
+        .getRemoteAuthServiceUrls(conf);
 
     if (remoteAuthorizerServiceUrl == null
           || remoteAuthorizerServiceUrl.isEmpty()) {
       throw new WasbAuthorizationException(
           "fs.azure.authorization.remote.service.url config not set"
-          + " in configuration.");
+              + " in configuration.");
     }
 
     this.remoteCallHelper = new WasbRemoteCallHelper();
+    this.isSecurityEnabled = UserGroupInformation.isSecurityEnabled();
+    this.isKerberosSupportEnabled = conf
+        .getBoolean(Constants.AZURE_KERBEROS_SUPPORT_PROPERTY_NAME, false);
   }
 
   @Override
-  public boolean authorize(String wasbAbsolutePath, String accessType,
-      String delegationToken) throws WasbAuthorizationException, IOException {
+  public boolean authorize(String wasbAbsolutePath, String accessType)
+      throws WasbAuthorizationException, IOException {
+      try {
+        final URIBuilder uriBuilder = new URIBuilder(remoteAuthorizerServiceUrl);
+        uriBuilder.setPath("/" + CHECK_AUTHORIZATION_OP);
+        uriBuilder.addParameter(WASB_ABSOLUTE_PATH_QUERY_PARAM_NAME,
+            wasbAbsolutePath);
+        uriBuilder.addParameter(ACCESS_OPERATION_QUERY_PARAM_NAME,
+            accessType);
+        if (isSecurityEnabled && StringUtils.isNotEmpty(delegationToken)) {
+          uriBuilder.addParameter(DELEGATION_TOKEN_QUERY_PARAM_NAME,
+              delegationToken);
+        }
 
-    try {
-      URIBuilder uriBuilder = new URIBuilder(remoteAuthorizerServiceUrl);
-      uriBuilder.setPath("/" + CHECK_AUTHORIZATION_OP);
-      uriBuilder.addParameter(WASB_ABSOLUTE_PATH_QUERY_PARAM_NAME,
-          wasbAbsolutePath);
-      uriBuilder.addParameter(ACCESS_OPERATION_QUERY_PARAM_NAME,
-          accessType);
-      uriBuilder.addParameter(DELEGATION_TOKEN_QUERY_PARAM_NAME,
-          delegationToken);
+        String responseBody = null;
+        UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+        UserGroupInformation connectUgi = ugi.getRealUser();
+        if (connectUgi == null) {
+          connectUgi = ugi;
+        } else {
+          uriBuilder.addParameter(Constants.DOAS_PARAM, ugi.getShortUserName());
+        }
+        if (isSecurityEnabled && !connectUgi.hasKerberosCredentials()) {
+          connectUgi = UserGroupInformation.getLoginUser();
+        }
+        connectUgi.checkTGTAndReloginFromKeytab();
 
-      String responseBody = remoteCallHelper.makeRemoteGetRequest(
-          new HttpGet(uriBuilder.build()));
+        try {
+          responseBody = connectUgi
+              .doAs(new PrivilegedExceptionAction<String>() {
+                @Override
+                public String run() throws Exception {
+                  AuthenticatedURL.Token token = null;
+                  HttpGet httpGet = new HttpGet(uriBuilder.build());
+                  if (isKerberosSupportEnabled && UserGroupInformation
+                      .isSecurityEnabled() && (delegationToken == null
+                      || delegationToken.isEmpty())) {
+                    token = new AuthenticatedURL.Token();
+                    final Authenticator kerberosAuthenticator = new KerberosDelegationTokenAuthenticator();
+                    try {
+                      kerberosAuthenticator
+                          .authenticate(uriBuilder.build().toURL(), token);
+                      Validate.isTrue(token.isSet(),
+                          "Authenticated Token is NOT present. The request cannot proceed.");
+                    } catch (AuthenticationException e){
+                      throw new IOException("Authentication failed in check authorization", e);
+                    }
+                    if (token != null) {
+                      httpGet.setHeader("Cookie",
+                          AuthenticatedURL.AUTH_COOKIE + "=" + token);
+                    }
+                  }
+                  return remoteCallHelper.makeRemoteGetRequest(httpGet);
+                }
+              });
+        } catch (InterruptedException e) {
+          LOG.error("Error in check authorization", e);
+          throw new WasbAuthorizationException("Error in check authorize", e);
+        }
 
-      ObjectMapper objectMapper = new ObjectMapper();
-      RemoteAuthorizerResponse authorizerResponse =
-          objectMapper.readValue(responseBody, RemoteAuthorizerResponse.class);
+        ObjectMapper objectMapper = new ObjectMapper();
+        RemoteAuthorizerResponse authorizerResponse =
+            objectMapper
+            .readValue(responseBody, RemoteAuthorizerResponse.class);
 
-      if (authorizerResponse == null) {
-        throw new WasbAuthorizationException(
-            "RemoteAuthorizerResponse object null from remote call");
-      } else if (authorizerResponse.getResponseCode()
-          == REMOTE_CALL_SUCCESS_CODE) {
-        return authorizerResponse.getAuthorizationResult();
-      } else {
-        throw new WasbAuthorizationException("Remote authorization"
-            + " service encountered an error "
-            + authorizerResponse.getResponseMessage());
+        if (authorizerResponse == null) {
+          throw new WasbAuthorizationException(
+              "RemoteAuthorizerResponse object null from remote call");
+        } else if (authorizerResponse.getResponseCode()
+            == REMOTE_CALL_SUCCESS_CODE) {
+          return authorizerResponse.getAuthorizationResult();
+        } else {
+          throw new WasbAuthorizationException("Remote authorization"
+              + " serivce encountered an error "
+              + authorizerResponse.getResponseMessage());
+        }
+      } catch (URISyntaxException | WasbRemoteCallException
+          | JsonParseException | JsonMappingException ex) {
+        throw new WasbAuthorizationException(ex);
       }
-    } catch (URISyntaxException | WasbRemoteCallException
-        | JsonParseException | JsonMappingException ex) {
-      throw new WasbAuthorizationException(ex);
-    }
   }
 }
 

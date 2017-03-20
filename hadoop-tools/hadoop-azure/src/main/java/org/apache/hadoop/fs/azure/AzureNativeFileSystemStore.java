@@ -478,7 +478,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         this.storageInteractionLayer = new StorageInterfaceImpl();
       } else {
         this.storageInteractionLayer = new SecureStorageInterfaceImpl(
-            useLocalSasKeyMode, conf, delegationToken);
+            useLocalSasKeyMode, conf);
       }
     }
 
