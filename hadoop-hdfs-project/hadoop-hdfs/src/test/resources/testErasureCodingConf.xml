@@ -72,6 +72,22 @@
     </test>
 
     <test>
+      <description>help: help with extra argument</description>
+      <test-commands>
+        <ec-admin-command>-help arg1 arg2</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>You must give exactly one argument to -help.</expected-output>
+          <expected-exit-code>1</expected-exit-code>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
       <description>help: setPolicy command</description>
       <test-commands>
         <ec-admin-command>-fs NAMENODE -help setPolicy</ec-admin-command>

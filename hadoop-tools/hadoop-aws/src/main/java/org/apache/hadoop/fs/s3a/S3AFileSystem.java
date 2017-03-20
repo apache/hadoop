@@ -866,7 +866,7 @@ public class S3AFileSystem extends FileSystem {
       //Verify dest is not a child of the source directory
       if (dstKey.startsWith(srcKey)) {
         throw new RenameFailedException(srcKey, dstKey,
-            "cannot rename a directory to a subdirectory o fitself ");
+            "cannot rename a directory to a subdirectory of itself ");
       }
 
       List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>();

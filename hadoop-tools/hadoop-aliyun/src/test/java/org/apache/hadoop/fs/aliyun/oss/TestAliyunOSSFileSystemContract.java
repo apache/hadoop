@@ -38,8 +38,8 @@ import java.io.IOException;
 public class TestAliyunOSSFileSystemContract
     extends FileSystemContractBaseTest {
   public static final String TEST_FS_OSS_NAME = "test.fs.oss.name";
-  private static String testRootPath =
-      AliyunOSSTestUtils.generateUniqueTestPath();
+  private static Path testRootPath =
+      new Path(AliyunOSSTestUtils.generateUniqueTestPath());
 
   @Override
   public void setUp() throws Exception {
@@ -49,20 +49,8 @@ public class TestAliyunOSSFileSystemContract
   }
 
   @Override
-  public void tearDown() throws Exception {
-    if (fs != null) {
-      fs.delete(super.path(testRootPath), true);
-    }
-    super.tearDown();
-  }
-
-  @Override
-  protected Path path(String path) {
-    if (path.startsWith("/")) {
-      return super.path(testRootPath + path);
-    } else {
-      return super.path(testRootPath + "/" + path);
-    }
+  public Path getTestBaseDir() {
+    return testRootPath;
   }
 
   @Override
@@ -226,21 +214,6 @@ public class TestAliyunOSSFileSystemContract
     } catch (FileAlreadyExistsException e) {
       // expected
     }
-  }
-
-  public void testWorkingDirectory() throws Exception {
-    Path workDir = super.path(this.getDefaultWorkingDirectory());
-    assertEquals(workDir, this.fs.getWorkingDirectory());
-    this.fs.setWorkingDirectory(super.path("."));
-    assertEquals(workDir, this.fs.getWorkingDirectory());
-    this.fs.setWorkingDirectory(super.path(".."));
-    assertEquals(workDir.getParent(), this.fs.getWorkingDirectory());
-    Path relativeDir = super.path("hadoop");
-    this.fs.setWorkingDirectory(relativeDir);
-    assertEquals(relativeDir, this.fs.getWorkingDirectory());
-    Path absoluteDir = super.path("/test/hadoop");
-    this.fs.setWorkingDirectory(absoluteDir);
-    assertEquals(absoluteDir, this.fs.getWorkingDirectory());
   }
 
 }

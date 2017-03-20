@@ -941,5 +941,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
   public boolean isRegistered() {
     return isAlive() && !forceRegistration;
   }
+
+  public boolean hasStorageType(StorageType type) {
+    for (DatanodeStorageInfo dnStorage : getStorageInfos()) {
+      if (dnStorage.getStorageType() == type) {
+        return true;
+      }
+    }
+    return false;
+  }
 }
 

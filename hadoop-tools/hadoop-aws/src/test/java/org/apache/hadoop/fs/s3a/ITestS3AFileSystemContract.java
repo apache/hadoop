@@ -59,35 +59,13 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
 
     fs = S3ATestUtils.createTestFileSystem(conf);
     basePath = fs.makeQualified(
-        S3ATestUtils.createTestPath(new Path("/s3afilesystemcontract")));
+        S3ATestUtils.createTestPath(new Path("s3afilesystemcontract")));
     super.setUp();
   }
 
-  /**
-   * This path explicitly places all absolute paths under the per-test suite
-   * path directory; this allows the test to run in parallel.
-   * @param pathString path string as input
-   * @return a qualified path string.
-   */
-  protected Path path(String pathString) {
-    if (pathString.startsWith("/")) {
-      return fs.makeQualified(new Path(basePath, pathString));
-    } else {
-      return super.path(pathString);
-    }
-  }
-
   @Override
-  protected void tearDown() throws Exception {
-    if (fs != null) {
-      try {
-        LOG.info("Deleting {}", basePath);
-        fs.delete(basePath, true);
-      } catch (IOException e) {
-        LOG.info("Failed to delete {}", basePath);
-      }
-    }
-    super.tearDown();
+  public Path getTestBaseDir() {
+    return basePath;
   }
 
   @Override
@@ -101,22 +79,22 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
       return;
     }
 
-    Path src = path("/test/hadoop/dir");
+    Path src = path("testRenameDirectoryAsExisting/dir");
     fs.mkdirs(src);
-    createFile(path("/test/hadoop/dir/file1"));
-    createFile(path("/test/hadoop/dir/subdir/file2"));
+    createFile(path(src + "/file1"));
+    createFile(path(src + "/subdir/file2"));
 
-    Path dst = path("/test/new/newdir");
+    Path dst = path("testRenameDirectoryAsExistingNew/newdir");
     fs.mkdirs(dst);
     rename(src, dst, true, false, true);
     assertFalse("Nested file1 exists",
-                fs.exists(path("/test/hadoop/dir/file1")));
+        fs.exists(path(src + "/file1")));
     assertFalse("Nested file2 exists",
-                fs.exists(path("/test/hadoop/dir/subdir/file2")));
+        fs.exists(path(src + "/subdir/file2")));
     assertTrue("Renamed nested file1 exists",
-               fs.exists(path("/test/new/newdir/file1")));
+        fs.exists(path(dst + "/file1")));
     assertTrue("Renamed nested exists",
-               fs.exists(path("/test/new/newdir/subdir/file2")));
+        fs.exists(path(dst + "/subdir/file2")));
   }
 
 //  @Override

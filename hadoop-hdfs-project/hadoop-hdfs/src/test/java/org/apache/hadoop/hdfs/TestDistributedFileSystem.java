@@ -1030,13 +1030,6 @@ public class TestDistributedFileSystem {
         out.close();
       }
 
-      // verify the magic val for zero byte files
-      {
-        final FileChecksum zeroChecksum = hdfs.getFileChecksum(zeroByteFile);
-        assertEquals(zeroChecksum.toString(),
-            "MD5-of-0MD5-of-0CRC32:70bc8f4b72a86921468bf8e8441dce51");
-      }
-
       //write another file
       final Path bar = new Path(dir, "bar" + n);
       {
@@ -1045,8 +1038,19 @@ public class TestDistributedFileSystem {
         out.write(data);
         out.close();
       }
-  
-      { //verify checksum
+
+      {
+        final FileChecksum zeroChecksum = hdfs.getFileChecksum(zeroByteFile);
+        final String magicValue =
+            "MD5-of-0MD5-of-0CRC32:70bc8f4b72a86921468bf8e8441dce51";
+        // verify the magic val for zero byte files
+        assertEquals(magicValue, zeroChecksum.toString());
+
+        //verify checksums for empty file and 0 request length
+        final FileChecksum checksumWith0 = hdfs.getFileChecksum(bar, 0);
+        assertEquals(zeroChecksum, checksumWith0);
+
+        //verify checksum
         final FileChecksum barcs = hdfs.getFileChecksum(bar);
         final int barhashcode = barcs.hashCode();
         assertEquals(hdfsfoocs.hashCode(), barhashcode);

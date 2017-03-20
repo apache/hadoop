@@ -176,11 +176,11 @@ public class AdminHelper {
         for (AdminHelper.Command command : commands) {
           System.err.println(command.getLongUsage());
         }
-        return 0;
+        return 1;
       }
       if (args.size() != 1) {
-        System.out.println("You must give exactly one argument to -help.");
-        return 0;
+        System.err.println("You must give exactly one argument to -help.");
+        return 1;
       }
       final String commandName = args.get(0);
       // prepend a dash to match against the command names

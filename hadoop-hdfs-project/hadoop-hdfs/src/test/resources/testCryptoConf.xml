@@ -47,6 +47,37 @@
     </test>
 
     <test>
+      <description>Test help usage</description>
+      <test-commands>
+        <crypto-admin-command>-help</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>[-createZone -keyName</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test extra help argument</description>
+      <test-commands>
+        <crypto-admin-command>-help arg1 arg2</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>You must give exactly one argument to -help.</expected-output>
+          <expected-exit-code>1</expected-exit-code>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
       <description>Test create ez, dir doesn't exist</description>
       <test-commands>
         <command>-fs NAMENODE -ls /test</command>-
