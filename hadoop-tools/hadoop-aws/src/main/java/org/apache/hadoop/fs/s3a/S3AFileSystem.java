@@ -2403,11 +2403,13 @@ public class S3AFileSystem extends FileSystem {
           "No partitions have been uploaded");
       LOG.debug("Completing multipart upload {} with {} parts",
           uploadId, partETags.size());
+      // a copy of the list is required, so that the AWS SDK doesn't
+      // attempt to sort an unmodifiable list.
       return s3.completeMultipartUpload(
           new CompleteMultipartUploadRequest(bucket,
               key,
               uploadId,
-              partETags));
+              new ArrayList<>(partETags)));
     }
 
     /**
