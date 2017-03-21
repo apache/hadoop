@@ -143,6 +143,7 @@ public interface S3ATestConstants {
   String TEST_S3GUARD_IMPLEMENTATION = TEST_S3GUARD_PREFIX + ".implementation";
   String TEST_S3GUARD_IMPLEMENTATION_LOCAL = "local";
   String TEST_S3GUARD_IMPLEMENTATION_DYNAMO = "dynamo";
+  String TEST_S3GUARD_IMPLEMENTATION_DYNAMODBLOCAL = "dynamodblocal";
   String TEST_S3GUARD_IMPLEMENTATION_NONE = "none";
 
   /**

@@ -30,6 +30,7 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -43,7 +44,8 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet;
  *
  * Implementation should be configured for setting and getting configuration.
  */
-interface DynamoDBClientFactory extends Configurable {
+@InterfaceAudience.Private
+public interface DynamoDBClientFactory extends Configurable {
   Logger LOG = LoggerFactory.getLogger(DynamoDBClientFactory.class);
 
   /**
@@ -77,6 +79,26 @@ interface DynamoDBClientFactory extends Configurable {
       final ClientConfiguration awsConf =
           DefaultS3ClientFactory.createAwsConf(conf);
 
+      final String region = getRegion(conf, defaultRegion);
+      LOG.debug("Creating DynamoDB client in region {}", region);
+
+      return AmazonDynamoDBClientBuilder.standard()
+          .withCredentials(credentials)
+          .withClientConfiguration(awsConf)
+          .withRegion(region)
+          .build();
+    }
+
+    /**
+     * Helper method to get and validate the AWS region for DynamoDBClient.
+     *
+     * @param conf configuration
+     * @param defaultRegion the default region
+     * @return configured region or else the provided default region
+     * @throws IOException if the region is not valid
+     */
+    static String getRegion(Configuration conf, String defaultRegion)
+        throws IOException {
       String region = conf.getTrimmed(S3GUARD_DDB_REGION_KEY);
       if (StringUtils.isEmpty(region)) {
         region = defaultRegion;
@@ -85,17 +107,10 @@ interface DynamoDBClientFactory extends Configurable {
         Regions.fromName(region);
       } catch (IllegalArgumentException | NullPointerException e) {
         throw new IOException("Invalid region specified: " + region + "; " +
-            "Region can be configured with " + S3GUARD_DDB_REGION_KEY +": " +
+            "Region can be configured with " + S3GUARD_DDB_REGION_KEY + ": " +
             validRegionsString());
       }
-
-      LOG.debug("Creating DynamoDB client in region {}", region);
-
-      return AmazonDynamoDBClientBuilder.standard()
-          .withCredentials(credentials)
-          .withClientConfiguration(awsConf)
-          .withRegion(region)
-          .build();
+      return region;
     }
 
     private static String validRegionsString() {

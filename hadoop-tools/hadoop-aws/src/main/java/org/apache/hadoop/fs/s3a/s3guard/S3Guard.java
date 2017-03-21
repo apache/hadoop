@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -50,7 +51,8 @@ public final class S3Guard {
 
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  static final String S3GUARD_DDB_CLIENT_FACTORY_IMPL =
+  @VisibleForTesting
+  public static final String S3GUARD_DDB_CLIENT_FACTORY_IMPL =
       "fs.s3a.s3guard.ddb.client.factory.impl";
 
   static final Class<? extends DynamoDBClientFactory>
