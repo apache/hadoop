@@ -227,7 +227,7 @@ public class TestDataNodeMXBean {
       Assert.assertEquals(datanodes.size(), 1);
       DataNode datanode = datanodes.get(0);
       String slowDiskPath = "test/data1/slowVolume";
-      datanode.getDiskMetrics().addSlowDiskForTesting(slowDiskPath);
+      datanode.getDiskMetrics().addSlowDiskForTesting(slowDiskPath, null);
 
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
       ObjectName mxbeanName = new ObjectName(
