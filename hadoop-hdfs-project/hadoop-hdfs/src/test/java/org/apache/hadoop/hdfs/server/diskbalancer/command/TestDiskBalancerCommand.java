@@ -34,6 +34,8 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.PrintStream;
 import java.net.URI;
 import java.util.List;
@@ -675,14 +677,18 @@ public class TestDiskBalancerCommand {
         REPORT, NODE, dataNodeUuid1, dataNodeUuid2);
     final String cmdLine = String.format("hdfs diskbalancer %s", planArg);
     List<String> outputs = runCommand(cmdLine, cluster);
+    verifyOutputsOfReportCommand(outputs, dataNodeUuid1, dataNodeUuid2, true);
+  }
 
-    assertThat(
-        outputs.get(0),
-        containsString("Processing report command"));
-    assertThat(
-        outputs.get(1),
-        is(allOf(containsString("Reporting volume information for DataNode"),
-            containsString(dataNodeUuid1), containsString(dataNodeUuid2))));
+  private void verifyOutputsOfReportCommand(List<String> outputs,
+      String dataNodeUuid1, String dataNodeUuid2, boolean inputNodesStr) {
+    assertThat(outputs.get(0), containsString("Processing report command"));
+    if (inputNodesStr) {
+      assertThat(outputs.get(1),
+          is(allOf(containsString("Reporting volume information for DataNode"),
+              containsString(dataNodeUuid1), containsString(dataNodeUuid2))));
+    }
+
     // Since the order of input nodes will be disrupted when parse
     // the node string, we should compare UUID with both output lines.
     assertTrue(outputs.get(2).contains(dataNodeUuid1)
@@ -712,6 +718,57 @@ public class TestDiskBalancerCommand {
         String.format("The node(s) '%s' not found. "
             + "Please make sure that '%s' exists in the cluster."
             , invalidNode, invalidNode);
+    assertTrue(outputs.get(2).contains(invalidNodeInfo));
+  }
+
+  @Test(timeout = 60000)
+  public void testReportCommandWithNullNodes() throws Exception {
+    // don't input nodes
+    final String planArg = String.format("-%s -%s ,", REPORT, NODE);
+    final String cmdLine = String.format("hdfs diskbalancer %s", planArg);
+    List<String> outputs = runCommand(cmdLine, cluster);
+
+    String invalidNodeInfo = "The number of input nodes is 0. "
+        + "Please input the valid nodes.";
+    assertTrue(outputs.get(2).contains(invalidNodeInfo));
+  }
+
+  @Test(timeout = 60000)
+  public void testReportCommandWithReadingHostFile() throws Exception {
+    final String testDir = GenericTestUtils.getTestDir().getAbsolutePath();
+    File includeFile = new File(testDir, "diskbalancer.include");
+    String filePath = testDir + "/diskbalancer.include";
+
+    String dataNodeUuid1 = cluster.getDataNodes().get(0).getDatanodeUuid();
+    String dataNodeUuid2 = cluster.getDataNodes().get(1).getDatanodeUuid();
+
+    FileWriter fw = new FileWriter(filePath);
+    fw.write("#This-is-comment\n");
+    fw.write(dataNodeUuid1 + "\n");
+    fw.write(dataNodeUuid2 + "\n");
+    fw.close();
+
+    final String planArg = String.format("-%s -%s file://%s",
+        REPORT, NODE, filePath);
+    final String cmdLine = String.format("hdfs diskbalancer %s", planArg);
+    List<String> outputs = runCommand(cmdLine, cluster);
+
+    verifyOutputsOfReportCommand(outputs, dataNodeUuid1, dataNodeUuid2, false);
+    includeFile.delete();
+  }
+
+  @Test(timeout = 60000)
+  public void testReportCommandWithInvalidHostFilePath() throws Exception {
+    final String testDir = GenericTestUtils.getTestDir().getAbsolutePath();
+    String invalidFilePath = testDir + "/diskbalancer-invalid.include";
+
+    final String planArg = String.format("-%s -%s file://%s",
+        REPORT, NODE, invalidFilePath);
+    final String cmdLine = String.format("hdfs diskbalancer %s", planArg);
+    List<String> outputs = runCommand(cmdLine, cluster);
+
+    String invalidNodeInfo = String.format(
+        "The input host file path 'file://%s' is not a valid path.", invalidFilePath);
     assertTrue(outputs.get(2).contains(invalidNodeInfo));
   }
 }

@@ -102,9 +102,9 @@ or
 Plan ID can be read from datanode using query command.
 
 ### Report
-Report command provides detailed report of specified node(s) or top nodes that will benefit from running disk balancer.
+Report command provides detailed report of specified node(s) or top nodes that will benefit from running disk balancer. The node(s) can be specified by a host file or comma-separated list of nodes.
 
-`hdfs diskbalancer -fs http://namenode.uri -report -node [<DataNodeID|IP|Hostname>,...]`
+`hdfs diskbalancer -fs http://namenode.uri -report -node <file://> | [<DataNodeID|IP|Hostname>,...]`
 
 or
 

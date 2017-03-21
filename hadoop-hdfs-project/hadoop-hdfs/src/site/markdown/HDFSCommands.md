@@ -418,7 +418,7 @@ Usage:
          [-query <datanode>]
          [-cancel <planfile>]
          [-cancel <planID> -node <datanode>]
-         [-report -node [<DataNodeID|IP|Hostname>,...]]
+         [-report -node <file://> | [<DataNodeID|IP|Hostname>,...]]
          [-report -node -top <topnum>]
 
 | COMMAND\_OPTION | Description |
