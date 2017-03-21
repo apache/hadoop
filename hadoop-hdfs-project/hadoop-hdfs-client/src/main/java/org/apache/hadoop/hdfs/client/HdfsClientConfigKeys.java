@@ -264,6 +264,8 @@ public interface HdfsClientConfigKeys {
     String  CONNECTION_RETRIES_ON_SOCKET_TIMEOUTS_KEY =
         PREFIX + "connection.retries.on.timeouts";
     int     CONNECTION_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT = 0;
+    String  RANDOM_ORDER = PREFIX + "random.order";
+    boolean RANDOM_ORDER_DEFAULT = false;
   }
 
   /** dfs.client.write configuration properties */
