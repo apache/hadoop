@@ -351,7 +351,7 @@ public class DFSUtilClient {
   static Map<String, InetSocketAddress> getAddressesForNameserviceId(
       Configuration conf, String nsId, String defaultValue, String... keys) {
     Collection<String> nnIds = getNameNodeIds(conf, nsId);
-    Map<String, InetSocketAddress> ret = Maps.newHashMap();
+    Map<String, InetSocketAddress> ret = Maps.newLinkedHashMap();
     for (String nnId : emptyAsSingletonNull(nnIds)) {
       String suffix = concatSuffixes(nsId, nnId);
       String address = getConfValue(defaultValue, suffix, conf, keys);
