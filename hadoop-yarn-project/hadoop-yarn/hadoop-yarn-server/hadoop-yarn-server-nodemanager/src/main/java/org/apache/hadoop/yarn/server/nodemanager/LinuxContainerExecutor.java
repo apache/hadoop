@@ -31,7 +31,6 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ConfigurationException;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
@@ -115,7 +114,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   /**
    * The container exit code.
    */
-  public enum LinuxContainerExecutorExitCode {
+  public enum ExitCode {
     SUCCESS(0),
     INVALID_ARGUMENT_NUMBER(1),
     INVALID_COMMAND_PROVIDED(3),
@@ -146,7 +145,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
     private final int code;
 
-    private LinuxContainerExecutorExitCode(int exitCode) {
+    private ExitCode(int exitCode) {
       this.code = exitCode;
     }
 
@@ -551,7 +550,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       } else {
         LOG.info(
             "Container was marked as inactive. Returning terminated error");
-        return ExitCode.TERMINATED.getExitCode();
+        return ContainerExecutor.ExitCode.TERMINATED.getExitCode();
       }
     } catch (ContainerExecutionException e) {
       int exitCode = e.getExitCode();
@@ -559,8 +558,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the container was
       // terminated/killed forcefully. In all other cases, log the
       // output
-      if (exitCode != ExitCode.FORCE_KILLED.getExitCode()
-          && exitCode != ExitCode.TERMINATED.getExitCode()) {
+      if (exitCode != ContainerExecutor.ExitCode.FORCE_KILLED.getExitCode()
+          && exitCode != ContainerExecutor.ExitCode.TERMINATED.getExitCode()) {
         LOG.warn("Exception from container-launch with container ID: "
             + containerId + " and exit code: " + exitCode, e);
 
@@ -580,19 +579,19 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         logOutput(diagnostics);
         container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
             diagnostics));
-        if (exitCode == LinuxContainerExecutorExitCode.
+        if (exitCode == ExitCode.
                 INVALID_CONTAINER_EXEC_PERMISSIONS.getExitCode() ||
-            exitCode == LinuxContainerExecutorExitCode.
+            exitCode == ExitCode.
                 INVALID_CONFIG_FILE.getExitCode() ||
-            exitCode == LinuxContainerExecutorExitCode.
+            exitCode == ExitCode.
                 COULD_NOT_CREATE_SCRIPT_COPY.getExitCode() ||
-            exitCode == LinuxContainerExecutorExitCode.
+            exitCode == ExitCode.
                 COULD_NOT_CREATE_CREDENTIALS_FILE.getExitCode() ||
-            exitCode == LinuxContainerExecutorExitCode.
+            exitCode == ExitCode.
                 COULD_NOT_CREATE_WORK_DIRECTORIES.getExitCode() ||
-            exitCode == LinuxContainerExecutorExitCode.
+            exitCode == ExitCode.
                 COULD_NOT_CREATE_APP_LOG_DIRECTORIES.getExitCode() ||
-            exitCode == LinuxContainerExecutorExitCode.
+            exitCode == ExitCode.
                 COULD_NOT_CREATE_TMP_DIRECTORIES.getExitCode()) {
           throw new ConfigurationException(
               "Linux Container Executor reached unrecoverable exception", e);
