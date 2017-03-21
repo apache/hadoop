@@ -16,10 +16,12 @@
  */
 package org.apache.hadoop.ozone.container.common;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerReport;
 import org.apache.hadoop.ozone.container.common.statemachine
     .DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine
@@ -343,5 +345,52 @@ public class TestEndPoint {
     long end = Time.monotonicNow();
     scmServerImpl.setRpcResponseDelay(0);
     Assert.assertThat(end - start, new LessOrEqual<>(rpcTimeout + tolerance));
+  }
+
+  /**
+   * Returns a new container report.
+   * @return
+   */
+  ContainerReport getRandomContainerReport() {
+    return new ContainerReport(UUID.randomUUID().toString()
+        ,DigestUtils.sha256Hex("Random"));
+  }
+
+  /**
+   * Creates dummy container reports.
+   * @param count - The number of closed containers to create.
+   * @return ContainerReportsProto
+   */
+  StorageContainerDatanodeProtocolProtos.ContainerReportsProto
+      createDummyContainerReports(int count) {
+    StorageContainerDatanodeProtocolProtos.ContainerReportsProto.Builder
+        reportsBuilder = StorageContainerDatanodeProtocolProtos
+        .ContainerReportsProto.newBuilder();
+    for (int x = 0; x < count; x++) {
+      reportsBuilder.addReports(getRandomContainerReport()
+          .getProtoBufMessage());
+    }
+    reportsBuilder.setType(StorageContainerDatanodeProtocolProtos
+        .ContainerReportsProto.reportType.fullReport);
+    return reportsBuilder.build();
+  }
+
+  /**
+   * Tests that rpcEndpoint sendContainerReport works as expected.
+   * @throws Exception
+   */
+  @Test
+  public void testContainerReportSend() throws Exception {
+    final int count = 1000;
+    try (EndpointStateMachine rpcEndPoint =
+             SCMTestUtils.createEndpoint(SCMTestUtils.getConf(),
+                 serverAddress, 1000)) {
+      SCMHeartbeatResponseProto responseProto = rpcEndPoint
+          .getEndPoint().sendContainerReport(createDummyContainerReports(
+              count));
+      Assert.assertNotNull(responseProto);
+    }
+    Assert.assertEquals(1, scmServerImpl.getContainerReportsCount());
+    Assert.assertEquals(count, scmServerImpl.getClosedContainerCount());
   }
 }

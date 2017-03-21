@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.container.common;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
@@ -37,6 +38,8 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   private AtomicInteger heartbeatCount = new AtomicInteger(0);
   private AtomicInteger rpcCount = new AtomicInteger(0);
   private ReportState reportState;
+  private AtomicInteger containerReportsCount = new AtomicInteger(0);
+  private AtomicInteger closedContainerCount = new AtomicInteger(0);
 
   /**
    * Returns the number of heartbeats made to this class.
@@ -72,6 +75,22 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
    */
   public void setRpcResponseDelay(int rpcResponseDelay) {
     this.rpcResponseDelay = rpcResponseDelay;
+  }
+
+  /**
+   * Returns the number of container reports server has seen.
+   * @return int
+   */
+  public int getContainerReportsCount() {
+    return containerReportsCount.get();
+  }
+
+  /**
+   * Returns the number of closed containers that have been reported so far.
+   * @return - count of closed containers.
+   */
+  public int getClosedContainerCount() {
+    return closedContainerCount.get();
   }
 
   /**
@@ -118,6 +137,12 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
     heartbeatCount.incrementAndGet();
     this.reportState = reportState;
     sleepIfNeeded();
+    return getNullRespose();
+  }
+
+  private StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto
+      getNullRespose() throws
+      com.google.protobuf.InvalidProtocolBufferException {
     StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto
         cmdResponse = StorageContainerDatanodeProtocolProtos
         .SCMCommandResponseProto
@@ -153,6 +178,23 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
         .setDatanodeUUID(datanodeID.getDatanodeUuid()).setErrorCode(
             StorageContainerDatanodeProtocolProtos
                 .SCMRegisteredCmdResponseProto.ErrorCode.success).build();
+  }
+
+  /**
+   * Send a container report.
+   *
+   * @param reports -- Container report
+   * @return HeartbeatResponse.nullcommand.
+   * @throws IOException
+   */
+  @Override
+  public StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto
+      sendContainerReport(StorageContainerDatanodeProtocolProtos
+      .ContainerReportsProto reports) throws IOException {
+    Preconditions.checkNotNull(reports);
+    containerReportsCount.incrementAndGet();
+    closedContainerCount.addAndGet(reports.getReportsCount());
+    return getNullRespose();
   }
 
   public ReportState getReportState() {

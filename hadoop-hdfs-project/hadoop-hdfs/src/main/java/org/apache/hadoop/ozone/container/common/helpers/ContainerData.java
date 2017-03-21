@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.ozone.container.common.helpers;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
+import org.apache.hadoop.util.Time;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -49,6 +51,7 @@ public class ContainerData {
   public ContainerData(String containerName) {
     this.metadata = new TreeMap<>();
     this.containerName = containerName;
+    this.open = true;
   }
 
   /**
@@ -213,15 +216,20 @@ public class ContainerData {
    * checks if the container is open.
    * @return - boolean
    */
-  public boolean isOpen() {
+  public synchronized  boolean isOpen() {
     return open;
   }
 
   /**
    * Marks this container as closed.
    */
-  public void closeContainer() {
-    this.open = false;
+  public synchronized void closeContainer() {
+    setOpen(false);
+
+    // Some thing brain dead for now. name + Time stamp of when we get the close
+    // container message.
+    setHash(DigestUtils.sha256Hex(this.getContainerName() +
+        Long.toString(Time.monotonicNow())));
   }
 
   /**
@@ -242,7 +250,7 @@ public class ContainerData {
    * Sets the open or closed values.
    * @param open
    */
-  public void setOpen(boolean open) {
+  public synchronized void setOpen(boolean open) {
     this.open = open;
   }
 

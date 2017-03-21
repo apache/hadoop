@@ -21,7 +21,10 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneClientUtils;
+import org.apache.hadoop.ozone.container.common.statemachine.commandhandler.CommandDispatcher;
+import org.apache.hadoop.ozone.container.common.statemachine.commandhandler.ContainerReportHandler;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
+import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.slf4j.Logger;
@@ -31,6 +34,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * State Machine Class.
@@ -46,12 +50,15 @@ public class DatanodeStateMachine implements Closeable {
   private StateContext context;
   private final OzoneContainer container;
   private DatanodeID datanodeID = null;
+  private final CommandDispatcher commandDispatcher;
+  private long commandsHandled;
+  private AtomicLong nextHB;
 
   /**
    * Constructs a a datanode state machine.
    *
    * @param datanodeID - DatanodeID used to identify a datanode
-   * @param conf - Configration.
+   * @param conf - Configuration.
    */
   public DatanodeStateMachine(DatanodeID datanodeID,
       Configuration conf) throws IOException {
@@ -65,6 +72,17 @@ public class DatanodeStateMachine implements Closeable {
         OzoneClientUtils.getScmHeartbeatInterval(conf));
     container = new OzoneContainer(conf);
     this.datanodeID = datanodeID;
+    nextHB = new AtomicLong(Time.monotonicNow());
+
+
+     // When we add new handlers just adding a new handler here should do the
+     // trick.
+    commandDispatcher = CommandDispatcher.newBuilder()
+      .addHandler(new ContainerReportHandler())
+      .setConnectionManager(connectionManager)
+      .setContainer(container)
+      .setContext(context)
+      .build();
   }
 
   public DatanodeStateMachine(Configuration conf)
@@ -104,18 +122,19 @@ public class DatanodeStateMachine implements Closeable {
    */
   private void start() throws IOException {
     long now = 0;
-    long nextHB = 0;
+
     container.start();
+    initCommandHandlerThread(conf);
     while (context.getState() != DatanodeStates.SHUTDOWN) {
       try {
         LOG.debug("Executing cycle Number : {}", context.getExecutionCount());
-        nextHB = Time.monotonicNow() + heartbeatFrequency;
+        nextHB.set(Time.monotonicNow() + heartbeatFrequency);
         context.setReportState(container.getNodeReport());
         context.execute(executorService, heartbeatFrequency,
             TimeUnit.MILLISECONDS);
         now = Time.monotonicNow();
-        if (now < nextHB) {
-          Thread.sleep(nextHB - now);
+        if (now < nextHB.get()) {
+          Thread.sleep(nextHB.get() - now);
         }
       } catch (Exception e) {
         LOG.error("Unable to finish the execution.", e);
@@ -162,7 +181,7 @@ public class DatanodeStateMachine implements Closeable {
       }
 
       if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
-        LOG.error("Unable to shutdown statemachine properly.");
+        LOG.error("Unable to shutdown state machine properly.");
       }
     } catch (InterruptedException e) {
       LOG.error("Error attempting to shutdown.", e);
@@ -288,5 +307,62 @@ public class DatanodeStateMachine implements Closeable {
     return this.executorService.isShutdown()
         && this.getContext().getExecutionCount() == 0
         && this.getContext().getState() == DatanodeStates.SHUTDOWN;
+  }
+
+  /**
+   * Create a command handler thread.
+   *
+   * @param conf
+   */
+  private void initCommandHandlerThread(Configuration conf) {
+
+    /**
+     * Task that periodically checks if we have any outstanding commands.
+     * It is assumed that commands can be processed slowly and in order.
+     * This assumption might change in future. Right now due to this assumption
+     * we have single command  queue process thread.
+     */
+    Runnable processCommandQueue = () -> {
+      long now;
+      while (getContext().getState() != DatanodeStates.SHUTDOWN) {
+        SCMCommand command = getContext().getNextCommand();
+        if (command != null) {
+          commandDispatcher.handle(command);
+          commandsHandled++;
+        } else {
+          try {
+            // Sleep till the next HB + 1 second.
+            now = Time.monotonicNow();
+            if (nextHB.get() > now) {
+              Thread.sleep((nextHB.get() - now) + 1000L);
+            }
+          } catch (InterruptedException e) {
+            // Ignore this exception.
+          }
+        }
+      }
+    };
+
+    // We will have only one thread for command processing in a datanode.
+    Thread cmdProcessThread = new Thread(processCommandQueue);
+    cmdProcessThread.setDaemon(true);
+    cmdProcessThread.setName("Command processor thread");
+    cmdProcessThread.setUncaughtExceptionHandler((Thread t, Throwable e) -> {
+      // Let us just restart this thread after logging a critical error.
+      // if this thread is not running we cannot handle commands from SCM.
+      LOG.error("Critical Error : Command processor thread encountered an " +
+          "error. Thread: {}", t.toString(), e);
+      cmdProcessThread.start();
+    });
+    cmdProcessThread.start();
+  }
+
+  /**
+   * Returns the number of commands handled  by the datanode.
+   * @return  count
+   */
+  @VisibleForTesting
+  public long getCommandHandled() {
+    return commandsHandled;
   }
 }

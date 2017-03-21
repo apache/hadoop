@@ -23,6 +23,7 @@ import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.ozone.protocol.proto
@@ -32,13 +33,11 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
-import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMRegisterRequestProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -157,6 +156,25 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
       throw ProtobufHelper.getRemoteException(e);
     }
     return response;
+  }
+
+  /**
+   * Send a container report.
+   *
+   * @param reports -- Container report
+   * @return HeartbeatRespose.nullcommand.
+   * @throws IOException
+   */
+  @Override
+  public SCMHeartbeatResponseProto sendContainerReport(
+      ContainerReportsProto reports) throws IOException {
+    final SCMHeartbeatResponseProto resp;
+    try {
+      resp = rpcProxy.sendContainerReport(NULL_RPC_CONTROLLER, reports);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+    return resp;
   }
 
 }
