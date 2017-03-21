@@ -839,17 +839,16 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
   }
 
   // API open to out classes
-  public void addTrackedApp(ApplicationAttemptId appAttemptId,
+  public void addTrackedApp(ApplicationId appId,
                             String oldAppId) {
     if (metricsON) {
-      schedulerMetrics.trackApp(appAttemptId, oldAppId);
+      schedulerMetrics.trackApp(appId, oldAppId);
     }
   }
 
-  public void removeTrackedApp(ApplicationAttemptId appAttemptId,
-                               String oldAppId) {
+  public void removeTrackedApp(String oldAppId) {
     if (metricsON) {
-      schedulerMetrics.untrackApp(appAttemptId, oldAppId);
+      schedulerMetrics.untrackApp(oldAppId);
     }
   }
 

@@ -23,11 +23,11 @@ import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler
-        .ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler
-        .SchedulerAppReport;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
@@ -42,42 +42,61 @@ public abstract class SchedulerMetrics {
   protected Set<String> queueTrackedMetrics;
   
   public SchedulerMetrics() {
-    appTrackedMetrics = new HashSet<String>();
+    appTrackedMetrics = new HashSet<>();
     appTrackedMetrics.add("live.containers");
     appTrackedMetrics.add("reserved.containers");
-    queueTrackedMetrics = new HashSet<String>();
+    queueTrackedMetrics = new HashSet<>();
   }
   
   public void init(ResourceScheduler scheduler, MetricRegistry metrics) {
     this.scheduler = scheduler;
-    this.trackedQueues = new HashSet<String>();
+    this.trackedQueues = new HashSet<>();
     this.metrics = metrics;
   }
-  
-  public void trackApp(final ApplicationAttemptId appAttemptId,
-                       String oldAppId) {
+
+  protected SchedulerApplicationAttempt getSchedulerAppAttempt(
+      ApplicationId appId) {
+    AbstractYarnScheduler yarnScheduler = (AbstractYarnScheduler)scheduler;
+    SchedulerApplication app = (SchedulerApplication)yarnScheduler
+        .getSchedulerApplications().get(appId);
+    if (app == null) {
+      return null;
+    }
+    return app.getCurrentAppAttempt();
+  }
+
+  public void trackApp(final ApplicationId appId, String oldAppId) {
     metrics.register("variable.app." + oldAppId + ".live.containers",
-      new Gauge<Integer>() {
-        @Override
-        public Integer getValue() {
-          SchedulerAppReport app = scheduler.getSchedulerAppInfo(appAttemptId);
-          return app.getLiveContainers().size();
+        new Gauge<Integer>() {
+          @Override
+          public Integer getValue() {
+            SchedulerApplicationAttempt appAttempt =
+                getSchedulerAppAttempt(appId);
+            if (appAttempt != null) {
+              return appAttempt.getLiveContainers().size();
+            } else {
+              return 0;
+            }
+          }
         }
-      }
     );
     metrics.register("variable.app." + oldAppId + ".reserved.containers",
-      new Gauge<Integer>() {
-        @Override
-        public Integer getValue() {
-          SchedulerAppReport app = scheduler.getSchedulerAppInfo(appAttemptId);
-          return app.getReservedContainers().size();
+        new Gauge<Integer>() {
+          @Override
+          public Integer getValue() {
+            SchedulerApplicationAttempt appAttempt =
+                getSchedulerAppAttempt(appId);
+            if (appAttempt != null) {
+              return appAttempt.getReservedContainers().size();
+            } else {
+              return 0;
+            }
+          }
         }
-      }
     );
   }
-  
-  public void untrackApp(ApplicationAttemptId appAttemptId,
-      String oldAppId) {
+
+  public void untrackApp(String oldAppId) {
     for (String m : appTrackedMetrics) {
       metrics.remove("variable.app." + oldAppId + "." + m);
     }

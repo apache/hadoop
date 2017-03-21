@@ -70,7 +70,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
@@ -793,17 +792,15 @@ final public class ResourceSchedulerWrapper
   }
 
   // API open to out classes
-  public void addTrackedApp(ApplicationAttemptId appAttemptId,
-                            String oldAppId) {
+  public void addTrackedApp(ApplicationId appId, String oldAppId) {
     if (metricsON) {
-      schedulerMetrics.trackApp(appAttemptId, oldAppId);
+      schedulerMetrics.trackApp(appId, oldAppId);
     }
   }
 
-  public void removeTrackedApp(ApplicationAttemptId appAttemptId,
-                               String oldAppId) {
+  public void removeTrackedApp(String oldAppId) {
     if (metricsON) {
-      schedulerMetrics.untrackApp(appAttemptId, oldAppId);
+      schedulerMetrics.untrackApp(oldAppId);
     }
   }
 
