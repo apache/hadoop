@@ -25,13 +25,19 @@ public final class CBlockConfigKeys {
       "dfs.cblock.enabled";
   public static final String DFS_CBLOCK_SERVICERPC_ADDRESS_KEY =
       "dfs.cblock.servicerpc-address";
-  public static final int DFS_CBLOCK_RPCSERVICE_PORT_DEFAULT =
+  public static final String DFS_CBLOCK_SERVICERPC_PORT_KEY =
+      "dfs.cblock.servicerpc.port";
+  public static final int DFS_CBLOCK_SERVICERPC_PORT_DEFAULT =
       9810;
+  public static final String DFS_CBLOCK_SERVICERPC_HOSTNAME_KEY =
+      "dfs.cblock.servicerpc.hostname";
+  public static final String DFS_CBLOCK_SERVICERPC_HOSTNAME_DEFAULT =
+      "0.0.0.0";
   public static final String DFS_CBLOCK_RPCSERVICE_IP_DEFAULT =
       "0.0.0.0";
   public static final String DFS_CBLOCK_SERVICERPC_ADDRESS_DEFAULT =
-      DFS_CBLOCK_RPCSERVICE_IP_DEFAULT
-          + ":" + DFS_CBLOCK_RPCSERVICE_PORT_DEFAULT;
+      DFS_CBLOCK_SERVICERPC_HOSTNAME_DEFAULT
+          + ":" + DFS_CBLOCK_SERVICERPC_PORT_DEFAULT;
 
   public static final String DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY =
       "dfs.cblock.jscsi-address";
