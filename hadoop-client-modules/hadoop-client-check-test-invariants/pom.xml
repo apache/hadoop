@@ -103,17 +103,6 @@
                         <ignoreClass>*</ignoreClass>
                       </ignoreClasses>
                     </dependency>
-                    <dependency>
-                      <!--Duplicate classes found:-->
-                      <!--Found in:-->
-                      <!--org.apache.hadoop:hadoop-client-runtime:jar:3.0.0-alpha3-SNAPSHOT:compile-->
-                      <!--org.apache.hadoop:hadoop-client-minicluster:jar:3.0.0-alpha3-SNAPSHOT:compile-->
-                      <ignoreClasses>
-                        <groupId>io.netty</groupId>
-                        <artifactId>netty</artifactId>
-                        <ignoreClass>*</ignoreClass>
-                      </ignoreClasses>
-                    </dependency>
                   </dependencies>
                 </banDuplicateClasses>
               </rules>
