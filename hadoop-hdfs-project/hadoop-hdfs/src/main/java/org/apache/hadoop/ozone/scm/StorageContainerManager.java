@@ -34,11 +34,12 @@ import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.protocol.LocatedContainer;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
-import org.apache.hadoop.ozone.protocol.commands.NullCommand;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.ozone.protocol.proto
@@ -297,14 +298,22 @@ public class StorageContainerManager
     Type type = cmd.getType();
     switch (type) {
     case nullCmd:
-      Preconditions.checkState(cmd.getClass() == NullCommand.class);
-      return SCMCommandResponseProto.newBuilder().setCmdType(cmd.getType())
-          .setNullCommand(
-              NullCmdResponseProto.parseFrom(cmd.getProtoBufMessage()))
-          .build();
+      return getNullCmdResponse();
     default:
       throw new IllegalArgumentException("Not implemented");
     }
+  }
+
+  /**
+   * Returns a null command response.
+   * @return
+   * @throws InvalidProtocolBufferException
+   */
+  private static SCMCommandResponseProto getNullCmdResponse()  {
+    return SCMCommandResponseProto.newBuilder()
+        .setCmdType(Type.nullCmd)
+        .setNullCommand(NullCmdResponseProto.getDefaultInstance())
+        .build();
   }
 
   @VisibleForTesting
@@ -478,6 +487,22 @@ public class StorageContainerManager
       throws IOException {
     // TODO : Return the list of Nodes that forms the SCM HA.
     return getRegisteredResponse(scmNodeManager.register(datanodeID), null);
+  }
+
+  /**
+   * Send a container report.
+   *
+   * @param reports -- Container report
+   * @return HeartbeatRespose.nullcommand.
+   * @throws IOException
+   */
+  @Override
+  public SCMHeartbeatResponseProto
+      sendContainerReport(ContainerReportsProto reports) throws IOException {
+    // TODO : fix this in the server side code changes for handling this request
+    // correctly.
+    return SCMHeartbeatResponseProto.newBuilder()
+        .addCommands(getNullCmdResponse()).build();
   }
 
   /**

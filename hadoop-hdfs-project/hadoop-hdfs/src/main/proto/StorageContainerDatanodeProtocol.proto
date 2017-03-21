@@ -96,7 +96,7 @@ A container report contains the following information.
 */
 message ContainerInfo {
   required string containerName = 1;
-  repeated bytes finalhash = 2;
+  required string finalhash = 2;
   optional int64 size = 3;
   optional int64 keycount = 4;
 }
@@ -105,7 +105,7 @@ message ContainerInfo {
 A set of container reports, max count is generally set to
 8192 since that keeps the size of the reports under 1 MB.
 */
-message ContainerReports {
+message ContainerReportsProto {
   enum reportType {
     fullReport = 0;
     deltaReport = 1;
@@ -306,4 +306,11 @@ service StorageContainerDatanodeProtocolService {
    * extremely light weight and contains no data payload.
    */
   rpc sendHeartbeat (SCMHeartbeatRequestProto) returns (SCMHeartbeatResponseProto);
+
+  /**
+    send container reports sends the container report to SCM. This will
+    return a null command as response.
+  */
+  rpc sendContainerReport(ContainerReportsProto)  returns (SCMHeartbeatResponseProto);
+
 }

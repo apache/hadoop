@@ -23,6 +23,7 @@ import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 
 import java.io.IOException;
 
@@ -80,6 +81,18 @@ public class StorageContainerDatanodeProtocolServerSideTranslatorPB
       return impl.sendHeartbeat(DatanodeID.getFromProtoBuf(request
           .getDatanodeID()), request.getNodeReport(),
           request.getContainerReportState());
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public SCMHeartbeatResponseProto
+      sendContainerReport(RpcController controller,
+      ContainerReportsProto request)
+      throws ServiceException {
+    try {
+      return impl.sendContainerReport(request);
     } catch (IOException e) {
       throw new ServiceException(e);
     }

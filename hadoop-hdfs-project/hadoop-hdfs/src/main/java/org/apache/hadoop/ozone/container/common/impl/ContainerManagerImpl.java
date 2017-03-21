@@ -58,6 +58,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
@@ -609,6 +610,25 @@ public class ContainerManagerImpl implements ContainerManager {
           .build());
     }
     return nrb.build();
+  }
+
+  /**
+   * Gets container reports.
+   *
+   * @return List of all closed containers.
+   * @throws IOException
+   */
+  @Override
+  public List<ContainerData> getContainerReports() throws IOException {
+    LOG.debug("Starting container report iteration.");
+    // No need for locking since containerMap is a ConcurrentSkipListMap
+    // And we can never get the exact state since close might happen
+    // after we iterate a point.
+    return containerMap.entrySet().stream()
+        .filter(containerStatus ->
+            containerStatus.getValue().getContainer().isOpen())
+        .map(containerStatus -> containerStatus.getValue().getContainer())
+        .collect(Collectors.toList());
   }
 
   /**

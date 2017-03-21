@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container.ozoneimpl;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ChunkManagerImpl;
 import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
 import org.apache.hadoop.ozone.container.common.impl.Dispatcher;
@@ -175,5 +176,14 @@ public class OzoneContainer {
    */
   public int getContainerServerPort() {
     return server.getIPCPort();
+  }
+
+  /**
+   * Returns the list of closed containers.
+   * @return - List of closed containers.
+   * @throws IOException
+   */
+  public List<ContainerData> getContainerReports() throws IOException {
+    return this.manager.getContainerReports();
   }
 }
