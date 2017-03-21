@@ -296,7 +296,7 @@ public class ContainerLaunch implements Callable<Integer> {
           .setContainerLocalDirs(containerLocalDirs)
           .setContainerLogDirs(containerLogDirs).build());
     } catch (ConfigurationException e) {
-      LOG.error("Failed to launch container.", e);
+      LOG.error("Failed to launch container due to configuration error.", e);
       dispatcher.getEventHandler().handle(new ContainerExitEvent(
           containerID, ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
           e.getMessage()));

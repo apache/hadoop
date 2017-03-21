@@ -19,13 +19,12 @@
 package org.apache.hadoop.yarn.exceptions;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
 /**
- * This exception is thrown on unrecoverable container launch errors.
+ * This exception is thrown on unrecoverable configuration errors.
+ * An example is container launch error due to configuration.
  */
 @Public
-@Unstable
 public class ConfigurationException extends YarnException {
 
   private static final long serialVersionUID = 0x9801a7a0f8e3L;
