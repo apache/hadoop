@@ -534,11 +534,14 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
         unreserve(request.getPriority(), node);
       }
 
+      LOG.info("GPU allocation request: " + capability.toString() + " from availability: " + available.toString());
       int allocated = Resources.allocateGPUs(capability, available, node.getTotalResource());
+      LOG.info("Allocated GPUs in bitvector format: " + allocated);
       container.setGPULocation(allocated);
 
       // Inform the node
       node.allocateContainer(allocatedContainer);
+      LOG.info("Node information after allocating GPUs: " + node.toString());
 
       // If this container is used to run AM, update the leaf queue's AM usage
       if (getLiveContainers().size() == 1 && !getUnmanagedAM()) {
