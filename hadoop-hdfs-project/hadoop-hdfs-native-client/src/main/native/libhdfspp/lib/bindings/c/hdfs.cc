@@ -41,6 +41,23 @@ using namespace std::placeholders;
 
 static constexpr tPort kDefaultPort = 8020;
 
+// Functions exposed through the C API and extended C API get tagged with no-op
+// defines.  This is to make it really clear what's being exposed in a way that
+// won't blend into the comments.  Can also be used to add attributes or disable
+// the extensions e.g. "#define HDFS_EXT_API static"
+// API declared in hdfs.h shared with libhdfs
+#define HDFS_API
+// API extension functions specific to libhdfs++ declared in hdfs_ext.h
+#define HDFS_EXT_API
+
+// Common catch-all case to get exception and return the appropriate error code
+#define CATCH_AND_REPORT  catch (const std::exception & e) { return ReportException(e); } \
+                          catch (...) { return ReportCaughtNonException(); }
+
+
+
+
+
 /* Separate the handles used by the C api from the C++ API*/
 struct hdfs_internal {
   hdfs_internal(FileSystem *p) : filesystem_(p), working_directory_("/") {}
@@ -79,9 +96,14 @@ struct hdfsFile_internal {
 thread_local std::string errstr;
 
 /* Fetch last error that happened in this thread */
+HDFS_EXT_API
 int hdfsGetLastError(char *buf, int len) {
   //No error message
   if(errstr.empty()){
+    if(len > 0) {
+      // Null terminator if there is space
+      *buf = 0;
+    }
     return -1;
   }
 
@@ -102,6 +124,17 @@ int hdfsGetLastError(char *buf, int len) {
   buf[copylen] = 0;
 
   return 0;
+}
+
+/* Clear out last error.  This shouldn't need to be public if functions do it themselves */
+static void resetErrorForApiCall(const char *location = nullptr) {
+  // POSIX spec says caller should be responsible for resetting errno.
+  // Clearing it here just in case.
+  errno = 0;
+  if(location)
+    errstr = std::string(location) + " has not set an error message";
+  else
+    errstr.clear();
 }
 
 /* Event callbacks for next open calls */
@@ -255,7 +288,9 @@ optional<std::string> getAbsolutePath(hdfsFS fs, const char* path) {
  * C API implementations
  **/
 
+HDFS_API
 int hdfsFileIsOpenForRead(hdfsFile file) {
+  resetErrorForApiCall("hdfsFileIsOpenForRead");
   /* files can only be open for reads at the moment, do a quick check */
   if (!CheckHandle(file)){
     return 0;
@@ -263,7 +298,9 @@ int hdfsFileIsOpenForRead(hdfsFile file) {
   return 1; // Update implementation when we get file writing
 }
 
+HDFS_API
 int hdfsFileIsOpenForWrite(hdfsFile file) {
+  resetErrorForApiCall("hdfsFileIsOpenForWrite");
   /* files can only be open for reads at the moment, so return false */
   CheckHandle(file);
   return -1; // Update implementation when we get file writing
@@ -276,11 +313,7 @@ int hdfsConfGetLong(const char *key, int64_t *val)
     errno = 0;
     hdfsBuilder builder;
     return hdfsBuilderConfGetLong(&builder, key, val);
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
 hdfsFS doHdfsConnect(optional<std::string> nn, optional<tPort> port, optional<std::string> user, const Options & options) {
@@ -332,11 +365,12 @@ hdfsFS doHdfsConnect(optional<std::string> nn, optional<tPort> port, optional<st
   }
 }
 
+HDFS_EXT_API
 hdfsFS hdfsAllocateFileSystem(struct hdfsBuilder *bld) {
+  resetErrorForApiCall("hdfsAllocateFileSystem");
   // Same idea as the first half of doHdfsConnect, but return the wrapped FS before
   // connecting.
   try {
-    errno = 0;
     std::shared_ptr<IoService> io_service = IoService::MakeShared();
 
     int io_thread_count = bld->config.GetOptions().io_threads_;
@@ -367,7 +401,9 @@ hdfsFS hdfsAllocateFileSystem(struct hdfsBuilder *bld) {
   return nullptr;
 }
 
+HDFS_EXT_API
 int hdfsConnectAllocated(hdfsFS fs, struct hdfsBuilder *bld) {
+  resetErrorForApiCall("hdfsConnectAllocated");
   if(!CheckSystem(fs)) {
     return ENODEV;
   }
@@ -420,25 +456,35 @@ int hdfsConnectAllocated(hdfsFS fs, struct hdfsBuilder *bld) {
   return 0;
 }
 
+HDFS_API
 hdfsFS hdfsConnect(const char *nn, tPort port) {
-  return hdfsConnectAsUser(nn, port, "");
+  resetErrorForApiCall("hdfsConnect");
+  return doHdfsConnect(std::string(nn), port, std::string(""), Options());
 }
 
+HDFS_API
 hdfsFS hdfsConnectAsUser(const char* nn, tPort port, const char *user) {
+  resetErrorForApiCall("hdfsConnectAsUser");
   return doHdfsConnect(std::string(nn), port, std::string(user), Options());
 }
 
+HDFS_API
 hdfsFS hdfsConnectAsUserNewInstance(const char* nn, tPort port, const char *user ) {
+  resetErrorForApiCall("hdfsConnectAsUserNewInstance");
   //libhdfspp always returns a new instance
   return doHdfsConnect(std::string(nn), port, std::string(user), Options());
 }
 
+HDFS_API
 hdfsFS hdfsConnectNewInstance(const char* nn, tPort port) {
+  resetErrorForApiCall("hdfsConnectNewInstance");
   //libhdfspp always returns a new instance
-  return hdfsConnectAsUser(nn, port, "");
+  return doHdfsConnect(std::string(nn), port, std::string(""), Options());
 }
 
+HDFS_EXT_API
 int hdfsCancelPendingConnection(hdfsFS fs) {
+  resetErrorForApiCall("hdfsCancelPendingConnection");
   // todo: stick an enum in hdfs_internal to check the connect state
   if(!CheckSystem(fs)) {
     return ENODEV;
@@ -458,10 +504,11 @@ int hdfsCancelPendingConnection(hdfsFS fs) {
   }
 }
 
+HDFS_API
 int hdfsDisconnect(hdfsFS fs) {
+  resetErrorForApiCall("hdfsDisconnect");
   try
   {
-    errno = 0;
     if (!fs) {
       ReportError(ENODEV, "Cannot disconnect null FS handle.");
       return -1;
@@ -469,18 +516,15 @@ int hdfsDisconnect(hdfsFS fs) {
 
     delete fs;
     return 0;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
+HDFS_API
 hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, int bufferSize,
                       short replication, tSize blocksize) {
+  resetErrorForApiCall("hdfsOpenFile");
   try
   {
-    errno = 0;
     (void)flags;
     (void)bufferSize;
     (void)replication;
@@ -512,26 +556,24 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, int bufferSize,
   }
 }
 
+HDFS_API
 int hdfsCloseFile(hdfsFS fs, hdfsFile file) {
+  resetErrorForApiCall("hdfsCloseFile");
   try
   {
-    errno = 0;
     if (!CheckSystemAndHandle(fs, file)) {
       return -1;
     }
     delete file;
     return 0;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
+HDFS_API
 char* hdfsGetWorkingDirectory(hdfsFS fs, char *buffer, size_t bufferSize) {
+  resetErrorForApiCall("hdfsGetWorkingDirectory");
   try
   {
-    errno = 0;
     if (!CheckSystem(fs)) {
       return nullptr;
     }
@@ -556,10 +598,11 @@ char* hdfsGetWorkingDirectory(hdfsFS fs, char *buffer, size_t bufferSize) {
   }
 }
 
+HDFS_API
 int hdfsSetWorkingDirectory(hdfsFS fs, const char* path) {
+  resetErrorForApiCall("hdfsSetWorkingDirectory");
   try
   {
-    errno = 0;
     if (!CheckSystem(fs)) {
       return -1;
     }
@@ -575,25 +618,23 @@ int hdfsSetWorkingDirectory(hdfsFS fs, const char* path) {
     }
     fs->set_working_directory(withSlash);
     return 0;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
+HDFS_API
 int hdfsAvailable(hdfsFS fs, hdfsFile file) {
+  resetErrorForApiCall("hdfsAvailable");
   //Since we do not have read ahead implemented, return 0 if fs and file are good;
-  errno = 0;
   if (!CheckSystemAndHandle(fs, file)) {
     return -1;
   }
   return 0;
 }
 
+HDFS_API
 tOffset hdfsGetDefaultBlockSize(hdfsFS fs) {
+  resetErrorForApiCall("hdfsGetDefaultBlockSize");
   try {
-    errno = 0;
     return fs->get_impl()->get_options().block_size;
   } catch (const std::exception & e) {
     ReportException(e);
@@ -604,9 +645,10 @@ tOffset hdfsGetDefaultBlockSize(hdfsFS fs) {
   }
 }
 
+HDFS_API
 tOffset hdfsGetDefaultBlockSizeAtPath(hdfsFS fs, const char *path) {
+  resetErrorForApiCall("hdfsGetDefaultBlockSizeAtPath");
   try {
-    errno = 0;
     if (!CheckSystem(fs)) {
       return -1;
     }
@@ -633,58 +675,53 @@ tOffset hdfsGetDefaultBlockSizeAtPath(hdfsFS fs, const char *path) {
   }
 }
 
+HDFS_API
 int hdfsSetReplication(hdfsFS fs, const char* path, int16_t replication) {
-    try {
-      errno = 0;
-      if (!CheckSystem(fs)) {
-        return -1;
-      }
-      const optional<std::string> abs_path = getAbsolutePath(fs, path);
-      if(!abs_path) {
-        return -1;
-      }
-      if(replication < 1){
-        return Error(Status::InvalidArgument("SetReplication: argument 'replication' cannot be less than 1"));
-      }
-      Status stat;
-      stat = fs->get_impl()->SetReplication(*abs_path, replication);
-      if (!stat.ok()) {
-        return Error(stat);
-      }
-      return 0;
-    } catch (const std::exception & e) {
-      return ReportException(e);
-    } catch (...) {
-      return ReportCaughtNonException();
-    }
-}
-
-int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime) {
-    try {
-      errno = 0;
-      if (!CheckSystem(fs)) {
-        return -1;
-      }
-      const optional<std::string> abs_path = getAbsolutePath(fs, path);
-      if(!abs_path) {
-        return -1;
-      }
-      Status stat;
-      stat = fs->get_impl()->SetTimes(*abs_path, mtime, atime);
-      if (!stat.ok()) {
-        return Error(stat);
-      }
-      return 0;
-    } catch (const std::exception & e) {
-      return ReportException(e);
-    } catch (...) {
-      return ReportCaughtNonException();
-    }
-}
-
-tOffset hdfsGetCapacity(hdfsFS fs) {
+  resetErrorForApiCall("hdfsSetReplication");
   try {
-    errno = 0;
+    if (!CheckSystem(fs)) {
+      return -1;
+    }
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return -1;
+    }
+    if(replication < 1){
+      return Error(Status::InvalidArgument("SetReplication: argument 'replication' cannot be less than 1"));
+    }
+    Status stat;
+    stat = fs->get_impl()->SetReplication(*abs_path, replication);
+    if (!stat.ok()) {
+      return Error(stat);
+    }
+    return 0;
+  } CATCH_AND_REPORT
+}
+
+HDFS_API
+int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime) {
+  resetErrorForApiCall("hdfsUtime");
+  try {
+    if (!CheckSystem(fs)) {
+      return -1;
+    }
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return -1;
+    }
+    Status stat;
+    stat = fs->get_impl()->SetTimes(*abs_path, mtime, atime);
+    if (!stat.ok()) {
+      return Error(stat);
+    }
+    return 0;
+  } CATCH_AND_REPORT
+}
+
+HDFS_API
+tOffset hdfsGetCapacity(hdfsFS fs) {
+  resetErrorForApiCall("hdfsGetCapacity");
+  try {
     if (!CheckSystem(fs)) {
       return -1;
     }
@@ -705,9 +742,10 @@ tOffset hdfsGetCapacity(hdfsFS fs) {
   }
 }
 
+HDFS_API
 tOffset hdfsGetUsed(hdfsFS fs) {
+  resetErrorForApiCall("hdfsGetUsed");
   try {
-    errno = 0;
     if (!CheckSystem(fs)) {
       return -1;
     }
@@ -777,9 +815,10 @@ void StatInfoToHdfsFileInfo(hdfsFileInfo * file_info,
   file_info->mLastAccess = stat_info.access_time;
 }
 
+HDFS_API
 int hdfsExists(hdfsFS fs, const char *path) {
+  resetErrorForApiCall("hdfsExists");
   try {
-    errno = 0;
     if (!CheckSystem(fs)) {
       return -1;
     }
@@ -793,16 +832,13 @@ int hdfsExists(hdfsFS fs, const char *path) {
       return Error(stat);
     }
     return 0;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
+HDFS_API
 hdfsFileInfo *hdfsGetPathInfo(hdfsFS fs, const char* path) {
+  resetErrorForApiCall("hdfsGetPathInfo");
   try {
-    errno = 0;
     if (!CheckSystem(fs)) {
        return nullptr;
     }
@@ -828,61 +864,64 @@ hdfsFileInfo *hdfsGetPathInfo(hdfsFS fs, const char* path) {
   }
 }
 
+HDFS_API
 hdfsFileInfo *hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries) {
+  resetErrorForApiCall("hdfsListDirectory");
   try {
-      errno = 0;
-      if (!CheckSystem(fs)) {
-        *numEntries = 0;
-        return nullptr;
-      }
-      const optional<std::string> abs_path = getAbsolutePath(fs, path);
-      if(!abs_path) {
-        return nullptr;
-      }
-      std::vector<StatInfo> stat_infos;
-      Status stat = fs->get_impl()->GetListing(*abs_path, &stat_infos);
-      if (!stat.ok()) {
-        Error(stat);
-        *numEntries = 0;
-        return nullptr;
-      }
-      if(stat_infos.empty()){
-        *numEntries = 0;
-        return nullptr;
-      }
-      *numEntries = stat_infos.size();
-      hdfsFileInfo *file_infos = new hdfsFileInfo[stat_infos.size()];
-      for(std::vector<StatInfo>::size_type i = 0; i < stat_infos.size(); i++) {
-        StatInfoToHdfsFileInfo(&file_infos[i], stat_infos.at(i));
-      }
-
-      return file_infos;
-    } catch (const std::exception & e) {
-      ReportException(e);
-      *numEntries = 0;
-      return nullptr;
-    } catch (...) {
-      ReportCaughtNonException();
+    if (!CheckSystem(fs)) {
       *numEntries = 0;
       return nullptr;
     }
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return nullptr;
+    }
+    std::vector<StatInfo> stat_infos;
+    Status stat = fs->get_impl()->GetListing(*abs_path, &stat_infos);
+    if (!stat.ok()) {
+      Error(stat);
+      *numEntries = 0;
+      return nullptr;
+    }
+    if(stat_infos.empty()){
+      *numEntries = 0;
+      return nullptr;
+    }
+    *numEntries = stat_infos.size();
+    hdfsFileInfo *file_infos = new hdfsFileInfo[stat_infos.size()];
+    for(std::vector<StatInfo>::size_type i = 0; i < stat_infos.size(); i++) {
+      StatInfoToHdfsFileInfo(&file_infos[i], stat_infos.at(i));
+    }
+
+    return file_infos;
+  } catch (const std::exception & e) {
+    ReportException(e);
+    *numEntries = 0;
+    return nullptr;
+  } catch (...) {
+    ReportCaughtNonException();
+    *numEntries = 0;
+    return nullptr;
+  }
 }
 
+HDFS_API
 void hdfsFreeFileInfo(hdfsFileInfo *hdfsFileInfo, int numEntries)
 {
-    errno = 0;
-    int i;
-    for (i = 0; i < numEntries; ++i) {
-        delete[] hdfsFileInfo[i].mName;
-        delete[] hdfsFileInfo[i].mOwner;
-        delete[] hdfsFileInfo[i].mGroup;
-    }
-    delete[] hdfsFileInfo;
+  resetErrorForApiCall("hdfsFreeFileInfo");
+  int i;
+  for (i = 0; i < numEntries; ++i) {
+    delete[] hdfsFileInfo[i].mName;
+    delete[] hdfsFileInfo[i].mOwner;
+    delete[] hdfsFileInfo[i].mGroup;
+  }
+  delete[] hdfsFileInfo;
 }
 
+HDFS_API
 int hdfsCreateDirectory(hdfsFS fs, const char* path) {
+  resetErrorForApiCall("hdfsCreateDirectory");
   try {
-    errno = 0;
     if (!CheckSystem(fs)) {
       return -1;
     }
@@ -891,45 +930,39 @@ int hdfsCreateDirectory(hdfsFS fs, const char* path) {
       return -1;
     }
     Status stat;
-    //Use default permissions and set true for creating all non-existant parent directories
+    //Use default permissions and set true for creating all non-existent parent directories
     stat = fs->get_impl()->Mkdirs(*abs_path, FileSystem::GetDefaultPermissionMask(), true);
     if (!stat.ok()) {
       return Error(stat);
     }
     return 0;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
+HDFS_API
 int hdfsDelete(hdfsFS fs, const char* path, int recursive) {
+  resetErrorForApiCall("hdfsDelete");
   try {
-      errno = 0;
-      if (!CheckSystem(fs)) {
-        return -1;
-      }
-      const optional<std::string> abs_path = getAbsolutePath(fs, path);
-      if(!abs_path) {
-        return -1;
-      }
-      Status stat;
-      stat = fs->get_impl()->Delete(*abs_path, recursive);
-      if (!stat.ok()) {
-        return Error(stat);
-      }
-      return 0;
-    } catch (const std::exception & e) {
-      return ReportException(e);
-    } catch (...) {
-      return ReportCaughtNonException();
+    if (!CheckSystem(fs)) {
+      return -1;
     }
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return -1;
+    }
+    Status stat;
+    stat = fs->get_impl()->Delete(*abs_path, recursive);
+    if (!stat.ok()) {
+      return Error(stat);
+    }
+    return 0;
+  } CATCH_AND_REPORT
 }
 
+HDFS_API
 int hdfsRename(hdfsFS fs, const char* oldPath, const char* newPath) {
+  resetErrorForApiCall("hdfsRename");
   try {
-    errno = 0;
     if (!CheckSystem(fs)) {
       return -1;
     }
@@ -944,106 +977,99 @@ int hdfsRename(hdfsFS fs, const char* oldPath, const char* newPath) {
       return Error(stat);
     }
     return 0;
+  } CATCH_AND_REPORT
+}
+
+HDFS_API
+int hdfsChmod(hdfsFS fs, const char* path, short mode){
+  resetErrorForApiCall("hdfsChmod");
+  try {
+    if (!CheckSystem(fs)) {
+      return -1;
+    }
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return -1;
+    }
+    Status stat = FileSystem::CheckValidPermissionMask(mode);
+    if (!stat.ok()) {
+      return Error(stat);
+    }
+    stat = fs->get_impl()->SetPermission(*abs_path, mode);
+    if (!stat.ok()) {
+      return Error(stat);
+    }
+    return 0;
+  } CATCH_AND_REPORT
+}
+
+HDFS_API
+int hdfsChown(hdfsFS fs, const char* path, const char *owner, const char *group){
+  resetErrorForApiCall("hdfsChown");
+  try {
+    if (!CheckSystem(fs)) {
+      return -1;
+    }
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return -1;
+    }
+    std::string own = (owner) ? owner : "";
+    std::string grp = (group) ? group : "";
+
+    Status stat;
+    stat = fs->get_impl()->SetOwner(*abs_path, own, grp);
+    if (!stat.ok()) {
+      return Error(stat);
+    }
+    return 0;
+  } CATCH_AND_REPORT
+}
+
+HDFS_EXT_API
+hdfsFileInfo * hdfsFind(hdfsFS fs, const char* path, const char* name, uint32_t * numEntries)
+{
+  resetErrorForApiCall("hdfsFind");
+  try {
+    if (!CheckSystem(fs)) {
+      *numEntries = 0;
+      return nullptr;
+    }
+
+    std::vector<StatInfo>  stat_infos;
+    Status stat = fs->get_impl()->Find(path, name, hdfs::FileSystem::GetDefaultFindMaxDepth(), &stat_infos);
+    if (!stat.ok()) {
+      Error(stat);
+      *numEntries = 0;
+      return nullptr;
+    }
+    //Existing API expects nullptr if size is 0
+    if(stat_infos.empty()){
+      *numEntries = 0;
+      return nullptr;
+    }
+    *numEntries = stat_infos.size();
+    hdfsFileInfo *file_infos = new hdfsFileInfo[stat_infos.size()];
+    for(std::vector<StatInfo>::size_type i = 0; i < stat_infos.size(); i++) {
+      StatInfoToHdfsFileInfo(&file_infos[i], stat_infos.at(i));
+    }
+
+    return file_infos;
   } catch (const std::exception & e) {
-    return ReportException(e);
+    ReportException(e);
+    *numEntries = 0;
+    return nullptr;
   } catch (...) {
-    return ReportCaughtNonException();
+    ReportCaughtNonException();
+    *numEntries = 0;
+    return nullptr;
   }
 }
 
-int hdfsChmod(hdfsFS fs, const char* path, short mode){
-  try {
-      errno = 0;
-      if (!CheckSystem(fs)) {
-        return -1;
-      }
-      const optional<std::string> abs_path = getAbsolutePath(fs, path);
-      if(!abs_path) {
-        return -1;
-      }
-      Status stat = FileSystem::CheckValidPermissionMask(mode);
-      if (!stat.ok()) {
-        return Error(stat);
-      }
-      stat = fs->get_impl()->SetPermission(*abs_path, mode);
-      if (!stat.ok()) {
-        return Error(stat);
-      }
-      return 0;
-    } catch (const std::exception & e) {
-      return ReportException(e);
-    } catch (...) {
-      return ReportCaughtNonException();
-    }
-}
-
-int hdfsChown(hdfsFS fs, const char* path, const char *owner, const char *group){
-  try {
-      errno = 0;
-      if (!CheckSystem(fs)) {
-        return -1;
-      }
-      const optional<std::string> abs_path = getAbsolutePath(fs, path);
-      if(!abs_path) {
-        return -1;
-      }
-      std::string own = (owner) ? owner : "";
-      std::string grp = (group) ? group : "";
-
-      Status stat;
-      stat = fs->get_impl()->SetOwner(*abs_path, own, grp);
-      if (!stat.ok()) {
-        return Error(stat);
-      }
-      return 0;
-    } catch (const std::exception & e) {
-      return ReportException(e);
-    } catch (...) {
-      return ReportCaughtNonException();
-    }
-}
-
-hdfsFileInfo * hdfsFind(hdfsFS fs, const char* path, const char* name, uint32_t * numEntries){
-  try {
-      errno = 0;
-      if (!CheckSystem(fs)) {
-        *numEntries = 0;
-        return nullptr;
-      }
-
-      std::vector<StatInfo>  stat_infos;
-      Status stat = fs->get_impl()->Find(path, name, hdfs::FileSystem::GetDefaultFindMaxDepth(), &stat_infos);
-      if (!stat.ok()) {
-        Error(stat);
-        *numEntries = 0;
-        return nullptr;
-      }
-      //Existing API expects nullptr if size is 0
-      if(stat_infos.empty()){
-        *numEntries = 0;
-        return nullptr;
-      }
-      *numEntries = stat_infos.size();
-      hdfsFileInfo *file_infos = new hdfsFileInfo[stat_infos.size()];
-      for(std::vector<StatInfo>::size_type i = 0; i < stat_infos.size(); i++) {
-        StatInfoToHdfsFileInfo(&file_infos[i], stat_infos.at(i));
-      }
-
-      return file_infos;
-    } catch (const std::exception & e) {
-      ReportException(e);
-      *numEntries = 0;
-      return nullptr;
-    } catch (...) {
-      ReportCaughtNonException();
-      *numEntries = 0;
-      return nullptr;
-    }
-}
-
+HDFS_EXT_API
 int hdfsCreateSnapshot(hdfsFS fs, const char* path, const char* name) {
+  resetErrorForApiCall("hdfsCreateSnapshot");
   try {
-    errno = 0;
     if (!CheckSystem(fs)) {
       return -1;
     }
@@ -1061,16 +1087,13 @@ int hdfsCreateSnapshot(hdfsFS fs, const char* path, const char* name) {
       return Error(stat);
     }
     return 0;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
+HDFS_EXT_API
 int hdfsDeleteSnapshot(hdfsFS fs, const char* path, const char* name) {
+  resetErrorForApiCall("hdfsDeleteSnapshot");
   try {
-    errno = 0;
     if (!CheckSystem(fs)) {
       return -1;
     }
@@ -1087,16 +1110,13 @@ int hdfsDeleteSnapshot(hdfsFS fs, const char* path, const char* name) {
       return Error(stat);
     }
     return 0;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
+HDFS_EXT_API
 int hdfsAllowSnapshot(hdfsFS fs, const char* path) {
+  resetErrorForApiCall("hdfsAllowSnapshot");
   try {
-    errno = 0;
     if (!CheckSystem(fs)) {
       return -1;
     }
@@ -1110,16 +1130,13 @@ int hdfsAllowSnapshot(hdfsFS fs, const char* path) {
       return Error(stat);
     }
     return 0;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
+HDFS_EXT_API
 int hdfsDisallowSnapshot(hdfsFS fs, const char* path) {
+  resetErrorForApiCall("hdfsDisallowSnapshot");
   try {
-    errno = 0;
     if (!CheckSystem(fs)) {
       return -1;
     }
@@ -1133,18 +1150,15 @@ int hdfsDisallowSnapshot(hdfsFS fs, const char* path) {
       return Error(stat);
     }
     return 0;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
+HDFS_API
 tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position, void *buffer,
                 tSize length) {
+  resetErrorForApiCall("hdfsPread");
   try
   {
-    errno = 0;
     if (!CheckSystemAndHandle(fs, file)) {
       return -1;
     }
@@ -1155,17 +1169,14 @@ tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position, void *buffer,
       return Error(stat);
     }
     return (tSize)len;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
+HDFS_API
 tSize hdfsRead(hdfsFS fs, hdfsFile file, void *buffer, tSize length) {
+  resetErrorForApiCall("hdfsRead");
   try
   {
-    errno = 0;
     if (!CheckSystemAndHandle(fs, file)) {
       return -1;
     }
@@ -1177,67 +1188,63 @@ tSize hdfsRead(hdfsFS fs, hdfsFile file, void *buffer, tSize length) {
     }
 
     return (tSize)len;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
+HDFS_API
 int hdfsUnbufferFile(hdfsFile file) {
+  resetErrorForApiCall("hdfsUnbufferFile");
   //Currently we are not doing any buffering
   CheckHandle(file);
   return -1;
 }
 
+HDFS_API
 int hdfsFileGetReadStatistics(hdfsFile file, struct hdfsReadStatistics **stats) {
+  resetErrorForApiCall("hdfsFileGetReadStatistics");
   try
-    {
-      errno = 0;
-      if (!CheckHandle(file)) {
-        return -1;
-      }
-      *stats = new hdfsReadStatistics;
-      memset(*stats, 0, sizeof(hdfsReadStatistics));
-      (*stats)->totalBytesRead = file->get_impl()->get_bytes_read();
-      return 0;
-    } catch (const std::exception & e) {
-      return ReportException(e);
-    } catch (...) {
-      return ReportCaughtNonException();
+  {
+    if (!CheckHandle(file)) {
+      return -1;
     }
+    *stats = new hdfsReadStatistics;
+    memset(*stats, 0, sizeof(hdfsReadStatistics));
+    (*stats)->totalBytesRead = file->get_impl()->get_bytes_read();
+    return 0;
+  } CATCH_AND_REPORT
 }
 
+HDFS_API
 int hdfsFileClearReadStatistics(hdfsFile file) {
+  resetErrorForApiCall("hdfsFileClearReadStatistics");
   try
-    {
-      errno = 0;
-      if (!CheckHandle(file)) {
-        return -1;
-      }
-      file->get_impl()->clear_bytes_read();
-      return 0;
-    } catch (const std::exception & e) {
-      return ReportException(e);
-    } catch (...) {
-      return ReportCaughtNonException();
+  {
+    if (!CheckHandle(file)) {
+      return -1;
     }
+    file->get_impl()->clear_bytes_read();
+    return 0;
+  } CATCH_AND_REPORT
 }
 
+HDFS_API
 int64_t hdfsReadStatisticsGetRemoteBytesRead(const struct hdfsReadStatistics *stats) {
-    return stats->totalBytesRead - stats->totalLocalBytesRead;
+  resetErrorForApiCall("hdfsReadStatisticsGetRemoteBytesRead");
+  return stats->totalBytesRead - stats->totalLocalBytesRead;
 }
 
+HDFS_API
 void hdfsFileFreeReadStatistics(struct hdfsReadStatistics *stats) {
-    errno = 0;
-    delete stats;
+  resetErrorForApiCall("hdfsFileFreeReadStatistics");
+  delete stats;
 }
 
 /* 0 on success, -1 on error*/
+HDFS_API
 int hdfsSeek(hdfsFS fs, hdfsFile file, tOffset desiredPos) {
+  resetErrorForApiCall("hdfsSeek");
   try
   {
-    errno = 0;
     if (!CheckSystemAndHandle(fs, file)) {
       return -1;
     }
@@ -1249,17 +1256,14 @@ int hdfsSeek(hdfsFS fs, hdfsFile file, tOffset desiredPos) {
     }
 
     return 0;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
+HDFS_API
 tOffset hdfsTell(hdfsFS fs, hdfsFile file) {
+  resetErrorForApiCall("hdfsTell");
   try
   {
-    errno = 0;
     if (!CheckSystemAndHandle(fs, file)) {
       return -1;
     }
@@ -1271,36 +1275,30 @@ tOffset hdfsTell(hdfsFS fs, hdfsFile file) {
     }
 
     return offset;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
 /* extended API */
+HDFS_EXT_API
 int hdfsCancel(hdfsFS fs, hdfsFile file) {
+  resetErrorForApiCall("hdfsCancel");
   try
   {
-    errno = 0;
     if (!CheckSystemAndHandle(fs, file)) {
       return -1;
     }
     static_cast<FileHandleImpl*>(file->get_impl())->CancelOperations();
     return 0;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
 
+HDFS_EXT_API
 int hdfsGetBlockLocations(hdfsFS fs, const char *path, struct hdfsBlockLocations ** locations_out)
 {
+  resetErrorForApiCall("hdfsGetBlockLocations");
   try
   {
-    errno = 0;
     if (!CheckSystem(fs)) {
       return -1;
     }
@@ -1364,15 +1362,12 @@ int hdfsGetBlockLocations(hdfsFS fs, const char *path, struct hdfsBlockLocations
     }
 
     return 0;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
+HDFS_EXT_API
 int hdfsFreeBlockLocations(struct hdfsBlockLocations * blockLocations) {
-  errno = 0;
+  resetErrorForApiCall("hdfsFreeBlockLocations");
   if (blockLocations == nullptr)
     return 0;
 
@@ -1391,48 +1386,50 @@ int hdfsFreeBlockLocations(struct hdfsBlockLocations * blockLocations) {
   return 0;
 }
 
+HDFS_API
 char*** hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length) {
+  resetErrorForApiCall("hdfsGetHosts");
   try
-    {
-      errno = 0;
-      if (!CheckSystem(fs)) {
-        return nullptr;
-      }
-      const optional<std::string> abs_path = getAbsolutePath(fs, path);
-      if(!abs_path) {
-        return nullptr;
-      }
-      std::shared_ptr<FileBlockLocation> ppLocations;
-      Status stat = fs->get_impl()->GetBlockLocations(*abs_path, start, length, &ppLocations);
-      if (!stat.ok()) {
-        Error(stat);
-        return nullptr;
-      }
-      const std::vector<BlockLocation> & ppBlockLocations = ppLocations->getBlockLocations();
-      char ***hosts = new char**[ppBlockLocations.size() + 1];
-      for (size_t i=0; i < ppBlockLocations.size(); i++) {
-        const std::vector<DNInfo> & ppDNInfos = ppBlockLocations[i].getDataNodes();
-        hosts[i] = new char*[ppDNInfos.size() + 1];
-        for (size_t j=0; j < ppDNInfos.size(); j++) {
-          auto ppDNInfo = ppDNInfos[j];
-          hosts[i][j] = new char[ppDNInfo.getHostname().size() + 1];
-          strncpy(hosts[i][j], ppDNInfo.getHostname().c_str(), ppDNInfo.getHostname().size() + 1);
-        }
-        hosts[i][ppDNInfos.size()] = nullptr;
-      }
-      hosts[ppBlockLocations.size()] = nullptr;
-      return hosts;
-    } catch (const std::exception & e) {
-      ReportException(e);
-      return nullptr;
-    } catch (...) {
-      ReportCaughtNonException();
+  {
+    if (!CheckSystem(fs)) {
       return nullptr;
     }
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return nullptr;
+    }
+    std::shared_ptr<FileBlockLocation> ppLocations;
+    Status stat = fs->get_impl()->GetBlockLocations(*abs_path, start, length, &ppLocations);
+    if (!stat.ok()) {
+      Error(stat);
+      return nullptr;
+    }
+    const std::vector<BlockLocation> & ppBlockLocations = ppLocations->getBlockLocations();
+    char ***hosts = new char**[ppBlockLocations.size() + 1];
+    for (size_t i=0; i < ppBlockLocations.size(); i++) {
+      const std::vector<DNInfo> & ppDNInfos = ppBlockLocations[i].getDataNodes();
+      hosts[i] = new char*[ppDNInfos.size() + 1];
+      for (size_t j=0; j < ppDNInfos.size(); j++) {
+        auto ppDNInfo = ppDNInfos[j];
+        hosts[i][j] = new char[ppDNInfo.getHostname().size() + 1];
+        strncpy(hosts[i][j], ppDNInfo.getHostname().c_str(), ppDNInfo.getHostname().size() + 1);
+      }
+      hosts[i][ppDNInfos.size()] = nullptr;
+    }
+    hosts[ppBlockLocations.size()] = nullptr;
+    return hosts;
+  } catch (const std::exception & e) {
+    ReportException(e);
+    return nullptr;
+  } catch (...) {
+    ReportCaughtNonException();
+    return nullptr;
+  }
 }
 
+HDFS_API
 void hdfsFreeHosts(char ***blockHosts) {
-  errno = 0;
+  resetErrorForApiCall("hdfsFreeHosts");
   if (blockHosts == nullptr)
     return;
 
@@ -1495,16 +1492,20 @@ event_response file_callback_glue(libhdfspp_file_event_callback handler,
   return event_response::ok();
 }
 
+HDFS_EXT_API
 int hdfsPreAttachFSMonitor(libhdfspp_fs_event_callback handler, int64_t cookie)
 {
+  resetErrorForApiCall("hdfsPreAttachFSMonitor");
   fs_event_callback callback = std::bind(fs_callback_glue, handler, cookie, _1, _2, _3);
   fsEventCallback = callback;
   return 0;
 }
 
 
+HDFS_EXT_API
 int hdfsPreAttachFileMonitor(libhdfspp_file_event_callback handler, int64_t cookie)
 {
+  resetErrorForApiCall("hdfsPreAttachFileMonitor");
   file_event_callback callback = std::bind(file_callback_glue, handler, cookie, _1, _2, _3, _4);
   fileEventCallback = callback;
   return 0;
@@ -1541,11 +1542,12 @@ hdfsBuilder::hdfsBuilder(const char * directory) :
   config = LoadDefault(loader);
 }
 
+HDFS_API
 struct hdfsBuilder *hdfsNewBuilder(void)
 {
+  resetErrorForApiCall("hdfsNewBuilder");
   try
   {
-    errno = 0;
     return new struct hdfsBuilder();
   } catch (const std::exception & e) {
     ReportException(e);
@@ -1556,37 +1558,42 @@ struct hdfsBuilder *hdfsNewBuilder(void)
   }
 }
 
+HDFS_API
 void hdfsBuilderSetNameNode(struct hdfsBuilder *bld, const char *nn)
 {
-  errno = 0;
+  resetErrorForApiCall("hdfsBuilderSetNameNode");
   bld->overrideHost = std::string(nn);
 }
 
+HDFS_API
 void hdfsBuilderSetNameNodePort(struct hdfsBuilder *bld, tPort port)
 {
-  errno = 0;
+  resetErrorForApiCall("hdfsBuilderSetNameNodePort");
   bld->overridePort = port;
 }
 
+HDFS_API
 void hdfsBuilderSetUserName(struct hdfsBuilder *bld, const char *userName)
 {
-  errno = 0;
+  resetErrorForApiCall("hdfsBuilderSetUserName");
   if (userName && *userName) {
     bld->user = std::string(userName);
   }
 }
 
+HDFS_API
 void hdfsBuilderSetForceNewInstance(struct hdfsBuilder *bld) {
+  resetErrorForApiCall("hdfsBuilderSetForceNewInstance");
   //libhdfspp always returns a new instance, so nothing to do
   (void)bld;
-  errno = 0;
 }
 
+HDFS_API
 void hdfsFreeBuilder(struct hdfsBuilder *bld)
 {
+  resetErrorForApiCall("hdfsFreeBuilder");
   try
   {
-    errno = 0;
     delete bld;
   } catch (const std::exception & e) {
     ReportException(e);
@@ -1595,12 +1602,12 @@ void hdfsFreeBuilder(struct hdfsBuilder *bld)
   }
 }
 
-int hdfsBuilderConfSetStr(struct hdfsBuilder *bld, const char *key,
-                          const char *val)
+HDFS_API
+int hdfsBuilderConfSetStr(struct hdfsBuilder *bld, const char *key, const char *val)
 {
+  resetErrorForApiCall("hdfsBuilderConfSetStr");
   try
   {
-    errno = 0;
     optional<HdfsConfiguration> newConfig = bld->loader.OverlayValue(bld->config, key, val);
     if (newConfig)
     {
@@ -1612,28 +1619,15 @@ int hdfsBuilderConfSetStr(struct hdfsBuilder *bld, const char *key,
       ReportError(EINVAL, "Could not change Builder value");
       return -1;
     }
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
-void hdfsConfStrFree(char *val)
-{
-  errno = 0;
-  free(val);
-}
-
-hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld) {
-  return doHdfsConnect(bld->overrideHost, bld->overridePort, bld->user, bld->config.GetOptions());
-}
-
+HDFS_API
 int hdfsConfGetStr(const char *key, char **val)
 {
+  resetErrorForApiCall("hdfsConfGetStr");
   try
   {
-    errno = 0;
     hdfsBuilder builder;
     return hdfsBuilderConfGetStr(&builder, key, val);
   } catch (const std::exception & e) {
@@ -1643,28 +1637,39 @@ int hdfsConfGetStr(const char *key, char **val)
   }
 }
 
+HDFS_API
+void hdfsConfStrFree(char *val)
+{
+  resetErrorForApiCall("hdfsConfStrFree");
+  free(val);
+}
+
+HDFS_API
+hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld) {
+  resetErrorForApiCall("hdfsBuilderConnect");
+  return doHdfsConnect(bld->overrideHost, bld->overridePort, bld->user, bld->config.GetOptions());
+}
+
+HDFS_API
 int hdfsConfGetInt(const char *key, int32_t *val)
 {
+  resetErrorForApiCall("hdfsConfGetInt");
   try
   {
-    errno = 0;
     hdfsBuilder builder;
     return hdfsBuilderConfGetInt(&builder, key, val);
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
 //
 //  Extended builder interface
 //
+HDFS_EXT_API
 struct hdfsBuilder *hdfsNewBuilderFromDirectory(const char * configDirectory)
 {
+  resetErrorForApiCall("hdfsNewBuilderFromDirectory");
   try
   {
-    errno = 0;
     return new struct hdfsBuilder(configDirectory);
   } catch (const std::exception & e) {
     ReportException(e);
@@ -1675,12 +1680,12 @@ struct hdfsBuilder *hdfsNewBuilderFromDirectory(const char * configDirectory)
   }
 }
 
-int hdfsBuilderConfGetStr(struct hdfsBuilder *bld, const char *key,
-                          char **val)
+HDFS_EXT_API
+int hdfsBuilderConfGetStr(struct hdfsBuilder *bld, const char *key, char **val)
 {
+  resetErrorForApiCall("hdfsBuilderConfGetStr");
   try
   {
-    errno = 0;
     optional<std::string> value = bld->config.Get(key);
     if (value)
     {
@@ -1693,11 +1698,7 @@ int hdfsBuilderConfGetStr(struct hdfsBuilder *bld, const char *key,
       *val = nullptr;
     }
     return 0;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
 // If we're running on a 32-bit platform, we might get 64-bit values that
@@ -1708,11 +1709,12 @@ bool isValidInt(int64_t value)
           value <= std::numeric_limits<int>::max());
 }
 
+HDFS_EXT_API
 int hdfsBuilderConfGetInt(struct hdfsBuilder *bld, const char *key, int32_t *val)
 {
+  resetErrorForApiCall("hdfsBuilderConfGetInt");
   try
   {
-    errno = 0;
     // Pull from default configuration
     optional<int64_t> value = bld->config.GetInt(key);
     if (value)
@@ -1727,18 +1729,15 @@ int hdfsBuilderConfGetInt(struct hdfsBuilder *bld, const char *key, int32_t *val
     // If not found, don't change val
     ReportError(EINVAL, "Could not get Builder value");
     return 0;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
+HDFS_EXT_API
 int hdfsBuilderConfGetLong(struct hdfsBuilder *bld, const char *key, int64_t *val)
 {
+  resetErrorForApiCall("hdfsBuilderConfGetLong");
   try
   {
-    errno = 0;
     // Pull from default configuration
     optional<int64_t> value = bld->config.GetInt(key);
     if (value)
@@ -1749,11 +1748,7 @@ int hdfsBuilderConfGetLong(struct hdfsBuilder *bld, const char *key, int64_t *va
     // If not found, don't change val
     ReportError(EINVAL, "Could not get Builder value");
     return 0;
-  } catch (const std::exception & e) {
-    return ReportException(e);
-  } catch (...) {
-    return ReportCaughtNonException();
-  }
+  } CATCH_AND_REPORT
 }
 
 /**
@@ -1829,15 +1824,21 @@ void CForwardingLogger::FreeLogData(LogData *data) {
 }
 
 
+HDFS_EXT_API
 LogData *hdfsCopyLogData(LogData *data) {
+  resetErrorForApiCall("hdfsCopyLogData");
   return CForwardingLogger::CopyLogData(data);
 }
 
+HDFS_EXT_API
 void hdfsFreeLogData(LogData *data) {
+  resetErrorForApiCall("hdfsFreeLogData");
   CForwardingLogger::FreeLogData(data);
 }
 
+HDFS_EXT_API
 void hdfsSetLogFunction(void (*callback)(LogData*)) {
+  resetErrorForApiCall("hdfsSetLogFunction");
   CForwardingLogger *logger = new CForwardingLogger();
   logger->SetCallback(callback);
   LogManager::SetLoggerImplementation(std::unique_ptr<LoggerInterface>(logger));
@@ -1849,8 +1850,8 @@ static bool IsLevelValid(int component) {
   return true;
 }
 
-
 //  should use  __builtin_popcnt as optimization on some platforms
+//    *but maybe not Intel: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=62011
 static int popcnt(int val) {
   int bits = sizeof(val) * 8;
   int count = 0;
@@ -1869,24 +1870,27 @@ static bool IsComponentValid(int component) {
   return true;
 }
 
+HDFS_EXT_API
 int hdfsEnableLoggingForComponent(int component) {
-  errno = 0;
+  resetErrorForApiCall("hdfsEnableLoggingForComponent");
   if(!IsComponentValid(component))
     return -1;
   LogManager::EnableLogForComponent(static_cast<LogSourceComponent>(component));
   return 0;
 }
 
+HDFS_EXT_API
 int hdfsDisableLoggingForComponent(int component) {
-  errno = 0;
+  resetErrorForApiCall("hdfsDisableLoggingForComponent");
   if(!IsComponentValid(component))
     return -1;
   LogManager::DisableLogForComponent(static_cast<LogSourceComponent>(component));
   return 0;
 }
 
+HDFS_EXT_API
 int hdfsSetLoggingLevel(int level) {
-  errno = 0;
+  resetErrorForApiCall("hdfsSetLoggingLevel");
   if(!IsLevelValid(level))
     return -1;
   LogManager::SetLogLevel(static_cast<LogLevel>(level));
