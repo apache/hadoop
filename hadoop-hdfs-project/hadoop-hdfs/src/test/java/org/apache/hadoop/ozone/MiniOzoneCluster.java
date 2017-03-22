@@ -222,7 +222,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
     private final String path;
     private final UUID runID;
     private Optional<String> ozoneHandlerType = Optional.absent();
-    private Optional<Boolean> enableTrace = Optional.of(true);
+    private Optional<Boolean> enableTrace = Optional.of(false);
     private Optional<Integer> hbSeconds = Optional.absent();
     private Optional<Integer> hbProcessorInterval = Optional.absent();
     private Optional<String> scmMetadataDir = Optional.absent();
