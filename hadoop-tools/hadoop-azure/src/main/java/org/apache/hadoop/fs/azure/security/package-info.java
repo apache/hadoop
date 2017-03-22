@@ -15,23 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.cli.util;
-
-import org.apache.hadoop.hdfs.tools.CryptoAdmin;
-import org.apache.hadoop.util.ToolRunner;
-
-public class CryptoAdminCmdExecutor extends CommandExecutor {
-  protected String namenode = null;
-  protected CryptoAdmin admin = null;
-
-  public CryptoAdminCmdExecutor(String namenode, CryptoAdmin admin) {
-    this.namenode = namenode;
-    this.admin = admin;
-  }
-
-  @Override
-  protected int execute(final String cmd) throws Exception {
-    String[] args = getCommandAsArgs(cmd, "NAMENODE", this.namenode);
-    return ToolRunner.run(admin, args);
-  }
-}
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+package org.apache.hadoop.fs.azure.security;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

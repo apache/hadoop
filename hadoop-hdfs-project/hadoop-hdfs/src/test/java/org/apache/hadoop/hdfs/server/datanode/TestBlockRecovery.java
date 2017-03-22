@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
@@ -220,7 +221,8 @@ public class TestBlockRecovery {
             Mockito.anyInt(),
             Mockito.any(VolumeFailureSummary.class),
             Mockito.anyBoolean(),
-            Mockito.any(SlowPeerReports.class)))
+            Mockito.any(SlowPeerReports.class),
+            Mockito.any(SlowDiskReports.class)))
         .thenReturn(new HeartbeatResponse(
             new DatanodeCommand[0],
             new NNHAStatusHeartbeat(HAServiceState.ACTIVE, 1),

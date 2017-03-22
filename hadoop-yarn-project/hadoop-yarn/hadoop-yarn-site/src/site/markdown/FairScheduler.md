@@ -83,31 +83,31 @@ The allocation file must be in XML format. The format contains five types of ele
 
 * **Queue elements**: which represent queues. Queue elements can take an optional attribute 'type', which when set to 'parent' makes it a parent queue. This is useful when we want to create a parent queue without configuring any leaf queues. Each queue element may contain the following properties:
 
-    * minResources: minimum resources the queue is entitled to, in the form "X mb, Y vcores". For the single-resource fairness policy, the vcores value is ignored. If a queue's minimum share is not satisfied, it will be offered available resources before any other queue under the same parent. Under the single-resource fairness policy, a queue is considered unsatisfied if its memory usage is below its minimum memory share. Under dominant resource fairness, a queue is considered unsatisfied if its usage for its dominant resource with respect to the cluster capacity is below its minimum share for that resource. If multiple queues are unsatisfied in this situation, resources go to the queue with the smallest ratio between relevant resource usage and minimum. Note that it is possible that a queue that is below its minimum may not immediately get up to its minimum when it submits an application, because already-running jobs may be using those resources.
+    * **minResources**: minimum resources the queue is entitled to, in the form "X mb, Y vcores". For the single-resource fairness policy, the vcores value is ignored. If a queue's minimum share is not satisfied, it will be offered available resources before any other queue under the same parent. Under the single-resource fairness policy, a queue is considered unsatisfied if its memory usage is below its minimum memory share. Under dominant resource fairness, a queue is considered unsatisfied if its usage for its dominant resource with respect to the cluster capacity is below its minimum share for that resource. If multiple queues are unsatisfied in this situation, resources go to the queue with the smallest ratio between relevant resource usage and minimum. Note that it is possible that a queue that is below its minimum may not immediately get up to its minimum when it submits an application, because already-running jobs may be using those resources.
 
-    * maxResources: maximum resources a queue is allowed, in the form "X mb, Y vcores". A queue will never be assigned a container that would put its aggregate usage over this limit.
+    * **maxResources**: maximum resources a queue is allowed, in the form "X mb, Y vcores". A queue will never be assigned a container that would put its aggregate usage over this limit.
 
-    * maxChildResources: maximum resources an ad hoc child queue is allowed, in the form "X mb, Y vcores". Any ad hoc queue that is a direct child of a queue with this property set will have it's maxResources property set accordingly.
+    * **maxChildResources**: maximum resources an ad hoc child queue is allowed, in the form "X mb, Y vcores". Any ad hoc queue that is a direct child of a queue with this property set will have it's maxResources property set accordingly.
 
-    * maxRunningApps: limit the number of apps from the queue to run at once
+    * **maxRunningApps**: limit the number of apps from the queue to run at once
 
-    * maxAMShare: limit the fraction of the queue's fair share that can be used to run application masters. This property can only be used for leaf queues. For example, if set to 1.0f, then AMs in the leaf queue can take up to 100% of both the memory and CPU fair share. The value of -1.0f will disable this feature and the amShare will not be checked. The default value is 0.5f.
+    * **maxAMShare**: limit the fraction of the queue's fair share that can be used to run application masters. This property can only be used for leaf queues. For example, if set to 1.0f, then AMs in the leaf queue can take up to 100% of both the memory and CPU fair share. The value of -1.0f will disable this feature and the amShare will not be checked. The default value is 0.5f.
 
-    * weight: to share the cluster non-proportionally with other queues. Weights default to 1, and a queue with weight 2 should receive approximately twice as many resources as a queue with the default weight.
+    * **weight**: to share the cluster non-proportionally with other queues. Weights default to 1, and a queue with weight 2 should receive approximately twice as many resources as a queue with the default weight.
 
-    * schedulingPolicy: to set the scheduling policy of any queue. The allowed values are "fifo"/"fair"/"drf" or any class that extends `org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy`. Defaults to "fair". If "fifo", apps with earlier submit times are given preference for containers, but apps submitted later may run concurrently if there is leftover space on the cluster after satisfying the earlier app's requests.
+    * **schedulingPolicy**: to set the scheduling policy of any queue. The allowed values are "fifo"/"fair"/"drf" or any class that extends `org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy`. Defaults to "fair". If "fifo", apps with earlier submit times are given preference for containers, but apps submitted later may run concurrently if there is leftover space on the cluster after satisfying the earlier app's requests.
 
-    * aclSubmitApps: a list of users and/or groups that can submit apps to the queue. Refer to the ACLs section below for more info on the format of this list and how queue ACLs work.
+    * **aclSubmitApps**: a list of users and/or groups that can submit apps to the queue. Refer to the ACLs section below for more info on the format of this list and how queue ACLs work.
 
-    * aclAdministerApps: a list of users and/or groups that can administer a queue. Currently the only administrative action is killing an application. Refer to the ACLs section below for more info on the format of this list and how queue ACLs work.
+    * **aclAdministerApps**: a list of users and/or groups that can administer a queue. Currently the only administrative action is killing an application. Refer to the ACLs section below for more info on the format of this list and how queue ACLs work.
 
-    * minSharePreemptionTimeout: number of seconds the queue is under its minimum share before it will try to preempt containers to take resources from other queues. If not set, the queue will inherit the value from its parent queue.
+    * **minSharePreemptionTimeout**: number of seconds the queue is under its minimum share before it will try to preempt containers to take resources from other queues. If not set, the queue will inherit the value from its parent queue.
 
-    * fairSharePreemptionTimeout: number of seconds the queue is under its fair share threshold before it will try to preempt containers to take resources from other queues. If not set, the queue will inherit the value from its parent queue.
+    * **fairSharePreemptionTimeout**: number of seconds the queue is under its fair share threshold before it will try to preempt containers to take resources from other queues. If not set, the queue will inherit the value from its parent queue.
 
-    * fairSharePreemptionThreshold: the fair share preemption threshold for the queue. If the queue waits fairSharePreemptionTimeout without receiving fairSharePreemptionThreshold\*fairShare resources, it is allowed to preempt containers to take resources from other queues. If not set, the queue will inherit the value from its parent queue.
+    * **fairSharePreemptionThreshold**: the fair share preemption threshold for the queue. If the queue waits fairSharePreemptionTimeout without receiving fairSharePreemptionThreshold\*fairShare resources, it is allowed to preempt containers to take resources from other queues. If not set, the queue will inherit the value from its parent queue.
 
-    * allowPreemptionFrom: determines whether the scheduler is allowed to preempt resources from the queue. The default is true. If a queue has this property set to false, this property will apply recursively to all child queues.
+    * **allowPreemptionFrom**: determines whether the scheduler is allowed to preempt resources from the queue. The default is true. If a queue has this property set to false, this property will apply recursively to all child queues.
 
 * **User elements**: which represent settings governing the behavior of individual users. They can contain a single property: maxRunningApps, a limit on the number of running apps for a particular user.
 
@@ -129,19 +129,19 @@ The allocation file must be in XML format. The format contains five types of ele
 
 * **A queuePlacementPolicy element**: which contains a list of rule elements that tell the scheduler how to place incoming apps into queues. Rules are applied in the order that they are listed. Rules may take arguments. All rules accept the "create" argument, which indicates whether the rule can create a new queue. "Create" defaults to true; if set to false and the rule would place the app in a queue that is not configured in the allocations file, we continue on to the next rule. The last rule must be one that can never issue a continue. Valid rules are:
 
-    * specified: the app is placed into the queue it requested. If the app requested no queue, i.e. it specified "default", we continue. If the app requested a queue name starting or ending with period, i.e. names like ".q1" or "q1." will be rejected.
+    * **specified**: the app is placed into the queue it requested. If the app requested no queue, i.e. it specified "default", we continue. If the app requested a queue name starting or ending with period, i.e. names like ".q1" or "q1." will be rejected.
 
-    * user: the app is placed into a queue with the name of the user who submitted it. Periods in the username will be replace with "\_dot\_", i.e. the queue name for user "first.last" is "first\_dot\_last".
+    * **user**: the app is placed into a queue with the name of the user who submitted it. Periods in the username will be replace with "\_dot\_", i.e. the queue name for user "first.last" is "first\_dot\_last".
 
-    * primaryGroup: the app is placed into a queue with the name of the primary group of the user who submitted it. Periods in the group name will be replaced with "\_dot\_", i.e. the queue name for group "one.two" is "one\_dot\_two".
+    * **primaryGroup**: the app is placed into a queue with the name of the primary group of the user who submitted it. Periods in the group name will be replaced with "\_dot\_", i.e. the queue name for group "one.two" is "one\_dot\_two".
 
-    * secondaryGroupExistingQueue: the app is placed into a queue with a name that matches a secondary group of the user who submitted it. The first secondary group that matches a configured queue will be selected. Periods in group names will be replaced with "\_dot\_", i.e. a user with "one.two" as one of their secondary groups would be placed into the "one\_dot\_two" queue, if such a queue exists.
+    * **secondaryGroupExistingQueue**: the app is placed into a queue with a name that matches a secondary group of the user who submitted it. The first secondary group that matches a configured queue will be selected. Periods in group names will be replaced with "\_dot\_", i.e. a user with "one.two" as one of their secondary groups would be placed into the "one\_dot\_two" queue, if such a queue exists.
 
-    * nestedUserQueue : the app is placed into a queue with the name of the user under the queue suggested by the nested rule. This is similar to âuserâ rule,the difference being in 'nestedUserQueue' rule,user queues can be created under any parent queue, while 'user' rule creates user queues only under root queue. Note that nestedUserQueue rule would be applied only if the nested rule returns a parent queue.One can configure a parent queue either by setting 'type' attribute of queue to 'parent' or by configuring at least one leaf under that queue which makes it a parent. See example allocation for a sample use case.
+    * **nestedUserQueue**: the app is placed into a queue with the name of the user under the queue suggested by the nested rule. This is similar to âuserâ rule,the difference being in 'nestedUserQueue' rule,user queues can be created under any parent queue, while 'user' rule creates user queues only under root queue. Note that nestedUserQueue rule would be applied only if the nested rule returns a parent queue.One can configure a parent queue either by setting 'type' attribute of queue to 'parent' or by configuring at least one leaf under that queue which makes it a parent. See example allocation for a sample use case.
 
-    * default: the app is placed into the queue specified in the 'queue' attribute of the default rule. If 'queue' attribute is not specified, the app is placed into 'root.default' queue.
+    * **default**: the app is placed into the queue specified in the 'queue' attribute of the default rule. If 'queue' attribute is not specified, the app is placed into 'root.default' queue.
 
-    * reject: the app is rejected.
+    * **reject**: the app is rejected.
 
     An example allocation file is given here:
 

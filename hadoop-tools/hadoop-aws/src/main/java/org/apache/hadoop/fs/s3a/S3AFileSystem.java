@@ -813,7 +813,7 @@ public class S3AFileSystem extends FileSystem {
       //Verify dest is not a child of the source directory
       if (dstKey.startsWith(srcKey)) {
         throw new RenameFailedException(srcKey, dstKey,
-            "cannot rename a directory to a subdirectory o fitself ");
+            "cannot rename a directory to a subdirectory of itself ");
       }
 
       List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>();
@@ -2403,11 +2403,13 @@ public class S3AFileSystem extends FileSystem {
           "No partitions have been uploaded");
       LOG.debug("Completing multipart upload {} with {} parts",
           uploadId, partETags.size());
+      // a copy of the list is required, so that the AWS SDK doesn't
+      // attempt to sort an unmodifiable list.
       return s3.completeMultipartUpload(
           new CompleteMultipartUploadRequest(bucket,
               key,
               uploadId,
-              partETags));
+              new ArrayList<>(partETags)));
     }
 
     /**

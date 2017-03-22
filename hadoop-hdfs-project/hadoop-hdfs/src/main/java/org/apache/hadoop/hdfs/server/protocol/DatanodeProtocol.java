@@ -122,7 +122,8 @@ public interface DatanodeProtocol {
                                        int failedVolumes,
                                        VolumeFailureSummary volumeFailureSummary,
                                        boolean requestFullBlockReportLease,
-                                       @Nonnull SlowPeerReports slowPeers)
+                                       @Nonnull SlowPeerReports slowPeers,
+                                       @Nonnull SlowDiskReports slowDisks)
       throws IOException;
 
   /**

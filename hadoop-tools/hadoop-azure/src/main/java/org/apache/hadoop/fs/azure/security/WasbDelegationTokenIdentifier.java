@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,23 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.cli.util;
 
-import org.apache.hadoop.hdfs.tools.CryptoAdmin;
-import org.apache.hadoop.util.ToolRunner;
+package org.apache.hadoop.fs.azure.security;
 
-public class CryptoAdminCmdExecutor extends CommandExecutor {
-  protected String namenode = null;
-  protected CryptoAdmin admin = null;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 
-  public CryptoAdminCmdExecutor(String namenode, CryptoAdmin admin) {
-    this.namenode = namenode;
-    this.admin = admin;
+/**
+ * Delegation token Identifier for WASB delegation tokens.
+ */
+public class WasbDelegationTokenIdentifier extends DelegationTokenIdentifier {
+  public static final Text TOKEN_KIND = new Text("WASB delegation");
+
+  public WasbDelegationTokenIdentifier(){
+    super(TOKEN_KIND);
+  }
+
+  public WasbDelegationTokenIdentifier(Text kind) {
+    super(kind);
+  }
+
+  public WasbDelegationTokenIdentifier(Text kind, Text owner, Text renewer,
+      Text realUser) {
+    super(kind, owner, renewer, realUser);
   }
 
   @Override
-  protected int execute(final String cmd) throws Exception {
-    String[] args = getCommandAsArgs(cmd, "NAMENODE", this.namenode);
-    return ToolRunner.run(admin, args);
+  public Text getKind() {
+    return TOKEN_KIND;
   }
+
 }

@@ -62,10 +62,6 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.log4j.Logger;
@@ -335,13 +331,12 @@ public abstract class AMSimulator extends TaskRunner.Task {
   private void trackApp() {
     if (isTracked) {
       ((SchedulerWrapper) rm.getResourceScheduler())
-              .addTrackedApp(appAttemptId, oldAppId);
+          .addTrackedApp(appId, oldAppId);
     }
   }
   public void untrackApp() {
     if (isTracked) {
-      ((SchedulerWrapper) rm.getResourceScheduler())
-              .removeTrackedApp(appAttemptId, oldAppId);
+      ((SchedulerWrapper) rm.getResourceScheduler()).removeTrackedApp(oldAppId);
     }
   }
   
