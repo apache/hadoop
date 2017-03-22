@@ -261,7 +261,11 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
 
       // If home-subcluster is not active, ignore node/rack request
       if (bookkeeper.isActiveAndEnabled(homeSubcluster)) {
-        bookkeeper.addLocalizedNodeRR(homeSubcluster, rr);
+        if (targetIds != null && targetIds.size() > 0) {
+          bookkeeper.addRackRR(homeSubcluster, rr);
+        } else {
+          bookkeeper.addLocalizedNodeRR(homeSubcluster, rr);
+        }
       } else {
         if (LOG.isDebugEnabled()) {
           LOG.debug("The homeSubCluster (" + homeSubcluster + ") we are "
