@@ -655,21 +655,24 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
   }
  
-  static{
-    //print deprecation warning if hadoop-site.xml is found in classpath
+  static {
+    // Add default resources
+    addDefaultResource("core-default.xml");
+    addDefaultResource("core-site.xml");
+
+    // print deprecation warning if hadoop-site.xml is found in classpath
     ClassLoader cL = Thread.currentThread().getContextClassLoader();
     if (cL == null) {
       cL = Configuration.class.getClassLoader();
     }
-    if(cL.getResource("hadoop-site.xml")!=null) {
+    if (cL.getResource("hadoop-site.xml") != null) {
       LOG.warn("DEPRECATED: hadoop-site.xml found in the classpath. " +
           "Usage of hadoop-site.xml is deprecated. Instead use core-site.xml, "
           + "mapred-site.xml and hdfs-site.xml to override properties of " +
           "core-default.xml, mapred-default.xml and hdfs-default.xml " +
           "respectively");
+      addDefaultResource("hadoop-site.xml");
     }
-    addDefaultResource("core-default.xml");
-    addDefaultResource("core-site.xml");
   }
   
   private Properties properties;
@@ -2556,11 +2559,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if(loadDefaults) {
       for (String resource : defaultResources) {
         loadResource(properties, new Resource(resource), quiet);
-      }
-    
-      //support the hadoop-site.xml as a deprecated case
-      if(getResource("hadoop-site.xml")!=null) {
-        loadResource(properties, new Resource("hadoop-site.xml"), quiet);
       }
     }
     
