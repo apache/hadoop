@@ -1869,7 +1869,7 @@ public class S3AFileSystem extends FileSystem {
     }
   }
 
-  protected void setOptionalPutRequestParameters(PutObjectRequest request) {
+  private void setOptionalPutRequestParameters(PutObjectRequest request) {
     switch (serverSideEncryptionAlgorithm) {
     case SSE_KMS:
       request.setSSEAwsKeyManagementParams(generateSSEAwsKeyParams());
