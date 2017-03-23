@@ -76,12 +76,44 @@ final class TimelineReaderWebServicesUtils {
       String isRelatedTo, String infofilters, String conffilters,
       String metricfilters, String eventfilters,
       String fromid) throws TimelineParseException {
-    return new TimelineEntityFilters(parseLongStr(limit),
-        parseLongStr(createdTimeStart), parseLongStr(createdTimeEnd),
-        parseRelationFilters(relatesTo), parseRelationFilters(isRelatedTo),
-        parseKVFilters(infofilters, false), parseKVFilters(conffilters, true),
-        parseMetricFilters(metricfilters), parseEventFilters(eventfilters),
-        parseStr(fromid));
+    return createTimelineEntityFilters(
+        limit, parseLongStr(createdTimeStart),
+        parseLongStr(createdTimeEnd),
+        relatesTo, isRelatedTo, infofilters,
+        conffilters, metricfilters, eventfilters, fromid);
+  }
+
+  /**
+   * Parse the passed filters represented as strings and convert them into a
+   * {@link TimelineEntityFilters} object.
+   * @param limit Limit to number of entities to return.
+   * @param createdTimeStart Created time start for the entities to return.
+   * @param createdTimeEnd Created time end for the entities to return.
+   * @param relatesTo Entities to return must match relatesTo.
+   * @param isRelatedTo Entities to return must match isRelatedTo.
+   * @param infofilters Entities to return must match these info filters.
+   * @param conffilters Entities to return must match these metric filters.
+   * @param metricfilters Entities to return must match these metric filters.
+   * @param eventfilters Entities to return must match these event filters.
+   * @return a {@link TimelineEntityFilters} object.
+   * @throws TimelineParseException if any problem occurs during parsing.
+   */
+  static TimelineEntityFilters createTimelineEntityFilters(String limit,
+      Long createdTimeStart, Long createdTimeEnd, String relatesTo,
+      String isRelatedTo, String infofilters, String conffilters,
+      String metricfilters, String eventfilters,
+      String fromid) throws TimelineParseException {
+    return new TimelineEntityFilters.Builder()
+        .entityLimit(parseLongStr(limit))
+        .createdTimeBegin(createdTimeStart)
+        .createTimeEnd(createdTimeEnd)
+        .relatesTo(parseRelationFilters(relatesTo))
+        .isRelatedTo(parseRelationFilters(isRelatedTo))
+        .infoFilters(parseKVFilters(infofilters, false))
+        .configFilters(parseKVFilters(conffilters, true))
+        .metricFilters(parseMetricFilters(metricfilters))
+        .eventFilters(parseEventFilters(eventfilters))
+        .fromId(parseStr(fromid)).build();
   }
 
   /**
