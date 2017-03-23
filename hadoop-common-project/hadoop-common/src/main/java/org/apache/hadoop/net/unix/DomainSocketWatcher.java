@@ -321,11 +321,7 @@ public final class DomainSocketWatcher implements Closeable {
       toAdd.add(entry);
       kick();
       while (true) {
-        try {
-          processedCond.await();
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-        }
+        processedCond.awaitUninterruptibly();
         if (!toAdd.contains(entry)) {
           break;
         }
@@ -347,11 +343,7 @@ public final class DomainSocketWatcher implements Closeable {
       toRemove.put(sock.fd, sock);
       kick();
       while (true) {
-        try {
-          processedCond.await();
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-        }
+        processedCond.awaitUninterruptibly();
         if (!toRemove.containsKey(sock.fd)) {
           break;
         }
