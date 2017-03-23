@@ -188,6 +188,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-10829. Iteration on CredentialProviderFactory.serviceLoader is
     thread-unsafe. (enoy Antony via jnp)
 
+    HADOOP-14214. DomainSocketWatcher::add()/delete() should not self
+    interrupt while looping await(). (Mingliang Liu)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
