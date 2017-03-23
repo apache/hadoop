@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.DelegateToFileSystem;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 
 /**
@@ -63,6 +64,13 @@ public class RawLocalFs extends DelegateToFileSystem {
   }
   
   @Override
+  public FsServerDefaults getServerDefaults(final Path f)
+      throws IOException {
+    return LocalConfigKeys.getServerDefaults();
+  }
+
+  @Override
+  @Deprecated
   public FsServerDefaults getServerDefaults() throws IOException {
     return LocalConfigKeys.getServerDefaults();
   }
