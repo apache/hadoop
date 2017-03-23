@@ -36,11 +36,11 @@ HttpFS itself is Java web-application and it runs using a preconfigured Tomcat b
 
 HttpFS HTTP web-service API calls are HTTP REST calls that map to a HDFS file system operation. For example, using the `curl` Unix command:
 
-* `$ curl http://httpfs-host:14000/webhdfs/v1/user/foo/README.txt` returns the contents of the HDFS `/user/foo/README.txt` file.
+* `$ curl 'http://httpfs-host:14000/webhdfs/v1/user/foo/README.txt?op=OPEN&user.name=foo'` returns the contents of the HDFS `/user/foo/README.txt` file.
 
-* `$ curl http://httpfs-host:14000/webhdfs/v1/user/foo?op=list` returns the contents of the HDFS `/user/foo` directory in JSON format.
+* `$ curl 'http://httpfs-host:14000/webhdfs/v1/user/foo?op=LISTSTATUS&user.name=foo'` returns the contents of the HDFS `/user/foo` directory in JSON format.
 
-* `$ curl -X POST http://httpfs-host:14000/webhdfs/v1/user/foo/bar?op=mkdirs` creates the HDFS `/user/foo.bar` directory.
+* `$ curl -X POST 'http://httpfs-host:14000/webhdfs/v1/user/foo/bar?op=MKDIRS&user.name=foo'` creates the HDFS `/user/foo/bar` directory.
 
 User and Developer Documentation
 --------------------------------
