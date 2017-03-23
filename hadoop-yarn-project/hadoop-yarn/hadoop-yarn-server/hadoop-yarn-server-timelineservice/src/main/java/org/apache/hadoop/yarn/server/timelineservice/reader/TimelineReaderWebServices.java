@@ -1392,10 +1392,8 @@ public class TimelineReaderWebServices {
       DateRange range = parseDateRange(dateRange);
       TimelineEntityFilters entityFilters =
           TimelineReaderWebServicesUtils.createTimelineEntityFilters(
-              limit, null, null, null, null, null, null, null, null,
-              fromId);
-      entityFilters.setCreatedTimeBegin(range.dateStart);
-      entityFilters.setCreatedTimeEnd(range.dateEnd);
+              limit, range.dateStart, range.dateEnd,
+              null, null, null, null, null, null, fromId);
       entities = timelineReaderManager.getEntities(
           TimelineReaderWebServicesUtils.createTimelineReaderContext(
           clusterId, null, null, null, null,
