@@ -208,6 +208,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.jscsi</groupId>
+      <artifactId>target</artifactId>
+      <version>2.5.3</version>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <build>
