@@ -133,6 +133,11 @@ Add the following properties to your `core-site.xml`
 
 ```xml
 <property>
+  <name>dfs.adls.oauth2.access.token.provider.type</name>
+  <value>ClientCredential</value>
+</property>
+
+<property>
   <name>dfs.adls.oauth2.refresh.url</name>
   <value>TOKEN ENDPOINT FROM STEP 7 ABOVE</value>
 </property>
