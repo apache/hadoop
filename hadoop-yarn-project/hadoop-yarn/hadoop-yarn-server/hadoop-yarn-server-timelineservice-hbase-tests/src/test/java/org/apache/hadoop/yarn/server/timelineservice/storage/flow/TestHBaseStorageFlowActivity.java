@@ -184,8 +184,7 @@ public class TestHBaseStorageFlowActivity {
       Set<TimelineEntity> entities = hbr.getEntities(
           new TimelineReaderContext(cluster, null, null, null, null,
           TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), null),
-          new TimelineEntityFilters(10L, null, null, null, null, null,
-          null, null, null),
+          new TimelineEntityFilters.Builder().entityLimit(10L).build(),
           new TimelineDataToRetrieve());
       assertEquals(1, entities.size());
       for (TimelineEntity e : entities) {
@@ -249,8 +248,7 @@ public class TestHBaseStorageFlowActivity {
       Set<TimelineEntity> entities = hbr.getEntities(
           new TimelineReaderContext(cluster, user, flow, null, null,
           TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), null),
-          new TimelineEntityFilters(10L, null, null, null, null, null,
-          null, null, null),
+          new TimelineEntityFilters.Builder().entityLimit(10L).build(),
           new TimelineDataToRetrieve());
       assertEquals(1, entities.size());
       for (TimelineEntity e : entities) {
@@ -377,8 +375,7 @@ public class TestHBaseStorageFlowActivity {
       Set<TimelineEntity> entities = hbr.getEntities(
           new TimelineReaderContext(cluster, null, null, null, null,
           TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), null),
-          new TimelineEntityFilters(10L, null, null, null, null, null,
-          null, null, null),
+          new TimelineEntityFilters.Builder().entityLimit(10L).build(),
           new TimelineDataToRetrieve());
       assertEquals(1, entities.size());
       for (TimelineEntity e : entities) {
