@@ -166,15 +166,19 @@ For additional reading on the credential provider API, see
 ##### Provisioning
 
 ```bash
-hadoop credential create dfs.adls.oauth2.refresh.token -value 123
+hadoop credential create dfs.adls.oauth2.client.id -value 123
     -provider localjceks://file/home/foo/adls.jceks
-hadoop credential create dfs.adls.oauth2.credential -value 123
+hadoop credential create dfs.adls.oauth2.refresh.token -value 123
     -provider localjceks://file/home/foo/adls.jceks
 ```
 
 ##### Configuring core-site.xml or command line property
 
 ```xml
+<property>
+  <name>dfs.adls.oauth2.access.token.provider.type</name>
+  <value>RefreshToken</value>
+</property>
 <property>
   <name>hadoop.security.credential.provider.path</name>
   <value>localjceks://file/home/foo/adls.jceks</value>
@@ -186,9 +190,10 @@ hadoop credential create dfs.adls.oauth2.credential -value 123
 
 ```bash
 hadoop distcp
-    [-D hadoop.security.credential.provider.path=localjceks://file/home/user/adls.jceks]
-    hdfs://<NameNode Hostname>:9001/user/foo/007020615
-    adl://<Account Name>.azuredatalakestore.net/testDir/
+    [-D dfs.adls.oauth2.access.token.provider.type=RefreshToken
+     -D hadoop.security.credential.provider.path=localjceks://file/home/user/adls.jceks]
+    hdfs://<NameNode Hostname>:9001/user/foo/srcDir
+    adl://<Account Name>.azuredatalakestore.net/tgtDir/
 ```
 
 NOTE: You may optionally add the provider path property to the `distcp` command
