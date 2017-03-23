@@ -185,7 +185,7 @@ public abstract class TimelineEntityReader extends
    */
   protected void createFiltersIfNull() {
     if (filters == null) {
-      filters = new TimelineEntityFilters();
+      filters = new TimelineEntityFilters.Builder().build();
     }
   }
 
