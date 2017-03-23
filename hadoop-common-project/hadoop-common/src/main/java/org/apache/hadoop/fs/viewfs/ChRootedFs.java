@@ -223,8 +223,14 @@ class ChRootedFs extends AbstractFileSystem {
   }
 
   @Override
+  @Deprecated
   public FsServerDefaults getServerDefaults() throws IOException {
     return myFs.getServerDefaults();
+  }
+
+  @Override
+  public FsServerDefaults getServerDefaults(final Path f) throws IOException {
+    return myFs.getServerDefaults(fullPath(f));
   }
 
   @Override

@@ -240,8 +240,20 @@ public class ViewFs extends AbstractFileSystem {
   }
 
   @Override
+  @Deprecated
   public FsServerDefaults getServerDefaults() throws IOException {
     return LocalConfigKeys.getServerDefaults(); 
+  }
+
+  @Override
+  public FsServerDefaults getServerDefaults(final Path f) throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res;
+    try {
+      res = fsState.resolve(getUriPath(f), true);
+    } catch (FileNotFoundException fnfe) {
+      return LocalConfigKeys.getServerDefaults();
+    }
+    return res.targetFileSystem.getServerDefaults(res.remainingPath);
   }
 
   @Override
@@ -927,8 +939,14 @@ public class ViewFs extends AbstractFileSystem {
     }
 
     @Override
+    @Deprecated
     public FsServerDefaults getServerDefaults() throws IOException {
-      throw new IOException("FsServerDefaults not implemented yet");
+      return LocalConfigKeys.getServerDefaults();
+    }
+
+    @Override
+    public FsServerDefaults getServerDefaults(final Path f) throws IOException {
+      return LocalConfigKeys.getServerDefaults();
     }
 
     @Override
