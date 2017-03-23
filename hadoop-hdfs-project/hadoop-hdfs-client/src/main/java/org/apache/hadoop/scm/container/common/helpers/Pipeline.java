@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -35,6 +36,12 @@ public class Pipeline {
   private String containerName;
   private String leaderID;
   private Map<String, DatanodeID> datanodes;
+  /**
+   * Allows you to maintain private data on pipelines.
+   * This is not serialized via protobuf, just allows us to maintain some
+   * private data.
+   */
+  private byte[] data;
 
   /**
    * Constructs a new pipeline data structure.
@@ -44,6 +51,7 @@ public class Pipeline {
   public Pipeline(String leaderID) {
     this.leaderID = leaderID;
     datanodes = new TreeMap<>();
+    data = null;
   }
 
   /**
@@ -123,5 +131,28 @@ public class Pipeline {
    */
   public void setContainerName(String containerName) {
     this.containerName = containerName;
+  }
+
+  /**
+   * Set private data on pipeline.
+   * @param data -- private data.
+   */
+  public void setData(byte[] data) {
+    if (data != null) {
+      this.data = Arrays.copyOf(data, data.length);
+    }
+  }
+
+  /**
+   * Returns private data that is set on this pipeline.
+   *
+   * @return blob, the user can interpret it any way they like.
+   */
+  public byte[] getData() {
+    if (this.data != null) {
+      return Arrays.copyOf(this.data, this.data.length);
+    } else {
+      return null;
+    }
   }
 }
