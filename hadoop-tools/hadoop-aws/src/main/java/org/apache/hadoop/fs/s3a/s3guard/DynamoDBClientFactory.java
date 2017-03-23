@@ -30,6 +30,7 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -43,7 +44,8 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet;
  *
  * Implementation should be configured for setting and getting configuration.
  */
-interface DynamoDBClientFactory extends Configurable {
+@InterfaceAudience.Private
+public interface DynamoDBClientFactory extends Configurable {
   Logger LOG = LoggerFactory.getLogger(DynamoDBClientFactory.class);
 
   /**

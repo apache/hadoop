@@ -16,6 +16,8 @@
 
 **Experimental Feature**
 
+<!-- MACRO{toc|fromDepth=0|toDepth=5} -->
+
 ## Overview
 
 *S3Guard* is an experimental feature for the S3A client of the S3 Filesystem,
@@ -424,17 +426,21 @@ The basic strategy for testing S3Guard correctness consists of:
 
 All the S3A tests which work with a private repository can be configured to
 run with S3Guard by using the `s3guard` profile. When set, this will run
-all the tests with a local dynamo DB instance set to "non-authoritative" mode.
+all the tests with local memory for the metadata set to "non-authoritative" mode.
 
 ```bash
 mvn -T 1C verify -Dparallel-tests -DtestsThreadCount=6 -Ds3guard 
 ```
 
-When the `s3guard` profile is enabled, are two other profiles which can be
-enabled
- 
-* `dynamo` : use an AWS-hosted dynamo DB table, instead of a local table; creating
-the table if it does not exist.
+When the `s3guard` profile is enabled, following profiles can be specified:
+
+* `dynamo`: use an AWS-hosted DynamoDB table; creating the table if it does
+  not exist. You will have to pay the bills for DynamoDB web service.
+* `dynamodblocal`: use an in-memory DynamoDBLocal server instead of real AWS
+  DynamoDB web service; launch the server if it is not yet started; creating the
+  table if it does not exist. You won't be charged bills for using DynamoDB in
+  test. However, the DynamoDBLocal is a simulator of real AWS DynamoDB and is
+  maintained separately, so it may be stale.
 * `non-auth`: treat the s3guard metadata as authorative
 
 ```bash

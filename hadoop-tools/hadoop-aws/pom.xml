@@ -312,6 +312,19 @@
       </properties>
     </profile>
 
+    <!-- Switch to DynamoDBLocal for s3guard. Has no effect unless s3guard is enabled -->
+    <profile>
+      <id>dynamodblocal</id>
+      <activation>
+        <property>
+          <name>dynamodblocal</name>
+        </property>
+      </activation>
+      <properties>
+        <fs.s3a.s3guard.test.implementation>dynamodblocal</fs.s3a.s3guard.test.implementation>
+      </properties>
+    </profile>
+
     <!-- Switch s3guard from Authoritative=false to true
      Has no effect unless s3guard is enabled -->
     <profile>
