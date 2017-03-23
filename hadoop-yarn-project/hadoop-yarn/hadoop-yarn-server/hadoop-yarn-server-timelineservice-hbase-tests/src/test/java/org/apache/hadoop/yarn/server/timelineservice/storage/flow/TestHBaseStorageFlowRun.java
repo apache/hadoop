@@ -608,7 +608,7 @@ public class TestHBaseStorageFlowRun {
       Set<TimelineEntity> entities = hbr.getEntities(
           new TimelineReaderContext(cluster, user, flow, null, null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), null),
-          new TimelineEntityFilters(),
+          new TimelineEntityFilters.Builder().build(),
           new TimelineDataToRetrieve(null, metricsToRetrieve, null, null));
       assertEquals(2, entities.size());
       int metricCnt = 0;
@@ -669,7 +669,7 @@ public class TestHBaseStorageFlowRun {
       Set<TimelineEntity> entities = hbr.getEntities(
           new TimelineReaderContext(cluster, user, flow, runid, null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), null),
-          new TimelineEntityFilters(),
+          new TimelineEntityFilters.Builder().build(),
           new TimelineDataToRetrieve());
       assertEquals(1, entities.size());
       for (TimelineEntity timelineEntity : entities) {
@@ -679,8 +679,9 @@ public class TestHBaseStorageFlowRun {
       entities = hbr.getEntities(
           new TimelineReaderContext(cluster, user, flow, runid, null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), null),
-          new TimelineEntityFilters(), new TimelineDataToRetrieve(null, null,
-          EnumSet.of(Field.METRICS), null));
+          new TimelineEntityFilters.Builder().build(),
+          new TimelineDataToRetrieve(null, null,
+              EnumSet.of(Field.METRICS), null));
       assertEquals(1, entities.size());
       for (TimelineEntity timelineEntity : entities) {
         Set<TimelineMetric> timelineMetrics = timelineEntity.getMetrics();
@@ -850,8 +851,9 @@ public class TestHBaseStorageFlowRun {
       Set<TimelineEntity> entities = hbr.getEntities(
           new TimelineReaderContext(cluster, user, flow,
           null, null, TimelineEntityType.YARN_FLOW_RUN.toString(), null),
-          new TimelineEntityFilters(null, 1425016501000L, 1425016502001L, null,
-          null, null, null, null, null), new TimelineDataToRetrieve());
+          new TimelineEntityFilters.Builder().createdTimeBegin(1425016501000L)
+              .createTimeEnd(1425016502001L).build(),
+          new TimelineDataToRetrieve());
       assertEquals(2, entities.size());
       for (TimelineEntity entity : entities) {
         if (!entity.getId().equals("user2@flow_name2/1002345678918") &&
@@ -863,8 +865,9 @@ public class TestHBaseStorageFlowRun {
       entities = hbr.getEntities(
           new TimelineReaderContext(cluster, user, flow, null, null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), null),
-          new TimelineEntityFilters(null, 1425016501050L, null, null, null,
-          null, null, null, null), new TimelineDataToRetrieve());
+          new TimelineEntityFilters.Builder().createdTimeBegin(1425016501050L)
+              .build(),
+          new TimelineDataToRetrieve());
       assertEquals(1, entities.size());
       for (TimelineEntity entity : entities) {
         if (!entity.getId().equals("user2@flow_name2/1002345678918")) {
@@ -874,8 +877,9 @@ public class TestHBaseStorageFlowRun {
       entities = hbr.getEntities(
           new TimelineReaderContext(cluster, user, flow, null, null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), null),
-          new TimelineEntityFilters(null, null, 1425016501050L, null, null,
-          null, null, null, null), new TimelineDataToRetrieve());
+          new TimelineEntityFilters.Builder().createTimeEnd(1425016501050L)
+              .build(),
+          new TimelineDataToRetrieve());
       assertEquals(1, entities.size());
       for (TimelineEntity entity : entities) {
         if (!entity.getId().equals("user2@flow_name2/1002345678919")) {
@@ -941,8 +945,9 @@ public class TestHBaseStorageFlowRun {
       Set<TimelineEntity> entities = hbr.getEntities(
           new TimelineReaderContext(cluster, user, flow, null,
           null, TimelineEntityType.YARN_FLOW_RUN.toString(), null),
-          new TimelineEntityFilters(null, null, null, null, null, null, null,
-          metricFilterList, null), new TimelineDataToRetrieve(null, null,
+          new TimelineEntityFilters.Builder().metricFilters(metricFilterList)
+              .build(),
+          new TimelineDataToRetrieve(null, null,
           EnumSet.of(Field.METRICS), null));
       assertEquals(2, entities.size());
       int metricCnt = 0;
@@ -958,8 +963,9 @@ public class TestHBaseStorageFlowRun {
       entities = hbr.getEntities(
           new TimelineReaderContext(cluster, user, flow, null, null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), null),
-          new TimelineEntityFilters(null, null, null, null, null, null, null,
-          metricFilterList1, null), new TimelineDataToRetrieve(null, null,
+          new TimelineEntityFilters.Builder().metricFilters(metricFilterList1)
+              .build(),
+          new TimelineDataToRetrieve(null, null,
           EnumSet.of(Field.METRICS), null));
       assertEquals(1, entities.size());
       metricCnt = 0;
@@ -974,8 +980,9 @@ public class TestHBaseStorageFlowRun {
       entities = hbr.getEntities(
           new TimelineReaderContext(cluster, user, flow, null, null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), null),
-          new TimelineEntityFilters(null, null, null, null, null, null, null,
-          metricFilterList2, null), new TimelineDataToRetrieve(null, null,
+          new TimelineEntityFilters.Builder().metricFilters(metricFilterList2)
+              .build(),
+          new TimelineDataToRetrieve(null, null,
           EnumSet.of(Field.METRICS), null));
       assertEquals(0, entities.size());
 
@@ -984,8 +991,9 @@ public class TestHBaseStorageFlowRun {
       entities = hbr.getEntities(
           new TimelineReaderContext(cluster, user, flow, null, null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), null),
-          new TimelineEntityFilters(null, null, null, null, null, null, null,
-          metricFilterList3, null), new TimelineDataToRetrieve(null, null,
+          new TimelineEntityFilters.Builder().metricFilters(metricFilterList3)
+              .build(),
+          new TimelineDataToRetrieve(null, null,
           EnumSet.of(Field.METRICS), null));
       assertEquals(0, entities.size());
 
@@ -1005,8 +1013,8 @@ public class TestHBaseStorageFlowRun {
       entities = hbr.getEntities(
           new TimelineReaderContext(cluster, user, flow, null, null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), null),
-          new TimelineEntityFilters(null, null, null, null, null, null, null,
-          metricFilterList4, null),
+          new TimelineEntityFilters.Builder().metricFilters(metricFilterList4)
+              .build(),
           new TimelineDataToRetrieve(null, metricsToRetrieve,
           EnumSet.of(Field.ALL), null));
       assertEquals(2, entities.size());
