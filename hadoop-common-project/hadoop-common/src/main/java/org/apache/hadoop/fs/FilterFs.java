@@ -146,10 +146,15 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
 
   @Override
+  @Deprecated
   public FsServerDefaults getServerDefaults() throws IOException {
     return myFs.getServerDefaults();
   }
   
+  @Override
+  public FsServerDefaults getServerDefaults(final Path f) throws IOException {
+    return myFs.getServerDefaults(f);
+  }
 
   @Override
   public Path resolvePath(final Path p) throws FileNotFoundException,

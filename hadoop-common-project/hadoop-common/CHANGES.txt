@@ -120,6 +120,9 @@ Release 2.7.4 - UNRELEASED
 
     HADOOP-13433 Race in UGI.reloginFromKeytab. (Duo Zhang via xiao)
 
+    HADOOP-9631. ViewFs should use underlying FileSystem's server side defaults.
+    (Lohit Vijayarenu and Erik Krogen via zhz)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES

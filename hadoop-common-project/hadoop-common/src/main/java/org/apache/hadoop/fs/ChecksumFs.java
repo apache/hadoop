@@ -57,7 +57,7 @@ public abstract class ChecksumFs extends FilterFs {
     throws IOException, URISyntaxException {
     super(theFs);
     defaultBytesPerChecksum = 
-      getMyFs().getServerDefaults().getBytesPerChecksum();
+      getMyFs().getServerDefaults(new Path("/")).getBytesPerChecksum();
   }
   
   /**
@@ -96,9 +96,10 @@ public abstract class ChecksumFs extends FilterFs {
     return defaultBytesPerChecksum;
   }
 
-  private int getSumBufferSize(int bytesPerSum, int bufferSize)
+  private int getSumBufferSize(int bytesPerSum, int bufferSize, Path file)
     throws IOException {
-    int defaultBufferSize =  getMyFs().getServerDefaults().getFileBufferSize();
+    int defaultBufferSize = getMyFs().getServerDefaults(file)
+        .getFileBufferSize();
     int proportionalBufferSize = bufferSize / bytesPerSum;
     return Math.max(bytesPerSum,
                     Math.max(proportionalBufferSize, defaultBufferSize));
@@ -121,7 +122,7 @@ public abstract class ChecksumFs extends FilterFs {
     
     public ChecksumFSInputChecker(ChecksumFs fs, Path file)
       throws IOException, UnresolvedLinkException {
-      this(fs, file, fs.getServerDefaults().getFileBufferSize());
+      this(fs, file, fs.getServerDefaults(file).getFileBufferSize());
     }
     
     public ChecksumFSInputChecker(ChecksumFs fs, Path file, int bufferSize)
@@ -132,7 +133,7 @@ public abstract class ChecksumFs extends FilterFs {
       Path sumFile = fs.getChecksumFile(file);
       try {
         int sumBufferSize = fs.getSumBufferSize(fs.getBytesPerSum(),
-                                                bufferSize);
+            bufferSize, file);
         sums = fs.getRawFs().open(sumFile, sumBufferSize);
 
         byte[] version = new byte[CHECKSUM_VERSION.length];
@@ -355,7 +356,7 @@ public abstract class ChecksumFs extends FilterFs {
       
       // Now create the chekcsumfile; adjust the buffsize
       int bytesPerSum = fs.getBytesPerSum();
-      int sumBufferSize = fs.getSumBufferSize(bytesPerSum, bufferSize);
+      int sumBufferSize = fs.getSumBufferSize(bytesPerSum, bufferSize, file);
       this.sums = fs.getRawFs().createInternal(fs.getChecksumFile(file),
           EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
           absolutePermission, sumBufferSize, replication, blockSize, progress,

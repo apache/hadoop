@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,8 +46,10 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextTestHelper;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.FileContextTestHelper.fileType;
@@ -54,6 +57,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.local.LocalConfigKeys;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.AclUtil;
@@ -795,6 +799,51 @@ public class ViewFsBaseTest {
   @Test(expected=AccessControlException.class)
   public void testInternalRemoveXAttr() throws IOException {
     fcView.removeXAttr(new Path("/internalDir"), "xattrName");
+  }
+
+  @Test
+  public void testRespectsServerDefaults() throws Exception {
+    FsServerDefaults targetDefs =
+        fcTarget.getDefaultFileSystem().getServerDefaults(new Path("/"));
+    FsServerDefaults viewDefs =
+        fcView.getDefaultFileSystem().getServerDefaults(new Path("/data"));
+    assertEquals(targetDefs.getReplication(), viewDefs.getReplication());
+    assertEquals(targetDefs.getBlockSize(), viewDefs.getBlockSize());
+    assertEquals(targetDefs.getBytesPerChecksum(),
+        viewDefs.getBytesPerChecksum());
+    assertEquals(targetDefs.getFileBufferSize(),
+        viewDefs.getFileBufferSize());
+    assertEquals(targetDefs.getWritePacketSize(),
+        viewDefs.getWritePacketSize());
+    assertEquals(targetDefs.getEncryptDataTransfer(),
+        viewDefs.getEncryptDataTransfer());
+    assertEquals(targetDefs.getTrashInterval(), viewDefs.getTrashInterval());
+    assertEquals(targetDefs.getChecksumType(), viewDefs.getChecksumType());
+
+    fcView.create(new Path("/data/file"), EnumSet.of(CreateFlag.CREATE))
+        .close();
+    FileStatus stat =
+        fcTarget.getFileStatus(new Path(targetTestRoot, "data/file"));
+    assertEquals(targetDefs.getReplication(), stat.getReplication());
+  }
+
+  @Test
+  public void testServerDefaultsInternalDir() throws Exception {
+    FsServerDefaults localDefs = LocalConfigKeys.getServerDefaults();
+    FsServerDefaults viewDefs = fcView
+        .getDefaultFileSystem().getServerDefaults(new Path("/internalDir"));
+    assertEquals(localDefs.getReplication(), viewDefs.getReplication());
+    assertEquals(localDefs.getBlockSize(), viewDefs.getBlockSize());
+    assertEquals(localDefs.getBytesPerChecksum(),
+        viewDefs.getBytesPerChecksum());
+    assertEquals(localDefs.getFileBufferSize(),
+        viewDefs.getFileBufferSize());
+    assertEquals(localDefs.getWritePacketSize(),
+        viewDefs.getWritePacketSize());
+    assertEquals(localDefs.getEncryptDataTransfer(),
+        viewDefs.getEncryptDataTransfer());
+    assertEquals(localDefs.getTrashInterval(), viewDefs.getTrashInterval());
+    assertEquals(localDefs.getChecksumType(), viewDefs.getChecksumType());
   }
 
   // Confirm that listLocatedStatus is delegated properly to the underlying
