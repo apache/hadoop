@@ -227,6 +227,24 @@ public class TestHttpFSServer extends HFSTestCase {
   @TestDir
   @TestJetty
   @TestHdfs
+  public void testMkdirs() throws Exception {
+    createHttpFSServer(false);
+
+    String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    URL url = new URL(TestJettyHelper.getJettyURL(), MessageFormat.format(
+        "/webhdfs/v1/tmp/sub-tmp?user.name={0}&op=MKDIRS", user));
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod("PUT");
+    conn.connect();
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+
+    getStatus("/tmp/sub-tmp", "LISTSTATUS");
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
   public void testGlobFilter() throws Exception {
     createHttpFSServer(false);
 
