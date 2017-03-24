@@ -69,6 +69,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics.LongStatistic;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
@@ -81,7 +82,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
-import org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager.Op;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
@@ -1404,6 +1404,39 @@ public class TestDistributedFileSystem {
       // The list of clients corresponding to this renewer should be empty
       assertEquals(true, leaseRenewer.isEmpty());
       assertEquals(true, dfsClient.isFilesBeingWrittenEmpty());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testDFSDataOutputStreamBuilder() throws Exception {
+    Configuration conf = getTestConfiguration();
+    MiniDFSCluster cluster = null;
+    String testFile = "/testDFSDataOutputStreamBuilder";
+    Path testFilePath = new Path(testFile);
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      DistributedFileSystem fs = cluster.getFileSystem();
+
+      // Test create an empty file
+      FSDataOutputStream out =
+          fs.newFSDataOutputStreamBuilder(testFilePath).build();
+      out.close();
+
+      // Test create a file with content, and verify the content
+      String content = "This is a test!";
+      out = fs.newFSDataOutputStreamBuilder(testFilePath)
+          .setBufferSize(4096).setReplication((short) 1)
+          .setBlockSize(4096).build();
+      byte[] contentOrigin = content.getBytes("UTF8");
+      out.write(contentOrigin);
+      out.close();
+
+      ContractTestUtils.verifyFileContents(fs, testFilePath,
+          content.getBytes());
     } finally {
       if (cluster != null) {
         cluster.shutdown();

@@ -189,6 +189,29 @@ public class TestFavoredNodesEndToEnd {
     }
   }
 
+  @Test(timeout = 180000)
+  public void testCreateStreamBuilderFavoredNodesEndToEnd() throws Exception {
+    //create 10 files with random preferred nodes
+    for (int i = 0; i < NUM_FILES; i++) {
+      Random rand = new Random(System.currentTimeMillis() + i);
+      //pass a new created rand so as to get a uniform distribution each time
+      //without too much collisions (look at the do-while loop in getDatanodes)
+      InetSocketAddress[] dns = getDatanodes(rand);
+      Path p = new Path("/filename"+i);
+      FSDataOutputStream out =
+          dfs.newFSDataOutputStreamBuilder(p).setFavoredNodes(dns).build();
+      out.write(SOME_BYTES);
+      out.close();
+      BlockLocation[] locations = getBlockLocations(p);
+      //verify the files got created in the right nodes
+      for (BlockLocation loc : locations) {
+        String[] hosts = loc.getNames();
+        String[] hosts1 = getStringForInetSocketAddrs(dns);
+        assertTrue(compareNodes(hosts, hosts1));
+      }
+    }
+  }
+
   private BlockLocation[] getBlockLocations(Path p) throws Exception {
     DFSTestUtil.waitReplication(dfs, p, (short)3);
     BlockLocation[] locations = dfs.getClient().getBlockLocations(
