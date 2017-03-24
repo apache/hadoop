@@ -24,17 +24,24 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
 import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.local.main.ServerRunner;
+import com.amazonaws.services.dynamodbv2.local.server.DynamoDBProxyServer;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
-
+import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -45,18 +52,23 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.DefaultS3ClientFactory;
 import org.apache.hadoop.fs.s3a.MockS3ClientFactory;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ClientFactory;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.*;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
@@ -64,11 +76,11 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
 /**
  * Test that {@link DynamoDBMetadataStore} implements {@link MetadataStore}.
  *
- * In this unit test, we use an in-memory DynamoDBLocal server instead of real
- * AWS DynamoDB. An {@link S3AFileSystem} object is created and shared for
+ * In this unit test, we create an in-memory DynamoDBLocal server instance for
+ * all unit test cases.  You won't be charged bills for DynamoDB requests when
+ * you run this test.  An {@link S3AFileSystem} object is created and shared for
  * initializing {@link DynamoDBMetadataStore} objects.  There are no real S3
- * request issued as the underlying AWS S3Client is mocked.  You won't be
- * charged bills for AWS S3 or DynamoDB when you run this test.
+ * request issued as the underlying AWS S3Client is mocked.
  *
  * According to the base class, every test case will have independent contract
  * to create a new {@link DynamoDBMetadataStore} instance and initializes it.
@@ -85,6 +97,9 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
       VERSION_MARKER_PRIMARY_KEY = createVersionMarkerPrimaryKey(
       DynamoDBMetadataStore.VERSION_MARKER);
 
+  /** The DynamoDBLocal dynamoDBLocalServer instance for testing. */
+  private static DynamoDBProxyServer dynamoDBLocalServer;
+  private static String ddbEndpoint;
   /** The DynamoDB instance that can issue requests directly to server. */
   private static DynamoDB dynamoDB;
 
@@ -92,11 +107,22 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   public final Timeout timeout = new Timeout(60 * 1000);
 
   /**
-   * Start the in-memory DynamoDBLocal server and initializes s3 file system.
+   * Sets up the in-memory DynamoDBLocal server and initializes s3 file system.
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    DynamoDBLocalClientFactory.startSingletonServer();
+    GenericTestUtils.setLogLevel(DynamoDBMetadataStore.LOG, Level.ALL);
+    // sqlite4java library should have been copied to target/native-libs
+    System.setProperty("sqlite4java.library.path", "target/native-libs");
+
+    // Set up the in-memory local DynamoDB instance for all test cases
+    final String port = String.valueOf(ServerSocketUtil.getPort(0, 100));
+    dynamoDBLocalServer = ServerRunner.createServerFromCommandLineArgs(
+        new String[] {"-inMemory", "-port", port});
+    dynamoDBLocalServer.start();
+    ddbEndpoint = "http://localhost:" + port;
+    LOG.info("DynamoDBLocal for test was started at {}", ddbEndpoint);
+
     try {
       dynamoDB = new DynamoDBMSContract().getMetadataStore().getDynamoDB();
     } catch (AmazonServiceException e) {
@@ -114,7 +140,36 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     if (dynamoDB != null) {
       dynamoDB.shutdown();
     }
-    DynamoDBLocalClientFactory.stopSingletonServer();
+    if (dynamoDBLocalServer != null) {
+      LOG.info("Shutting down the in-memory local DynamoDB server");
+      try {
+        dynamoDBLocalServer.stop();
+      } catch (Exception e) {
+        final String msg = "Got exception to stop the DynamoDBLocal server. ";
+        LOG.error(msg, e);
+        fail(msg + e.getLocalizedMessage());
+      }
+    }
+  }
+
+  static class LocalDynamoDBClientFactory extends Configured
+      implements DynamoDBClientFactory {
+    @Override
+    public AmazonDynamoDB createDynamoDBClient(String region)
+        throws IOException {
+      final Configuration conf = getConf();
+      final AWSCredentialsProvider credentials =
+          createAWSCredentialProviderSet(null, conf, null);
+      final ClientConfiguration awsConf =
+          DefaultS3ClientFactory.createAwsConf(conf);
+      LOG.info("Creating AmazonDynamoDB client using endpoint {}", ddbEndpoint);
+      return AmazonDynamoDBClientBuilder.standard()
+          .withCredentials(credentials)
+          .withClientConfiguration(awsConf)
+          .withEndpointConfiguration(
+              new AwsClientBuilder.EndpointConfiguration(ddbEndpoint, region))
+          .build();
+    }
   }
 
   /**
@@ -135,7 +190,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
       conf.set(Constants.SECRET_KEY, "dummy-secret-key");
       conf.setBoolean(Constants.S3GUARD_DDB_TABLE_CREATE_KEY, true);
       conf.setClass(S3Guard.S3GUARD_DDB_CLIENT_FACTORY_IMPL,
-          DynamoDBLocalClientFactory.class, DynamoDBClientFactory.class);
+          LocalDynamoDBClientFactory.class, DynamoDBClientFactory.class);
 
       // always create new file system object for a test contract
       s3afs = (S3AFileSystem) FileSystem.newInstance(conf);

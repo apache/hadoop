@@ -25,10 +25,6 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.s3a.s3guard.DynamoDBClientFactory;
-import org.apache.hadoop.fs.s3a.s3guard.DynamoDBLocalClientFactory;
-import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
-
 import org.hamcrest.core.Is;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -370,9 +366,6 @@ public final class S3ATestUtils {
       case TEST_S3GUARD_IMPLEMENTATION_LOCAL:
         implClass = S3GUARD_METASTORE_LOCAL;
         break;
-      case TEST_S3GUARD_IMPLEMENTATION_DYNAMODBLOCAL:
-        conf.setClass(S3Guard.S3GUARD_DDB_CLIENT_FACTORY_IMPL,
-            DynamoDBLocalClientFactory.class, DynamoDBClientFactory.class);
       case TEST_S3GUARD_IMPLEMENTATION_DYNAMO:
         implClass = S3GUARD_METASTORE_DYNAMO;
         break;
