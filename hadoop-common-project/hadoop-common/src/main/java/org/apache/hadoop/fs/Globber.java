@@ -254,8 +254,8 @@ class Globber {
                 if (!child.isDirectory()) continue; 
               }
               // Set the child path based on the parent path.
-              child.setPath(new Path(candidate.getPath(),
-                      child.getPath().getName()));
+              child.setPath(new Path(candidate.getPath().toString() + Path.SEPARATOR
+                + child.getPath().getName()));
               if (globFilter.accept(child.getPath())) {
                 newCandidates.add(child);
               }
