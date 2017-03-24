@@ -215,7 +215,16 @@ public class FileStatus implements Writable, Comparable<FileStatus>,
   public boolean isEncrypted() {
     return permission.getEncryptedBit();
   }
-  
+
+  /**
+   * Tell whether the underlying file or directory is erasure coded or not.
+   *
+   * @return true if the underlying file or directory is erasure coded.
+   */
+  public boolean isErasureCoded() {
+    return permission.getErasureCodedBit();
+  }
+
   /**
    * Get the owner of the file.
    * @return owner of the file. The string could be empty if there is no

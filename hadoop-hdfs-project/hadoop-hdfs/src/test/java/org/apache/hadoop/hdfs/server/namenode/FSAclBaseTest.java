@@ -862,7 +862,7 @@ public abstract class FSAclBaseTest {
     assertPermission((short)0700);
     fs.setPermission(path,
       new FsPermissionExtension(FsPermission.
-          createImmutable((short)0755), true, true));
+          createImmutable((short)0755), true, true, true));
     INode inode = cluster.getNamesystem().getFSDirectory()
         .getINode(path.toUri().getPath(), DirOp.READ_LINK);
     assertNotNull(inode);

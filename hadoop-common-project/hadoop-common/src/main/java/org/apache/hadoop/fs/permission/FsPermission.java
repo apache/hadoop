@@ -312,6 +312,13 @@ public class FsPermission implements Writable, Serializable,
     return false;
   }
 
+  /**
+   * Returns true if the file or directory is erasure coded.
+   */
+  public boolean getErasureCodedBit() {
+    return false;
+  }
+
   /** Set the user file creation mask (umask) */
   public static void setUMask(Configuration conf, FsPermission umask) {
     conf.set(UMASK_LABEL, String.format("%1$03o", umask.toShort()));

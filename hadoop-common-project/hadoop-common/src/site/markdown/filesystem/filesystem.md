@@ -90,7 +90,16 @@ Get the status of a path
             stat.isEncrypted = True
         else
             stat.isEncrypted = False
+        if isErasureCoded(FS, p) :
+            stat.isErasureCoded = True
+        else
+            stat.isErasureCoded = False
 
+The returned `FileStatus` status of the path additionally carries details on
+Encryption and Erasure Coding information. `getFileStatus(Path p).isEncrypted()`
+can be queried to find if the path is Encrypted.
+Likewise, `getFileStatus(Path p).isErasureCoded()` will tell if the path is
+Erasure Coded or not.
 
 ### `Path getHomeDirectory()`
 
