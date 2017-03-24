@@ -1286,10 +1286,10 @@ public class JobConf extends Configuration {
   }
 
   /**
-   * Get configured the number of reduce tasks for this job.
+   * Get the configured number of map tasks for this job.
    * Defaults to <code>1</code>.
    * 
-   * @return the number of reduce tasks for this job.
+   * @return the number of map tasks for this job.
    */
   public int getNumMapTasks() { return getInt(JobContext.NUM_MAPS, 1); }
   
@@ -1334,7 +1334,7 @@ public class JobConf extends Configuration {
   public void setNumMapTasks(int n) { setInt(JobContext.NUM_MAPS, n); }
 
   /**
-   * Get configured the number of reduce tasks for this job. Defaults to 
+   * Get the configured number of reduce tasks for this job. Defaults to 
    * <code>1</code>.
    * 
    * @return the number of reduce tasks for this job.
