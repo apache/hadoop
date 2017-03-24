@@ -125,7 +125,9 @@ class BPServiceActor implements Runnable {
     this.initialRegistrationComplete = lifelineNnAddr != null ?
         new CountDownLatch(1) : null;
     this.dnConf = dn.getDnConf();
-    this.ibrManager = new IncrementalBlockReportManager(dnConf.ibrInterval);
+    this.ibrManager = new IncrementalBlockReportManager(
+        dnConf.ibrInterval,
+        dn.getMetrics());
     prevBlockReportId = ThreadLocalRandom.current().nextLong();
     scheduler = new Scheduler(dnConf.heartBeatInterval,
         dnConf.getLifelineIntervalMs(), dnConf.blockReportInterval,
@@ -349,7 +351,7 @@ class BPServiceActor implements Runnable {
     // or we will report an RBW replica after the BlockReport already reports
     // a FINALIZED one.
     ibrManager.sendIBRs(bpNamenode, bpRegistration,
-        bpos.getBlockPoolId(), dn.getMetrics());
+        bpos.getBlockPoolId());
 
     long brCreateStartTime = monotonicNow();
     Map<DatanodeStorage, BlockListAsLongs> perVolumeBlockLists =
@@ -672,7 +674,7 @@ class BPServiceActor implements Runnable {
         }
         if (ibrManager.sendImmediately() || sendHeartbeat) {
           ibrManager.sendIBRs(bpNamenode, bpRegistration,
-              bpos.getBlockPoolId(), dn.getMetrics());
+              bpos.getBlockPoolId());
         }
 
         List<DatanodeCommand> cmds = null;
