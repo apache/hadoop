@@ -30,6 +30,7 @@ import static org.mockito.Mockito.verify;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.concurrent.TimeoutException;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -40,6 +41,7 @@ import org.apache.hadoop.ha.ClientBaseWithFixes;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.api.YarnClient;
@@ -58,6 +60,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.base.Supplier;
 
 public class TestRMFailover extends ClientBaseWithFixes {
   private static final Log LOG =
@@ -159,6 +163,21 @@ public class TestRMFailover extends ClientBaseWithFixes {
     verifyConnections();
   }
 
+  private void verifyRMTransitionToStandby(final ResourceManager rm)
+      throws InterruptedException {
+    try {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return rm.getRMContext().getHAServiceState() ==
+              HAServiceState.STANDBY;
+        }
+      }, 100, 20000);
+    } catch (TimeoutException e) {
+      fail("RM didn't transition to Standby.");
+    }
+  }
+
   @Test
   public void testAutomaticFailover()
       throws YarnException, InterruptedException, IOException {
@@ -182,15 +201,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
     ResourceManager rm = cluster.getResourceManager(
         cluster.getActiveRMIndex());
     rm.handleTransitionToStandByInNewThread();
-    int maxWaitingAttempts = 2000;
-    while (maxWaitingAttempts-- > 0 ) {
-      if (rm.getRMContext().getHAServiceState() == HAServiceState.STANDBY) {
-        break;
-      }
-      Thread.sleep(1);
-    }
-    Assert.assertFalse("RM didn't transition to Standby ",
-        maxWaitingAttempts == 0);
+    verifyRMTransitionToStandby(rm);
     verifyConnections();
   }
 
@@ -393,15 +404,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
     testThread.start();
     testThread.join();
 
-    int maxWaitingAttempts = 2000;
-    while (maxWaitingAttempts-- > 0) {
-      if (resourceManager.getRMContext().getHAServiceState()
-          == HAServiceState.STANDBY) {
-        break;
-      }
-      Thread.sleep(1);
-    }
-    assertFalse("RM didn't transition to Standby ", maxWaitingAttempts < 0);
+    verifyRMTransitionToStandby(resourceManager);
   }
 
   /**
