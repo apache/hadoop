@@ -517,6 +517,12 @@ public class FairScheduler extends
           + sched.getName() + ": resDueToMinShare = " + resDueToMinShare
           + ", resDueToFairShare = " + resDueToFairShare;
       LOG.info(message);
+      String vMessage = "PHILLY: Summary =====> MinShare: " + sched.getMinShare() + ", FairShare: "
+          + sched.getFairShare() + ", Demand: " + sched.getDemand() + ", MinShareTimeout: "
+          + minShareTimeout + ", FairShareTimeout: " + fairShareTimeout + ", MinElapsed: "
+          + (curTime - sched.getLastTimeAtMinShare()) + ", FairElapsed: "
+          + (curTime - sched.getLastTimeAtFairShareThreshold());
+      LOG.info(vMessage);
     }
     return resToPreempt;
   }
@@ -929,26 +935,29 @@ public class FairScheduler extends
 
     synchronized (application) {
       if (!ask.isEmpty()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("allocate: pre-update" +
+        LOG.info("PHILLY: allocate: pre-update" +
               " applicationAttemptId=" + appAttemptId +
               " application=" + application.getApplicationId());
-        }
         application.showRequests();
 
         // Update application requests
         application.updateResourceRequests(ask);
 
         application.showRequests();
-      }
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("allocate: post-update" +
+        LOG.info("PHILLY: allocate: post-update" +
             " applicationAttemptId=" + appAttemptId +
             " #ask=" + ask.size() +
             " reservation= " + application.getCurrentReservation());
 
-        LOG.debug("Preempting " + application.getPreemptionContainers().size()
+        String askString = "ASK:";
+        int reqNum = 1;
+        for (ResourceRequest request : ask) {
+          askString += request.getResourceName() + " (" + reqNum + "): " + request.getCapability() + "; ";
+          reqNum++;
+        }
+
+        LOG.info("PHILLY: " + askString);
+        LOG.info("PHILLY: Preempting " + application.getPreemptionContainers().size()
             + " container(s)");
       }
       

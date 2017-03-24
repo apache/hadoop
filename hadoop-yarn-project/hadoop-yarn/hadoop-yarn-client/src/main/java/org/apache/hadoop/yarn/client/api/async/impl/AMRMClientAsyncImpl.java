@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
@@ -303,6 +304,11 @@ extends AMRMClientAsync<T> {
           List<Container> allocated = response.getAllocatedContainers();
           if (!allocated.isEmpty()) {
             handler.onContainersAllocated(allocated);
+          }
+
+          PreemptionMessage message = response.getPreemptionMessage();
+          if (message != null) {
+            handler.onPreemptionMessage(message);
           }
 
           progress = handler.getProgress();
