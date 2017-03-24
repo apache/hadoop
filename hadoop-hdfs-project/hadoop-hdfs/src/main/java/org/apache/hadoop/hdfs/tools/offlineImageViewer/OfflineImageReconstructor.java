@@ -568,6 +568,13 @@ class OfflineImageReconstructor {
   private void processFileXml(Node node, INodeSection.INode.Builder inodeBld)
       throws IOException {
     inodeBld.setType(INodeSection.INode.Type.FILE);
+    INodeSection.INodeFile.Builder bld = createINodeFileBuilder(node);
+    inodeBld.setFile(bld);
+    // Will check remaining keys and serialize in processINodeXml
+  }
+
+  private INodeSection.INodeFile.Builder createINodeFileBuilder(Node node)
+      throws IOException {
     INodeSection.INodeFile.Builder bld = INodeSection.INodeFile.newBuilder();
     Integer ival = node.removeChildInt(SECTION_REPLICATION);
     if (ival != null) {
@@ -596,24 +603,7 @@ class OfflineImageReconstructor {
         if (block == null) {
           break;
         }
-        HdfsProtos.BlockProto.Builder blockBld =
-            HdfsProtos.BlockProto.newBuilder();
-        Long id = block.removeChildLong(SECTION_ID);
-        if (id == null) {
-          throw new IOException("<block> found without <id>");
-        }
-        blockBld.setBlockId(id);
-        Long genstamp = block.removeChildLong(INODE_SECTION_GEMSTAMP);
-        if (genstamp == null) {
-          throw new IOException("<block> found without <genstamp>");
-        }
-        blockBld.setGenStamp(genstamp);
-        Long numBytes = block.removeChildLong(INODE_SECTION_NUM_BYTES);
-        if (numBytes == null) {
-          throw new IOException("<block> found without <numBytes>");
-        }
-        blockBld.setNumBytes(numBytes);
-        bld.addBlocks(blockBld);
+        bld.addBlocks(createBlockBuilder(block));
       }
     }
     Node fileUnderConstruction =
@@ -650,13 +640,43 @@ class OfflineImageReconstructor {
     if (ival != null) {
       bld.setStoragePolicyID(ival);
     }
-    inodeBld.setFile(bld);
+    return bld;
     // Will check remaining keys and serialize in processINodeXml
+  }
+
+  private HdfsProtos.BlockProto.Builder createBlockBuilder(Node block)
+      throws IOException {
+    HdfsProtos.BlockProto.Builder blockBld =
+        HdfsProtos.BlockProto.newBuilder();
+    Long id = block.removeChildLong(SECTION_ID);
+    if (id == null) {
+      throw new IOException("<block> found without <id>");
+    }
+    blockBld.setBlockId(id);
+    Long genstamp = block.removeChildLong(INODE_SECTION_GENSTAMP);
+    if (genstamp == null) {
+      throw new IOException("<block> found without <genstamp>");
+    }
+    blockBld.setGenStamp(genstamp);
+    Long numBytes = block.removeChildLong(INODE_SECTION_NUM_BYTES);
+    if (numBytes == null) {
+      throw new IOException("<block> found without <numBytes>");
+    }
+    blockBld.setNumBytes(numBytes);
+    return blockBld;
   }
 
   private void processDirectoryXml(Node node,
           INodeSection.INode.Builder inodeBld) throws IOException {
     inodeBld.setType(INodeSection.INode.Type.DIRECTORY);
+    INodeSection.INodeDirectory.Builder bld =
+        createINodeDirectoryBuilder(node);
+    inodeBld.setDirectory(bld);
+    // Will check remaining keys and serialize in processINodeXml
+  }
+
+  private INodeSection.INodeDirectory.Builder
+      createINodeDirectoryBuilder(Node node) throws IOException {
     INodeSection.INodeDirectory.Builder bld =
         INodeSection.INodeDirectory.newBuilder();
     Long lval = node.removeChildLong(INODE_SECTION_MTIME);
@@ -710,8 +730,7 @@ class OfflineImageReconstructor {
       qf.addQuotas(qbld);
     }
     bld.setTypeQuotas(qf);
-    inodeBld.setDirectory(bld);
-    // Will check remaining keys and serialize in processINodeXml
+    return bld;
   }
 
   private void processSymlinkXml(Node node,
@@ -1355,7 +1374,11 @@ class OfflineImageReconstructor {
         if (name != null) {
           bld.setName(ByteString.copyFrom(name, "UTF8"));
         }
-        // TODO: add missing snapshotCopy field to XML
+        Node snapshotCopy = dirDiff.removeChild(
+            SNAPSHOT_DIFF_SECTION_SNAPSHOT_COPY);
+        if (snapshotCopy != null) {
+          bld.setSnapshotCopy(createINodeDirectoryBuilder(snapshotCopy));
+        }
         Integer expectedCreatedListSize = dirDiff.removeChildInt(
             SNAPSHOT_DIFF_SECTION_CREATED_LIST_SIZE);
         if (expectedCreatedListSize == null) {
@@ -1454,8 +1477,21 @@ class OfflineImageReconstructor {
         if (name != null) {
           bld.setName(ByteString.copyFrom(name, "UTF8"));
         }
-        // TODO: missing snapshotCopy
-        // TODO: missing blocks
+        Node snapshotCopy = fileDiff.removeChild(
+            SNAPSHOT_DIFF_SECTION_SNAPSHOT_COPY);
+        if (snapshotCopy != null) {
+          bld.setSnapshotCopy(createINodeFileBuilder(snapshotCopy));
+        }
+        Node blocks = fileDiff.removeChild(INODE_SECTION_BLOCKS);
+        if (blocks != null) {
+          while (true) {
+            Node block = blocks.removeChild(INODE_SECTION_BLOCK);
+            if (block == null) {
+              break;
+            }
+            bld.addBlocks(createBlockBuilder(block));
+          }
+        }
         fileDiff.verifyNoRemainingKeys("fileDiff");
         bld.build().writeDelimitedTo(out);
       }

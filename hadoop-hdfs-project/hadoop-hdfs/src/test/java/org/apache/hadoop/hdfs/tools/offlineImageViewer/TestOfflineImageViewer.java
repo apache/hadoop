@@ -181,14 +181,27 @@ public class TestOfflineImageViewer {
       hdfs.mkdirs(src);
       dirCount++;
       writtenFiles.put(src.toString(), hdfs.getFileStatus(src));
+
+      // Create snapshot and snapshotDiff.
       final Path orig = new Path("/src/orig");
       hdfs.mkdirs(orig);
+      final Path file1 = new Path("/src/file");
+      FSDataOutputStream o = hdfs.create(file1);
+      o.write(23);
+      o.write(45);
+      o.close();
       hdfs.allowSnapshot(src);
       hdfs.createSnapshot(src, "snapshot");
       final Path dst = new Path("/dst");
+      // Rename a directory in the snapshot directory to add snapshotCopy
+      // field to the dirDiff entry.
       hdfs.rename(orig, dst);
       dirCount++;
       writtenFiles.put(dst.toString(), hdfs.getFileStatus(dst));
+      // Truncate a file in the snapshot directory to add snapshotCopy and
+      // blocks fields to the fileDiff entry.
+      hdfs.truncate(file1, 1);
+      writtenFiles.put(file1.toString(), hdfs.getFileStatus(file1));
 
       // Set XAttrs so the fsimage contains XAttr ops
       final Path xattr = new Path("/xattr");
@@ -279,7 +292,7 @@ public class TestOfflineImageViewer {
     Matcher matcher = p.matcher(outputString);
     assertTrue(matcher.find() && matcher.groupCount() == 1);
     int totalFiles = Integer.parseInt(matcher.group(1));
-    assertEquals(NUM_DIRS * FILES_PER_DIR, totalFiles);
+    assertEquals(NUM_DIRS * FILES_PER_DIR + 1, totalFiles);
 
     p = Pattern.compile("totalDirectories = (\\d+)\n");
     matcher = p.matcher(outputString);
