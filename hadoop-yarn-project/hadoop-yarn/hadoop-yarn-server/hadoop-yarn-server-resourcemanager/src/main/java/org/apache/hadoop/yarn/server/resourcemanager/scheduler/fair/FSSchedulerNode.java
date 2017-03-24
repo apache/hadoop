@@ -163,7 +163,7 @@ public class FSSchedulerNode extends SchedulerNode {
   /**
    * Remove apps that have their preemption requests fulfilled
    */
-  synchronized void cleanupPreemptionList() {
+  private synchronized void cleanupPreemptionList() {
     Iterator<FSAppAttempt> iterator =
         resourcesPreemptedForApp.keySet().iterator();
     while (iterator.hasNext()) {

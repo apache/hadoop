@@ -974,21 +974,19 @@ public class FairScheduler extends
    */
   static boolean assignPreemptedContainers(FSSchedulerNode node ) {
     boolean assignedAny = false;
-    node.cleanupPreemptionList();
     for (Entry<FSAppAttempt, Resource> entry :
         node.getPreemptionList().entrySet()) {
       FSAppAttempt app = entry.getKey();
-      Resource reserved = Resources.clone(entry.getValue());
-      while (!app.isStopped() && !Resources.isNone(reserved)) {
+      Resource pendingReservation = Resources.clone(entry.getValue());
+      while (!app.isStopped() && !Resources.isNone(pendingReservation)) {
         Resource assigned = app.assignContainer(node);
         if (Resources.isNone(assigned)) {
           break;
         }
         assignedAny = true;
-        Resources.subtractFromNonNegative(reserved, assigned);
+        Resources.subtractFromNonNegative(pendingReservation, assigned);
       }
     }
-    node.cleanupPreemptionList();
     return assignedAny;
   }
 
