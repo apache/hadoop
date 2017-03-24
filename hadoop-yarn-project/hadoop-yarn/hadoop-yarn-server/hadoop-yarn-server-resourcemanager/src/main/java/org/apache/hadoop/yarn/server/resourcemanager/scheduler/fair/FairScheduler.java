@@ -91,8 +91,15 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
@@ -959,6 +966,32 @@ public class FairScheduler extends
     }
   }
 
+  /**
+   * Assign preempted containers to the applications that have reserved
+   * resources for preempted containers.
+   * @param node Node to check
+   * @return assignment has occurred
+   */
+  static boolean assignPreemptedContainers(FSSchedulerNode node ) {
+    boolean assignedAny = false;
+    node.cleanupPreemptionList();
+    for (Entry<FSAppAttempt, Resource> entry :
+        node.getPreemptionList().entrySet()) {
+      FSAppAttempt app = entry.getKey();
+      Resource reserved = Resources.clone(entry.getValue());
+      while (!app.isStopped() && !Resources.isNone(reserved)) {
+        Resource assigned = app.assignContainer(node);
+        if (Resources.isNone(assigned)) {
+          break;
+        }
+        assignedAny = true;
+        Resources.subtractFromNonNegative(reserved, assigned);
+      }
+    }
+    node.cleanupPreemptionList();
+    return assignedAny;
+  }
+
   @VisibleForTesting
   void attemptScheduling(FSSchedulerNode node) {
     try {
@@ -986,14 +1019,10 @@ public class FairScheduler extends
       // We have to satisfy these first to avoid cases, when we preempt
       // a container for A from B and C gets the preempted containers,
       // when C does not qualify for preemption itself.
-      for (FSAppAttempt app : node.getPreemptionList()) {
-        if (!app.isStopped()) {
-          app.assignContainer(node);
-        }
-      }
-      boolean validReservation = false;
+      boolean validReservation;
+      validReservation = assignPreemptedContainers(node);
       FSAppAttempt reservedAppSchedulable = node.getReservedAppSchedulable();
-      if (reservedAppSchedulable != null) {
+      if (!validReservation && reservedAppSchedulable != null) {
         validReservation = reservedAppSchedulable.assignReservedContainer(node);
       }
       if (!validReservation) {

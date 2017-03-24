@@ -10,6 +10,7 @@ import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -99,7 +100,7 @@ public class TestFSSchedulerNode {
     assertTrue("No containers should be reserved for preemption",
         schedulerNode.containersForPreemption.isEmpty());
     assertTrue("No resources should be reserved for preemptees",
-        schedulerNode.resourcesPreemptedPerApp.isEmpty());
+        schedulerNode.resourcesPreemptedForApp.isEmpty());
     assertEquals(
         "No amount of resource should be reserved for preemptees",
         Resources.none(),
@@ -107,12 +108,7 @@ public class TestFSSchedulerNode {
   }
 
   private void allocateContainers(FSSchedulerNode schedulerNode) {
-    for (FSAppAttempt app : schedulerNode.getPreemptionList()) {
-      if (!app.isStopped()) {
-        app.assignContainer(schedulerNode);
-      }
-    }
-    schedulerNode.cleanupPreemptionList();
+    FairScheduler.assignPreemptedContainers(schedulerNode);
   }
 
   /**

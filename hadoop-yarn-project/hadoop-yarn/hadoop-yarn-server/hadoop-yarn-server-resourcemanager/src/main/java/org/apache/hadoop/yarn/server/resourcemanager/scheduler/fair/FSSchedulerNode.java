@@ -33,7 +33,13 @@ import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 @Private
@@ -51,14 +57,16 @@ public class FSSchedulerNode extends SchedulerNode {
   };
 
   private FSAppAttempt reservedAppSchedulable;
-  // Stores preemption list until the container is completed
+  // Stores list of containers still to be preempted
   @VisibleForTesting
   final Set<RMContainer> containersForPreemption =
       new ConcurrentSkipListSet<>(comparator);
-  // Stores preemption list after the container is completed before assigned
+  // Stores amount of respources preempted and reserved for each app
   @VisibleForTesting
   final Map<FSAppAttempt, Resource>
-      resourcesPreemptedPerApp = new LinkedHashMap<>();
+      resourcesPreemptedForApp = new LinkedHashMap<>();
+  // Sum of resourcesPreemptedForApp values, total resources that are
+  // slated for preemption
   Resource totalResourcesPreempted = Resource.newInstance(0, 0);
 
   public FSSchedulerNode(RMNode node, boolean usePortForNodeName) {
@@ -71,9 +79,9 @@ public class FSSchedulerNode extends SchedulerNode {
    * @return total resources reserved
    */
   Resource getTotalReserved() {
-    Resource totalReserved = getReservedContainer() != null ?
-        Resources.clone(getReservedContainer().getAllocatedResource()) :
-        Resource.newInstance(0, 0);
+    Resource totalReserved = getReservedContainer() != null
+        ? Resources.clone(getReservedContainer().getAllocatedResource())
+        : Resource.newInstance(0, 0);
     Resources.addTo(totalReserved, totalResourcesPreempted);
     return totalReserved;
   }
@@ -147,9 +155,9 @@ public class FSSchedulerNode extends SchedulerNode {
    * after this call
    * @return if any resources were allocated
    */
-  synchronized Collection<FSAppAttempt> getPreemptionList() {
+  synchronized LinkedHashMap<FSAppAttempt, Resource> getPreemptionList() {
     cleanupPreemptionList();
-    return new LinkedHashSet<>(resourcesPreemptedPerApp.keySet());
+    return new LinkedHashMap<>(resourcesPreemptedForApp);
   }
 
   /**
@@ -157,7 +165,7 @@ public class FSSchedulerNode extends SchedulerNode {
    */
   synchronized void cleanupPreemptionList() {
     Iterator<FSAppAttempt> iterator =
-        resourcesPreemptedPerApp.keySet().iterator();
+        resourcesPreemptedForApp.keySet().iterator();
     while (iterator.hasNext()) {
       FSAppAttempt app = iterator.next();
       boolean removeApp = false;
@@ -165,7 +173,7 @@ public class FSSchedulerNode extends SchedulerNode {
           app.getPendingDemand(), Resources.none())) {
         // App does not need more resources
         Resources.subtractFrom(totalResourcesPreempted,
-            resourcesPreemptedPerApp.get(app));
+            resourcesPreemptedForApp.get(app));
         iterator.remove();
       }
     }
@@ -174,7 +182,7 @@ public class FSSchedulerNode extends SchedulerNode {
   /**
    * Mark {@code containers} as being considered for preemption so they are
    * not considered again. A call to this requires a corresponding call to
-   * {@link #removeContainerForPreemption} to ensure we do not mark a
+   * removeContainer for preemption to ensure we do not mark a
    * container for preemption and never consider it again and avoid memory
    * leaks.
    *
@@ -183,8 +191,8 @@ public class FSSchedulerNode extends SchedulerNode {
   void addContainersForPreemption(Collection<RMContainer> containers,
                                   FSAppAttempt app) {
 
-    resourcesPreemptedPerApp.putIfAbsent(app, Resource.newInstance(0, 0));
-    Resource appReserved = resourcesPreemptedPerApp.get(app);
+    resourcesPreemptedForApp.putIfAbsent(app, Resource.newInstance(0, 0));
+    Resource appReserved = resourcesPreemptedForApp.get(app);
 
     for(RMContainer container : containers) {
       containersForPreemption.add(container);
@@ -202,17 +210,6 @@ public class FSSchedulerNode extends SchedulerNode {
   }
 
   /**
-   * Remove container from the set of containers marked for preemption.
-   * Reserve the preempted resources for the app that requested
-   * the preemption.
-   *
-   * @param container container to remove
-   */
-  void removeContainerForPreemption(RMContainer container) {
-    containersForPreemption.remove(container);
-  }
-
-  /**
    * The Scheduler has allocated containers on this node to the given
    * application.
    * @param rmContainer Allocated container
@@ -224,16 +221,16 @@ public class FSSchedulerNode extends SchedulerNode {
     super.allocateContainer(rmContainer, launchedOnNode);
     Resource allocated = rmContainer.getAllocatedResource();
     if (!Resources.isNone(allocated)) {
-      for (FSAppAttempt app: resourcesPreemptedPerApp.keySet()) {
+      for (FSAppAttempt app: resourcesPreemptedForApp.keySet()) {
         if (app.getApplicationAttemptId().equals(
             rmContainer.getApplicationAttemptId())) {
-          Resource reserved = resourcesPreemptedPerApp.get(app);
+          Resource reserved = resourcesPreemptedForApp.get(app);
           Resource fulfilled = Resources.componentwiseMin(reserved, allocated);
           Resources.subtractFrom(reserved, fulfilled);
           Resources.subtractFrom(totalResourcesPreempted, fulfilled);
           if (Resources.isNone(reserved)) {
             // No more preempted containers
-            resourcesPreemptedPerApp.remove(app);
+            resourcesPreemptedForApp.remove(app);
           }
           break;
         }
@@ -254,7 +251,7 @@ public class FSSchedulerNode extends SchedulerNode {
     RMContainer container = getContainer(containerId);
     super.releaseContainer(containerId, releasedByNode);
     if (container != null) {
-      removeContainerForPreemption(container);
+      containersForPreemption.remove(container);
     }
   }
 }
