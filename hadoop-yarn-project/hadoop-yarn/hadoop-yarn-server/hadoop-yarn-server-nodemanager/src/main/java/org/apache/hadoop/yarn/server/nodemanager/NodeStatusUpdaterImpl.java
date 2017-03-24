@@ -371,7 +371,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           "Message from ResourceManager: "
               + regNMResponse.getDiagnosticsMessage();
       throw new YarnRuntimeException(
-        "Recieved SHUTDOWN signal from Resourcemanager, Registration of NodeManager failed, "
+        "Received SHUTDOWN signal from Resourcemanager, Registration of NodeManager failed, "
             + message);
     }
 
@@ -965,7 +965,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private boolean handleShutdownOrResyncCommand(
       NodeHeartbeatResponse response) {
     if (response.getNodeAction() == NodeAction.SHUTDOWN) {
-      LOG.warn("Recieved SHUTDOWN signal from Resourcemanager as part of"
+      LOG.warn("Received SHUTDOWN signal from Resourcemanager as part of"
           + " heartbeat, hence shutting down.");
       LOG.warn("Message from ResourceManager: "
           + response.getDiagnosticsMessage());
