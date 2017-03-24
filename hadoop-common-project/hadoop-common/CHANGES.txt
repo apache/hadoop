@@ -123,6 +123,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-9631. ViewFs should use underlying FileSystem's server side defaults.
     (Lohit Vijayarenu and Erik Krogen via zhz)
 
+    HADOOP-14211. FilterFs and ChRootedFs are too aggressive about enforcing
+    "authorityNeeded". (Erik Krogen via wang)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
