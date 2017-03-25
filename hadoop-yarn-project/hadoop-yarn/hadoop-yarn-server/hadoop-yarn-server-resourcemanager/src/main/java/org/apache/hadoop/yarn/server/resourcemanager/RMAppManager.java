@@ -590,7 +590,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       this.rmContext.getStateStore()
           .updateApplicationStateSynchronously(appState, false, future);
 
-      Futures.get(future, YarnException.class);
+      Futures.getChecked(future, YarnException.class);
 
       // update in-memory
       ((RMAppImpl) app).updateApplicationTimeout(newExpireTime);
@@ -627,7 +627,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         return;
       }
 
-      Futures.get(future, YarnException.class);
+      Futures.getChecked(future, YarnException.class);
 
       // update in-memory
       ((RMAppImpl) app).setApplicationPriority(appPriority);
@@ -710,7 +710,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         false, future);
 
     try {
-      Futures.get(future, YarnException.class);
+      Futures.getChecked(future, YarnException.class);
     } catch (YarnException ex) {
       if (!toSuppressException) {
         throw ex;

@@ -63,7 +63,7 @@ public class JournalSet implements JournalManager {
     public int compare(EditLogInputStream elis1, EditLogInputStream elis2) {
       // we want local logs to be ordered earlier in the collection, and true
       // is considered larger than false, so we want to invert the booleans here
-      return ComparisonChain.start().compare(!elis1.isLocalLog(),
+      return ComparisonChain.start().compareFalseFirst(!elis1.isLocalLog(),
           !elis2.isLocalLog()).result();
     }
   };

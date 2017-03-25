@@ -31,7 +31,7 @@ import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Maps;
 
 /**
@@ -127,7 +127,7 @@ public class MetricsCache {
     }
 
     @Override public String toString() {
-      return Objects.toStringHelper(this)
+      return MoreObjects.toStringHelper(this)
           .add("tags", tags).add("metrics", metrics)
           .toString();
     }

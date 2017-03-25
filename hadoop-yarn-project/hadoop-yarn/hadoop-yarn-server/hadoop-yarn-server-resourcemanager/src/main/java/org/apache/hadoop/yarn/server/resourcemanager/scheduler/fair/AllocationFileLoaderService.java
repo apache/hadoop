@@ -465,7 +465,7 @@ public class AllocationFileLoaderService extends AbstractService {
       Set<String> reservableQueues,
       Set<String> nonPreemptableQueues)
       throws AllocationConfigurationException {
-    String queueName = CharMatcher.WHITESPACE.trimFrom(
+    String queueName = CharMatcher.whitespace().trimFrom(
         element.getAttribute("name"));
 
     if (queueName.contains(".")) {

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.metrics2;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import static com.google.common.base.Preconditions.*;
 
@@ -84,7 +85,7 @@ public abstract class AbstractMetric implements MetricsInfo {
   }
 
   @Override public String toString() {
-    return Objects.toStringHelper(this)
+    return MoreObjects.toStringHelper(this)
         .add("info", info)
         .add("value", value())
         .toString();

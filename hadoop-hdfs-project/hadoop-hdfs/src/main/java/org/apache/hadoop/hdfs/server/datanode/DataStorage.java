@@ -1109,7 +1109,7 @@ public class DataStorage extends Storage {
     }
     linkWorkers.shutdown();
     for (Future<Void> f : futures) {
-      Futures.get(f, IOException.class);
+      Futures.getChecked(f, IOException.class);
     }
   }
 

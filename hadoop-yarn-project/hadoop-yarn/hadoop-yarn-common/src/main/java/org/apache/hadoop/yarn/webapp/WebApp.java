@@ -275,7 +275,7 @@ public abstract class WebApp extends ServletModule {
 
   static String getPrefix(String pathSpec) {
     int start = 0;
-    while (CharMatcher.WHITESPACE.matches(pathSpec.charAt(start))) {
+    while (CharMatcher.whitespace().matches(pathSpec.charAt(start))) {
       ++start;
     }
     if (pathSpec.charAt(start) != '/') {
@@ -291,7 +291,7 @@ public abstract class WebApp extends ServletModule {
     char c;
     do {
       c = pathSpec.charAt(--ci);
-    } while (c == '/' || CharMatcher.WHITESPACE.matches(c));
+    } while (c == '/' || CharMatcher.whitespace().matches(c));
     return pathSpec.substring(start, ci + 1);
   }
 

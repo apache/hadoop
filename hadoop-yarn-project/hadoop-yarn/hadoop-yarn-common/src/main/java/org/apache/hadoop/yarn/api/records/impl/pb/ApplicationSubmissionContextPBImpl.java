@@ -283,7 +283,7 @@ extends ApplicationSubmissionContext {
             "maximum allowed length of a tag is " +
             YarnConfiguration.APPLICATION_MAX_TAG_LENGTH);
       }
-      if (!CharMatcher.ASCII.matchesAllOf(tag)) {
+      if (!CharMatcher.ascii().matchesAllOf(tag)) {
         throw new IllegalArgumentException("A tag can only have ASCII " +
             "characters! Invalid tag - " + tag);
       }

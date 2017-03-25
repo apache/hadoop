@@ -67,7 +67,7 @@ class XAttrCommands extends FsCommand {
       "0x and 0s, respectively.\n" +
       "<path>: The file or directory.\n";
     private final static Function<String, XAttrCodec> enValueOfFunc =
-        Enums.valueOfFunction(XAttrCodec.class);
+        Enums.stringConverter(XAttrCodec.class);
 
     private String name = null;
     private boolean dump = false;
