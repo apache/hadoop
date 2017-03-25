@@ -646,6 +646,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   private boolean reserve(Resource perAllocationResource, FSSchedulerNode node,
       Container reservedContainer, NodeType type,
       SchedulerRequestKey schedulerKey) {
+
     if (!reservationExceedsThreshold(node, type)) {
       LOG.info("Making reservation: node=" + node.getNodeName() +
               " app_id=" + getApplicationId());
@@ -1138,7 +1139,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   /**
    * Is application starved for fairshare or minshare
    */
-  private boolean isStarved() {
+  boolean isStarved() {
     return isStarvedForFairShare() || !Resources.isNone(minshareStarvation);
   }
 

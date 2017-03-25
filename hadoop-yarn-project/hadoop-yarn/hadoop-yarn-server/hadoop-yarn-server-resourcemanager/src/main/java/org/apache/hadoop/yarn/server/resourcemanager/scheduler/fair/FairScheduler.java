@@ -977,14 +977,15 @@ public class FairScheduler extends
     for (Entry<FSAppAttempt, Resource> entry :
         node.getPreemptionList().entrySet()) {
       FSAppAttempt app = entry.getKey();
-      Resource pendingReservation = Resources.clone(entry.getValue());
-      while (!app.isStopped() && !Resources.isNone(pendingReservation)) {
+      Resource preemptionPending = Resources.clone(entry.getValue());
+      while (!app.isStopped() && !Resources.isNone(preemptionPending)) {
         Resource assigned = app.assignContainer(node);
         if (Resources.isNone(assigned)) {
+          // Fail to assign, let's not try further
           break;
         }
         assignedAny = true;
-        Resources.subtractFromNonNegative(pendingReservation, assigned);
+        Resources.subtractFromNonNegative(preemptionPending, assigned);
       }
     }
     return assignedAny;

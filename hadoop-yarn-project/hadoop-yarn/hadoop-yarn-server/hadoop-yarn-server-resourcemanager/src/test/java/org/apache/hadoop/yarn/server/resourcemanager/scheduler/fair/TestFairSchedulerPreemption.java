@@ -299,7 +299,8 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
       FSSchedulerNode node = (FSSchedulerNode)
           scheduler.getNodeTracker().getNode(rmNode.getNodeID());
       if (node.getContainersForPreemption().size() > 0) {
-        assertTrue(node.getPreemptionList().keySet().contains(starvingApp));
+        assertTrue("node should be reserved for the starvingApp",
+            node.getPreemptionList().keySet().contains(starvingApp));
       }
     }
 
@@ -314,7 +315,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
       FSSchedulerNode node = (FSSchedulerNode)
           scheduler.getNodeTracker().getNode(rmNode.getNodeID());
       if (node.getContainersForPreemption().size() > 0) {
-        assertTrue(!node.getPreemptionList().keySet().contains(starvingApp));
+        assertFalse(node.getPreemptionList().keySet().contains(starvingApp));
       }
     }
   }

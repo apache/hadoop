@@ -10,7 +10,6 @@ import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -22,8 +21,7 @@ import static org.mockito.Mockito.when;
  * Test scheduler node, especially preemption reservations.
  */
 public class TestFSSchedulerNode {
-  private long containerNum = 0;
-  private ArrayList<RMContainer> containers = new ArrayList<>();
+  private final ArrayList<RMContainer> containers = new ArrayList<>();
 
   private RMNode createNode() {
     RMNode node = mock(RMNode.class);
@@ -32,8 +30,8 @@ public class TestFSSchedulerNode {
     return node;
   }
 
-  private RMContainer createDefaultContainer() {
-    return createContainer(Resource.newInstance(1024, 1), null);
+  private void createDefaultContainer() {
+    createContainer(Resource.newInstance(1024, 1), null);
   }
 
   private RMContainer createContainer(
@@ -41,7 +39,7 @@ public class TestFSSchedulerNode {
     RMContainer container = mock(RMContainer.class);
     Container containerInner = mock(Container.class);
     ContainerId id = mock(ContainerId.class);
-    when(id.getContainerId()).thenReturn(containerNum);
+    when(id.getContainerId()).thenReturn((long)containers.size());
     when(containerInner.getResource()).
         thenReturn(Resources.clone(request));
     when(containerInner.getId()).thenReturn(id);
@@ -54,15 +52,14 @@ public class TestFSSchedulerNode {
     when(container.getAllocatedResource()).
         thenReturn(Resources.clone(request));
     containers.add(container);
-    containerNum++;
     return container;
   }
 
   private void saturateCluster(FSSchedulerNode schedulerNode) {
     while (!Resources.isNone(schedulerNode.getUnallocatedResource())) {
       createDefaultContainer();
-      schedulerNode.allocateContainer(containers.get((int)containerNum - 1));
-      schedulerNode.containerStarted(containers.get((int)containerNum - 1).
+      schedulerNode.allocateContainer(containers.get(containers.size() - 1));
+      schedulerNode.containerStarted(containers.get(containers.size() - 1).
           getContainerId());
     }
   }
@@ -90,6 +87,14 @@ public class TestFSSchedulerNode {
             return response;
           }
         });
+    when(starvingApp.isStarved()).thenAnswer(
+        new Answer<Boolean>() {
+          @Override
+          public Boolean answer(InvocationOnMock invocationOnMock) throws Throwable {
+            return !Resources.isNone(request);
+          }
+        }
+    );
     when(starvingApp.getPendingDemand()).thenReturn(request);
     return starvingApp;
   }
@@ -99,7 +104,7 @@ public class TestFSSchedulerNode {
         Resources.none(), schedulerNode.getAllocatedResource());
     assertTrue("No containers should be reserved for preemption",
         schedulerNode.containersForPreemption.isEmpty());
-    assertTrue("No resources should be reserved for preemptees",
+    assertTrue("No resources should be reserved for preemptors",
         schedulerNode.resourcesPreemptedForApp.isEmpty());
     assertEquals(
         "No amount of resource should be reserved for preemptees",
@@ -174,7 +179,7 @@ public class TestFSSchedulerNode {
     saturateCluster(schedulerNode);
     assertEquals("Container should be allocated",
         Resources.multiply(containers.get(0).getContainer().getResource(),
-            containerNum),
+            containers.size()),
         schedulerNode.getAllocatedResource());
 
     // Request preemption
@@ -187,15 +192,15 @@ public class TestFSSchedulerNode {
         containers.get(0).getAllocatedResource(),
         schedulerNode.getTotalReserved());
 
-    // Preemption occurs
+    // Preemption occurs release one container
     schedulerNode.releaseContainer(containers.get(0).getContainerId(), true);
     allocateContainers(schedulerNode);
     assertEquals("Container should be allocated",
         schedulerNode.getTotalResource(),
         schedulerNode.getAllocatedResource());
 
-    // Release all containers
-    for (int i = 1; i < containerNum; ++i) {
+    // Release all remaining containers
+    for (int i = 1; i < containers.size(); ++i) {
       schedulerNode.releaseContainer(containers.get(i).getContainerId(), true);
     }
     finalValidation(schedulerNode);
@@ -213,7 +218,7 @@ public class TestFSSchedulerNode {
     saturateCluster(schedulerNode);
     assertEquals("Container should be allocated",
         Resources.multiply(containers.get(0).getContainer().getResource(),
-            containerNum),
+            containers.size()),
         schedulerNode.getAllocatedResource());
 
     // Preempt a container
@@ -241,7 +246,7 @@ public class TestFSSchedulerNode {
         schedulerNode.getAllocatedResource());
 
     // Release all containers
-    for (int i = 3; i < containerNum; ++i) {
+    for (int i = 3; i < containers.size(); ++i) {
       schedulerNode.releaseContainer(containers.get(i).getContainerId(), true);
     }
     finalValidation(schedulerNode);
@@ -260,7 +265,7 @@ public class TestFSSchedulerNode {
     saturateCluster(schedulerNode);
     assertEquals("Container should be allocated",
         Resources.multiply(containers.get(0).getContainer().getResource(),
-            containerNum),
+            containers.size()),
         schedulerNode.getAllocatedResource());
 
     // Preempt a container
@@ -288,7 +293,7 @@ public class TestFSSchedulerNode {
         schedulerNode.getAllocatedResource());
 
     // Release all containers
-    for (int i = 3; i < containerNum; ++i) {
+    for (int i = 3; i < containers.size(); ++i) {
       schedulerNode.releaseContainer(containers.get(i).getContainerId(), true);
     }
     finalValidation(schedulerNode);
@@ -306,7 +311,7 @@ public class TestFSSchedulerNode {
     saturateCluster(schedulerNode);
     assertEquals("Container should be allocated",
         Resources.multiply(containers.get(0).getContainer().getResource(),
-            containerNum),
+            containers.size()),
         schedulerNode.getAllocatedResource());
 
     // Preempt a container
@@ -327,7 +332,7 @@ public class TestFSSchedulerNode {
         schedulerNode.getAllocatedResource());
 
     // Release all containers
-    for (int i = 1; i < containerNum; ++i) {
+    for (int i = 1; i < containers.size(); ++i) {
       schedulerNode.releaseContainer(containers.get(i).getContainerId(), true);
     }
     finalValidation(schedulerNode);
@@ -345,7 +350,7 @@ public class TestFSSchedulerNode {
     saturateCluster(schedulerNode);
     assertEquals("Container should be allocated",
         Resources.multiply(containers.get(0).getContainer().getResource(),
-            containerNum),
+            containers.size()),
         schedulerNode.getAllocatedResource());
 
     // Preempt a container
@@ -365,8 +370,11 @@ public class TestFSSchedulerNode {
             Resource.newInstance(512, 0)),
         schedulerNode.getAllocatedResource());
 
+    // Cleanup simulating node update
+    schedulerNode.getPreemptionList();
+
     // Release all containers
-    for (int i = 1; i < containerNum; ++i) {
+    for (int i = 1; i < containers.size(); ++i) {
       schedulerNode.releaseContainer(containers.get(i).getContainerId(), true);
     }
     finalValidation(schedulerNode);
