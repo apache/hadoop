@@ -29,6 +29,7 @@ import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * Set of configuration properties that can be injected into the application
@@ -102,6 +103,35 @@ public class Configuration implements Serializable {
 
   public void setFiles(List<ConfigFile> files) {
     this.files = files;
+  }
+
+  public long getPropertyLong(String name, long defaultValue) {
+    if (name == null) {
+      return defaultValue;
+    }
+    String value = properties.get(name.trim());
+    if (StringUtils.isEmpty(value)) {
+      return defaultValue;
+    }
+    return Long.parseLong(value);
+  }
+
+  public String getProperty(String name, String defaultValue) {
+    if (name == null) {
+      return defaultValue;
+    }
+    return properties.get(name.trim());
+  }
+
+  public void setProperty(String name, String value) {
+    properties.put(name, value);
+  }
+
+  public String getProperty(String name) {
+    if (name == null) {
+      return null;
+    }
+    return properties.get(name.trim());
   }
 
   @Override

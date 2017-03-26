@@ -20,6 +20,7 @@ package org.apache.slider.common.tools;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 import java.io.IOException;
 
@@ -28,6 +29,8 @@ import java.io.IOException;
  * persistent state
  */
 public class SliderFileSystem extends CoreFileSystem {
+
+  Path appDir = null;
 
   public SliderFileSystem(FileSystem fileSystem,
       Configuration configuration) {
@@ -38,5 +41,11 @@ public class SliderFileSystem extends CoreFileSystem {
     super(configuration);
   }
 
+  public void setAppDir(Path appDir) {
+    this.appDir = appDir;
+  }
 
+  public Path getAppDir() {
+    return this.appDir;
+  }
 }

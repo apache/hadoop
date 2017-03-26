@@ -112,17 +112,6 @@ public class SliderApplicationIpcClient implements SliderApplicationApi {
     }
   }
 
-
-  @Override
-  public void putDesiredResources(ConfTree updated) throws IOException {
-    try {
-      operations.flex(updated);
-    } catch (IOException e) {
-      throw convert(e);
-    }
-  }
-
-  
   @Override
   public AggregateConf getResolvedModel() throws IOException {
     try {

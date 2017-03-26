@@ -21,14 +21,12 @@ package org.apache.slider.server.appmaster.state;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.slider.api.ClusterDescription;
 import org.apache.slider.api.ClusterNode;
+import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.types.ApplicationLivenessInformation;
 import org.apache.slider.api.types.ComponentInformation;
 import org.apache.slider.api.types.NodeInformation;
 import org.apache.slider.api.types.RoleStatistics;
-import org.apache.slider.core.conf.AggregateConf;
-import org.apache.slider.core.conf.ConfTreeOperations;
 import org.apache.slider.core.exceptions.NoSuchNodeException;
 import org.apache.slider.core.registry.docstore.PublishedConfigSet;
 import org.apache.slider.core.registry.docstore.PublishedExportsSet;
@@ -130,43 +128,13 @@ public class ProviderAppState implements StateAccessForProviders {
   }
 
   @Override
-  public ClusterDescription getClusterStatus() {
+  public Application getApplication() {
     return appState.getClusterStatus();
-  }
-
-  @Override
-  public ConfTreeOperations getResourcesSnapshot() {
-    return appState.getResourcesSnapshot();
-  }
-
-  @Override
-  public ConfTreeOperations getAppConfSnapshot() {
-    return appState.getAppConfSnapshot();
-  }
-
-  @Override
-  public ConfTreeOperations getInternalsSnapshot() {
-    return appState.getInternalsSnapshot();
   }
 
   @Override
   public boolean isApplicationLive() {
     return appState.isApplicationLive();
-  }
-
-  @Override
-  public long getSnapshotTime() {
-    return appState.getSnapshotTime();
-  }
-
-  @Override
-  public AggregateConf getInstanceDefinitionSnapshot() {
-    return appState.getInstanceDefinitionSnapshot();
-  }
-  
-  @Override
-  public AggregateConf getUnresolvedInstanceDefinition() {
-    return appState.getUnresolvedInstanceDefinition();
   }
 
   @Override
@@ -221,23 +189,13 @@ public class ProviderAppState implements StateAccessForProviders {
   }
 
   @Override
-  public ClusterDescription refreshClusterStatus() {
+  public Application refreshClusterStatus() {
     return appState.refreshClusterStatus();
-  }
-
-  @Override
-  public List<RoleStatus> cloneRoleStatusList() {
-    return appState.cloneRoleStatusList();
   }
 
   @Override
   public ApplicationLivenessInformation getApplicationLivenessInformation() {
     return appState.getApplicationLivenessInformation();
-  }
-
-  @Override
-  public Map<String, Integer> getLiveStatistics() {
-    return appState.getLiveStatistics();
   }
 
   @Override

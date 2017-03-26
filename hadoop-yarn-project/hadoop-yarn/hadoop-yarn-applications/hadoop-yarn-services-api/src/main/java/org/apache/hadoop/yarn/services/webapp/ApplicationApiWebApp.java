@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.yarn.services.webapp;
 
-import static org.apache.hadoop.yarn.services.utils.RestApiConstants.*;
+import static org.apache.slider.util.RestApiConstants.*;
 
 import java.io.IOException;
 import java.net.InetAddress;

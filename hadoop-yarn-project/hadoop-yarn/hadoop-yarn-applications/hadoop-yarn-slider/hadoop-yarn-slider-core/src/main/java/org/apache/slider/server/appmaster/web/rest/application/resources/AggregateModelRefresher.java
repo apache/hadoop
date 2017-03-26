@@ -23,7 +23,6 @@ import org.apache.slider.server.appmaster.state.StateAccessForProviders;
 
 /**
  * Refresh the aggregate desired model via
- * {@link StateAccessForProviders#getInstanceDefinitionSnapshot()}
  */
 public class AggregateModelRefresher
     implements ResourceRefresher<AggregateConf> {
@@ -39,9 +38,6 @@ public class AggregateModelRefresher
 
   @Override
   public AggregateConf refresh() throws Exception {
-    return
-        resolved ?
-          state.getInstanceDefinitionSnapshot()
-          : state.getUnresolvedInstanceDefinition();
+    return new AggregateConf();
   }
 }

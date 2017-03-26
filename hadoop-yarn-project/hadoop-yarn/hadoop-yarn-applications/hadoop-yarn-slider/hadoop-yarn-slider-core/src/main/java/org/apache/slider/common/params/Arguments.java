@@ -36,6 +36,7 @@ public interface Arguments {
   String ARG_CLIENT = "--client";
   String ARG_CONFDIR = "--appconf";
   String ARG_COMPONENT = "--component";
+  String ARG_COUNT = "--count";
   String ARG_COMPONENT_SHORT = "--comp";
   String ARG_COMPONENTS = "--components";
   String ARG_COMP_OPT= "--compopt";

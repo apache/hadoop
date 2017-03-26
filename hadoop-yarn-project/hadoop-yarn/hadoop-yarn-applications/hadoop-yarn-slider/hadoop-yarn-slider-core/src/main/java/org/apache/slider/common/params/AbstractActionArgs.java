@@ -69,7 +69,7 @@ public abstract class AbstractActionArgs extends ArgOps implements Arguments {
   /**
    -D name=value
 
-   Define an HBase configuration option which overrides any options in
+   Define an configuration option which overrides any options in
    the configuration XML files of the image or in the image configuration
    directory. The values will be persisted.
    Configuration options are only passed to the cluster when creating or reconfiguring a cluster.

@@ -73,6 +73,9 @@ public interface SliderXmlConfKeys {
   int DEFAULT_YARN_QUEUE_PRIORITY = 1;
 
 
+  String KEY_AM_RESOURCE_MEM = "slider.am.resource.memory";
+  long DEFAULT_KEY_AM_RESOURCE_MEM = 1024;
+
   /**
    * The slider base path: {@value}
    * Defaults to HomeDir/.slider

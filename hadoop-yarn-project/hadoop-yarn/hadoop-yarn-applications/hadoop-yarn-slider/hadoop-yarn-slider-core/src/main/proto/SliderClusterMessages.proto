@@ -80,21 +80,13 @@ message UpgradeContainersRequestProto {
 message UpgradeContainersResponseProto {
 }
 
-/**
- * flex the cluster
- */
-message FlexClusterRequestProto {
-  required string clusterSpec = 1;
+message FlexComponentRequestProto {
+  optional string name = 1;
+  optional int32 numberOfContainers = 2;
 }
 
-
-/**
- * flex the cluster
- */
-message FlexClusterResponseProto {
-  required bool response = 1;
+message FlexComponentResponseProto {
 }
-
 
 /**
  * void request

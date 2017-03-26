@@ -30,8 +30,6 @@ public interface ApplicationApi {
 
   Response getApplications(String state);
 
-  Response getApplication(String appName);
-
   Response deleteApplication(String appName);
 
   Response updateApplication(String appName, Application updateAppData);

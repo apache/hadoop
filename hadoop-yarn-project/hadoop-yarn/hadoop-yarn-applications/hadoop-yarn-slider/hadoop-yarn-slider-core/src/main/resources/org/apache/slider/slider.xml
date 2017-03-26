@@ -24,10 +24,6 @@
     <value>true</value>
   </property>
   <property>
-    <name>slider.provider.agent</name>
-    <value>org.apache.slider.providers.agent.AgentProviderFactory</value>
-  </property>
-  <property>
     <name>slider.provider.docker</name>
     <value>org.apache.slider.providers.docker.DockerProviderFactory</value>
   </property>

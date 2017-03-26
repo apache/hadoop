@@ -28,6 +28,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -55,11 +56,11 @@ public class Application extends BaseResource {
   private Long numberOfRunningContainers = null;
   private Long lifetime = null;
   private PlacementPolicy placementPolicy = null;
-  private List<Component> components = null;
-  private Configuration configuration = null;
+  private List<Component> components = new ArrayList<>();
+  private Configuration configuration = new Configuration();
   private List<Container> containers = new ArrayList<>();
   private ApplicationState state = null;
-  private Map<String, String> quicklinks = null;
+  private Map<String, String> quicklinks = new HashMap<>();
   private String queue = null;
 
   /**
@@ -283,6 +284,15 @@ public class Application extends BaseResource {
 
   public void setComponents(List<Component> components) {
     this.components = components;
+  }
+
+  public Component getComponent(String name) {
+    for (Component component : components) {
+      if (component.getName().equals(name)) {
+        return component;
+      }
+    }
+    return null;
   }
 
   /**

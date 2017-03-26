@@ -18,7 +18,7 @@
 
 package org.apache.slider.providers;
 
-import org.apache.slider.api.ResourceKeys;
+import org.apache.slider.api.resource.Component;
 
 /**
  * Provider role and key for use in app requests.
@@ -34,16 +34,8 @@ public final class ProviderRole {
   public int nodeFailureThreshold;
   public final long placementTimeoutSeconds;
   public final String labelExpression;
+  public final Component component;
 
-  public ProviderRole(String name, int id) {
-    this(name,
-        name,
-        id,
-        PlacementPolicy.DEFAULT,
-        ResourceKeys.DEFAULT_NODE_FAILURE_THRESHOLD,
-        ResourceKeys.DEFAULT_PLACEMENT_ESCALATE_DELAY_SECONDS,
-        ResourceKeys.DEF_YARN_LABEL_EXPRESSION);
-  }
 
   /**
    * Create a provider role
@@ -67,7 +59,7 @@ public final class ProviderRole {
         policy,
         nodeFailureThreshold,
         placementTimeoutSeconds,
-        labelExpression);
+        labelExpression, null);
   }
 
   /**
@@ -87,7 +79,8 @@ public final class ProviderRole {
       int policy,
       int nodeFailureThreshold,
       long placementTimeoutSeconds,
-      String labelExpression) {
+      String labelExpression,
+      Component component) {
     this.name = name;
     if (group == null) {
       this.group = name;
@@ -99,6 +92,8 @@ public final class ProviderRole {
     this.nodeFailureThreshold = nodeFailureThreshold;
     this.placementTimeoutSeconds = placementTimeoutSeconds;
     this.labelExpression = labelExpression;
+    this.component = component;
+
   }
 
   @Override

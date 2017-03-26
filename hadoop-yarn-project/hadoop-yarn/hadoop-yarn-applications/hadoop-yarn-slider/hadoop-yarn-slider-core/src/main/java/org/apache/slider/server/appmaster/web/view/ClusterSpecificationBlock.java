@@ -49,7 +49,7 @@ public class ClusterSpecificationBlock extends SliderHamletBlock {
    * @return
    */
   private String getJson() {
-    return appState.getClusterStatus().toString();
+    return appState.getApplication().toString();
   }
 
 }

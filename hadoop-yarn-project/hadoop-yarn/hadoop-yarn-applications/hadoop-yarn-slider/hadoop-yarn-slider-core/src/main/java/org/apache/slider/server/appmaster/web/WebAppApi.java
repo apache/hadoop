@@ -22,7 +22,6 @@ import org.apache.slider.server.appmaster.actions.QueueAccess;
 import org.apache.slider.server.appmaster.management.MetricsAndMonitoring;
 import org.apache.slider.server.appmaster.state.AppState;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
-import org.apache.slider.server.appmaster.web.rest.application.resources.ContentCache;
 
 /**
  * Interface to pass information from the Slider AppMaster to the WebApp
@@ -56,10 +55,4 @@ public interface WebAppApi {
    * @return the immediate and scheduled queues
    */
   QueueAccess getQueues();
-
-  /**
-   * Local cache of content
-   * @return the cache
-   */
-  ContentCache getContentCache();
 }

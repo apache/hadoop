@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeReport;
-import org.apache.slider.core.conf.AggregateConf;
+import org.apache.slider.api.resource.Application;
 import org.apache.slider.providers.ProviderRole;
 
 import java.util.ArrayList;
@@ -38,26 +38,24 @@ import java.util.Map;
  * are added.
  */
 public class AppStateBindingInfo {
-  public AggregateConf instanceDefinition;
   public Configuration serviceConfig = new Configuration();
-  public Configuration publishedProviderConf = new Configuration(false);
+  public Application application = null;
   public List<ProviderRole> roles = new ArrayList<>();
   public FileSystem fs;
   public Path historyPath;
   public List<Container> liveContainers = new ArrayList<>(0);
-  public Map<String, String> applicationInfo = new HashMap<>();
   public ContainerReleaseSelector releaseSelector = new SimpleReleaseSelector();
   /** node reports off the RM. */
   public List<NodeReport> nodeReports = new ArrayList<>(0);
 
   public void validate() throws IllegalArgumentException {
-    Preconditions.checkArgument(instanceDefinition != null, "null instanceDefinition");
     Preconditions.checkArgument(serviceConfig != null, "null appmasterConfig");
-    Preconditions.checkArgument(publishedProviderConf != null, "null publishedProviderConf");
     Preconditions.checkArgument(releaseSelector != null, "null releaseSelector");
     Preconditions.checkArgument(roles != null, "null providerRoles");
     Preconditions.checkArgument(fs != null, "null fs");
     Preconditions.checkArgument(historyPath != null, "null historyDir");
     Preconditions.checkArgument(nodeReports != null, "null nodeReports");
+    Preconditions.checkArgument(application != null, "null application");
+
   }
 }

@@ -36,7 +36,7 @@ public interface SliderActions {
   String ACTION_ECHO = "echo";
   String ACTION_EXISTS = "exists";
   String ACTION_FLEX = "flex";
-  String ACTION_FREEZE = "stop";
+  String ACTION_STOP = "stop";
   String ACTION_HELP = "help";
   String ACTION_INSTALL_KEYTAB = "install-keytab";
   String ACTION_INSTALL_PACKAGE = "install-package";
@@ -53,7 +53,7 @@ public interface SliderActions {
   String ACTION_RESOLVE = "resolve";
   String ACTION_RESOURCE = "resource";
   String ACTION_STATUS = "status";
-  String ACTION_THAW = "start";
+  String ACTION_START = "start";
   String ACTION_TOKENS = "tokens";
 
   String ACTION_VERSION = "version";
@@ -68,7 +68,7 @@ public interface SliderActions {
   String DESCRIBE_ACTION_UPDATE =
       "Update template for a Slider application";
   String DESCRIBE_ACTION_UPGRADE =
-      "Rolling upgrade/downgrade the application to a newer/previous version";
+      "Rolling upgrade/downgrade the component/containerto a newer/previous version";
   String DESCRIBE_ACTION_DESTROY =
         "Destroy a stopped Slider application";
   String DESCRIBE_ACTION_EXISTS =

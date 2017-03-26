@@ -18,6 +18,7 @@
 
 package org.apache.slider.server.appmaster.actions;
 
+import org.apache.slider.api.proto.Messages;
 import org.apache.slider.core.conf.ConfTree;
 import org.apache.slider.server.appmaster.SliderAppMaster;
 import org.apache.slider.server.appmaster.state.AppState;
@@ -26,19 +27,16 @@ import java.util.concurrent.TimeUnit;
 
 public class ActionFlexCluster extends AsyncAction {
 
-  public final ConfTree resources;
-  
-  public ActionFlexCluster(String name,
-      long delay,
-      TimeUnit timeUnit, ConfTree resources) {
+  final Messages.FlexComponentRequestProto requestProto;
+  public ActionFlexCluster(String name, long delay, TimeUnit timeUnit,
+      Messages.FlexComponentRequestProto requestProto) {
     super(name, delay, timeUnit, ATTR_CHANGES_APP_SIZE);
-    this.resources = resources;
+    this.requestProto = requestProto;
   }
-
   @Override
   public void execute(SliderAppMaster appMaster,
       QueueAccess queueService,
       AppState appState) throws Exception {
-    appMaster.flexCluster(resources);
+    appMaster.flexCluster(requestProto);
   }
 }
