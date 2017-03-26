@@ -54,6 +54,11 @@ public class RMAuditLogger {
     public static final String GET_APP_STATE = "Get Application State";
     public static final String GET_APP_PRIORITY = "Get Application Priority";
     public static final String GET_APP_QUEUE = "Get Application Queue";
+    public static final String GET_APP_ATTEMPTS = "Get Application Attempts";
+    public static final String GET_APP_ATTEMPT_REPORT
+        = "Get Application Attempt Report";
+    public static final String GET_CONTAINERS = "Get Containers";
+    public static final String GET_CONTAINER_REPORT = "Get Container Report";
     public static final String FINISH_SUCCESS_APP = "Application Finished - Succeeded";
     public static final String FINISH_FAILED_APP = "Application Finished - Failed";
     public static final String FINISH_KILLED_APP = "Application Finished - Killed";
