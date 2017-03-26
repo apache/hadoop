@@ -19,6 +19,7 @@
 package org.apache.slider.server.appmaster.actions;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.slider.api.resource.Application;
 import org.apache.slider.server.appmaster.SliderAppMaster;
 import org.apache.slider.server.appmaster.state.AppState;
 
@@ -31,21 +32,13 @@ public class ActionRegisterServiceInstance extends AsyncAction {
 
   private final String instanceName;
   private final ApplicationId appId;
-
+  private final Application application;
   public ActionRegisterServiceInstance(String instanceName,
-      ApplicationId appId) {
+      ApplicationId appId, Application application) {
     super("ActionRegisterServiceInstance");
     this.instanceName = instanceName;
     this.appId = appId;
-  }
-
-  public ActionRegisterServiceInstance(String instanceName,
-      ApplicationId appId,
-      long delay,
-      TimeUnit timeUnit) {
-    super("ActionRegisterServiceInstance", delay, timeUnit);
-    this.instanceName = instanceName;
-    this.appId = appId;
+    this.application = application;
   }
 
   @Override
@@ -54,6 +47,6 @@ public class ActionRegisterServiceInstance extends AsyncAction {
       AppState appState) throws Exception {
 
     // YARN Registry do the registration
-    appMaster.registerServiceInstance(instanceName, appId);
+    appMaster.registerServiceInstance(instanceName, appId, application);
   }
 }

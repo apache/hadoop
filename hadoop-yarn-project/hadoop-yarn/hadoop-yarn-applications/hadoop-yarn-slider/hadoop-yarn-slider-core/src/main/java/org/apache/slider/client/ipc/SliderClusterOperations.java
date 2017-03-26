@@ -25,6 +25,8 @@ import org.apache.slider.api.ClusterNode;
 import org.apache.slider.api.SliderClusterProtocol;
 import org.apache.slider.api.StateValues;
 import org.apache.slider.api.proto.Messages;
+import org.apache.slider.api.resource.Application;
+import org.apache.slider.api.resource.Component;
 import org.apache.slider.api.types.ApplicationLivenessInformation;
 import org.apache.slider.api.types.ComponentInformation;
 import org.apache.slider.api.types.ContainerInformation;
@@ -39,6 +41,7 @@ import org.apache.slider.core.exceptions.NoSuchNodeException;
 import org.apache.slider.core.exceptions.SliderException;
 import org.apache.slider.core.exceptions.WaitTimeoutException;
 import org.apache.slider.core.persist.ConfTreeSerDeser;
+import org.apache.slider.core.persist.JsonSerDeser;
 import org.codehaus.jackson.JsonParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +64,8 @@ public class SliderClusterOperations {
     log = LoggerFactory.getLogger(SliderClusterOperations.class);
   
   private final SliderClusterProtocol appMaster;
+  private static final JsonSerDeser<Application> jsonSerDeser =
+      new JsonSerDeser<Application>(Application.class);
   private static final Messages.EmptyPayloadProto EMPTY;
   static {
     EMPTY = Messages.EmptyPayloadProto.newBuilder().build(); 
@@ -130,48 +135,20 @@ public class SliderClusterOperations {
    * Connect to a live cluster and get its current state
    * @return its description
    */
-  public ClusterDescription getClusterDescription()
-    throws YarnException, IOException {
-    
+  public Application getApplication() throws YarnException, IOException {
     Messages.GetJSONClusterStatusRequestProto req =
       Messages.GetJSONClusterStatusRequestProto.newBuilder().build();
     Messages.GetJSONClusterStatusResponseProto resp =
       appMaster.getJSONClusterStatus(req);
     String statusJson = resp.getClusterSpec();
     try {
-      return ClusterDescription.fromJson(statusJson);
+      return jsonSerDeser.fromJson(statusJson);
     } catch (JsonParseException e) {
-      log.error("Exception " + e + " parsing:\n" + statusJson, e);
+      log.error("Error when parsing app json file", e);
       throw e;
     }
   }
 
-  /**
-   * Get the AM instance definition.
-   * <p>
-   *   See {@link SliderClusterProtocol#getInstanceDefinition(Messages.GetInstanceDefinitionRequestProto)}
-   * @return current slider AM aggregate definition
-   * @throws YarnException
-   * @throws IOException
-   */
-  public AggregateConf getInstanceDefinition()
-    throws YarnException, IOException {
-    Messages.GetInstanceDefinitionRequestProto.Builder builder =
-      Messages.GetInstanceDefinitionRequestProto.newBuilder();
-
-    Messages.GetInstanceDefinitionRequestProto request = builder.build();
-    Messages.GetInstanceDefinitionResponseProto response =
-      appMaster.getInstanceDefinition(request);
-
-    ConfTreeSerDeser confTreeSerDeser = new ConfTreeSerDeser();
-
-    ConfTree internal = confTreeSerDeser.fromJson(response.getInternal());
-    ConfTree resources = confTreeSerDeser.fromJson(response.getResources());
-    ConfTree app = confTreeSerDeser.fromJson(response.getApplication());
-    AggregateConf instanceDefinition =
-      new AggregateConf(resources, app, internal);
-    return instanceDefinition;
-  }
   /**
    * Kill a container
    * @param id container ID
@@ -315,21 +292,13 @@ public class SliderClusterOperations {
     return state;
   }
 
-  /**
-   * Flex operation
-   * @param resources new resources
-   * @return the response
-   * @throws IOException
-   */
-  public boolean flex(ConfTree resources) throws IOException {
-    Messages.FlexClusterRequestProto request =
-      Messages.FlexClusterRequestProto.newBuilder()
-              .setClusterSpec(resources.toJson())
-              .build();
-    Messages.FlexClusterResponseProto response = appMaster.flexCluster(request);
-    return response.getResponse();
+  public void flex(Component component) throws IOException{
+    Messages.FlexComponentRequestProto request =
+        Messages.FlexComponentRequestProto.newBuilder()
+            .setNumberOfContainers(component.getNumberOfContainers().intValue())
+            .setName(component.getName()).build();
+        appMaster.flexComponent(request);
   }
-
 
   /**
    * Commit (possibly delayed) AM suicide

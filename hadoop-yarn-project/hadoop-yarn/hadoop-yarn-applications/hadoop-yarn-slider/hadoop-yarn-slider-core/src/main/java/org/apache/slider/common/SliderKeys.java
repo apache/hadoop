@@ -18,6 +18,8 @@
 
 package org.apache.slider.common;
 
+import org.apache.hadoop.yarn.api.ApplicationConstants;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -50,7 +52,7 @@ public interface SliderKeys extends SliderXmlConfKeys {
   String SLIDER_DEPENDENCY_LOCALIZED_DIR_LINK = "slider_dep";
   String SLIDER_DEPENDENCY_HDP_PARENT_DIR = "/hdp";
   String SLIDER_DEPENDENCY_DIR = "/apps/%s/slider";
-  String SLIDER_DEPENDENCY_TAR_GZ_FILE_NAME = "slider";
+  String SLIDER_DEPENDENCY_TAR_GZ_FILE_NAME = "slider-dep";
   String SLIDER_DEPENDENCY_TAR_GZ_FILE_EXT = ".tar.gz";
   String SLIDER_DEPENDENCY_DIR_PERMISSIONS = "755";
 
@@ -181,7 +183,7 @@ public interface SliderKeys extends SliderXmlConfKeys {
   /**
    * name of generated dir for this conf: {@value}
    */
-  String SUBMITTED_CONF_DIR = "confdir";
+  String SUBMITTED_CONF_DIR = "conf";
 
   /**
    * Slider AM log4j file name : {@value}
@@ -227,7 +229,7 @@ public interface SliderKeys extends SliderXmlConfKeys {
    */
   String ADDONS_DIR = "addons";
 
-  String SLIDER_JAR = "slider.jar";
+  String SLIDER_JAR = "slider-core.jar";
   String JCOMMANDER_JAR = "jcommander.jar";
   String GSON_JAR = "gson.jar";
   String DEFAULT_APP_PKG = "appPkg.zip";
@@ -238,7 +240,7 @@ public interface SliderKeys extends SliderXmlConfKeys {
   String STDERR_AM = "slider-err.txt";
   String DEFAULT_GC_OPTS = "";
 
-  String HADOOP_USER_NAME = "HADOOP_USER_NAME";
+  String HADOOP_USER_NAME = ApplicationConstants.Environment.USER.toString();
   String HADOOP_PROXY_USER = "HADOOP_PROXY_USER";
   String SLIDER_PASSPHRASE = "SLIDER_PASSPHRASE";
 

@@ -16,6 +16,8 @@
  */
 package org.apache.slider.server.appmaster.web;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.health.HealthCheckRegistry;
 import com.codahale.metrics.servlets.HealthCheckServlet;
 import com.codahale.metrics.servlets.MetricsServlet;
 import com.codahale.metrics.servlets.PingServlet;
@@ -28,16 +30,16 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
 import org.apache.hadoop.yarn.webapp.Dispatcher;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
-import org.apache.slider.server.appmaster.management.MetricsAndMonitoring;
 import org.apache.slider.server.appmaster.web.rest.AMWadlGeneratorConfig;
 import org.apache.slider.server.appmaster.web.rest.AMWebServices;
-import static org.apache.slider.server.appmaster.web.rest.RestPaths.*;
 import org.apache.slider.server.appmaster.web.rest.SliderJacksonJaxbJsonProvider;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static org.apache.slider.server.appmaster.web.rest.RestPaths.*;
 
 /**
  * 
@@ -65,6 +67,7 @@ public class SliderAMWebApp extends WebApp {
     bind(GenericExceptionHandler.class);
     // bind the REST interface
     bind(AMWebServices.class);
+
     //bind(AMAgentWebServices.class);
     route("/", SliderAMController.class);
     route(CONTAINER_STATS, SliderAMController.class, "containerStats");
@@ -81,11 +84,9 @@ public class SliderAMWebApp extends WebApp {
       serve(path).with(Dispatcher.class);
     }
 
-    // metrics
-    MetricsAndMonitoring monitoring =
-        webAppApi.getMetricsAndMonitoring();
-    serve(SYSTEM_HEALTHCHECK).with(new HealthCheckServlet(monitoring.getHealth()));
-    serve(SYSTEM_METRICS).with(new MetricsServlet(monitoring.getMetrics()));
+    serve(SYSTEM_HEALTHCHECK)
+        .with(new HealthCheckServlet(new HealthCheckRegistry()));
+    serve(SYSTEM_METRICS).with(new MetricsServlet(new MetricRegistry()));
     serve(SYSTEM_PING).with(new PingServlet());
     serve(SYSTEM_THREADS).with(new ThreadDumpServlet());
 

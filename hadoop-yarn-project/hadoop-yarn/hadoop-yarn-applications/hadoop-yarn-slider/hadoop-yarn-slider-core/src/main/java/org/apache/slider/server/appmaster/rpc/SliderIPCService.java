@@ -24,9 +24,9 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.slider.api.ClusterDescription;
 import org.apache.slider.api.SliderClusterProtocol;
 import org.apache.slider.api.proto.Messages;
+import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.types.ApplicationLivenessInformation;
 import org.apache.slider.api.types.ComponentInformation;
 import org.apache.slider.api.types.ContainerInformation;
@@ -38,6 +38,7 @@ import org.apache.slider.core.exceptions.ServiceNotReadyException;
 import org.apache.slider.core.main.LauncherExitCodes;
 import org.apache.slider.core.persist.AggregateConfSerDeser;
 import org.apache.slider.core.persist.ConfTreeSerDeser;
+import org.apache.slider.core.persist.JsonSerDeser;
 import org.apache.slider.server.appmaster.AppMasterActionOperations;
 import org.apache.slider.server.appmaster.actions.ActionFlexCluster;
 import org.apache.slider.server.appmaster.actions.ActionHalt;
@@ -78,6 +79,9 @@ public class SliderIPCService extends AbstractService
   private final MetricsAndMonitoring metricsAndMonitoring;
   private final AppMasterActionOperations amOperations;
   private final ContentCache cache;
+  private static final JsonSerDeser<Application> jsonSerDeser =
+      new JsonSerDeser<Application>(Application.class);
+
 
   /**
    * This is the prefix used for metrics
@@ -195,17 +199,12 @@ public class SliderIPCService extends AbstractService
     return Messages.UpgradeContainersResponseProto.getDefaultInstance();
   }
 
-  @Override //SliderClusterProtocol
-  public Messages.FlexClusterResponseProto flexCluster(Messages.FlexClusterRequestProto request)
-      throws IOException {
+  @Override
+  public Messages.FlexComponentResponseProto flexComponent(
+      Messages.FlexComponentRequestProto request) throws IOException {
     onRpcCall("flex");
-    String payload = request.getClusterSpec();
-    ConfTreeSerDeser confTreeSerDeser = new ConfTreeSerDeser();
-    ConfTree updatedResources = confTreeSerDeser.fromJson(payload);
-    schedule(new ActionFlexCluster("flex", 1, TimeUnit.MILLISECONDS,
-        updatedResources));
-    return Messages.FlexClusterResponseProto.newBuilder().setResponse(
-        true).build();
+    schedule(new ActionFlexCluster("flex", 1, TimeUnit.MILLISECONDS, request));
+    return Messages.FlexComponentResponseProto.newBuilder().build();
   }
 
   @Override //SliderClusterProtocol
@@ -216,38 +215,10 @@ public class SliderIPCService extends AbstractService
     String result;
     //quick update
     //query and json-ify
-    ClusterDescription cd = state.refreshClusterStatus();
-    result = cd.toJsonString();
-    String stat = result;
+    Application application = state.refreshClusterStatus();
+    String stat = jsonSerDeser.toJson(application);
     return Messages.GetJSONClusterStatusResponseProto.newBuilder()
-                                                     .setClusterSpec(stat)
-                                                     .build();
-  }
-
-  @Override
-  public Messages.GetInstanceDefinitionResponseProto getInstanceDefinition(
-      Messages.GetInstanceDefinitionRequestProto request)
-      throws IOException, YarnException {
-
-    onRpcCall("getinstancedefinition");
-    String internal;
-    String resources;
-    String app;
-    AggregateConf instanceDefinition =
-        state.getInstanceDefinitionSnapshot();
-    internal = instanceDefinition.getInternal().toJson();
-    resources = instanceDefinition.getResources().toJson();
-    app = instanceDefinition.getAppConf().toJson();
-    assert internal != null;
-    assert resources != null;
-    assert app != null;
-    log.debug("Generating getInstanceDefinition Response");
-    Messages.GetInstanceDefinitionResponseProto.Builder builder =
-        Messages.GetInstanceDefinitionResponseProto.newBuilder();
-    builder.setInternal(internal);
-    builder.setResources(resources);
-    builder.setApplication(app);
-    return builder.build();
+        .setClusterSpec(stat).build();
   }
 
   @Override //SliderClusterProtocol

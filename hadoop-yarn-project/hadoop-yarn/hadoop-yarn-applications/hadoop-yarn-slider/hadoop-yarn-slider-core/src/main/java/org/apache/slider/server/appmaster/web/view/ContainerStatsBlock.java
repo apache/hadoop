@@ -26,8 +26,8 @@ import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
-import org.apache.slider.api.ClusterDescription;
 import org.apache.slider.api.ClusterNode;
+import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.types.ComponentInformation;
 import org.apache.slider.server.appmaster.state.RoleInstance;
 import org.apache.slider.server.appmaster.web.WebAppApi;
@@ -141,18 +141,10 @@ public class ContainerStatsBlock extends SliderHamletBlock {
 
           }));
 
-      ClusterDescription desc = appState.getClusterStatus();
-      Map<String, String> options = desc.getRole(name);
+      Application application = appState.getApplication();
       Iterable<Entry<TableContent, String>> tableContent;
-      
-      // Generate the pairs of data in the expected form
-      if (null != options) {
-        tableContent = Iterables.transform(options.entrySet(), stringStringPairFunc);
-      } else {
-        // Or catch that we have no options and provide "empty"
-        tableContent = Collections.emptySet();
-      }
-      
+      tableContent = Collections.emptySet();
+
       // Generate the options used by this role
       generateRoleDetails(div, "role-options-wrap", "Role Options", tableContent);
 

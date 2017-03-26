@@ -499,9 +499,6 @@ public final class SliderUtils {
           "Source file not a file " + srcFile);
     }
     FileSystem destFS = FileSystem.get(destFile.toUri(), conf);
-    if (destFS.exists(destFile)) {
-      throw new IOException("Dest file already exists " + destFile);
-    }
     FileUtil.copy(srcFS, srcFile, destFS, destFile, false, true, conf);
   }
 
@@ -1221,6 +1218,29 @@ public final class SliderUtils {
     return buildEnvMap(roleOpts, null);
   }
 
+
+  // Build env map: key -> value;
+  // value will be replaced by the corresponding value in tokenMap, if any.
+  public static Map<String, String> buildEnvMap(
+      org.apache.slider.api.resource.Configuration conf,
+      Map<String,String> tokenMap) {
+    if (tokenMap == null) {
+      return conf.getEnv();
+    }
+    Map<String, String> env = new HashMap<>();
+    for (Map.Entry<String, String> entry : conf.getEnv().entrySet()) {
+      String key = entry.getKey();
+      String val = entry.getValue();
+      for (Map.Entry<String,String> token : tokenMap.entrySet()) {
+        val = val.replaceAll(Pattern.quote(token.getKey()),
+            token.getValue());
+      }
+      env.put(key,val);
+    }
+    return env;
+  }
+
+
   public static Map<String, String> buildEnvMap(Map<String, String> roleOpts,
       Map<String,String> tokenMap) {
     Map<String, String> env = new HashMap<>();
@@ -1273,8 +1293,8 @@ public final class SliderUtils {
    * @param clustername cluster name
    * @throws BadCommandArgumentsException if it is invalid
    */
-  public static void validateClusterName(String clustername) throws
-      BadCommandArgumentsException {
+  public static void validateClusterName(String clustername)
+      throws BadCommandArgumentsException {
     if (!isClusternameValid(clustername)) {
       throw new BadCommandArgumentsException(
           "Illegal cluster name: " + clustername);
@@ -1603,14 +1623,12 @@ public final class SliderUtils {
    * @param sliderConfDir relative path to the dir containing slider config
    *                      options to put on the classpath -or null
    * @param libdir directory containing the JAR files
-   * @param config the configuration
    * @param usingMiniMRCluster flag to indicate the MiniMR cluster is in use
    * (and hence the current classpath should be used, not anything built up)
    * @return a classpath
    */
   public static ClasspathConstructor buildClasspath(String sliderConfDir,
       String libdir,
-      Configuration config,
       SliderFileSystem sliderFileSystem,
       boolean usingMiniMRCluster) {
 

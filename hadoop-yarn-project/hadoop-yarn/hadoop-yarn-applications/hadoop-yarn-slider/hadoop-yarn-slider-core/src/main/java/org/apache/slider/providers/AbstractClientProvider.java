@@ -103,19 +103,6 @@ public abstract class AbstractClientProvider extends Configured {
 
 
   /**
-   * Any provider-side alteration of a configuration can take place here.
-   * @param aggregateConf config to patch
-   * @throws IOException IO problems
-   * @throws SliderException Slider-specific issues
-   */
-  public void prepareInstanceConfiguration(AggregateConf aggregateConf) throws
-      SliderException,
-                                                                    IOException {
-    //default: do nothing
-  }
-
-
-  /**
    * Prepare the AM settings for launch
    * @param fileSystem filesystem
    * @param serviceConf configuration of the client
@@ -234,7 +221,7 @@ public abstract class AbstractClientProvider extends Configured {
    * @param appDescription brief description of the application
    * @return
    */
-  public final Set<String> createApplicationTags(String appName,
+  public static final Set<String> createApplicationTags(String appName,
       String appVersion, String appDescription) {
     Set<String> tags = new HashSet<>();
     tags.add(SliderUtils.createNameTag(appName));

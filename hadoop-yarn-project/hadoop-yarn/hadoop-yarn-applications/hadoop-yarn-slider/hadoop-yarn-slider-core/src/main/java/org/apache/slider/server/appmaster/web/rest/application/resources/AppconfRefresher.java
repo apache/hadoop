@@ -44,10 +44,7 @@ public class AppconfRefresher
 
   @Override
   public ConfTree refresh() throws Exception {
-    AggregateConf aggregateConf =
-        unresolved ?
-        state.getUnresolvedInstanceDefinition():
-        state.getInstanceDefinitionSnapshot();
+    AggregateConf aggregateConf = new AggregateConf();
     ConfTree ct = resources ? aggregateConf.getResources() 
                             : aggregateConf.getAppConf();
     return new ConfTreeSerDeser().fromInstance(ct);

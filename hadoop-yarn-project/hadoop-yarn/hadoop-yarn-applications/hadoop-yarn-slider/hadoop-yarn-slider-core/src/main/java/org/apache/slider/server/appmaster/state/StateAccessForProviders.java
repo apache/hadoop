@@ -21,15 +21,13 @@ package org.apache.slider.server.appmaster.state;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.slider.api.ClusterDescription;
 import org.apache.slider.api.ClusterNode;
 import org.apache.slider.api.StatusKeys;
+import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.types.ApplicationLivenessInformation;
 import org.apache.slider.api.types.ComponentInformation;
 import org.apache.slider.api.types.NodeInformation;
 import org.apache.slider.api.types.RoleStatistics;
-import org.apache.slider.core.conf.AggregateConf;
-import org.apache.slider.core.conf.ConfTreeOperations;
 import org.apache.slider.core.exceptions.NoSuchNodeException;
 import org.apache.slider.core.registry.docstore.PublishedConfigSet;
 import org.apache.slider.core.registry.docstore.PublishedExportsSet;
@@ -105,29 +103,7 @@ public interface StateAccessForProviders {
    * Get the current cluster description 
    * @return the actual state of the cluster
    */
-  ClusterDescription getClusterStatus();
-
-  /**
-   * Get at the snapshot of the resource config
-   * Changes here do not affect the application state.
-   * @return the most recent settings
-   */
-  ConfTreeOperations getResourcesSnapshot();
-
-  /**
-   * Get at the snapshot of the appconf config
-   * Changes here do not affect the application state.
-   * @return the most recent settings
-   */
-  ConfTreeOperations getAppConfSnapshot();
-
-  /**
-   * Get at the snapshot of the internals config.
-   * Changes here do not affect the application state.
-   * @return the internals settings
-   */
-
-  ConfTreeOperations getInternalsSnapshot();
+  Application getApplication();
 
   /**
    * Flag set to indicate the application is live -this only happens
@@ -135,22 +111,8 @@ public interface StateAccessForProviders {
    */
   boolean isApplicationLive();
 
-  long getSnapshotTime();
-
   /**
-   * Get a snapshot of the entire aggregate configuration
-   * @return the aggregate configuration
-   */
-  AggregateConf getInstanceDefinitionSnapshot();
-
-  /**
-   * Get the desired/unresolved value
-   * @return unresolved
-   */
-  AggregateConf getUnresolvedInstanceDefinition();
-
-  /**
-   * Look up a role from its key -or fail 
+   * Look up a role from its key -or fail
    *
    * @param key key to resolve
    * @return the status
@@ -159,7 +121,7 @@ public interface StateAccessForProviders {
   RoleStatus lookupRoleStatus(int key);
 
   /**
-   * Look up a role from its key -or fail 
+   * Look up a role from its key -or fail
    *
    * @param c container in a role
    * @return the status
@@ -232,27 +194,14 @@ public interface StateAccessForProviders {
   /**
    * Update the cluster description with anything interesting
    */
-  ClusterDescription refreshClusterStatus();
+  Application refreshClusterStatus();
 
-  /**
-   * Get a deep clone of the role status list. Concurrent events may mean this
-   * list (or indeed, some of the role status entries) may be inconsistent
-   * @return a snapshot of the role status entries
-   */
-  List<RoleStatus> cloneRoleStatusList();
 
   /**
    * get application liveness information
    * @return a snapshot of the current liveness information
    */
   ApplicationLivenessInformation getApplicationLivenessInformation();
-
-  /**
-   * Get the live statistics map
-   * @return a map of statistics values, defined in the {@link StatusKeys}
-   * keylist.
-   */
-  Map<String, Integer> getLiveStatistics();
 
   /**
    * Get a snapshot of component information.

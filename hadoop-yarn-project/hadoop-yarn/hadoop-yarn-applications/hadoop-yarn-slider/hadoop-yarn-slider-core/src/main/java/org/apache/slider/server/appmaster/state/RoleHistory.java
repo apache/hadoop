@@ -135,17 +135,6 @@ public class RoleHistory {
     outstandingRequests = new OutstandingRequestTracker();
   }
 
-  /**
-   * Register all metrics with the metrics infra
-   * @param metrics metrics
-   */
-  public void register(MetricsAndMonitoring metrics) {
-    metrics.register(RoleHistory.class, dirty, "dirty");
-    metrics.register(RoleHistory.class, nodesUpdatedTime, "nodes-updated.time");
-    metrics.register(RoleHistory.class, nodeUpdateReceived, "nodes-updated.flag");
-    metrics.register(RoleHistory.class, thawedDataTime, "thawed.time");
-    metrics.register(RoleHistory.class, saveTime, "saved.time");
-  }
 
   /**
    * safety check: make sure the role is unique amongst
@@ -1102,13 +1091,13 @@ public class RoleHistory {
     int roleId = role.getKey();
     List<OutstandingRequest> requests = new ArrayList<>(toCancel);
     // there may be pending requests which can be cancelled here
-    long pending = role.getPendingAntiAffineRequests();
+    long pending = role.getAAPending();
     if (pending > 0) {
       // there are some pending ones which can be cancelled first
       long pendingToCancel = Math.min(pending, toCancel);
       log.info("Cancelling {} pending AA allocations, leaving {}", toCancel,
           pendingToCancel);
-      role.setPendingAntiAffineRequests(pending - pendingToCancel);
+      role.setAAPending(pending - pendingToCancel);
       toCancel -= pendingToCancel;
     }
     if (toCancel > 0 && role.isAARequestOutstanding()) {

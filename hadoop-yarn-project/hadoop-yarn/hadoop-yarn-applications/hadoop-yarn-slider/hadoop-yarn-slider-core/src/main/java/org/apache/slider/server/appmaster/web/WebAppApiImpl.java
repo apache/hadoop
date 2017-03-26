@@ -18,11 +18,9 @@ package org.apache.slider.server.appmaster.web;
 
 import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.slider.providers.ProviderService;
-import org.apache.slider.server.appmaster.AppMasterActionOperations;
 import org.apache.slider.server.appmaster.actions.QueueAccess;
 import org.apache.slider.server.appmaster.management.MetricsAndMonitoring;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
-import org.apache.slider.server.appmaster.web.rest.application.resources.ContentCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,15 +37,10 @@ public class WebAppApiImpl implements WebAppApi {
   private final RegistryOperations registryOperations;
   private final MetricsAndMonitoring metricsAndMonitoring;
   private final QueueAccess queues;
-  private final AppMasterActionOperations appMasterOperations;
-  private final ContentCache contentCache;
 
   public WebAppApiImpl(StateAccessForProviders appState,
       ProviderService provider, RegistryOperations registryOperations,
-      MetricsAndMonitoring metricsAndMonitoring, QueueAccess queues,
-      AppMasterActionOperations appMasterOperations, ContentCache contentCache) {
-    this.appMasterOperations = appMasterOperations;
-    this.contentCache = contentCache;
+      MetricsAndMonitoring metricsAndMonitoring, QueueAccess queues) {
     checkNotNull(appState);
     checkNotNull(provider);
     this.queues = queues;
@@ -81,11 +74,5 @@ public class WebAppApiImpl implements WebAppApi {
   @Override
   public QueueAccess getQueues() {
     return queues;
-  }
-
-
-  @Override
-  public ContentCache getContentCache() {
-    return contentCache;
   }
 }

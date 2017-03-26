@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.services.utils;
+package org.apache.slider.util;
 
 public interface RestApiConstants {
   String CONTEXT_ROOT = "/services/v1";

@@ -21,6 +21,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 import java.io.Serializable;
+import java.util.Map;
 import java.util.Objects;
 
 import javax.xml.bind.annotation.XmlElement;
@@ -62,7 +63,7 @@ public class ConfigFile implements Serializable {
   private TypeEnum type = null;
   private String destFile = null;
   private String srcFile = null;
-  private Object props = null;
+  private Map<String, String> props = null;
 
   /**
    * Config file in the standard format like xml, properties, json, yaml,
@@ -104,6 +105,8 @@ public class ConfigFile implements Serializable {
   }
 
   /**
+   * TODO this probably is not required for non-template configs. It is now used as symlink for localization for non-template configs - we could infer the name from destFile instead
+   *
    * Required for type template. This provides the source location of the
    * template which needs to be mounted as dest_file post property
    * substitutions. Typically the src_file would point to a source controlled
@@ -131,19 +134,34 @@ public class ConfigFile implements Serializable {
    * src_file is mandatory and the src_file content is dumped to dest_file post
    * property substitutions.
    **/
-  public ConfigFile props(Object props) {
+  public ConfigFile props(Map<String, String> props) {
     this.props = props;
     return this;
   }
 
   @ApiModelProperty(example = "null", value = "A blob of key value pairs that will be dumped in the dest_file in the format as specified in type. If the type is template then the attribute src_file is mandatory and the src_file content is dumped to dest_file post property substitutions.")
   @JsonProperty("props")
-  public Object getProps() {
+  public Map<String, String> getProps() {
     return props;
   }
 
-  public void setProps(Object props) {
+  public void setProps(Map<String, String> props) {
     this.props = props;
+  }
+
+  public long getLong(String name, long defaultValue) {
+    if (name == null) {
+      return defaultValue;
+    }
+    String value = props.get(name.trim());
+    return Long.parseLong(value);
+  }
+
+  public boolean getBoolean(String name, boolean defaultValue) {
+    if (name == null) {
+      return defaultValue;
+    }
+    return Boolean.valueOf(props.get(name.trim()));
   }
 
   @Override

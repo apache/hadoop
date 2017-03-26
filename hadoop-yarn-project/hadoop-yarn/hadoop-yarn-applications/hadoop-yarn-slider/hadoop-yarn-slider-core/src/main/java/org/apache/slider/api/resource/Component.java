@@ -22,6 +22,7 @@ import io.swagger.annotations.ApiModelProperty;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -49,15 +50,17 @@ public class Component implements Serializable {
   private String name = null;
   private List<String> dependencies = new ArrayList<String>();
   private ReadinessCheck readinessCheck = null;
-  private Artifact artifact = null;
+  private Artifact artifact = new Artifact();
   private String launchCommand = null;
-  private Resource resource = null;
+  private Resource resource = new Resource();
   private Long numberOfContainers = null;
-  private Boolean uniqueComponentSupport = null;
-  private Boolean runPrivilegedContainer = null;
+  private Boolean uniqueComponentSupport = false;
+  private Boolean runPrivilegedContainer = false;
   private PlacementPolicy placementPolicy = null;
-  private Configuration configuration = null;
+  private Configuration configuration = new Configuration();
   private List<String> quicklinks = new ArrayList<String>();
+  private List<Container> containers =
+      Collections.synchronizedList(new ArrayList<Container>());
 
   /**
    * Name of the application component (mandatory).
@@ -194,6 +197,29 @@ public class Component implements Serializable {
   @XmlElement(name = "number_of_containers")
   public void setNumberOfContainers(Long numberOfContainers) {
     this.numberOfContainers = numberOfContainers;
+  }
+
+  @ApiModelProperty(example = "null", value = "Containers of a started component. Specifying a value for this attribute for the POST payload raises a validation error. This blob is available only in the GET response of a started application.")
+  @JsonProperty("containers")
+  public List<Container> getContainers() {
+    return containers;
+  }
+
+  public void setContainers(List<Container> containers) {
+    this.containers = containers;
+  }
+
+  public void addContainer(Container container) {
+    this.containers.add(container);
+  }
+
+  public Container getContainer(String id) {
+    for (Container container : containers) {
+      if (container.getId().equals(id)) {
+        return container;
+      }
+    }
+    return null;
   }
 
   /**
@@ -354,6 +380,8 @@ public class Component implements Serializable {
     sb.append("    resource: ").append(toIndentedString(resource)).append("\n");
     sb.append("    numberOfContainers: ")
         .append(toIndentedString(numberOfContainers)).append("\n");
+    sb.append("    containers: ").append(toIndentedString(containers))
+        .append("\n");
     sb.append("    uniqueComponentSupport: ")
         .append(toIndentedString(uniqueComponentSupport)).append("\n");
     sb.append("    runPrivilegedContainer: ")

@@ -210,8 +210,6 @@ public class YarnRegistryViewForProviders {
 
   /**
    * Add a service under a path for the current user
-   * @param serviceClass service class to use under ~user
-   * @param serviceName name of the service
    * @param record service record
    * @param deleteTreeFirst perform recursive delete of the path first
    * @return the path the service was created at

@@ -110,10 +110,10 @@ public class SliderClusterProtocolProxy implements SliderClusterProtocol {
   }
 
   @Override
-  public Messages.FlexClusterResponseProto flexCluster(Messages.FlexClusterRequestProto request)
-      throws IOException {
+  public Messages.FlexComponentResponseProto flexComponent(
+      Messages.FlexComponentRequestProto request) throws IOException {
     try {
-      return endpoint.flexCluster(NULL_CONTROLLER, request);
+      return endpoint.flexComponent(NULL_CONTROLLER, request);
     } catch (ServiceException e) {
       throw convert(e);
     }
@@ -126,19 +126,6 @@ public class SliderClusterProtocolProxy implements SliderClusterProtocol {
                                                        YarnException {
     try {
       return endpoint.getJSONClusterStatus(NULL_CONTROLLER, request);
-    } catch (ServiceException e) {
-      throw convert(e);
-    }
-  }
-
-
-  @Override
-  public Messages.GetInstanceDefinitionResponseProto getInstanceDefinition(
-    Messages.GetInstanceDefinitionRequestProto request) throws
-                                                        IOException,
-                                                        YarnException {
-    try {
-      return endpoint.getInstanceDefinition(NULL_CONTROLLER, request);
     } catch (ServiceException e) {
       throw convert(e);
     }

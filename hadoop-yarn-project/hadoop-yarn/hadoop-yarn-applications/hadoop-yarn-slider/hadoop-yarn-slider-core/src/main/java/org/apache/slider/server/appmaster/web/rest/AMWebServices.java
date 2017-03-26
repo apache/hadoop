@@ -18,13 +18,24 @@ package org.apache.slider.server.appmaster.web.rest;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import org.apache.slider.api.resource.Application;
 import org.apache.slider.server.appmaster.web.WebAppApi;
-import org.apache.slider.server.appmaster.web.rest.application.ApplicationResource;
+import org.apache.slider.server.appmaster.web.rest.application.actions.RestActionStop;
+import org.apache.slider.server.appmaster.web.rest.application.actions.StopResponse;
 import org.apache.slider.server.appmaster.web.rest.management.ManagementResource;
 import org.apache.slider.server.appmaster.web.rest.publisher.PublisherResource;
 import org.apache.slider.server.appmaster.web.rest.registry.RegistryResource;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.UriInfo;
+
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.apache.slider.server.appmaster.web.rest.RestPaths.ACTION_STOP;
 
 /**
  *  The available REST services exposed by a slider AM. 
@@ -38,7 +49,6 @@ public class AMWebServices {
   private final ManagementResource managementResource;
   private final PublisherResource publisherResource;
   private final RegistryResource registryResource;
-  private final ApplicationResource applicationResource;
 
   @Inject
   public AMWebServices(WebAppApi slider) {
@@ -46,7 +56,6 @@ public class AMWebServices {
     managementResource = new ManagementResource(slider);
     publisherResource = new PublisherResource(slider);
     registryResource = new RegistryResource(slider);
-    applicationResource = new ApplicationResource(slider);
   }
 
   @Path(RestPaths.SLIDER_SUBPATH_MANAGEMENT)
@@ -63,9 +72,21 @@ public class AMWebServices {
   public RegistryResource getRegistryResource() {
     return registryResource;
   }
-  
+
+
+  @GET
   @Path(RestPaths.SLIDER_SUBPATH_APPLICATION)
-  public ApplicationResource getApplicationResource() {
-    return applicationResource;
+  @Produces({APPLICATION_JSON})
+  public Application getApplicationResource() {
+    return slider.getAppState().getApplication();
+  }
+
+  @POST
+  @Path(ACTION_STOP)
+  @Produces({APPLICATION_JSON})
+  public StopResponse actionStop(@Context HttpServletRequest request,
+      @Context UriInfo uriInfo,
+      String body) {
+    return new RestActionStop(slider).stop(request, uriInfo, body);
   }
 }

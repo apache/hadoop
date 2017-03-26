@@ -22,14 +22,14 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.beust.jcommander.ParametersDelegate;
 
-@Parameters(commandNames = {SliderActions.ACTION_FREEZE},
+@Parameters(commandNames = {SliderActions.ACTION_STOP },
             commandDescription = SliderActions.DESCRIBE_ACTION_FREEZE)
 
 public class ActionFreezeArgs extends AbstractActionArgs implements
                                                          WaitTimeAccessor {
   @Override
   public String getActionName() {
-    return SliderActions.ACTION_FREEZE;
+    return SliderActions.ACTION_STOP;
   }
   
   public static final String FREEZE_COMMAND_ISSUED = "stop command issued";

@@ -39,7 +39,7 @@ public class Resource extends BaseResource implements Cloneable {
   private static final long serialVersionUID = -6431667797380250037L;
 
   private String profile = null;
-  private Integer cpus = null;
+  private Integer cpus = 1;
   private String memory = null;
 
   /**

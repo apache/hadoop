@@ -23,6 +23,7 @@ import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.types.NodeInformationList;
 import org.apache.slider.api.types.SliderInstanceDescription;
 import org.apache.slider.common.params.AbstractClusterBuildingActionArgs;
@@ -61,15 +62,8 @@ import java.util.Map;
  * Stability: evolving
  */
 public interface SliderClientAPI extends Service {
-  /**
-   * Destroy a cluster. There's two race conditions here
-   * #1 the cluster is started between verifying that there are no live
-   * clusters of that name.
-   */
-  int actionDestroy(String clustername, ActionDestroyArgs destroyArgs)
-      throws YarnException, IOException;
 
-  int actionDestroy(String clustername) throws YarnException,
+  void actionDestroy(String clustername) throws YarnException,
       IOException;
 
   /**
@@ -86,18 +80,6 @@ public interface SliderClientAPI extends Service {
    */
   AbstractClientProvider createClientProvider(String provider)
     throws SliderException;
-
-  /**
-   * Build up the cluster specification/directory
-   *
-   * @param clustername cluster name
-   * @param buildInfo the arguments needed to build the cluster
-   * @throws YarnException Yarn problems
-   * @throws IOException other problems
-   * @throws BadCommandArgumentsException bad arguments.
-   */
-  int actionBuild(String clustername,
-      AbstractClusterBuildingActionArgs buildInfo) throws YarnException, IOException;
 
   /**
    * Upload keytab to a designated sub-directory of the user home directory
@@ -188,24 +170,7 @@ public interface SliderClientAPI extends Service {
    */
   int actionUpgrade(String clustername,
       ActionUpgradeArgs buildInfo)
-      throws YarnException, IOException; 
-
-  /**
-   * Get the report of a this application
-   * @return the app report or null if it could not be found.
-   * @throws IOException
-   * @throws YarnException
-   */
-  ApplicationReport getApplicationReport()
-      throws IOException, YarnException;
-
-  /**
-   * Kill the submitted application via YARN
-   * @throws YarnException
-   * @throws IOException
-   */
-  boolean forceKillApplication(String reason)
-    throws YarnException, IOException;
+      throws YarnException, IOException;
 
   /**
    * Implement the list action: list all nodes
@@ -213,30 +178,8 @@ public interface SliderClientAPI extends Service {
    */
   int actionList(String clustername, ActionListArgs args) throws IOException, YarnException;
 
-  /**
-   * Enumerate slider instances for the current user, and the
-   * most recent app report, where available.
-   * @param listOnlyInState boolean to indicate that the instances should
-   * only include those in a YARN state
-   * <code> minAppState &lt;= currentState &lt;= maxAppState </code>
-   *
-   * @param minAppState minimum application state to include in enumeration.
-   * @param maxAppState maximum application state to include
-   * @return a map of application instance name to description
-   * @throws IOException Any IO problem
-   * @throws YarnException YARN problems
-   */
-  Map<String, SliderInstanceDescription> enumSliderInstances(
-      boolean listOnlyInState,
-      YarnApplicationState minAppState,
-      YarnApplicationState maxAppState)
-      throws IOException, YarnException;
 
-  /**
-   * Implement the islive action: probe for a cluster of the given name existing
-   * @return exit code
-   */
-  int actionFlex(String name, ActionFlexArgs args) throws YarnException, IOException;
+  void actionFlex(String name, ActionFlexArgs args) throws YarnException, IOException;
 
   /**
    * Test for a cluster existing probe for a cluster of the given name existing
@@ -288,7 +231,7 @@ public interface SliderClientAPI extends Service {
    * @throws YarnException
    * @throws IOException
    */
-  String actionStatus(String clustername) throws YarnException, IOException;
+  Application actionStatus(String clustername) throws YarnException, IOException;
 
   /**
    * Version Details
@@ -303,13 +246,13 @@ public interface SliderClientAPI extends Service {
    * @param freezeArgs arguments to the stop
    * @return EXIT_SUCCESS if the cluster was not running by the end of the operation
    */
-  int actionFreeze(String clustername, ActionFreezeArgs freezeArgs)
+  void actionStop(String clustername, ActionFreezeArgs freezeArgs)
       throws YarnException, IOException;
 
   /**
    * Restore a cluster
    */
-  int actionThaw(String clustername, ActionThawArgs thaw) throws YarnException, IOException;
+  int actionStart(String clustername, ActionThawArgs thaw) throws YarnException, IOException;
 
   /**
    * Registry operation

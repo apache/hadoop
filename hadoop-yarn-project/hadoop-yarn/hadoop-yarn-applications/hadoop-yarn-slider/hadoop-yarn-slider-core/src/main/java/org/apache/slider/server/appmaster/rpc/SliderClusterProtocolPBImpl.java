@@ -70,11 +70,12 @@ public class SliderClusterProtocolPBImpl implements SliderClusterProtocolPB {
   }
 
   @Override
-  public Messages.FlexClusterResponseProto flexCluster(RpcController controller,
-      Messages.FlexClusterRequestProto request) throws ServiceException {
+  public Messages.FlexComponentResponseProto flexComponent(
+      RpcController controller, Messages.FlexComponentRequestProto request)
+      throws ServiceException {
     try {
-      return real.flexCluster(request);
-    } catch (Exception e) {
+      return real.flexComponent(request);
+    } catch (IOException e) {
       throw wrap(e);
     }
   }
@@ -85,19 +86,6 @@ public class SliderClusterProtocolPBImpl implements SliderClusterProtocolPB {
     Messages.GetJSONClusterStatusRequestProto request) throws ServiceException {
     try {
       return real.getJSONClusterStatus(request);
-    } catch (Exception e) {
-      throw wrap(e);
-    }
-  }
-
-
-  @Override
-  public Messages.GetInstanceDefinitionResponseProto getInstanceDefinition(
-    RpcController controller,
-    Messages.GetInstanceDefinitionRequestProto request)
-      throws ServiceException {
-    try {
-      return real.getInstanceDefinition(request);
     } catch (Exception e) {
       throw wrap(e);
     }

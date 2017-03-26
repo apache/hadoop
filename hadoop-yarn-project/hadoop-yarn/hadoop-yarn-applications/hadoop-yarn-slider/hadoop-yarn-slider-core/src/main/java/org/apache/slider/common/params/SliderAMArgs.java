@@ -43,7 +43,7 @@ public class SliderAMArgs extends CommonArgs {
    * This is the URI in the FS to the Slider cluster; the conf file (and any
    * other cluster-specifics) can be picked up here
    */
-  public String getSliderClusterURI() {
+  public String getAppDefDir() {
     return createAction.sliderClusterURI;
   }
 

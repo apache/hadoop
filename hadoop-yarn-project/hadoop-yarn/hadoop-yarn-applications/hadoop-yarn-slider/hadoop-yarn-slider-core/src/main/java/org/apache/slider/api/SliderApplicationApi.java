@@ -60,14 +60,6 @@ public interface SliderApplicationApi {
   ConfTreeOperations getDesiredResources() throws IOException;
 
   /**
-   * Put an updated resources structure. This triggers a cluster flex
-   * operation
-   * @param updated updated resources
-   * @throws IOException on any problem.
-   */
-  void putDesiredResources(ConfTree updated) throws IOException;
-
-  /**
    * Get the aggregate resolved model
    * @return the aggregate configuration of what was asked for
    * -after resolution has taken place

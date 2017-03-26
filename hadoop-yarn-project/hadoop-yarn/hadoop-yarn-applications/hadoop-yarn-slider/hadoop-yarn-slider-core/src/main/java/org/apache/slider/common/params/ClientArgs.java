@@ -53,7 +53,6 @@ public class ClientArgs extends CommonArgs {
   // =========================================================
 
   private final ActionAMSuicideArgs actionAMSuicideArgs = new ActionAMSuicideArgs();
-  private final ActionBuildArgs actionBuildArgs = new ActionBuildArgs();
   private final ActionClientArgs actionClientArgs = new ActionClientArgs();
   private final ActionCreateArgs actionCreateArgs = new ActionCreateArgs();
   private final ActionDependencyArgs actionDependencyArgs = new ActionDependencyArgs();
@@ -96,7 +95,6 @@ public class ClientArgs extends CommonArgs {
 
     addActions(
         actionAMSuicideArgs,
-        actionBuildArgs,
         actionClientArgs,
         actionCreateArgs,
         actionDependencyArgs,
@@ -153,10 +151,6 @@ public class ClientArgs extends CommonArgs {
 
   public ActionAMSuicideArgs getActionAMSuicideArgs() {
     return actionAMSuicideArgs;
-  }
-
-  public ActionBuildArgs getActionBuildArgs() {
-    return actionBuildArgs;
   }
 
   public ActionInstallPackageArgs getActionInstallPackageArgs() { return actionInstallPackageArgs; }
@@ -256,23 +250,17 @@ public class ClientArgs extends CommonArgs {
       action = ACTION_HELP;
     }
     switch (action) {
-      case ACTION_BUILD:
-        bindCoreAction(actionBuildArgs);
-        //its a builder, so set those actions too
-        buildingActionArgs = actionBuildArgs;
-        break;
-
       case ACTION_CREATE:
         bindCoreAction(actionCreateArgs);
         //its a builder, so set those actions too
         buildingActionArgs = actionCreateArgs;
         break;
 
-      case ACTION_FREEZE:
+      case ACTION_STOP:
         bindCoreAction(actionFreezeArgs);
         break;
 
-      case ACTION_THAW:
+      case ACTION_START:
         bindCoreAction(actionThawArgs);
         break;
 

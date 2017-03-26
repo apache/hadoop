@@ -177,29 +177,6 @@ public class SliderApplicationApiRestClient extends BaseRestClient
   }
 
   @Override
-  public void putDesiredResources(ConfTree updated) throws IOException {
-    WebResource resource = applicationResource(MODEL_DESIRED_RESOURCES);
-    try {
-
-      // put operation. The result is discarded; it does help validate
-      // that the operation returned a JSON data structure as well as a 200
-      // response.
-
-      resource.accept(MediaType.APPLICATION_JSON_TYPE)
-              .type(MediaType.APPLICATION_JSON_TYPE)
-              .entity(updated)
-              .put(ConfTree.class);
-    } catch (ClientHandlerException ex) {
-        throw ExceptionConverter.convertJerseyException("PUT",
-            resource.getURI().toString(),
-            ex);
-      } catch (UniformInterfaceException ex) {
-      throw ExceptionConverter.convertJerseyException("PUT",
-          resource.getURI().toString(), ex);
-      }
-  }
-
-  @Override
   public AggregateConf getResolvedModel() throws IOException {
     return getApplicationResource(MODEL_RESOLVED, AggregateConf.class);
   }

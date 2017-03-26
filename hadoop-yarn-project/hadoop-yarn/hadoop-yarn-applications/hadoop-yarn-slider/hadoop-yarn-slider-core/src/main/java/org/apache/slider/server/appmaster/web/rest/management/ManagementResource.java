@@ -88,6 +88,7 @@ public class ManagementResource extends AbstractSliderResource {
   }
 
   protected AggregateConf getAggregateConf() {
-    return slider.getAppState().getInstanceDefinitionSnapshot();
+    //TODO
+    return  new AggregateConf();
   }
 }
