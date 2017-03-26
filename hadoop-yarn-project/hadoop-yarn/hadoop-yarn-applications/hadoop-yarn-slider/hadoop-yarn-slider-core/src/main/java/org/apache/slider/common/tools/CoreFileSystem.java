@@ -511,6 +511,7 @@ public class CoreFileSystem {
    * @return the parent dir path of slider.tar.gz in HDFS
    */
   public Path getDependencyPath() {
+    // FIXME: 3/20/17 HDP ???????????
     String parentDir = (SliderUtils.isHdp()) ? SliderKeys.SLIDER_DEPENDENCY_HDP_PARENT_DIR
         + SliderKeys.SLIDER_DEPENDENCY_DIR
         : SliderKeys.SLIDER_DEPENDENCY_DIR;

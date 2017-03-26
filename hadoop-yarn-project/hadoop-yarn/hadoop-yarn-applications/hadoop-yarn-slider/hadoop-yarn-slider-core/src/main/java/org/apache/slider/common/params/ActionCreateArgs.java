@@ -18,6 +18,7 @@
 
 package org.apache.slider.common.params;
 
+import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.beust.jcommander.ParametersDelegate;
 
@@ -26,34 +27,19 @@ import java.io.File;
 @Parameters(commandNames = {SliderActions.ACTION_CREATE},
             commandDescription = SliderActions.DESCRIBE_ACTION_CREATE)
 
-public class ActionCreateArgs extends AbstractClusterBuildingActionArgs
-  implements WaitTimeAccessor, LaunchArgsAccessor {
-  
+public class ActionCreateArgs extends AbstractClusterBuildingActionArgs {
+
+  @Parameter(names = {ARG_APPDEF},
+      description = "Template application definition file in JSON format.")
+  public File appDef;
+
+  public File getAppDef() {
+    return appDef;
+  }
+
   @Override
   public String getActionName() {
     return SliderActions.ACTION_CREATE;
   }
-  
-  @ParametersDelegate
-  LaunchArgsDelegate launchArgs = new LaunchArgsDelegate();
-
-  @Override
-  public File getOutputFile() {
-    return launchArgs.getOutputFile();
-  }
-
-  @Override
-  public String getRmAddress() {
-    return launchArgs.getRmAddress();
-  }
-
-  @Override
-  public int getWaittime() {
-    return launchArgs.getWaittime();
-  }
-
-  @Override
-  public void setWaittime(int waittime) {
-    launchArgs.setWaittime(waittime);
-  }
 }
+

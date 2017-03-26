@@ -29,6 +29,7 @@ import org.apache.slider.api.ClusterNode;
 import org.apache.slider.api.proto.Messages;
 import org.apache.slider.api.types.ContainerInformation;
 import org.apache.slider.common.tools.SliderUtils;
+import org.apache.slider.providers.ProviderRole;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,6 +41,7 @@ import java.util.List;
 public final class RoleInstance implements Cloneable {
 
   public Container container;
+  public ProviderRole providerRole;
   /**
    * Container ID
    */

@@ -24,7 +24,7 @@ import com.beust.jcommander.ParametersDelegate;
 
 import java.io.File;
 
-@Parameters(commandNames = {SliderActions.ACTION_THAW},
+@Parameters(commandNames = {SliderActions.ACTION_START },
             commandDescription = SliderActions.DESCRIBE_ACTION_THAW)
 public class ActionThawArgs extends AbstractActionArgs implements
                                                        WaitTimeAccessor,
@@ -33,7 +33,7 @@ public class ActionThawArgs extends AbstractActionArgs implements
 
   @Override
   public String getActionName() {
-    return SliderActions.ACTION_THAW;
+    return SliderActions.ACTION_START;
   }
 
   @Override

@@ -52,12 +52,9 @@ public interface SliderClusterProtocol extends VersionedProtocol {
       Messages.UpgradeContainersRequestProto request) throws IOException,
       YarnException;
 
-  /**
-   * Flex the cluster. 
-   */
-  Messages.FlexClusterResponseProto flexCluster(Messages.FlexClusterRequestProto request)
-      throws IOException;
 
+  Messages.FlexComponentResponseProto flexComponent(
+      Messages.FlexComponentRequestProto request) throws IOException;
 
   /**
    * Get the current cluster status
@@ -119,13 +116,6 @@ public interface SliderClusterProtocol extends VersionedProtocol {
    */
   Messages.AMSuicideResponseProto amSuicide(Messages.AMSuicideRequestProto request)
       throws IOException;
-
-  /**
-   * Get the instance definition
-   */
-  Messages.GetInstanceDefinitionResponseProto getInstanceDefinition(
-    Messages.GetInstanceDefinitionRequestProto request)
-    throws IOException, YarnException;
 
   /**
    * Get the application liveness

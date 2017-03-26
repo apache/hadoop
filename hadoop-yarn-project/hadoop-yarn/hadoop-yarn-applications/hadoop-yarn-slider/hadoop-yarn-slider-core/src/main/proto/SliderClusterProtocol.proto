@@ -61,24 +61,14 @@ service SliderClusterProtocolPB {
   rpc upgradeContainers(UpgradeContainersRequestProto) 
     returns(UpgradeContainersResponseProto);
 
-  /**
-   * Flex the cluster. 
-   */
-  rpc flexCluster(FlexClusterRequestProto) 
-    returns(FlexClusterResponseProto);
+  rpc flexComponent(FlexComponentRequestProto) returns (FlexComponentResponseProto);
 
   /**
    * Get the current cluster status
    */
   rpc getJSONClusterStatus(GetJSONClusterStatusRequestProto)
     returns(GetJSONClusterStatusResponseProto);
-      
-  /**
-   * Get the instance definition
-   */
-  rpc getInstanceDefinition(GetInstanceDefinitionRequestProto)
-   returns(GetInstanceDefinitionResponseProto);
-      
+
   /**
    * List all running nodes in a role
    */

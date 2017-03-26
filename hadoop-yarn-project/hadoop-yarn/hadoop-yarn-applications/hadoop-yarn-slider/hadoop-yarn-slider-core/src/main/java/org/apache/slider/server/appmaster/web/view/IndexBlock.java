@@ -22,15 +22,12 @@ import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.LI;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.UL;
-import org.apache.slider.api.ClusterDescription;
-import org.apache.slider.api.StatusKeys;
 import org.apache.slider.api.types.ApplicationLivenessInformation;
 import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.core.registry.docstore.ExportEntry;
 import org.apache.slider.core.registry.docstore.PublishedExports;
 import org.apache.slider.core.registry.docstore.PublishedExportsSet;
-import org.apache.slider.providers.MonitorDetail;
-import org.apache.slider.providers.ProviderService;
+import org.apache.slider.server.appmaster.metrics.SliderMetrics;
 import org.apache.slider.server.appmaster.state.RoleStatus;
 import org.apache.slider.server.appmaster.web.WebAppApi;
 import org.slf4j.Logger;
@@ -39,7 +36,6 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -71,8 +67,7 @@ public class IndexBlock extends SliderHamletBlock {
   // An extra method to make testing easier since you can't make an instance of Block
   @VisibleForTesting
   protected void doIndex(Hamlet html, String providerName) {
-    ClusterDescription clusterStatus = appState.getClusterStatus();
-    String name = clusterStatus.name;
+    String name = appState.getApplicationName();
     if (name != null && (name.startsWith(" ") || name.endsWith(" "))) {
       name = "'" + name + "'";
     } 
@@ -96,23 +91,23 @@ public class IndexBlock extends SliderHamletBlock {
           ._();
     table1.tr()
           .td("Create time: ")
-          .td(getInfoAvoidingNulls(StatusKeys.INFO_CREATE_TIME_HUMAN))
+          .td("N/A")
           ._();
     table1.tr()
           .td("Running since: ")
-          .td(getInfoAvoidingNulls(StatusKeys.INFO_LIVE_TIME_HUMAN))
+          .td("N/A")
           ._();
     table1.tr()
           .td("Time last flexed: ")
-          .td(getInfoAvoidingNulls(StatusKeys.INFO_FLEX_TIME_HUMAN))
+          .td("N/A")
           ._();
     table1.tr()
           .td("Application storage path: ")
-          .td(clusterStatus.dataPath)
+          .td("N/A")
           ._();
     table1.tr()
           .td("Application configuration path: ")
-          .td(clusterStatus.originConfigurationPath)
+          .td("N/A")
           ._();
     table1._();
     div._();
@@ -136,7 +131,8 @@ public class IndexBlock extends SliderHamletBlock {
     trb(header, "Placement");
     header._()._();  // tr & thead
 
-    List<RoleStatus> roleStatuses = appState.cloneRoleStatusList();
+    List<RoleStatus> roleStatuses =
+        new ArrayList<>(appState.getRoleStatusMap().values());
     Collections.sort(roleStatuses, new RoleStatus.CompareByName());
     for (RoleStatus status : roleStatuses) {
       String roleName = status.getName();
@@ -144,7 +140,7 @@ public class IndexBlock extends SliderHamletBlock {
       String aatext;
       if (status.isAntiAffinePlacement()) {
         boolean aaRequestOutstanding = status.isAARequestOutstanding();
-        int pending = (int)status.getPendingAntiAffineRequests();
+        int pending = (int)status.getAAPending();
         aatext = buildAADetails(aaRequestOutstanding, pending);
         if (SliderUtils.isSet(status.getLabelExpression())) {
           aatext += " (label: " + status.getLabelExpression() + ")";
@@ -160,17 +156,17 @@ public class IndexBlock extends SliderHamletBlock {
         } else {
           aatext = "";
         }
-        if (status.getRequested() > 0) {
+        if (status.getPending() > 0) {
           roleWithOpenRequest ++;
         }
       }
+      SliderMetrics metrics = status.getComponentMetrics();
       table.tr()
         .td().a(nameUrl, roleName)._()
-        .td(String.format("%d", status.getDesired()))
-        .td(String.format("%d", status.getActual()))
-        .td(String.format("%d", status.getRequested()))
-        .td(String.format("%d", status.getFailed()))
-        .td(String.format("%d", status.getStartFailed()))
+        .td(String.format("%d", metrics.containersDesired.value()))
+        .td(String.format("%d", metrics.containersRunning.value()))
+        .td(String.format("%d", metrics.containersPending.value()))
+        .td(String.format("%d", metrics.containersFailed.value()))
         .td(aatext)
         ._();
     }
@@ -218,7 +214,7 @@ public class IndexBlock extends SliderHamletBlock {
     DIV<Hamlet> provider_info = html.div("provider_info");
     provider_info.h3(providerName + " information");
     UL<Hamlet> ul = html.ul();
-    addProviderServiceOptions(providerService, ul, clusterStatus);
+    //TODO render app/cluster status
     ul._();
     provider_info._();
 
@@ -250,40 +246,9 @@ public class IndexBlock extends SliderHamletBlock {
   }
 
   private String getProviderName() {
-    return providerService.getHumanName();
+    return "docker";
   }
 
-  private String getInfoAvoidingNulls(String key) {
-    String createTime = appState.getClusterStatus().getInfo(key);
-
-    return null == createTime ? "N/A" : createTime;
-  }
-
-  protected void addProviderServiceOptions(ProviderService provider,
-      UL ul, ClusterDescription clusterStatus) {
-    Map<String, MonitorDetail> details = provider.buildMonitorDetails(
-        clusterStatus);
-    if (null == details) {
-      return;
-    }
-    // Loop over each entry, placing the text in the UL, adding an anchor when the URL is non-null/empty
-    for (Entry<String, MonitorDetail> entry : details.entrySet()) {
-      MonitorDetail detail = entry.getValue();
-      if (SliderUtils.isSet(detail.getValue()) ) {
-        LI item = ul.li();
-        item.span().$class("bold")._(entry.getKey())._();
-        item._(" - ");
-        if (detail.isUrl()) {
-          // Render an anchor if the value is a URL
-          item.a(detail.getValue(), detail.getValue())._();
-        } else {
-          item._(detail.getValue())._();
-        }
-      } else {
-        ul.li(entry.getKey());
-      }
-    }
-  }
 
   protected void enumeratePublishedExports(PublishedExportsSet exports, UL<Hamlet> ul) {
     for(String key : exports.keys()) {

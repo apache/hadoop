@@ -60,6 +60,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+//TODO, Remove this class and YarnAppListClient
+// why do we need so many yarn client wrappers ?
+// - yarn client already provides most of functionality already
+
 /**
  * A class that extends visibility to some of the YarnClientImpl
  * members and data structures, and factors out pure-YARN operations
@@ -69,76 +73,11 @@ public class SliderYarnClientImpl extends YarnClientImpl {
   protected static final Logger log = LoggerFactory.getLogger(SliderYarnClientImpl.class);
 
   /**
-   * Keyword to use in the {@link #emergencyForceKill(String)}
-   * operation to force kill <i>all</i> application instances belonging
-   * to a specific user
-   */
-  public static final String KILL_ALL = "all";
-
-  @Override
-  protected void serviceInit(Configuration conf) throws Exception {
-    InetSocketAddress clientRpcAddress = SliderUtils.getRmAddress(conf);
-    if (!SliderUtils.isAddressDefined(clientRpcAddress)) {
-      // address isn't known; fail fast
-      throw new BindException("Invalid " + YarnConfiguration.RM_ADDRESS
-          + " value:" + conf.get(YarnConfiguration.RM_ADDRESS)
-          + " - see https://wiki.apache.org/hadoop/UnsetHostnameOrPort");
-    }
-    super.serviceInit(conf);
-  }
-
-  /**
    * Get the RM Client RPC interface
    * @return an RPC interface valid after initialization and authentication
    */
   public ApplicationClientProtocol getRmClient() {
     return rmClient;
-  }
-
-  /**
-   * List Slider <i>running</i>instances belonging to a specific user.
-   * @deprecated use {@link #listDeployedInstances(String)}
-   * @param user user: "" means all users
-   * @return a possibly empty list of Slider AMs
-   */
-  public List<ApplicationReport> listInstances(String user)
-    throws YarnException, IOException {
-    return listDeployedInstances(user);
-  }
-
-  /**
-   * List Slider <i>deployed</i>instances belonging to a specific user.
-   * <p>
-   *   Deployed means: known about in the YARN cluster; it will include
-   *   any that are in the failed/finished state, as well as those queued
-   *   for starting.
-   * @param user user: "" means all users
-   * @return a possibly empty list of Slider AMs
-   */
-  public List<ApplicationReport> listDeployedInstances(String user)
-    throws YarnException, IOException {
-    return listDeployedInstances(user, null);
-  }
-
-  /**
-   * List Slider <i>deployed</i>instances belonging to a specific user in a
-   * given set of states.
-   * <p>
-   * Deployed means: known about in the YARN cluster; it will include all apps
-   * in the specified set of states.
-   *
-   * @param user
-   *          user: "" means all users
-   * @param appStates
-   *          filter by a set of YarnApplicationState
-   * @return a possibly empty list of Slider AMs
-   * @throws YarnException
-   * @throws IOException
-   */
-  public List<ApplicationReport> listDeployedInstances(String user,
-      EnumSet<YarnApplicationState> appStates)
-      throws YarnException, IOException {
-    return listDeployedInstances(user, appStates, null);
   }
 
   /**
@@ -178,21 +117,6 @@ public class SliderYarnClientImpl extends YarnClientImpl {
     }
     return results;
   }
-
-  /**
-   * find all instances of a specific app -if there is more than one in the
-   * YARN cluster,
-   * this returns them all
-   * @param user user; use "" for all users
-   * @param appname application name
-   * @return the list of all matching application instances
-   */
-  public List<ApplicationReport> findAllInstances(String user, String appname)
-      throws IOException, YarnException {
-    Preconditions.checkArgument(appname != null, "Null application name");
-
-    return listDeployedInstances(user, null, appname);
-  }
   
   /**
    * Helper method to determine if a cluster application is running -or
@@ -204,122 +128,6 @@ public class SliderYarnClientImpl extends YarnClientImpl {
     Preconditions.checkArgument(app != null, "Null app report");
 
     return app.getYarnApplicationState().ordinal() <= YarnApplicationState.RUNNING.ordinal();
-  }
-
-
-  /**
-   * Kill a running application
-   * @param applicationId app Id
-   * @param reason reason: reason for log
-   * @return the response
-   * @throws YarnException YARN problems
-   * @throws IOException IO problems
-   */
-  public  KillApplicationResponse killRunningApplication(ApplicationId applicationId,
-                                                         String reason)
-      throws YarnException, IOException {
-    Preconditions.checkArgument(applicationId != null, "Null application Id");
-    log.info("Killing application {} - {}", applicationId.getClusterTimestamp(),
-             reason);
-    KillApplicationRequest request =
-      Records.newRecord(KillApplicationRequest.class);
-    request.setApplicationId(applicationId);
-    return getRmClient().forceKillApplication(request);
-  }
-
-  private String getUsername() throws IOException {
-    return UserGroupInformation.getCurrentUser().getShortUserName();
-  }
-  
-  /**
-   * Force kill a yarn application by ID. No niceties here
-   * @param applicationId app Id. "all" means "kill all instances of the current user
-   * 
-   */
-  public void emergencyForceKill(String applicationId)
-      throws YarnException, IOException {
-
-    Preconditions.checkArgument(StringUtils.isNotEmpty(applicationId),
-        "Null/empty application Id");
-
-    if (KILL_ALL.equals(applicationId)) {
-      // user wants all instances killed
-      String user = getUsername();
-      log.info("Killing all applications belonging to {}", user);
-      Collection<ApplicationReport> instances = listDeployedInstances(user,
-          SliderUtils.getAllLiveAppStates());
-      for (ApplicationReport instance : instances) {
-        ApplicationId appId = instance.getApplicationId();
-        log.info("Killing Application {}", appId);
-        killRunningApplication(appId, "forced kill");
-      }
-    } else {
-      ApplicationId appId = ConverterUtils.toApplicationId(applicationId);
-
-      log.info("Killing Application {}", applicationId);
-
-      killRunningApplication(appId, "forced kill");
-    }
-  }
-
-  /**
-   * Monitor the submitted application for reaching the requested state.
-   * Will also report if the app reaches a later state (failed, killed, etc)
-   * Kill application if duration!= null & time expires. 
-   * @param appId Application Id of application to be monitored
-   * @param duration how long to wait -must be more than 0
-   * @param desiredState desired state.
-   * @return the application report -null on a timeout
-   * @throws YarnException
-   * @throws IOException
-   */
-  public ApplicationReport monitorAppToState(
-    ApplicationId appId, YarnApplicationState desiredState, Duration duration)
-    throws YarnException, IOException {
-
-    if (appId == null) {
-      throw new BadCommandArgumentsException("null application ID");
-    }
-    if (duration.limit <= 0) {
-      throw new BadCommandArgumentsException("Invalid monitoring duration");
-    }
-    log.debug("Waiting {} millis for app to reach state {} ",
-              duration.limit,
-              desiredState);
-    duration.start();
-    try {
-      while (true) {
-        // Get application report for the appId we are interested in
-
-        ApplicationReport r = getApplicationReport(appId);
-
-        log.debug("queried status is\n{}",
-          new SliderUtils.OnDemandReportStringifier(r));
-
-        YarnApplicationState state = r.getYarnApplicationState();
-        if (state.ordinal() >= desiredState.ordinal()) {
-          log.debug("App in desired state (or higher) :{}", state);
-          return r;
-        }
-        if (duration.getLimitExceeded()) {
-          log.debug(
-            "Wait limit of {} millis to get to state {}, exceeded; app status\n {}",
-            duration.limit,
-            desiredState,
-            new SliderUtils.OnDemandReportStringifier(r));
-          return null;
-        }
-
-        // sleep 1s.
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException ignored) {
-          log.debug("Thread sleep in monitoring loop interrupted");
-        }
-      }
-    } finally {
-      duration.close();
-    }
   }
 
   /**

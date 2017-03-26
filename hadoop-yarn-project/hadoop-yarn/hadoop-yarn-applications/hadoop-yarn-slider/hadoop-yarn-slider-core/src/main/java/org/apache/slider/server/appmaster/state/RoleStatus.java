@@ -21,18 +21,21 @@ package org.apache.slider.server.appmaster.state;
 import com.codahale.metrics.Metric;
 import com.codahale.metrics.MetricSet;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.slider.api.types.ComponentInformation;
 import org.apache.slider.api.types.RoleStatistics;
 import org.apache.slider.providers.PlacementPolicy;
 import org.apache.slider.providers.ProviderRole;
 import org.apache.slider.server.appmaster.management.BoolMetricPredicate;
-import org.apache.slider.server.appmaster.management.LongGauge;
+import org.apache.slider.server.appmaster.metrics.SliderMetrics;
 
 import java.io.Serializable;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.apache.hadoop.metrics2.lib.Interns.info;
 
 /**
  * Models the ongoing status of all nodes in an application.
@@ -42,7 +45,7 @@ import java.util.Map;
  * requires synchronization. Where synchronized access is good is that it allows for
  * the whole instance to be locked, for updating multiple entries.
  */
-public final class RoleStatus implements Cloneable, MetricSet {
+public final class RoleStatus implements MetricSet {
 
   private final String name;
   private final String group;
@@ -53,25 +56,9 @@ public final class RoleStatus implements Cloneable, MetricSet {
   private final int key;
   private final ProviderRole providerRole;
 
-  private final LongGauge actual = new LongGauge();
-  private final LongGauge completed = new LongGauge();
-  private final LongGauge desired = new LongGauge();
-  private final LongGauge failed = new LongGauge();
-  private final LongGauge failedRecently = new LongGauge(0);
-  private final LongGauge limitsExceeded = new LongGauge(0);
-  private final LongGauge nodeFailed = new LongGauge(0);
-  /** Number of AA requests queued. */
-  private final LongGauge pendingAntiAffineRequests = new LongGauge(0);
-  private final LongGauge preempted = new LongGauge(0);
-  private final LongGauge releasing = new LongGauge();
-  private final LongGauge requested = new LongGauge();
-  private final LongGauge started = new LongGauge();
-  private final LongGauge startFailed = new LongGauge();
-  private final LongGauge totalRequested = new LongGauge();
-
   /** resource requirements */
   private Resource resourceRequirements;
-
+  private SliderMetrics componentMetrics;
 
   /** any pending AA request */
   private volatile OutstandingRequest outstandingAArequest = null;
@@ -84,28 +71,19 @@ public final class RoleStatus implements Cloneable, MetricSet {
     this.name = providerRole.name;
     this.group = providerRole.group;
     this.key = providerRole.id;
+    componentMetrics =
+        SliderMetrics.register(this.name, "Metrics for component " + this.name);
+    componentMetrics
+        .tag("type", "Metrics type [component or service]", "component");
+  }
+
+  public SliderMetrics getComponentMetrics() {
+    return this.componentMetrics;
   }
 
   @Override
   public Map<String, Metric> getMetrics() {
     Map<String, Metric> metrics = new HashMap<>(15);
-    metrics.put("actual", actual);
-    metrics.put("completed", completed );
-    metrics.put("desired", desired);
-    metrics.put("failed", failed);
-    metrics.put("limitsExceeded", limitsExceeded);
-    metrics.put("nodeFailed", nodeFailed);
-    metrics.put("preempted", preempted);
-    metrics.put("pendingAntiAffineRequests", pendingAntiAffineRequests);
-    metrics.put("releasing", releasing);
-    metrics.put("requested", requested);
-    metrics.put("preempted", preempted);
-    metrics.put("releasing", releasing );
-    metrics.put("requested", requested);
-    metrics.put("started", started);
-    metrics.put("startFailed", startFailed);
-    metrics.put("totalRequested", totalRequested);
-
     metrics.put("outstandingAArequest",
       new BoolMetricPredicate(new BoolMetricPredicate.Eval() {
         @Override
@@ -174,83 +152,6 @@ public final class RoleStatus implements Cloneable, MetricSet {
     return !hasPlacementPolicy(PlacementPolicy.ANYWHERE);
   }
 
-  public long getDesired() {
-    return desired.get();
-  }
-
-  public void setDesired(long desired) {
-    this.desired.set(desired);
-  }
-
-  public long getActual() {
-    return actual.get();
-  }
-
-  public long incActual() {
-    return actual.incrementAndGet();
-  }
-
-  public long decActual() {
-    return actual.decToFloor(1);
-  }
-
-  /**
-   * Get the request count.
-   * @return a count of requested containers
-   */
-  public long getRequested() {
-    return requested.get();
-  }
-
-  public long incRequested() {
-    totalRequested.incrementAndGet();
-    return requested.incrementAndGet();
-  }
-
-  public void cancel(long count) {
-    requested.decToFloor(count);
-  }
-
-  public void decRequested() {
-    cancel(1);
-  }
-
-  public long getReleasing() {
-    return releasing.get();
-  }
-
-  public long incReleasing() {
-    return releasing.incrementAndGet();
-  }
-
-  public long decReleasing() {
-    return releasing.decToFloor(1);
-  }
-
-  public long getFailed() {
-    return failed.get();
-  }
-
-  public long getFailedRecently() {
-    return failedRecently.get();
-  }
-
-  /**
-   * Reset the recent failure
-   * @return the number of failures in the "recent" window
-   */
-  public long resetFailedRecently() {
-    return failedRecently.getAndSet(0);
-  }
-
-  public long getLimitsExceeded() {
-    return limitsExceeded.get();
-  }
-
-  public long incPendingAntiAffineRequests(long v) {
-    return pendingAntiAffineRequests.addAndGet(v);
-  }
-
   /**
    * Probe for an outstanding AA request being true
    * @return true if there is an outstanding AA Request
@@ -271,94 +172,14 @@ public final class RoleStatus implements Cloneable, MetricSet {
    * Note that a role failed, text will
    * be used in any diagnostics if an exception
    * is later raised.
-   * @param startupFailure flag to indicate this was a startup event
    * @param text text about the failure
-   * @param outcome outcome of the container
    */
-  public synchronized void noteFailed(boolean startupFailure, String text,
-      ContainerOutcome outcome) {
+  public synchronized void noteFailed(String text) {
     if (text != null) {
       failureMessage = text;
     }
-    switch (outcome) {
-      case Preempted:
-        preempted.incrementAndGet();
-        break;
-
-      case Node_failure:
-        nodeFailed.incrementAndGet();
-        failed.incrementAndGet();
-        break;
-
-      case Failed_limits_exceeded: // exceeded memory or CPU; app/configuration related
-        limitsExceeded.incrementAndGet();
-        // fall through
-      case Failed: // application failure, possibly node related, possibly not
-      default: // anything else (future-proofing)
-        failed.incrementAndGet();
-        failedRecently.incrementAndGet();
-        //have a look to see if it short lived
-        if (startupFailure) {
-          incStartFailed();
-        }
-        break;
-    }
   }
 
-  public long getStartFailed() {
-    return startFailed.get();
-  }
-
-  public synchronized void incStartFailed() {
-    startFailed.getAndIncrement();
-  }
-
-  public synchronized String getFailureMessage() {
-    return failureMessage;
-  }
-
-  public long getCompleted() {
-    return completed.get();
-  }
-
-  public long incCompleted() {
-    return completed.incrementAndGet();
-  }
-  public long getStarted() {
-    return started.get();
-  }
-
-  public synchronized void incStarted() {
-    started.incrementAndGet();
-  }
-
-  public long getTotalRequested() {
-    return totalRequested.get();
-  }
-
-  public long getPreempted() {
-    return preempted.get();
-  }
-
-  public long getNodeFailed() {
-    return nodeFailed.get();
-  }
-
-  public long getPendingAntiAffineRequests() {
-    return pendingAntiAffineRequests.get();
-  }
-
-  public void setPendingAntiAffineRequests(long pendingAntiAffineRequests) {
-    this.pendingAntiAffineRequests.set(pendingAntiAffineRequests);
-  }
-
-  public long decPendingAntiAffineRequests() {
-    return pendingAntiAffineRequests.decToFloor(1);
-  }
-
-  public OutstandingRequest getOutstandingAArequest() {
-    return outstandingAArequest;
-  }
 
   public void setOutstandingAArequest(OutstandingRequest outstandingAArequest) {
     this.outstandingAArequest = outstandingAArequest;
@@ -379,11 +200,50 @@ public final class RoleStatus implements Cloneable, MetricSet {
   public void cancelOutstandingAARequest() {
     if (outstandingAArequest != null) {
       setOutstandingAArequest(null);
-      setPendingAntiAffineRequests(0);
-      decRequested();
     }
   }
 
+  public long getDesired() {
+    return componentMetrics.containersDesired.value();
+  }
+
+  long getRunning() {
+    return componentMetrics.containersRunning.value();
+  }
+
+  public long getPending() {
+    return componentMetrics.containersPending.value();
+  }
+
+  public long getAAPending() {
+    return componentMetrics.pendingAAContainers.value();
+  }
+
+  void decAAPending() {
+    componentMetrics.pendingAAContainers.decr();
+  }
+  void setAAPending(long n) {
+    componentMetrics.pendingAAContainers.set((int)n);
+  }
+
+  long getFailedRecently() {
+    return componentMetrics.failedSinceLastThreshold.value();
+  }
+
+  long resetFailedRecently() {
+    long count =
+        componentMetrics.failedSinceLastThreshold.value();
+    componentMetrics.failedSinceLastThreshold.set(0);
+    return count;
+  }
+
+  long getFailed() {
+    return componentMetrics.containersFailed.value();
+  }
+
+  String getFailureMessage() {
+    return this.failureMessage;
+  }
   /**
    * Get the number of roles we are short of.
    * nodes released are ignored.
@@ -392,10 +252,9 @@ public final class RoleStatus implements Cloneable, MetricSet {
    */
   public long getDelta() {
     long inuse = getActualAndRequested();
-    long delta = desired.get() - inuse;
+    long delta = getDesired() - inuse;
     if (delta < 0) {
       //if we are releasing, remove the number that are already released.
-      delta += releasing.get();
       //but never switch to a positive
       delta = Math.min(delta, 0);
     }
@@ -407,43 +266,7 @@ public final class RoleStatus implements Cloneable, MetricSet {
    * @return the size of the application when outstanding requests are included.
    */
   public long getActualAndRequested() {
-    return actual.get() + requested.get();
-  }
-
-  @Override
-  public String toString() {
-    final StringBuilder sb = new StringBuilder("RoleStatus{");
-    sb.append("name='").append(name).append('\'');
-    sb.append(", group=").append(group);
-    sb.append(", key=").append(key);
-    sb.append(", desired=").append(desired);
-    sb.append(", actual=").append(actual);
-    sb.append(", requested=").append(requested);
-    sb.append(", releasing=").append(releasing);
-    sb.append(", failed=").append(failed);
-    sb.append(", startFailed=").append(startFailed);
-    sb.append(", started=").append(started);
-    sb.append(", completed=").append(completed);
-    sb.append(", totalRequested=").append(totalRequested);
-    sb.append(", preempted=").append(preempted);
-    sb.append(", nodeFailed=").append(nodeFailed);
-    sb.append(", failedRecently=").append(failedRecently);
-    sb.append(", limitsExceeded=").append(limitsExceeded);
-    sb.append(", resourceRequirements=").append(resourceRequirements);
-    sb.append(", isAntiAffinePlacement=").append(isAntiAffinePlacement());
-    if (isAntiAffinePlacement()) {
-      sb.append(", pendingAntiAffineRequests=").append(pendingAntiAffineRequests);
-      sb.append(", outstandingAArequest=").append(outstandingAArequest);
-    }
-    sb.append(", failureMessage='").append(failureMessage).append('\'');
-    sb.append(", providerRole=").append(providerRole);
-    sb.append('}');
-    return sb.toString();
-  }
-
-  @Override
-  public synchronized  Object clone() throws CloneNotSupportedException {
-    return super.clone();
+    return getRunning() + getPending();
   }
 
   /**
@@ -455,36 +278,12 @@ public final class RoleStatus implements Cloneable, MetricSet {
   }
 
   /**
-   * Build the statistics map from the current data
-   * @return a map for use in statistics reports
-   */
-  public Map<String, Integer> buildStatistics() {
-    ComponentInformation componentInformation = serialize();
-    return componentInformation.buildStatistics();
-  }
-
-  /**
    * Produced a serialized form which can be served up as JSON
    * @return a summary of the current role status.
    */
   public synchronized ComponentInformation serialize() {
     ComponentInformation info = new ComponentInformation();
     info.name = name;
-    info.priority = getPriority();
-    info.desired = desired.intValue();
-    info.actual = actual.intValue();
-    info.requested = requested.intValue();
-    info.releasing = releasing.intValue();
-    info.failed = failed.intValue();
-    info.startFailed = startFailed.intValue();
-    info.placementPolicy = getPlacementPolicy();
-    info.failureMessage = failureMessage;
-    info.totalRequested = totalRequested.intValue();
-    info.failedRecently = failedRecently.intValue();
-    info.nodeFailed = nodeFailed.intValue();
-    info.preempted = preempted.intValue();
-    info.pendingAntiAffineRequestCount = pendingAntiAffineRequests.intValue();
-    info.isAARequestOutstanding = isAARequestOutstanding();
     return info;
   }
 
@@ -542,17 +341,6 @@ public final class RoleStatus implements Cloneable, MetricSet {
   public synchronized RoleStatistics getStatistics() {
     RoleStatistics stats = new RoleStatistics();
     stats.activeAA = getOutstandingAARequestCount();
-    stats.actual = actual.get();
-    stats.desired = desired.get();
-    stats.failed = failed.get();
-    stats.limitsExceeded = limitsExceeded.get();
-    stats.nodeFailed = nodeFailed.get();
-    stats.preempted = preempted.get();
-    stats.releasing = releasing.get();
-    stats.requested = requested.get();
-    stats.started = started.get();
-    stats.startFailed = startFailed.get();
-    stats.totalRequested = totalRequested.get();
     return stats;
   }
 
