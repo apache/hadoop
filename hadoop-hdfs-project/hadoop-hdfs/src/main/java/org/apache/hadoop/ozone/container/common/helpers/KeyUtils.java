@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.container.common.helpers;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.impl.KeyManagerImpl;
@@ -47,34 +48,27 @@ public final class KeyUtils {
   }
 
   /**
-   * Returns a file handle to LevelDB.
+   * Get a DB handler for a given container.
+   * If the handler doesn't exist in cache yet, first create one and
+   * add into cache. This function is called with containerManager
+   * ReadLock held.
    *
-   * @param dbPath - DbPath.
-   * @return LevelDB
-   */
-  public static LevelDBStore getDB(String dbPath) throws IOException {
-    Preconditions.checkNotNull(dbPath);
-    Preconditions.checkState(!dbPath.isEmpty());
-    return new LevelDBStore(new File(dbPath), false);
-  }
-
-  /**
-   * This function is called with  containerManager ReadLock held.
-   *
-   * @param container - container.
-   * @param cache     - cache
+   * @param container container.
+   * @param conf configuration.
    * @return LevelDB handle.
    * @throws StorageContainerException
    */
   public static LevelDBStore getDB(ContainerData container,
-                                   ContainerCache cache)
-      throws StorageContainerException {
+      Configuration conf) throws StorageContainerException {
     Preconditions.checkNotNull(container);
+    ContainerCache cache = ContainerCache.getInstance(conf);
     Preconditions.checkNotNull(cache);
     try {
       LevelDBStore db = cache.getDB(container.getContainerName());
       if (db == null) {
-        db = getDB(container.getDBPath());
+        db = new LevelDBStore(
+            new File(container.getDBPath()),
+            false);
         cache.putDB(container.getContainerName(), db);
       }
       return db;
@@ -85,6 +79,19 @@ public final class KeyUtils {
     }
   }
 
+  /**
+   * Remove a DB handler from cache.
+   *
+   * @param container - Container data.
+   * @param conf - Configuration.
+   */
+  public static void removeDB(ContainerData container,
+      Configuration conf) {
+    Preconditions.checkNotNull(container);
+    ContainerCache cache = ContainerCache.getInstance(conf);
+    Preconditions.checkNotNull(cache);
+    cache.removeDB(container.getContainerName());
+  }
   /**
    * Shutdown all DB Handles.
    *

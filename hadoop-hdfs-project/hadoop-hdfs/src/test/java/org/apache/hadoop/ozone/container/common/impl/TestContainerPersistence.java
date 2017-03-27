@@ -210,7 +210,6 @@ public class TestContainerPersistence {
     containerManager.createContainer(createSingleNodePipeline(containerName2),
         data);
 
-
     Assert.assertTrue(containerManager.getContainerMap()
         .containsKey(containerName1));
     Assert.assertTrue(containerManager.getContainerMap()
@@ -236,6 +235,22 @@ public class TestContainerPersistence {
     Assert.assertTrue(containerManager.getContainerMap()
         .containsKey(containerName2));
 
+    // Add some key to a container and then delete.
+    // Delete should fail because the container is no longer empty.
+    KeyData someKey = new KeyData(containerName1, "someKey");
+    someKey.setChunks(new LinkedList<ContainerProtos.ChunkInfo>());
+    keyManager.putKey(
+        createSingleNodePipeline(containerName1),
+        someKey);
+
+    exception.expect(StorageContainerException.class);
+    exception.expectMessage(
+        "Container cannot be deleted because it is not empty.");
+    containerManager.deleteContainer(
+        createSingleNodePipeline(containerName1),
+        containerName1);
+    Assert.assertTrue(containerManager.getContainerMap()
+        .containsKey(containerName1));
   }
 
   /**

@@ -21,7 +21,6 @@ package org.apache.hadoop.ozone.container.common.impl;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
@@ -52,7 +51,7 @@ public class KeyManagerImpl implements KeyManager {
 
   private static final float LOAD_FACTOR = 0.75f;
   private final ContainerManager containerManager;
-  private final ContainerCache containerCache;
+  private final Configuration conf;
 
   /**
    * Constructs a key Manager.
@@ -63,10 +62,8 @@ public class KeyManagerImpl implements KeyManager {
     Preconditions.checkNotNull(containerManager, "Container manager cannot be" +
         " null");
     Preconditions.checkNotNull(conf, "Config cannot be null");
-    int cacheSize = conf.getInt(OzoneConfigKeys.OZONE_KEY_CACHE,
-        OzoneConfigKeys.OZONE_KEY_CACHE_DEFAULT);
     this.containerManager = containerManager;
-    containerCache = new ContainerCache(cacheSize, LOAD_FACTOR, true);
+    this.conf = conf;
   }
 
   /**
@@ -84,7 +81,7 @@ public class KeyManagerImpl implements KeyManager {
           "Container name cannot be null");
       ContainerData cData = containerManager.readContainer(
           pipeline.getContainerName());
-      LevelDBStore db = KeyUtils.getDB(cData, containerCache);
+      LevelDBStore db = KeyUtils.getDB(cData, conf);
 
       // This is a post condition that acts as a hint to the user.
       // Should never fail.
@@ -109,7 +106,7 @@ public class KeyManagerImpl implements KeyManager {
           "Container name cannot be null");
       ContainerData cData = containerManager.readContainer(data
           .getContainerName());
-      LevelDBStore db = KeyUtils.getDB(cData, containerCache);
+      LevelDBStore db = KeyUtils.getDB(cData, conf);
 
       // This is a post condition that acts as a hint to the user.
       // Should never fail.
@@ -143,7 +140,7 @@ public class KeyManagerImpl implements KeyManager {
           "Container name cannot be null");
       ContainerData cData = containerManager.readContainer(pipeline
           .getContainerName());
-      LevelDBStore db = KeyUtils.getDB(cData, containerCache);
+      LevelDBStore db = KeyUtils.getDB(cData, conf);
 
       // This is a post condition that acts as a hint to the user.
       // Should never fail.
@@ -181,6 +178,6 @@ public class KeyManagerImpl implements KeyManager {
   public void shutdown() {
     Preconditions.checkState(this.containerManager.hasWriteLock(), "asserts " +
         "that we are holding the container manager lock when shutting down.");
-    KeyUtils.shutdownCache(containerCache);
+    KeyUtils.shutdownCache(ContainerCache.getInstance(conf));
   }
 }

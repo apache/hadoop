@@ -96,6 +96,7 @@ public class ContainerManagerImpl implements ContainerManager {
   private ContainerLocationManager locationManager;
   private ChunkManager chunkManager;
   private KeyManager keyManager;
+  private Configuration conf;
 
   /**
    * Init call that sets up a container Manager.
@@ -114,6 +115,7 @@ public class ContainerManagerImpl implements ContainerManager {
     Preconditions.checkState(containerDirs.size() > 0, "Number of container" +
         " directories must be greater than zero.");
 
+    this.conf = config;
     readLock();
     try {
       for (StorageLocation path : containerDirs) {
@@ -375,8 +377,10 @@ public class ContainerManagerImpl implements ContainerManager {
         throw new StorageContainerException("No such container. Name : " +
             containerName, CONTAINER_NOT_FOUND);
       }
-      ContainerUtils.removeContainer(status.containerData);
+      ContainerUtils.removeContainer(status.containerData, conf);
       containerMap.remove(containerName);
+    } catch (StorageContainerException e) {
+      throw e;
     } catch (IOException e) {
       // TODO : An I/O error during delete can leave partial artifacts on the
       // disk. We will need the cleaner thread to cleanup this information.
