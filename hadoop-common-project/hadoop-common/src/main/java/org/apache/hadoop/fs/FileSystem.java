@@ -4122,4 +4122,13 @@ public abstract class FileSystem extends Configured implements Closeable {
   public static GlobalStorageStatistics getGlobalStorageStatistics() {
     return GlobalStorageStatistics.INSTANCE;
   }
+
+  /**
+   * Create a new FSDataOutputStreamBuilder for the file with path.
+   * @param path file path
+   * @return a FSDataOutputStreamBuilder object to build the file
+   */
+  public FSDataOutputStreamBuilder newFSDataOutputStreamBuilder(Path path) {
+    return new FSDataOutputStreamBuilder(this, path);
+  }
 }
