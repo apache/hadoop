@@ -124,6 +124,7 @@ enum Result {
   PUT_SMALL_FILE_ERROR = 20;
   GET_SMALL_FILE_ERROR = 21;
   CLOSED_CONTAINER_IO = 22;
+  ERROR_CONTAINER_NOT_EMPTY = 23;
 }
 
 message ContainerCommandRequestProto {

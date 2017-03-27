@@ -120,7 +120,7 @@ public class LevelDBStore {
     DBIterator iter = db.iterator();
     try {
       iter.seekToFirst();
-      return iter.hasNext();
+      return !iter.hasNext();
     } finally {
       iter.close();
     }

@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container.common.helpers;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -339,14 +340,19 @@ public final class ContainerUtils {
    * @param containerData - Data of the container to remove.
    * @throws IOException
    */
-  public static void removeContainer(ContainerData containerData) throws
-      IOException {
+  public static void removeContainer(ContainerData containerData,
+      Configuration conf) throws IOException {
     Preconditions.checkNotNull(containerData);
-
-    // TODO : Check if there are any keys. This needs to be done
-    // by calling into key layer code, hence this is a TODO for now.
-
     Path dbPath = Paths.get(containerData.getDBPath());
+
+    LevelDBStore db = KeyUtils.getDB(containerData, conf);
+    if(!db.isEmpty()) {
+      throw new StorageContainerException(
+          "Container cannot be deleted because it is not empty.",
+          ContainerProtos.Result.ERROR_CONTAINER_NOT_EMPTY);
+    }
+    // Close the DB connection and remove the DB handler from cache
+    KeyUtils.removeDB(containerData, conf);
 
     // Delete the DB File.
     FileUtils.forceDelete(dbPath.toFile());

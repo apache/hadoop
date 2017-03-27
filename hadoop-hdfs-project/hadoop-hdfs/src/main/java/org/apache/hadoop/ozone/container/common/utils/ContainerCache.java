@@ -22,6 +22,8 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.collections.map.LRUMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.utils.LevelDBStore;
 
 import java.io.IOException;
@@ -31,16 +33,33 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * container cache is a LRUMap that maintains the DB handles.
  */
-public class ContainerCache extends LRUMap {
+public final class ContainerCache extends LRUMap {
   static final Log LOG = LogFactory.getLog(ContainerCache.class);
   private final Lock lock = new ReentrantLock();
-
+  private static ContainerCache cache;
+  private static final float LOAD_FACTOR = 0.75f;
   /**
    * Constructs a cache that holds DBHandle references.
    */
-  public ContainerCache(int maxSize, float loadFactor, boolean
+  private ContainerCache(int maxSize, float loadFactor, boolean
       scanUntilRemovable) {
     super(maxSize, loadFactor, scanUntilRemovable);
+  }
+
+  /**
+   * Return a singleton instance of {@link ContainerCache}
+   * that holds the DB handlers.
+   *
+   * @param conf - Configuration.
+   * @return A instance of {@link ContainerCache}.
+   */
+  public synchronized static ContainerCache getInstance(Configuration conf) {
+    if (cache == null) {
+      int cacheSize = conf.getInt(OzoneConfigKeys.OZONE_KEY_CACHE,
+          OzoneConfigKeys.OZONE_KEY_CACHE_DEFAULT);
+      cache = new ContainerCache(cacheSize, LOAD_FACTOR, true);
+    }
+    return cache;
   }
 
   /**
@@ -72,6 +91,30 @@ public class ContainerCache extends LRUMap {
     lock.lock();
     try {
       return (LevelDBStore) this.get(containerName);
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  /**
+   * Remove a DB handler from cache.
+   *
+   * @param containerName - Name of the container.
+   */
+  public void removeDB(String containerName) {
+    Preconditions.checkNotNull(containerName);
+    Preconditions.checkState(!containerName.isEmpty());
+    lock.lock();
+    try {
+      LevelDBStore db = this.getDB(containerName);
+      if (db != null) {
+        try {
+          db.close();
+        } catch (IOException e) {
+          LOG.warn("There is some issue to stop an unused DB handler.", e);
+        }
+      }
+      this.remove(containerName);
     } finally {
       lock.unlock();
     }
