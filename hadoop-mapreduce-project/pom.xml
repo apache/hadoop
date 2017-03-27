@@ -194,6 +194,7 @@
           <excludes>
             <exclude>.eclipse.templates/</exclude>
             <exclude>lib/jdiff/**</exclude>
+            <exclude>dev-support/jdiff/**</exclude>
           </excludes>
         </configuration>
       </plugin>
