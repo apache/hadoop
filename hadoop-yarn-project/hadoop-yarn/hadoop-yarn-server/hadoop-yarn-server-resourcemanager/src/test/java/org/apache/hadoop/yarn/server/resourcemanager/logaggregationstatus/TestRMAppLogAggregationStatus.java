@@ -409,6 +409,8 @@ public class TestRMAppLogAggregationStatus {
     Assert.assertEquals(LogAggregationStatus.TIME_OUT,
       rmApp.getLogAggregationStatusForAppReport());
 
+    rmApp = (RMAppImpl)createRMApp(conf);
+    rmApp.handle(new RMAppEvent(rmApp.getApplicationId(), RMAppEventType.KILL));
     // If the log aggregation status for all NMs are SUCCEEDED and Application
     // is at the final state, the log aggregation status for this app will
     // return SUCCEEDED
