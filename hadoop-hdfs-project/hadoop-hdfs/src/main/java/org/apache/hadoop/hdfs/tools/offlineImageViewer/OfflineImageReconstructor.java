@@ -669,7 +669,7 @@ class OfflineImageReconstructor {
       throw new IOException("<block> found without <id>");
     }
     blockBld.setBlockId(id);
-    Long genstamp = block.removeChildLong(INODE_SECTION_GEMSTAMP);
+    Long genstamp = block.removeChildLong(INODE_SECTION_GENSTAMP);
     if (genstamp == null) {
       throw new IOException("<block> found without <genstamp>");
     }
