@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
@@ -164,8 +165,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   private long logAggregationStartTime = 0;
   private final long logAggregationStatusTimeout;
   private final Map<NodeId, LogAggregationReport> logAggregationStatus =
-      new HashMap<NodeId, LogAggregationReport>();
-  private LogAggregationStatus logAggregationStatusForAppReport;
+      new ConcurrentHashMap<NodeId, LogAggregationReport>();
+  private volatile LogAggregationStatus logAggregationStatusForAppReport;
   private int logAggregationSucceed = 0;
   private int logAggregationFailed = 0;
   private Map<NodeId, List<String>> logAggregationDiagnosticsForNMs =
@@ -1515,26 +1516,23 @@ public class RMAppImpl implements RMApp, Recoverable {
   public Map<NodeId, LogAggregationReport> getLogAggregationReportsForApp() {
     try {
       this.readLock.lock();
-      Map<NodeId, LogAggregationReport> outputs =
-          new HashMap<NodeId, LogAggregationReport>();
-      outputs.putAll(logAggregationStatus);
-      if (!isLogAggregationFinished()) {
-        for (Entry<NodeId, LogAggregationReport> output : outputs.entrySet()) {
+      if (!isLogAggregationFinished() && isAppInFinalState(this) &&
+          System.currentTimeMillis() > this.logAggregationStartTime
+          + this.logAggregationStatusTimeout) {
+        for (Entry<NodeId, LogAggregationReport> output :
+            logAggregationStatus.entrySet()) {
           if (!output.getValue().getLogAggregationStatus()
             .equals(LogAggregationStatus.TIME_OUT)
               && !output.getValue().getLogAggregationStatus()
                 .equals(LogAggregationStatus.SUCCEEDED)
               && !output.getValue().getLogAggregationStatus()
-                .equals(LogAggregationStatus.FAILED)
-              && isAppInFinalState(this)
-              && System.currentTimeMillis() > this.logAggregationStartTime
-                  + this.logAggregationStatusTimeout) {
+                .equals(LogAggregationStatus.FAILED)) {
             output.getValue().setLogAggregationStatus(
               LogAggregationStatus.TIME_OUT);
           }
         }
       }
-      return outputs;
+      return Collections.unmodifiableMap(logAggregationStatus);
     } finally {
       this.readLock.unlock();
     }
@@ -1642,11 +1640,17 @@ public class RMAppImpl implements RMApp, Recoverable {
         // the log aggregation is finished. And the log aggregation status will
         // not be updated anymore.
         if (logFailedCount > 0 && isAppInFinalState(this)) {
+          this.logAggregationStatusForAppReport =
+              LogAggregationStatus.FAILED;
           return LogAggregationStatus.FAILED;
         } else if (logTimeOutCount > 0) {
+          this.logAggregationStatusForAppReport =
+              LogAggregationStatus.TIME_OUT;
           return LogAggregationStatus.TIME_OUT;
         }
         if (isAppInFinalState(this)) {
+          this.logAggregationStatusForAppReport =
+              LogAggregationStatus.SUCCEEDED;
           return LogAggregationStatus.SUCCEEDED;
         }
       } else if (logRunningWithFailure > 0) {
@@ -1662,7 +1666,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     return this.logAggregationStatusForAppReport
       .equals(LogAggregationStatus.SUCCEEDED)
         || this.logAggregationStatusForAppReport
-          .equals(LogAggregationStatus.FAILED);
+          .equals(LogAggregationStatus.FAILED)
+        || this.logAggregationStatusForAppReport
+          .equals(LogAggregationStatus.TIME_OUT);
 
   }
 
