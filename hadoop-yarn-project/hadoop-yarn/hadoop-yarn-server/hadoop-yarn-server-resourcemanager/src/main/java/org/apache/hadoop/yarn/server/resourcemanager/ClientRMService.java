@@ -1204,7 +1204,7 @@ public class ClientRMService extends AbstractService implements
   @Override
   public GetNewReservationResponse getNewReservation(
       GetNewReservationRequest request) throws YarnException, IOException {
-    checkReservationSystem(AuditConstants.CREATE_NEW_RESERVATION_REQUEST);
+    checkReservationSystem();
     GetNewReservationResponse response =
         recordFactory.newRecordInstance(GetNewReservationResponse.class);
 
@@ -1218,7 +1218,7 @@ public class ClientRMService extends AbstractService implements
   public ReservationSubmissionResponse submitReservation(
       ReservationSubmissionRequest request) throws YarnException, IOException {
     // Check if reservation system is enabled
-    checkReservationSystem(AuditConstants.SUBMIT_RESERVATION_REQUEST);
+    checkReservationSystem();
     ReservationSubmissionResponse response =
         recordFactory.newRecordInstance(ReservationSubmissionResponse.class);
     ReservationId reservationId = request.getReservationId();
@@ -1277,7 +1277,7 @@ public class ClientRMService extends AbstractService implements
   public ReservationUpdateResponse updateReservation(
       ReservationUpdateRequest request) throws YarnException, IOException {
     // Check if reservation system is enabled
-    checkReservationSystem(AuditConstants.UPDATE_RESERVATION_REQUEST);
+    checkReservationSystem();
     ReservationUpdateResponse response =
         recordFactory.newRecordInstance(ReservationUpdateResponse.class);
     // Validate the input
@@ -1316,7 +1316,7 @@ public class ClientRMService extends AbstractService implements
   public ReservationDeleteResponse deleteReservation(
       ReservationDeleteRequest request) throws YarnException, IOException {
     // Check if reservation system is enabled
-    checkReservationSystem(AuditConstants.DELETE_RESERVATION_REQUEST);
+    checkReservationSystem();
     ReservationDeleteResponse response =
         recordFactory.newRecordInstance(ReservationDeleteResponse.class);
     // Validate the input
@@ -1355,7 +1355,7 @@ public class ClientRMService extends AbstractService implements
   public ReservationListResponse listReservations(
         ReservationListRequest requestInfo) throws YarnException, IOException {
     // Check if reservation system is enabled
-    checkReservationSystem(AuditConstants.LIST_RESERVATION_REQUEST);
+    checkReservationSystem();
     ReservationListResponse response =
             recordFactory.newRecordInstance(ReservationListResponse.class);
 
@@ -1418,7 +1418,7 @@ public class ClientRMService extends AbstractService implements
             labelsMgr.getClusterNodeLabels());
   }
 
-  private void checkReservationSystem(String auditConstant)
+  private void checkReservationSystem()
       throws YarnException {
     // Check if reservation is enabled
     if (reservationSystem == null) {
