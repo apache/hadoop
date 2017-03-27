@@ -1599,11 +1599,11 @@ class OfflineImageReconstructor {
     } catch (IOException e) {
       // Handle the case where <version> does not exist.
       // Note: fsimage XML files which are missing <version> are also missing
-      // many other fields that ovi needs to accurately reconstruct the
+      // many other fields that oiv needs to accurately reconstruct the
       // fsimage.
       throw new IOException("No <version> section found at the top of " +
           "the fsimage XML.  This XML file is too old to be processed " +
-          "by ovi.", e);
+          "by oiv.", e);
     }
     Node version = new Node();
     loadNodeChildren(version, "version fields");
