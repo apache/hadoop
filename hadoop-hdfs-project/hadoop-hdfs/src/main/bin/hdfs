@@ -57,6 +57,7 @@ function hadoop_usage
   hadoop_add_subcommand "oiv" admin "apply the offline fsimage viewer to an fsimage"
   hadoop_add_subcommand "oiv_legacy" admin "apply the offline fsimage viewer to a legacy fsimage"
   hadoop_add_subcommand "portmap" daemon "run a portmap service"
+  hadoop_add_subcommand "router" daemon "run the DFS router"
   hadoop_add_subcommand "secondarynamenode" daemon "run the DFS secondary namenode"
   hadoop_add_subcommand "snapshotDiff" client "diff two snapshots of a directory or diff the current directory contents with a snapshot"
   hadoop_add_subcommand "storagepolicies" admin "list/get/set block storage policies"
@@ -175,6 +176,10 @@ function hdfscmd_case
     portmap)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME=org.apache.hadoop.portmap.Portmap
+    ;;
+    router)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.federation.router.Router'
     ;;
     secondarynamenode)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
