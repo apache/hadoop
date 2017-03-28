@@ -18,17 +18,27 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
+import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class TestTimelineCollector {
 
@@ -123,5 +133,58 @@ public class TestTimelineCollector {
       }
     }
 
+  }
+
+  /**
+   * Test TimelineCollector's interaction with TimelineWriter upon
+   * putEntity() calls.
+   */
+  @Test
+  public void testPutEntity() throws IOException {
+    TimelineWriter writer = mock(TimelineWriter.class);
+    TimelineCollector collector = new TimelineCollectorForTest(writer);
+
+    TimelineEntities entities = generateTestEntities(1, 1);
+    collector.putEntities(
+        entities, UserGroupInformation.createRemoteUser("test-user"));
+
+    verify(writer, times(1)).write(
+        anyString(), anyString(), anyString(), anyString(), anyLong(),
+        anyString(), any(TimelineEntities.class));
+    verify(writer, times(1)).flush();
+  }
+
+  /**
+   * Test TimelineCollector's interaction with TimelineWriter upon
+   * putEntityAsync() calls.
+   */
+  @Test
+  public void testPutEntityAsync() throws IOException {
+    TimelineWriter writer = mock(TimelineWriter.class);
+    TimelineCollector collector = new TimelineCollectorForTest(writer);
+
+    TimelineEntities entities = generateTestEntities(1, 1);
+    collector.putEntitiesAsync(
+        entities, UserGroupInformation.createRemoteUser("test-user"));
+
+    verify(writer, times(1)).write(
+        anyString(), anyString(), anyString(), anyString(), anyLong(),
+        anyString(), any(TimelineEntities.class));
+    verify(writer, never()).flush();
+  }
+
+  private static class TimelineCollectorForTest extends TimelineCollector {
+    private final TimelineCollectorContext context =
+        new TimelineCollectorContext();
+
+    TimelineCollectorForTest(TimelineWriter writer) {
+      super("TimelineCollectorForTest");
+      setWriter(writer);
+    }
+
+    @Override
+    public TimelineCollectorContext getTimelineEntityContext() {
+      return context;
+    }
   }
 }
