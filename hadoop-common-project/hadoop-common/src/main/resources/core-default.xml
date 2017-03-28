@@ -2456,6 +2456,7 @@
 
 
   <!-- Azure Data Lake File System Configurations -->
+
   <property>
     <name>fs.adl.impl</name>
     <value>org.apache.hadoop.fs.adl.AdlFileSystem</value>
@@ -2465,6 +2466,68 @@
     <name>fs.AbstractFileSystem.adl.impl</name>
     <value>org.apache.hadoop.fs.adl.Adl</value>
   </property>
+
+  <property>
+    <name>adl.feature.ownerandgroup.enableupn</name>
+    <value>false</value>
+    <description>
+      When true : User and Group in FileStatus/AclStatus response is
+      represented as user friendly name as per Azure AD profile.
+
+      When false (default) : User and Group in FileStatus/AclStatus
+      response is represented by the unique identifier from Azure AD
+      profile (Object ID as GUID).
+
+      For optimal performance, false is recommended.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.access.token.provider.type</name>
+    <value>ClientCredential</value>
+    <description>
+      Defines Azure Active Directory OAuth2 access token provider type.
+      Supported types are ClientCredential, RefreshToken, and Custom.
+      The ClientCredential type requires property fs.adl.oauth2.client.id,
+      fs.adl.oauth2.credential, and fs.adl.oauth2.refresh.url.
+      The RefreshToken type requires property fs.adl.oauth2.client.id and
+      fs.adl.oauth2.refresh.token.
+      The Custom type requires property fs.adl.oauth2.access.token.provider.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.client.id</name>
+    <value></value>
+    <description>The OAuth2 client id.</description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.credential</name>
+    <value></value>
+    <description>The OAuth2 access key.</description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.refresh.url</name>
+    <value></value>
+    <description>The OAuth2 token endpoint.</description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.refresh.token</name>
+    <value></value>
+    <description>The OAuth2 refresh token.</description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.access.token.provider</name>
+    <value></value>
+    <description>
+      The class name of the OAuth2 access token provider.
+    </description>
+  </property>
+
   <!-- Azure Data Lake File System Configurations Ends Here-->
 
   <property>

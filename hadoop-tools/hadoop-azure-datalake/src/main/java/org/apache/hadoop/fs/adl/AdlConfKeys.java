@@ -40,6 +40,8 @@ public final class AdlConfKeys {
       "fs.adl.oauth2.client.id";
   public static final String AZURE_AD_TOKEN_PROVIDER_TYPE_KEY =
       "fs.adl.oauth2.access.token.provider.type";
+  public static final TokenProviderType AZURE_AD_TOKEN_PROVIDER_TYPE_DEFAULT =
+      TokenProviderType.ClientCredential;
 
   // OAuth Refresh Token Configuration
   public static final String AZURE_AD_REFRESH_TOKEN_KEY =
