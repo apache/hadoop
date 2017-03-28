@@ -232,6 +232,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-11499. Decommissioning stuck because of failing recovery.
     Contributed by Lukas Majercak and Manoj Govindassamy.
 
+    HDFS-11486. Client close() should not fail fast if the last block is being
+    decommissioned. Contributed by Wei-Chiu Chuang and Yiqun Lin.
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
