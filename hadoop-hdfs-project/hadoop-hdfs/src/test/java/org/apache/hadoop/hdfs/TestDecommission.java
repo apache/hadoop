@@ -921,6 +921,57 @@ public class TestDecommission {
 
     assertEquals(dfs.getFileStatus(file).getLen(), writtenBytes);
   }
+
+  @Test(timeout=120000)
+  public void testCloseWhileDecommission() throws IOException,
+      ExecutionException, InterruptedException {
+    LOG.info("Starting test testCloseWhileDecommission");
+
+    // min replication = 2
+    Configuration hdfsConf = new HdfsConfiguration(conf);
+    hdfsConf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, 2);
+    startCluster(1, 3, hdfsConf);
+
+    FileSystem fileSys = cluster.getFileSystem(0);
+    FSNamesystem ns = cluster.getNamesystem(0);
+
+    String openFile = "/testDecommissionWithOpenfile.dat";
+
+    writeFile(fileSys, new Path(openFile), (short)3);
+    // make sure the file was open for write
+    FSDataOutputStream fdos =  fileSys.append(new Path(openFile));
+    byte[] bytes = new byte[1];
+    fdos.write(bytes);
+    fdos.hsync();
+
+    LocatedBlocks lbs = NameNodeAdapter.getBlockLocations(
+        cluster.getNameNode(0), openFile, 0, fileSize);
+
+    DatanodeInfo[] dnInfos4LastBlock = lbs.getLastLocatedBlock().getLocations();
+
+    ArrayList<String> nodes = new ArrayList<String>();
+    ArrayList<DatanodeInfo> dnInfos = new ArrayList<DatanodeInfo>();
+
+    DatanodeManager dm = ns.getBlockManager().getDatanodeManager();
+    //decommission 2 of the 3 nodes which have last block
+    nodes.add(dnInfos4LastBlock[0].getXferAddr());
+    dnInfos.add(dm.getDatanode(dnInfos4LastBlock[0]));
+    nodes.add(dnInfos4LastBlock[1].getXferAddr());
+    dnInfos.add(dm.getDatanode(dnInfos4LastBlock[1]));
+    writeConfigFile(excludeFile, nodes);
+
+    // because the cluster has only 3 nodes, and 2 of which are decomm'ed,
+    // the last block file will remain under replicated.
+    refreshNodes(cluster.getNamesystem(0), cluster.getConfiguration(0));
+
+    // the close() should not fail despite the number of live replicas of
+    // the last block becomes one.
+    fdos.close();
+
+    // make sure the two datanodes remain in decomm in progress state
+    BlockManagerTestUtil.recheckDecommissionState(dm);
+    assertTrackedAndPending(dm.getDecomManager(), 2, 0);
+  }
   
   /**
    * Tests restart of namenode while datanode hosts are added to exclude file
