@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.util.Collections;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -31,6 +33,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -335,14 +339,16 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // has been disabled. Reject the recovery of this application if it
     // is true and give clear message so that user can react properly.
     if (!appContext.getUnmanagedAM() &&
-        application.getAMResourceRequest() == null &&
+        (application.getAMResourceRequests() == null ||
+            application.getAMResourceRequests().isEmpty()) &&
         !YarnConfiguration.areNodeLabelsEnabled(this.conf)) {
       // check application submission context and see if am resource request
       // or application itself contains any node label expression.
-      ResourceRequest amReqFromAppContext =
-          appContext.getAMContainerResourceRequest();
-      String labelExp = (amReqFromAppContext != null) ?
-          amReqFromAppContext.getNodeLabelExpression() : null;
+      List<ResourceRequest> amReqsFromAppContext =
+          appContext.getAMContainerResourceRequests();
+      String labelExp =
+          (amReqsFromAppContext != null && !amReqsFromAppContext.isEmpty()) ?
+          amReqsFromAppContext.get(0).getNodeLabelExpression() : null;
       if (labelExp == null) {
         labelExp = appContext.getNodeLabelExpression();
       }
@@ -377,9 +383,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     }
 
     ApplicationId applicationId = submissionContext.getApplicationId();
-    ResourceRequest amReq = null;
+    List<ResourceRequest> amReqs = null;
     try {
-      amReq = validateAndCreateResourceRequest(submissionContext, isRecovery);
+      amReqs = validateAndCreateResourceRequest(submissionContext, isRecovery);
     } catch (InvalidLabelResourceRequestException e) {
       // This can happen if the application had been submitted and run
       // with Node Label enabled but recover with Node Label disabled.
@@ -440,7 +446,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         submissionContext.getApplicationName(), user,
         submissionContext.getQueue(), submissionContext, this.scheduler,
         this.masterService, submitTime, submissionContext.getApplicationType(),
-        submissionContext.getApplicationTags(), amReq);
+        submissionContext.getApplicationTags(), amReqs);
 
     // Concurrent app submissions with same applicationId will fail here
     // Concurrent app submissions with different applicationIds will not
@@ -462,7 +468,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     return application;
   }
 
-  private ResourceRequest validateAndCreateResourceRequest(
+  private List<ResourceRequest> validateAndCreateResourceRequest(
       ApplicationSubmissionContext submissionContext, boolean isRecovery)
       throws InvalidResourceRequestException {
     // Validation of the ApplicationSubmissionContext needs to be completed
@@ -472,33 +478,77 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
     // Check whether AM resource requirements are within required limits
     if (!submissionContext.getUnmanagedAM()) {
-      ResourceRequest amReq = submissionContext.getAMContainerResourceRequest();
-      if (amReq == null) {
-        amReq = BuilderUtils
-            .newResourceRequest(RMAppAttemptImpl.AM_CONTAINER_PRIORITY,
-                ResourceRequest.ANY, submissionContext.getResource(), 1);
-      }
-
-      // set label expression for AM container
-      if (null == amReq.getNodeLabelExpression()) {
-        amReq.setNodeLabelExpression(submissionContext
-            .getNodeLabelExpression());
+      List<ResourceRequest> amReqs =
+          submissionContext.getAMContainerResourceRequests();
+      if (amReqs == null || amReqs.isEmpty()) {
+        if (submissionContext.getResource() != null) {
+          amReqs = Collections.singletonList(BuilderUtils
+              .newResourceRequest(RMAppAttemptImpl.AM_CONTAINER_PRIORITY,
+                  ResourceRequest.ANY, submissionContext.getResource(), 1));
+        } else {
+          throw new InvalidResourceRequestException("Invalid resource request, "
+              + "no resources requested");
+        }
       }
 
       try {
-        SchedulerUtils.normalizeAndValidateRequest(amReq,
-            scheduler.getMaximumResourceCapability(),
-            submissionContext.getQueue(), scheduler, isRecovery, rmContext);
+        // Find the ANY request and ensure there's only one
+        ResourceRequest anyReq = null;
+        for (ResourceRequest amReq : amReqs) {
+          if (amReq.getResourceName().equals(ResourceRequest.ANY)) {
+            if (anyReq == null) {
+              anyReq = amReq;
+            } else {
+              throw new InvalidResourceRequestException("Invalid resource "
+                  + "request, only one resource request with "
+                  + ResourceRequest.ANY + " is allowed");
+            }
+          }
+        }
+        if (anyReq == null) {
+          throw new InvalidResourceRequestException("Invalid resource request, "
+              + "no resource request specified with " + ResourceRequest.ANY);
+        }
+
+        // Make sure that all of the requests agree with the ANY request
+        // and have correct values
+        for (ResourceRequest amReq : amReqs) {
+          amReq.setCapability(anyReq.getCapability());
+          amReq.setExecutionTypeRequest(
+              ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED));
+          amReq.setNumContainers(1);
+          amReq.setPriority(RMAppAttemptImpl.AM_CONTAINER_PRIORITY);
+        }
+
+        // set label expression for AM ANY request if not set
+        if (null == anyReq.getNodeLabelExpression()) {
+          anyReq.setNodeLabelExpression(submissionContext
+              .getNodeLabelExpression());
+        }
+
+        // Put ANY request at the front
+        if (!amReqs.get(0).equals(anyReq)) {
+          amReqs.remove(anyReq);
+          amReqs.add(0, anyReq);
+        }
+
+        // Normalize all requests
+        for (ResourceRequest amReq : amReqs) {
+          SchedulerUtils.normalizeAndValidateRequest(amReq,
+              scheduler.getMaximumResourceCapability(),
+              submissionContext.getQueue(), scheduler, isRecovery, rmContext);
+
+          amReq.setCapability(
+              scheduler.getNormalizedResource(amReq.getCapability()));
+        }
+        return amReqs;
       } catch (InvalidResourceRequestException e) {
         LOG.warn("RM app submission failed in validating AM resource request"
             + " for application " + submissionContext.getApplicationId(), e);
         throw e;
       }
-
-      amReq.setCapability(scheduler.getNormalizedResource(amReq.getCapability()));
-      return amReq;
     }
-    
+
     return null;
   }
 

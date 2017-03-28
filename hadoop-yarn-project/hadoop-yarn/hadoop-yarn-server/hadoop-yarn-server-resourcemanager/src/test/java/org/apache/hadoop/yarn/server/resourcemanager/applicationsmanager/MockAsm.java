@@ -57,7 +57,7 @@ import com.google.common.collect.Lists;
 public abstract class MockAsm extends MockApps {
 
   public static class ApplicationBase implements RMApp {
-    ResourceRequest amReq;
+    List<ResourceRequest> amReqs;
     @Override
     public String getUser() {
       throw new UnsupportedOperationException("Not supported yet.");
@@ -192,8 +192,8 @@ public abstract class MockAsm extends MockApps {
     }
     
     @Override
-    public ResourceRequest getAMResourceRequest() {
-      return this.amReq; 
+    public List<ResourceRequest> getAMResourceRequests() {
+      return this.amReqs;
     }
 
     @Override

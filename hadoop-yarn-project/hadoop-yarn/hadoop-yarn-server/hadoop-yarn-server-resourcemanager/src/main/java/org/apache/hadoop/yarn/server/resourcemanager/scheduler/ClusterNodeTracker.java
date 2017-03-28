@@ -268,6 +268,9 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
 
   /**
    * Convenience method to filter nodes based on a condition.
+   *
+   * @param nodeFilter A {@link NodeFilter} for filtering the nodes
+   * @return A list of filtered nodes
    */
   public List<N> getNodes(NodeFilter nodeFilter) {
     List<N> nodeList = new ArrayList<>();
@@ -279,6 +282,37 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
         for (N node : nodes.values()) {
           if (nodeFilter.accept(node)) {
             nodeList.add(node);
+          }
+        }
+      }
+    } finally {
+      readLock.unlock();
+    }
+    return nodeList;
+  }
+
+  public List<NodeId> getAllNodeIds() {
+    return getNodeIds(null);
+  }
+
+  /**
+   * Convenience method to filter nodes based on a condition.
+   *
+   * @param nodeFilter A {@link NodeFilter} for filtering the nodes
+   * @return A list of filtered nodes
+   */
+  public List<NodeId> getNodeIds(NodeFilter nodeFilter) {
+    List<NodeId> nodeList = new ArrayList<>();
+    readLock.lock();
+    try {
+      if (nodeFilter == null) {
+        for (N node : nodes.values()) {
+          nodeList.add(node.getNodeID());
+        }
+      } else {
+        for (N node : nodes.values()) {
+          if (nodeFilter.accept(node)) {
+            nodeList.add(node.getNodeID());
           }
         }
       }
@@ -320,11 +354,38 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
         resourceName != null && !resourceName.isEmpty());
     List<N> retNodes = new ArrayList<>();
     if (ResourceRequest.ANY.equals(resourceName)) {
-      return getAllNodes();
+      retNodes.addAll(getAllNodes());
     } else if (nodeNameToNodeMap.containsKey(resourceName)) {
       retNodes.add(nodeNameToNodeMap.get(resourceName));
     } else if (nodesPerRack.containsKey(resourceName)) {
-      return nodesPerRack.get(resourceName);
+      retNodes.addAll(nodesPerRack.get(resourceName));
+    } else {
+      LOG.info(
+          "Could not find a node matching given resourceName " + resourceName);
+    }
+    return retNodes;
+  }
+
+  /**
+   * Convenience method to return list of {@link NodeId} corresponding to
+   * resourceName passed in the {@link ResourceRequest}.
+   *
+   * @param resourceName Host/rack name of the resource, or
+   * {@link ResourceRequest#ANY}
+   * @return list of {@link NodeId} that match the resourceName
+   */
+  public List<NodeId> getNodeIdsByResourceName(final String resourceName) {
+    Preconditions.checkArgument(
+        resourceName != null && !resourceName.isEmpty());
+    List<NodeId> retNodes = new ArrayList<>();
+    if (ResourceRequest.ANY.equals(resourceName)) {
+      retNodes.addAll(getAllNodeIds());
+    } else if (nodeNameToNodeMap.containsKey(resourceName)) {
+      retNodes.add(nodeNameToNodeMap.get(resourceName).getNodeID());
+    } else if (nodesPerRack.containsKey(resourceName)) {
+      for (N node : nodesPerRack.get(resourceName)) {
+        retNodes.add(node.getNodeID());
+      }
     } else {
       LOG.info(
           "Could not find a node matching given resourceName " + resourceName);

@@ -153,7 +153,8 @@ public class TestLeafQueue {
     amResourceRequest = mock(ResourceRequest.class);
     when(amResourceRequest.getCapability()).thenReturn(
       Resources.createResource(0, 0));
-    when(rmApp.getAMResourceRequest()).thenReturn(amResourceRequest);
+    when(rmApp.getAMResourceRequests()).thenReturn(
+        Collections.singletonList(amResourceRequest));
     Mockito.doReturn(rmApp).when(spyApps).get((ApplicationId)Matchers.any());
     when(spyRMContext.getRMApps()).thenReturn(spyApps);
     

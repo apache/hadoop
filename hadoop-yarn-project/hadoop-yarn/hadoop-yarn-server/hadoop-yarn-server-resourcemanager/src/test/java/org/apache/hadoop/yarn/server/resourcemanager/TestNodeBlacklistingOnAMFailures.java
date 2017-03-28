@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -28,6 +29,9 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
@@ -154,6 +158,186 @@ public class TestNodeBlacklistingOnAMFailures {
         "Even though AM is blacklisted from the node, application can "
             + "still allocate non-AM containers there",
         currentNode.getNodeId(), allocatedContainers.get(0).getNodeId());
+  }
+
+  @Test(timeout = 100000)
+  public void testNodeBlacklistingOnAMFailureStrictNodeLocality()
+      throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    conf.setBoolean(YarnConfiguration.AM_SCHEDULING_NODE_BLACKLISTING_ENABLED,
+        true);
+
+    DrainDispatcher dispatcher = new DrainDispatcher();
+    MockRM rm = startRM(conf, dispatcher);
+    CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
+
+    // Register 5 nodes, so that we can blacklist atleast one if AM container
+    // is failed. As per calculation it will be like, 5nodes * 0.2 (default)=1.
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 8000, rm.getResourceTrackerService());
+    nm1.registerNode();
+
+    MockNM nm2 =
+        new MockNM("127.0.0.2:2345", 8000, rm.getResourceTrackerService());
+    nm2.registerNode();
+
+    MockNM nm3 =
+        new MockNM("127.0.0.3:2345", 8000, rm.getResourceTrackerService());
+    nm3.registerNode();
+
+    MockNM nm4 =
+        new MockNM("127.0.0.4:2345", 8000, rm.getResourceTrackerService());
+    nm4.registerNode();
+
+    MockNM nm5 =
+        new MockNM("127.0.0.5:2345", 8000, rm.getResourceTrackerService());
+    nm5.registerNode();
+
+    // Specify a strict locality on nm2
+    List<ResourceRequest> reqs = new ArrayList<>();
+    ResourceRequest nodeReq = ResourceRequest.newInstance(
+        Priority.newInstance(0), nm2.getNodeId().getHost(),
+        Resource.newInstance(200, 1), 1, true);
+    ResourceRequest rackReq = ResourceRequest.newInstance(
+        Priority.newInstance(0), "/default-rack",
+        Resource.newInstance(200, 1), 1, false);
+    ResourceRequest anyReq = ResourceRequest.newInstance(
+        Priority.newInstance(0), ResourceRequest.ANY,
+        Resource.newInstance(200, 1), 1, false);
+    reqs.add(anyReq);
+    reqs.add(rackReq);
+    reqs.add(nodeReq);
+    RMApp app = rm.submitApp(reqs);
+
+    MockAM am1 = MockRM.launchAndRegisterAM(app, rm, nm2);
+    ContainerId amContainerId =
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 1);
+    RMContainer rmContainer = scheduler.getRMContainer(amContainerId);
+    NodeId nodeWhereAMRan = rmContainer.getAllocatedNode();
+    Assert.assertEquals(nm2.getNodeId(), nodeWhereAMRan);
+
+    // Set the exist status to INVALID so that we can verify that the system
+    // automatically blacklisting the node
+    makeAMContainerExit(rm, amContainerId, nm2, ContainerExitStatus.INVALID);
+
+    // restart the am
+    RMAppAttempt attempt = MockRM.waitForAttemptScheduled(app, rm);
+    System.out.println("New AppAttempt launched " + attempt.getAppAttemptId());
+
+    nm2.nodeHeartbeat(true);
+    dispatcher.await();
+
+    // Now the AM container should be allocated
+    MockRM.waitForState(attempt, RMAppAttemptState.ALLOCATED, 20000);
+
+    MockAM am2 = rm.sendAMLaunched(attempt.getAppAttemptId());
+    rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.LAUNCHED);
+    amContainerId =
+        ContainerId.newContainerId(am2.getApplicationAttemptId(), 1);
+    rmContainer = scheduler.getRMContainer(amContainerId);
+    nodeWhereAMRan = rmContainer.getAllocatedNode();
+
+    // The second AM should be on the same node because the strict locality
+    // made the eligible nodes only 1, so the blacklisting threshold kicked in
+    System.out.println("AM ran on " + nodeWhereAMRan);
+    Assert.assertEquals(nm2.getNodeId(), nodeWhereAMRan);
+
+    am2.registerAppAttempt();
+    rm.waitForState(app.getApplicationId(), RMAppState.RUNNING);
+  }
+
+  @Test(timeout = 100000)
+  public void testNodeBlacklistingOnAMFailureRelaxedNodeLocality()
+      throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    conf.setBoolean(YarnConfiguration.AM_SCHEDULING_NODE_BLACKLISTING_ENABLED,
+        true);
+
+    DrainDispatcher dispatcher = new DrainDispatcher();
+    MockRM rm = startRM(conf, dispatcher);
+    CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
+
+    // Register 5 nodes, so that we can blacklist atleast one if AM container
+    // is failed. As per calculation it will be like, 5nodes * 0.2 (default)=1.
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 8000, rm.getResourceTrackerService());
+    nm1.registerNode();
+
+    MockNM nm2 =
+        new MockNM("127.0.0.2:2345", 8000, rm.getResourceTrackerService());
+    nm2.registerNode();
+
+    MockNM nm3 =
+        new MockNM("127.0.0.3:2345", 8000, rm.getResourceTrackerService());
+    nm3.registerNode();
+
+    MockNM nm4 =
+        new MockNM("127.0.0.4:2345", 8000, rm.getResourceTrackerService());
+    nm4.registerNode();
+
+    MockNM nm5 =
+        new MockNM("127.0.0.5:2345", 8000, rm.getResourceTrackerService());
+    nm5.registerNode();
+
+    // Specify a relaxed locality on nm2
+    List<ResourceRequest> reqs = new ArrayList<>();
+    ResourceRequest nodeReq = ResourceRequest.newInstance(
+        Priority.newInstance(0), nm2.getNodeId().getHost(),
+        Resource.newInstance(200, 1), 1, true);
+    ResourceRequest rackReq = ResourceRequest.newInstance(
+        Priority.newInstance(0), "/default-rack",
+        Resource.newInstance(200, 1), 1, true);
+    ResourceRequest anyReq = ResourceRequest.newInstance(
+        Priority.newInstance(0), ResourceRequest.ANY,
+        Resource.newInstance(200, 1), 1, true);
+    reqs.add(anyReq);
+    reqs.add(rackReq);
+    reqs.add(nodeReq);
+    RMApp app = rm.submitApp(reqs);
+
+    MockAM am1 = MockRM.launchAndRegisterAM(app, rm, nm2);
+    ContainerId amContainerId =
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 1);
+    RMContainer rmContainer = scheduler.getRMContainer(amContainerId);
+    NodeId nodeWhereAMRan = rmContainer.getAllocatedNode();
+    Assert.assertEquals(nm2.getNodeId(), nodeWhereAMRan);
+
+    // Set the exist status to INVALID so that we can verify that the system
+    // automatically blacklisting the node
+    makeAMContainerExit(rm, amContainerId, nm2, ContainerExitStatus.INVALID);
+
+    // restart the am
+    RMAppAttempt attempt = MockRM.waitForAttemptScheduled(app, rm);
+    System.out.println("New AppAttempt launched " + attempt.getAppAttemptId());
+
+    nm2.nodeHeartbeat(true);
+    nm1.nodeHeartbeat(true);
+    nm3.nodeHeartbeat(true);
+    nm4.nodeHeartbeat(true);
+    nm5.nodeHeartbeat(true);
+    dispatcher.await();
+
+    // Now the AM container should be allocated
+    MockRM.waitForState(attempt, RMAppAttemptState.ALLOCATED, 20000);
+
+    MockAM am2 = rm.sendAMLaunched(attempt.getAppAttemptId());
+    rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.LAUNCHED);
+    amContainerId =
+        ContainerId.newContainerId(am2.getApplicationAttemptId(), 1);
+    rmContainer = scheduler.getRMContainer(amContainerId);
+    nodeWhereAMRan = rmContainer.getAllocatedNode();
+
+    // The second AM should be on a different node because the relaxed locality
+    // made the app schedulable on other nodes and nm2 is blacklisted
+    System.out.println("AM ran on " + nodeWhereAMRan);
+    Assert.assertNotEquals(nm2.getNodeId(), nodeWhereAMRan);
+
+    am2.registerAppAttempt();
+    rm.waitForState(app.getApplicationId(), RMAppState.RUNNING);
   }
 
   @Test(timeout = 100000)

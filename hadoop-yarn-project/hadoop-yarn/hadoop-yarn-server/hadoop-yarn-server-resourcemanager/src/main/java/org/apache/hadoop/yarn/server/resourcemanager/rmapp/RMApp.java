@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -246,7 +247,7 @@ public interface RMApp extends EventHandler<RMAppEvent> {
 
   ReservationId getReservationId();
   
-  ResourceRequest getAMResourceRequest();
+  List<ResourceRequest> getAMResourceRequests();
 
   Map<NodeId, LogAggregationReport> getLogAggregationReportsForApp();
 

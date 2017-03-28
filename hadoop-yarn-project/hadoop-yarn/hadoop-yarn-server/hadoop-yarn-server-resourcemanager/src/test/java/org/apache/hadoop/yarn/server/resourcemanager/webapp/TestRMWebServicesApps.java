@@ -1168,8 +1168,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(app1.getApplicationId().toString(), appInfo.getAppId());
     assertEquals(app1.getName(), appInfo.getName());
     assertEquals(app1.createApplicationState(), appInfo.getState());
-    assertEquals(app1.getAMResourceRequest().getCapability().getMemorySize(),
-        appInfo.getAllocatedMB());
+    assertEquals(app1.getAMResourceRequests().get(0).getCapability()
+            .getMemorySize(), appInfo.getAllocatedMB());
 
     rm.stop();
   }
@@ -1378,7 +1378,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       expectedNumberOfElements++;
       appNodeLabelExpression = info.getString("appNodeLabelExpression");
     }
-    if (app.getAMResourceRequest().getNodeLabelExpression() != null) {
+    if (app.getAMResourceRequests().get(0).getNodeLabelExpression() != null) {
       expectedNumberOfElements++;
       amNodeLabelExpression = info.getString("amNodeLabelExpression");
     }
@@ -1485,7 +1485,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         app.getApplicationSubmissionContext().getNodeLabelExpression(),
         appNodeLabelExpression);
     assertEquals("unmanagedApplication doesn't match",
-        app.getAMResourceRequest().getNodeLabelExpression(),
+        app.getAMResourceRequests().get(0).getNodeLabelExpression(),
         amNodeLabelExpression);
     assertEquals("amRPCAddress",
         AppInfo.getAmRPCAddressFromRMAppAttempt(app.getCurrentAppAttempt()),
@@ -1512,7 +1512,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       String nodeLabelExpression, int numContainers, boolean relaxLocality,
       int priority, String resourceName, long memory, long vCores,
       String executionType, boolean enforceExecutionType) {
-    ResourceRequest request = app.getAMResourceRequest();
+    ResourceRequest request = app.getAMResourceRequests().get(0);
     assertEquals("nodeLabelExpression doesn't match",
         request.getNodeLabelExpression(), nodeLabelExpression);
     assertEquals("numContainers doesn't match", request.getNumContainers(),

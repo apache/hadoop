@@ -3206,6 +3206,84 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals(1, app.getLiveContainers().size());
   }
 
+  @Test
+  public void testAMStrictLocalityRack() throws IOException {
+    testAMStrictLocality(false, false);
+  }
+
+  @Test
+  public void testAMStrictLocalityNode() throws IOException {
+    testAMStrictLocality(true, false);
+  }
+
+  @Test
+  public void testAMStrictLocalityRackInvalid() throws IOException {
+    testAMStrictLocality(false, true);
+  }
+
+  @Test
+  public void testAMStrictLocalityNodeInvalid() throws IOException {
+    testAMStrictLocality(true, true);
+  }
+
+  private void testAMStrictLocality(boolean node, boolean invalid)
+      throws IOException {
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024), 1,
+        "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    RMNode node2 = MockNodes.newNodeInfo(2, Resources.createResource(1024), 2,
+        "127.0.0.2");
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+    scheduler.handle(nodeEvent2);
+
+    List<ResourceRequest> reqs = new ArrayList<>();
+    ResourceRequest nodeRequest = createResourceRequest(1024,
+        node2.getHostName(), 1, 1, true);
+    if (node && invalid) {
+      nodeRequest.setResourceName("invalid");
+    }
+    ResourceRequest rackRequest = createResourceRequest(1024,
+        node2.getRackName(), 1, 1, !node);
+    if (!node && invalid) {
+      rackRequest.setResourceName("invalid");
+    }
+    ResourceRequest anyRequest = createResourceRequest(1024,
+        ResourceRequest.ANY, 1, 1, false);
+    reqs.add(anyRequest);
+    reqs.add(rackRequest);
+    if (node) {
+      reqs.add(nodeRequest);
+    }
+
+    ApplicationAttemptId attId1 =
+        createSchedulingRequest("queue1", "user1", reqs);
+
+    scheduler.update();
+
+    NodeUpdateSchedulerEvent node2UpdateEvent =
+        new NodeUpdateSchedulerEvent(node2);
+
+    FSAppAttempt app = scheduler.getSchedulerApp(attId1);
+
+    // node2 should get the container
+    scheduler.handle(node2UpdateEvent);
+    if (invalid) {
+      assertEquals(0, app.getLiveContainers().size());
+      assertEquals(0, scheduler.getNode(node2.getNodeID()).getNumContainers());
+      assertEquals(0, scheduler.getNode(node1.getNodeID()).getNumContainers());
+    } else {
+      assertEquals(1, app.getLiveContainers().size());
+      assertEquals(1, scheduler.getNode(node2.getNodeID()).getNumContainers());
+      assertEquals(0, scheduler.getNode(node1.getNodeID()).getNumContainers());
+    }
+  }
+
   /**
    * Strict locality requests shouldn't reserve resources on another node.
    */
