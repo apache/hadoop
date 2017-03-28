@@ -141,18 +141,20 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     Resource amResource;
     String partition;
 
-    if (rmApp == null || rmApp.getAMResourceRequest() == null) {
+    if (rmApp == null || rmApp.getAMResourceRequests() == null
+        || rmApp.getAMResourceRequests().isEmpty()) {
       // the rmApp may be undefined (the resource manager checks for this too)
       // and unmanaged applications do not provide an amResource request
       // in these cases, provide a default using the scheduler
       amResource = rmContext.getScheduler().getMinimumResourceCapability();
       partition = CommonNodeLabelsManager.NO_LABEL;
     } else {
-      amResource = rmApp.getAMResourceRequest().getCapability();
+      amResource = rmApp.getAMResourceRequests().get(0).getCapability();
       partition =
-          (rmApp.getAMResourceRequest().getNodeLabelExpression() == null)
+          (rmApp.getAMResourceRequests().get(0)
+              .getNodeLabelExpression() == null)
           ? CommonNodeLabelsManager.NO_LABEL
-          : rmApp.getAMResourceRequest().getNodeLabelExpression();
+          : rmApp.getAMResourceRequests().get(0).getNodeLabelExpression();
     }
 
     setAppAMNodePartitionName(partition);

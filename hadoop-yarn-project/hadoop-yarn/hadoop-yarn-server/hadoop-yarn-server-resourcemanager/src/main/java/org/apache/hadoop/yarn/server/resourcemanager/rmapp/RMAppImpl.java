@@ -196,7 +196,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   private RMAppEvent eventCausingFinalSaving;
   private RMAppState targetedFinalState;
   private RMAppState recoveredFinalState;
-  private ResourceRequest amReq;
+  private List<ResourceRequest> amReqs;
   
   private CallerContext callerContext;
 
@@ -424,10 +424,10 @@ public class RMAppImpl implements RMApp, Recoverable {
       ApplicationSubmissionContext submissionContext, YarnScheduler scheduler,
       ApplicationMasterService masterService, long submitTime,
       String applicationType, Set<String> applicationTags,
-      ResourceRequest amReq) {
+      List<ResourceRequest> amReqs) {
     this(applicationId, rmContext, config, name, user, queue, submissionContext,
       scheduler, masterService, submitTime, applicationType, applicationTags,
-      amReq, -1);
+      amReqs, -1);
   }
 
   public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
@@ -435,7 +435,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       ApplicationSubmissionContext submissionContext, YarnScheduler scheduler,
       ApplicationMasterService masterService, long submitTime,
       String applicationType, Set<String> applicationTags,
-      ResourceRequest amReq, long startTime) {
+      List<ResourceRequest> amReqs, long startTime) {
 
     this.systemClock = SystemClock.getInstance();
 
@@ -458,7 +458,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     }
     this.applicationType = applicationType;
     this.applicationTags = applicationTags;
-    this.amReq = amReq;
+    this.amReqs = amReqs;
     if (submissionContext.getPriority() != null) {
       this.applicationPriority = Priority
           .newInstance(submissionContext.getPriority().getPriority());
@@ -987,7 +987,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       if (amBlacklistingEnabled && !submissionContext.getUnmanagedAM()) {
         currentAMBlacklistManager = new SimpleBlacklistManager(
             RMServerUtils.getApplicableNodeCountForAM(rmContext, conf,
-                getAMResourceRequest()),
+                getAMResourceRequests()),
             blacklistDisableThreshold);
       } else {
         currentAMBlacklistManager = new DisabledBlacklistManager();
@@ -995,7 +995,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     }
     RMAppAttempt attempt =
         new RMAppAttemptImpl(appAttemptId, rmContext, scheduler, masterService,
-          submissionContext, conf, amReq, this, currentAMBlacklistManager);
+          submissionContext, conf, amReqs, this, currentAMBlacklistManager);
     attempts.put(appAttemptId, attempt);
     currentAttempt = attempt;
   }
@@ -1690,8 +1690,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
   
   @Override
-  public ResourceRequest getAMResourceRequest() {
-    return this.amReq; 
+  public List<ResourceRequest> getAMResourceRequests() {
+    return this.amReqs;
   }
 
   @Override
@@ -1964,7 +1964,9 @@ public class RMAppImpl implements RMApp, Recoverable {
   public String getAmNodeLabelExpression() {
     String amNodeLabelExpression = null;
     if (!getApplicationSubmissionContext().getUnmanagedAM()) {
-      amNodeLabelExpression = getAMResourceRequest().getNodeLabelExpression();
+      amNodeLabelExpression =
+          getAMResourceRequests() != null && !getAMResourceRequests().isEmpty()
+              ? getAMResourceRequests().get(0).getNodeLabelExpression() : null;
       amNodeLabelExpression = (amNodeLabelExpression == null)
           ? NodeLabel.NODE_LABEL_EXPRESSION_NOT_SET : amNodeLabelExpression;
       amNodeLabelExpression = (amNodeLabelExpression.trim().isEmpty())

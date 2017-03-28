@@ -21,13 +21,16 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
@@ -41,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -557,19 +561,65 @@ public class RMServerUtils {
    *
    * @param rmContext context
    * @param conf configuration
-   * @param amreq am resource request
+   * @param amReqs am resource requests
    * @return applicable node count
    */
   public static int getApplicableNodeCountForAM(RMContext rmContext,
-      Configuration conf, ResourceRequest amreq) {
-    if (YarnConfiguration.areNodeLabelsEnabled(conf)) {
-      RMNodeLabelsManager labelManager = rmContext.getNodeLabelManager();
-      String amNodeLabelExpression = amreq.getNodeLabelExpression();
-      amNodeLabelExpression = (amNodeLabelExpression == null
-          || amNodeLabelExpression.trim().isEmpty())
-              ? RMNodeLabelsManager.NO_LABEL : amNodeLabelExpression;
-      return labelManager.getActiveNMCountPerLabel(amNodeLabelExpression);
+      Configuration conf, List<ResourceRequest> amReqs) {
+    // Determine the list of nodes that are eligible based on the strict
+    // resource requests
+    Set<NodeId> nodesForReqs = new HashSet<>();
+    for (ResourceRequest amReq : amReqs) {
+      if (amReq.getRelaxLocality() &&
+          !amReq.getResourceName().equals(ResourceRequest.ANY)) {
+        nodesForReqs.addAll(
+            rmContext.getScheduler().getNodeIds(amReq.getResourceName()));
+      }
     }
-    return rmContext.getScheduler().getNumClusterNodes();
+
+    if (YarnConfiguration.areNodeLabelsEnabled(conf)) {
+      // Determine the list of nodes that are eligible based on the node label
+      String amNodeLabelExpression = amReqs.get(0).getNodeLabelExpression();
+      Set<NodeId> nodesForLabels =
+          getNodeIdsForLabel(rmContext, amNodeLabelExpression);
+      if (nodesForLabels != null && !nodesForLabels.isEmpty()) {
+        // If only node labels, strip out any wildcard NodeIds and return
+        if (nodesForReqs.isEmpty()) {
+          for (Iterator<NodeId> it = nodesForLabels.iterator(); it.hasNext();) {
+            if (it.next().getPort() == 0) {
+              it.remove();
+            }
+          }
+          return nodesForLabels.size();
+        } else {
+          // The NodeIds common to both the strict resource requests and the
+          // node label is the eligible set
+          return Sets.intersection(nodesForReqs, nodesForLabels).size();
+        }
+      }
+    }
+
+    // If no strict resource request NodeIds nor node label NodeIds, then just
+    // return the entire cluster
+    if (nodesForReqs.isEmpty()) {
+      return rmContext.getScheduler().getNumClusterNodes();
+    }
+    // No node label NodeIds, so return the strict resource request NodeIds
+    return nodesForReqs.size();
+  }
+
+  private static Set<NodeId> getNodeIdsForLabel(RMContext rmContext,
+      String label) {
+    label = (label == null || label.trim().isEmpty())
+        ? RMNodeLabelsManager.NO_LABEL : label;
+    if (label.equals(RMNodeLabelsManager.NO_LABEL)) {
+      // NO_LABEL nodes aren't tracked directly
+      return rmContext.getNodeLabelManager().getNodesWithoutALabel();
+    } else {
+      Map<String, Set<NodeId>> labelsToNodes =
+          rmContext.getNodeLabelManager().getLabelsToNodes(
+              Collections.singleton(label));
+      return labelsToNodes.get(label);
+    }
   }
 }

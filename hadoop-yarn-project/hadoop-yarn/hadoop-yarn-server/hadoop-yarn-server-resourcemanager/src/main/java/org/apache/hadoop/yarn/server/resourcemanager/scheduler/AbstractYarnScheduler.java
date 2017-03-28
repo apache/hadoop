@@ -1257,4 +1257,9 @@ public abstract class AbstractYarnScheduler
               rmContainer.getLastConfirmedResource(), null)));
     }
   }
+
+  @Override
+  public List<NodeId> getNodeIds(String resourceName) {
+    return nodeTracker.getNodeIdsByResourceName(resourceName);
+  }
 }

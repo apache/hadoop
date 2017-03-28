@@ -801,6 +801,28 @@ public class CommonNodeLabelsManager extends AbstractService {
     }
   }
 
+  /**
+   * Get nodes that have no labels.
+   *
+   * @return set of nodes with no labels
+   */
+  public Set<NodeId> getNodesWithoutALabel() {
+    try {
+      readLock.lock();
+      Set<NodeId> nodes = new HashSet<>();
+      for (Host host : nodeCollections.values()) {
+        for (NodeId nodeId : host.nms.keySet()) {
+          if (getLabelsByNode(nodeId).isEmpty()) {
+            nodes.add(nodeId);
+          }
+        }
+      }
+      return Collections.unmodifiableSet(nodes);
+    } finally {
+      readLock.unlock();
+    }
+  }
+
 
   /**
    * Get mapping of labels to nodes for all the labels.

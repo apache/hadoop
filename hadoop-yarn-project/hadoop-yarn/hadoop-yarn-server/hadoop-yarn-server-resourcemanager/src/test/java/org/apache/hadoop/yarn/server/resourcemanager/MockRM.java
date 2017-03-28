@@ -24,6 +24,7 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -678,9 +679,44 @@ public class MockRM extends ResourceManager {
         tokensConf);
   }
 
+  public RMApp submitApp(List<ResourceRequest> amResourceRequests)
+      throws Exception {
+    return submitApp(amResourceRequests, "app1",
+        "user", null, false, null,
+        super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true,
+        false, false, null, 0, null, true,
+        amResourceRequests.get(0).getPriority(),
+        amResourceRequests.get(0).getNodeLabelExpression(), null, null);
+  }
+
   public RMApp submitApp(Resource capability, String name, String user,
       Map<ApplicationAccessType, String> acls, boolean unmanaged, String queue,
       int maxAppAttempts, Credentials ts, String appType,
+      boolean waitForAccepted, boolean keepContainers, boolean isAppIdProvided,
+      ApplicationId applicationId, long attemptFailuresValidityInterval,
+      LogAggregationContext logAggregationContext,
+      boolean cancelTokensWhenComplete, Priority priority, String amLabel,
+      Map<ApplicationTimeoutType, Long> applicationTimeouts,
+      ByteBuffer tokensConf)
+      throws Exception {
+    priority = (priority == null) ? Priority.newInstance(0) : priority;
+    ResourceRequest amResourceRequest = ResourceRequest.newInstance(
+        priority, ResourceRequest.ANY, capability, 1);
+    if (amLabel != null && !amLabel.isEmpty()) {
+      amResourceRequest.setNodeLabelExpression(amLabel.trim());
+    }
+    return submitApp(Collections.singletonList(amResourceRequest), name, user,
+        acls, unmanaged, queue, maxAppAttempts, ts, appType, waitForAccepted,
+        keepContainers, isAppIdProvided, applicationId,
+        attemptFailuresValidityInterval, logAggregationContext,
+        cancelTokensWhenComplete, priority, amLabel, applicationTimeouts,
+        tokensConf);
+  }
+
+  public RMApp submitApp(List<ResourceRequest> amResourceRequests, String name,
+      String user, Map<ApplicationAccessType, String> acls, boolean unmanaged,
+      String queue, int maxAppAttempts, Credentials ts, String appType,
       boolean waitForAccepted, boolean keepContainers, boolean isAppIdProvided,
       ApplicationId applicationId, long attemptFailuresValidityInterval,
       LogAggregationContext logAggregationContext,
@@ -718,7 +754,6 @@ public class MockRM extends ResourceManager {
     sub.setApplicationType(appType);
     ContainerLaunchContext clc = Records
         .newRecord(ContainerLaunchContext.class);
-    sub.setResource(capability);
     clc.setApplicationACLs(acls);
     if (ts != null && UserGroupInformation.isSecurityEnabled()) {
       DataOutputBuffer dob = new DataOutputBuffer();
@@ -733,12 +768,12 @@ public class MockRM extends ResourceManager {
       sub.setLogAggregationContext(logAggregationContext);
     }
     sub.setCancelTokensWhenComplete(cancelTokensWhenComplete);
-    ResourceRequest amResourceRequest = ResourceRequest.newInstance(
-        Priority.newInstance(0), ResourceRequest.ANY, capability, 1);
     if (amLabel != null && !amLabel.isEmpty()) {
-      amResourceRequest.setNodeLabelExpression(amLabel.trim());
+      for (ResourceRequest amResourceRequest : amResourceRequests) {
+        amResourceRequest.setNodeLabelExpression(amLabel.trim());
+      }
     }
-    sub.setAMContainerResourceRequest(amResourceRequest);
+    sub.setAMContainerResourceRequests(amResourceRequests);
     req.setApplicationSubmissionContext(sub);
     UserGroupInformation fakeUser =
       UserGroupInformation.createUserForTesting(user, new String[] {"someGroup"});
