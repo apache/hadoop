@@ -24,13 +24,14 @@ import org.iq80.leveldb.DBIterator;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.WriteOptions;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 
 /**
  * LevelDB interface.
  */
-public class LevelDBStore {
+public class LevelDBStore implements Closeable {
   private DB db;
   private final File dbFile;
   private final Options dbOptions;
@@ -106,6 +107,7 @@ public class LevelDBStore {
    *
    * @throws IOException
    */
+  @Override
   public void close() throws IOException {
     db.close();
   }

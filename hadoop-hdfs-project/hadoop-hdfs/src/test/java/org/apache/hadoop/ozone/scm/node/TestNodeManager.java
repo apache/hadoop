@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.ozone.scm.node;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.protocol.proto
@@ -27,13 +28,17 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.PathUtils;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
@@ -59,6 +64,9 @@ import static org.junit.Assert.assertTrue;
  * Test the Node Manager class.
  */
 public class TestNodeManager {
+
+  private File testDir;
+
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
@@ -66,13 +74,27 @@ public class TestNodeManager {
   public static void init() throws IOException {
   }
 
+  @Before
+  public void setup() {
+    testDir = PathUtils.getTestDir(
+        TestNodeManager.class);
+  }
+
+  @After
+  public void cleanup() {
+    FileUtil.fullyDelete(testDir);
+  }
+
   /**
    * Returns a new copy of Configuration.
    *
    * @return Config
    */
-  Configuration getConf() {
-    return new OzoneConfiguration();
+  OzoneConfiguration getConf() {
+    OzoneConfiguration conf = new OzoneConfiguration();
+    conf.set(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS,
+        testDir.getAbsolutePath());
+    return conf;
   }
 
   /**
@@ -83,7 +105,8 @@ public class TestNodeManager {
    * @throws IOException
    */
 
-  SCMNodeManager createNodeManager(Configuration config) throws IOException {
+  SCMNodeManager createNodeManager(OzoneConfiguration config)
+      throws IOException {
     SCMNodeManager nodeManager = new SCMNodeManager(config,
         UUID.randomUUID().toString());
     assertFalse("Node manager should be in chill mode",
@@ -201,7 +224,7 @@ public class TestNodeManager {
   @Test
   public void testScmShutdown() throws IOException, InterruptedException,
       TimeoutException {
-    Configuration conf = getConf();
+    OzoneConfiguration conf = getConf();
     conf.setInt(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, 100);
     SCMNodeManager nodeManager = createNodeManager(conf);
     DatanodeID datanodeID = SCMTestUtils.getDatanodeID(nodeManager);
@@ -228,7 +251,7 @@ public class TestNodeManager {
   @Test
   public void testScmHealthyNodeCount() throws IOException,
       InterruptedException, TimeoutException {
-    Configuration conf = getConf();
+    OzoneConfiguration conf = getConf();
     final int count = 10;
 
     try (SCMNodeManager nodeManager = createNodeManager(conf)) {
@@ -256,7 +279,7 @@ public class TestNodeManager {
   @Test
   public void testScmSanityOfUserConfig1() throws IOException,
       InterruptedException, TimeoutException {
-    Configuration conf = getConf();
+    OzoneConfiguration conf = getConf();
     final int interval = 100;
     conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, interval);
     conf.setInt(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1);
@@ -284,7 +307,7 @@ public class TestNodeManager {
   @Test
   public void testScmSanityOfUserConfig2() throws IOException,
       InterruptedException, TimeoutException {
-    Configuration conf = getConf();
+    OzoneConfiguration conf = getConf();
     final int interval = 100;
     conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, interval);
     conf.setInt(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1);
@@ -306,7 +329,7 @@ public class TestNodeManager {
   @Test
   public void testScmDetectStaleNode() throws IOException,
       InterruptedException, TimeoutException {
-    Configuration conf = getConf();
+    OzoneConfiguration conf = getConf();
     final int interval = 100;
     final int nodeCount = 10;
     conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, interval);
@@ -362,7 +385,7 @@ public class TestNodeManager {
     final int interval = 100;
     final int nodeCount = 10;
 
-    Configuration conf = getConf();
+    OzoneConfiguration conf = getConf();
     conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, interval);
     conf.setInt(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1);
     conf.setInt(OZONE_SCM_STALENODE_INTERVAL_MS, 3 * 1000);
@@ -483,7 +506,7 @@ public class TestNodeManager {
      *
      */
 
-    Configuration conf = getConf();
+    OzoneConfiguration conf = getConf();
     conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, 100);
     conf.setInt(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1);
     conf.setInt(OZONE_SCM_STALENODE_INTERVAL_MS, 3 * 1000);
@@ -659,7 +682,7 @@ public class TestNodeManager {
     final int staleCount = 100;
     final int deadCount = 10;
 
-    Configuration conf = getConf();
+    OzoneConfiguration conf = getConf();
     conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, 100);
     conf.setInt(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1);
     conf.setInt(OZONE_SCM_STALENODE_INTERVAL_MS, 3 * 1000);
@@ -749,7 +772,7 @@ public class TestNodeManager {
       InterruptedException, TimeoutException {
     final int healthyCount = 3000;
     final int staleCount = 3000;
-    Configuration conf = getConf();
+    OzoneConfiguration conf = getConf();
     conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, 100);
     conf.setInt(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1);
     conf.setInt(OZONE_SCM_STALENODE_INTERVAL_MS, 3 * 1000);
@@ -809,7 +832,7 @@ public class TestNodeManager {
     final int healthyCount = 3000;
 
     // Make the HB process thread run slower.
-    Configuration conf = getConf();
+    OzoneConfiguration conf = getConf();
     conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, 500);
     conf.setInt(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1);
     conf.setInt(OZONE_SCM_MAX_HB_COUNT_TO_PROCESS, 500);
@@ -845,7 +868,7 @@ public class TestNodeManager {
   @Test
   public void testScmEnterAndExistChillMode() throws IOException,
       InterruptedException {
-    Configuration conf = getConf();
+    OzoneConfiguration conf = getConf();
     conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, 100);
 
     try (SCMNodeManager nodeManager = createNodeManager(conf)) {
@@ -908,7 +931,7 @@ public class TestNodeManager {
   @Test
   public void testScmStatsFromNodeReport() throws IOException,
       InterruptedException, TimeoutException {
-    Configuration conf = getConf();
+    OzoneConfiguration conf = getConf();
     final int nodeCount = 10;
     final long capacity = 2000;
     final long used = 100;
@@ -948,7 +971,7 @@ public class TestNodeManager {
   @Test
   public void testScmNodeReportUpdate() throws IOException,
       InterruptedException, TimeoutException {
-    Configuration conf = getConf();
+    OzoneConfiguration conf = getConf();
     final int heartbeatCount = 5;
     final int nodeCount = 1;
     final int interval = 100;

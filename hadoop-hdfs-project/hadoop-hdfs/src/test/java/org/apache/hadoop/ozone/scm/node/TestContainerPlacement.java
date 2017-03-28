@@ -41,7 +41,6 @@ import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
@@ -66,7 +65,7 @@ public class TestContainerPlacement {
    *
    * @return Config
    */
-  Configuration getConf() {
+  OzoneConfiguration getConf() {
     return new OzoneConfiguration();
   }
 
@@ -78,7 +77,8 @@ public class TestContainerPlacement {
    * @throws IOException
    */
 
-  SCMNodeManager createNodeManager(Configuration config) throws IOException {
+  SCMNodeManager createNodeManager(OzoneConfiguration config)
+      throws IOException {
     SCMNodeManager nodeManager = new SCMNodeManager(config,
         UUID.randomUUID().toString());
     assertFalse("Node manager should be in chill mode",
@@ -103,7 +103,7 @@ public class TestContainerPlacement {
   @Test
   public void testContainerPlacementCapacity() throws IOException,
       InterruptedException, TimeoutException {
-    Configuration conf = getConf();
+    OzoneConfiguration conf = getConf();
     final int nodeCount = 4;
     final long capacity = 10L * OzoneConsts.GB;
     final long used = 2L * OzoneConsts.GB;
@@ -119,11 +119,8 @@ public class TestContainerPlacement {
     SCMNodeManager nodeManager = createNodeManager(conf);
     ContainerMapping containerManager =
         createContainerManager(conf, nodeManager);
-    List<DatanodeID> datanodes = new ArrayList<>(nodeCount);
-    for (int i = 0; i < nodeCount; i++) {
-      datanodes.add(SCMTestUtils.getDatanodeID(nodeManager));
-    }
-
+    List<DatanodeID> datanodes =
+        SCMTestUtils.getRegisteredDatanodeIDs(nodeManager, nodeCount);
     try {
       for (DatanodeID datanodeID: datanodes) {
         StorageContainerDatanodeProtocolProtos.SCMNodeReport.Builder nrb =

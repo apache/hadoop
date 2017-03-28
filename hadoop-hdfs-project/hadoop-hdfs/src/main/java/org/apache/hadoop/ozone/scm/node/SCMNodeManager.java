@@ -22,11 +22,11 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.collections.map.HashedMap;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneClientUtils;
+import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
@@ -127,10 +127,15 @@ public class SCMNodeManager
   private final CommandQueue commandQueue;
   // Node manager MXBean
   private ObjectName nmInfoBean;
+
+  // Node pool manager.
+  private final SCMNodePoolManager nodePoolManager;
+
   /**
    * Constructs SCM machine Manager.
    */
-  public SCMNodeManager(Configuration conf, String clusterID) {
+  public SCMNodeManager(OzoneConfiguration conf, String clusterID)
+      throws IOException {
     heartbeatQueue = new ConcurrentLinkedQueue<>();
     healthyNodes = new ConcurrentHashMap<>();
     deadNodes = new ConcurrentHashMap<>();
@@ -167,6 +172,8 @@ public class SCMNodeManager
         TimeUnit.MILLISECONDS);
 
     registerMXBean();
+
+    this.nodePoolManager = new SCMNodePoolManager(conf);
   }
 
   private void registerMXBean() {
@@ -671,6 +678,13 @@ public class SCMNodeManager
     healthyNodes.put(datanodeID.getDatanodeUuid(), monotonicNow());
     healthyNodeCount.incrementAndGet();
     nodeStats.put(datanodeID.getDatanodeUuid(), new SCMNodeStat());
+
+    // TODO: define node pool policy for non-default node pool.
+    // For now, all nodes are added to the "DefaultNodePool" upon registration
+    // if it has not been added to any node pool yet.
+    if (nodePoolManager.getNodePool(datanodeID) == null) {
+      nodePoolManager.addNode(SCMNodePoolManager.DEFAULT_NODEPOOL, datanodeID);
+    }
     LOG.info("Data node with ID: {} Registered.",
         datanodeID.getDatanodeUuid());
     return RegisteredCommand.newBuilder()
