@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import com.google.common.base.Supplier;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.junit.Before;
 import static org.mockito.Matchers.argThat;
@@ -590,9 +592,9 @@ public class TestRM extends ParameterizedSchedulerTestBase {
     };
 
     // test metrics
-    QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
-    int appsKilled = metrics.getAppsKilled();
-    int appsSubmitted = metrics.getAppsSubmitted();
+    final QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
+    final int appsKilled = metrics.getAppsKilled();
+    final int appsSubmitted = metrics.getAppsSubmitted();
 
     rm.start();
     
@@ -630,7 +632,13 @@ public class TestRM extends ParameterizedSchedulerTestBase {
     rm.waitForState(application.getApplicationId(), RMAppState.KILLED);
 
     // test metrics
-    metrics = rm.getResourceScheduler().getRootQueueMetrics();
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return appsKilled + 1 == metrics.getAppsKilled()
+            && appsSubmitted + 1 == metrics.getAppsSubmitted();
+      }
+    }, 100, 10000);
     Assert.assertEquals(appsKilled + 1, metrics.getAppsKilled());
     Assert.assertEquals(appsSubmitted + 1, metrics.getAppsSubmitted());
   }
