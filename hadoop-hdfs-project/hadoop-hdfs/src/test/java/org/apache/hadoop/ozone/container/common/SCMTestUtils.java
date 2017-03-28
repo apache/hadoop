@@ -38,6 +38,8 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
@@ -165,6 +167,33 @@ public final class SCMTestUtils {
     return new DatanodeID(command.getDatanodeUUID(), tempDataNode);
   }
 
+  /**
+   * Get specified number of datanode IDs and registered them with node manager.
+   * @param nodeManager - node manager to register the datanode ids.
+   * @param count - number of datanode IDs needed.
+   * @return
+   */
+  public static List<DatanodeID> getRegisteredDatanodeIDs(
+      SCMNodeManager nodeManager, int count) {
+    ArrayList<DatanodeID> datanodes = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      datanodes.add(getDatanodeID(nodeManager));
+    }
+    return datanodes;
+  }
+
+  /**
+   * Get specified number of datanode IDs.
+   * @param count - number of datanode IDs needed.
+   * @return
+   */
+  public static List<DatanodeID> getDatanodeIDs(int count) {
+    ArrayList<DatanodeID> datanodes = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      datanodes.add(getDatanodeID());
+    }
+    return datanodes;
+  }
   /**
    * Get a datanode ID.
    *

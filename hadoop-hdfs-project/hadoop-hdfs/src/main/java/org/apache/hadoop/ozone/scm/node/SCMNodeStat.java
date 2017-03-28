@@ -23,7 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 /**
  * This class represents the SCM node stat.
  */
-public class SCMNodeStat {
+public final class SCMNodeStat implements NodeStat {
   private long capacity;
   private long scmUsed;
   private long remaining;
@@ -31,13 +31,14 @@ public class SCMNodeStat {
   public SCMNodeStat() {
   }
 
-  public SCMNodeStat(SCMNodeStat other) {
+  public SCMNodeStat(final SCMNodeStat other) {
     set(other.capacity, other.scmUsed, other.remaining);
   }
 
   /**
    * @return the total configured capacity of the node.
    */
+  @Override
   public long getCapacity() {
     return capacity;
   }
@@ -45,6 +46,7 @@ public class SCMNodeStat {
   /**
    * @return the total SCM used space on the node.
    */
+  @Override
   public long getScmUsed() {
     return scmUsed;
   }
@@ -52,25 +54,29 @@ public class SCMNodeStat {
   /**
    * @return the total remaining space available on the node.
    */
+  @Override
   public long getRemaining() {
     return remaining;
   }
 
   @VisibleForTesting
-  public void set(long total, long used, long remain) {
+  @Override
+  public void set(final long total, final long used, final long remain) {
     this.capacity = total;
     this.scmUsed = used;
     this.remaining = remain;
   }
 
-  public SCMNodeStat add(SCMNodeStat stat) {
+  @Override
+  public SCMNodeStat add(final NodeStat stat) {
     this.capacity += stat.getCapacity();
     this.scmUsed += stat.getScmUsed();
     this.remaining += stat.getRemaining();
     return this;
   }
 
-  public SCMNodeStat subtract(SCMNodeStat stat) {
+  @Override
+  public SCMNodeStat subtract(final NodeStat stat) {
     this.capacity -= stat.getCapacity();
     this.scmUsed -= stat.getScmUsed();
     this.remaining -= stat.getRemaining();
@@ -78,12 +84,12 @@ public class SCMNodeStat {
   }
 
   @Override
-  public boolean equals(Object to) {
-    return this == to ||
-        (to instanceof SCMNodeStat &&
-            capacity == ((SCMNodeStat) to).getCapacity() &&
-            scmUsed == ((SCMNodeStat) to).getScmUsed() &&
-            remaining == ((SCMNodeStat) to).getRemaining());
+  public boolean equals(final Object to) {
+    return this == to
+        || (to instanceof SCMNodeStat
+        && capacity == ((SCMNodeStat) to).getCapacity()
+        && scmUsed == ((SCMNodeStat) to).getScmUsed()
+        && remaining == ((SCMNodeStat) to).getRemaining());
   }
 
   @Override
