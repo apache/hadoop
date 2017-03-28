@@ -4650,4 +4650,20 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.federation.router.file.resolver.client.class</name>
+    <value>org.apache.hadoop.hdfs.server.federation.MockResolver</value>
+    <description>
+      Class to resolve files to subclusters.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.namenode.resolver.client.class</name>
+    <value>org.apache.hadoop.hdfs.server.federation.MockResolver</value>
+    <description>
+      Class to resolve the namenode for a subcluster.
+    </description>
+  </property>
+
 </configuration>
