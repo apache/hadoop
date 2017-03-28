@@ -150,9 +150,6 @@ public class TimelineCollectorWebService {
       throw new ForbiddenException(msg);
     }
 
-    // TODO how to express async posts and handle them
-    boolean isAsync = async != null && async.trim().equalsIgnoreCase("true");
-
     try {
       ApplicationId appID = parseApplicationId(appId);
       if (appID == null) {
@@ -167,7 +164,14 @@ public class TimelineCollectorWebService {
         throw new NotFoundException(); // different exception?
       }
 
-      collector.putEntities(processTimelineEntities(entities), callerUgi);
+      boolean isAsync = async != null && async.trim().equalsIgnoreCase("true");
+      if (isAsync) {
+        collector.putEntitiesAsync(
+            processTimelineEntities(entities), callerUgi);
+      } else {
+        collector.putEntities(processTimelineEntities(entities), callerUgi);
+      }
+
       return Response.ok().build();
     } catch (Exception e) {
       LOG.error("Error putting entities", e);
