@@ -82,6 +82,11 @@ public final class CBlockConfigKeys {
   public static final String DFS_CBLOCK_TRACE_IO = "dfs.cblock.trace.io";
   public static final boolean DFS_CBLOCK_TRACE_IO_DEFAULT = false;
 
+  public static final String DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO =
+      "dfs.cblock.short.circuit.io";
+  public static final boolean DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO_DEFAULT =
+      false;
+
   /**
    * Cache size in 1000s of entries. 256 indicates 256 * 1024.
    */
