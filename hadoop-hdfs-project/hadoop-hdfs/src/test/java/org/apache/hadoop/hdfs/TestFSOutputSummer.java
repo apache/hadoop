@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -27,6 +28,7 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
@@ -104,7 +106,11 @@ public class TestFSOutputSummer {
     checkAndEraseData(actual, 0, expected, "Read Sanity Test");
     stm.close();
     // do a sanity check. Get the file checksum
-    fileSys.getFileChecksum(name);
+    FileChecksum fileChecksum = fileSys.getFileChecksum(name);
+    if (fileSys.getConf().get(
+        DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY).toString().equals("NULL")) {
+      assertNull(fileChecksum);
+    }
   }
 
   private void cleanupFile(Path name) throws IOException {

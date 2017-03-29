@@ -1950,12 +1950,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       // If there is no block allocated for the file,
       // return one with the magic entry that matches what previous
       // hdfs versions return.
-      if (locatedblocks.size() == 0) {
+      if (locatedblocks.size() == 0 || length == 0) {
         return new MD5MD5CRC32GzipFileChecksum(0, 0, fileMD5);
       }
-
-      // we should never get here since the validity was checked
-      // when getCrcType() was called above.
+      // We will get here if above condition is not met.
       return null;
     }
   }
