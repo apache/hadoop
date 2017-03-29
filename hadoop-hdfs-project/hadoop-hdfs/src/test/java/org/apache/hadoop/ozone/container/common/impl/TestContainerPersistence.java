@@ -44,6 +44,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.DirectoryStream;
@@ -613,5 +614,71 @@ public class TestContainerPersistence {
     keyManager.deleteKey(pipeline, keyName);
   }
 
+  /**
+   * Tries to update an existing and non-existing container.
+   * Verifies container map and persistent data both updated.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testUpdateContainer() throws IOException {
+    String containerName = OzoneUtils.getRequestID();
+    ContainerData data = new ContainerData(containerName);
+    data.addMetadata("VOLUME", "shire");
+    data.addMetadata("owner)", "bilbo");
 
+    containerManager.createContainer(
+        createSingleNodePipeline(containerName),
+        data);
+
+    File orgContainerFile = containerManager.getContainerFile(data);
+    Assert.assertTrue(orgContainerFile.exists());
+
+    ContainerData newData = new ContainerData(containerName);
+    newData.addMetadata("VOLUME", "shire_new");
+    newData.addMetadata("owner)", "bilbo_new");
+
+    containerManager.updateContainer(
+        createSingleNodePipeline(containerName),
+        containerName,
+        newData);
+
+    Assert.assertEquals(1, containerManager.getContainerMap().size());
+    Assert.assertTrue(containerManager.getContainerMap()
+        .containsKey(containerName));
+
+    // Verify in-memory map
+    ContainerData actualNewData = containerManager.getContainerMap()
+        .get(containerName).getContainer();
+    Assert.assertEquals(actualNewData.getAllMetadata().get("VOLUME"),
+        "shire_new");
+    Assert.assertEquals(actualNewData.getAllMetadata().get("owner)"),
+        "bilbo_new");
+
+    // Verify container data on disk
+    File newContainerFile = containerManager.getContainerFile(actualNewData);
+    Assert.assertTrue("Container file should exist.",
+        newContainerFile.exists());
+    Assert.assertEquals("Container file should be in same location.",
+        orgContainerFile.getAbsolutePath(),
+        newContainerFile.getAbsolutePath());
+
+    try (FileInputStream newIn = new FileInputStream(newContainerFile)) {
+      ContainerProtos.ContainerData actualContainerDataProto =
+          ContainerProtos.ContainerData.parseDelimitedFrom(newIn);
+      ContainerData actualContainerData = ContainerData
+          .getFromProtBuf(actualContainerDataProto);
+      Assert.assertEquals(actualContainerData.getAllMetadata().get("VOLUME"),
+          "shire_new");
+      Assert.assertEquals(actualContainerData.getAllMetadata().get("owner)"),
+          "bilbo_new");
+    }
+
+    // Update a non-existing container
+    exception.expect(StorageContainerException.class);
+    exception.expectMessage("Container doesn't exist.");
+    containerManager.updateContainer(
+        createSingleNodePipeline("non_exist_container"),
+        "non_exist_container", newData);
+  }
 }

@@ -70,6 +70,17 @@ public interface ContainerManager extends RwLock {
       throws StorageContainerException;
 
   /**
+   * Update an existing container.
+   *
+   * @param pipeline container nodes
+   * @param containerName name of the container
+   * @param data container data
+   * @throws StorageContainerException
+   */
+  void updateContainer(Pipeline pipeline, String containerName,
+      ContainerData data) throws StorageContainerException;
+
+  /**
    * As simple interface for container Iterations.
    *
    * @param prefix - Return only values matching this prefix
