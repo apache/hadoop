@@ -78,6 +78,8 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import static org.junit.Assert.assertTrue;
 
 public class TestRMAdminService {
 
@@ -841,6 +843,78 @@ public class TestRMAdminService {
     }
   }
 
+  /**
+   * Test that a configuration with no leader election configured fails.
+   */
+  @Test
+  public void testHAConfWithoutLeaderElection() {
+    Configuration conf = new Configuration(configuration);
+
+    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_EMBEDDED, false);
+    conf.setBoolean(YarnConfiguration.CURATOR_LEADER_ELECTOR, false);
+    conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2");
+
+    int base = 100;
+
+    for (String confKey :
+        YarnConfiguration.getServiceAddressConfKeys(configuration)) {
+      conf.set(HAUtil.addSuffix(confKey, "rm1"), "0.0.0.0:"
+          + (base + 20));
+      conf.set(HAUtil.addSuffix(confKey, "rm2"), "0.0.0.0:"
+          + (base + 40));
+      base = base * 2;
+    }
+
+    conf.set(YarnConfiguration.RM_HA_ID, "rm1");
+
+    checkBadConfiguration(conf);
+  }
+
+  /**
+   * Test that a configuration with a single RM fails.
+   */
+  @Test
+  public void testHAConfWithSingleRMID() {
+    Configuration conf = new Configuration(configuration);
+
+    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_EMBEDDED, true);
+    conf.set(YarnConfiguration.RM_HA_IDS, "rm1");
+
+    int base = 100;
+
+    for (String confKey :
+        YarnConfiguration.getServiceAddressConfKeys(configuration)) {
+      conf.set(HAUtil.addSuffix(confKey, "rm1"), "0.0.0.0:"
+          + (base + 20));
+      base = base * 2;
+    }
+
+    conf.set(YarnConfiguration.RM_HA_ID, "rm1");
+
+    checkBadConfiguration(conf);
+  }
+
+  /**
+   * Test that a configuration with no service information fails.
+   */
+  @Test
+  public void testHAConfWithoutServiceInfo() {
+    Configuration conf = new Configuration(configuration);
+
+    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_EMBEDDED, true);
+    conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2");
+
+    conf.set(YarnConfiguration.RM_HA_ID, "rm1");
+
+    checkBadConfiguration(conf);
+  }
+
   @Test
   public void testRMStartsWithoutConfigurationFilesProvided() {
     // enable FileSystemBasedConfigurationProvider without uploading
@@ -1366,6 +1440,27 @@ public class TestRMAdminService {
       configuration.set(HAUtil.addSuffix(confKey, "rm2"),
           "0.0.0.1:" + (base + 40));
       base = base * 2;
+    }
+  }
+
+  /**
+   * This method initializes an RM with the given configuration and expects it
+   * to fail with a configuration error.
+   *
+   * @param conf the {@link Configuration} to use
+   */
+  private void checkBadConfiguration(Configuration conf) {
+    MockRM rm1 = null;
+
+    conf.set(YarnConfiguration.RM_HA_ID, "rm1");
+
+    try {
+      rm1 = new MockRM(conf);
+      rm1.init(conf);
+      fail("The RM allowed an invalid configuration");
+    } catch (YarnRuntimeException e) {
+      assertTrue("The RM initialization threw an unexpected exception",
+          e.getMessage().startsWith(HAUtil.BAD_CONFIG_MESSAGE_PREFIX));
     }
   }
 }
