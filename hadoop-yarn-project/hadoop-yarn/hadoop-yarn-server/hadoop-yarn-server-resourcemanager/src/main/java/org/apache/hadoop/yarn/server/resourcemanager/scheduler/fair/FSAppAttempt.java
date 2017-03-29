@@ -647,7 +647,12 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       Container reservedContainer, NodeType type,
       SchedulerRequestKey schedulerKey) {
 
-    if (!reservationExceedsThreshold(node, type)) {
+    RMContainer nodeReservedContainer = node.getReservedContainer();
+    boolean reservableForThisApp = nodeReservedContainer == null ||
+        nodeReservedContainer.getApplicationAttemptId()
+            .equals(getApplicationAttemptId());
+    if (!reservationExceedsThreshold(node, type) &&
+        reservableForThisApp) {
       LOG.info("Making reservation: node=" + node.getNodeName() +
               " app_id=" + getApplicationId());
       if (reservedContainer == null) {
