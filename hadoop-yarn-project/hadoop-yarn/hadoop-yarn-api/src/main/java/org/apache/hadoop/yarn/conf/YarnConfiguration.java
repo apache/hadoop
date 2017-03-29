@@ -627,8 +627,22 @@ public class YarnConfiguration extends Configuration {
       AUTO_FAILOVER_PREFIX + "enabled";
   public static final boolean DEFAULT_AUTO_FAILOVER_ENABLED = true;
 
+  /**
+   * This property controls whether {@link ActiveStandbyElector} leader
+   * election should be used when {@link #CURATOR_LEADER_ELECTOR} is
+   * {@code false}.
+   *
+   * @deprecated This property should never be set to {@code false}.
+   */
+  @Deprecated
   public static final String AUTO_FAILOVER_EMBEDDED =
       AUTO_FAILOVER_PREFIX + "embedded";
+  /**
+   * The default value for {@link #AUTO_FAILOVER_EMBEDDED}.
+   *
+   * @deprecated The {@link #AUTO_FAILOVER_EMBEDDED} property is deprecated.
+   */
+  @Deprecated
   public static final boolean DEFAULT_AUTO_FAILOVER_EMBEDDED = true;
 
   public static final String AUTO_FAILOVER_ZK_BASE_PATH =
@@ -667,7 +681,7 @@ public class YarnConfiguration extends Configuration {
 
 
   /**
-   * Whether to use curator-based elector for leader election.
+   * Whether to use the Curator-based elector for leader election.
    *
    * @deprecated Eventually, we want to default to the curator-based
    * implementation and remove the {@link ActiveStandbyElector} based
