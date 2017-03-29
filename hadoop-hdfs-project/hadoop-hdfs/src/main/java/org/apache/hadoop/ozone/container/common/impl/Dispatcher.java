@@ -163,8 +163,7 @@ public class Dispatcher implements ContainerDispatcher {
         return ContainerUtils.unsupportedRequest(msg);
 
       case UpdateContainer:
-        // TODO : Support Update Container.
-        return ContainerUtils.unsupportedRequest(msg);
+        return handleUpdateContainer(msg);
 
       case ReadContainer:
         return handleReadContainer(msg);
@@ -295,6 +294,33 @@ public class Dispatcher implements ContainerDispatcher {
     default:
       return ContainerUtils.unsupportedRequest(msg);
     }
+  }
+
+  /**
+   * Update an existing container with the new container data.
+   *
+   * @param msg Request
+   * @return ContainerCommandResponseProto
+   * @throws IOException
+   */
+  private ContainerCommandResponseProto handleUpdateContainer(
+      ContainerCommandRequestProto msg)
+      throws IOException {
+    if (!msg.hasUpdateContainer()) {
+      LOG.debug("Malformed read container request. trace ID: {}",
+          msg.getTraceID());
+      return ContainerUtils.malformedRequest(msg);
+    }
+
+    Pipeline pipeline = Pipeline.getFromProtoBuf(
+        msg.getUpdateContainer().getPipeline());
+    String containerName = msg.getUpdateContainer()
+        .getContainerData().getName();
+
+    ContainerData data = ContainerData.getFromProtBuf(
+        msg.getUpdateContainer().getContainerData());
+    this.containerManager.updateContainer(pipeline, containerName, data);
+    return ContainerUtils.getContainerResponse(msg);
   }
 
   /**

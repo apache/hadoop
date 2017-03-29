@@ -32,6 +32,8 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Tests ozone containers.
@@ -177,6 +179,27 @@ public class TestOzoneContainer {
       Assert.assertNotNull(response);
       Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
       Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+
+      //Update an existing container
+      Map<String, String> containerUpdate = new HashMap<String, String>();
+      containerUpdate.put("container_updated_key", "container_updated_value");
+      ContainerProtos.ContainerCommandRequestProto updateRequest1 =
+          ContainerTestHelper.getUpdateContainerRequest(
+              containerName, containerUpdate);
+      ContainerProtos.ContainerCommandResponseProto updateResponse1 =
+          client.sendCommand(updateRequest1);
+      Assert.assertNotNull(updateResponse1);
+      Assert.assertEquals(ContainerProtos.Result.SUCCESS,
+          response.getResult());
+
+      //Update an non-existing container
+      ContainerProtos.ContainerCommandRequestProto updateRequest2 =
+          ContainerTestHelper.getUpdateContainerRequest(
+              "non_exist_container", containerUpdate);
+      ContainerProtos.ContainerCommandResponseProto updateResponse2 =
+          client.sendCommand(updateRequest2);
+      Assert.assertEquals(ContainerProtos.Result.CONTAINER_NOT_FOUND,
+          updateResponse2.getResult());
     } finally {
       if (client != null) {
         client.close();

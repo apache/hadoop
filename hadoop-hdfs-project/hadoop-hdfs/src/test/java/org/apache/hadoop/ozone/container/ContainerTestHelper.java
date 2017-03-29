@@ -41,6 +41,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
+import java.util.Map;
 
 /**
  * Helpers for container tests.
@@ -292,6 +293,43 @@ public final class ContainerTestHelper {
     return request.build();
   }
 
+  /**
+   * Return an update container command for test purposes.
+   * Creates a container data based on the given meta data,
+   * and request to update an existing container with it.
+   *
+   * @param containerName
+   * @param metaData
+   * @return
+   * @throws IOException
+   */
+  public static ContainerCommandRequestProto getUpdateContainerRequest(
+      String containerName, Map<String, String> metaData) throws IOException {
+    ContainerProtos.UpdateContainerRequestProto.Builder updateRequestBuilder =
+        ContainerProtos.UpdateContainerRequestProto.newBuilder();
+    ContainerProtos.ContainerData.Builder containerData = ContainerProtos
+        .ContainerData.newBuilder();
+    containerData.setName(containerName);
+    String[] keys = metaData.keySet().toArray(new String[]{});
+    for(int i=0; i<keys.length; i++) {
+      ContainerProtos.KeyValue.Builder kvBuilder =
+          ContainerProtos.KeyValue.newBuilder();
+      kvBuilder.setKey(keys[i]);
+      kvBuilder.setValue(metaData.get(keys[i]));
+      containerData.addMetadata(i, kvBuilder.build());
+    }
+
+    updateRequestBuilder.setPipeline(
+        ContainerTestHelper.createSingleNodePipeline(containerName)
+            .getProtobufMessage());
+    updateRequestBuilder.setContainerData(containerData.build());
+
+    ContainerCommandRequestProto.Builder request =
+        ContainerCommandRequestProto.newBuilder();
+    request.setCmdType(ContainerProtos.Type.UpdateContainer);
+    request.setUpdateContainer(updateRequestBuilder.build());
+    return request.build();
+  }
   /**
    * Returns a create container response for test purposes. There are a bunch of
    * tests where we need to just send a request and get a reply.
