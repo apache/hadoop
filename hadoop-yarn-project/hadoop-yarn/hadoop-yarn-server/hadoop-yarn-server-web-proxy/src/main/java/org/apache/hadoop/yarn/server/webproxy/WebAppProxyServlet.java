@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher.AppReportSource;
 import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher.FetchedAppReport;
 import org.apache.hadoop.yarn.util.Apps;
@@ -348,7 +349,12 @@ public class WebAppProxyServlet extends HttpServlet {
       //parts[0] is empty because path info always starts with a /
       String appId = parts[1];
       String rest = parts.length > 2 ? parts[2] : "";
-      ApplicationId id = Apps.toAppID(appId);
+      ApplicationId id = null;
+      try {
+        id = Apps.toAppID(appId);
+      } catch (YarnRuntimeException e) {
+        throw new YarnRuntimeException("Error parsing Application Id");
+      }
 
       if (id == null) {
         LOG.warn("{} attempting to access {} that is invalid",

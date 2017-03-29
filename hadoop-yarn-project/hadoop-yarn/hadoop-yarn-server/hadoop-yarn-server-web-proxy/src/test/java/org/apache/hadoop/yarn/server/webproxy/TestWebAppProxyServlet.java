@@ -380,6 +380,47 @@ public class TestWebAppProxyServlet {
     }
   }
 
+  /**
+   * Test header injections are not done.
+   */
+  @Test(timeout=5000)
+  public void testWebAppProxyServerHeaderInjection() throws Exception {
+    WebAppProxyServer mainServer = null;
+    Configuration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.PROXY_ADDRESS, "localhost:9099");
+    try {
+      mainServer = WebAppProxyServer.startServer(conf);
+      int counter = 20;
+
+      URL wrongUrl = new URL(
+          "http://localhost:9099/proxy/%C4%8D%C4%8ASomeCustomInjectedHeader:%20"
+          + "injected_headerVal_1484290871375_0113/");
+      HttpURLConnection proxyConn = null;
+      while (counter > 0) {
+        counter--;
+        try {
+          proxyConn = (HttpURLConnection) wrongUrl.openConnection();
+          proxyConn.connect();
+          proxyConn.getResponseCode();
+          // server started ok
+          counter = 0;
+        } catch (Exception e) {
+          Thread.sleep(100);
+        }
+      }
+      assertNotNull(proxyConn);
+      // wrong application Id
+      assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR,
+          proxyConn.getResponseCode());
+      assertTrue("Header injection happened",
+          proxyConn.getHeaderField("SomeCustomInjectedHeader") == null);
+    } finally {
+      if (mainServer != null) {
+        mainServer.stop();
+      }
+    }
+  }
+
   private String readInputStream(InputStream input) throws Exception {
     ByteArrayOutputStream data = new ByteArrayOutputStream();
     byte[] buffer = new byte[512];
