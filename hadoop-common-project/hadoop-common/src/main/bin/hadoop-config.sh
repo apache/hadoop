@@ -38,8 +38,10 @@
 # settings that might be different between daemons & interactive
 
 # you must be this high to ride the ride
-if [[ -z "${BASH_VERSINFO}" ]] || [[ "${BASH_VERSINFO}" -lt 3 ]]; then
-  echo "Hadoop requires bash v3 or better. Sorry."
+if [[ -z "${BASH_VERSINFO[0]}" ]] \
+   || [[ "${BASH_VERSINFO[0]}" -lt 3 ]] \
+   || [[ "${BASH_VERSINFO[0]}" -eq 3 && "${BASH_VERSINFO[1]}" -lt 2 ]]; then
+  echo "bash v3.2+ is required. Sorry."
   exit 1
 fi
 
@@ -55,8 +57,10 @@ fi
 # get our functions defined for usage later
 if [[ -n "${HADOOP_COMMON_HOME}" ]] &&
    [[ -e "${HADOOP_COMMON_HOME}/libexec/hadoop-functions.sh" ]]; then
+  # shellcheck source=./hadoop-common-project/hadoop-common/src/main/bin/hadoop-functions.sh
   . "${HADOOP_COMMON_HOME}/libexec/hadoop-functions.sh"
 elif [[ -e "${HADOOP_LIBEXEC_DIR}/hadoop-functions.sh" ]]; then
+  # shellcheck source=./hadoop-common-project/hadoop-common/src/main/bin/hadoop-functions.sh
   . "${HADOOP_LIBEXEC_DIR}/hadoop-functions.sh"
 else
   echo "ERROR: Unable to exec ${HADOOP_LIBEXEC_DIR}/hadoop-functions.sh." 1>&2
@@ -68,8 +72,10 @@ hadoop_deprecate_envvar HADOOP_PREFIX HADOOP_HOME
 # allow overrides of the above and pre-defines of the below
 if [[ -n "${HADOOP_COMMON_HOME}" ]] &&
    [[ -e "${HADOOP_COMMON_HOME}/libexec/hadoop-layout.sh" ]]; then
+  # shellcheck source=./hadoop-common-project/hadoop-common/src/main/bin/hadoop-layout.sh.example
   . "${HADOOP_COMMON_HOME}/libexec/hadoop-layout.sh"
 elif [[ -e "${HADOOP_LIBEXEC_DIR}/hadoop-layout.sh" ]]; then
+  # shellcheck source=./hadoop-common-project/hadoop-common/src/main/bin/hadoop-layout.sh.example
   . "${HADOOP_LIBEXEC_DIR}/hadoop-layout.sh"
 fi
 

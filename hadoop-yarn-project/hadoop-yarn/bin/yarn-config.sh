@@ -69,6 +69,7 @@ if [[ -z "${HADOOP_LIBEXEC_DIR}" ]]; then
   HADOOP_LIBEXEC_DIR=$(cd -P -- "$(dirname -- "${_yc_this}")" >/dev/null && pwd -P)
 fi
 
+# shellcheck source=./hadoop-common-project/hadoop-common/src/main/bin/hadoop-config.sh
 if [[ -n "${HADOOP_COMMON_HOME}" ]] &&
    [[ -e "${HADOOP_COMMON_HOME}/libexec/hadoop-config.sh" ]]; then
   . "${HADOOP_COMMON_HOME}/libexec/hadoop-config.sh"
