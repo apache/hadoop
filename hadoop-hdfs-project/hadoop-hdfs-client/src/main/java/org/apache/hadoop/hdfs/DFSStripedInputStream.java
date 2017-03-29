@@ -177,14 +177,18 @@ public class DFSStripedInputStream extends DFSInputStream {
 
   @Override
   public synchronized void close() throws IOException {
-    super.close();
-    if (curStripeBuf != null) {
-      BUFFER_POOL.putBuffer(curStripeBuf);
-      curStripeBuf = null;
-    }
-    if (parityBuf != null) {
-      BUFFER_POOL.putBuffer(parityBuf);
-      parityBuf = null;
+    try {
+      super.close();
+    } finally {
+      if (curStripeBuf != null) {
+        BUFFER_POOL.putBuffer(curStripeBuf);
+        curStripeBuf = null;
+      }
+      if (parityBuf != null) {
+        BUFFER_POOL.putBuffer(parityBuf);
+        parityBuf = null;
+      }
+      decoder.release();
     }
   }
 

@@ -253,6 +253,12 @@ abstract class StripedReconstructor {
     return decoder;
   }
 
+  void cleanup() {
+    if (decoder != null) {
+      decoder.release();
+    }
+  }
+
   StripedReader getStripedReader() {
     return stripedReader;
   }
