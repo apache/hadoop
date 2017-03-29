@@ -59,16 +59,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.sls.appmaster.AMSimulator;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.sls.nodemanager.NMSimulator;
 import org.apache.hadoop.yarn.sls.resourcemanager.MockAMLauncher;
-import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
-import org.apache.hadoop.yarn.sls.scheduler.ResourceSchedulerWrapper;
-import org.apache.hadoop.yarn.sls.scheduler.SLSCapacityScheduler;
-import org.apache.hadoop.yarn.sls.scheduler.SchedulerWrapper;
-import org.apache.hadoop.yarn.sls.scheduler.TaskRunner;
+import org.apache.hadoop.yarn.sls.scheduler.*;
 import org.apache.hadoop.yarn.sls.utils.SLSUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.log4j.Logger;
@@ -152,9 +150,9 @@ public class SLSRunner {
     // start application masters
     startAM();
     // set queue & tracked apps information
-    ((SchedulerWrapper) rm.getResourceScheduler())
+    ((SchedulerWrapper) rm.getResourceScheduler()).getTracker()
                             .setQueueSet(this.queueAppNumMap.keySet());
-    ((SchedulerWrapper) rm.getResourceScheduler())
+    ((SchedulerWrapper) rm.getResourceScheduler()).getTracker()
                             .setTrackedAppSet(this.trackedApps);
     // print out simulation info
     printSimulationInfo();
@@ -164,7 +162,7 @@ public class SLSRunner {
     runner.start();
   }
 
-  private void startRM() throws IOException, ClassNotFoundException {
+  private void startRM() throws Exception {
     Configuration rmConf = new YarnConfiguration();
     String schedulerClass = rmConf.get(YarnConfiguration.RM_SCHEDULER);
 
@@ -175,10 +173,12 @@ public class SLSRunner {
     if(Class.forName(schedulerClass) == CapacityScheduler.class) {
       rmConf.set(YarnConfiguration.RM_SCHEDULER,
           SLSCapacityScheduler.class.getName());
-    } else {
+    } else if (Class.forName(schedulerClass) == FairScheduler.class) {
       rmConf.set(YarnConfiguration.RM_SCHEDULER,
-              ResourceSchedulerWrapper.class.getName());
-      rmConf.set(SLSConfiguration.RM_SCHEDULER, schedulerClass);
+          SLSFairScheduler.class.getName());
+    } else if (Class.forName(schedulerClass) == FifoScheduler.class){
+      // TODO add support for FifoScheduler
+      throw new Exception("Fifo Scheduler is not supported yet.");
     }
 
     rmConf.set(SLSConfiguration.METRICS_OUTPUT_DIR, metricsOutputDir);
