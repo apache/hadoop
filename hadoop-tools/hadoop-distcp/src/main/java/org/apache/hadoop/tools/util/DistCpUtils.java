@@ -236,8 +236,13 @@ public class DistCpUtils {
       }
     }
 
-    if (attributes.contains(FileAttribute.REPLICATION) && !targetFileStatus.isDirectory() &&
-        (srcFileStatus.getReplication() != targetFileStatus.getReplication())) {
+    // The replication factor can only be preserved for replicated files.
+    // It is ignored when either the source or target file are erasure coded.
+    if (attributes.contains(FileAttribute.REPLICATION) &&
+        !targetFileStatus.isDirectory() &&
+        !targetFileStatus.isErasureCoded() &&
+        !srcFileStatus.isErasureCoded() &&
+        srcFileStatus.getReplication() != targetFileStatus.getReplication()) {
       targetFS.setReplication(path, srcFileStatus.getReplication());
     }
 

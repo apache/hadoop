@@ -159,6 +159,10 @@ public final class CopyListingFileStatus implements Writable {
     return permission;
   }
 
+  public boolean isErasureCoded() {
+    return getPermission().getErasureCodedBit();
+  }
+
   /**
    * Returns the full logical ACL.
    *

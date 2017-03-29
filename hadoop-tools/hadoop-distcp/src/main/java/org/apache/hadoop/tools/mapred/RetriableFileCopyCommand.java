@@ -167,6 +167,9 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         FsPermission.getUMask(targetFS.getConf()));
     final OutputStream outStream;
     if (action == FileAction.OVERWRITE) {
+      // If there is an erasure coding policy set on the target directory,
+      // files will be written to the target directory using the same EC policy.
+      // The replication factor of the source file is ignored and not preserved.
       final short repl = getReplicationFactor(fileAttributes, source,
           targetFS, targetPath);
       final long blockSize = getBlockSize(fileAttributes, source,
