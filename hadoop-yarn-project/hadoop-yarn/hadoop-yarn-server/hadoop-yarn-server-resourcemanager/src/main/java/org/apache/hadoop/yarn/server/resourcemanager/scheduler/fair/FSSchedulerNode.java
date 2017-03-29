@@ -171,9 +171,8 @@ public class FSSchedulerNode extends SchedulerNode {
   /**
    * Mark {@code containers} as being considered for preemption so they are
    * not considered again. A call to this requires a corresponding call to
-   * {@code releaseContainer} for preemption to ensure we do not mark a
-   * container for preemption and never consider it again and avoid memory
-   * leaks.
+   * {@code releaseContainer} to ensure we do not mark a container for
+   * preemption and never consider it again and avoid memory leaks.
    *
    * @param containers container to mark
    */
@@ -211,6 +210,7 @@ public class FSSchedulerNode extends SchedulerNode {
     super.allocateContainer(rmContainer, launchedOnNode);
     Resource allocated = rmContainer.getAllocatedResource();
     if (!Resources.isNone(allocated)) {
+      // check for satisfied preemption request and update bookkeeping
       FSAppAttempt app =
           appIdToAppMap.get(rmContainer.getApplicationAttemptId());
       if (app != null) {
@@ -224,6 +224,8 @@ public class FSSchedulerNode extends SchedulerNode {
           appIdToAppMap.remove(rmContainer.getApplicationAttemptId());
         }
       }
+    } else {
+      LOG.error("Allocated empty container" + rmContainer.getContainerId());
     }
   }
 
