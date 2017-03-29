@@ -86,20 +86,15 @@ Get the status of a path
             stat.length = 0
             stat.isdir = False
             stat.symlink = FS.Symlinks[p]
-        if inEncryptionZone(FS, p) :
-            stat.isEncrypted = True
-        else
-            stat.isEncrypted = False
-        if isErasureCoded(FS, p) :
-            stat.isErasureCoded = True
-        else
-            stat.isErasureCoded = False
+        stat.hasAcl = hasACL(FS, p)
+        stat.isEncrypted = inEncryptionZone(FS, p)
+        stat.isErasureCoded = isErasureCoded(FS, p)
 
 The returned `FileStatus` status of the path additionally carries details on
-Encryption and Erasure Coding information. `getFileStatus(Path p).isEncrypted()`
-can be queried to find if the path is Encrypted.
-Likewise, `getFileStatus(Path p).isErasureCoded()` will tell if the path is
-Erasure Coded or not.
+ACL, encryption and erasure coding information. `getFileStatus(Path p).hasAcl()`
+can be queried to find if the path has an ACL. `getFileStatus(Path p).isEncrypted()`
+can be queried to find if the path is encrypted. `getFileStatus(Path p).isErasureCoded()`
+will tell if the path is erasure coded or not.
 
 ### `Path getHomeDirectory()`
 

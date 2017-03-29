@@ -75,6 +75,9 @@ public class TestViewfsFileStatus {
     FileStatus stat = vfs.getFileStatus(path);
     assertEquals(content.length, stat.getLen());
     ContractTestUtils.assertNotErasureCoded(vfs, path);
+    assertTrue(path + " should have erasure coding unset in " +
+            "FileStatus#toString(): " + stat,
+        stat.toString().contains("isErasureCoded=false"));
 
     // check serialization/deserialization
     DataOutputBuffer dob = new DataOutputBuffer();

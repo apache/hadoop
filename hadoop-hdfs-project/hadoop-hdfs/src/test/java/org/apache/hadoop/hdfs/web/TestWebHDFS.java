@@ -547,24 +547,36 @@ public class TestWebHDFS {
       Assert.assertEquals(expectedECDirStatus.isErasureCoded(),
           actualECDirStatus.isErasureCoded());
       ContractTestUtils.assertErasureCoded(dfs, ecDir);
+      assertTrue(ecDir+ " should have erasure coding set in " +
+              "FileStatus#toString(): " + actualECDirStatus,
+          actualECDirStatus.toString().contains("isErasureCoded=true"));
 
       FileStatus expectedECFileStatus = dfs.getFileStatus(ecFile);
       FileStatus actualECFileStatus = webHdfs.getFileStatus(ecFile);
       Assert.assertEquals(expectedECFileStatus.isErasureCoded(),
           actualECFileStatus.isErasureCoded());
       ContractTestUtils.assertErasureCoded(dfs, ecFile);
+      assertTrue(ecFile+ " should have erasure coding set in " +
+              "FileStatus#toString(): " + actualECFileStatus,
+          actualECFileStatus.toString().contains("isErasureCoded=true"));
 
       FileStatus expectedNormalDirStatus = dfs.getFileStatus(normalDir);
       FileStatus actualNormalDirStatus = webHdfs.getFileStatus(normalDir);
       Assert.assertEquals(expectedNormalDirStatus.isErasureCoded(),
           actualNormalDirStatus.isErasureCoded());
       ContractTestUtils.assertNotErasureCoded(dfs, normalDir);
+      assertTrue(normalDir + " should have erasure coding unset in " +
+              "FileStatus#toString(): " + actualNormalDirStatus,
+          actualNormalDirStatus.toString().contains("isErasureCoded=false"));
 
       FileStatus expectedNormalFileStatus = dfs.getFileStatus(normalFile);
       FileStatus actualNormalFileStatus = webHdfs.getFileStatus(normalDir);
       Assert.assertEquals(expectedNormalFileStatus.isErasureCoded(),
           actualNormalFileStatus.isErasureCoded());
       ContractTestUtils.assertNotErasureCoded(dfs, normalFile);
+      assertTrue(normalFile + " should have erasure coding unset in " +
+              "FileStatus#toString(): " + actualNormalFileStatus,
+          actualNormalFileStatus.toString().contains("isErasureCoded=false"));
 
     } finally {
       if (cluster != null) {

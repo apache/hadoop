@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -85,7 +86,7 @@ public class TestFileStatusWithECPolicy {
     assertNotNull(ecPolicy2);
     assertTrue(ecPolicy1.equals(ecPolicy2));
 
-    // test file doesn't have an EC policy
+    // test file with EC policy
     fs.create(file).close();
     final ErasureCodingPolicy ecPolicy3 =
         fs.getClient().getFileInfo(file.toUri().getPath())
@@ -93,5 +94,9 @@ public class TestFileStatusWithECPolicy {
     assertNotNull(ecPolicy3);
     assertTrue(ecPolicy1.equals(ecPolicy3));
     ContractTestUtils.assertErasureCoded(fs, file);
+    FileStatus status = fs.getFileStatus(file);
+    assertTrue(file + " should have erasure coding set in " +
+            "FileStatus#toString(): " + status,
+        status.toString().contains("isErasureCoded=true"));
   }
 }

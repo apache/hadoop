@@ -139,6 +139,9 @@ public class TestFileStatus {
     assertEquals(file1.makeQualified(fs.getUri(),
         fs.getWorkingDirectory()).toString(), 
         status.getPath().toString());
+    assertTrue(file1 + " should have erasure coding unset in " +
+            "FileStatus#toString(): " + status,
+        status.toString().contains("isErasureCoded=false"));
   }
 
   /** Test the FileStatus obtained calling listStatus on a file */
