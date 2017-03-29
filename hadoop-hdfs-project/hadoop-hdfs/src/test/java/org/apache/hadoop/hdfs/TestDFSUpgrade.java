@@ -290,7 +290,7 @@ public class TestDFSUpgrade {
           UpgradeUtilities.getCurrentFsscTime(cluster), NodeType.DATA_NODE);
       
       UpgradeUtilities.createDataNodeVersionFile(baseDirs, storageInfo,
-          UpgradeUtilities.getCurrentBlockPoolID(cluster));
+          UpgradeUtilities.getCurrentBlockPoolID(cluster), conf);
       
       startBlockPoolShouldFail(StartupOption.REGULAR, UpgradeUtilities
           .getCurrentBlockPoolID(null));
@@ -308,7 +308,7 @@ public class TestDFSUpgrade {
           NodeType.DATA_NODE);
           
       UpgradeUtilities.createDataNodeVersionFile(baseDirs, storageInfo, 
-          UpgradeUtilities.getCurrentBlockPoolID(cluster));
+          UpgradeUtilities.getCurrentBlockPoolID(cluster), conf);
       // Ensure corresponding block pool failed to initialized
       startBlockPoolShouldFail(StartupOption.REGULAR, UpgradeUtilities
           .getCurrentBlockPoolID(null));
