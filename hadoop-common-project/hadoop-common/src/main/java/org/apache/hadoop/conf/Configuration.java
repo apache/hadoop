@@ -2756,9 +2756,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             token.setLength(0);
             break;
           case "include":
-            if (!"xi".equals(reader.getPrefix())) {
-              break;
-            }
             // Determine href for xi:include
             String confInclude = null;
             attrCount = reader.getAttributeCount();
@@ -2795,9 +2792,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             }
             break;
           case "fallback":
-            if (!"xi".equals(reader.getPrefix())) {
-              break;
-            }
             fallbackEntered = true;
             break;
           case "configuration":
@@ -2833,9 +2827,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             confSource.add(StringInterner.weakIntern(token.toString()));
             break;
           case "include":
-            if (!"xi".equals(reader.getPrefix())) {
-              break;
-            }
             if (fallbackAllowed && !fallbackEntered) {
               throw new IOException("Fetch fail on include with no "
                   + "fallback while loading '" + name + "'");
