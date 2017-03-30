@@ -238,28 +238,42 @@ class JobResourceUploader {
     Collection<String> dcArchives =
         conf.getStringCollection(MRJobConfig.CACHE_ARCHIVES);
 
-    for (String path : dcFiles) {
-      explorePath(conf, new Path(path), limitChecker, statCache);
+    for (String uri : dcFiles) {
+      explorePath(conf, stringToPath(uri), limitChecker, statCache);
     }
 
-    for (String path : dcArchives) {
-      explorePath(conf, new Path(path), limitChecker, statCache);
+    for (String uri : dcArchives) {
+      explorePath(conf, stringToPath(uri), limitChecker, statCache);
     }
 
-    for (String path : files) {
-      explorePath(conf, new Path(path), limitChecker, statCache);
+    for (String uri : files) {
+      explorePath(conf, stringToPath(uri), limitChecker, statCache);
     }
 
-    for (String path : libjars) {
-      explorePath(conf, new Path(path), limitChecker, statCache);
+    for (String uri : libjars) {
+      explorePath(conf, stringToPath(uri), limitChecker, statCache);
     }
 
-    for (String path : archives) {
-      explorePath(conf, new Path(path), limitChecker, statCache);
+    for (String uri : archives) {
+      explorePath(conf, stringToPath(uri), limitChecker, statCache);
     }
 
     if (jobJar != null) {
-      explorePath(conf, new Path(jobJar), limitChecker, statCache);
+      explorePath(conf, stringToPath(jobJar), limitChecker, statCache);
+    }
+  }
+
+  /**
+   * Convert a String to a Path and gracefully remove fragments/queries if they
+   * exist in the String.
+   */
+  @VisibleForTesting
+  Path stringToPath(String s) {
+    try {
+      URI uri = new URI(s);
+      return new Path(uri.getScheme(), uri.getAuthority(), uri.getPath());
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(e);
     }
   }
 
