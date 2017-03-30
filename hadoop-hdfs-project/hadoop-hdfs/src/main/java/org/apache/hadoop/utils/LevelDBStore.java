@@ -156,4 +156,16 @@ public class LevelDBStore implements Closeable {
   public void destroy() throws IOException {
     JniDBFactory.factory.destroy(dbFile, dbOptions);
   }
+
+
+  /**
+   * Compacts the DB by removing deleted keys etc.
+   * @throws IOException if there is an error.
+   */
+  public void compactDB() throws IOException {
+    if(db != null) {
+      // From LevelDB docs : begin == null and end == null means the whole DB.
+      db.compactRange(null, null);
+    }
+  }
 }

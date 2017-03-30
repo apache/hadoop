@@ -24,9 +24,9 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.impl.ChunkManagerImpl;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -217,7 +217,12 @@ public final class ChunkUtils {
         }
       }
       if (file != null) {
-        IOUtils.closeStream(file);
+        try {
+          file.close();
+        } catch (IOException e) {
+          throw new StorageContainerException("Error closing chunk file",
+              e, CONTAINER_INTERNAL_ERROR);
+        }
       }
     }
   }
@@ -250,9 +255,7 @@ public final class ChunkUtils {
    *
    * @param chunkFile - file where data lives.
    * @param data - chunk definition.
-   *
    * @return ByteBuffer
-   *
    * @throws StorageContainerException
    * @throws ExecutionException
    * @throws InterruptedException

@@ -24,6 +24,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
+import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
@@ -40,6 +41,7 @@ import org.apache.hadoop.ozone.container.common.interfaces
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.utils.LevelDBStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,6 +80,8 @@ import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .Result.UNABLE_TO_READ_METADATA_DB;
 import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .Result.UNSUPPORTED_REQUEST;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+   .Result.ERROR_IN_COMPACT_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_EXTENSION;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_META;
 
@@ -301,18 +305,22 @@ public class ContainerManagerImpl implements ContainerManager {
     FileOutputStream metaStream = null;
 
     try {
-      Path location = locationManager.getContainerPath();
+      Path metadataPath = null;
+      Path location = (!overwrite) ? locationManager.getContainerPath():
+          Paths.get(containerData.getContainerPath()).getParent();
       File containerFile = ContainerUtils.getContainerFile(containerData,
           location);
       File metadataFile = ContainerUtils.getMetadataFile(containerData,
           location);
+
       if(!overwrite) {
         ContainerUtils.verifyIsNewContainer(containerFile, metadataFile);
+        metadataPath = this.locationManager.getDataPath(
+            containerData.getContainerName());
+        metadataPath = ContainerUtils.createMetadata(metadataPath);
+      }  else {
+        metadataPath = ContainerUtils.getMetadataDirectory(containerData);
       }
-
-      Path metadataPath = this.locationManager.getDataPath(
-          containerData.getContainerName());
-      metadataPath = ContainerUtils.createMetadata(metadataPath);
 
       containerStream = new FileOutputStream(containerFile);
       metaStream = new FileOutputStream(metadataFile);
@@ -470,6 +478,16 @@ public class ContainerManagerImpl implements ContainerManager {
     ContainerData containerData = readContainer(containerName);
     containerData.closeContainer();
     writeContainerInfo(containerData, true);
+    LevelDBStore db = KeyUtils.getDB(containerData, conf);
+
+    // It is ok if this operation takes a bit of time.
+    // Close container is not expected to be instantaneous.
+    try {
+      db.compactDB();
+    } catch (IOException e) {
+      LOG.error("Error in DB compaction while closing container", e);
+      throw new StorageContainerException(e, ERROR_IN_COMPACT_DB);
+    }
 
     // Active is different from closed. Closed means it is immutable, active
     // false means we have some internal error that is happening to this

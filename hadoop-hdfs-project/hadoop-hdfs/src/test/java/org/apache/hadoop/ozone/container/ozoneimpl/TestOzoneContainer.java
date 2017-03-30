@@ -276,7 +276,8 @@ public class TestOzoneContainer {
     }
   }
 
-  private void testCloseContainer() throws Exception {
+  @Test
+  public void testCloseContainer() throws Exception {
     MiniOzoneCluster cluster = null;
     XceiverClient client = null;
     try {
@@ -307,16 +308,18 @@ public class TestOzoneContainer {
       client.connect();
 
 
+
+      // Create container
+      ContainerProtos.ContainerCommandRequestProto request =
+          ContainerTestHelper.getCreateContainerRequest(containerName);
+      ContainerProtos.ContainerCommandResponseProto response =
+          client.sendCommand(request);
+      Assert.assertNotNull(response);
+      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+
       ContainerProtos.ContainerCommandRequestProto writeChunkRequest =
           ContainerTestHelper.getWriteChunkRequest(pipeline, containerName,
               keyName, 1024);
-
-      ContainerProtos.ContainerCommandRequestProto request;
-      ContainerProtos.ContainerCommandResponseProto response;
-
-      ContainerProtos.ContainerCommandRequestProto putKeyRequest =
-          ContainerTestHelper.getPutKeyRequest(writeChunkRequest
-              .getWriteChunk());
 
       // Write Chunk before closing
       response = client.sendCommand(writeChunkRequest);
@@ -327,6 +330,9 @@ public class TestOzoneContainer {
           .getTraceID()));
 
 
+      ContainerProtos.ContainerCommandRequestProto putKeyRequest =
+          ContainerTestHelper.getPutKeyRequest(writeChunkRequest
+              .getWriteChunk());
       // Put key before closing.
       response = client.sendCommand(putKeyRequest);
       Assert.assertNotNull(response);
