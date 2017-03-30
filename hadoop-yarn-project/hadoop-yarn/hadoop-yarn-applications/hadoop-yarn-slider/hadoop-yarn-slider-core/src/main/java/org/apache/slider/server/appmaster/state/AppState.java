@@ -64,6 +64,7 @@ import org.apache.slider.server.appmaster.operations.AbstractRMOperation;
 import org.apache.slider.server.appmaster.operations.ContainerReleaseOperation;
 import org.apache.slider.server.appmaster.operations.ContainerRequestOperation;
 import org.apache.slider.server.appmaster.operations.UpdateBlacklistOperation;
+import org.apache.slider.server.appmaster.timelineservice.ServiceTimelinePublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -207,6 +208,8 @@ public class AppState {
   private Resource maxResource;
 
   private SliderMetrics appMetrics;
+
+  private ServiceTimelinePublisher serviceTimelinePublisher;
   /**
    * Create an instance
    * @param recordFactory factory for YARN records
@@ -1762,6 +1765,10 @@ public class AppState {
         log.info("Releasing container. Log: " + url);
         try {
           containerReleaseSubmitted(possible);
+          // update during finish call
+          if (serviceTimelinePublisher != null) {
+            serviceTimelinePublisher.componentInstanceFinished(instance);
+          }
         } catch (SliderInternalStateException e) {
           log.warn("when releasing container {} :", possible, e);
         }
@@ -1947,5 +1954,9 @@ public class AppState {
       naming.put(entry.getKey(), entry.getValue().getName());
     }
     return naming;
+  }
+
+  public void setServiceTimelinePublisher(ServiceTimelinePublisher serviceTimelinePublisher) {
+    this.serviceTimelinePublisher = serviceTimelinePublisher;
   }
 }
