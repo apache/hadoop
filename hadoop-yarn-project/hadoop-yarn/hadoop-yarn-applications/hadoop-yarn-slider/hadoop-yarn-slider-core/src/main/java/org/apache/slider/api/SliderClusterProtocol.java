@@ -149,18 +149,4 @@ public interface SliderClusterProtocol extends VersionedProtocol {
   Messages.NodeInformationProto getLiveNode(
       Messages.GetLiveNodeRequestProto request
   ) throws IOException;
-
-  Messages.WrappedJsonProto getModelDesired(Messages.EmptyPayloadProto request) throws IOException;
-
-  Messages.WrappedJsonProto getModelDesiredAppconf(Messages.EmptyPayloadProto request) throws IOException;
-
-  Messages.WrappedJsonProto getModelDesiredResources(Messages.EmptyPayloadProto request) throws IOException;
-
-  Messages.WrappedJsonProto getModelResolved(Messages.EmptyPayloadProto request) throws IOException;
-
-  Messages.WrappedJsonProto getModelResolvedAppconf(Messages.EmptyPayloadProto request) throws IOException;
-
-  Messages.WrappedJsonProto getModelResolvedResources(Messages.EmptyPayloadProto request) throws IOException;
-
-  Messages.WrappedJsonProto getLiveResources(Messages.EmptyPayloadProto request) throws IOException;
 }

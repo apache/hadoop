@@ -137,32 +137,4 @@ service SliderClusterProtocolPB {
 
   rpc getLiveNode(GetLiveNodeRequestProto)
     returns(NodeInformationProto);
-  
-// AggregateConf getModelDesired()
-  rpc getModelDesired(EmptyPayloadProto) 
-    returns(WrappedJsonProto);
-
-  // ConfTree getModelDesiredAppconf
-  rpc getModelDesiredAppconf(EmptyPayloadProto) 
-    returns(WrappedJsonProto);
-
-    // ConfTree getModelDesiredResources
-  rpc getModelDesiredResources(EmptyPayloadProto) 
-    returns(WrappedJsonProto);
-  
-// AggregateConf getModelResolved()
-  rpc getModelResolved(EmptyPayloadProto) 
-    returns(WrappedJsonProto);
-
-  // ConfTree getModelResolvedAppconf
-  rpc getModelResolvedAppconf(EmptyPayloadProto) 
-    returns(WrappedJsonProto);
-
-    // ConfTree getModelResolvedResources
-  rpc getModelResolvedResources(EmptyPayloadProto) 
-    returns(WrappedJsonProto);
-
-    // ConfTree getLiveResources
-  rpc getLiveResources(EmptyPayloadProto) 
-    returns(WrappedJsonProto);
 }

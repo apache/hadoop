@@ -36,9 +36,6 @@ public class ApplicationLivenessInformation {
   /** number of outstanding requests: those needed to satisfy */
   public int requestsOutstanding;
 
-  /** number of requests submitted to YARN */
-  public int activeRequests;
-
   @Override
   public String toString() {
     final StringBuilder sb =

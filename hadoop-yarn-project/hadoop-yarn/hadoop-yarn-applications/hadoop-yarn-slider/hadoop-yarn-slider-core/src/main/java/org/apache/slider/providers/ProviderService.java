@@ -18,29 +18,18 @@
 
 package org.apache.slider.providers;
 
-import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.slider.api.ClusterDescription;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.common.tools.SliderFileSystem;
-import org.apache.slider.core.conf.AggregateConf;
 import org.apache.slider.core.exceptions.SliderException;
 import org.apache.slider.core.launch.ContainerLauncher;
-import org.apache.slider.core.main.ExitCodeProvider;
-import org.apache.slider.server.appmaster.actions.QueueAccess;
-import org.apache.slider.server.appmaster.operations.RMOperationHandlerActions;
-import org.apache.slider.server.appmaster.state.ContainerReleaseSelector;
 import org.apache.slider.server.appmaster.state.StateAccessForProviders;
 import org.apache.slider.server.services.yarnregistry.YarnRegistryViewForProviders;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.URL;
-import java.util.List;
-import java.util.Map;
 
 public interface ProviderService extends Service {
 
