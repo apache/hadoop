@@ -22,7 +22,6 @@ import org.apache.slider.api.resource.Application;
 import org.apache.slider.server.appmaster.web.WebAppApi;
 import org.apache.slider.server.appmaster.web.rest.application.actions.RestActionStop;
 import org.apache.slider.server.appmaster.web.rest.application.actions.StopResponse;
-import org.apache.slider.server.appmaster.web.rest.management.ManagementResource;
 import org.apache.slider.server.appmaster.web.rest.publisher.PublisherResource;
 import org.apache.slider.server.appmaster.web.rest.registry.RegistryResource;
 
@@ -46,22 +45,16 @@ public class AMWebServices {
   
   /** AM/WebApp info object */
   private WebAppApi slider;
-  private final ManagementResource managementResource;
   private final PublisherResource publisherResource;
   private final RegistryResource registryResource;
 
   @Inject
   public AMWebServices(WebAppApi slider) {
     this.slider = slider;
-    managementResource = new ManagementResource(slider);
     publisherResource = new PublisherResource(slider);
     registryResource = new RegistryResource(slider);
   }
-
-  @Path(RestPaths.SLIDER_SUBPATH_MANAGEMENT)
-  public ManagementResource getManagementResource() {
-    return managementResource;
-  }
+  //TODO add an endpoint for exposing configs
 
   @Path(RestPaths.SLIDER_SUBPATH_PUBLISHER)
   public PublisherResource getPublisherResource() {

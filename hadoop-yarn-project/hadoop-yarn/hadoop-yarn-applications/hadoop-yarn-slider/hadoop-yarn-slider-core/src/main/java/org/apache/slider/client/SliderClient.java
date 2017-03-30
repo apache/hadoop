@@ -46,8 +46,6 @@ import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.KerberosDiags;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.alias.CredentialProvider;
-import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
@@ -59,8 +57,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
-import org.apache.hadoop.yarn.api.records.NodeReport;
-import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
@@ -72,14 +68,12 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.slider.api.ClusterNode;
-import org.apache.slider.api.SliderApplicationApi;
 import org.apache.slider.api.SliderClusterProtocol;
 import org.apache.slider.api.proto.Messages;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.Component;
 import org.apache.slider.api.types.ContainerInformation;
 import org.apache.slider.api.types.NodeInformationList;
-import org.apache.slider.client.ipc.SliderApplicationIpcClient;
 import org.apache.slider.client.ipc.SliderClusterOperations;
 import org.apache.slider.common.Constants;
 import org.apache.slider.common.SliderExitCodes;
@@ -119,9 +113,6 @@ import org.apache.slider.common.tools.ConfigHelper;
 import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.common.tools.SliderVersionInfo;
-import org.apache.slider.core.buildutils.InstanceIO;
-import org.apache.slider.core.conf.AggregateConf;
-import org.apache.slider.core.conf.ConfTree;
 import org.apache.slider.core.exceptions.BadClusterStateException;
 import org.apache.slider.core.exceptions.BadCommandArgumentsException;
 import org.apache.slider.core.exceptions.BadConfigException;
@@ -178,8 +169,6 @@ import java.io.InterruptedIOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -199,7 +188,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.registry.client.binding.RegistryUtils.*;
-import static org.apache.slider.api.InternalKeys.INTERNAL_APPLICATION_IMAGE_PATH;
 import static org.apache.slider.common.Constants.HADOOP_JAAS_DEBUG;
 import static org.apache.slider.common.params.SliderActions.*;
 import static org.apache.slider.common.tools.SliderUtils.*;
@@ -253,7 +241,6 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
    */
   private SliderYarnClientImpl yarnClient;
   private YarnAppListClient yarnAppListClient;
-  private AggregateConf launchedInstanceDefinition;
 
   /**
    * The YARN registry service
@@ -942,43 +929,43 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     return 0;
   }
 
-  protected static void checkForCredentials(Configuration conf,
-      ConfTree tree, String clusterName) throws IOException {
-    if (tree.credentials == null || tree.credentials.isEmpty()) {
-      log.info("No credentials requested");
-      return;
-    }
-
-    Console console = System.console();
-    for (Entry<String, List<String>> cred : tree.credentials.entrySet()) {
-      String provider = cred.getKey()
-          .replaceAll(Pattern.quote("${CLUSTER_NAME}"), clusterName)
-          .replaceAll(Pattern.quote("${CLUSTER}"), clusterName);
-      List<String> aliases = cred.getValue();
-      if (aliases == null || aliases.isEmpty()) {
-        continue;
-      }
-      Configuration c = new Configuration(conf);
-      c.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, provider);
-      CredentialProvider credentialProvider = CredentialProviderFactory.getProviders(c).get(0);
-      Set<String> existingAliases = new HashSet<>(credentialProvider.getAliases());
-      for (String alias : aliases) {
-        if (existingAliases.contains(alias.toLowerCase(Locale.ENGLISH))) {
-          log.info("Credentials for " + alias + " found in " + provider);
-        } else {
-          if (console == null) {
-            throw new IOException("Unable to input password for " + alias +
-                " because System.console() is null; provider " + provider +
-                " must be populated manually");
-          }
-          char[] pass = readPassword(alias, console);
-          credentialProvider.createCredentialEntry(alias, pass);
-          credentialProvider.flush();
-          Arrays.fill(pass, ' ');
-        }
-      }
-    }
-  }
+//  protected static void checkForCredentials(Configuration conf,
+//      ConfTree tree, String clusterName) throws IOException {
+//    if (tree.credentials == null || tree.credentials.isEmpty()) {
+//      log.info("No credentials requested");
+//      return;
+//    }
+//
+//    Console console = System.console();
+//    for (Entry<String, List<String>> cred : tree.credentials.entrySet()) {
+//      String provider = cred.getKey()
+//          .replaceAll(Pattern.quote("${CLUSTER_NAME}"), clusterName)
+//          .replaceAll(Pattern.quote("${CLUSTER}"), clusterName);
+//      List<String> aliases = cred.getValue();
+//      if (aliases == null || aliases.isEmpty()) {
+//        continue;
+//      }
+//      Configuration c = new Configuration(conf);
+//      c.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, provider);
+//      CredentialProvider credentialProvider = CredentialProviderFactory.getProviders(c).get(0);
+//      Set<String> existingAliases = new HashSet<>(credentialProvider.getAliases());
+//      for (String alias : aliases) {
+//        if (existingAliases.contains(alias.toLowerCase(Locale.ENGLISH))) {
+//          log.info("Credentials for " + alias + " found in " + provider);
+//        } else {
+//          if (console == null) {
+//            throw new IOException("Unable to input password for " + alias +
+//                " because System.console() is null; provider " + provider +
+//                " must be populated manually");
+//          }
+//          char[] pass = readPassword(alias, console);
+//          credentialProvider.createCredentialEntry(alias, pass);
+//          credentialProvider.flush();
+//          Arrays.fill(pass, ' ');
+//        }
+//      }
+//    }
+//  }
 
   private static char[] readPassword(String alias, Console console)
       throws IOException {
@@ -1347,56 +1334,57 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   }
 
   private int actionPackageInstances() throws YarnException, IOException {
-    Map<String, Path> persistentInstances = sliderFileSystem
-        .listPersistentInstances();
-    if (persistentInstances.isEmpty()) {
-      log.info("No slider cluster specification available");
-      return EXIT_SUCCESS;
-    }
-    String pkgPathValue = sliderFileSystem
-        .buildPackageDirPath(StringUtils.EMPTY, StringUtils.EMPTY).toUri()
-        .getPath();
-    FileSystem fs = sliderFileSystem.getFileSystem();
-    Iterator<Map.Entry<String, Path>> instanceItr = persistentInstances
-        .entrySet().iterator();
-    log.info("List of applications with its package name and path");
-    println("%-25s  %15s  %30s  %s", "Cluster Name", "Package Name",
-        "Package Version", "Application Location");
-    while(instanceItr.hasNext()) {
-      Map.Entry<String, Path> entry = instanceItr.next();
-      String clusterName = entry.getKey();
-      Path clusterPath = entry.getValue();
-      AggregateConf instanceDefinition = loadInstanceDefinitionUnresolved(
-          clusterName, clusterPath);
-      Path appDefPath = null;
-      try {
-        appDefPath = new Path(
-            getApplicationDefinitionPath(instanceDefinition
-                .getAppConfOperations()));
-      } catch (BadConfigException e) {
-        // Invalid cluster state, so move on to next. No need to log anything
-        // as this is just listing of instances.
-        continue;
-      }
-      if (!appDefPath.isUriPathAbsolute()) {
-        appDefPath = new Path(fs.getHomeDirectory(), appDefPath);
-      }
-      String appDefPathStr = appDefPath.toUri().toString();
-      try {
-        if (appDefPathStr.contains(pkgPathValue) && fs.isFile(appDefPath)) {
-          String packageName = appDefPath.getParent().getName();
-          String packageVersion = StringUtils.EMPTY;
-          if (instanceDefinition.isVersioned()) {
-            packageVersion = packageName;
-            packageName = appDefPath.getParent().getParent().getName();
-          }
-          println("%-25s  %15s  %30s  %s", clusterName, packageName,
-              packageVersion, appDefPathStr);
-        }
-      } catch (IOException e) {
-        log.debug("{} application definition path {} is not found.", clusterName, appDefPathStr);
-      }
-    }
+//    Map<String, Path> persistentInstances = sliderFileSystem
+//        .listPersistentInstances();
+//    if (persistentInstances.isEmpty()) {
+//      log.info("No slider cluster specification available");
+//      return EXIT_SUCCESS;
+//    }
+//    String pkgPathValue = sliderFileSystem
+//        .buildPackageDirPath(StringUtils.EMPTY, StringUtils.EMPTY).toUri()
+//        .getPath();
+//    FileSystem fs = sliderFileSystem.getFileSystem();
+//    Iterator<Map.Entry<String, Path>> instanceItr = persistentInstances
+//        .entrySet().iterator();
+//    log.info("List of applications with its package name and path");
+//    println("%-25s  %15s  %30s  %s", "Cluster Name", "Package Name",
+//        "Package Version", "Application Location");
+    //TODO deal with packages
+//    while(instanceItr.hasNext()) {
+//      Map.Entry<String, Path> entry = instanceItr.next();
+//      String clusterName = entry.getKey();
+//      Path clusterPath = entry.getValue();
+//      AggregateConf instanceDefinition = loadInstanceDefinitionUnresolved(
+//          clusterName, clusterPath);
+//      Path appDefPath = null;
+//      try {
+//        appDefPath = new Path(
+//            getApplicationDefinitionPath(instanceDefinition
+//                .getAppConfOperations()));
+//      } catch (BadConfigException e) {
+//        // Invalid cluster state, so move on to next. No need to log anything
+//        // as this is just listing of instances.
+//        continue;
+//      }
+//      if (!appDefPath.isUriPathAbsolute()) {
+//        appDefPath = new Path(fs.getHomeDirectory(), appDefPath);
+//      }
+//      String appDefPathStr = appDefPath.toUri().toString();
+//      try {
+//        if (appDefPathStr.contains(pkgPathValue) && fs.isFile(appDefPath)) {
+//          String packageName = appDefPath.getParent().getName();
+//          String packageVersion = StringUtils.EMPTY;
+//          if (instanceDefinition.isVersioned()) {
+//            packageVersion = packageName;
+//            packageName = appDefPath.getParent().getParent().getName();
+//          }
+//          println("%-25s  %15s  %30s  %s", clusterName, packageName,
+//              packageVersion, appDefPathStr);
+//        }
+//      } catch (IOException e) {
+//        log.debug("{} application definition path {} is not found.", clusterName, appDefPathStr);
+//      }
+//    }
     return EXIT_SUCCESS;
   }
 
@@ -1563,29 +1551,6 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
         + appName + ", appId = " + appId
         + ". New expiry time in ISO8601 format is " + newTimeout);
     return newTimeout;
-  }
-
-  /**
-   * Load the instance definition. It is not resolved at this point
-   * @param name cluster name
-   * @param clusterDirectory cluster dir
-   * @return the loaded configuration
-   * @throws IOException
-   * @throws SliderException
-   * @throws UnknownApplicationInstanceException if the file is not found
-   */
-  public AggregateConf loadInstanceDefinitionUnresolved(String name,
-            Path clusterDirectory) throws IOException, SliderException {
-
-    try {
-      AggregateConf definition =
-        InstanceIO.loadInstanceDefinitionUnresolved(sliderFileSystem,
-                                                    clusterDirectory);
-      definition.setName(name);
-      return definition;
-    } catch (FileNotFoundException e) {
-      throw UnknownApplicationInstanceException.unknownInstance(name, e);
-    }
   }
 
   protected Map<String, String> getAmLaunchEnv(Configuration config) {
@@ -2237,55 +2202,6 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   }
 
   /**
-   * List all node UUIDs in a role
-   * @param role role name or "" for all
-   * @return an array of UUID strings
-   * @throws IOException
-   * @throws YarnException
-   */
-  @VisibleForTesting
-  public String[] listNodeUUIDsByRole(String role) throws
-                                               IOException,
-                                               YarnException {
-    return createClusterOperations()
-              .listNodeUUIDsByRole(role);
-  }
-
-  /**
-   * List all nodes in a role. This is a double round trip: once to list
-   * the nodes in a role, another to get their details
-   * @param role component/role to look for
-   * @return an array of ContainerNode instances
-   * @throws IOException
-   * @throws YarnException
-   */
-  @VisibleForTesting
-  public List<ClusterNode> listClusterNodesInRole(String role) throws
-                                               IOException,
-                                               YarnException {
-    return createClusterOperations().listClusterNodesInRole(role);
-  }
-
-  /**
-   * Get the details on a list of uuids
-   * @param uuids uuids to ask for 
-   * @return a possibly empty list of node details
-   * @throws IOException
-   * @throws YarnException
-   */
-  @VisibleForTesting
-  public List<ClusterNode> listClusterNodes(String[] uuids) throws
-                                               IOException,
-                                               YarnException {
-
-    if (uuids.length == 0) {
-      // short cut on an empty list
-      return new LinkedList<>();
-    }
-    return createClusterOperations().listClusterNodes(uuids);
-  }
-
-  /**
    * Bond to a running cluster
    * @param clustername cluster name
    * @return the AM RPC client
@@ -2317,39 +2233,6 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
                                                                             IOException {
     SliderClusterProtocol sliderAM = bondToCluster(clustername);
     return new SliderClusterOperations(sliderAM);
-  }
-
-  /**
-   * Create a cluster operations instance against the active cluster
-   * -returning any previous created one if held.
-   * @return a bonded cluster operations instance
-   * @throws YarnException YARN issues
-   * @throws IOException IO problems
-   */
-  private SliderClusterOperations createClusterOperations() throws
-                                                         YarnException,
-                                                         IOException {
-    if (sliderClusterOperations == null) {
-      sliderClusterOperations =
-        createClusterOperations(getDeployedClusterName());
-    }
-    return sliderClusterOperations;
-  }
-
-  /**
-   * Wait for an instance of a named role to be live (or past it in the lifecycle)
-   * @param role role to look for
-   * @param timeout time to wait
-   * @return the state. If still in CREATED, the cluster didn't come up
-   * in the time period. If LIVE, all is well. If >LIVE, it has shut for a reason
-   * @throws IOException IO
-   * @throws SliderException Slider
-   * @throws WaitTimeoutException if the wait timed out
-   */
-  @VisibleForTesting
-  public int waitForRoleInstanceLive(String role, long timeout)
-    throws WaitTimeoutException, IOException, YarnException {
-    return createClusterOperations().waitForRoleInstanceLive(role, timeout);
   }
 
   /**
@@ -2546,11 +2429,18 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
       if (diagnosticArgs.client) {
         actionDiagnosticClient(diagnosticArgs);
       } else if (diagnosticArgs.application) {
-        actionDiagnosticApplication(diagnosticArgs);
+        // TODO print configs of application - get from AM
       } else if (diagnosticArgs.yarn) {
-        actionDiagnosticYarn(diagnosticArgs);
+        // This method prints yarn nodes info and yarn configs.
+        // We can just use yarn node CLI instead which is much more richful
+        // for yarn configs, this method reads local config which is only client
+        // config not cluster configs.
+//        actionDiagnosticYarn(diagnosticArgs);
       } else if (diagnosticArgs.credentials) {
-        actionDiagnosticCredentials();
+        // actionDiagnosticCredentials internall only runs a bare 'klist' command...
+        // IMHO, the user can just run klist on their own with extra options supported, don't
+        // actually see the point of this method.
+//        actionDiagnosticCredentials();
       } else if (diagnosticArgs.all) {
         actionDiagnosticAll(diagnosticArgs);
       } else if (diagnosticArgs.level) {
@@ -2571,122 +2461,11 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
       throws IOException, YarnException {
     // assign application name from param to each sub diagnostic function
     actionDiagnosticClient(diagnosticArgs);
-    actionDiagnosticApplication(diagnosticArgs);
-    actionDiagnosticSlider(diagnosticArgs);
-    actionDiagnosticYarn(diagnosticArgs);
-    actionDiagnosticCredentials();
-  }
-
-  private void actionDiagnosticCredentials() throws BadConfigException,
-      IOException {
-    if (isHadoopClusterSecure(loadSliderClientXML())) {
-      String credentialCacheFileDescription = null;
-      try {
-        credentialCacheFileDescription = checkCredentialCacheFile();
-      } catch (BadConfigException e) {
-        log.error("The credential config is not valid: " + e.toString());
-        throw e;
-      } catch (IOException e) {
-        log.error("Unable to read the credential file: " + e.toString());
-        throw e;
-      }
-      log.info("Credential cache file for the current user: "
-          + credentialCacheFileDescription);
-    } else {
-      log.info("the cluster is not in secure mode");
-    }
-  }
-
-  private void actionDiagnosticYarn(ActionDiagnosticArgs diagnosticArgs)
-      throws IOException, YarnException {
-    JSONObject converter = null;
-    log.info("the node in the YARN cluster has below state: ");
-    List<NodeReport> yarnClusterInfo;
-    try {
-      yarnClusterInfo = yarnClient.getNodeReports(NodeState.RUNNING);
-    } catch (YarnException e1) {
-      log.error("Exception happened when fetching node report from the YARN cluster: "
-          + e1.toString());
-      throw e1;
-    } catch (IOException e1) {
-      log.error("Network problem happened when fetching node report YARN cluster: "
-          + e1.toString());
-      throw e1;
-    }
-    for (NodeReport nodeReport : yarnClusterInfo) {
-      log.info(nodeReport.toString());
-    }
-
-    if (diagnosticArgs.verbose) {
-      Writer configWriter = new StringWriter();
-      try {
-        Configuration.dumpConfiguration(yarnClient.getConfig(), configWriter);
-      } catch (IOException e1) {
-        log.error("Network problem happened when retrieving YARN config from YARN: "
-            + e1.toString());
-        throw e1;
-      }
-      try {
-        converter = new JSONObject(configWriter.toString());
-        log.info("the configuration of the YARN cluster is: "
-            + converter.toString(2));
-
-      } catch (JSONException e) {
-        log.error("JSONException happened during parsing response from YARN: "
-            + e.toString());
-      }
-    }
-  }
-
-  private void actionDiagnosticSlider(ActionDiagnosticArgs diagnosticArgs)
-      throws YarnException, IOException {
-    // not using member variable clustername because we want to place
-    // application name after --application option and member variable
-    // cluster name has to be put behind action
-    String clusterName = diagnosticArgs.name;
-    if(isUnset(clusterName)){
-      throw new BadCommandArgumentsException("application name must be provided with --name option");
-    }
-    AggregateConf instanceDefinition = new AggregateConf();
-    String imagePath = instanceDefinition.getInternalOperations().get(
-        INTERNAL_APPLICATION_IMAGE_PATH);
-    // if null, it will be uploaded by Slider and thus at slider's path
-    if (imagePath == null) {
-      ApplicationReport appReport = findInstance(clusterName);
-      if (appReport != null) {
-        Path path1 = sliderFileSystem.getTempPathForCluster(clusterName);
-        Path subPath = new Path(path1, appReport.getApplicationId().toString()
-            + "/agent");
-        imagePath = subPath.toString();
-      }
-    }
-    log.info("The path of slider agent tarball on HDFS is: " + imagePath);
-  }
-
-  private void actionDiagnosticApplication(ActionDiagnosticArgs diagnosticArgs)
-      throws YarnException, IOException {
-    // not using member variable clustername because we want to place
-    // application name after --application option and member variable
-    // cluster name has to be put behind action
-    String clusterName = diagnosticArgs.name;
-    requireArgumentSet(Arguments.ARG_NAME, clusterName);
-    AggregateConf instanceDefinition = new AggregateConf();
-    String clusterDir = instanceDefinition.getAppConfOperations()
-        .getGlobalOptions().get(AgentKeys.APP_ROOT);
-    String pkgTarball = getApplicationDefinitionPath(instanceDefinition.getAppConfOperations());
-    String runAsUser = instanceDefinition.getAppConfOperations()
-        .getGlobalOptions().get(AgentKeys.RUNAS_USER);
-
-    log.info("The location of the cluster instance directory in HDFS is: {}", clusterDir);
-    log.info("The name of the application package tarball on HDFS is: {}",pkgTarball);
-    log.info("The runas user of the application in the cluster is: {}",runAsUser);
-
-    if (diagnosticArgs.verbose) {
-      log.info("App config of the application:\n{}",
-          instanceDefinition.getAppConf().toJson());
-      log.info("Resource config of the application:\n{}",
-          instanceDefinition.getResources().toJson());
-    }
+    // actionDiagnosticSlider only prints the agent location on hdfs,
+    // which is invalid now.
+    // actionDiagnosticCredentials only runs 'klist' command, IMHO, the user
+    // can just run klist on its own with extra options supported, don't
+    // actually see the point of this method.
   }
 
   private void actionDiagnosticClient(ActionDiagnosticArgs diagnosticArgs)
@@ -3239,16 +3018,6 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
       println(serDeser.toJson(nodes));
     }
     return 0;
-  }
-
-  /**
-   * Create a new IPC client for talking to slider via what follows the REST API.
-   * Client must already be bonded to the cluster
-   * @return a new IPC client
-   */
-  public SliderApplicationApi createIpcClient()
-    throws IOException, YarnException {
-    return new SliderApplicationIpcClient(createClusterOperations());
   }
 
   /**

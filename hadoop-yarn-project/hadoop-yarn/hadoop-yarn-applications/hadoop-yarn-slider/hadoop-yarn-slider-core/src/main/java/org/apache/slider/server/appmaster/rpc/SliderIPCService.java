@@ -32,12 +32,8 @@ import org.apache.slider.api.types.ComponentInformation;
 import org.apache.slider.api.types.ContainerInformation;
 import org.apache.slider.api.types.NodeInformation;
 import org.apache.slider.api.types.NodeInformationList;
-import org.apache.slider.core.conf.AggregateConf;
-import org.apache.slider.core.conf.ConfTree;
 import org.apache.slider.core.exceptions.ServiceNotReadyException;
 import org.apache.slider.core.main.LauncherExitCodes;
-import org.apache.slider.core.persist.AggregateConfSerDeser;
-import org.apache.slider.core.persist.ConfTreeSerDeser;
 import org.apache.slider.core.persist.JsonSerDeser;
 import org.apache.slider.server.appmaster.AppMasterActionOperations;
 import org.apache.slider.server.appmaster.actions.ActionFlexCluster;
@@ -399,70 +395,6 @@ public class SliderIPCService extends AbstractService
     } else {
       throw new FileNotFoundException("Unknown host: " + name);
     }
-  }
-
-  @Override
-  public Messages.WrappedJsonProto getModelDesired(Messages.EmptyPayloadProto request) throws IOException {
-    return lookupAggregateConf(MODEL_DESIRED);
-  }
-
-  @Override
-  public Messages.WrappedJsonProto getModelDesiredAppconf(Messages.EmptyPayloadProto request) throws IOException {
-    return lookupConfTree(MODEL_DESIRED_APPCONF);
-  }
-
-  @Override
-  public Messages.WrappedJsonProto getModelDesiredResources(Messages.EmptyPayloadProto request) throws IOException {
-    return lookupConfTree(MODEL_DESIRED_RESOURCES);
-  }
-
-  @Override
-  public Messages.WrappedJsonProto getModelResolved(Messages.EmptyPayloadProto request) throws IOException {
-    return lookupAggregateConf(MODEL_RESOLVED);
-  }
-
-  @Override
-  public Messages.WrappedJsonProto getModelResolvedAppconf(Messages.EmptyPayloadProto request) throws IOException {
-    return lookupConfTree(MODEL_RESOLVED_APPCONF);
-  }
-
-  @Override
-  public Messages.WrappedJsonProto getModelResolvedResources(Messages.EmptyPayloadProto request) throws IOException {
-    return lookupConfTree(MODEL_RESOLVED_RESOURCES);
-  }
-
-  @Override
-  public Messages.WrappedJsonProto getLiveResources(Messages.EmptyPayloadProto request) throws IOException {
-    return lookupConfTree(LIVE_RESOURCES);
-  }
-
-  /**
-   * Helper method; look up an aggregate configuration in the cache from
-   * a key, or raise an exception
-   * @param key key to resolve
-   * @return the configuration
-   * @throws IOException on a failure
-   */
-
-  protected Messages.WrappedJsonProto lookupAggregateConf(String key) throws
-      IOException {
-    AggregateConf aggregateConf = (AggregateConf) cache.lookupWithIOE(key);
-    String json = AggregateConfSerDeser.toString(aggregateConf);
-    return wrap(json);
-  }
-
-  /**
-   * Helper method; look up an conf tree in the cache from
-   * a key, or raise an exception
-   * @param key key to resolve
-   * @return the configuration
-   * @throws IOException on a failure
-   */
-  protected Messages.WrappedJsonProto lookupConfTree(String key) throws
-      IOException {
-    ConfTree conf = (ConfTree) cache.lookupWithIOE(key);
-    String json = ConfTreeSerDeser.toString(conf);
-    return wrap(json);
   }
 
   private Messages.WrappedJsonProto wrap(String json) {

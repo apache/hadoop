@@ -19,7 +19,6 @@
 package org.apache.slider.server.appmaster.actions;
 
 import org.apache.slider.api.proto.Messages;
-import org.apache.slider.core.conf.ConfTree;
 import org.apache.slider.server.appmaster.SliderAppMaster;
 import org.apache.slider.server.appmaster.state.AppState;
 

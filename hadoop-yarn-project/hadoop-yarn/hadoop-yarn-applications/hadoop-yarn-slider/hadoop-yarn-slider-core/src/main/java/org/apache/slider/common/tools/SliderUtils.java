@@ -19,7 +19,6 @@
 package org.apache.slider.common.tools;
 
 import com.google.common.base.Preconditions;
-
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
@@ -52,23 +51,18 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.slider.Slider;
-import org.apache.slider.api.InternalKeys;
 import org.apache.slider.api.RoleKeys;
 import org.apache.slider.api.types.ContainerInformation;
 import org.apache.slider.common.SliderKeys;
 import org.apache.slider.common.SliderXmlConfKeys;
 import org.apache.slider.common.params.Arguments;
 import org.apache.slider.common.params.SliderActions;
-import org.apache.slider.core.conf.ConfTreeOperations;
-import org.apache.slider.core.conf.MapOperations;
 import org.apache.slider.core.exceptions.BadClusterStateException;
 import org.apache.slider.core.exceptions.BadCommandArgumentsException;
 import org.apache.slider.core.exceptions.BadConfigException;
-import org.apache.slider.core.exceptions.ErrorStrings;
 import org.apache.slider.core.exceptions.SliderException;
 import org.apache.slider.core.launch.ClasspathConstructor;
 import org.apache.slider.core.main.LauncherExitCodes;
-import org.apache.slider.providers.agent.AgentKeys;
 import org.apache.slider.server.services.utility.PatternValidator;
 import org.apache.slider.server.services.workflow.ForkedProcessService;
 import org.apache.zookeeper.server.util.KerberosUtil;
@@ -81,7 +75,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -112,7 +105,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TimeZone;
-import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -1778,61 +1770,6 @@ public final class SliderUtils {
         VersionInfo.getBranch() + " @" + VersionInfo.getSrcChecksum());
   }
 
-  /**
-   * Set the time for an information (human, machine) timestamp pair of fields.
-   * The human time is the time in millis converted via the {@link Date} class.
-   * @param info info fields
-   * @param keyHumanTime name of human time key
-   * @param keyMachineTime name of machine time
-   * @param time timestamp
-   */
-  public static void setInfoTime(Map info,
-      String keyHumanTime,
-      String keyMachineTime,
-      long time) {
-    info.put(keyHumanTime, SliderUtils.toGMTString(time));
-    info.put(keyMachineTime, Long.toString(time));
-  }
-
-  public static Path extractImagePath(CoreFileSystem fs,
-      MapOperations internalOptions) throws
-      SliderException, IOException {
-    Path imagePath;
-    String imagePathOption =
-        internalOptions.get(InternalKeys.INTERNAL_APPLICATION_IMAGE_PATH);
-    String appHomeOption =
-        internalOptions.get(InternalKeys.INTERNAL_APPLICATION_HOME);
-    if (!isUnset(imagePathOption)) {
-      if (!isUnset(appHomeOption)) {
-        throw new BadClusterStateException(
-            ErrorStrings.E_BOTH_IMAGE_AND_HOME_DIR_SPECIFIED);
-      }
-      imagePath = fs.createPathThatMustExist(imagePathOption);
-    } else {
-      imagePath = null;
-      if (isUnset(appHomeOption)) {
-        throw new BadClusterStateException(
-            ErrorStrings.E_NO_IMAGE_OR_HOME_DIR_SPECIFIED);
-      }
-    }
-    return imagePath;
-  }
-
-  /**
-   * trigger a  JVM halt with no clean shutdown at all
-   * @param status status code for exit
-   * @param text text message
-   * @param delay delay in millis
-   * @return the timer (assuming the JVM hasn't halted yet)
-   *
-   */
-  public static Timer haltAM(int status, String text, int delay) {
-
-    Timer timer = new Timer("halt timer", false);
-    timer.schedule(new DelayedHalt(status, text), delay);
-    return timer;
-  }
-
   public static String propertiesToString(Properties props) {
     TreeSet<String> keys = new TreeSet<>(props.stringPropertyNames());
     StringBuilder builder = new StringBuilder();
@@ -2379,40 +2316,6 @@ public final class SliderUtils {
   }
 
   /**
-   * return the HDFS path where the application package has been uploaded
-   * manually or by using slider client (install package command)
-   * 
-   * @param conf configuration
-   * @return
-   */
-  public static String getApplicationDefinitionPath(ConfTreeOperations conf)
-      throws BadConfigException {
-    return getApplicationDefinitionPath(conf, null);
-  }
-
-  /**
-   * return the HDFS path where the application package has been uploaded
-   * manually or by using slider client (install package command)
-   *
-   * @param conf configuration
-   * @param roleGroup name of component
-   * @return
-   */
-  public static String getApplicationDefinitionPath(ConfTreeOperations conf,
-      String roleGroup)
-      throws BadConfigException {
-    String appDefPath = conf.getGlobalOptions().getMandatoryOption(
-        AgentKeys.APP_DEF);
-    if (roleGroup != null) {
-      MapOperations component = conf.getComponent(roleGroup);
-      if (component != null) {
-        appDefPath = component.getOption(AgentKeys.APP_DEF, appDefPath);
-      }
-    }
-    return appDefPath;
-  }
-
-  /**
    * return the path to the slider-client.xml used by the current running
    * slider command
    *
@@ -2484,25 +2387,6 @@ public final class SliderUtils {
     return
         "The version of the JDK invoking the current running slider command: "
         + version + "; The path to it is: " + javaHome;
-  }
-
-  /**
-   * return a description of whether the current user has created credential
-   * cache files from kerberos servers
-   *
-   * @throws IOException
-   * @throws BadConfigException
-   * @throws SecurityException
-   *             - if a security manager exists and its checkPropertyAccess
-   *             method doesn't allow access to the specified system property.
-   */
-  public static String checkCredentialCacheFile() throws IOException,
-      BadConfigException {
-    String result = null;
-    if (!Shell.WINDOWS) {
-      result = Shell.execCommand("klist");
-    }
-    return result;
   }
 
   /**

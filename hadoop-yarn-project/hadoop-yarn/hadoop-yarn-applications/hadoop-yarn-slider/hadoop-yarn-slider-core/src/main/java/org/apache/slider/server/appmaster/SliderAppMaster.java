@@ -30,7 +30,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
@@ -76,7 +75,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
-import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.apache.hadoop.yarn.webapp.WebApps;
@@ -98,7 +96,6 @@ import org.apache.slider.common.tools.PortScanner;
 import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.common.tools.SliderUtils;
 import org.apache.slider.common.tools.SliderVersionInfo;
-import org.apache.slider.core.conf.AggregateConf;
 import org.apache.slider.core.conf.MapOperations;
 import org.apache.slider.core.exceptions.BadConfigException;
 import org.apache.slider.core.exceptions.SliderException;
@@ -137,7 +134,6 @@ import org.apache.slider.server.appmaster.operations.AbstractRMOperation;
 import org.apache.slider.server.appmaster.operations.AsyncRMOperationHandler;
 import org.apache.slider.server.appmaster.operations.RMOperationHandler;
 import org.apache.slider.server.appmaster.rpc.RpcBinder;
-import org.apache.slider.server.appmaster.rpc.SliderAMPolicyProvider;
 import org.apache.slider.server.appmaster.rpc.SliderClusterProtocolPBImpl;
 import org.apache.slider.server.appmaster.rpc.SliderIPCService;
 import org.apache.slider.server.appmaster.security.SecurityConfiguration;
@@ -384,13 +380,10 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
    * added as a child and inited in {@link #serviceInit(Configuration)}
    */
   private final QueueService actionQueues = new QueueService();
-  private String agentOpsUrl;
-  private String agentStatusUrl;
   private YarnRegistryViewForProviders yarnRegistryOperations;
   //private FsDelegationTokenManager fsDelegationTokenManager;
   private RegisterApplicationMasterResponse amRegistrationData;
   private PortScanner portScanner;
-  private SecurityConfiguration securityConfiguration;
 
   /**
    * Is security enabled?
@@ -752,31 +745,31 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       // the max value as part of its lookup
       rmOperationHandler = new AsyncRMOperationHandler(asyncRMClient, maximumResourceCapability);
 
-//      processAMCredentials(securityConfiguration);
+      stripAMRMToken();
 
-      if (securityEnabled) {
-        secretManager.setMasterKey(
-            amRegistrationData.getClientToAMTokenMasterKey().array());
-        applicationACLs = amRegistrationData.getApplicationACLs();
-
-        //tell the server what the ACLs are
-        rpcService.getServer().refreshServiceAcl(serviceConf,
-            new SliderAMPolicyProvider());
-        if (securityConfiguration.isKeytabProvided()) {
-          // perform keytab based login to establish kerberos authenticated
-          // principal.  Can do so now since AM registration with RM above required
-          // tokens associated to principal
-          String principal = securityConfiguration.getPrincipal();
-          //TODO read key tab file from slider-am.xml
-          File localKeytabFile =
-              securityConfiguration.getKeytabFile(new AggregateConf());
-          // Now log in...
-          login(principal, localKeytabFile);
-          // obtain new FS reference that should be kerberos based and different
-          // than the previously cached reference
-          fs = new SliderFileSystem(serviceConf);
-        }
-      }
+//      if (securityEnabled) {
+//        secretManager.setMasterKey(
+//            amRegistrationData.getClientToAMTokenMasterKey().array());
+//        applicationACLs = amRegistrationData.getApplicationACLs();
+//
+//        //tell the server what the ACLs are
+//        rpcService.getServer().refreshServiceAcl(serviceConf,
+//            new SliderAMPolicyProvider());
+//        if (securityConfiguration.isKeytabProvided()) {
+//          // perform keytab based login to establish kerberos authenticated
+//          // principal.  Can do so now since AM registration with RM above required
+//          // tokens associated to principal
+//          String principal = securityConfiguration.getPrincipal();
+//          //TODO read key tab file from slider-am.xml
+//          File localKeytabFile = new File("todo");
+////              securityConfiguration.getKeytabFile(new AggregateConf());
+//          // Now log in...
+//          login(principal, localKeytabFile);
+//          // obtain new FS reference that should be kerberos based and different
+//          // than the previously cached reference
+//          fs = new SliderFileSystem(serviceConf);
+//        }
+//      }
 
       // YARN client.
       // Important: this is only valid at startup, and must be executed within
@@ -1010,22 +1003,12 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
    * Process the initial user to obtain the set of user
    * supplied credentials (tokens were passed in by client).
    * Removes the AM/RM token.
-   * If a keytab has been provided, also strip the HDFS delegation token.
-   * @param securityConfig slider security config
    * @throws IOException
    */
-  private void processAMCredentials(SecurityConfiguration securityConfig)
+  private void stripAMRMToken()
       throws IOException {
-
     List<Text> filteredTokens = new ArrayList<>(3);
     filteredTokens.add(AMRMTokenIdentifier.KIND_NAME);
-    filteredTokens.add(TimelineDelegationTokenIdentifier.KIND_NAME);
-
-    boolean keytabProvided = securityConfig.isKeytabProvided();
-    log.info("Slider AM Security Mode: {}", keytabProvided ? "KEYTAB" : "TOKEN");
-    if (keytabProvided) {
-      filteredTokens.add(DelegationTokenIdentifier.HDFS_DELEGATION_KIND);
-    }
     containerCredentials = CredentialUtils.filterTokens(
         UserGroupInformation.getCurrentUser().getCredentials(),
         filteredTokens);
@@ -1944,24 +1927,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
     appState.containerStartSubmitted(container, instance);
         
     nmClientAsync.startContainerAsync(container, ctx);
-  }
-
-  /**
-   * Build the credentials needed for containers. This will include
-   * getting new delegation tokens for HDFS if the AM is running
-   * with a keytab.
-   * @return a buffer of credentials
-   * @throws IOException
-   */
-
-  private Credentials buildContainerCredentials() throws IOException {
-    Credentials credentials = new Credentials(containerCredentials);
-    if (securityConfiguration.isKeytabProvided()) {
-      CredentialUtils.addSelfRenewableFSDelegationTokens(
-          getClusterFS().getFileSystem(),
-          credentials);
-    }
-    return credentials;
   }
 
   @Override //  NMClientAsync.CallbackHandler 
