@@ -1053,6 +1053,7 @@ Frankfurt
 ```
 
 Seoul
+
 ```xml
 <property>
   <name>fs.s3a.endpoint</name>
