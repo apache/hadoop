@@ -23,6 +23,7 @@ Purpose
   However, for warm and cold datasets with relatively low I/O activities, additional block replicas are rarely accessed during normal operations, but still consume the same amount of resources as the first replica.
 
   Therefore, a natural improvement is to use Erasure Coding (EC) in place of replication, which provides the same level of fault-tolerance with much less storage space. In typical Erasure Coding (EC) setups, the storage overhead is no more than 50%.
+  Replication factor of an EC file is meaningless. It is always 1 and cannot be changed via -setrep command.
 
 Background
 ----------
