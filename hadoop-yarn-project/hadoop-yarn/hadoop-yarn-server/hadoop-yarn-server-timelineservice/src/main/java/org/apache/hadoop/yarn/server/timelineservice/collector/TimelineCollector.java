@@ -137,8 +137,14 @@ public abstract class TimelineCollector extends CompositeService {
           + callerUgi + ")");
     }
 
-    TimelineWriteResponse response = writeTimelineEntities(entities);
-    flushBufferedTimelineEntities();
+    TimelineWriteResponse response;
+    // synchronize on the writer object so that no other threads can
+    // flush the writer buffer concurrently and swallow any exception
+    // caused by the timeline enitites that are being put here.
+    synchronized (writer) {
+      response = writeTimelineEntities(entities);
+      flushBufferedTimelineEntities();
+    }
 
     return response;
   }

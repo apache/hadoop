@@ -259,7 +259,12 @@ public class TimelineCollectorManager extends AbstractService {
 
     public void run() {
       try {
-        writer.flush();
+        // synchronize on the writer object to avoid flushing timeline
+        // entities placed on the buffer by synchronous putEntities
+        // requests.
+        synchronized (writer) {
+          writer.flush();
+        }
       } catch (Throwable th) {
         // we need to handle all exceptions or subsequent execution may be
         // suppressed
