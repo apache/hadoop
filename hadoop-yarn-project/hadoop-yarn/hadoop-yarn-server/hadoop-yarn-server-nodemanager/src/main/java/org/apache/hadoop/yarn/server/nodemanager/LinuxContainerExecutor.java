@@ -145,7 +145,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
     private final int code;
 
-    private ExitCode(int exitCode) {
+    ExitCode(int exitCode) {
       this.code = exitCode;
     }
 

@@ -165,6 +165,7 @@ public abstract class ContainerExecutor implements Configurable {
    * @param ctx Encapsulates information necessary for launching containers.
    * @return the return status of the launch
    * @throws IOException if the container launch fails
+   * @throws ConfigurationException if config error was found
    */
   public abstract int launchContainer(ContainerStartContext ctx) throws
       IOException, ConfigurationException;
