@@ -358,7 +358,7 @@ public class FSOperations {
      * Creates a Concat executor.
      *
      * @param path target path to concat to.
-     * @param sources comma seperated absolute paths to use as sources.
+     * @param sources comma separated absolute paths to use as sources.
      */
     public FSConcat(String path, String[] sources) {
       this.sources = new Path[sources.length];

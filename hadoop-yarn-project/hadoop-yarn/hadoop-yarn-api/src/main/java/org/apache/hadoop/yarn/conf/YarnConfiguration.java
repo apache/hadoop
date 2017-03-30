@@ -1897,7 +1897,7 @@ public class YarnConfiguration extends Configuration {
   public static final float DEFAULT_TIMELINE_SERVICE_VERSION = 1.0f;
 
   /**
-   * Comma seperated list of names for UIs hosted in the timeline server
+   * Comma separated list of names for UIs hosted in the timeline server
    * (For pluggable UIs).
    */
   public static final String TIMELINE_SERVICE_UI_NAMES =
