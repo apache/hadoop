@@ -32,6 +32,9 @@ Release 2.7.4 - UNRELEASED
     MAPREDUCE-6724. Single shuffle to memory must not exceed
     Integer#MAX_VALUE. (Haibo Chen via jlowe)
 
+    MAPREDUCE-6873. MR Job Submission Fails if MR framework application path
+    not on defaultFS. (xkrogen via zhz)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
