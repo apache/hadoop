@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
+import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
@@ -146,6 +147,8 @@ import org.apache.slider.server.appmaster.state.ContainerAssignment;
 import org.apache.slider.server.appmaster.state.MostRecentContainerReleaseSelector;
 import org.apache.slider.server.appmaster.state.ProviderAppState;
 import org.apache.slider.server.appmaster.state.RoleInstance;
+import org.apache.slider.server.appmaster.timelineservice.ServiceTimelinePublisher;
+import org.apache.slider.server.appmaster.timelineservice.SliderMetricsSink;
 import org.apache.slider.server.appmaster.web.SliderAMWebApp;
 import org.apache.slider.server.appmaster.web.WebAppApi;
 import org.apache.slider.server.appmaster.web.WebAppApiImpl;
@@ -239,6 +242,13 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
   /** Handle to communicate with the Resource Manager*/
   @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized")
   private AMRMClientAsync asyncRMClient;
+
+  /** Handle to communicate with the timeline service */
+  private TimelineClient timelineClient;
+
+  private boolean timelineServiceEnabled = false;
+
+  ServiceTimelinePublisher serviceTimelinePublisher;
 
   @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized")
   private RMOperationHandler rmOperationHandler;
@@ -483,6 +493,10 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
     addService(executorService);
 
     addService(actionQueues);
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      timelineServiceEnabled = true;
+      log.info("Enabled YARN timeline service v2. ");
+    }
 
     //init all child services
     super.serviceInit(conf);
@@ -650,6 +664,20 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       //now bring it up
       deployChildService(asyncRMClient);
 
+      if (timelineServiceEnabled) {
+        timelineClient = TimelineClient.createTimelineClient(appid);
+        asyncRMClient.registerTimelineClient(timelineClient);
+        timelineClient.init(getConfig());
+        timelineClient.start();
+        log.info("Timeline client started.");
+
+        serviceTimelinePublisher = new ServiceTimelinePublisher(timelineClient);
+        serviceTimelinePublisher.init(getConfig());
+        serviceTimelinePublisher.start();
+        appState.setServiceTimelinePublisher(serviceTimelinePublisher);
+        log.info("ServiceTimelinePublisher started.");
+      }
+
 
       // nmclient relays callbacks back to this class
       nmClientAsync = new NMClientAsyncImpl("nmclient", this);
@@ -781,6 +809,12 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
 
       liveContainers = amRegistrationData.getContainersFromPreviousAttempts();
       DefaultMetricsSystem.initialize("SliderAppMaster");
+      if (timelineServiceEnabled) {
+        DefaultMetricsSystem.instance().register("SliderMetricsSink",
+            "For processing metrics to ATS",
+            new SliderMetricsSink(serviceTimelinePublisher));
+        log.info("SliderMetricsSink registered.");
+      }
 
       //determine the location for the role history data
       Path historyDir = new Path(appDir, HISTORY_DIR_NAME);
@@ -1132,6 +1166,9 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
           yarnRegistryOperations.getSelfRegistrationPath(),
           true);
     }
+    if (timelineServiceEnabled) {
+      serviceTimelinePublisher.serviceAttemptRegistered(appState);
+    }
   }
 
   /**
@@ -1184,6 +1221,11 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
     container.setState(org.apache.slider.api.resource.ContainerState.INIT);
     container.setBareHost(instance.host);
     instance.providerRole.component.addContainer(container);
+
+    if (timelineServiceEnabled) {
+      serviceTimelinePublisher.componentInstanceStarted(container,
+          instance.providerRole.component.getName());
+    }
     return true;
   }
 
@@ -1345,6 +1387,12 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
     releaseAllContainers(application);
     DefaultMetricsSystem.shutdown();
 
+    if (timelineServiceEnabled) {
+      serviceTimelinePublisher.serviceAttemptUnregistered(appState, stopAction);
+      serviceTimelinePublisher.stop();
+      timelineClient.stop();
+    }
+
     // When the application completes, it should send a finish application
     // signal to the RM
     log.info("Application completed. Signalling finish to RM");
@@ -1490,6 +1538,10 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       if(!result.unknownNode) {
         queue(new UnregisterComponentInstance(containerId, 0,
             TimeUnit.MILLISECONDS));
+        if (timelineServiceEnabled && result.roleInstance != null) {
+          serviceTimelinePublisher
+              .componentInstanceFinished(result.roleInstance);
+        }
       }
     }
 
@@ -1966,6 +2018,17 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
         //trigger another async container status
         nmClientAsync.getContainerStatusAsync(containerId,
             cinfo.container.getNodeId());
+      }
+    } else if (timelineServiceEnabled) {
+      RoleInstance instance = appState.getOwnedContainer(containerId);
+      if (instance != null) {
+        org.apache.slider.api.resource.Container container =
+            instance.providerRole.component
+                .getContainer(containerId.toString());
+        if (container != null) {
+          serviceTimelinePublisher.componentInstanceUpdated(container,
+              instance.providerRole.component.getName());
+        }
       }
     }
   }
