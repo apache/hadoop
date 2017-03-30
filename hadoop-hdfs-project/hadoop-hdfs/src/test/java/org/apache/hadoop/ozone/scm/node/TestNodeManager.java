@@ -866,7 +866,7 @@ public class TestNodeManager {
   }
 
   @Test
-  public void testScmEnterAndExistChillMode() throws IOException,
+  public void testScmEnterAndExitChillMode() throws IOException,
       InterruptedException {
     OzoneConfiguration conf = getConf();
     conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, 100);
@@ -879,7 +879,7 @@ public class TestNodeManager {
       Assert.assertThat(status, CoreMatchers.containsString("Still in chill " +
           "mode. Waiting on nodes to report in."));
 
-      // Should not exist chill mode since 10 nodes have not heartbeat yet.
+      // Should not exit chill mode since 10 nodes have not heartbeat yet.
       assertFalse(nodeManager.isOutOfNodeChillMode());
       assertFalse((nodeManager.isInManualChillMode()));
 
