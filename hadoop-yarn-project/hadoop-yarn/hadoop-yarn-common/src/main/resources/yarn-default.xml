@@ -2153,6 +2153,15 @@
   </property>
 
   <property>
+    <description>
+    The time period for which timeline v2 client will wait for draining
+    leftover entities after stop.
+    </description>
+    <name>yarn.timeline-service.client.drain-entities.timeout.ms</name>
+    <value>2000</value>
+  </property>
+
+  <property>
     <description>Enable timeline server to recover state after starting. If
     true, then yarn.timeline-service.state-store-class must be specified.
     </description>

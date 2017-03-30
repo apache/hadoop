@@ -2277,6 +2277,16 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_NUMBER_OF_ASYNC_ENTITIES_TO_MERGE = 10;
 
+
+  /**
+   * The time period for which timeline v2 client will wait for draining
+   * leftover entities after stop.
+   */
+  public static final String TIMELINE_V2_CLIENT_DRAIN_TIME_MILLIS =
+      TIMELINE_SERVICE_CLIENT_PREFIX + "drain-entities.timeout.ms";
+  public static final long DEFAULT_TIMELINE_V2_CLIENT_DRAIN_TIME_MILLIS
+      = 2000L;
+
   // mark app-history related configs @Private as application history is going
   // to be integrated into the timeline service
   @Private
