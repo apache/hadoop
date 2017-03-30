@@ -466,7 +466,9 @@ public class TestRequestHedgingProxyProvider {
       }
 
       @Override
-      public NamenodeProtocols createProxy(Configuration conf, InetSocketAddress nnAddr, Class<NamenodeProtocols> xface, UserGroupInformation ugi, boolean withRetries) throws IOException {
+      public NamenodeProtocols createProxy(Configuration conf,
+          InetSocketAddress nnAddr, Class<NamenodeProtocols> xface,
+          UserGroupInformation ugi, boolean withRetries) throws IOException {
         return iterator.next();
       }
     };

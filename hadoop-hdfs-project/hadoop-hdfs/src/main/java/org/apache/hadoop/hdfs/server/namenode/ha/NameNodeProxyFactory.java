@@ -31,13 +31,15 @@ public class NameNodeProxyFactory<T> implements ProxyFactory<T> {
   public T createProxy(Configuration conf, InetSocketAddress nnAddr,
       Class<T> xface, UserGroupInformation ugi, boolean withRetries,
       AtomicBoolean fallbackToSimpleAuth) throws IOException {
-    return NameNodeProxies.createNonHAProxy(conf, nnAddr,
-      xface, ugi, withRetries, fallbackToSimpleAuth).getProxy();
+    return NameNodeProxies.createNonHAProxy(conf, nnAddr, xface,
+      ugi, withRetries, fallbackToSimpleAuth).getProxy();
   }
 
   @Override
-  public T createProxy(Configuration conf, InetSocketAddress nnAddr, Class<T> xface, UserGroupInformation ugi, boolean withRetries) throws IOException {
-    return NameNodeProxies.createNonHAProxy(conf, nnAddr,
-      xface, ugi, withRetries).getProxy();
+  public T createProxy(Configuration conf, InetSocketAddress nnAddr,
+      Class<T> xface, UserGroupInformation ugi, boolean withRetries)
+      throws IOException {
+    return NameNodeProxies.createNonHAProxy(conf, nnAddr, xface,
+      ugi, withRetries).getProxy();
   }
 }

@@ -177,7 +177,7 @@ public class DFSUtilClient {
    * @return list of InetSocketAddresses
    */
   public static Map<String, Map<String, InetSocketAddress>> getHaNnRpcAddresses(
-    Configuration conf) {
+      Configuration conf) {
     return DFSUtilClient.getAddresses(conf, null,
       HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
   }

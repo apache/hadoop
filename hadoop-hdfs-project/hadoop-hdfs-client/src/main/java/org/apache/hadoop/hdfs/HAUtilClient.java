@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -28,6 +26,8 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -38,8 +38,7 @@ import static org.apache.hadoop.security.SecurityUtil.buildTokenService;
 
 @InterfaceAudience.Private
 public class HAUtilClient {
-  private static final Log LOG =
-    LogFactory.getLog(HAUtilClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HAUtilClient.class);
 
   private static final DelegationTokenSelector tokenSelector =
     new DelegationTokenSelector();
@@ -117,8 +116,8 @@ public class HAUtilClient {
    * applies
    */
   public static void cloneDelegationTokenForLogicalUri(
-    UserGroupInformation ugi, URI haUri,
-    Collection<InetSocketAddress> nnAddrs) {
+      UserGroupInformation ugi, URI haUri,
+      Collection<InetSocketAddress> nnAddrs) {
     // this cloning logic is only used by hdfs
     Text haService = HAUtilClient.buildTokenServiceForLogicalUri(haUri,
       HdfsConstants.HDFS_URI_SCHEME);

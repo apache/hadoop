@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ClientProxyFactory<T> implements ProxyFactory<T> {
   @Override
+  @SuppressWarnings("unchecked")
   public T createProxy(Configuration conf, InetSocketAddress nnAddr,
       Class<T> xface, UserGroupInformation ugi, boolean withRetries,
       AtomicBoolean fallbackToSimpleAuth) throws IOException {
@@ -35,7 +36,9 @@ public class ClientProxyFactory<T> implements ProxyFactory<T> {
   }
 
   @Override
-  public T createProxy(Configuration conf, InetSocketAddress nnAddr, Class<T> xface, UserGroupInformation ugi, boolean withRetries) throws IOException {
+  public T createProxy(Configuration conf, InetSocketAddress nnAddr,
+      Class<T> xface, UserGroupInformation ugi, boolean withRetries)
+      throws IOException {
     return createProxy(conf, nnAddr, xface, ugi, withRetries, null);
   }
 }

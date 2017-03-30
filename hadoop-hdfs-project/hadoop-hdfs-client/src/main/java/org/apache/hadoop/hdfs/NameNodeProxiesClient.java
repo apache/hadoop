@@ -209,6 +209,7 @@ public class NameNodeProxiesClient {
     }
   }
 
+  @VisibleForTesting
   public static <T> AbstractNNFailoverProxyProvider<T> createFailoverProxyProvider(
       Configuration conf, URI nameNodeUri, Class<T> xface, boolean checkPort,
       AtomicBoolean fallbackToSimpleAuth) throws IOException {
@@ -220,7 +221,8 @@ public class NameNodeProxiesClient {
   @VisibleForTesting
   public static <T> AbstractNNFailoverProxyProvider<T> createFailoverProxyProvider(
       Configuration conf, URI nameNodeUri, Class<T> xface, boolean checkPort,
-      AtomicBoolean fallbackToSimpleAuth, ProxyFactory<T> proxyFactory) throws IOException {
+      AtomicBoolean fallbackToSimpleAuth, ProxyFactory<T> proxyFactory)
+      throws IOException {
     Class<FailoverProxyProvider<T>> failoverProxyProviderClass = null;
     AbstractNNFailoverProxyProvider<T> providerNN;
     try {
