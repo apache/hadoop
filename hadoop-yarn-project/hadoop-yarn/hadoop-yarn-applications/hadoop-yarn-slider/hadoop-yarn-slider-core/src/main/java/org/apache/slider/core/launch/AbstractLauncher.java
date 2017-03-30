@@ -304,30 +304,6 @@ public abstract class AbstractLauncher extends Configured {
     }
   }
 
-  /**
-   * Extract the value for option
-   * {@code yarn.resourcemanager.am.retry-count-window-ms}
-   * and set it on the ApplicationSubmissionContext. Use the default value
-   * if option is not set.
-   *
-   * @param submissionContext
-   * @param map
-   */
-  public void extractAmRetryCount(ApplicationSubmissionContext submissionContext,
-                                  Map<String, String> map) {
-
-    if (map != null) {
-      MapOperations options = new MapOperations("", map);
-      long amRetryCountWindow = options.getOptionLong(ResourceKeys
-          .YARN_RESOURCEMANAGER_AM_RETRY_COUNT_WINDOW_MS,
-          ResourceKeys.DEFAULT_AM_RETRY_COUNT_WINDOW_MS);
-      log.info("Setting {} to {}",
-          ResourceKeys.YARN_RESOURCEMANAGER_AM_RETRY_COUNT_WINDOW_MS,
-          amRetryCountWindow);
-      submissionContext.setAttemptFailuresValidityInterval(amRetryCountWindow);
-    }
-  }
-
   public void extractLogAggregationContext(Map<String, String> map) {
     if (map != null) {
       String logPatternSepStr = "\\|";
@@ -453,24 +429,6 @@ public abstract class AbstractLauncher extends Configured {
     env.putAll(map);
   }
 
-  /**
-   * Important: the configuration must already be fully resolved 
-   * in order to pick up global options
-   * Copy env vars into the launch context.
-   */
-  public boolean copyEnvVars(MapOperations options) {
-    if (options == null) {
-      return false;
-    }
-    for (Map.Entry<String, String> entry : options.entrySet()) {
-      String key = entry.getKey();
-      if (key.startsWith(RoleKeys.ENV_PREFIX)) {
-        key = key.substring(RoleKeys.ENV_PREFIX.length());
-        env.put(key, entry.getValue());
-      }
-    }
-    return true;
-  }
 
   public String[] dumpEnvToString() {
 
@@ -502,19 +460,6 @@ public abstract class AbstractLauncher extends Configured {
       srcDir,
       destRelativeDir);
     addLocalResources(confResources);
-  }
-
-  /**
-   * Return the label expression and if not set null
-   * @param map map to look up
-   * @return extracted label or null
-   */
-  public String extractLabelExpression(Map<String, String> map) {
-    if (map != null) {
-      MapOperations options = new MapOperations("", map);
-      return options.getOption(ResourceKeys.YARN_LABEL_EXPRESSION, null);
-    }
-    return null;
   }
 
   public void setDockerImage(String dockerImage) {

@@ -19,10 +19,6 @@ package org.apache.slider.providers.docker;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.slider.common.SliderKeys;
-import org.apache.slider.common.tools.SliderFileSystem;
-import org.apache.slider.core.conf.AggregateConf;
-import org.apache.slider.core.conf.ConfTreeOperations;
-import org.apache.slider.core.exceptions.SliderException;
 import org.apache.slider.providers.AbstractClientProvider;
 import org.apache.slider.providers.ProviderRole;
 import org.apache.slider.providers.ProviderUtils;
@@ -31,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 public class DockerClientProvider extends AbstractClientProvider
     implements SliderKeys {
@@ -53,19 +48,6 @@ public class DockerClientProvider extends AbstractClientProvider
   @Override
   public List<ProviderRole> getRoles() {
     return Collections.emptyList();
-  }
-
-  @Override
-  public void validateInstanceDefinition(AggregateConf instanceDefinition,
-      SliderFileSystem fs) throws SliderException {
-    super.validateInstanceDefinition(instanceDefinition, fs);
-    //TODO validate Application payload, part of that is already done in ApplicationApiService, need to do more
-  }
-
-  @Override
-  public Set<String> getApplicationTags(SliderFileSystem fileSystem,
-      ConfTreeOperations appConf, String appName) throws SliderException {
-    return createApplicationTags(appName, null, null);
   }
 
 }

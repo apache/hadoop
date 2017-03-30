@@ -20,27 +20,20 @@ package org.apache.slider.client.ipc;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.slider.api.ClusterDescription;
 import org.apache.slider.api.ClusterNode;
 import org.apache.slider.api.SliderClusterProtocol;
 import org.apache.slider.api.StateValues;
 import org.apache.slider.api.proto.Messages;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.Component;
-import org.apache.slider.api.types.ApplicationLivenessInformation;
-import org.apache.slider.api.types.ComponentInformation;
 import org.apache.slider.api.types.ContainerInformation;
 import org.apache.slider.api.types.NodeInformation;
 import org.apache.slider.api.types.NodeInformationList;
 import org.apache.slider.api.types.PingInformation;
 import org.apache.slider.common.tools.Duration;
-import org.apache.slider.core.conf.AggregateConf;
-import org.apache.slider.core.conf.ConfTree;
-import org.apache.slider.core.conf.ConfTreeOperations;
 import org.apache.slider.core.exceptions.NoSuchNodeException;
 import org.apache.slider.core.exceptions.SliderException;
 import org.apache.slider.core.exceptions.WaitTimeoutException;
-import org.apache.slider.core.persist.ConfTreeSerDeser;
 import org.apache.slider.core.persist.JsonSerDeser;
 import org.codehaus.jackson.JsonParseException;
 import org.slf4j.Logger;
@@ -50,11 +43,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import static org.apache.slider.api.types.RestTypeMarshalling.*;
+import static org.apache.slider.api.types.RestTypeMarshalling.unmarshall;
 
 /**
  * Cluster operations at a slightly higher level than the RPC code
@@ -322,118 +313,11 @@ public class SliderClusterOperations {
     appMaster.amSuicide(req);
   }
 
-  /**
-   * Get the application liveness
-   * @return current liveness information
-   * @throws IOException
-   */
-  public ApplicationLivenessInformation getLivenessInformation() throws IOException {
-    Messages.GetApplicationLivenessRequestProto.Builder builder =
-        Messages.GetApplicationLivenessRequestProto.newBuilder();
-    Messages.ApplicationLivenessInformationProto wire =
-        appMaster.getLivenessInformation(builder.build());
-    return unmarshall(wire);
-
-  }
-
-  public AggregateConf getModelDesired() throws IOException {
-    return unmarshallToAggregateConf(appMaster.getModelDesired(EMPTY));
-  }
-
-  
-  public ConfTreeOperations getModelDesiredAppconf() throws IOException {
-    return unmarshallToCTO(appMaster.getModelDesiredAppconf(EMPTY));
-  }
-
-  
-  public ConfTreeOperations getModelDesiredResources() throws IOException {
-    return unmarshallToCTO(appMaster.getModelDesiredResources(EMPTY));
-  }
-
-  
-  public AggregateConf getModelResolved() throws IOException {
-    return unmarshallToAggregateConf(appMaster.getModelResolved(EMPTY));
-  }
-
-  
-  public ConfTreeOperations getModelResolvedAppconf() throws IOException {
-    return unmarshallToCTO(appMaster.getModelResolvedAppconf(EMPTY));
-  }
-
-  
-  public ConfTreeOperations getModelResolvedResources() throws IOException {
-    return unmarshallToCTO(appMaster.getModelDesiredResources(EMPTY));
-  }
-
-  
-  public ConfTreeOperations getLiveResources() throws IOException {
-    return unmarshallToCTO(appMaster.getLiveResources(EMPTY));
-  }
-
-  
-  public Map<String, ContainerInformation> enumContainers() throws IOException {
-    Messages.GetLiveContainersResponseProto response =
-        appMaster.getLiveContainers(
-            Messages.GetLiveContainersRequestProto.newBuilder().build());
-
-    int namesCount = response.getNamesCount();
-    int records = response.getContainersCount();
-    if (namesCount != records) {
-      throw new IOException("Number of names returned (" + namesCount
-                      + ") does not match the number of records returned: " 
-                      + records);
-    }
-    Map<String, ContainerInformation> map = new HashMap<>(namesCount);
-    for (int i = 0; i < namesCount; i++) {
-      map.put(response.getNames(i), unmarshall(response.getContainers(i)));
-    }
-    return map;
-  }
-
-  
-  public ContainerInformation getContainer(String containerId) throws
-      IOException {
-    Messages.ContainerInformationProto response =
-        appMaster.getLiveContainer(
-            Messages.GetLiveContainerRequestProto.newBuilder()
-                                                 .setContainerId(containerId)
-                                                 .build());
-    return unmarshall(response);
-  }
-
   public List<ContainerInformation> getContainers() throws IOException {
     Messages.GetLiveContainersResponseProto response = appMaster
         .getLiveContainers(Messages.GetLiveContainersRequestProto.newBuilder()
                                                                  .build());
     return unmarshall(response);
-  }
-
-  public Map<String, ComponentInformation> enumComponents() throws IOException {
-    Messages.GetLiveComponentsResponseProto response =
-        appMaster.getLiveComponents(
-            Messages.GetLiveComponentsRequestProto.newBuilder().build());
-
-    int namesCount = response.getNamesCount();
-    int records = response.getComponentsCount();
-    if (namesCount != records) {
-      throw new IOException(
-          "Number of names returned (" + namesCount + ")" +
-          " does not match the number of records returned: " + records);
-    }
-    Map<String, ComponentInformation> map = new HashMap<>(namesCount);
-    for (int i = 0; i < namesCount; i++) {
-      map.put(response.getNames(i), unmarshall(response.getComponents(i)));
-    }
-    return map;
-  }
-
-  public ComponentInformation getComponent(String componentName)
-      throws IOException {
-    Messages.GetLiveComponentRequestProto.Builder builder =
-        Messages.GetLiveComponentRequestProto.newBuilder();
-    builder.setName(componentName);
-    Messages.ComponentInformationProto proto = appMaster.getLiveComponent(builder.build());
-    return unmarshall(proto);
   }
 
   public NodeInformationList getLiveNodes() throws IOException {
@@ -461,14 +345,5 @@ public class SliderClusterOperations {
 
   public void stop(String text) throws IOException {
     amSuicide(text, 3, 0);
-  }
-
-  public ApplicationLivenessInformation getApplicationLiveness() throws
-      IOException {
-    Messages.ApplicationLivenessInformationProto proto =
-        appMaster.getLivenessInformation(
-            Messages.GetApplicationLivenessRequestProto.newBuilder().build()
-        );
-    return unmarshall(proto);
   }
 }

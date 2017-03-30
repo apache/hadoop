@@ -19,17 +19,6 @@
 package org.apache.slider.common.params;
 
 import com.beust.jcommander.Parameter;
-import com.beust.jcommander.ParametersDelegate;
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.fs.Path;
-import org.apache.slider.core.conf.ConfTree;
-import org.apache.slider.core.conf.ConfTreeOperations;
-import org.apache.slider.core.exceptions.BadCommandArgumentsException;
-import org.apache.slider.providers.SliderProviderFactory;
-
-import java.io.File;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Abstract Action to build things; shares args across build and
