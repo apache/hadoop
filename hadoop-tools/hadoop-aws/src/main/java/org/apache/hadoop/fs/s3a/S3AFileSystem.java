@@ -1525,8 +1525,6 @@ public class S3AFileSystem extends FileSystem {
    * @throws IOException other IO problems
    * @throws AmazonClientException on failures inside the AWS SDK
    */
-  // TODO: If we have created an empty file at /foo/bar and we then call
-  // mkdirs for /foo/bar/baz/roo what happens to the empty file /foo/bar/?
   private boolean innerMkdirs(Path f, FsPermission permission)
       throws IOException, FileAlreadyExistsException, AmazonClientException {
     LOG.debug("Making directory: {}", f);
@@ -1561,6 +1559,7 @@ public class S3AFileSystem extends FileSystem {
 
       String key = pathToKey(f);
       createFakeDirectory(key);
+      deleteUnnecessaryFakeDirectories(f.getParent());
       return true;
     }
   }
