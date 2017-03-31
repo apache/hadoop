@@ -22,6 +22,7 @@ import org.apache.hadoop.cblock.meta.VolumeInfo;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.cblock.util.MockStorageClient;
 import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -45,6 +46,13 @@ public class TestCBlockServer {
     ScmClient storageClient = new MockStorageClient();
     conf = new OzoneConfiguration();
     cBlockManager = new CBlockManager(conf, storageClient);
+  }
+
+  @AfterClass
+  public static void clean() {
+    cBlockManager.stop();
+    cBlockManager.join();
+    cBlockManager.clean();
   }
 
   /**
