@@ -324,6 +324,54 @@ public final class S3Guard {
     addMoveStatus(srcPaths, dstMetas, srcPath, dstStatus);
   }
 
+  /**
+   * Helper method that records the move of all ancestors of a path.
+   *
+   * In S3A, an optimization is to delete unnecessary fake directory objects if
+   * the directory is non-empty. In that case, for a nested child to move, S3A
+   * is not listing and thus moving all its ancestors (up to source root). So we
+   * take care of those inferred directories of this path explicitly.
+   *
+   * As {@link #addMoveFile} and {@link #addMoveDir}, this method adds resulting
+   * metadata to the supplied lists. It does not store in MetadataStore.
+   *
+   * @param ms MetadataStore, no-op if it is NullMetadataStore
+   * @param srcPaths stores the source path here
+   * @param dstMetas stores destination metadata here
+   * @param srcRoot source root up to which (exclusive) should we add ancestors
+   * @param srcPath source path of the child to add ancestors
+   * @param dstPath destination path of the child to add ancestors
+   * @param owner Hadoop user name
+   */
+  public static void addMoveAncestors(MetadataStore ms,
+      Collection<Path> srcPaths, Collection<PathMetadata> dstMetas,
+      Path srcRoot, Path srcPath, Path dstPath, String owner) {
+    if (isNullMetadataStore(ms)) {
+      return;
+    }
+
+    assertQualified(srcRoot);
+    assertQualified(srcPath);
+    assertQualified(dstPath);
+
+    if (srcPath.equals(srcRoot)) {
+      LOG.debug("Skip moving ancestors of source root directory {}", srcRoot);
+      return;
+    }
+
+    Path parentSrc = srcPath.getParent();
+    Path parentDst = dstPath.getParent();
+    while (parentSrc != null
+        && !parentSrc.isRoot()
+        && !parentSrc.equals(srcRoot)
+        && !srcPaths.contains(parentSrc)) {
+      LOG.debug("Renaming non-listed parent {} to {}", parentSrc, parentDst);
+      S3Guard.addMoveDir(ms, srcPaths, dstMetas, parentSrc, parentDst, owner);
+      parentSrc = parentSrc.getParent();
+      parentDst = parentDst.getParent();
+    }
+  }
+
   private static void addMoveStatus(Collection<Path> srcPaths,
       Collection<PathMetadata> dstMetas, Path srcPath, FileStatus dstStatus)
   {

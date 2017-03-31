@@ -25,8 +25,10 @@ import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -820,10 +822,10 @@ public class S3AFileSystem extends FileSystem {
     }
 
     // If we have a MetadataStore, track deletions/creations.
-    List<Path> srcPaths = null;
+    Collection<Path> srcPaths = null;
     List<PathMetadata> dstMetas = null;
     if (hasMetadataStore()) {
-      srcPaths = new ArrayList<>();
+      srcPaths = new HashSet<>(); // srcPaths need fast look up before put
       dstMetas = new ArrayList<>();
     }
     // HADOOP-13761 s3guard: retries when source paths are not visible yet
@@ -892,15 +894,18 @@ public class S3AFileSystem extends FileSystem {
           copyFile(summary.getKey(), newDstKey, length);
 
           if (hasMetadataStore()) {
-            Path srcPath = keyToQualifiedPath(summary.getKey());
-            Path dstPath = keyToQualifiedPath(newDstKey);
+            Path childSrc = keyToQualifiedPath(summary.getKey());
+            Path childDst = keyToQualifiedPath(newDstKey);
             if (objectRepresentsDirectory(summary.getKey(), length)) {
-              S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas, srcPath,
-                  dstPath, username);
+              S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas, childSrc,
+                  childDst, username);
             } else {
-              S3Guard.addMoveFile(metadataStore, srcPaths, dstMetas, srcPath,
-                  dstPath, length, getDefaultBlockSize(dstPath), username);
+              S3Guard.addMoveFile(metadataStore, srcPaths, dstMetas, childSrc,
+                  childDst, length, getDefaultBlockSize(childDst), username);
             }
+            // Ancestor directories may not be listed, so we explicitly add them
+            S3Guard.addMoveAncestors(metadataStore, srcPaths, dstMetas,
+                keyToQualifiedPath(srcKey), childSrc, childDst, username);
           }
 
           if (keysToDelete.size() == MAX_ENTRIES_TO_DELETE) {
@@ -918,9 +923,11 @@ public class S3AFileSystem extends FileSystem {
         }
       }
 
-      // We moved all the children, now move the top-level dir if it's non-empty
-      // Empty directory has been added as the object summary of listObjects
-      if (srcStatus.isEmptyDirectory() == Tristate.FALSE) {
+      // We moved all the children, now move the top-level dir
+      // Empty directory should have been added as the object summary
+      if (hasMetadataStore()
+          && srcPaths != null
+          && !srcPaths.contains(src)) {
         LOG.debug("To move the non-empty top-level dir src={} and dst={}",
             src, dst);
         S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas, src, dst,
