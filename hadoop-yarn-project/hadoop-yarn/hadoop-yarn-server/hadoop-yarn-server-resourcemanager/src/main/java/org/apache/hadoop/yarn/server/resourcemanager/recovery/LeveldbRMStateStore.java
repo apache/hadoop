@@ -214,6 +214,11 @@ public class LeveldbRMStateStore extends RMStateStore {
     return db == null;
   }
 
+  @VisibleForTesting
+  DB getDatabase() {
+    return db;
+  }
+
   @Override
   protected Version loadVersion() throws Exception {
     Version version = null;
@@ -284,6 +289,9 @@ public class LeveldbRMStateStore extends RMStateStore {
       while (iter.hasNext()) {
         Entry<byte[],byte[]> entry = iter.next();
         String key = asString(entry.getKey());
+        if (!key.startsWith(RM_RESERVATION_KEY_PREFIX)) {
+          break;
+        }
 
         String planReservationString =
             key.substring(RM_RESERVATION_KEY_PREFIX.length());
