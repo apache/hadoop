@@ -97,7 +97,11 @@ public class DistCpOptions {
   // targetPathExist is a derived field, it's initialized in the
   // beginning of distcp.
   private boolean targetPathExists = true;
-  
+
+  // Size of chunk in number of blocks when splitting large file into chunks
+  // to copy in parallel. Default is 0 and file are not splitted.
+  private int blocksPerChunk = 0;
+
   public static enum FileAttribute{
     REPLICATION, BLOCKSIZE, USER, GROUP, PERMISSION, CHECKSUMTYPE, ACL, XATTR, TIMES;
 
@@ -166,6 +170,7 @@ public class DistCpOptions {
       this.targetPath = that.getTargetPath();
       this.targetPathExists = that.getTargetPathExists();
       this.filtersFile = that.getFiltersFile();
+      this.blocksPerChunk = that.blocksPerChunk;
     }
   }
 
@@ -578,6 +583,18 @@ public class DistCpOptions {
     this.filtersFile = filtersFilename;
   }
 
+  public final void setBlocksPerChunk(int csize) {
+    this.blocksPerChunk = csize;
+  }
+
+  public final int getBlocksPerChunk() {
+    return blocksPerChunk;
+  }
+
+  public final boolean splitLargeFile() {
+    return blocksPerChunk > 0;
+  }
+
   void validate() {
     if ((useDiff || useRdiff) && deleteMissing) {
       // -delete and -diff/-rdiff are mutually exclusive. For backward
@@ -669,6 +686,8 @@ public class DistCpOptions {
       DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.FILTERS,
           filtersFile);
     }
+    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.BLOCKS_PER_CHUNK,
+        String.valueOf(blocksPerChunk));
   }
 
   /**
@@ -704,6 +723,7 @@ public class DistCpOptions {
         ", targetPath=" + targetPath +
         ", targetPathExists=" + targetPathExists +
         ", filtersFile='" + filtersFile + '\'' +
+        ", blocksPerChunk=" + blocksPerChunk +
         '}';
   }
 
