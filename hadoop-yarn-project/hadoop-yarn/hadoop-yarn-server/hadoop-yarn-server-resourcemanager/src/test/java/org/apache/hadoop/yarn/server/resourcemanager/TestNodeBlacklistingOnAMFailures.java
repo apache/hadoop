@@ -33,8 +33,6 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.TestAMRestart;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -65,8 +63,7 @@ public class TestNodeBlacklistingOnAMFailures {
     conf.setBoolean(YarnConfiguration.AM_SCHEDULING_NODE_BLACKLISTING_ENABLED,
         true);
 
-    DrainDispatcher dispatcher = new DrainDispatcher();
-    MockRM rm = startRM(conf, dispatcher);
+    MockRM rm = startRM(conf);
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
 
     // Register 5 nodes, so that we can blacklist atleast one if AM container
@@ -122,7 +119,7 @@ public class TestNodeBlacklistingOnAMFailures {
     // Try the current node a few times
     for (int i = 0; i <= 2; i++) {
       currentNode.nodeHeartbeat(true);
-      dispatcher.await();
+      rm.drainEvents();
 
       Assert.assertEquals(
           "AppAttemptState should still be SCHEDULED if currentNode is "
@@ -132,7 +129,7 @@ public class TestNodeBlacklistingOnAMFailures {
 
     // Now try the other node
     otherNode.nodeHeartbeat(true);
-    dispatcher.await();
+    rm.drainEvents();
 
     // Now the AM container should be allocated
     MockRM.waitForState(attempt, RMAppAttemptState.ALLOCATED, 20000);
@@ -169,8 +166,7 @@ public class TestNodeBlacklistingOnAMFailures {
     conf.setBoolean(YarnConfiguration.AM_SCHEDULING_NODE_BLACKLISTING_ENABLED,
         true);
 
-    DrainDispatcher dispatcher = new DrainDispatcher();
-    MockRM rm = startRM(conf, dispatcher);
+    MockRM rm = startRM(conf);
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
 
     // Register 5 nodes, so that we can blacklist atleast one if AM container
@@ -227,7 +223,7 @@ public class TestNodeBlacklistingOnAMFailures {
     System.out.println("New AppAttempt launched " + attempt.getAppAttemptId());
 
     nm2.nodeHeartbeat(true);
-    dispatcher.await();
+    rm.drainEvents();
 
     // Now the AM container should be allocated
     MockRM.waitForState(attempt, RMAppAttemptState.ALLOCATED, 20000);
@@ -257,8 +253,7 @@ public class TestNodeBlacklistingOnAMFailures {
     conf.setBoolean(YarnConfiguration.AM_SCHEDULING_NODE_BLACKLISTING_ENABLED,
         true);
 
-    DrainDispatcher dispatcher = new DrainDispatcher();
-    MockRM rm = startRM(conf, dispatcher);
+    MockRM rm = startRM(conf);
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
 
     // Register 5 nodes, so that we can blacklist atleast one if AM container
@@ -319,7 +314,7 @@ public class TestNodeBlacklistingOnAMFailures {
     nm3.nodeHeartbeat(true);
     nm4.nodeHeartbeat(true);
     nm5.nodeHeartbeat(true);
-    dispatcher.await();
+    rm.drainEvents();
 
     // Now the AM container should be allocated
     MockRM.waitForState(attempt, RMAppAttemptState.ALLOCATED, 20000);
@@ -352,8 +347,7 @@ public class TestNodeBlacklistingOnAMFailures {
         1.5f);
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 100);
 
-    DrainDispatcher dispatcher = new DrainDispatcher();
-    MockRM rm = startRM(conf, dispatcher);
+    MockRM rm = startRM(conf);
 
     MockNM node =
         new MockNM("127.0.0.1:1234", 8000, rm.getResourceTrackerService());
@@ -367,7 +361,7 @@ public class TestNodeBlacklistingOnAMFailures {
     // Now the AM container should be allocated
     RMAppAttempt attempt = MockRM.waitForAttemptScheduled(app, rm);
     node.nodeHeartbeat(true);
-    dispatcher.await();
+    rm.drainEvents();
     MockRM.waitForState(attempt, RMAppAttemptState.ALLOCATED, 20000);
     rm.sendAMLaunched(attempt.getAppAttemptId());
     rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.LAUNCHED);
@@ -394,7 +388,7 @@ public class TestNodeBlacklistingOnAMFailures {
           .println("New AppAttempt launched " + attempt.getAppAttemptId());
 
       node.nodeHeartbeat(true);
-      dispatcher.await();
+      rm.drainEvents();
 
       MockRM.waitForState(attempt, RMAppAttemptState.ALLOCATED, 20000);
       rm.sendAMLaunched(attempt.getAppAttemptId());
@@ -418,20 +412,13 @@ public class TestNodeBlacklistingOnAMFailures {
     rm.waitForState(amAttemptID.getApplicationId(), RMAppState.ACCEPTED);
   }
 
-  private MockRM startRM(YarnConfiguration conf,
-      final DrainDispatcher dispatcher) {
-
+  private MockRM startRM(YarnConfiguration conf) {
     MemoryRMStateStore memStore = new MemoryRMStateStore();
     memStore.init(conf);
 
-    MockRM rm1 = new MockRM(conf, memStore) {
-      @Override
-      protected Dispatcher createDispatcher() {
-        return dispatcher;
-      }
-    };
+    MockRM rm = new MockRM(conf, memStore);
 
-    rm1.start();
-    return rm1;
+    rm.start();
+    return rm;
   }
 }
