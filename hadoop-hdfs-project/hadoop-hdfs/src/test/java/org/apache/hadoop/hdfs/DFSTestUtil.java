@@ -862,7 +862,27 @@ public class DFSTestUtil {
       out.write(toAppend);
     }
   }
-  
+
+  /**
+   * Append specified length of bytes to a given file, starting with new block.
+   * @param fs The file system
+   * @param p Path of the file to append
+   * @param length Length of bytes to append to the file
+   * @throws IOException
+   */
+  public static void appendFileNewBlock(DistributedFileSystem fs,
+      Path p, int length) throws IOException {
+    assert fs.exists(p);
+    assert length >= 0;
+    byte[] toAppend = new byte[length];
+    Random random = new Random();
+    random.nextBytes(toAppend);
+    try (FSDataOutputStream out = fs.append(p,
+        EnumSet.of(CreateFlag.APPEND, CreateFlag.NEW_BLOCK), 4096, null)) {
+      out.write(toAppend);
+    }
+  }
+
   /**
    * @return url content as string (UTF-8 encoding assumed)
    */
