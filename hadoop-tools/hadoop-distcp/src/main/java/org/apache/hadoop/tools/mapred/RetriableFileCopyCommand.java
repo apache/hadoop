@@ -118,21 +118,17 @@ public class RetriableFileCopyCommand extends RetriableCommand {
           .contains(FileAttribute.CHECKSUMTYPE) ? sourceFS
           .getFileChecksum(sourcePath) : null;
 
-      long offset = (action == FileAction.APPEND) ?
-          targetFS.getFileStatus(target).getLen() : source.getChunkOffset();
+      final long offset = action == FileAction.APPEND ? targetFS.getFileStatus(
+          target).getLen() : 0;
       long bytesRead = copyToFile(targetPath, targetFS, source,
           offset, context, fileAttributes, sourceChecksum);
 
-      if (!source.isSplit()) {
-        compareFileLengths(source, targetPath, configuration, bytesRead
-            + offset);
-      }
+      compareFileLengths(source, targetPath, configuration, bytesRead
+          + offset);
       //At this point, src&dest lengths are same. if length==0, we skip checksum
       if ((bytesRead != 0) && (!skipCrc)) {
-        if (!source.isSplit()) {
-          compareCheckSums(sourceFS, source.getPath(), sourceChecksum,
-              targetFS, targetPath);
-        }
+        compareCheckSums(sourceFS, source.getPath(), sourceChecksum,
+            targetFS, targetPath);
       }
       // it's not append case, thus we first write to a temporary file, rename
       // it to the target path.
@@ -253,26 +249,16 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     ThrottledInputStream inStream = null;
     long totalBytesRead = 0;
 
-    long chunkLength = source2.getChunkLength();
-    boolean finished = false;
     try {
       inStream = getInputStream(source, context.getConfiguration());
       int bytesRead = readBytes(inStream, buf, sourceOffset);
       while (bytesRead >= 0) {
-        if (chunkLength > 0 &&
-            (totalBytesRead + bytesRead) >= chunkLength) {
-          bytesRead = (int)(chunkLength - totalBytesRead);
-          finished = true;
-        }
         totalBytesRead += bytesRead;
         if (action == FileAction.APPEND) {
           sourceOffset += bytesRead;
         }
         outStream.write(buf, 0, bytesRead);
         updateContextStatus(totalBytesRead, context, source2);
-        if (finished) {
-          break;
-        }
         bytesRead = readBytes(inStream, buf, sourceOffset);
       }
       outStream.close();

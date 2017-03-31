@@ -99,8 +99,7 @@ public class UniformSizeInputFormat
       while (reader.next(srcRelPath, srcFileStatus)) {
         // If adding the current file would cause the bytes per map to exceed
         // limit. Add the current file to new split
-        if (currentSplitSize + srcFileStatus.getChunkLength() > nBytesPerSplit
-            && lastPosition != 0) {
+        if (currentSplitSize + srcFileStatus.getLen() > nBytesPerSplit && lastPosition != 0) {
           FileSplit split = new FileSplit(listingFilePath, lastSplitStart,
               lastPosition - lastSplitStart, null);
           if (LOG.isDebugEnabled()) {
@@ -110,7 +109,7 @@ public class UniformSizeInputFormat
           lastSplitStart = lastPosition;
           currentSplitSize = 0;
         }
-        currentSplitSize += srcFileStatus.getChunkLength();
+        currentSplitSize += srcFileStatus.getLen();
         lastPosition = reader.getPosition();
       }
       if (lastPosition > lastSplitStart) {
