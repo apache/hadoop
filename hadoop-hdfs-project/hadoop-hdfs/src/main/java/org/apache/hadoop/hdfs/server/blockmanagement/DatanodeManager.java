@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
@@ -180,9 +181,15 @@ public class DatanodeManager {
    * True if we should process latency metrics from downstream peers.
    */
   private final boolean dataNodePeerStatsEnabled;
+  /**
+   *  True if we should process latency metrics from individual DN disks.
+   */
+  private final boolean dataNodeDiskStatsEnabled;
 
   @Nullable
   private final SlowPeerTracker slowPeerTracker;
+  @Nullable
+  private final SlowDiskTracker slowDiskTracker;
   
   /**
    * The minimum time between resending caching directives to Datanodes,
@@ -208,9 +215,16 @@ public class DatanodeManager {
     this.dataNodePeerStatsEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY,
         DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT);
+    this.dataNodeDiskStatsEnabled = Util.isDiskStatsEnabled(conf.getDouble(
+        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY,
+        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_DEFAULT));
 
+    final Timer timer = new Timer();
     this.slowPeerTracker = dataNodePeerStatsEnabled ?
-        new SlowPeerTracker(conf, new Timer()) : null;
+        new SlowPeerTracker(conf, timer) : null;
+
+    this.slowDiskTracker = dataNodeDiskStatsEnabled ?
+        new SlowDiskTracker(conf, timer) : null;
 
     this.defaultXferPort = NetUtils.createSocketAddr(
           conf.getTrimmed(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
@@ -1664,6 +1678,16 @@ public class DatanodeManager {
       }
     }
 
+    if (slowDiskTracker != null) {
+      if (!slowDisks.getSlowDisks().isEmpty()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("DataNode " + nodeReg + " reported slow disks: " +
+              slowDisks.getSlowDisks());
+        }
+        slowDiskTracker.addSlowDiskReport(nodeReg.getIpcAddr(false), slowDisks);
+      }
+    }
+
     if (!cmds.isEmpty()) {
       return cmds.toArray(new DatanodeCommand[cmds.size()]);
     }
@@ -1874,6 +1898,14 @@ public class DatanodeManager {
    */
   public String getSlowPeersReport() {
     return slowPeerTracker != null ? slowPeerTracker.getJson() : null;
+  }
+
+  /**
+   * Use only for testing.
+   */
+  @VisibleForTesting
+  public SlowDiskTracker getSlowDiskTracker() {
+    return slowDiskTracker;
   }
 }
 

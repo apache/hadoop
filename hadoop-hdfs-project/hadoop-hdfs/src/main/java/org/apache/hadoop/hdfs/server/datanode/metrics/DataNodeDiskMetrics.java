@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.datanode.metrics;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -33,9 +32,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * This class detects and maintains DataNode disk outliers and their
@@ -122,41 +121,39 @@ public class DataNodeDiskMetrics {
 
   private void detectAndUpdateDiskOutliers(Map<String, Double> metadataOpStats,
       Map<String, Double> readIoStats, Map<String, Double> writeIoStats) {
-    Set<String> diskOutliersSet = Sets.newHashSet();
+    Map<String, Map<DiskOp, Double>> diskStats = Maps.newHashMap();
 
     // Get MetadataOp Outliers
     Map<String, Double> metadataOpOutliers = slowDiskDetector
         .getOutliers(metadataOpStats);
-    if (!metadataOpOutliers.isEmpty()) {
-      diskOutliersSet.addAll(metadataOpOutliers.keySet());
+    for (Map.Entry<String, Double> entry : metadataOpOutliers.entrySet()) {
+      addDiskStat(diskStats, entry.getKey(), DiskOp.METADATA, entry.getValue());
     }
 
     // Get ReadIo Outliers
     Map<String, Double> readIoOutliers = slowDiskDetector
         .getOutliers(readIoStats);
-    if (!readIoOutliers.isEmpty()) {
-      diskOutliersSet.addAll(readIoOutliers.keySet());
+    for (Map.Entry<String, Double> entry : readIoOutliers.entrySet()) {
+      addDiskStat(diskStats, entry.getKey(), DiskOp.READ, entry.getValue());
     }
 
     // Get WriteIo Outliers
     Map<String, Double> writeIoOutliers = slowDiskDetector
         .getOutliers(writeIoStats);
-    if (!readIoOutliers.isEmpty()) {
-      diskOutliersSet.addAll(writeIoOutliers.keySet());
-    }
-
-    Map<String, Map<DiskOp, Double>> diskStats =
-        Maps.newHashMap();
-    for (String disk : diskOutliersSet) {
-      Map<DiskOp, Double> diskStat = Maps.newHashMap();
-      diskStat.put(DiskOp.METADATA, metadataOpStats.get(disk));
-      diskStat.put(DiskOp.READ, readIoStats.get(disk));
-      diskStat.put(DiskOp.WRITE, writeIoStats.get(disk));
-      diskStats.put(disk, diskStat);
+    for (Map.Entry<String, Double> entry : writeIoOutliers.entrySet()) {
+      addDiskStat(diskStats, entry.getKey(), DiskOp.WRITE, entry.getValue());
     }
 
     diskOutliersStats = diskStats;
     LOG.debug("Updated disk outliers.");
+  }
+
+  private void addDiskStat(Map<String, Map<DiskOp, Double>> diskStats,
+      String disk, DiskOp diskOp, double latency) {
+    if (!diskStats.containsKey(disk)) {
+      diskStats.put(disk, new HashMap<>());
+    }
+    diskStats.get(disk).put(diskOp, latency);
   }
 
   public Map<String, Map<DiskOp, Double>> getDiskOutliersStats() {
