@@ -59,8 +59,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
 import org.apache.hadoop.yarn.exceptions.NMNotYetReadyException;
@@ -260,7 +258,6 @@ public class TestApplicationMasterLauncher {
     Configuration conf = new Configuration();
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
     conf.setInt(YarnConfiguration.CLIENT_NM_CONNECT_RETRY_INTERVAL_MS, 1);
-    final DrainDispatcher dispatcher = new DrainDispatcher();
     MockRM rm = new MockRMWithCustomAMLauncher(conf, null) {
       @Override
       protected ApplicationMasterLauncher createAMLauncher() {
@@ -284,12 +281,8 @@ public class TestApplicationMasterLauncher {
           }
         };
       }
-
-      @Override
-      protected Dispatcher createDispatcher() {
-        return dispatcher;
-      }
     };
+
     rm.start();
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 5120);
 
@@ -297,7 +290,7 @@ public class TestApplicationMasterLauncher {
 
     // kick the scheduling
     nm1.nodeHeartbeat(true);
-    dispatcher.await();
+    rm.drainEvents();
 
     MockRM.waitForState(app.getCurrentAppAttempt(),
       RMAppAttemptState.LAUNCHED, 500);
