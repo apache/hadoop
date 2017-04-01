@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.client.api.impl.TimelineV2ClientImpl;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -53,14 +54,21 @@ public class TestNMTimelinePublisher {
     final DummyTimelineClient timelineClient = new DummyTimelineClient(null);
     when(context.getNodeId()).thenReturn(NodeId.newInstance("localhost", 0));
     when(context.getHttpPort()).thenReturn(0);
+
+    Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
+
     NMTimelinePublisher publisher = new NMTimelinePublisher(context) {
       public void createTimelineClient(ApplicationId appId) {
         if (!getAppToClientMap().containsKey(appId)) {
+          timelineClient.init(getConfig());
+          timelineClient.start();
           getAppToClientMap().put(appId, timelineClient);
         }
       }
     };
-    publisher.init(new Configuration());
+    publisher.init(conf);
     publisher.start();
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     publisher.createTimelineClient(appId);

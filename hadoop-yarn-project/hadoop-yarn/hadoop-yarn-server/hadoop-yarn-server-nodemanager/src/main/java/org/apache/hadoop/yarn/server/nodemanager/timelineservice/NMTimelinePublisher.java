@@ -102,6 +102,14 @@ public class NMTimelinePublisher extends CompositeService {
     this.nodeId = context.getNodeId();
   }
 
+  @Override
+  protected void serviceStop() throws Exception {
+    for(ApplicationId app : appToClientMap.keySet()) {
+      stopTimelineClient(app);
+    }
+    super.serviceStop();
+  }
+
   @VisibleForTesting
   Map<ApplicationId, TimelineV2Client> getAppToClientMap() {
     return appToClientMap;
