@@ -1018,9 +1018,9 @@ public class FairScheduler extends
       // We have to satisfy these first to avoid cases, when we preempt
       // a container for A from B and C gets the preempted containers,
       // when C does not qualify for preemption itself.
-      boolean validReservation = false;
       assignPreemptedContainers(node);
       FSAppAttempt reservedAppSchedulable = node.getReservedAppSchedulable();
+      boolean validReservation = false;
       if (reservedAppSchedulable != null) {
         validReservation = reservedAppSchedulable.assignReservedContainer(node);
       }
