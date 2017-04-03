@@ -22,29 +22,43 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.ozone.container.common.impl.Dispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
-import org.apache.hadoop.ozone.container.common.impl.Dispatcher;
-import org.apache.hadoop.scm.XceiverClient;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerHandler;
-
+import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverServerRatis;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.scm.XceiverClient;
+import org.apache.hadoop.scm.XceiverClientRatis;
+import org.apache.hadoop.scm.XceiverClientSpi;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.ratis.rpc.RpcType;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.BiConsumer;
 
+import static org.apache.ratis.rpc.SupportedRpcType.GRPC;
+import static org.apache.ratis.rpc.SupportedRpcType.NETTY;
 import static org.mockito.Mockito.mock;
 
 /**
  * Test Containers.
  */
 public class TestContainerServer {
+  static final String TEST_DIR
+      = GenericTestUtils.getTestDir("dfs").getAbsolutePath() + File.separator;
 
   @Test
   public void testPipeline() throws IOException {
@@ -68,33 +82,87 @@ public class TestContainerServer {
 
   @Test
   public void testClientServer() throws Exception {
-    XceiverServer server = null;
-    XceiverClient client = null;
+    runTestClientServer(1,
+        (pipeline, conf) -> conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
+            pipeline.getLeader().getContainerPort()),
+        XceiverClient::new,
+        (dn, conf) -> new XceiverServer(conf, new TestContainerDispatcher()));
+  }
+
+  @FunctionalInterface
+  interface CheckedBiFunction<LEFT, RIGHT, OUT, THROWABLE extends Throwable> {
+    OUT apply(LEFT left, RIGHT right) throws THROWABLE;
+  }
+
+  @Test
+  public void testClientServerRatisNetty() throws Exception {
+    runTestClientServerRatis(NETTY, 1);
+    runTestClientServerRatis(NETTY, 3);
+  }
+
+  @Test
+  public void testClientServerRatisGrpc() throws Exception {
+    runTestClientServerRatis(GRPC, 1);
+    runTestClientServerRatis(GRPC, 3);
+  }
+
+  static XceiverServerRatis newXceiverServerRatis(
+      DatanodeID dn, OzoneConfiguration conf) throws IOException {
+    final String id = dn.getXferAddr();
+    conf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_ADDRESS, id);
+    final String dir = TEST_DIR + id.replace(':', '_');
+    conf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR, dir);
+
+    final ContainerDispatcher dispatcher = new TestContainerDispatcher();
+    return XceiverServerRatis.newXceiverServerRatis(conf, dispatcher);
+  }
+
+  static void runTestClientServerRatis(RpcType rpc, int numNodes)
+      throws Exception {
+    runTestClientServer(numNodes,
+        (pipeline, conf) -> ContainerTestHelper.initRatisConf(
+            rpc, pipeline, conf),
+        XceiverClientRatis::newXceiverClientRatis,
+        TestContainerServer::newXceiverServerRatis);
+  }
+
+  static void runTestClientServer(
+      int numDatanodes,
+      BiConsumer<Pipeline, OzoneConfiguration> initConf,
+      CheckedBiFunction<Pipeline, OzoneConfiguration, XceiverClientSpi,
+          IOException> createClient,
+      CheckedBiFunction<DatanodeID, OzoneConfiguration, XceiverServerSpi,
+          IOException> createServer)
+      throws Exception {
+    final List<XceiverServerSpi> servers = new ArrayList<>();
+    XceiverClientSpi client = null;
     String containerName = OzoneUtils.getRequestID();
     try {
-      Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline(
-          containerName);
-      OzoneConfiguration conf = new OzoneConfiguration();
-      conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
-          pipeline.getLeader().getContainerPort());
+      final Pipeline pipeline = ContainerTestHelper.createPipeline(
+          containerName, numDatanodes);
+      final OzoneConfiguration conf = new OzoneConfiguration();
+      initConf.accept(pipeline, conf);
 
-      server = new XceiverServer(conf, new TestContainerDispatcher());
-      client = new XceiverClient(pipeline, conf);
+      for(DatanodeID dn : pipeline.getMachines()) {
+        final XceiverServerSpi s = createServer.apply(dn, conf);
+        servers.add(s);
+        s.start();
+      }
 
-      server.start();
+      client = createClient.apply(pipeline, conf);
       client.connect();
 
-      ContainerCommandRequestProto request =
+      final ContainerCommandRequestProto request =
           ContainerTestHelper.getCreateContainerRequest(containerName);
+      Assert.assertNotNull(request.getTraceID());
+
       ContainerCommandResponseProto response = client.sendCommand(request);
-      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
+      Assert.assertEquals(request.getTraceID(), response.getTraceID());
     } finally {
       if (client != null) {
         client.close();
       }
-      if (server != null) {
-        server.stop();
-      }
+      servers.stream().forEach(XceiverServerSpi::stop);
     }
   }
 

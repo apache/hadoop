@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
@@ -83,6 +84,33 @@ public final class MiniOzoneCluster extends MiniDFSCluster
     this.conf = builder.conf;
     this.scm = scm;
     tempPath = Paths.get(builder.getPath(), builder.getRunID());
+  }
+
+  @Override
+  protected void setupDatanodeAddress(
+      int i, Configuration dnConf, boolean setupHostsFile,
+      boolean checkDnAddrConf) throws IOException {
+    super.setupDatanodeAddress(i, dnConf, setupHostsFile, checkDnAddrConf);
+
+    final boolean useRatis = dnConf.getBoolean(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
+    if (!useRatis) {
+      return;
+    }
+    final String[] ids = dnConf.getStrings(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_CONF);
+    // TODO: use the i-th raft server as the i-th datanode address
+    //       this only work for one Raft cluster
+    setConf(i, dnConf, OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_ADDRESS,
+        ids[i]);
+    setConf(i, dnConf, OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR,
+        getInstanceStorageDir(i, -1).getCanonicalPath());
+  }
+
+  static void setConf(int i, Configuration conf, String key, String value) {
+    conf.set(key, value);
+    LOG.info("dn{}: set {} = {}", i, key, value);
   }
 
   @Override

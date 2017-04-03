@@ -30,6 +30,7 @@ import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverServerRatis;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
@@ -86,7 +87,13 @@ public class OzoneContainer {
     manager.setKeyManager(this.keyManager);
 
     this.dispatcher = new Dispatcher(manager, this.ozoneConfig);
-    server = new XceiverServer(this.ozoneConfig, this.dispatcher);
+
+    final boolean useRatis = ozoneConfig.getBoolean(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
+    server = useRatis?
+        XceiverServerRatis.newXceiverServerRatis(ozoneConfig, dispatcher)
+        : new XceiverServer(this.ozoneConfig, this.dispatcher);
   }
 
   /**

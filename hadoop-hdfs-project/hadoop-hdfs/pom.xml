@@ -212,6 +212,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <artifactId>assertj-core</artifactId>
         <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.jctools</groupId>
+      <artifactId>jctools-core</artifactId>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <build>

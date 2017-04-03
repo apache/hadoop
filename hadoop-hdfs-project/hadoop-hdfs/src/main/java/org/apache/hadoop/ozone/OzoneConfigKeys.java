@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.scm.ScmConfigKeys;
 
 /**
  * This class contains constants for configuration keys used in Ozone.
@@ -66,6 +67,21 @@ public final class OzoneConfigKeys {
   public static final String OZONE_CONTAINER_TASK_WAIT =
       "ozone.container.task.wait.seconds";
   public static final long OZONE_CONTAINER_TASK_WAIT_DEFAULT = 5;
+
+  public static final String DFS_CONTAINER_RATIS_ENABLED_KEY
+      = ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY;
+  public static final boolean DFS_CONTAINER_RATIS_ENABLED_DEFAULT
+      = ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT;
+  public static final String DFS_CONTAINER_RATIS_RPC_TYPE_KEY
+      = ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY;
+  public static final String DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT
+      = ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT;
+  public static final String DFS_CONTAINER_RATIS_CONF =
+      "dfs.container.ratis.conf";
+  public static final String DFS_CONTAINER_RATIS_DATANODE_ADDRESS =
+      "dfs.container.ratis.datanode.address";
+  public static final String DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR =
+      "dfs.container.ratis.datanode.storage.dir";
 
   /**
    * There is no need to instantiate this class.
