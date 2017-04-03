@@ -134,6 +134,10 @@ public final class S3Guard {
   }
 
   public static FileStatus[] dirMetaToStatuses(DirListingMetadata dirMeta)  {
+    if (dirMeta == null) {
+      return new FileStatus[0];
+    }
+
     Collection<PathMetadata> listing = dirMeta.getListing();
     FileStatus[] statuses = new FileStatus[listing.size()];
 

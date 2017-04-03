@@ -2486,12 +2486,28 @@ public class S3AFileSystem extends FileSystem {
             filter.accept(path) ? toLocatedFileStatus(fileStatus) : null);
       } else {
         // directory: trigger a lookup
+        final DirListingMetadata dirMeta = metadataStore.listChildren(path);
+        if (allowAuthoritative
+            && dirMeta != null
+            && dirMeta.isAuthoritative()) {
+          return listing.createProvidedLocatedFileStatusIterator(
+              S3Guard.dirMetaToStatuses(dirMeta),
+              new Listing.ProvidedFileStatusFilter() {
+                @Override
+                public boolean accept(FileStatus status) {
+                  return filter.accept(status.getPath());
+                }
+              });
+        }
+
         String key = maybeAddTrailingSlash(pathToKey(path));
         return listing.createLocatedFileStatusIterator(
             listing.createFileStatusListingIterator(path,
                 createListObjectsRequest(key, "/"),
                 filter,
-                new Listing.AcceptAllButSelfAndS3nDirs(path)));
+                new Listing.AcceptAllButSelfAndS3nDirs(path),
+                S3Guard.dirMetaToStatuses(dirMeta)
+            ));
       }
     } catch (AmazonClientException e) {
       throw translateException("listLocatedStatus", path, e);

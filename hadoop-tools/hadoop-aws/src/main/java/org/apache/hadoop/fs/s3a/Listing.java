@@ -27,13 +27,18 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
+
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import static org.apache.hadoop.fs.s3a.Constants.S3N_FOLDER_SUFFIX;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createFileStatus;
@@ -48,9 +53,32 @@ public class Listing {
 
   private final S3AFileSystem owner;
   private static final Logger LOG = S3AFileSystem.LOG;
+  private static final FileStatus[] EMPTY_FILE_STATUS_ARRAY = new FileStatus[0];
 
   public Listing(S3AFileSystem owner) {
     this.owner = owner;
+  }
+
+  /**
+   * Create a FileStatus iterator against a provided list of file status, with
+   * a given status filter.
+   *
+   * @param fileStatuses the provided list of file status. NO remote calls.
+   * @param filter file status filter
+   * @return the file status iterator
+   */
+  ProvidedLocatedFileStatusIterator createProvidedLocatedFileStatusIterator(
+      FileStatus[] fileStatuses, ProvidedFileStatusFilter filter) {
+    return new ProvidedLocatedFileStatusIterator(fileStatuses, filter);
+  }
+
+  FileStatusListingIterator createFileStatusListingIterator(
+      Path listPath,
+      ListObjectsRequest request,
+      PathFilter filter,
+      Listing.FileStatusAcceptor acceptor) throws IOException {
+    return createFileStatusListingIterator(listPath, request, filter, acceptor,
+        EMPTY_FILE_STATUS_ARRAY);
   }
 
   /**
@@ -61,6 +89,8 @@ public class Listing {
    * @param filter the filter on which paths to accept
    * @param acceptor the class/predicate to decide which entries to accept
    * in the listing based on the full file status.
+   * @param providedStatus the provided list of file status, which may contain
+   *                       items that are not listed from source.
    * @return the iterator
    * @throws IOException IO Problems
    */
@@ -68,11 +98,13 @@ public class Listing {
       Path listPath,
       ListObjectsRequest request,
       PathFilter filter,
-      Listing.FileStatusAcceptor acceptor) throws IOException {
+      Listing.FileStatusAcceptor acceptor,
+      FileStatus[] providedStatus) throws IOException {
     return new FileStatusListingIterator(
         new ObjectListingIterator(listPath, request),
         filter,
-        acceptor);
+        acceptor,
+        providedStatus);
   }
 
   /**
@@ -169,6 +201,51 @@ public class Listing {
   }
 
   /**
+   * Filter out a FileStatus object, unlike {@link PathFilter} against a path.
+   */
+  interface ProvidedFileStatusFilter {
+    boolean accept(FileStatus status);
+  }
+
+  /**
+   * This wraps up a provided non-null list of file status as a remote iterator.
+   *
+   * It firstly filters the provided list and later {@link #next} call will get
+   * from the filtered list. This suffers from scalability issues if the
+   * provided list is too large.
+   *
+   * There is no remote data to fetch.
+   */
+  class ProvidedLocatedFileStatusIterator
+      implements RemoteIterator<LocatedFileStatus> {
+    private final ArrayList<FileStatus> filteredStatusList;
+    private int index = 0;
+
+    ProvidedLocatedFileStatusIterator(FileStatus[] fileStatuses,
+        ProvidedFileStatusFilter filter) {
+      Preconditions.checkArgument(fileStatuses != null, "Null status list!");
+
+      filteredStatusList = new ArrayList<>(fileStatuses.length);
+      for (FileStatus status : fileStatuses) {
+        if (filter.accept(status)) {
+          filteredStatusList.add(status);
+        }
+      }
+      filteredStatusList.trimToSize();
+    }
+
+    @Override
+    public boolean hasNext() throws IOException {
+      return index < filteredStatusList.size();
+    }
+
+    @Override
+    public LocatedFileStatus next() throws IOException {
+      return owner.toLocatedFileStatus(filteredStatusList.get(index++));
+    }
+  }
+
+  /**
    * Wraps up object listing into a remote iterator which will ask for more
    * listing data if needed.
    *
@@ -208,20 +285,32 @@ public class Listing {
     /** Iterator over the current set of results. */
     private ListIterator<FileStatus> statusBatchIterator;
 
+    private final Set<FileStatus> providedStatus;
+    private Iterator<FileStatus> providedStatusIterator;
+
     /**
      * Create an iterator over file status entries.
      * @param source the listing iterator from a listObjects call.
      * @param filter the filter on which paths to accept
      * @param acceptor the class/predicate to decide which entries to accept
      * in the listing based on the full file status.
+     * @param providedStatus the provided list of file status, which may contain
+     *                       items that are not listed from source.
      * @throws IOException IO Problems
      */
     FileStatusListingIterator(ObjectListingIterator source,
         PathFilter filter,
-        FileStatusAcceptor acceptor) throws IOException {
+        FileStatusAcceptor acceptor,
+        FileStatus[] providedStatus) throws IOException {
       this.source = source;
       this.filter = filter;
       this.acceptor = acceptor;
+      this.providedStatus = new HashSet<>(providedStatus.length);
+      for (FileStatus status : providedStatus) {
+        if (filter.accept(status.getPath())) {
+          this.providedStatus.add(status);
+        }
+      }
       // build the first set of results. This will not trigger any
       // remote IO, assuming the source iterator is in its initial
       // iteration
@@ -233,20 +322,46 @@ public class Listing {
      * If there is data in the local filtered list, return true.
      * Else: request more data util that condition is met, or there
      * is no more remote listing data.
+     * Lastly, return true if the provided file status has left items.
      * @return true if a call to {@link #next()} will succeed.
      * @throws IOException
      */
     @Override
     public boolean hasNext() throws IOException {
-      return statusBatchIterator.hasNext() || requestNextBatch();
+      return sourceHasNext() || providedStatusIterator.hasNext();
+    }
+
+    private boolean sourceHasNext() throws IOException {
+      if (statusBatchIterator.hasNext() || requestNextBatch()) {
+        return true;
+      } else {
+        // turn to file status that are only in provided list
+        if (providedStatusIterator == null) {
+          LOG.debug("Start iterating the provided status.");
+          providedStatusIterator = providedStatus.iterator();
+        }
+        return false;
+      }
     }
 
     @Override
     public FileStatus next() throws IOException {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
+      final FileStatus status;
+      if (sourceHasNext()) {
+        status = statusBatchIterator.next();
+        // We remove from provided list the file status listed by S3 so that
+        // this does not return duplicate items.
+        LOG.debug("Removing the status from provided file status {}", status);
+        providedStatus.remove(status);
+      } else {
+        if (providedStatusIterator.hasNext()) {
+          status = providedStatusIterator.next();
+          LOG.debug("Returning provided file status {}", status);
+        } else {
+          throw new NoSuchElementException();
+        }
       }
-      return statusBatchIterator.next();
+      return status;
     }
 
     /**

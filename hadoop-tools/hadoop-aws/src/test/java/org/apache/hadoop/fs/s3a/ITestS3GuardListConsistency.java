@@ -21,7 +21,9 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
@@ -48,7 +50,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testConsistentList() throws Exception {
+  public void testConsistentListStatus() throws Exception {
 
     S3AFileSystem fs = getFileSystem();
 
@@ -78,6 +80,71 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     assertTrue(list.contains(path("a/b/dir2")));
     // This should fail without S3Guard, and succeed with it.
     assertTrue(list.contains(inconsistentPath));
+  }
+
+  /**
+   * Similar to {@link #testConsistentListStatus()}, this tests that the FS
+   * listLocatedStatus() call will return consistent list.
+   */
+  @Test
+  public void testConsistentListLocatedStatus() throws Exception {
+    final S3AFileSystem fs = getFileSystem();
+    // This test will fail if NullMetadataStore (the default) is configured:
+    // skip it.
+    Assume.assumeTrue(fs.hasMetadataStore());
+    fs.mkdirs(path("doTestConsistentListLocatedStatus"));
+
+    final int[] numOfPaths = {0, 1, 10};
+    for (int normalPathNum : numOfPaths) {
+      for (int delayedPathNum : numOfPaths) {
+        LOG.info("Testing with normalPathNum={}, delayedPathNum={}",
+            normalPathNum, delayedPathNum);
+        doTestConsistentListLocatedStatus(fs, normalPathNum, delayedPathNum);
+      }
+    }
+  }
+
+  /**
+   * Helper method to implement the tests of consistent listLocatedStatus().
+   * @param fs The S3 file system from contract
+   * @param normalPathNum number paths listed directly from S3 without delaying
+   * @param delayedPathNum number paths listed with delaying
+   * @throws Exception
+   */
+  private void doTestConsistentListLocatedStatus(S3AFileSystem fs,
+      int normalPathNum, int delayedPathNum) throws Exception {
+    final List<Path> testDirs = new ArrayList<>(normalPathNum + delayedPathNum);
+    int index = 0;
+    for (; index < normalPathNum; index++) {
+      testDirs.add(path("doTestConsistentListLocatedStatus/dir-" + index));
+    }
+    for (; index < normalPathNum + delayedPathNum; index++) {
+      // Any S3 keys that contain DELAY_KEY_SUBSTRING will be delayed
+      // in listObjects() results via InconsistentS3Client
+      testDirs.add(path("doTestConsistentListLocatedStatus/dir-" + index
+          + InconsistentAmazonS3Client.DELAY_KEY_SUBSTRING));
+    }
+
+    for (Path path : testDirs) {
+      // delete the old test path (if any) so that when we call mkdirs() later,
+      // the to delay directories will be tracked via putObject() request.
+      fs.delete(path, true);
+      assertTrue(fs.mkdirs(path));
+    }
+
+    // this should return the union data from S3 and MetadataStore
+    final RemoteIterator<LocatedFileStatus> statusIterator =
+        fs.listLocatedStatus(path("doTestConsistentListLocatedStatus/"));
+    List<Path> list = new ArrayList<>();
+    for (; statusIterator.hasNext();) {
+      list.add(statusIterator.next().getPath());
+    }
+
+    // This should fail without S3Guard, and succeed with it because part of the
+    // children under test path are delaying visibility
+    for (Path path : testDirs) {
+      assertTrue("listLocatedStatus should list " + path, list.contains(path));
+    }
   }
 
   @Test
