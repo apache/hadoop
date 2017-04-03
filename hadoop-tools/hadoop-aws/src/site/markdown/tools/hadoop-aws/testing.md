@@ -651,6 +651,7 @@ located.
 
 New tests are always welcome. Bear in mind that we need to keep costs
 and test time down, which is done by
+
 * Not duplicating tests.
 * Being efficient in your use of Hadoop API calls.
 * Isolating large/slow tests into the "scale" test group.
