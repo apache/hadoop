@@ -203,6 +203,7 @@
       <item name="Java API docs" href="api/index.html"/>
       <item name="Unix Shell API" href="hadoop-project-dist/hadoop-common/UnixShellAPI.html"/>
       <item name="Metrics" href="hadoop-project-dist/hadoop-common/Metrics.html"/>
+      <item name="Ozone Metrics" href="hadoop-project-dist/hadoop-hdfs/Ozonemetrics.html"/>
     </menu>
     
     <menu name="Configuration" inherit="top">
