@@ -58,7 +58,11 @@ public class InMemoryConfigurationStore implements YarnConfigurationStore {
         if (isValid) {
           Map<String, String> mutations = mutation.getUpdates();
           for (Map.Entry<String, String> kv : mutations.entrySet()) {
-            schedConf.set(kv.getKey(), kv.getValue());
+            if (kv.getValue() == null) {
+              schedConf.unset(kv.getKey());
+            } else {
+              schedConf.set(kv.getKey(), kv.getValue());
+            }
           }
         }
         return true;

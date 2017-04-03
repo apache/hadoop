@@ -86,6 +86,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnSched
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
@@ -150,7 +152,7 @@ import com.google.common.util.concurrent.SettableFuture;
 public class CapacityScheduler extends
     AbstractYarnScheduler<FiCaSchedulerApp, FiCaSchedulerNode> implements
     PreemptableResourceScheduler, CapacitySchedulerContext, Configurable,
-    ResourceAllocationCommitter {
+    ResourceAllocationCommitter, MutableConfScheduler {
 
   private static final Log LOG = LogFactory.getLog(CapacityScheduler.class);
 
@@ -2609,5 +2611,17 @@ public class CapacityScheduler extends
     }
     // In seconds
     return ((LeafQueue) queue).getMaximumApplicationLifetime();
+  }
+
+  @Override
+  public void updateConfiguration(UserGroupInformation user,
+      Map<String, String> confUpdate) throws IOException {
+    if (csConfProvider instanceof MutableConfigurationProvider) {
+      ((MutableConfigurationProvider) csConfProvider).mutateConfiguration(
+          user.getShortUserName(), confUpdate);
+    } else {
+      throw new UnsupportedOperationException("Configured CS configuration " +
+          "provider does not support updating configuration.");
+    }
   }
 }
