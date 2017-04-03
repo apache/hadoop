@@ -52,6 +52,7 @@ public class XceiverClientManager {
   private final Configuration conf;
   private Cache<String, XceiverClientWithAccessInfo> openClient;
   private final long staleThresholdMs;
+  private final boolean useRatis;
 
   /**
    * Creates a new XceiverClientManager.
@@ -63,6 +64,9 @@ public class XceiverClientManager {
     this.staleThresholdMs = conf.getTimeDuration(
         SCM_CONTAINER_CLIENT_STALE_THRESHOLD_KEY,
         SCM_CONTAINER_CLIENT_STALE_THRESHOLD_DEFAULT, TimeUnit.MILLISECONDS);
+    this.useRatis = conf.getBoolean(
+        ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
+        ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
     this.conf = conf;
     this.openClient = CacheBuilder.newBuilder()
         .expireAfterAccess(this.staleThresholdMs, TimeUnit.MILLISECONDS)
@@ -109,7 +113,9 @@ public class XceiverClientManager {
       return info.getXceiverClient();
     } else {
       // connection not found, create new, add reference and return
-      XceiverClientSpi xceiverClient = new XceiverClient(pipeline, conf);
+      final XceiverClientSpi xceiverClient = useRatis?
+          XceiverClientRatis.newXceiverClientRatis(pipeline, conf)
+          : new XceiverClient(pipeline, conf);
       try {
         xceiverClient.connect();
       } catch (Exception e) {

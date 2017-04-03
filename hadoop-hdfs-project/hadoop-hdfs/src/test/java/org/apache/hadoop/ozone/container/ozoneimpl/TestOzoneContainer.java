@@ -25,7 +25,11 @@ import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.XceiverClient;
+import org.apache.hadoop.scm.XceiverClientRatis;
+import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.ratis.rpc.RpcType;
+import org.apache.ratis.rpc.SupportedRpcType;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -89,19 +93,68 @@ public class TestOzoneContainer {
   }
 
   @Test
+  public void testOzoneContainerViaDataNodeRatisGrpc() throws Exception {
+    runTestOzoneContainerViaDataNodeRatis(SupportedRpcType.GRPC, 1);
+    runTestOzoneContainerViaDataNodeRatis(SupportedRpcType.GRPC, 3);
+  }
+
+  @Test
+  public void testOzoneContainerViaDataNodeRatisNetty() throws Exception {
+    runTestOzoneContainerViaDataNodeRatis(SupportedRpcType.NETTY, 1);
+    runTestOzoneContainerViaDataNodeRatis(SupportedRpcType.NETTY, 3);
+  }
+
+  private static void runTestOzoneContainerViaDataNodeRatis(
+      RpcType rpc, int numNodes) throws Exception {
+    ContainerTestHelper.LOG.info("runTestOzoneContainerViaDataNodeRatis(rpc="
+        + rpc + ", numNodes=" + numNodes);
+
+    final String containerName = OzoneUtils.getRequestID();
+    final Pipeline pipeline = ContainerTestHelper.createPipeline(
+        containerName, numNodes);
+    final OzoneConfiguration conf = initOzoneConfiguration(pipeline);
+    ContainerTestHelper.initRatisConf(rpc, pipeline, conf);
+
+    final MiniOzoneCluster cluster = new MiniOzoneCluster.Builder(conf)
+        .setHandlerType("local")
+        .numDataNodes(pipeline.getMachines().size())
+        .build();
+    cluster.waitOzoneReady();
+    final XceiverClientSpi client = XceiverClientRatis.newXceiverClientRatis(
+        pipeline, conf);
+
+    try {
+      runTestOzoneContainerViaDataNode(containerName, pipeline, client);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  private static OzoneConfiguration initOzoneConfiguration(Pipeline pipeline) {
+    final OzoneConfiguration conf = new OzoneConfiguration();
+    conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
+        pipeline.getLeader().getContainerPort());
+
+    setOzoneLocalStorageRoot(conf);
+    return conf;
+  }
+
+  private static void setOzoneLocalStorageRoot(OzoneConfiguration conf) {
+    URL p = conf.getClass().getResource("");
+    String path = p.getPath().concat(TestOzoneContainer.class.getSimpleName());
+    path += conf.getTrimmed(
+        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
+        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
+    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
+  }
+
+  @Test
   public void testOzoneContainerViaDataNode() throws Exception {
     MiniOzoneCluster cluster = null;
-    XceiverClient client = null;
     try {
-      String keyName = OzoneUtils.getRequestID();
       String containerName = OzoneUtils.getRequestID();
       OzoneConfiguration conf = new OzoneConfiguration();
-      URL p = conf.getClass().getResource("");
-      String path = p.getPath().concat(
-          TestOzoneContainer.class.getSimpleName());
-      path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
-          OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
-      conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
+      setOzoneLocalStorageRoot(conf);
 
       // Start ozone container Via Datanode create.
 
@@ -115,19 +168,32 @@ public class TestOzoneContainer {
           .setHandlerType("distributed").build();
 
       // This client talks to ozone container via datanode.
-      client = new XceiverClient(pipeline, conf);
+      XceiverClient client = new XceiverClient(pipeline, conf);
+
+      runTestOzoneContainerViaDataNode(containerName, pipeline, client);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  static void runTestOzoneContainerViaDataNode(
+      String containerName, Pipeline pipeline, XceiverClientSpi client)
+      throws Exception {
+    try {
       client.connect();
 
       // Create container
       ContainerProtos.ContainerCommandRequestProto request =
           ContainerTestHelper.getCreateContainerRequest(containerName);
-      pipeline.setContainerName(containerName);
       ContainerProtos.ContainerCommandResponseProto response =
           client.sendCommand(request);
       Assert.assertNotNull(response);
       Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
 
       // Write Chunk
+      final String keyName = OzoneUtils.getRequestID();
       ContainerProtos.ContainerCommandRequestProto writeChunkRequest =
           ContainerTestHelper.getWriteChunkRequest(pipeline, containerName,
               keyName, 1024);
@@ -203,9 +269,6 @@ public class TestOzoneContainer {
     } finally {
       if (client != null) {
         client.close();
-      }
-      if (cluster != null) {
-        cluster.shutdown();
       }
     }
   }

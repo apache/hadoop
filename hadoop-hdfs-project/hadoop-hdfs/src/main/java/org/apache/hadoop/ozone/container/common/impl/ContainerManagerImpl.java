@@ -598,10 +598,15 @@ public class ContainerManagerImpl implements ContainerManager {
    */
   @Override
   public boolean isOpen(String containerName) throws StorageContainerException {
-    ContainerData cData = containerMap.get(containerName).getContainer();
+    final ContainerStatus status = containerMap.get(containerName);
+    if (status == null) {
+      throw new StorageContainerException(
+          "Container status not found: " + containerName, CONTAINER_NOT_FOUND);
+    }
+    final ContainerData cData = status.getContainer();
     if (cData == null) {
-      throw new StorageContainerException("Container not found",
-          CONTAINER_NOT_FOUND);
+      throw new StorageContainerException(
+          "Container not found: " + containerName, CONTAINER_NOT_FOUND);
     }
     return cData.isOpen();
   }

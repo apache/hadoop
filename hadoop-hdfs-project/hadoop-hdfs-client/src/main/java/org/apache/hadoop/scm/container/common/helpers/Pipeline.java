@@ -155,4 +155,14 @@ public class Pipeline {
       return null;
     }
   }
+
+  @Override
+  public String toString() {
+    final StringBuilder b = new StringBuilder(getClass().getSimpleName())
+        .append("[");
+    datanodes.keySet().stream()
+        .forEach(id -> b.append(id.endsWith(leaderID)? "*" + id : id));
+    b.append("] container:").append(containerName);
+    return b.toString();
+  }
 }

@@ -35,6 +35,15 @@ public final class ScmConfigKeys {
   public static final int SCM_CONTAINER_CLIENT_STALE_THRESHOLD_DEFAULT =
       10000;
 
+  public static final String DFS_CONTAINER_RATIS_ENABLED_KEY
+      = "dfs.container.ratis.enabled";
+  public static final boolean DFS_CONTAINER_RATIS_ENABLED_DEFAULT
+      = false;
+  public static final String DFS_CONTAINER_RATIS_RPC_TYPE_KEY
+      = "dfs.container.ratis.rpc.type";
+  public static final String DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT
+      = "GRPC";
+
   // TODO : this is copied from OzoneConsts, may need to move to a better place
   public static final int CHUNK_SIZE = 1 * 1024 * 1024; // 1 MB
 
