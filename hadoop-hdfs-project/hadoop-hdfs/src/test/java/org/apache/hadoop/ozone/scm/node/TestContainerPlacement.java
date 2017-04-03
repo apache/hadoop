@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,10 +26,11 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.ozone.scm.container.ContainerMapping;
-import org.apache.hadoop.ozone.scm.container.ContainerPlacementPolicy;
-import org.apache.hadoop.ozone.scm.container.SCMContainerPlacementCapacity;
+import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
+import org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -93,6 +94,7 @@ public class TestContainerPlacement {
     return new ContainerMapping(config, scmNodeManager, cacheSize);
 
   }
+
   /**
    * Test capacity based container placement policy with node reports.
    *
@@ -122,7 +124,7 @@ public class TestContainerPlacement {
     List<DatanodeID> datanodes =
         SCMTestUtils.getRegisteredDatanodeIDs(nodeManager, nodeCount);
     try {
-      for (DatanodeID datanodeID: datanodes) {
+      for (DatanodeID datanodeID : datanodes) {
         StorageContainerDatanodeProtocolProtos.SCMNodeReport.Builder nrb =
             StorageContainerDatanodeProtocolProtos.SCMNodeReport.newBuilder();
         StorageContainerDatanodeProtocolProtos.SCMStorageReport.Builder srb =
@@ -139,11 +141,11 @@ public class TestContainerPlacement {
           100, 4 * 1000);
       assertEquals(nodeCount, nodeManager.getNodeCount(HEALTHY));
       assertEquals(capacity * nodeCount,
-          nodeManager.getStats().getCapacity());
+          (long) nodeManager.getStats().getCapacity().get());
       assertEquals(used * nodeCount,
-          nodeManager.getStats().getScmUsed());
+          (long) nodeManager.getStats().getScmUsed().get());
       assertEquals(remaining * nodeCount,
-          nodeManager.getStats().getRemaining());
+          (long) nodeManager.getStats().getRemaining().get());
 
       assertTrue(nodeManager.isOutOfNodeChillMode());
 
@@ -155,7 +157,7 @@ public class TestContainerPlacement {
       final long newUsed = 7L * OzoneConsts.GB;
       final long newRemaining = capacity - newUsed;
 
-      for (DatanodeID datanodeID: datanodes) {
+      for (DatanodeID datanodeID : datanodes) {
         StorageContainerDatanodeProtocolProtos.SCMNodeReport.Builder nrb =
             StorageContainerDatanodeProtocolProtos.SCMNodeReport.newBuilder();
         StorageContainerDatanodeProtocolProtos.SCMStorageReport.Builder srb =
@@ -168,14 +170,14 @@ public class TestContainerPlacement {
             nrb.addStorageReport(srb).build());
       }
 
-      GenericTestUtils.waitFor(() -> nodeManager.getStats().getRemaining() ==
-              nodeCount * newRemaining,
+      GenericTestUtils.waitFor(() -> nodeManager.getStats().getRemaining()
+              .get() == nodeCount * newRemaining,
           100, 4 * 1000);
 
       thrown.expect(IOException.class);
       thrown.expectMessage(
-          startsWith("No healthy node found with enough remaining capacity to" +
-              " allocate container."));
+          startsWith("Unable to find enough nodes that meet the space " +
+              "requirement in healthy node set."));
       String container2 = UUID.randomUUID().toString();
       containerManager.allocateContainer(container2,
           ScmClient.ReplicationFactor.THREE);

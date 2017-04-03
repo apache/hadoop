@@ -59,15 +59,17 @@ public class TestContainerMapping {
     testDir = Paths.get(path).toFile();
     boolean folderExisted = testDir.exists() || testDir.mkdirs();
     if (!folderExisted) {
-      throw new IOException("Unable to create test diectory path");
+      throw new IOException("Unable to create test directory path");
     }
-    nodeManager = new MockNodeManager();
+    nodeManager = new MockNodeManager(true, 10);
     mapping = new ContainerMapping(conf, nodeManager, 128);
   }
 
   @AfterClass
   public static void cleanup() throws IOException {
-    mapping.close();
+    if(mapping != null) {
+      mapping.close();
+    }
     FileUtil.fullyDelete(testDir);
   }
 

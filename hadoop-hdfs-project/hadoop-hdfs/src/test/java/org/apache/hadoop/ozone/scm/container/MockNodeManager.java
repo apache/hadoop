@@ -18,6 +18,7 @@ package org.apache.hadoop.ozone.scm.container;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
@@ -25,9 +26,9 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
-
+import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeMetric;
+import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
-import org.apache.hadoop.ozone.scm.node.SCMNodeStat;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -39,21 +40,55 @@ import java.util.Map;
  * Test Helper for testing container Mapping.
  */
 public class MockNodeManager implements NodeManager {
-  private final List<DatanodeID> healthyNodes;
   private static final int HEALTHY_NODE_COUNT = 10;
+  private final static NodeData[] NODES = {
+      new NodeData(10L * OzoneConsts.TB,  OzoneConsts.GB),
+      new NodeData(64L * OzoneConsts.TB, 100 * OzoneConsts.GB),
+      new NodeData(128L * OzoneConsts.TB, 256 * OzoneConsts.GB),
+      new NodeData(40L * OzoneConsts.TB, OzoneConsts.TB),
+      new NodeData(256L * OzoneConsts.TB, 200 * OzoneConsts.TB),
+      new NodeData(20L * OzoneConsts.TB, 10 * OzoneConsts.GB),
+      new NodeData(32L * OzoneConsts.TB, 16 * OzoneConsts.TB),
+      new NodeData(OzoneConsts.TB, 900 * OzoneConsts.GB),
+  };
+  private final List<DatanodeID> healthyNodes;
+  private final Map<String, SCMNodeStat> nodeMetricMap;
+  private final SCMNodeStat aggregateStat;
   private boolean chillmode;
 
-  public MockNodeManager() {
+  public MockNodeManager(boolean initializeFakeNodes, int nodeCount) {
     this.healthyNodes = new LinkedList<>();
-    for (int x = 0; x < 10; x++) {
-      healthyNodes.add(SCMTestUtils.getDatanodeID());
+    this.nodeMetricMap = new HashMap<>();
+    aggregateStat = new SCMNodeStat();
+    if (initializeFakeNodes) {
+      for (int x = 0; x < nodeCount; x++) {
+        DatanodeID id = SCMTestUtils.getDatanodeID();
+        healthyNodes.add(id);
+        populateNodeMetric(id, x);
+      }
     }
     chillmode = false;
   }
 
   /**
+   * Invoked from ctor to create some node Metrics.
+   *
+   * @param datanodeID - Datanode ID
+   */
+  private void populateNodeMetric(DatanodeID datanodeID, int x) {
+    SCMNodeStat newStat = new SCMNodeStat();
+    long remaining =
+        NODES[x % NODES.length].capacity - NODES[x % NODES.length].used;
+    newStat.set(
+        (NODES[x % NODES.length].capacity),
+        (NODES[x % NODES.length].used), remaining);
+    this.nodeMetricMap.put(datanodeID.toString(), newStat);
+    aggregateStat.add(newStat);
+  }
+
+  /**
    * Sets the chill mode value.
-   * @param chillmode  boolean
+   * @param chillmode boolean
    */
   public void setChillmode(boolean chillmode) {
     this.chillmode = chillmode;
@@ -184,7 +219,7 @@ public class MockNodeManager implements NodeManager {
    */
   @Override
   public SCMNodeStat getStats() {
-    return null;
+    return aggregateStat;
   }
 
   /**
@@ -193,7 +228,7 @@ public class MockNodeManager implements NodeManager {
    */
   @Override
   public Map<String, SCMNodeStat> getNodeStats() {
-    return null;
+    return nodeMetricMap;
   }
 
   /**
@@ -202,8 +237,8 @@ public class MockNodeManager implements NodeManager {
    * @return node stat if it is live/stale, null if it is dead or does't exist.
    */
   @Override
-  public SCMNodeStat getNodeStat(DatanodeID datanodeID) {
-    return null;
+  public SCMNodeMetric getNodeStat(DatanodeID datanodeID) {
+    return new SCMNodeMetric(nodeMetricMap.get(datanodeID.toString()));
   }
 
   /**
@@ -283,15 +318,103 @@ public class MockNodeManager implements NodeManager {
   @Override
   public List<SCMCommand> sendHeartbeat(DatanodeID datanodeID,
       SCMNodeReport nodeReport) {
+    if ((datanodeID != null) && (nodeReport != null) && (nodeReport
+        .getStorageReportCount() > 0)) {
+      SCMNodeStat stat = this.nodeMetricMap.get(datanodeID.toString());
+
+      long totalCapacity = 0L;
+      long totalRemaining = 0L;
+      long totalScmUsed = 0L;
+      List<StorageContainerDatanodeProtocolProtos.SCMStorageReport>
+          storageReports = nodeReport.getStorageReportList();
+      for (StorageContainerDatanodeProtocolProtos.SCMStorageReport report :
+          storageReports) {
+        totalCapacity += report.getCapacity();
+        totalRemaining +=report.getRemaining();
+        totalScmUsed += report.getScmUsed();
+      }
+      aggregateStat.subtract(stat);
+      stat.set(totalCapacity, totalScmUsed, totalRemaining);
+      aggregateStat.add(stat);
+      nodeMetricMap.put(datanodeID.toString(), stat);
+
+    }
     return null;
   }
 
   @Override
   public Map<String, Integer> getNodeCount() {
     Map<String, Integer> nodeCountMap = new HashMap<String, Integer>();
-    for(NodeManager.NODESTATE state : NodeManager.NODESTATE.values()) {
+    for (NodeManager.NODESTATE state : NodeManager.NODESTATE.values()) {
       nodeCountMap.put(state.toString(), getNodeCount(state));
     }
     return nodeCountMap;
+  }
+
+  /**
+   * Makes it easy to add a container.
+   *
+   * @param datanodeID datanode ID
+   * @param size number of bytes.
+   */
+  public void addContainer(DatanodeID datanodeID, long size) {
+    SCMNodeStat stat = this.nodeMetricMap.get(datanodeID.toString());
+    if (stat != null) {
+      aggregateStat.subtract(stat);
+      stat.getCapacity().add(size);
+      aggregateStat.add(stat);
+      nodeMetricMap.put(datanodeID.toString(), stat);
+    }
+  }
+
+  /**
+   * Makes it easy to simulate a delete of a container.
+   *
+   * @param datanodeID datanode ID
+   * @param size number of bytes.
+   */
+  public void delContainer(DatanodeID datanodeID, long size) {
+    SCMNodeStat stat = this.nodeMetricMap.get(datanodeID.toString());
+    if (stat != null) {
+      aggregateStat.subtract(stat);
+      stat.getCapacity().subtract(size);
+      aggregateStat.add(stat);
+      nodeMetricMap.put(datanodeID.toString(), stat);
+    }
+  }
+
+  /**
+   * A class to declare some values for the nodes so that our tests
+   * won't fail.
+   */
+  private static class NodeData {
+    private long capacity, used;
+
+    /**
+     * Constructs a nodeDefinition.
+     *
+     * @param capacity capacity.
+     * @param used used.
+     */
+    NodeData(long capacity, long used) {
+      this.capacity = capacity;
+      this.used = used;
+    }
+
+    public long getCapacity() {
+      return capacity;
+    }
+
+    public void setCapacity(long capacity) {
+      this.capacity = capacity;
+    }
+
+    public long getUsed() {
+      return used;
+    }
+
+    public void setUsed(long used) {
+      this.used = used;
+    }
   }
 }

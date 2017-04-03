@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
 import static org.apache.hadoop.ozone.scm
     .exceptions.SCMException.ResultCodes.FAILED_TO_LOAD_NODEPOOL;
 import static org.apache.hadoop.ozone.scm
-    .exceptions.SCMException.ResultCodes.NODE_NOT_FOUND_IN_NODEPOOL;
+    .exceptions.SCMException.ResultCodes.FAILED_TO_FIND_NODE_IN_POOL;
 import static org.apache.hadoop.scm
     .ScmConfigKeys.OZONE_SCM_DB_CACHE_SIZE_DEFAULT;
 import static org.apache.hadoop.scm
@@ -183,7 +183,7 @@ public final class SCMNodePoolManager implements NodePoolManager {
       if (kData == null) {
         throw new SCMException(String.format("Unable to find node %s from" +
             " pool %s in DB.", DFSUtil.bytes2String(kName), pool),
-            NODE_NOT_FOUND_IN_NODEPOOL);
+            FAILED_TO_FIND_NODE_IN_POOL);
       }
       nodePoolStore.delete(kName);
 
@@ -194,7 +194,7 @@ public final class SCMNodePoolManager implements NodePoolManager {
       } else {
         throw new SCMException(String.format("Unable to find node %s from" +
             " pool %s in MAP.", DFSUtil.bytes2String(kName), pool),
-            NODE_NOT_FOUND_IN_NODEPOOL);      }
+            FAILED_TO_FIND_NODE_IN_POOL);      }
     } finally {
       lock.writeLock().unlock();
     }

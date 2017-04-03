@@ -21,6 +21,8 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
+import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeMetric;
+import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeStat;
 
 import java.io.Closeable;
 import java.util.List;
@@ -127,7 +129,7 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * @param datanodeID - datanode ID.
    * @return node stat if it is live/stale, null if it is dead or does't exist.
    */
-  SCMNodeStat getNodeStat(DatanodeID datanodeID);
+  SCMNodeMetric getNodeStat(DatanodeID datanodeID);
 
   /**
    * Wait for the heartbeat is processed by NodeManager.

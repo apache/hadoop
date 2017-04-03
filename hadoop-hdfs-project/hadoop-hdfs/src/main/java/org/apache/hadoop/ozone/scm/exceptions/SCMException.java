@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,19 +16,13 @@
  * limitations under the License.
  */
 package org.apache.hadoop.ozone.scm.exceptions;
+
 import java.io.IOException;
 
 /**
  * Exception thrown by SCM.
  */
 public class SCMException extends IOException {
-  /**
-   * Error codes to make it easy to decode these exceptions.
-   */
-  public enum  ResultCodes {
-      FAILED_TO_LOAD_NODEPOOL,
-      NODE_NOT_FOUND_IN_NODEPOOL,
-  }
   private final ResultCodes result;
 
   /**
@@ -87,5 +81,25 @@ public class SCMException extends IOException {
   public SCMException(Throwable cause, ResultCodes result) {
     super(cause);
     this.result = result;
+  }
+
+  /**
+   * Returns resultCode.
+   * @return ResultCode
+   */
+  public ResultCodes getResult() {
+    return result;
+  }
+
+  /**
+   * Error codes to make it easy to decode these exceptions.
+   */
+  public enum ResultCodes {
+    FAILED_TO_LOAD_NODEPOOL,
+    FAILED_TO_FIND_NODE_IN_POOL,
+    FAILED_TO_FIND_HEALTHY_NODES,
+    FAILED_TO_FIND_NODES_WITH_SPACE,
+    FAILED_TO_FIND_SUITABLE_NODE,
+    INVALID_CAPACITY
   }
 }
