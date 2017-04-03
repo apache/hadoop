@@ -633,6 +633,11 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
     for(DirectoryDiff d : diffs) {
       for(INode deletedNode : d.getChildrenDiff().getList(ListType.DELETED)) {
         context.reportDeletedSnapshottedNode(deletedNode);
+        if (deletedNode.isDirectory()){
+          DirectoryWithSnapshotFeature sf =
+              deletedNode.asDirectory().getDirectoryWithSnapshotFeature();
+          sf.computeContentSummary4Snapshot(context);
+        }
       }
     }
   }

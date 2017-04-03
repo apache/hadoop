@@ -26,6 +26,7 @@ import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
+import static org.apache.hadoop.test.GenericTestUtils.getTestDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -2429,7 +2430,7 @@ public class TestRenameWithSnapshots {
    */
   @Test (timeout=300000)
   public void testDu() throws Exception {
-    File tempFile = File.createTempFile("testDu-", ".tmp");
+    File tempFile = File.createTempFile("testDu-", ".tmp", getTestDir());
     tempFile.deleteOnExit();
 
     final FileSystem localfs = FileSystem.getLocal(conf);
@@ -2539,7 +2540,8 @@ public class TestRenameWithSnapshots {
    */
   @Test (timeout=300000)
   public void testDuMultipleDirs() throws Exception {
-    File tempFile = File.createTempFile("testDuMultipleDirs-", "" + ".tmp");
+    File tempFile = File.createTempFile("testDuMultipleDirs-", ".tmp",
+        getTestDir());
     tempFile.deleteOnExit();
 
     final FileSystem localfs = FileSystem.getLocal(conf);
