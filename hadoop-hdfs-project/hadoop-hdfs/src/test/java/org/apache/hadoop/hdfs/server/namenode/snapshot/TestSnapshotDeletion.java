@@ -27,6 +27,7 @@ import java.io.PrintStream;
 import java.security.PrivilegedAction;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
@@ -1231,5 +1232,79 @@ public class TestSnapshotDeletion {
 
     // make sure bar has been cleaned from inodeMap
     Assert.assertNull(fsdir.getInode(fileId));
+  }
+
+  /**
+   * Test for HDFS-11515.
+   * In a scenario where a directory with subdirectories is removed from the
+   * file system after taking a snapshot on one of its ancestors, du command
+   * fails with a ConcurrentModificationException until a new snapshot is taken,
+   * or the old snapshots are removed.
+   * This test is testing this scenario with checks on the space consumed
+   * calculation.
+   *
+   * @throws Exception
+   */
+  @Test(timeout = 180000)
+  public void testDuWithRmdirInSnapshots() throws Exception {
+    final Path parent = new Path("/testDuWithRmdirInSnapshots");
+    final Path snapshotDir = new Path(parent, "snapshotDir");
+    final Path dir1 = new Path(snapshotDir, "d1"); //snapshotDir/d1
+    final Path dir2 = new Path(snapshotDir, "d2"); //snapshotDir/d2
+    final Path dir4 = new Path(dir2, "d4"); //snapshotDir/d2/d4
+    final Path dir3 = new Path(snapshotDir, "d3"); //snapshotDir/d3
+    final Path dir5 = new Path(dir3, "d5"); //snapshotDir/d3/d5
+    final Path aFileOutsideSnapshots = new Path(parent, "aFile");
+    final Path aFileInsideSnapshots = new Path(dir5, "aFile");
+
+    final String snapshotName = "s1";
+    final String snapshotName2 = "s2";
+
+    final long spaceConsumed = BLOCKSIZE * REPLICATION;
+    final long spaceConsumed2 = 2 * spaceConsumed;
+    ContentSummary summary = null;
+
+    DFSTestUtil.createFile(hdfs, aFileOutsideSnapshots,
+        BLOCKSIZE, REPLICATION, 0);
+    summary = hdfs.getContentSummary(parent);
+    assertEquals("Du is wrong even with one file without further ado.",
+        spaceConsumed, summary.getSpaceConsumed());
+
+    hdfs.mkdirs(snapshotDir);
+    hdfs.allowSnapshot(snapshotDir);
+    hdfs.mkdirs(dir1);
+
+    hdfs.createSnapshot(snapshotDir, snapshotName);
+
+    hdfs.mkdirs(dir4);
+    hdfs.mkdirs(dir5);
+    DFSTestUtil.createFile(hdfs, aFileInsideSnapshots,
+        BLOCKSIZE, REPLICATION, 0);
+    summary = hdfs.getContentSummary(parent);
+    assertEquals("Du is wrong with 2 files added to the file system.",
+        spaceConsumed2, summary.getSpaceConsumed());
+
+    hdfs.createSnapshot(snapshotDir, snapshotName2);
+
+    hdfs.delete(dir2, true);
+    hdfs.delete(dir3, true);
+
+    summary = hdfs.getContentSummary(parent);
+    assertEquals("Snapshot file count is not matching expected value.",
+        1, summary.getSnapshotFileCount());
+    assertEquals("Snapshot directory count is not matching expected value.",
+        4, summary.getSnapshotDirectoryCount());
+    assertEquals("Consumed space does not matching expected value.",
+        spaceConsumed, summary.getSnapshotSpaceConsumed());
+    assertEquals("Snapshot length is not matching expected value.",
+        BLOCKSIZE, summary.getSnapshotLength());
+    assertEquals("File count is not matching expected value.",
+        2, summary.getFileCount());
+    assertEquals("Directory count is not matching expected value.",
+        7, summary.getDirectoryCount());
+    assertEquals("Consumed space is not matching expected value.",
+        spaceConsumed2, summary.getSpaceConsumed());
+    assertEquals("Length is not matching expected value.",
+        2 * BLOCKSIZE, summary.getLength());
   }
 }
