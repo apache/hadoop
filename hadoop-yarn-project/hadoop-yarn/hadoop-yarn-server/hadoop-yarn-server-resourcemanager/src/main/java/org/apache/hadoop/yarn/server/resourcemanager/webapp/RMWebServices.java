@@ -55,7 +55,8 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-
+import com.google.common.base.Joiner;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -134,11 +135,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
@@ -2453,5 +2457,171 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   protected List<ContainerReport> getContainersReport(
       GetContainersRequest request) throws YarnException, IOException {
     return rm.getClientRMService().getContainers(request).getContainerList();
+  }
+
+  @PUT
+  @Path("/queues")
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response updateSchedulerConfiguration(QueueConfigsUpdateInfo
+      mutationInfo, @Context HttpServletRequest hsr)
+      throws AuthorizationException, InterruptedException {
+    init();
+
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    ApplicationACLsManager aclsManager = rm.getApplicationACLsManager();
+    if (aclsManager.areACLsEnabled()) {
+      if (callerUGI == null || !aclsManager.isAdmin(callerUGI)) {
+        String msg = "Only admins can carry out this operation.";
+        throw new ForbiddenException(msg);
+      }
+    }
+
+    ResourceScheduler scheduler = rm.getResourceScheduler();
+    if (scheduler instanceof MutableConfScheduler) {
+      try {
+        callerUGI.doAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws IOException, YarnException {
+            Map<String, String> confUpdate =
+                constructKeyValueConfUpdate(mutationInfo);
+            ((CapacityScheduler) scheduler).updateConfiguration(callerUGI,
+                confUpdate);
+            return null;
+          }
+        });
+      } catch (IOException e) {
+        return Response.status(Status.BAD_REQUEST).entity(e.getMessage())
+            .build();
+      }
+      return Response.status(Status.OK).entity("Configuration change " +
+          "successfully applied.").build();
+    } else {
+      return Response.status(Status.BAD_REQUEST)
+          .entity("Configuration change only supported by CapacityScheduler.")
+          .build();
+    }
+  }
+
+  private Map<String, String> constructKeyValueConfUpdate(
+      QueueConfigsUpdateInfo mutationInfo) throws IOException {
+    CapacitySchedulerConfiguration currentConf =
+        ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
+    CapacitySchedulerConfiguration proposedConf =
+        new CapacitySchedulerConfiguration(currentConf, false);
+    Map<String, String> confUpdate = new HashMap<>();
+    for (String queueToRemove : mutationInfo.getRemoveQueueInfo()) {
+      removeQueue(queueToRemove, proposedConf, confUpdate);
+    }
+    for (QueueConfigInfo addQueueInfo : mutationInfo.getAddQueueInfo()) {
+      addQueue(addQueueInfo, proposedConf, confUpdate);
+    }
+    for (QueueConfigInfo updateQueueInfo : mutationInfo.getUpdateQueueInfo()) {
+      updateQueue(updateQueueInfo, proposedConf, confUpdate);
+    }
+    return confUpdate;
+  }
+
+  private void removeQueue(
+      String queueToRemove, CapacitySchedulerConfiguration proposedConf,
+      Map<String, String> confUpdate) throws IOException {
+    if (queueToRemove == null) {
+      return;
+    } else {
+      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+      String queueName = queueToRemove.substring(
+          queueToRemove.lastIndexOf('.') + 1);
+      CSQueue queue = cs.getQueue(queueName);
+      if (queue == null ||
+          !queue.getQueuePath().equals(queueToRemove)) {
+        throw new IOException("Queue " + queueToRemove + " not found");
+      } else if (queueToRemove.lastIndexOf('.') == -1) {
+        throw new IOException("Can't remove queue " + queueToRemove);
+      }
+      String parentQueuePath = queueToRemove.substring(0, queueToRemove
+          .lastIndexOf('.'));
+      String[] siblingQueues = proposedConf.getQueues(parentQueuePath);
+      List<String> newSiblingQueues = new ArrayList<>();
+      for (String siblingQueue : siblingQueues) {
+        if (!siblingQueue.equals(queueName)) {
+          newSiblingQueues.add(siblingQueue);
+        }
+      }
+      proposedConf.setQueues(parentQueuePath, newSiblingQueues
+          .toArray(new String[0]));
+      String queuesConfig = CapacitySchedulerConfiguration.PREFIX +
+          parentQueuePath + CapacitySchedulerConfiguration.DOT +
+          CapacitySchedulerConfiguration.QUEUES;
+      if (newSiblingQueues.size() == 0) {
+        confUpdate.put(queuesConfig, null);
+      } else {
+        confUpdate.put(queuesConfig, Joiner.on(',').join(newSiblingQueues));
+      }
+      for (Map.Entry<String, String> confRemove : proposedConf.getValByRegex(
+          ".*" + queueToRemove.replaceAll("\\.", "\\.") + "\\..*")
+          .entrySet()) {
+        proposedConf.unset(confRemove.getKey());
+        confUpdate.put(confRemove.getKey(), null);
+      }
+    }
+  }
+
+  private void addQueue(
+      QueueConfigInfo addInfo, CapacitySchedulerConfiguration proposedConf,
+      Map<String, String> confUpdate) throws IOException {
+    if (addInfo == null) {
+      return;
+    } else {
+      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+      String queuePath = addInfo.getQueue();
+      String queueName = queuePath.substring(queuePath.lastIndexOf('.') + 1);
+      if (cs.getQueue(queueName) != null) {
+        throw new IOException("Can't add existing queue " + queuePath);
+      } else if (queuePath.lastIndexOf('.') == -1) {
+        throw new IOException("Can't add invalid queue " + queuePath);
+      }
+      String parentQueue = queuePath.substring(0, queuePath.lastIndexOf('.'));
+      String[] siblings = proposedConf.getQueues(parentQueue);
+      List<String> siblingQueues = siblings == null ? new ArrayList<>() :
+          new ArrayList<>(Arrays.<String>asList(siblings));
+      siblingQueues.add(queuePath.substring(queuePath.lastIndexOf('.') + 1));
+      proposedConf.setQueues(parentQueue,
+          siblingQueues.toArray(new String[0]));
+      confUpdate.put(CapacitySchedulerConfiguration.PREFIX +
+          parentQueue + CapacitySchedulerConfiguration.DOT +
+          CapacitySchedulerConfiguration.QUEUES,
+          Joiner.on(',').join(siblingQueues));
+      String keyPrefix = CapacitySchedulerConfiguration.PREFIX +
+          queuePath + CapacitySchedulerConfiguration.DOT;
+      for (Map.Entry<String, String> kv : addInfo.getParams().entrySet()) {
+        if (kv.getValue() == null) {
+          proposedConf.unset(keyPrefix + kv.getKey());
+        } else {
+          proposedConf.set(keyPrefix + kv.getKey(), kv.getValue());
+        }
+        confUpdate.put(keyPrefix + kv.getKey(), kv.getValue());
+      }
+    }
+  }
+
+  private void updateQueue(QueueConfigInfo updateInfo,
+      CapacitySchedulerConfiguration proposedConf,
+      Map<String, String> confUpdate) {
+    if (updateInfo == null) {
+      return;
+    } else {
+      String queuePath = updateInfo.getQueue();
+      String keyPrefix = CapacitySchedulerConfiguration.PREFIX +
+          queuePath + CapacitySchedulerConfiguration.DOT;
+      for (Map.Entry<String, String> kv : updateInfo.getParams().entrySet()) {
+        if (kv.getValue() == null) {
+          proposedConf.unset(keyPrefix + kv.getKey());
+        } else {
+          proposedConf.set(keyPrefix + kv.getKey(), kv.getValue());
+        }
+        confUpdate.put(keyPrefix + kv.getKey(), kv.getValue());
+      }
+    }
   }
 }

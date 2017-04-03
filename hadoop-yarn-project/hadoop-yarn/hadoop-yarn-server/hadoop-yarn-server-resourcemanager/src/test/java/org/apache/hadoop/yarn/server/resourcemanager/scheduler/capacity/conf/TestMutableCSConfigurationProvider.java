@@ -77,7 +77,11 @@ public class TestMutableCSConfigurationProvider {
     assertNull(confProvider.loadConfiguration(conf).get("badKey"));
     doThrow(new IOException()).when(cs).reinitialize(any(Configuration.class),
         any(RMContext.class));
-    confProvider.mutateConfiguration(TEST_USER, badUpdate);
+    try {
+      confProvider.mutateConfiguration(TEST_USER, badUpdate);
+    } catch (IOException e) {
+      // Expected exception.
+    }
     assertNull(confProvider.loadConfiguration(conf).get("badKey"));
   }
 }
