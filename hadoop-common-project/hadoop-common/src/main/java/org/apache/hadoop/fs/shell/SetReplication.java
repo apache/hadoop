@@ -85,11 +85,20 @@ class SetReplication extends FsCommand {
     }
     
     if (item.stat.isFile()) {
-      if (!item.fs.setReplication(item.path, newRep)) {
-        throw new IOException("Could not set replication for: " + item);
+      // Do the checking if the file is erasure coded since
+      // replication factor for an EC file is meaningless.
+      if (!item.stat.isErasureCoded()) {
+        if (!item.fs.setReplication(item.path, newRep)) {
+          throw new IOException("Could not set replication for: " + item);
+        }
+        out.println("Replication " + newRep + " set: " + item);
+        if (waitOpt) {
+          waitList.add(item);
+        }
+      } else {
+        out.println("Did not set replication for: " + item
+            + ", because it's an erasure coded file.");
       }
-      out.println("Replication " + newRep + " set: " + item);
-      if (waitOpt) waitList.add(item);
     } 
   }
 
