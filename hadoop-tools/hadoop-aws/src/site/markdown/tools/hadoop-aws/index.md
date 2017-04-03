@@ -91,6 +91,7 @@ access to the data. Anyone with the credentials can not only read your datasets
 —they can delete them.
 
 Do not inadvertently share these credentials through means such as
+
 1. Checking in to SCM any configuration files containing the secrets.
 1. Logging them to a console, as they invariably end up being seen.
 1. Defining filesystem URIs with the credentials in the URL, such as
