@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.ozone;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -191,19 +190,16 @@ public final class MiniOzoneCluster extends MiniDFSCluster
    * Waits for the Ozone cluster to be ready for processing requests.
    */
   public void waitOzoneReady() throws TimeoutException, InterruptedException {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        if (scm.getNodeCount(SCMNodeManager.NODESTATE.HEALTHY)
-            >= numDataNodes) {
-          return true;
-        }
-        LOG.info("Waiting for cluster to be ready. Got {} of {} DN Heartbeats.",
-            scm.getNodeCount(SCMNodeManager.NODESTATE.HEALTHY),
-            numDataNodes);
-
-        return false;
+    GenericTestUtils.waitFor(() -> {
+      if (scm.getNodeCount(SCMNodeManager.NODESTATE.HEALTHY)
+          >= numDataNodes) {
+        return true;
       }
+      LOG.info("Waiting for cluster to be ready. Got {} of {} DN Heartbeats.",
+          scm.getNodeCount(SCMNodeManager.NODESTATE.HEALTHY),
+          numDataNodes);
+
+      return false;
     }, 1000, 5 * 60 * 1000); //wait for 5 mins.
   }
 
@@ -216,15 +212,12 @@ public final class MiniOzoneCluster extends MiniDFSCluster
    */
   public void waitTobeOutOfChillMode() throws TimeoutException,
       InterruptedException {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        if (scm.getScmNodeManager().isOutOfNodeChillMode()) {
-          return true;
-        }
-        LOG.info("Waiting for cluster to be ready. No datanodes found");
-        return false;
+    GenericTestUtils.waitFor(() -> {
+      if (scm.getScmNodeManager().isOutOfNodeChillMode()) {
+        return true;
       }
+      LOG.info("Waiting for cluster to be ready. No datanodes found");
+      return false;
     }, 100, 45000);
   }
 
@@ -234,7 +227,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
             scm.getScmNodeManager().waitForHeartbeatProcessed(), 100,
         4 * 1000);
     GenericTestUtils.waitFor(() ->
-            scm.getScmNodeManager().getStats().getCapacity() > 0, 100,
+            scm.getScmNodeManager().getStats().getCapacity().get() > 0, 100,
         4 * 1000);
   }
 
@@ -242,21 +235,20 @@ public final class MiniOzoneCluster extends MiniDFSCluster
    * Builder for configuring the MiniOzoneCluster to run.
    */
   public static class Builder
-      extends org.apache.hadoop.hdfs.MiniDFSCluster.Builder {
+      extends MiniDFSCluster.Builder {
 
     private final OzoneConfiguration conf;
-    private final int defaultHBSeconds = 1;
-    private final int defaultProcessorMs = 100;
+    private static final int DEFAULT_HB_SECONDS = 1;
+    private static final int DEFAULT_PROCESSOR_MS = 100;
     private final String path;
     private final UUID runID;
-    private Optional<String> ozoneHandlerType = Optional.absent();
+    private Optional<String> ozoneHandlerType = java.util.Optional.empty();
     private Optional<Boolean> enableTrace = Optional.of(false);
-    private Optional<Integer> hbSeconds = Optional.absent();
-    private Optional<Integer> hbProcessorInterval = Optional.absent();
-    private Optional<String> scmMetadataDir = Optional.absent();
+    private Optional<Integer> hbSeconds = Optional.empty();
+    private Optional<Integer> hbProcessorInterval = Optional.empty();
+    private Optional<String> scmMetadataDir = Optional.empty();
     private Boolean ozoneEnabled = true;
     private Boolean waitForChillModeFinish = true;
-    private int containerWorkerThreadInterval = 1;
     private Boolean randomContainerPort = true;
 
     /**
@@ -267,9 +259,6 @@ public final class MiniOzoneCluster extends MiniDFSCluster
     public Builder(OzoneConfiguration conf) {
       super(conf);
       this.conf = conf;
-
-      // TODO : Remove this later, with SCM, NN and SCM can run together.
-      //this.nnTopology(new MiniDFSNNTopology()); // No NameNode required
 
       URL p = conf.getClass().getResource("");
       path = p.getPath().concat(MiniOzoneCluster.class.getSimpleName() + UUID
@@ -326,11 +315,6 @@ public final class MiniOzoneCluster extends MiniDFSCluster
 
     public Builder doNotwaitTobeOutofChillMode() {
       waitForChillModeFinish = false;
-      return this;
-    }
-
-    public Builder setSCMContainerWorkerThreadInterval(int intervalInSeconds) {
-      containerWorkerThreadInterval = intervalInSeconds;
       return this;
     }
 
@@ -391,7 +375,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
         return;
       }
 
-      // If user has not specified a path, create a UUID for this miniCluser
+      // If user has not specified a path, create a UUID for this miniCluster
       // and create SCM under that directory.
       Path scmPath = Paths.get(path, runID.toString(), "scm");
       Files.createDirectories(scmPath);
@@ -417,9 +401,11 @@ public final class MiniOzoneCluster extends MiniDFSCluster
       if (enableTrace.isPresent()) {
         conf.setBoolean(OzoneConfigKeys.OZONE_TRACE_ENABLED_KEY,
             enableTrace.get());
+        GenericTestUtils.setLogLevel(org.apache.log4j.Logger.getRootLogger(),
+            Level.ALL);
       }
       GenericTestUtils.setLogLevel(org.apache.log4j.Logger.getRootLogger(),
-          Level.ALL);
+          Level.INFO);
     }
 
     private void configureSCMheartbeat() {
@@ -429,7 +415,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
 
       } else {
         conf.setInt(ScmConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS,
-            defaultHBSeconds);
+            DEFAULT_HB_SECONDS);
       }
 
       if (hbProcessorInterval.isPresent()) {
@@ -437,7 +423,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
             hbProcessorInterval.get());
       } else {
         conf.setInt(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS,
-            defaultProcessorMs);
+            DEFAULT_PROCESSOR_MS);
       }
 
     }

@@ -18,7 +18,7 @@
 package org.apache.hadoop.ozone.scm.node;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
+import java.util.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.collections.map.HashedMap;
@@ -42,6 +42,8 @@ import org.apache.hadoop.ozone.protocol
     .proto.StorageContainerDatanodeProtocolProtos.SCMStorageReport;
 
 import org.apache.hadoop.ozone.scm.VersionInfo;
+import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeMetric;
+import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.slf4j.Logger;
@@ -165,7 +167,7 @@ public class SCMNodeManager
     executorService = HadoopExecutors.newScheduledThreadPool(1,
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("SCM Heartbeat Processing Thread - %d").build());
-    this.inManualChillMode = Optional.absent();
+    this.inManualChillMode = Optional.empty();
 
     Preconditions.checkState(heartbeatCheckerIntervalMs > 0);
     executorService.schedule(this, heartbeatCheckerIntervalMs,
@@ -290,7 +292,7 @@ public class SCMNodeManager
    */
   @Override
   public void clearChillModeFlag() {
-    this.inManualChillMode = Optional.absent();
+    this.inManualChillMode = Optional.empty();
   }
 
   /**
@@ -601,8 +603,8 @@ public class SCMNodeManager
       List<SCMStorageReport> storageReports = nodeReport.getStorageReportList();
       for (SCMStorageReport report : storageReports) {
         totalCapacity += report.getCapacity();
-        totalRemaining += report.getRemaining();
-        totalScmUsed += report.getScmUsed();
+        totalRemaining +=  report.getRemaining();
+        totalScmUsed+= report.getScmUsed();
       }
       scmStat.subtract(stat);
       stat.set(totalCapacity, totalScmUsed, totalRemaining);
@@ -768,8 +770,8 @@ public class SCMNodeManager
    * @return node stat if it is live/stale, null if it is dead or does't exist.
    */
   @Override
-  public SCMNodeStat getNodeStat(DatanodeID datanodeID) {
-    return nodeStats.get(datanodeID.getDatanodeUuid());
+  public SCMNodeMetric getNodeStat(DatanodeID datanodeID) {
+    return new SCMNodeMetric(nodeStats.get(datanodeID.getDatanodeUuid()));
   }
 
   @Override

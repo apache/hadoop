@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.scm.node;
+package org.apache.hadoop.ozone.scm.container.placement.metrics;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -28,28 +28,28 @@ interface NodeStat {
    * Get capacity of the node.
    * @return capacity of the node.
    */
-  long getCapacity();
+  LongMetric getCapacity();
 
   /**
    * Get the used space of the node.
    * @return the used space of the node.
    */
-  long getScmUsed();
+  LongMetric getScmUsed();
 
   /**
    * Get the remaining space of the node.
    * @return the remaining space of the node.
    */
-  long getRemaining();
+  LongMetric getRemaining();
 
   /**
    * Set the total/used/remaining space.
-   * @param total - total space.
+   * @param capacity - total space.
    * @param used - used space.
    * @param remain - remaining space.
    */
   @VisibleForTesting
-  void set(long total, long used, long remain);
+  void set(long capacity, long used, long remain);
 
   /**
    * Adding of the stat.

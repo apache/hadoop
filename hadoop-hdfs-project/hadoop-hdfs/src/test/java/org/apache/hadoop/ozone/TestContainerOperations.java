@@ -19,8 +19,8 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ozone.scm.container.ContainerPlacementPolicy;
-import org.apache.hadoop.ozone.scm.container.SCMContainerPlacementCapacity;
+import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
+import org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.client.ContainerOperationClient;
@@ -41,7 +41,7 @@ import static org.junit.Assert.assertEquals;
 public class TestContainerOperations {
 
   private static ScmClient storageClient;
-  private static MiniOzoneCluster cluster;;
+  private static MiniOzoneCluster cluster;
   private static OzoneConfiguration ozoneConf;
 
   @BeforeClass

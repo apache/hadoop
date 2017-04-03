@@ -23,11 +23,14 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
+import org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementRandom;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.utils.LevelDBStore;
+import org.iq80.leveldb.Options;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +42,6 @@ import java.nio.charset.Charset;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import org.iq80.leveldb.Options;
 
 /**
  * Mapping class contains the mapping from a name to a pipeline mapping. This is
@@ -94,8 +96,7 @@ public class ContainerMapping implements Mapping {
     this.containerSize = OzoneConsts.GB * conf.getInt(
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_GB,
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);
-
-    this.placementPolicy =  createContainerPlacementPolicy(nodeManager, conf);
+    this.placementPolicy = createContainerPlacementPolicy(nodeManager, conf);
   }
 
   /**
@@ -105,9 +106,10 @@ public class ContainerMapping implements Mapping {
    * @param conf - configuration.
    * @return SCM container placement policy implementation instance.
    */
+  @SuppressWarnings("unchecked")
   private static ContainerPlacementPolicy createContainerPlacementPolicy(
       final NodeManager nodeManager, final Configuration conf) {
-    Class<? extends  ContainerPlacementPolicy> implClass =
+    Class<? extends ContainerPlacementPolicy> implClass =
         (Class<? extends ContainerPlacementPolicy>) conf.getClass(
             ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
             SCMContainerPlacementRandom.class);
@@ -123,15 +125,18 @@ public class ContainerMapping implements Mapping {
       throw new RuntimeException(implClass.getName()
           + " could not be constructed.", e.getCause());
     } catch (Exception e) {
+      LOG.error("Unhandled exception occured, Placement policy will not be " +
+          "functional.");
+      throw new IllegalArgumentException("Unable to load " +
+          "ContainerPlacementPolicy", e);
     }
-    return null;
   }
 
   /**
    * Translates a list of nodes, ordered such that the first is the leader, into
    * a corresponding {@link Pipeline} object.
    * @param nodes - list of datanodes on which we will allocate the container.
-   *              The first of the list will be the leader node.
+   * The first of the list will be the leader node.
    * @param containerName container name
    * @return pipeline corresponding to nodes
    */
@@ -148,7 +153,6 @@ public class ContainerMapping implements Mapping {
     return pipeline;
   }
 
-
   /**
    * Returns the Pipeline from the container name.
    *
@@ -157,7 +161,7 @@ public class ContainerMapping implements Mapping {
    */
   @Override
   public Pipeline getContainer(final String containerName) throws IOException {
-    Pipeline pipeline = null;
+    Pipeline pipeline;
     lock.lock();
     try {
       byte[] pipelineBytes =
