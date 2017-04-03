@@ -15,24 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
+
+import org.apache.hadoop.security.UserGroupInformation;
 
 import java.io.IOException;
 import java.util.Map;
 
 /**
- * Interface for allowing changing scheduler configurations.
+ * Interface for a scheduler that supports changing configuration at runtime.
+ *
  */
-public interface MutableConfigurationProvider {
+public interface MutableConfScheduler extends ResourceScheduler {
 
   /**
-   * Update the scheduler configuration with the provided key value pairs.
-   * @param user User issuing the request
-   * @param confUpdate Key-value pairs for configurations to be updated.
-   * @throws IOException if scheduler could not be reinitialized
+   * Update the scheduler's configuration.
+   * @param user Caller of this update
+   * @param confUpdate key-value map of the configuration update
+   * @throws IOException if update is invalid
    */
-  void mutateConfiguration(String user, Map<String, String> confUpdate)
-      throws IOException;
+  void updateConfiguration(UserGroupInformation user,
+      Map<String, String> confUpdate) throws IOException;
 
 }

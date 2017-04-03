@@ -60,34 +60,44 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     }
     Configuration initialSchedConf = new Configuration(false);
     initialSchedConf.addResource(YarnConfiguration.CS_CONFIGURATION_FILE);
-    this.schedConf = initialSchedConf;
-    confStore.initialize(config, initialSchedConf);
+    this.schedConf = new Configuration(false);
+    // We need to explicitly set the key-values in schedConf, otherwise
+    // these configuration keys cannot be deleted when
+    // configuration is reloaded.
+    for (Map.Entry<String, String> kv : initialSchedConf) {
+      schedConf.set(kv.getKey(), kv.getValue());
+    }
+    confStore.initialize(config, schedConf);
     this.conf = config;
   }
 
   @Override
   public CapacitySchedulerConfiguration loadConfiguration(Configuration
       configuration) throws IOException {
-    Configuration loadedConf = new Configuration(configuration);
-    loadedConf.addResource(schedConf);
+    Configuration loadedConf = new Configuration(schedConf);
+    loadedConf.addResource(configuration);
     return new CapacitySchedulerConfiguration(loadedConf, false);
   }
 
   @Override
   public void mutateConfiguration(String user,
-      Map<String, String> confUpdate) {
+      Map<String, String> confUpdate) throws IOException {
     Configuration oldConf = new Configuration(schedConf);
     LogMutation log = new LogMutation(confUpdate, user);
     long id = confStore.logMutation(log);
     for (Map.Entry<String, String> kv : confUpdate.entrySet()) {
-      schedConf.set(kv.getKey(), kv.getValue());
+      if (kv.getValue() == null) {
+        schedConf.unset(kv.getKey());
+      } else {
+        schedConf.set(kv.getKey(), kv.getValue());
+      }
     }
     try {
       rmContext.getScheduler().reinitialize(conf, rmContext);
     } catch (IOException e) {
       schedConf = oldConf;
       confStore.confirmMutation(id, false);
-      return;
+      throw e;
     }
     confStore.confirmMutation(id, true);
   }
