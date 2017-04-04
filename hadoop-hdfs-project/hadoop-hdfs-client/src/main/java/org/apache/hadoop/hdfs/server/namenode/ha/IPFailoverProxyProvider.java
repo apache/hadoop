@@ -25,13 +25,9 @@ import java.net.URI;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.DFSUtilClient;
-import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
-
-import com.google.common.base.Preconditions;
 
 /**
  * A NNFailoverProxyProvider implementation which works on IP failover setup.
@@ -54,15 +50,14 @@ public class IPFailoverProxyProvider<T> extends
   private final Configuration conf;
   private final Class<T> xface;
   private final URI nameNodeUri;
+  private final ProxyFactory<T> factory;
   private ProxyInfo<T> nnProxyInfo = null;
   
   public IPFailoverProxyProvider(Configuration conf, URI uri,
-      Class<T> xface) {
-    Preconditions.checkArgument(
-        xface.isAssignableFrom(NamenodeProtocols.class),
-        "Interface class %s is not a valid NameNode protocol!");
+      Class<T> xface, ProxyFactory<T> factory) {
     this.xface = xface;
     this.nameNodeUri = uri;
+    this.factory = factory;
 
     this.conf = new Configuration(conf);
     int maxRetries = this.conf.getInt(
@@ -92,9 +87,8 @@ public class IPFailoverProxyProvider<T> extends
       try {
         // Create a proxy that is not wrapped in RetryProxy
         InetSocketAddress nnAddr = DFSUtilClient.getNNAddress(nameNodeUri);
-        nnProxyInfo = new ProxyInfo<T>(NameNodeProxies.createNonHAProxy(
-            conf, nnAddr, xface, UserGroupInformation.getCurrentUser(), 
-            false).getProxy(), nnAddr.toString());
+        nnProxyInfo = new ProxyInfo<T>(factory.createProxy(conf, nnAddr, xface,
+          UserGroupInformation.getCurrentUser(), false), nnAddr.toString());
       } catch (IOException ioe) {
         throw new RuntimeException(ioe);
       }

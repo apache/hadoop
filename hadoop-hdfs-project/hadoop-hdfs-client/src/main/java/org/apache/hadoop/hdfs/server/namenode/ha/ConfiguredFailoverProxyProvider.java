@@ -26,22 +26,16 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.HAUtil;
-import org.apache.hadoop.hdfs.NameNodeProxies;
+import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.HAUtilClient;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A FailoverProxyProvider implementation which allows one to configure
@@ -52,25 +46,9 @@ import com.google.common.base.Preconditions;
 public class ConfiguredFailoverProxyProvider<T> extends
     AbstractNNFailoverProxyProvider<T> {
   
-  private static final Log LOG =
-      LogFactory.getLog(ConfiguredFailoverProxyProvider.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ConfiguredFailoverProxyProvider.class);
   
-  interface ProxyFactory<T> {
-    T createProxy(Configuration conf, InetSocketAddress nnAddr, Class<T> xface,
-        UserGroupInformation ugi, boolean withRetries,
-        AtomicBoolean fallbackToSimpleAuth) throws IOException;
-  }
-
-  static class DefaultProxyFactory<T> implements ProxyFactory<T> {
-    @Override
-    public T createProxy(Configuration conf, InetSocketAddress nnAddr,
-        Class<T> xface, UserGroupInformation ugi, boolean withRetries,
-        AtomicBoolean fallbackToSimpleAuth) throws IOException {
-      return NameNodeProxies.createNonHAProxy(conf,
-          nnAddr, xface, ugi, false, fallbackToSimpleAuth).getProxy();
-    }
-  }
-
   protected final Configuration conf;
   protected final List<AddressRpcProxyPair<T>> proxies =
       new ArrayList<AddressRpcProxyPair<T>>();
@@ -81,19 +59,8 @@ public class ConfiguredFailoverProxyProvider<T> extends
   private final ProxyFactory<T> factory;
 
   public ConfiguredFailoverProxyProvider(Configuration conf, URI uri,
-      Class<T> xface) {
-    this(conf, uri, xface, new DefaultProxyFactory<T>());
-  }
-
-  @VisibleForTesting
-  ConfiguredFailoverProxyProvider(Configuration conf, URI uri,
       Class<T> xface, ProxyFactory<T> factory) {
-
-    Preconditions.checkArgument(
-        xface.isAssignableFrom(NamenodeProtocols.class),
-        "Interface class %s is not a valid NameNode protocol!");
     this.xface = xface;
-    
     this.conf = new Configuration(conf);
     int maxRetries = this.conf.getInt(
         HdfsClientConfigKeys.Failover.CONNECTION_RETRIES_KEY,
@@ -113,8 +80,8 @@ public class ConfiguredFailoverProxyProvider<T> extends
     try {
       ugi = UserGroupInformation.getCurrentUser();
       
-      Map<String, Map<String, InetSocketAddress>> map = DFSUtil.getHaNnRpcAddresses(
-          conf);
+      Map<String, Map<String, InetSocketAddress>> map =
+        DFSUtilClient.getHaNnRpcAddresses(conf);
       Map<String, InetSocketAddress> addressesInNN = map.get(uri.getHost());
       
       if (addressesInNN == null || addressesInNN.size() == 0) {
@@ -137,7 +104,7 @@ public class ConfiguredFailoverProxyProvider<T> extends
       // The client may have a delegation token set for the logical
       // URI of the cluster. Clone this token to apply to each of the
       // underlying IPC addresses so that the IPC code can find it.
-      HAUtil.cloneDelegationTokenForLogicalUri(ugi, uri, addressesOfNns);
+      HAUtilClient.cloneDelegationTokenForLogicalUri(ugi, uri, addressesOfNns);
       this.factory = factory;
     } catch (IOException e) {
       throw new RuntimeException(e);

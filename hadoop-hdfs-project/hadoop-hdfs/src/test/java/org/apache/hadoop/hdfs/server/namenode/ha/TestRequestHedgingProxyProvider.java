@@ -30,7 +30,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider.ProxyFactory;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.retry.MultiException;
 import org.apache.hadoop.ipc.RemoteException;
@@ -463,6 +462,13 @@ public class TestRequestHedgingProxyProvider {
           InetSocketAddress nnAddr, Class<NamenodeProtocols> xface,
           UserGroupInformation ugi, boolean withRetries,
           AtomicBoolean fallbackToSimpleAuth) throws IOException {
+        return iterator.next();
+      }
+
+      @Override
+      public NamenodeProtocols createProxy(Configuration conf,
+          InetSocketAddress nnAddr, Class<NamenodeProtocols> xface,
+          UserGroupInformation ugi, boolean withRetries) throws IOException {
         return iterator.next();
       }
     };

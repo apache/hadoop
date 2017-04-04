@@ -170,6 +170,19 @@ public class DFSUtilClient {
   }
 
   /**
+   * Returns list of InetSocketAddress corresponding to HA NN RPC addresses from
+   * the configuration.
+   *
+   * @param conf configuration
+   * @return list of InetSocketAddresses
+   */
+  public static Map<String, Map<String, InetSocketAddress>> getHaNnRpcAddresses(
+      Configuration conf) {
+    return DFSUtilClient.getAddresses(conf, null,
+      HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+  }
+
+  /**
    * Returns list of InetSocketAddress corresponding to HA NN HTTP addresses from
    * the configuration.
    *

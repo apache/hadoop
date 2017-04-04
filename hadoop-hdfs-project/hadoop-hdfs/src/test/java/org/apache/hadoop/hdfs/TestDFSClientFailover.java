@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.IPFailoverProxyProvider;
+import org.apache.hadoop.hdfs.server.namenode.ha.ProxyFactory;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
@@ -333,7 +334,7 @@ public class TestDFSClientFailover {
     private Class<T> xface;
     private T proxy;
     public DummyLegacyFailoverProxyProvider(Configuration conf, URI uri,
-        Class<T> xface) {
+        Class<T> xface, ProxyFactory<T> proxyFactory) {
       try {
         this.proxy = NameNodeProxies.createNonHAProxy(conf,
             DFSUtilClient.getNNAddress(uri), xface,

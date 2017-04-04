@@ -147,15 +147,9 @@ public class RequestHedgingProxyProvider<T> extends
   private volatile ProxyInfo<T> successfulProxy = null;
   private volatile String toIgnore = null;
 
-  public RequestHedgingProxyProvider(
-          Configuration conf, URI uri, Class<T> xface) {
-    this(conf, uri, xface, new DefaultProxyFactory<T>());
-  }
-
-  @VisibleForTesting
-  RequestHedgingProxyProvider(Configuration conf, URI uri,
-                              Class<T> xface, ProxyFactory<T> factory) {
-    super(conf, uri, xface, factory);
+  public RequestHedgingProxyProvider(Configuration conf, URI uri,
+      Class<T> xface, ProxyFactory<T> proxyFactory) {
+    super(conf, uri, xface, proxyFactory);
   }
 
   @SuppressWarnings("unchecked")
