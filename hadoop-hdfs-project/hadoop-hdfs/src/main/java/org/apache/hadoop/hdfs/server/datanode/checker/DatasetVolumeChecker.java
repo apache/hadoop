@@ -91,6 +91,7 @@ public class DatasetVolumeChecker {
    * Minimum time between two successive disk checks of a volume.
    */
   private final long minDiskCheckGapMs;
+  private final long diskCheckTimeout;
 
   /**
    * Timestamp of the last check of all volumes.
@@ -136,6 +137,17 @@ public class DatasetVolumeChecker {
           + minDiskCheckGapMs + " (should be >= 0)");
     }
 
+    diskCheckTimeout = conf.getTimeDuration(
+        DFSConfigKeys.DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY,
+        DFSConfigKeys.DFS_DATANODE_DISK_CHECK_TIMEOUT_DEFAULT,
+        TimeUnit.MILLISECONDS);
+
+    if (diskCheckTimeout < 0) {
+      throw new DiskErrorException("Invalid value configured for "
+          + DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY + " - "
+          + diskCheckTimeout + " (should be >= 0)");
+    }
+
     lastAllVolumesCheck = timer.monotonicNow() - minDiskCheckGapMs;
 
     if (maxVolumeFailuresTolerated < 0) {
@@ -145,7 +157,8 @@ public class DatasetVolumeChecker {
     }
 
     delegateChecker = new ThrottledAsyncChecker<>(
-        timer, minDiskCheckGapMs, Executors.newCachedThreadPool(
+        timer, minDiskCheckGapMs, diskCheckTimeout,
+        Executors.newCachedThreadPool(
             new ThreadFactoryBuilder()
                 .setNameFormat("DataNode DiskChecker thread %d")
                 .setDaemon(true)

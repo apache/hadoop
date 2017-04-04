@@ -59,7 +59,7 @@ public class TestThrottledAsyncChecker {
     final NoOpCheckable target2 = new NoOpCheckable();
     final FakeTimer timer = new FakeTimer();
     ThrottledAsyncChecker<Boolean, Boolean> checker =
-        new ThrottledAsyncChecker<>(timer, MIN_ERROR_CHECK_GAP,
+        new ThrottledAsyncChecker<>(timer, MIN_ERROR_CHECK_GAP, 0,
                                     getExecutorService());
 
     // check target1 and ensure we get back the expected result.
@@ -99,8 +99,8 @@ public class TestThrottledAsyncChecker {
     final FakeTimer timer = new FakeTimer();
     final LatchedCallback callback = new LatchedCallback(target);
     ThrottledAsyncChecker<Boolean, Boolean> checker =
-        new ThrottledAsyncChecker<>(timer, MIN_ERROR_CHECK_GAP,
-                                    getExecutorService());
+        new ThrottledAsyncChecker<>(timer, MIN_ERROR_CHECK_GAP, 0,
+            getExecutorService());
 
     Optional<ListenableFuture<Boolean>> olf =
         checker.schedule(target, true);
@@ -124,8 +124,8 @@ public class TestThrottledAsyncChecker {
     final LatchedCheckable target = new LatchedCheckable();
     final FakeTimer timer = new FakeTimer();
     final ThrottledAsyncChecker<Boolean, Boolean> checker =
-        new ThrottledAsyncChecker<>(timer, MIN_ERROR_CHECK_GAP,
-                                    getExecutorService());
+        new ThrottledAsyncChecker<>(timer, MIN_ERROR_CHECK_GAP, 0,
+            getExecutorService());
     final Optional<ListenableFuture<Boolean>> olf1 =
         checker.schedule(target, true);
 
@@ -167,7 +167,7 @@ public class TestThrottledAsyncChecker {
     final NoOpCheckable target1 = new NoOpCheckable();
     final FakeTimer timer = new FakeTimer();
     ThrottledAsyncChecker<Boolean, Boolean> checker =
-        new ThrottledAsyncChecker<>(timer, MIN_ERROR_CHECK_GAP,
+        new ThrottledAsyncChecker<>(timer, MIN_ERROR_CHECK_GAP, 0,
             getExecutorService());
 
     assertTrue(checker.schedule(target1, true).isPresent());
@@ -204,7 +204,7 @@ public class TestThrottledAsyncChecker {
     final ThrowingCheckable target1 = new ThrowingCheckable();
     final FakeTimer timer = new FakeTimer();
     ThrottledAsyncChecker<Boolean, Boolean> checker =
-        new ThrottledAsyncChecker<>(timer, MIN_ERROR_CHECK_GAP,
+        new ThrottledAsyncChecker<>(timer, MIN_ERROR_CHECK_GAP, 0,
             getExecutorService());
 
     assertTrue(checker.schedule(target1, true).isPresent());
