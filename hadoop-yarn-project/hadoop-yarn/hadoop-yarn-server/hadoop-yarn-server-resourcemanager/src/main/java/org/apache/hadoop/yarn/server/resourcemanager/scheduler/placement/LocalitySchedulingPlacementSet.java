@@ -204,15 +204,17 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
   private void decrementOutstanding(SchedulerRequestKey schedulerRequestKey,
       ResourceRequest offSwitchRequest) {
     int numOffSwitchContainers = offSwitchRequest.getNumContainers() - 1;
-
-    // Do not remove ANY
     offSwitchRequest.setNumContainers(numOffSwitchContainers);
 
     // Do we have any outstanding requests?
     // If there is nothing, we need to deactivate this application
     if (numOffSwitchContainers == 0) {
-      appSchedulingInfo.decrementSchedulerKeyReference(schedulerRequestKey);
+      appSchedulingInfo.getSchedulerKeys().remove(schedulerRequestKey);
       appSchedulingInfo.checkForDeactivation();
+      resourceRequestMap.remove(ResourceRequest.ANY);
+      if (resourceRequestMap.isEmpty()) {
+        appSchedulingInfo.removePlacementSets(schedulerRequestKey);
+      }
     }
 
     appSchedulingInfo.decPendingResource(
