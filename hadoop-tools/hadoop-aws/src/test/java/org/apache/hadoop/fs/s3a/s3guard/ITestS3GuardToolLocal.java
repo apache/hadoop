@@ -40,7 +40,7 @@ import static org.junit.Assert.fail;
 /**
  * Test S3Guard related CLI commands against a LocalMetadataStore.
  */
-public class TestS3GuardTool extends S3GuardToolTestBase {
+public class ITestS3GuardToolLocal extends S3GuardToolTestBase {
 
   @Override
   protected MetadataStore newMetadataStore() {
