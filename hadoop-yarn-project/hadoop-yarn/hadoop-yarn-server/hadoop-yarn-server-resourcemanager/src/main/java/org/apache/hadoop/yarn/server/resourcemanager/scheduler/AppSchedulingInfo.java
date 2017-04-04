@@ -25,12 +25,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
@@ -51,9 +47,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -86,8 +81,8 @@ public class AppSchedulingInfo {
 
   private Set<String> requestedPartitions = new HashSet<>();
 
-  private final ConcurrentSkipListMap<SchedulerRequestKey, Integer>
-      schedulerKeys = new ConcurrentSkipListMap<>();
+  private final ConcurrentSkipListSet<SchedulerRequestKey>
+      schedulerKeys = new ConcurrentSkipListSet<>();
   final Map<SchedulerRequestKey, SchedulingPlacementSet<SchedulerNode>>
       schedulerKeyToPlacementSets = new ConcurrentHashMap<>();
 
@@ -156,29 +151,6 @@ public class AppSchedulingInfo {
     LOG.info("Application " + applicationId + " requests cleared");
   }
 
-
-  private void incrementSchedulerKeyReference(
-      SchedulerRequestKey schedulerKey) {
-    Integer schedulerKeyCount = schedulerKeys.get(schedulerKey);
-    if (schedulerKeyCount == null) {
-      schedulerKeys.put(schedulerKey, 1);
-    } else {
-      schedulerKeys.put(schedulerKey, schedulerKeyCount + 1);
-    }
-  }
-
-  public void decrementSchedulerKeyReference(
-      SchedulerRequestKey schedulerKey) {
-    Integer schedulerKeyCount = schedulerKeys.get(schedulerKey);
-    if (schedulerKeyCount != null) {
-      if (schedulerKeyCount > 1) {
-        schedulerKeys.put(schedulerKey, schedulerKeyCount - 1);
-      } else {
-        schedulerKeys.remove(schedulerKey);
-      }
-    }
-  }
-
   public ContainerUpdateContext getUpdateContext() {
     return updateContext;
   }
@@ -231,6 +203,10 @@ public class AppSchedulingInfo {
     }
   }
 
+  public void removePlacementSets(SchedulerRequestKey schedulerRequestKey) {
+    schedulerKeyToPlacementSets.remove(schedulerRequestKey);
+  }
+
   boolean addToPlacementSets(
       boolean recoverPreemptedRequestForAContainer,
       Map<SchedulerRequestKey, Map<String, ResourceRequest>> dedupRequests) {
@@ -269,7 +245,8 @@ public class AppSchedulingInfo {
         (lastRequest != null) ? lastRequest.getNumContainers() : 0;
     if (request.getNumContainers() <= 0) {
       if (lastRequestContainers >= 0) {
-        decrementSchedulerKeyReference(schedulerKey);
+        schedulerKeys.remove(schedulerKey);
+        schedulerKeyToPlacementSets.remove(schedulerKey);
       }
       LOG.info("checking for deactivate of application :"
           + this.applicationId);
@@ -277,7 +254,7 @@ public class AppSchedulingInfo {
     } else {
       // Activate application. Metrics activation is done here.
       if (lastRequestContainers <= 0) {
-        incrementSchedulerKeyReference(schedulerKey);
+        schedulerKeys.add(schedulerKey);
         activeUsersManager.activateApplication(user, applicationId);
       }
     }
@@ -367,7 +344,7 @@ public class AppSchedulingInfo {
   }
 
   public Collection<SchedulerRequestKey> getSchedulerKeys() {
-    return schedulerKeys.keySet();
+    return schedulerKeys;
   }
 
   /**
@@ -390,7 +367,7 @@ public class AppSchedulingInfo {
   public PendingAsk getNextPendingAsk() {
     try {
       readLock.lock();
-      SchedulerRequestKey firstRequestKey = schedulerKeys.firstKey();
+      SchedulerRequestKey firstRequestKey = schedulerKeys.first();
       return getPendingAsk(firstRequestKey, ResourceRequest.ANY);
     } finally {
       readLock.unlock();
@@ -409,7 +386,7 @@ public class AppSchedulingInfo {
   @Unstable
   public synchronized ResourceRequest getNextResourceRequest() {
     SchedulingPlacementSet<SchedulerNode> ps = schedulerKeyToPlacementSets.get(
-        schedulerKeys.firstKey());
+        schedulerKeys.first());
     if (null != ps) {
       for (ResourceRequest rr : ps.getResourceRequests().values()) {
         return rr;
