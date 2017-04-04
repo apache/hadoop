@@ -32,6 +32,7 @@ import org.junit.Assume;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -175,36 +176,41 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     conf.setBoolean(Constants.METADATASTORE_AUTHORITATIVE, true);
     FileSystem yesWriteBack = FileSystem.get(directory.toUri(), conf);
 
+    // delete the existing directory (in case of last test failure)
+    noS3Guard.delete(directory, true);
     // Create a directory on S3 only
-    noS3Guard.mkdirs(new Path(directory, "123"));
-    // Create a directory on metastore only
-    noWriteBack.mkdirs(new Path(directory, "XYZ"));
+    noS3Guard.mkdirs(new Path(directory, "OnS3"));
+    // Create a directory on both S3 and metadata store
+    noWriteBack.mkdirs(new Path(directory, "OnS3AndMS"));
 
     FileStatus[] fsResults;
     DirListingMetadata mdResults;
 
-    // FS should return both
+    // FS should return both even though S3Guard is not writing back to MS
     fsResults = noWriteBack.listStatus(directory);
-    assertTrue("Unexpected number of results from filesystem. " +
-            "Should have /XYZ and /123: " + fsResults.toString(),
-        fsResults.length == 2);
+    assertEquals("Filesystem enabled S3Guard without write back should have "
+            + "both /OnS3 and /OnS3AndMS: " + Arrays.toString(fsResults),
+        2, fsResults.length);
 
-    // Metastore without write-back should still only contain 1
+    // Metadata store without write-back should still only contain /OnS3AndMS,
+    // because newly discovered /OnS3 is not written back to metadata store
     mdResults = S3Guard.getMetadataStore(noWriteBack).listChildren(directory);
-    assertTrue("Unexpected number of results from metastore. " +
-            "Metastore should only know about /XYZ: " + mdResults.toString(),
-        mdResults.numEntries() == 1);
+    assertEquals("Metadata store without write back should still only know "
+            + "about /OnS3AndMS, but it has: " + mdResults,
+        1, mdResults.numEntries());
 
     // FS should return both (and will write it back)
     fsResults = yesWriteBack.listStatus(directory);
-    assertTrue("Unexpected number of results from filesystem. " +
-            "Should have /XYZ and /123: " + fsResults.toString(),
-        fsResults.length == 2);
+    assertEquals("Filesystem enabled S3Guard with write back should have "
+            + " both /OnS3 and /OnS3AndMS: " + Arrays.toString(fsResults),
+        2, fsResults.length);
 
-    // Metastore should not contain both
+    // Metadata store with write-back should contain both because the newly
+    // discovered /OnS3 should have been written back to metadata store
     mdResults = S3Guard.getMetadataStore(yesWriteBack).listChildren(directory);
-    assertTrue("Unexpected number of results from metastore. " +
-            "Should have /XYZ and /123: " + mdResults.toString(),
-        mdResults.numEntries() == 2);
+    assertEquals("Unexpected number of results from metadata store. "
+            + "Should have /OnS3 and /OnS3AndMS: " + mdResults,
+        2, mdResults.numEntries());
   }
+
 }
