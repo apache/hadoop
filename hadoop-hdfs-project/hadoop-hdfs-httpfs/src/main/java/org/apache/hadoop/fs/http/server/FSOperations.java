@@ -333,7 +333,7 @@ public class FSOperations {
      *
      * @return void.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     public Void execute(FileSystem fs) throws IOException {
@@ -377,7 +377,7 @@ public class FSOperations {
      *
      * @return void.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     public Void execute(FileSystem fs) throws IOException {
@@ -418,7 +418,7 @@ public class FSOperations {
      *         wait for it to complete before proceeding with further file 
      *         updates.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     public JSONObject execute(FileSystem fs) throws IOException {
@@ -452,7 +452,7 @@ public class FSOperations {
      *
      * @return a Map object (JSON friendly) with the content-summary.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     public Map execute(FileSystem fs) throws IOException {
@@ -501,7 +501,7 @@ public class FSOperations {
      *
      * @return The URI of the created file.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     public Void execute(FileSystem fs) throws IOException {
@@ -549,7 +549,7 @@ public class FSOperations {
      * @return <code>true</code> if the delete operation was successful,
      *         <code>false</code> otherwise.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     public JSONObject execute(FileSystem fs) throws IOException {
@@ -583,7 +583,7 @@ public class FSOperations {
      *
      * @return a Map object (JSON friendly) with the file checksum.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     public Map execute(FileSystem fs) throws IOException {
@@ -640,7 +640,7 @@ public class FSOperations {
      *
      * @return a JSON object with the user home directory.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     @SuppressWarnings("unchecked")
@@ -765,7 +765,7 @@ public class FSOperations {
      * @return <code>true</code> if the mkdirs operation was successful,
      *         <code>false</code> otherwise.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     public JSONObject execute(FileSystem fs) throws IOException {
@@ -799,7 +799,7 @@ public class FSOperations {
      *
      * @return The inputstream of the file.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     public InputStream execute(FileSystem fs) throws IOException {
@@ -837,7 +837,7 @@ public class FSOperations {
      * @return <code>true</code> if the rename operation was successful,
      *         <code>false</code> otherwise.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     public JSONObject execute(FileSystem fs) throws IOException {
@@ -876,7 +876,7 @@ public class FSOperations {
      *
      * @return void.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     public Void execute(FileSystem fs) throws IOException {
@@ -913,7 +913,7 @@ public class FSOperations {
      *
      * @return void.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     public Void execute(FileSystem fs) throws IOException {
@@ -1186,7 +1186,7 @@ public class FSOperations {
      * @return <code>true</code> if the replication value was set,
      *         <code>false</code> otherwise.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     @SuppressWarnings("unchecked")
@@ -1228,7 +1228,7 @@ public class FSOperations {
      *
      * @return void.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     public Void execute(FileSystem fs) throws IOException {
@@ -1314,7 +1314,7 @@ public class FSOperations {
      *
      * @return Map a map object (JSON friendly) with the xattr names.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     public Map execute(FileSystem fs) throws IOException {
@@ -1353,7 +1353,7 @@ public class FSOperations {
      *
      * @return Map a map object (JSON friendly) with the xattrs.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     public Map execute(FileSystem fs) throws IOException {

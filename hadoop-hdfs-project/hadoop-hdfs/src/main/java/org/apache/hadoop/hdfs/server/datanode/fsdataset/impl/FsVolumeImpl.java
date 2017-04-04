@@ -1323,7 +1323,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
       fileNames = fileIoProvider.listDirectory(
           this, dir, BlockDirFilter.INSTANCE);
     } catch (IOException ioe) {
-      LOG.warn("Exception occured while compiling report: ", ioe);
+      LOG.warn("Exception occurred while compiling report: ", ioe);
       // Volume error check moved to FileIoProvider.
       // Ignore this directory and proceed.
       return report;

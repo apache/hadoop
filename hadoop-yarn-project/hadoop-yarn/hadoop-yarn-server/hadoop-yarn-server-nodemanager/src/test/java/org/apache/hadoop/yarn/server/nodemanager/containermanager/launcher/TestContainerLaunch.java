@@ -641,8 +641,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     ContainerLaunch launch = new ContainerLaunch(context, conf, dispatcher,
         exec, app, container, dirsHandler, containerManager);
     launch.call();
-    Assert.assertTrue("ContainerExitEvent should have occured",
-        eventHandler.isContainerExitEventOccured());
+    Assert.assertTrue("ContainerExitEvent should have occurred",
+        eventHandler.isContainerExitEventOccurred());
   }
 
   private static class ContainerExitHandler implements EventHandler<Event> {
@@ -652,15 +652,15 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       this.testForMultiFile = testForMultiFile;
     }
 
-    boolean containerExitEventOccured = false;
+    boolean containerExitEventOccurred = false;
 
-    public boolean isContainerExitEventOccured() {
-      return containerExitEventOccured;
+    public boolean isContainerExitEventOccurred() {
+      return containerExitEventOccurred;
     }
 
     public void handle(Event event) {
       if (event instanceof ContainerExitEvent) {
-        containerExitEventOccured = true;
+        containerExitEventOccurred = true;
         ContainerExitEvent exitEvent = (ContainerExitEvent) event;
         Assert.assertEquals(ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
             exitEvent.getType());

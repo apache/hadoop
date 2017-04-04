@@ -394,7 +394,7 @@ public class DFSStripedInputStream extends DFSInputStream {
         return result;
       } finally {
         // Check if need to report block replicas corruption either read
-        // was successful or ChecksumException occured.
+        // was successful or ChecksumException occurred.
         reportCheckSumFailure(corruptedBlocks,
             currentLocatedBlock.getLocations().length, true);
       }
