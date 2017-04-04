@@ -14,28 +14,15 @@
 
 # Hadoop Azure Data Lake Support
 
-* [Introduction](#Introduction)
-* [Features](#Features)
-* [Limitations](#Limitations)
-* [Usage](#Usage)
-    * [Concepts](#Concepts)
-        * [OAuth2 Support](#OAuth2_Support)
-    * [Configuring Credentials and FileSystem](#Configuring_Credentials)
-        * [Using Refresh Token](#Refresh_Token)
-        * [Using Client Keys](#Client_Credential_Token)
-        * [Protecting the Credentials with Credential Providers](#Credential_Provider)
-    * [Enabling ADL Filesystem](#Enabling_ADL)
-    * [Accessing `adl` URLs](#Accessing_adl_URLs)
-    * [User/Group Representation](#OIDtoUPNConfiguration)
-* [Testing the `hadoop-azure` Module](#Testing_the_hadoop-azure_Module)
+<!-- MACRO{toc|fromDepth=1|toDepth=3} -->
 
-## <a name="Introduction" />Introduction
+## Introduction
 
 The `hadoop-azure-datalake` module provides support for integration with the
 [Azure Data Lake Store](https://azure.microsoft.com/en-in/documentation/services/data-lake-store/).
 This support comes via the JAR file `azure-datalake-store.jar`.
 
-## <a name="Features" />Features
+## Features
 
 * Read and write data stored in an Azure Data Lake Storage account.
 * Reference file system paths using URLs using the `adl` scheme for Secure Webhdfs i.e. SSL
@@ -46,7 +33,7 @@ This support comes via the JAR file `azure-datalake-store.jar`.
 * API `setOwner()`, `setAcl`, `removeAclEntries()`, `modifyAclEntries()` accepts UPN or OID
   (Object ID) as user and group names.
 
-## <a name="Limitations" />Limitations
+## Limitations
 
 Partial or no support for the following operations :
 
@@ -62,9 +49,9 @@ Partial or no support for the following operations :
 * User and group information returned as `listStatus()` and `getFileStatus()` is
 in the form of the GUID associated in Azure Active Directory.
 
-## <a name="Usage" />Usage
+## Usage
 
-### <a name="Concepts" />Concepts
+### Concepts
 Azure Data Lake Storage access path syntax is:
 
 ```
@@ -74,7 +61,7 @@ adl://<Account Name>.azuredatalakestore.net/
 For details on using the store, see
 [**Get started with Azure Data Lake Store using the Azure Portal**](https://azure.microsoft.com/en-in/documentation/articles/data-lake-store-get-started-portal/)
 
-### <a name="#OAuth2_Support" />OAuth2 Support
+#### OAuth2 Support
 
 Usage of Azure Data Lake Storage requires an OAuth2 bearer token to be present as
 part of the HTTPS header as per the OAuth2 specification.
@@ -86,17 +73,17 @@ and identity management service. See [*What is ActiveDirectory*](https://azure.m
 
 Following sections describes theOAuth2 configuration in `core-site.xml`.
 
-#### <a name="Configuring_Credentials" />Configuring Credentials & FileSystem
+### Configuring Credentials and FileSystem
 Credentials can be configured using either a refresh token (associated with a user),
 or a client credential (analogous to a service principal).
 
-#### <a name="Refresh_Token" />Using Refresh Tokens
+#### Using Refresh Tokens
 
 Add the following properties to the cluster's `core-site.xml`
 
 ```xml
 <property>
-  <name>dfs.adls.oauth2.access.token.provider.type</name>
+  <name>fs.adl.oauth2.access.token.provider.type</name>
   <value>RefreshToken</value>
 </property>
 ```
@@ -108,20 +95,20 @@ service associated with the client id. See [*Active Directory Library For Java*]
 
 ```xml
 <property>
-  <name>dfs.adls.oauth2.client.id</name>
+  <name>fs.adl.oauth2.client.id</name>
   <value></value>
 </property>
 
 <property>
-  <name>dfs.adls.oauth2.refresh.token</name>
+  <name>fs.adl.oauth2.refresh.token</name>
   <value></value>
 </property>
 ```
 
 
-### <a name="Client_Credential_Token" />Using Client Keys
+#### Using Client Keys
 
-#### Generating the Service Principal
+##### Generating the Service Principal
 
 1.  Go to [the portal](https://portal.azure.com)
 2.  Under "Browse", look for Active Directory and click on it.
@@ -135,33 +122,38 @@ service associated with the client id. See [*Active Directory Library For Java*]
     -  The token endpoint (select "View endpoints" at the bottom of the page and copy/paste the OAuth2 .0 Token Endpoint value)
     -  Resource: Always https://management.core.windows.net/ , for all customers
 
-#### Adding the service principal to your ADL Account
+##### Adding the service principal to your ADL Account
 1.  Go to the portal again, and open your ADL account
 2.  Select Users under Settings
 3.  Add your user name you created in Step 6 above (note that it does not show up in the list, but will be found if you searched for the name)
 4.  Add "Owner" role
 
-### Configure core-site.xml
+##### Configure core-site.xml
 Add the following properties to your `core-site.xml`
 
 ```xml
 <property>
-  <name>dfs.adls.oauth2.refresh.url</name>
+  <name>fs.adl.oauth2.access.token.provider.type</name>
+  <value>ClientCredential</value>
+</property>
+
+<property>
+  <name>fs.adl.oauth2.refresh.url</name>
   <value>TOKEN ENDPOINT FROM STEP 7 ABOVE</value>
 </property>
 
 <property>
-  <name>dfs.adls.oauth2.client.id</name>
+  <name>fs.adl.oauth2.client.id</name>
   <value>CLIENT ID FROM STEP 7 ABOVE</value>
 </property>
 
 <property>
-  <name>dfs.adls.oauth2.credential</name>
+  <name>fs.adl.oauth2.credential</name>
   <value>PASSWORD FROM STEP 7 ABOVE</value>
 </property>
 ```
 
-### <a name="Credential_Provider" />Protecting the Credentials with Credential Providers
+#### Protecting the Credentials with Credential Providers
 
 In many Hadoop clusters, the `core-site.xml` file is world-readable. To protect
 these credentials, it is recommended that you use the
@@ -171,18 +163,22 @@ All ADLS credential properties can be protected by credential providers.
 For additional reading on the credential provider API, see
 [Credential Provider API](../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
 
-#### Provisioning
+##### Provisioning
 
 ```bash
-hadoop credential create dfs.adls.oauth2.refresh.token -value 123
+hadoop credential create fs.adl.oauth2.client.id -value 123
     -provider localjceks://file/home/foo/adls.jceks
-hadoop credential create dfs.adls.oauth2.credential -value 123
+hadoop credential create fs.adl.oauth2.refresh.token -value 123
     -provider localjceks://file/home/foo/adls.jceks
 ```
 
-#### Configuring core-site.xml or command line property
+##### Configuring core-site.xml or command line property
 
 ```xml
+<property>
+  <name>fs.adl.oauth2.access.token.provider.type</name>
+  <value>RefreshToken</value>
+</property>
 <property>
   <name>hadoop.security.credential.provider.path</name>
   <value>localjceks://file/home/foo/adls.jceks</value>
@@ -190,20 +186,21 @@ hadoop credential create dfs.adls.oauth2.credential -value 123
 </property>
 ```
 
-#### Running DistCp
+##### Running DistCp
 
 ```bash
 hadoop distcp
-    [-D hadoop.security.credential.provider.path=localjceks://file/home/user/adls.jceks]
-    hdfs://<NameNode Hostname>:9001/user/foo/007020615
-    adl://<Account Name>.azuredatalakestore.net/testDir/
+    [-D fs.adl.oauth2.access.token.provider.type=RefreshToken
+     -D hadoop.security.credential.provider.path=localjceks://file/home/user/adls.jceks]
+    hdfs://<NameNode Hostname>:9001/user/foo/srcDir
+    adl://<Account Name>.azuredatalakestore.net/tgtDir/
 ```
 
 NOTE: You may optionally add the provider path property to the `distcp` command
 line instead of added job specific configuration to a generic `core-site.xml`.
 The square brackets above illustrate this capability.`
 
-### <a name="Accessing_adl_URLs" />Accessing adl URLs
+### Accessing adl URLs
 
 After credentials are configured in `core-site.xml`, any Hadoop component may
 reference files in that Azure Data Lake Storage account by using URLs of the following
@@ -230,7 +227,7 @@ hadoop fs -put testFile adl://yourcontainer.azuredatalakestore.net/testDir/testF
 hadoop fs -cat adl://yourcontainer.azuredatalakestore.net/testDir/testFile
 test file content
 ```
-### <a name="OIDtoUPNConfiguration" />User/Group Representation
+### User/Group Representation
 
 The `hadoop-azure-datalake` module provides support for configuring how
 User/Group information is represented during
@@ -254,7 +251,7 @@ Add the following properties to `core-site.xml`
   </description>
 </property>
 ```
-## <a name="Testing_the_hadoop-azure_Module" />Testing the azure-datalake-store Module
+## Testing the azure-datalake-store Module
 The `hadoop-azure` module includes a full suite of unit tests.
 Most of the tests will run without additional configuration by running mvn test.
 This includes tests against mocked storage, which is an in-memory emulation of Azure Data Lake Storage.

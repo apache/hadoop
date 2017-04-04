@@ -229,7 +229,7 @@ public class AppInfo {
       appNodeLabelExpression =
           app.getApplicationSubmissionContext().getNodeLabelExpression();
       amNodeLabelExpression = (unmanagedApplication) ? null
-          : app.getAMResourceRequest().getNodeLabelExpression();
+          : app.getAMResourceRequests().get(0).getNodeLabelExpression();
 
       // Setting partition based resource usage of application
       ResourceScheduler scheduler = rm.getRMContext().getScheduler();

@@ -44,8 +44,8 @@ public class MockWasbAuthorizerImpl implements WasbAuthorizerInterface {
   }
 
   @Override
-  public boolean authorize(String wasbAbsolutePath, String accessType,
-      String delegationToken) throws WasbAuthorizationException {
+  public boolean authorize(String wasbAbsolutePath, String accessType)
+      throws WasbAuthorizationException {
 
     AuthorizationComponent component =
         new AuthorizationComponent(wasbAbsolutePath, accessType);

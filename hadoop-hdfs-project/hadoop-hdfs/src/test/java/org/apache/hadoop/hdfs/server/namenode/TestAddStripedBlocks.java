@@ -19,11 +19,13 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSStripedOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -67,7 +69,7 @@ import static org.junit.Assert.assertEquals;
 
 public class TestAddStripedBlocks {
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
   private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
   private final int cellSize = ecPolicy.getCellSize();
@@ -82,12 +84,13 @@ public class TestAddStripedBlocks {
 
   @Before
   public void setup() throws IOException {
-    cluster = new MiniDFSCluster.Builder(new HdfsConfiguration())
-        .numDataNodes(groupSize).build();
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        ecPolicy.getName());
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize).build();
     cluster.waitActive();
     dfs = cluster.getFileSystem();
-    dfs.getClient().setErasureCodingPolicy("/", ErasureCodingPolicyManager
-        .getSystemDefaultPolicy().getName());
+    dfs.getClient().setErasureCodingPolicy("/", ecPolicy.getName());
   }
 
   @After

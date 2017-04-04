@@ -269,7 +269,7 @@ public final class ConfTest {
     } else {
       String confDirName = System.getenv(HADOOP_CONF_DIR);
       if (confDirName == null) {
-        terminate(1, HADOOP_CONF_DIR + " does not defined");
+        terminate(1, HADOOP_CONF_DIR + " is not defined");
       }
       File confDir = new File(confDirName);
       if (!confDir.isDirectory()) {

@@ -45,9 +45,8 @@ public class TestAdlFileSystemContractLive extends FileSystemContractBaseTest {
   protected void tearDown() throws Exception {
     if (AdlStorageConfiguration.isContractTestEnabled()) {
       cleanup();
-      adlStore = null;
-      fs = null;
     }
+    super.tearDown();
   }
 
   private void cleanup() throws IOException {

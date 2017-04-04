@@ -1826,6 +1826,12 @@ public class NameNode extends ReconfigurableBase implements
         .getSlowPeersReport();
   }
 
+  @Override //NameNodeStatusMXBean
+  public String getSlowDisksReport() {
+    return namesystem.getBlockManager().getDatanodeManager()
+        .getSlowDisksReport();
+  }
+
   /**
    * Shutdown the NN immediately in an ungraceful way. Used when it would be
    * unsafe for the NN to continue operating, e.g. during a failed HA state

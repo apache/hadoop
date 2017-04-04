@@ -8,8 +8,10 @@
     "test": "tests"
   },
   "scripts": {
-    "build": "ember build",
-    "start": "ember server"
+    "build": "TMPDIR=tmp node ./node_modules/ember-cli/bin/ember build",
+    "start": "TMPDIR=tmp node ./node_modules/ember-cli/bin/ember server",
+
+    "build:mvn": "TMPDIR=tmp node/node ./node_modules/ember-cli/bin/ember build -prod"
   },
   "repository": "",
   "engines": {

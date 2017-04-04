@@ -544,17 +544,17 @@ public class TestDistributedShell {
       Assert.assertEquals(
           "Container created event needs to be published atleast once",
           1,
-          getNumOfStringOccurences(containerEntityFile,
+          getNumOfStringOccurrences(containerEntityFile,
               ContainerMetricsConstants.CREATED_EVENT_TYPE));
 
       // to avoid race condition of testcase, atleast check 4 times with sleep
       // of 500ms
-      long numOfContainerFinishedOccurences = 0;
+      long numOfContainerFinishedOccurrences = 0;
       for (int i = 0; i < 4; i++) {
-        numOfContainerFinishedOccurences =
-            getNumOfStringOccurences(containerEntityFile,
+        numOfContainerFinishedOccurrences =
+            getNumOfStringOccurrences(containerEntityFile,
                 ContainerMetricsConstants.FINISHED_EVENT_TYPE);
-        if (numOfContainerFinishedOccurences > 0) {
+        if (numOfContainerFinishedOccurrences > 0) {
           break;
         } else {
           Thread.sleep(500L);
@@ -563,7 +563,7 @@ public class TestDistributedShell {
       Assert.assertEquals(
           "Container finished event needs to be published atleast once",
           1,
-          numOfContainerFinishedOccurences);
+          numOfContainerFinishedOccurrences);
 
       // Verify RM posting Application life cycle Events are getting published
       String appMetricsTimestampFileName =
@@ -576,17 +576,17 @@ public class TestDistributedShell {
       Assert.assertEquals(
           "Application created event should be published atleast once",
           1,
-          getNumOfStringOccurences(appEntityFile,
+          getNumOfStringOccurrences(appEntityFile,
               ApplicationMetricsConstants.CREATED_EVENT_TYPE));
 
       // to avoid race condition of testcase, atleast check 4 times with sleep
       // of 500ms
-      long numOfStringOccurences = 0;
+      long numOfStringOccurrences = 0;
       for (int i = 0; i < 4; i++) {
-        numOfStringOccurences =
-            getNumOfStringOccurences(appEntityFile,
+        numOfStringOccurrences =
+            getNumOfStringOccurrences(appEntityFile,
                 ApplicationMetricsConstants.FINISHED_EVENT_TYPE);
-        if (numOfStringOccurences > 0) {
+        if (numOfStringOccurrences > 0) {
           break;
         } else {
           Thread.sleep(500L);
@@ -595,7 +595,7 @@ public class TestDistributedShell {
       Assert.assertEquals(
           "Application finished event should be published atleast once",
           1,
-          numOfStringOccurences);
+          numOfStringOccurrences);
 
       // Verify RM posting AppAttempt life cycle Events are getting published
       String appAttemptMetricsTimestampFileName =
@@ -609,13 +609,13 @@ public class TestDistributedShell {
       Assert.assertEquals(
           "AppAttempt register event should be published atleast once",
           1,
-          getNumOfStringOccurences(appAttemptEntityFile,
+          getNumOfStringOccurrences(appAttemptEntityFile,
               AppAttemptMetricsConstants.REGISTERED_EVENT_TYPE));
 
       Assert.assertEquals(
           "AppAttempt finished event should be published atleast once",
           1,
-          getNumOfStringOccurences(appAttemptEntityFile,
+          getNumOfStringOccurrences(appAttemptEntityFile,
               AppAttemptMetricsConstants.FINISHED_EVENT_TYPE));
     } finally {
       FileUtils.deleteDirectory(tmpRootFolder.getParentFile());
@@ -636,7 +636,7 @@ public class TestDistributedShell {
     return entityFile;
   }
 
-  private long getNumOfStringOccurences(File entityFile, String searchString)
+  private long getNumOfStringOccurrences(File entityFile, String searchString)
       throws IOException {
     BufferedReader reader = null;
     String strLine;

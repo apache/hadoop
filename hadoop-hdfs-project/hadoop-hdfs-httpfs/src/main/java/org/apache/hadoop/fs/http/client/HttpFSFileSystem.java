@@ -193,6 +193,7 @@ public class HttpFSFileSystem extends FileSystem
   public static final String ACL_BIT_JSON = "aclBit";
 
   public static final String ENC_BIT_JSON = "encBit";
+  public static final String EC_BIT_JSON = "ecBit";
 
   public static final String DIRECTORY_LISTING_JSON = "DirectoryListing";
   public static final String PARTIAL_LISTING_JSON = "partialListing";
@@ -1042,11 +1043,13 @@ public class HttpFSFileSystem extends FileSystem
     final String s = (String) json.get(PERMISSION_JSON);
     final Boolean aclBit = (Boolean) json.get(ACL_BIT_JSON);
     final Boolean encBit = (Boolean) json.get(ENC_BIT_JSON);
+    final Boolean erasureBit = (Boolean) json.get(EC_BIT_JSON);
     FsPermission perm = new FsPermission(Short.parseShort(s, 8));
     final boolean aBit = (aclBit != null) ? aclBit : false;
     final boolean eBit = (encBit != null) ? encBit : false;
-    if (aBit || eBit) {
-      return new FsPermissionExtension(perm, aBit, eBit);
+    final boolean ecBit = (erasureBit != null) ? erasureBit : false;
+    if (aBit || eBit || ecBit) {
+      return new FsPermissionExtension(perm, aBit, eBit, ecBit);
     } else {
       return perm;
     }

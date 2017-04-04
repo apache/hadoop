@@ -141,6 +141,7 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
+      <version>${hbase-compatible-guava.version}</version>
       <scope>test</scope>
     </dependency>
 
@@ -368,6 +369,24 @@
             </additionnalDependency>
           </additionnalDependencies>
         </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>depcheck</id>
+            <configuration>
+              <!-- disable dependency convergence check -->
+              <skip>true</skip>
+            </configuration>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <phase/>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

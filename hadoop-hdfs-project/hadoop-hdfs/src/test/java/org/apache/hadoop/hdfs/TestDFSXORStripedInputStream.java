@@ -27,7 +27,7 @@ import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 public class TestDFSXORStripedInputStream extends TestDFSStripedInputStream{
 
   public ErasureCodingPolicy getEcPolicy() {
-    return ErasureCodingPolicyManager.getPolicyByPolicyID(
+    return ErasureCodingPolicyManager.getPolicyByID(
         HdfsConstants.XOR_2_1_POLICY_ID);
   }
 }

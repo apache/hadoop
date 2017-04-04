@@ -526,7 +526,8 @@ public class TestSystemMetricsPublisher {
     when(app.getAppNodeLabelExpression()).thenCallRealMethod();
     ResourceRequest amReq = mock(ResourceRequest.class);
     when(amReq.getNodeLabelExpression()).thenReturn("high-mem");
-    when(app.getAMResourceRequest()).thenReturn(amReq);
+    when(app.getAMResourceRequests())
+        .thenReturn(Collections.singletonList(amReq));
     when(app.getAmNodeLabelExpression()).thenCallRealMethod();
     when(app.getApplicationPriority()).thenReturn(Priority.newInstance(10));
     when(app.getCallerContext())

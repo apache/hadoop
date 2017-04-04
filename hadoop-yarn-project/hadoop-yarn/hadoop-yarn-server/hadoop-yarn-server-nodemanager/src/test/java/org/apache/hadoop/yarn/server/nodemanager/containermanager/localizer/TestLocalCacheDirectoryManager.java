@@ -33,7 +33,7 @@ import org.junit.Test;
 
 public class TestLocalCacheDirectoryManager {
 
-  @Test(timeout = 10000)
+  @Test
   public void testHierarchicalSubDirectoryCreation() {
     // setting per directory file limit to 1.
     YarnConfiguration conf = new YarnConfiguration();
@@ -73,7 +73,7 @@ public class TestLocalCacheDirectoryManager {
     Assert.assertEquals(testPath2, hDir.getRelativePathForLocalization());
   }
 
-  @Test(timeout = 10000)
+  @Test
   public void testMinimumPerDirectoryFileLimit() {
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_LOCAL_CACHE_MAX_FILES_PER_DIRECTORY, "1");
@@ -98,7 +98,7 @@ public class TestLocalCacheDirectoryManager {
 
   }
 
-  @Test(timeout = 1000)
+  @Test
   public void testDirectoryStateChangeFromFullToNonFull() {
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_LOCAL_CACHE_MAX_FILES_PER_DIRECTORY, "40");

@@ -107,12 +107,12 @@ public class SLSWebApp extends HttpServlet {
 
   public SLSWebApp(SchedulerWrapper wrapper, int metricsAddressPort) {
     this.wrapper = wrapper;
-    metrics = wrapper.getMetrics();
     handleOperTimecostHistogramMap =
             new HashMap<SchedulerEventType, Histogram>();
     queueAllocatedMemoryCounterMap = new HashMap<String, Counter>();
     queueAllocatedVCoresCounterMap = new HashMap<String, Counter>();
     schedulerMetrics = wrapper.getSchedulerMetrics();
+    metrics = schedulerMetrics.getMetrics();
     port = metricsAddressPort;
   }
 
@@ -226,7 +226,7 @@ public class SLSWebApp extends HttpServlet {
     response.setStatus(HttpServletResponse.SC_OK);
 
     // queues {0}
-    Set<String> queues = wrapper.getQueueSet();
+    Set<String> queues = wrapper.getTracker().getQueueSet();
     StringBuilder queueInfo = new StringBuilder();
 
     int i = 0;
@@ -265,7 +265,7 @@ public class SLSWebApp extends HttpServlet {
 
     // tracked queues {0}
     StringBuilder trackedQueueInfo = new StringBuilder();
-    Set<String> trackedQueues = wrapper.getQueueSet();
+    Set<String> trackedQueues = wrapper.getTracker().getQueueSet();
     for(String queue : trackedQueues) {
       trackedQueueInfo.append("<option value='Queue ").append(queue)
               .append("'>").append(queue).append("</option>");
@@ -273,7 +273,7 @@ public class SLSWebApp extends HttpServlet {
 
     // tracked apps {1}
     StringBuilder trackedAppInfo = new StringBuilder();
-    Set<String> trackedApps = wrapper.getTrackedAppSet();
+    Set<String> trackedApps = wrapper.getTracker().getTrackedAppSet();
     for(String job : trackedApps) {
       trackedAppInfo.append("<option value='Job ").append(job)
               .append("'>").append(job).append("</option>");
@@ -422,7 +422,7 @@ public class SLSWebApp extends HttpServlet {
     // allocated resource for each queue
     Map<String, Double> queueAllocatedMemoryMap = new HashMap<String, Double>();
     Map<String, Long> queueAllocatedVCoresMap = new HashMap<String, Long>();
-    for (String queue : wrapper.getQueueSet()) {
+    for (String queue : wrapper.getTracker().getQueueSet()) {
       // memory
       String key = "counter.queue." + queue + ".allocated.memory";
       if (! queueAllocatedMemoryCounterMap.containsKey(queue) &&
@@ -462,7 +462,7 @@ public class SLSWebApp extends HttpServlet {
             .append(",\"cluster.available.memory\":").append(availableMemoryGB)
             .append(",\"cluster.available.vcores\":").append(availableVCoresGB);
 
-    for (String queue : wrapper.getQueueSet()) {
+    for (String queue : wrapper.getTracker().getQueueSet()) {
       sb.append(",\"queue.").append(queue).append(".allocated.memory\":")
               .append(queueAllocatedMemoryMap.get(queue));
       sb.append(",\"queue.").append(queue).append(".allocated.vcores\":")

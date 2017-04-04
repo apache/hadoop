@@ -77,41 +77,41 @@ public abstract class CopyListing extends Configured {
    * TARGET IS DIR        : Key-"/file1", Value-FileStatus(/tmp/file1)  
    *
    * @param pathToListFile - Output file where the listing would be stored
-   * @param options - Input options to distcp
+   * @param distCpContext - distcp context associated with input options
    * @throws IOException - Exception if any
    */
   public final void buildListing(Path pathToListFile,
-                                 DistCpOptions options) throws IOException {
-    validatePaths(options);
-    doBuildListing(pathToListFile, options);
+      DistCpContext distCpContext) throws IOException {
+    validatePaths(distCpContext);
+    doBuildListing(pathToListFile, distCpContext);
     Configuration config = getConf();
 
     config.set(DistCpConstants.CONF_LABEL_LISTING_FILE_PATH, pathToListFile.toString());
     config.setLong(DistCpConstants.CONF_LABEL_TOTAL_BYTES_TO_BE_COPIED, getBytesToCopy());
     config.setLong(DistCpConstants.CONF_LABEL_TOTAL_NUMBER_OF_RECORDS, getNumberOfPaths());
 
-    validateFinalListing(pathToListFile, options);
+    validateFinalListing(pathToListFile, distCpContext);
     LOG.info("Number of paths in the copy list: " + this.getNumberOfPaths());
   }
 
   /**
    * Validate input and output paths
    *
-   * @param options - Input options
+   * @param distCpContext - Distcp context
    * @throws InvalidInputException If inputs are invalid
    * @throws IOException any Exception with FS
    */
-  protected abstract void validatePaths(DistCpOptions options)
+  protected abstract void validatePaths(DistCpContext distCpContext)
       throws IOException, InvalidInputException;
 
   /**
    * The interface to be implemented by sub-classes, to create the source/target file listing.
    * @param pathToListFile Path on HDFS where the listing file is written.
-   * @param options Input Options for DistCp (indicating source/target paths.)
+   * @param distCpContext - Distcp context
    * @throws IOException Thrown on failure to create the listing file.
    */
   protected abstract void doBuildListing(Path pathToListFile,
-                                         DistCpOptions options) throws IOException;
+      DistCpContext distCpContext) throws IOException;
 
   /**
    * Return the total bytes that distCp should copy for the source paths
@@ -135,22 +135,32 @@ public abstract class CopyListing extends Configured {
    * If preserving XAttrs, checks that file system can support XAttrs.
    *
    * @param pathToListFile - path listing build by doBuildListing
-   * @param options - Input options to distcp
+   * @param context - Distcp context with associated input options
    * @throws IOException - Any issues while checking for duplicates and throws
    * @throws DuplicateFileException - if there are duplicates
    */
-  private void validateFinalListing(Path pathToListFile, DistCpOptions options)
+  private void validateFinalListing(Path pathToListFile, DistCpContext context)
       throws DuplicateFileException, IOException {
 
     Configuration config = getConf();
     FileSystem fs = pathToListFile.getFileSystem(config);
 
-    Path sortedList = DistCpUtils.sortListing(fs, config, pathToListFile);
+    final boolean splitLargeFile = context.splitLargeFile();
+
+    // When splitLargeFile is enabled, we don't randomize the copylist
+    // earlier, so we don't do the sorting here. For a file that has
+    // multiple entries due to split, we check here that their
+    // <chunkOffset, chunkLength> is continuous.
+    //
+    Path checkPath = splitLargeFile?
+        pathToListFile : DistCpUtils.sortListing(fs, config, pathToListFile);
 
     SequenceFile.Reader reader = new SequenceFile.Reader(
-                          config, SequenceFile.Reader.file(sortedList));
+                          config, SequenceFile.Reader.file(checkPath));
     try {
       Text lastKey = new Text("*"); //source relative path can never hold *
+      long lastChunkOffset = -1;
+      long lastChunkLength = -1;
       CopyListingFileStatus lastFileStatus = new CopyListingFileStatus();
 
       Text currentKey = new Text();
@@ -161,11 +171,24 @@ public abstract class CopyListing extends Configured {
         if (currentKey.equals(lastKey)) {
           CopyListingFileStatus currentFileStatus = new CopyListingFileStatus();
           reader.getCurrentValue(currentFileStatus);
-          throw new DuplicateFileException("File " + lastFileStatus.getPath() + " and " +
-              currentFileStatus.getPath() + " would cause duplicates. Aborting");
+          if (!splitLargeFile) {
+            throw new DuplicateFileException("File " + lastFileStatus.getPath()
+                + " and " + currentFileStatus.getPath()
+                + " would cause duplicates. Aborting");
+          } else {
+            if (lastChunkOffset + lastChunkLength !=
+                currentFileStatus.getChunkOffset()) {
+              throw new InvalidInputException("File " + lastFileStatus.getPath()
+                  + " " + lastChunkOffset + "," + lastChunkLength
+                  + " and " + currentFileStatus.getPath()
+                  + " " + currentFileStatus.getChunkOffset() + ","
+                  + currentFileStatus.getChunkLength()
+                  + " are not continuous. Aborting");
+            }
+          }
         }
         reader.getCurrentValue(lastFileStatus);
-        if (options.shouldPreserve(DistCpOptions.FileAttribute.ACL)) {
+        if (context.shouldPreserve(DistCpOptions.FileAttribute.ACL)) {
           FileSystem lastFs = lastFileStatus.getPath().getFileSystem(config);
           URI lastFsUri = lastFs.getUri();
           if (!aclSupportCheckFsSet.contains(lastFsUri)) {
@@ -173,7 +196,7 @@ public abstract class CopyListing extends Configured {
             aclSupportCheckFsSet.add(lastFsUri);
           }
         }
-        if (options.shouldPreserve(DistCpOptions.FileAttribute.XATTR)) {
+        if (context.shouldPreserve(DistCpOptions.FileAttribute.XATTR)) {
           FileSystem lastFs = lastFileStatus.getPath().getFileSystem(config);
           URI lastFsUri = lastFs.getUri();
           if (!xAttrSupportCheckFsSet.contains(lastFsUri)) {
@@ -181,9 +204,13 @@ public abstract class CopyListing extends Configured {
             xAttrSupportCheckFsSet.add(lastFsUri);
           }
         }
-        lastKey.set(currentKey);
 
-        if (options.shouldUseDiff() && LOG.isDebugEnabled()) {
+        lastKey.set(currentKey);
+        if (splitLargeFile) {
+          lastChunkOffset = lastFileStatus.getChunkOffset();
+          lastChunkLength = lastFileStatus.getChunkLength();
+        }
+        if (context.shouldUseDiff() && LOG.isDebugEnabled()) {
           LOG.debug("Copy list entry " + idx + ": " +
                   lastFileStatus.getPath().toUri().getPath());
           idx++;
@@ -226,14 +253,12 @@ public abstract class CopyListing extends Configured {
    * Public Factory method with which the appropriate CopyListing implementation may be retrieved.
    * @param configuration The input configuration.
    * @param credentials Credentials object on which the FS delegation tokens are cached
-   * @param options The input Options, to help choose the appropriate CopyListing Implementation.
+   * @param context Distcp context with associated input options
    * @return An instance of the appropriate CopyListing implementation.
    * @throws java.io.IOException - Exception if any
    */
   public static CopyListing getCopyListing(Configuration configuration,
-                                           Credentials credentials,
-                                           DistCpOptions options)
-      throws IOException {
+      Credentials credentials, DistCpContext context) throws IOException {
     String copyListingClassName = configuration.get(DistCpConstants.
         CONF_LABEL_COPY_LISTING_CLASS, "");
     Class<? extends CopyListing> copyListingClass;
@@ -243,7 +268,7 @@ public abstract class CopyListing extends Configured {
             CONF_LABEL_COPY_LISTING_CLASS, GlobbedCopyListing.class,
             CopyListing.class);
       } else {
-        if (options.getSourceFileListing() == null) {
+        if (context.getSourceFileListing() == null) {
             copyListingClass = GlobbedCopyListing.class;
         } else {
             copyListingClass = FileBasedCopyListing.class;

@@ -19,10 +19,13 @@ package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 
 import java.io.*;
@@ -635,5 +638,56 @@ public class TestLocalFileSystem {
     doReturn(stat).when(fs).getFileStatus(path);
     FileStatus[] stats = fs.listStatus(path);
     assertTrue(stats != null && stats.length == 1 && stats[0] == stat);
+  }
+
+  @Test
+  public void testFSOutputStreamBuilder() throws Exception {
+    Path path = new Path(TEST_ROOT_DIR, "testBuilder");
+
+    try {
+      FSDataOutputStreamBuilder builder =
+          fileSys.newFSDataOutputStreamBuilder(path);
+      FSDataOutputStream out = builder.build();
+      String content = "Create with a generic type of createBuilder!";
+      byte[] contentOrigin = content.getBytes("UTF8");
+      out.write(contentOrigin);
+      out.close();
+
+      FSDataInputStream input = fileSys.open(path);
+      byte[] buffer =
+          new byte[(int) (fileSys.getFileStatus(path).getLen())];
+      input.readFully(0, buffer);
+      input.close();
+      Assert.assertArrayEquals("The data be read should equals with the "
+          + "data written.", contentOrigin, buffer);
+    } catch (IOException e) {
+      throw e;
+    }
+
+    // Test value not being set for replication, block size, buffer size
+    // and permission
+    FSDataOutputStreamBuilder builder =
+        fileSys.newFSDataOutputStreamBuilder(path);
+    builder.build();
+    Assert.assertEquals("Should be default block size",
+        builder.getBlockSize(), fileSys.getDefaultBlockSize());
+    Assert.assertEquals("Should be default replication factor",
+        builder.getReplication(), fileSys.getDefaultReplication());
+    Assert.assertEquals("Should be default buffer size",
+        builder.getBufferSize(),
+        fileSys.getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+            IO_FILE_BUFFER_SIZE_DEFAULT));
+    Assert.assertEquals("Should be default permission",
+        builder.getPermission(), FsPermission.getFileDefault());
+
+    // Test set 0 to replication, block size and buffer size
+    builder = fileSys.newFSDataOutputStreamBuilder(path);
+    builder.setBufferSize(0).setBlockSize(0).setReplication((short) 0);
+    Assert.assertEquals("Block size should be 0",
+        builder.getBlockSize(), 0);
+    Assert.assertEquals("Replication factor should be 0",
+        builder.getReplication(), 0);
+    Assert.assertEquals("Buffer size should be 0",
+        builder.getBufferSize(), 0);
   }
 }

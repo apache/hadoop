@@ -2102,6 +2102,15 @@
   </property>
 
   <property>
+    <description>
+    The time period for which timeline v2 client will wait for draining
+    leftover entities after stop.
+    </description>
+    <name>yarn.timeline-service.client.drain-entities.timeout.ms</name>
+    <value>2000</value>
+  </property>
+
+  <property>
     <description>Enable timeline server to recover state after starting. If
     true, then yarn.timeline-service.state-store-class must be specified.
     </description>
@@ -3066,6 +3075,17 @@
     </description>
     <name>yarn.app.attempt.diagnostics.limit.kc</name>
     <value>64</value>
+  </property>
+
+  <property>
+    <description>
+      Flag to enable cross-origin (CORS) support for timeline service v1.x or
+      Timeline Reader in timeline service v2. For timeline service v2, also add
+      org.apache.hadoop.security.HttpCrossOriginFilterInitializer to the
+      configuration hadoop.http.filter.initializers in core-site.xml.
+    </description>
+    <name>yarn.timeline-service.http-cross-origin.enabled</name>
+    <value>false</value>
   </property>
 
 </configuration>

@@ -16,7 +16,7 @@
 -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
@@ -31,9 +31,9 @@
   <properties>
     <packaging.type>pom</packaging.type>
     <webappTgtDir>${basedir}/target/src/main/webapp</webappTgtDir>
-    <node.executable>node</node.executable>
-    <nodeVersion>v4.4.5</nodeVersion>
-    <npmVersion>2.15.5</npmVersion>
+    <node.executable>${basedir}/target/src/main/webapp/node/node</node.executable>
+    <nodeVersion>v5.7.1</nodeVersion>
+    <npmVersion>3.6.0</npmVersion>
     <keep-ui-build-cache>false</keep-ui-build-cache>
   </properties>
 
@@ -123,6 +123,7 @@
           <plugin>
             <groupId>com.github.eirslett</groupId>
             <artifactId>frontend-maven-plugin</artifactId>
+            <version>0.0.22</version>
             <configuration>
               <workingDirectory>${webappTgtDir}</workingDirectory>
             </configuration>
@@ -169,12 +170,11 @@
                 </goals>
                 <configuration>
                   <workingDirectory>${webappTgtDir}</workingDirectory>
-                  <executable>ember</executable>
+                  <executable>${node.executable}</executable>
                   <arguments>
-                    <argument>build</argument>
-                    <argument>-prod</argument>
-                    <argument>--output-path</argument>
-                    <argument>${basedir}/target/dist</argument>
+                    <argument>node/npm/bin/npm-cli</argument>
+                    <argument>run</argument>
+                    <argument>build:mvn</argument>
                   </arguments>
                 </configuration>
               </execution>
@@ -187,7 +187,7 @@
             <artifactId>maven-war-plugin</artifactId>
             <configuration>
               <webXml>${basedir}/src/main/webapp/WEB-INF/web.xml</webXml>
-              <warSourceDirectory>${basedir}/target/dist</warSourceDirectory>
+              <warSourceDirectory>${webappTgtDir}/dist</warSourceDirectory>
             </configuration>
           </plugin>
 

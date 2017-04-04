@@ -57,8 +57,7 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
   
   protected FilterFs(AbstractFileSystem fs) throws URISyntaxException {
-    super(fs.getUri(), fs.getUri().getScheme(),
-        fs.getUri().getAuthority() != null, fs.getUriDefaultPort());
+    super(fs.getUri(), fs.getUri().getScheme(), false, fs.getUriDefaultPort());
     myFs = fs;
   }
 
@@ -147,10 +146,15 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
 
   @Override
+  @Deprecated
   public FsServerDefaults getServerDefaults() throws IOException {
     return myFs.getServerDefaults();
   }
   
+  @Override
+  public FsServerDefaults getServerDefaults(final Path f) throws IOException {
+    return myFs.getServerDefaults(f);
+  }
 
   @Override
   public Path resolvePath(final Path p) throws FileNotFoundException,

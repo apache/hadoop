@@ -295,11 +295,15 @@ public class TestFileStatus {
     expected.append("permission=").append(fileStatus.getPermission()).append("; ");
     if(fileStatus.isSymlink()) {
       expected.append("isSymlink=").append(true).append("; ");
-      expected.append("symlink=").append(fileStatus.getSymlink()).append("}");
+      expected.append("symlink=").append(fileStatus.getSymlink()).append("; ");
     } else {
-      expected.append("isSymlink=").append(false).append("}");
+      expected.append("isSymlink=").append(false).append("; ");
     }
-    
+    expected.append("hasAcl=").append(fileStatus.hasAcl()).append("; ");
+    expected.append("isEncrypted=").append(
+        fileStatus.isEncrypted()).append("; ");
+    expected.append("isErasureCoded=").append(
+        fileStatus.isErasureCoded()).append("}");
     assertEquals(expected.toString(), fileStatus.toString());
   }
 }

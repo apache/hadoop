@@ -946,7 +946,7 @@ public class TestQuorumJournalManager {
           protected ExecutorService createSingleThreadExecutor() {
             // Don't parallelize calls to the quorum in the tests.
             // This makes the tests more deterministic.
-            return MoreExecutors.sameThreadExecutor();
+            return MoreExecutors.newDirectExecutorService();
           }
         };
         

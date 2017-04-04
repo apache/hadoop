@@ -13,4 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem
+org.apache.hadoop.fs.azure.security.WasbDelegationTokenIdentifier

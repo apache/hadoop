@@ -68,6 +68,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -277,6 +279,15 @@ public class DFSTestUtil {
     newLog.restart();
     Whitebox.setInternalState(fsn.getFSImage(), "editLog", newLog);
     Whitebox.setInternalState(fsn.getFSDirectory(), "editLog", newLog);
+  }
+
+  public static void enableAllECPolicies(Configuration conf) {
+    // Enable all the available EC policies
+    String policies =
+        Arrays.asList(ErasureCodingPolicyManager.getSystemPolicies()).stream()
+        .map(ErasureCodingPolicy::getName)
+        .collect(Collectors.joining(","));
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY, policies);
   }
 
   /** class MyFile contains enough information to recreate the contents of
@@ -851,7 +862,27 @@ public class DFSTestUtil {
       out.write(toAppend);
     }
   }
-  
+
+  /**
+   * Append specified length of bytes to a given file, starting with new block.
+   * @param fs The file system
+   * @param p Path of the file to append
+   * @param length Length of bytes to append to the file
+   * @throws IOException
+   */
+  public static void appendFileNewBlock(DistributedFileSystem fs,
+      Path p, int length) throws IOException {
+    assert fs.exists(p);
+    assert length >= 0;
+    byte[] toAppend = new byte[length];
+    Random random = new Random();
+    random.nextBytes(toAppend);
+    try (FSDataOutputStream out = fs.append(p,
+        EnumSet.of(CreateFlag.APPEND, CreateFlag.NEW_BLOCK), 4096, null)) {
+      out.write(toAppend);
+    }
+  }
+
   /**
    * @return url content as string (UTF-8 encoding assumed)
    */
@@ -1899,7 +1930,7 @@ public class DFSTestUtil {
       Path dir, int numBlocks, int numStripesPerBlk, boolean toMkdir)
       throws Exception {
     createStripedFile(cluster, file, dir, numBlocks, numStripesPerBlk,
-        toMkdir, ErasureCodingPolicyManager.getSystemDefaultPolicy());
+        toMkdir, StripedFileTestUtil.getDefaultECPolicy());
   }
 
   /**

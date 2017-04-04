@@ -346,7 +346,7 @@ public class BlockBlobAppendStream extends OutputStream {
 
     try {
       if (!ioThreadPool.awaitTermination(10, TimeUnit.MINUTES)) {
-        LOG.error("Time out occured while waiting for IO request to finish in append"
+        LOG.error("Time out occurred while waiting for IO request to finish in append"
             + " for blob : {}", key);
         NativeAzureFileSystemHelper.logAllLiveStackTraces();
         throw new IOException("Timed out waiting for IO requests to finish");

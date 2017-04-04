@@ -35,6 +35,7 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -60,6 +61,10 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
     assertTrue(stat.isFile());
     assertEquals(meta.getContentLength(), stat.getLen());
     assertEquals(meta.getLastModified().getTime(), stat.getModificationTime());
+    ContractTestUtils.assertNotErasureCoded(fs, path);
+    assertTrue(path + " should have erasure coding unset in " +
+            "FileStatus#toString(): " + stat,
+        stat.toString().contains("isErasureCoded=false"));
   }
 
   @Test
@@ -98,6 +103,10 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
     assertNotNull(stat);
     assertEquals(fs.makeQualified(path), stat.getPath());
     assertTrue(stat.isDirectory());
+    ContractTestUtils.assertNotErasureCoded(fs, path);
+    assertTrue(path + " should have erasure coding unset in " +
+            "FileStatus#toString(): " + stat,
+        stat.toString().contains("isErasureCoded=false"));
   }
 
   @Test

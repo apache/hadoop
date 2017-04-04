@@ -676,12 +676,14 @@ public class TestFsck {
         setNumFiles(4).build();
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
     ErasureCodingPolicy ecPolicy =
-        ErasureCodingPolicyManager.getSystemDefaultPolicy();
+        StripedFileTestUtil.getDefaultECPolicy();
     final int dataBlocks = ecPolicy.getNumDataUnits();
     final int cellSize = ecPolicy.getCellSize();
     final int numAllUnits = dataBlocks + ecPolicy.getNumParityUnits();
     int blockSize = 2 * cellSize;
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        ecPolicy.getName());
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
         numAllUnits + 1).build();
     String topDir = "/myDir";
@@ -1997,10 +1999,11 @@ public class TestFsck {
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY,
         precision);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
-    int dataBlocks = ErasureCodingPolicyManager
-        .getSystemDefaultPolicy().getNumDataUnits();
-    int parityBlocks = ErasureCodingPolicyManager
-        .getSystemDefaultPolicy().getNumParityUnits();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
+    int dataBlocks = StripedFileTestUtil.getDefaultECPolicy().getNumDataUnits();
+    int parityBlocks =
+        StripedFileTestUtil.getDefaultECPolicy().getNumParityUnits();
     int totalSize = dataBlocks + parityBlocks;
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(totalSize).build();
     fs = cluster.getFileSystem();
@@ -2288,13 +2291,13 @@ public class TestFsck {
   @Test (timeout = 300000)
   public void testFsckCorruptECFile() throws Exception {
     DistributedFileSystem fs = null;
-    int dataBlocks = ErasureCodingPolicyManager
-        .getSystemDefaultPolicy().getNumDataUnits();
-    int parityBlocks = ErasureCodingPolicyManager
-        .getSystemDefaultPolicy().getNumParityUnits();
-    int cellSize = ErasureCodingPolicyManager
-        .getSystemDefaultPolicy().getCellSize();
+    int dataBlocks = StripedFileTestUtil.getDefaultECPolicy().getNumDataUnits();
+    int parityBlocks =
+        StripedFileTestUtil.getDefaultECPolicy().getNumParityUnits();
+    int cellSize = StripedFileTestUtil.getDefaultECPolicy().getCellSize();
     int totalSize = dataBlocks + parityBlocks;
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(totalSize).build();
     fs = cluster.getFileSystem();
@@ -2308,7 +2311,7 @@ public class TestFsck {
     Path ecDirPath = new Path("/striped");
     fs.mkdir(ecDirPath, FsPermission.getDirDefault());
     fs.getClient().setErasureCodingPolicy(ecDirPath.toString(),
-        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     Path file = new Path(ecDirPath, "corrupted");
     final int length = cellSize * dataBlocks;
     final byte[] bytes = StripedFileTestUtil.generateBytes(length);
@@ -2359,13 +2362,13 @@ public class TestFsck {
   @Test (timeout = 300000)
   public void testFsckMissingECFile() throws Exception {
     DistributedFileSystem fs = null;
-    int dataBlocks = ErasureCodingPolicyManager
-        .getSystemDefaultPolicy().getNumDataUnits();
-    int parityBlocks = ErasureCodingPolicyManager
-        .getSystemDefaultPolicy().getNumParityUnits();
-    int cellSize = ErasureCodingPolicyManager
-        .getSystemDefaultPolicy().getCellSize();
+    int dataBlocks = StripedFileTestUtil.getDefaultECPolicy().getNumDataUnits();
+    int parityBlocks =
+        StripedFileTestUtil.getDefaultECPolicy().getNumParityUnits();
+    int cellSize = StripedFileTestUtil.getDefaultECPolicy().getCellSize();
     int totalSize = dataBlocks + parityBlocks;
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(totalSize).build();
     fs = cluster.getFileSystem();
@@ -2374,7 +2377,7 @@ public class TestFsck {
     Path ecDirPath = new Path("/striped");
     fs.mkdir(ecDirPath, FsPermission.getDirDefault());
     fs.getClient().setErasureCodingPolicy(ecDirPath.toString(),
-        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     Path file = new Path(ecDirPath, "missing");
     final int length = cellSize * dataBlocks;
     final byte[] bytes = StripedFileTestUtil.generateBytes(length);

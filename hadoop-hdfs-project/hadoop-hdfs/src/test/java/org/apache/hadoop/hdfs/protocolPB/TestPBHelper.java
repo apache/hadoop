@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.protocolPB;
 
+import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
@@ -36,6 +37,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -77,7 +79,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
@@ -228,7 +229,7 @@ public class TestPBHelper {
         datanodeUuids, storageIDs, storageTypes);
     if (isStriped) {
       blkLocs = new StripedBlockWithLocations(blkLocs, indices, dataBlkNum,
-          ErasureCodingPolicyManager.getSystemDefaultPolicy().getCellSize());
+          StripedFileTestUtil.getDefaultECPolicy().getCellSize());
     }
     return blkLocs;
   }
@@ -720,7 +721,7 @@ public class TestPBHelper {
     byte[] liveBlkIndices0 = new byte[2];
     BlockECReconstructionInfo blkECRecoveryInfo0 = new BlockECReconstructionInfo(
         new ExtendedBlock("bp1", 1234), dnInfos0, targetDnInfos0,
-        liveBlkIndices0, ErasureCodingPolicyManager.getSystemDefaultPolicy());
+        liveBlkIndices0, StripedFileTestUtil.getDefaultECPolicy());
     DatanodeInfo[] dnInfos1 = new DatanodeInfo[] {
         DFSTestUtil.getLocalDatanodeInfo(), DFSTestUtil.getLocalDatanodeInfo() };
     DatanodeStorageInfo targetDnInfos_2 = BlockManagerTestUtil
@@ -734,7 +735,7 @@ public class TestPBHelper {
     byte[] liveBlkIndices1 = new byte[2];
     BlockECReconstructionInfo blkECRecoveryInfo1 = new BlockECReconstructionInfo(
         new ExtendedBlock("bp2", 3256), dnInfos1, targetDnInfos1,
-        liveBlkIndices1, ErasureCodingPolicyManager.getSystemDefaultPolicy());
+        liveBlkIndices1, StripedFileTestUtil.getDefaultECPolicy());
     List<BlockECReconstructionInfo> blkRecoveryInfosList = new ArrayList<BlockECReconstructionInfo>();
     blkRecoveryInfosList.add(blkECRecoveryInfo0);
     blkRecoveryInfosList.add(blkECRecoveryInfo1);
@@ -792,6 +793,32 @@ public class TestPBHelper {
         slowPeersConverted2.equals(SlowPeerReports.EMPTY_REPORT));
   }
 
+  @Test
+  public void testSlowDiskInfoPBHelper() {
+    // Test with a map that has a few slow disk entries.
+    final SlowDiskReports slowDisks = SlowDiskReports.create(
+        ImmutableMap.of(
+            "disk1", ImmutableMap.of(SlowDiskReports.DiskOp.METADATA, 0.5),
+            "disk2", ImmutableMap.of(SlowDiskReports.DiskOp.READ, 1.0,
+                SlowDiskReports.DiskOp.WRITE, 1.0),
+            "disk3", ImmutableMap.of(SlowDiskReports.DiskOp.METADATA, 1.2,
+                SlowDiskReports.DiskOp.READ, 1.5,
+                SlowDiskReports.DiskOp.WRITE, 1.3)));
+    SlowDiskReports slowDisksConverted1 = PBHelper.convertSlowDiskInfo(
+        PBHelper.convertSlowDiskInfo(slowDisks));
+    assertTrue(
+        "Expected map:" + slowDisks + ", got map:" +
+            slowDisksConverted1.getSlowDisks(),
+        slowDisksConverted1.equals(slowDisks));
+
+    // Test with an empty map
+    SlowDiskReports slowDisksConverted2 = PBHelper.convertSlowDiskInfo(
+        PBHelper.convertSlowDiskInfo(SlowDiskReports.EMPTY_REPORT));
+    assertTrue(
+        "Expected empty map:" + ", got map:" + slowDisksConverted2,
+        slowDisksConverted2.equals(SlowDiskReports.EMPTY_REPORT));
+  }
+
   private void assertBlockECRecoveryInfoEquals(
       BlockECReconstructionInfo blkECRecoveryInfo1,
       BlockECReconstructionInfo blkECRecoveryInfo2) {
@@ -823,8 +850,8 @@ public class TestPBHelper {
     ErasureCodingPolicy ecPolicy2 = blkECRecoveryInfo2.getErasureCodingPolicy();
     // Compare ECPolicies same as default ECPolicy as we used system default
     // ECPolicy used in this test
-    compareECPolicies(ErasureCodingPolicyManager.getSystemDefaultPolicy(), ecPolicy1);
-    compareECPolicies(ErasureCodingPolicyManager.getSystemDefaultPolicy(), ecPolicy2);
+    compareECPolicies(StripedFileTestUtil.getDefaultECPolicy(), ecPolicy1);
+    compareECPolicies(StripedFileTestUtil.getDefaultECPolicy(), ecPolicy2);
   }
 
   private void compareECPolicies(ErasureCodingPolicy ecPolicy1, ErasureCodingPolicy ecPolicy2) {

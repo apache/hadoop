@@ -55,6 +55,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   private String softwareVersion;
   private List<String> dependentHostNames = new LinkedList<>();
   private String upgradeDomain;
+  public static final DatanodeInfo[] EMPTY_ARRAY = {};
 
   // Datanode administrative states
   public enum AdminStates {

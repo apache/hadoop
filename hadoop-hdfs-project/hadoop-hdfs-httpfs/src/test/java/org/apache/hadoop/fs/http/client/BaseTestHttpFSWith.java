@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.http.server.HttpFSServerWebApp;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -944,6 +945,24 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     assertFalse(httpStatus.isEncrypted());
   }
 
+  private void testErasureCoding() throws Exception {
+    Assume.assumeFalse("Assume its not a local FS!", isLocalFS());
+    FileSystem proxyFs = FileSystem.get(getProxiedFSConf());
+    FileSystem httpFS = getHttpFSFileSystem();
+    Path filePath = new Path(getProxiedFSTestDir(), "foo.txt");
+    proxyFs.create(filePath).close();
+
+    ContractTestUtils.assertNotErasureCoded(httpFS, getProxiedFSTestDir());
+    ContractTestUtils.assertNotErasureCoded(httpFS, filePath);
+    ContractTestUtils.assertErasureCoded(httpFS,
+        TestHdfsHelper.ERASURE_CODING_DIR);
+    ContractTestUtils.assertErasureCoded(httpFS,
+        TestHdfsHelper.ERASURE_CODING_FILE);
+
+    proxyFs.close();
+    httpFS.close();
+  }
+
   private void testStoragePolicy() throws Exception {
     Assume.assumeFalse("Assume its not a local FS", isLocalFS());
     FileSystem fs = FileSystem.get(getProxiedFSConf());
@@ -993,7 +1012,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     WORKING_DIRECTORY, MKDIRS, SET_TIMES, SET_PERMISSION, SET_OWNER, 
     SET_REPLICATION, CHECKSUM, CONTENT_SUMMARY, FILEACLS, DIRACLS, SET_XATTR,
     GET_XATTRS, REMOVE_XATTR, LIST_XATTRS, ENCRYPTION, LIST_STATUS_BATCH,
-    GETTRASHROOT, STORAGEPOLICY
+    GETTRASHROOT, STORAGEPOLICY, ERASURE_CODING
   }
 
   private void operation(Operation op) throws Exception {
@@ -1078,6 +1097,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case STORAGEPOLICY:
       testStoragePolicy();
+      break;
+    case ERASURE_CODING:
+      testErasureCoding();
       break;
     }
   }

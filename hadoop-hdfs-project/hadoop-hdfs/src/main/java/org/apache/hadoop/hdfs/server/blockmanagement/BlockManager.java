@@ -891,7 +891,15 @@ public class BlockManager implements BlockStatsMXBean {
       lastBlock.getUnderConstructionFeature()
           .updateStorageScheduledSize((BlockInfoStriped) lastBlock);
     }
-    if (hasMinStorage(lastBlock)) {
+
+    // Count replicas on decommissioning nodes, as these will not be
+    // decommissioned unless recovery/completing last block has finished
+    NumberReplicas numReplicas = countNodes(lastBlock);
+    int numUsableReplicas = numReplicas.liveReplicas() +
+        numReplicas.decommissioning() +
+        numReplicas.liveEnteringMaintenanceReplicas();
+
+    if (hasMinStorage(lastBlock, numUsableReplicas)) {
       if (committed) {
         addExpectedReplicasToPending(lastBlock);
       }
@@ -4171,7 +4179,7 @@ public class BlockManager implements BlockStatsMXBean {
     BlockPlacementPolicy placementPolicy = placementPolicies
         .getPolicy(blockType);
     int numReplicas = blockType == STRIPED ? ((BlockInfoStriped) storedBlock)
-        .getRealDataBlockNum() : storedBlock.getReplication();
+        .getRealTotalBlockNum() : storedBlock.getReplication();
     return placementPolicy.verifyBlockPlacement(locs, numReplicas)
         .isPlacementPolicySatisfied();
   }

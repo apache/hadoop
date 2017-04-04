@@ -1282,7 +1282,7 @@ public class TestRetryCacheWithHA {
 
   /**
    * When NN failover happens, if the client did not receive the response and
-   * send a retry request to the other NN, the same response should be recieved
+   * send a retry request to the other NN, the same response should be received
    * based on the retry cache.
    */
   public void testClientRetryWithFailover(final AtMostOnceOp op)

@@ -77,7 +77,7 @@ public class FieldSelectionReducer<K, V>
     Configuration conf = context.getConfiguration();
     
     this.fieldSeparator = 
-      conf.get(FieldSelectionHelper.DATA_FIELD_SEPERATOR, "\t");
+      conf.get(FieldSelectionHelper.DATA_FIELD_SEPARATOR, "\t");
     
     this.reduceOutputKeyValueSpec = 
       conf.get(FieldSelectionHelper.REDUCE_OUTPUT_KEY_VALUE_SPEC, "0-:");

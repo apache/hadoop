@@ -74,6 +74,7 @@ class StripedBlockReconstructor extends StripedReconstructor
       metrics.incrECReconstructionBytesWritten(getBytesWritten());
       getStripedReader().close();
       stripedWriter.close();
+      cleanup();
     }
   }
 

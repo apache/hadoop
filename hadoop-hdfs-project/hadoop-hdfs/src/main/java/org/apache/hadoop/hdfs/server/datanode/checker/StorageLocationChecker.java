@@ -119,6 +119,7 @@ public class StorageLocationChecker {
             DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY,
             DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_DEFAULT,
             TimeUnit.MILLISECONDS),
+        0,
         Executors.newCachedThreadPool(
             new ThreadFactoryBuilder()
                 .setNameFormat("StorageLocationChecker thread %d")

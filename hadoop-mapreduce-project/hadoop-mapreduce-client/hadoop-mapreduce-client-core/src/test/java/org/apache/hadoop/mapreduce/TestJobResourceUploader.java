@@ -40,6 +40,34 @@ import org.junit.Test;
 public class TestJobResourceUploader {
 
   @Test
+  public void testStringToPath() throws IOException {
+    Configuration conf = new Configuration();
+    JobResourceUploader uploader =
+        new JobResourceUploader(FileSystem.getLocal(conf), false);
+
+    Assert.assertEquals("Failed: absolute, no scheme, with fragment",
+        "/testWithFragment.txt",
+        uploader.stringToPath("/testWithFragment.txt#fragment.txt").toString());
+
+    Assert.assertEquals("Failed: absolute, with scheme, with fragment",
+        "file:/testWithFragment.txt",
+        uploader.stringToPath("file:///testWithFragment.txt#fragment.txt")
+            .toString());
+
+    Assert.assertEquals("Failed: relative, no scheme, with fragment",
+        "testWithFragment.txt",
+        uploader.stringToPath("testWithFragment.txt#fragment.txt").toString());
+
+    Assert.assertEquals("Failed: relative, no scheme, no fragment",
+        "testWithFragment.txt",
+        uploader.stringToPath("testWithFragment.txt").toString());
+
+    Assert.assertEquals("Failed: absolute, with scheme, no fragment",
+        "file:/testWithFragment.txt",
+        uploader.stringToPath("file:///testWithFragment.txt").toString());
+  }
+
+  @Test
   public void testAllDefaults() throws IOException {
     ResourceLimitsConf.Builder b = new ResourceLimitsConf.Builder();
     runLimitsTest(b.build(), true, null);
@@ -210,17 +238,17 @@ public class TestJobResourceUploader {
         rlConf.maxSingleResourceMB);
 
     conf.set("tmpfiles",
-        buildPathString("file://tmpFiles", rlConf.numOfTmpFiles));
+        buildPathString("file:///tmpFiles", rlConf.numOfTmpFiles));
     conf.set("tmpjars",
-        buildPathString("file://tmpjars", rlConf.numOfTmpLibJars));
+        buildPathString("file:///tmpjars", rlConf.numOfTmpLibJars));
     conf.set("tmparchives",
-        buildPathString("file://tmpArchives", rlConf.numOfTmpArchives));
+        buildPathString("file:///tmpArchives", rlConf.numOfTmpArchives));
     conf.set(MRJobConfig.CACHE_ARCHIVES,
-        buildPathString("file://cacheArchives", rlConf.numOfDCArchives));
+        buildPathString("file:///cacheArchives", rlConf.numOfDCArchives));
     conf.set(MRJobConfig.CACHE_FILES,
-        buildPathString("file://cacheFiles", rlConf.numOfDCFiles));
+        buildPathString("file:///cacheFiles", rlConf.numOfDCFiles));
     if (rlConf.jobJar) {
-      conf.setJar("file://jobjar.jar");
+      conf.setJar("file:///jobjar.jar");
     }
     return conf;
   }

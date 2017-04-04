@@ -159,7 +159,7 @@ public class FieldSelectionMapReduce<K, V>
   }
 
   public void configure(JobConf job) {
-    this.fieldSeparator = job.get(FieldSelectionHelper.DATA_FIELD_SEPERATOR,
+    this.fieldSeparator = job.get(FieldSelectionHelper.DATA_FIELD_SEPARATOR,
         "\t");
     this.mapOutputKeyValueSpec = job.get(
         FieldSelectionHelper.MAP_OUTPUT_KEY_VALUE_SPEC, "0-:");

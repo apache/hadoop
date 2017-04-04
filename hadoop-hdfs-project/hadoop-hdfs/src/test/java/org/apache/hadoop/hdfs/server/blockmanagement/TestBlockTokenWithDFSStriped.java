@@ -20,11 +20,11 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.junit.Rule;
@@ -35,7 +35,7 @@ import java.io.IOException;
 
 public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private final int dataBlocks = ecPolicy.getNumDataUnits();
   private final int parityBlocks = ecPolicy.getNumParityUnits();
   private final int cellSize = ecPolicy.getCellSize();
@@ -55,6 +55,8 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
   private Configuration getConf() {
     Configuration conf = super.getConf(numDNs);
     conf.setInt("io.bytes.per.checksum", cellSize);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     return conf;
   }
 
@@ -84,7 +86,7 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
         .numDataNodes(numDNs)
         .build();
     cluster.getFileSystem().getClient().setErasureCodingPolicy("/",
-        ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     try {
       cluster.waitActive();
       doTestRead(conf, cluster, true);
@@ -114,6 +116,8 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
   public void testEnd2End() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     new TestBalancer().integrationTestWithStripedFile(conf);
   }
 

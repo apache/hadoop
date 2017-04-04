@@ -318,15 +318,12 @@ public final class S3AUtils {
    * Create the AWS credentials from the providers and the URI.
    * @param binding Binding URI, may contain user:pass login details
    * @param conf filesystem configuration
-   * @param fsURI fS URI —after any login details have been stripped.
    * @return a credentials provider list
    * @throws IOException Problems loading the providers (including reading
    * secrets from credential files).
    */
   public static AWSCredentialProviderList createAWSCredentialProviderSet(
-      URI binding,
-      Configuration conf,
-      URI fsURI) throws IOException {
+      URI binding, Configuration conf) throws IOException {
     AWSCredentialProviderList credentials = new AWSCredentialProviderList();
 
     Class<?>[] awsClasses;
@@ -351,11 +348,12 @@ public final class S3AUtils {
               SharedInstanceProfileCredentialsProvider.class.getName());
           aClass = SharedInstanceProfileCredentialsProvider.class;
         }
-        credentials.add(createAWSCredentialProvider(conf,
-            aClass,
-            fsURI));
+        credentials.add(createAWSCredentialProvider(conf, aClass));
       }
     }
+    // make sure the logging message strips out any auth details
+    LOG.debug("For URI {}, using credentials {}",
+        S3xLoginHelper.toString(binding), credentials);
     return credentials;
   }
 
@@ -365,8 +363,8 @@ public final class S3AUtils {
    * attempted in order:
    *
    * <ol>
-   * <li>a public constructor accepting java.net.URI and
-   *     org.apache.hadoop.conf.Configuration</li>
+   * <li>a public constructor accepting
+   *    org.apache.hadoop.conf.Configuration</li>
    * <li>a public static method named getInstance that accepts no
    *    arguments and returns an instance of
    *    com.amazonaws.auth.AWSCredentialsProvider, or</li>
@@ -375,14 +373,11 @@ public final class S3AUtils {
    *
    * @param conf configuration
    * @param credClass credential class
-   * @param uri URI of the FS
    * @return the instantiated class
    * @throws IOException on any instantiation failure.
    */
   static AWSCredentialsProvider createAWSCredentialProvider(
-      Configuration conf,
-      Class<?> credClass,
-      URI uri) throws IOException {
+      Configuration conf, Class<?> credClass) throws IOException {
     AWSCredentialsProvider credentials = null;
     String className = credClass.getName();
     if (!AWSCredentialsProvider.class.isAssignableFrom(credClass)) {
@@ -394,11 +389,10 @@ public final class S3AUtils {
     LOG.debug("Credential provider class is {}", className);
 
     try {
-      // new X(uri, conf)
-      Constructor cons = getConstructor(credClass, URI.class,
-          Configuration.class);
+      // new X(conf)
+      Constructor cons = getConstructor(credClass, Configuration.class);
       if (cons != null) {
-        credentials = (AWSCredentialsProvider)cons.newInstance(uri, conf);
+        credentials = (AWSCredentialsProvider)cons.newInstance(conf);
         return credentials;
       }
 
@@ -420,16 +414,12 @@ public final class S3AUtils {
       // no supported constructor or factory method found
       throw new IOException(String.format("%s " + CONSTRUCTOR_EXCEPTION
           + ".  A class specified in %s must provide a public constructor "
-          + "accepting URI and Configuration, or a public factory method named "
+          + "accepting Configuration, or a public factory method named "
           + "getInstance that accepts no arguments, or a public default "
           + "constructor.", className, AWS_CREDENTIALS_PROVIDER));
     } catch (ReflectiveOperationException | IllegalArgumentException e) {
       // supported constructor or factory method found, but the call failed
       throw new IOException(className + " " + INSTANTIATION_EXCEPTION +".", e);
-    } finally {
-      if (credentials != null) {
-        LOG.debug("Using {} for {}.", credentials, uri);
-      }
     }
   }
 

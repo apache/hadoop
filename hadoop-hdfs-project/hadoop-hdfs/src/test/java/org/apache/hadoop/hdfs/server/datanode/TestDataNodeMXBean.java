@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -104,8 +105,12 @@ public class TestDataNodeMXBean {
       String bpActorInfo = (String)mbs.getAttribute(mxbeanName,
           "BPServiceActorInfo");
       Assert.assertEquals(datanode.getBPServiceActorInfo(), bpActorInfo);
+      String slowDisks = (String)mbs.getAttribute(mxbeanName, "SlowDisks");
+      Assert.assertEquals(datanode.getSlowDisks(), slowDisks);
     } finally {
-      if (cluster != null) {cluster.shutdown();}
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
   
@@ -208,5 +213,31 @@ public class TestDataNodeMXBean {
       totalBlocks += volumeInfoMap.get("numBlocks");
     }
     return totalBlocks;
+  }
+
+  @Test
+  public void testDataNodeMXBeanSlowDisksEnabled() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setDouble(DFSConfigKeys
+        .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_FRACTION_KEY, 1.0);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+
+    try {
+      List<DataNode> datanodes = cluster.getDataNodes();
+      Assert.assertEquals(datanodes.size(), 1);
+      DataNode datanode = datanodes.get(0);
+      String slowDiskPath = "test/data1/slowVolume";
+      datanode.getDiskMetrics().addSlowDiskForTesting(slowDiskPath, null);
+
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanName = new ObjectName(
+          "Hadoop:service=DataNode,name=DataNodeInfo");
+
+      String slowDisks = (String)mbs.getAttribute(mxbeanName, "SlowDisks");
+      Assert.assertEquals(datanode.getSlowDisks(), slowDisks);
+      Assert.assertTrue(slowDisks.contains(slowDiskPath));
+    } finally {
+      if (cluster != null) {cluster.shutdown();}
+    }
   }
 }

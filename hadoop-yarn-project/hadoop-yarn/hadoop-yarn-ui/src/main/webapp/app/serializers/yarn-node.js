@@ -36,8 +36,8 @@ export default DS.JSONAPISerializer.extend({
         pmemCheckEnabled: payload.pmemCheckEnabled,
         nodeHealthy: payload.nodeHealthy,
         lastNodeUpdateTime: Converter.timeStampToDate(payload.lastNodeUpdateTime),
-        healthReport: payload.healthReport,
-        nmStartupTime: Converter.timeStampToDate(payload.nmStartupTime),
+        healthReport: payload.healthReport || 'N/A',
+        nmStartupTime: payload.nmStartupTime? Converter.timeStampToDate(payload.nmStartupTime) : '',
         nodeManagerBuildVersion: payload.nodeManagerBuildVersion,
         hadoopBuildVersion: payload.hadoopBuildVersion
       }

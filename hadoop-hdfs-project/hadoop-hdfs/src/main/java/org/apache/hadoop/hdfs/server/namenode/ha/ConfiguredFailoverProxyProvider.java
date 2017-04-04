@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -43,9 +44,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
- * A FailoverProxyProvider implementation which allows one to configure two URIs
- * to connect to during fail-over. The first configured address is tried first,
- * and on a fail-over event the other address is tried.
+ * A FailoverProxyProvider implementation which allows one to configure
+ * multiple URIs to connect to during fail-over. A random configured address is
+ * tried first, and on a fail-over event the other addresses are tried
+ * sequentially in a random order.
  */
 public class ConfiguredFailoverProxyProvider<T> extends
     AbstractNNFailoverProxyProvider<T> {
@@ -123,6 +125,13 @@ public class ConfiguredFailoverProxyProvider<T> extends
       Collection<InetSocketAddress> addressesOfNns = addressesInNN.values();
       for (InetSocketAddress address : addressesOfNns) {
         proxies.add(new AddressRpcProxyPair<T>(address));
+      }
+      // Randomize the list to prevent all clients pointing to the same one
+      boolean randomized = conf.getBoolean(
+          HdfsClientConfigKeys.Failover.RANDOM_ORDER,
+          HdfsClientConfigKeys.Failover.RANDOM_ORDER_DEFAULT);
+      if (randomized) {
+        Collections.shuffle(proxies);
       }
 
       // The client may have a delegation token set for the logical

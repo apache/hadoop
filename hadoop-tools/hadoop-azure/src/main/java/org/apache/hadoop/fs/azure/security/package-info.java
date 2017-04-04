@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,22 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.net.NetworkTopology;
-
-/**
- * The HDFS specific network topology class. The main purpose of doing this
- * subclassing is to add storage-type-aware chooseRandom method. All the
- * remaining parts should be the same.
- *
- * Currently a placeholder to test storage type info.
- * TODO : add "chooseRandom with storageType info" function.
- */
-public class DFSNetworkTopology extends NetworkTopology {
-  public static DFSNetworkTopology getInstance(Configuration conf) {
-    DFSNetworkTopology nt = new DFSNetworkTopology();
-    return (DFSNetworkTopology)nt.init(DFSTopologyNodeImpl.FACTORY);
-  }
-}
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+package org.apache.hadoop.fs.azure.security;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

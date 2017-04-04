@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.NameNodeProxies;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -310,6 +311,8 @@ public class TestStripedINodeFile {
       final short GROUP_SIZE = (short) (testECPolicy.getNumDataUnits() +
           testECPolicy.getNumParityUnits());
       conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY, 2);
+      conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+          StripedFileTestUtil.getDefaultECPolicy().getName());
 
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(GROUP_SIZE)
           .build();
@@ -321,7 +324,7 @@ public class TestStripedINodeFile {
 
       // set erasure coding policy
       dfs.setErasureCodingPolicy(ecDir,
-          ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
+          StripedFileTestUtil.getDefaultECPolicy().getName());
       DFSTestUtil.createFile(dfs, ecFile, len, (short) 1, 0xFEED);
       DFSTestUtil.createFile(dfs, contiguousFile, len, (short) 1, 0xFEED);
       final FSDirectory fsd = fsn.getFSDirectory();
@@ -385,6 +388,8 @@ public class TestStripedINodeFile {
         1L);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+        StripedFileTestUtil.getDefaultECPolicy().getName());
 
     // start 10 datanodes
     int numOfDatanodes = 10;
@@ -423,7 +428,7 @@ public class TestStripedINodeFile {
       client.setStoragePolicy(fooDir, HdfsConstants.ONESSD_STORAGE_POLICY_NAME);
       // set an EC policy on "/foo" directory
       client.setErasureCodingPolicy(fooDir,
-          ErasureCodingPolicyManager.getSystemDefaultPolicy().getName());
+          StripedFileTestUtil.getDefaultECPolicy().getName());
 
       // write file to fooDir
       final String barFile = "/foo/bar";

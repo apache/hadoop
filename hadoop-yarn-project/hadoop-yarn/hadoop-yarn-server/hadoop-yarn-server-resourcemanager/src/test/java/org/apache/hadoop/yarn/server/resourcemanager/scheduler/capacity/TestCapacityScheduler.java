@@ -3205,7 +3205,7 @@ public class TestCapacityScheduler {
     RMApp rmApp = rm.submitApp(amMemory, "app-1", "user_0", null, queueName);
 
     assertEquals("RMApp does not containes minimum allocation",
-        minAllocResource, rmApp.getAMResourceRequest().getCapability());
+        minAllocResource, rmApp.getAMResourceRequests().get(0).getCapability());
 
     ResourceScheduler scheduler = rm.getRMContext().getScheduler();
     LeafQueue queueA =

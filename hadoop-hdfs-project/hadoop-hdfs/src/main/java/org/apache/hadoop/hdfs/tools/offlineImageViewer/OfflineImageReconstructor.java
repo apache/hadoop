@@ -647,6 +647,10 @@ class OfflineImageReconstructor {
         break;
       case "STRIPED":
         bld.setBlockType(HdfsProtos.BlockTypeProto.STRIPED);
+        ival = node.removeChildInt(INODE_SECTION_EC_POLICY_ID);
+        if (ival != null) {
+          bld.setErasureCodingPolicyID(ival);
+        }
         break;
       default:
         throw new IOException("INode XML found with unknown <blocktype> " +
@@ -665,7 +669,7 @@ class OfflineImageReconstructor {
       throw new IOException("<block> found without <id>");
     }
     blockBld.setBlockId(id);
-    Long genstamp = block.removeChildLong(INODE_SECTION_GEMSTAMP);
+    Long genstamp = block.removeChildLong(INODE_SECTION_GENSTAMP);
     if (genstamp == null) {
       throw new IOException("<block> found without <genstamp>");
     }
@@ -1595,11 +1599,11 @@ class OfflineImageReconstructor {
     } catch (IOException e) {
       // Handle the case where <version> does not exist.
       // Note: fsimage XML files which are missing <version> are also missing
-      // many other fields that ovi needs to accurately reconstruct the
+      // many other fields that oiv needs to accurately reconstruct the
       // fsimage.
       throw new IOException("No <version> section found at the top of " +
           "the fsimage XML.  This XML file is too old to be processed " +
-          "by ovi.", e);
+          "by oiv.", e);
     }
     Node version = new Node();
     loadNodeChildren(version, "version fields");

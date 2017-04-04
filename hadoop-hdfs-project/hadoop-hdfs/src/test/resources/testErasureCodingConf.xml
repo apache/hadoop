@@ -72,6 +72,22 @@
     </test>
 
     <test>
+      <description>help: help with extra argument</description>
+      <test-commands>
+        <ec-admin-command>-help arg1 arg2</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>You must give exactly one argument to -help.</expected-output>
+          <expected-exit-code>1</expected-exit-code>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
       <description>help: setPolicy command</description>
       <test-commands>
         <ec-admin-command>-fs NAMENODE -help setPolicy</ec-admin-command>
@@ -119,7 +135,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Get the list of supported erasure coding policies</expected-output>
+          <expected-output>Get the list of enabled erasure coding policies</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
@@ -359,7 +375,24 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Policy 'invalidpolicy' does not match any supported erasure coding policies.</expected-output>
+          <expected-output>Policy 'invalidpolicy' does not match any enabled erasure coding policies</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>setPolicy : illegal parameters - RS-10-4-64k</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-10-4-64k -path /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Policy 'RS-10-4-64k' does not match any enabled erasure coding policies</expected-output>
         </comparator>
       </comparators>
     </test>

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.metrics2.impl;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.collect.Iterables;
 
@@ -43,7 +44,7 @@ abstract class AbstractMetricsRecord implements MetricsRecord {
   }
 
   @Override public String toString() {
-    return Objects.toStringHelper(this)
+    return MoreObjects.toStringHelper(this)
         .add("timestamp", timestamp())
         .add("name", name())
         .add("description", description())

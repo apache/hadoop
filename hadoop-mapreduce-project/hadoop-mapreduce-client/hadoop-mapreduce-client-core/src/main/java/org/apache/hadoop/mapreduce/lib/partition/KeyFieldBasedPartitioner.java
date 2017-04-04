@@ -65,7 +65,7 @@ public class KeyFieldBasedPartitioner<K2, V2> extends Partitioner<K2, V2>
     this.conf = conf;
     keyFieldHelper = new KeyFieldHelper();
     String keyFieldSeparator = 
-      conf.get(MRJobConfig.MAP_OUTPUT_KEY_FIELD_SEPERATOR, "\t");
+      conf.get(MRJobConfig.MAP_OUTPUT_KEY_FIELD_SEPARATOR, "\t");
     keyFieldHelper.setKeyFieldSeparator(keyFieldSeparator);
     if (conf.get("num.key.fields.for.partition") != null) {
       LOG.warn("Using deprecated num.key.fields.for.partition. " +

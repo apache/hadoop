@@ -2929,6 +2929,16 @@
 </property>
 
 <property>
+  <name>dfs.namenode.ec.policies.enabled</name>
+  <value></value>
+  <description>Comma-delimited list of enabled erasure coding policies.
+    The NameNode will enforce this when setting an erasure coding policy
+    on a directory. By default, none of the built-in erasure coding
+    policies are enabled.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.ec.reconstruction.stripedread.timeout.millis</name>
   <value>5000</value>
   <description>Datanode striped read timeout in milliseconds.

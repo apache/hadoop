@@ -292,4 +292,25 @@ public class FSParentQueue extends FSQueue {
     // TODO Auto-generated method stub
     
   }
+
+  @Override
+  protected void dumpStateInternal(StringBuilder sb) {
+    sb.append("{Name: " + getName() +
+        ", Weight: " + weights +
+        ", Policy: " + policy.getName() +
+        ", FairShare: " + getFairShare() +
+        ", SteadyFairShare: " + getSteadyFairShare() +
+        ", MaxShare: " + maxShare +
+        ", MinShare: " + minShare +
+        ", ResourceUsage: " + getResourceUsage() +
+        ", Demand: " + getDemand() +
+        ", MaxAMShare: " + maxAMShare +
+        ", Runnable: " + getNumRunnableApps() +
+        "}");
+
+    for(FSQueue child : getChildQueues()) {
+      sb.append(", ");
+      child.dumpStateInternal(sb);
+    }
+  }
 }
