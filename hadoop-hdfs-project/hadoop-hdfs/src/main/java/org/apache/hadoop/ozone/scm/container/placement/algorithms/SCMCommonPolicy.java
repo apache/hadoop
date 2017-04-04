@@ -125,8 +125,9 @@ public abstract class SCMCommonPolicy implements ContainerPlacementPolicy {
 
     if (healthyList.size() < nodesRequired) {
       msg = String.format("Unable to find enough nodes that meet the space " +
-              "requirement in healthy node set. Nodes required: %d Found: %d",
-          nodesRequired, healthyList.size());
+              "requirement of %d bytes in healthy node set." +
+              " Nodes required: %d Found: %d",
+          sizeRequired, nodesRequired, healthyList.size());
       LOG.error(msg);
       throw new SCMException(msg,
           SCMException.ResultCodes.FAILED_TO_FIND_NODES_WITH_SPACE);
