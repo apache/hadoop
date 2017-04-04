@@ -2202,6 +2202,8 @@
   <description>
     The KeyProvider to use when managing zone keys, and interacting with
     encryption keys when reading and writing to an encryption zone.
+    For hdfs clients, the provider path will be same as namenode's
+    provider path.
   </description>
 </property>
 

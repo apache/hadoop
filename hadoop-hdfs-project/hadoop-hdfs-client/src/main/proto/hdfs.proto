@@ -420,6 +420,7 @@ message FsServerDefaultsProto {
   optional bool encryptDataTransfer = 6 [default = false];
   optional uint64 trashInterval = 7 [default = 0];
   optional ChecksumTypeProto checksumType = 8 [default = CHECKSUM_CRC32];
+  optional string keyProviderUri = 9;
 }
 
 

@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FileSystemTestWrapper;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -83,6 +84,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension.DelegationTokenExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
@@ -105,8 +107,21 @@ import static org.mockito.Matchers.anyShort;
 import static org.mockito.Mockito.withSettings;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.DFSTestUtil.verifyFilesEqual;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
@@ -1667,5 +1682,195 @@ public class TestEncryptionZones {
         fs.delete(path, true);
       }
     }
+  }
+
+  /** This test tests that client will first lookup secrets map
+   * for key provider uri from {@link Credentials} in
+   * {@link UserGroupInformation}
+   * @throws Exception
+   */
+  @Test
+  public void testProviderUriInCredentials() throws Exception {
+    String dummyKeyProvider = "dummy://foo:bar@test_provider1";
+    DFSClient client = cluster.getFileSystem().getClient();
+    Credentials credentials = new Credentials();
+    // Key provider uri should be in the secret map of credentials object with
+    // namenode uri as key
+    Text lookUpKey = client.getKeyProviderMapKey();
+    credentials.addSecretKey(lookUpKey,
+        DFSUtilClient.string2Bytes(dummyKeyProvider));
+    client.ugi.addCredentials(credentials);
+    client.setKeyProviderUri(null);
+    Assert.assertEquals("Client Key provider is different from provider in "
+        + "credentials map", dummyKeyProvider,
+        client.getKeyProviderUri().toString());
+  }
+
+
+ /**
+  * Testing the fallback behavior of keyProviderUri.
+  * This test tests first the key provider uri is used from conf
+  * and then used from serverDefaults.
+  * @throws IOException
+  */
+  @Test
+  public void testKeyProviderFallBackBehavior() throws IOException {
+    Configuration clusterConf = cluster.getConfiguration(0);
+    String dummyKeyProviderUri1 = "dummy://foo:bar@test_provider1";
+    // set the key provider uri in conf.
+    clusterConf.set(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        dummyKeyProviderUri1);
+    DFSClient mockClient = Mockito.spy(cluster.getFileSystem().getClient());
+    mockClient.setKeyProviderUri(null);
+    // Namenode returning null as keyProviderUri in FSServerDefaults.
+    FsServerDefaults serverDefaultsWithKeyProviderNull =
+        getTestServerDefaults(null);
+    Mockito.doReturn(serverDefaultsWithKeyProviderNull)
+        .when(mockClient).getServerDefaults();
+    Assert.assertEquals(
+        "Key provider uri from client doesn't match with uri from conf",
+        dummyKeyProviderUri1, mockClient.getKeyProviderUri().toString());
+    Mockito.verify(mockClient, Mockito.times(1)).getServerDefaults();
+
+    String dummyKeyProviderUri2 = "dummy://foo:bar@test_provider2";
+    mockClient.setKeyProviderUri(null);
+    FsServerDefaults serverDefaultsWithDummyKeyProvider =
+        getTestServerDefaults(dummyKeyProviderUri2);
+    // Namenode returning dummyKeyProvider2 in serverDefaults.
+    Mockito.doReturn(serverDefaultsWithDummyKeyProvider)
+    .when(mockClient).getServerDefaults();
+    Assert.assertEquals(
+        "Key provider uri from client doesn't match with uri from namenode",
+        dummyKeyProviderUri2, mockClient.getKeyProviderUri().toString());
+    Mockito.verify(mockClient, Mockito.times(2)).getServerDefaults();
+  }
+
+  /**
+   * This test makes sure the client gets the key provider uri from namenode
+   * instead of its own conf.
+   * This test assumes both the namenode and client are upgraded.
+   * @throws Exception
+   */
+  @Test
+  public void testDifferentKMSProviderOnUpgradedNamenode() throws Exception {
+    Configuration clusterConf = cluster.getConfiguration(0);
+    URI namenodeKeyProviderUri = URI.create(getKeyProviderURI());
+    Assert.assertEquals("Key Provider for client and namenode are different",
+        namenodeKeyProviderUri, cluster.getFileSystem().getClient()
+        .getKeyProviderUri());
+
+    // Unset the provider path in conf
+    clusterConf.unset(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH);
+    // Nullify the cached value for key provider uri on client
+    cluster.getFileSystem().getClient().setKeyProviderUri(null);
+    // Even after unsetting the local conf, the client key provider should be
+    // the same as namenode's provider.
+    Assert.assertEquals("Key Provider for client and namenode are different",
+        namenodeKeyProviderUri, cluster.getFileSystem().getClient()
+        .getKeyProviderUri());
+
+    // Set the provider path to some dummy scheme.
+    clusterConf.set(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        "dummy://foo:bar@test_provider1");
+    // Nullify the cached value for key provider uri on client
+    cluster.getFileSystem().getClient().setKeyProviderUri(null);
+    // Even after pointing the conf to some dummy provider, the client key
+    // provider should be the same as namenode's provider.
+    Assert.assertEquals("Key Provider for client and namenode are different",
+        namenodeKeyProviderUri, cluster.getFileSystem().getClient()
+        .getKeyProviderUri());
+  }
+
+  /**
+   * This test makes sure the client trusts its local conf
+   * This test assumes the client is upgraded but the namenode is not.
+   * @throws Exception
+   */
+  @Test
+  public void testDifferentKMSProviderOnUnUpgradedNamenode()
+      throws Exception {
+    Configuration clusterConf = cluster.getConfiguration(0);
+    URI namenodeKeyProviderUri = URI.create(getKeyProviderURI());
+    URI clientKeyProviderUri =
+        cluster.getFileSystem().getClient().getKeyProviderUri();
+    Assert.assertNotNull(clientKeyProviderUri);
+    // Since the client and the namenode share the same conf, they will have
+    // identical key provider.
+    Assert.assertEquals("Key Provider for client and namenode are different",
+        namenodeKeyProviderUri, clientKeyProviderUri);
+
+    String dummyKeyProviderUri = "dummy://foo:bar@test_provider";
+    // Unset the provider path in conf.
+    clusterConf.set(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        dummyKeyProviderUri);
+    FsServerDefaults spyServerDefaults = getTestServerDefaults(null);
+    // Creating a fake serverdefaults so that we can simulate namenode not
+    // being upgraded.
+    DFSClient spyClient = Mockito.spy(cluster.getFileSystem().getClient());
+    // Clear the cache value of keyProviderUri on client side.
+    spyClient.setKeyProviderUri(null);
+    Mockito.doReturn(spyServerDefaults).when(spyClient).getServerDefaults();
+
+    // Since FsServerDefaults#keyProviderUri is null, the client
+    // will fallback to local conf which is null.
+    clientKeyProviderUri = spyClient.getKeyProviderUri();
+    Assert.assertEquals("Client keyProvider should be " + dummyKeyProviderUri,
+        dummyKeyProviderUri, clientKeyProviderUri.toString());
+    Mockito.verify(spyClient, Mockito.times(1)).getServerDefaults();
+  }
+
+  // Given a provider uri return serverdefaults.
+  // provider uri == null means the namenode does not support returning
+  // provider uri in FSServerDefaults object.
+  private FsServerDefaults getTestServerDefaults(String providerPath) {
+    FsServerDefaults serverDefaults = new FsServerDefaults(
+        conf.getLongBytes(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT),
+        conf.getInt(DFS_BYTES_PER_CHECKSUM_KEY, DFS_BYTES_PER_CHECKSUM_DEFAULT),
+        conf.getInt(DFS_CLIENT_WRITE_PACKET_SIZE_KEY,
+        DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT),
+        (short) conf.getInt(DFS_REPLICATION_KEY, DFS_REPLICATION_DEFAULT),
+        conf.getInt(IO_FILE_BUFFER_SIZE_KEY, IO_FILE_BUFFER_SIZE_DEFAULT),
+        conf.getBoolean(
+        DFS_ENCRYPT_DATA_TRANSFER_KEY, DFS_ENCRYPT_DATA_TRANSFER_DEFAULT),
+        conf.getLong(FS_TRASH_INTERVAL_KEY, FS_TRASH_INTERVAL_DEFAULT),
+        DataChecksum.Type.valueOf(DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT),
+        providerPath);
+    return serverDefaults;
+  }
+
+  /**
+   * This test performs encrypted read/write and picks up the key provider uri
+   * from the credentials and not the conf.
+   * @throws Exception
+   */
+  @Test
+  public void testEncryptedReadWriteUsingDiffKeyProvider() throws Exception {
+    final HdfsAdmin dfsAdmin =
+        new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+    Configuration clusterConf = cluster.getConfiguration(0);
+    clusterConf.unset(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH);
+    DFSClient client = cluster.getFileSystem().getClient();
+    Credentials credentials = new Credentials();
+    Text lookUpKey = client.getKeyProviderMapKey();
+    credentials.addSecretKey(lookUpKey,
+        DFSUtilClient.string2Bytes(getKeyProviderURI()));
+    client.ugi.addCredentials(credentials);
+    // Create a base file for comparison
+    final Path baseFile = new Path("/base");
+    final int len = 8192;
+    DFSTestUtil.createFile(fs, baseFile, len, (short) 1, 0xFEED);
+    // Create the first enc file
+    final Path zone = new Path("/zone");
+    fs.mkdirs(zone);
+    dfsAdmin.createEncryptionZone(zone, TEST_KEY, NO_TRASH);
+    final Path encFile1 = new Path(zone, "myfile");
+    DFSTestUtil.createFile(fs, encFile1, len, (short) 1, 0xFEED);
+    // Read them back in and compare byte-by-byte
+    verifyFilesEqual(fs, baseFile, encFile1, len);
   }
 }
