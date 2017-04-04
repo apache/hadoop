@@ -354,6 +354,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
         if (waitForChillModeFinish) {
           cluster.waitTobeOutOfChillMode();
         }
+        cluster.waitForHeartbeatProcessed();
       } catch (Exception e) {
         // A workaround to propagate MiniOzoneCluster failures without
         // changing the method signature (which would require cascading
