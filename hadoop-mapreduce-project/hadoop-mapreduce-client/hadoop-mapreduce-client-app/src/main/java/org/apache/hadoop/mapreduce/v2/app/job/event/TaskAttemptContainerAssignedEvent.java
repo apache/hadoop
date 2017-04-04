@@ -28,12 +28,21 @@ public class TaskAttemptContainerAssignedEvent extends TaskAttemptEvent {
 
   private final Container container;
   private final Map<ApplicationAccessType, String> applicationACLs;
+  private int shufflePort = -1;
 
   public TaskAttemptContainerAssignedEvent(TaskAttemptId id,
       Container container, Map<ApplicationAccessType, String> applicationACLs) {
     super(id, TaskAttemptEventType.TA_ASSIGNED);
     this.container = container;
     this.applicationACLs = applicationACLs;
+  }
+
+  public int getShufflePort() {
+    return shufflePort;
+  }
+
+  public void setShufflePort(int shufflePort) {
+    this.shufflePort = shufflePort;
   }
 
   public Container getContainer() {

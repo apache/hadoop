@@ -34,25 +34,29 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssignedEvent;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest.ResourceRequestComparator;
+import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,11 +118,16 @@ public class RMContainerRequestor extends AbstractService
       .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
   private final ApplicationId applicationId;
   private final RMCommunicator rmCommunicator;
+  @SuppressWarnings("rawtypes")
+  private EventHandler eventHandler;
 
-  public RMContainerRequestor(RMCommunicator rmCommunicator) {
+  @SuppressWarnings("rawtypes")
+  public RMContainerRequestor(EventHandler eventHandler,
+      RMCommunicator rmCommunicator) {
     super(RMContainerRequestor.class.getName());
     this.rmCommunicator = rmCommunicator;
     applicationId = rmCommunicator.applicationId;
+    this.eventHandler = eventHandler;
   }
 
   @Private
@@ -424,17 +433,28 @@ public class RMContainerRequestor extends AbstractService
         req.nodeLabelExpression);
   }
 
+  @SuppressWarnings("unchecked")
+  @Override
+  public void containerAssigned(Container allocated, ContainerRequest req,
+      Map<ApplicationAccessType, String> applicationACLs) {
+    decContainerReq(req);
+
+    // send the container-assigned event to task attempt
+    eventHandler.handle(new TaskAttemptContainerAssignedEvent(
+        req.attemptID, allocated, applicationACLs));
+  }
+
   @Override
   public void decContainerReq(ContainerRequest req) {
     // Update resource requests
     for (String hostName : req.hosts) {
       decResourceRequest(req.priority, hostName, req.capability);
     }
-    
+
     for (String rack : req.racks) {
       decResourceRequest(req.priority, rack, req.capability);
     }
-   
+
     decResourceRequest(req.priority, ResourceRequest.ANY, req.capability);
   }
 

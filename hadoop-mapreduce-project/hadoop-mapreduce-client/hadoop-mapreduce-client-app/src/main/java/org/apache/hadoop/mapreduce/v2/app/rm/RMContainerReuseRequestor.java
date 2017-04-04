@@ -34,7 +34,9 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssignedEvent;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -53,8 +55,8 @@ public class RMContainerReuseRequestor extends RMContainerRequestor
   private static final Log LOG = LogFactory
       .getLog(RMContainerReuseRequestor.class);
 
-  private Map<Container, String> containersToReuse =
-      new ConcurrentHashMap<Container, String>();
+  private Map<Container, HostInfo> containersToReuse =
+      new ConcurrentHashMap<>();
   private Map<ContainerId, List<TaskAttemptId>> containerToTaskAttemptsMap =
       new HashMap<ContainerId, List<TaskAttemptId>>();
   private int containerReuseMaxMapTasks;
@@ -63,14 +65,17 @@ public class RMContainerReuseRequestor extends RMContainerRequestor
   private int maxReduceTaskContainers;
   private int noOfMapTaskContainersForReuse;
   private int noOfReduceTaskContainersForReuse;
+  private final RMCommunicator rmCommunicator;
+  @SuppressWarnings("rawtypes")
+  private final EventHandler eventHandler;
 
-  private RMCommunicator rmCommunicator;
-
+  @SuppressWarnings("rawtypes")
   public RMContainerReuseRequestor(
-      EventHandler<ContainerAvailableEvent> eventHandler,
+      EventHandler eventHandler,
       RMCommunicator rmCommunicator) {
-    super(rmCommunicator);
+    super(eventHandler, rmCommunicator);
     this.rmCommunicator = rmCommunicator;
+    this.eventHandler = eventHandler;
   }
 
   @Override
@@ -113,8 +118,8 @@ public class RMContainerReuseRequestor extends RMContainerRequestor
     boolean blacklisted = super.isNodeBlacklisted(hostName);
     if (blacklisted) {
       Set<Container> containersOnHost = new HashSet<Container>();
-      for (Entry<Container, String> elem : containersToReuse.entrySet()) {
-        if (elem.getValue().equals(hostName)) {
+      for (Entry<Container, HostInfo> elem : containersToReuse.entrySet()) {
+        if (elem.getValue().getHost().equals(hostName)) {
           containersOnHost.add(elem.getKey());
         }
       }
@@ -139,6 +144,7 @@ public class RMContainerReuseRequestor extends RMContainerRequestor
         containerTaskAttempts = new ArrayList<TaskAttemptId>();
         containerToTaskAttemptsMap.put(containerId, containerTaskAttempts);
       }
+      TaskAttemptId taskAttemptId = event.getTaskAttemptId();
       if (checkMapContainerReuseConstraints(priority, containerTaskAttempts)
           || checkReduceContainerReuseConstraints(priority,
               containerTaskAttempts)) {
@@ -147,13 +153,17 @@ public class RMContainerReuseRequestor extends RMContainerRequestor
         // If there are any eligible requests
         if (resourceRequests != null && !resourceRequests.isEmpty()) {
           canReuse = true;
-          containerTaskAttempts.add(event.getTaskAttemptId());
+          containerTaskAttempts.add(taskAttemptId);
         }
       }
       ((RMContainerAllocator) rmCommunicator)
           .resetContainerForReuse(container.getId());
       if (canReuse) {
-        containersToReuse.put(container, resourceName);
+        int shufflePort =
+            rmCommunicator.getJob().getTask(taskAttemptId.getTaskId())
+                .getAttempt(taskAttemptId).getShufflePort();
+        containersToReuse.put(container,
+            new HostInfo(resourceName, shufflePort));
         incrementRunningReuseContainers(priority);
         LOG.info("Adding the " + containerId + " for reuse.");
       } else {
@@ -211,7 +221,7 @@ public class RMContainerReuseRequestor extends RMContainerRequestor
 
   @Private
   @VisibleForTesting
-  Map<Container, String> getContainersToReuse() {
+  Map<Container, HostInfo> getContainersToReuse() {
     return containersToReuse;
   }
 
@@ -220,5 +230,35 @@ public class RMContainerReuseRequestor extends RMContainerRequestor
    */
   public static enum EventType {
     CONTAINER_AVAILABLE
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public void containerAssigned(Container allocated, ContainerRequest req,
+      Map<ApplicationAccessType, String> applicationACLs) {
+    if(containersToReuse.containsKey(allocated)){
+      decContainerReq(req);
+      // send the container-assigned event to task attempt
+      eventHandler.handle(new TaskAttemptContainerAssignedEvent(
+          req.attemptID, allocated, applicationACLs));
+    } else {
+      super.containerAssigned(allocated, req, applicationACLs);
+    }
+  }
+
+  static class HostInfo {
+    private String host;
+    private int port;
+    public HostInfo(String host, int port) {
+      super();
+      this.host = host;
+      this.port = port;
+    }
+    public String getHost() {
+      return host;
+    }
+    public int getPort() {
+      return port;
+    }
   }
 }

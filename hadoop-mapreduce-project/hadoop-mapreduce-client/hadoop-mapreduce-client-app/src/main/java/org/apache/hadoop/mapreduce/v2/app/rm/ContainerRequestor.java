@@ -18,9 +18,12 @@
 package org.apache.hadoop.mapreduce.v2.app.rm;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.hadoop.mapreduce.v2.app.rm.RMContainerRequestor.ContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -37,6 +40,9 @@ public interface ContainerRequestor {
   void addContainerReq(ContainerRequest request);
 
   void decContainerReq(ContainerRequest request);
+
+  void containerAssigned(Container allocated, ContainerRequest assigned,
+      Map<ApplicationAccessType, String> acls);
 
   void release(ContainerId containerId);
 

@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.mapreduce.v2.app.rm;
 
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Map;
@@ -29,8 +31,12 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
+import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.app.job.Task;
+import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMContainerRequestor.ContainerRequest;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMContainerReuseRequestor.EventType;
+import org.apache.hadoop.mapreduce.v2.app.rm.RMContainerReuseRequestor.HostInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -51,8 +57,16 @@ public class TestRMContainerReuseRequestor {
 
   @Before
   public void setup() throws IOException {
+    RMContainerAllocator allocator = mock(RMContainerAllocator.class);
+    Job job = mock(Job.class);
+    Task task = mock(Task.class);
+    TaskAttempt taskAttempt = mock(TaskAttempt.class);
+    when(taskAttempt.getShufflePort()).thenReturn(0);
+    when(task.getAttempt(any(TaskAttemptId.class))).thenReturn(taskAttempt);
+    when(job.getTask(any(TaskId.class))).thenReturn(task);
+    when(allocator.getJob()).thenReturn(job);
     reuseRequestor = new RMContainerReuseRequestor(null,
-        mock(RMContainerAllocator.class));
+        allocator);
   }
 
   @Test
@@ -138,14 +152,14 @@ public class TestRMContainerReuseRequestor {
   @Test
   public void testContainerFailedOnHost() throws Exception {
     reuseRequestor.serviceInit(new Configuration());
-    Map<Container, String> containersToReuse = reuseRequestor
+    Map<Container, HostInfo> containersToReuse = reuseRequestor
         .getContainersToReuse();
     containersToReuse
         .put(newContainerInstance("container_1472171035081_0009_01_000008",
-            RMContainerAllocator.PRIORITY_REDUCE), "node1");
+            RMContainerAllocator.PRIORITY_REDUCE), new HostInfo("node1", 1999));
     containersToReuse
         .put(newContainerInstance("container_1472171035081_0009_01_000009",
-            RMContainerAllocator.PRIORITY_REDUCE), "node2");
+            RMContainerAllocator.PRIORITY_REDUCE), new HostInfo("node2", 1999));
     reuseRequestor.getBlacklistedNodes().add("node1");
     // It removes all containers from containersToReuse running in node1
     reuseRequestor.containerFailedOnHost("node1");
@@ -172,7 +186,7 @@ public class TestRMContainerReuseRequestor {
       ContainerAvailableEvent event = new ContainerAvailableEvent(
           EventType.CONTAINER_AVAILABLE, taskAttemptId, container);
       reuseRequestor.handle(event);
-      Map<Container, String> containersToReuse = reuseRequestor
+      Map<Container, HostInfo> containersToReuse = reuseRequestor
           .getContainersToReuse();
       Assert.assertTrue("Container should be added for reuse.",
           containersToReuse.containsKey(container));
@@ -206,7 +220,7 @@ public class TestRMContainerReuseRequestor {
     ContainerAvailableEvent event1 = new ContainerAvailableEvent(eventType,
         taskAttemptId1, container);
     reuseRequestor.handle(event1);
-    Map<Container, String> containersToReuse = reuseRequestor
+    Map<Container, HostInfo> containersToReuse = reuseRequestor
         .getContainersToReuse();
     // It is reusing the container
     Assert.assertTrue("Container should be added for reuse.",
@@ -236,7 +250,7 @@ public class TestRMContainerReuseRequestor {
       ContainerAvailableEvent event1 = new ContainerAvailableEvent(
           EventType.CONTAINER_AVAILABLE, taskAttemptId1, container);
       reuseRequestor.handle(event1);
-      Map<Container, String> containersToReuse = reuseRequestor
+      Map<Container, HostInfo> containersToReuse = reuseRequestor
           .getContainersToReuse();
       Assert.assertTrue("Container should be added for reuse.",
           containersToReuse.containsKey(container));
@@ -269,7 +283,7 @@ public class TestRMContainerReuseRequestor {
     ContainerAvailableEvent event1 = new ContainerAvailableEvent(eventType,
         taskAttemptId1, container1);
     reuseRequestor.handle(event1);
-    Map<Container, String> containersToReuse = reuseRequestor
+    Map<Container, HostInfo> containersToReuse = reuseRequestor
         .getContainersToReuse();
     Assert.assertTrue("Container should be added for reuse.",
         containersToReuse.containsKey(container1));

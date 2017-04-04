@@ -53,7 +53,6 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobUpdatedNodesEvent;
-import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssignedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
@@ -257,7 +256,7 @@ public class RMContainerAllocator extends RMCommunicator
       dispatcher.register(RMContainerReuseRequestor.EventType.class,
           (RMContainerReuseRequestor) containerRequestor);
     } else {
-      containerRequestor = new RMContainerRequestor(this);
+      containerRequestor = new RMContainerRequestor(eventHandler, this);
     }
     containerRequestor.init(conf);
   }
@@ -1298,11 +1297,8 @@ public class RMContainerAllocator extends RMCommunicator
     private void containerAssigned(Container allocated, 
                                     ContainerRequest assigned) {
       // Update resource requests
-      containerRequestor.decContainerReq(assigned);
-
-      // send the container-assigned event to task attempt
-      eventHandler.handle(new TaskAttemptContainerAssignedEvent(
-          assigned.attemptID, allocated, applicationACLs));
+      containerRequestor.containerAssigned(allocated, assigned,
+          applicationACLs);
 
       assignedRequests.add(allocated, assigned.attemptID);
 
