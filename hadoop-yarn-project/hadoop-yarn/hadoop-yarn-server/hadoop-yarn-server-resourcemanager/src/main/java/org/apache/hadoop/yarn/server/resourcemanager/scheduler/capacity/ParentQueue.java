@@ -315,7 +315,22 @@ public class ParentQueue extends AbstractCSQueue {
 
         // Check if the child-queue already exists
         if (childQueue != null) {
-          // Re-init existing child queues
+          // Check if the child-queue has been converted into parent queue.
+          // The CS has already checked to ensure that this child-queue is in
+          // STOPPED state.
+          if (childQueue instanceof LeafQueue
+              && newChildQueue instanceof ParentQueue) {
+            // We would convert this LeafQueue to ParentQueue, consider this
+            // as the combination of DELETE then ADD.
+            newChildQueue.setParent(this);
+            currentChildQueues.put(newChildQueueName, newChildQueue);
+            // inform CapacitySchedulerQueueManager
+            CapacitySchedulerQueueManager queueManager = this.csContext
+                .getCapacitySchedulerQueueManager();
+            queueManager.addQueue(newChildQueueName, newChildQueue);
+            continue;
+          }
+          // Re-init existing queues
           childQueue.reinitialize(newChildQueue, clusterResource);
           LOG.info(getQueueName() + ": re-configured queue: " + childQueue);
         } else{
