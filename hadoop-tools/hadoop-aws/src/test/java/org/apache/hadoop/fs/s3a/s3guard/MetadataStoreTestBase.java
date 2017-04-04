@@ -710,7 +710,7 @@ public abstract class MetadataStoreTestBase extends Assert {
     assertNull(pathStr + " should not be cached.", meta);
   }
 
-  private void assertCached(String pathStr) throws IOException {
+  protected void assertCached(String pathStr) throws IOException {
     Path path = strToPath(pathStr);
     PathMetadata meta = ms.get(path);
     assertNotNull(pathStr + " should be cached.", meta);
@@ -719,7 +719,7 @@ public abstract class MetadataStoreTestBase extends Assert {
   /**
    * Convenience to create a fully qualified Path from string.
    */
-  private Path strToPath(String p) {
+  Path strToPath(String p) {
     final Path path = new Path(p);
     assert path.isAbsolute();
     return path.makeQualified(contract.getFileSystem().getUri(), null);

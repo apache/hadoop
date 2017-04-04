@@ -32,6 +32,7 @@ import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
 
@@ -417,6 +418,75 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
       assertTrue("Should not be marked empty",
           rootMeta.isEmptyDirectory() != Tristate.TRUE);
     }
+  }
+
+  /**
+   * Test that when moving nested paths, all its ancestors up to destination
+   * root will also be created.
+   * Here is the directory tree before move:
+   *
+   * testMovePopulateAncestors
+   * ├── a
+   * │   └── b
+   * │       └── src
+   * │           ├── dir1
+   * │           │   └── dir2
+   * │           └── file1.txt
+   * └── c
+   *     └── d
+   *         └── dest
+   *
+   * As part of rename(a/b/src, d/c/dest), S3A will enumerate the subtree at
+   * a/b/src.  This test verifies that after the move, the new subtree at
+   * 'dest' is reachable from the root (i.e. c/ and c/d exist in the table.
+   * DynamoDBMetadataStore depends on this property to do recursive delete
+   * without a full table scan.
+   */
+  @Test
+  public void testMovePopulatesAncestors() throws IOException {
+    final DynamoDBMetadataStore ddbms = getDynamoMetadataStore();
+    final String testRoot = "/testMovePopulatesAncestors";
+    final String srcRoot = testRoot + "/a/b/src";
+    final String destRoot = testRoot + "/c/d/e/dest";
+
+    final Path nestedPath1 = strToPath(srcRoot + "/file1.txt");
+    ddbms.put(new PathMetadata(basicFileStatus(nestedPath1, 1024, false)));
+    final Path nestedPath2 = strToPath(srcRoot + "/dir1/dir2");
+    ddbms.put(new PathMetadata(basicFileStatus(nestedPath2, 0, true)));
+
+    // We don't put the destRoot path here, since put() would create ancestor
+    // entries, and we want to ensure that move() does it, instead.
+
+    // Build enumeration of src / dest paths and do the move()
+    final Collection<Path> fullSourcePaths = Lists.newArrayList(
+        strToPath(srcRoot),
+        strToPath(srcRoot + "/dir1"),
+        strToPath(srcRoot + "/dir1/dir2"),
+        strToPath(srcRoot + "/file1.txt")
+    );
+    final Collection<PathMetadata> pathsToCreate = Lists.newArrayList(
+        new PathMetadata(basicFileStatus(strToPath(destRoot),
+            0, true)),
+        new PathMetadata(basicFileStatus(strToPath(destRoot + "/dir1"),
+            0, true)),
+        new PathMetadata(basicFileStatus(strToPath(destRoot + "/dir1/dir2"),
+            0, true)),
+        new PathMetadata(basicFileStatus(strToPath(destRoot + "/file1.txt"),
+            1024, false))
+    );
+
+    ddbms.move(fullSourcePaths, pathsToCreate);
+
+    // assert that all the ancestors should have been populated automatically
+    assertCached(testRoot + "/c");
+    assertCached(testRoot + "/c/d");
+    assertCached(testRoot + "/c/d/e");
+    assertCached(destRoot /* /c/d/e/dest */);
+
+    // Also check moved files while we're at it
+    assertCached(destRoot + "/dir1");
+    assertCached(destRoot + "/dir1/dir2");
+    assertCached(destRoot + "/file1.txt");
   }
 
   @Test

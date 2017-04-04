@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -418,9 +419,40 @@ public class DynamoDBMetadataStore implements MetadataStore {
         pathsToCreate == null ? 0 : pathsToCreate.size());
     LOG.trace("move: pathsToDelete = {}, pathsToCreate = {}", pathsToDelete,
         pathsToCreate);
+
+    // In DynamoDBMetadataStore implementation, we assume that if a path
+    // exists, all its ancestors will also exist in the table.
+    // Following code is to maintain this invariant by putting all ancestor
+    // directories of the paths to create.
+    // ancestor paths that are not explicitly added to paths to create
+    Collection<PathMetadata> inferredPathsToCreate = null;
+    if (pathsToCreate != null) {
+      inferredPathsToCreate = new ArrayList<>(pathsToCreate);
+      // help set for fast look up; we should avoid putting duplicate paths
+      final Collection<Path> fullPathsToCreate = new HashSet<>();
+      for (PathMetadata meta : pathsToCreate) {
+        fullPathsToCreate.add(meta.getFileStatus().getPath());
+      }
+
+      for (PathMetadata meta : pathsToCreate) {
+        Preconditions.checkArgument(meta != null);
+        Path parent = meta.getFileStatus().getPath().getParent();
+        while (parent != null
+            && !parent.isRoot()
+            && !fullPathsToCreate.contains(parent)) {
+          LOG.debug("move: auto-create ancestor path {} for child path {}",
+              parent, meta.getFileStatus().getPath());
+          final FileStatus status = makeDirStatus(parent, username);
+          inferredPathsToCreate.add(new PathMetadata(status, Tristate.FALSE));
+          fullPathsToCreate.add(parent);
+          parent = parent.getParent();
+        }
+      }
+    }
+
     try {
       processBatchWriteRequest(pathToKey(pathsToDelete),
-          pathMetadataToItem(pathsToCreate));
+          pathMetadataToItem(inferredPathsToCreate));
     } catch (AmazonClientException e) {
       throw translateException("move", (String) null, e);
     }
