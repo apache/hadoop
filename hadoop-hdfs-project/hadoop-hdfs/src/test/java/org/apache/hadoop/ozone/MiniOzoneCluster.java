@@ -43,7 +43,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -260,9 +259,9 @@ public final class MiniOzoneCluster extends MiniDFSCluster
       super(conf);
       this.conf = conf;
 
-      URL p = conf.getClass().getResource("");
-      path = p.getPath().concat(MiniOzoneCluster.class.getSimpleName() + UUID
-          .randomUUID().toString());
+      path = GenericTestUtils.getTempPath(
+          MiniOzoneCluster.class.getSimpleName() +
+          UUID.randomUUID().toString());
       runID = UUID.randomUUID();
     }
 
