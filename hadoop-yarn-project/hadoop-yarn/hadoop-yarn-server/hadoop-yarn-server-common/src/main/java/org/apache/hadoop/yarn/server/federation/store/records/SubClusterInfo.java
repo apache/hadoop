@@ -260,4 +260,66 @@ public abstract class SubClusterInfo {
         + ", getState() = " + getState() + ", getLastStartTime() = "
         + getLastStartTime() + ", getCapability() = " + getCapability() + "]";
   }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    SubClusterInfo other = (SubClusterInfo) obj;
+    if (!this.getSubClusterId().equals(other.getSubClusterId())) {
+      return false;
+    }
+    if (!this.getAMRMServiceAddress().equals(other.getAMRMServiceAddress())) {
+      return false;
+    }
+    if (!this.getClientRMServiceAddress()
+        .equals(other.getClientRMServiceAddress())) {
+      return false;
+    }
+    if (!this.getRMAdminServiceAddress()
+        .equals(other.getRMAdminServiceAddress())) {
+      return false;
+    }
+    if (!this.getRMWebServiceAddress().equals(other.getRMWebServiceAddress())) {
+      return false;
+    }
+    if (!this.getState().equals(other.getState())) {
+      return false;
+    }
+    return this.getLastStartTime() == other.getLastStartTime();
+    // Capability and HeartBeat fields are not included as they are temporal
+    // (i.e. timestamps), so they change during the lifetime of the same
+    // sub-cluster
+  }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result
+        + ((getSubClusterId() == null) ? 0 : getSubClusterId().hashCode());
+    result = prime * result + ((getAMRMServiceAddress() == null) ? 0
+        : getAMRMServiceAddress().hashCode());
+    result = prime * result + ((getClientRMServiceAddress() == null) ? 0
+        : getClientRMServiceAddress().hashCode());
+    result = prime * result + ((getRMAdminServiceAddress() == null) ? 0
+        : getRMAdminServiceAddress().hashCode());
+    result = prime * result + ((getRMWebServiceAddress() == null) ? 0
+        : getRMWebServiceAddress().hashCode());
+    result =
+        prime * result + ((getState() == null) ? 0 : getState().hashCode());
+    result = prime * result
+        + (int) (getLastStartTime() ^ (getLastStartTime() >>> 32));
+    return result;
+    // Capability and HeartBeat fields are not included as they are temporal
+    // (i.e. timestamps), so they change during the lifetime of the same
+    // sub-cluster
+  }
 }

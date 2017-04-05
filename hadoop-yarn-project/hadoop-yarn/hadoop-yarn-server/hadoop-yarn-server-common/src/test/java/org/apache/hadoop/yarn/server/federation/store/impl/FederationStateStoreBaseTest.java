@@ -19,11 +19,14 @@ package org.apache.hadoop.yarn.server.federation.store.impl;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreErrorCode;
+import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreException;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
@@ -67,9 +70,11 @@ public abstract class FederationStateStoreBaseTest {
 
   protected abstract FederationStateStore createStateStore();
 
+  private Configuration conf;
+
   @Before
   public void before() throws IOException, YarnException {
-    stateStore.init(new Configuration());
+    stateStore.init(conf);
   }
 
   @After
@@ -114,8 +119,10 @@ public abstract class FederationStateStoreBaseTest {
     try {
       stateStore.deregisterSubCluster(deregisterRequest);
       Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage().startsWith("SubCluster SC not found"));
+    } catch (FederationStateStoreException e) {
+      Assert.assertEquals(
+          FederationStateStoreErrorCode.MEMBERSHIP_UPDATE_DEREGISTER_FAIL,
+          e.getCode());
     }
   }
 
@@ -141,9 +148,10 @@ public abstract class FederationStateStoreBaseTest {
     try {
       stateStore.getSubCluster(request).getSubClusterInfo();
       Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertTrue(
-          e.getMessage().startsWith("Subcluster SC does not exist"));
+    } catch (FederationStateStoreException e) {
+      Assert.assertEquals(
+          FederationStateStoreErrorCode.MEMBERSHIP_SINGLE_SELECT_FAIL,
+          e.getCode());
     }
   }
 
@@ -166,19 +174,25 @@ public abstract class FederationStateStoreBaseTest {
     stateStore.subClusterHeartbeat(SubClusterHeartbeatRequest.newInstance(
         subClusterId2, SubClusterState.SC_UNHEALTHY, "capability"));
 
-    Assert.assertTrue(
+    List<SubClusterInfo> subClustersActive =
         stateStore.getSubClusters(GetSubClustersInfoRequest.newInstance(true))
-            .getSubClusters().contains(subClusterInfo1));
-    Assert.assertFalse(
-        stateStore.getSubClusters(GetSubClustersInfoRequest.newInstance(true))
-            .getSubClusters().contains(subClusterInfo2));
+            .getSubClusters();
+    List<SubClusterInfo> subClustersAll =
+        stateStore.getSubClusters(GetSubClustersInfoRequest.newInstance(false))
+            .getSubClusters();
 
-    Assert.assertTrue(
-        stateStore.getSubClusters(GetSubClustersInfoRequest.newInstance(false))
-            .getSubClusters().contains(subClusterInfo1));
-    Assert.assertTrue(
-        stateStore.getSubClusters(GetSubClustersInfoRequest.newInstance(false))
-            .getSubClusters().contains(subClusterInfo2));
+    // SC1 is the only active
+    Assert.assertEquals(1, subClustersActive.size());
+    SubClusterInfo sc1 = subClustersActive.get(0);
+    Assert.assertEquals(subClusterId1, sc1.getSubClusterId());
+
+    // SC1 and SC2 are the SubCluster present into the StateStore
+
+    Assert.assertEquals(2, subClustersAll.size());
+    Assert.assertTrue(subClustersAll.contains(sc1));
+    subClustersAll.remove(sc1);
+    SubClusterInfo sc2 = subClustersAll.get(0);
+    Assert.assertEquals(subClusterId2, sc2.getSubClusterId());
   }
 
   @Test
@@ -204,9 +218,10 @@ public abstract class FederationStateStoreBaseTest {
     try {
       stateStore.subClusterHeartbeat(heartbeatRequest);
       Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage()
-          .startsWith("Subcluster SC does not exist; cannot heartbeat"));
+    } catch (FederationStateStoreException e) {
+      Assert.assertEquals(
+          FederationStateStoreErrorCode.MEMBERSHIP_UPDATE_HEARTBEAT_FAIL,
+          e.getCode());
     }
   }
 
@@ -265,9 +280,10 @@ public abstract class FederationStateStoreBaseTest {
     try {
       queryApplicationHomeSC(appId);
       Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage()
-          .startsWith("Application " + appId + " does not exist"));
+    } catch (FederationStateStoreException e) {
+      Assert.assertEquals(
+          FederationStateStoreErrorCode.APPLICATIONS_SINGLE_SELECT_FAIL,
+          e.getCode());
     }
 
   }
@@ -281,9 +297,9 @@ public abstract class FederationStateStoreBaseTest {
     try {
       stateStore.deleteApplicationHomeSubCluster(delRequest);
       Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage()
-          .startsWith("Application " + appId.toString() + " does not exist"));
+    } catch (FederationStateStoreException e) {
+      Assert.assertEquals(
+          FederationStateStoreErrorCode.APPLICATIONS_DELETE_FAIL, e.getCode());
     }
   }
 
@@ -314,9 +330,10 @@ public abstract class FederationStateStoreBaseTest {
     try {
       stateStore.getApplicationHomeSubCluster(request);
       Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage()
-          .startsWith("Application " + appId.toString() + " does not exist"));
+    } catch (FederationStateStoreException e) {
+      Assert.assertEquals(
+          FederationStateStoreErrorCode.APPLICATIONS_SINGLE_SELECT_FAIL,
+          e.getCode());
     }
   }
 
@@ -379,9 +396,9 @@ public abstract class FederationStateStoreBaseTest {
     try {
       stateStore.updateApplicationHomeSubCluster((updateRequest));
       Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage()
-          .startsWith("Application " + appId.toString() + " does not exist"));
+    } catch (FederationStateStoreException e) {
+      Assert.assertEquals(
+          FederationStateStoreErrorCode.APPLICATIONS_UPDATE_FAIL, e.getCode());
     }
   }
 
@@ -440,9 +457,9 @@ public abstract class FederationStateStoreBaseTest {
     try {
       stateStore.getPolicyConfiguration(request);
       Assert.fail();
-    } catch (YarnException e) {
-      Assert.assertTrue(
-          e.getMessage().startsWith("Policy for queue Queue does not exist"));
+    } catch (FederationStateStoreException e) {
+      Assert.assertEquals(
+          FederationStateStoreErrorCode.POLICY_SINGLE_SELECT_FAIL, e.getCode());
     }
   }
 
@@ -535,6 +552,10 @@ public abstract class FederationStateStoreBaseTest {
     GetSubClusterPolicyConfigurationResponse result =
         stateStore.getPolicyConfiguration(request);
     return result.getPolicyConfiguration();
+  }
+
+  protected void setConf(Configuration conf) {
+    this.conf = conf;
   }
 
 }
