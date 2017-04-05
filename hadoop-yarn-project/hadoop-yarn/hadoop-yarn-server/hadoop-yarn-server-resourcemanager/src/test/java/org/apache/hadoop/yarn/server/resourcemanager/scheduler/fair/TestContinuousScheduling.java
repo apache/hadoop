@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -30,6 +31,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ClusterNodeTracker;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
@@ -57,6 +59,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class TestContinuousScheduling extends FairSchedulerTestBase {
   private ControlledClock mockClock;
@@ -300,6 +303,39 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     }
 
     assertNotEquals("One of the threads is still alive", 0, numRetries);
+  }
+
+  @Test
+  public void TestNodeAvailableResourceComparatorTransitivity() {
+    ClusterNodeTracker<FSSchedulerNode> clusterNodeTracker =
+        scheduler.getNodeTracker();
+
+    List<RMNode> rmNodes =
+        MockNodes.newNodes(2, 4000, Resource.newInstance(4096, 4));
+    for (RMNode rmNode : rmNodes) {
+      clusterNodeTracker.addNode(new FSSchedulerNode(rmNode, false));
+    }
+
+    // To simulate unallocated resource changes
+    new Thread() {
+      @Override
+      public void run() {
+        for (int j = 0; j < 100; j++) {
+          for (FSSchedulerNode node : clusterNodeTracker.getAllNodes()) {
+            int i = ThreadLocalRandom.current().nextInt(-30, 30);
+            synchronized (scheduler) {
+              node.deductUnallocatedResource(Resource.newInstance(i * 1024, i));
+            }
+          }
+        }
+      }
+    }.start();
+
+    try {
+      scheduler.continuousSchedulingAttempt();
+    } catch (Exception e) {
+      fail(e.getMessage());
+    }
   }
 
   @Test

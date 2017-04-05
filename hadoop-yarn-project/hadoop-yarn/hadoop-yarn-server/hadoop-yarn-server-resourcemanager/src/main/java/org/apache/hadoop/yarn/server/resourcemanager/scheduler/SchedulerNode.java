@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -286,7 +287,8 @@ public abstract class SchedulerNode {
    * container.
    * @param resource Resources to deduct.
    */
-  private synchronized void deductUnallocatedResource(Resource resource) {
+  @VisibleForTesting
+  public synchronized void deductUnallocatedResource(Resource resource) {
     if (resource == null) {
       LOG.error("Invalid deduction of null resource for "
           + rmNode.getNodeAddress());
