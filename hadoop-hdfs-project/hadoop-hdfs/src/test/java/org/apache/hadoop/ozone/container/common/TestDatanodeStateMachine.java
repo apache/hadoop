@@ -303,7 +303,6 @@ public class TestDatanodeStateMachine {
     for (String name : new String[] {
         "",          // Empty
         "x..y",      // Invalid schema
-        "scm:",      // Missing port
         "scm:xyz",   // Invalid port
         "scm:123456" // Port out of range
     }) {

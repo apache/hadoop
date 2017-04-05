@@ -62,9 +62,11 @@ public class TestCBlockCLI {
 
   @AfterClass
   public static void clean() {
-    cBlockManager.stop();
-    cBlockManager.join();
-    cBlockManager.clean();
+    if (cBlockManager != null) {
+      cBlockManager.stop();
+      cBlockManager.join();
+      cBlockManager.clean();
+    }
   }
 
   @After

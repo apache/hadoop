@@ -103,8 +103,7 @@ public class TestDataNodeVolumeMetrics {
       ArrayList<DataNode> dns = cluster.getDataNodes();
       assertTrue("DN1 should be up", dns.get(0).isDatanodeUp());
 
-      final String dataDir = cluster.getDataDirectory();
-      final File dn1Vol2 = new File(dataDir, "data2");
+      final File dn1Vol2 = cluster.getInstanceStorageDir(0, 0);
 
       DataNodeTestUtils.injectDataDirFailure(dn1Vol2);
       verifyDataNodeVolumeMetrics(fs, cluster, fileName);
