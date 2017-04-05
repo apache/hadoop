@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreRetriableException;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
@@ -137,14 +138,32 @@ public final class FederationStateStoreFacade {
     initCache();
   }
 
+  /**
+   * Create a RetryPolicy for {@code FederationStateStoreFacade}. In case of
+   * failure, it retries for:
+   * <ul>
+   * <li>{@code FederationStateStoreRetriableException}</li>
+   * <li>{@code CacheLoaderException}</li>
+   * </ul>
+   *
+   * @param conf the updated configuration
+   * @return the RetryPolicy for FederationStateStoreFacade
+   */
   public static RetryPolicy createRetryPolicy(Configuration conf) {
     // Retry settings for StateStore
-    RetryPolicy retryPolicy = RetryPolicies.exponentialBackoffRetry(
+    RetryPolicy basePolicy = RetryPolicies.exponentialBackoffRetry(
         conf.getInt(YarnConfiguration.CLIENT_FAILOVER_RETRIES, Integer.SIZE),
         conf.getLong(YarnConfiguration.CLIENT_FAILOVER_SLEEPTIME_BASE_MS,
             YarnConfiguration.DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS),
         TimeUnit.MILLISECONDS);
+    Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap =
+        new HashMap<Class<? extends Exception>, RetryPolicy>();
+    exceptionToPolicyMap.put(FederationStateStoreRetriableException.class,
+        basePolicy);
+    exceptionToPolicyMap.put(CacheLoaderException.class, basePolicy);
 
+    RetryPolicy retryPolicy = RetryPolicies.retryByException(
+        RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);
     return retryPolicy;
   }
 

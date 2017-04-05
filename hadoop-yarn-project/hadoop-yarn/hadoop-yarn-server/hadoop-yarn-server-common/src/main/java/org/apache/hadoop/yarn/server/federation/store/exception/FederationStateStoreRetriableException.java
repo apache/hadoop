@@ -16,32 +16,28 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.federation.store.utils;
+package org.apache.hadoop.yarn.server.federation.store.exception;
 
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
- * Exception thrown by the {@link FederationMembershipStateStoreInputValidator},
- * {@link FederationApplicationHomeSubClusterStoreInputValidator},
- * {@link FederationPolicyStoreInputValidator} if the input is invalid.
+ * Exception thrown by the {@code FederationStateStore}, if it is a retriable
+ * exception.
  *
  */
-public class FederationStateStoreInvalidInputException extends YarnException {
+public class FederationStateStoreRetriableException extends YarnException {
 
-  /**
-   * IDE auto-generated.
-   */
-  private static final long serialVersionUID = -7352144682711430801L;
+  private static final long serialVersionUID = 1L;
 
-  public FederationStateStoreInvalidInputException(Throwable cause) {
+  public FederationStateStoreRetriableException(Throwable cause) {
     super(cause);
   }
 
-  public FederationStateStoreInvalidInputException(String message) {
+  public FederationStateStoreRetriableException(String message) {
     super(message);
   }
 
-  public FederationStateStoreInvalidInputException(String message,
+  public FederationStateStoreRetriableException(String message,
       Throwable cause) {
     super(message, cause);
   }

@@ -14,21 +14,4 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-
-package org.apache.hadoop.yarn.server.federation.store.impl;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
-
-/**
- * Unit tests for MemoryFederationStateStore.
- */
-public class TestMemoryFederationStateStore
-    extends FederationStateStoreBaseTest {
-
-  @Override
-  protected FederationStateStore createStateStore() {
-    super.setConf(new Configuration());
-    return new MemoryFederationStateStore();
-  }
-}
+package org.apache.hadoop.yarn.server.federation.store.exception;
