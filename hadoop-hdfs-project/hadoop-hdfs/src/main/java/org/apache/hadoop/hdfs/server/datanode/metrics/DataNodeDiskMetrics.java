@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports.DiskOp;
 import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +55,7 @@ public class DataNodeDiskMetrics {
   private volatile boolean shouldRun;
   private OutlierDetector slowDiskDetector;
   private Daemon slowDiskDetectionDaemon;
-  private volatile Map<String, Map<DiskOutlierDetectionOp, Double>>
+  private volatile Map<String, Map<DiskOp, Double>>
       diskOutliersStats = Maps.newHashMap();
 
   public DataNodeDiskMetrics(DataNode dn, long diskOutlierDetectionIntervalMs) {
@@ -144,13 +145,13 @@ public class DataNodeDiskMetrics {
       diskOutliersSet.addAll(writeIoOutliers.keySet());
     }
 
-    Map<String, Map<DiskOutlierDetectionOp, Double>> diskStats =
+    Map<String, Map<DiskOp, Double>> diskStats =
         Maps.newHashMap();
     for (String disk : diskOutliersSet) {
-      Map<DiskOutlierDetectionOp, Double> diskStat = Maps.newHashMap();
-      diskStat.put(DiskOutlierDetectionOp.METADATA, metadataOpStats.get(disk));
-      diskStat.put(DiskOutlierDetectionOp.READ, readIoStats.get(disk));
-      diskStat.put(DiskOutlierDetectionOp.WRITE, writeIoStats.get(disk));
+      Map<DiskOp, Double> diskStat = Maps.newHashMap();
+      diskStat.put(DiskOp.METADATA, metadataOpStats.get(disk));
+      diskStat.put(DiskOp.READ, readIoStats.get(disk));
+      diskStat.put(DiskOp.WRITE, writeIoStats.get(disk));
       diskStats.put(disk, diskStat);
     }
 
@@ -158,17 +159,7 @@ public class DataNodeDiskMetrics {
     LOG.debug("Updated disk outliers.");
   }
 
-  /**
-   * Lists the types of operations on which disk latencies are measured.
-   */
-  public enum DiskOutlierDetectionOp {
-    METADATA,
-    READ,
-    WRITE
-  }
-
-  public Map<String,
-      Map<DiskOutlierDetectionOp, Double>> getDiskOutliersStats() {
+  public Map<String, Map<DiskOp, Double>> getDiskOutliersStats() {
     return diskOutliersStats;
   }
 
@@ -186,8 +177,12 @@ public class DataNodeDiskMetrics {
    * Use only for testing.
    */
   @VisibleForTesting
-  public void addSlowDiskForTesting(String slowDiskPath) {
-    diskOutliersStats.put(slowDiskPath,
-        ImmutableMap.<DiskOutlierDetectionOp, Double>of());
+  public void addSlowDiskForTesting(String slowDiskPath,
+      Map<DiskOp, Double> latencies) {
+    if (latencies == null) {
+      diskOutliersStats.put(slowDiskPath, ImmutableMap.<DiskOp, Double>of());
+    } else {
+      diskOutliersStats.put(slowDiskPath, latencies);
+    }
   }
 }

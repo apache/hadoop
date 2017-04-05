@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -499,11 +500,15 @@ class BPServiceActor implements Runnable {
         .getVolumeFailureSummary();
     int numFailedVolumes = volumeFailureSummary != null ?
         volumeFailureSummary.getFailedStorageLocations().length : 0;
-    final boolean slowPeersReportDue = scheduler.isSlowPeersReportDue(now);
+    final boolean outliersReportDue = scheduler.isOutliersReportDue(now);
     final SlowPeerReports slowPeers =
-        slowPeersReportDue && dn.getPeerMetrics() != null ?
+        outliersReportDue && dn.getPeerMetrics() != null ?
             SlowPeerReports.create(dn.getPeerMetrics().getOutliers()) :
             SlowPeerReports.EMPTY_REPORT;
+    final SlowDiskReports slowDisks =
+        outliersReportDue && dn.getDiskMetrics() != null ?
+            SlowDiskReports.create(dn.getDiskMetrics().getDiskOutliersStats()) :
+            SlowDiskReports.EMPTY_REPORT;
     HeartbeatResponse response = bpNamenode.sendHeartbeat(bpRegistration,
         reports,
         dn.getFSDataset().getCacheCapacity(),
@@ -513,11 +518,12 @@ class BPServiceActor implements Runnable {
         numFailedVolumes,
         volumeFailureSummary,
         requestBlockReportLease,
-        slowPeers);
+        slowPeers,
+        slowDisks);
 
-    if (slowPeersReportDue) {
+    if (outliersReportDue) {
       // If the report was due and successfully sent, schedule the next one.
-      scheduler.scheduleNextSlowPeerReport();
+      scheduler.scheduleNextOutlierReport();
     }
     return response;
   }
@@ -1097,7 +1103,7 @@ class BPServiceActor implements Runnable {
     boolean resetBlockReportTime = true;
 
     @VisibleForTesting
-    volatile long nextSlowPeersReportTime = monotonicNow();
+    volatile long nextOutliersReportTime = monotonicNow();
 
     private final AtomicBoolean forceFullBlockReport =
         new AtomicBoolean(false);
@@ -1105,14 +1111,14 @@ class BPServiceActor implements Runnable {
     private final long heartbeatIntervalMs;
     private final long lifelineIntervalMs;
     private final long blockReportIntervalMs;
-    private final long slowPeersReportIntervalMs;
+    private final long outliersReportIntervalMs;
 
     Scheduler(long heartbeatIntervalMs, long lifelineIntervalMs,
-              long blockReportIntervalMs, long slowPeersReportIntervalMs) {
+              long blockReportIntervalMs, long outliersReportIntervalMs) {
       this.heartbeatIntervalMs = heartbeatIntervalMs;
       this.lifelineIntervalMs = lifelineIntervalMs;
       this.blockReportIntervalMs = blockReportIntervalMs;
-      this.slowPeersReportIntervalMs = slowPeersReportIntervalMs;
+      this.outliersReportIntervalMs = outliersReportIntervalMs;
       scheduleNextLifeline(nextHeartbeatTime);
     }
 
@@ -1145,8 +1151,8 @@ class BPServiceActor implements Runnable {
       lastBlockReportTime = blockReportTime;
     }
 
-    void scheduleNextSlowPeerReport() {
-      nextSlowPeersReportTime = monotonicNow() + slowPeersReportIntervalMs;
+    void scheduleNextOutlierReport() {
+      nextOutliersReportTime = monotonicNow() + outliersReportIntervalMs;
     }
 
     long getLastHearbeatTime() {
@@ -1175,8 +1181,8 @@ class BPServiceActor implements Runnable {
       return nextBlockReportTime - curTime <= 0;
     }
 
-    boolean isSlowPeersReportDue(long curTime) {
-      return nextSlowPeersReportTime - curTime <= 0;
+    boolean isOutliersReportDue(long curTime) {
+      return nextOutliersReportTime - curTime <= 0;
     }
 
     void forceFullBlockReportNow() {
