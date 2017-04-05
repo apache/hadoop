@@ -29,7 +29,6 @@ import org.mockito.Mockito;
 
 public class TestSchedulingPolicy {
 
-  @Test(timeout = 1000)
   public void testParseSchedulingPolicy()
       throws AllocationConfigurationException {
 
