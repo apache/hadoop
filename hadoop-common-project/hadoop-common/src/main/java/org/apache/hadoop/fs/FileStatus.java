@@ -208,6 +208,15 @@ public class FileStatus implements Writable, Comparable<FileStatus>,
   }
 
   /**
+   * Tell whether the underlying file or directory has ACLs set.
+   *
+   * @return true if the underlying file or directory has ACLs set.
+   */
+  public boolean hasAcl() {
+    return permission.getAclBit();
+  }
+
+  /**
    * Tell whether the underlying file or directory is encrypted or not.
    *
    * @return true if the underlying file is encrypted.
@@ -215,7 +224,16 @@ public class FileStatus implements Writable, Comparable<FileStatus>,
   public boolean isEncrypted() {
     return permission.getEncryptedBit();
   }
-  
+
+  /**
+   * Tell whether the underlying file or directory is erasure coded or not.
+   *
+   * @return true if the underlying file or directory is erasure coded.
+   */
+  public boolean isErasureCoded() {
+    return permission.getErasureCodedBit();
+  }
+
   /**
    * Get the owner of the file.
    * @return owner of the file. The string could be empty if there is no
@@ -390,6 +408,9 @@ public class FileStatus implements Writable, Comparable<FileStatus>,
     if(isSymlink()) {
       sb.append("; symlink=" + symlink);
     }
+    sb.append("; hasAcl=" + hasAcl());
+    sb.append("; isEncrypted=" + isEncrypted());
+    sb.append("; isErasureCoded=" + isErasureCoded());
     sb.append("}");
     return sb.toString();
   }

@@ -186,7 +186,7 @@ public class S3AFileSystem extends FileSystem {
           S3_CLIENT_FACTORY_IMPL, DEFAULT_S3_CLIENT_FACTORY_IMPL,
           S3ClientFactory.class);
       s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
-          .createS3Client(name, uri);
+          .createS3Client(name);
 
       maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
       listing = new Listing(this);
@@ -1870,7 +1870,7 @@ public class S3AFileSystem extends FileSystem {
     }
   }
 
-  protected void setOptionalPutRequestParameters(PutObjectRequest request) {
+  private void setOptionalPutRequestParameters(PutObjectRequest request) {
     switch (serverSideEncryptionAlgorithm) {
     case SSE_KMS:
       request.setSSEAwsKeyManagementParams(generateSSEAwsKeyParams());

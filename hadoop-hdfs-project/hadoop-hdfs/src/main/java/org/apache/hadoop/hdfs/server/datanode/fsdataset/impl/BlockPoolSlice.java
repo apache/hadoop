@@ -822,7 +822,7 @@ class BlockPoolSlice {
     } catch (Exception e) {
       // Any exception we need to revert back to read from disk
       // Log the error and return false
-      LOG.info("Exception occured while reading the replicas cache file: "
+      LOG.info("Exception occurred while reading the replicas cache file: "
           + replicaFile.getPath(), e );
       return false;
     }

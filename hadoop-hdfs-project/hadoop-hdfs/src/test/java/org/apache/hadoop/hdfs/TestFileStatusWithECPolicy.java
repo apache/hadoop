@@ -23,8 +23,9 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.After;
@@ -66,25 +67,36 @@ public class TestFileStatusWithECPolicy {
     // test directory doesn't have an EC policy
     final Path dir = new Path("/foo");
     assertTrue(fs.mkdir(dir, FsPermission.getDirDefault()));
+    ContractTestUtils.assertNotErasureCoded(fs, dir);
     assertNull(client.getFileInfo(dir.toString()).getErasureCodingPolicy());
     // test file doesn't have an EC policy
     final Path file = new Path(dir, "foo");
     fs.create(file).close();
     assertNull(client.getFileInfo(file.toString()).getErasureCodingPolicy());
+    ContractTestUtils.assertNotErasureCoded(fs, file);
     fs.delete(file, true);
 
-    final ErasureCodingPolicy ecPolicy1 = StripedFileTestUtil.getDefaultECPolicy();
+    final ErasureCodingPolicy ecPolicy1 =
+        StripedFileTestUtil.getDefaultECPolicy();
     // set EC policy on dir
     fs.setErasureCodingPolicy(dir, ecPolicy1.getName());
-    final ErasureCodingPolicy ecPolicy2 = client.getFileInfo(dir.toUri().getPath()).getErasureCodingPolicy();
+    ContractTestUtils.assertErasureCoded(fs, dir);
+    final ErasureCodingPolicy ecPolicy2 =
+        client.getFileInfo(dir.toUri().getPath()).getErasureCodingPolicy();
     assertNotNull(ecPolicy2);
     assertTrue(ecPolicy1.equals(ecPolicy2));
 
-    // test file doesn't have an EC policy
+    // test file with EC policy
     fs.create(file).close();
     final ErasureCodingPolicy ecPolicy3 =
-        fs.getClient().getFileInfo(file.toUri().getPath()).getErasureCodingPolicy();
+        fs.getClient().getFileInfo(file.toUri().getPath())
+            .getErasureCodingPolicy();
     assertNotNull(ecPolicy3);
     assertTrue(ecPolicy1.equals(ecPolicy3));
+    ContractTestUtils.assertErasureCoded(fs, file);
+    FileStatus status = fs.getFileStatus(file);
+    assertTrue(file + " should have erasure coding set in " +
+            "FileStatus#toString(): " + status,
+        status.toString().contains("isErasureCoded=true"));
   }
 }

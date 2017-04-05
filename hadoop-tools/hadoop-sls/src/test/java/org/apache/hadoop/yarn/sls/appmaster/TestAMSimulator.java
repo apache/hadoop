@@ -22,26 +22,47 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
-import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
-import org.apache.hadoop.yarn.sls.scheduler.FairSchedulerMetrics;
-import org.apache.hadoop.yarn.sls.scheduler.SchedulerWrapper;
+import org.apache.hadoop.yarn.sls.scheduler.*;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
+@RunWith(Parameterized.class)
 public class TestAMSimulator {
   private ResourceManager rm;
   private YarnConfiguration conf;
   private Path metricOutputDir;
+
+  private Class slsScheduler;
+  private Class scheduler;
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][] {
+        {SLSFairScheduler.class, FairScheduler.class},
+        {SLSCapacityScheduler.class, CapacityScheduler.class}
+    });
+  }
+
+  public TestAMSimulator(Class slsScheduler, Class scheduler) {
+    this.slsScheduler = slsScheduler;
+    this.scheduler = scheduler;
+  }
 
   @Before
   public void setup() {
@@ -49,10 +70,8 @@ public class TestAMSimulator {
 
     conf = new YarnConfiguration();
     conf.set(SLSConfiguration.METRICS_OUTPUT_DIR, metricOutputDir.toString());
-    conf.set(YarnConfiguration.RM_SCHEDULER,
-        "org.apache.hadoop.yarn.sls.scheduler.ResourceSchedulerWrapper");
-    conf.set(SLSConfiguration.RM_SCHEDULER,
-        "org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler");
+    conf.set(YarnConfiguration.RM_SCHEDULER, slsScheduler.getName());
+    conf.set(SLSConfiguration.RM_SCHEDULER, scheduler.getName());
     conf.setBoolean(SLSConfiguration.METRICS_SWITCH, true);
     rm = new ResourceManager();
     rm.init(conf);
@@ -76,15 +95,17 @@ public class TestAMSimulator {
   }
 
   private void verifySchedulerMetrics(String appId) {
-    SchedulerWrapper schedulerWrapper = (SchedulerWrapper)
-        rm.getResourceScheduler();
-    MetricRegistry metricRegistry = schedulerWrapper.getMetrics();
-    for (FairSchedulerMetrics.Metric metric :
-        FairSchedulerMetrics.Metric.values()) {
-      String key = "variable.app." + appId + "." + metric.getValue()
-          + ".memory";
-      Assert.assertTrue(metricRegistry.getGauges().containsKey(key));
-      Assert.assertNotNull(metricRegistry.getGauges().get(key).getValue());
+    if (scheduler.equals(FairScheduler.class)) {
+      SchedulerMetrics schedulerMetrics = ((SchedulerWrapper)
+          rm.getResourceScheduler()).getSchedulerMetrics();
+      MetricRegistry metricRegistry = schedulerMetrics.getMetrics();
+      for (FairSchedulerMetrics.Metric metric :
+          FairSchedulerMetrics.Metric.values()) {
+        String key = "variable.app." + appId + "." + metric.getValue() +
+            ".memory";
+        Assert.assertTrue(metricRegistry.getGauges().containsKey(key));
+        Assert.assertNotNull(metricRegistry.getGauges().get(key).getValue());
+      }
     }
   }
 

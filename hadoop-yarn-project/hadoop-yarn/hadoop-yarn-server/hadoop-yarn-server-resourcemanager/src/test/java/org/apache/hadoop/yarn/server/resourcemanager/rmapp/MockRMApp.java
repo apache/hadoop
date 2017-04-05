@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -62,14 +63,14 @@ public class MockRMApp implements RMApp {
   StringBuilder diagnostics = new StringBuilder();
   RMAppAttempt attempt;
   int maxAppAttempts = 1;
-  ResourceRequest amReq;
+  List<ResourceRequest> amReqs;
 
   public MockRMApp(int newid, long time, RMAppState newState) {
     finish = time;
     id = MockApps.newAppID(newid);
     state = newState;
-    amReq = ResourceRequest.newInstance(Priority.UNDEFINED, "0.0.0.0",
-        Resource.newInstance(0, 0), 1);
+    amReqs = Collections.singletonList(ResourceRequest.newInstance(
+        Priority.UNDEFINED, "0.0.0.0", Resource.newInstance(0, 0), 1));
   }
 
   public MockRMApp(int newid, long time, RMAppState newState, String userName) {
@@ -276,8 +277,8 @@ public class MockRMApp implements RMApp {
   }
   
   @Override
-  public ResourceRequest getAMResourceRequest() {
-    return this.amReq; 
+  public List<ResourceRequest> getAMResourceRequests() {
+    return this.amReqs;
   }
 
   @Override

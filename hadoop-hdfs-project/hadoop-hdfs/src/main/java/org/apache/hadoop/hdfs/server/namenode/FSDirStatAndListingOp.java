@@ -414,6 +414,7 @@ class FSDirStatAndListingOp {
 
     final ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp
         .unprotectedGetErasureCodingPolicy(fsd.getFSNamesystem(), iip);
+    final boolean isErasureCoded = (ecPolicy != null);
 
     if (node.isFile()) {
       final INodeFile fileNode = node.asFile();
@@ -448,7 +449,7 @@ class FSDirStatAndListingOp {
         blocksize,
         node.getModificationTime(snapshot),
         node.getAccessTime(snapshot),
-        getPermissionForFileStatus(nodeAttrs, isEncrypted),
+        getPermissionForFileStatus(nodeAttrs, isEncrypted, isErasureCoded),
         nodeAttrs.getUserName(),
         nodeAttrs.getGroupName(),
         node.isSymlink() ? node.asSymlink().getSymlink() : null,
@@ -489,11 +490,12 @@ class FSDirStatAndListingOp {
    * and encrypted bit on if it represents an encrypted file/dir.
    */
   private static FsPermission getPermissionForFileStatus(
-      INodeAttributes node, boolean isEncrypted) {
+      INodeAttributes node, boolean isEncrypted, boolean isErasureCoded) {
     FsPermission perm = node.getFsPermission();
     boolean hasAcl = node.getAclFeature() != null;
-    if (hasAcl || isEncrypted) {
-      perm = new FsPermissionExtension(perm, hasAcl, isEncrypted);
+    if (hasAcl || isEncrypted || isErasureCoded) {
+      perm = new FsPermissionExtension(perm, hasAcl,
+          isEncrypted, isErasureCoded);
     }
     return perm;
   }

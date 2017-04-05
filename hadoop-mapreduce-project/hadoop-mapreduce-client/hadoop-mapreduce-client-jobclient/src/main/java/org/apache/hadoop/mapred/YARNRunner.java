@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -589,7 +590,8 @@ public class YARNRunner implements ClientProtocol {
       amResourceRequest.setCapability(capability);
       amResourceRequest.setNumContainers(1);
       amResourceRequest.setNodeLabelExpression(amNodelabelExpression.trim());
-      appContext.setAMContainerResourceRequest(amResourceRequest);
+      appContext.setAMContainerResourceRequests(
+          Collections.singletonList(amResourceRequest));
     }
     // set labels for the Job containers
     appContext.setNodeLabelExpression(jobConf

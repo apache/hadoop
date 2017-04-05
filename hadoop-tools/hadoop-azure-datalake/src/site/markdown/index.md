@@ -83,7 +83,7 @@ Add the following properties to the cluster's `core-site.xml`
 
 ```xml
 <property>
-  <name>dfs.adls.oauth2.access.token.provider.type</name>
+  <name>fs.adl.oauth2.access.token.provider.type</name>
   <value>RefreshToken</value>
 </property>
 ```
@@ -95,12 +95,12 @@ service associated with the client id. See [*Active Directory Library For Java*]
 
 ```xml
 <property>
-  <name>dfs.adls.oauth2.client.id</name>
+  <name>fs.adl.oauth2.client.id</name>
   <value></value>
 </property>
 
 <property>
-  <name>dfs.adls.oauth2.refresh.token</name>
+  <name>fs.adl.oauth2.refresh.token</name>
   <value></value>
 </property>
 ```
@@ -133,17 +133,22 @@ Add the following properties to your `core-site.xml`
 
 ```xml
 <property>
-  <name>dfs.adls.oauth2.refresh.url</name>
+  <name>fs.adl.oauth2.access.token.provider.type</name>
+  <value>ClientCredential</value>
+</property>
+
+<property>
+  <name>fs.adl.oauth2.refresh.url</name>
   <value>TOKEN ENDPOINT FROM STEP 7 ABOVE</value>
 </property>
 
 <property>
-  <name>dfs.adls.oauth2.client.id</name>
+  <name>fs.adl.oauth2.client.id</name>
   <value>CLIENT ID FROM STEP 7 ABOVE</value>
 </property>
 
 <property>
-  <name>dfs.adls.oauth2.credential</name>
+  <name>fs.adl.oauth2.credential</name>
   <value>PASSWORD FROM STEP 7 ABOVE</value>
 </property>
 ```
@@ -161,15 +166,19 @@ For additional reading on the credential provider API, see
 ##### Provisioning
 
 ```bash
-hadoop credential create dfs.adls.oauth2.refresh.token -value 123
+hadoop credential create fs.adl.oauth2.client.id -value 123
     -provider localjceks://file/home/foo/adls.jceks
-hadoop credential create dfs.adls.oauth2.credential -value 123
+hadoop credential create fs.adl.oauth2.refresh.token -value 123
     -provider localjceks://file/home/foo/adls.jceks
 ```
 
 ##### Configuring core-site.xml or command line property
 
 ```xml
+<property>
+  <name>fs.adl.oauth2.access.token.provider.type</name>
+  <value>RefreshToken</value>
+</property>
 <property>
   <name>hadoop.security.credential.provider.path</name>
   <value>localjceks://file/home/foo/adls.jceks</value>
@@ -181,9 +190,10 @@ hadoop credential create dfs.adls.oauth2.credential -value 123
 
 ```bash
 hadoop distcp
-    [-D hadoop.security.credential.provider.path=localjceks://file/home/user/adls.jceks]
-    hdfs://<NameNode Hostname>:9001/user/foo/007020615
-    adl://<Account Name>.azuredatalakestore.net/testDir/
+    [-D fs.adl.oauth2.access.token.provider.type=RefreshToken
+     -D hadoop.security.credential.provider.path=localjceks://file/home/user/adls.jceks]
+    hdfs://<NameNode Hostname>:9001/user/foo/srcDir
+    adl://<Account Name>.azuredatalakestore.net/tgtDir/
 ```
 
 NOTE: You may optionally add the provider path property to the `distcp` command

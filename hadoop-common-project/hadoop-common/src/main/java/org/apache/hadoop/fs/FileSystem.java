@@ -874,7 +874,8 @@ public abstract class FileSystem extends Configured implements Closeable {
         config.getInt(IO_FILE_BUFFER_SIZE_KEY, IO_FILE_BUFFER_SIZE_DEFAULT),
         false,
         FS_TRASH_INTERVAL_DEFAULT,
-        DataChecksum.Type.CRC32);
+        DataChecksum.Type.CRC32,
+        "");
   }
 
   /**
@@ -4137,5 +4138,14 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public static GlobalStorageStatistics getGlobalStorageStatistics() {
     return GlobalStorageStatistics.INSTANCE;
+  }
+
+  /**
+   * Create a new FSDataOutputStreamBuilder for the file with path.
+   * @param path file path
+   * @return a FSDataOutputStreamBuilder object to build the file
+   */
+  public FSDataOutputStreamBuilder newFSDataOutputStreamBuilder(Path path) {
+    return new FSDataOutputStreamBuilder(this, path);
   }
 }

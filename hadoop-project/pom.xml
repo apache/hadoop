@@ -51,6 +51,7 @@
     <kafka.version>0.8.2.1</kafka.version>
     <hbase.version>1.2.4</hbase.version>
     <hbase-compatible-hadoop.version>2.5.1</hbase-compatible-hadoop.version>
+    <hbase-compatible-guava.version>11.0.2</hbase-compatible-guava.version>
 
     <hadoop.assemblies.version>${project.version}</hadoop.assemblies.version>
     <commons-daemon.version>1.0.13</commons-daemon.version>
@@ -514,7 +515,7 @@
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>11.0.2</version>
+        <version>21.0</version>
       </dependency>
       <dependency>
         <groupId>com.google.code.gson</groupId>
@@ -868,6 +869,16 @@
         <groupId>org.eclipse.jdt</groupId>
         <artifactId>core</artifactId>
         <version>3.1.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.woodstox</groupId>
+        <artifactId>stax2-api</artifactId>
+        <version>3.1.4</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml</groupId>
+        <artifactId>aalto-xml</artifactId>
+        <version>1.0.0</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>

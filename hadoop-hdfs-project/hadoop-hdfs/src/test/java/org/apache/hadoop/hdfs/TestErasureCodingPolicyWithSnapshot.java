@@ -25,6 +25,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -198,5 +199,30 @@ public class TestErasureCodingPolicyWithSnapshot {
         fs.getErasureCodingPolicy(snap1CopyECDir));
     assertEquals("Got unexpected erasure coding policy", sysDefaultPolicy,
         fs.getErasureCodingPolicy(snap1));
+  }
+
+  @Test (timeout = 300000)
+  public void testFileStatusAcrossNNRestart() throws IOException {
+    final int len = 1024;
+    final Path normalFile = new Path("/", "normalFile");
+    DFSTestUtil.createFile(fs, normalFile, len, (short) 1, 0xFEED);
+
+    final Path ecDir = new Path("/ecdir");
+    final Path ecFile = new Path(ecDir, "ecFile");
+    fs.mkdirs(ecDir);
+
+    // Set erasure coding policy
+    fs.setErasureCodingPolicy(ecDir, sysDefaultPolicy.getName());
+    DFSTestUtil.createFile(fs, ecFile, len, (short) 1, 0xFEED);
+
+    // Verify FileStatus for normal and EC files
+    ContractTestUtils.assertNotErasureCoded(fs, normalFile);
+    ContractTestUtils.assertErasureCoded(fs, ecFile);
+
+    cluster.restartNameNode(true);
+
+    // Verify FileStatus for normal and EC files
+    ContractTestUtils.assertNotErasureCoded(fs, normalFile);
+    ContractTestUtils.assertErasureCoded(fs, ecFile);
   }
 }

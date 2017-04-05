@@ -573,8 +573,6 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       (remoteNodeLogFileForApp.getName() + LogAggregationUtils.TMP_FILE_SUFFIX));
   }
 
-  // TODO: The condition: containerId.getId() == 1 to determine an AM container
-  // is not always true.
   private boolean shouldUploadLogs(ContainerLogContext logContext) {
     return logAggPolicy.shouldDoLogAggregation(logContext);
   }

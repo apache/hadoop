@@ -778,7 +778,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*rooted at &lt;path&gt;\.( )*</expected-output>
+          <expected-output>^\s*rooted at &lt;path&gt;\. The EC files will be ignored here\.( )*</expected-output>
         </comparator>
         <comparator>
             <type>RegexpComparator</type>

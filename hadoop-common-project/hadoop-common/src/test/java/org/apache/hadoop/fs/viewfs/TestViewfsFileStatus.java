@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -70,8 +71,14 @@ public class TestViewfsFileStatus {
     ConfigUtil.addLink(conf, "/foo/bar/baz", TEST_DIR.toURI());
     FileSystem vfs = FileSystem.get(FsConstants.VIEWFS_URI, conf);
     assertEquals(ViewFileSystem.class, vfs.getClass());
-    FileStatus stat = vfs.getFileStatus(new Path("/foo/bar/baz", testfilename));
+    Path path = new Path("/foo/bar/baz", testfilename);
+    FileStatus stat = vfs.getFileStatus(path);
     assertEquals(content.length, stat.getLen());
+    ContractTestUtils.assertNotErasureCoded(vfs, path);
+    assertTrue(path + " should have erasure coding unset in " +
+            "FileStatus#toString(): " + stat,
+        stat.toString().contains("isErasureCoded=false"));
+
     // check serialization/deserialization
     DataOutputBuffer dob = new DataOutputBuffer();
     stat.write(dob);
@@ -80,6 +87,7 @@ public class TestViewfsFileStatus {
     FileStatus deSer = new FileStatus();
     deSer.readFields(dib);
     assertEquals(content.length, deSer.getLen());
+    assertFalse(deSer.isErasureCoded());
   }
 
   // Tests that ViewFileSystem.getFileChecksum calls res.targetFileSystem

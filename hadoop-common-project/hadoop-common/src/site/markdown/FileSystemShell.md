@@ -647,7 +647,7 @@ setrep
 
 Usage: `hadoop fs -setrep [-R] [-w] <numReplicas> <path> `
 
-Changes the replication factor of a file. If *path* is a directory then the command recursively changes the replication factor of all files under the directory tree rooted at *path*.
+Changes the replication factor of a file. If *path* is a directory then the command recursively changes the replication factor of all files under the directory tree rooted at *path*. The EC files will be ignored when executing this command.
 
 Options:
 

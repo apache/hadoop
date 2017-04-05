@@ -79,7 +79,7 @@ public class FieldSelectionMapper<K, V>
       throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
     this.fieldSeparator = 
-      conf.get(FieldSelectionHelper.DATA_FIELD_SEPERATOR, "\t");
+      conf.get(FieldSelectionHelper.DATA_FIELD_SEPARATOR, "\t");
     this.mapOutputKeyValueSpec = 
       conf.get(FieldSelectionHelper.MAP_OUTPUT_KEY_VALUE_SPEC, "0-:");
     try {

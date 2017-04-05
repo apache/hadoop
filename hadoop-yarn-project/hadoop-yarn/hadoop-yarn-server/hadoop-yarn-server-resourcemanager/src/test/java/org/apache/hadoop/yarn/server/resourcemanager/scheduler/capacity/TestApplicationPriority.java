@@ -36,8 +36,6 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -612,24 +610,17 @@ public class TestApplicationPriority {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
     conf.setInt(YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY, 10);
-    final DrainDispatcher dispatcher = new DrainDispatcher();
 
     MemoryRMStateStore memStore = new MemoryRMStateStore();
     memStore.init(conf);
 
-    MockRM rm1 = new MockRM(conf, memStore) {
-      @Override
-      protected Dispatcher createDispatcher() {
-        return dispatcher;
-      }
-    };
+    MockRM rm1 = new MockRM(conf, memStore);
     rm1.start();
 
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 16384, rm1.getResourceTrackerService());
     nm1.registerNode();
-
-    dispatcher.await();
+    rm1.drainEvents();
 
     ResourceScheduler scheduler = rm1.getRMContext().getScheduler();
     LeafQueue defaultQueue =
@@ -648,7 +639,7 @@ public class TestApplicationPriority {
     MockAM am2 = MockRM.launchAM(app2, rm1, nm1);
     am2.registerAppAttempt();
 
-    dispatcher.await();
+    rm1.drainEvents();
     Assert.assertEquals(2, defaultQueue.getNumActiveApplications());
     Assert.assertEquals(0, defaultQueue.getNumPendingApplications());
 
@@ -657,7 +648,7 @@ public class TestApplicationPriority {
     Priority appPriority3 = Priority.newInstance(7);
     RMApp app3 = rm1.submitApp(memory, appPriority3);
 
-    dispatcher.await();
+    rm1.drainEvents();
     Assert.assertEquals(2, defaultQueue.getNumActiveApplications());
     Assert.assertEquals(1, defaultQueue.getNumPendingApplications());
 
@@ -676,14 +667,8 @@ public class TestApplicationPriority {
     Assert.assertEquals(app3.getCurrentAppAttempt().getAppAttemptId(),
         fcApp3.getApplicationAttemptId());
 
-    final DrainDispatcher dispatcher1 = new DrainDispatcher();
     // create new RM to represent restart and recover state
-    MockRM rm2 = new MockRM(conf, memStore) {
-      @Override
-      protected Dispatcher createDispatcher() {
-        return dispatcher1;
-      }
-    };
+    MockRM rm2 = new MockRM(conf, memStore);
 
     // start new RM
     rm2.start();
@@ -693,7 +678,7 @@ public class TestApplicationPriority {
     // Verify RM Apps after this restart
     Assert.assertEquals(3, rm2.getRMContext().getRMApps().size());
 
-    dispatcher1.await();
+    rm2.drainEvents();
     scheduler = rm2.getRMContext().getScheduler();
     defaultQueue =
         (LeafQueue) ((CapacityScheduler) scheduler).getQueue("default");
@@ -714,7 +699,7 @@ public class TestApplicationPriority {
 
     // NM resync to new RM
     nm1.registerNode();
-    dispatcher1.await();
+    rm2.drainEvents();
 
     // wait for activating applications
     count = 50;

@@ -21,26 +21,50 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
+import org.apache.hadoop.yarn.sls.scheduler.SLSCapacityScheduler;
+import org.apache.hadoop.yarn.sls.scheduler.SLSFairScheduler;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.util.Arrays;
+import java.util.Collection;
+
+@RunWith(Parameterized.class)
 public class TestNMSimulator {
   private final int GB = 1024;
   private ResourceManager rm;
   private YarnConfiguration conf;
 
+  private Class slsScheduler;
+  private Class scheduler;
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][] {
+        {SLSFairScheduler.class, FairScheduler.class},
+        {SLSCapacityScheduler.class, CapacityScheduler.class}
+    });
+  }
+
+  public TestNMSimulator(Class slsScheduler, Class scheduler) {
+    this.slsScheduler = slsScheduler;
+    this.scheduler = scheduler;
+  }
+
   @Before
   public void setup() {
     conf = new YarnConfiguration();
-    conf.set(YarnConfiguration.RM_SCHEDULER,
-        "org.apache.hadoop.yarn.sls.scheduler.ResourceSchedulerWrapper");
-    conf.set(SLSConfiguration.RM_SCHEDULER,
-        "org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler");
+    conf.set(YarnConfiguration.RM_SCHEDULER, slsScheduler.getName());
+    conf.set(SLSConfiguration.RM_SCHEDULER, scheduler.getName());
     conf.setBoolean(SLSConfiguration.METRICS_SWITCH, false);
     rm = new ResourceManager();
     rm.init(conf);

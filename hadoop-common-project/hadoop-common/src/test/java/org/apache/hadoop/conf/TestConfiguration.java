@@ -99,10 +99,22 @@ public class TestConfiguration extends TestCase {
     out.close();
   }
 
-  private void addInclude(String filename) throws IOException{
-    out.write("<xi:include href=\"" + filename + "\" xmlns:xi=\"http://www.w3.org/2001/XInclude\"  />\n ");
+  private void startInclude(String filename) throws IOException {
+    out.write("<xi:include href=\"" + filename + "\" xmlns:xi=\"http://www.w3.org/2001/XInclude\"  >\n ");
   }
-  
+
+  private void endInclude() throws IOException{
+    out.write("</xi:include>\n ");
+  }
+
+  private void startFallback() throws IOException {
+    out.write("<xi:fallback>\n ");
+  }
+
+  private void endFallback() throws IOException {
+    out.write("</xi:fallback>\n ");
+  }
+
   public void testInputStreamResource() throws Exception {
     StringWriter writer = new StringWriter();
     out = new BufferedWriter(writer);
@@ -507,7 +519,8 @@ public class TestConfiguration extends TestCase {
 
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
-    addInclude(CONFIG2);
+    startInclude(CONFIG2);
+    endInclude();
     appendProperty("e","f");
     appendProperty("g","h");
     endConfig();
@@ -519,6 +532,44 @@ public class TestConfiguration extends TestCase {
     assertEquals(conf.get("c"), "d"); 
     assertEquals(conf.get("e"), "f"); 
     assertEquals(conf.get("g"), "h"); 
+    tearDown();
+  }
+
+  public void testIncludesWithFallback() throws Exception {
+    tearDown();
+    out=new BufferedWriter(new FileWriter(CONFIG2));
+    startConfig();
+    appendProperty("a","b");
+    appendProperty("c","d");
+    endConfig();
+
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    startInclude(CONFIG2);
+    startFallback();
+    appendProperty("a", "b.fallback");
+    appendProperty("c", "d.fallback", true);
+    endFallback();
+    endInclude();
+    appendProperty("e","f");
+    appendProperty("g","h");
+    startInclude("MissingConfig.xml");
+    startFallback();
+    appendProperty("i", "j.fallback");
+    appendProperty("k", "l.fallback", true);
+    endFallback();
+    endInclude();
+    endConfig();
+
+    // verify that the includes file contains all properties
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    assertEquals("b", conf.get("a"));
+    assertEquals("d", conf.get("c"));
+    assertEquals("f", conf.get("e"));
+    assertEquals("h", conf.get("g"));
+    assertEquals("j.fallback", conf.get("i"));
+    assertEquals("l.fallback", conf.get("k"));
     tearDown();
   }
 
@@ -536,7 +587,8 @@ public class TestConfiguration extends TestCase {
     out = new BufferedWriter(new FileWriter(relConfig));
     startConfig();
     // Add the relative path instead of the absolute one.
-    addInclude(new File(relConfig2).getName());
+    startInclude(new File(relConfig2).getName());
+    endInclude();
     appendProperty("c", "d");
     endConfig();
 

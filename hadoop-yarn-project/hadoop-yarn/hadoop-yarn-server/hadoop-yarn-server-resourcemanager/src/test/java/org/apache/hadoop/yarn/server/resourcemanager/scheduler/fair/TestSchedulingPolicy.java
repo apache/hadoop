@@ -55,7 +55,6 @@ public class TestSchedulingPolicy {
     conf = new FairSchedulerConfiguration();
   }
 
-  @Test(timeout = 1000)
   public void testParseSchedulingPolicy()
       throws AllocationConfigurationException {
 

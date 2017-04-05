@@ -133,19 +133,41 @@ public abstract class TimelineCollector extends CompositeService {
   public TimelineWriteResponse putEntities(TimelineEntities entities,
       UserGroupInformation callerUgi) throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("SUCCESS - TIMELINE V2 PROTOTYPE");
       LOG.debug("putEntities(entities=" + entities + ", callerUgi="
           + callerUgi + ")");
     }
-    TimelineCollectorContext context = getTimelineEntityContext();
 
+    TimelineWriteResponse response;
+    // synchronize on the writer object so that no other threads can
+    // flush the writer buffer concurrently and swallow any exception
+    // caused by the timeline enitites that are being put here.
+    synchronized (writer) {
+      response = writeTimelineEntities(entities);
+      flushBufferedTimelineEntities();
+    }
+
+    return response;
+  }
+
+  private TimelineWriteResponse writeTimelineEntities(
+      TimelineEntities entities) throws IOException {
     // Update application metrics for aggregation
     updateAggregateStatus(entities, aggregationGroups,
         getEntityTypesSkipAggregation());
 
+    final TimelineCollectorContext context = getTimelineEntityContext();
     return writer.write(context.getClusterId(), context.getUserId(),
-        context.getFlowName(), context.getFlowVersion(), context.getFlowRunId(),
-        context.getAppId(), entities);
+        context.getFlowName(), context.getFlowVersion(),
+        context.getFlowRunId(), context.getAppId(), entities);
+  }
+
+  /**
+   * Flush buffered timeline entities, if any.
+   * @throws IOException if there is any exception encountered while
+   *      flushing buffered entities.
+   */
+  private void flushBufferedTimelineEntities() throws IOException {
+    writer.flush();
   }
 
   /**
@@ -158,14 +180,17 @@ public abstract class TimelineCollector extends CompositeService {
    *
    * @param entities entities to post
    * @param callerUgi the caller UGI
+   * @throws IOException if there is any exception encounted while putting
+   *     entities.
    */
   public void putEntitiesAsync(TimelineEntities entities,
-      UserGroupInformation callerUgi) {
-    // TODO implement
+      UserGroupInformation callerUgi) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("putEntitiesAsync(entities=" + entities + ", callerUgi=" +
           callerUgi + ")");
     }
+
+    writeTimelineEntities(entities);
   }
 
   /**

@@ -52,7 +52,7 @@ public class FileBasedCopyListing extends CopyListing {
 
   /** {@inheritDoc} */
   @Override
-  protected void validatePaths(DistCpOptions options)
+  protected void validatePaths(DistCpContext context)
       throws IOException, InvalidInputException {
   }
 
@@ -60,14 +60,14 @@ public class FileBasedCopyListing extends CopyListing {
    * Implementation of CopyListing::buildListing().
    *   Iterates over all source paths mentioned in the input-file.
    * @param pathToListFile Path on HDFS where the listing file is written.
-   * @param options Input Options for DistCp (indicating source/target paths.)
+   * @param context Distcp context with associated input options.
    * @throws IOException
    */
   @Override
-  public void doBuildListing(Path pathToListFile, DistCpOptions options) throws IOException {
-    DistCpOptions newOption = new DistCpOptions(options);
-    newOption.setSourcePaths(fetchFileList(options.getSourceFileListing()));
-    globbedListing.buildListing(pathToListFile, newOption);
+  public void doBuildListing(Path pathToListFile, DistCpContext context)
+      throws IOException {
+    context.setSourcePaths(fetchFileList(context.getSourceFileListing()));
+    globbedListing.buildListing(pathToListFile, context);
   }
 
   private List<Path> fetchFileList(Path sourceListing) throws IOException {

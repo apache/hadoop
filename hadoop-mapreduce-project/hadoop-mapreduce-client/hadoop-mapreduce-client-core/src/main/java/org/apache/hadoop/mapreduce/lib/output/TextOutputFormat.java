@@ -42,7 +42,12 @@ import org.apache.hadoop.util.*;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
-  public static String SEPERATOR = "mapreduce.output.textoutputformat.separator";
+  public static String SEPARATOR = "mapreduce.output.textoutputformat.separator";
+  /**
+   * @deprecated Use {@link #SEPARATOR}
+   */
+  @Deprecated
+  public static String SEPERATOR = SEPARATOR;
   protected static class LineRecordWriter<K, V>
     extends RecordWriter<K, V> {
     private static final byte[] NEWLINE =
@@ -107,7 +112,7 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
                          ) throws IOException, InterruptedException {
     Configuration conf = job.getConfiguration();
     boolean isCompressed = getCompressOutput(job);
-    String keyValueSeparator= conf.get(SEPERATOR, "\t");
+    String keyValueSeparator= conf.get(SEPARATOR, "\t");
     CompressionCodec codec = null;
     String extension = "";
     if (isCompressed) {

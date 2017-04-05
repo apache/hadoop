@@ -543,7 +543,7 @@ public class DataStorage extends Storage {
   void recoverTransitionRead(DataNode datanode, NamespaceInfo nsInfo,
       Collection<StorageLocation> dataDirs, StartupOption startOpt) throws IOException {
     if (addStorageLocations(datanode, nsInfo, dataDirs, startOpt).isEmpty()) {
-      throw new IOException("All specified directories are failed to load.");
+      throw new IOException("All specified directories have failed to load.");
     }
   }
 
@@ -1109,7 +1109,7 @@ public class DataStorage extends Storage {
     }
     linkWorkers.shutdown();
     for (Future<Void> f : futures) {
-      Futures.get(f, IOException.class);
+      Futures.getChecked(f, IOException.class);
     }
   }
 

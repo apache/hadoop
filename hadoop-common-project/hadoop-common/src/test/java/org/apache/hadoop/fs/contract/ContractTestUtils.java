@@ -520,6 +520,33 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
+   * Assert that a path is Erasure Coded.
+   *
+   * @param fs filesystem
+   * @param path path of the file or directory
+   * @throws IOException on File IO problems
+   */
+  public static void assertErasureCoded(final FileSystem fs, final Path path)
+      throws IOException {
+    FileStatus fileStatus = fs.getFileStatus(path);
+    assertTrue(path + " must be erasure coded!", fileStatus.isErasureCoded());
+  }
+
+  /**
+   * Assert that a path is not Erasure Coded.
+   *
+   * @param fs filesystem
+   * @param path path of the file or directory
+   * @throws IOException on File IO problems
+   */
+  public static void assertNotErasureCoded(final FileSystem fs,
+      final Path path) throws IOException {
+    FileStatus fileStatus = fs.getFileStatus(path);
+    assertFalse(path + " should not be erasure coded!",
+        fileStatus.isErasureCoded());
+  }
+
+  /**
    * Write the text to a file, returning the converted byte array
    * for use in validating the round trip.
    * @param fs filesystem

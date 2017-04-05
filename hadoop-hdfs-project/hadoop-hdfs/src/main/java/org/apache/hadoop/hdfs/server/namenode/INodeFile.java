@@ -328,9 +328,11 @@ public class INodeFile extends INodeWithAdditionalFields
     for (int i = 0; i < blocks.length; i++) {
       final String err = checkBlockComplete(blocks, i, numCommittedAllowed,
           minReplication);
-      Preconditions.checkState(err == null,
-          "Unexpected block state: %s, file=%s (%s), blocks=%s (i=%s)",
-          err, this, getClass().getSimpleName(), Arrays.asList(blocks), i);
+      if(err != null) {
+        throw new IllegalStateException(String.format("Unexpected block state: " +
+            "%s, file=%s (%s), blocks=%s (i=%s)", err, this,
+            getClass().getSimpleName(), Arrays.asList(blocks), i));
+      }
     }
   }
 

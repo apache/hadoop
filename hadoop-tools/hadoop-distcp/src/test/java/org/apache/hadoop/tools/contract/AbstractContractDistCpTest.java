@@ -19,9 +19,8 @@
 package org.apache.hadoop.tools.contract;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
-import static org.junit.Assert.*;
 
-import java.util.Arrays;
+import java.util.Collections;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -184,7 +183,8 @@ public abstract class AbstractContractDistCpTest
    * @throws Exception if there is a failure
    */
   private void runDistCp(Path src, Path dst) throws Exception {
-    DistCpOptions options = new DistCpOptions(Arrays.asList(src), dst);
+    DistCpOptions options = new DistCpOptions.Builder(
+        Collections.singletonList(src), dst).build();
     Job job = new DistCp(conf, options).execute();
     assertNotNull("Unexpected null job returned from DistCp execution.", job);
     assertTrue("DistCp job did not complete.", job.isComplete());

@@ -276,7 +276,7 @@ public class JobControl implements Runnable {
   }
 
   synchronized private void failAllJobs(Throwable t) {
-    String message = "Unexpected System Error Occured: "+
+    String message = "Unexpected System Error Occurred: "+
     StringUtils.stringifyException(t);
     Iterator<ControlledJob> it = jobsInProgress.iterator();
     while(it.hasNext()) {

@@ -31,6 +31,7 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
+import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -130,6 +131,14 @@ public class DataNodeMetrics {
   @Metric MutableRate sendDataPacketTransferNanos;
   final MutableQuantiles[] sendDataPacketTransferNanosQuantiles;
 
+  @Metric("Count of blocks in pending IBR")
+  private MutableGaugeLong blocksInPendingIBR;
+  @Metric("Count of blocks at receiving status in pending IBR")
+  private MutableGaugeLong blocksReceivingInPendingIBR;
+  @Metric("Count of blocks at received status in pending IBR")
+  private MutableGaugeLong blocksReceivedInPendingIBR;
+  @Metric("Count of blocks at deleted status in pending IBR")
+  private MutableGaugeLong blocksDeletedInPendingIBR;
   @Metric("Count of erasure coding reconstruction tasks")
   MutableCounterLong ecReconstructionTasks;
   @Metric("Count of erasure coding failed reconstruction tasks")
@@ -431,6 +440,32 @@ public class DataNodeMetrics {
     for (MutableQuantiles q : ramDiskBlocksLazyPersistWindowMsQuantiles) {
       q.add(latencyMs);
     }
+  }
+
+  /**
+   * Resets blocks in pending IBR to zero.
+   */
+  public void resetBlocksInPendingIBR() {
+    blocksInPendingIBR.set(0);
+    blocksReceivingInPendingIBR.set(0);
+    blocksReceivedInPendingIBR.set(0);
+    blocksDeletedInPendingIBR.set(0);
+  }
+
+  public void incrBlocksInPendingIBR() {
+    blocksInPendingIBR.incr();
+  }
+
+  public void incrBlocksReceivingInPendingIBR() {
+    blocksReceivingInPendingIBR.incr();
+  }
+
+  public void incrBlocksReceivedInPendingIBR() {
+    blocksReceivedInPendingIBR.incr();
+  }
+
+  public void incrBlocksDeletedInPendingIBR() {
+    blocksDeletedInPendingIBR.incr();
   }
 
   public void incrECReconstructionTasks() {

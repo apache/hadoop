@@ -264,6 +264,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
   /**
    * Ensure all existing queues are present. Queues cannot be deleted if its not
    * in Stopped state, Queue's cannot be moved from one hierarchy to other also.
+   * Previous child queue could be converted into parent queue if it is in
+   * STOPPED state.
    *
    * @param queues existing queues
    * @param newQueues new queues
@@ -292,6 +294,17 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
           throw new IOException(queueName + " is moved from:"
               + oldQueue.getQueuePath() + " to:" + newQueue.getQueuePath()
               + " after refresh, which is not allowed.");
+        } else  if (oldQueue instanceof LeafQueue
+            && newQueue instanceof ParentQueue) {
+          if (oldQueue.getState() == QueueState.STOPPED) {
+            LOG.info("Converting the leaf queue: " + oldQueue.getQueuePath()
+                + " to parent queue.");
+          } else {
+            throw new IOException("Can not convert the leaf queue: "
+                + oldQueue.getQueuePath() + " to parent queue since "
+                + "it is not yet in stopped state. Current State : "
+                + oldQueue.getState());
+          }
         }
       }
     }

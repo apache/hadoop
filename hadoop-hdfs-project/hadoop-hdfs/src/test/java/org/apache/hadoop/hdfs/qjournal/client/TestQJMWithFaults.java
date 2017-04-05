@@ -402,7 +402,7 @@ public class TestQJMWithFaults {
 
     @Override
     protected ExecutorService createSingleThreadExecutor() {
-      return MoreExecutors.sameThreadExecutor();
+      return MoreExecutors.newDirectExecutorService();
     }
   }
 

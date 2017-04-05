@@ -22,7 +22,7 @@ import java.util.Collection;
 import java.util.Map;
 
 import com.google.common.collect.Maps;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -416,7 +416,7 @@ public class MetricsRegistry {
   }
 
   @Override public String toString() {
-    return Objects.toStringHelper(this)
+    return MoreObjects.toStringHelper(this)
         .add("info", metricsInfo).add("tags", tags()).add("metrics", metrics())
         .toString();
   }

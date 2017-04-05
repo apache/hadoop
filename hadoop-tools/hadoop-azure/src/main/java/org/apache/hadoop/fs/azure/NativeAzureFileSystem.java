@@ -1287,6 +1287,8 @@ public class NativeAzureFileSystem extends FileSystem {
 
     this.azureAuthorization = useSecureMode &&
         conf.getBoolean(KEY_AZURE_AUTHORIZATION, DEFAULT_AZURE_AUTHORIZATION);
+    this.kerberosSupportEnabled =
+        conf.getBoolean(Constants.AZURE_KERBEROS_SUPPORT_PROPERTY_NAME, false);
 
     if (this.azureAuthorization) {
 
