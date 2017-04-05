@@ -110,4 +110,16 @@
       The default is appropriate for small clusters (tens of nodes).
     </description>
   </property>
+
+  <property>
+    <name>ozone.scm.chunk.size</name>
+    <value>1048576</value>
+    <description>
+      The chunk size for read/write chunk operations in bytes.
+
+      The chunk size defaults to 1MB. If the value configured is more
+      than the maximum size (1MB), it will be reset to the maximum
+      size.
+    </description>
+  </property>
 </configuration>

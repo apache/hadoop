@@ -45,7 +45,11 @@ public final class ScmConfigKeys {
       = "GRPC";
 
   // TODO : this is copied from OzoneConsts, may need to move to a better place
-  public static final int CHUNK_SIZE = 1 * 1024 * 1024; // 1 MB
+  public static final String OZONE_SCM_CHUNK_SIZE_KEY = "ozone.scm.chunk.size";
+  // 1 MB by default
+  public static final int OZONE_SCM_CHUNK_SIZE_DEFAULT = 1 * 1024 * 1024;
+  public static final int OZONE_SCM_CHUNK_MAX_SIZE = 1 * 1024 * 1024;
+
 
   public static final int OZONE_SCM_CLIENT_PORT_DEFAULT = 9860;
   public static final int OZONE_SCM_DATANODE_PORT_DEFAULT = 9861;
