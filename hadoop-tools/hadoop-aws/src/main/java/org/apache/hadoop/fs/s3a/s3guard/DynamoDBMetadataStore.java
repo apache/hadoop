@@ -651,7 +651,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     int itemCount = 0;
     try {
       Collection<Path> deletionBatch =
-          new ArrayList(S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT);
+          new ArrayList<>(S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT);
       int delay = conf.getInt(S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY,
           S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_DEFAULT);
       for (Item item : expiredFiles(modTime)) {
@@ -671,7 +671,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
         processBatchWriteRequest(pathToKey(deletionBatch), new Item[0]);
       }
     } catch (InterruptedException e) {
-      Thread.currentThread().interrupted();
+      Thread.currentThread().interrupt();
       throw new InterruptedIOException("Pruning was interrupted");
     }
     LOG.info("Finished pruning {} items in batches of {}", itemCount,
