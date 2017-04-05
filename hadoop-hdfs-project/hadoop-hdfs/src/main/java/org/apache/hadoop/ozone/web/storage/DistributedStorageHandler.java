@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.protocol.LocatedContainer;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
@@ -40,6 +41,8 @@ import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.storage.ChunkInputStream;
 import org.apache.hadoop.scm.storage.ChunkOutputStream;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -55,10 +58,14 @@ import static org.apache.hadoop.scm.storage.ContainerProtocolCalls.putKey;
  * across the nodes of an HDFS cluster.
  */
 public final class DistributedStorageHandler implements StorageHandler {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DistributedStorageHandler.class);
 
   private final StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocation;
   private final XceiverClientManager xceiverClientManager;
+
+  private int chunkSize;
 
   /**
    * Creates a new DistributedStorageHandler.
@@ -71,6 +78,16 @@ public final class DistributedStorageHandler implements StorageHandler {
       storageContainerLocation) {
     this.storageContainerLocation = storageContainerLocation;
     this.xceiverClientManager = new XceiverClientManager(conf);
+
+    chunkSize = conf.getInt(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,
+        ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_DEFAULT);
+    if(chunkSize > ScmConfigKeys.OZONE_SCM_CHUNK_MAX_SIZE) {
+      LOG.warn("The chunk size ({}) is not allowed to be more than"
+          + " the maximum size ({}),"
+          + " resetting to the maximum size.",
+          chunkSize, ScmConfigKeys.OZONE_SCM_CHUNK_MAX_SIZE);
+      chunkSize = ScmConfigKeys.OZONE_SCM_CHUNK_MAX_SIZE;
+    }
   }
 
   @Override
@@ -227,7 +244,8 @@ public final class DistributedStorageHandler implements StorageHandler {
     key.setCreatedOn(dateToString(new Date()));
     XceiverClientSpi xceiverClient = acquireXceiverClient(containerKey);
     return new ChunkOutputStream(containerKey, key.getKeyName(),
-        xceiverClientManager, xceiverClient, args.getRequestID());
+        xceiverClientManager, xceiverClient, args.getRequestID(),
+        chunkSize);
   }
 
   @Override
