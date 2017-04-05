@@ -69,18 +69,17 @@ public class TestSignalContainer {
 
     //kick the scheduler
     nm1.nodeHeartbeat(true);
-    List<Container> conts = null;
-    int contReceived = 0;
+    List<Container> conts = new ArrayList<>(request);
     int waitCount = 0;
-    while (contReceived < request && waitCount++ < 200) {
-      LOG.info("Got " + contReceived + " containers. Waiting to get "
+    while (conts.size() < request && waitCount++ < 200) {
+      LOG.info("Got " + conts.size() + " containers. Waiting to get "
            + request);
       Thread.sleep(100);
-      conts = am.allocate(new ArrayList<ResourceRequest>(),
+      List<Container> allocation = am.allocate(new ArrayList<ResourceRequest>(),
           new ArrayList<ContainerId>()).getAllocatedContainers();
-      contReceived += conts.size();
+      conts.addAll(allocation);
     }
-    Assert.assertEquals(request, contReceived);
+    Assert.assertEquals(request, conts.size());
 
     for(Container container : conts) {
       rm.signalToContainer(container.getId(),
