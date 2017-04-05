@@ -67,6 +67,7 @@ public interface HdfsClientConfigKeys {
 
   String PREFIX = "dfs.client.";
   String  DFS_NAMESERVICES = "dfs.nameservices";
+  String DFS_NAMENODE_RPC_ADDRESS_KEY = "dfs.namenode.rpc-address";
   int     DFS_NAMENODE_HTTP_PORT_DEFAULT = 9870;
   String  DFS_NAMENODE_HTTP_ADDRESS_KEY = "dfs.namenode.http-address";
   int     DFS_NAMENODE_HTTPS_PORT_DEFAULT = 9871;
