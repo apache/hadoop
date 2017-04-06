@@ -744,7 +744,8 @@ public abstract class FileSystem extends Configured implements Closeable {
         conf.getInt("io.file.buffer.size", 4096),
         false,
         CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT,
-        DataChecksum.Type.CRC32);
+        DataChecksum.Type.CRC32,
+        "");
   }
 
   /**
