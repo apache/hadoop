@@ -68,7 +68,6 @@ import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.Times;
 
@@ -313,24 +312,21 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       }
     }
 
-    LogWriter writer = null;
+    if (pendingContainerInThisCycle.isEmpty()) {
+      sendLogAggregationReport(true, "", appFinished);
+      return;
+    }
+
+    logAggregationTimes++;
     String diagnosticMessage = "";
     boolean logAggregationSucceedInThisCycle = true;
-    try {
-      if (pendingContainerInThisCycle.isEmpty()) {
-        return;
-      }
-
-      logAggregationTimes++;
-
+    try (LogWriter writer = new LogWriter()){
       try {
-        writer =
-            new LogWriter(this.conf, this.remoteNodeTmpLogFileForApp,
-              this.userUgi);
+        writer.initialize(this.conf, this.remoteNodeTmpLogFileForApp,
+            this.userUgi);
         // Write ACLs once when the writer is created.
         writer.writeApplicationACLs(appAcls);
         writer.writeApplicationOwner(this.userUgi.getShortUserName());
-
       } catch (IOException e1) {
         logAggregationSucceedInThisCycle = false;
         LOG.error("Cannot create writer for app " + this.applicationId
@@ -369,11 +365,6 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       if (uploadedLogsInThisCycle && logAggregationInRolling) {
         cleanOldLogs();
         cleanupOldLogTimes++;
-      }
-
-      if (writer != null) {
-        writer.close();
-        writer = null;
       }
 
       long currentTime = System.currentTimeMillis();
@@ -416,29 +407,32 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         logAggregationSucceedInThisCycle = false;
       }
     } finally {
-      LogAggregationStatus logAggregationStatus =
-          logAggregationSucceedInThisCycle
-              ? LogAggregationStatus.RUNNING
-              : LogAggregationStatus.RUNNING_WITH_FAILURE;
-      sendLogAggregationReport(logAggregationStatus, diagnosticMessage);
-      if (appFinished) {
-        // If the app is finished, one extra final report with log aggregation
-        // status SUCCEEDED/FAILED will be sent to RM to inform the RM
-        // that the log aggregation in this NM is completed.
-        LogAggregationStatus finalLogAggregationStatus =
-            renameTemporaryLogFileFailed || !logAggregationSucceedInThisCycle
-                ? LogAggregationStatus.FAILED
-                : LogAggregationStatus.SUCCEEDED;
-        sendLogAggregationReport(finalLogAggregationStatus, "");
-      }
-
-      if (writer != null) {
-        writer.close();
-      }
+      sendLogAggregationReport(logAggregationSucceedInThisCycle,
+          diagnosticMessage, appFinished);
     }
   }
 
   private void sendLogAggregationReport(
+      boolean logAggregationSucceedInThisCycle, String diagnosticMessage,
+      boolean appFinished) {
+    LogAggregationStatus logAggregationStatus =
+        logAggregationSucceedInThisCycle
+            ? LogAggregationStatus.RUNNING
+            : LogAggregationStatus.RUNNING_WITH_FAILURE;
+    sendLogAggregationReportInternal(logAggregationStatus, diagnosticMessage);
+    if (appFinished) {
+      // If the app is finished, one extra final report with log aggregation
+      // status SUCCEEDED/FAILED will be sent to RM to inform the RM
+      // that the log aggregation in this NM is completed.
+      LogAggregationStatus finalLogAggregationStatus =
+          renameTemporaryLogFileFailed || !logAggregationSucceedInThisCycle
+              ? LogAggregationStatus.FAILED
+              : LogAggregationStatus.SUCCEEDED;
+      sendLogAggregationReportInternal(finalLogAggregationStatus, "");
+    }
+  }
+
+  private void sendLogAggregationReportInternal(
       LogAggregationStatus logAggregationStatus, String diagnosticMessage) {
     LogAggregationReport report =
         Records.newRecord(LogAggregationReport.class);
