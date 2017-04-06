@@ -180,8 +180,9 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
         getTimelinelineAppMetrics(appMetrics, finishedTime);
     entity.setMetrics(entityMetrics);
 
-    getDispatcher().getEventHandler().handle(new TimelineV2PublishEvent(
-        SystemMetricsEventType.PUBLISH_ENTITY, entity, app.getApplicationId()));
+    getDispatcher().getEventHandler().handle(
+        new ApplicationFinishPublishEvent(SystemMetricsEventType.
+            PUBLISH_APPLICATION_FINISHED_ENTITY, entity, app));
   }
 
   private Set<TimelineMetric> getTimelinelineAppMetrics(
@@ -450,16 +451,16 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
   }
 
   private class ApplicationFinishPublishEvent extends TimelineV2PublishEvent {
-    private RMAppImpl app;
+    private RMApp app;
 
     public ApplicationFinishPublishEvent(SystemMetricsEventType type,
-        TimelineEntity entity, RMAppImpl app) {
+        TimelineEntity entity, RMApp app) {
       super(type, entity, app.getApplicationId());
       this.app = app;
     }
 
     public RMAppImpl getRMAppImpl() {
-      return app;
+      return (RMAppImpl) app;
     }
   }
 
