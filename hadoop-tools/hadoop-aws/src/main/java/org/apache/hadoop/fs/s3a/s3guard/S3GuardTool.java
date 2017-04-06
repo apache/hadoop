@@ -441,11 +441,13 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
     /**
      * Recursively import every path under path
+     * @return number of items inserted into MetadataStore
      */
-    private void importDir(FileStatus status) throws IOException {
+    private long importDir(FileStatus status) throws IOException {
       Preconditions.checkArgument(status.isDirectory());
       RemoteIterator<LocatedFileStatus> it =
           s3a.listFilesAndDirectories(status.getPath(), true);
+      long items = 0;
 
       while (it.hasNext()) {
         LocatedFileStatus located = it.next();
@@ -463,7 +465,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
         }
         putParentsIfNotPresent(child);
         ms.put(new PathMetadata(child));
+        items++;
       }
+      return items;
     }
 
     @Override
@@ -493,12 +497,15 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
       initMetadataStore(false);
 
+      long items = 1;
       if (status.isFile()) {
         PathMetadata meta = new PathMetadata(status);
         ms.put(meta);
       } else {
-        importDir(status);
+        items = importDir(status);
       }
+
+      System.out.printf("Inserted %d items into Metadata Store%n", items);
 
       return SUCCESS;
     }
@@ -554,30 +561,55 @@ public abstract class S3GuardTool extends Configured implements Tool {
      * @return the string of output.
      */
     private static String formatFileStatus(FileStatus status) {
-      return String.format("%s%s%s",
+      return String.format("%s%s%d%s%s",
           status.isDirectory() ? "D" : "F",
+          SEP,
+          status.getLen(),
           SEP,
           status.getPath().toString());
     }
 
     /**
+     * Compares metadata from 2 S3 FileStatus's to see if they differ.
+     * @param thisOne
+     * @param thatOne
+     * @return true if the metadata is not identical
+     */
+    private static boolean differ(FileStatus thisOne, FileStatus thatOne) {
+      Preconditions.checkArgument(!(thisOne == null && thatOne == null));
+      return (thisOne == null || thatOne == null) ||
+          (thisOne.getLen() != thatOne.getLen()) ||
+          (thisOne.isDirectory() != thatOne.isDirectory()) ||
+          (!thisOne.isDirectory() &&
+              thisOne.getModificationTime() != thatOne.getModificationTime());
+    }
+
+    /**
      * Print difference, if any, between two file statuses to the output stream.
      *
-     * @param statusFromMS file status from metadata store.
-     * @param statusFromS3 file status from S3.
+     * @param msStatus file status from metadata store.
+     * @param s3Status file status from S3.
      * @param out output stream.
      */
-    private static void printDiff(FileStatus statusFromMS,
-                                  FileStatus statusFromS3,
+    private static void printDiff(FileStatus msStatus,
+                                  FileStatus s3Status,
                                   PrintStream out) {
-      Preconditions.checkArgument(
-          !(statusFromMS == null && statusFromS3 == null));
-      if (statusFromMS == null) {
-        out.printf("%s%s%s%n", S3_PREFIX, SEP, formatFileStatus(statusFromS3));
-      } else if (statusFromS3 == null) {
-        out.printf("%s%s%s%n", MS_PREFIX, SEP, formatFileStatus(statusFromMS));
+      Preconditions.checkArgument(!(msStatus == null && s3Status == null));
+      if (msStatus != null && s3Status != null) {
+        Preconditions.checkArgument(
+            msStatus.getPath().equals(s3Status.getPath()),
+            String.format("The path from metadata store and s3 are different:" +
+            " ms=%s s3=%s", msStatus.getPath(), s3Status.getPath()));
       }
-      // TODO: Do we need to compare the internal fields of two FileStatuses?
+
+      if (differ(msStatus, s3Status)) {
+        if (s3Status != null) {
+          out.printf("%s%s%s%n", S3_PREFIX, SEP, formatFileStatus(s3Status));
+        }
+        if (msStatus != null) {
+          out.printf("%s%s%s%n", MS_PREFIX, SEP, formatFileStatus(msStatus));
+        }
+      }
     }
 
     /**
@@ -597,32 +629,28 @@ public abstract class S3GuardTool extends Configured implements Tool {
      */
     private void compareDir(FileStatus msDir, FileStatus s3Dir,
                             PrintStream out) throws IOException {
-      if (msDir == null && s3Dir == null) {
-        return;
-      }
+      Preconditions.checkArgument(!(msDir == null && s3Dir == null));
       if (msDir != null && s3Dir != null) {
         Preconditions.checkArgument(msDir.getPath().equals(s3Dir.getPath()),
             String.format("The path from metadata store and s3 are different:" +
-                " ms=%s s3=%s", msDir.getPath(), s3Dir.getPath()));
+             " ms=%s s3=%s", msDir.getPath(), s3Dir.getPath()));
       }
 
-      printDiff(msDir, s3Dir, out);
-      Map<Path, S3AFileStatus> s3Children = new HashMap<>();
+      Map<Path, FileStatus> s3Children = new HashMap<>();
       if (s3Dir != null && s3Dir.isDirectory()) {
         for (FileStatus status : s3a.listStatus(s3Dir.getPath())) {
-          Preconditions.checkState(status instanceof S3AFileStatus);
-          s3Children.put(status.getPath(), (S3AFileStatus) status);
+          s3Children.put(status.getPath(), status);
         }
       }
 
-      Map<Path, S3AFileStatus> msChildren = new HashMap<>();
+      Map<Path, FileStatus> msChildren = new HashMap<>();
       if (msDir != null && msDir.isDirectory()) {
         DirListingMetadata dirMeta =
             ms.listChildren(msDir.getPath());
 
         if (dirMeta != null) {
           for (PathMetadata meta : dirMeta.getListing()) {
-            S3AFileStatus status = (S3AFileStatus) meta.getFileStatus();
+            FileStatus status = meta.getFileStatus();
             msChildren.put(status.getPath(), status);
           }
         }
@@ -632,12 +660,12 @@ public abstract class S3GuardTool extends Configured implements Tool {
       allPaths.addAll(msChildren.keySet());
 
       for (Path path : allPaths) {
-        S3AFileStatus s3status = s3Children.get(path);
-        S3AFileStatus msStatus = msChildren.get(path);
-        printDiff(msStatus, s3status, out);
-        if ((s3status != null && s3status.isDirectory()) ||
+        FileStatus s3Status = s3Children.get(path);
+        FileStatus msStatus = msChildren.get(path);
+        printDiff(msStatus, s3Status, out);
+        if ((s3Status != null && s3Status.isDirectory()) ||
             (msStatus != null && msStatus.isDirectory())) {
-          compareDir(msStatus, s3status, out);
+          compareDir(msStatus, s3Status, out);
         }
       }
       out.flush();
@@ -650,7 +678,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
      * @param out  the output stream to display results.
      * @throws IOException
      */
-    private void compare(Path path, PrintStream out) throws IOException {
+    private void compareRoot(Path path, PrintStream out) throws IOException {
       Path qualified = s3a.qualify(path);
       FileStatus s3Status = null;
       try {
@@ -658,8 +686,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       } catch (FileNotFoundException e) {
       }
       PathMetadata meta = ms.get(qualified);
-      S3AFileStatus msStatus = meta != null ?
-          (S3AFileStatus) meta.getFileStatus() : null;
+      FileStatus msStatus = meta != null ? meta.getFileStatus() : null;
       compareDir(msStatus, s3Status, out);
     }
 
@@ -687,7 +714,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         root = new Path(uri.getPath());
       }
       root = s3a.qualify(root);
-      compare(root, out);
+      compareRoot(root, out);
       out.flush();
       return SUCCESS;
     }
