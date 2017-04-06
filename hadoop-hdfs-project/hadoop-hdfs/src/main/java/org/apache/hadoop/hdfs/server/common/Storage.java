@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIOException;
 import org.apache.hadoop.util.ToolRunner;
@@ -272,7 +273,6 @@ public abstract class Storage extends StorageInfo {
     private String storageUuid = null;      // Storage directory identifier.
     
     public StorageDirectory(File dir) {
-      // default dirType is null
       this(dir, null, false);
     }
     
@@ -298,7 +298,8 @@ public abstract class Storage extends StorageInfo {
     public StorageDirectory(File dir, StorageDirType dirType, boolean isShared) {
       this.root = dir;
       this.lock = null;
-      this.dirType = dirType;
+      // default dirType is UNDEFINED
+      this.dirType = (dirType == null ? NameNodeDirType.UNDEFINED : dirType);
       this.isShared = isShared;
     }
     
