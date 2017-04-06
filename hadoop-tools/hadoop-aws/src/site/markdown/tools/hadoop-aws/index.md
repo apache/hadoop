@@ -43,6 +43,7 @@ The specifics of using these filesystems are documented in this section.
 See also:
 * [Testing](testing.html)
 * [Troubleshooting S3a](troubleshooting_s3a.html)
+* [S3Guard](s3guard.html)
 
 ### Warning #1: Object Stores are not filesystems
 

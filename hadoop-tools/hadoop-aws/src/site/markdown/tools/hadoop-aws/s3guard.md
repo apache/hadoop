@@ -26,9 +26,10 @@ in an S3 bucket.
 
 S3Guard
 
-1. Increases performances on all directory listing/scanning operations, including
-those which take place during the partitioning period of query execution, the
-process where files are listed and the work divided up amongst processes.
+1. May improve performance on directory listing/scanning operations,
+including those which take place during the partitioning period of query
+execution, the process where files are listed and the work divided up amongst
+processes.
 
 1. Permits a consistent view of the object store. Without this, changes in
 objects may not be immediately visible, especially in listing operations.
@@ -81,7 +82,7 @@ The funtional MetadataStore back-end uses Amazon's DynamoDB database service.  T
 ```
 
 
-Note that the Null Metadata store can be explicitly requested if desired.
+Note that the Null metadata store can be explicitly requested if desired.
 
 ```xml
 <property>
@@ -137,20 +138,16 @@ choose our own table name:
 </property>
 ```
 
-You may also wish to specify the endpoint to use for DynamoDB. In AWS, the
-endpoint should be matched to the region the table lives in. If an endpoint
-is not configured, it will be assume that it is in the same region as the S3
-bucket. A list of regions and endpoints for the DynamoDB service can be found in
+You may also wish to specify the region to use for DynamoDB.  If a region
+is not configured, S3A will assume that it is in the same region as the S3
+bucket. A list of regions for the DynamoDB service can be found in
 [Amazon's documentation](http://docs.aws.amazon.com/general/latest/gr/rande.html#ddb_region).
+In this example, we set the US West 2 region:
 
 ```xml
 <property>
-  <name>fs.s3a.s3guard.ddb.endpoint</name>
-  <value>dynamodb.us-west-1.amazonaws.com</value>
-  <description>
-    Endpoint to use for DynamoDB requests. The endpoint should be matched to the
-    region the metastore database will be in.
-  </description>
+  <name>fs.s3a.s3guard.ddb.region</name>
+  <value>us-west-2</value>
 </property>
 ```
 
@@ -168,20 +165,12 @@ following parameter to true.
 </property>
 ```
 
-We can also explicitly set the DynamoDB service endpoint we will connect to.
-This makes sure we always access the region our table lives in, even if we
-access S3 buckets in other regions.  In this example we use the endpoint for
-US West (Oregon):
-
-```xml
-<property>
-  <name>fs.s3a.s3guard.ddb.endpoint</name>
-  <value>dynamodb.us-west-2.amazonaws.com</value>
-</property>
-```
 Next, you need to set the DynamoDB read and write throughput requirements you
 expect to need for your cluster.  Setting higher values will cost you more
-money.
+money.  *Note* that these settings only affect table creation when
+`fs.s3a.s3guard.ddb.table.create` is enabled.  To change the throughput for
+an existing table, use the AWS console or CLI tool.
+
 For more details on DynamoDB capacity units, see the AWS page on [Capacity
 Unit Calculations](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithTables.html#CapacityUnitCalculations).
 
@@ -235,16 +224,16 @@ unsafe and thus deprecated.
 
 ## S3Guard Command Line Interface (CLI)
 
-Note that in some cases an endpoint or a s3a:// URI can be provided.
+Note that in some cases an AWS region or s3a:// URI can be provided.
 
 Metadata store URIs include a scheme that designates the backing store. For
-example (e.g. dynamodb://&lt;table_name&gt;). As documented above, endpoints can
-be inferred if the URI to an existing bucket is provided.
+example (e.g. dynamodb://&lt;table_name&gt;). As documented above, AWS region
+can be inferred if the URI to an existing bucket is provided.
 
 ### Init
 
 ```
-hadoop s3a init -meta URI ( -endpoint ENDPOINT | s3a://BUCKET )
+hadoop s3guard init -meta URI ( -region REGION | s3a://BUCKET )
 ```
 
 Creates and initializes an empty metadata store.
@@ -259,7 +248,7 @@ pertaining to [Provisioned Throughput](http://docs.aws.amazon.com/amazondynamodb
 ### Import
 
 ```
-hadoop s3a import [-meta URI] s3a://BUCKET
+hadoop s3guard import [-meta URI] s3a://BUCKET
 ```
 
 Pre-populates a metadata store according to the current contents of an S3
@@ -268,7 +257,7 @@ bucket.
 ### Diff
 
 ```
-hadoop s3a diff [-meta URI] s3a://BUCKET
+hadoop s3guard diff [-meta URI] s3a://BUCKET
 ```
 
 Lists discrepancies between a metadata store and bucket. Note that depending on
@@ -277,7 +266,7 @@ how S3Guard is used, certain discrepancies are to be expected.
 ### Destroy
 
 ```
-hadoop s3a destroy [-meta URI] ( -endpoint ENDPOINT | s3a://BUCKET )
+hadoop s3guard destroy [-meta URI] ( -region REGION | s3a://BUCKET )
 ```
 
 Deletes a metadata store.
@@ -285,8 +274,8 @@ Deletes a metadata store.
 ### Prune
 
 ```
-hadoop s3a prune [-days DAYS] [-hours HOURS] [-minutes MINUTES]
-    [-seconds SECONDS] [-m URI] ( -endpoint ENDPOINT | s3a://BUCKET )
+hadoop s3guard prune [-days DAYS] [-hours HOURS] [-minutes MINUTES]
+    [-seconds SECONDS] [-m URI] ( -region REGION | s3a://BUCKET )
 ```
 
 Trims metadata for files that are older than the time given. Must supply at least length of time.
@@ -476,7 +465,7 @@ S3A scale tests.
 
 The two scale tests here are `ITestDynamoDBMetadataStoreScale` and
 `ITestLocalMetadataStoreScale`.  To run the DynamoDB test, you will need to
-define your table name and endpoint in your test configuration.  For example,
+define your table name and region in your test configuration.  For example,
 the following settings allow us to run `ITestDynamoDBMetadataStoreScale` with
 artificially low read and write capacity provisioned, so we can judge the
 effects of being throttled by the DynamoDB service:
@@ -499,8 +488,8 @@ effects of being throttled by the DynamoDB service:
     <value>my-scale-test</value>
 </property>
 <property>
-    <name>fs.s3a.s3guard.ddb.endpoint</name>
-    <value>dynamodb.us-west-2.amazonaws.com</value>
+    <name>fs.s3a.s3guard.ddb.region</name>
+    <value>us-west-2</value>
 </property>
 <property>
     <name>fs.s3a.s3guard.ddb.table.create</name>
