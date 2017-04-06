@@ -203,7 +203,7 @@ public class TestMRTimelineEventHandling {
     MiniMRYarnCluster cluster = null;
     try {
       cluster = new MiniMRYarnCluster(
-          TestMRTimelineEventHandling.class.getSimpleName(), 1, true);
+          TestMRTimelineEventHandling.class.getSimpleName(), 1);
       cluster.init(conf);
       cluster.start();
       LOG.info("A MiniMRYarnCluster get start.");

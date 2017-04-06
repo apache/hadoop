@@ -31,6 +31,7 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -63,6 +64,7 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -86,6 +88,7 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
 import org.apache.hadoop.yarn.server.resourcemanager.Application;
+import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
@@ -2944,6 +2947,162 @@ public class TestCapacityScheduler {
       Assert.assertTrue(rm.waitForState(nm, containerId,
           RMContainerState.ALLOCATED));
     }
+  }
+
+  @Test
+  public void testSchedulerKeyGarbageCollection() throws Exception {
+    YarnConfiguration conf =
+        new YarnConfiguration(new CapacitySchedulerConfiguration());
+    conf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
+
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+    MockRM rm = new MockRM(conf, memStore);
+    rm.start();
+
+    HashMap<NodeId, MockNM> nodes = new HashMap<>();
+    MockNM nm1 = new MockNM("h1:1234", 4096, rm.getResourceTrackerService());
+    nodes.put(nm1.getNodeId(), nm1);
+    MockNM nm2 = new MockNM("h2:1234", 4096, rm.getResourceTrackerService());
+    nodes.put(nm2.getNodeId(), nm2);
+    MockNM nm3 = new MockNM("h3:1234", 4096, rm.getResourceTrackerService());
+    nodes.put(nm3.getNodeId(), nm3);
+    MockNM nm4 = new MockNM("h4:1234", 4096, rm.getResourceTrackerService());
+    nodes.put(nm4.getNodeId(), nm4);
+    nm1.registerNode();
+    nm2.registerNode();
+    nm3.registerNode();
+    nm4.registerNode();
+
+    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    ApplicationAttemptId attemptId =
+        app1.getCurrentAppAttempt().getAppAttemptId();
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
+    ResourceScheduler scheduler = rm.getResourceScheduler();
+
+    // All nodes 1 - 4 will be applicable for scheduling.
+    nm1.nodeHeartbeat(true);
+    nm2.nodeHeartbeat(true);
+    nm3.nodeHeartbeat(true);
+    nm4.nodeHeartbeat(true);
+
+    Thread.sleep(1000);
+
+    AllocateResponse allocateResponse = am1.allocate(
+        Arrays.asList(
+            newResourceRequest(1, 1, ResourceRequest.ANY,
+                Resources.createResource(3 * GB), 1, true,
+                ExecutionType.GUARANTEED),
+            newResourceRequest(2, 2, ResourceRequest.ANY,
+                Resources.createResource(3 * GB), 1, true,
+                ExecutionType.GUARANTEED),
+            newResourceRequest(3, 3, ResourceRequest.ANY,
+                Resources.createResource(3 * GB), 1, true,
+                ExecutionType.GUARANTEED),
+            newResourceRequest(4, 4, ResourceRequest.ANY,
+                Resources.createResource(3 * GB), 1, true,
+                ExecutionType.GUARANTEED)
+        ),
+        null);
+    List<Container> allocatedContainers = allocateResponse
+        .getAllocatedContainers();
+    Assert.assertEquals(0, allocatedContainers.size());
+
+    Collection<SchedulerRequestKey> schedulerKeys =
+        ((CapacityScheduler) scheduler).getApplicationAttempt(attemptId)
+            .getAppSchedulingInfo().getSchedulerKeys();
+    Assert.assertEquals(4, schedulerKeys.size());
+
+    // Get a Node to HB... at which point 1 container should be
+    // allocated
+    nm1.nodeHeartbeat(true);
+    Thread.sleep(200);
+    allocateResponse =  am1.allocate(new ArrayList<>(), new ArrayList<>());
+    allocatedContainers = allocateResponse.getAllocatedContainers();
+    Assert.assertEquals(1, allocatedContainers.size());
+
+    // Verify 1 outstanding schedulerKey is removed
+    Assert.assertEquals(3, schedulerKeys.size());
+
+    List <ResourceRequest> resReqs =
+        ((CapacityScheduler) scheduler).getApplicationAttempt(attemptId)
+            .getAppSchedulingInfo().getAllResourceRequests();
+
+    // Verify 1 outstanding schedulerKey is removed from the
+    // rrMap as well
+    Assert.assertEquals(3, resReqs.size());
+
+    // Verify One more container Allocation on node nm2
+    // And ensure the outstanding schedulerKeys go down..
+    nm2.nodeHeartbeat(true);
+    Thread.sleep(200);
+
+    // Update the allocateReq to send 0 numContainer req.
+    // For the satisfied container...
+    allocateResponse =  am1.allocate(Arrays.asList(
+        newResourceRequest(1,
+            allocatedContainers.get(0).getAllocationRequestId(),
+            ResourceRequest.ANY,
+            Resources.createResource(3 * GB), 0, true,
+            ExecutionType.GUARANTEED)
+        ),
+        new ArrayList<>());
+    allocatedContainers = allocateResponse.getAllocatedContainers();
+    Assert.assertEquals(1, allocatedContainers.size());
+
+    // Verify 1 outstanding schedulerKey is removed
+    Assert.assertEquals(2, schedulerKeys.size());
+
+    resReqs = ((CapacityScheduler) scheduler).getApplicationAttempt(attemptId)
+        .getAppSchedulingInfo().getAllResourceRequests();
+    // Verify the map size is not increased due to 0 req
+    Assert.assertEquals(2, resReqs.size());
+
+    // Now Verify that the AM can cancel 1 Ask:
+    SchedulerRequestKey sk = schedulerKeys.iterator().next();
+    am1.allocate(
+        Arrays.asList(
+            newResourceRequest(sk.getPriority().getPriority(),
+                sk.getAllocationRequestId(),
+                ResourceRequest.ANY, Resources.createResource(3 * GB), 0, true,
+                ExecutionType.GUARANTEED)
+        ),
+        null);
+
+    schedulerKeys =
+        ((CapacityScheduler) scheduler).getApplicationAttempt(attemptId)
+            .getAppSchedulingInfo().getSchedulerKeys();
+
+    Thread.sleep(200);
+
+    // Verify 1 outstanding schedulerKey is removed because of the
+    // cancel ask
+    Assert.assertEquals(1, schedulerKeys.size());
+
+    // Now verify that after the next node heartbeat, we allocate
+    // the last schedulerKey
+    nm3.nodeHeartbeat(true);
+    Thread.sleep(200);
+    allocateResponse =  am1.allocate(new ArrayList<>(), new ArrayList<>());
+    allocatedContainers = allocateResponse.getAllocatedContainers();
+    Assert.assertEquals(1, allocatedContainers.size());
+
+    // Verify no more outstanding schedulerKeys..
+    Assert.assertEquals(0, schedulerKeys.size());
+    resReqs =
+        ((CapacityScheduler) scheduler).getApplicationAttempt(attemptId)
+            .getAppSchedulingInfo().getAllResourceRequests();
+    Assert.assertEquals(0, resReqs.size());
+  }
+
+  private static ResourceRequest newResourceRequest(int priority,
+      long allocReqId, String rName, Resource resource, int numContainers,
+      boolean relaxLoc, ExecutionType eType) {
+    ResourceRequest rr = ResourceRequest.newInstance(
+        Priority.newInstance(priority), rName, resource, numContainers,
+        relaxLoc, null, ExecutionTypeRequest.newInstance(eType, true));
+    rr.setAllocationRequestId(allocReqId);
+    return rr;
   }
 
   @Test

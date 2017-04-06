@@ -913,8 +913,12 @@ public class FairScheduler extends
 
   void continuousSchedulingAttempt() throws InterruptedException {
     long start = getClock().getTime();
-    List<FSSchedulerNode> nodeIdList =
-        nodeTracker.sortedNodeList(nodeAvailableResourceComparator);
+    List<FSSchedulerNode> nodeIdList;
+    // Hold a lock to prevent comparator order changes due to changes of node
+    // unallocated resources
+    synchronized (this) {
+      nodeIdList = nodeTracker.sortedNodeList(nodeAvailableResourceComparator);
+    }
 
     // iterate all nodes
     for (FSSchedulerNode node : nodeIdList) {

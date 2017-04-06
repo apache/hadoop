@@ -146,7 +146,6 @@ public class MiniYARNCluster extends CompositeService {
   private int numLocalDirs;
   // Number of nm-log-dirs per nodemanager
   private int numLogDirs;
-  private boolean enableAHS;
 
   /**
    * @param testName name of the test
@@ -154,16 +153,13 @@ public class MiniYARNCluster extends CompositeService {
    * @param numNodeManagers the number of node managers in the cluster
    * @param numLocalDirs the number of nm-local-dirs per nodemanager
    * @param numLogDirs the number of nm-log-dirs per nodemanager
-   * @param enableAHS enable ApplicationHistoryServer or not
    */
-  @Deprecated
   public MiniYARNCluster(
       String testName, int numResourceManagers, int numNodeManagers,
-      int numLocalDirs, int numLogDirs, boolean enableAHS) {
+      int numLocalDirs, int numLogDirs) {
     super(testName.replace("$", ""));
     this.numLocalDirs = numLocalDirs;
     this.numLogDirs = numLogDirs;
-    this.enableAHS = enableAHS;
     String testSubDir = testName.replace("$", "");
     File targetWorkDir = new File("target", testSubDir);
     try {
@@ -211,20 +207,6 @@ public class MiniYARNCluster extends CompositeService {
 
     resourceManagers = new ResourceManager[numResourceManagers];
     nodeManagers = new NodeManager[numNodeManagers];
-  }
-
-  /**
-   * @param testName name of the test
-   * @param numResourceManagers the number of resource managers in the cluster
-   * @param numNodeManagers the number of node managers in the cluster
-   * @param numLocalDirs the number of nm-local-dirs per nodemanager
-   * @param numLogDirs the number of nm-log-dirs per nodemanager
-   */
-  public MiniYARNCluster(
-      String testName, int numResourceManagers, int numNodeManagers,
-      int numLocalDirs, int numLogDirs) {
-    this(testName, numResourceManagers, numNodeManagers, numLocalDirs,
-        numLogDirs, false);
   }
 
   /**
@@ -288,7 +270,7 @@ public class MiniYARNCluster extends CompositeService {
     }
 
     if(conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
-        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED) || enableAHS) {
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)) {
         addService(new ApplicationHistoryServerWrapper());
     }
     

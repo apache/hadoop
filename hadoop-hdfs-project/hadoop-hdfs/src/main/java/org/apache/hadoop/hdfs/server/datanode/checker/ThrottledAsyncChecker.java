@@ -187,28 +187,21 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
 
   /**
    * {@inheritDoc}.
+   *
+   * The results of in-progress checks are not useful during shutdown,
+   * so we optimize for faster shutdown by interrupt all actively
+   * executing checks.
    */
   @Override
   public void shutdownAndWait(long timeout, TimeUnit timeUnit)
       throws InterruptedException {
-    // Try orderly shutdown.
-    executorService.shutdown();
-
-    if (!executorService.awaitTermination(timeout, timeUnit)) {
-      // Interrupt executing tasks and wait again.
-      executorService.shutdownNow();
-      executorService.awaitTermination(timeout, timeUnit);
-    }
     if (scheduledExecutorService != null) {
-      // Try orderly shutdown
-      scheduledExecutorService.shutdown();
-
-      if (!scheduledExecutorService.awaitTermination(timeout, timeUnit)) {
-        // Interrupt executing tasks and wait again.
-        scheduledExecutorService.shutdownNow();
-        scheduledExecutorService.awaitTermination(timeout, timeUnit);
-      }
+      scheduledExecutorService.shutdownNow();
+      scheduledExecutorService.awaitTermination(timeout, timeUnit);
     }
+
+    executorService.shutdownNow();
+    executorService.awaitTermination(timeout, timeUnit);
   }
 
   /**
