@@ -29,6 +29,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-13742. Expose "NumOpenConnectionsPerUser" as a metric.
     (Brahma Reddy Battula via kihwal)
 
+    HADOOP-14276. Add a nanosecond API to Time/Timer/FakeTimer.
+    (Erik Krogen via zhz)
+
   OPTIMIZATIONS
 
     HADOOP-14138. Remove S3A ref from META-INF service discovery, rely on
