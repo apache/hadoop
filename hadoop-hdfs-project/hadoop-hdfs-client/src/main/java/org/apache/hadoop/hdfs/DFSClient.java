@@ -72,6 +72,7 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersi
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStorageLocation;
 import org.apache.hadoop.fs.CacheFlag;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -172,6 +173,7 @@ import org.apache.hadoop.ipc.RpcNoSuchMethodException;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
@@ -209,6 +211,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public static final Logger LOG = LoggerFactory.getLogger(DFSClient.class);
   // 1 hour
   public static final long SERVER_DEFAULTS_VALIDITY_PERIOD = 60 * 60 * 1000L;
+  private static final String DFS_KMS_PREFIX = "dfs-kms-";
 
   private final Configuration conf;
   private final Tracer tracer;
@@ -226,7 +229,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   final SocketFactory socketFactory;
   final ReplaceDatanodeOnFailure dtpReplaceDatanodeOnFailure;
   private final FileSystem.Statistics stats;
-  private final String authority;
+  private final URI namenodeUri;
   private final Random r = new Random();
   private SocketAddress[] localInterfaceAddrs;
   private DataEncryptionKey encryptionKey;
@@ -239,6 +242,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       new DFSHedgedReadMetrics();
   private static ThreadPoolExecutor HEDGED_READ_THREAD_POOL;
   private final int smallBufferSize;
+  private URI keyProviderUri = null;
 
   public DfsClientConf getConf() {
     return dfsClientConf;
@@ -309,7 +313,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
     this.ugi = UserGroupInformation.getCurrentUser();
 
-    this.authority = nameNodeUri == null? "null": nameNodeUri.getAuthority();
+    this.namenodeUri = nameNodeUri;
     this.clientName = "DFSClient_" + dfsClientConf.getTaskId() + "_" +
         ThreadLocalRandom.current().nextInt()  + "_" +
         Thread.currentThread().getId();
@@ -461,7 +465,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    *  be returned until all output streams are closed.
    */
   public LeaseRenewer getLeaseRenewer() {
-    return LeaseRenewer.getInstance(authority, ugi, this);
+    return LeaseRenewer.getInstance(
+        namenodeUri != null ? namenodeUri.getAuthority() : "null", ugi, this);
   }
 
   /** Get a lease and start automatic renewal */
@@ -2993,8 +2998,66 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return HEDGED_READ_METRIC;
   }
 
-  public KeyProvider getKeyProvider() {
-    return clientContext.getKeyProviderCache().get(conf);
+  /**
+   * Returns a key to map namenode uri to key provider uri.
+   * Tasks will lookup this key to find key Provider.
+   */
+  public Text getKeyProviderMapKey() {
+    return new Text(DFS_KMS_PREFIX + namenodeUri.getScheme()
+        +"://" + namenodeUri.getAuthority());
+  }
+
+  /**
+   * The key provider uri is searched in the following order.
+   * 1. If there is a mapping in Credential's secrets map for namenode uri.
+   * 2. From namenode getServerDefaults rpc.
+   * 3. Finally fallback to local conf.
+   * @return keyProviderUri if found from either of above 3 cases,
+   * null otherwise
+   * @throws IOException
+   */
+  URI getKeyProviderUri() throws IOException {
+    if (keyProviderUri != null) {
+      return keyProviderUri;
+    }
+
+    // Lookup the secret in credentials object for namenodeuri.
+    Credentials credentials = ugi.getCredentials();
+    byte[] keyProviderUriBytes = credentials.getSecretKey(getKeyProviderMapKey());
+    if(keyProviderUriBytes != null) {
+      keyProviderUri =
+          URI.create(DFSUtilClient.bytes2String(keyProviderUriBytes));
+      return keyProviderUri;
+    }
+
+    // Query the namenode for the key provider uri.
+    FsServerDefaults serverDefaults = getServerDefaults();
+    if (serverDefaults.getKeyProviderUri() != null) {
+      if (!serverDefaults.getKeyProviderUri().isEmpty()) {
+        keyProviderUri = URI.create(serverDefaults.getKeyProviderUri());
+      }
+      return keyProviderUri;
+    }
+
+    // Last thing is to trust its own conf to be backwards compatible.
+    String keyProviderUriStr = conf.getTrimmed(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH);
+    if (keyProviderUriStr != null && !keyProviderUriStr.isEmpty()) {
+      keyProviderUri = URI.create(keyProviderUriStr);
+    }
+    return keyProviderUri;
+  }
+
+  public KeyProvider getKeyProvider() throws IOException {
+    return clientContext.getKeyProviderCache().get(conf, getKeyProviderUri());
+  }
+
+  /*
+   * Should be used only for testing.
+   */
+  @VisibleForTesting
+  public void setKeyProviderUri(URI providerUri) {
+    this.keyProviderUri = providerUri;
   }
 
   @VisibleForTesting
@@ -3004,11 +3067,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Probe for encryption enabled on this filesystem.
-   * See {@link DFSUtilClient#isHDFSEncryptionEnabled(Configuration)}
    * @return true if encryption is enabled
    */
-  public boolean isHDFSEncryptionEnabled() {
-    return DFSUtilClient.isHDFSEncryptionEnabled(this.conf);
+  public boolean isHDFSEncryptionEnabled() throws IOException{
+    return getKeyProviderUri() != null;
   }
 
   /**

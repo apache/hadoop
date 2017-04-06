@@ -97,6 +97,7 @@ Once a KMS has been set up and the NameNode and HDFS clients have been correctly
 #### hadoop.security.key.provider.path
 
 The KeyProvider to use when interacting with encryption keys used when reading and writing to an encryption zone.
+HDFS clients will use the provider path returned from Namenode via getServerDefaults. If namenode doesn't support returning key provider uri then client's conf will be used.
 
 ### <a name="Selecting_an_encryption_algorithm_and_codec"></a>Selecting an encryption algorithm and codec
 

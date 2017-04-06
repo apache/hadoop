@@ -2479,12 +2479,15 @@ public class DistributedFileSystem extends FileSystem {
   public Token<?>[] addDelegationTokens(
       final String renewer, Credentials credentials) throws IOException {
     Token<?>[] tokens = super.addDelegationTokens(renewer, credentials);
-    if (dfs.isHDFSEncryptionEnabled()) {
+    URI keyProviderUri = dfs.getKeyProviderUri();
+    if (keyProviderUri != null) {
       KeyProviderDelegationTokenExtension keyProviderDelegationTokenExtension =
           KeyProviderDelegationTokenExtension.
               createKeyProviderDelegationTokenExtension(dfs.getKeyProvider());
       Token<?>[] kpTokens = keyProviderDelegationTokenExtension.
           addDelegationTokens(renewer, credentials);
+      credentials.addSecretKey(dfs.getKeyProviderMapKey(),
+          DFSUtilClient.string2Bytes(keyProviderUri.toString()));
       if (tokens != null && kpTokens != null) {
         Token<?>[] all = new Token<?>[tokens.length + kpTokens.length];
         System.arraycopy(tokens, 0, all, 0, tokens.length);
@@ -2517,7 +2520,13 @@ public class DistributedFileSystem extends FileSystem {
    */
   @Override
   public Path getTrashRoot(Path path) {
-    if ((path == null) || !dfs.isHDFSEncryptionEnabled()) {
+    try {
+      if ((path == null) || !dfs.isHDFSEncryptionEnabled()) {
+        return super.getTrashRoot(path);
+      }
+    } catch (IOException ioe) {
+      DFSClient.LOG.warn("Exception while checking whether encryption zone is "
+          + "supported", ioe);
       return super.getTrashRoot(path);
     }
 
