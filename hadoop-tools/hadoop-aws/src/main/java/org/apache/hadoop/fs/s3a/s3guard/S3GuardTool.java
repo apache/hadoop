@@ -445,7 +445,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
     private void importDir(FileStatus status) throws IOException {
       Preconditions.checkArgument(status.isDirectory());
       RemoteIterator<LocatedFileStatus> it =
-          s3a.listFiles(status.getPath(), true);
+          s3a.listFilesAndDirectories(status.getPath(), true);
 
       while (it.hasNext()) {
         LocatedFileStatus located = it.next();

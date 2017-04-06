@@ -2415,6 +2415,18 @@ public class S3AFileSystem extends FileSystem {
   @Override
   public RemoteIterator<LocatedFileStatus> listFiles(Path f,
       boolean recursive) throws FileNotFoundException, IOException {
+    return innerListFiles(f, recursive,
+        new Listing.AcceptFilesOnly(qualify(f)));
+  }
+
+  public RemoteIterator<LocatedFileStatus> listFilesAndDirectories(Path f,
+      boolean recursive) throws IOException {
+    return innerListFiles(f, recursive,
+        new Listing.AcceptAllButSelfAndS3nDirs(qualify(f)));
+  }
+
+  private RemoteIterator<LocatedFileStatus> innerListFiles(Path f, boolean
+      recursive, Listing.FileStatusAcceptor acceptor) throws IOException {
     incrementStatistic(INVOCATION_LIST_FILES);
     Path path = qualify(f);
     LOG.debug("listFiles({}, {})", path, recursive);
@@ -2435,8 +2447,7 @@ public class S3AFileSystem extends FileSystem {
         return listing.createLocatedFileStatusIterator(
             listing.createFileStatusListingIterator(path,
                 createListObjectsRequest(key, delimiter),
-                ACCEPT_ALL,
-                new Listing.AcceptFilesOnly(path)));
+                ACCEPT_ALL, acceptor));
       }
     } catch (AmazonClientException e) {
       // TODO s3guard:

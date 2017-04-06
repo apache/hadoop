@@ -55,6 +55,8 @@ public class TestS3GuardTool extends S3GuardToolTestBase {
     fs.mkdirs(parent);
     Path dir = new Path(parent, "a");
     fs.mkdirs(dir);
+    Path emptyDir = new Path(parent, "emptyDir");
+    fs.mkdirs(emptyDir);
     for (int i = 0; i < 10; i++) {
       String child = String.format("file-%d", i);
       try (FSDataOutputStream out = fs.create(new Path(dir, child))) {
@@ -66,12 +68,14 @@ public class TestS3GuardTool extends S3GuardToolTestBase {
     cmd.setMetadataStore(ms);
 
     assertEquals("Import command did not exit successfully - see output",
-        SUCCESS, cmd.run(new String[]{"import", dir.toString()}));
+        SUCCESS, cmd.run(new String[]{"import", parent.toString()}));
 
     DirListingMetadata children =
         ms.listChildren(dir);
     assertEquals("Unexpected number of paths imported", 10, children
         .getListing().size());
+    assertEquals("Expected 2 items: empty directory and a parent directory", 2,
+        ms.listChildren(parent).getListing().size());
     // assertTrue(children.isAuthoritative());
   }
 
