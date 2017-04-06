@@ -117,7 +117,6 @@ public class TestS3GuardTool extends S3GuardToolTestBase {
 
     Set<Path> actualOnS3 = new HashSet<>();
     Set<Path> actualOnMS = new HashSet<>();
-    boolean duplicates = false;
     try (ByteArrayInputStream in =
              new ByteArrayInputStream(buf.toByteArray())) {
       try (BufferedReader reader =
@@ -126,15 +125,12 @@ public class TestS3GuardTool extends S3GuardToolTestBase {
         while ((line = reader.readLine()) != null) {
           String[] fields = line.split("\\s");
           assertEquals("[" + line + "] does not have enough fields",
-              4, fields.length);
+              3, fields.length);
           String where = fields[0];
-          Path path = new Path(fields[3]);
           if (Diff.S3_PREFIX.equals(where)) {
-            duplicates = duplicates || actualOnS3.contains(path);
-            actualOnS3.add(path);
+            actualOnS3.add(new Path(fields[2]));
           } else if (Diff.MS_PREFIX.equals(where)) {
-            duplicates = duplicates || actualOnMS.contains(path);
-            actualOnMS.add(path);
+            actualOnMS.add(new Path(fields[2]));
           } else {
             fail("Unknown prefix: " + where);
           }
@@ -145,6 +141,5 @@ public class TestS3GuardTool extends S3GuardToolTestBase {
     assertEquals("Mismatched metadata store outputs: " + actualOut,
         filesOnMS, actualOnMS);
     assertEquals("Mismatched s3 outputs: " + actualOut, filesOnS3, actualOnS3);
-    assertFalse("Diff contained duplicates", duplicates);
   }
 }
