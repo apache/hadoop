@@ -23,6 +23,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -91,7 +92,7 @@ class JobResourceUploader {
     submitJobDir = new Path(submitJobDir.toUri().getPath());
     FsPermission mapredSysPerms =
         new FsPermission(JobSubmissionFiles.JOB_DIR_PERMISSION);
-    FileSystem.mkdirs(jtFs, submitJobDir, mapredSysPerms);
+    mkdirs(jtFs, submitJobDir, mapredSysPerms);
 
     Collection<String> files = conf.getStringCollection("tmpfiles");
     Collection<String> libjars = conf.getStringCollection("tmpjars");
@@ -116,18 +117,20 @@ class JobResourceUploader {
         job.getCredentials());
   }
 
-  private void uploadFiles(Configuration conf, Collection<String> files,
+  @VisibleForTesting
+  void uploadFiles(Configuration conf, Collection<String> files,
       Path submitJobDir, FsPermission mapredSysPerms, short submitReplication)
       throws IOException {
     Path filesDir = JobSubmissionFiles.getJobDistCacheFiles(submitJobDir);
     if (!files.isEmpty()) {
-      FileSystem.mkdirs(jtFs, filesDir, mapredSysPerms);
+      mkdirs(jtFs, filesDir, mapredSysPerms);
       for (String tmpFile : files) {
         URI tmpURI = null;
         try {
           tmpURI = new URI(tmpFile);
         } catch (URISyntaxException e) {
-          throw new IllegalArgumentException(e);
+          throw new IllegalArgumentException("Error parsing files argument."
+              + " Argument must be a valid URI: " + tmpFile, e);
         }
         Path tmp = new Path(tmpURI);
         Path newPath = copyRemoteFiles(filesDir, tmp, conf, submitReplication);
@@ -136,50 +139,83 @@ class JobResourceUploader {
           DistributedCache.addCacheFile(pathURI, conf);
         } catch (URISyntaxException ue) {
           // should not throw a uri exception
-          throw new IOException("Failed to create uri for " + tmpFile, ue);
+          throw new IOException(
+              "Failed to create a URI (URISyntaxException) for the remote path "
+                  + newPath + ". This was based on the files parameter: "
+                  + tmpFile,
+              ue);
         }
       }
     }
   }
 
-  private void uploadLibJars(Configuration conf, Collection<String> libjars,
+  // Suppress warning for use of DistributedCache (it is everywhere).
+  @SuppressWarnings("deprecation")
+  @VisibleForTesting
+  void uploadLibJars(Configuration conf, Collection<String> libjars,
       Path submitJobDir, FsPermission mapredSysPerms, short submitReplication)
       throws IOException {
     Path libjarsDir = JobSubmissionFiles.getJobDistCacheLibjars(submitJobDir);
     if (!libjars.isEmpty()) {
-      FileSystem.mkdirs(jtFs, libjarsDir, mapredSysPerms);
+      mkdirs(jtFs, libjarsDir, mapredSysPerms);
+      Collection<URI> libjarURIs = new LinkedList<>();
+      boolean foundFragment = false;
       for (String tmpjars : libjars) {
-        Path tmp = new Path(tmpjars);
+        URI tmpURI = null;
+        try {
+          tmpURI = new URI(tmpjars);
+        } catch (URISyntaxException e) {
+          throw new IllegalArgumentException("Error parsing libjars argument."
+              + " Argument must be a valid URI: " + tmpjars, e);
+        }
+        Path tmp = new Path(tmpURI);
         Path newPath =
             copyRemoteFiles(libjarsDir, tmp, conf, submitReplication);
-
-        // Add each file to the classpath
-        DistributedCache.addFileToClassPath(
-            new Path(newPath.toUri().getPath()), conf, jtFs, !useWildcard);
+        try {
+          URI pathURI = getPathURI(newPath, tmpURI.getFragment());
+          if (!foundFragment) {
+            foundFragment = pathURI.getFragment() != null;
+          }
+          DistributedCache.addFileToClassPath(new Path(pathURI.getPath()), conf,
+              jtFs, false);
+          libjarURIs.add(pathURI);
+        } catch (URISyntaxException ue) {
+          // should not throw a uri exception
+          throw new IOException(
+              "Failed to create a URI (URISyntaxException) for the remote path "
+                  + newPath + ". This was based on the libjar parameter: "
+                  + tmpjars,
+              ue);
+        }
       }
 
-      if (useWildcard) {
-        // Add the whole directory to the cache
+      if (useWildcard && !foundFragment) {
+        // Add the whole directory to the cache using a wild card
         Path libJarsDirWildcard =
             jtFs.makeQualified(new Path(libjarsDir, DistributedCache.WILDCARD));
-
         DistributedCache.addCacheFile(libJarsDirWildcard.toUri(), conf);
+      } else {
+        for (URI uri : libjarURIs) {
+          DistributedCache.addCacheFile(uri, conf);
+        }
       }
     }
   }
 
-  private void uploadArchives(Configuration conf, Collection<String> archives,
+  @VisibleForTesting
+  void uploadArchives(Configuration conf, Collection<String> archives,
       Path submitJobDir, FsPermission mapredSysPerms, short submitReplication)
       throws IOException {
     Path archivesDir = JobSubmissionFiles.getJobDistCacheArchives(submitJobDir);
     if (!archives.isEmpty()) {
-      FileSystem.mkdirs(jtFs, archivesDir, mapredSysPerms);
+      mkdirs(jtFs, archivesDir, mapredSysPerms);
       for (String tmpArchives : archives) {
         URI tmpURI;
         try {
           tmpURI = new URI(tmpArchives);
         } catch (URISyntaxException e) {
-          throw new IllegalArgumentException(e);
+          throw new IllegalArgumentException("Error parsing archives argument."
+              + " Argument must be a valid URI: " + tmpArchives, e);
         }
         Path tmp = new Path(tmpURI);
         Path newPath =
@@ -189,13 +225,18 @@ class JobResourceUploader {
           DistributedCache.addCacheArchive(pathURI, conf);
         } catch (URISyntaxException ue) {
           // should not throw an uri excpetion
-          throw new IOException("Failed to create uri for " + tmpArchives, ue);
+          throw new IOException(
+              "Failed to create a URI (URISyntaxException) for the remote path"
+                  + newPath + ". This was based on the archive parameter: "
+                  + tmpArchives,
+              ue);
         }
       }
     }
   }
 
-  private void uploadJobJar(Job job, String jobJar, Path submitJobDir,
+  @VisibleForTesting
+  void uploadJobJar(Job job, String jobJar, Path submitJobDir,
       short submitReplication) throws IOException {
     if (jobJar != null) { // copy jar to JobTracker's fs
       // use jar name if job is not named.
@@ -273,7 +314,8 @@ class JobResourceUploader {
       URI uri = new URI(s);
       return new Path(uri.getScheme(), uri.getAuthority(), uri.getPath());
     } catch (URISyntaxException e) {
-      throw new IllegalArgumentException(e);
+      throw new IllegalArgumentException(
+          "Error parsing argument." + " Argument must be a valid URI: " + s, e);
     }
   }
 
@@ -380,9 +422,20 @@ class JobResourceUploader {
     return status;
   }
 
+  /**
+   * Create a new directory in the passed filesystem. This wrapper method exists
+   * so that it can be overridden/stubbed during testing.
+   */
+  @VisibleForTesting
+  boolean mkdirs(FileSystem fs, Path dir, FsPermission permission)
+      throws IOException {
+    return FileSystem.mkdirs(fs, dir, permission);
+  }
+
   // copies a file to the jobtracker filesystem and returns the path where it
   // was copied to
-  private Path copyRemoteFiles(Path parentDir, Path originalPath,
+  @VisibleForTesting
+  Path copyRemoteFiles(Path parentDir, Path originalPath,
       Configuration conf, short replication) throws IOException {
     // check if we do not need to copy the files
     // is jt using the same file system.
@@ -400,10 +453,12 @@ class JobResourceUploader {
     Path newPath = new Path(parentDir, originalPath.getName());
     FileUtil.copy(remoteFs, originalPath, jtFs, newPath, false, conf);
     jtFs.setReplication(newPath, replication);
+    jtFs.makeQualified(newPath);
     return newPath;
   }
 
-  private void copyJar(Path originalJarPath, Path submitJarFile,
+  @VisibleForTesting
+  void copyJar(Path originalJarPath, Path submitJarFile,
       short replication) throws IOException {
     jtFs.copyFromLocalFile(originalJarPath, submitJarFile);
     jtFs.setReplication(submitJarFile, replication);
@@ -427,7 +482,7 @@ class JobResourceUploader {
     URI pathURI = destPath.toUri();
     if (pathURI.getFragment() == null) {
       if (fragment == null) {
-        pathURI = new URI(pathURI.toString() + "#" + destPath.getName());
+        // no fragment, just return existing pathURI from destPath
       } else {
         pathURI = new URI(pathURI.toString() + "#" + fragment);
       }
