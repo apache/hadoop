@@ -416,19 +416,13 @@ public class TestAppLogAggregatorImpl {
           logAggregationContext, context, lfs, -1, recoveredLogInitedTime);
       this.applicationId = appId;
       this.deletionService = deletionService;
-
-      this.logWriter = getSpiedLogWriter(conf, ugi, remoteNodeLogFileForApp);
+      this.logWriter = spy(new LogWriter());
       this.logValue = ArgumentCaptor.forClass(LogValue.class);
     }
 
     @Override
     protected LogWriter createLogWriter() {
       return this.logWriter;
-    }
-
-    private LogWriter getSpiedLogWriter(Configuration conf,
-        UserGroupInformation ugi, Path remoteAppLogFile) throws IOException {
-      return spy(new LogWriter(conf, remoteAppLogFile, ugi));
     }
   }
 }

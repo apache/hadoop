@@ -295,18 +295,18 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       }
     }
 
-    LogWriter writer = null;
+    if (pendingContainerInThisCycle.isEmpty()) {
+      sendLogAggregationReport(true, "", appFinished);
+      return;
+    }
+
+    logAggregationTimes++;
     String diagnosticMessage = "";
     boolean logAggregationSucceedInThisCycle = true;
-    try {
-      if (pendingContainerInThisCycle.isEmpty()) {
-        return;
-      }
-
-      logAggregationTimes++;
-
+    try (LogWriter writer = createLogWriter()) {
       try {
-        writer = createLogWriter();
+        writer.initialize(this.conf, this.remoteNodeTmpLogFileForApp,
+            this.userUgi);
         // Write ACLs once when the writer is created.
         writer.writeApplicationACLs(appAcls);
         writer.writeApplicationOwner(this.userUgi.getShortUserName());
@@ -351,11 +351,6 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         cleanupOldLogTimes++;
       }
 
-      if (writer != null) {
-        writer.close();
-        writer = null;
-      }
-
       long currentTime = System.currentTimeMillis();
       final Path renamedPath = this.rollingMonitorInterval <= 0
               ? remoteNodeLogFileForApp : new Path(
@@ -396,34 +391,37 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         logAggregationSucceedInThisCycle = false;
       }
     } finally {
-      LogAggregationStatus logAggregationStatus =
-          logAggregationSucceedInThisCycle
-              ? LogAggregationStatus.RUNNING
-              : LogAggregationStatus.RUNNING_WITH_FAILURE;
-      sendLogAggregationReport(logAggregationStatus, diagnosticMessage);
-      if (appFinished) {
-        // If the app is finished, one extra final report with log aggregation
-        // status SUCCEEDED/FAILED will be sent to RM to inform the RM
-        // that the log aggregation in this NM is completed.
-        LogAggregationStatus finalLogAggregationStatus =
-            renameTemporaryLogFileFailed || !logAggregationSucceedInThisCycle
-                ? LogAggregationStatus.FAILED
-                : LogAggregationStatus.SUCCEEDED;
-        sendLogAggregationReport(finalLogAggregationStatus, "");
-      }
-
-      if (writer != null) {
-        writer.close();
-      }
+      sendLogAggregationReport(logAggregationSucceedInThisCycle,
+          diagnosticMessage, appFinished);
     }
   }
 
-  protected LogWriter createLogWriter() throws IOException {
-    return new LogWriter(this.conf, this.remoteNodeTmpLogFileForApp,
-        this.userUgi);
+  @VisibleForTesting
+  protected LogWriter createLogWriter() {
+    return new LogWriter();
   }
 
   private void sendLogAggregationReport(
+      boolean logAggregationSucceedInThisCycle, String diagnosticMessage,
+      boolean appFinished) {
+    LogAggregationStatus logAggregationStatus =
+        logAggregationSucceedInThisCycle
+            ? LogAggregationStatus.RUNNING
+            : LogAggregationStatus.RUNNING_WITH_FAILURE;
+    sendLogAggregationReportInternal(logAggregationStatus, diagnosticMessage);
+    if (appFinished) {
+      // If the app is finished, one extra final report with log aggregation
+      // status SUCCEEDED/FAILED will be sent to RM to inform the RM
+      // that the log aggregation in this NM is completed.
+      LogAggregationStatus finalLogAggregationStatus =
+          renameTemporaryLogFileFailed || !logAggregationSucceedInThisCycle
+              ? LogAggregationStatus.FAILED
+              : LogAggregationStatus.SUCCEEDED;
+      sendLogAggregationReportInternal(finalLogAggregationStatus, "");
+    }
+  }
+
+  private void sendLogAggregationReportInternal(
       LogAggregationStatus logAggregationStatus, String diagnosticMessage) {
     LogAggregationReport report =
         Records.newRecord(LogAggregationReport.class);
