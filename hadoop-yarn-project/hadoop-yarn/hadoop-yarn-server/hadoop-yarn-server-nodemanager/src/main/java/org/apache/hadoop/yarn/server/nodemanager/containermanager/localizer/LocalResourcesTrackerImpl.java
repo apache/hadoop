@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceReleaseEvent;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 
 /**

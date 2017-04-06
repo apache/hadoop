@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
-import com.google.common.collect.Iterators;
-import com.google.common.util.concurrent.Uninterruptibles;
+import org.apache.hadoop.shaded.com.google.common.collect.Iterators;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;

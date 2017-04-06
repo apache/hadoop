@@ -41,7 +41,7 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.records.Applicati
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ContainerHistoryData;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 public class ApplicationHistoryManagerImpl extends AbstractService implements
     ApplicationHistoryManager {

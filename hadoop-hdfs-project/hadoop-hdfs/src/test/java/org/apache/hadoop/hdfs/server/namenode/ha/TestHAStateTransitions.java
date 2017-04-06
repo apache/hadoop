@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import com.google.common.util.concurrent.Uninterruptibles;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;

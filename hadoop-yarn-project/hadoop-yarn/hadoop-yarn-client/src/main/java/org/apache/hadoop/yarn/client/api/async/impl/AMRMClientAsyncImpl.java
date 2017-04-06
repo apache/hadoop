@@ -50,7 +50,7 @@ import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 @Private
 @Unstable

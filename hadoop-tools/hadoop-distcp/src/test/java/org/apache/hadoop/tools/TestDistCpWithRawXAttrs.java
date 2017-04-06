@@ -32,7 +32,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.common.collect.Maps;
+import org.apache.hadoop.shaded.com.google.common.collect.Maps;
 
 /**
  * Tests distcp in combination with HDFS raw.* XAttrs.

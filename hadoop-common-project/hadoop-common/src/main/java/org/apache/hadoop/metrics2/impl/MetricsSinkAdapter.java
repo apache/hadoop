@@ -22,7 +22,7 @@ import java.io.Closeable;
 import java.util.Random;
 import java.util.concurrent.*;
 
-import static com.google.common.base.Preconditions.*;
+import static org.apache.hadoop.shaded.com.google.common.base.Preconditions.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

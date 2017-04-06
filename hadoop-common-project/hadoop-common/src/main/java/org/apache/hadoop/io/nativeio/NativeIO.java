@@ -45,7 +45,7 @@ import org.apache.commons.logging.LogFactory;
 
 import sun.misc.Unsafe;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * JNI wrappers for various native IO-related calls not available in Java.

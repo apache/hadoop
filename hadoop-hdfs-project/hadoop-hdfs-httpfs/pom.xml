@@ -72,8 +72,8 @@
       <artifactId>javax.servlet-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-shaded-thirdparty</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>

@@ -65,8 +65,8 @@ import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableSet;
 
 public class TestApplicationLimitsByPartition {
   final static int GB = 1024;

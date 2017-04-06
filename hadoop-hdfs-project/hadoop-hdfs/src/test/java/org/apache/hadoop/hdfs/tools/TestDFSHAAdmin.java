@@ -48,8 +48,8 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Joiner;
+import org.apache.hadoop.shaded.com.google.common.base.Charsets;
+import org.apache.hadoop.shaded.com.google.common.base.Joiner;
 
 public class TestDFSHAAdmin {
   private static final Log LOG = LogFactory.getLog(TestDFSHAAdmin.class);

@@ -41,8 +41,8 @@ import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableMap;
 
 /**
  * A command-line tool for making calls in the HAServiceProtocol.

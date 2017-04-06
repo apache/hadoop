@@ -91,8 +91,8 @@ import org.junit.Test;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 
-import com.google.common.base.Supplier;
-import com.google.common.primitives.Ints;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.primitives.Ints;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY;
 

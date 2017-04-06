@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.UnmodifiableIterator;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Collections2;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.collect.HashMultimap;
+import org.apache.hadoop.shaded.com.google.common.collect.Multimap;
+import org.apache.hadoop.shaded.com.google.common.collect.UnmodifiableIterator;
+import org.apache.hadoop.shaded.com.google.common.collect.Iterables;
+import org.apache.hadoop.shaded.com.google.common.collect.Collections2;
+import org.apache.hadoop.shaded.com.google.common.base.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +42,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.base.Predicate;
 
 import org.apache.hadoop.hdfs.util.CombinedHostsFileReader;
 

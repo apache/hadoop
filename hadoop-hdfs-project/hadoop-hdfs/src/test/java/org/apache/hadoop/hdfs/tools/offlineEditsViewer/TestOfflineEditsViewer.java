@@ -47,7 +47,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableSet;
 
 public class TestOfflineEditsViewer {
   private static final Log LOG = LogFactory

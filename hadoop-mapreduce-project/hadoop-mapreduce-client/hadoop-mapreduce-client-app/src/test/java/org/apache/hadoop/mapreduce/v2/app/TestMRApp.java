@@ -28,7 +28,7 @@ import java.util.Iterator;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 

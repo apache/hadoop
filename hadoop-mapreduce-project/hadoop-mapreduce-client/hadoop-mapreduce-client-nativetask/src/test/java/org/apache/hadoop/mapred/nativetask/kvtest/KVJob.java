@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 
-import com.google.common.primitives.Longs;
+import org.apache.hadoop.shaded.com.google.common.primitives.Longs;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

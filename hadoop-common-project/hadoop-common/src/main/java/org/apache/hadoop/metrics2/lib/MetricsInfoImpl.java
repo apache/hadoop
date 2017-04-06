@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import com.google.common.base.Objects;
+import org.apache.hadoop.shaded.com.google.common.base.Objects;
 import org.apache.hadoop.metrics2.MetricsInfo;
 
 import java.util.StringJoiner;

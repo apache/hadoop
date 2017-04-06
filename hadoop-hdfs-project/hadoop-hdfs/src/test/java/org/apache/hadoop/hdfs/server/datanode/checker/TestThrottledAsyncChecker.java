@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Supplier;
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.shaded.com.google.common.base.Optional;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.FakeTimer;
 import org.junit.Test;

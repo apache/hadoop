@@ -61,7 +61,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 
-import com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
 
 /** 
  * Utilities used in unit test.

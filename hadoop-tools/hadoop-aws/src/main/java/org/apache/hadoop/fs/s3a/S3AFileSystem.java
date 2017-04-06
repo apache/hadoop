@@ -65,9 +65,9 @@ import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.event.ProgressEvent;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.ListeningExecutorService;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;

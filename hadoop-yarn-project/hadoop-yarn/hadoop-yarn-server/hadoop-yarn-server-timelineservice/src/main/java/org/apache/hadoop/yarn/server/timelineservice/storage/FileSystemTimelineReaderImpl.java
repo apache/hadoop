@@ -53,7 +53,7 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContex
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  *  File System based implementation for TimelineReader. This implementation may

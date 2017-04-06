@@ -50,8 +50,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.sharedcache.SharedCacheUtil;
 import org.apache.hadoop.yarn.server.sharedcachemanager.AppChecker;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A thread safe version of an in-memory SCM store. The thread safety is

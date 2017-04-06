@@ -35,7 +35,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
 import org.apache.hadoop.yarn.server.sharedcachemanager.webapp.SCMWebServer;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This service maintains the shared cache meta data. It handles claiming and

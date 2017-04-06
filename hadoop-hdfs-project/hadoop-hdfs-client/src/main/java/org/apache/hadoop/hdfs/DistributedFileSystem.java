@@ -98,8 +98,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringUtils;
 
 import javax.annotation.Nonnull;

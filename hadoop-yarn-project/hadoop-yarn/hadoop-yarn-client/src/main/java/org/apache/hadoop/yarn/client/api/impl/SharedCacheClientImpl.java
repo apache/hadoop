@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.sharedcache.SharedCacheChecksum;
 import org.apache.hadoop.yarn.sharedcache.SharedCacheChecksumFactory;
 import org.apache.hadoop.yarn.util.Records;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * An implementation of the SharedCacheClient API.

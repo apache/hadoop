@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
 
 import java.util.HashSet;
 import java.util.Map;

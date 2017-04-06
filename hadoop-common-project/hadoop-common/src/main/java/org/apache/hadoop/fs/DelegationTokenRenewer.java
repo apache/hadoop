@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;

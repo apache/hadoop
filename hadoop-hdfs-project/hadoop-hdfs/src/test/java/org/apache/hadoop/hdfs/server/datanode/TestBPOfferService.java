@@ -76,9 +76,9 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.collect.Maps;
 
 public class TestBPOfferService {
 

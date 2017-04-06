@@ -56,10 +56,10 @@ import org.apache.hadoop.security.SaslRpcServer.QualityOfProtection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
-import com.google.common.net.InetAddresses;
+import org.apache.hadoop.shaded.com.google.common.base.Charsets;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.shaded.com.google.common.collect.Maps;
+import org.apache.hadoop.shaded.com.google.common.net.InetAddresses;
 import com.google.protobuf.ByteString;
 
 /**

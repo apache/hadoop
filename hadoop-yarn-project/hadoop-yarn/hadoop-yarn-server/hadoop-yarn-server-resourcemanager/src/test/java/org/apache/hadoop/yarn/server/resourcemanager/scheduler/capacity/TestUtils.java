@@ -66,7 +66,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.shaded.com.google.common.collect.Sets;
 import org.apache.hadoop.yarn.event.Event;
 
 public class TestUtils {

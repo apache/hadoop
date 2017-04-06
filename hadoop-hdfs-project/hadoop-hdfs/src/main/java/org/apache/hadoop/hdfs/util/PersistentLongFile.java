@@ -28,7 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.IOUtils;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.shaded.com.google.common.base.Charsets;
 
 /**
  * Class that represents a file on disk which persistently stores

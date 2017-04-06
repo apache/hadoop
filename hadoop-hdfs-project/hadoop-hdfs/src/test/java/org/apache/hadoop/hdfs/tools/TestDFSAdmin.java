@@ -23,8 +23,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAUL
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
 
 import org.apache.commons.lang.text.StrBuilder;
 import org.apache.commons.logging.Log;

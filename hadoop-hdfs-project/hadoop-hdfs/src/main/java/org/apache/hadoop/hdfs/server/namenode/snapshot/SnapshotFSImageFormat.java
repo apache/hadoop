@@ -41,7 +41,7 @@ import org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
 
 /**
  * A helper class defining static methods for reading/writing snapshot related

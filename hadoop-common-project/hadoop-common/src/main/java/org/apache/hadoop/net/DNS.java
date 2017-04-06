@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.net;
 
-import com.google.common.net.InetAddresses;
+import org.apache.hadoop.shaded.com.google.common.net.InetAddresses;
 import com.sun.istack.Nullable;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

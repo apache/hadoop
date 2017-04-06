@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.test;
 
-import static com.google.common.base.Preconditions.*;
+import static org.apache.hadoop.shaded.com.google.common.base.Preconditions.*;
 
 import org.hamcrest.Description;
 import org.junit.Assert;

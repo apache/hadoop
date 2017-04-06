@@ -50,8 +50,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 
 /**

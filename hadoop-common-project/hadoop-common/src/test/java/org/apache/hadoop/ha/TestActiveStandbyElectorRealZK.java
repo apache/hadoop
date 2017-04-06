@@ -36,7 +36,7 @@ import org.junit.Test;
 import org.mockito.AdditionalMatchers;
 import org.mockito.Mockito;
 
-import com.google.common.primitives.Ints;
+import org.apache.hadoop.shaded.com.google.common.primitives.Ints;
 
 /**
  * Test for {@link ActiveStandbyElector} using real zookeeper.

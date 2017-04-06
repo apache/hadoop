@@ -76,8 +76,8 @@ import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.ResourceSta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenIdentifier;
 import org.apache.hadoop.yarn.util.FSDownload;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import static org.apache.hadoop.util.Shell.getAllShells;
 

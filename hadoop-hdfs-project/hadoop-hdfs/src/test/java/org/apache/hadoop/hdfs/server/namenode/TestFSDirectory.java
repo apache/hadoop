@@ -27,7 +27,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -47,7 +47,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.api.records;
 
-import com.google.common.base.Splitter;
+import org.apache.hadoop.shaded.com.google.common.base.Splitter;
 
 import java.text.NumberFormat;
 import java.util.Iterator;

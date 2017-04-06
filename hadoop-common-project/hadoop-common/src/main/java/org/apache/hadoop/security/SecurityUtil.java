@@ -56,7 +56,7 @@ import org.apache.hadoop.util.StringUtils;
 import sun.net.dns.ResolverConfiguration;
 import sun.net.util.IPAddressUtil;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Security Utils.

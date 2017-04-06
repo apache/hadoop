@@ -42,7 +42,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.shaded.com.google.common.collect.Sets;
 
 public class TestHdfsAdmin {
   

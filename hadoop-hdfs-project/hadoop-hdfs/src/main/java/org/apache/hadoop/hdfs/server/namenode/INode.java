@@ -23,8 +23,8 @@ import java.io.StringWriter;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.shaded.com.google.common.collect.Maps;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -45,8 +45,8 @@ import org.apache.hadoop.hdfs.util.Diff;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
 
 /**
  * We keep an in-memory representation of the file/block hierarchy.

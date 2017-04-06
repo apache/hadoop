@@ -30,8 +30,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.net.util.SubnetUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.net.InetAddresses;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.net.InetAddresses;
 
 /**
  * Container class which holds a list of ip/host addresses and 

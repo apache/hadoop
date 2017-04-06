@@ -78,9 +78,9 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
-import com.google.common.collect.HashMultimap;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.collect.HashMultimap;
 
 @NotThreadSafe
 public class TestShortCircuitCache {

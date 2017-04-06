@@ -52,7 +52,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.shaded.com.google.common.base.Charsets;
 
 /**
  * A map/reduce program that uses Bailey-Borwein-Plouffe to compute exact 

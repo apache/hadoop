@@ -58,9 +58,9 @@ import org.junit.Assume;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Supplier;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.shaded.com.google.common.base.Joiner;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.collect.Sets;
 
 /**
  * Test provides some very generic helpers which might be used across the tests

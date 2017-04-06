@@ -36,7 +36,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.util.Daemon;
 import org.junit.Assert;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
 import org.mockito.internal.util.reflection.Whitebox;
 
 public class BlockManagerTestUtil {

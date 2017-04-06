@@ -42,7 +42,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRo
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityTable;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
 
 /**
  * Timeline entity reader for flow activity entities that are stored in the

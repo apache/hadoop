@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.log4j.*;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 import java.io.File;
 import java.io.IOException;

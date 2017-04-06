@@ -21,8 +21,8 @@ package org.apache.hadoop.metrics2.lib;
 import java.lang.reflect.Method;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.*;
-import com.google.common.collect.Sets;
+import static org.apache.hadoop.shaded.com.google.common.base.Preconditions.*;
+import org.apache.hadoop.shaded.com.google.common.collect.Sets;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

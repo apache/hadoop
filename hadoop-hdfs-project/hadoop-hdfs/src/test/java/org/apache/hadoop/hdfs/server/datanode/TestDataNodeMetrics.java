@@ -29,8 +29,8 @@ import java.lang.management.ManagementFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.List;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
 
 import net.jcip.annotations.NotThreadSafe;
 import org.apache.commons.logging.Log;

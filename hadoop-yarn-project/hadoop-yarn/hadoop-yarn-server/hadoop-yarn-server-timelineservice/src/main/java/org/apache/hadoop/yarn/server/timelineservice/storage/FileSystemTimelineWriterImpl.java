@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse.
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This implements a local file based backend for storing application timeline

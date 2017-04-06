@@ -35,7 +35,7 @@ import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 @InterfaceAudience.LimitedPrivate({"YARN", "MAPREDUCE"})
 public class RackResolver {

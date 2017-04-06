@@ -32,8 +32,8 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Joiner;
+import org.apache.hadoop.shaded.com.google.common.base.Charsets;
+import org.apache.hadoop.shaded.com.google.common.base.Joiner;
 
 public class TestHAAdmin {
   private static final Log LOG = LogFactory.getLog(TestHAAdmin.class);

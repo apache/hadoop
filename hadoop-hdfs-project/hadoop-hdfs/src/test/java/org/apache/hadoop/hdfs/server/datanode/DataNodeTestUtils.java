@@ -41,7 +41,7 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
 
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;

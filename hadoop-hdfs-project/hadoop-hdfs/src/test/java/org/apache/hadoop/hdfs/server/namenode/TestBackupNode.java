@@ -56,10 +56,10 @@ import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
 
 public class TestBackupNode {
   public static final Log LOG = LogFactory.getLog(TestBackupNode.class);

@@ -43,7 +43,7 @@ import org.apache.hadoop.fs.ReadOption;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.io.ByteBufferPool;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
 
 /**
  * CryptoInputStream decrypts data. It is not thread-safe. AES CTR mode is

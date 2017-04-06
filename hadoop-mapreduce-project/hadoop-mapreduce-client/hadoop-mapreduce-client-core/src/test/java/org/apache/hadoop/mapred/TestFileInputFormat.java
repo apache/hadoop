@@ -43,7 +43,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
 
 @RunWith(value = Parameterized.class)
 public class TestFileInputFormat {

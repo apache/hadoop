@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertTrue;
 
-import com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.server.MiniKMS;
 import org.apache.hadoop.security.Credentials;

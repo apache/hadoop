@@ -61,8 +61,8 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.util.LimitInputStream;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.util.VersionInfo;
 
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_MASK;

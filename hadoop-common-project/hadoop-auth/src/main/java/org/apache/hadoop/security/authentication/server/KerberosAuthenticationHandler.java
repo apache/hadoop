@@ -49,7 +49,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import com.google.common.collect.HashMultimap;
+import org.apache.hadoop.shaded.com.google.common.collect.HashMultimap;
 
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 

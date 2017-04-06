@@ -58,8 +58,8 @@ import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 import org.xml.sax.SAXException;
 
-import com.google.common.base.CharMatcher;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.base.CharMatcher;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 @Public
 @Unstable

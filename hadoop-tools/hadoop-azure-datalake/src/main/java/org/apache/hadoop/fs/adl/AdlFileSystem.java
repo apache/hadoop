@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 import com.microsoft.azure.datalake.store.ADLStoreClient;
 import com.microsoft.azure.datalake.store.ADLStoreOptions;
 import com.microsoft.azure.datalake.store.DirectoryEntry;

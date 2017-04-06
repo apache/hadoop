@@ -51,7 +51,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ReservationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
 
-import com.google.common.base.CharMatcher;
+import org.apache.hadoop.shaded.com.google.common.base.CharMatcher;
 import com.google.protobuf.TextFormat;
 
 @Private

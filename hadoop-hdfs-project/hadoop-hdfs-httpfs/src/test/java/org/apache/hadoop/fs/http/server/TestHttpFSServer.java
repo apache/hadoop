@@ -66,7 +66,7 @@ import org.junit.Test;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.webapp.WebAppContext;
 
-import com.google.common.collect.Maps;
+import org.apache.hadoop.shaded.com.google.common.collect.Maps;
 import java.util.Properties;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 

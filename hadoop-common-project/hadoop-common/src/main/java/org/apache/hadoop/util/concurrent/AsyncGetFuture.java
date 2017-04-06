@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.util.concurrent;
 
-import com.google.common.util.concurrent.AbstractFuture;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.AbstractFuture;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

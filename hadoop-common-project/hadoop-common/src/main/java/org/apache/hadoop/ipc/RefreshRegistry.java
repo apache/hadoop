@@ -20,9 +20,9 @@ package org.apache.hadoop.ipc;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
+import org.apache.hadoop.shaded.com.google.common.base.Joiner;
+import org.apache.hadoop.shaded.com.google.common.collect.HashMultimap;
+import org.apache.hadoop.shaded.com.google.common.collect.Multimap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

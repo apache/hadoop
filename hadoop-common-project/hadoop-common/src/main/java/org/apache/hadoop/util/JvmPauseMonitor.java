@@ -30,11 +30,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.shaded.com.google.common.base.Joiner;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.collect.Maps;
+import org.apache.hadoop.shaded.com.google.common.collect.Sets;
 
 /**
  * Class which sets up a simple thread which runs in a loop sleeping

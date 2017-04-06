@@ -37,7 +37,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableList;
 import org.mockito.internal.util.reflection.Whitebox;
 
 /**

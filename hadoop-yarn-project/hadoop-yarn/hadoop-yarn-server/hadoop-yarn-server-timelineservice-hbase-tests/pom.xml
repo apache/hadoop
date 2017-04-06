@@ -139,9 +139,8 @@
     </dependency>
 
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>${hbase-compatible-guava.version}</version>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-shaded-thirdparty</artifactId>
       <scope>test</scope>
     </dependency>
 

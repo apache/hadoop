@@ -297,12 +297,12 @@ import org.apache.log4j.AsyncAppender;
 import org.apache.log4j.Logger;
 import org.eclipse.jetty.util.ajax.JSON;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.base.Charsets;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * FSNamesystem is a container of both transient

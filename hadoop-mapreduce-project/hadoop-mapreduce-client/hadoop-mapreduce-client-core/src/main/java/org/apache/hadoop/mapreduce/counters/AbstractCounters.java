@@ -42,9 +42,9 @@ import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.util.StringInterner;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.shaded.com.google.common.collect.Iterables;
+import org.apache.hadoop.shaded.com.google.common.collect.Iterators;
+import org.apache.hadoop.shaded.com.google.common.collect.Maps;
 
 /**
  * An abstract class to provide common implementation for the Counters

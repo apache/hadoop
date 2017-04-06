@@ -35,8 +35,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsRequestProtoOrBuilder;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
+import org.apache.hadoop.shaded.com.google.common.base.Function;
+import org.apache.hadoop.shaded.com.google.common.collect.Iterables;
 import com.google.protobuf.TextFormat;
 
 @Private

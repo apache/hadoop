@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.Test;
 
-import com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
 
 @SuppressWarnings({ "unchecked", "rawtypes" })
 public class TestSpeculativeExecutionWithMRApp {

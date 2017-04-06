@@ -52,9 +52,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.base.Charsets;
-import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Ints;
+import org.apache.hadoop.shaded.com.google.common.base.Charsets;
+import org.apache.hadoop.shaded.com.google.common.primitives.Bytes;
+import org.apache.hadoop.shaded.com.google.common.primitives.Ints;
 
 
 public class TestJournalNode {

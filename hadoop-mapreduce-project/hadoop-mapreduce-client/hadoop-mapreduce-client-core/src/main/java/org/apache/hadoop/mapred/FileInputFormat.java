@@ -49,7 +49,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.collect.Iterables;
+import org.apache.hadoop.shaded.com.google.common.collect.Iterables;
 
 /** 
  * A base class for file-based {@link InputFormat}.

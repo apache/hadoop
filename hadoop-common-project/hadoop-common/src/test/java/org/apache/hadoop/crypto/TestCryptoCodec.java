@@ -45,7 +45,7 @@ import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.primitives.Longs;
+import org.apache.hadoop.shaded.com.google.common.primitives.Longs;
 
 public class TestCryptoCodec {
   private static final Log LOG= LogFactory.getLog(TestCryptoCodec.class);

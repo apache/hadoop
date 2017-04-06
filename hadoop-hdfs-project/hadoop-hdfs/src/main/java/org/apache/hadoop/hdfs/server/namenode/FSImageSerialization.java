@@ -49,7 +49,7 @@ import org.apache.hadoop.io.WritableUtils;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
 
 /**
  * Static utility functions for serializing various pieces of data in the correct

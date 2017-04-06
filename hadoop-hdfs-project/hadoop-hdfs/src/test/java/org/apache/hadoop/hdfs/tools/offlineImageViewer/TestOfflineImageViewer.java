@@ -57,7 +57,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
-import com.google.common.io.Files;
+import org.apache.hadoop.shaded.com.google.common.io.Files;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.NullOutputStream;
@@ -98,8 +98,8 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.collect.Maps;
 
 public class TestOfflineImageViewer {
   private static final Log LOG = LogFactory.getLog(OfflineImageViewerPB.class);

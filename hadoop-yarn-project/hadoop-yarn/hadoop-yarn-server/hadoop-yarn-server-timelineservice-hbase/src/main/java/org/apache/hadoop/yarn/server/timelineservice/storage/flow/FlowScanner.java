@@ -51,7 +51,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimestampGenerator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ValueConverter;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Invoked via the coprocessor when a Get or a Scan is issued for flow run

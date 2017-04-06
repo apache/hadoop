@@ -44,7 +44,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import com.google.common.io.Files;
+import org.apache.hadoop.shaded.com.google.common.io.Files;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -95,12 +95,12 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.primitives.Ints;
+import org.apache.hadoop.shaded.com.google.common.base.Joiner;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.primitives.Ints;
 
 /**
  * This class tests the creation and validation of a checkpoint.

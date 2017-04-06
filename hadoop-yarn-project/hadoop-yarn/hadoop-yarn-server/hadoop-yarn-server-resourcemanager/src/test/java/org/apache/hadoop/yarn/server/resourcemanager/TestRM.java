@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.junit.Before;

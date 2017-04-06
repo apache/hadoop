@@ -19,7 +19,7 @@ package org.apache.hadoop.mapred.nativetask;
 
 import java.io.IOException;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.shaded.com.google.common.base.Charsets;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

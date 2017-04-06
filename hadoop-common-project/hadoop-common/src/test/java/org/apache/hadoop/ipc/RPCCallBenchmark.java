@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.ipc;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.shaded.com.google.common.base.Joiner;
 import com.google.protobuf.BlockingService;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;

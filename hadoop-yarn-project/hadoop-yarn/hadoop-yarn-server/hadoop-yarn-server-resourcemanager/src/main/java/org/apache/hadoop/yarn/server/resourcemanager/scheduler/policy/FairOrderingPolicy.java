@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy;
 import java.util.*;
 import java.util.concurrent.ConcurrentSkipListSet;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;

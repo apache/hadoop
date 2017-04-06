@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.shaded.com.google.common.collect.Sets;
 
 public class TestQueueManager {
   private FairSchedulerConfiguration conf;

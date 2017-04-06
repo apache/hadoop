@@ -30,7 +30,7 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Arrays;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -64,7 +64,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.shaded.com.google.common.base.Charsets;
 
 /**
  * Interprets the map reduce cli options 

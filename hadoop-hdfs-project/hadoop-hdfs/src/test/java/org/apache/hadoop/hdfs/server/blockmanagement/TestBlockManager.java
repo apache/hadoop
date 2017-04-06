@@ -109,10 +109,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.LinkedListMultimap;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.base.Joiner;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.shaded.com.google.common.collect.LinkedListMultimap;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
 
 public class TestBlockManager {
   private DatanodeStorageInfo[] storages;

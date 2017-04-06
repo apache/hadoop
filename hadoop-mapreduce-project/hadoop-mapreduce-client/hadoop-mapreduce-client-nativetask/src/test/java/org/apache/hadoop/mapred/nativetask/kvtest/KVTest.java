@@ -42,8 +42,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.base.Splitter;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
 
 @RunWith(Parameterized.class)
 public class KVTest {

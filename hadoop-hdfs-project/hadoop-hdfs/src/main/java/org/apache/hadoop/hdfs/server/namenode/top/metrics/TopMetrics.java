@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.top.metrics;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;

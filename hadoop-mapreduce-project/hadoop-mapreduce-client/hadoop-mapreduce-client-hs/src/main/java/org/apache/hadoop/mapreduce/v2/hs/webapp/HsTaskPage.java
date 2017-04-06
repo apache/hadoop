@@ -48,7 +48,7 @@ import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
 import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.InputType;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.shaded.com.google.common.base.Joiner;
 import com.google.inject.Inject;
 
 /**

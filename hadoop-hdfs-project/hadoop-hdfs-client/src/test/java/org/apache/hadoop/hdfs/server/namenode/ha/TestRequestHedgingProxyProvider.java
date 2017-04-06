@@ -47,7 +47,7 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
 
 public class TestRequestHedgingProxyProvider {
 

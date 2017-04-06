@@ -28,7 +28,7 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,8 +39,8 @@ import org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager;
 import org.apache.hadoop.hdfs.qjournal.server.JournalNode;
 import org.apache.hadoop.net.NetUtils;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.base.Joiner;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.test.GenericTestUtils;
 
 public class MiniJournalCluster {

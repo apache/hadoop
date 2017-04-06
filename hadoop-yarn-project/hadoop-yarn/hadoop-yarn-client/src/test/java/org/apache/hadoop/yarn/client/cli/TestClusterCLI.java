@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableSet;
 
 public class TestClusterCLI {
   ByteArrayOutputStream sysOutStream;

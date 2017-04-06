@@ -21,7 +21,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.shaded.com.google.common.base.Charsets;
 
 /**
  * TextWriterImageProcessor mixes in the ability for ImageVisitor

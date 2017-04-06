@@ -28,7 +28,7 @@ import org.apache.hadoop.http.FilterInitializer;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 public class AmFilterInitializer extends FilterInitializer {
   private static final String FILTER_NAME = "AM_PROXY_FILTER";

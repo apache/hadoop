@@ -37,7 +37,7 @@ import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.shaded.com.google.common.collect.Sets;
 
 public class TestLoadBalancingKMSClientProvider {
 

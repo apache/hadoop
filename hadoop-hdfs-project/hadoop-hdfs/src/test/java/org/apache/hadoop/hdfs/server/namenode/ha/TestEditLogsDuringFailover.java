@@ -43,8 +43,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.base.Joiner;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
 
 /**
  * Test cases for the handling of edit logs during failover

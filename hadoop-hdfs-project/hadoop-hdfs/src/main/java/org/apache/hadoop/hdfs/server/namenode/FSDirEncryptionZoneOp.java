@@ -48,8 +48,8 @@ import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.security.SecurityUtil;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
 import com.google.protobuf.InvalidProtocolBufferException;
 import static org.apache.hadoop.util.Time.monotonicNow;
 

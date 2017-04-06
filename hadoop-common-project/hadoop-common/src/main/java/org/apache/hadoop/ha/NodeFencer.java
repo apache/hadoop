@@ -29,8 +29,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
 
 /**
  * This class parses the configured list of fencing methods, and

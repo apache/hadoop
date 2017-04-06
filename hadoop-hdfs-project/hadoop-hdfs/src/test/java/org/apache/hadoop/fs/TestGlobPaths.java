@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
-import com.google.common.collect.Ordering;
+import org.apache.hadoop.shaded.com.google.common.collect.Ordering;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;

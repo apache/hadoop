@@ -121,7 +121,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.xml.sax.SAXException;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.shaded.com.google.common.collect.Sets;
 
 @SuppressWarnings("unchecked")
 public class TestFairScheduler extends FairSchedulerTestBase {

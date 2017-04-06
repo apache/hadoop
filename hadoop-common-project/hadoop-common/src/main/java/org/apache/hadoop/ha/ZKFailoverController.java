@@ -53,9 +53,9 @@ import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.data.ACL;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 @InterfaceAudience.LimitedPrivate("HDFS")
 public abstract class ZKFailoverController {

@@ -31,7 +31,7 @@ import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Interface for a remote log which is only communicated with asynchronously.

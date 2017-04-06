@@ -50,7 +50,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNod
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RemoveFromClusterNodeLabelsRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.ReplaceLabelsOnNodeRequestPBImpl;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.shaded.com.google.common.collect.Sets;
 
 public class FileSystemNodeLabelsStore extends NodeLabelsStore {
   protected static final Log LOG = LogFactory.getLog(FileSystemNodeLabelsStore.class);

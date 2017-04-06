@@ -34,8 +34,8 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.util.ResourceBundles;
 
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.Iterators;
+import org.apache.hadoop.shaded.com.google.common.collect.AbstractIterator;
+import org.apache.hadoop.shaded.com.google.common.collect.Iterators;
 
 /**
  * An abstract class to provide common implementation for the framework

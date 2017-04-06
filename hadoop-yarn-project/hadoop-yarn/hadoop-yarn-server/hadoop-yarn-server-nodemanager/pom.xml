@@ -84,8 +84,8 @@
       <artifactId>jetty-util</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-shaded-thirdparty</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-logging</groupId>

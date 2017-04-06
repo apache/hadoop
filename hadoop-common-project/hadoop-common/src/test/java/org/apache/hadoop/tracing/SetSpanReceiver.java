@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.tracing;
 
-import com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.htrace.core.Span;
 import org.apache.htrace.core.SpanId;

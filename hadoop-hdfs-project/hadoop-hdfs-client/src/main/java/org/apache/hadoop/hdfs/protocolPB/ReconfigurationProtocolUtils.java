@@ -25,8 +25,8 @@ import org.apache.hadoop.conf.ReconfigurationUtil.PropertyChange;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.GetReconfigurationStatusConfigChangeProto;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.GetReconfigurationStatusResponseProto;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.shaded.com.google.common.base.Optional;
+import org.apache.hadoop.shaded.com.google.common.collect.Maps;
 
 /**
  * This is a client side utility class that handles

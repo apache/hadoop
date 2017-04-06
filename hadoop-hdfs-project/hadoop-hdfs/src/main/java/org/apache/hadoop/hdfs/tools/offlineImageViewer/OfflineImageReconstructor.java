@@ -49,8 +49,8 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 
-import com.google.common.io.CountingOutputStream;
-import com.google.common.primitives.Ints;
+import org.apache.hadoop.shaded.com.google.common.io.CountingOutputStream;
+import org.apache.hadoop.shaded.com.google.common.primitives.Ints;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.TextFormat;
 

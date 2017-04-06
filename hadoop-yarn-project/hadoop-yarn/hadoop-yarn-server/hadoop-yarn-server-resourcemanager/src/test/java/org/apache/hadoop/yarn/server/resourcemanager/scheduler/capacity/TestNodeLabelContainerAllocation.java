@@ -63,9 +63,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.shaded.com.google.common.collect.Sets;
 
 public class TestNodeLabelContainerAllocation {
   private final int GB = 1024;

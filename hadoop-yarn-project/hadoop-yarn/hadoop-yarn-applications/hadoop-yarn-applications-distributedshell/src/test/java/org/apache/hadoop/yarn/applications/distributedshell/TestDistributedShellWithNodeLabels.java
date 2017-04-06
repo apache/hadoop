@@ -33,7 +33,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableMap;
 
 public class TestDistributedShellWithNodeLabels {
   private static final Log LOG =

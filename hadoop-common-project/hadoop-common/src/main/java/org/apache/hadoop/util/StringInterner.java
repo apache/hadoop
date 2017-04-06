@@ -21,8 +21,8 @@ package org.apache.hadoop.util;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import com.google.common.collect.Interner;
-import com.google.common.collect.Interners;
+import org.apache.hadoop.shaded.com.google.common.collect.Interner;
+import org.apache.hadoop.shaded.com.google.common.collect.Interners;
 
 /**
  * Provides equivalent behavior to String.intern() to optimize performance, 

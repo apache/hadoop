@@ -20,10 +20,10 @@ package org.apache.hadoop.hdfs.server.datanode.checker;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.shaded.com.google.common.base.Optional;
+import org.apache.hadoop.shaded.com.google.common.collect.Maps;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;

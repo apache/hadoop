@@ -150,6 +150,13 @@
                       <exclude>commons-logging:commons-logging</exclude>
                       <!-- Leave log4j unshaded so downstream users can configure logging. -->
                       <exclude>log4j:log4j</exclude>
+                      <!-- Guava, which is included in hadoop-shaded-thirdparty, is excepted
+                             from relocation. It's for enabling us to use Apache Curator.
+                             For more detail, please check the technical note and
+                             hadoop-shaded-thirdparty/pom.xml.
+                             https://cwiki.apache.org/confluence/display/CURATOR/TN13
+                              -->
+                      <exclude>com.google.guava:guava</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
@@ -213,6 +220,7 @@
                         <exclude>org/w3c/dom/*</exclude>
                         <exclude>org/w3c/dom/**/*</exclude>
                         <exclude>org/xml/sax/*</exclude>
+
                         <exclude>org/xml/sax/**/*</exclude>
                       </excludes>
                     </relocation>

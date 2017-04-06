@@ -59,8 +59,8 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
 import org.jboss.netty.channel.Channel;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
 
 /**
  * OpenFileCtx saves the context of one HDFS file output stream. Access to it is

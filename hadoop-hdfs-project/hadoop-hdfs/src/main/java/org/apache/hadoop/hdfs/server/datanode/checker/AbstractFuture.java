@@ -20,12 +20,12 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
-import com.google.common.annotations.Beta;
-import com.google.common.annotations.GwtCompatible;
-import com.google.common.base.Preconditions;
-import static com.google.common.base.Preconditions.checkNotNull;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.Uninterruptibles;
+import org.apache.hadoop.shaded.com.google.common.annotations.Beta;
+import org.apache.hadoop.shaded.com.google.common.annotations.GwtCompatible;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
+import static org.apache.hadoop.shaded.com.google.common.base.Preconditions.checkNotNull;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.Uninterruptibles;
 import static java.util.concurrent.atomic.AtomicReferenceFieldUpdater
     .newUpdater;
 

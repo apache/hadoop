@@ -26,7 +26,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.GetRe
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.GetReconfigurationStatusResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ListReconfigurablePropertiesResponseProto;
 
-import com.google.common.base.Optional;
+import org.apache.hadoop.shaded.com.google.common.base.Optional;
 
 /**
  * This is a server side utility class that handles

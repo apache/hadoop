@@ -90,8 +90,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.eclipse.jetty.util.log.Log;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.shaded.com.google.common.collect.Sets;
 
 public class TestYarnCLI {
 

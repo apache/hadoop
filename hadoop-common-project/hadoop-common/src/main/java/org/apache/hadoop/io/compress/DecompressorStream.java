@@ -22,7 +22,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 

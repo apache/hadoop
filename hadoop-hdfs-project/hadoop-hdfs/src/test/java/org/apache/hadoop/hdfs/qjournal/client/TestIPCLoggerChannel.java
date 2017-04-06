@@ -40,7 +40,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
 
 public class TestIPCLoggerChannel {
   private static final Log LOG = LogFactory.getLog(

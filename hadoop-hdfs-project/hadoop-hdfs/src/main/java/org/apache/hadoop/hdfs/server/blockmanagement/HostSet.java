@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import com.google.common.base.Function;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.UnmodifiableIterator;
+import org.apache.hadoop.shaded.com.google.common.base.Function;
+import org.apache.hadoop.shaded.com.google.common.base.Joiner;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.collect.HashMultimap;
+import org.apache.hadoop.shaded.com.google.common.collect.Iterators;
+import org.apache.hadoop.shaded.com.google.common.collect.Multimap;
+import org.apache.hadoop.shaded.com.google.common.collect.UnmodifiableIterator;
 
 import javax.annotation.Nullable;
 import java.net.InetAddress;

@@ -50,10 +50,10 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.util.concurrent.Futures;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.cache.CacheLoader;
+import org.apache.hadoop.shaded.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.Futures;
 
 /**
  * Download a single URL to the local disk.

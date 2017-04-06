@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.registry.client.api;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.ServiceStateException;

@@ -62,7 +62,7 @@ import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.util.concurrent.Uninterruptibles;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.Uninterruptibles;
 
 public class TestBlockReaderFactory {
   static final Log LOG = LogFactory.getLog(TestBlockReaderFactory.class);

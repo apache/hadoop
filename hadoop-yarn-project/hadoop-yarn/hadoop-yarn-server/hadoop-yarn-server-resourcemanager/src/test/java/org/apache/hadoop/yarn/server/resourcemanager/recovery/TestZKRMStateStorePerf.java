@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-import com.google.common.base.Optional;
+import org.apache.hadoop.shaded.com.google.common.base.Optional;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;

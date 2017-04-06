@@ -28,8 +28,8 @@ import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.util.List;
 
-import com.google.common.io.ByteArrayDataOutput;
-import com.google.common.io.ByteStreams;
+import org.apache.hadoop.shaded.com.google.common.io.ByteArrayDataOutput;
+import org.apache.hadoop.shaded.com.google.common.io.ByteStreams;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -72,8 +72,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.PerformanceAdvisory;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
 import org.apache.htrace.core.Tracer;
 
 import org.slf4j.Logger;

@@ -27,11 +27,11 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.shaded.com.google.common.base.Joiner;
 import static com.google.common.base.Preconditions.*;
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.shaded.com.google.common.collect.AbstractIterator;
+import org.apache.hadoop.shaded.com.google.common.collect.Iterators;
+import org.apache.hadoop.shaded.com.google.common.collect.Maps;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

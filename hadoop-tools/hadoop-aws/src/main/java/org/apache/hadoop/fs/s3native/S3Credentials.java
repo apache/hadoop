@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3native;
 import java.io.IOException;
 import java.net.URI;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;

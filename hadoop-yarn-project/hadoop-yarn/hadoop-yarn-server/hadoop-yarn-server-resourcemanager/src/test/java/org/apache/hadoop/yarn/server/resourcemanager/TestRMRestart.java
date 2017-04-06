@@ -128,9 +128,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.shaded.com.google.common.collect.Sets;
 
 public class TestRMRestart extends ParameterizedSchedulerTestBase {
   private static final Log LOG = LogFactory.getLog(TestRMRestart.class);

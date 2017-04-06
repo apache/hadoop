@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import com.google.common.base.Function;
-import com.google.common.collect.ComparisonChain;
+import org.apache.hadoop.shaded.com.google.common.base.Function;
+import org.apache.hadoop.shaded.com.google.common.collect.ComparisonChain;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 
 public class RemoteEditLog implements Comparable<RemoteEditLog> {

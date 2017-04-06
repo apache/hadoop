@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
 import org.apache.curator.CuratorZookeeperClient;
 import org.apache.curator.test.InstanceSpec;
 import org.apache.curator.test.KillSession;

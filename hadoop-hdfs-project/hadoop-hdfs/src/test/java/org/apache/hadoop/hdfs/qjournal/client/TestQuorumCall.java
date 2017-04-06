@@ -26,9 +26,9 @@ import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.hdfs.qjournal.client.QuorumCall;
 import org.junit.Test;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.SettableFuture;
+import org.apache.hadoop.shaded.com.google.common.base.Joiner;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.SettableFuture;
 
 public class TestQuorumCall {
   @Test(timeout=10000)

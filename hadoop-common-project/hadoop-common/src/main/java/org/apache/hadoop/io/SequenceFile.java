@@ -24,7 +24,7 @@ import java.util.*;
 import java.rmi.server.UID;
 import java.security.MessageDigest;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.*;
 import org.apache.hadoop.util.Options;
 import org.apache.hadoop.fs.*;

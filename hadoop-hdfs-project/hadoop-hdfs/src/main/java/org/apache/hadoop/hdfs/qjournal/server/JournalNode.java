@@ -26,7 +26,7 @@ import java.util.Map;
 
 import javax.management.ObjectName;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -51,8 +51,8 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.htrace.core.Tracer;
 import org.eclipse.jetty.util.ajax.JSON;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.collect.Maps;
 
 /**
  * The JournalNode is a daemon which allows namenodes using

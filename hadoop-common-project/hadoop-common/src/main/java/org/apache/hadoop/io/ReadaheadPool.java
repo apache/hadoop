@@ -31,8 +31,8 @@ import org.apache.hadoop.io.nativeio.NativeIO;
 
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_WILLNEED;
 
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Manages a pool of threads which can issue readahead requests on file descriptors.

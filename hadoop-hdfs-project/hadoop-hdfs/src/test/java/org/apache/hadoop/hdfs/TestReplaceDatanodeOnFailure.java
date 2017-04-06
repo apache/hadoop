@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
 
 import java.io.IOException;
 import java.util.Arrays;

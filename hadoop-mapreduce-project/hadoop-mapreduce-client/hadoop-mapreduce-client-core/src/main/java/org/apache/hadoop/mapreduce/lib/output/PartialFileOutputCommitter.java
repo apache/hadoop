@@ -34,7 +34,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.task.annotation.Checkpointable;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 /** An {@link OutputCommitter} that commits files specified
  * in job output directory i.e. ${mapreduce.output.fileoutputformat.outputdir}.

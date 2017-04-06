@@ -63,8 +63,8 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.base.Optional;
 
 /**
  * The {@code DefaultContainerExecuter} class offers generic container

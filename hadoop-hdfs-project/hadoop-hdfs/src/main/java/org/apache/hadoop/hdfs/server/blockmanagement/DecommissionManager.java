@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.shaded.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.util.AbstractList;
@@ -44,9 +44,9 @@ import org.apache.hadoop.util.ChunkedArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Manages datanode decommissioning. A background monitor thread 

@@ -52,9 +52,9 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.NetworkTopology;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.HashMultiset;
-import com.google.common.collect.Multiset;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.collect.HashMultiset;
+import org.apache.hadoop.shaded.com.google.common.collect.Multiset;
 
 /**
  * An abstract {@link InputFormat} that returns {@link CombineFileSplit}'s in 

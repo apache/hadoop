@@ -45,8 +45,8 @@ import org.apache.zookeeper.AsyncCallback.*;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.KeeperException.Code;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
 
 /**
  * 

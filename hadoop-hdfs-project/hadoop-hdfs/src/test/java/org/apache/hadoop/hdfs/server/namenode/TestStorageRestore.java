@@ -52,7 +52,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableSet;
 /**
  * Startup and checkpoint tests
  * 

@@ -50,7 +50,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
-import com.google.common.util.concurrent.SettableFuture;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.SettableFuture;
 
 /**
  * This interface is used by the components to talk to the

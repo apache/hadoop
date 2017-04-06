@@ -48,7 +48,7 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
 
 /** The load generator is a tool for testing NameNode behavior under
  * different client loads. Note there is a subclass of this clas that lets 

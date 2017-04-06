@@ -59,7 +59,7 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.http.HttpStatus;
 import org.junit.Test;
 
-import com.google.common.net.HttpHeaders;
+import org.apache.hadoop.shaded.com.google.common.net.HttpHeaders;
 import com.google.inject.Injector;
 
 public class TestAMWebApp {

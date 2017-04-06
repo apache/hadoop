@@ -42,7 +42,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.CleanerMetrics;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * The cleaner service that maintains the shared cache area, and cleans up stale

@@ -65,8 +65,8 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
 
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * Functional tests for QuorumJournalManager.

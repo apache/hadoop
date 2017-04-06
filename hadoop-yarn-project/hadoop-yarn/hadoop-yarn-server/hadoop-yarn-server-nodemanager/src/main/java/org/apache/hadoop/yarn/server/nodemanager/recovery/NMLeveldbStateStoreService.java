@@ -69,9 +69,9 @@ import org.iq80.leveldb.Logger;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.WriteBatch;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.collect.ArrayListMultimap;
+import org.apache.hadoop.shaded.com.google.common.collect.ListMultimap;
 
 public class NMLeveldbStateStoreService extends NMStateStoreService {
 

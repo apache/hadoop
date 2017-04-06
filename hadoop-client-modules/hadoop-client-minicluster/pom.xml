@@ -136,6 +136,10 @@
         </exclusion>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-shaded-thirdparty</artifactId>
+        </exclusion>
+       <exclusion>
+          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapreduce-client-common</artifactId>
         </exclusion>
         <exclusion>
@@ -446,6 +450,10 @@
         </exclusion>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-shaded-thirdparty</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-yarn-api</artifactId>
         </exclusion>
         <exclusion>
@@ -573,6 +581,7 @@
                       <exclude>org.apache.hadoop:hadoop-annotations</exclude>
                       <exclude>org.apache.hadoop:hadoop-client-api</exclude>
                       <exclude>org.apache.hadoop:hadoop-client-runtime</exclude>
+                      <exclude>org.apache.hadoop:hadoop-shaded-thirdparty</exclude>
                       <!-- Fine to expose our purposefully not-shaded deps as dependencies -->
                       <exclude>org.apache.htrace:htrace-core4</exclude>
                       <exclude>org.slf4j:slf4j-api</exclude>
@@ -581,7 +590,14 @@
                       <!-- Keep optional runtime deps out of the shading -->
                       <exclude>org.apache.hadoop:hadoop-yarn-server-timelineservice</exclude>
                       <exclude>log4j:log4j</exclude>
-                      <!-- We need a filter that matches just those things that are included in the above artiacts -->
+                      <!-- Guava, which is included in hadoop-shaded-thirdparty, is excepted
+                             from relocation. It's for enabling us to use Apache Curator.
+                             For more detail, please check the technical note and
+                             hadoop-shaded-thirdparty/pom.xml.
+                             https://cwiki.apache.org/confluence/display/CURATOR/TN13
+                              -->
+                      <exclude>com.google.guava:guava</exclude>
+<!-- We need a filter that matches just those things that are included in the above artiacts -->
                     </excludes>
                   </artifactSet>
                   <filters>

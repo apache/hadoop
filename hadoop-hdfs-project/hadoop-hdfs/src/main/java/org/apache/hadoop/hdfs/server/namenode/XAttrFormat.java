@@ -25,8 +25,8 @@ import java.util.List;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.XAttrHelper;
 
-import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.primitives.Ints;
 
 /**
  * Class to pack XAttrs into byte[].<br>

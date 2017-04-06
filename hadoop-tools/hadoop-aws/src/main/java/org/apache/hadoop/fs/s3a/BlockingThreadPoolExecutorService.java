@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.MoreExecutors;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 

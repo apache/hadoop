@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
 import java.util.ArrayList;
 import java.util.Collection;
 

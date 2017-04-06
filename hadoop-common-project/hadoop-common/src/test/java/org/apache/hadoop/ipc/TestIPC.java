@@ -95,9 +95,9 @@ import org.mockito.internal.util.reflection.Whitebox;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Supplier;
-import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Ints;
+import org.apache.hadoop.shaded.com.google.common.base.Supplier;
+import org.apache.hadoop.shaded.com.google.common.primitives.Bytes;
+import org.apache.hadoop.shaded.com.google.common.primitives.Ints;
 
 /** Unit tests for IPC. */
 public class TestIPC {

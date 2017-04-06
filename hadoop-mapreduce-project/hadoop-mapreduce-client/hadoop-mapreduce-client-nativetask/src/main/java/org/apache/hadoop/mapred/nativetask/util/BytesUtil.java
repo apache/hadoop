@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.mapred.nativetask.util;
 
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
+import org.apache.hadoop.shaded.com.google.common.primitives.Ints;
+import org.apache.hadoop.shaded.com.google.common.primitives.Longs;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 @InterfaceAudience.Private

@@ -28,7 +28,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.xml.parsers.ParserConfigurationException;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -38,8 +38,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 import org.xml.sax.SAXException;
 
-import com.google.common.base.CharMatcher;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.base.CharMatcher;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 import java.util.Iterator;
 import java.util.Set;
 import org.apache.hadoop.yarn.api.records.Resource;

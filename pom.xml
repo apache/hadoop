@@ -129,6 +129,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <module>hadoop-client-modules</module>
     <module>hadoop-build-tools</module>
     <module>hadoop-cloud-storage-project</module>
+    <module>hadoop-shaded-thirdparty</module>
   </modules>
 
   <build>

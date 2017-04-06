@@ -24,12 +24,12 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.cache.Weigher;
-import com.google.common.util.concurrent.UncheckedExecutionException;
+import org.apache.hadoop.shaded.com.google.common.cache.Cache;
+import org.apache.hadoop.shaded.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.shaded.com.google.common.cache.CacheLoader;
+import org.apache.hadoop.shaded.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.shaded.com.google.common.cache.Weigher;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.UncheckedExecutionException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -44,7 +44,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Manages an in memory cache of parsed Job History files.

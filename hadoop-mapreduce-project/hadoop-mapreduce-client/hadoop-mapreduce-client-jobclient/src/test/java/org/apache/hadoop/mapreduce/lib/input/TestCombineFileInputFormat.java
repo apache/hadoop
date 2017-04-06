@@ -60,7 +60,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import com.google.common.collect.HashMultiset;
+import org.apache.hadoop.shaded.com.google.common.collect.HashMultiset;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

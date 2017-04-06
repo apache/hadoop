@@ -35,8 +35,8 @@ import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.ChildrenDiff;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
 
-import com.google.common.base.Preconditions;
-import com.google.common.primitives.SignedBytes;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.primitives.SignedBytes;
 
 /**
  * A class describing the difference between snapshots of a snapshottable

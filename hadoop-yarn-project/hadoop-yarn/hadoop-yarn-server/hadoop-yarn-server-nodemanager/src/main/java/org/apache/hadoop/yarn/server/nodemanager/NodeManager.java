@@ -77,7 +77,7 @@ import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePubli
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 public class NodeManager extends CompositeService 
     implements EventHandler<NodeManagerEvent> {

@@ -34,7 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.CloseableReferenceCount;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * The implementation of UNIX domain sockets in Java.

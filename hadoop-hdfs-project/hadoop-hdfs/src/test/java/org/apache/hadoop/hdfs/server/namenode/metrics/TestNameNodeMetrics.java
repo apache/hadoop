@@ -37,7 +37,7 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.EnumSet;
 import java.util.Random;
-import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

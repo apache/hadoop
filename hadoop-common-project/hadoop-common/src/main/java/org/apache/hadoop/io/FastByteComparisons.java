@@ -27,8 +27,8 @@ import sun.misc.Unsafe;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import com.google.common.primitives.Longs;
-import com.google.common.primitives.UnsignedBytes;
+import org.apache.hadoop.shaded.com.google.common.primitives.Longs;
+import org.apache.hadoop.shaded.com.google.common.primitives.UnsignedBytes;
 
 /**
  * Utility code to do optimized byte-array comparison.

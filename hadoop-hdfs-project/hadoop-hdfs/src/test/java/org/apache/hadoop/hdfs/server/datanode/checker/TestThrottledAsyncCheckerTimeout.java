@@ -25,10 +25,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.shaded.com.google.common.base.Optional;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.FutureCallback;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.Futures;
+import org.apache.hadoop.shaded.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;

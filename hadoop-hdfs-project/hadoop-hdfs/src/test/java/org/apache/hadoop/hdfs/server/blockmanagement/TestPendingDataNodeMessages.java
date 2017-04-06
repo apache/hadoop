@@ -29,7 +29,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.junit.Test;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.shaded.com.google.common.base.Joiner;
 
 
 public class TestPendingDataNodeMessages {

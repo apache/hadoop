@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.registry.server.integration;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.curator.framework.api.BackgroundCallback;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;

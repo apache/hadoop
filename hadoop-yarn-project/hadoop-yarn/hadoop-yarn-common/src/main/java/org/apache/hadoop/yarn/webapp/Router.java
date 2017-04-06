@@ -36,9 +36,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.CharMatcher;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.shaded.com.google.common.base.CharMatcher;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.shaded.com.google.common.collect.Maps;
 
 /**
  * Manages path info to controller#action routing.

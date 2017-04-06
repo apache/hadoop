@@ -28,11 +28,11 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.collect.ComparisonChain;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
+import org.apache.hadoop.shaded.com.google.common.base.MoreObjects;
+import org.apache.hadoop.shaded.com.google.common.collect.ComparisonChain;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.collect.Maps;
+import org.apache.hadoop.shaded.com.google.common.collect.Ordering;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.AclEntry;

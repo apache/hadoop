@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.yarn.api;
+
 import java.io.IOException;
 
 import org.apache.commons.lang.math.LongRange;
@@ -328,7 +329,7 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableSet;
 
 /**
  * Test class for YARN API protocol records.

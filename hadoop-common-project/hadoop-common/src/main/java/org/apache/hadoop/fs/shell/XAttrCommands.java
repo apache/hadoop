@@ -24,9 +24,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import com.google.common.base.Enums;
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.base.Enums;
+import org.apache.hadoop.shaded.com.google.common.base.Function;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;

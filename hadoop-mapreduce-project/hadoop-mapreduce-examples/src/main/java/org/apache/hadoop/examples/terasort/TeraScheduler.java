@@ -28,7 +28,7 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.shaded.com.google.common.base.Charsets;
 
 class TeraScheduler {
   private static final Log LOG = LogFactory.getLog(TeraScheduler.class);

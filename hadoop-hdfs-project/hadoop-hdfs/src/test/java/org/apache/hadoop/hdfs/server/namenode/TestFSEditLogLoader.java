@@ -65,8 +65,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import com.google.common.collect.Maps;
-import com.google.common.io.Files;
+import org.apache.hadoop.shaded.com.google.common.collect.Maps;
+import org.apache.hadoop.shaded.com.google.common.io.Files;
 
 @RunWith(Parameterized.class)
 public class TestFSEditLogLoader {

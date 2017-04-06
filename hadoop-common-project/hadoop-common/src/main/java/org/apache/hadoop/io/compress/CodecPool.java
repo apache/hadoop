@@ -30,9 +30,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
+import org.apache.hadoop.shaded.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.shaded.com.google.common.cache.CacheLoader;
+import org.apache.hadoop.shaded.com.google.common.cache.LoadingCache;
 
 /**
  * A global compressor/decompressor pool used to save and reuse 

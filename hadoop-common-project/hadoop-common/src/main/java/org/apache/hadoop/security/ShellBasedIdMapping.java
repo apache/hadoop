@@ -34,9 +34,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.collect.BiMap;
+import org.apache.hadoop.shaded.com.google.common.collect.HashBiMap;
 
 /**
  * A simple shell-based implementation of {@link IdMappingServiceProvider} 

@@ -38,9 +38,9 @@ import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.shaded.com.google.common.base.Predicate;
+import org.apache.hadoop.shaded.com.google.common.collect.Iterables;
+import org.apache.hadoop.shaded.com.google.common.collect.Lists;
 
 /** Snapshot of a sub-tree in the namesystem. */
 @InterfaceAudience.Private

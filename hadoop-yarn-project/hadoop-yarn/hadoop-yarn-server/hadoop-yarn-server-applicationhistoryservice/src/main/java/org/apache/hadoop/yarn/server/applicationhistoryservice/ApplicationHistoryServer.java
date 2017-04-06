@@ -59,7 +59,7 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.webapp.WebAppContext;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * History server that keeps track of all types of history in the cluster.

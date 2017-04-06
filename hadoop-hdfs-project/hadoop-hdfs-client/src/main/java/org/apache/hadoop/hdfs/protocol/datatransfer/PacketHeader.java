@@ -27,9 +27,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.PacketHeaderProto;
 import org.apache.hadoop.hdfs.util.ByteBufferOutputStream;
 
-import com.google.common.base.Preconditions;
-import com.google.common.primitives.Shorts;
-import com.google.common.primitives.Ints;
+import org.apache.hadoop.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.shaded.com.google.common.primitives.Shorts;
+import org.apache.hadoop.shaded.com.google.common.primitives.Ints;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**

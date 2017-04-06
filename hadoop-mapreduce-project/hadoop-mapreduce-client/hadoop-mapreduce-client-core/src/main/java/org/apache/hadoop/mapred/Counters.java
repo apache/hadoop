@@ -45,7 +45,7 @@ import org.apache.hadoop.mapreduce.counters.Limits;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormatCounter;
 
-import com.google.common.collect.Iterators;
+import org.apache.hadoop.shaded.com.google.common.collect.Iterators;
 
 /**
  * A set of named counters.

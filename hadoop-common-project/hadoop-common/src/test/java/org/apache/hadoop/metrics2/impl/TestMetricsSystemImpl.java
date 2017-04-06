@@ -38,8 +38,8 @@ import org.mockito.stubbing.Answer;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
+import org.apache.hadoop.shaded.com.google.common.base.Predicate;
+import org.apache.hadoop.shaded.com.google.common.collect.Iterables;
 
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.commons.logging.Log;

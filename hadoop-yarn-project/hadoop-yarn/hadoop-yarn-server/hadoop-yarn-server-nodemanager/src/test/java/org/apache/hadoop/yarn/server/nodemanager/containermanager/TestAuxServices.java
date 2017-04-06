@@ -27,8 +27,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.shaded.com.google.common.base.Charsets;
+import org.apache.hadoop.shaded.com.google.common.collect.Sets;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
+import org.apache.hadoop.shaded.com.google.common.base.Joiner;
+import org.apache.hadoop.shaded.com.google.common.base.Optional;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;

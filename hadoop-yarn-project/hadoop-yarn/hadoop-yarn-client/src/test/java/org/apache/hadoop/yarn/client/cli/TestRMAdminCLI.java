@@ -79,8 +79,8 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.shaded.com.google.common.base.Charsets;
+import org.apache.hadoop.shaded.com.google.common.collect.ImmutableSet;
 
 public class TestRMAdminCLI {
 

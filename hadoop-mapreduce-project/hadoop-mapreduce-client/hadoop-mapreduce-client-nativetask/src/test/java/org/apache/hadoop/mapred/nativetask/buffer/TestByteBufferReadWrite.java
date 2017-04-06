@@ -19,8 +19,8 @@ package org.apache.hadoop.mapred.nativetask.buffer;
 
 import java.io.*;
 
-import com.google.common.base.Charsets;
-import com.google.common.primitives.Shorts;
+import org.apache.hadoop.shaded.com.google.common.base.Charsets;
+import org.apache.hadoop.shaded.com.google.common.primitives.Shorts;
 import org.apache.hadoop.mapred.nativetask.NativeDataTarget;
 
 import org.junit.Assert;

@@ -26,7 +26,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_TOKEN_FI
 import static org.apache.hadoop.security.UGIExceptionMessages.*;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 import java.io.File;
 import java.io.FileNotFoundException;

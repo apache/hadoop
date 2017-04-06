@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyVa
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelinePrefixFilter;
 import org.junit.Test;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.shaded.com.google.common.collect.Sets;
 
 public class TestTimelineReaderWebServicesUtils {
   private static void verifyFilterList(String expr, TimelineFilterList list,

@@ -50,7 +50,7 @@ import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.shaded.com.google.common.annotations.VisibleForTesting;
 
 class Fetcher<K,V> extends Thread {
   
