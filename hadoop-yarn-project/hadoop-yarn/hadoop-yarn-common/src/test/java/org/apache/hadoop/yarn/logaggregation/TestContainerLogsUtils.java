@@ -110,13 +110,14 @@ public final class TestContainerLogsUtils {
       ContainerId containerId, Path appDir, FileSystem fs) throws IOException {
     Path path =
         new Path(appDir, LogAggregationUtils.getNodeString(nodeId));
-    AggregatedLogFormat.LogWriter writer =
-        new AggregatedLogFormat.LogWriter(configuration, path, ugi);
-    writer.writeApplicationOwner(ugi.getUserName());
+    try (AggregatedLogFormat.LogWriter writer =
+        new AggregatedLogFormat.LogWriter()) {
+      writer.initialize(configuration, path, ugi);
+      writer.writeApplicationOwner(ugi.getUserName());
 
-    writer.append(new AggregatedLogFormat.LogKey(containerId),
-        new AggregatedLogFormat.LogValue(rootLogDirs, containerId,
-        ugi.getShortUserName()));
-    writer.close();
+      writer.append(new AggregatedLogFormat.LogKey(containerId),
+          new AggregatedLogFormat.LogValue(rootLogDirs, containerId,
+              ugi.getShortUserName()));
+    }
   }
 }

@@ -446,14 +446,23 @@ public class AggregatedLogFormat {
    * The writer that writes out the aggregated logs.
    */
   @Private
-  public static class LogWriter {
+  public static class LogWriter implements AutoCloseable {
 
-    private final FSDataOutputStream fsDataOStream;
-    private final TFile.Writer writer;
+    private FSDataOutputStream fsDataOStream;
+    private TFile.Writer writer;
     private FileContext fc;
 
-    public LogWriter(final Configuration conf, final Path remoteAppLogFile,
-        UserGroupInformation userUgi) throws IOException {
+    /**
+     * Initialize the LogWriter.
+     * Must be called just after the instance is created.
+     * @param conf Configuration
+     * @param remoteAppLogFile remote log file path
+     * @param userUgi Ugi of the user
+     * @throws IOException Failed to initialize
+     */
+    public void initialize(final Configuration conf,
+                           final Path remoteAppLogFile,
+                           UserGroupInformation userUgi) throws IOException {
       try {
         this.fsDataOStream =
             userUgi.doAs(new PrivilegedExceptionAction<FSDataOutputStream>() {
@@ -530,11 +539,14 @@ public class AggregatedLogFormat {
       }
     }
 
+    @Override
     public void close() {
-      try {
-        this.writer.close();
-      } catch (IOException e) {
-        LOG.warn("Exception closing writer", e);
+      if (writer != null) {
+        try {
+          writer.close();
+        } catch (IOException e) {
+          LOG.warn("Exception closing writer", e);
+        }
       }
       IOUtils.closeStream(fsDataOStream);
     }
