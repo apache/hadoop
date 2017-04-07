@@ -428,4 +428,63 @@ public class TestLocalBlockCache {
         100, 20 * 1000);
     ozoneStore.close();
   }
+
+  /**
+   * This test creates a cache and performs a simple write / read.
+   * The operations are done by bypassing the cache.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testDirectIO() throws IOException,
+      InterruptedException, TimeoutException {
+    OzoneConfiguration cConfig = new OzoneConfiguration();
+    cConfig.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, false);
+    cConfig.setBoolean(DFS_CBLOCK_TRACE_IO, true);
+    final long blockID = 0;
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(4);
+    String userName = "user" + RandomStringUtils.randomNumeric(4);
+    String data = RandomStringUtils.random(4 * KB);
+    String dataHash = DigestUtils.sha256Hex(data);
+    CBlockTargetMetrics metrics = CBlockTargetMetrics.create();
+    ContainerCacheFlusher flusher = new ContainerCacheFlusher(cConfig,
+        xceiverClientManager, metrics);
+    CBlockLocalCache cache = CBlockLocalCache.newBuilder()
+        .setConfiguration(cConfig)
+        .setVolumeName(volumeName)
+        .setUserName(userName)
+        .setPipelines(getContainerPipeline(10))
+        .setClientManager(xceiverClientManager)
+        .setBlockSize(4 * KB)
+        .setVolumeSize(50 * GB)
+        .setFlusher(flusher)
+        .setCBlockTargetMetrics(metrics)
+        .build();
+    Assert.assertFalse(cache.isShortCircuitIOEnabled());
+    cache.put(blockID, data.getBytes(StandardCharsets.UTF_8));
+    Assert.assertEquals(1, metrics.getNumDirectBlockWrites());
+    Assert.assertEquals(1, metrics.getNumWriteOps());
+    // Please note that this read is directly from remote container
+    LogicalBlock block = cache.get(blockID);
+    Assert.assertEquals(1, metrics.getNumReadOps());
+    Assert.assertEquals(0, metrics.getNumReadCacheHits());
+    Assert.assertEquals(1, metrics.getNumReadCacheMiss());
+    Assert.assertEquals(0, metrics.getNumReadLostBlocks());
+    Assert.assertEquals(0, metrics.getNumFailedDirectBlockWrites());
+
+    cache.put(blockID + 1, data.getBytes(StandardCharsets.UTF_8));
+    Assert.assertEquals(2, metrics.getNumDirectBlockWrites());
+    Assert.assertEquals(2, metrics.getNumWriteOps());
+    Assert.assertEquals(0, metrics.getNumFailedDirectBlockWrites());
+    // Please note that this read is directly from remote container
+    block = cache.get(blockID + 1);
+    Assert.assertEquals(2, metrics.getNumReadOps());
+    Assert.assertEquals(0, metrics.getNumReadCacheHits());
+    Assert.assertEquals(2, metrics.getNumReadCacheMiss());
+    Assert.assertEquals(0, metrics.getNumReadLostBlocks());
+    String readHash = DigestUtils.sha256Hex(block.getData().array());
+    Assert.assertEquals("File content does not match.", dataHash, readHash);
+    GenericTestUtils.waitFor(() -> !cache.isDirtyCache(), 100, 20 * 1000);
+    cache.close();
+  }
 }

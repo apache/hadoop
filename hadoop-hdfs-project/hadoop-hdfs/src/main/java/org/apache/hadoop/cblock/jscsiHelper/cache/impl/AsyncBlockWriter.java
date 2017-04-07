@@ -23,6 +23,9 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.cblock.jscsiHelper.cache.LogicalBlock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.scm.XceiverClientManager;
+import org.apache.hadoop.scm.XceiverClientSpi;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.scm.storage.ContainerProtocolCalls;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.LevelDBStore;
 import org.slf4j.Logger;
@@ -167,10 +170,33 @@ public class AsyncBlockWriter {
       }
       block.clearData();
     } else {
-      // TODO : Support Direct I/O
-      LOG.error("Non-Cache I/O is not supported at this point of time.");
-      throw new IllegalStateException("Cache is required and cannot be " +
-          "disabled now.");
+      Pipeline pipeline = parentCache.getPipeline(block.getBlockID());
+      String containerName = pipeline.getContainerName();
+      try {
+        long startTime = Time.monotonicNow();
+        XceiverClientSpi client = parentCache.getClientManager()
+            .acquireClient(parentCache.getPipeline(block.getBlockID()));
+        // BUG: fix the trace ID.
+        ContainerProtocolCalls.writeSmallFile(client, containerName,
+            Long.toString(block.getBlockID()), block.getData().array(), "");
+        long endTime = Time.monotonicNow();
+        if (parentCache.isTraceEnabled()) {
+          String datahash = DigestUtils.sha256Hex(block.getData().array());
+          parentCache.getTracer().info(
+              "Task=DirectWriterPut,BlockID={},Time={},SHA={}",
+              block.getBlockID(), endTime - startTime, datahash);
+        }
+        parentCache.getTargetMetrics().
+            updateDirectBlockWriteLatency(endTime - startTime);
+        parentCache.getTargetMetrics().incNumDirectBlockWrites();
+      } catch (Exception ex) {
+        parentCache.getTargetMetrics().incNumFailedDirectBlockWrites();
+        LOG.error("Direct I/O writing of block:{} to container {} failed",
+            block.getBlockID(), containerName, ex);
+        throw ex;
+      } finally {
+        block.clearData();
+      }
     }
     if (blockIDBuffer.remaining() <= (Long.SIZE / Byte.SIZE)) {
       long startTime = Time.monotonicNow();
