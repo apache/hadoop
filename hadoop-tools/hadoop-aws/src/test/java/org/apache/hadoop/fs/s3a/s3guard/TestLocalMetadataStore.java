@@ -42,10 +42,7 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
     private FileSystem fs;
 
     private LocalMSContract() throws IOException {
-      this(new Configuration());
-    }
-
-    private LocalMSContract(Configuration config) throws IOException {
+      Configuration config = new Configuration();
       config.set(LocalMetadataStore.CONF_MAX_RECORDS, MAX_ENTRIES_STR);
       fs = FileSystem.getLocal(config);
     }
@@ -65,12 +62,6 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
   @Override
   public AbstractMSContract createContract() throws IOException {
     return new LocalMSContract();
-  }
-
-  @Override
-  public AbstractMSContract createContract(Configuration conf) throws
-      IOException {
-    return new LocalMSContract(conf);
   }
 
   @Test

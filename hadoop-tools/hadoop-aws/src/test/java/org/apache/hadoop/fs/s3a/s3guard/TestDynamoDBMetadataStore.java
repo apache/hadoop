@@ -126,10 +126,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
     private final DynamoDBMetadataStore ms = new DynamoDBMetadataStore();
 
     DynamoDBMSContract() throws IOException {
-        this(new Configuration());
-    }
-
-    DynamoDBMSContract(Configuration conf) throws IOException {
+      final Configuration conf = new Configuration();
       // using mocked S3 clients
       conf.setClass(S3_CLIENT_FACTORY_IMPL, MockS3ClientFactory.class,
           S3ClientFactory.class);
@@ -160,12 +157,6 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Override
   public DynamoDBMSContract createContract() throws IOException {
     return new DynamoDBMSContract();
-  }
-
-  @Override
-  public DynamoDBMSContract createContract(Configuration conf) throws
-      IOException {
-    return new DynamoDBMSContract(conf);
   }
 
   @Override
@@ -349,21 +340,15 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
    */
   @Test
   public void testTableVersionRequired() throws Exception {
-    Configuration conf = getFileSystem().getConf();
-    int maxRetries = conf.getInt(Constants.S3GUARD_DDB_MAX_RETRIES, Constants
-        .S3GUARD_DDB_MAX_RETRIES_DEFAULT);
-    conf.setInt(Constants.S3GUARD_DDB_MAX_RETRIES, 3);
-
-    final DynamoDBMetadataStore ddbms = createContract(conf).getMetadataStore();
-    String tableName = conf.get(Constants.S3GUARD_DDB_TABLE_NAME_KEY, BUCKET);
+    final DynamoDBMetadataStore ddbms = createContract().getMetadataStore();
+    String tableName = getFileSystem().getConf().get(Constants
+        .S3GUARD_DDB_TABLE_NAME_KEY, BUCKET);
     Table table = verifyTableInitialized(tableName);
     table.deleteItem(VERSION_MARKER_PRIMARY_KEY);
 
     // create existing table
     intercept(IOException.class, E_NO_VERSION_MARKER,
         () -> ddbms.initTable());
-
-    conf.setInt(Constants.S3GUARD_DDB_MAX_RETRIES, maxRetries);
   }
 
   /**
