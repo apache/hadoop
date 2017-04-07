@@ -61,7 +61,11 @@ export default Ember.Service.extend({
   },
 
   localBaseAddress: Ember.computed(function () {
-    return this.localAddress();
+    var url = this.localAddress();
+    if (url.endsWith('/')) {
+      url = url.slice(0, -1);
+    }
+    return url;
   }),
 
   timelineWebAddress: Ember.computed(function () {
