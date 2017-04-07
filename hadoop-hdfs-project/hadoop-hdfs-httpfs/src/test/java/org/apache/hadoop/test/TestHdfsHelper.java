@@ -31,9 +31,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.junit.Test;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.Statement;
@@ -142,7 +141,7 @@ public class TestHdfsHelper extends TestDirHelper {
   public static final Path ERASURE_CODING_DIR = new Path("/ec");
   public static final Path ERASURE_CODING_FILE = new Path("/ec/ecfile");
   public static final ErasureCodingPolicy ERASURE_CODING_POLICY =
-      ErasureCodingPolicyManager.getPolicyByID(HdfsConstants.XOR_2_1_POLICY_ID);
+      StripedFileTestUtil.getDefaultECPolicy();
 
   private static MiniDFSCluster MINI_DFS = null;
 
