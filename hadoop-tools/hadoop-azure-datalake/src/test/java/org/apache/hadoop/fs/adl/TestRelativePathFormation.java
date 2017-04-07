@@ -29,6 +29,8 @@ import java.net.URISyntaxException;
 
 import static org.apache.hadoop.fs.adl.AdlConfKeys
     .AZURE_AD_TOKEN_PROVIDER_CLASS_KEY;
+import static org.apache.hadoop.fs.adl.AdlConfKeys
+    .AZURE_AD_TOKEN_PROVIDER_TYPE_KEY;
 
 /**
  * This class verifies path conversion to SDK.
@@ -39,6 +41,8 @@ public class TestRelativePathFormation {
   public void testToRelativePath() throws URISyntaxException, IOException {
     AdlFileSystem fs = new AdlFileSystem();
     Configuration configuration = new Configuration();
+    configuration.setEnum(AZURE_AD_TOKEN_PROVIDER_TYPE_KEY,
+        TokenProviderType.Custom);
     configuration.set(AZURE_AD_TOKEN_PROVIDER_CLASS_KEY,
         "org.apache.hadoop.fs.adl.common.CustomMockTokenProvider");
 

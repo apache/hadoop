@@ -38,6 +38,8 @@ import java.util.Collection;
 import static org.apache.hadoop.fs.adl.AdlConfKeys.ADL_BLOCK_SIZE;
 import static org.apache.hadoop.fs.adl.AdlConfKeys
     .AZURE_AD_TOKEN_PROVIDER_CLASS_KEY;
+import static org.apache.hadoop.fs.adl.AdlConfKeys
+    .AZURE_AD_TOKEN_PROVIDER_TYPE_KEY;
 
 /**
  * Test access token provider behaviour with custom token provider and for token
@@ -89,6 +91,8 @@ public class TestCustomTokenProvider extends AdlMockWebServer {
    */
   public void init() throws IOException, URISyntaxException {
     Configuration configuration = new Configuration();
+    configuration.setEnum(AZURE_AD_TOKEN_PROVIDER_TYPE_KEY,
+        TokenProviderType.Custom);
     configuration.set(AZURE_AD_TOKEN_PROVIDER_CLASS_KEY,
         typeOfTokenProviderClass.getName());
     fileSystems = new TestableAdlFileSystem[fsObjectCount];
