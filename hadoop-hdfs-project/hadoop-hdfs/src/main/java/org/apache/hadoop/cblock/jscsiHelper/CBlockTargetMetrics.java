@@ -39,12 +39,16 @@ public class CBlockTargetMetrics {
   @Metric private MutableCounterLong numReadCacheHits;
   @Metric private MutableCounterLong numReadCacheMiss;
   @Metric private MutableCounterLong numReadLostBlocks;
+  @Metric private MutableCounterLong numDirectBlockWrites;
+  @Metric private MutableCounterLong numFailedDirectBlockWrites;
 
   @Metric private MutableRate dbReadLatency;
   @Metric private MutableRate containerReadLatency;
 
   @Metric private MutableRate dbWriteLatency;
   @Metric private MutableRate containerWriteLatency;
+
+  @Metric private MutableRate directBlockWriteLatency;
 
   public CBlockTargetMetrics() {
   }
@@ -76,6 +80,14 @@ public class CBlockTargetMetrics {
     numReadLostBlocks.incr();
   }
 
+  public void incNumDirectBlockWrites() {
+    numDirectBlockWrites.incr();
+  }
+
+  public void incNumFailedDirectBlockWrites() {
+    numFailedDirectBlockWrites.incr();
+  }
+
   public void updateDBReadLatency(long latency) {
     dbReadLatency.add(latency);
   }
@@ -90,6 +102,10 @@ public class CBlockTargetMetrics {
 
   public void updateContainerWriteLatency(long latency) {
     containerWriteLatency.add(latency);
+  }
+
+  public void updateDirectBlockWriteLatency(long latency) {
+    directBlockWriteLatency.add(latency);
   }
 
   @VisibleForTesting
@@ -115,5 +131,15 @@ public class CBlockTargetMetrics {
   @VisibleForTesting
   public long getNumReadLostBlocks() {
     return numReadLostBlocks.value();
+  }
+
+  @VisibleForTesting
+  public long getNumDirectBlockWrites() {
+    return numDirectBlockWrites.value();
+  }
+
+  @VisibleForTesting
+  public long getNumFailedDirectBlockWrites() {
+    return numFailedDirectBlockWrites.value();
   }
 }
