@@ -1379,7 +1379,7 @@ public class TestLogsCLI {
       out = writer.getWriter().prepareAppendValue(-1);
       new AggregatedLogFormat.LogValue(rootLogDirs, containerId,
           UserGroupInformation.getCurrentUser().getShortUserName()).write(out,
-              new HashSet<>());
+              new HashSet<File>());
       out.close();
     }
   }
