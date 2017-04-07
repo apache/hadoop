@@ -131,6 +131,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
+import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.LocalResourceTrackerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredLocalizationState;
@@ -165,6 +166,8 @@ public class ResourceLocalizationService extends CompositeService
   private final ScheduledExecutorService cacheCleanup;
   private LocalizerTokenSecretManager secretManager;
   private NMStateStoreService stateStore;
+  @VisibleForTesting
+  final NodeManagerMetrics metrics;
 
   @VisibleForTesting
   LocalResourcesTracker publicRsrc;
@@ -194,7 +197,8 @@ public class ResourceLocalizationService extends CompositeService
 
   public ResourceLocalizationService(Dispatcher dispatcher,
       ContainerExecutor exec, DeletionService delService,
-      LocalDirsHandlerService dirsHandler, Context context) {
+      LocalDirsHandlerService dirsHandler, Context context,
+      NodeManagerMetrics metrics) {
 
     super(ResourceLocalizationService.class.getName());
     this.exec = exec;
@@ -208,6 +212,7 @@ public class ResourceLocalizationService extends CompositeService
           .build());
     this.stateStore = context.getNMStateStore();
     this.nmContext = context;
+    this.metrics = metrics;
   }
 
   FileContext getLocalFileContext(Configuration conf) {
@@ -530,6 +535,12 @@ public class ResourceLocalizationService extends CompositeService
     } else if (LOG.isInfoEnabled()) {
       LOG.info(stats.toString());
     }
+
+    // Update metrics
+    metrics.setCacheSizeBeforeClean(stats.getCacheSizeBeforeClean());
+    metrics.setTotalBytesDeleted(stats.getTotalDelSize());
+    metrics.setPrivateBytesDeleted(stats.getPrivateDelSize());
+    metrics.setPublicBytesDeleted(stats.getPublicDelSize());
     return stats;
   }
 
