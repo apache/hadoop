@@ -115,7 +115,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     // ADL properties are in a different subtree
     // - org.apache.hadoop.hdfs.web.ADLConfKeys
     xmlPrefixToSkipCompare.add("adl.");
-    xmlPropsToSkipCompare.add("fs.adl.impl");
+    xmlPrefixToSkipCompare.add("fs.adl.");
     xmlPropsToSkipCompare.add("fs.AbstractFileSystem.adl.impl");
 
     // Deprecated properties.  These should eventually be removed from the
