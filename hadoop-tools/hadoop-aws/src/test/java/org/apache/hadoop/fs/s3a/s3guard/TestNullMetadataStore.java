@@ -55,4 +55,9 @@ public class TestNullMetadataStore extends MetadataStoreTestBase {
   public AbstractMSContract createContract() {
     return new NullMSContract();
   }
+
+  @Override
+  public AbstractMSContract createContract(Configuration conf) {
+    return createContract();
+  }
 }

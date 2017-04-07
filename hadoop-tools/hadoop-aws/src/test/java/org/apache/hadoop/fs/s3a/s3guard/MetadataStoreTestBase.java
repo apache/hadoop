@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -63,10 +64,18 @@ public abstract class MetadataStoreTestBase extends Assert {
   private final long modTime = accessTime - 5000;
 
   /**
-   * Each test should override this.
+   * Each test should override this.  Will use a new Configuration instance.
    * @return Contract which specifies the MetadataStore under test plus config.
    */
   public abstract AbstractMSContract createContract() throws IOException;
+
+  /**
+   * Each test should override this.
+   * @param conf Base configuration instance to use.
+   * @return Contract which specifies the MetadataStore under test plus config.
+   */
+  public abstract AbstractMSContract createContract(Configuration conf)
+      throws IOException;
 
   /**
    * Tests assume that implementations will return recently set results.  If
