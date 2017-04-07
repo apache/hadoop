@@ -698,7 +698,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * after this method returns successfully.
    *
    * @throws IOException if table does not exist and auto-creation is disabled;
-   * or any other I/O exception occurred.
+   * or table is being deleted, or any other I/O exception occurred.
    */
   @VisibleForTesting
   void initTable() throws IOException {
@@ -706,15 +706,31 @@ public class DynamoDBMetadataStore implements MetadataStore {
     try {
       try {
         LOG.debug("Binding to table {}", tableName);
-        table.describe();
-        final Item versionMarker = table.getItem(
-            createVersionMarkerPrimaryKey(VERSION_MARKER));
+        final String status = table.describe().getTableStatus();
+        switch (status) {
+          case "CREATING":
+          case "UPDATING":
+            LOG.debug("Table {} in region {} is being created/updated. This may "
+                    + "indicate that the table is being operated by another "
+                    + "concurrent thread or process. Waiting for active...",
+                tableName, region);
+            waitForTableActive(table);
+            break;
+          case "DELETING":
+            throw new IOException("DynamoDB table '" + tableName + "' is being "
+                + "deleted in region " + region);
+          case "ACTIVE":
+            break;
+          default:
+            throw new IOException("Unknown DynamoDB table status " + status
+                + ": tableName='" + tableName + "', region=" + region);
+        }
+
+        final Item versionMarker = getVersionMarkerItem();
         verifyVersionCompatibility(tableName, versionMarker);
         Long created = extractCreationTimeFromMarker(versionMarker);
         LOG.debug("Using existing DynamoDB table {} in region {} created {}",
-            tableName, region,
-            created != null ? new Date(created) : null);
-
+            tableName, region, (created != null) ? new Date(created) : null);
       } catch (ResourceNotFoundException rnfe) {
         if (conf.getBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, false)) {
           final ProvisionedThroughput capacity = new ProvisionedThroughput(
@@ -733,6 +749,35 @@ public class DynamoDBMetadataStore implements MetadataStore {
     } catch (AmazonClientException e) {
       throw translateException("initTable", (String) null, e);
     }
+  }
+
+  /**
+   * Get the version mark item in the existing DynamoDB table.
+   *
+   * As the version marker item may be created by another concurrent thread or
+   * process, we retry a limited times before we fail to get it.
+   */
+  private Item getVersionMarkerItem() throws IOException {
+    final PrimaryKey versionMarkerKey =
+        createVersionMarkerPrimaryKey(VERSION_MARKER);
+    int retryCount = 0;
+    Item versionMarker = table.getItem(versionMarkerKey);
+    while (versionMarker == null) {
+      try {
+        RetryPolicy.RetryAction action = batchRetryPolicy.shouldRetry(null,
+            retryCount, 0, true);
+        if (action.action == RetryPolicy.RetryAction.RetryDecision.FAIL) {
+          break;
+        } else {
+          LOG.debug("Sleeping {} ms before next retry", action.delayMillis);
+          Thread.sleep(action.delayMillis);
+        }
+      } catch (Exception e) {
+        throw new IOException("initTable: Unexpected exception", e);
+      }
+      versionMarker = table.getItem(versionMarkerKey);
+    }
+    return versionMarker;
   }
 
   /**
@@ -762,6 +807,21 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   /**
+   * Wait for table being active.
+   */
+  private void waitForTableActive(Table table) throws IOException {
+    try {
+      table.waitForActive();
+    } catch (InterruptedException e) {
+      LOG.warn("Interrupted while waiting for table {} in region {} active",
+          tableName, region, e);
+      Thread.currentThread().interrupt();
+      throw (IOException) new InterruptedIOException("DynamoDB table '"
+          + tableName + "' is not active yet in region " + region).initCause(e);
+    }
+  }
+
+  /**
    * Create a table, wait for it to become active, then add the version
    * marker.
    * @param capacity capacity to provision
@@ -777,20 +837,13 @@ public class DynamoDBMetadataStore implements MetadataStore {
           .withAttributeDefinitions(attributeDefinitions())
           .withProvisionedThroughput(capacity));
       LOG.debug("Awaiting table becoming active");
-      table.waitForActive();
     } catch (ResourceInUseException e) {
       LOG.warn("ResourceInUseException while creating DynamoDB table {} "
               + "in region {}.  This may indicate that the table was "
               + "created by another concurrent thread or process.",
           tableName, region);
-    } catch (InterruptedException e) {
-      LOG.warn("Interrupted while waiting for DynamoDB table {} active",
-          tableName, e);
-      Thread.currentThread().interrupt();
-      throw (IOException) new InterruptedIOException(
-          "DynamoDB table '" + tableName + "' "
-              + "is not active yet in region " + region).initCause(e);
     }
+    waitForTableActive(table);
     final Item marker = createVersionMarker(VERSION_MARKER, VERSION,
         System.currentTimeMillis());
     putItem(marker);
