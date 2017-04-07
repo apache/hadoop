@@ -190,6 +190,7 @@ public final class ErasureCodingPolicyManager {
    * Clear and clean up.
    */
   public void clear() {
-    enabledPoliciesByName.clear();
+    // TODO: we should only clear policies loaded from NN metadata.
+    // This is a placeholder for HDFS-7337.
   }
 }
