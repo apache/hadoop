@@ -31,8 +31,8 @@ import org.apache.hadoop.io.IOUtils;
 /**
  * This class returns build information about Hadoop components.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class VersionInfo {
   private static final Log LOG = LogFactory.getLog(VersionInfo.class);
 
@@ -102,8 +102,8 @@ public class VersionInfo {
   }
   
   /**
-   * Get the subversion revision number for the root directory
-   * @return the revision number, eg. "451451"
+   * Get the Git commit hash of the repository when compiled.
+   * @return the commit hash, eg. "18f64065d5db6208daf50b02c1b5ed4ee3ce547a"
    */
   public static String getRevision() {
     return COMMON_VERSION_INFO._getRevision();
@@ -124,7 +124,7 @@ public class VersionInfo {
   public static String getDate() {
     return COMMON_VERSION_INFO._getDate();
   }
-  
+
   /**
    * The user that compiled Hadoop.
    * @return the username of the user
@@ -132,25 +132,27 @@ public class VersionInfo {
   public static String getUser() {
     return COMMON_VERSION_INFO._getUser();
   }
-  
+
   /**
-   * Get the subversion URL for the root Hadoop directory.
+   * Get the URL for the Hadoop repository.
+   * @return the URL of the Hadoop repository
    */
   public static String getUrl() {
     return COMMON_VERSION_INFO._getUrl();
   }
 
   /**
-   * Get the checksum of the source files from which Hadoop was
-   * built.
-   **/
+   * Get the checksum of the source files from which Hadoop was built.
+   * @return the checksum of the source files
+   */
   public static String getSrcChecksum() {
     return COMMON_VERSION_INFO._getSrcChecksum();
   }
 
   /**
-   * Returns the buildVersion which includes version, 
-   * revision, user and date. 
+   * Returns the buildVersion which includes version,
+   * revision, user and date.
+   * @return the buildVersion
    */
   public static String getBuildVersion(){
     return COMMON_VERSION_INFO._getBuildVersion();
@@ -158,6 +160,7 @@ public class VersionInfo {
 
   /**
    * Returns the protoc version used for the build.
+   * @return the protoc version
    */
   public static String getProtocVersion(){
     return COMMON_VERSION_INFO._getProtocVersion();
