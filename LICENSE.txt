@@ -516,7 +516,9 @@ hadoop-tools/hadoop-sls/src/main/html/css/bootstrap-responsive.min.css
 And the binary distribution of this product bundles these dependencies under the
 following license:
 Mockito 1.8.5
-SLF4J 1.7.10
+JUL to SLF4J bridge 1.7.25
+SLF4J API Module 1.7.25
+SLF4J LOG4J-12 Binding 1.7.25
 --------------------------------------------------------------------------------
 
 The MIT License (MIT)

@@ -70,6 +70,9 @@
     <jackson.version>1.9.13</jackson.version>
     <jackson2.version>2.7.8</jackson2.version>
 
+    <!-- SLF4J version -->
+    <slf4j.version>1.7.25</slf4j.version>
+
     <!-- ProtocolBuffer version, used to verify the protoc version and -->
     <!-- define the protobuf JAR version                               -->
     <protobuf.version>2.5.0</protobuf.version>
@@ -740,17 +743,17 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>1.7.10</version>
+        <version>${slf4j.version}</version>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-log4j12</artifactId>
-        <version>1.7.10</version>
+        <version>${slf4j.version}</version>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>jul-to-slf4j</artifactId>
-        <version>1.7.10</version>
+        <version>${slf4j.version}</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jdt</groupId>
