@@ -631,9 +631,9 @@ Azure Data Lake Store - Java client SDK 2.0.11
 JCodings 1.0.8
 Joni 2.1.2
 Mockito 1.8.5
-JUL to SLF4J bridge 1.7.10
-SLF4J API Module 1.7.10
-SLF4J LOG4J-12 Binding 1.7.10
+JUL to SLF4J bridge 1.7.25
+SLF4J API Module 1.7.25
+SLF4J LOG4J-12 Binding 1.7.25
 --------------------------------------------------------------------------------
 
 The MIT License (MIT)
