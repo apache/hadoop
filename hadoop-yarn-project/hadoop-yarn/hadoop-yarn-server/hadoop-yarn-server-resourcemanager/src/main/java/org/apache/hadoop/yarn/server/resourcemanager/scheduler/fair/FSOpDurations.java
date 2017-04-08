@@ -53,9 +53,6 @@ public class FSOpDurations implements MetricsSource {
   @Metric("Duration for an update call")
   MutableRate updateCall;
 
-  @Metric("Duration for a preempt call")
-  MutableRate preemptCall;
-
   private static final MetricsInfo RECORD_INFO =
       info("FSOpDurations", "Durations of FairScheduler calls or thread-runs");
 
@@ -88,7 +85,6 @@ public class FSOpDurations implements MetricsSource {
     nodeUpdateCall.setExtended(isExtended);
     updateThreadRun.setExtended(isExtended);
     updateCall.setExtended(isExtended);
-    preemptCall.setExtended(isExtended);
 
     INSTANCE.isExtended = isExtended;
   }
@@ -112,10 +108,6 @@ public class FSOpDurations implements MetricsSource {
 
   public void addUpdateCallDuration(long value) {
     updateCall.add(value);
-  }
-
-  public void addPreemptCallDuration(long value) {
-    preemptCall.add(value);
   }
 
   @VisibleForTesting
