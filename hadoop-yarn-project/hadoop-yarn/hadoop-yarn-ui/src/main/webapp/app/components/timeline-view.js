@@ -18,6 +18,7 @@
 
 import Ember from 'ember';
 import Converter from 'yarn-ui/utils/converter';
+import ColumnDef from 'em-table/utils/column-definition';
 
 export default Ember.Component.extend({
   canvas: {
@@ -31,6 +32,8 @@ export default Ember.Component.extend({
   modelArr: [],
   colors: d3.scale.category10().range(),
   _selected: undefined,
+  gridColumns: [],
+  gridRows: [],
 
   selected: function() {
     return this._selected;
@@ -276,5 +279,199 @@ export default Ember.Component.extend({
     if (this.modelArr.length > 0) {
       this.setSelected(this.modelArr[0]);
     }
+
+    if (this.get('attemptModel')) {
+      this.setAttemptsGridColumnsAndRows();
+    } else {
+      this.setContainersGridColumnsAndRows();
+    }
   },
+
+  setAttemptsGridColumnsAndRows: function() {
+    var self = this;
+    var columns = [];
+
+    columns.push({
+      id: 'id',
+      headerTitle: 'Attempt ID',
+      contentPath: 'id',
+      cellComponentName: 'em-table-linked-cell',
+      minWidth: '300px',
+      getCellContent: function(row) {
+        return {
+          displayText: row.get('id'),
+          routeName: 'yarn-app-attempt',
+          id: row.get('id')
+        };
+      }
+    }, {
+      id: 'attemptStartedTime',
+      headerTitle: 'Started Time',
+      contentPath: 'attemptStartedTime'
+    }, {
+      id: 'finishedTime',
+      headerTitle: 'Finished Time',
+      contentPath: 'finishedTime',
+      getCellContent: function(row) {
+        if (row.get('finishedTs')) {
+          return row.get('finishedTime');
+        }
+        return 'N/A';
+      }
+    }, {
+      id: 'elapsedTime',
+      headerTitle: 'Elapsed Time',
+      contentPath: 'elapsedTime'
+    }, {
+      id: 'appMasterContainerId',
+      headerTitle: 'AM Container ID',
+      contentPath: 'appMasterContainerId',
+      minWidth: '300px'
+    }, {
+      id: 'amNodeId',
+      headerTitle: 'AM Node ID',
+      contentPath: 'amNodeId'
+    }, {
+      id: 'attemptState',
+      headerTitle: 'State',
+      contentPath: 'attemptState',
+      getCellContent: function(row) {
+        var state = row.get('attemptState');
+        if (state) {
+          return state;
+        } else {
+          return 'N/A';
+        }
+      }
+    }, {
+      id: 'nodeHttpAddress',
+      headerTitle: 'NodeManager Web UI',
+      contentPath: 'nodeHttpAddress',
+      cellComponentName: 'em-table-html-cell',
+      getCellContent: function(row) {
+        var address = self.checkHttpProtocol(row.get('nodeHttpAddress'));
+        if (address) {
+          return `<a href="${address}" target="_blank">${address}</a>`;
+        } else {
+          return 'N/A';
+        }
+      }
+    }, {
+      id: 'logsLink',
+      headerTitle: 'Logs',
+      contentPath: 'logsLink',
+      cellComponentName: 'em-table-html-cell',
+      getCellContent: function(row) {
+        var logUrl = self.checkHttpProtocol(row.get('logsLink'));
+        if (logUrl) {
+          return `<a href="${logUrl}" target="_blank">Link</a>`;
+        } else {
+          return 'N/A';
+        }
+      }
+    });
+
+    var gridCols = ColumnDef.make(columns);
+    this.set('gridColumns', gridCols);
+    this.set('gridRows', this.modelArr);
+  },
+
+  setContainersGridColumnsAndRows: function() {
+    var self = this;
+    var columns = [];
+
+    columns.push({
+      id: 'id',
+      headerTitle: 'Container ID',
+      contentPath: 'id',
+      minWidth: '300px'
+    }, {
+      id: 'startedTime',
+      headerTitle: 'Started Time',
+      contentPath: 'startedTime'
+    }, {
+      id: 'finishedTime',
+      headerTitle: 'Finished Time',
+      contentPath: 'finishedTime',
+      getCellContent: function(row) {
+        if (row.get('finishedTs')) {
+          return row.get('finishedTime');
+        }
+        return 'N/A';
+      }
+    }, {
+      id: 'elapsedTime',
+      headerTitle: 'Elapsed Time',
+      contentPath: 'elapsedTime'
+    }, {
+      id: 'priority',
+      headerTitle: 'Priority',
+      contentPath: 'priority'
+    }, {
+      id: 'containerExitStatus',
+      headerTitle: 'Exit Status',
+      contentPath: 'containerExitStatus',
+      getCellContent: function(row) {
+        var status = row.get('containerExitStatus');
+        if (status) {
+          return status;
+        } else {
+          return 'N/A';
+        }
+      }
+    }, {
+      id: 'containerState',
+      headerTitle: 'State',
+      contentPath: 'containerState',
+      getCellContent: function(row) {
+        var state = row.get('containerState');
+        if (state) {
+          return state;
+        } else {
+          return 'N/A';
+        }
+      }
+    }, {
+      id: 'logUrl',
+      headerTitle: 'Logs',
+      contentPath: 'logUrl',
+      cellComponentName: 'em-table-html-cell',
+      getCellContent: function(row) {
+        var url = self.checkHttpProtocol(row.get('logUrl'));
+        if (url) {
+          return `<a href="${url}" target="_blank">${url}</a>`;
+        } else {
+          return 'N/A';
+        }
+      }
+    }, {
+      id: 'nodeHttpAddress',
+      headerTitle: 'Node Manager UI',
+      contentPath: 'nodeHttpAddress',
+      cellComponentName: 'em-table-html-cell',
+      getCellContent: function(row) {
+        var address = self.checkHttpProtocol(row.get('nodeHttpAddress'));
+        if (address) {
+          return `<a href="${address}" target="_blank">${address}</a>`;
+        } else {
+          return 'N/A';
+        }
+      }
+    });
+
+    var gridCols = ColumnDef.make(columns);
+    this.set('gridColumns', gridCols);
+    this.set('gridRows', this.modelArr);
+  },
+
+  checkHttpProtocol: function(prop) {
+    if (prop && prop.indexOf('://') < 0) {
+      prop = 'http://' + prop;
+    }
+    return prop;
+  },
+
+  isDataEmpty: Ember.computed(function() {
+    return this.modelArr.length === 0;
+  })
 });

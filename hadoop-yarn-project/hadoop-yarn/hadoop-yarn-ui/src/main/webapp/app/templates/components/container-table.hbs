@@ -19,13 +19,15 @@
 <table id="container-table" class="table table-striped table-bordered" cellspacing="0" width="100%" height="100%">
   <tbody>
     <tr>
-      <td>Start Time</td>
+      <td>Started Time</td>
       <td>{{container.startedTime}}</td>
     </tr>
+    {{#if container.validatedFinishedTs}}
     <tr>
       <td>Finished Time</td>
       <td>{{container.validatedFinishedTs}}</td>
     </tr>
+    {{/if}}
     <tr>
       <td>Elapsed Time</td>
       <td>{{container.elapsedTime}}</td>
@@ -34,21 +36,29 @@
       <td>Priority</td>
       <td>{{container.priority}}</td>
     </tr>
-    <tr>
-      <td>Log</td>
-      <td><a href="{{container.logUrl}}" target="_blank">Link</a></td>
-    </tr>
+    {{#if container.containerExitStatus}}
     <tr>
       <td>Exit Status</td>
       <td>{{container.containerExitStatus}}</td>
     </tr>
+    {{/if}}
+    {{#if container.containerState}}
     <tr>
       <td>State</td>
       <td>{{container.containerState}}</td>
     </tr>
+    {{/if}}
+    {{#if container.nodeHttpAddress}}
     <tr>
       <td>NodeManager UI</td>
-      <td><a href="{{container.nodeHttpAddress}}" target="_blank">{{container.nodeHttpAddress}}</a></td>
+      <td><a href="{{prepend-protocol container.nodeHttpAddress}}" target="_blank">{{container.nodeHttpAddress}}</a></td>
     </tr>
+    {{/if}}
+    {{#if container.logUrl}}
+    <tr>
+      <td>Log</td>
+      <td><a href="{{prepend-protocol container.logUrl}}" target="_blank">Link</a></td>
+    </tr>
+    {{/if}}
   </tbody>
 </table>

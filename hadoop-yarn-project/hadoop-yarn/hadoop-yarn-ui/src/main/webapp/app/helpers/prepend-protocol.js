@@ -18,5 +18,12 @@
 
 import Ember from 'ember';
 
-export default Ember.Component.extend({
-});
+export function prependProtocol(params/*, hash*/) {
+  let address = params[0];
+  if (address && address.indexOf('://') < 0) {
+    address = 'http://' + address;
+  }
+  return address;
+}
+
+export default Ember.Helper.helper(prependProtocol);
