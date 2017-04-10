@@ -16,7 +16,13 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
+import { prependProtocol } from '../../../helpers/prepend-protocol';
+import { module, test } from 'qunit';
 
-export default Ember.Component.extend({
+module('Unit | Helper | prepend protocol');
+
+// Replace this with your real tests.
+test('it works', function(assert) {
+  let result = prependProtocol(42);
+  assert.ok(result);
 });

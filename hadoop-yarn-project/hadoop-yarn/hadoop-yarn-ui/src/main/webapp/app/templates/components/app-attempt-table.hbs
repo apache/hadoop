@@ -23,39 +23,43 @@
       <td>{{attempt.id}}</td>
     </tr>
     <tr>
-      <td>Start Time</td>
+      <td>Started Time</td>
       <td>{{attempt.attemptStartedTime}}</td>
+    </tr>
+    {{#if attempt.validatedFinishedTs}}
+    <tr>
+      <td>Finished Time</td>
+      <td>{{attempt.validatedFinishedTs}}</td>
+    </tr>
+    {{/if}}
+    <tr>
+      <td>Elapsed Time</td>
+      <td>{{attempt.elapsedTime}}</td>
     </tr>
     <tr>
       <td>AM Container Id</td>
       <td>{{attempt.appMasterContainerId}}</td>
     </tr>
-    {{#if attempt.IsAmNodeUrl}}
-    <tr>
-      <td>AM Node Web UI</td>
-      <td><a href="{{nodeHttpAddressFormatted}}" target="_blank">{{nodeHttpAddressFormatted}}</a></td>
-    </tr>
-    {{/if}}
     <tr>
       <td>AM Node Id</td>
       <td>{{attempt.amNodeId}}</td>
     </tr>
-    {{#if attempt.IsLinkAvailable}}
-    <tr>
-      <td>Log</td>
-      <td><a href="{{attempt.logsLink}}" target="_blank">Link</a></td>
-    </tr>
-    {{/if}}
     {{#if attempt.attemptState}}
     <tr>
       <td>Attempt State</td>
       <td>{{attempt.attemptState}}</td>
     </tr>
     {{/if}}
-    {{#if attempt.elapsedTime}}
+    {{#if attempt.nodeHttpAddress}}
     <tr>
-      <td>Elapsed Time</td>
-      <td>{{attempt.elapsedTime}}</td>
+      <td>AM Node Web UI</td>
+      <td><a href="{{prepend-protocol attempt.nodeHttpAddress}}" target="_blank">{{attempt.nodeHttpAddress}}</a></td>
+    </tr>
+    {{/if}}
+    {{#if attempt.logsLink}}
+    <tr>
+      <td>Log</td>
+      <td><a href="{{prepend-protocol attempt.logsLink}}" target="_blank">Link</a></td>
     </tr>
     {{/if}}
   </tbody>
