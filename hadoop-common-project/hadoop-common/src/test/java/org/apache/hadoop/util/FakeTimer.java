@@ -33,7 +33,8 @@ public class FakeTimer extends Timer {
 
   /** Constructs a FakeTimer with a non-zero value */
   public FakeTimer() {
-    nowNanos = 1000;  // Initialize with a non-trivial value.
+    // Initialize with a non-trivial value.
+    nowNanos = TimeUnit.MILLISECONDS.toNanos(1000);
   }
 
   @Override
