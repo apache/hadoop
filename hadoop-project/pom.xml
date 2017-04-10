@@ -546,11 +546,6 @@
         <version>1.0</version>
       </dependency>
       <dependency>
-        <groupId>xmlenc</groupId>
-        <artifactId>xmlenc</artifactId>
-        <version>0.52</version>
-      </dependency>
-      <dependency>
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpclient</artifactId>
         <version>4.5.2</version>

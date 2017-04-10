@@ -1711,7 +1711,6 @@ Hamcrest Core 1.3
 ASM Core 5.0.4
 ASM Commons 5.0.2
 ASM Tree 5.0.2
-xmlenc Library 0.52
 --------------------------------------------------------------------------------
 (3-clause BSD)
 Redistribution and use in source and binary forms, with or without
