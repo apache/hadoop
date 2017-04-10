@@ -1304,6 +1304,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     return appSchedulingInfo.getSchedulingPlacementSet(schedulerRequestKey);
   }
 
+  public Map<String, ResourceRequest> getResourceRequests(
+      SchedulerRequestKey schedulerRequestKey) {
+    return appSchedulingInfo.getSchedulingPlacementSet(schedulerRequestKey)
+        .getResourceRequests();
+  }
 
   public void incUnconfirmedRes(Resource res) {
     unconfirmedAllocatedMem.addAndGet(res.getMemorySize());
