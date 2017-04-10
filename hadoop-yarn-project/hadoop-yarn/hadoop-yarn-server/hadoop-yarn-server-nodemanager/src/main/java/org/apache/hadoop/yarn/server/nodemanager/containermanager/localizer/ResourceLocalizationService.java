@@ -261,7 +261,8 @@ public class ResourceLocalizationService extends CompositeService
     }
 
     diskValidator = DiskValidatorFactory.getInstance(
-        conf.get(YarnConfiguration.DISK_VALIDATOR));
+        conf.get(YarnConfiguration.DISK_VALIDATOR,
+            YarnConfiguration.DEFAULT_DISK_VALIDATOR));
     LOG.info("Disk Validator: " + YarnConfiguration.DISK_VALIDATOR +
         " is loaded.");
     cacheTargetSize =
