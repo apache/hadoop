@@ -269,8 +269,8 @@ To submit the pi job to run in Docker containers, run the following commands:
 
 ```
     vars="YARN_CONTAINER_RUNTIME_TYPE=docker,YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=hadoop-docker"
-    hadoop jar hadoop-examples.jar -Dyarn.app.mapreduce.am.env=$vars \
-        -Dmapreduce.map.env=$vars -Dmapreduce.reduce.env=$vars pi 10 100
+    hadoop jar hadoop-examples.jar pi -Dyarn.app.mapreduce.am.env=$vars \
+        -Dmapreduce.map.env=$vars -Dmapreduce.reduce.env=$vars 10 100
 ```
 
 Note that the application master, map tasks, and reduce tasks are configured
