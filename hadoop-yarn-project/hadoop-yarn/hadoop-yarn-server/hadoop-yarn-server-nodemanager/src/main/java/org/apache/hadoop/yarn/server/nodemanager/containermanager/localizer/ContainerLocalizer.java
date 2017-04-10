@@ -127,7 +127,8 @@ public class ContainerLocalizer {
     this.recordFactory = recordFactory;
     this.conf = new YarnConfiguration();
     this.diskValidator = DiskValidatorFactory.getInstance(
-        conf.get(YarnConfiguration.DISK_VALIDATOR));
+        conf.get(YarnConfiguration.DISK_VALIDATOR,
+            YarnConfiguration.DEFAULT_DISK_VALIDATOR));
     LOG.info("Disk Validator: " + YarnConfiguration.DISK_VALIDATOR +
         " is loaded.");
     this.appCacheDirContextName = String.format(APPCACHE_CTXT_FMT, appId);
