@@ -213,7 +213,7 @@ public class TestDFSStripedOutputStreamWithFailure {
     final int numDNs = dataBlocks + parityBlocks;
     if (ErasureCodeNative.isNativeCodeLoaded()) {
       conf.set(
-          CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODER_KEY,
+          CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
           NativeRSRawErasureCoderFactory.class.getCanonicalName());
     }
     DFSTestUtil.enableAllECPolicies(conf);

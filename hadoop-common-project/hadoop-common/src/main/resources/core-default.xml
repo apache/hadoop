@@ -657,34 +657,33 @@
 </property>
 
 <property>
-  <name>io.erasurecode.codec.rs.rawcoder</name>
-  <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory</value>
+  <name>io.erasurecode.codec.rs.rawcoders</name>
+  <value>org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory,org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory</value>
   <description>
-    Raw coder implementation for the rs codec. The default value is a
-    pure Java implementation. There is also a native implementation. Its value
-    is org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory.
+    Comma separated raw coder implementations for the rs codec. The earlier
+    factory is prior to followings in case of failure of creating raw coders.
   </description>
 </property>
 
 <property>
-  <name>io.erasurecode.codec.rs-legacy.rawcoder</name>
+  <name>io.erasurecode.codec.rs-legacy.rawcoders</name>
   <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactoryLegacy</value>
   <description>
-    Raw coder implementation for the rs-legacy codec.
+    Comma separated raw coder implementations for the rs-legacy codec. The earlier
+    factory is prior to followings in case of failure of creating raw coders.
   </description>
 </property>
 
 <property>
-  <name>io.erasurecode.codec.xor.rawcoder</name>
-  <value>org.apache.hadoop.io.erasurecode.rawcoder.XORRawErasureCoderFactory</value>
+  <name>io.erasurecode.codec.xor.rawcoders</name>
+  <value>org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawErasureCoderFactory,org.apache.hadoop.io.erasurecode.rawcoder.XORRawErasureCoderFactory</value>
   <description>
-    Raw coder implementation for the xor codec. The default value is a pure Java
-    implementation. There is also a native implementation. Its value is
-    org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawErasureCoderFactory.
+    Comma separated raw coder implementations for the xor codec. The earlier
+    factory is prior to followings in case of failure of creating raw coders.
   </description>
 </property>
 
-<!-- file system properties -->
+  <!-- file system properties -->
 
 <property>
   <name>fs.defaultFS</name>
