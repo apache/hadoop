@@ -72,7 +72,6 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
-import org.apache.hadoop.hdfs.protocol.datatransfer.PacketReceiver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
@@ -102,8 +101,6 @@ import org.apache.htrace.Span;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceInfo;
 import org.apache.htrace.TraceScope;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -140,8 +137,6 @@ import com.google.common.cache.RemovalNotification;
 public class DFSOutputStream extends FSOutputSummer
     implements Syncable, CanSetDropBehind {
   private final long dfsclientSlowLogThresholdMs;
-  static final Logger LOG = LoggerFactory.getLogger(DFSOutputStream.class);
-
   /**
    * Number of times to retry creating a file when there are transient 
    * errors (typically related to encryption zones and KeyProvider operations).
@@ -191,7 +186,6 @@ public class DFSOutputStream extends FSOutputSummer
   private FileEncryptionInfo fileEncryptionInfo;
   private static final BlockStoragePolicySuite blockStoragePolicySuite =
       BlockStoragePolicySuite.createDefaultSuite();
-  private int writePacketSize;
 
   /** Use {@link ByteArrayManager} to create buffer for non-heartbeat packets.*/
   private DFSPacket createPacket(int packetSize, int chunksPerPkt, long offsetInBlock,
@@ -1675,9 +1669,7 @@ public class DFSOutputStream extends FSOutputSummer
       DFSClient.LOG.debug(
           "Set non-null progress callback on DFSOutputStream " + src);
     }
-
-    initWritePacketSize();
-
+    
     this.bytesPerChecksum = checksum.getBytesPerChecksum();
     if (bytesPerChecksum <= 0) {
       throw new HadoopIllegalArgumentException(
@@ -1693,21 +1685,6 @@ public class DFSOutputStream extends FSOutputSummer
     this.dfsclientSlowLogThresholdMs =
       dfsClient.getConf().dfsclientSlowIoWarningThresholdMs;
     this.byteArrayManager = dfsClient.getClientContext().getByteArrayManager();
-  }
-
-  /**
-   * Ensures the configured writePacketSize never exceeds
-   * PacketReceiver.MAX_PACKET_SIZE.
-   */
-  private void initWritePacketSize() {
-    writePacketSize = dfsClient.getConf().writePacketSize;
-    if (writePacketSize > PacketReceiver.MAX_PACKET_SIZE) {
-      LOG.warn(
-          "Configured write packet exceeds {} bytes as max,"
-              + " using {} bytes.",
-          PacketReceiver.MAX_PACKET_SIZE, PacketReceiver.MAX_PACKET_SIZE);
-      writePacketSize = PacketReceiver.MAX_PACKET_SIZE;
-    }
   }
 
   /** Construct a new output stream for creating a file. */
@@ -1959,8 +1936,18 @@ public class DFSOutputStream extends FSOutputSummer
       }
       waitAndQueueCurrentPacket();
 
-      adjustChunkBoundary();
+      // If the reopened file did not end at chunk boundary and the above
+      // write filled up its partial chunk. Tell the summer to generate full 
+      // crc chunks from now on.
+      if (appendChunk && bytesCurBlock%bytesPerChecksum == 0) {
+        appendChunk = false;
+        resetChecksumBufSize();
+      }
 
+      if (!appendChunk) {
+        int psize = Math.min((int)(blockSize-bytesCurBlock), dfsClient.getConf().writePacketSize);
+        computePacketChunkSize(psize, bytesPerChecksum);
+      }
       //
       // if encountering a block boundary, send an empty packet to 
       // indicate the end of block and reset bytesCurBlock.
@@ -1973,40 +1960,6 @@ public class DFSOutputStream extends FSOutputSummer
         lastFlushOffset = 0;
       }
     }
-  }
-
-  /**
-   * If the reopened file did not end at chunk boundary and the above
-   * write filled up its partial chunk. Tell the summer to generate full
-   * crc chunks from now on.
-   */
-  protected void adjustChunkBoundary() {
-    if (appendChunk && bytesCurBlock % bytesPerChecksum == 0) {
-      appendChunk = false;
-      resetChecksumBufSize();
-    }
-
-    if (!appendChunk) {
-      final int psize = (int) Math.min(blockSize - bytesCurBlock,
-          writePacketSize);
-      computePacketChunkSize(psize, bytesPerChecksum);
-    }
-  }
-
-  /**
-   * Used in test only.
-   */
-  @VisibleForTesting
-  void setAppendChunk(final boolean appendChunk) {
-    this.appendChunk = appendChunk;
-  }
-
-  /**
-   * Used in test only.
-   */
-  @VisibleForTesting
-  void setBytesCurBlock(final long bytesCurBlock) {
-    this.bytesCurBlock = bytesCurBlock;
   }
 
   @Deprecated
