@@ -736,7 +736,7 @@ hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/d3-LICENSE
 
 The binary distribution of this product bundles these dependencies under the
 following license:
-HSQLDB Database 2.0.0
+HSQLDB Database 2.3.4
 --------------------------------------------------------------------------------
 (HSQL License)
 "COPYRIGHTS AND LICENSES (based on BSD License)
