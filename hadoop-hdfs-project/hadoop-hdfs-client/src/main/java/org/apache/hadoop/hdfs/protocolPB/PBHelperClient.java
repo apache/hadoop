@@ -1619,7 +1619,8 @@ public class PBHelperClient {
         fs.getEncryptDataTransfer(),
         fs.getTrashInterval(),
         convert(fs.getChecksumType()),
-        fs.hasKeyProviderUri() ? fs.getKeyProviderUri() : null);
+        fs.hasKeyProviderUri() ? fs.getKeyProviderUri() : null,
+        (byte) fs.getPolicyId());
   }
 
   public static List<CryptoProtocolVersionProto> convert(
@@ -1771,6 +1772,7 @@ public class PBHelperClient {
         .setTrashInterval(fs.getTrashInterval())
         .setChecksumType(convert(fs.getChecksumType()))
         .setKeyProviderUri(fs.getKeyProviderUri())
+        .setPolicyId(fs.getDefaultStoragePolicyId())
         .build();
   }
 
