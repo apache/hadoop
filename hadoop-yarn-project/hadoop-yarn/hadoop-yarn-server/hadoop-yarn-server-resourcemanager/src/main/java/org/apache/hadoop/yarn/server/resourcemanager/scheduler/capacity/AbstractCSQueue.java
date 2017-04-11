@@ -228,16 +228,6 @@ public abstract class AbstractCSQueue implements CSQueue {
             null, null, Server.getRemoteAddress(), null));
   }
 
-  @Override
-  public void setUsedCapacity(float usedCapacity) {
-    queueCapacities.setUsedCapacity(usedCapacity);
-  }
-  
-  @Override
-  public void setAbsoluteUsedCapacity(float absUsedCapacity) {
-    queueCapacities.setAbsoluteUsedCapacity(absUsedCapacity);
-  }
-
   /**
    * Set maximum capacity - used only for testing.
    * @param maximumCapacity new max capacity
@@ -309,7 +299,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       // Update metrics
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
-          minimumAllocation, this, labelManager, null);
+          this, labelManager, null);
 
       // Check if labels of this queue is a subset of parent queue, only do this
       // when we not root
@@ -461,7 +451,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       ++numContainers;
 
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
-          minimumAllocation, this, labelManager, nodePartition);
+          this, labelManager, nodePartition);
     } finally {
       writeLock.unlock();
     }
@@ -474,7 +464,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       queueUsage.decUsed(nodePartition, resource);
 
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
-          minimumAllocation, this, labelManager, nodePartition);
+          this, labelManager, nodePartition);
 
       --numContainers;
     } finally {
@@ -735,7 +725,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     queueUsage.incUsed(nodeLabel, resourceToInc);
     CSQueueUtils.updateUsedCapacity(resourceCalculator,
         labelManager.getResourceByLabel(nodeLabel, Resources.none()),
-        minimumAllocation, queueUsage, queueCapacities, nodeLabel);
+        nodeLabel, this);
     if (null != parent) {
       parent.incUsedResource(nodeLabel, resourceToInc, null);
     }
@@ -751,7 +741,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     queueUsage.decUsed(nodeLabel, resourceToDec);
     CSQueueUtils.updateUsedCapacity(resourceCalculator,
         labelManager.getResourceByLabel(nodeLabel, Resources.none()),
-        minimumAllocation, queueUsage, queueCapacities, nodeLabel);
+        nodeLabel, this);
     if (null != parent) {
       parent.decUsedResource(nodeLabel, resourceToDec, null);
     }
