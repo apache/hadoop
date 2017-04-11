@@ -781,8 +781,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           conf.getLong(FS_TRASH_INTERVAL_KEY, FS_TRASH_INTERVAL_DEFAULT),
           checksumType,
           conf.getTrimmed(
-          CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
-          ""));
+              CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+              ""),
+          blockManager.getStoragePolicySuite().getDefaultPolicy().getId());
 
       this.maxFsObjects = conf.getLong(DFS_NAMENODE_MAX_OBJECTS_KEY, 
                                        DFS_NAMENODE_MAX_OBJECTS_DEFAULT);

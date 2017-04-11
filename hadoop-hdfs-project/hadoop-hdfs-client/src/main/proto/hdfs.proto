@@ -421,6 +421,7 @@ message FsServerDefaultsProto {
   optional uint64 trashInterval = 7 [default = 0];
   optional ChecksumTypeProto checksumType = 8 [default = CHECKSUM_CRC32];
   optional string keyProviderUri = 9;
+  optional uint32 policyId = 10 [default = 0];
 }
 
 
