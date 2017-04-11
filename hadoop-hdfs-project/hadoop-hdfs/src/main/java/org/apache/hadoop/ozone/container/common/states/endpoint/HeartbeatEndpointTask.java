@@ -126,11 +126,6 @@ public class HeartbeatEndpointTask
     for (SCMCommandResponseProto commandResponseProto : response
         .getCommandsList()) {
       if (commandResponseProto.getCmdType() ==
-          StorageContainerDatanodeProtocolProtos.Type.nullCmd) {
-        //this.context.addCommand(NullCommand.newBuilder().build());
-        LOG.debug("Discarding a null command from SCM.");
-      }
-      if (commandResponseProto.getCmdType() ==
           StorageContainerDatanodeProtocolProtos.Type.sendContainerReport) {
         this.context.addCommand(SendContainerCommand.getFromProtobuf(
             commandResponseProto.getSendReport()));

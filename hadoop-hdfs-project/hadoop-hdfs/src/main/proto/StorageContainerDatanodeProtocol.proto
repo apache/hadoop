@@ -181,12 +181,6 @@ message ContainerNodeIDProto {
 }
 
 
-/**
- * Empty Command Response
- */
-message NullCmdResponseProto {
-
-}
 
 /**
 This command tells the data node to send in the container report when possible
@@ -198,7 +192,6 @@ message SendContainerReportProto {
 Type of commands supported by SCM to datanode protocol.
 */
 enum Type {
-  nullCmd = 1;
   versionCommand = 2;
   registeredCommand = 3;
   sendContainerReport = 4;
@@ -209,10 +202,9 @@ enum Type {
  */
 message SCMCommandResponseProto {
   required Type cmdType = 2; // Type of the command
-  optional NullCmdResponseProto nullCommand = 3;
-  optional SCMRegisteredCmdResponseProto registeredProto = 4;
-  optional SCMVersionResponseProto versionProto = 5;
-  optional SendContainerReportProto sendReport = 6;
+  optional SCMRegisteredCmdResponseProto registeredProto = 3;
+  optional SCMVersionResponseProto versionProto = 4;
+  optional SendContainerReportProto sendReport = 5;
 
 }
 

@@ -20,13 +20,16 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
-import org.apache.hadoop.ozone.protocol.commands.NullCommand;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.scm.VersionInfo;
 
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -137,25 +140,10 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
     heartbeatCount.incrementAndGet();
     this.reportState = reportState;
     sleepIfNeeded();
-    return getNullRespose();
-  }
-
-  private StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto
-      getNullRespose() throws
-      com.google.protobuf.InvalidProtocolBufferException {
-    StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto
-        cmdResponse = StorageContainerDatanodeProtocolProtos
-        .SCMCommandResponseProto
-        .newBuilder().setCmdType(StorageContainerDatanodeProtocolProtos
-            .Type.nullCmd)
-        .setNullCommand(
-            StorageContainerDatanodeProtocolProtos.NullCmdResponseProto
-                .parseFrom(
-                    NullCommand.newBuilder().build().getProtoBufMessage()))
+    List<SCMCommandResponseProto>
+        cmdResponses = new LinkedList<>();
+    return SCMHeartbeatResponseProto.newBuilder().addAllCommands(cmdResponses)
         .build();
-    return StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto
-        .newBuilder()
-        .addCommands(cmdResponse).build();
   }
 
   /**
@@ -188,13 +176,16 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
    * @throws IOException
    */
   @Override
-  public StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto
+  public SCMHeartbeatResponseProto
       sendContainerReport(StorageContainerDatanodeProtocolProtos
       .ContainerReportsProto reports) throws IOException {
     Preconditions.checkNotNull(reports);
     containerReportsCount.incrementAndGet();
     closedContainerCount.addAndGet(reports.getReportsCount());
-    return getNullRespose();
+    List<SCMCommandResponseProto>
+        cmdResponses = new LinkedList<>();
+    return SCMHeartbeatResponseProto.newBuilder().addAllCommands(cmdResponses)
+        .build();
   }
 
   public ReportState getReportState() {
