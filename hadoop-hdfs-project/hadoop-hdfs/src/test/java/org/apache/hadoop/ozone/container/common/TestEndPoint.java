@@ -47,8 +47,6 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.Type;
 import org.apache.hadoop.ozone.scm.VersionInfo;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Time;
@@ -286,10 +284,7 @@ public class TestEndPoint {
       SCMHeartbeatResponseProto responseProto = rpcEndPoint.getEndPoint()
           .sendHeartbeat(dataNode, nrb.build(), defaultReportState);
       Assert.assertNotNull(responseProto);
-      Assert.assertEquals(1, responseProto.getCommandsCount());
-      Assert.assertNotNull(responseProto.getCommandsList().get(0));
-      Assert.assertEquals(responseProto.getCommandsList().get(0).getCmdType(),
-          Type.nullCmd);
+      Assert.assertEquals(0, responseProto.getCommandsCount());
     }
   }
 

@@ -18,7 +18,6 @@
 package org.apache.hadoop.ozone.scm.node;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.ozone.protocol.commands.NullCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 
 import java.util.HashMap;
@@ -39,7 +38,7 @@ public class CommandQueue {
 
   private final Map<DatanodeID, List<SCMCommand>> commandMap;
   private final Lock lock;
-  // This map is used as default return value containing one null command.
+  // This map is used as default return value.
   private static final List<SCMCommand> DEFAULT_LIST = new LinkedList<>();
 
   /**
@@ -48,12 +47,11 @@ public class CommandQueue {
   public CommandQueue() {
     commandMap = new HashMap<>();
     lock = new ReentrantLock();
-    DEFAULT_LIST.add(NullCommand.newBuilder().build());
   }
 
   /**
    * Returns  a list of Commands for the datanode to execute, if we have no
-   * commands returns a list with Null Command otherwise the current set of
+   * commands returns a empty list otherwise the current set of
    * commands are returned and command map set to empty list again.
    *
    * @param datanodeID DatanodeID
@@ -67,8 +65,7 @@ public class CommandQueue {
       if (commandMap.containsKey(datanodeID)) {
         List temp = commandMap.get(datanodeID);
         if (temp.size() > 0) {
-          LinkedList<SCMCommand> emptyList = new LinkedList<>();
-          commandMap.put(datanodeID, emptyList);
+          commandMap.put(datanodeID, DEFAULT_LIST);
           return temp;
         }
       }

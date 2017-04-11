@@ -176,8 +176,8 @@ public class TestContainerPlacement {
 
       thrown.expect(IOException.class);
       thrown.expectMessage(
-          startsWith("Unable to find enough nodes that meet the space " +
-              "requirement in healthy node set."));
+          startsWith("Unable to find enough nodes that meet "
+              + "the space requirement"));
       String container2 = UUID.randomUUID().toString();
       containerManager.allocateContainer(container2,
           ScmClient.ReplicationFactor.THREE);

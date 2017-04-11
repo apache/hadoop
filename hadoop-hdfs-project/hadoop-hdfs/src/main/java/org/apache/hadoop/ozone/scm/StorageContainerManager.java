@@ -43,8 +43,6 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.NullCmdResponseProto;
-import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
@@ -58,6 +56,8 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SendContainerReportProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.Type;
 import org.apache.hadoop.ozone.protocol.proto
@@ -296,24 +296,25 @@ public class StorageContainerManager
   public static SCMCommandResponseProto getCommandResponse(SCMCommand cmd)
       throws InvalidProtocolBufferException {
     Type type = cmd.getType();
+    SCMCommandResponseProto.Builder builder =
+        SCMCommandResponseProto.newBuilder();
     switch (type) {
-    case nullCmd:
-      return getNullCmdResponse();
+    case registeredCommand:
+      return builder.setCmdType(Type.registeredCommand)
+          .setRegisteredProto(
+              SCMRegisteredCmdResponseProto.getDefaultInstance())
+          .build();
+    case versionCommand:
+      return builder.setCmdType(Type.versionCommand)
+          .setVersionProto(SCMVersionResponseProto.getDefaultInstance())
+          .build();
+    case sendContainerReport:
+      return builder.setCmdType(Type.sendContainerReport)
+          .setSendReport(SendContainerReportProto.getDefaultInstance())
+          .build();
     default:
       throw new IllegalArgumentException("Not implemented");
     }
-  }
-
-  /**
-   * Returns a null command response.
-   * @return
-   * @throws InvalidProtocolBufferException
-   */
-  private static SCMCommandResponseProto getNullCmdResponse()  {
-    return SCMCommandResponseProto.newBuilder()
-        .setCmdType(Type.nullCmd)
-        .setNullCommand(NullCmdResponseProto.getDefaultInstance())
-        .build();
   }
 
   @VisibleForTesting
@@ -465,11 +466,11 @@ public class StorageContainerManager
       SCMNodeReport nodeReport, ReportState reportState) throws IOException {
     List<SCMCommand> commands =
         getScmNodeManager().sendHeartbeat(datanodeID, nodeReport);
-    List<SCMCommandResponseProto> cmdReponses = new LinkedList<>();
+    List<SCMCommandResponseProto> cmdResponses = new LinkedList<>();
     for (SCMCommand cmd : commands) {
-      cmdReponses.add(getCommandResponse(cmd));
+      cmdResponses.add(getCommandResponse(cmd));
     }
-    return SCMHeartbeatResponseProto.newBuilder().addAllCommands(cmdReponses)
+    return SCMHeartbeatResponseProto.newBuilder().addAllCommands(cmdResponses)
         .build();
   }
 
@@ -501,8 +502,9 @@ public class StorageContainerManager
       sendContainerReport(ContainerReportsProto reports) throws IOException {
     // TODO : fix this in the server side code changes for handling this request
     // correctly.
-    return SCMHeartbeatResponseProto.newBuilder()
-        .addCommands(getNullCmdResponse()).build();
+    List<SCMCommandResponseProto> cmdResponses = new LinkedList<>();
+    return SCMHeartbeatResponseProto.newBuilder().addAllCommands(cmdResponses)
+        .build();
   }
 
   /**
