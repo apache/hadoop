@@ -93,10 +93,10 @@ public class PlanQueue extends ParentQueue {
 
       PlanQueue newlyParsedParentQueue = (PlanQueue) newlyParsedQueue;
 
-      if (newlyParsedParentQueue.getChildQueues().size() > 0) {
+      if (newlyParsedParentQueue.getChildQueues().size() != 1) {
         throw new IOException(
             "Reservable Queue should not have sub-queues in the"
-                + "configuration");
+                + "configuration expect the default reservation queue");
       }
 
       // Set new configs

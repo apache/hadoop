@@ -154,6 +154,13 @@ public class TestCapacitySchedulerPlanFollower extends
   }
 
   @Override
+  protected void checkDefaultQueueBeforePlanFollowerRun(){
+    Queue defQ = getDefaultQueue();
+    Assert.assertEquals(0, getNumberOfApplications(defQ));
+    Assert.assertNotNull(defQ);
+  }
+
+  @Override
   protected Queue getDefaultQueue() {
     return cs.getQueue("dedicated" + ReservationConstants.DEFAULT_QUEUE_SUFFIX);
   }
