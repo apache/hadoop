@@ -159,6 +159,7 @@ public class S3AFileSystem extends FileSystem {
     // Try to get our credentials or just connect anonymously
     String accessKey = conf.get(ACCESS_KEY, null);
     String secretKey = conf.get(SECRET_KEY, null);
+    String sessionToken = conf.get(SESSION_TOKEN, null);
 
     String userInfo = name.getUserInfo();
     if (userInfo != null) {
@@ -172,6 +173,7 @@ public class S3AFileSystem extends FileSystem {
     }
 
     AWSCredentialsProviderChain credentials = new AWSCredentialsProviderChain(
+        new BasicSessionAWSCredentialsProvider(accessKey, secretKey, sessionToken),
         new BasicAWSCredentialsProvider(accessKey, secretKey),
         new InstanceProfileCredentialsProvider(),
         new AnonymousAWSCredentialsProvider()
