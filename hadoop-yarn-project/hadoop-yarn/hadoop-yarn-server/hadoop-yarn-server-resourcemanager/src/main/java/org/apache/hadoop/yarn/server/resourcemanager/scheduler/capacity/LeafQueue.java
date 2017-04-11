@@ -1890,7 +1890,7 @@ public class LeafQueue extends AbstractCSQueue {
 
       // Update metrics
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
-          minimumAllocation, this, labelManager, null);
+          this, labelManager, null);
 
       // queue metrics are updated, more resource may be available
       // activate the pending applications if possible
