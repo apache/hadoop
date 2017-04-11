@@ -790,7 +790,7 @@ public class FileSystemRMStateStore extends RMStateStore {
    * atomic for underlying file system.
    */
   protected void writeFile(Path outputPath, byte[] data, boolean
-          makeUnradableByAdmin) throws Exception {
+          makeUnreadableByAdmin) throws Exception {
     Path tempPath =
         new Path(outputPath.getParent(), outputPath.getName() + ".tmp");
     FSDataOutputStream fsOut = null;
@@ -798,7 +798,7 @@ public class FileSystemRMStateStore extends RMStateStore {
     // final status.
     try {
       fsOut = fs.create(tempPath, true);
-      if (makeUnradableByAdmin) {
+      if (makeUnreadableByAdmin) {
         setUnreadableBySuperuserXattrib(tempPath);
       }
       fsOut.write(data);
@@ -816,10 +816,10 @@ public class FileSystemRMStateStore extends RMStateStore {
    * atomic for underlying file system.
    */
   protected void updateFile(Path outputPath, byte[] data, boolean
-          makeUnradableByAdmin) throws Exception {
+          makeUnreadableByAdmin) throws Exception {
     Path newPath = new Path(outputPath.getParent(), outputPath.getName() + ".new");
     // use writeFileWithRetries to make sure .new file is created atomically
-    writeFileWithRetries(newPath, data, makeUnradableByAdmin);
+    writeFileWithRetries(newPath, data, makeUnreadableByAdmin);
     replaceFile(newPath, outputPath);
   }
 
