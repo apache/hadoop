@@ -171,6 +171,7 @@ public class TestFileCreation {
       assertEquals(DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT, serverDefaults.getWritePacketSize());
       assertEquals(DFS_REPLICATION_DEFAULT + 1, serverDefaults.getReplication());
       assertEquals(IO_FILE_BUFFER_SIZE_DEFAULT, serverDefaults.getFileBufferSize());
+      assertEquals(7, serverDefaults.getDefaultStoragePolicyId());
     } finally {
       fs.close();
       cluster.shutdown();
