@@ -130,18 +130,31 @@ public class BlockStorageMovementAttemptedItems {
   }
 
   /**
-   * Stops the monitor thread.
+   * Sets running flag to false. Also, this will interrupt monitor thread and
+   * clear all the queued up tasks.
    */
-  public synchronized void stop() {
+  public synchronized void deactivate() {
     monitorRunning = false;
     if (timerThread != null) {
       timerThread.interrupt();
-      try {
-        timerThread.join(3000);
-      } catch (InterruptedException ie) {
-      }
     }
     this.clearQueues();
+  }
+
+  /**
+   * Timed wait to stop monitor thread.
+   */
+  synchronized void stopGracefully() {
+    if (timerThread == null) {
+      return;
+    }
+    if (monitorRunning) {
+      deactivate();
+    }
+    try {
+      timerThread.join(3000);
+    } catch (InterruptedException ie) {
+    }
   }
 
   /**

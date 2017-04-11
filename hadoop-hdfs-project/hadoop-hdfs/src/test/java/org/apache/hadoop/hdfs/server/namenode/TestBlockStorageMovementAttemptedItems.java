@@ -47,7 +47,8 @@ public class TestBlockStorageMovementAttemptedItems {
   @After
   public void teardown() {
     if (bsmAttemptedItems != null) {
-      bsmAttemptedItems.stop();
+      bsmAttemptedItems.deactivate();
+      bsmAttemptedItems.stopGracefully();
     }
   }
 

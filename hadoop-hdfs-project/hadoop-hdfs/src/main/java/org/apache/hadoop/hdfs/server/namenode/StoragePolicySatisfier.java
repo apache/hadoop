@@ -115,28 +115,44 @@ public class StoragePolicySatisfier implements Runnable {
   }
 
   /**
-   * Stop storage policy satisfier demon thread.
+   * Deactivates storage policy satisfier by stopping its services.
    *
-   * @param reconfigStop
+   * @param reconfig
+   *          true represents deactivating SPS service as requested by admin,
+   *          false otherwise
    */
-  public synchronized void stop(boolean reconfigStop) {
+  public synchronized void deactivate(boolean reconfig) {
     isRunning = false;
     if (storagePolicySatisfierThread == null) {
       return;
     }
+
     storagePolicySatisfierThread.interrupt();
-    try {
-      storagePolicySatisfierThread.join(3000);
-    } catch (InterruptedException ie) {
-    }
-    this.storageMovementsMonitor.stop();
-    if (reconfigStop) {
+    this.storageMovementsMonitor.deactivate();
+    if (reconfig) {
       LOG.info("Stopping StoragePolicySatisfier, as admin requested to "
           + "deactivate it.");
       this.clearQueuesWithNotification();
       this.blockManager.getDatanodeManager().addDropSPSWorkCommandsToAllDNs();
     } else {
       LOG.info("Stopping StoragePolicySatisfier.");
+    }
+  }
+
+  /**
+   * Timed wait to stop storage policy satisfier daemon threads.
+   */
+  public synchronized void stopGracefully() {
+    if (isRunning) {
+      deactivate(true);
+    }
+    this.storageMovementsMonitor.stopGracefully();
+    if (storagePolicySatisfierThread == null) {
+      return;
+    }
+    try {
+      storagePolicySatisfierThread.join(3000);
+    } catch (InterruptedException ie) {
     }
   }
 
@@ -162,7 +178,7 @@ public class StoragePolicySatisfier implements Runnable {
       if (!isRunning) {
         // Stopping monitor thread and clearing queues as well
         this.clearQueues();
-        this.storageMovementsMonitor.stop();
+        this.storageMovementsMonitor.stopGracefully();
         LOG.error(
             "Stopping StoragePolicySatisfier thread " + "as Mover ID file "
                 + HdfsServerConstants.MOVER_ID_PATH.toString()
@@ -194,7 +210,7 @@ public class StoragePolicySatisfier implements Runnable {
           isRunning = false;
           // Stopping monitor thread and clearing queues as well
           this.clearQueues();
-          this.storageMovementsMonitor.stop();
+          this.storageMovementsMonitor.stopGracefully();
         }
         if (!namesystem.isRunning()) {
           LOG.info("Stopping StoragePolicySatisfier.");
