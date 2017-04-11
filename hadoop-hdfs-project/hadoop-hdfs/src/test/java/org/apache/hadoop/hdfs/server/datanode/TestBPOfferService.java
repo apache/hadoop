@@ -412,7 +412,7 @@ public class TestBPOfferService {
           Mockito.eq(new InetSocketAddress(port)));
     }
 
-    return new BPOfferService(Lists.newArrayList(nnMap.keySet()),
+    return new BPOfferService("test_ns", Lists.newArrayList(nnMap.keySet()),
         Collections.<InetSocketAddress>nCopies(nnMap.size(), null), mockDn);
   }
 
