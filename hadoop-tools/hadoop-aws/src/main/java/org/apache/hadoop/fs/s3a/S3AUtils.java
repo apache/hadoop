@@ -339,14 +339,15 @@ public final class S3AUtils {
       credentials.add(new BasicAWSCredentialsProvider(
               creds.getUser(), creds.getPassword()));
       credentials.add(new EnvironmentVariableCredentialsProvider());
-      credentials.add(
-          SharedInstanceProfileCredentialsProvider.getInstance());
+      credentials.add(InstanceProfileCredentialsProvider.getInstance());
     } else {
       for (Class<?> aClass : awsClasses) {
-        if (aClass == InstanceProfileCredentialsProvider.class) {
-          LOG.debug("Found {}, but will use {} instead.", aClass.getName(),
-              SharedInstanceProfileCredentialsProvider.class.getName());
-          aClass = SharedInstanceProfileCredentialsProvider.class;
+        if (aClass == SharedInstanceProfileCredentialsProvider.class) {
+          LOG.warn("{} is deprecated and will be removed in future. " +
+                  "Fall back to {} automatically.",
+              aClass.getName(),
+              InstanceProfileCredentialsProvider.class.getName());
+          aClass = InstanceProfileCredentialsProvider.class;
         }
         credentials.add(createAWSCredentialProvider(conf, aClass));
       }

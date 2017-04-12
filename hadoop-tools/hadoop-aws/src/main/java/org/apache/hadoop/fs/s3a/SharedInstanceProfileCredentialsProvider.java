@@ -37,12 +37,15 @@ import org.apache.hadoop.classification.InterfaceStability;
  * {@link S3AFileSystem} connecting to different buckets, so sharing a singleton
  * instance is safe.
  *
- * As of AWS SDK 1.11.39, the SDK code internally enforces a singleton.  After
- * Hadoop upgrades to that version or higher, it's likely that we can remove
- * this class.
+ * As of AWS SDK 1.11.39, the SDK code internally enforces a singleton.  Hadoop
+ * has upgraded its dependency to 1.11.39+ so this class is deprecated. In
+ * next major version, this will be removed.
+ *
+ * @deprecated Please use {@link InstanceProfileCredentialsProvider} instead.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
+@Deprecated
 public final class SharedInstanceProfileCredentialsProvider
     extends InstanceProfileCredentialsProvider {
 

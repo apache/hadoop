@@ -357,13 +357,8 @@ of `com.amazonaws.auth.AWSCredentialsProvider` may also be used.
             configuration of AWS access key ID and secret access key in
             environment variables named AWS_ACCESS_KEY_ID and
             AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
-        3. org.apache.hadoop.fs.s3a.SharedInstanceProfileCredentialsProvider:
-            a shared instance of
-            com.amazonaws.auth.InstanceProfileCredentialsProvider from the AWS
-            SDK, which supports use of instance profile credentials if running
-            in an EC2 VM.  Using this shared instance potentially reduces load
-            on the EC2 instance metadata service for multi-threaded
-            applications.
+        3. com.amazonaws.auth.InstanceProfileCredentialsProvider: supports use
+            of instance profile credentials if running in an EC2 VM.
       </description>
     </property>
 
@@ -459,19 +454,23 @@ set up in the authentication chain:
 Applications running in EC2 may associate an IAM role with the VM and query the
 [EC2 Instance Metadata Service](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
 for credentials to access S3.  Within the AWS SDK, this functionality is
-provided by `InstanceProfileCredentialsProvider`.  Heavily multi-threaded
-applications may trigger a high volume of calls to the instance metadata service
-and trigger throttling: either an HTTP 429 response or a forcible close of the
-connection.
+provided by `InstanceProfileCredentialsProvider`.  In previous AWS SDK versions
+earlier than 1.11.39, heavily multi-threaded applications may trigger a high
+volume of calls to the instance metadata service and trigger throttling: either
+an HTTP 429 response or a forcible close of the connection.
 
-To mitigate against this problem, `hadoop-aws` ships with a variant of
+To mitigate against that problem, `hadoop-aws` ships with a variant of
 `InstanceProfileCredentialsProvider` called
 `SharedInstanceProfileCredentialsProvider`.  Using this ensures that all
 instances of S3A reuse the same instance profile credentials instead of issuing
-a large volume of redundant metadata service calls.  If
-`fs.s3a.aws.credentials.provider` refers to
-`com.amazonaws.auth.InstanceProfileCredentialsProvider`, S3A automatically uses
-`org.apache.hadoop.fs.s3a.SharedInstanceProfileCredentialsProvider` instead.
+a large volume of redundant metadata service calls.
+
+As of AWS SDK 1.11.39, the SDK code internally enforces a singleton.  Hadoop has
+upgraded its dependency so that this class is deprecated. In next major
+version, this will be removed. If `fs.s3a.aws.credentials.provider` refers to
+`org.apache.hadoop.fs.s3a.SharedInstanceProfileCredentialsProvider`, S3A
+automatically uses `com.amazonaws.auth.InstanceProfileCredentialsProvider`
+instead, along with a warning message.
 
 *Session Credentials with `TemporaryAWSCredentialsProvider`*
 
@@ -571,7 +570,7 @@ This means that the default S3A authentication chain can be defined as
       <value>
       org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
       com.amazonaws.auth.EnvironmentVariableCredentialsProvider,
-      org.apache.hadoop.fs.s3a.SharedInstanceProfileCredentialsProvider
+      com.amazonaws.auth.InstanceProfileCredentialsProvider
       </value>
     </property>
 
@@ -958,7 +957,7 @@ role information available when deployed in Amazon EC2.
 ```xml
 <property>
   <name>fs.s3a.aws.credentials.provider</name>
-  <value>org.apache.hadoop.fs.s3a.SharedInstanceProfileCredentialsProvider</value>
+  <value>com.amazonaws.auth.InstanceProfileCredentialsProvider</value>
 </property>
 ```
 

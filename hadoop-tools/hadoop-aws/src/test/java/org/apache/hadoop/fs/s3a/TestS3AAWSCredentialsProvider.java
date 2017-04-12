@@ -114,7 +114,7 @@ public class TestS3AAWSCredentialsProvider {
         Arrays.asList(
             BasicAWSCredentialsProvider.class,
             EnvironmentVariableCredentialsProvider.class,
-            SharedInstanceProfileCredentialsProvider.class);
+            InstanceProfileCredentialsProvider.class);
     assertCredentialProviders(expectedClasses, list1);
     assertCredentialProviders(expectedClasses, list2);
     assertSameInstanceProfileCredentialsProvider(list1.getProviders().get(2),
@@ -125,12 +125,20 @@ public class TestS3AAWSCredentialsProvider {
   public void testConfiguredChain() throws Exception {
     URI uri1 = new URI("s3a://bucket1"), uri2 = new URI("s3a://bucket2");
     Configuration conf = new Configuration();
-    List<Class<? extends AWSCredentialsProvider>> expectedClasses =
+    List<Class<? extends AWSCredentialsProvider>> originalClasses =
         Arrays.asList(
             EnvironmentVariableCredentialsProvider.class,
             SharedInstanceProfileCredentialsProvider.class,
             AnonymousAWSCredentialsProvider.class);
-    conf.set(AWS_CREDENTIALS_PROVIDER, buildClassListString(expectedClasses));
+    conf.set(AWS_CREDENTIALS_PROVIDER, buildClassListString(originalClasses));
+
+    // SharedInstanceProfileCredentialsProvider is deprecated and should have
+    // been replaced with InstanceProfileCredentialsProvider automatically
+    List<Class<? extends AWSCredentialsProvider>> expectedClasses =
+        Arrays.asList(
+            EnvironmentVariableCredentialsProvider.class,
+            InstanceProfileCredentialsProvider.class,
+            AnonymousAWSCredentialsProvider.class);
     AWSCredentialProviderList list1 = S3AUtils.createAWSCredentialProviderSet(
         uri1, conf);
     AWSCredentialProviderList list2 = S3AUtils.createAWSCredentialProviderSet(
