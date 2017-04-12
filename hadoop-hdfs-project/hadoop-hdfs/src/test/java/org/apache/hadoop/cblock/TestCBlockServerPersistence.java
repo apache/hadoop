@@ -66,6 +66,7 @@ public class TestCBlockServerPersistence {
     try {
       ScmClient storageClient = new MockStorageClient();
       cBlockManager = new CBlockManager(conf, storageClient);
+      cBlockManager.start();
       cBlockManager.createVolume(userName, volumeName1, volumeSize1, blockSize);
       cBlockManager.createVolume(userName, volumeName2, volumeSize2, blockSize);
       List<VolumeDescriptor> allVolumes = cBlockManager.getAllVolumes();
@@ -86,6 +87,7 @@ public class TestCBlockServerPersistence {
       conf1.set(DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY, path.concat(
           "/testCblockPersistence.dat"));
       cBlockManager1 = new CBlockManager(conf1, storageClient1);
+      cBlockManager1.start();
       List<VolumeDescriptor> allVolumes1 = cBlockManager1.getAllVolumes();
       assertEquals(2, allVolumes1.size());
       VolumeDescriptor newvolumeDescriptor1 = allVolumes1.get(0);
@@ -113,6 +115,9 @@ public class TestCBlockServerPersistence {
         cBlockManager.clean();
       }
       if (cBlockManager1 != null) {
+        cBlockManager1.close();
+        cBlockManager1.stop();
+        cBlockManager1.join();
         cBlockManager1.clean();
       }
     }
