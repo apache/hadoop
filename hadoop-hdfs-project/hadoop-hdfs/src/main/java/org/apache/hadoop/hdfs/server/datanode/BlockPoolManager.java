@@ -211,7 +211,7 @@ class BlockPoolManager {
             lifelineAddrs.add(nnIdToLifelineAddr != null ?
                 nnIdToLifelineAddr.get(nnId) : null);
           }
-          BPOfferService bpos = createBPOS(addrs, lifelineAddrs);
+          BPOfferService bpos = createBPOS(nsToAdd, addrs, lifelineAddrs);
           bpByNameserviceId.put(nsToAdd, bpos);
           offerServices.add(bpos);
         }
@@ -261,8 +261,10 @@ class BlockPoolManager {
   /**
    * Extracted out for test purposes.
    */
-  protected BPOfferService createBPOS(List<InetSocketAddress> nnAddrs,
+  protected BPOfferService createBPOS(
+      final String nameserviceId,
+      List<InetSocketAddress> nnAddrs,
       List<InetSocketAddress> lifelineNnAddrs) {
-    return new BPOfferService(nnAddrs, lifelineNnAddrs, dn);
+    return new BPOfferService(nameserviceId, nnAddrs, lifelineNnAddrs, dn);
   }
 }

@@ -264,7 +264,10 @@ class BPServiceActor implements Runnable {
     // This also initializes our block pool in the DN if we are
     // the first NN connection for this BP.
     bpos.verifyAndSetNamespaceInfo(this, nsInfo);
-    
+
+    /* set thread name again to include NamespaceInfo when it's available. */
+    this.bpThread.setName(formatThreadName("heartbeating", nnAddr));
+
     // Second phase of the handshake with the NN.
     register(nsInfo);
   }
@@ -483,14 +486,15 @@ class BPServiceActor implements Runnable {
       lifelineSender.start();
     }
   }
-  
-  private String formatThreadName(String action, InetSocketAddress addr) {
-    Collection<StorageLocation> dataDirs =
-        DataNode.getStorageLocations(dn.getConf());
-    return "DataNode: [" + dataDirs.toString() + "]  " +
-        action + " to " + addr;
+
+  private String formatThreadName(
+      final String action,
+      final InetSocketAddress addr) {
+    final String prefix = bpos.getBlockPoolId() != null ? bpos.getBlockPoolId()
+        : bpos.getNameserviceId();
+    return prefix + " " + action + " to " + addr;
   }
-  
+
   //This must be called only by blockPoolManager.
   void stop() {
     shouldServiceRun = false;
@@ -944,8 +948,8 @@ class BPServiceActor implements Runnable {
     }
 
     public void start() {
-      lifelineThread = new Thread(this, formatThreadName("lifeline",
-          lifelineNnAddr));
+      lifelineThread = new Thread(this,
+          formatThreadName("lifeline", lifelineNnAddr));
       lifelineThread.setDaemon(true);
       lifelineThread.setUncaughtExceptionHandler(
           new Thread.UncaughtExceptionHandler() {
