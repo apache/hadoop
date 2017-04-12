@@ -160,6 +160,10 @@ public interface ClientProtocol {
    * @param replication block replication factor.
    * @param blockSize maximum block size.
    * @param supportedVersions CryptoProtocolVersions supported by the client
+   * @param ecPolicyName the name of erasure coding policy. A null value means
+   *                     this file will inherit its parent directory's policy,
+   *                     either traditional replication or erasure coding
+   *                     policy.
    *
    * @return the status of the created file, it could be null if the server
    *           doesn't support returning the file status
@@ -193,7 +197,7 @@ public interface ClientProtocol {
   HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize,
-      CryptoProtocolVersion[] supportedVersions)
+      CryptoProtocolVersion[] supportedVersions, String ecPolicyName)
       throws IOException;
 
   /**

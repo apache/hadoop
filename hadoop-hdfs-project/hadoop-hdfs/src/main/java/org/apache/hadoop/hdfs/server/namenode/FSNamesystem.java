@@ -2180,14 +2180,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   HdfsFileStatus startFile(String src, PermissionStatus permissions,
       String holder, String clientMachine, EnumSet<CreateFlag> flag,
-      boolean createParent, short replication, long blockSize, 
-      CryptoProtocolVersion[] supportedVersions, boolean logRetryCache)
-      throws IOException {
+      boolean createParent, short replication, long blockSize,
+      CryptoProtocolVersion[] supportedVersions, String ecPolicyName,
+      boolean logRetryCache) throws IOException {
 
     HdfsFileStatus status;
     try {
       status = startFileInt(src, permissions, holder, clientMachine, flag,
-          createParent, replication, blockSize, supportedVersions,
+          createParent, replication, blockSize, supportedVersions, ecPolicyName,
           logRetryCache);
     } catch (AccessControlException e) {
       logAuditEvent(false, "create", src);
@@ -2201,8 +2201,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       PermissionStatus permissions, String holder, String clientMachine,
       EnumSet<CreateFlag> flag, boolean createParent, short replication,
       long blockSize, CryptoProtocolVersion[] supportedVersions,
-      boolean logRetryCache)
-      throws IOException {
+      String ecPolicyName, boolean logRetryCache) throws IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       StringBuilder builder = new StringBuilder();
       builder.append("DIR* NameSystem.startFile: src=").append(src)
@@ -2270,9 +2269,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       dir.writeLock();
       try {
         stat = FSDirWriteFileOp.startFile(this, iip, permissions, holder,
-                                          clientMachine, flag, createParent,
-                                          replication, blockSize, feInfo,
-                                          toRemoveBlocks, logRetryCache);
+            clientMachine, flag, createParent, replication, blockSize, feInfo,
+            toRemoveBlocks, ecPolicyName, logRetryCache);
       } catch (IOException e) {
         skipSync = e instanceof StandbyException;
         throw e;

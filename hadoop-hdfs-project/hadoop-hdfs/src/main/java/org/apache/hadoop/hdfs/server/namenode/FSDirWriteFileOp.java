@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.CreateFlag;
@@ -351,7 +352,7 @@ class FSDirWriteFileOp {
       EnumSet<CreateFlag> flag, boolean createParent,
       short replication, long blockSize,
       FileEncryptionInfo feInfo, INode.BlocksMapUpdateInfo toRemoveBlocks,
-      boolean logRetryEntry)
+      String ecPolicyName, boolean logRetryEntry)
       throws IOException {
     assert fsn.hasWriteLock();
     boolean overwrite = flag.contains(CreateFlag.OVERWRITE);
@@ -385,7 +386,7 @@ class FSDirWriteFileOp {
         FSDirMkdirOp.createAncestorDirectories(fsd, iip, permissions);
     if (parent != null) {
       iip = addFile(fsd, parent, iip.getLastLocalName(), permissions,
-                    replication, blockSize, holder, clientMachine);
+          replication, blockSize, holder, clientMachine, ecPolicyName);
       newNode = iip != null ? iip.getLastINode().asFile() : null;
     }
     if (newNode == null) {
@@ -521,7 +522,7 @@ class FSDirWriteFileOp {
   private static INodesInPath addFile(
       FSDirectory fsd, INodesInPath existing, byte[] localName,
       PermissionStatus permissions, short replication, long preferredBlockSize,
-      String clientName, String clientMachine)
+      String clientName, String clientMachine, String ecPolicyName)
       throws IOException {
 
     Preconditions.checkNotNull(existing);
@@ -530,8 +531,14 @@ class FSDirWriteFileOp {
     fsd.writeLock();
     try {
       boolean isStriped = false;
-      ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.
-          unprotectedGetErasureCodingPolicy(fsd.getFSNamesystem(), existing);
+      ErasureCodingPolicy ecPolicy;
+      if (!StringUtils.isEmpty(ecPolicyName)) {
+        ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicyByName(
+            fsd.getFSNamesystem(), ecPolicyName);
+      } else {
+        ecPolicy = FSDirErasureCodingOp.unprotectedGetErasureCodingPolicy(
+            fsd.getFSNamesystem(), existing);
+      }
       if (ecPolicy != null) {
         isStriped = true;
       }
