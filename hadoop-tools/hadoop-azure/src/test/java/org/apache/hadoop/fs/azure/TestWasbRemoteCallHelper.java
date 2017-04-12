@@ -263,9 +263,9 @@ public class TestWasbRemoteCallHelper
 
   private void setupExpectations() {
     expectedEx.expect(WasbAuthorizationException.class);
-    expectedEx.expectMessage("org.apache.hadoop.fs.azure.WasbRemoteCallException: " +
-        "http://localhost/CHECK_AUTHORIZATION?wasb_absolute_path=%2Ftest.dat&" +
-        "operation_type=write&delegation_token:Encountered IOException while making remote call");
+    expectedEx.expectMessage("org.apache.hadoop.fs.azure.WasbRemoteCallException: "
+        + "http://localhost/CHECK_AUTHORIZATION?wasb_absolute_path=%2F&"
+        + "operation_type=write:Encountered IOException while making remote call");
   }
 
   private void performop(HttpClient mockHttpClient) throws Throwable {
