@@ -955,13 +955,8 @@
         configuration of AWS access key ID and secret access key in
         environment variables named AWS_ACCESS_KEY_ID and
         AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
-    3. org.apache.hadoop.fs.s3a.SharedInstanceProfileCredentialsProvider:
-        a shared instance of
-        com.amazonaws.auth.InstanceProfileCredentialsProvider from the AWS
-        SDK, which supports use of instance profile credentials if running
-        in an EC2 VM.  Using this shared instance potentially reduces load
-        on the EC2 instance metadata service for multi-threaded
-        applications.
+    3. com.amazonaws.auth.InstanceProfileCredentialsProvider: supports use
+        of instance profile credentials if running in an EC2 VM.
   </description>
 </property>
 
