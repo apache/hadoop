@@ -46,6 +46,7 @@ public class TestCBlockServer {
     ScmClient storageClient = new MockStorageClient();
     conf = new OzoneConfiguration();
     cBlockManager = new CBlockManager(conf, storageClient);
+    cBlockManager.start();
   }
 
   @AfterClass
