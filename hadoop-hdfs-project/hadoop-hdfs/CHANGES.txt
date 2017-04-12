@@ -99,6 +99,9 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-10619. Cache path in InodesInPath. (daryn via kihwal, backported by zhz)
 
+    HDFS-11648. Lazy construct the IIP pathname.
+    (daryn via kihwal, backported by zhz)
+
   OPTIMIZATIONS
 
     HDFS-10896. Move lock logging logic from FSNamesystem into FSNamesystemLock.
