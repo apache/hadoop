@@ -76,6 +76,12 @@ public class TestCapacitySchedulerDynamicBehavior {
   public void testRefreshQueuesWithReservations() throws Exception {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
+    //set default queue capacity to zero
+    ((ReservationQueue) cs
+            .getQueue("a" + ReservationConstants.DEFAULT_QUEUE_SUFFIX))
+            .setEntitlement(
+                    new QueueEntitlement(0f, 1f));
+
     // Test add one reservation dynamically and manually modify capacity
     ReservationQueue a1 =
         new ReservationQueue(cs, "a1", (PlanQueue) cs.getQueue("a"));
@@ -120,6 +126,11 @@ public class TestCapacitySchedulerDynamicBehavior {
     ReservationQueue a1 =
         new ReservationQueue(cs, "a1", (PlanQueue) cs.getQueue("a"));
     cs.addQueue(a1);
+    //set default queue capacity to zero
+    ((ReservationQueue) cs
+        .getQueue("a" + ReservationConstants.DEFAULT_QUEUE_SUFFIX))
+            .setEntitlement(
+                new QueueEntitlement(0f, 1f));
     a1.setEntitlement(new QueueEntitlement(A1_CAPACITY / 100, 1f));
 
     // Test add another reservation queue and use setEntitlement to modify

@@ -35,6 +35,7 @@ import java.util.EnumSet;
 
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -77,8 +78,8 @@ public class TestFSImage {
   private static final String HADOOP_2_7_ZER0_BLOCK_SIZE_TGZ =
       "image-with-zero-block-size.tar.gz";
   private static final ErasureCodingPolicy testECPolicy =
-      ErasureCodingPolicyManager.getPolicyByID(
-          HdfsConstants.RS_10_4_POLICY_ID);
+      SystemErasureCodingPolicies.getByID(
+          SystemErasureCodingPolicies.RS_10_4_POLICY_ID);
 
   @Test
   public void testPersist() throws IOException {
@@ -470,8 +471,8 @@ public class TestFSImage {
       DistributedFileSystem fs = cluster.getFileSystem();
       Path parentDir = new Path("/ec-10-4");
       Path childDir = new Path(parentDir, "ec-3-2");
-      ErasureCodingPolicy ec32Policy = ErasureCodingPolicyManager
-          .getPolicyByID(HdfsConstants.RS_3_2_POLICY_ID);
+      ErasureCodingPolicy ec32Policy = SystemErasureCodingPolicies
+          .getByID(SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
 
       // Create directories and files
       fs.mkdirs(parentDir);
@@ -519,8 +520,8 @@ public class TestFSImage {
       // check the information of file_3_2
       inode = fsn.dir.getINode(file_3_2.toString()).asFile();
       assertTrue(inode.isStriped());
-      assertEquals(ErasureCodingPolicyManager.getPolicyByID(
-          HdfsConstants.RS_3_2_POLICY_ID).getId(),
+      assertEquals(SystemErasureCodingPolicies.getByID(
+          SystemErasureCodingPolicies.RS_3_2_POLICY_ID).getId(),
           inode.getErasureCodingPolicyID());
       blks = inode.getBlocks();
       assertEquals(1, blks.length);

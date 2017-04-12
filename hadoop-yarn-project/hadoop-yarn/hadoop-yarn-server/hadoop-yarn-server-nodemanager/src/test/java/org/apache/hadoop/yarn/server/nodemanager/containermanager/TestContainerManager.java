@@ -1859,4 +1859,49 @@ public class TestContainerManager extends BaseContainerManagerTest {
       Assert.assertEquals(signal, signalContext.getSignal());
     }
   }
+
+  @Test
+  public void testStartContainerFailureWithInvalidLocalResource()
+      throws Exception {
+    containerManager.start();
+    LocalResource rsrc_alpha =
+        recordFactory.newRecordInstance(LocalResource.class);
+    rsrc_alpha.setResource(null);
+    rsrc_alpha.setSize(-1);
+    rsrc_alpha.setVisibility(LocalResourceVisibility.APPLICATION);
+    rsrc_alpha.setType(LocalResourceType.FILE);
+    rsrc_alpha.setTimestamp(System.currentTimeMillis());
+    Map<String, LocalResource> localResources =
+        new HashMap<String, LocalResource>();
+    localResources.put("invalid_resource", rsrc_alpha);
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    ContainerLaunchContext spyContainerLaunchContext =
+        Mockito.spy(containerLaunchContext);
+    Mockito.when(spyContainerLaunchContext.getLocalResources())
+        .thenReturn(localResources);
+
+    ContainerId cId = createContainerId(0);
+    String user = "start_container_fail";
+    Token containerToken =
+        createContainerToken(cId, DUMMY_RM_IDENTIFIER, context.getNodeId(),
+            user, context.getContainerTokenSecretManager());
+    StartContainerRequest request = StartContainerRequest
+        .newInstance(spyContainerLaunchContext, containerToken);
+
+    // start containers
+    List<StartContainerRequest> startRequest =
+        new ArrayList<StartContainerRequest>();
+    startRequest.add(request);
+    StartContainersRequest requestList =
+        StartContainersRequest.newInstance(startRequest);
+
+    StartContainersResponse response =
+        containerManager.startContainers(requestList);
+    Assert.assertTrue(response.getFailedRequests().size() == 1);
+    Assert.assertTrue(response.getSuccessfullyStartedContainers().size() == 0);
+    Assert.assertTrue(response.getFailedRequests().containsKey(cId));
+    Assert.assertTrue(response.getFailedRequests().get(cId).getMessage()
+        .contains("Null resource URL for local resource"));
+  }
 }

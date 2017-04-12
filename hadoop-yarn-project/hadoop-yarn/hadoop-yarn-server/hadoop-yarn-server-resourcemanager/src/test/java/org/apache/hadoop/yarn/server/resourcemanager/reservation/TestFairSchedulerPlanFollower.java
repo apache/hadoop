@@ -132,6 +132,10 @@ public class TestFairSchedulerPlanFollower extends
   }
 
   @Override
+  protected void checkDefaultQueueBeforePlanFollowerRun() {
+    Assert.assertNull(getDefaultQueue());
+  }
+  @Override
   protected void verifyCapacity(Queue defQ) {
     assertTrue(((FSQueue) defQ).getWeights().getWeight(ResourceType.MEMORY) > 0.9);
   }

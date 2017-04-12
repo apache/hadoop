@@ -1426,13 +1426,20 @@ public class NativeAzureFileSystem extends FileSystem {
     return store;
   }
 
-  private void performAuthCheck(String path, String accessType,
-      String operation) throws WasbAuthorizationException, IOException {
+  /**
+   * @param requestingAccessForPath - The path to the ancestor/parent/subtree/file that needs to be
+   *                                checked before granting access to originalPath
+   * @param accessType - The type of access READ/WRITE being requested
+   * @param operation - A string describing the operation being performed ("delete", "create" etc.).
+   * @param originalPath - The originalPath that was being accessed
+   */
+  private void performAuthCheck(String requestingAccessForPath, WasbAuthorizationOperations accessType,
+      String operation, String originalPath) throws WasbAuthorizationException, IOException {
 
     if (azureAuthorization && this.authorizer != null &&
-        !this.authorizer.authorize(path, accessType)) {
+        !this.authorizer.authorize(requestingAccessForPath, accessType.toString())) {
       throw new WasbAuthorizationException(operation
-          + " operation for Path : " + path + " not allowed");
+          + " operation for Path : " + originalPath + " not allowed");
     }
   }
 
@@ -1459,8 +1466,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
     Path absolutePath = makeAbsolute(f);
 
-    performAuthCheck(absolutePath.toString(),
-        WasbAuthorizationOperations.WRITE.toString(), "append");
+    performAuthCheck(absolutePath.toString(), WasbAuthorizationOperations.WRITE, "append", absolutePath.toString());
 
     String key = pathToKey(absolutePath);
     FileMetadata meta = null;
@@ -1663,9 +1669,9 @@ public class NativeAzureFileSystem extends FileSystem {
     }
 
     Path absolutePath = makeAbsolute(f);
+    Path ancestor = getAncestor(absolutePath);
 
-    performAuthCheck(absolutePath.toString(),
-        WasbAuthorizationOperations.WRITE.toString(), "create");
+    performAuthCheck(ancestor.toString(), WasbAuthorizationOperations.WRITE, "create", absolutePath.toString());
 
     String key = pathToKey(absolutePath);
 
@@ -1677,6 +1683,9 @@ public class NativeAzureFileSystem extends FileSystem {
       }
       if (!overwrite) {
         throw new FileAlreadyExistsException("File already exists:" + f);
+      }
+      else {
+        performAuthCheck(absolutePath.toString(), WasbAuthorizationOperations.WRITE, "create", absolutePath.toString());
       }
     }
 
@@ -1768,7 +1777,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
   /**
    * Delete the specified file or folder. The parameter
-   * skipParentFolderLastModifidedTimeUpdate
+   * skipParentFolderLastModifiedTimeUpdate
    * is used in the case of atomic folder rename redo. In that case, there is
    * a lease on the parent folder, so (without reworking the code) modifying
    * the parent folder update time will fail because of a conflict with the
@@ -1778,20 +1787,20 @@ public class NativeAzureFileSystem extends FileSystem {
    *
    * @param f file path to be deleted.
    * @param recursive specify deleting recursively or not.
-   * @param skipParentFolderLastModifidedTimeUpdate If true, don't update the folder last
+   * @param skipParentFolderLastModifiedTimeUpdate If true, don't update the folder last
    * modified time.
    * @return true if and only if the file is deleted
    * @throws IOException Thrown when fail to delete file or directory.
    */
   public boolean delete(Path f, boolean recursive,
-      boolean skipParentFolderLastModifidedTimeUpdate) throws IOException {
+      boolean skipParentFolderLastModifiedTimeUpdate) throws IOException {
 
     LOG.debug("Deleting file: {}", f.toString());
 
     Path absolutePath = makeAbsolute(f);
+    Path parentPath = absolutePath.getParent();
 
-    performAuthCheck(absolutePath.toString(),
-        WasbAuthorizationOperations.EXECUTE.toString(), "delete");
+    performAuthCheck(parentPath.toString(), WasbAuthorizationOperations.WRITE, "delete", absolutePath.toString());
 
     String key = pathToKey(absolutePath);
 
@@ -1827,7 +1836,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // (e.g. the blob store only contains the blob a/b and there's no
       // corresponding directory blob a) and that would implicitly delete
       // the directory as well, which is not correct.
-      Path parentPath = absolutePath.getParent();
+
       if (parentPath.getParent() != null) {// Not root
         String parentKey = pathToKey(parentPath);
 
@@ -1876,7 +1885,7 @@ public class NativeAzureFileSystem extends FileSystem {
           store.storeEmptyFolder(parentKey,
               createPermissionStatus(FsPermission.getDefault()));
         } else {
-          if (!skipParentFolderLastModifidedTimeUpdate) {
+          if (!skipParentFolderLastModifiedTimeUpdate) {
             updateParentFolderLastModifiedTime(key);
           }
         }
@@ -1903,7 +1912,6 @@ public class NativeAzureFileSystem extends FileSystem {
       // The path specifies a folder. Recursively delete all entries under the
       // folder.
       LOG.debug("Directory Delete encountered: {}", f.toString());
-      Path parentPath = absolutePath.getParent();
       if (parentPath.getParent() != null) {
         String parentKey = pathToKey(parentPath);
         FileMetadata parentMetadata = null;
@@ -1981,12 +1989,30 @@ public class NativeAzureFileSystem extends FileSystem {
 
       final FileMetadata[] contents = fileMetadataList.toArray(new FileMetadata[fileMetadataList.size()]);
 
-      if (!recursive && contents.length > 0) {
+      if (contents.length > 0) {
+        if (!recursive) {
           // The folder is non-empty and recursive delete was not specified.
           // Throw an exception indicating that a non-recursive delete was
           // specified for a non-empty folder.
           throw new IOException("Non-recursive delete of non-empty directory "
               + f.toString());
+        }
+        else {
+          // Check write-permissions on sub-tree including current folder
+          // NOTE: Ideally the subtree needs read-write-execute access check.
+          // But we will simplify it to write-access check.
+          if (metaFile.isDir()) { // the absolute-path
+            performAuthCheck(absolutePath.toString(), WasbAuthorizationOperations.WRITE, "delete",
+                absolutePath.toString());
+          }
+          for (FileMetadata meta : contents) {
+            if (meta.isDir()) {
+              Path subTreeDir = keyToPath(meta.getKey());
+              performAuthCheck(subTreeDir.toString(), WasbAuthorizationOperations.WRITE, "delete",
+                  absolutePath.toString());
+            }
+          }
+        }
       }
 
       // Delete all files / folders in current directory stored as list in 'contents'.
@@ -2014,7 +2040,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // Update parent directory last modified time
       Path parent = absolutePath.getParent();
       if (parent != null && parent.getParent() != null) { // not root
-        if (!skipParentFolderLastModifidedTimeUpdate) {
+        if (!skipParentFolderLastModifiedTimeUpdate) {
           updateParentFolderLastModifiedTime(key);
         }
       }
@@ -2064,8 +2090,8 @@ public class NativeAzureFileSystem extends FileSystem {
     // Capture the absolute path and the path to key.
     Path absolutePath = makeAbsolute(f);
 
-    performAuthCheck(absolutePath.toString(),
-        WasbAuthorizationOperations.EXECUTE.toString(), "getFileStatus");
+    performAuthCheck(absolutePath.toString(), WasbAuthorizationOperations.READ, "getFileStatus",
+        absolutePath.toString());
 
     String key = pathToKey(absolutePath);
     if (key.length() == 0) { // root always exists
@@ -2166,8 +2192,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
     Path absolutePath = makeAbsolute(f);
 
-    performAuthCheck(absolutePath.toString(),
-        WasbAuthorizationOperations.EXECUTE.toString(), "list");
+    performAuthCheck(absolutePath.toString(), WasbAuthorizationOperations.READ, "liststatus", absolutePath.toString());
 
     String key = pathToKey(absolutePath);
     Set<FileStatus> status = new TreeSet<FileStatus>();
@@ -2375,6 +2400,24 @@ public class NativeAzureFileSystem extends FileSystem {
         permission);
   }
 
+  private Path getAncestor(Path f) throws IOException {
+
+    for (Path current = f.getParent(), parent = current.getParent();
+         parent != null; // Stop when you get to the root
+         current = parent, parent = current.getParent()) {
+
+      String currentKey = pathToKey(current);
+      FileMetadata currentMetadata = store.retrieveMetadata(currentKey);
+      if (currentMetadata != null) {
+        Path ancestor = keyToPath(currentMetadata.getKey());
+        LOG.debug("Found ancestor {}, for path: {}", ancestor.toString(), f.toString());
+        return ancestor;
+      }
+    }
+
+    return new Path("/");
+  }
+
   @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
       return mkdirs(f, permission, false);
@@ -2391,9 +2434,9 @@ public class NativeAzureFileSystem extends FileSystem {
     }
 
     Path absolutePath = makeAbsolute(f);
+    Path ancestor = getAncestor(absolutePath);
 
-    performAuthCheck(absolutePath.toString(),
-        WasbAuthorizationOperations.EXECUTE.toString(), "mkdirs");
+    performAuthCheck(ancestor.toString(), WasbAuthorizationOperations.WRITE, "mkdirs", absolutePath.toString());
 
     PermissionStatus permissionStatus = null;
     if(noUmask) {
@@ -2449,8 +2492,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
     Path absolutePath = makeAbsolute(f);
 
-    performAuthCheck(absolutePath.toString(),
-        WasbAuthorizationOperations.READ.toString(), "read");
+    performAuthCheck(absolutePath.toString(), WasbAuthorizationOperations.READ, "read", absolutePath.toString());
 
     String key = pathToKey(absolutePath);
     FileMetadata meta = null;
@@ -2508,12 +2550,18 @@ public class NativeAzureFileSystem extends FileSystem {
           + " through WASB that has colons in the name");
     }
 
-    Path absolutePath = makeAbsolute(src);
+    Path absoluteSrcPath = makeAbsolute(src);
+    Path srcParentFolder = absoluteSrcPath.getParent();
 
-    performAuthCheck(absolutePath.toString(),
-        WasbAuthorizationOperations.EXECUTE.toString(), "rename");
+    if (srcParentFolder == null) {
+      // Cannot rename root of file system
+      return false;
+    }
 
-    String srcKey = pathToKey(absolutePath);
+    performAuthCheck(srcParentFolder.toString(), WasbAuthorizationOperations.WRITE, "rename",
+        absoluteSrcPath.toString());
+
+    String srcKey = pathToKey(absoluteSrcPath);
 
     if (srcKey.length() == 0) {
       // Cannot rename root of file system
@@ -2521,8 +2569,13 @@ public class NativeAzureFileSystem extends FileSystem {
     }
 
     // Figure out the final destination
-    Path absoluteDst = makeAbsolute(dst);
-    String dstKey = pathToKey(absoluteDst);
+    Path absoluteDstPath = makeAbsolute(dst);
+    Path dstParentFolder = absoluteDstPath.getParent();
+
+    performAuthCheck(dstParentFolder.toString(), WasbAuthorizationOperations.WRITE, "rename",
+        absoluteDstPath.toString());
+
+    String dstKey = pathToKey(absoluteDstPath);
     FileMetadata dstMetadata = null;
     try {
       dstMetadata = store.retrieveMetadata(dstKey);
@@ -2530,14 +2583,14 @@ public class NativeAzureFileSystem extends FileSystem {
 
       Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
 
-      // A BlobNotFound storage exception in only thrown from retrieveMetdata API when
+      // A BlobNotFound storage exception in only thrown from retrieveMetadata API when
       // there is a race condition. If there is another thread which deletes the destination
       // file or folder, then this thread calling rename should be able to continue with
       // rename gracefully. Hence the StorageException is swallowed here.
       if (innerException instanceof StorageException) {
         if (NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
           LOG.debug("BlobNotFound exception encountered for Destination key : {}. "
-              + "Swallowin the exception to handle race condition gracefully", dstKey);
+              + "Swallowing the exception to handle race condition gracefully", dstKey);
         }
       } else {
         throw ex;
@@ -2558,7 +2611,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // Check that the parent directory exists.
       FileMetadata parentOfDestMetadata = null;
       try {
-        parentOfDestMetadata = store.retrieveMetadata(pathToKey(absoluteDst.getParent()));
+        parentOfDestMetadata = store.retrieveMetadata(pathToKey(absoluteDstPath.getParent()));
       } catch (IOException ex) {
 
         Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
@@ -2816,9 +2869,6 @@ public class NativeAzureFileSystem extends FileSystem {
   public void setPermission(Path p, FsPermission permission) throws FileNotFoundException, IOException {
     Path absolutePath = makeAbsolute(p);
 
-    performAuthCheck(absolutePath.toString(),
-        WasbAuthorizationOperations.EXECUTE.toString(), "setPermission");
-
     String key = pathToKey(absolutePath);
     FileMetadata metadata = null;
     try {
@@ -2857,9 +2907,6 @@ public class NativeAzureFileSystem extends FileSystem {
   public void setOwner(Path p, String username, String groupname)
       throws IOException {
     Path absolutePath = makeAbsolute(p);
-
-    performAuthCheck(absolutePath.toString(),
-        WasbAuthorizationOperations.EXECUTE.toString(), "setOwner");
 
     String key = pathToKey(absolutePath);
     FileMetadata metadata = null;

@@ -41,10 +41,13 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.Permission;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueStateManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerQueueManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -220,6 +223,23 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         queue =
             new PlanQueue(csContext, queueName, parent,
                 oldQueues.get(queueName));
+
+        //initializing the "internal" default queue, for SLS compatibility
+        String defReservationId =
+            queueName + ReservationConstants.DEFAULT_QUEUE_SUFFIX;
+
+        List<CSQueue> childQueues = new ArrayList<>();
+        ReservationQueue resQueue = new ReservationQueue(csContext,
+            defReservationId, (PlanQueue) queue);
+        try {
+          resQueue.setEntitlement(new QueueEntitlement(1.0f, 1.0f));
+        } catch (SchedulerDynamicEditException e) {
+          throw new IllegalStateException(e);
+        }
+        childQueues.add(resQueue);
+        ((PlanQueue) queue).setChildQueues(childQueues);
+        queues.put(defReservationId, resQueue);
+
       } else {
         queue =
             new LeafQueue(csContext, queueName, parent,
@@ -264,6 +284,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
   /**
    * Ensure all existing queues are present. Queues cannot be deleted if its not
    * in Stopped state, Queue's cannot be moved from one hierarchy to other also.
+   * Previous child queue could be converted into parent queue if it is in
+   * STOPPED state.
    *
    * @param queues existing queues
    * @param newQueues new queues
@@ -292,6 +314,17 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
           throw new IOException(queueName + " is moved from:"
               + oldQueue.getQueuePath() + " to:" + newQueue.getQueuePath()
               + " after refresh, which is not allowed.");
+        } else  if (oldQueue instanceof LeafQueue
+            && newQueue instanceof ParentQueue) {
+          if (oldQueue.getState() == QueueState.STOPPED) {
+            LOG.info("Converting the leaf queue: " + oldQueue.getQueuePath()
+                + " to parent queue.");
+          } else {
+            throw new IOException("Can not convert the leaf queue: "
+                + oldQueue.getQueuePath() + " to parent queue since "
+                + "it is not yet in stopped state. Current State : "
+                + oldQueue.getState());
+          }
         }
       }
     }

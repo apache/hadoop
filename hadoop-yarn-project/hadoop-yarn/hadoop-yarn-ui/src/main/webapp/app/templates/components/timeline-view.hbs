@@ -25,29 +25,48 @@
         Containers
       {{/if}}
     </div>
-    <div class="panel-body">
-      <br/><br/>
-      <div class="col-md-8 container-fluid" id={{parent-id}}>
-      </div>
-
-      <!-- diag info -->
-      <div class="col-md-4 container-fluid">
-        <div class="panel panel-default add-ellipsis">
-          <div class="panel-heading">
-            {{#if selected.link}}
-              {{#link-to selected.linkname selected.id}}{{selected.id}}{{/link-to}}
-            {{else}}
-              {{selected.id}}
-            {{/if}}
+    {{#if isDataEmpty}}
+      <ul class="nav nav-tabs" role="tablist">
+        <li class="active">
+          <a href="#graphViewTab" role="tab" data-toggle="tab">Graph View</a>
+        </li>
+        <li class="">
+          <a href="#gridViewTab" role="tab" data-toggle="tab">Grid View</a>
+        </li>
+      </ul>
+      <div class="panel-body">
+        <div class="tab-content">
+          <div role="tabpanel" class="tab-pane active" id="graphViewTab">
+            <br/><br/>
+            <div class="col-md-8 container-fluid" id={{parent-id}}></div>
+            <!-- diag info -->
+            <div class="col-md-4 container-fluid">
+              <div class="panel panel-default add-ellipsis">
+                <div class="panel-heading">
+                  {{#if selected.link}}
+                    {{#link-to selected.linkname selected.id}}{{selected.id}}{{/link-to}}
+                  {{else}}
+                    {{selected.id}}
+                  {{/if}}
+                </div>
+                {{#if attemptModel}}
+                  {{app-attempt-table attempt=selected}}
+                {{else}}
+                  {{container-table container=selected}}
+                {{/if}}
+              </div>
+            </div>
           </div>
-          {{#if attemptModel}}
-            {{app-attempt-table attempt=selected}}
-          {{else}}
-            {{container-table container=selected}}
-          {{/if}}
+          <div role="tabpanel" class="tab-pane" id="gridViewTab">
+            {{em-table columns=gridColumns rows=gridRows}}
+          </div>
         </div>
       </div>
-    </div>
+    {{else}}
+      <div class="panel-body">
+        <h4 class="text-center">No data available!</h4>
+      </div>
+    {{/if}}
   </div>
 </div>
 

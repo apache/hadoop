@@ -15,39 +15,39 @@
 
 load hadoop-functions_test_helper
 
-@test "hadoop_verify_user (hadoop: no setting)" {
-  run hadoop_verify_user hadoop test
+@test "hadoop_verify_user_perm (hadoop: no setting)" {
+  run hadoop_verify_user_perm hadoop test
   [ "${status}" = "0" ]
 }
 
-@test "hadoop_verify_user (yarn: no setting)" {
-  run hadoop_verify_user yarn test
+@test "hadoop_verify_user_perm (yarn: no setting)" {
+  run hadoop_verify_user_perm yarn test
   [ "${status}" = "0" ]
 }
 
-@test "hadoop_verify_user (hadoop: allow)" {
+@test "hadoop_verify_user_perm (hadoop: allow)" {
   HADOOP_TEST_USER=${USER}
-  run hadoop_verify_user hadoop test
+  run hadoop_verify_user_perm hadoop test
   [ "${status}" = "0" ]
 }
 
-@test "hadoop_verify_user (yarn: allow)" {
+@test "hadoop_verify_user_perm (yarn: allow)" {
   YARN_TEST_USER=${USER}
-  run hadoop_verify_user yarn test
+  run hadoop_verify_user_perm yarn test
   [ "${status}" = "0" ]
 }
 
 # colon isn't a valid username, so let's use it
 # this should fail regardless of who the user is
 # that is running the test code
-@test "hadoop_verify_user (hadoop: disallow)" {
+@test "hadoop_verify_user_perm (hadoop: disallow)" {
   HADOOP_TEST_USER=:
-  run hadoop_verify_user hadoop test
+  run hadoop_verify_user_perm hadoop test
   [ "${status}" = "1" ]
 }
 
-@test "hadoop_verify_user (yarn: disallow)" {
+@test "hadoop_verify_user_perm (yarn: disallow)" {
   YARN_TEST_USER=:
-  run hadoop_verify_user yarn test
+  run hadoop_verify_user_perm yarn test
   [ "${status}" = "1" ]
 }

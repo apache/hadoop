@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -107,7 +108,9 @@ public class TestINodeFile {
 
   INodeFile createStripedINodeFile(long preferredBlockSize) {
     return new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
-        null, null, HdfsConstants.RS_6_3_POLICY_ID, preferredBlockSize,
+        null, null,
+        StripedFileTestUtil.getDefaultECPolicy().getId(),
+        preferredBlockSize,
         HdfsConstants.WARM_STORAGE_POLICY_ID, STRIPED);
   }
 
@@ -140,7 +143,7 @@ public class TestINodeFile {
     try {
       new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID,
           null, perm, 0L, 0L, null, new Short((short) 3) /*replication*/,
-          HdfsConstants.RS_6_3_POLICY_ID /*ec policy*/,
+          StripedFileTestUtil.getDefaultECPolicy().getId() /*ec policy*/,
           preferredBlockSize, HdfsConstants.WARM_STORAGE_POLICY_ID, CONTIGUOUS);
       fail("INodeFile construction should fail when both replication and " +
           "ECPolicy requested!");

@@ -74,11 +74,11 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   private static final DefaultResourceCalculator RESOURCE_CALCULATOR
       = new DefaultResourceCalculator();
 
-  private long startTime;
-  private Priority appPriority;
-  private ResourceWeights resourceWeights;
+  private final long startTime;
+  private final Priority appPriority;
+  private final ResourceWeights resourceWeights;
   private Resource demand = Resources.createResource(0);
-  private FairScheduler scheduler;
+  private final FairScheduler scheduler;
   private FSQueue fsQueue;
   private Resource fairShare = Resources.createResource(0, 0);
 
@@ -96,9 +96,9 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   // Used to record node reservation by an app.
   // Key = RackName, Value = Set of Nodes reserved by app on rack
-  private Map<String, Set<String>> reservations = new HashMap<>();
+  private final Map<String, Set<String>> reservations = new HashMap<>();
 
-  private List<FSSchedulerNode> blacklistNodeIds = new ArrayList<>();
+  private final List<FSSchedulerNode> blacklistNodeIds = new ArrayList<>();
   /**
    * Delay scheduling: We often want to prioritize scheduling of node-local
    * containers over rack-local or off-switch containers. To achieve this
@@ -647,7 +647,11 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       Container reservedContainer, NodeType type,
       SchedulerRequestKey schedulerKey) {
 
-    if (!reservationExceedsThreshold(node, type)) {
+    RMContainer nodeReservedContainer = node.getReservedContainer();
+    boolean reservableForThisApp = nodeReservedContainer == null ||
+        nodeReservedContainer.getApplicationAttemptId()
+            .equals(getApplicationAttemptId());
+    if (reservableForThisApp &&!reservationExceedsThreshold(node, type)) {
       LOG.info("Making reservation: node=" + node.getNodeName() +
               " app_id=" + getApplicationId());
       if (reservedContainer == null) {
@@ -1139,7 +1143,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   /**
    * Is application starved for fairshare or minshare
    */
-  private boolean isStarved() {
+  boolean isStarved() {
     return isStarvedForFairShare() || !Resources.isNone(minshareStarvation);
   }
 

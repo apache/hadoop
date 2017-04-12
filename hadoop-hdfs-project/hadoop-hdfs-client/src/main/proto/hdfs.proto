@@ -353,9 +353,9 @@ message ECSchemaProto {
 }
 
 message ErasureCodingPolicyProto {
-  required string name = 1;
-  required ECSchemaProto schema = 2;
-  required uint32 cellSize = 3;
+  optional string name = 1;
+  optional ECSchemaProto schema = 2;
+  optional uint32 cellSize = 3;
   required uint32 id = 4; // Actually a byte - only 8 bits used
 }
 
@@ -421,6 +421,8 @@ message FsServerDefaultsProto {
   optional bool encryptDataTransfer = 6 [default = false];
   optional uint64 trashInterval = 7 [default = 0];
   optional ChecksumTypeProto checksumType = 8 [default = CHECKSUM_CRC32];
+  optional string keyProviderUri = 9;
+  optional uint32 policyId = 10 [default = 0];
 }
 
 

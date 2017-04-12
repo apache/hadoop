@@ -99,6 +99,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Contai
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerScheduler;
 
+import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
@@ -699,8 +700,10 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
 
   private ContainerManagerImpl createContainerManager(Context context) {
     final LogHandler logHandler = mock(LogHandler.class);
+    final NodeManagerMetrics metrics = mock(NodeManagerMetrics.class);
     final ResourceLocalizationService rsrcSrv =
-        new ResourceLocalizationService(null, null, null, null, context) {
+        new ResourceLocalizationService(null, null, null, null, context,
+            metrics) {
           @Override
           public void serviceInit(Configuration conf) throws Exception {
           }
@@ -739,8 +742,10 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
           }
 
           @Override
-          protected ResourceLocalizationService createResourceLocalizationService(
-              ContainerExecutor exec, DeletionService deletionContext, Context context) {
+          protected ResourceLocalizationService
+              createResourceLocalizationService(
+              ContainerExecutor exec, DeletionService deletionContext,
+              Context context, NodeManagerMetrics metrics) {
             return rsrcSrv;
           }
 

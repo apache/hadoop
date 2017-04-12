@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
@@ -40,9 +41,6 @@ import static org.junit.Assert.fail;
  * erasure coding policies from configuration and exposes this information.
  */
 public class TestEnabledECPolicies {
-
-  private static final ErasureCodingPolicy[] SYSTEM_POLICIES =
-      ErasureCodingPolicyManager.getSystemPolicies();
 
   @Rule
   public Timeout testTimeout = new Timeout(60000);
@@ -112,13 +110,16 @@ public class TestEnabledECPolicies {
     testGetPolicies(enabledPolicies);
 
     // Enable one policy
-    enabledPolicies = new ErasureCodingPolicy[]
-        {SYSTEM_POLICIES[1]};
+    enabledPolicies = new ErasureCodingPolicy[]{
+        SystemErasureCodingPolicies.getPolicies().get(1)
+    };
     testGetPolicies(enabledPolicies);
 
     // Enable two policies
-    enabledPolicies = new ErasureCodingPolicy[]
-        {SYSTEM_POLICIES[1], SYSTEM_POLICIES[2]};
+    enabledPolicies = new ErasureCodingPolicy[]{
+        SystemErasureCodingPolicies.getPolicies().get(1),
+        SystemErasureCodingPolicies.getPolicies().get(2)
+    };
     testGetPolicies(enabledPolicies);
   }
 
@@ -145,7 +146,7 @@ public class TestEnabledECPolicies {
     }
     Assert.assertEquals(enabledPolicies.length, found.size());
     // Check that getEnabledPolicyByName only returns enabled policies
-    for (ErasureCodingPolicy p: SYSTEM_POLICIES) {
+    for (ErasureCodingPolicy p: SystemErasureCodingPolicies.getPolicies()) {
       if (found.contains(p.getName())) {
         // Enabled policy should be present
         Assert.assertNotNull(

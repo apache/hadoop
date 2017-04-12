@@ -74,6 +74,9 @@
     <jackson.version>1.9.13</jackson.version>
     <jackson2.version>2.7.8</jackson2.version>
 
+    <!-- SLF4J version -->
+    <slf4j.version>1.7.25</slf4j.version>
+
     <!-- com.google.re2j version -->
     <re2j.version>1.0</re2j.version>
 
@@ -106,7 +109,7 @@
     for an open-ended enforcement
     -->
     <enforced.java.version>[${javac.version},)</enforced.java.version>
-    <enforced.maven.version>[3.0.2,)</enforced.maven.version>
+    <enforced.maven.version>[3.3.0,)</enforced.maven.version>
 
     <!-- Plugin versions and config -->
     <maven-surefire-plugin.argLine>-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError</maven-surefire-plugin.argLine>
@@ -131,6 +134,7 @@
     <native-maven-plugin.version>1.0-alpha-8</native-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
     <aws-java-sdk.version>1.11.86</aws-java-sdk.version>
+    <hsqldb.version>2.3.4</hsqldb.version>
     <!-- the version of Hadoop declared in the version resources; can be overridden
     so that Hadoop 3.x can declare itself a 2.x artifact. -->
     <declared.hadoop.version>${project.version}</declared.hadoop.version>
@@ -546,11 +550,6 @@
         <version>1.0</version>
       </dependency>
       <dependency>
-        <groupId>xmlenc</groupId>
-        <artifactId>xmlenc</artifactId>
-        <version>0.52</version>
-      </dependency>
-      <dependency>
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpclient</artifactId>
         <version>4.5.2</version>
@@ -893,17 +892,17 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>1.7.10</version>
+        <version>${slf4j.version}</version>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-log4j12</artifactId>
-        <version>1.7.10</version>
+        <version>${slf4j.version}</version>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>jul-to-slf4j</artifactId>
-        <version>1.7.10</version>
+        <version>${slf4j.version}</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jdt</groupId>
@@ -1080,7 +1079,7 @@
       <dependency>
         <groupId>org.hsqldb</groupId>
         <artifactId>hsqldb</artifactId>
-        <version>2.0.0</version>
+        <version>${hsqldb.version}</version>
       </dependency>
       <dependency>
         <groupId>com.codahale.metrics</groupId>

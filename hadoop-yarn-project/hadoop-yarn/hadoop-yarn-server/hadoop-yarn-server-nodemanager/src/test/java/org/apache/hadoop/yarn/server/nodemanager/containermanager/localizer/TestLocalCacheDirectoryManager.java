@@ -18,13 +18,15 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
-import org.junit.Assert;
+import static org.mockito.Mockito.mock;
 
+import org.junit.Assert;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalCacheDirectoryManager.Directory;
+import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
@@ -83,8 +85,10 @@ public class TestLocalCacheDirectoryManager {
           new NMTokenSecretManagerInNM(), null,
           new ApplicationACLsManager(conf), new NMNullStateStoreService(),
             false, conf);
+    NodeManagerMetrics metrics = mock(NodeManagerMetrics.class);
     ResourceLocalizationService service =
-        new ResourceLocalizationService(null, null, null, null, nmContext);
+        new ResourceLocalizationService(null, null, null, null, nmContext,
+            metrics);
     try {
       service.init(conf);
     } catch (Exception e1) {

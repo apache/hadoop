@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocolPB.JournalProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.namenode.ha.AbstractNNFailoverProxyProvider;
+import org.apache.hadoop.hdfs.server.namenode.ha.NameNodeHAProxyFactory;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.io.Text;
@@ -112,7 +113,7 @@ public class NameNodeProxies {
       throws IOException {
     AbstractNNFailoverProxyProvider<T> failoverProxyProvider =
         NameNodeProxiesClient.createFailoverProxyProvider(conf, nameNodeUri,
-            xface, true, fallbackToSimpleAuth);
+            xface, true, fallbackToSimpleAuth, new NameNodeHAProxyFactory<T>());
 
     if (failoverProxyProvider == null) {
       return createNonHAProxy(conf, DFSUtilClient.getNNAddress(nameNodeUri),

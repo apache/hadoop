@@ -638,7 +638,7 @@ public class TestNodeManagerResync {
     }
 
     @Override
-    protected void shutDown() {
+    protected void shutDown(int exitCode) {
       synchronized (isNMShutdownCalled) {
         isNMShutdownCalled.set(true);
         isNMShutdownCalled.notify();

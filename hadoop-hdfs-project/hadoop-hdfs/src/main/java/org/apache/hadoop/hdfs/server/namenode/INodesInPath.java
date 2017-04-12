@@ -238,7 +238,7 @@ public class INodesInPath {
   }
 
   private final byte[][] path;
-  private final String pathname;
+  private volatile String pathname;
 
   /**
    * Array with the specified number of INodes resolved for a given path.
@@ -268,7 +268,6 @@ public class INodesInPath {
     Preconditions.checkArgument(inodes != null && path != null);
     this.inodes = inodes;
     this.path = path;
-    this.pathname = DFSUtil.byteArray2PathString(path);
     this.isRaw = isRaw;
     this.isSnapshot = isSnapshot;
     this.snapshotId = snapshotId;
@@ -329,6 +328,9 @@ public class INodesInPath {
 
   /** @return the full path in string form */
   public String getPath() {
+    if (pathname == null) {
+      pathname = DFSUtil.byteArray2PathString(path);
+    }
     return pathname;
   }
 

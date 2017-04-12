@@ -81,12 +81,12 @@ import org.apache.hadoop.hdfs.TestFileCreation;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
@@ -520,8 +520,8 @@ public class TestWebHDFS {
     MiniDFSCluster cluster = null;
     final Configuration conf = WebHdfsTestUtil.createConf();
     conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        ErasureCodingPolicyManager.getPolicyByID(
-            HdfsConstants.XOR_2_1_POLICY_ID).getName());
+        SystemErasureCodingPolicies.getByID(
+            SystemErasureCodingPolicies.XOR_2_1_POLICY_ID).getName());
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
       cluster.waitActive();
@@ -532,8 +532,8 @@ public class TestWebHDFS {
       final Path ecDir = new Path("/ec");
       dfs.mkdirs(ecDir);
       dfs.setErasureCodingPolicy(ecDir,
-          ErasureCodingPolicyManager.getPolicyByID(
-              HdfsConstants.XOR_2_1_POLICY_ID).getName());
+          SystemErasureCodingPolicies.getByID(
+              SystemErasureCodingPolicies.XOR_2_1_POLICY_ID).getName());
       final Path ecFile = new Path(ecDir, "ec-file.log");
       DFSTestUtil.createFile(dfs, ecFile, 1024 * 10, (short) 1, 0xFEED);
 

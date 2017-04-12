@@ -95,6 +95,7 @@ public class LeafQueue extends AbstractCSQueue {
   private float maxAMResourcePerQueuePercent;
 
   private volatile int nodeLocalityDelay;
+  private volatile int rackLocalityAdditionalDelay;
   private volatile boolean rackLocalityFullReset;
 
   Map<ApplicationAttemptId, FiCaSchedulerApp> applicationAttemptMap =
@@ -215,6 +216,7 @@ public class LeafQueue extends AbstractCSQueue {
       }
 
       nodeLocalityDelay = conf.getNodeLocalityDelay();
+      rackLocalityAdditionalDelay = conf.getRackLocalityAdditionalDelay();
       rackLocalityFullReset = conf.getRackLocalityFullReset();
 
       // re-init this since max allocation could have changed
@@ -271,9 +273,12 @@ public class LeafQueue extends AbstractCSQueue {
               + "numContainers = " + numContainers
               + " [= currentNumContainers ]" + "\n" + "state = " + getState()
               + " [= configuredState ]" + "\n" + "acls = " + aclsString
-              + " [= configuredAcls ]" + "\n" + "nodeLocalityDelay = "
-              + nodeLocalityDelay + "\n" + "labels=" + labelStrBuilder
-              .toString() + "\n" + "reservationsContinueLooking = "
+              + " [= configuredAcls ]" + "\n"
+              + "nodeLocalityDelay = " + nodeLocalityDelay + "\n"
+              + "rackLocalityAdditionalDelay = "
+              + rackLocalityAdditionalDelay + "\n"
+              + "labels=" + labelStrBuilder.toString() + "\n"
+              + "reservationsContinueLooking = "
               + reservationsContinueLooking + "\n" + "preemptionDisabled = "
               + getPreemptionDisabled() + "\n" + "defaultAppPriorityPerQueue = "
               + defaultAppPriorityPerQueue + "\npriority = " + priority);
@@ -1347,6 +1352,11 @@ public class LeafQueue extends AbstractCSQueue {
   }
 
   @Lock(NoLock.class)
+  public int getRackLocalityAdditionalDelay() {
+    return rackLocalityAdditionalDelay;
+  }
+
+  @Lock(NoLock.class)
   public boolean getRackLocalityFullReset() {
     return rackLocalityFullReset;
   }
@@ -1666,7 +1676,7 @@ public class LeafQueue extends AbstractCSQueue {
 
       // Update metrics
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
-          minimumAllocation, this, labelManager, null);
+          this, labelManager, null);
 
       // queue metrics are updated, more resource may be available
       // activate the pending applications if possible

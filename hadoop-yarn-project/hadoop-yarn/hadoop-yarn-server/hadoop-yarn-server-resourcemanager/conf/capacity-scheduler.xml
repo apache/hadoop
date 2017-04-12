@@ -111,9 +111,27 @@
     <value>40</value>
     <description>
       Number of missed scheduling opportunities after which the CapacityScheduler 
-      attempts to schedule rack-local containers. 
-      Typically this should be set to number of nodes in the cluster, By default is setting 
-      approximately number of nodes in one rack which is 40.
+      attempts to schedule rack-local containers.
+      When setting this parameter, the size of the cluster should be taken into account.
+      We use 40 as the default value, which is approximately the number of nodes in one rack.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.capacity.rack-locality-additional-delay</name>
+    <value>-1</value>
+    <description>
+      Number of additional missed scheduling opportunities over the node-locality-delay
+      ones, after which the CapacityScheduler attempts to schedule off-switch containers,
+      instead of rack-local ones.
+      Example: with node-locality-delay=40 and rack-locality-delay=20, the scheduler will
+      attempt rack-local assignments after 40 missed opportunities, and off-switch assignments
+      after 40+20=60 missed opportunities.
+      When setting this parameter, the size of the cluster should be taken into account.
+      We use -1 as the default value, which disables this feature. In this case, the number
+      of missed opportunities for assigning off-switch containers is calculated based on
+      the number of containers and unique locations specified in the resource request,
+      as well as the size of the cluster.
     </description>
   </property>
 

@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azure;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -38,8 +39,11 @@ public class MockWasbAuthorizerImpl implements WasbAuthorizerInterface {
 
   public void addAuthRule(String wasbAbsolutePath,
       String accessType, boolean access) {
-    AuthorizationComponent component =
-        new AuthorizationComponent(wasbAbsolutePath, accessType);
+
+    AuthorizationComponent component = wasbAbsolutePath.endsWith("*")
+        ? new AuthorizationComponent("^" + wasbAbsolutePath.replace("*", ".*"), accessType)
+        : new AuthorizationComponent(wasbAbsolutePath, accessType);
+
     this.authRules.put(component, access);
   }
 
@@ -47,12 +51,26 @@ public class MockWasbAuthorizerImpl implements WasbAuthorizerInterface {
   public boolean authorize(String wasbAbsolutePath, String accessType)
       throws WasbAuthorizationException {
 
+    if (wasbAbsolutePath.endsWith(NativeAzureFileSystem.FolderRenamePending.SUFFIX)) {
+      return true;
+    }
+
     AuthorizationComponent component =
         new AuthorizationComponent(wasbAbsolutePath, accessType);
 
     if (authRules.containsKey(component)) {
       return authRules.get(component);
     } else {
+      // Regex-pattern match if we don't have a straight match
+      for (Map.Entry<AuthorizationComponent, Boolean> entry : authRules.entrySet()) {
+        AuthorizationComponent key = entry.getKey();
+        String keyPath = key.getWasbAbsolutePath();
+        String keyAccess = key.getAccessType();
+
+        if (keyPath.endsWith("*") && Pattern.matches(keyPath, wasbAbsolutePath) && keyAccess.equals(accessType)) {
+          return entry.getValue();
+        }
+      }
       return false;
     }
   }

@@ -405,7 +405,8 @@ public class TestRetryCacheWithHA {
           FsPermission.getFileDefault(), client.getClientName(),
           new EnumSetWritable<CreateFlag>(createFlag), false, DataNodes,
           BlockSize,
-          new CryptoProtocolVersion[] {CryptoProtocolVersion.ENCRYPTION_ZONES});
+          new CryptoProtocolVersion[] {CryptoProtocolVersion.ENCRYPTION_ZONES},
+          null);
     }
 
     @Override
