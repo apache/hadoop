@@ -68,7 +68,8 @@ class BPOfferService {
    * handshake.
    */
   volatile DatanodeRegistration bpRegistration;
-  
+
+  private final String nameserviceId;
   private final DataNode dn;
 
   /**
@@ -118,12 +119,16 @@ class BPOfferService {
     mWriteLock.unlock();
   }
 
-  BPOfferService(List<InetSocketAddress> nnAddrs,
-      List<InetSocketAddress> lifelineNnAddrs, DataNode dn) {
+  BPOfferService(
+      final String nameserviceId,
+      List<InetSocketAddress> nnAddrs,
+      List<InetSocketAddress> lifelineNnAddrs,
+      DataNode dn) {
     Preconditions.checkArgument(!nnAddrs.isEmpty(),
         "Must pass at least one NN.");
     Preconditions.checkArgument(nnAddrs.size() == lifelineNnAddrs.size(),
         "Must pass same number of NN addresses and lifeline addresses.");
+    this.nameserviceId = nameserviceId;
     this.dn = dn;
 
     for (int i = 0; i < nnAddrs.size(); ++i) {
@@ -166,6 +171,14 @@ class BPOfferService {
       }
     }
     return false;
+  }
+
+  /**
+   * Gets nameservice id to which this {@link BPOfferService} maps to.
+   * @return nameservice id, which can be null.
+   */
+  String getNameserviceId() {
+    return nameserviceId;
   }
 
   String getBlockPoolId() {

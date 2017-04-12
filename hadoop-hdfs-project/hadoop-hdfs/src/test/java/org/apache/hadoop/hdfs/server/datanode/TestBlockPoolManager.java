@@ -51,7 +51,9 @@ public class TestBlockPoolManager {
     bpm = new BlockPoolManager(mockDN){
 
       @Override
-      protected BPOfferService createBPOS(List<InetSocketAddress> nnAddrs,
+      protected BPOfferService createBPOS(
+          final String nameserviceId,
+          List<InetSocketAddress> nnAddrs,
           List<InetSocketAddress> lifelineNnAddrs) {
         final int idx = mockIdx++;
         doLog("create #" + idx);
