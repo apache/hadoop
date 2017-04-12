@@ -169,11 +169,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>xmlenc</groupId>
-      <artifactId>xmlenc</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk16</artifactId>
       <scope>test</scope>

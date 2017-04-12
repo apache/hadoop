@@ -840,7 +840,7 @@ public class ParentQueue extends AbstractCSQueue {
       }
 
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
-          minimumAllocation, this, labelManager, null);
+          this, labelManager, null);
     } finally {
       writeLock.unlock();
     }

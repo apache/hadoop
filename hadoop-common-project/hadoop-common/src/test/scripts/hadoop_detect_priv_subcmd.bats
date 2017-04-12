@@ -15,7 +15,20 @@
 
 load hadoop-functions_test_helper
 
-@test "hadoop_get_verify_uservar" {
-  run hadoop_get_verify_uservar cool program
-  [ "${output}" = "COOL_PROGRAM_USER" ]
+@test "hadoop_detect_priv_subcmd (no classname) " {
+  run hadoop_detect_priv_subcmd test app
+  [ "${status}" = "1" ]
+}
+
+@test "hadoop_detect_priv_subcmd (classname; no user) " {
+  export HADOOP_SECURE_CLASSNAME=fake
+  run hadoop_detect_priv_subcmd test app
+  [ "${status}" = "1" ]
+}
+
+@test "hadoop_detect_priv_subcmd (classname; user) " {
+  export HADOOP_SECURE_CLASSNAME=fake
+  export TEST_APP_SECURE_USER=test
+  run hadoop_detect_priv_subcmd test app
+  [ "${status}" = "0" ]
 }

@@ -61,11 +61,6 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>xmlenc</groupId>
-      <artifactId>xmlenc</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
       <scope>compile</scope>

@@ -168,9 +168,9 @@ Some products such as Apache Oozie which access the services of Hadoop on behalf
 
 Because the DataNode data transfer protocol does not use the Hadoop RPC framework, DataNodes must authenticate themselves using privileged ports which are specified by `dfs.datanode.address` and `dfs.datanode.http.address`. This authentication is based on the assumption that the attacker won't be able to get root privileges on DataNode hosts.
 
-When you execute the `hdfs datanode` command as root, the server process binds privileged ports at first, then drops privilege and runs as the user account specified by `HADOOP_SECURE_DN_USER`. This startup process uses [the jsvc program](https://commons.apache.org/proper/commons-daemon/jsvc.html "Link to Apache Commons Jsvc") installed to `JSVC_HOME`. You must specify `HADOOP_SECURE_DN_USER` and `JSVC_HOME` as environment variables on start up (in `hadoop-env.sh`).
+When you execute the `hdfs datanode` command as root, the server process binds privileged ports at first, then drops privilege and runs as the user account specified by `HDFS_DATANODE_SECURE_USER`. This startup process uses [the jsvc program](https://commons.apache.org/proper/commons-daemon/jsvc.html "Link to Apache Commons Jsvc") installed to `JSVC_HOME`. You must specify `HDFS_DATANODE_SECURE_USER` and `JSVC_HOME` as environment variables on start up (in `hadoop-env.sh`).
 
-As of version 2.6.0, SASL can be used to authenticate the data transfer protocol. In this configuration, it is no longer required for secured clusters to start the DataNode as root using `jsvc` and bind to privileged ports. To enable SASL on data transfer protocol, set `dfs.data.transfer.protection` in hdfs-site.xml, set a non-privileged port for `dfs.datanode.address`, set `dfs.http.policy` to `HTTPS_ONLY` and make sure the `HADOOP_SECURE_DN_USER` environment variable is not defined. Note that it is not possible to use SASL on data transfer protocol if `dfs.datanode.address` is set to a privileged port. This is required for backwards-compatibility reasons.
+As of version 2.6.0, SASL can be used to authenticate the data transfer protocol. In this configuration, it is no longer required for secured clusters to start the DataNode as root using `jsvc` and bind to privileged ports. To enable SASL on data transfer protocol, set `dfs.data.transfer.protection` in hdfs-site.xml, set a non-privileged port for `dfs.datanode.address`, set `dfs.http.policy` to `HTTPS_ONLY` and make sure the `HDFS_DATANODE_SECURE_USER` environment variable is not defined. Note that it is not possible to use SASL on data transfer protocol if `dfs.datanode.address` is set to a privileged port. This is required for backwards-compatibility reasons.
 
 In order to migrate an existing cluster that used root authentication to start using SASL instead, first ensure that version 2.6.0 or later has been deployed to all cluster nodes as well as any external applications that need to connect to the cluster. Only versions 2.6.0 and later of the HDFS client can connect to a DataNode that uses SASL for authentication of data transfer protocol, so it is vital that all callers have the correct version before migrating. After version 2.6.0 or later has been deployed everywhere, update configuration of any external applications to enable SASL. If an HDFS client is enabled for SASL, then it can connect successfully to a DataNode running with either root authentication or SASL authentication. Changing configuration for all clients guarantees that subsequent configuration changes on DataNodes will not disrupt the applications. Finally, each individual DataNode can be migrated by changing its configuration and restarting. It is acceptable to have a mix of some DataNodes running with root authentication and some DataNodes running with SASL authentication temporarily during this migration period, because an HDFS client enabled for SASL can connect to both.
 
@@ -293,7 +293,7 @@ The following settings allow configuring SSL access to the NameNode web UI (opti
 | `dfs.encrypt.data.transfer.algorithm`            |                                          | optionally set to `3des` or `rc4` when using data encryption to control encryption algorithm                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `dfs.encrypt.data.transfer.cipher.suites`        |                                          | optionally set to `AES/CTR/NoPadding` to activate AES encryption when using data encryption                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `dfs.encrypt.data.transfer.cipher.key.bitlength` |                                          | optionally set to `128`, `192` or `256` to control key bit length when using AES with data encryption                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `dfs.data.transfer.protection`                   |                                          | `authentication` : authentication only; `integrity` : integrity check in addition to authentication; `privacy` : data encryption in addition to integrity This property is unspecified by default. Setting this property enables SASL for authentication of data transfer protocol. If this is enabled, then `dfs.datanode.address` must use a non-privileged port, `dfs.http.policy` must be set to `HTTPS_ONLY` and the `HADOOP_SECURE_DN_USER` environment variable must be undefined when starting the DataNode process. |
+| `dfs.data.transfer.protection`                   |                                          | `authentication` : authentication only; `integrity` : integrity check in addition to authentication; `privacy` : data encryption in addition to integrity This property is unspecified by default. Setting this property enables SASL for authentication of data transfer protocol. If this is enabled, then `dfs.datanode.address` must use a non-privileged port, `dfs.http.policy` must be set to `HTTPS_ONLY` and the `HDFS_DATANODE_SECURE_USER` environment variable must be undefined when starting the DataNode process. |
 
 ### WebHDFS
 
@@ -413,7 +413,7 @@ Set the environment variable `HADOOP_JAAS_DEBUG` to `true`.
 export HADOOP_JAAS_DEBUG=true
 ```
 
-Edit the `log4j.properties` file to log Hadoop's security package at `DEBUG` level. 
+Edit the `log4j.properties` file to log Hadoop's security package at `DEBUG` level.
 
 ```
 log4j.logger.org.apache.hadoop.security=DEBUG
@@ -434,19 +434,19 @@ It contains a series of probes for the JVM's configuration and the environment,
 dumps out some system files (`/etc/krb5.conf`, `/etc/ntp.conf`), prints
 out some system state and then attempts to log in to Kerberos as the current user,
 or a specific principal in a named keytab.
- 
+
 The output of the command can be used for local diagnostics, or forwarded to
 whoever supports the cluster.
 
 The `KDiag` command has its own entry point; it is currently not hooked up
-to the end-user CLI. 
+to the end-user CLI.
 
 It is invoked simply by passing its full classname to one of the `bin/hadoop`,
 `bin/hdfs` or `bin/yarn` commands. Accordingly, it will display the kerberos client
 state of the command used to invoke it.
 
 ```
-hadoop org.apache.hadoop.security.KDiag 
+hadoop org.apache.hadoop.security.KDiag
 hdfs org.apache.hadoop.security.KDiag
 yarn org.apache.hadoop.security.KDiag
 ```
@@ -557,8 +557,8 @@ hdfs org.apache.hadoop.security.KDiag --resource hbase-default.xml --resource hb
 yarn org.apache.hadoop.security.KDiag --resource yarn-default.xml --resource yarn-site.xml
 ```
 
-For extra logging during the operation, set the logging and `HADOOP_JAAS_DEBUG` 
-environment variable to the values listed in "Troubleshooting". The JVM 
+For extra logging during the operation, set the logging and `HADOOP_JAAS_DEBUG`
+environment variable to the values listed in "Troubleshooting". The JVM
 options are automatically set in KDiag.
 
 #### `--secure`: Fail if the command is not executed on a secure cluster.
@@ -589,7 +589,7 @@ hdfs org.apache.hadoop.security.KDiag \
   --keylen 1024 \
   --keytab zk.service.keytab --principal zookeeper/devix.example.org@REALM
 ```
- 
+
 This attempts to to perform all diagnostics without failing early, load in
 the HDFS and YARN XML resources, require a minimum key length of 1024 bytes,
 and log in as the principal `zookeeper/devix.example.org@REALM`, whose key must be in

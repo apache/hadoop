@@ -66,6 +66,16 @@ public final class Time {
   }
 
   /**
+   * Same as {@link #monotonicNow()} but returns its result in nanoseconds.
+   * Note that this is subject to the same resolution constraints as
+   * {@link System#nanoTime()}.
+   * @return a monotonic clock that counts in nanoseconds.
+   */
+  public static long monotonicNowNanos() {
+    return System.nanoTime();
+  }
+
+  /**
    * Convert time in millisecond to human readable format.
    * @return a human readable string for the input time
    */

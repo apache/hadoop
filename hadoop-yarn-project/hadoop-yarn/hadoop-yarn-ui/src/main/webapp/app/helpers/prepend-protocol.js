@@ -15,21 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import Ember from 'ember';
 
-/**
- * This tests write operation of DFS striped file with RS-10-4-64k
- *  erasure code policy.
- */
-public class TestDFSRSDefault10x4StripedOutputStream
-    extends TestDFSStripedOutputStream {
-
-  @Override
-  public ErasureCodingPolicy getEcPolicy() {
-    return SystemErasureCodingPolicies.getByID(
-        SystemErasureCodingPolicies.RS_10_4_POLICY_ID);
+export function prependProtocol(params/*, hash*/) {
+  let address = params[0];
+  if (address && address.indexOf('://') < 0) {
+    address = 'http://' + address;
   }
+  return address;
 }
+
+export default Ember.Helper.helper(prependProtocol);

@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
+import org.apache.hadoop.hdfs.protocol.datatransfer.PacketReceiver;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
@@ -122,6 +123,7 @@ public class DFSOutputStream extends FSOutputSummer
   private final EnumSet<AddBlockFlag> addBlockFlags;
   protected final AtomicReference<CachingStrategy> cachingStrategy;
   private FileEncryptionInfo fileEncryptionInfo;
+  private int writePacketSize;
 
   /** Use {@link ByteArrayManager} to create buffer for non-heartbeat packets.*/
   protected DFSPacket createPacket(int packetSize, int chunksPerPkt,
@@ -202,6 +204,8 @@ public class DFSOutputStream extends FSOutputSummer
           +"{}", src);
     }
 
+    initWritePacketSize();
+
     this.bytesPerChecksum = checksum.getBytesPerChecksum();
     if (bytesPerChecksum <= 0) {
       throw new HadoopIllegalArgumentException(
@@ -214,6 +218,21 @@ public class DFSOutputStream extends FSOutputSummer
           blockSize + ").");
     }
     this.byteArrayManager = dfsClient.getClientContext().getByteArrayManager();
+  }
+
+  /**
+   * Ensures the configured writePacketSize never exceeds
+   * PacketReceiver.MAX_PACKET_SIZE.
+   */
+  private void initWritePacketSize() {
+    writePacketSize = dfsClient.getConf().getWritePacketSize();
+    if (writePacketSize > PacketReceiver.MAX_PACKET_SIZE) {
+      LOG.warn(
+          "Configured write packet exceeds {} bytes as max,"
+              + " using {} bytes.",
+          PacketReceiver.MAX_PACKET_SIZE, PacketReceiver.MAX_PACKET_SIZE);
+      writePacketSize = PacketReceiver.MAX_PACKET_SIZE;
+    }
   }
 
   /** Construct a new output stream for creating a file. */
@@ -489,10 +508,26 @@ public class DFSOutputStream extends FSOutputSummer
     }
 
     if (!getStreamer().getAppendChunk()) {
-      int psize = Math.min((int)(blockSize- getStreamer().getBytesCurBlock()),
-          dfsClient.getConf().getWritePacketSize());
+      final int psize = (int) Math
+          .min(blockSize - getStreamer().getBytesCurBlock(), writePacketSize);
       computePacketChunkSize(psize, bytesPerChecksum);
     }
+  }
+
+  /**
+   * Used in test only.
+   */
+  @VisibleForTesting
+  void setAppendChunk(final boolean appendChunk) {
+    getStreamer().setAppendChunk(appendChunk);
+  }
+
+  /**
+   * Used in test only.
+   */
+  @VisibleForTesting
+  void setBytesCurBlock(final long bytesCurBlock) {
+    getStreamer().setBytesCurBlock(bytesCurBlock);
   }
 
   /**

@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.XAttrHelper;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
@@ -302,7 +303,7 @@ final class FSDirErasureCodingOp {
         if (inode.isFile()) {
           byte id = inode.asFile().getErasureCodingPolicyID();
           return id < 0 ? null :
-              ErasureCodingPolicyManager.getPolicyByID(id);
+              SystemErasureCodingPolicies.getByID(id);
         }
         // We don't allow setting EC policies on paths with a symlink. Thus
         // if a symlink is encountered, the dir shouldn't have EC policy.
@@ -317,8 +318,7 @@ final class FSDirErasureCodingOp {
             ByteArrayInputStream bIn = new ByteArrayInputStream(xattr.getValue());
             DataInputStream dIn = new DataInputStream(bIn);
             String ecPolicyName = WritableUtils.readString(dIn);
-            return ErasureCodingPolicyManager
-                .getPolicyByName(ecPolicyName);
+            return SystemErasureCodingPolicies.getByName(ecPolicyName);
           }
         }
       }

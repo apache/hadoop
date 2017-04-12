@@ -25,9 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.znerd.xmlenc.XMLOutputter;
 
 /**
  * A base class for the servlets in DFS.
@@ -37,25 +35,6 @@ abstract class DfsServlet extends HttpServlet {
   private static final long serialVersionUID = 1L;
 
   static final Log LOG = LogFactory.getLog(DfsServlet.class.getCanonicalName());
-
-  /** Write the object to XML format */
-  protected void writeXml(Exception except, String path, XMLOutputter doc)
-      throws IOException {
-    doc.startTag(RemoteException.class.getSimpleName());
-    doc.attribute("path", path);
-    if (except instanceof RemoteException) {
-      doc.attribute("class", ((RemoteException) except).getClassName());
-    } else {
-      doc.attribute("class", except.getClass().getName());
-    }
-    String msg = except.getLocalizedMessage();
-    int i = msg.indexOf("\n");
-    if (i >= 0) {
-      msg = msg.substring(0, i);
-    }
-    doc.attribute("message", msg.substring(msg.indexOf(":") + 1).trim());
-    doc.endTag();
-  }
 
   protected UserGroupInformation getUGI(HttpServletRequest request,
                                         Configuration conf) throws IOException {

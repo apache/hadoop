@@ -101,6 +101,7 @@ public class TestAzureADTokenProvider {
   public void testCustomCredTokenProvider()
       throws URISyntaxException, IOException {
     Configuration conf = new Configuration();
+    conf.setEnum(AZURE_AD_TOKEN_PROVIDER_TYPE_KEY, TokenProviderType.Custom);
     conf.setClass(AZURE_AD_TOKEN_PROVIDER_CLASS_KEY,
         CustomMockTokenProvider.class, AzureADTokenProvider.class);
 
@@ -115,6 +116,7 @@ public class TestAzureADTokenProvider {
   public void testInvalidProviderConfigurationForType()
       throws URISyntaxException, IOException {
     Configuration conf = new Configuration();
+    conf.setEnum(AZURE_AD_TOKEN_PROVIDER_TYPE_KEY, TokenProviderType.Custom);
     URI uri = new URI("adl://localhost:8080");
     AdlFileSystem fileSystem = new AdlFileSystem();
     try {
@@ -136,6 +138,7 @@ public class TestAzureADTokenProvider {
     Configuration conf = new Configuration();
     URI uri = new URI("adl://localhost:8080");
     AdlFileSystem fileSystem = new AdlFileSystem();
+    conf.setEnum(AZURE_AD_TOKEN_PROVIDER_TYPE_KEY, TokenProviderType.Custom);
     conf.set(AZURE_AD_TOKEN_PROVIDER_CLASS_KEY,
         "wrong.classpath.CustomMockTokenProvider");
     try {

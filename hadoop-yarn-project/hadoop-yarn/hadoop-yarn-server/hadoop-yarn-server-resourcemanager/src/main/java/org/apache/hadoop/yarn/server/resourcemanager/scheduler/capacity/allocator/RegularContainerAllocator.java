@@ -278,6 +278,12 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
         .getCSLeafQueue().getNodeLocalityDelay());
   }
 
+  private int getActualRackLocalityDelay() {
+    return Math.min(rmContext.getScheduler().getNumClusterNodes(),
+        application.getCSLeafQueue().getNodeLocalityDelay()
+        + application.getCSLeafQueue().getRackLocalityAdditionalDelay());
+  }
+
   private boolean canAssign(SchedulerRequestKey schedulerKey,
       FiCaSchedulerNode node, NodeType type, RMContainer reservedContainer) {
 
@@ -286,26 +292,37 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       if (reservedContainer != null) {
         return true;
       }
+      // If there are no nodes in the cluster, return false.
+      if (rmContext.getScheduler().getNumClusterNodes() == 0) {
+        return false;
+      }
+      // If we have only ANY requests for this schedulerKey, we should not
+      // delay its scheduling.
+      if (application.getResourceRequests(schedulerKey).size() == 1) {
+        return true;
+      }
 
       // 'Delay' off-switch
       long missedOpportunities =
           application.getSchedulingOpportunities(schedulerKey);
-      long requiredContainers = application.getOutstandingAsksCount(
-          schedulerKey);
 
-      float localityWaitFactor =
-          getLocalityWaitFactor(schedulerKey, rmContext.getScheduler()
-              .getNumClusterNodes());
-      // Cap the delay by the number of nodes in the cluster. Under most
-      // conditions this means we will consider each node in the cluster before
-      // accepting an off-switch assignment.
-      return (Math.min(rmContext.getScheduler().getNumClusterNodes(),
-          (requiredContainers * localityWaitFactor)) < missedOpportunities);
+      // If rack locality additional delay parameter is enabled.
+      if (application.getCSLeafQueue().getRackLocalityAdditionalDelay() > -1) {
+        return missedOpportunities > getActualRackLocalityDelay();
+      } else {
+        long requiredContainers =
+            application.getOutstandingAsksCount(schedulerKey);
+        float localityWaitFactor = getLocalityWaitFactor(schedulerKey,
+            rmContext.getScheduler().getNumClusterNodes());
+        // Cap the delay by the number of nodes in the cluster.
+        return (Math.min(rmContext.getScheduler().getNumClusterNodes(),
+            (requiredContainers * localityWaitFactor)) < missedOpportunities);
+      }
     }
 
     // Check if we need containers on this rack
-    if (application.getOutstandingAsksCount(schedulerKey, node.getRackName())
-        <= 0) {
+    if (application.getOutstandingAsksCount(schedulerKey,
+        node.getRackName()) <= 0) {
       return false;
     }
 

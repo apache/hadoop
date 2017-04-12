@@ -94,7 +94,7 @@ public class TestDatasetVolumeCheckerTimeout {
     return volume;
   }
 
-  @Test (timeout = 1000)
+  @Test (timeout = 300000)
   public void testDiskCheckTimeout() throws Exception {
     LOG.info("Executing {}", testName.getMethodName());
     final FsVolumeSpi volume = makeSlowVolume();

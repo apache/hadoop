@@ -89,10 +89,10 @@ The rest of the NFS gateway configurations are optional for both secure and non-
     server can be assured to have been committed.
 
 *   HDFS super-user is the user with the same identity as NameNode process itself and
-    the super-user can do anything in that permissions checks never fail for the super-user. 
+    the super-user can do anything in that permissions checks never fail for the super-user.
     If the following property is configured, the superuser on NFS client can access any file
     on HDFS. By default, the super user is not configured in the gateway.
-    Note that, even the the superuser is configured, "nfs.exports.allowed.hosts" still takes effect. 
+    Note that, even the the superuser is configured, "nfs.exports.allowed.hosts" still takes effect.
     For example, the superuser will not have write access to HDFS files through the gateway if
     the NFS client host is not allowed to have write access in "nfs.exports.allowed.hosts".
 
@@ -143,7 +143,7 @@ It's strongly recommended for the users to update a few configuration properties
     For example: "192.168.0.0/22 rw ; \\\\w\*\\\\.example\\\\.com ; host1.test.org ro;". Only the NFS gateway needs to restart after
     this property is updated. Note that, here Java regular expression is different with the regulation expression used in
     Linux NFS export table, such as, using "\\\\w\*\\\\.example\\\\.com" instead of "\*.example.com", "192\\\\.168\\\\.0\\\\.(11|22)"
-    instead of "192.168.0.[11|22]" and so on.  
+    instead of "192.168.0.[11|22]" and so on.
 
         <property>
           <name>nfs.exports.allowed.hosts</name>
@@ -151,10 +151,10 @@ It's strongly recommended for the users to update a few configuration properties
         </property>
 
 *   HDFS super-user is the user with the same identity as NameNode process itself and
-    the super-user can do anything in that permissions checks never fail for the super-user. 
+    the super-user can do anything in that permissions checks never fail for the super-user.
     If the following property is configured, the superuser on NFS client can access any file
     on HDFS. By default, the super user is not configured in the gateway.
-    Note that, even the the superuser is configured, "nfs.exports.allowed.hosts" still takes effect. 
+    Note that, even the the superuser is configured, "nfs.exports.allowed.hosts" still takes effect.
     For example, the superuser will not have write access to HDFS files through the gateway if
     the NFS client host is not allowed to have write access in "nfs.exports.allowed.hosts".
 
@@ -224,7 +224,7 @@ Three daemons are required to provide NFS service: rpcbind (or portmap), mountd 
         [hdfs]$ $HADOOP_HOME/bin/hdfs --daemon stop nfs3
         [root]> $HADOOP_HOME/bin/hdfs --daemon stop portmap
 
-Optionally, you can forgo running the Hadoop-provided portmap daemon and instead use the system portmap daemon on all operating systems if you start the NFS Gateway as root. This will allow the HDFS NFS Gateway to work around the aforementioned bug and still register using the system portmap daemon. To do so, just start the NFS gateway daemon as you normally would, but make sure to do so as the "root" user, and also set the "HADOOP\_PRIVILEGED\_NFS\_USER" environment variable to an unprivileged user. In this mode the NFS Gateway will start as root to perform its initial registration with the system portmap, and then will drop privileges back to the user specified by the HADOOP\_PRIVILEGED\_NFS\_USER afterward and for the rest of the duration of the lifetime of the NFS Gateway process. Note that if you choose this route, you should skip steps 1 and 2 above.
+Optionally, you can forgo running the Hadoop-provided portmap daemon and instead use the system portmap daemon on all operating systems if you start the NFS Gateway as root. This will allow the HDFS NFS Gateway to work around the aforementioned bug and still register using the system portmap daemon. To do so, just start the NFS gateway daemon as you normally would, but make sure to do so as the "root" user, and also set the "HDFS\_NFS3\_SECURE\_USER" environment variable to an unprivileged user. In this mode the NFS Gateway will start as root to perform its initial registration with the system portmap, and then will drop privileges back to the user specified by the HDFS\_NFS3\_SECURE\_USER afterward and for the rest of the duration of the lifetime of the NFS Gateway process. Note that if you choose this route, you should skip steps 1 and 2 above.
 
 Verify validity of NFS related services
 ---------------------------------------
@@ -268,7 +268,7 @@ Verify validity of NFS related services
 Mount the export "/"
 --------------------
 
-Currently NFS v3 only uses TCP as the transportation protocol. NLM is not supported so mount option "nolock" is needed. 
+Currently NFS v3 only uses TCP as the transportation protocol. NLM is not supported so mount option "nolock" is needed.
 Mount option "sync" is strongly recommended since it can minimize or avoid reordered writes, which results in more predictable throughput.
  Not specifying the sync option may cause unreliable behavior when uploading large files.
  It's recommended to use hard mount. This is because, even after the client sends all data to NFS gateway, it may take NFS gateway some extra time to transfer data to HDFS when writes were reorderd by NFS client Kernel.

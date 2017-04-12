@@ -230,7 +230,8 @@ public class ContainerManagerImpl extends CompositeService implements
     this.metrics = metrics;
 
     rsrcLocalizationSrvc =
-        createResourceLocalizationService(exec, deletionContext, context);
+        createResourceLocalizationService(exec, deletionContext, context,
+            metrics);
     addService(rsrcLocalizationSrvc);
 
     containersLauncher = createContainersLauncher(context, exec);
@@ -477,9 +478,10 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   protected ResourceLocalizationService createResourceLocalizationService(
-      ContainerExecutor exec, DeletionService deletionContext, Context context) {
+      ContainerExecutor exec, DeletionService deletionContext,
+      Context nmContext, NodeManagerMetrics nmMetrics) {
     return new ResourceLocalizationService(this.dispatcher, exec,
-        deletionContext, dirsHandler, context);
+        deletionContext, dirsHandler, nmContext, nmMetrics);
   }
 
   protected SharedCacheUploadService createSharedCacheUploaderService() {

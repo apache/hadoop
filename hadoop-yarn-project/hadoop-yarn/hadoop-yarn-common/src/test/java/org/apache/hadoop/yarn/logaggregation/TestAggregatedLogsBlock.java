@@ -295,17 +295,20 @@ public class TestAggregatedLogsBlock {
     List<String> rootLogDirs = Arrays.asList("target/logs/logs");
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
-    AggregatedLogFormat.LogWriter writer = new AggregatedLogFormat.LogWriter(
-        configuration, new Path(path), ugi);
-    writer.writeApplicationOwner(ugi.getUserName());
+    try (AggregatedLogFormat.LogWriter writer =
+             new AggregatedLogFormat.LogWriter()) {
+      writer.initialize(configuration, new Path(path), ugi);
+      writer.writeApplicationOwner(ugi.getUserName());
 
-    Map<ApplicationAccessType, String> appAcls = new HashMap<ApplicationAccessType, String>();
-    appAcls.put(ApplicationAccessType.VIEW_APP, ugi.getUserName());
-    writer.writeApplicationACLs(appAcls);
+      Map<ApplicationAccessType, String> appAcls = new HashMap<>();
+      appAcls.put(ApplicationAccessType.VIEW_APP, ugi.getUserName());
+      writer.writeApplicationACLs(appAcls);
 
-    writer.append(new AggregatedLogFormat.LogKey("container_0_0001_01_000001"),
-        new AggregatedLogFormat.LogValue(rootLogDirs, containerId,UserGroupInformation.getCurrentUser().getShortUserName()));
-    writer.close();
+      writer.append(
+          new AggregatedLogFormat.LogKey("container_0_0001_01_000001"),
+          new AggregatedLogFormat.LogValue(rootLogDirs, containerId,
+              UserGroupInformation.getCurrentUser().getShortUserName()));
+    }
   }
 
   private void writeLogs(String dirName) throws Exception {

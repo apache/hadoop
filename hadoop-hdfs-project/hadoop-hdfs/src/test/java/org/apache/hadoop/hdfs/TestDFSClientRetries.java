@@ -370,7 +370,7 @@ public class TestDFSClientRetries {
     String file1 = "/testFile1";
     String file2 = "/testFile2";
     // Set short retry timeouts so this test runs faster
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
+    conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
     conf.setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, 2 * 1000);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {

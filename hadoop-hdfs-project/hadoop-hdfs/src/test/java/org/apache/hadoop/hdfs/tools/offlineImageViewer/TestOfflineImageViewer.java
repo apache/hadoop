@@ -78,9 +78,8 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
@@ -124,9 +123,8 @@ public class TestOfflineImageViewer {
     tempDir = Files.createTempDir();
     MiniDFSCluster cluster = null;
     try {
-      final ErasureCodingPolicy ecPolicy =
-          ErasureCodingPolicyManager.getPolicyByID(
-              HdfsConstants.XOR_2_1_POLICY_ID);
+      final ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies
+          .getByID(SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
 
       Configuration conf = new Configuration();
       conf.setLong(
@@ -412,8 +410,7 @@ public class TestOfflineImageViewer {
             Assert.assertEquals("INode '"
                     + currentInodeName + "' has unexpected EC Policy!",
                 Byte.parseByte(currentECPolicy),
-                ErasureCodingPolicyManager.getPolicyByID(
-                    HdfsConstants.XOR_2_1_POLICY_ID).getId());
+                SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
             Assert.assertEquals("INode '"
                     + currentInodeName + "' has unexpected replication!",
                 currentRepl,

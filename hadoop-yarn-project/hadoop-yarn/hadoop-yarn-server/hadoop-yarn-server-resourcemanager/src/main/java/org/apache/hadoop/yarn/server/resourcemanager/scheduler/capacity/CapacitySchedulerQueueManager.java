@@ -41,10 +41,13 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.Permission;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueStateManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerQueueManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -220,6 +223,23 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         queue =
             new PlanQueue(csContext, queueName, parent,
                 oldQueues.get(queueName));
+
+        //initializing the "internal" default queue, for SLS compatibility
+        String defReservationId =
+            queueName + ReservationConstants.DEFAULT_QUEUE_SUFFIX;
+
+        List<CSQueue> childQueues = new ArrayList<>();
+        ReservationQueue resQueue = new ReservationQueue(csContext,
+            defReservationId, (PlanQueue) queue);
+        try {
+          resQueue.setEntitlement(new QueueEntitlement(1.0f, 1.0f));
+        } catch (SchedulerDynamicEditException e) {
+          throw new IllegalStateException(e);
+        }
+        childQueues.add(resQueue);
+        ((PlanQueue) queue).setChildQueues(childQueues);
+        queues.put(defReservationId, resQueue);
+
       } else {
         queue =
             new LeafQueue(csContext, queueName, parent,

@@ -15,21 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import { prependProtocol } from '../../../helpers/prepend-protocol';
+import { module, test } from 'qunit';
 
-/**
- * This tests write operation of DFS striped file with RS-10-4-64k
- *  erasure code policy.
- */
-public class TestDFSRSDefault10x4StripedOutputStream
-    extends TestDFSStripedOutputStream {
+module('Unit | Helper | prepend protocol');
 
-  @Override
-  public ErasureCodingPolicy getEcPolicy() {
-    return SystemErasureCodingPolicies.getByID(
-        SystemErasureCodingPolicies.RS_10_4_POLICY_ID);
-  }
-}
+// Replace this with your real tests.
+test('it works', function(assert) {
+  let result = prependProtocol(42);
+  assert.ok(result);
+});

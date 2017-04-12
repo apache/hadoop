@@ -74,14 +74,14 @@ public class TestStripedINodeFile {
 
   // use hard coded policy - see HDFS-9816
   private static final ErasureCodingPolicy testECPolicy
-      = ErasureCodingPolicyManager.getSystemPolicies()[0];
+      = StripedFileTestUtil.getDefaultECPolicy();
 
   @Rule
   public Timeout globalTimeout = new Timeout(300000);
 
   private static INodeFile createStripedINodeFile() {
     return new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
-        null, null, HdfsConstants.RS_6_3_POLICY_ID, 1024L,
+        null, null, StripedFileTestUtil.getDefaultECPolicy().getId(), 1024L,
         HdfsConstants.COLD_STORAGE_POLICY_ID, BlockType.STRIPED);
   }
 
@@ -118,7 +118,7 @@ public class TestStripedINodeFile {
     try {
       new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID,
           null, perm, 0L, 0L, null, new Short((short) 3) /*replication*/,
-          HdfsConstants.RS_6_3_POLICY_ID /*ec policy*/,
+          StripedFileTestUtil.getDefaultECPolicy().getId() /*ec policy*/,
           1024L, HdfsConstants.WARM_STORAGE_POLICY_ID, STRIPED);
       fail("INodeFile construction should fail when both replication and " +
           "ECPolicy requested!");
@@ -147,7 +147,7 @@ public class TestStripedINodeFile {
       LOG.info("Expected exception: ", iae);
     }
 
-    final Byte ecPolicyID = HdfsConstants.RS_6_3_POLICY_ID;
+    final Byte ecPolicyID = StripedFileTestUtil.getDefaultECPolicy().getId();
     try {
       new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID,
           null, perm, 0L, 0L, null, null /*replication*/, ecPolicyID,

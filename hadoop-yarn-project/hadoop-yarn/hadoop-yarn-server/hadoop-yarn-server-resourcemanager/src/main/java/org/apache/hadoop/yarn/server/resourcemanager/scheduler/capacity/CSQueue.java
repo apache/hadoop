@@ -121,20 +121,6 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   public float getAbsoluteUsedCapacity();
 
   /**
-   * Set used capacity of the queue.
-   * @param usedCapacity
-   *          used capacity of the queue
-   */
-  public void setUsedCapacity(float usedCapacity);
-
-  /**
-   * Set absolute used capacity of the queue.
-   * @param absUsedCapacity
-   *          absolute used capacity of the queue
-   */
-  public void setAbsoluteUsedCapacity(float absUsedCapacity);
-
-  /**
    * Get the current used capacity of nodes without label(s) of the queue
    * and it's children (if any).
    * @return queue used capacity

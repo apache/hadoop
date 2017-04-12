@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 
 /**
  * This tests write operation of DFS striped file with XOR-2-1-64k erasure code
@@ -30,7 +29,7 @@ public class TestDFSXORStripedOutputStreamWithFailure
 
   @Override
   public ErasureCodingPolicy getEcPolicy() {
-    return ErasureCodingPolicyManager.getPolicyByID(
-        HdfsConstants.XOR_2_1_POLICY_ID);
+    return SystemErasureCodingPolicies.getByID(
+        SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
   }
 }
