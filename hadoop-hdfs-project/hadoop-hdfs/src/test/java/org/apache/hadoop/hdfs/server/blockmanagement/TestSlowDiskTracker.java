@@ -393,18 +393,9 @@ public class TestSlowDiskTracker {
     timer.advance(reportValidityMs);
 
     tracker.updateSlowDiskReportAsync(timer.monotonicNow());
+    Thread.sleep(OUTLIERS_REPORT_INTERVAL*2);
 
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        return tracker.getSlowDiskReportAsJsonString() != null;
-      }
-    }, 500, 5000);
-
-    ArrayList<DiskLatency> jsonReport = getAndDeserializeJson(
-        tracker.getSlowDiskReportAsJsonString());
-
-    assertTrue(jsonReport.isEmpty());
+    assertTrue(tracker.getSlowDiskReportAsJsonString() == null);
   }
 
   private boolean isDiskInReports(ArrayList<DiskLatency> reports,

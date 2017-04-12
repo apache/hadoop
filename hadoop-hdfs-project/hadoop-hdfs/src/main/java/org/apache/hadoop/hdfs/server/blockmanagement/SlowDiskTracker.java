@@ -256,6 +256,9 @@ public class SlowDiskTracker {
   public String getSlowDiskReportAsJsonString() {
     ObjectMapper objectMapper = new ObjectMapper();
     try {
+      if (slowDisksReport.isEmpty()) {
+        return null;
+      }
       return objectMapper.writeValueAsString(slowDisksReport);
     } catch (JsonProcessingException e) {
       // Failed to serialize. Don't log the exception call stack.
