@@ -387,9 +387,8 @@ class S3ABlockOutputStream extends OutputStream {
     int size = block.dataSize();
     final S3ADataBlocks.BlockUploadData uploadData = block.startUpload();
     final PutObjectRequest putObjectRequest = uploadData.hasFile() ?
-        writeOperationHelper.newPutRequest(uploadData.getFile())
-        : writeOperationHelper.newPutRequest(uploadData.getUploadStream(), size);
-    fs.setOptionalPutRequestParameters(putObjectRequest);
+        writeOperationHelper.newPutRequest(uploadData.getFile()) :
+        writeOperationHelper.newPutRequest(uploadData.getUploadStream(), size);
     long transferQueueTime = now();
     BlockUploadProgress callback =
         new BlockUploadProgress(

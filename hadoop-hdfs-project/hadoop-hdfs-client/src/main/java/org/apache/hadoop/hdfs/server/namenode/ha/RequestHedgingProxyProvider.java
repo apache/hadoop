@@ -34,7 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.io.retry.MultiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +43,7 @@ import org.slf4j.LoggerFactory;
  * per-se. It constructs a wrapper proxy that sends the request to ALL
  * underlying proxies simultaneously. It assumes the in an HA setup, there will
  * be only one Active, and the active should respond faster than any configured
- * standbys. Once it recieve a response from any one of the configred proxies,
+ * standbys. Once it receive a response from any one of the configred proxies,
  * outstanding requests to other proxies are immediately cancelled.
  */
 public class RequestHedgingProxyProvider<T> extends
@@ -147,15 +146,9 @@ public class RequestHedgingProxyProvider<T> extends
   private volatile ProxyInfo<T> successfulProxy = null;
   private volatile String toIgnore = null;
 
-  public RequestHedgingProxyProvider(
-          Configuration conf, URI uri, Class<T> xface) {
-    this(conf, uri, xface, new DefaultProxyFactory<T>());
-  }
-
-  @VisibleForTesting
-  RequestHedgingProxyProvider(Configuration conf, URI uri,
-                              Class<T> xface, ProxyFactory<T> factory) {
-    super(conf, uri, xface, factory);
+  public RequestHedgingProxyProvider(Configuration conf, URI uri,
+      Class<T> xface, HAProxyFactory<T> proxyFactory) {
+    super(conf, uri, xface, proxyFactory);
   }
 
   @SuppressWarnings("unchecked")

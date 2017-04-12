@@ -194,7 +194,7 @@ public class S3AFileSystem extends FileSystem {
           S3_CLIENT_FACTORY_IMPL, DEFAULT_S3_CLIENT_FACTORY_IMPL,
           S3ClientFactory.class);
       s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
-          .createS3Client(name, uri);
+          .createS3Client(name);
 
       maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
       listing = new Listing(this);
@@ -1643,8 +1643,6 @@ public class S3AFileSystem extends FileSystem {
    * @throws IOException other IO problems
    * @throws AmazonClientException on failures inside the AWS SDK
    */
-  // TODO: If we have created an empty file at /foo/bar and we then call
-  // mkdirs for /foo/bar/baz/roo what happens to the empty file /foo/bar/?
   private boolean innerMkdirs(Path p, FsPermission permission)
       throws IOException, FileAlreadyExistsException, AmazonClientException {
     Path f = qualify(p);
@@ -1695,6 +1693,7 @@ public class S3AFileSystem extends FileSystem {
       String key = pathToKey(f);
       createFakeDirectory(key);
       S3Guard.makeDirsOrdered(metadataStore, metadataStoreDirs, username);
+      deleteUnnecessaryFakeDirectories(f.getParent());
       return true;
     }
   }
@@ -2071,7 +2070,7 @@ public class S3AFileSystem extends FileSystem {
     }
   }
 
-  protected void setOptionalPutRequestParameters(PutObjectRequest request) {
+  private void setOptionalPutRequestParameters(PutObjectRequest request) {
     switch (serverSideEncryptionAlgorithm) {
     case SSE_KMS:
       request.setSSEAwsKeyManagementParams(generateSSEAwsKeyParams());
@@ -2652,11 +2651,13 @@ public class S3AFileSystem extends FileSystem {
           "No partitions have been uploaded");
       LOG.debug("Completing multipart upload {} with {} parts",
           uploadId, partETags.size());
+      // a copy of the list is required, so that the AWS SDK doesn't
+      // attempt to sort an unmodifiable list.
       return s3.completeMultipartUpload(
           new CompleteMultipartUploadRequest(bucket,
               key,
               uploadId,
-              partETags));
+              new ArrayList<>(partETags)));
     }
 
     /**

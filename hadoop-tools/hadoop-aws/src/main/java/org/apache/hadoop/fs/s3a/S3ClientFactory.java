@@ -39,10 +39,9 @@ public interface S3ClientFactory {
    * because both values may be useful in logging.
    *
    * @param name raw input S3A file system URI
-   * @param uri validated form of S3A file system URI
    * @return S3 client
    * @throws IOException IO problem
    */
-  AmazonS3 createS3Client(URI name, URI uri) throws IOException;
+  AmazonS3 createS3Client(URI name) throws IOException;
 
 }

@@ -22,7 +22,7 @@ import java.util.Collection;
 import java.util.Map;
 
 import com.google.common.collect.Maps;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -143,6 +143,7 @@ public class MetricsRegistry {
   public MutableGaugeInt newGauge(String name, String desc, int iVal) {
     return newGauge(Interns.info(name, desc), iVal);
   }
+
   /**
    * Create a mutable integer gauge
    * @param info  metadata of the metric
@@ -176,6 +177,30 @@ public class MetricsRegistry {
   public synchronized MutableGaugeLong newGauge(MetricsInfo info, long iVal) {
     checkMetricName(info.name());
     MutableGaugeLong ret = new MutableGaugeLong(info, iVal);
+    metricsMap.put(info.name(), ret);
+    return ret;
+  }
+
+  /**
+   * Create a mutable float gauge
+   * @param name  of the metric
+   * @param desc  metric description
+   * @param iVal  initial value
+   * @return a new gauge object
+   */
+  public MutableGaugeFloat newGauge(String name, String desc, float iVal) {
+    return newGauge(Interns.info(name, desc), iVal);
+  }
+
+  /**
+   * Create a mutable float gauge
+   * @param info  metadata of the metric
+   * @param iVal  initial value
+   * @return a new gauge object
+   */
+  public synchronized MutableGaugeFloat newGauge(MetricsInfo info, float iVal) {
+    checkMetricName(info.name());
+    MutableGaugeFloat ret = new MutableGaugeFloat(info, iVal);
     metricsMap.put(info.name(), ret);
     return ret;
   }
@@ -416,8 +441,9 @@ public class MetricsRegistry {
   }
 
   @Override public String toString() {
-    return Objects.toStringHelper(this)
+    return MoreObjects.toStringHelper(this)
         .add("info", metricsInfo).add("tags", tags()).add("metrics", metrics())
         .toString();
   }
+
 }

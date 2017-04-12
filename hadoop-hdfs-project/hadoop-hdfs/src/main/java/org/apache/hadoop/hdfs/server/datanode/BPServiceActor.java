@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -57,6 +56,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -125,7 +125,9 @@ class BPServiceActor implements Runnable {
     this.initialRegistrationComplete = lifelineNnAddr != null ?
         new CountDownLatch(1) : null;
     this.dnConf = dn.getDnConf();
-    this.ibrManager = new IncrementalBlockReportManager(dnConf.ibrInterval);
+    this.ibrManager = new IncrementalBlockReportManager(
+        dnConf.ibrInterval,
+        dn.getMetrics());
     prevBlockReportId = ThreadLocalRandom.current().nextLong();
     scheduler = new Scheduler(dnConf.heartBeatInterval,
         dnConf.getLifelineIntervalMs(), dnConf.blockReportInterval,
@@ -276,7 +278,10 @@ class BPServiceActor implements Runnable {
     // This also initializes our block pool in the DN if we are
     // the first NN connection for this BP.
     bpos.verifyAndSetNamespaceInfo(this, nsInfo);
-    
+
+    /* set thread name again to include NamespaceInfo when it's available. */
+    this.bpThread.setName(formatThreadName("heartbeating", nnAddr));
+
     // Second phase of the handshake with the NN.
     register(nsInfo);
   }
@@ -349,7 +354,7 @@ class BPServiceActor implements Runnable {
     // or we will report an RBW replica after the BlockReport already reports
     // a FINALIZED one.
     ibrManager.sendIBRs(bpNamenode, bpRegistration,
-        bpos.getBlockPoolId(), dn.getMetrics());
+        bpos.getBlockPoolId());
 
     long brCreateStartTime = monotonicNow();
     Map<DatanodeStorage, BlockListAsLongs> perVolumeBlockLists =
@@ -497,11 +502,15 @@ class BPServiceActor implements Runnable {
         .getVolumeFailureSummary();
     int numFailedVolumes = volumeFailureSummary != null ?
         volumeFailureSummary.getFailedStorageLocations().length : 0;
-    final boolean slowPeersReportDue = scheduler.isSlowPeersReportDue(now);
+    final boolean outliersReportDue = scheduler.isOutliersReportDue(now);
     final SlowPeerReports slowPeers =
-        slowPeersReportDue && dn.getPeerMetrics() != null ?
+        outliersReportDue && dn.getPeerMetrics() != null ?
             SlowPeerReports.create(dn.getPeerMetrics().getOutliers()) :
             SlowPeerReports.EMPTY_REPORT;
+    final SlowDiskReports slowDisks =
+        outliersReportDue && dn.getDiskMetrics() != null ?
+            SlowDiskReports.create(dn.getDiskMetrics().getDiskOutliersStats()) :
+            SlowDiskReports.EMPTY_REPORT;
     HeartbeatResponse response = bpNamenode.sendHeartbeat(bpRegistration,
         reports,
         dn.getFSDataset().getCacheCapacity(),
@@ -511,11 +520,12 @@ class BPServiceActor implements Runnable {
         numFailedVolumes,
         volumeFailureSummary,
         requestBlockReportLease,
-        slowPeers);
+        slowPeers,
+        slowDisks);
 
-    if (slowPeersReportDue) {
+    if (outliersReportDue) {
       // If the report was due and successfully sent, schedule the next one.
-      scheduler.scheduleNextSlowPeerReport();
+      scheduler.scheduleNextOutlierReport();
     }
     return response;
   }
@@ -539,14 +549,15 @@ class BPServiceActor implements Runnable {
       lifelineSender.start();
     }
   }
-  
-  private String formatThreadName(String action, InetSocketAddress addr) {
-    Collection<StorageLocation> dataDirs =
-        DataNode.getStorageLocations(dn.getConf());
-    return "DataNode: [" + dataDirs.toString() + "]  " +
-        action + " to " + addr;
+
+  private String formatThreadName(
+      final String action,
+      final InetSocketAddress addr) {
+    final String prefix = bpos.getBlockPoolId() != null ? bpos.getBlockPoolId()
+        : bpos.getNameserviceId();
+    return prefix + " " + action + " to " + addr;
   }
-  
+
   //This must be called only by blockPoolManager.
   void stop() {
     shouldServiceRun = false;
@@ -672,7 +683,7 @@ class BPServiceActor implements Runnable {
         }
         if (ibrManager.sendImmediately() || sendHeartbeat) {
           ibrManager.sendIBRs(bpNamenode, bpRegistration,
-              bpos.getBlockPoolId(), dn.getMetrics());
+              bpos.getBlockPoolId());
         }
 
         List<DatanodeCommand> cmds = null;
@@ -1000,8 +1011,8 @@ class BPServiceActor implements Runnable {
     }
 
     public void start() {
-      lifelineThread = new Thread(this, formatThreadName("lifeline",
-          lifelineNnAddr));
+      lifelineThread = new Thread(this,
+          formatThreadName("lifeline", lifelineNnAddr));
       lifelineThread.setDaemon(true);
       lifelineThread.setUncaughtExceptionHandler(
           new Thread.UncaughtExceptionHandler() {
@@ -1095,7 +1106,7 @@ class BPServiceActor implements Runnable {
     boolean resetBlockReportTime = true;
 
     @VisibleForTesting
-    volatile long nextSlowPeersReportTime = monotonicNow();
+    volatile long nextOutliersReportTime = monotonicNow();
 
     private final AtomicBoolean forceFullBlockReport =
         new AtomicBoolean(false);
@@ -1103,14 +1114,14 @@ class BPServiceActor implements Runnable {
     private final long heartbeatIntervalMs;
     private final long lifelineIntervalMs;
     private final long blockReportIntervalMs;
-    private final long slowPeersReportIntervalMs;
+    private final long outliersReportIntervalMs;
 
     Scheduler(long heartbeatIntervalMs, long lifelineIntervalMs,
-              long blockReportIntervalMs, long slowPeersReportIntervalMs) {
+              long blockReportIntervalMs, long outliersReportIntervalMs) {
       this.heartbeatIntervalMs = heartbeatIntervalMs;
       this.lifelineIntervalMs = lifelineIntervalMs;
       this.blockReportIntervalMs = blockReportIntervalMs;
-      this.slowPeersReportIntervalMs = slowPeersReportIntervalMs;
+      this.outliersReportIntervalMs = outliersReportIntervalMs;
       scheduleNextLifeline(nextHeartbeatTime);
     }
 
@@ -1143,8 +1154,8 @@ class BPServiceActor implements Runnable {
       lastBlockReportTime = blockReportTime;
     }
 
-    void scheduleNextSlowPeerReport() {
-      nextSlowPeersReportTime = monotonicNow() + slowPeersReportIntervalMs;
+    void scheduleNextOutlierReport() {
+      nextOutliersReportTime = monotonicNow() + outliersReportIntervalMs;
     }
 
     long getLastHearbeatTime() {
@@ -1173,8 +1184,8 @@ class BPServiceActor implements Runnable {
       return nextBlockReportTime - curTime <= 0;
     }
 
-    boolean isSlowPeersReportDue(long curTime) {
-      return nextSlowPeersReportTime - curTime <= 0;
+    boolean isOutliersReportDue(long curTime) {
+      return nextOutliersReportTime - curTime <= 0;
     }
 
     void forceFullBlockReportNow() {

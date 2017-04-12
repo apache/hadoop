@@ -41,6 +41,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -48,10 +49,13 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
@@ -564,7 +568,58 @@ public class TestStartup {
     } finally {
       cluster.shutdown();
     }
-}
+  }
+
+  @Test(timeout=30000)
+  public void testCorruptImageFallbackLostECPolicy() throws IOException {
+    final ErasureCodingPolicy defaultPolicy = StripedFileTestUtil
+        .getDefaultECPolicy();
+    final String policy = defaultPolicy.getName();
+    final Path f1 = new Path("/f1");
+    config.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY, policy);
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(config)
+        .numDataNodes(0)
+        .format(true)
+        .build();
+    try {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      // set root directory to use the default ec policy
+      Path srcECDir = new Path("/");
+      fs.setErasureCodingPolicy(srcECDir,
+          defaultPolicy.getName());
+
+      // create a file which will use the default ec policy
+      fs.create(f1);
+      FileStatus fs1 = fs.getFileStatus(f1);
+      assertTrue(fs1.isErasureCoded());
+      ErasureCodingPolicy fs1Policy = fs.getErasureCodingPolicy(f1);
+      assertEquals(fs1Policy, defaultPolicy);
+    } finally {
+      cluster.close();
+    }
+
+    // Delete a single md5sum
+    corruptFSImageMD5(false);
+    // Should still be able to start
+    cluster = new MiniDFSCluster.Builder(config)
+        .numDataNodes(0)
+        .format(false)
+        .build();
+    try {
+      cluster.waitActive();
+      ErasureCodingPolicy[] ecPolicies = cluster.getNameNode()
+          .getNamesystem().getErasureCodingPolicyManager().getEnabledPolicies();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      // make sure the ec policy of the file is still correct
+      assertEquals(fs.getErasureCodingPolicy(f1), defaultPolicy);
+      // make sure after fsimage fallback, enabled ec policies are not cleared.
+      assertTrue(ecPolicies.length == 1);
+    } finally {
+      cluster.shutdown();
+    }
+  }
 
   /**
    * This test tests hosts include list contains host names.  After namenode

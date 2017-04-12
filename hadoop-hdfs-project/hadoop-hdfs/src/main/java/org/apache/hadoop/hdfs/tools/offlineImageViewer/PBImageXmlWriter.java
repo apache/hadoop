@@ -119,7 +119,7 @@ public final class PBImageXmlWriter {
   public static final String INODE_SECTION_PERMISSION = "permission";
   public static final String INODE_SECTION_BLOCKS = "blocks";
   public static final String INODE_SECTION_BLOCK = "block";
-  public static final String INODE_SECTION_GEMSTAMP = "genstamp";
+  public static final String INODE_SECTION_GENSTAMP = "genstamp";
   public static final String INODE_SECTION_NUM_BYTES = "numBytes";
   public static final String INODE_SECTION_FILE_UNDER_CONSTRUCTION =
       "file-under-construction";
@@ -492,7 +492,7 @@ public final class PBImageXmlWriter {
       for (BlockProto b : f.getBlocksList()) {
         out.print("<" + INODE_SECTION_BLOCK + ">");
         o(SECTION_ID, b.getBlockId())
-            .o(INODE_SECTION_GEMSTAMP, b.getGenStamp())
+            .o(INODE_SECTION_GENSTAMP, b.getGenStamp())
             .o(INODE_SECTION_NUM_BYTES, b.getNumBytes());
         out.print("</" + INODE_SECTION_BLOCK + ">\n");
       }
@@ -685,7 +685,7 @@ public final class PBImageXmlWriter {
             for (BlockProto b : f.getBlocksList()) {
               out.print("<" + INODE_SECTION_BLOCK + ">");
               o(SECTION_ID, b.getBlockId())
-                  .o(INODE_SECTION_GEMSTAMP, b.getGenStamp())
+                  .o(INODE_SECTION_GENSTAMP, b.getGenStamp())
                   .o(INODE_SECTION_NUM_BYTES, b.getNumBytes());
               out.print("</" + INODE_SECTION_BLOCK + ">\n");
             }

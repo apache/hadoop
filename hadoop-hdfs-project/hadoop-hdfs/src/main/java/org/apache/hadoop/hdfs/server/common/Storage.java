@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIOException;
@@ -275,12 +276,10 @@ public abstract class Storage extends StorageInfo {
     
     private final StorageLocation location;
     public StorageDirectory(File dir) {
-      // default dirType is null
       this(dir, null, false);
     }
     
     public StorageDirectory(StorageLocation location) {
-      // default dirType is null
       this(null, false, location);
     }
 
@@ -337,7 +336,8 @@ public abstract class Storage extends StorageInfo {
         boolean isShared, StorageLocation location) {
       this.root = dir;
       this.lock = null;
-      this.dirType = dirType;
+      // default dirType is UNDEFINED
+      this.dirType = (dirType == null ? NameNodeDirType.UNDEFINED : dirType);
       this.isShared = isShared;
       this.location = location;
       assert location == null || dir == null ||

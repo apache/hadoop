@@ -225,7 +225,7 @@ public abstract class MultithreadedTestUtil {
 
     /**
      * User method for any code to test repeating behavior of (as threads).
-     * @throws Exception throw an exception if a failure has occured.
+     * @throws Exception throw an exception if a failure has occurred.
      */
     public abstract void doAnAction() throws Exception;
   }

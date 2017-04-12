@@ -27,7 +27,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.Charset;
+import java.security.PrivilegedExceptionAction;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -61,10 +63,16 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
+import org.apache.hadoop.fs.azure.security.Constants;
+import org.apache.hadoop.fs.azure.security.SecurityUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator;
+import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticator;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -1107,6 +1115,9 @@ public class NativeAzureFileSystem extends FileSystem {
   // A counter to create unique (within-process) names for my metrics sources.
   private static AtomicInteger metricsSourceNameCounter = new AtomicInteger();
   private boolean appendSupportEnabled = false;
+  private DelegationTokenAuthenticatedURL authURL;
+  private DelegationTokenAuthenticatedURL.Token authToken = new DelegationTokenAuthenticatedURL.Token();
+  private String credServiceUrl;
 
   /**
    * Configuration key to enable authorization support in WASB.
@@ -1123,6 +1134,11 @@ public class NativeAzureFileSystem extends FileSystem {
    * Flag controlling authorization support in WASB.
    */
   private boolean azureAuthorization = false;
+
+  /**
+   * Flag controlling Kerberos support in WASB.
+   */
+  private boolean kerberosSupportEnabled = false;
 
   /**
    * Authorizer to use when authorization support is enabled in
@@ -1271,12 +1287,20 @@ public class NativeAzureFileSystem extends FileSystem {
 
     this.azureAuthorization = useSecureMode &&
         conf.getBoolean(KEY_AZURE_AUTHORIZATION, DEFAULT_AZURE_AUTHORIZATION);
+    this.kerberosSupportEnabled =
+        conf.getBoolean(Constants.AZURE_KERBEROS_SUPPORT_PROPERTY_NAME, false);
 
     if (this.azureAuthorization) {
 
       this.authorizer =
           new RemoteWasbAuthorizerImpl();
       authorizer.init(conf);
+    }
+
+    if (UserGroupInformation.isSecurityEnabled() && kerberosSupportEnabled) {
+      DelegationTokenAuthenticator authenticator = new KerberosDelegationTokenAuthenticator();
+      authURL = new DelegationTokenAuthenticatedURL(authenticator);
+      credServiceUrl = SecurityUtils.getCredServiceUrls(conf);
     }
   }
 
@@ -1406,7 +1430,7 @@ public class NativeAzureFileSystem extends FileSystem {
       String operation) throws WasbAuthorizationException, IOException {
 
     if (azureAuthorization && this.authorizer != null &&
-        !this.authorizer.authorize(path, accessType, delegationToken)) {
+        !this.authorizer.authorize(path, accessType)) {
       throw new WasbAuthorizationException(operation
           + " operation for Path : " + path + " not allowed");
     }
@@ -2897,6 +2921,49 @@ public class NativeAzureFileSystem extends FileSystem {
     LOG.debug("Submitting metrics when file system closed took {} ms.",
         (System.currentTimeMillis() - startTime));
     isClosed = true;
+  }
+
+  /**
+   * Get a delegation token from remote service endpoint if
+   * 'fs.azure.enable.kerberos.support' is set to 'true'.
+   * @param renewer the account name that is allowed to renew the token.
+   * @return delegation token
+   * @throws IOException thrown when getting the current user.
+   */
+  @Override
+  public Token<?> getDelegationToken(final String renewer) throws IOException {
+    if (kerberosSupportEnabled) {
+      try {
+        final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+        UserGroupInformation connectUgi = ugi.getRealUser();
+        final UserGroupInformation proxyUser = connectUgi;
+        if (connectUgi == null) {
+          connectUgi = ugi;
+        }
+        if (!connectUgi.hasKerberosCredentials()) {
+          connectUgi = UserGroupInformation.getLoginUser();
+        }
+        connectUgi.checkTGTAndReloginFromKeytab();
+        return connectUgi.doAs(new PrivilegedExceptionAction<Token<?>>() {
+          @Override
+          public Token<?> run() throws Exception {
+            return authURL.getDelegationToken(new URL(credServiceUrl
+                    + Constants.DEFAULT_DELEGATION_TOKEN_MANAGER_ENDPOINT),
+                authToken, renewer, (proxyUser != null)? ugi.getShortUserName(): null);
+          }
+        });
+      } catch (Exception ex) {
+        LOG.error("Error in fetching the delegation token from remote service",
+            ex);
+        if (ex instanceof IOException) {
+          throw (IOException) ex;
+        } else {
+          throw new IOException(ex);
+        }
+      }
+    } else {
+      return super.getDelegationToken(renewer);
+    }
   }
 
   /**

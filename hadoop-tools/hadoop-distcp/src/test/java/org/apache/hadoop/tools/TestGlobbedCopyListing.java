@@ -34,7 +34,7 @@ import org.junit.Test;
 
 import java.io.DataOutputStream;
 import java.net.URI;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -109,9 +109,12 @@ public class TestGlobbedCopyListing {
     Path source = new Path(fileSystemPath.toString() + "/tmp/source");
     Path target = new Path(fileSystemPath.toString() + "/tmp/target");
     Path listingPath = new Path(fileSystemPath.toString() + "/tmp/META/fileList.seq");
-    DistCpOptions options = new DistCpOptions(Arrays.asList(source), target);
-    options.setTargetPathExists(false);
-    new GlobbedCopyListing(new Configuration(), CREDENTIALS).buildListing(listingPath, options);
+    DistCpOptions options = new DistCpOptions.Builder(
+        Collections.singletonList(source), target).build();
+    DistCpContext context = new DistCpContext(options);
+    context.setTargetPathExists(false);
+    new GlobbedCopyListing(new Configuration(), CREDENTIALS)
+        .buildListing(listingPath, context);
 
     verifyContents(listingPath);
   }

@@ -208,11 +208,24 @@ extends ContainerLaunchContext {
       final Map<String, LocalResource> localResources) {
     if (localResources == null)
       return;
+    checkLocalResources(localResources);
     initLocalResources();
     this.localResources.clear();
     this.localResources.putAll(localResources);
   }
   
+  private void checkLocalResources(Map<String, LocalResource> localResources) {
+    for (Map.Entry<String, LocalResource> rsrcEntry : localResources
+        .entrySet()) {
+      if (rsrcEntry.getValue() == null
+          || rsrcEntry.getValue().getResource() == null) {
+        throw new NullPointerException(
+            "Null resource URL for local resource " + rsrcEntry.getKey() + " : "
+                + rsrcEntry.getValue());
+      }
+    }
+  }
+
   private void addLocalResourcesToProto() {
     maybeInitBuilder();
     builder.clearLocalResources();

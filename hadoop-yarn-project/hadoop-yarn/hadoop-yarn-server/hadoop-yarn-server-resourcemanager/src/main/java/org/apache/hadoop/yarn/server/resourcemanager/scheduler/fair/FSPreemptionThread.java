@@ -113,11 +113,6 @@ class FSPreemptionThread extends Thread {
         List<FSSchedulerNode> potentialNodes = scheduler.getNodeTracker()
             .getNodesByResourceName(rr.getResourceName());
         for (FSSchedulerNode node : potentialNodes) {
-          // TODO (YARN-5829): Attempt to reserve the node for starved app.
-          if (isNodeAlreadyReserved(node, starvedApp)) {
-            continue;
-          }
-
           int maxAMContainers = bestContainers == null ?
               Integer.MAX_VALUE : bestContainers.numAMContainers;
           PreemptableContainers preemptableContainers =
@@ -134,7 +129,8 @@ class FSPreemptionThread extends Thread {
 
         if (bestContainers != null && bestContainers.containers.size() > 0) {
           containersToPreempt.addAll(bestContainers.containers);
-          trackPreemptionsAgainstNode(bestContainers.containers);
+          // Reserve the containers for the starved app
+          trackPreemptionsAgainstNode(bestContainers.containers, starvedApp);
         }
       }
     } // End of iteration over RRs
@@ -163,8 +159,10 @@ class FSPreemptionThread extends Thread {
         node.getRunningContainersWithAMsAtTheEnd();
     containersToCheck.removeAll(node.getContainersForPreemption());
 
-    // Initialize potential with unallocated resources
-    Resource potential = Resources.clone(node.getUnallocatedResource());
+    // Initialize potential with unallocated but not reserved resources
+    Resource potential = Resources.subtractFromNonNegative(
+        Resources.clone(node.getUnallocatedResource()),
+        node.getTotalReserved());
 
     for (RMContainer container : containersToCheck) {
       FSAppAttempt app =
@@ -182,8 +180,6 @@ class FSPreemptionThread extends Thread {
       // Check if we have already identified enough containers
       if (Resources.fitsIn(request, potential)) {
         return preemptableContainers;
-      } else {
-        // TODO (YARN-5829): Unreserve the node for the starved app.
       }
     }
     return null;
@@ -195,10 +191,11 @@ class FSPreemptionThread extends Thread {
     return nodeReservedApp != null && !nodeReservedApp.equals(app);
   }
 
-  private void trackPreemptionsAgainstNode(List<RMContainer> containers) {
+  private void trackPreemptionsAgainstNode(List<RMContainer> containers,
+                                           FSAppAttempt app) {
     FSSchedulerNode node = (FSSchedulerNode) scheduler.getNodeTracker()
         .getNode(containers.get(0).getNodeId());
-    node.addContainersForPreemption(containers);
+    node.addContainersForPreemption(containers, app);
   }
 
   private void preemptContainers(List<RMContainer> containers) {
@@ -232,10 +229,6 @@ class FSPreemptionThread extends Thread {
         LOG.info("Killing container " + container);
         scheduler.completedContainer(
             container, status, RMContainerEventType.KILL);
-
-        FSSchedulerNode containerNode = (FSSchedulerNode)
-            scheduler.getNodeTracker().getNode(container.getAllocatedNode());
-        containerNode.removeContainerForPreemption(container);
       }
     }
   }

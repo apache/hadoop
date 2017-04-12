@@ -241,12 +241,12 @@ class DataXceiver extends Receiver implements Runnable {
           LOG.info("Failed to read expected encryption handshake from client " +
               "at " + peer.getRemoteAddressString() + ". Perhaps the client " +
               "is running an older version of Hadoop which does not support " +
-              "encryption");
+              "encryption", imne);
         } else {
           LOG.info("Failed to read expected SASL data transfer protection " +
               "handshake from client at " + peer.getRemoteAddressString() + 
               ". Perhaps the client is running an older version of Hadoop " +
-              "which does not support SASL data transfer protection");
+              "which does not support SASL data transfer protection", imne);
         }
         return;
       }

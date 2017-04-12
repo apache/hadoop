@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.metrics2.impl;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.metrics2.AbstractMetric;
@@ -74,7 +74,7 @@ public class TestKafkaMetrics {
 
     @Override
     public String toString() {
-      return Objects.toStringHelper(this).add("name", name())
+      return MoreObjects.toStringHelper(this).add("name", name())
           .add("description", desc).toString();
     }
   }

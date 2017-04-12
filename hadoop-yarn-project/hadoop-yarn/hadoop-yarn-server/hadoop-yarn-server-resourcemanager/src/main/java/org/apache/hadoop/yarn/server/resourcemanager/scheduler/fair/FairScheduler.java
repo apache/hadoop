@@ -71,9 +71,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManage
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
@@ -913,8 +911,12 @@ public class FairScheduler extends
 
   void continuousSchedulingAttempt() throws InterruptedException {
     long start = getClock().getTime();
-    List<FSSchedulerNode> nodeIdList =
-        nodeTracker.sortedNodeList(nodeAvailableResourceComparator);
+    List<FSSchedulerNode> nodeIdList;
+    // Hold a lock to prevent comparator order changes due to changes of node
+    // unallocated resources
+    synchronized (this) {
+      nodeIdList = nodeTracker.sortedNodeList(nodeAvailableResourceComparator);
+    }
 
     // iterate all nodes
     for (FSSchedulerNode node : nodeIdList) {
@@ -968,6 +970,31 @@ public class FairScheduler extends
     }
   }
 
+  /**
+   * Assign preempted containers to the applications that have reserved
+   * resources for preempted containers.
+   * @param node Node to check
+   * @return assignment has occurred
+   */
+  static boolean assignPreemptedContainers(FSSchedulerNode node) {
+    boolean assignedAny = false;
+    for (Entry<FSAppAttempt, Resource> entry :
+        node.getPreemptionList().entrySet()) {
+      FSAppAttempt app = entry.getKey();
+      Resource preemptionPending = Resources.clone(entry.getValue());
+      while (!app.isStopped() && !Resources.isNone(preemptionPending)) {
+        Resource assigned = app.assignContainer(node);
+        if (Resources.isNone(assigned)) {
+          // Fail to assign, let's not try further
+          break;
+        }
+        assignedAny = true;
+        Resources.subtractFromNonNegative(preemptionPending, assigned);
+      }
+    }
+    return assignedAny;
+  }
+
   @VisibleForTesting
   void attemptScheduling(FSSchedulerNode node) {
     try {
@@ -987,11 +1014,17 @@ public class FairScheduler extends
       }
 
       // Assign new containers...
-      // 1. Check for reserved applications
-      // 2. Schedule if there are no reservations
+      // 1. Ensure containers are assigned to the apps that preempted
+      // 2. Check for reserved applications
+      // 3. Schedule if there are no reservations
 
-      boolean validReservation = false;
+      // Apps may wait for preempted containers
+      // We have to satisfy these first to avoid cases, when we preempt
+      // a container for A from B and C gets the preempted containers,
+      // when C does not qualify for preemption itself.
+      assignPreemptedContainers(node);
       FSAppAttempt reservedAppSchedulable = node.getReservedAppSchedulable();
+      boolean validReservation = false;
       if (reservedAppSchedulable != null) {
         validReservation = reservedAppSchedulable.assignReservedContainer(node);
       }

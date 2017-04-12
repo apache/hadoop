@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.XAttrHelper;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
@@ -56,6 +57,39 @@ final class FSDirErasureCodingOp {
    * creation. Static-only class.
    */
   private FSDirErasureCodingOp() {}
+
+  /**
+   * Check if the ecPolicyName is valid and enabled, return the corresponding
+   * EC policy if is.
+   * @param fsn namespace
+   * @param ecPolicyName name of EC policy to be checked
+   * @return an erasure coding policy if ecPolicyName is valid and enabled
+   * @throws IOException
+   */
+  static ErasureCodingPolicy getErasureCodingPolicyByName(
+      final FSNamesystem fsn, final String ecPolicyName) throws IOException {
+    assert fsn.hasReadLock();
+    ErasureCodingPolicy ecPolicy = fsn.getErasureCodingPolicyManager()
+        .getEnabledPolicyByName(ecPolicyName);
+    if (ecPolicy == null) {
+      final String sysPolicies =
+          Arrays.asList(
+              fsn.getErasureCodingPolicyManager().getEnabledPolicies())
+              .stream()
+              .map(ErasureCodingPolicy::getName)
+              .collect(Collectors.joining(", "));
+      final String message = String.format("Policy '%s' does not match any " +
+              "enabled erasure" +
+              " coding policies: [%s]. The set of enabled erasure coding " +
+              "policies can be configured at '%s'.",
+          ecPolicyName,
+          sysPolicies,
+          DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY
+      );
+      throw new HadoopIllegalArgumentException(message);
+    }
+    return ecPolicy;
+  }
 
   /**
    * Set an erasure coding policy on the given path.
@@ -83,25 +117,8 @@ final class FSDirErasureCodingOp {
     List<XAttr> xAttrs;
     fsd.writeLock();
     try {
-      ErasureCodingPolicy ecPolicy = fsn.getErasureCodingPolicyManager()
-          .getEnabledPolicyByName(ecPolicyName);
-      if (ecPolicy == null) {
-        final String sysPolicies =
-            Arrays.asList(
-                fsn.getErasureCodingPolicyManager().getEnabledPolicies())
-                .stream()
-                .map(ErasureCodingPolicy::getName)
-                .collect(Collectors.joining(", "));
-        final String message = String.format("Policy '%s' does not match any " +
-            "enabled erasure" +
-            " coding policies: [%s]. The set of enabled erasure coding " +
-            "policies can be configured at '%s'.",
-            ecPolicyName,
-            sysPolicies,
-            DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY
-            );
-        throw new HadoopIllegalArgumentException(message);
-      }
+      ErasureCodingPolicy ecPolicy = getErasureCodingPolicyByName(fsn,
+          ecPolicyName);
       iip = fsd.resolvePath(pc, src, DirOp.WRITE_LINK);
       // Write access is required to set erasure coding policy
       if (fsd.isPermissionEnabled()) {
@@ -302,7 +319,7 @@ final class FSDirErasureCodingOp {
         if (inode.isFile()) {
           byte id = inode.asFile().getErasureCodingPolicyID();
           return id < 0 ? null :
-              ErasureCodingPolicyManager.getPolicyByID(id);
+              SystemErasureCodingPolicies.getByID(id);
         }
         // We don't allow setting EC policies on paths with a symlink. Thus
         // if a symlink is encountered, the dir shouldn't have EC policy.
@@ -317,8 +334,7 @@ final class FSDirErasureCodingOp {
             ByteArrayInputStream bIn = new ByteArrayInputStream(xattr.getValue());
             DataInputStream dIn = new DataInputStream(bIn);
             String ecPolicyName = WritableUtils.readString(dIn);
-            return ErasureCodingPolicyManager
-                .getPolicyByName(ecPolicyName);
+            return SystemErasureCodingPolicies.getByName(ecPolicyName);
           }
         }
       }

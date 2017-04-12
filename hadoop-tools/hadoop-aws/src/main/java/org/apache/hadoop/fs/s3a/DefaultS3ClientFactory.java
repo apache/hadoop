@@ -46,10 +46,10 @@ public class DefaultS3ClientFactory extends Configured implements
   private static final Logger LOG = S3AFileSystem.LOG;
 
   @Override
-  public AmazonS3 createS3Client(URI name, URI uri) throws IOException {
+  public AmazonS3 createS3Client(URI name) throws IOException {
     Configuration conf = getConf();
     AWSCredentialsProvider credentials =
-        createAWSCredentialProviderSet(name, conf, uri);
+        createAWSCredentialProviderSet(name, conf);
     final ClientConfiguration awsConf = createAwsConf(getConf());
     AmazonS3 s3 = newAmazonS3Client(credentials, awsConf);
     return createAmazonS3Client(s3, conf, credentials, awsConf);

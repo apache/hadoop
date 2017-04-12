@@ -70,7 +70,6 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.junit.Assert;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
@@ -141,6 +140,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerResourceRequestEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceFailedLocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceLocalizedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
@@ -171,6 +171,7 @@ public class TestResourceLocalizationService {
   private AbstractFileSystem spylfs;
   private FileContext lfs;
   private NMContext nmContext;
+  private NodeManagerMetrics metrics;
   @BeforeClass
   public static void setupClass() {
     mockServer = mock(Server.class);
@@ -189,6 +190,7 @@ public class TestResourceLocalizationService {
       conf), new NMTokenSecretManagerInNM(), null,
       new ApplicationACLsManager(conf), new NMNullStateStoreService(), false,
           conf);
+    metrics = mock(NodeManagerMetrics.class);
   }
 
   @After
@@ -225,7 +227,7 @@ public class TestResourceLocalizationService {
 
     ResourceLocalizationService locService =
       spy(new ResourceLocalizationService(dispatcher, exec, delService,
-                                          diskhandler, nmContext));
+            diskhandler, nmContext, metrics));
     doReturn(lfs)
       .when(locService).getLocalFileContext(isA(Configuration.class));
     try {
@@ -286,7 +288,7 @@ public class TestResourceLocalizationService {
 
     ResourceLocalizationService locService =
         spy(new ResourceLocalizationService(dispatcher, exec, delService,
-            diskhandler,nmContext));
+            diskhandler, nmContext, metrics));
     doReturn(lfs)
         .when(locService).getLocalFileContext(isA(Configuration.class));
     try {
@@ -357,7 +359,7 @@ public class TestResourceLocalizationService {
 
     ResourceLocalizationService rawService =
       new ResourceLocalizationService(dispatcher, exec, delService,
-                                      dirsHandler, nmContext);
+            dirsHandler, nmContext, metrics);
     ResourceLocalizationService spyService = spy(rawService);
     doReturn(mockServer).when(spyService).createServer();
     doReturn(mockLocallilzerTracker).when(spyService).createLocalizerTracker(
@@ -757,7 +759,7 @@ public class TestResourceLocalizationService {
 
     ResourceLocalizationService rawService =
         new ResourceLocalizationService(dispatcher, exec, delService,
-        dirsHandlerSpy, nmContext);
+            dirsHandlerSpy, nmContext, metrics);
     ResourceLocalizationService spyService = spy(rawService);
     doReturn(mockServer).when(spyService).createServer();
     try {
@@ -847,7 +849,7 @@ public class TestResourceLocalizationService {
 
     ResourceLocalizationService rawService =
       new ResourceLocalizationService(dispatcher, exec, delService,
-                                      dirsHandler, nmContext);
+            dirsHandler, nmContext, metrics);
     ResourceLocalizationService spyService = spy(rawService);
     doReturn(mockServer).when(spyService).createServer();
     doReturn(lfs).when(spyService).getLocalFileContext(isA(Configuration.class));
@@ -1124,7 +1126,6 @@ public class TestResourceLocalizationService {
   }
 
   @Test(timeout = 20000)
-  @SuppressWarnings("unchecked")
   public void testDownloadingResourcesOnContainerKill() throws Exception {
     List<Path> localDirs = new ArrayList<Path>();
     String[] sDirs = new String[1];
@@ -1132,13 +1133,6 @@ public class TestResourceLocalizationService {
     sDirs[0] = localDirs.get(0).toString();
 
     conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
-    DrainDispatcher dispatcher = new DrainDispatcher();
-    dispatcher.init(conf);
-    dispatcher.start();
-    EventHandler<ApplicationEvent> applicationBus = mock(EventHandler.class);
-    dispatcher.register(ApplicationEventType.class, applicationBus);
-    EventHandler<ContainerEvent> containerBus = mock(EventHandler.class);
-    dispatcher.register(ContainerEventType.class, containerBus);
 
     DummyExecutor exec = new DummyExecutor();
     LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
@@ -1149,8 +1143,10 @@ public class TestResourceLocalizationService {
     delService.init(new Configuration());
     delService.start();
 
+    DrainDispatcher dispatcher = getDispatcher(conf);
     ResourceLocalizationService rawService = new ResourceLocalizationService(
-        dispatcher, exec, delService, dirsHandler, nmContext);
+        dispatcher, exec, delService, dirsHandler, nmContext, metrics);
+
     ResourceLocalizationService spyService = spy(rawService);
     doReturn(mockServer).when(spyService).createServer();
     doReturn(lfs).when(spyService).getLocalFileContext(isA(Configuration.class));
@@ -1191,180 +1187,235 @@ public class TestResourceLocalizationService {
       spyService.init(conf);
       spyService.start();
 
-      final Application app = mock(Application.class);
-      final ApplicationId appId =
-          BuilderUtils.newApplicationId(314159265358979L, 3);
-      String user = "user0";
-      when(app.getUser()).thenReturn(user);
-      when(app.getAppId()).thenReturn(appId);
-      spyService.handle(new ApplicationLocalizationEvent(
-          LocalizationEventType.INIT_APPLICATION_RESOURCES, app));
-      ArgumentMatcher<ApplicationEvent> matchesAppInit =
-        new ArgumentMatcher<ApplicationEvent>() {
-          @Override
-          public boolean matches(Object o) {
-            ApplicationEvent evt = (ApplicationEvent) o;
-            return evt.getType() == ApplicationEventType.APPLICATION_INITED
-              && appId == evt.getApplicationID();
-          }
-        };
-      dispatcher.await();
-      verify(applicationBus).handle(argThat(matchesAppInit));
+      doLocalization(spyService, dispatcher, exec, delService);
 
-      // Initialize localizer.
-      Random r = new Random();
-      long seed = r.nextLong();
-      System.out.println("SEED: " + seed);
-      r.setSeed(seed);
-      final Container c1 = getMockContainer(appId, 42, "user0");
-      final Container c2 = getMockContainer(appId, 43, "user0");
-      FSDataOutputStream out =
-        new FSDataOutputStream(new DataOutputBuffer(), null);
-      doReturn(out).when(spylfs).createInternal(isA(Path.class),
-          isA(EnumSet.class), isA(FsPermission.class), anyInt(), anyShort(),
-          anyLong(), isA(Progressable.class), isA(ChecksumOpt.class),
-          anyBoolean());
-      final LocalResource resource1 = getPrivateMockedResource(r);
-      LocalResource resource2 = null;
-      do {
-        resource2 = getPrivateMockedResource(r);
-      } while (resource2 == null || resource2.equals(resource1));
-      LocalResource resource3 = null;
-      do {
-        resource3 = getPrivateMockedResource(r);
-      } while (resource3 == null || resource3.equals(resource1)
-          || resource3.equals(resource2));
-
-      // Send localization requests for container c1 and c2.
-      final LocalResourceRequest req1 = new LocalResourceRequest(resource1);
-      final LocalResourceRequest req2 = new LocalResourceRequest(resource2);
-      final LocalResourceRequest req3 = new LocalResourceRequest(resource3);
-      Map<LocalResourceVisibility, Collection<LocalResourceRequest>> rsrcs =
-        new HashMap<LocalResourceVisibility,
-                    Collection<LocalResourceRequest>>();
-      List<LocalResourceRequest> privateResourceList =
-          new ArrayList<LocalResourceRequest>();
-      privateResourceList.add(req1);
-      privateResourceList.add(req2);
-      privateResourceList.add(req3);
-      rsrcs.put(LocalResourceVisibility.PRIVATE, privateResourceList);
-      spyService.handle(new ContainerLocalizationRequestEvent(c1, rsrcs));
-
-      final LocalResourceRequest req1_1 = new LocalResourceRequest(resource2);
-      Map<LocalResourceVisibility, Collection<LocalResourceRequest>> rsrcs1 =
-        new HashMap<LocalResourceVisibility,
-                    Collection<LocalResourceRequest>>();
-      List<LocalResourceRequest> privateResourceList1 =
-          new ArrayList<LocalResourceRequest>();
-      privateResourceList1.add(req1_1);
-      rsrcs1.put(LocalResourceVisibility.PRIVATE, privateResourceList1);
-      spyService.handle(new ContainerLocalizationRequestEvent(c2, rsrcs1));
-
-      dispatcher.await();
-      // Wait for localizers of both container c1 and c2 to begin.
-      exec.waitForLocalizers(2);
-      LocalizerRunner locC1 =
-          spyService.getLocalizerRunner(c1.getContainerId().toString());
-      final String containerIdStr = c1.getContainerId().toString();
-      // Heartbeats from container localizer
-      LocalResourceStatus rsrc1success = mock(LocalResourceStatus.class);
-      LocalResourceStatus rsrc2pending = mock(LocalResourceStatus.class);
-      LocalizerStatus stat = mock(LocalizerStatus.class);
-      when(stat.getLocalizerId()).thenReturn(containerIdStr);
-      when(rsrc1success.getResource()).thenReturn(resource1);
-      when(rsrc2pending.getResource()).thenReturn(resource2);
-      when(rsrc1success.getLocalSize()).thenReturn(4344L);
-      URL locPath = getPath("/some/path");
-      when(rsrc1success.getLocalPath()).thenReturn(locPath);
-      when(rsrc1success.getStatus()).
-          thenReturn(ResourceStatusType.FETCH_SUCCESS);
-      when(rsrc2pending.getStatus()).
-          thenReturn(ResourceStatusType.FETCH_PENDING);
-
-      when(stat.getResources())
-        .thenReturn(Collections.<LocalResourceStatus>emptyList())
-        .thenReturn(Collections.singletonList(rsrc1success))
-        .thenReturn(Collections.singletonList(rsrc2pending))
-        .thenReturn(Collections.singletonList(rsrc2pending))
-        .thenReturn(Collections.<LocalResourceStatus>emptyList());
-
-      // First heartbeat which schedules first resource.
-      LocalizerHeartbeatResponse response = spyService.heartbeat(stat);
-      assertEquals(LocalizerAction.LIVE, response.getLocalizerAction());
-
-      // Second heartbeat which reports first resource as success.
-      // Second resource is scheduled.
-      response = spyService.heartbeat(stat);
-      assertEquals(LocalizerAction.LIVE, response.getLocalizerAction());
-      final String locPath1 = response.getResourceSpecs().get(0).
-          getDestinationDirectory().getFile();
-
-      // Third heartbeat which reports second resource as pending.
-      // Third resource is scheduled.
-      response = spyService.heartbeat(stat);
-      assertEquals(LocalizerAction.LIVE, response.getLocalizerAction());
-      final String locPath2 = response.getResourceSpecs().get(0).
-          getDestinationDirectory().getFile();
-
-      // Container c1 is killed which leads to cleanup
-      spyService.handle(new ContainerLocalizationCleanupEvent(c1, rsrcs));
-
-      // This heartbeat will indicate to container localizer to die as localizer
-      // runner has stopped.
-      response = spyService.heartbeat(stat);
-      assertEquals(LocalizerAction.DIE, response.getLocalizerAction());
-
-      exec.setStopLocalization();
-      dispatcher.await();
-      // verify container notification
-      ArgumentMatcher<ContainerEvent> successContainerLoc =
-        new ArgumentMatcher<ContainerEvent>() {
-          @Override
-          public boolean matches(Object o) {
-            ContainerEvent evt = (ContainerEvent) o;
-            return evt.getType() == ContainerEventType.RESOURCE_LOCALIZED
-              && c1.getContainerId() == evt.getContainerID();
-          }
-        };
-      // Only one resource gets localized for container c1.
-      verify(containerBus).handle(argThat(successContainerLoc));
-
-      Set<Path> paths =
-          Sets.newHashSet(new Path(locPath1), new Path(locPath1 + "_tmp"),
-              new Path(locPath2), new Path(locPath2 + "_tmp"));
-      // Wait for localizer runner thread for container c1 to finish.
-      while (locC1.getState() != Thread.State.TERMINATED) {
-        Thread.sleep(50);
-      }
-      // Verify if downloading resources were submitted for deletion.
-      verify(delService).delete(eq(user),
-          (Path) eq(null), argThat(new DownloadingPathsMatcher(paths)));
-
-      LocalResourcesTracker tracker = spyService.getLocalResourcesTracker(
-          LocalResourceVisibility.PRIVATE, "user0", appId);
-      // Container c1 was killed but this resource was localized before kill
-      // hence its not removed despite ref cnt being 0.
-      LocalizedResource rsrc1 = tracker.getLocalizedResource(req1);
-      assertNotNull(rsrc1);
-      assertEquals(rsrc1.getState(), ResourceState.LOCALIZED);
-      assertEquals(rsrc1.getRefCount(), 0);
-
-      // Container c1 was killed but this resource is referenced by container c2
-      // as well hence its ref cnt is 1.
-      LocalizedResource rsrc2 = tracker.getLocalizedResource(req2);
-      assertNotNull(rsrc2);
-      assertEquals(rsrc2.getState(), ResourceState.DOWNLOADING);
-      assertEquals(rsrc2.getRefCount(), 1);
-
-      // As container c1 was killed and this resource was not referenced by any
-      // other container, hence its removed.
-      LocalizedResource rsrc3 = tracker.getLocalizedResource(req3);
-      assertNull(rsrc3);
     } finally {
       spyService.stop();
       dispatcher.stop();
       delService.stop();
     }
+  }
+
+  private DrainDispatcher getDispatcher(Configuration config) {
+    DrainDispatcher dispatcher = new DrainDispatcher();
+    dispatcher.init(config);
+    dispatcher.start();
+    return dispatcher;
+  }
+
+  @SuppressWarnings("unchecked")
+  private EventHandler<ApplicationEvent> getApplicationBus(
+      DrainDispatcher dispatcher) {
+    EventHandler<ApplicationEvent> applicationBus = mock(EventHandler.class);
+    dispatcher.register(ApplicationEventType.class, applicationBus);
+    return applicationBus;
+  }
+
+  @SuppressWarnings("unchecked")
+  private EventHandler<ContainerEvent> getContainerBus(
+      DrainDispatcher dispatcher) {
+    EventHandler<ContainerEvent> containerBus = mock(EventHandler.class);
+    dispatcher.register(ContainerEventType.class, containerBus);
+    return containerBus;
+  }
+
+  private void initApp(ResourceLocalizationService spyService,
+      EventHandler<ApplicationEvent> applicationBus, Application app,
+      ApplicationId appId, DrainDispatcher dispatcher) {
+    spyService.handle(new ApplicationLocalizationEvent(
+        LocalizationEventType.INIT_APPLICATION_RESOURCES, app));
+    ArgumentMatcher<ApplicationEvent> matchesAppInit =
+        new ArgumentMatcher<ApplicationEvent>() {
+          @Override
+          public boolean matches(Object o) {
+            ApplicationEvent evt = (ApplicationEvent) o;
+            return evt.getType() == ApplicationEventType.APPLICATION_INITED
+                && appId == evt.getApplicationID();
+          }
+        };
+    dispatcher.await();
+    verify(applicationBus).handle(argThat(matchesAppInit));
+  }
+
+  private void doLocalization(ResourceLocalizationService spyService,
+      DrainDispatcher dispatcher, DummyExecutor exec,
+      DeletionService delService)
+      throws IOException, URISyntaxException, InterruptedException {
+    final Application app = mock(Application.class);
+    final ApplicationId appId =
+        BuilderUtils.newApplicationId(314159265358979L, 3);
+    String user = "user0";
+    when(app.getUser()).thenReturn(user);
+    when(app.getAppId()).thenReturn(appId);
+    List<LocalResource> resources = initializeLocalizer(appId);
+    LocalResource resource1 = resources.get(0);
+    LocalResource resource2 = resources.get(1);
+    LocalResource resource3 = resources.get(2);
+    final Container c1 = getMockContainer(appId, 42, "user0");
+    final Container c2 = getMockContainer(appId, 43, "user0");
+
+    EventHandler<ApplicationEvent> applicationBus =
+        getApplicationBus(dispatcher);
+    EventHandler<ContainerEvent> containerBus = getContainerBus(dispatcher);
+    initApp(spyService, applicationBus, app, appId, dispatcher);
+
+    // Send localization requests for container c1 and c2.
+    final LocalResourceRequest req1 = new LocalResourceRequest(resource1);
+    final LocalResourceRequest req2 = new LocalResourceRequest(resource2);
+    final LocalResourceRequest req3 = new LocalResourceRequest(resource3);
+    Map<LocalResourceVisibility, Collection<LocalResourceRequest>> rsrcs =
+        new HashMap<LocalResourceVisibility,
+            Collection<LocalResourceRequest>>();
+    List<LocalResourceRequest> privateResourceList =
+        new ArrayList<LocalResourceRequest>();
+    privateResourceList.add(req1);
+    privateResourceList.add(req2);
+    privateResourceList.add(req3);
+    rsrcs.put(LocalResourceVisibility.PRIVATE, privateResourceList);
+    spyService.handle(new ContainerLocalizationRequestEvent(c1, rsrcs));
+
+    final LocalResourceRequest req11 = new LocalResourceRequest(resource2);
+    Map<LocalResourceVisibility, Collection<LocalResourceRequest>> rsrcs1 =
+        new HashMap<LocalResourceVisibility,
+            Collection<LocalResourceRequest>>();
+    List<LocalResourceRequest> privateResourceList1 =
+        new ArrayList<LocalResourceRequest>();
+    privateResourceList1.add(req11);
+    rsrcs1.put(LocalResourceVisibility.PRIVATE, privateResourceList1);
+    spyService.handle(new ContainerLocalizationRequestEvent(c2, rsrcs1));
+
+    dispatcher.await();
+    // Wait for localizers of both container c1 and c2 to begin.
+    exec.waitForLocalizers(2);
+    LocalizerRunner locC1 =
+        spyService.getLocalizerRunner(c1.getContainerId().toString());
+
+    LocalizerStatus stat = mockLocalizerStatus(c1, resource1, resource2);
+
+    // First heartbeat which schedules first resource.
+    LocalizerHeartbeatResponse response = spyService.heartbeat(stat);
+    assertEquals(LocalizerAction.LIVE, response.getLocalizerAction());
+
+    // Second heartbeat which reports first resource as success.
+    // Second resource is scheduled.
+    response = spyService.heartbeat(stat);
+    assertEquals(LocalizerAction.LIVE, response.getLocalizerAction());
+    final String locPath1 =
+        response.getResourceSpecs().get(0).getDestinationDirectory().getFile();
+
+    // Third heartbeat which reports second resource as pending.
+    // Third resource is scheduled.
+    response = spyService.heartbeat(stat);
+    assertEquals(LocalizerAction.LIVE, response.getLocalizerAction());
+    final String locPath2 =
+        response.getResourceSpecs().get(0).getDestinationDirectory().getFile();
+
+    // Container c1 is killed which leads to cleanup
+    spyService.handle(new ContainerLocalizationCleanupEvent(c1, rsrcs));
+
+    // This heartbeat will indicate to container localizer to die as localizer
+    // runner has stopped.
+    response = spyService.heartbeat(stat);
+    assertEquals(LocalizerAction.DIE, response.getLocalizerAction());
+
+    exec.setStopLocalization();
+    dispatcher.await();
+    // verify container notification
+    ArgumentMatcher<ContainerEvent> successContainerLoc =
+        new ArgumentMatcher<ContainerEvent>() {
+          @Override
+          public boolean matches(Object o) {
+            ContainerEvent evt = (ContainerEvent) o;
+            return evt.getType() == ContainerEventType.RESOURCE_LOCALIZED
+                && c1.getContainerId() == evt.getContainerID();
+          }
+        };
+    // Only one resource gets localized for container c1.
+    verify(containerBus).handle(argThat(successContainerLoc));
+
+    Set<Path> paths =
+        Sets.newHashSet(new Path(locPath1), new Path(locPath1 + "_tmp"),
+            new Path(locPath2), new Path(locPath2 + "_tmp"));
+    // Wait for localizer runner thread for container c1 to finish.
+    while (locC1.getState() != Thread.State.TERMINATED) {
+      Thread.sleep(50);
+    }
+    // Verify if downloading resources were submitted for deletion.
+    verify(delService).delete(eq(user), (Path) eq(null),
+        argThat(new DownloadingPathsMatcher(paths)));
+
+    LocalResourcesTracker tracker = spyService.getLocalResourcesTracker(
+        LocalResourceVisibility.PRIVATE, "user0", appId);
+    // Container c1 was killed but this resource was localized before kill
+    // hence its not removed despite ref cnt being 0.
+    LocalizedResource rsrc1 = tracker.getLocalizedResource(req1);
+    assertNotNull(rsrc1);
+    assertEquals(rsrc1.getState(), ResourceState.LOCALIZED);
+    assertEquals(rsrc1.getRefCount(), 0);
+
+    // Container c1 was killed but this resource is referenced by container c2
+    // as well hence its ref cnt is 1.
+    LocalizedResource rsrc2 = tracker.getLocalizedResource(req2);
+    assertNotNull(rsrc2);
+    assertEquals(rsrc2.getState(), ResourceState.DOWNLOADING);
+    assertEquals(rsrc2.getRefCount(), 1);
+
+    // As container c1 was killed and this resource was not referenced by any
+    // other container, hence its removed.
+    LocalizedResource rsrc3 = tracker.getLocalizedResource(req3);
+    assertNull(rsrc3);
+  }
+
+  private LocalizerStatus mockLocalizerStatus(Container c1,
+      LocalResource resource1, LocalResource resource2) {
+    final String containerIdStr = c1.getContainerId().toString();
+    // Heartbeats from container localizer
+    LocalResourceStatus rsrc1success = mock(LocalResourceStatus.class);
+    LocalResourceStatus rsrc2pending = mock(LocalResourceStatus.class);
+    LocalizerStatus stat = mock(LocalizerStatus.class);
+    when(stat.getLocalizerId()).thenReturn(containerIdStr);
+    when(rsrc1success.getResource()).thenReturn(resource1);
+    when(rsrc2pending.getResource()).thenReturn(resource2);
+    when(rsrc1success.getLocalSize()).thenReturn(4344L);
+    URL locPath = getPath("/some/path");
+    when(rsrc1success.getLocalPath()).thenReturn(locPath);
+    when(rsrc1success.getStatus()).thenReturn(ResourceStatusType.FETCH_SUCCESS);
+    when(rsrc2pending.getStatus()).thenReturn(ResourceStatusType.FETCH_PENDING);
+
+    when(stat.getResources())
+        .thenReturn(Collections.<LocalResourceStatus> emptyList())
+        .thenReturn(Collections.singletonList(rsrc1success))
+        .thenReturn(Collections.singletonList(rsrc2pending))
+        .thenReturn(Collections.singletonList(rsrc2pending))
+        .thenReturn(Collections.<LocalResourceStatus> emptyList());
+    return stat;
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<LocalResource> initializeLocalizer(ApplicationId appId)
+      throws IOException {
+    // Initialize localizer.
+    Random r = new Random();
+    long seed = r.nextLong();
+    System.out.println("SEED: " + seed);
+    r.setSeed(seed);
+    FSDataOutputStream out =
+        new FSDataOutputStream(new DataOutputBuffer(), null);
+    doReturn(out).when(spylfs).createInternal(isA(Path.class),
+        isA(EnumSet.class), isA(FsPermission.class), anyInt(), anyShort(),
+        anyLong(), isA(Progressable.class), isA(ChecksumOpt.class),
+        anyBoolean());
+    final LocalResource resource1 = getPrivateMockedResource(r);
+    LocalResource resource2 = null;
+    do {
+      resource2 = getPrivateMockedResource(r);
+    } while (resource2 == null || resource2.equals(resource1));
+    LocalResource resource3 = null;
+    do {
+      resource3 = getPrivateMockedResource(r);
+    } while (resource3 == null || resource3.equals(resource1)
+        || resource3.equals(resource2));
+    return Arrays.asList(resource1, resource2, resource3);
   }
 
   @Test
@@ -1404,7 +1455,7 @@ public class TestResourceLocalizationService {
     try {
       ResourceLocalizationService rawService =
           new ResourceLocalizationService(dispatcher, exec, delService,
-              dirsHandler, spyContext);
+              dirsHandler, spyContext, metrics);
       ResourceLocalizationService spyService = spy(rawService);
       doReturn(mockServer).when(spyService).createServer();
       doReturn(lfs).when(spyService).getLocalFileContext(
@@ -1499,7 +1550,8 @@ public class TestResourceLocalizationService {
     dirsHandler.init(conf);
     // Start resource localization service.
     ResourceLocalizationService rawService = new ResourceLocalizationService(
-        dispatcher, exec, mock(DeletionService.class), dirsHandler, nmContext);
+        dispatcher, exec, mock(DeletionService.class), dirsHandler, nmContext,
+        metrics);
     ResourceLocalizationService spyService = spy(rawService);
     doReturn(mockServer).when(spyService).createServer();
     doReturn(lfs).when(spyService).
@@ -1618,7 +1670,7 @@ public class TestResourceLocalizationService {
     try {
       ResourceLocalizationService rawService =
           new ResourceLocalizationService(dispatcher, exec, delService,
-                                        dirsHandler, nmContext);
+              dirsHandler, nmContext, metrics);
       ResourceLocalizationService spyService = spy(rawService);
       doReturn(mockServer).when(spyService).createServer();
       doReturn(lfs).when(spyService).getLocalFileContext(
@@ -1727,7 +1779,7 @@ public class TestResourceLocalizationService {
     try {
       ResourceLocalizationService rawService =
           new ResourceLocalizationService(dispatcher, exec, delService,
-            dirsHandlerSpy, nmContext);
+              dirsHandlerSpy, nmContext, metrics);
       ResourceLocalizationService spyService = spy(rawService);
       doReturn(mockServer).when(spyService).createServer();
       doReturn(lfs).when(spyService).getLocalFileContext(
@@ -1859,7 +1911,7 @@ public class TestResourceLocalizationService {
 
       ResourceLocalizationService rls =
           new ResourceLocalizationService(dispatcher1, exec, delService,
-            localDirHandler, nmContext);
+              localDirHandler, nmContext, metrics);
       dispatcher1.register(LocalizationEventType.class, rls);
       rls.init(conf);
 
@@ -2012,7 +2064,7 @@ public class TestResourceLocalizationService {
 
       ResourceLocalizationService rls =
           new ResourceLocalizationService(dispatcher1, exec, delService,
-            localDirHandler, nmContext);
+              localDirHandler, nmContext, metrics);
       dispatcher1.register(LocalizationEventType.class, rls);
       rls.init(conf);
 
@@ -2178,7 +2230,7 @@ public class TestResourceLocalizationService {
       // it as otherwise it will remove requests from pending queue.
       ResourceLocalizationService rawService =
           new ResourceLocalizationService(dispatcher1, exec, delService,
-            dirsHandler, nmContext);
+              dirsHandler, nmContext, metrics);
       ResourceLocalizationService spyService = spy(rawService);
       dispatcher1.register(LocalizationEventType.class, spyService);
       spyService.init(conf);
@@ -2484,7 +2536,7 @@ public class TestResourceLocalizationService {
           new ApplicationACLsManager(conf), stateStore, false, conf);
     ResourceLocalizationService rawService =
       new ResourceLocalizationService(dispatcher, exec, delService,
-                                      dirsHandler, nmContext);
+            dirsHandler, nmContext, metrics);
     ResourceLocalizationService spyService = spy(rawService);
     doReturn(mockServer).when(spyService).createServer();
     doReturn(mockLocalizerTracker).when(spyService).createLocalizerTracker(
@@ -2548,7 +2600,7 @@ public class TestResourceLocalizationService {
     // setup mocks
     ResourceLocalizationService rawService =
         new ResourceLocalizationService(dispatcher, exec, delService,
-          mockDirsHandler, nmContext);
+            mockDirsHandler, nmContext, metrics);
     ResourceLocalizationService spyService = spy(rawService);
     doReturn(mockServer).when(spyService).createServer();
     doReturn(mockLocallilzerTracker).when(spyService).createLocalizerTracker(

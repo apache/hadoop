@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.util;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -28,7 +29,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.*;
 
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.Before;
 import org.junit.Rule;
@@ -81,7 +81,7 @@ import static org.junit.Assert.assertFalse;
 public class TestStripedBlockUtil {
   // use hard coded policy - see HDFS-9816
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemPolicies()[0];
+      StripedFileTestUtil.getDefaultECPolicy();
   private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
   private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
   private final short groupSize = (short) (dataBlocks + parityBlocks);

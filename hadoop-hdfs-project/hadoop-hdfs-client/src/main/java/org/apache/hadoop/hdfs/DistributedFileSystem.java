@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FSLinkResolver;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileEncryptionInfo;
@@ -98,6 +99,8 @@ import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+
+import javax.annotation.Nonnull;
 
 /****************************************************************
  * Implementation of the abstract FileSystem for the DFS system.
@@ -442,6 +445,53 @@ public class DistributedFileSystem extends FileSystem {
           throws IOException {
         return fs.create(p, permission, cflags, bufferSize,
             replication, blockSize, progress, checksumOpt);
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Same as
+   * {@link #create(Path, FsPermission, EnumSet<CreateFlag>, int, short, long,
+   * Progressable, ChecksumOpt)} with the addition of favoredNodes that is a
+   * hint to where the namenode should place the file blocks.
+   * The favored nodes hint is not persisted in HDFS. Hence it may be honored
+   * at the creation time only. And with favored nodes, blocks will be pinned
+   * on the datanodes to prevent balancing move the block. HDFS could move the
+   * blocks during replication, to move the blocks from favored nodes. A value
+   * of null means no favored nodes for this create.
+   * Another addition is ecPolicyName. A non-null ecPolicyName specifies an
+   * explicit erasure coding policy for this file, overriding the inherited
+   * policy. A null ecPolicyName means the file will inherit its EC policy from
+   * an ancestor (the default).
+   */
+  private HdfsDataOutputStream create(final Path f,
+      final FsPermission permission, final EnumSet<CreateFlag> flag,
+      final int bufferSize, final short replication, final long blockSize,
+      final Progressable progress, final ChecksumOpt checksumOpt,
+      final InetSocketAddress[] favoredNodes, final String ecPolicyName)
+      throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.CREATE);
+    Path absF = fixRelativePart(f);
+    return new FileSystemLinkResolver<HdfsDataOutputStream>() {
+      @Override
+      public HdfsDataOutputStream doCall(final Path p) throws IOException {
+        final DFSOutputStream out = dfs.create(getPathName(f), permission,
+            flag, true, replication, blockSize, progress, bufferSize,
+            checksumOpt, favoredNodes, ecPolicyName);
+        return dfs.createWrappedOutputStream(out, statistics);
+      }
+      @Override
+      public HdfsDataOutputStream next(final FileSystem fs, final Path p)
+          throws IOException {
+        if (fs instanceof DistributedFileSystem) {
+          DistributedFileSystem myDfs = (DistributedFileSystem)fs;
+          return myDfs.create(p, permission, flag, bufferSize, replication,
+              blockSize, progress, checksumOpt, favoredNodes, ecPolicyName);
+        }
+        throw new UnsupportedOperationException("Cannot create with" +
+            " favoredNodes through a symlink to a non-DistributedFileSystem: "
+            + f + " -> " + p);
       }
     }.resolve(this, absF);
   }
@@ -2366,12 +2416,15 @@ public class DistributedFileSystem extends FileSystem {
   public Token<?>[] addDelegationTokens(
       final String renewer, Credentials credentials) throws IOException {
     Token<?>[] tokens = super.addDelegationTokens(renewer, credentials);
-    if (dfs.isHDFSEncryptionEnabled()) {
+    URI keyProviderUri = dfs.getKeyProviderUri();
+    if (keyProviderUri != null) {
       KeyProviderDelegationTokenExtension keyProviderDelegationTokenExtension =
           KeyProviderDelegationTokenExtension.
               createKeyProviderDelegationTokenExtension(dfs.getKeyProvider());
       Token<?>[] kpTokens = keyProviderDelegationTokenExtension.
           addDelegationTokens(renewer, credentials);
+      credentials.addSecretKey(dfs.getKeyProviderMapKey(),
+          DFSUtilClient.string2Bytes(keyProviderUri.toString()));
       if (tokens != null && kpTokens != null) {
         Token<?>[] all = new Token<?>[tokens.length + kpTokens.length];
         System.arraycopy(tokens, 0, all, 0, tokens.length);
@@ -2508,7 +2561,13 @@ public class DistributedFileSystem extends FileSystem {
    */
   @Override
   public Path getTrashRoot(Path path) {
-    if ((path == null) || !dfs.isHDFSEncryptionEnabled()) {
+    try {
+      if ((path == null) || !dfs.isHDFSEncryptionEnabled()) {
+        return super.getTrashRoot(path);
+      }
+    } catch (IOException ioe) {
+      DFSClient.LOG.warn("Exception while checking whether encryption zone is "
+          + "supported", ioe);
       return super.getTrashRoot(path);
     }
 
@@ -2583,5 +2642,56 @@ public class DistributedFileSystem extends FileSystem {
 
   DFSOpsCountStatistics getDFSOpsCountStatistics() {
     return storageStatistics;
+  }
+
+  /**
+   * Extends FSDataOutputStreamBuilder to support special requirements
+   * of DistributedFileSystem.
+   */
+  public static class HdfsDataOutputStreamBuilder
+      extends FSDataOutputStreamBuilder {
+    private final DistributedFileSystem dfs;
+    private InetSocketAddress[] favoredNodes = null;
+    private String ecPolicyName = null;
+
+    public HdfsDataOutputStreamBuilder(DistributedFileSystem dfs, Path path) {
+      super(dfs, path);
+      this.dfs = dfs;
+    }
+
+    protected InetSocketAddress[] getFavoredNodes() {
+      return favoredNodes;
+    }
+
+    public HdfsDataOutputStreamBuilder setFavoredNodes(
+        @Nonnull final InetSocketAddress[] nodes) {
+      Preconditions.checkNotNull(nodes);
+      favoredNodes = nodes.clone();
+      return this;
+    }
+
+    protected String getEcPolicyName() {
+      return ecPolicyName;
+    }
+
+    public HdfsDataOutputStreamBuilder setEcPolicyName(
+        @Nonnull final String policyName) {
+      Preconditions.checkNotNull(policyName);
+      ecPolicyName = policyName;
+      return this;
+    }
+
+    @Override
+    public HdfsDataOutputStream build() throws IOException {
+      return dfs.create(getPath(), getPermission(), getFlags(),
+          getBufferSize(), getReplication(), getBlockSize(),
+          getProgress(), getChecksumOpt(), getFavoredNodes(),
+          getEcPolicyName());
+    }
+  }
+
+  @Override
+  public HdfsDataOutputStreamBuilder newFSDataOutputStreamBuilder(Path path) {
+    return new HdfsDataOutputStreamBuilder(this, path);
   }
 }

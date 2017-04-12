@@ -348,7 +348,7 @@ public class Application {
     
     if(LOG.isDebugEnabled()) {
       LOG.debug("getResources() for " + applicationId + ":"
-        + " ask=" + ask.size() + " recieved=" + containers.size());
+        + " ask=" + ask.size() + " received=" + containers.size());
     }
     
     return containers;

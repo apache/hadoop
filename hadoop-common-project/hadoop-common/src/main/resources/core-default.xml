@@ -657,34 +657,33 @@
 </property>
 
 <property>
-  <name>io.erasurecode.codec.rs.rawcoder</name>
-  <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory</value>
+  <name>io.erasurecode.codec.rs.rawcoders</name>
+  <value>org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory,org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory</value>
   <description>
-    Raw coder implementation for the rs codec. The default value is a
-    pure Java implementation. There is also a native implementation. Its value
-    is org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory.
+    Comma separated raw coder implementations for the rs codec. The earlier
+    factory is prior to followings in case of failure of creating raw coders.
   </description>
 </property>
 
 <property>
-  <name>io.erasurecode.codec.rs-legacy.rawcoder</name>
+  <name>io.erasurecode.codec.rs-legacy.rawcoders</name>
   <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactoryLegacy</value>
   <description>
-    Raw coder implementation for the rs-legacy codec.
+    Comma separated raw coder implementations for the rs-legacy codec. The earlier
+    factory is prior to followings in case of failure of creating raw coders.
   </description>
 </property>
 
 <property>
-  <name>io.erasurecode.codec.xor.rawcoder</name>
-  <value>org.apache.hadoop.io.erasurecode.rawcoder.XORRawErasureCoderFactory</value>
+  <name>io.erasurecode.codec.xor.rawcoders</name>
+  <value>org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawErasureCoderFactory,org.apache.hadoop.io.erasurecode.rawcoder.XORRawErasureCoderFactory</value>
   <description>
-    Raw coder implementation for the xor codec. The default value is a pure Java
-    implementation. There is also a native implementation. Its value is
-    org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawErasureCoderFactory.
+    Comma separated raw coder implementations for the xor codec. The earlier
+    factory is prior to followings in case of failure of creating raw coders.
   </description>
 </property>
 
-<!-- file system properties -->
+  <!-- file system properties -->
 
 <property>
   <name>fs.defaultFS</name>
@@ -956,13 +955,8 @@
         configuration of AWS access key ID and secret access key in
         environment variables named AWS_ACCESS_KEY_ID and
         AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
-    3. org.apache.hadoop.fs.s3a.SharedInstanceProfileCredentialsProvider:
-        a shared instance of
-        com.amazonaws.auth.InstanceProfileCredentialsProvider from the AWS
-        SDK, which supports use of instance profile credentials if running
-        in an EC2 VM.  Using this shared instance potentially reduces load
-        on the EC2 instance metadata service for multi-threaded
-        applications.
+    3. com.amazonaws.auth.InstanceProfileCredentialsProvider: supports use
+        of instance profile credentials if running in an EC2 VM.
   </description>
 </property>
 
@@ -2310,6 +2304,8 @@
   <description>
     The KeyProvider to use when managing zone keys, and interacting with
     encryption keys when reading and writing to an encryption zone.
+    For hdfs clients, the provider path will be same as namenode's
+    provider path.
   </description>
 </property>
 
@@ -2562,6 +2558,7 @@
 
 
   <!-- Azure Data Lake File System Configurations -->
+
   <property>
     <name>fs.adl.impl</name>
     <value>org.apache.hadoop.fs.adl.AdlFileSystem</value>
@@ -2571,6 +2568,68 @@
     <name>fs.AbstractFileSystem.adl.impl</name>
     <value>org.apache.hadoop.fs.adl.Adl</value>
   </property>
+
+  <property>
+    <name>adl.feature.ownerandgroup.enableupn</name>
+    <value>false</value>
+    <description>
+      When true : User and Group in FileStatus/AclStatus response is
+      represented as user friendly name as per Azure AD profile.
+
+      When false (default) : User and Group in FileStatus/AclStatus
+      response is represented by the unique identifier from Azure AD
+      profile (Object ID as GUID).
+
+      For optimal performance, false is recommended.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.access.token.provider.type</name>
+    <value>ClientCredential</value>
+    <description>
+      Defines Azure Active Directory OAuth2 access token provider type.
+      Supported types are ClientCredential, RefreshToken, and Custom.
+      The ClientCredential type requires property fs.adl.oauth2.client.id,
+      fs.adl.oauth2.credential, and fs.adl.oauth2.refresh.url.
+      The RefreshToken type requires property fs.adl.oauth2.client.id and
+      fs.adl.oauth2.refresh.token.
+      The Custom type requires property fs.adl.oauth2.access.token.provider.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.client.id</name>
+    <value></value>
+    <description>The OAuth2 client id.</description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.credential</name>
+    <value></value>
+    <description>The OAuth2 access key.</description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.refresh.url</name>
+    <value></value>
+    <description>The OAuth2 token endpoint.</description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.refresh.token</name>
+    <value></value>
+    <description>The OAuth2 refresh token.</description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.access.token.provider</name>
+    <value></value>
+    <description>
+      The class name of the OAuth2 access token provider.
+    </description>
+  </property>
+
   <!-- Azure Data Lake File System Configurations Ends Here-->
 
   <property>

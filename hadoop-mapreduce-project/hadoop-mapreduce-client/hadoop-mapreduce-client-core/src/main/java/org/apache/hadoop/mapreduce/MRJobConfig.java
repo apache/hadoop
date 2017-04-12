@@ -318,7 +318,13 @@ public interface MRJobConfig {
 
   public static final String MAP_OUTPUT_VALUE_CLASS = "mapreduce.map.output.value.class";
 
-  public static final String MAP_OUTPUT_KEY_FIELD_SEPERATOR = "mapreduce.map.output.key.field.separator";
+  public static final String MAP_OUTPUT_KEY_FIELD_SEPARATOR = "mapreduce.map.output.key.field.separator";
+
+  /**
+   * @deprecated Use {@link #MAP_OUTPUT_KEY_FIELD_SEPARATOR}
+   */
+  @Deprecated
+  public static final String MAP_OUTPUT_KEY_FIELD_SEPERATOR = MAP_OUTPUT_KEY_FIELD_SEPARATOR;
 
   public static final String MAP_LOG_LEVEL = "mapreduce.map.log.level";
 

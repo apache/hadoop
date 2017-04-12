@@ -31,8 +31,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
-import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
@@ -47,12 +45,10 @@ import org.junit.Test;
 
 public class TestAMRMRPCNodeUpdates {
   private MockRM rm;
-  ApplicationMasterService amService = null;
-  DrainDispatcher dispatcher = null;
+  private ApplicationMasterService amService;
 
   @Before
   public void setUp() {
-    dispatcher = new DrainDispatcher();
     this.rm = new MockRM() {
       @Override
       public void init(Configuration conf) {
@@ -61,12 +57,8 @@ public class TestAMRMRPCNodeUpdates {
           "1.0");
         super.init(conf);
       }
-
-      @Override
-      protected Dispatcher createDispatcher() {
-        return dispatcher;
-      }
     };
+
     rm.start();
     amService = rm.getApplicationMasterService();
   }
@@ -80,14 +72,14 @@ public class TestAMRMRPCNodeUpdates {
   
   private void syncNodeHeartbeat(MockNM nm, boolean health) throws Exception {
     nm.nodeHeartbeat(health);
-    dispatcher.await();
+    rm.drainEvents();
   }
   
   private void syncNodeLost(MockNM nm) throws Exception {
     rm.sendNodeStarted(nm);
     rm.waitForState(nm.getNodeId(), NodeState.RUNNING);
     rm.sendNodeLost(nm);
-    dispatcher.await();
+    rm.drainEvents();
   }
 
   private AllocateResponse allocate(final ApplicationAttemptId attemptId,
@@ -113,7 +105,7 @@ public class TestAMRMRPCNodeUpdates {
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 10000);
     MockNM nm3 = rm.registerNode("127.0.0.3:1234", 10000);
     MockNM nm4 = rm.registerNode("127.0.0.4:1234", 10000);
-    dispatcher.await();
+    rm.drainEvents();
 
     RMApp app1 = rm.submitApp(2000);
 

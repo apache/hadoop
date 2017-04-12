@@ -430,6 +430,9 @@ public class LogsCLI extends Configured implements Tool {
         try {
           JSONArray array = new JSONArray();
           JSONObject json = response.getEntity(JSONObject.class);
+          if (!json.has("containerLogsInfo")) {
+            return logFileInfos;
+          }
           Object logsInfoObj = json.get("containerLogsInfo");
           if (logsInfoObj instanceof JSONObject) {
             array.put((JSONObject)logsInfoObj);
@@ -443,6 +446,9 @@ public class LogsCLI extends Configured implements Tool {
             JSONObject log = array.getJSONObject(i);
             String aggregateType = log.has("logAggregationType") ?
                 log.getString("logAggregationType") : "N/A";
+            if (!log.has("containerLogInfo")) {
+              continue;
+            }
             Object ob = log.get("containerLogInfo");
             if (ob instanceof JSONArray) {
               JSONArray obArray = (JSONArray)ob;

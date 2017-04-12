@@ -43,11 +43,10 @@ public interface WasbAuthorizerInterface {
 
    * @param wasbAbolutePath : Absolute WASB Path used for access.
    * @param accessType : Type of access
-   * @param delegationToken : The user information.
    * @return : true - If access allowed false - If access is not allowed.
    * @throws WasbAuthorizationException - On authorization exceptions
    * @throws IOException - When not able to reach the authorizer
    */
-  public boolean authorize(String wasbAbolutePath, String accessType,
-      String delegationToken) throws WasbAuthorizationException, IOException;
+  boolean authorize(String wasbAbolutePath, String accessType)
+      throws WasbAuthorizationException, IOException;
 }

@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -229,7 +230,8 @@ public class ContainerManagerImpl extends CompositeService implements
     this.metrics = metrics;
 
     rsrcLocalizationSrvc =
-        createResourceLocalizationService(exec, deletionContext, context);
+        createResourceLocalizationService(exec, deletionContext, context,
+            metrics);
     addService(rsrcLocalizationSrvc);
 
     containersLauncher = createContainersLauncher(context, exec);
@@ -476,9 +478,10 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   protected ResourceLocalizationService createResourceLocalizationService(
-      ContainerExecutor exec, DeletionService deletionContext, Context context) {
+      ContainerExecutor exec, DeletionService deletionContext,
+      Context nmContext, NodeManagerMetrics nmMetrics) {
     return new ResourceLocalizationService(this.dispatcher, exec,
-        deletionContext, dirsHandler, context);
+        deletionContext, dirsHandler, nmContext, nmMetrics);
   }
 
   protected SharedCacheUploadService createSharedCacheUploaderService() {
@@ -995,6 +998,15 @@ public class ContainerManagerImpl extends CompositeService implements
     LOG.info("Start request for " + containerIdStr + " by user " + user);
 
     ContainerLaunchContext launchContext = request.getContainerLaunchContext();
+
+    // Sanity check for local resources
+    for (Map.Entry<String, LocalResource> rsrc : launchContext
+        .getLocalResources().entrySet()) {
+      if (rsrc.getValue() == null || rsrc.getValue().getResource() == null) {
+        throw new YarnException(
+            "Null resource URL for local resource " + rsrc.getKey() + " : " + rsrc.getValue());
+      }
+    }
 
     Credentials credentials =
         YarnServerSecurityUtils.parseCredentials(launchContext);

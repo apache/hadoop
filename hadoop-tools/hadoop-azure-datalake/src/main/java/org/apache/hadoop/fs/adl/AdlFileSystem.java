@@ -88,6 +88,10 @@ public class AdlFileSystem extends FileSystem {
   private AccessTokenProvider tokenProvider;
   private AzureADTokenProvider azureTokenProvider;
 
+  static {
+    AdlConfKeys.addDeprecatedKeys();
+  }
+
   @Override
   public String getScheme() {
     return SCHEME;
@@ -239,7 +243,8 @@ public class AdlFileSystem extends FileSystem {
     Configuration conf = ProviderUtils.excludeIncompatibleCredentialProviders(
         config, AdlFileSystem.class);
     TokenProviderType type = conf.getEnum(
-        AdlConfKeys.AZURE_AD_TOKEN_PROVIDER_TYPE_KEY, TokenProviderType.Custom);
+        AdlConfKeys.AZURE_AD_TOKEN_PROVIDER_TYPE_KEY,
+        AdlConfKeys.AZURE_AD_TOKEN_PROVIDER_TYPE_DEFAULT);
 
     switch (type) {
     case RefreshToken:

@@ -46,6 +46,7 @@ import static org.junit.Assert.assertEquals;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -100,6 +101,7 @@ public class TestAzureADTokenProvider {
   public void testCustomCredTokenProvider()
       throws URISyntaxException, IOException {
     Configuration conf = new Configuration();
+    conf.setEnum(AZURE_AD_TOKEN_PROVIDER_TYPE_KEY, TokenProviderType.Custom);
     conf.setClass(AZURE_AD_TOKEN_PROVIDER_CLASS_KEY,
         CustomMockTokenProvider.class, AzureADTokenProvider.class);
 
@@ -114,6 +116,7 @@ public class TestAzureADTokenProvider {
   public void testInvalidProviderConfigurationForType()
       throws URISyntaxException, IOException {
     Configuration conf = new Configuration();
+    conf.setEnum(AZURE_AD_TOKEN_PROVIDER_TYPE_KEY, TokenProviderType.Custom);
     URI uri = new URI("adl://localhost:8080");
     AdlFileSystem fileSystem = new AdlFileSystem();
     try {
@@ -121,8 +124,8 @@ public class TestAzureADTokenProvider {
       Assert.fail("Initialization should have failed due no token provider "
           + "configuration");
     } catch (IllegalArgumentException e) {
-      Assert.assertTrue(
-          e.getMessage().contains("dfs.adls.oauth2.access.token.provider"));
+      GenericTestUtils.assertExceptionContains(
+          AZURE_AD_TOKEN_PROVIDER_CLASS_KEY, e);
     }
     conf.setClass(AZURE_AD_TOKEN_PROVIDER_CLASS_KEY,
         CustomMockTokenProvider.class, AzureADTokenProvider.class);
@@ -135,6 +138,7 @@ public class TestAzureADTokenProvider {
     Configuration conf = new Configuration();
     URI uri = new URI("adl://localhost:8080");
     AdlFileSystem fileSystem = new AdlFileSystem();
+    conf.setEnum(AZURE_AD_TOKEN_PROVIDER_TYPE_KEY, TokenProviderType.Custom);
     conf.set(AZURE_AD_TOKEN_PROVIDER_CLASS_KEY,
         "wrong.classpath.CustomMockTokenProvider");
     try {

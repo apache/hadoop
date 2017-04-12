@@ -21,9 +21,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
@@ -68,7 +67,7 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     if (ErasureCodeNative.isNativeCodeLoaded()) {
       conf.set(
-          CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODER_KEY,
+          CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
           NativeRSRawErasureCoderFactory.class.getCanonicalName());
     }
     DFSTestUtil.enableAllECPolicies(conf);
@@ -138,8 +137,8 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
     final Path ec63FilePath = new Path(childDir, "ec_6_3_file");
     final Path ec32FilePath = new Path(childDir, "ec_3_2_file");
     final Path ec63FilePath2 = new Path(childDir, "ec_6_3_file_2");
-    final ErasureCodingPolicy ec32Policy = ErasureCodingPolicyManager
-        .getPolicyByID(HdfsConstants.RS_3_2_POLICY_ID);
+    final ErasureCodingPolicy ec32Policy = SystemErasureCodingPolicies
+        .getByID(SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
 
     fs.mkdirs(parentDir);
     fs.setErasureCodingPolicy(parentDir, ecPolicy.getName());
@@ -236,8 +235,8 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
     final Path rootPath = new Path("/");
     final Path ec63FilePath = new Path(rootPath, "ec_6_3_file");
     final Path ec32FilePath = new Path(rootPath, "ec_3_2_file");
-    final ErasureCodingPolicy ec32Policy = ErasureCodingPolicyManager
-        .getPolicyByID(HdfsConstants.RS_3_2_POLICY_ID);
+    final ErasureCodingPolicy ec32Policy = SystemErasureCodingPolicies
+        .getByID(SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
 
     fs.unsetErasureCodingPolicy(rootPath);
     fs.setErasureCodingPolicy(rootPath, ecPolicy.getName());

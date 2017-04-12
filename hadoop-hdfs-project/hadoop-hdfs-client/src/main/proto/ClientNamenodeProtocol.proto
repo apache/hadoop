@@ -80,6 +80,7 @@ message CreateRequestProto {
   required uint64 blockSize = 7;
   repeated CryptoProtocolVersionProto cryptoProtocolVersion = 8;
   optional FsPermissionProto unmasked = 9;
+  optional string ecPolicyName = 10;
 }
 
 message CreateResponseProto {

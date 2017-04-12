@@ -33,8 +33,10 @@ public class FsPermissionExtension extends FsPermission {
 
   private final static short ACL_BIT = 1 << 12;
   private final static short ENCRYPTED_BIT = 1 << 13;
+  private final static short ERASURE_CODED_BIT = 1 << 14;
   private final boolean aclBit;
   private final boolean encryptedBit;
+  private final boolean erasureCodedBit;
 
   /**
    * Constructs a new FsPermissionExtension based on the given FsPermission.
@@ -42,10 +44,11 @@ public class FsPermissionExtension extends FsPermission {
    * @param perm FsPermission containing permission bits
    */
   public FsPermissionExtension(FsPermission perm, boolean hasAcl,
-      boolean isEncrypted) {
+      boolean isEncrypted, boolean isErasureCoded) {
     super(perm.toShort());
     aclBit = hasAcl;
     encryptedBit = isEncrypted;
+    erasureCodedBit = isErasureCoded;
   }
 
   /**
@@ -57,12 +60,15 @@ public class FsPermissionExtension extends FsPermission {
     super(perm);
     aclBit = (perm & ACL_BIT) != 0;
     encryptedBit = (perm & ENCRYPTED_BIT) != 0;
+    erasureCodedBit = (perm & ERASURE_CODED_BIT) != 0;
   }
 
   @Override
   public short toExtendedShort() {
-    return (short)(toShort() |
-        (aclBit ? ACL_BIT : 0) | (encryptedBit ? ENCRYPTED_BIT : 0));
+    return (short)(toShort()
+        | (aclBit ? ACL_BIT : 0)
+        | (encryptedBit ? ENCRYPTED_BIT : 0)
+        | (erasureCodedBit ? ERASURE_CODED_BIT : 0));
   }
 
   @Override
@@ -73,6 +79,11 @@ public class FsPermissionExtension extends FsPermission {
   @Override
   public boolean getEncryptedBit() {
     return encryptedBit;
+  }
+
+  @Override
+  public boolean getErasureCodedBit() {
+    return erasureCodedBit;
   }
 
   @Override

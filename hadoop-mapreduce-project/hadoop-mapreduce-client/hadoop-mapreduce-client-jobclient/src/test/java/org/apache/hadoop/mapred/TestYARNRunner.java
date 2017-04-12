@@ -571,7 +571,7 @@ public class TestYARNRunner {
         buildSubmitContext(yarnRunner, jobConf);
 
     assertEquals(appSubCtx.getNodeLabelExpression(), "GPU");
-    assertEquals(appSubCtx.getAMContainerResourceRequest()
+    assertEquals(appSubCtx.getAMContainerResourceRequests().get(0)
         .getNodeLabelExpression(), "highMem");
   }
 

@@ -55,7 +55,6 @@ import org.apache.zookeeper.data.ACL;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 @InterfaceAudience.LimitedPrivate("HDFS")
@@ -511,7 +510,7 @@ public abstract class ZKFailoverController {
       doFence(target);
     } catch (Throwable t) {
       recordActiveAttempt(new ActiveAttemptRecord(false, "Unable to fence old active: " + StringUtils.stringifyException(t)));
-      Throwables.propagate(t);
+      throw t;
     }
   }
   

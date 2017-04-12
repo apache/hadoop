@@ -88,7 +88,8 @@ class WasbRemoteCallHelper {
       }
 
       Header contentTypeHeader = response.getFirstHeader("Content-Type");
-      if (contentTypeHeader == null || contentTypeHeader.getValue() != APPLICATION_JSON) {
+      if (contentTypeHeader == null
+          || !APPLICATION_JSON.equals(contentTypeHeader.getValue())) {
         throw new WasbRemoteCallException(getRequest.getURI().toString() + ":" +
             "Content-Type mismatch: expected: " + APPLICATION_JSON +
             ", got " + ((contentTypeHeader!=null) ? contentTypeHeader.getValue() : "NULL")

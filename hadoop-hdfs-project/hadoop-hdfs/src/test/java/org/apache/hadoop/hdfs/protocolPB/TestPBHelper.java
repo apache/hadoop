@@ -17,8 +17,14 @@
  */
 package org.apache.hadoop.hdfs.protocolPB;
 
+
+import com.google.protobuf.UninitializedMessageException;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
+
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -34,9 +40,12 @@ import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -96,8 +105,10 @@ import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.junit.Assert;
 import org.junit.Test;
@@ -792,6 +803,32 @@ public class TestPBHelper {
         slowPeersConverted2.equals(SlowPeerReports.EMPTY_REPORT));
   }
 
+  @Test
+  public void testSlowDiskInfoPBHelper() {
+    // Test with a map that has a few slow disk entries.
+    final SlowDiskReports slowDisks = SlowDiskReports.create(
+        ImmutableMap.of(
+            "disk1", ImmutableMap.of(SlowDiskReports.DiskOp.METADATA, 0.5),
+            "disk2", ImmutableMap.of(SlowDiskReports.DiskOp.READ, 1.0,
+                SlowDiskReports.DiskOp.WRITE, 1.0),
+            "disk3", ImmutableMap.of(SlowDiskReports.DiskOp.METADATA, 1.2,
+                SlowDiskReports.DiskOp.READ, 1.5,
+                SlowDiskReports.DiskOp.WRITE, 1.3)));
+    SlowDiskReports slowDisksConverted1 = PBHelper.convertSlowDiskInfo(
+        PBHelper.convertSlowDiskInfo(slowDisks));
+    assertTrue(
+        "Expected map:" + slowDisks + ", got map:" +
+            slowDisksConverted1.getSlowDisks(),
+        slowDisksConverted1.equals(slowDisks));
+
+    // Test with an empty map
+    SlowDiskReports slowDisksConverted2 = PBHelper.convertSlowDiskInfo(
+        PBHelper.convertSlowDiskInfo(SlowDiskReports.EMPTY_REPORT));
+    assertTrue(
+        "Expected empty map:" + ", got map:" + slowDisksConverted2,
+        slowDisksConverted2.equals(SlowDiskReports.EMPTY_REPORT));
+  }
+
   private void assertBlockECRecoveryInfoEquals(
       BlockECReconstructionInfo blkECRecoveryInfo1,
       BlockECReconstructionInfo blkECRecoveryInfo2) {
@@ -841,5 +878,110 @@ public class TestPBHelper {
     }
   }
 
+  /**
+   * Test case for old namenode where the namenode doesn't support returning
+   * keyProviderUri.
+   */
+  @Test
+  public void testFSServerDefaultsHelper() {
+    HdfsProtos.FsServerDefaultsProto.Builder b =
+        HdfsProtos.FsServerDefaultsProto
+        .newBuilder();
+    b.setBlockSize(DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
+    b.setBytesPerChecksum(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT);
+    b.setWritePacketSize(
+        HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
+    b.setReplication(DFSConfigKeys.DFS_REPLICATION_DEFAULT);
+    b.setFileBufferSize(DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT);
+    b.setEncryptDataTransfer(DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_DEFAULT);
+    b.setTrashInterval(DFSConfigKeys.FS_TRASH_INTERVAL_DEFAULT);
+    b.setChecksumType(HdfsProtos.ChecksumTypeProto.valueOf(
+        DataChecksum.Type.valueOf(DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT).id));
+    HdfsProtos.FsServerDefaultsProto proto = b.build();
 
+    assertFalse("KeyProvider uri is not supported",
+        proto.hasKeyProviderUri());
+    FsServerDefaults fsServerDefaults = PBHelperClient.convert(proto);
+    Assert.assertNotNull("FsServerDefaults is null", fsServerDefaults);
+    Assert.assertNull("KeyProviderUri should be null",
+        fsServerDefaults.getKeyProviderUri());
+  }
+
+  @Test
+  public void testConvertErasureCodingPolicy() throws Exception {
+    // Check conversion of the built-in policies.
+    for (ErasureCodingPolicy policy :
+        SystemErasureCodingPolicies.getPolicies()) {
+      HdfsProtos.ErasureCodingPolicyProto proto = PBHelperClient
+          .convertErasureCodingPolicy(policy);
+      // Optional fields should not be set.
+      assertFalse("Unnecessary field is set.", proto.hasName());
+      assertFalse("Unnecessary field is set.", proto.hasSchema());
+      assertFalse("Unnecessary field is set.", proto.hasCellSize());
+      // Convert proto back to an object and check for equality.
+      ErasureCodingPolicy convertedPolicy = PBHelperClient
+          .convertErasureCodingPolicy(proto);
+      assertEquals("Converted policy not equal", policy, convertedPolicy);
+    }
+    // Check conversion of a non-built-in policy.
+    ECSchema newSchema = new ECSchema("testcodec", 3, 2);
+    ErasureCodingPolicy newPolicy =
+        new ErasureCodingPolicy(newSchema, 128 * 1024, (byte) 254);
+    HdfsProtos.ErasureCodingPolicyProto proto = PBHelperClient
+        .convertErasureCodingPolicy(newPolicy);
+    // Optional fields should be set.
+    assertTrue("Optional field not set", proto.hasName());
+    assertTrue("Optional field not set", proto.hasSchema());
+    assertTrue("Optional field not set", proto.hasCellSize());
+    ErasureCodingPolicy convertedPolicy = PBHelperClient
+        .convertErasureCodingPolicy(proto);
+    // Converted policy should be equal.
+    assertEquals("Converted policy not equal", newPolicy, convertedPolicy);
+  }
+
+  @Test(expected = UninitializedMessageException.class)
+  public void testErasureCodingPolicyMissingId() throws Exception {
+    HdfsProtos.ErasureCodingPolicyProto.Builder builder =
+        HdfsProtos.ErasureCodingPolicyProto.newBuilder();
+    PBHelperClient.convertErasureCodingPolicy(builder.build());
+  }
+
+  @Test
+  public void testErasureCodingPolicyMissingOptionalFields() throws Exception {
+    // For non-built-in policies, the optional fields are required
+    // when parsing an ErasureCodingPolicyProto.
+    HdfsProtos.ECSchemaProto schemaProto =
+        PBHelperClient.convertECSchema(
+            StripedFileTestUtil.getDefaultECPolicy().getSchema());
+    try {
+      PBHelperClient.convertErasureCodingPolicy(
+          HdfsProtos.ErasureCodingPolicyProto.newBuilder()
+              .setId(14)
+              .setSchema(schemaProto)
+              .setCellSize(123)
+              .build());
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains("Missing", e);
+    }
+    try {
+      PBHelperClient.convertErasureCodingPolicy(
+          HdfsProtos.ErasureCodingPolicyProto.newBuilder()
+              .setId(14)
+              .setName("testpolicy")
+              .setCellSize(123)
+              .build());
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains("Missing", e);
+    }
+    try {
+      PBHelperClient.convertErasureCodingPolicy(
+          HdfsProtos.ErasureCodingPolicyProto.newBuilder()
+              .setId(14)
+              .setName("testpolicy")
+              .setSchema(schemaProto)
+              .build());
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains("Missing", e);
+    }
+  }
 }

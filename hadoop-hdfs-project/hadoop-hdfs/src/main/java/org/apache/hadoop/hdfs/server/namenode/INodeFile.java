@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
@@ -191,8 +192,8 @@ public class INodeFile extends INodeWithAdditionalFields
       if (blockType == STRIPED) {
         Preconditions.checkArgument(replication == null &&
             erasureCodingPolicyID != null);
-        Preconditions.checkArgument(ErasureCodingPolicyManager
-            .getPolicyByID(erasureCodingPolicyID) != null,
+        Preconditions.checkArgument(SystemErasureCodingPolicies
+                .getByID(erasureCodingPolicyID) != null,
             "Could not find EC policy with ID 0x" + StringUtils
                 .byteToHexString(erasureCodingPolicyID));
         layoutRedundancy |= BLOCK_TYPE_MASK_STRIPED;
@@ -328,9 +329,11 @@ public class INodeFile extends INodeWithAdditionalFields
     for (int i = 0; i < blocks.length; i++) {
       final String err = checkBlockComplete(blocks, i, numCommittedAllowed,
           minReplication);
-      Preconditions.checkState(err == null,
-          "Unexpected block state: %s, file=%s (%s), blocks=%s (i=%s)",
-          err, this, getClass().getSimpleName(), Arrays.asList(blocks), i);
+      if(err != null) {
+        throw new IllegalStateException(String.format("Unexpected block state: " +
+            "%s, file=%s (%s), blocks=%s (i=%s)", err, this,
+            getClass().getSimpleName(), Arrays.asList(blocks), i));
+      }
     }
   }
 
@@ -514,8 +517,7 @@ public class INodeFile extends INodeWithAdditionalFields
     }
 
     ErasureCodingPolicy ecPolicy =
-        ErasureCodingPolicyManager.getPolicyByID(
-            getErasureCodingPolicyID());
+        SystemErasureCodingPolicies.getByID(getErasureCodingPolicyID());
     Preconditions.checkNotNull(ecPolicy, "Could not find EC policy with ID 0x"
         + StringUtils.byteToHexString(getErasureCodingPolicyID()));
     return (short) (ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits());

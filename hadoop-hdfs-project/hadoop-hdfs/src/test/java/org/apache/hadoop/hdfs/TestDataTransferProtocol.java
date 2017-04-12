@@ -133,7 +133,7 @@ public class TestDataTransferProtocol {
       LOG.info("Expected: " + expected);
       
       if (eofExpected) {
-        throw new IOException("Did not recieve IOException when an exception " +
+        throw new IOException("Did not receive IOException when an exception " +
                               "is expected while reading from " + datanode); 
       }
       assertEquals(expected, received);

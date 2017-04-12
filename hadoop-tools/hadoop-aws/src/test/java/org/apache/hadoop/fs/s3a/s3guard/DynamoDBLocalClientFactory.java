@@ -73,7 +73,7 @@ public class DynamoDBLocalClientFactory extends Configured
 
     final Configuration conf = getConf();
     final AWSCredentialsProvider credentials =
-        createAWSCredentialProviderSet(null, conf, null);
+        createAWSCredentialProviderSet(null, conf);
     final ClientConfiguration awsConf =
         DefaultS3ClientFactory.createAwsConf(conf);
     // fail fast in case of service errors

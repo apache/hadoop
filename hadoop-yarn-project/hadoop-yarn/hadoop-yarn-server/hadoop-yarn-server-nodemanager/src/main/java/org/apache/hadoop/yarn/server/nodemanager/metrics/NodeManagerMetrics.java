@@ -69,6 +69,15 @@ public class NodeManagerMetrics {
   @Metric("# of running opportunistic containers")
       MutableGaugeInt runningOpportunisticContainers;
 
+  @Metric("Local cache size (public and private) before clean (Bytes)")
+  MutableGaugeLong cacheSizeBeforeClean;
+  @Metric("# of total bytes deleted from the public and private local cache")
+  MutableGaugeLong totalBytesDeleted;
+  @Metric("# of bytes deleted from the public local cache")
+  MutableGaugeLong publicBytesDeleted;
+  @Metric("# of bytes deleted from the private local cache")
+  MutableGaugeLong privateBytesDeleted;
+
   // CHECKSTYLE:ON:VisibilityModifier
 
   private JvmMetrics jvmMetrics = null;
@@ -215,6 +224,22 @@ public class NodeManagerMetrics {
     this.goodLogDirsDiskUtilizationPerc.set(goodLogDirsDiskUtilizationPerc);
   }
 
+  public void setCacheSizeBeforeClean(long cacheSizeBeforeClean) {
+    this.cacheSizeBeforeClean.set(cacheSizeBeforeClean);
+  }
+
+  public void setTotalBytesDeleted(long totalBytesDeleted) {
+    this.totalBytesDeleted.set(totalBytesDeleted);
+  }
+
+  public void setPublicBytesDeleted(long publicBytesDeleted) {
+    this.publicBytesDeleted.set(publicBytesDeleted);
+  }
+
+  public void setPrivateBytesDeleted(long privateBytesDeleted) {
+    this.privateBytesDeleted.set(privateBytesDeleted);
+  }
+
   public int getRunningContainers() {
     return containersRunning.value();
   }
@@ -274,5 +299,21 @@ public class NodeManagerMetrics {
 
   public int getRunningOpportunisticContainers() {
     return runningOpportunisticContainers.value();
+  }
+
+  public long getCacheSizeBeforeClean() {
+    return this.cacheSizeBeforeClean.value();
+  }
+
+  public long getTotalBytesDeleted() {
+    return this.totalBytesDeleted.value();
+  }
+
+  public long getPublicBytesDeleted() {
+    return this.publicBytesDeleted.value();
+  }
+
+  public long getPrivateBytesDeleted() {
+    return this.privateBytesDeleted.value();
   }
 }

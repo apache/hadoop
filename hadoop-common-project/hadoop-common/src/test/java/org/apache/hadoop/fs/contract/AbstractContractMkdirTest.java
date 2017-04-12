@@ -126,4 +126,46 @@ public abstract class AbstractContractMkdirTest extends AbstractFSContractTestBa
     assertPathExists("check path existence without trailing slash failed",
         path("testmkdir/b"));
   }
+
+  @Test
+  public void testMkdirsPopulatingAllNonexistentAncestors() throws IOException {
+    describe("Verify mkdir will populate all its non-existent ancestors");
+    final FileSystem fs = getFileSystem();
+
+    final Path parent = path("testMkdirsPopulatingAllNonexistentAncestors");
+    assertTrue(fs.mkdirs(parent));
+    assertPathExists(parent + " should exist before making nested dir", parent);
+
+    Path nested = path(parent + "/a/b/c/d/e/f/g/h/i/j/k/L");
+    assertTrue(fs.mkdirs(nested));
+    while (nested != null && !nested.equals(parent) && !nested.isRoot()) {
+      assertPathExists(nested + " nested dir should exist", nested);
+      nested = nested.getParent();
+    }
+  }
+
+  @Test
+  public void testMkdirsDoesNotRemoveParentDirectories() throws IOException {
+    describe("Verify mkdir will make its parent existent");
+    final FileSystem fs = getFileSystem();
+
+    final Path parent = path("testMkdirsDoesNotRemoveParentDirectories");
+    assertTrue(fs.mkdirs(parent));
+
+    Path p = parent;
+    for (int i = 0; i < 10; i++) {
+      assertTrue(fs.mkdirs(p));
+      assertPathExists(p + " should exist after mkdir(" + p + ")", p);
+      p = path(p + "/dir-" + i);
+    }
+
+    // After mkdirs(sub-directory), its parent directory still exists
+    p = p.getParent();
+    while (p != null && !p.equals(parent) && !p.isRoot()) {
+      assertPathExists("Path " + p + " should exist", p);
+      assertIsDirectory(p);
+      p = p.getParent();
+    }
+  }
+
 }

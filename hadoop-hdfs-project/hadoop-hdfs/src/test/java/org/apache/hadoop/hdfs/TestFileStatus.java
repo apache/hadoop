@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.ipc.RemoteException;
@@ -97,7 +98,8 @@ public class TestFileStatus {
     Path path = new Path("/");
     assertTrue("/ should be a directory", 
                fs.getFileStatus(path).isDirectory());
-    
+    ContractTestUtils.assertNotErasureCoded(fs, path);
+
     // Make sure getFileInfo returns null for files which do not exist
     HdfsFileStatus fileInfo = dfsClient.getFileInfo("/noSuchFile");
     assertEquals("Non-existant file should result in null", null, fileInfo);
@@ -133,9 +135,13 @@ public class TestFileStatus {
     assertEquals(blockSize, status.getBlockSize());
     assertEquals(1, status.getReplication());
     assertEquals(fileSize, status.getLen());
-    assertEquals(file1.makeQualified(fs.getUri(), 
+    ContractTestUtils.assertNotErasureCoded(fs, file1);
+    assertEquals(file1.makeQualified(fs.getUri(),
         fs.getWorkingDirectory()).toString(), 
         status.getPath().toString());
+    assertTrue(file1 + " should have erasure coding unset in " +
+            "FileStatus#toString(): " + status,
+        status.toString().contains("isErasureCoded=false"));
   }
 
   /** Test the FileStatus obtained calling listStatus on a file */
@@ -148,10 +154,11 @@ public class TestFileStatus {
     assertEquals(blockSize, status.getBlockSize());
     assertEquals(1, status.getReplication());
     assertEquals(fileSize, status.getLen());
-    assertEquals(file1.makeQualified(fs.getUri(), 
+    ContractTestUtils.assertNotErasureCoded(fs, file1);
+    assertEquals(file1.makeQualified(fs.getUri(),
         fs.getWorkingDirectory()).toString(), 
         status.getPath().toString());
-    
+
     RemoteIterator<FileStatus> itor = fc.listStatus(file1);
     status = itor.next();
     assertEquals(stats[0], status);
@@ -196,7 +203,8 @@ public class TestFileStatus {
     FileStatus status = fs.getFileStatus(dir);
     assertTrue(dir + " should be a directory", status.isDirectory());
     assertTrue(dir + " should be zero size ", status.getLen() == 0);
-    assertEquals(dir.makeQualified(fs.getUri(), 
+    ContractTestUtils.assertNotErasureCoded(fs, dir);
+    assertEquals(dir.makeQualified(fs.getUri(),
         fs.getWorkingDirectory()).toString(), 
         status.getPath().toString());
     
