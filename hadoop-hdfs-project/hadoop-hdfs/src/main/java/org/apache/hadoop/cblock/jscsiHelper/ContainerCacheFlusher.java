@@ -116,7 +116,7 @@ public class ContainerCacheFlusher implements Runnable {
     int threadPri = config.getInt(DFS_CBLOCK_CACHE_THREAD_PRIORITY,
         DFS_CBLOCK_CACHE_THREAD_PRIORITY_DEFAULT);
     int blockBufferSize = config.getInt(DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE,
-        DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE_DEFAULT) * 1024;
+        DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE_DEFAULT) * (Long.SIZE / Byte.SIZE);
 
     LOG.info("Cache: Core Pool Size: {}", corePoolSize);
     LOG.info("Cache: Keep Alive: {}", keepAlive);

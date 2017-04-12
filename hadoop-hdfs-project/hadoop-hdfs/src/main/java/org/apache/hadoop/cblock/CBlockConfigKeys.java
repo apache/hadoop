@@ -126,11 +126,11 @@ public final class CBlockConfigKeys {
       NORM_PRIORITY;
 
   /**
-   * Block Buffer size in 1024 entries, 128 means 128 * 1024 blockIDs.
+   * Block Buffer size in terms of blockID entries, 512 means 512 blockIDs.
    */
   public static final String DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE =
       "dfs.cblock.cache.block.buffer.size";
-  public static final int DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE_DEFAULT = 128;
+  public static final int DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE_DEFAULT = 512;
 
   private CBlockConfigKeys() {
 

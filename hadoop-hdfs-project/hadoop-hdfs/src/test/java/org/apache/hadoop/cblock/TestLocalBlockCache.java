@@ -55,9 +55,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static java.lang.Math.abs;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_DISK_CACHE_PATH_KEY;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO;
-import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_TRACE_IO;
+import static org.apache.hadoop.cblock.CBlockConfigKeys.
+    DFS_CBLOCK_DISK_CACHE_PATH_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys.
+    DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO;
+import static org.apache.hadoop.cblock.CBlockConfigKeys.
+    DFS_CBLOCK_TRACE_IO;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE;
 
 /**
  * Tests for Tests for local cache.
@@ -231,6 +238,10 @@ public class TestLocalBlockCache {
     long endTime = Time.monotonicNow();
     LOG.info("Time taken for writing {} blocks is {} seconds", totalBlocks,
         TimeUnit.MILLISECONDS.toSeconds(endTime - startTime));
+    long blockBufferSize = config.getInt(DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE,
+        DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE_DEFAULT);
+    Assert.assertEquals(metrics.getNumWriteOps() / blockBufferSize,
+        metrics.getNumBlockBufferFlush());
     // TODO: Read this data back.
     cache.close();
   }

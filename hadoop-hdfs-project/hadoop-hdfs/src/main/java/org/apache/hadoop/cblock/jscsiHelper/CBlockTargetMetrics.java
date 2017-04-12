@@ -34,20 +34,22 @@ import org.apache.hadoop.metrics2.lib.MutableRate;
  * as well as the latency time of read and write ops.
  */
 public class CBlockTargetMetrics {
+  // Counter based Metrics
   @Metric private MutableCounterLong numReadOps;
   @Metric private MutableCounterLong numWriteOps;
   @Metric private MutableCounterLong numReadCacheHits;
   @Metric private MutableCounterLong numReadCacheMiss;
   @Metric private MutableCounterLong numReadLostBlocks;
+  @Metric private MutableCounterLong numBlockBufferFlush;
   @Metric private MutableCounterLong numDirectBlockWrites;
   @Metric private MutableCounterLong numFailedDirectBlockWrites;
 
+  // Latency based Metrics
   @Metric private MutableRate dbReadLatency;
   @Metric private MutableRate containerReadLatency;
-
   @Metric private MutableRate dbWriteLatency;
   @Metric private MutableRate containerWriteLatency;
-
+  @Metric private MutableRate blockBufferFlushLatency;
   @Metric private MutableRate directBlockWriteLatency;
 
   public CBlockTargetMetrics() {
@@ -88,6 +90,10 @@ public class CBlockTargetMetrics {
     numFailedDirectBlockWrites.incr();
   }
 
+  public void incNumBlockBufferFlush() {
+    numBlockBufferFlush.incr();
+  }
+
   public void updateDBReadLatency(long latency) {
     dbReadLatency.add(latency);
   }
@@ -106,6 +112,10 @@ public class CBlockTargetMetrics {
 
   public void updateDirectBlockWriteLatency(long latency) {
     directBlockWriteLatency.add(latency);
+  }
+
+  public void updateBlockBufferFlushLatency(long latency) {
+    blockBufferFlushLatency.add(latency);
   }
 
   @VisibleForTesting
@@ -141,5 +151,10 @@ public class CBlockTargetMetrics {
   @VisibleForTesting
   public long getNumFailedDirectBlockWrites() {
     return numFailedDirectBlockWrites.value();
+  }
+
+  @VisibleForTesting
+  public long getNumBlockBufferFlush() {
+    return numBlockBufferFlush.value();
   }
 }
