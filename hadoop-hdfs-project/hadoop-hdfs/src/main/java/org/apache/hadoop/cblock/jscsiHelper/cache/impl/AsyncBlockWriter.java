@@ -96,7 +96,7 @@ public class AsyncBlockWriter {
     Preconditions.checkNotNull(cache.getCacheDB(), "DB cannot be null.");
     localIoCount = new AtomicLong();
     blockBufferSize = config.getInt(DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE,
-        DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE_DEFAULT) * 1024;
+        DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE_DEFAULT) * (Long.SIZE / Byte.SIZE);
     LOG.info("Cache: Block Size: {}", blockBufferSize);
     lock = new ReentrantLock();
     notEmpty = lock.newCondition();
@@ -208,6 +208,9 @@ public class AsyncBlockWriter {
         parentCache.getTracer().info(
             "Task=DirtyBlockLogWrite,Time={}", endTime - startTime);
       }
+      parentCache.getTargetMetrics().incNumBlockBufferFlush();
+      parentCache.getTargetMetrics()
+          .updateBlockBufferFlushLatency(endTime - startTime);
     }
     blockIDBuffer.putLong(block.getBlockID());
   }
