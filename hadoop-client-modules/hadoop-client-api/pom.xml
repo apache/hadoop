@@ -36,6 +36,11 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-client</artifactId>
       <!-- We list this as optional because as a type-pom it won't get included in the shading.
@@ -105,15 +110,6 @@
                     <includes>
                       <include>org.apache.hadoop:*</include>
                     </includes>
-                    <excludes>
-                      <!-- Guava, which is included in hadoop-shaded-thirdparty, is excepted
-                             from relocation. It's for enabling us to use Apache Curator.
-                             For more detail, please check the technical note and
-                             hadoop-shaded-thirdparty/pom.xml.
-                             https://cwiki.apache.org/confluence/display/CURATOR/TN13
-                              -->
-                      <exclude>com.google.guava:guava</exclude>
-                    </excludes>
                   </artifactSet>
                   <filters>
                     <!-- We get these package level classes from various yarn api jars -->

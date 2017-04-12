@@ -35,6 +35,15 @@
   </properties>
 
   <dependencies>
+    <!-- shading here instead of using hadoop-shaded-thirdparty to avoid shading Guava
+         completely.
+         -->
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-client</artifactId>
@@ -150,12 +159,7 @@
                       <exclude>commons-logging:commons-logging</exclude>
                       <!-- Leave log4j unshaded so downstream users can configure logging. -->
                       <exclude>log4j:log4j</exclude>
-                      <!-- Guava, which is included in hadoop-shaded-thirdparty, is excepted
-                             from relocation. It's for enabling us to use Apache Curator.
-                             For more detail, please check the technical note and
-                             hadoop-shaded-thirdparty/pom.xml.
-                             https://cwiki.apache.org/confluence/display/CURATOR/TN13
-                              -->
+                      <!-- Leave gauva unshaded since it's shaded in hadoop-client-api. -->
                       <exclude>com.google.guava:guava</exclude>
                     </excludes>
                   </artifactSet>
