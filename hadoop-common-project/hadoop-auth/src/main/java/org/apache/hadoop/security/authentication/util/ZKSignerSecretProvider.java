@@ -16,6 +16,7 @@ package org.apache.hadoop.security.authentication.util;
 import com.google.common.annotations.VisibleForTesting;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -176,7 +177,7 @@ public class ZKSignerSecretProvider extends RolloverSignerSecretProvider {
 
   public ZKSignerSecretProvider() {
     super();
-    rand = new Random();
+    rand = new SecureRandom();
   }
 
   /**
@@ -369,8 +370,11 @@ public class ZKSignerSecretProvider extends RolloverSignerSecretProvider {
     }
   }
 
-  private byte[] generateRandomSecret() {
-    return Long.toString(rand.nextLong()).getBytes(Charset.forName("UTF-8"));
+  @VisibleForTesting
+  protected byte[] generateRandomSecret() {
+    byte[] secret = new byte[32]; // 32 bytes = 256 bits
+    rand.nextBytes(secret);
+    return secret;
   }
 
   /**

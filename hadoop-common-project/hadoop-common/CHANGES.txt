@@ -8,6 +8,10 @@ Release 2.7.6 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-14246. Authentication Tokens should use SecureRandom instead of
+    Random and 256 bit secrets (Conttributed by Robert Kanter via
+    Daniel Templeton)
+
   OPTIMIZATIONS
 
   BUG FIXES
