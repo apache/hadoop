@@ -57,6 +57,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.UUID;
 
 import static org.apache.hadoop.ozone.container.ContainerTestHelper
     .createSingleNodePipeline;
@@ -306,7 +308,10 @@ public class TestContainerPersistence {
     ContainerData cData = new ContainerData(containerName);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner)", "bilbo");
-    containerManager.createContainer(pipeline, cData);
+    if(!containerManager.getContainerMap()
+        .containsKey(containerName)) {
+      containerManager.createContainer(pipeline, cData);
+    }
     ChunkInfo info = getChunk(keyName, 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
@@ -680,5 +685,76 @@ public class TestContainerPersistence {
     containerManager.updateContainer(
         createSingleNodePipeline("non_exist_container"),
         "non_exist_container", newData);
+  }
+
+  private KeyData writeKeyHelper(Pipeline pipeline,
+      String containerName, String keyName)
+      throws IOException, NoSuchAlgorithmException {
+    ChunkInfo info = writeChunkHelper(containerName, keyName, pipeline);
+    KeyData keyData = new KeyData(containerName, keyName);
+    List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
+    chunkList.add(info.getProtoBufMessage());
+    keyData.setChunks(chunkList);
+    return keyData;
+  }
+
+  @Test
+  public void testListKey() throws Exception {
+    String containerName = "c-0";
+    Pipeline pipeline = createSingleNodePipeline(containerName);
+    List<String> expectedKeys = new ArrayList<String>();
+    for (int i = 0; i < 10; i++) {
+      String keyName = "k" + i + "-" + UUID.randomUUID();
+      expectedKeys.add(keyName);
+      KeyData kd = writeKeyHelper(pipeline, containerName, keyName);
+      keyManager.putKey(pipeline, kd);
+    }
+
+    // List all keys
+    List<KeyData> result = keyManager.listKey(pipeline, null, null, 100);
+    Assert.assertEquals(10, result.size());
+
+    int index = 0;
+    for (int i = index; i < result.size(); i++) {
+      KeyData data = result.get(i);
+      Assert.assertEquals(containerName, data.getContainerName());
+      Assert.assertEquals(expectedKeys.get(i), data.getKeyName());
+      index++;
+    }
+
+    // List key with prefix
+    result = keyManager.listKey(pipeline, "k1", null, 100);
+    // There is only one key with prefix k1
+    Assert.assertEquals(1, result.size());
+    Assert.assertEquals(expectedKeys.get(1), result.get(0).getKeyName());
+
+
+    // List key with preKev filter
+    String k6 = expectedKeys.get(6);
+    result = keyManager.listKey(pipeline, null, k6, 100);
+
+    Assert.assertEquals(3, result.size());
+    for (int i = 7; i < 10; i++) {
+      Assert.assertEquals(expectedKeys.get(i),
+          result.get(i - 7).getKeyName());
+    }
+
+    // List key with both prefix and preKey filter
+    String k7 = expectedKeys.get(7);
+    result = keyManager.listKey(pipeline, "k3", k7, 100);
+    // k3 is after k7, enhance we get an empty result
+    Assert.assertTrue(result.isEmpty());
+
+    // Set a pretty small cap for the key count
+    result = keyManager.listKey(pipeline, null, null, 3);
+    Assert.assertEquals(3, result.size());
+    for (int i = 0; i < 3; i++) {
+      Assert.assertEquals(expectedKeys.get(i), result.get(i).getKeyName());
+    }
+
+    // Count must be >0
+    exception.expect(IllegalArgumentException.class);
+    exception.expectMessage("Count must be a positive number.");
+    keyManager.listKey(pipeline, null, null, -1);
   }
 }

@@ -33,6 +33,8 @@ import java.nio.charset.Charset;
 
 import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .Result.UNABLE_TO_READ_METADATA_DB;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Result.NO_SUCH_KEY;
 
 /**
  * Utils functions to help key functions.
@@ -137,4 +139,30 @@ public final class KeyUtils {
     return  builder.build();
   }
 
+  /**
+   * Parses the key name from a bytes array.
+   * @param bytes key name in bytes.
+   * @return key name string.
+   */
+  public static String getKeyName(byte[] bytes) {
+    return new String(bytes, ENCODING);
+  }
+
+  /**
+   * Parses the {@link KeyData} from a bytes array.
+   *
+   * @param bytes key data in bytes.
+   * @return key data.
+   * @throws IOException if the bytes array is malformed or invalid.
+   */
+  public static KeyData getKeyData(byte[] bytes) throws IOException {
+    try {
+      ContainerProtos.KeyData kd = ContainerProtos.KeyData.parseFrom(bytes);
+      KeyData data = KeyData.getFromProtoBuf(kd);
+      return data;
+    } catch (IOException e) {
+      throw new StorageContainerException("Failed to parse key data from the bytes array.",
+          NO_SUCH_KEY);
+    }
+  }
 }

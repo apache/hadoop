@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
+import org.apache.hadoop.ozone.container.common.helpers.FilteredKeys;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
@@ -29,6 +30,8 @@ import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.ozone.container.common.helpers.FilteredKeys.KeyPrefixFilter;
+import org.apache.hadoop.ozone.container.common.helpers.FilteredKeys.PreKeyFilter;
 import org.apache.hadoop.utils.LevelDBStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -165,10 +168,21 @@ public class KeyManagerImpl implements KeyManager {
    * {@inheritDoc}
    */
   @Override
-  public List<KeyData> listKey(Pipeline pipeline, String prefix, String
-      prevKey, int count) {
-    // TODO : Implement listKey function.
-    return null;
+  public List<KeyData> listKey(
+      Pipeline pipeline, String prefix, String prevKey, int count)
+      throws StorageContainerException {
+    Preconditions.checkNotNull(pipeline,
+        "Pipeline cannot be null.");
+    Preconditions.checkArgument(count > 0,
+        "Count must be a positive number.");
+    ContainerData cData = containerManager.readContainer(pipeline
+        .getContainerName());
+    LevelDBStore db = KeyUtils.getDB(cData, conf);
+    try (FilteredKeys filteredKeys = new FilteredKeys(db, count)) {
+      filteredKeys.addKeyFilter(new KeyPrefixFilter(prefix));
+      filteredKeys.addKeyFilter(new PreKeyFilter(db, prevKey));
+      return filteredKeys.getFilteredKeys();
+    }
   }
 
   /**
