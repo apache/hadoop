@@ -597,7 +597,7 @@
                              https://cwiki.apache.org/confluence/display/CURATOR/TN13
                               -->
                       <exclude>com.google.guava:guava</exclude>
-<!-- We need a filter that matches just those things that are included in the above artiacts -->
+                      <!-- We need a filter that matches just those things that are included in the above artiacts -->
                     </excludes>
                   </artifactSet>
                   <filters>
