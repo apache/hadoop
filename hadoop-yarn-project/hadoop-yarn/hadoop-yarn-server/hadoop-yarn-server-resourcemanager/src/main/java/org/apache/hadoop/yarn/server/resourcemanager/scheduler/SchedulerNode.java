@@ -160,7 +160,7 @@ public abstract class SchedulerNode {
    * @param rmContainer Allocated container
    * @param launchedOnNode True if the container has been launched
    */
-  private synchronized void allocateContainer(RMContainer rmContainer,
+  protected synchronized void allocateContainer(RMContainer rmContainer,
       boolean launchedOnNode) {
     Container container = rmContainer.getContainer();
     if (rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
