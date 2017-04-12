@@ -64,8 +64,8 @@ public interface KeyManager {
    * @param count    - Number of keys to return.
    * @return List of Keys that match the criteria.
    */
-  List<KeyData> listKey(Pipeline pipeline, String prefix, String prevKey, int
-      count);
+  List<KeyData> listKey(Pipeline pipeline, String prefix, String prevKey,
+      int count) throws StorageContainerException;
 
   /**
    * Shutdown keyManager.
