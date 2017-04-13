@@ -58,6 +58,7 @@ public final class S3Guard {
   static final Class<? extends DynamoDBClientFactory>
       S3GUARD_DDB_CLIENT_FACTORY_IMPL_DEFAULT =
       DynamoDBClientFactory.DefaultDynamoDBClientFactory.class;
+  private static final FileStatus[] EMPTY_LISTING = new FileStatus[0];
 
   // Utility class.  All static functions.
   private S3Guard() { }
@@ -133,9 +134,15 @@ public final class S3Guard {
     return status;
   }
 
+  /**
+   * Convert the data of a directory listing to an array of {@link FileStatus}
+   * entries. If the listing is null an empty array is returned.
+   * @param dirMeta directory listing -may be null
+   * @return a possibly-empty array of file status entries
+   */
   public static FileStatus[] dirMetaToStatuses(DirListingMetadata dirMeta)  {
     if (dirMeta == null) {
-      return new FileStatus[0];
+      return EMPTY_LISTING;
     }
 
     Collection<PathMetadata> listing = dirMeta.getListing();

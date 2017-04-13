@@ -53,7 +53,6 @@ public class Listing {
 
   private final S3AFileSystem owner;
   private static final Logger LOG = S3AFileSystem.LOG;
-  private static final FileStatus[] EMPTY_FILE_STATUS_ARRAY = new FileStatus[0];
 
   public Listing(S3AFileSystem owner) {
     this.owner = owner;
@@ -64,21 +63,35 @@ public class Listing {
    * a given status filter.
    *
    * @param fileStatuses the provided list of file status. NO remote calls.
-   * @param filter file status filter
+   * @param filter file path filter on which paths to accept
+   * @param acceptor the file status acceptor
    * @return the file status iterator
    */
-  ProvidedLocatedFileStatusIterator createProvidedLocatedFileStatusIterator(
-      FileStatus[] fileStatuses, ProvidedFileStatusFilter filter) {
-    return new ProvidedLocatedFileStatusIterator(fileStatuses, filter);
+  ProvidedFileStatusIterator createProvidedFileStatusIterator(
+      FileStatus[] fileStatuses, PathFilter filter,
+      FileStatusAcceptor acceptor) {
+    return new ProvidedFileStatusIterator(fileStatuses, filter, acceptor);
   }
 
+  /**
+   * Create a FileStatus iterator against a path, with a given list object
+   * request.
+   *
+   * @param listPath path of the listing
+   * @param request initial request to make
+   * @param filter the filter on which paths to accept
+   * @param acceptor the class/predicate to decide which entries to accept
+   * in the listing based on the full file status.
+   * @return the iterator
+   * @throws IOException IO Problems
+   */
   FileStatusListingIterator createFileStatusListingIterator(
       Path listPath,
       ListObjectsRequest request,
       PathFilter filter,
       Listing.FileStatusAcceptor acceptor) throws IOException {
     return createFileStatusListingIterator(listPath, request, filter, acceptor,
-        EMPTY_FILE_STATUS_ARRAY);
+        null);
   }
 
   /**
@@ -99,7 +112,7 @@ public class Listing {
       ListObjectsRequest request,
       PathFilter filter,
       Listing.FileStatusAcceptor acceptor,
-      FileStatus[] providedStatus) throws IOException {
+      RemoteIterator<FileStatus> providedStatus) throws IOException {
     return new FileStatusListingIterator(
         new ObjectListingIterator(listPath, request),
         filter,
@@ -140,6 +153,13 @@ public class Listing {
      * should be generated.)
      */
     boolean accept(Path keyPath, String commonPrefix);
+
+    /**
+     * Predicate to decide whether or not to accept a file status.
+     * @param status file status containing file path information
+     * @return true if the status is accepted else false
+     */
+    boolean accept(FileStatus status);
   }
 
   /**
@@ -147,9 +167,9 @@ public class Listing {
    * value.
    *
    * If the status value is null, the iterator declares that it has no data.
-   * This iterator is used to handle {@link listStatus()} calls where the path
-   * handed in refers to a file, not a directory: this is the iterator
-   * returned.
+   * This iterator is used to handle {@link S3AFileSystem#listStatus} calls
+   * where the path handed in refers to a file, not a directory: this is the
+   * iterator returned.
    */
   static final class SingleStatusRemoteIterator
       implements RemoteIterator<LocatedFileStatus> {
@@ -201,13 +221,6 @@ public class Listing {
   }
 
   /**
-   * Filter out a FileStatus object, unlike {@link PathFilter} against a path.
-   */
-  interface ProvidedFileStatusFilter {
-    boolean accept(FileStatus status);
-  }
-
-  /**
    * This wraps up a provided non-null list of file status as a remote iterator.
    *
    * It firstly filters the provided list and later {@link #next} call will get
@@ -216,18 +229,18 @@ public class Listing {
    *
    * There is no remote data to fetch.
    */
-  class ProvidedLocatedFileStatusIterator
-      implements RemoteIterator<LocatedFileStatus> {
+  static class ProvidedFileStatusIterator
+      implements RemoteIterator<FileStatus> {
     private final ArrayList<FileStatus> filteredStatusList;
     private int index = 0;
 
-    ProvidedLocatedFileStatusIterator(FileStatus[] fileStatuses,
-        ProvidedFileStatusFilter filter) {
+    ProvidedFileStatusIterator(FileStatus[] fileStatuses, PathFilter filter,
+        FileStatusAcceptor acceptor) {
       Preconditions.checkArgument(fileStatuses != null, "Null status list!");
 
       filteredStatusList = new ArrayList<>(fileStatuses.length);
       for (FileStatus status : fileStatuses) {
-        if (filter.accept(status)) {
+        if (filter.accept(status.getPath()) && acceptor.accept(status)) {
           filteredStatusList.add(status);
         }
       }
@@ -240,8 +253,8 @@ public class Listing {
     }
 
     @Override
-    public LocatedFileStatus next() throws IOException {
-      return owner.toLocatedFileStatus(filteredStatusList.get(index++));
+    public FileStatus next() throws IOException {
+      return filteredStatusList.get(index++);
     }
   }
 
@@ -256,7 +269,7 @@ public class Listing {
    * iterator can declare that there is more data available.
    *
    * The need to filter the results precludes the iterator from simply
-   * declaring that if the {@link S3AFileSystem.ObjectListingIterator#hasNext()}
+   * declaring that if the {@link ObjectListingIterator#hasNext()}
    * is true then there are more results. Instead the next batch of results must
    * be retrieved and filtered.
    *
@@ -301,13 +314,14 @@ public class Listing {
     FileStatusListingIterator(ObjectListingIterator source,
         PathFilter filter,
         FileStatusAcceptor acceptor,
-        FileStatus[] providedStatus) throws IOException {
+        RemoteIterator<FileStatus> providedStatus) throws IOException {
       this.source = source;
       this.filter = filter;
       this.acceptor = acceptor;
-      this.providedStatus = new HashSet<>(providedStatus.length);
-      for (FileStatus status : providedStatus) {
-        if (filter.accept(status.getPath())) {
+      this.providedStatus = new HashSet<>();
+      for (; providedStatus != null && providedStatus.hasNext();) {
+        final FileStatus status = providedStatus.next();
+        if (filter.accept(status.getPath()) && acceptor.accept(status)) {
           this.providedStatus.add(status);
         }
       }
@@ -367,7 +381,7 @@ public class Listing {
     /**
      * Try to retrieve another batch.
      * Note that for the initial batch,
-     * {@link S3AFileSystem.ObjectListingIterator} does not generate a request;
+     * {@link ObjectListingIterator} does not generate a request;
      * it simply returns the initial set.
      *
      * @return true if a new batch was created.
@@ -467,7 +481,7 @@ public class Listing {
    * instance.
    *
    * 2. Second and later invocations will continue the ongoing listing,
-   * calling {@link #continueListObjects(ObjectListing)} to request the next
+   * calling {@link S3AFileSystem#continueListObjects} to request the next
    * batch of results.
    *
    * 3. The {@link #hasNext()} predicate returns true for the initial call,
@@ -619,6 +633,11 @@ public class Listing {
     public boolean accept(Path keyPath, String prefix) {
       return false;
     }
+
+    @Override
+    public boolean accept(FileStatus status) {
+      return (status != null) && status.isFile();
+    }
   }
 
   /**
@@ -689,6 +708,11 @@ public class Listing {
     @Override
     public boolean accept(Path keyPath, String prefix) {
       return !keyPath.equals(qualifiedPath);
+    }
+
+    @Override
+    public boolean accept(FileStatus status) {
+      return (status != null) && !status.getPath().equals(qualifiedPath);
     }
   }
 

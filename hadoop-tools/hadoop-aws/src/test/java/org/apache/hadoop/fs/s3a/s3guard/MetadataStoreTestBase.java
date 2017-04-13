@@ -164,7 +164,7 @@ public abstract class MetadataStoreTestBase extends Assert {
     final PathMetadata rootMeta = new PathMetadata(makeDirStatus("/"));
     for (DescendantsIterator desc = new DescendantsIterator(ms, rootMeta);
          desc.hasNext();) {
-      final Path p = desc.next().getFileStatus().getPath();
+      final Path p = desc.next().getPath();
       actual.add(Path.getPathWithoutSchemeAndAuthority(p).toString());
     }
     LOG.info("We got {} by iterating DescendantsIterator", actual);

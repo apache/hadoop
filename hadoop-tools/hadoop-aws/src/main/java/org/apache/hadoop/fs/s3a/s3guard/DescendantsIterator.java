@@ -27,6 +27,7 @@ import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 
@@ -42,7 +43,6 @@ import org.apache.hadoop.fs.RemoteIterator;
  * file system structure:
  *
  * <pre>
- * {@code
  * /dir1
  * |-- dir2
  * |   |-- file1
@@ -53,12 +53,10 @@ import org.apache.hadoop.fs.RemoteIterator;
  *     |-- dir5
  *     |   `-- file4
  *     `-- dir6
- * }
  * </pre>
  *
  * Consider this code sample:
  * <pre>
- * {@code
  * final PathMetadata dir1 = get(new Path("/dir1"));
  * for (DescendantsIterator descendants = new DescendantsIterator(dir1);
  *     descendants.hasNext(); ) {
@@ -66,12 +64,10 @@ import org.apache.hadoop.fs.RemoteIterator;
  *   System.out.printf("%s %s%n", status.isDirectory() ? 'D' : 'F',
  *       status.getPath());
  * }
- * }
  * </pre>
  *
  * The output is:
  * <pre>
- * {@code
  * D /dir1
  * D /dir1/dir2
  * D /dir1/dir3
@@ -82,12 +78,11 @@ import org.apache.hadoop.fs.RemoteIterator;
  * F /dir1/dir3/dir4/file3
  * F /dir1/dir3/dir5/file4
  * D /dir1/dir3/dir6
- * }
  * </pre>
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-class DescendantsIterator implements RemoteIterator<PathMetadata> {
+public class DescendantsIterator implements RemoteIterator<FileStatus> {
 
   private final MetadataStore metadataStore;
   private final Queue<PathMetadata> queue = new LinkedList<>();
@@ -97,22 +92,24 @@ class DescendantsIterator implements RemoteIterator<PathMetadata> {
    *
    * @param ms the associated {@link MetadataStore}
    * @param meta base path for descendants iteration, which will be the first
-   *     path returned during iteration (except root)
+   *     returned during iteration (except root). Null makes empty iterator.
+   * @throws IOException if errors happen during metadata store listing
    */
-  DescendantsIterator(MetadataStore ms, PathMetadata meta)
+  public DescendantsIterator(MetadataStore ms, PathMetadata meta)
       throws IOException {
     Preconditions.checkNotNull(ms);
-    Preconditions.checkNotNull(meta);
     this.metadataStore = ms;
 
-    final Path path = meta.getFileStatus().getPath();
-    if (path.isRoot()) {
-      final DirListingMetadata rootListing = ms.listChildren(path);
-      if (rootListing != null) {
-        queue.addAll(rootListing.getListing());
+    if (meta != null) {
+      final Path path = meta.getFileStatus().getPath();
+      if (path.isRoot()) {
+        final DirListingMetadata rootListing = ms.listChildren(path);
+        if (rootListing != null) {
+          queue.addAll(rootListing.getListing());
+        }
+      } else {
+        queue.add(meta);
       }
-    } else {
-      queue.add(meta);
     }
   }
 
@@ -122,7 +119,7 @@ class DescendantsIterator implements RemoteIterator<PathMetadata> {
   }
 
   @Override
-  public PathMetadata next() throws IOException {
+  public FileStatus next() throws IOException {
     if (!hasNext()) {
       throw new NoSuchElementException("No more descendants.");
     }
@@ -132,6 +129,6 @@ class DescendantsIterator implements RemoteIterator<PathMetadata> {
       final Path path = next.getFileStatus().getPath();
       queue.addAll(metadataStore.listChildren(path).getListing());
     }
-    return next;
+    return next.getFileStatus();
   }
 }

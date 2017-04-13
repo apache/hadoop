@@ -93,6 +93,7 @@ import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.s3a.s3guard.DescendantsIterator;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
@@ -2443,15 +2444,28 @@ public class S3AFileSystem extends FileSystem {
         String delimiter = recursive ? null : "/";
         LOG.debug("Requesting all entries under {} with delimiter '{}'",
             key, delimiter);
+        final RemoteIterator<FileStatus> cachedFilesIterator;
+        if (recursive) {
+          final PathMetadata pm = metadataStore.get(path, true);
+          cachedFilesIterator = new DescendantsIterator(metadataStore, pm);
+        } else {
+          final DirListingMetadata meta = metadataStore.listChildren(path);
+          cachedFilesIterator = listing.createProvidedFileStatusIterator(
+              S3Guard.dirMetaToStatuses(meta), ACCEPT_ALL, acceptor);
+          if (allowAuthoritative && meta != null && meta.isAuthoritative()) {
+            return listing.createLocatedFileStatusIterator(cachedFilesIterator);
+          }
+        }
         return listing.createLocatedFileStatusIterator(
             listing.createFileStatusListingIterator(path,
                 createListObjectsRequest(key, delimiter),
-                ACCEPT_ALL, acceptor));
+                ACCEPT_ALL,
+                acceptor,
+                cachedFilesIterator));
       }
     } catch (AmazonClientException e) {
       // TODO s3guard:
       // 1. retry on file not found exception
-      // 2. merge listing with MetadataStore's view of directory tree
       throw translateException("listFiles", path, e);
     }
   }
@@ -2496,28 +2510,21 @@ public class S3AFileSystem extends FileSystem {
             filter.accept(path) ? toLocatedFileStatus(fileStatus) : null);
       } else {
         // directory: trigger a lookup
-        final DirListingMetadata dirMeta = metadataStore.listChildren(path);
-        if (allowAuthoritative
-            && dirMeta != null
-            && dirMeta.isAuthoritative()) {
-          return listing.createProvidedLocatedFileStatusIterator(
-              S3Guard.dirMetaToStatuses(dirMeta),
-              new Listing.ProvidedFileStatusFilter() {
-                @Override
-                public boolean accept(FileStatus status) {
-                  return filter.accept(status.getPath());
-                }
-              });
-        }
-
-        String key = maybeAddTrailingSlash(pathToKey(path));
-        return listing.createLocatedFileStatusIterator(
-            listing.createFileStatusListingIterator(path,
-                createListObjectsRequest(key, "/"),
-                filter,
-                new Listing.AcceptAllButSelfAndS3nDirs(path),
-                S3Guard.dirMetaToStatuses(dirMeta)
-            ));
+        final String key = maybeAddTrailingSlash(pathToKey(path));
+        final Listing.FileStatusAcceptor acceptor =
+            new Listing.AcceptAllButSelfAndS3nDirs(path);
+        final DirListingMetadata meta = metadataStore.listChildren(path);
+        final RemoteIterator<FileStatus> cachedFileStatusIterator =
+            listing.createProvidedFileStatusIterator(
+                S3Guard.dirMetaToStatuses(meta), filter, acceptor);
+        return (allowAuthoritative && meta != null && meta.isAuthoritative())
+            ? listing.createLocatedFileStatusIterator(cachedFileStatusIterator)
+            : listing.createLocatedFileStatusIterator(
+                listing.createFileStatusListingIterator(path,
+                    createListObjectsRequest(key, "/"),
+                    filter,
+                    acceptor,
+                    cachedFileStatusIterator));
       }
     } catch (AmazonClientException e) {
       throw translateException("listLocatedStatus", path, e);

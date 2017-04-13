@@ -312,7 +312,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
     for (DescendantsIterator desc = new DescendantsIterator(this, meta);
          desc.hasNext();) {
-      delete(desc.next().getFileStatus().getPath());
+      delete(desc.next().getPath());
     }
   }
 
