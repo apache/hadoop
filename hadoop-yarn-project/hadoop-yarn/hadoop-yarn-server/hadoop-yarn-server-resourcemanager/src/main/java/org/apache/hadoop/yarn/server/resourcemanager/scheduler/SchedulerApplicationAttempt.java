@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -78,6 +77,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Scheduli
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SchedulingPlacementSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.SchedulableEntity;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
@@ -283,11 +283,6 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     return appSchedulingInfo.getUser();
   }
 
-  public Map<String, ResourceRequest> getResourceRequests(
-      SchedulerRequestKey schedulerKey) {
-    return appSchedulingInfo.getResourceRequests(schedulerKey);
-  }
-
   public Set<ContainerId> getPendingRelease() {
     return this.pendingRelease;
   }
@@ -299,34 +294,28 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   public Collection<SchedulerRequestKey> getSchedulerKeys() {
     return appSchedulingInfo.getSchedulerKeys();
   }
-  
-  public ResourceRequest getResourceRequest(
+
+  public PendingAsk getPendingAsk(
       SchedulerRequestKey schedulerKey, String resourceName) {
     try {
       readLock.lock();
-      return appSchedulingInfo.getResourceRequest(schedulerKey, resourceName);
-    } finally {
-      readLock.unlock();
-    }
-
-  }
-
-  public int getTotalRequiredResources(
-      SchedulerRequestKey schedulerKey) {
-    try {
-      readLock.lock();
-      ResourceRequest request =
-          getResourceRequest(schedulerKey, ResourceRequest.ANY);
-      return request == null ? 0 : request.getNumContainers();
+      return appSchedulingInfo.getPendingAsk(schedulerKey, resourceName);
     } finally {
       readLock.unlock();
     }
   }
 
-  public Resource getResource(SchedulerRequestKey schedulerKey) {
+  public int getOutstandingAsksCount(SchedulerRequestKey schedulerKey) {
+    return getOutstandingAsksCount(schedulerKey, ResourceRequest.ANY);
+  }
+
+  public int getOutstandingAsksCount(SchedulerRequestKey schedulerKey,
+      String resourceName) {
     try {
       readLock.lock();
-      return appSchedulingInfo.getResource(schedulerKey);
+      SchedulingPlacementSet ps = appSchedulingInfo.getSchedulingPlacementSet(
+          schedulerKey);
+      return ps == null ? 0 : ps.getOutstandingAsksCount(resourceName);
     } finally {
       readLock.unlock();
     }
@@ -625,16 +614,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       try {
         readLock.lock();
         for (SchedulerRequestKey schedulerKey : getSchedulerKeys()) {
-          Map<String, ResourceRequest> requests = getResourceRequests(
-              schedulerKey);
-          if (requests != null) {
+          SchedulingPlacementSet ps = getSchedulingPlacementSet(schedulerKey);
+          if (ps != null &&
+              ps.getOutstandingAsksCount(ResourceRequest.ANY) > 0) {
             LOG.debug("showRequests:" + " application=" + getApplicationId()
                 + " headRoom=" + getHeadroom() + " currentConsumption="
                 + attemptResourceUsage.getUsed().getMemorySize());
-            for (ResourceRequest request : requests.values()) {
-              LOG.debug("showRequests:" + " application=" + getApplicationId()
-                  + " request=" + request);
-            }
+            ps.showRequests();
           }
         }
       } finally {

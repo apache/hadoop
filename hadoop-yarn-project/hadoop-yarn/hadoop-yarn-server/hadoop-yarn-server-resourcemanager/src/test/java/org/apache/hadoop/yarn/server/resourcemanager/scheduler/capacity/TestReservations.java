@@ -327,7 +327,7 @@ public class TestReservations {
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
-    assertEquals(2, app_0.getTotalRequiredResources(
+    assertEquals(2, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
 
     // try to assign reducer (5G on node 0 and should reserve)
@@ -346,7 +346,7 @@ public class TestReservations {
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
-    assertEquals(2, app_0.getTotalRequiredResources(
+    assertEquals(2, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
 
     // assign reducer to node 2
@@ -365,7 +365,7 @@ public class TestReservations {
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(5 * GB, node_2.getAllocatedResource().getMemorySize());
-    assertEquals(1, app_0.getTotalRequiredResources(
+    assertEquals(1, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
 
     // node_1 heartbeat and unreserves from node_0 in order to allocate
@@ -384,7 +384,7 @@ public class TestReservations {
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(8 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(5 * GB, node_2.getAllocatedResource().getMemorySize());
-    assertEquals(0, app_0.getTotalRequiredResources(
+    assertEquals(0, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
   }
 
@@ -660,7 +660,7 @@ public class TestReservations {
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
-    assertEquals(2, app_0.getTotalRequiredResources(
+    assertEquals(2, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
 
     // try to assign reducer (5G on node 0 and should reserve)
@@ -679,7 +679,7 @@ public class TestReservations {
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
-    assertEquals(2, app_0.getTotalRequiredResources(
+    assertEquals(2, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
 
     // assign reducer to node 2
@@ -698,7 +698,7 @@ public class TestReservations {
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(5 * GB, node_2.getAllocatedResource().getMemorySize());
-    assertEquals(1, app_0.getTotalRequiredResources(
+    assertEquals(1, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
 
     // node_1 heartbeat and won't unreserve from node_0, potentially stuck
@@ -718,7 +718,7 @@ public class TestReservations {
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(5 * GB, node_2.getAllocatedResource().getMemorySize());
-    assertEquals(1, app_0.getTotalRequiredResources(
+    assertEquals(1, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
   }
 
@@ -839,7 +839,7 @@ public class TestReservations {
     assertEquals(null, node_0.getReservedContainer());
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
-    assertEquals(2, app_0.getTotalRequiredResources(
+    assertEquals(2, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
 
     // try to assign reducer (5G on node 0 and should reserve)
@@ -857,7 +857,7 @@ public class TestReservations {
         .getMemorySize());
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
-    assertEquals(2, app_0.getTotalRequiredResources(
+    assertEquals(2, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
 
     // could allocate but told need to unreserve first
@@ -874,7 +874,7 @@ public class TestReservations {
     assertEquals(null, node_0.getReservedContainer());
     assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
     assertEquals(8 * GB, node_1.getAllocatedResource().getMemorySize());
-    assertEquals(1, app_0.getTotalRequiredResources(
+    assertEquals(1, app_0.getOutstandingAsksCount(
         toSchedulerKey(priorityReduce)));
   }
 

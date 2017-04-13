@@ -290,9 +290,9 @@ public class QueuePriorityContainerCandidateSelector
     FiCaSchedulerApp app =
         preemptionContext.getScheduler().getApplicationAttempt(
             reservedContainer.getApplicationAttemptId());
-    ResourceRequest offswithRequest = app.getAppSchedulingInfo().getResourceRequest(
-        reservedContainer.getReservedSchedulerKey(), ResourceRequest.ANY);
-    if (!offswithRequest.getRelaxLocality()) {
+    
+    if (!app.getAppSchedulingInfo().canDelayTo(
+        reservedContainer.getReservedSchedulerKey(), ResourceRequest.ANY)) {
       // This is a hard locality request
       return false;
     }
