@@ -49,6 +49,7 @@ function hadoop_usage
   hadoop_add_subcommand "haadmin" "run a DFS HA admin client"
   hadoop_add_subcommand "jmxget" "get JMX exported values from NameNode or DataNode."
   hadoop_add_subcommand "journalnode" "run the DFS journalnode"
+  hadoop_add_subcommand "jscsi" "run cblock jscsi server"
   hadoop_add_subcommand "lsSnapshottableDir" "list all snapshottable dirs owned by the current user"
   hadoop_add_subcommand "mover" "run a utility to move block replicas across storage types"
   hadoop_add_subcommand "namenode" "run the DFS namenode"
@@ -142,6 +143,12 @@ function hdfscmd_case
     journalnode)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.hdfs.qjournal.server.JournalNode'
+    ;;
+    jscsi)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME=org.apache.hadoop.cblock.jscsiHelper.SCSITargetDaemon
+      hadoop_debug "Appending HADOOP_JSCSI_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_JSCSI_OPTS}"
     ;;
     jmxget)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.JMXGet

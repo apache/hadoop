@@ -27,7 +27,7 @@ import java.io.IOException;
  * When users mount a volume on CBlock client, CBlock client side uses this
  * protocol to send mount request to CBlock server.
  */
-public interface CBlockClientServerProtocol {
+public interface CBlockClientProtocol {
   MountVolumeResponse mountVolume(String userName, String volumeName)
       throws IOException;
 }

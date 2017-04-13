@@ -50,8 +50,11 @@ public final class ScmConfigKeys {
   public static final int OZONE_SCM_CHUNK_SIZE_DEFAULT = 1 * 1024 * 1024;
   public static final int OZONE_SCM_CHUNK_MAX_SIZE = 1 * 1024 * 1024;
 
-
+  public static final String OZONE_SCM_CLIENT_PORT_KEY =
+      "ozone.scm.client.port";
   public static final int OZONE_SCM_CLIENT_PORT_DEFAULT = 9860;
+  public static final String OZONE_SCM_DATANODE_PORT_KEY =
+      "ozone.scm.datanode.port";
   public static final int OZONE_SCM_DATANODE_PORT_DEFAULT = 9861;
 
   public static final String OZONE_SCM_CLIENT_ADDRESS_KEY =

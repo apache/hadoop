@@ -132,6 +132,20 @@ public final class CBlockConfigKeys {
       "dfs.cblock.cache.block.buffer.size";
   public static final int DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE_DEFAULT = 512;
 
+  // jscsi server settings
+  public static final String DFS_CBLOCK_JSCSI_SERVER_ADDRESS_KEY =
+      "dfs.cblock.jscsi.server.address";
+  public static final String DFS_CBLOCK_JSCSI_SERVER_ADDRESS_DEFAULT =
+      "127.0.0.1";
+  public static final String DFS_CBLOCK_JSCSI_CBLOCK_SERVER_ADDRESS_KEY =
+      "dfs.cblock.jscsi.cblock.server.address";
+  public static final String DFS_CBLOCK_JSCSI_CBLOCK_SERVER_ADDRESS_DEFAULT =
+      "127.0.0.1";
+
+  public static final String DFS_CBLOCK_CONTAINER_SIZE_GB_KEY =
+      "dfs.cblock.container.size.gb";
+  public static final int DFS_CBLOCK_CONTAINER_SIZE_GB_DEFAULT = 5;
+
   private CBlockConfigKeys() {
 
   }

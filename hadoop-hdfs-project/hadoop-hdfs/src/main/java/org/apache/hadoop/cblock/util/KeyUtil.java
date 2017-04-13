@@ -31,6 +31,18 @@ public final class KeyUtil {
     return getVolumeKey(userName, volumeName) + "#" + containerID;
   }
 
+  public static String getUserNameFromVolumeKey(String key) {
+    return key.split(":")[0];
+  }
+
+  public static String getVolumeFromVolumeKey(String key) {
+    return key.split(":")[1];
+  }
+
+  public static boolean isValidVolumeKey(String key) {
+    return key.contains(":");
+  }
+
   private KeyUtil() {
 
   }

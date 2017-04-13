@@ -21,7 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 import org.apache.hadoop.cblock.meta.VolumeDescriptor;
 import org.apache.hadoop.cblock.meta.VolumeInfo;
-import org.apache.hadoop.cblock.proto.CBlockClientServerProtocol;
+import org.apache.hadoop.cblock.proto.CBlockClientProtocol;
 import org.apache.hadoop.cblock.proto.CBlockServiceProtocol;
 import org.apache.hadoop.cblock.proto.MountVolumeResponse;
 import org.apache.hadoop.cblock.protocol.proto.CBlockClientServerProtocolProtos;
@@ -74,7 +74,7 @@ import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICE_LEVEL
  *
  */
 public class CBlockManager implements CBlockServiceProtocol,
-    CBlockClientServerProtocol {
+    CBlockClientProtocol {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(CBlockManager.class);
