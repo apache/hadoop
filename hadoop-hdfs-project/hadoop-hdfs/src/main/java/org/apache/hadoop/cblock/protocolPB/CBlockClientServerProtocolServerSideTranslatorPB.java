@@ -19,7 +19,7 @@ package org.apache.hadoop.cblock.protocolPB;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import org.apache.hadoop.cblock.proto.CBlockClientServerProtocol;
+import org.apache.hadoop.cblock.proto.CBlockClientProtocol;
 import org.apache.hadoop.cblock.proto.MountVolumeResponse;
 import org.apache.hadoop.cblock.protocol.proto.CBlockClientServerProtocolProtos;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -36,10 +36,10 @@ import java.util.List;
 public class CBlockClientServerProtocolServerSideTranslatorPB implements
     CBlockClientServerProtocolPB {
 
-  private final CBlockClientServerProtocol impl;
+  private final CBlockClientProtocol impl;
 
   public CBlockClientServerProtocolServerSideTranslatorPB(
-      CBlockClientServerProtocol impl) {
+      CBlockClientProtocol impl) {
     this.impl = impl;
   }
 
