@@ -54,12 +54,16 @@ public abstract class CredentialProviderFactory {
       try {
         URI uri = new URI(path);
         boolean found = false;
-        for(CredentialProviderFactory factory: serviceLoader) {
-          CredentialProvider kp = factory.createProvider(uri, conf);
-          if (kp != null) {
-            result.add(kp);
-            found = true;
-            break;
+        // Iterate serviceLoader in a synchronized block since
+        // serviceLoader iterator is not thread-safe.
+        synchronized (serviceLoader) {
+          for (CredentialProviderFactory factory : serviceLoader) {
+            CredentialProvider kp = factory.createProvider(uri, conf);
+            if (kp != null) {
+              result.add(kp);
+              found = true;
+              break;
+            }
           }
         }
         if (!found) {
