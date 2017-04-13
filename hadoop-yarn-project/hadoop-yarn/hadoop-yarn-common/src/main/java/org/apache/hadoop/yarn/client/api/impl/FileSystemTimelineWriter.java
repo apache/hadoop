@@ -844,11 +844,11 @@ public class FileSystemTimelineWriter extends TimelineWriter{
         List<TimelineEntity> entities, boolean isAppendSupported)
         throws IOException {
       checkAndStartTimeTasks();
-      writeSummmaryEntityLogs(fs, logPath, objMapper, attemptId, entities,
+      writeSummaryEntityLogs(fs, logPath, objMapper, attemptId, entities,
           isAppendSupported, this.summanyLogFDs);
     }
 
-    private void writeSummmaryEntityLogs(FileSystem fs, Path logPath,
+    private void writeSummaryEntityLogs(FileSystem fs, Path logPath,
         ObjectMapper objMapper, ApplicationAttemptId attemptId,
         List<TimelineEntity> entities, boolean isAppendSupported,
         Map<ApplicationAttemptId, EntityLogFD> logFDs) throws IOException {
