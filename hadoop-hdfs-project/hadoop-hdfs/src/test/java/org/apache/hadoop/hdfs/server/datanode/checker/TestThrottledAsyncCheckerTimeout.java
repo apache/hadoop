@@ -17,6 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
+
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -35,10 +42,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
-import static org.mockito.Matchers.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import org.junit.rules.Timeout;
 import org.slf4j.LoggerFactory;
 
 import java.util.Set;
@@ -56,10 +60,10 @@ public class TestThrottledAsyncCheckerTimeout {
 
   @Rule
   public TestName testName = new TestName();
+  @Rule
+  public Timeout testTimeout = new Timeout(300_000);
 
-  Configuration conf;
   private static final long DISK_CHECK_TIMEOUT = 10;
-  private static final long DISK_CHECK_TIME = 100;
   private ReentrantLock lock;
 
   private ExecutorService getExecutorService() {
@@ -71,7 +75,7 @@ public class TestThrottledAsyncCheckerTimeout {
     lock = new ReentrantLock();
   }
 
-  @Test	(timeout = 1000)
+  @Test
   public void testDiskCheckTimeout() throws Exception {
     LOG.info("Executing {}", testName.getMethodName());
 
@@ -121,7 +125,7 @@ public class TestThrottledAsyncCheckerTimeout {
     assertTrue(throwable[0] instanceof TimeoutException);
   }
 
-  @Test (timeout = 2000)
+  @Test
   public void testDiskCheckTimeoutInvokesOneCallbackOnly() throws Exception {
     LOG.info("Executing {}", testName.getMethodName());
 
@@ -141,13 +145,12 @@ public class TestThrottledAsyncCheckerTimeout {
     assertTrue(olf1.isPresent());
     Futures.addCallback(olf1.get(), futureCallback);
 
-    // Wait for the callback
-    Thread.sleep(DISK_CHECK_TIMEOUT);
-
     // Verify that timeout results in only 1 onFailure call and 0 onSuccess
     // calls.
-    verify(futureCallback, times(1)).onFailure(any(Throwable.class));
-    verify(futureCallback, times(0)).onSuccess(anyBoolean());
+    verify(futureCallback, timeout((int) DISK_CHECK_TIMEOUT*10).times(1))
+        .onFailure(any(Throwable.class));
+    verify(futureCallback, timeout((int) DISK_CHECK_TIMEOUT*10).times(0))
+        .onSuccess(anyBoolean());
 
     // Release lock so that target can acquire it.
     lock.unlock();
@@ -158,16 +161,15 @@ public class TestThrottledAsyncCheckerTimeout {
     assertTrue(olf2.isPresent());
     Futures.addCallback(olf2.get(), futureCallback);
 
-    // Wait for the callback
-    Thread.sleep(DISK_CHECK_TIME);
-
     // Verify that normal check (dummy) results in only 1 onSuccess call.
-    // Number of times onFailure is invoked should remain the same - 1.
-    verify(futureCallback, times(1)).onFailure(any(Throwable.class));
-    verify(futureCallback, times(1)).onSuccess(anyBoolean());
+    // Number of times onFailure is invoked should remain the same i.e. 1.
+    verify(futureCallback, timeout((int) DISK_CHECK_TIMEOUT*10).times(1))
+        .onFailure(any(Throwable.class));
+    verify(futureCallback, timeout((int) DISK_CHECK_TIMEOUT*10).times(1))
+        .onSuccess(anyBoolean());
   }
 
-  @Test (timeout = 1000)
+  @Test
   public void testTimeoutExceptionIsNotThrownForGoodDisk() throws Exception {
     LOG.info("Executing {}", testName.getMethodName());
 
