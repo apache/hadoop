@@ -50,8 +50,9 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
     Map<SubClusterIdInfo, Float> routerWeights = new HashMap<>();
     Map<SubClusterIdInfo, Float> amrmWeights = new HashMap<>();
 
-    // simulate 20 subclusters with a 5% chance of being inactive
-    for (int i = 0; i < 20; i++) {
+    float numSubClusters = 20;
+    // simulate N subclusters each with a 5% chance of being inactive
+    for (int i = 0; i < numSubClusters; i++) {
       SubClusterIdInfo sc = new SubClusterIdInfo("sc" + i);
       // with 5% omit a subcluster
       if (getRand().nextFloat() < 0.95f) {
@@ -60,8 +61,12 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
         when(sci.getSubClusterId()).thenReturn(sc.toId());
         getActiveSubclusters().put(sc.toId(), sci);
       }
-      // 5% chance we omit one of the weights
-      float weight = getRand().nextFloat();
+
+      // 80% of the weight is evenly spread, 20% is randomly generated
+      float weight =
+          (0.8f * 1f / numSubClusters) + (0.2f * getRand().nextFloat());
+
+      // also 5% chance we omit one of the weights
       if (i <= 5 || getRand().nextFloat() > 0.05f) {
         routerWeights.put(sc, weight);
         amrmWeights.put(sc, weight);
@@ -89,7 +94,7 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
       counter.put(id.toId(), new AtomicLong(0));
     }
 
-    float numberOfDraws = 100000;
+    float numberOfDraws = 10000;
 
     for (float i = 0; i < numberOfDraws; i++) {
       SubClusterId chosenId = ((FederationRouterPolicy) getPolicy())
@@ -118,8 +123,7 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
         Assert.assertTrue(
             "Id " + counterEntry.getKey() + " Actual weight: " + actualWeight
                 + " expected weight: " + expectedWeight,
-            expectedWeight == 0 || (actualWeight / expectedWeight) < 1.2
-                && (actualWeight / expectedWeight) > 0.8);
+            Math.abs(actualWeight - expectedWeight) < 0.01);
       } else {
         Assert
             .assertTrue(
