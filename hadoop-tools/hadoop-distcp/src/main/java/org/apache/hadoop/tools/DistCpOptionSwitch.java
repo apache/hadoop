@@ -178,6 +178,16 @@ public enum DistCpOptionSwitch {
       new Option("sizelimit", true, "(Deprecated!) Limit number of files " +
               "copied to <= n bytes")),
 
+  BLOCKS_PER_CHUNK("",
+      new Option("blocksperchunk", true, "If set to a positive value, files"
+          + "with more blocks than this value will be split into chunks of "
+          + "<blocksperchunk> blocks to be transferred in parallel, and "
+          + "reassembled on the destination. By default, <blocksperchunk> is "
+          + "0 and the files will be transmitted in their entirety without "
+          + "splitting. This switch is only applicable when the source file "
+          + "system implements getBlockLocations method and the target file "
+          + "system implements concat method")),
+
   /**
    * Specify bandwidth per map in MB
    */

@@ -184,7 +184,40 @@ public class OptionsParser {
           DistCpOptionSwitch.FILTERS.getSwitch()));
     }
 
+    parseBlocksPerChunk(command, option);
+
     return option;
+  }
+
+
+  /**
+   * A helper method to parse chunk size in number of blocks.
+   * Used when breaking large file into chunks to copy in parallel.
+   *
+   * @param command command line arguments
+   */
+  private static void parseBlocksPerChunk(CommandLine command,
+      DistCpOptions option) {
+    boolean hasOption =
+        command.hasOption(DistCpOptionSwitch.BLOCKS_PER_CHUNK.getSwitch());
+    LOG.info("parseChunkSize: " +
+        DistCpOptionSwitch.BLOCKS_PER_CHUNK.getSwitch() + " " + hasOption);
+    if (hasOption) {
+      String chunkSizeString = getVal(command,
+          DistCpOptionSwitch.BLOCKS_PER_CHUNK.getSwitch().trim());
+      try {
+        int csize = Integer.parseInt(chunkSizeString);
+        if (csize < 0) {
+          csize = 0;
+        }
+        LOG.info("Set distcp blocksPerChunk to " + csize);
+        option.setBlocksPerChunk(csize);
+      }
+      catch (NumberFormatException e) {
+        throw new IllegalArgumentException("blocksPerChunk is invalid: "
+            + chunkSizeString, e);
+      }
+    }
   }
 
   /**
@@ -221,8 +254,7 @@ public class OptionsParser {
                               DistCpOptionSwitch.FILE_LIMIT.getSwitch().trim());
       try {
         Integer.parseInt(fileLimitString);
-      }
-      catch (NumberFormatException e) {
+      } catch (NumberFormatException e) {
         throw new IllegalArgumentException("File-limit is invalid: "
                                             + fileLimitString, e);
       }
