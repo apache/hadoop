@@ -46,6 +46,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -150,6 +151,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -3159,7 +3161,7 @@ public class TestCapacityScheduler {
     Assert.assertEquals(queueInfoB.getDefaultNodeLabelExpression(), "y");
   }
 
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testAMLimitUsage() throws Exception {
 
     CapacitySchedulerConfiguration config =
@@ -3287,11 +3289,12 @@ public class TestCapacityScheduler {
   private void verifyAMLimitForLeafQueue(CapacitySchedulerConfiguration config)
       throws Exception {
     MockRM rm = setUpMove(config);
-    rm.registerNode("127.0.0.1:1234", 2 * GB);
+    final int nodeMemory = 4 * GB;
+    rm.registerNode("127.0.0.1:1234", nodeMemory);
 
     String queueName = "a1";
     String userName = "user_0";
-    ResourceScheduler scheduler = rm.getRMContext().getScheduler();
+    final ResourceScheduler scheduler = rm.getRMContext().getScheduler();
     LeafQueue queueA =
         (LeafQueue) ((CapacityScheduler) scheduler).getQueue(queueName);
     Resource amResourceLimit = queueA.getAMResourceLimit();
@@ -3302,6 +3305,14 @@ public class TestCapacityScheduler {
     Resource amResource2 =
         Resource.newInstance(amResourceLimit.getMemorySize() + 2048,
             amResourceLimit.getVirtualCores() + 1);
+
+    // Wait for the scheduler to be updated with new node capacity
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return scheduler.getMaximumResourceCapability().getMemorySize() == nodeMemory;
+        }
+      }, 100, 60 * 1000);
 
     rm.submitApp(amResource1, "app-1", userName, null, queueName);
 
