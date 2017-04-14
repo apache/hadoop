@@ -490,7 +490,7 @@ public class TestAMRestart {
   // Test RM restarts after AM container is preempted, new RM should not count
   // AM preemption failure towards the max-retry-account and should be able to
   // re-launch the AM.
-  @Test(timeout = 20000)
+  @Test(timeout = 60000)
   public void testPreemptedAMRestartOnRMRestart() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
