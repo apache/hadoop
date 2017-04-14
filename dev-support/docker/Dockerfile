@@ -58,6 +58,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     protobuf-c-compiler \
     python \
     python2.7 \
+    python2.7-dev \
     python-pip \
     rsync \
     snappy \
