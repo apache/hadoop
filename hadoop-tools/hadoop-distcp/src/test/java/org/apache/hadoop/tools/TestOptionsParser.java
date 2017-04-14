@@ -407,7 +407,7 @@ public class TestOptionsParser {
         + "copyStrategy='uniformsize', preserveStatus=[], "
         + "preserveRawXattrs=false, atomicWorkPath=null, logPath=null, "
         + "sourceFileListing=abc, sourcePaths=null, targetPath=xyz, "
-        + "targetPathExists=true, filtersFile='null'}";
+        + "targetPathExists=true, filtersFile='null', blocksPerChunk=0}";
     String optionString = option.toString();
     Assert.assertEquals(val, optionString);
     Assert.assertNotSame(DistCpOptionSwitch.ATOMIC_COMMIT.toString(),

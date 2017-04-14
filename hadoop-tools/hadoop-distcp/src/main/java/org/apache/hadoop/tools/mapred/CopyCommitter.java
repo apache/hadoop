@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -34,14 +35,17 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.tools.CopyListing;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCpConstants;
+import org.apache.hadoop.tools.DistCpOptionSwitch;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 import org.apache.hadoop.tools.GlobbedCopyListing;
 import org.apache.hadoop.tools.util.DistCpUtils;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -63,7 +67,8 @@ public class CopyCommitter extends FileOutputCommitter {
   private boolean syncFolder = false;
   private boolean overwrite = false;
   private boolean targetPathExists = true;
-  
+  private boolean ignoreFailures = false;
+
   /**
    * Create a output committer
    *
@@ -82,8 +87,13 @@ public class CopyCommitter extends FileOutputCommitter {
     Configuration conf = jobContext.getConfiguration();
     syncFolder = conf.getBoolean(DistCpConstants.CONF_LABEL_SYNC_FOLDERS, false);
     overwrite = conf.getBoolean(DistCpConstants.CONF_LABEL_OVERWRITE, false);
-    targetPathExists = conf.getBoolean(DistCpConstants.CONF_LABEL_TARGET_PATH_EXISTS, true);
-    
+    targetPathExists = conf.getBoolean(
+        DistCpConstants.CONF_LABEL_TARGET_PATH_EXISTS, true);
+    ignoreFailures = conf.getBoolean(
+        DistCpOptionSwitch.IGNORE_FAILURES.getConfigLabel(), false);
+
+    concatFileChunks(conf);
+
     super.commitJob(jobContext);
 
     cleanupTempFiles(jobContext);
@@ -169,9 +179,112 @@ public class CopyCommitter extends FileOutputCommitter {
     }
   }
 
+  private boolean isFileNotFoundException(IOException e) {
+    if (e instanceof FileNotFoundException) {
+      return true;
+    }
+
+    if (e instanceof RemoteException) {
+      return ((RemoteException)e).unwrapRemoteException()
+          instanceof FileNotFoundException;
+    }
+
+    return false;
+  }
+
+  /**
+   * Concat chunk files for the same file into one.
+   * Iterate through copy listing, identify chunk files for the same file,
+   * concat them into one.
+   */
+  private void concatFileChunks(Configuration conf) throws IOException {
+
+    LOG.info("concat file chunks ...");
+
+    String spath = conf.get(DistCpConstants.CONF_LABEL_LISTING_FILE_PATH);
+    if (spath == null || spath.isEmpty()) {
+      return;
+    }
+    Path sourceListing = new Path(spath);
+    SequenceFile.Reader sourceReader = new SequenceFile.Reader(conf,
+                                      SequenceFile.Reader.file(sourceListing));
+    Path targetRoot =
+        new Path(conf.get(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH));
+
+    try {
+      CopyListingFileStatus srcFileStatus = new CopyListingFileStatus();
+      Text srcRelPath = new Text();
+      CopyListingFileStatus lastFileStatus = null;
+      LinkedList<Path> allChunkPaths = new LinkedList<Path>();
+
+      // Iterate over every source path that was copied.
+      while (sourceReader.next(srcRelPath, srcFileStatus)) {
+        if (srcFileStatus.isDirectory()) {
+          continue;
+        }
+        Path targetFile = new Path(targetRoot.toString() + "/" + srcRelPath);
+        Path targetFileChunkPath =
+            DistCpUtils.getSplitChunkPath(targetFile, srcFileStatus);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("  add " + targetFileChunkPath + " to concat.");
+        }
+        allChunkPaths.add(targetFileChunkPath);
+        if (srcFileStatus.getChunkOffset() + srcFileStatus.getChunkLength()
+            == srcFileStatus.getLen()) {
+          // This is the last chunk of the splits, consolidate allChunkPaths
+          try {
+            concatFileChunks(conf, targetFile, allChunkPaths);
+          } catch (IOException e) {
+            // If the concat failed because a chunk file doesn't exist,
+            // then we assume that the CopyMapper has skipped copying this
+            // file, and we ignore the exception here.
+            // If a chunk file should have been created but it was not, then
+            // the CopyMapper would have failed.
+            if (!isFileNotFoundException(e)) {
+              String emsg = "Failed to concat chunk files for " + targetFile;
+              if (!ignoreFailures) {
+                throw new IOException(emsg, e);
+              } else {
+                LOG.warn(emsg, e);
+              }
+            }
+          }
+          allChunkPaths.clear();
+          lastFileStatus = null;
+        } else {
+          if (lastFileStatus == null) {
+            lastFileStatus = new CopyListingFileStatus(srcFileStatus);
+          } else {
+            // Two neighboring chunks have to be consecutive ones for the same
+            // file, for them to be merged
+            if (!srcFileStatus.getPath().equals(lastFileStatus.getPath()) ||
+                srcFileStatus.getChunkOffset() !=
+                (lastFileStatus.getChunkOffset() +
+                lastFileStatus.getChunkLength())) {
+              String emsg = "Inconsistent sequence file: current " +
+                  "chunk file " + srcFileStatus + " doesnt match prior " +
+                  "entry " + lastFileStatus;
+              if (!ignoreFailures) {
+                throw new IOException(emsg);
+              } else {
+                LOG.warn(emsg + ", skipping concat this set.");
+              }
+            } else {
+              lastFileStatus.setChunkOffset(srcFileStatus.getChunkOffset());
+              lastFileStatus.setChunkLength(srcFileStatus.getChunkLength());
+            }
+          }
+        }
+      }
+    } finally {
+      IOUtils.closeStream(sourceReader);
+    }
+  }
+
   // This method changes the target-directories' file-attributes (owner,
   // user/group permissions, etc.) based on the corresponding source directories.
-  private void preserveFileAttributesForDirectories(Configuration conf) throws IOException {
+  private void preserveFileAttributesForDirectories(Configuration conf)
+      throws IOException {
     String attrSymbols = conf.get(DistCpConstants.CONF_LABEL_PRESERVE_STATUS);
     final boolean syncOrOverwrite = syncFolder || overwrite;
 
@@ -325,4 +438,57 @@ public class CopyCommitter extends FileOutputCommitter {
         ", Unable to move to " + finalDir);
     }
   }
+
+  /**
+   * Concat the passed chunk files into one and rename it the targetFile.
+   */
+  private void concatFileChunks(Configuration conf, Path targetFile,
+      LinkedList<Path> allChunkPaths) throws IOException {
+    if (allChunkPaths.size() == 1) {
+      return;
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("concat " + targetFile + " allChunkSize+ "
+          + allChunkPaths.size());
+    }
+    FileSystem dstfs = targetFile.getFileSystem(conf);
+
+    Path firstChunkFile = allChunkPaths.removeFirst();
+    Path[] restChunkFiles = new Path[allChunkPaths.size()];
+    allChunkPaths.toArray(restChunkFiles);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("concat: firstchunk: " + dstfs.getFileStatus(firstChunkFile));
+      int i = 0;
+      for (Path f : restChunkFiles) {
+        LOG.debug("concat: other chunk: " + i + ": " + dstfs.getFileStatus(f));
+        ++i;
+      }
+    }
+    dstfs.concat(firstChunkFile, restChunkFiles);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("concat: result: " + dstfs.getFileStatus(firstChunkFile));
+    }
+    rename(dstfs, firstChunkFile, targetFile);
+  }
+
+  /**
+   * Rename tmp to dst on destFileSys.
+   * @param destFileSys the file ssystem
+   * @param tmp the source path
+   * @param dst the destination path
+   * @throws IOException if renaming failed
+   */
+  private static void rename(FileSystem destFileSys, Path tmp, Path dst)
+      throws IOException {
+    try {
+      if (destFileSys.exists(dst)) {
+        destFileSys.delete(dst, true);
+      }
+      destFileSys.rename(tmp, dst);
+    } catch (IOException ioe) {
+      throw new IOException("Fail to rename tmp file (=" + tmp
+          + ") to destination file (=" + dst + ")", ioe);
+    }
+  }
+
 }

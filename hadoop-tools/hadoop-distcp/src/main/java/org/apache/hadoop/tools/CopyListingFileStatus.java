@@ -74,6 +74,14 @@ public final class CopyListingFileStatus implements Writable {
   private List<AclEntry> aclEntries;
   private Map<String, byte[]> xAttrs;
 
+  // <chunkOffset, chunkLength> represents the offset and length of a file
+  // chunk in number of bytes.
+  // used when splitting a large file to chunks to copy in parallel.
+  // If a file is not large enough to split, chunkOffset would be 0 and
+  // chunkLength would be the length of the file.
+  private long chunkOffset = 0;
+  private long chunkLength = Long.MAX_VALUE;
+
   /**
    * Default constructor.
    */
@@ -96,11 +104,32 @@ public final class CopyListingFileStatus implements Writable {
         fileStatus.getPath());
   }
 
+  public CopyListingFileStatus(FileStatus fileStatus,
+      long chunkOffset, long chunkLength) {
+    this(fileStatus.getLen(), fileStatus.isDirectory(),
+        fileStatus.getReplication(), fileStatus.getBlockSize(),
+        fileStatus.getModificationTime(), fileStatus.getAccessTime(),
+        fileStatus.getPermission(), fileStatus.getOwner(),
+        fileStatus.getGroup(),
+        fileStatus.getPath());
+    this.chunkOffset = chunkOffset;
+    this.chunkLength = chunkLength;
+  }
+
   @SuppressWarnings("checkstyle:parameternumber")
   public CopyListingFileStatus(long length, boolean isdir,
       int blockReplication, long blocksize, long modificationTime,
       long accessTime, FsPermission permission, String owner, String group,
       Path path) {
+    this(length, isdir, blockReplication, blocksize, modificationTime,
+        accessTime, permission, owner, group, path, 0, Long.MAX_VALUE);
+  }
+
+  @SuppressWarnings("checkstyle:parameternumber")
+  public CopyListingFileStatus(long length, boolean isdir,
+      int blockReplication, long blocksize, long modificationTime,
+      long accessTime, FsPermission permission, String owner, String group,
+      Path path, long chunkOffset, long chunkLength) {
     this.length = length;
     this.isdir = isdir;
     this.blockReplication = (short)blockReplication;
@@ -117,6 +146,23 @@ public final class CopyListingFileStatus implements Writable {
     this.owner = (owner == null) ? "" : owner;
     this.group = (group == null) ? "" : group;
     this.path = path;
+    this.chunkOffset = chunkOffset;
+    this.chunkLength = chunkLength;
+  }
+
+  public CopyListingFileStatus(CopyListingFileStatus other) {
+    this.length = other.length;
+    this.isdir = other.isdir;
+    this.blockReplication = other.blockReplication;
+    this.blocksize = other.blocksize;
+    this.modificationTime = other.modificationTime;
+    this.accessTime = other.accessTime;
+    this.permission = other.permission;
+    this.owner = other.owner;
+    this.group = other.group;
+    this.path = new Path(other.path.toUri());
+    this.chunkOffset = other.chunkOffset;
+    this.chunkLength = other.chunkLength;
   }
 
   public Path getPath() {
@@ -196,6 +242,31 @@ public final class CopyListingFileStatus implements Writable {
     this.xAttrs = xAttrs;
   }
 
+  public long getChunkOffset() {
+    return chunkOffset;
+  }
+
+  public void setChunkOffset(long offset) {
+    this.chunkOffset = offset;
+  }
+
+  public long getChunkLength() {
+    return chunkLength;
+  }
+
+  public void setChunkLength(long chunkLength) {
+    this.chunkLength = chunkLength;
+  }
+
+  public boolean isSplit() {
+    return getChunkLength() != Long.MAX_VALUE &&
+        getChunkLength() != getLen();
+  }
+
+  public long getSizeToCopy() {
+    return isSplit()? getChunkLength() : getLen();
+  }
+
   @Override
   public void write(DataOutput out) throws IOException {
     Text.writeString(out, getPath().toString(), Text.DEFAULT_MAX_LEN);
@@ -240,6 +311,9 @@ public final class CopyListingFileStatus implements Writable {
     } else {
       out.writeInt(NO_XATTRS);
     }
+
+    out.writeLong(chunkOffset);
+    out.writeLong(chunkLength);
   }
 
   @Override
@@ -288,6 +362,9 @@ public final class CopyListingFileStatus implements Writable {
     } else {
       xAttrs = null;
     }
+
+    chunkOffset = in.readLong();
+    chunkLength = in.readLong();
   }
 
   @Override
@@ -313,8 +390,14 @@ public final class CopyListingFileStatus implements Writable {
   public String toString() {
     StringBuilder sb = new StringBuilder(super.toString());
     sb.append('{');
-    sb.append("aclEntries = " + aclEntries);
-    sb.append(", xAttrs = " + xAttrs);
+    sb.append(this.getPath().toString());
+    sb.append(" length = ").append(this.getLen());
+    sb.append(" aclEntries = ").append(aclEntries);
+    sb.append(", xAttrs = ").append(xAttrs);
+    if (isSplit()) {
+      sb.append(", chunkOffset = ").append(this.getChunkOffset());
+      sb.append(", chunkLength = ").append(this.getChunkLength());
+    }
     sb.append('}');
     return sb.toString();
   }
