@@ -18,10 +18,17 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.auth.InstanceProfileCredentialsProvider;
+import com.amazonaws.auth.*;
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
 
+import org.apache.commons.lang.*;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.fs.*;
+
+import java.io.*;
 
 /**
  * A subclass of {@link InstanceProfileCredentialsProvider} that enforces
@@ -49,6 +56,12 @@ public final class SharedInstanceProfileCredentialsProvider
   private static final SharedInstanceProfileCredentialsProvider INSTANCE =
       new SharedInstanceProfileCredentialsProvider();
 
+  private static final Path s3crednetialPath = new Path("hdfs:///tmp/s3credential.txt");
+
+  private volatile AWSCredentials credentials;
+
+  private static final int maxRetries = 5;
+
   /**
    * Returns the singleton instance.
    *
@@ -56,6 +69,84 @@ public final class SharedInstanceProfileCredentialsProvider
    */
   public static SharedInstanceProfileCredentialsProvider getInstance() {
     return INSTANCE;
+  }
+
+  private AWSCredentials readCredentialsFromHDFS() {
+    try {
+      FileSystem fs = FileSystem.get(new Configuration());
+      BufferedReader br = new BufferedReader(new InputStreamReader(fs.open(s3crednetialPath)));
+      String accessKey = br.readLine();
+      String secretKey = br.readLine();
+      String token = br.readLine();
+      AWSCredentials credentials;
+      if (StringUtils.isEmpty(accessKey) || StringUtils.isEmpty(secretKey)) {
+        // if there are no accessKey nor secretKey return null
+        return null;
+      } else if (StringUtils.isNotEmpty(token)) {
+        credentials = new BasicSessionCredentials(accessKey, secretKey, token);
+      } else {
+        credentials = new BasicAWSCredentials(accessKey, secretKey);
+      }
+      return credentials;
+    } catch (Exception e) {
+      return null; // ignore the read errors
+      // throw new AmazonServiceException("Failed reading S3 credentials from HDFS " + e.getStackTrace());
+    }
+  }
+
+  private void writeCredentialsToHDFS(AWSCredentials credentials) {
+    try {
+      // Simulate atomic write by creating a new s3credential file with random string suffix and rename to s3crednetialPath
+      Path newS3crednetialPath = new Path(s3crednetialPath.toUri() + RandomStringUtils.randomAlphanumeric(8));
+      FileSystem fs = FileSystem.get(new Configuration());
+      BufferedWriter br = new BufferedWriter(new OutputStreamWriter(fs.create(newS3crednetialPath, true)));
+      String accessKey = credentials.getAWSAccessKeyId();
+      String secretKey = credentials.getAWSSecretKey();
+      String token = "";
+      if (credentials instanceof BasicSessionCredentials) {
+        token = ((BasicSessionCredentials) credentials).getSessionToken();
+      }
+      br.write(accessKey);
+      br.newLine();
+      br.write(secretKey);
+      br.newLine();
+      br.write(token);
+      br.newLine();
+      br.close();
+      fs.delete(s3crednetialPath, false);
+      fs.rename(newS3crednetialPath, s3crednetialPath);
+    } catch (Exception e) {
+      // ignore write errors
+      // throw new AmazonServiceException("Failed writing S3 credentials from HDFS " + e.getStackTrace());
+    }
+  }
+
+  @Override
+  public AWSCredentials getCredentials() {
+    for (int retry = 0; retry < maxRetries; retry++) {
+      try {
+        AWSCredentials newCredentials = super.getCredentials();
+        // if this new credentials is different from HDFS write back
+        if (credentials == null || (!newCredentials.getAWSSecretKey().equals(credentials.getAWSSecretKey()))) {
+          credentials = newCredentials;
+          writeCredentialsToHDFS(credentials);
+        }
+        break;
+      } catch (Exception e) {
+        // fallback, read the credential from HDFS
+        credentials = readCredentialsFromHDFS();
+        if (credentials == null || StringUtils.isEmpty(credentials.getAWSAccessKeyId())
+          || StringUtils.isEmpty(credentials.getAWSSecretKey())) {
+          if (retry + 1 >= maxRetries) {
+            throw e;
+          } else {
+            continue;
+          }
+        }
+        break;
+      }
+    }
+    return credentials;
   }
 
   /**
