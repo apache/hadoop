@@ -331,10 +331,10 @@ public class TestFSNamesystemLock {
     FSNamesystemLock fsLock = new FSNamesystemLock(conf, rates, timer);
 
     fsLock.readLock();
-    timer.advance(1);
+    timer.advanceNanos(1200000);
     fsLock.readUnlock("foo");
     fsLock.readLock();
-    timer.advance(2);
+    timer.advanceNanos(2400000);
     fsLock.readUnlock("foo");
 
     fsLock.readLock();
@@ -351,12 +351,12 @@ public class TestFSNamesystemLock {
     MetricsRecordBuilder rb = MetricsAsserts.mockMetricsRecordBuilder();
     rates.snapshot(rb, true);
 
-    assertGauge("FSNReadLockFooAvgTime", 1.5, rb);
-    assertCounter("FSNReadLockFooNumOps", 2L, rb);
-    assertGauge("FSNReadLockBarAvgTime", 2.0, rb);
-    assertCounter("FSNReadLockBarNumOps", 1L, rb);
-    assertGauge("FSNWriteLockBazAvgTime", 1.0, rb);
-    assertCounter("FSNWriteLockBazNumOps", 1L, rb);
+    assertGauge("FSNReadLockFooNanosAvgTime", 1800000.0, rb);
+    assertCounter("FSNReadLockFooNanosNumOps", 2L, rb);
+    assertGauge("FSNReadLockBarNanosAvgTime", 2000000.0, rb);
+    assertCounter("FSNReadLockBarNanosNumOps", 1L, rb);
+    assertGauge("FSNWriteLockBazNanosAvgTime", 1000000.0, rb);
+    assertCounter("FSNWriteLockBazNanosNumOps", 1L, rb);
   }
 
 }
