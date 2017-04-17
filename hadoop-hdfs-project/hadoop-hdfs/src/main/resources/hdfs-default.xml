@@ -2358,7 +2358,11 @@
   <name>dfs.namenode.lock.detailed-metrics.enabled</name>
   <value>false</value>
   <description>If true, the namenode will keep track of how long various
-    operations hold the Namesystem lock for and emit this as metrics.
+    operations hold the Namesystem lock for and emit this as metrics. These
+    metrics have names of the form FSN(Read|Write)LockNanosOperationName,
+    where OperationName denotes the name of the operation that initiated the
+    lock hold (this will be OTHER for certain uncategorized operations) and
+    they export the hold time values in nanoseconds.
   </description>
 </property>
 

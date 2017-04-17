@@ -225,7 +225,7 @@ Release 2.7.4 - UNRELEASED
     (Eric Krogen via aajisaka)
 
     HDFS-11352. Potential deadlock in NN when failing over.
-    (Eric Krogen via aajisaka)
+    (Erik Krogen via aajisaka)
 
     HDFS-11379. DFSInputStream may infinite loop requesting block locations. Contributed by Daryn Sharp.
 
@@ -234,6 +234,9 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-11486. Client close() should not fail fast if the last block is being
     decommissioned. Contributed by Wei-Chiu Chuang and Yiqun Lin.
+
+    HDFS-11615. FSNamesystemLock metrics can be inaccurate due to millisecond precision.
+    (Erik Krogen via zhz)
 
 Release 2.7.3 - 2016-08-25
 
