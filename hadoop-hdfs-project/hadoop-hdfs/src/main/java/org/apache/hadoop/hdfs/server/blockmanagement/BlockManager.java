@@ -1184,13 +1184,9 @@ public class BlockManager implements BlockStatsMXBean {
     if(numBlocks == 0) {
       return new BlocksWithLocations(new BlockWithLocations[0]);
     }
-    Iterator<BlockInfo> iter = node.getBlockIterator();
     // starting from a random block
     int startBlock = ThreadLocalRandom.current().nextInt(numBlocks);
-    // skip blocks
-    for(int i=0; i<startBlock; i++) {
-      iter.next();
-    }
+    Iterator<BlockInfo> iter = node.getBlockIterator(startBlock);
     List<BlockWithLocations> results = new ArrayList<BlockWithLocations>();
     long totalSize = 0;
     BlockInfo curBlock;
