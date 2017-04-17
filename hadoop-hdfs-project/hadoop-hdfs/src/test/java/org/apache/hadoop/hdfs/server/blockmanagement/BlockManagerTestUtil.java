@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
@@ -53,6 +54,21 @@ public class BlockManagerTestUtil {
     }
   }
 
+  public static Iterator<BlockInfoContiguous> getBlockIterator(final FSNamesystem ns,
+      final String storageID, final int startBlock) {
+    ns.readLock();
+    try {
+      DatanodeDescriptor dn =
+          ns.getBlockManager().getDatanodeManager().getDatanode(storageID);
+      return dn.getBlockIterator(startBlock);
+    } finally {
+      ns.readUnlock();
+    }
+  }
+
+  public static Iterator<BlockInfoContiguous> getBlockIterator(DatanodeStorageInfo s) {
+    return s.getBlockIterator();
+  }
 
   /**
    * Refresh block queue counts on the name-node.

@@ -493,18 +493,35 @@ public class DatanodeDescriptor extends DatanodeInfo {
     private int index = 0;
     private final List<Iterator<BlockInfoContiguous>> iterators;
     
-    private BlockIterator(final DatanodeStorageInfo... storages) {
+    private BlockIterator(final int startBlock,
+                          final DatanodeStorageInfo... storages) {
+      if(startBlock < 0) {
+        throw new IllegalArgumentException(
+            "Illegal value startBlock = " + startBlock);
+      }
       List<Iterator<BlockInfoContiguous>> iterators = new ArrayList<Iterator<BlockInfoContiguous>>();
+      int s = startBlock;
+      int sumBlocks = 0;
       for (DatanodeStorageInfo e : storages) {
-        iterators.add(e.getBlockIterator());
+        int numBlocks = e.numBlocks();
+        sumBlocks += numBlocks;
+        if(sumBlocks <= startBlock) {
+          s -= numBlocks;
+        } else {
+          iterators.add(e.getBlockIterator());
+        }
       }
       this.iterators = Collections.unmodifiableList(iterators);
+      // skip to the storage containing startBlock
+      for(; s > 0 && hasNext(); s--) {
+        next();
+      }
     }
 
     @Override
     public boolean hasNext() {
       update();
-      return !iterators.isEmpty() && iterators.get(index).hasNext();
+      return index < iterators.size() && iterators.get(index).hasNext();
     }
 
     @Override
@@ -526,10 +543,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   Iterator<BlockInfoContiguous> getBlockIterator() {
-    return new BlockIterator(getStorageInfos());
+    return getBlockIterator(0);
   }
-  Iterator<BlockInfoContiguous> getBlockIterator(final String storageID) {
-    return new BlockIterator(getStorageInfo(storageID));
+
+  /**
+   * Get iterator, which starts iterating from the specified block.
+   */
+  Iterator<BlockInfoContiguous> getBlockIterator(final int startBlock) {
+    return new BlockIterator(startBlock, getStorageInfos());
   }
 
   void incrementPendingReplicationWithoutTargets() {
