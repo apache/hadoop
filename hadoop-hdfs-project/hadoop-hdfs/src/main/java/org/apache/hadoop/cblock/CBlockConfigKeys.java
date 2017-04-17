@@ -142,9 +142,20 @@ public final class CBlockConfigKeys {
   public static final String DFS_CBLOCK_JSCSI_CBLOCK_SERVER_ADDRESS_DEFAULT =
       "127.0.0.1";
 
+  // to what address cblock server should talk to scm?
+  public static final String DFS_CBLOCK_SCM_IPADDRESS_KEY =
+      "dfs.cblock.scm.ipaddress";
+  public static final String DFS_CBLOCK_SCM_IPADDRESS_DEFAULT =
+      "127.0.0.1";
+  public static final String DFS_CBLOCK_SCM_PORT_KEY =
+      "dfs.cblock.scm.port";
+  public static final int DFS_CBLOCK_SCM_PORT_DEFAULT = 9860;
+
   public static final String DFS_CBLOCK_CONTAINER_SIZE_GB_KEY =
-      "dfs.cblock.container.size.gb";
-  public static final int DFS_CBLOCK_CONTAINER_SIZE_GB_DEFAULT = 5;
+      "dfs.cblock.container.size";
+  public static final int DFS_CBLOCK_CONTAINER_SIZE_GB_DEFAULT =
+      5;
+
 
   private CBlockConfigKeys() {
 

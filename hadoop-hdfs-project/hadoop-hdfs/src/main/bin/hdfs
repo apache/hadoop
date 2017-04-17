@@ -33,6 +33,8 @@ function hadoop_usage
 
   hadoop_add_subcommand "balancer" "run a cluster balancing utility"
   hadoop_add_subcommand "cacheadmin" "configure the HDFS cache"
+  hadoop_add_subcommand "cblock" "cblock CLI"
+  hadoop_add_subcommand "cblockserver" "run cblock server"
   hadoop_add_subcommand "classpath" "prints the class path needed to get the hadoop jar and the required libraries"
   hadoop_add_subcommand "crypto" "configure HDFS encryption zones"
   hadoop_add_subcommand "datanode" "run a DFS datanode"
@@ -85,6 +87,15 @@ function hdfscmd_case
     ;;
     cacheadmin)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.CacheAdmin
+    ;;
+    cblock)
+      HADOOP_CLASSNAME=org.apache.hadoop.cblock.cli.CBlockCli
+    ;;
+    cblockserver)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME=org.apache.hadoop.cblock.CBlockManager
+      hadoop_debug "Appending HADOOP_CBLOCK_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CBLOCK_OPTS}"
     ;;
     classpath)
       hadoop_do_classpath_subcommand HADOOP_CLASSNAME "$@"
