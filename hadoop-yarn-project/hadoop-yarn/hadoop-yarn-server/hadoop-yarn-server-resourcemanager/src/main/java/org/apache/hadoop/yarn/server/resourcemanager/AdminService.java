@@ -289,6 +289,9 @@ public class AdminService extends CompositeService implements
   @Override
   public synchronized void transitionToActive(
       HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
+    if (isRMActive()) {
+      return;
+    }
     // call refreshAdminAcls before HA state transition
     // for the case that adminAcls have been updated in previous active RM
     try {
