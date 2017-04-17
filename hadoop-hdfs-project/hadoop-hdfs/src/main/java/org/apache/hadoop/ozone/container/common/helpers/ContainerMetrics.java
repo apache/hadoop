@@ -62,23 +62,24 @@ public class ContainerMetrics {
     this.opsLatQuantiles = new MutableQuantiles[numEnumEntries][len];
     this.registry = new MetricsRegistry("StorageContainerMetrics");
     for (int i = 0; i < numEnumEntries; i++) {
-      numOpsArray[i] =
-              registry.newCounter("num" + ContainerProtos.Type.valueOf(i),
-              "number of " + ContainerProtos.Type.valueOf(i) + " ops", (long)0);
-      opsBytesArray[i] =
-              registry.newCounter("bytes" + ContainerProtos.Type.valueOf(i),
-              "bytes used by " + ContainerProtos.Type.valueOf(i)+"op", (long)0);
-      opsLatency[i] =
-              registry.newRate("latency" + ContainerProtos.Type.valueOf(i),
-                         ContainerProtos.Type.valueOf(i) + " op");
+      numOpsArray[i] = registry.newCounter(
+          "num" + ContainerProtos.Type.valueOf(i + 1),
+          "number of " + ContainerProtos.Type.valueOf(i + 1) + " ops",
+          (long) 0);
+      opsBytesArray[i] = registry.newCounter(
+          "bytes" + ContainerProtos.Type.valueOf(i + 1),
+          "bytes used by " + ContainerProtos.Type.valueOf(i + 1) + "op",
+          (long) 0);
+      opsLatency[i] = registry.newRate(
+          "latency" + ContainerProtos.Type.valueOf(i + 1),
+          ContainerProtos.Type.valueOf(i + 1) + " op");
 
       for (int j = 0; j < len; j++) {
         int interval = intervals[j];
-        String quantileName = ContainerProtos.Type.valueOf(i) + "Nanos" +
-                              interval + "s";
-        opsLatQuantiles[i][j] =
-              registry.newQuantiles(quantileName, "latency of Container ops",
-                        "ops", "latency", interval);
+        String quantileName = ContainerProtos.Type.valueOf(i + 1) + "Nanos"
+            + interval + "s";
+        opsLatQuantiles[i][j] = registry.newQuantiles(quantileName,
+            "latency of Container ops", "ops", "latency", interval);
       }
     }
   }
