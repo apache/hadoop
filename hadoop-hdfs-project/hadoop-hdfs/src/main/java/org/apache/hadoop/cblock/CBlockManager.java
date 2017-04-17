@@ -30,6 +30,11 @@ import org.apache.hadoop.cblock.protocolPB.CBlockClientServerProtocolPB;
 import org.apache.hadoop.cblock.protocolPB.CBlockClientServerProtocolServerSideTranslatorPB;
 import org.apache.hadoop.cblock.protocolPB.CBlockServiceProtocolPB;
 import org.apache.hadoop.cblock.protocolPB.CBlockServiceProtocolServerSideTranslatorPB;
+import org.apache.hadoop.ipc.Client;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.scm.XceiverClientManager;
+import org.apache.hadoop.scm.client.ContainerOperationClient;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.cblock.storage.StorageManager;
 import org.apache.hadoop.cblock.util.KeyUtil;
@@ -37,6 +42,9 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.utils.LevelDBStore;
 import org.iq80.leveldb.DBIterator;
 import org.slf4j.Logger;
@@ -50,9 +58,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_CONTAINER_SIZE_GB_DEFAULT;
+import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_CONTAINER_SIZE_GB_KEY;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_JSCSIRPC_ADDRESS_DEFAULT;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_JSCSIRPC_BIND_HOST_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SCM_IPADDRESS_DEFAULT;
+import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SCM_IPADDRESS_KEY;
+import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SCM_PORT_DEFAULT;
+import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SCM_PORT_KEY;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_ADDRESS_DEFAULT;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_ADDRESS_KEY;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_BIND_HOST_KEY;
@@ -60,6 +74,7 @@ import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_HA
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICE_LEVELDB_PATH_DEFAULT;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT;
 
 /**
  * The main entry point of CBlock operations, ALL the CBlock operations
@@ -316,5 +331,37 @@ public class CBlockManager implements CBlockServiceProtocol,
       response.add(info);
     }
     return response;
+  }
+
+  public static void main(String[] args) throws Exception {
+    long version = RPC.getProtocolVersion(
+        StorageContainerLocationProtocolPB.class);
+    OzoneConfiguration ozoneConf = new OzoneConfiguration();
+    String scmAddress = ozoneConf.get(DFS_CBLOCK_SCM_IPADDRESS_KEY,
+        DFS_CBLOCK_SCM_IPADDRESS_DEFAULT);
+    int scmPort = ozoneConf.getInt(DFS_CBLOCK_SCM_PORT_KEY,
+        DFS_CBLOCK_SCM_PORT_DEFAULT);
+    int containerSizeGB = ozoneConf.getInt(DFS_CBLOCK_CONTAINER_SIZE_GB_KEY,
+        DFS_CBLOCK_CONTAINER_SIZE_GB_DEFAULT);
+    ContainerOperationClient.setContainerSizeB(containerSizeGB* OzoneConsts.GB);
+    InetSocketAddress address = new InetSocketAddress(scmAddress, scmPort);
+
+    ozoneConf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
+        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
+    LOG.info(
+        "Creating StorageContainerLocationProtocol RPC client with address {}",
+        address);
+    RPC.setProtocolEngine(ozoneConf, StorageContainerLocationProtocolPB.class,
+        ProtobufRpcEngine.class);
+    StorageContainerLocationProtocolClientSideTranslatorPB client =
+        new StorageContainerLocationProtocolClientSideTranslatorPB(
+            RPC.getProxy(StorageContainerLocationProtocolPB.class, version,
+                address, UserGroupInformation.getCurrentUser(), ozoneConf,
+                NetUtils.getDefaultSocketFactory(ozoneConf),
+                Client.getRpcTimeout(ozoneConf)));
+    ScmClient storageClient = new ContainerOperationClient(
+        client, new XceiverClientManager(ozoneConf));
+    CBlockManager cbm = new CBlockManager(ozoneConf, storageClient);
+    cbm.start();
   }
 }
