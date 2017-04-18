@@ -114,7 +114,7 @@ public class TestS3AAWSCredentialsProvider {
         Arrays.asList(
             BasicAWSCredentialsProvider.class,
             EnvironmentVariableCredentialsProvider.class,
-            SharedInstanceProfileCredentialsProvider.class);
+            InstanceProfileCredentialsProvider.class);
     assertCredentialProviders(expectedClasses, list1);
     assertCredentialProviders(expectedClasses, list2);
     assertSameInstanceProfileCredentialsProvider(list1.getProviders().get(2),
@@ -128,7 +128,7 @@ public class TestS3AAWSCredentialsProvider {
     List<Class<? extends AWSCredentialsProvider>> expectedClasses =
         Arrays.asList(
             EnvironmentVariableCredentialsProvider.class,
-            SharedInstanceProfileCredentialsProvider.class,
+            InstanceProfileCredentialsProvider.class,
             AnonymousAWSCredentialsProvider.class);
     conf.set(AWS_CREDENTIALS_PROVIDER, buildClassListString(expectedClasses));
     AWSCredentialProviderList list1 = S3AUtils.createAWSCredentialProviderSet(

@@ -59,6 +59,39 @@ final class FSDirErasureCodingOp {
   private FSDirErasureCodingOp() {}
 
   /**
+   * Check if the ecPolicyName is valid and enabled, return the corresponding
+   * EC policy if is.
+   * @param fsn namespace
+   * @param ecPolicyName name of EC policy to be checked
+   * @return an erasure coding policy if ecPolicyName is valid and enabled
+   * @throws IOException
+   */
+  static ErasureCodingPolicy getErasureCodingPolicyByName(
+      final FSNamesystem fsn, final String ecPolicyName) throws IOException {
+    assert fsn.hasReadLock();
+    ErasureCodingPolicy ecPolicy = fsn.getErasureCodingPolicyManager()
+        .getEnabledPolicyByName(ecPolicyName);
+    if (ecPolicy == null) {
+      final String sysPolicies =
+          Arrays.asList(
+              fsn.getErasureCodingPolicyManager().getEnabledPolicies())
+              .stream()
+              .map(ErasureCodingPolicy::getName)
+              .collect(Collectors.joining(", "));
+      final String message = String.format("Policy '%s' does not match any " +
+              "enabled erasure" +
+              " coding policies: [%s]. The set of enabled erasure coding " +
+              "policies can be configured at '%s'.",
+          ecPolicyName,
+          sysPolicies,
+          DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY
+      );
+      throw new HadoopIllegalArgumentException(message);
+    }
+    return ecPolicy;
+  }
+
+  /**
    * Set an erasure coding policy on the given path.
    *
    * @param fsn The namespace
@@ -84,25 +117,8 @@ final class FSDirErasureCodingOp {
     List<XAttr> xAttrs;
     fsd.writeLock();
     try {
-      ErasureCodingPolicy ecPolicy = fsn.getErasureCodingPolicyManager()
-          .getEnabledPolicyByName(ecPolicyName);
-      if (ecPolicy == null) {
-        final String sysPolicies =
-            Arrays.asList(
-                fsn.getErasureCodingPolicyManager().getEnabledPolicies())
-                .stream()
-                .map(ErasureCodingPolicy::getName)
-                .collect(Collectors.joining(", "));
-        final String message = String.format("Policy '%s' does not match any " +
-            "enabled erasure" +
-            " coding policies: [%s]. The set of enabled erasure coding " +
-            "policies can be configured at '%s'.",
-            ecPolicyName,
-            sysPolicies,
-            DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY
-            );
-        throw new HadoopIllegalArgumentException(message);
-      }
+      ErasureCodingPolicy ecPolicy = getErasureCodingPolicyByName(fsn,
+          ecPolicyName);
       iip = fsd.resolvePath(pc, src, DirOp.WRITE_LINK);
       // Write access is required to set erasure coding policy
       if (fsd.isPermissionEnabled()) {

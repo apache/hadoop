@@ -352,9 +352,9 @@ message ECSchemaProto {
 }
 
 message ErasureCodingPolicyProto {
-  required string name = 1;
-  required ECSchemaProto schema = 2;
-  required uint32 cellSize = 3;
+  optional string name = 1;
+  optional ECSchemaProto schema = 2;
+  optional uint32 cellSize = 3;
   required uint32 id = 4; // Actually a byte - only 8 bits used
 }
 

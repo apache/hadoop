@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -518,5 +519,49 @@ public class TestErasureCodingPolicies {
     useradmin.getErasureCodingPolicies();
     noadmin.getErasureCodingPolicies();
     superadmin.getErasureCodingPolicies();
+  }
+
+  /**
+   * Test apply specific erasure coding policy on single file. Usually file's
+   * policy is inherited from its parent.
+   */
+  @Test
+  public void testFileLevelECPolicy() throws Exception {
+    final Path dirPath = new Path("/striped");
+    final Path filePath0 = new Path(dirPath, "file0");
+    final Path filePath1 = new Path(dirPath, "file1");
+
+    fs.mkdirs(dirPath);
+    fs.setErasureCodingPolicy(dirPath, EC_POLICY.getName());
+
+    // null EC policy name value means inheriting parent directory's policy
+    fs.newFSDataOutputStreamBuilder(filePath0).build().close();
+    ErasureCodingPolicy ecPolicyOnFile = fs.getErasureCodingPolicy(filePath0);
+    assertEquals(EC_POLICY, ecPolicyOnFile);
+
+    // Test illegal EC policy name
+    final String illegalPolicyName = "RS-DEFAULT-1-2-64k";
+    try {
+      fs.newFSDataOutputStreamBuilder(filePath1)
+          .setEcPolicyName(illegalPolicyName).build().close();
+      Assert.fail("illegal erasure coding policy should not be found");
+    } catch (Exception e) {
+      GenericTestUtils.assertExceptionContains("Policy '" + illegalPolicyName
+          + "' does not match any enabled erasure coding policies", e);
+    }
+    fs.delete(dirPath, true);
+
+    // Test create a file with a different EC policy than its parent directory
+    fs.mkdirs(dirPath);
+    final ErasureCodingPolicy ecPolicyOnDir =
+        SystemErasureCodingPolicies.getByID(
+            SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
+    ecPolicyOnFile = EC_POLICY;
+    fs.setErasureCodingPolicy(dirPath, ecPolicyOnDir.getName());
+    fs.newFSDataOutputStreamBuilder(filePath0)
+        .setEcPolicyName(ecPolicyOnFile.getName()).build().close();
+    assertEquals(ecPolicyOnFile, fs.getErasureCodingPolicy(filePath0));
+    assertEquals(ecPolicyOnDir, fs.getErasureCodingPolicy(dirPath));
+    fs.delete(dirPath, true);
   }
 }

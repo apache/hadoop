@@ -100,6 +100,8 @@ import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
+import javax.annotation.Nonnull;
+
 /****************************************************************
  * Implementation of the abstract FileSystem for the DFS system.
  * This object is the way end-user code interacts with a Hadoop
@@ -456,13 +458,18 @@ public class DistributedFileSystem extends FileSystem {
    * at the creation time only. And with favored nodes, blocks will be pinned
    * on the datanodes to prevent balancing move the block. HDFS could move the
    * blocks during replication, to move the blocks from favored nodes. A value
-   * of null means no favored nodes for this create
+   * of null means no favored nodes for this create.
+   * Another addition is ecPolicyName. A non-null ecPolicyName specifies an
+   * explicit erasure coding policy for this file, overriding the inherited
+   * policy. A null ecPolicyName means the file will inherit its EC policy from
+   * an ancestor (the default).
    */
   private HdfsDataOutputStream create(final Path f,
-      final FsPermission permission, EnumSet<CreateFlag> flag,
+      final FsPermission permission, final EnumSet<CreateFlag> flag,
       final int bufferSize, final short replication, final long blockSize,
       final Progressable progress, final ChecksumOpt checksumOpt,
-      final InetSocketAddress[] favoredNodes) throws IOException {
+      final InetSocketAddress[] favoredNodes, final String ecPolicyName)
+      throws IOException {
     statistics.incrementWriteOps(1);
     storageStatistics.incrementOpCounter(OpType.CREATE);
     Path absF = fixRelativePart(f);
@@ -471,7 +478,7 @@ public class DistributedFileSystem extends FileSystem {
       public HdfsDataOutputStream doCall(final Path p) throws IOException {
         final DFSOutputStream out = dfs.create(getPathName(f), permission,
             flag, true, replication, blockSize, progress, bufferSize,
-            checksumOpt, favoredNodes);
+            checksumOpt, favoredNodes, ecPolicyName);
         return dfs.createWrappedOutputStream(out, statistics);
       }
       @Override
@@ -480,7 +487,7 @@ public class DistributedFileSystem extends FileSystem {
         if (fs instanceof DistributedFileSystem) {
           DistributedFileSystem myDfs = (DistributedFileSystem)fs;
           return myDfs.create(p, permission, flag, bufferSize, replication,
-              blockSize, progress, checksumOpt, favoredNodes);
+              blockSize, progress, checksumOpt, favoredNodes, ecPolicyName);
         }
         throw new UnsupportedOperationException("Cannot create with" +
             " favoredNodes through a symlink to a non-DistributedFileSystem: "
@@ -2645,6 +2652,7 @@ public class DistributedFileSystem extends FileSystem {
       extends FSDataOutputStreamBuilder {
     private final DistributedFileSystem dfs;
     private InetSocketAddress[] favoredNodes = null;
+    private String ecPolicyName = null;
 
     public HdfsDataOutputStreamBuilder(DistributedFileSystem dfs, Path path) {
       super(dfs, path);
@@ -2656,9 +2664,20 @@ public class DistributedFileSystem extends FileSystem {
     }
 
     public HdfsDataOutputStreamBuilder setFavoredNodes(
-        final InetSocketAddress[] nodes) {
+        @Nonnull final InetSocketAddress[] nodes) {
       Preconditions.checkNotNull(nodes);
       favoredNodes = nodes.clone();
+      return this;
+    }
+
+    protected String getEcPolicyName() {
+      return ecPolicyName;
+    }
+
+    public HdfsDataOutputStreamBuilder setEcPolicyName(
+        @Nonnull final String policyName) {
+      Preconditions.checkNotNull(policyName);
+      ecPolicyName = policyName;
       return this;
     }
 
@@ -2666,7 +2685,8 @@ public class DistributedFileSystem extends FileSystem {
     public HdfsDataOutputStream build() throws IOException {
       return dfs.create(getPath(), getPermission(), getFlags(),
           getBufferSize(), getReplication(), getBlockSize(),
-          getProgress(), getChecksumOpt(), getFavoredNodes());
+          getProgress(), getChecksumOpt(), getFavoredNodes(),
+          getEcPolicyName());
     }
   }
 

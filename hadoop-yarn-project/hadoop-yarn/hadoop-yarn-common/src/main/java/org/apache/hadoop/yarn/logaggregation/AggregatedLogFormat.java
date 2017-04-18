@@ -541,14 +541,15 @@ public class AggregatedLogFormat {
 
     @Override
     public void close() {
-      if (writer != null) {
-        try {
+      try {
+        if (writer != null) {
           writer.close();
-        } catch (IOException e) {
-          LOG.warn("Exception closing writer", e);
         }
+      } catch (Exception e) {
+        LOG.warn("Exception closing writer", e);
+      } finally {
+        IOUtils.closeStream(this.fsDataOStream);
       }
-      IOUtils.closeStream(fsDataOStream);
     }
   }
 

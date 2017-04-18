@@ -132,7 +132,14 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
   @Override
   public boolean authorize(String wasbAbsolutePath, String accessType)
       throws WasbAuthorizationException, IOException {
+
       try {
+
+        /* Make an exception for the internal -RenamePending files */
+        if (wasbAbsolutePath.endsWith(NativeAzureFileSystem.FolderRenamePending.SUFFIX)) {
+          return true;
+        }
+
         URIBuilder uriBuilder = new URIBuilder(remoteAuthorizerServiceUrl);
         uriBuilder.setPath("/" + CHECK_AUTHORIZATION_OP);
         uriBuilder.addParameter(WASB_ABSOLUTE_PATH_QUERY_PARAM_NAME,
@@ -203,7 +210,7 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
           return authorizerResponse.getAuthorizationResult();
         } else {
           throw new WasbAuthorizationException("Remote authorization"
-              + " serivce encountered an error "
+              + " service encountered an error "
               + authorizerResponse.getResponseMessage());
         }
       } catch (URISyntaxException | WasbRemoteCallException
@@ -220,7 +227,7 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
  * response in the following JSON format
  * {
  *    "responseCode" : 0 or non-zero <int>,
- *    "responseMessage" : relavant message of failure <String>
+ *    "responseMessage" : relevant message of failure <String>
  *    "authorizationResult" : authorization result <boolean>
  *                            true - if auhorization allowed
  *                            false - otherwise.
