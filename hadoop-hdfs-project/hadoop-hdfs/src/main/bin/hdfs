@@ -201,7 +201,7 @@ function hdfscmd_case
     ;;
     scm)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      HADOOP_CLASSNAME='org.apache.hadoop.ozone.storage.StorageContainerManager'
+      HADOOP_CLASSNAME='org.apache.hadoop.ozone.scm.StorageContainerManager'
       hadoop_debug "Appending HADOOP_SCM_OPTS onto HADOOP_OPTS"
       HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_SCM_OPTS}"
     ;;    
