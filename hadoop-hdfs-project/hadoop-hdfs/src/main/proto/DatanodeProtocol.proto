@@ -192,6 +192,7 @@ message BlocksStorageMovementResultProto {
   enum Status {
     SUCCESS = 1; // block movement succeeded
     FAILURE = 2; // block movement failed and needs to retry
+    IN_PROGRESS = 3; // block movement is still in progress
   }
   required uint64 trackID = 1;
   required Status status = 2;

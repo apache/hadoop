@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.hdfs.protocolPB.PBHelperClient.vintPrefixed;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -31,7 +32,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
@@ -87,9 +90,12 @@ public class StoragePolicySatisfyWorker {
   private final int moverThreads;
   private final ExecutorService moveExecutor;
   private final CompletionService<BlockMovementResult> moverCompletionService;
-  private final BlocksMovementsCompletionHandler handler;
+  private final BlocksMovementsStatusHandler handler;
   private final BlockStorageMovementTracker movementTracker;
   private Daemon movementTrackerThread;
+
+  private long inprogressTrackIdsCheckInterval = 30 * 1000; // 30seconds.
+  private long nextInprogressRecheckTime;
 
   public StoragePolicySatisfyWorker(Configuration conf, DataNode datanode) {
     this.datanode = datanode;
@@ -99,13 +105,50 @@ public class StoragePolicySatisfyWorker {
         DFSConfigKeys.DFS_MOVER_MOVERTHREADS_DEFAULT);
     moveExecutor = initializeBlockMoverThreadPool(moverThreads);
     moverCompletionService = new ExecutorCompletionService<>(moveExecutor);
-    handler = new BlocksMovementsCompletionHandler();
+    handler = new BlocksMovementsStatusHandler();
     movementTracker = new BlockStorageMovementTracker(moverCompletionService,
         handler);
     movementTrackerThread = new Daemon(movementTracker);
     movementTrackerThread.setName("BlockStorageMovementTracker");
-    movementTrackerThread.start();
+
+    // Interval to check that the inprogress trackIds. The time interval is
+    // proportional o the heart beat interval time period.
+    final long heartbeatIntervalSeconds = conf.getTimeDuration(
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS);
+    inprogressTrackIdsCheckInterval = 5 * heartbeatIntervalSeconds;
+    // update first inprogress recheck time to a future time stamp.
+    nextInprogressRecheckTime = monotonicNow()
+        + inprogressTrackIdsCheckInterval;
+
     // TODO: Needs to manage the number of concurrent moves per DataNode.
+  }
+
+  /**
+   * Start StoragePolicySatisfyWorker, which will start block movement tracker
+   * thread to track the completion of block movements.
+   */
+  void start() {
+    movementTrackerThread.start();
+  }
+
+  /**
+   * Stop StoragePolicySatisfyWorker, which will stop block movement tracker
+   * thread.
+   */
+  void stop() {
+    movementTrackerThread.interrupt();
+    movementTracker.stopTracking();
+  }
+
+  /**
+   * Timed wait to stop BlockStorageMovement tracker daemon thread.
+   */
+  void waitToFinishWorkerThread() {
+    try {
+      movementTrackerThread.join(3000);
+    } catch (InterruptedException ie) {
+    }
   }
 
   private ThreadPoolExecutor initializeBlockMoverThreadPool(int num) {
@@ -352,11 +395,11 @@ public class StoragePolicySatisfyWorker {
   }
 
   /**
-   * Blocks movements completion handler, which is used to collect details of
-   * the completed list of block movements and this status(success or failure)
-   * will be send to the namenode via heartbeat.
+   * Blocks movements status handler, which is used to collect details of the
+   * completed or inprogress list of block movements and this status(success or
+   * failure or inprogress) will be send to the namenode via heartbeat.
    */
-  static class BlocksMovementsCompletionHandler {
+  class BlocksMovementsStatusHandler {
     private final List<BlocksStorageMovementResult> trackIdVsMovementStatus =
         new ArrayList<>();
 
@@ -395,14 +438,21 @@ public class StoragePolicySatisfyWorker {
      * @return unmodifiable list of blocks storage movement results.
      */
     List<BlocksStorageMovementResult> getBlksMovementResults() {
+      List<BlocksStorageMovementResult> movementResults = new ArrayList<>();
+      // 1. Adding all the completed trackids.
       synchronized (trackIdVsMovementStatus) {
-        if (trackIdVsMovementStatus.size() <= 0) {
-          return new ArrayList<>();
+        if (trackIdVsMovementStatus.size() > 0) {
+          movementResults = Collections
+              .unmodifiableList(trackIdVsMovementStatus);
         }
-        List<BlocksStorageMovementResult> results = Collections
-            .unmodifiableList(trackIdVsMovementStatus);
-        return results;
       }
+      // 2. Adding the in progress track ids after those which are completed.
+      Set<Long> inProgressTrackIds = getInProgressTrackIds();
+      for (Long trackId : inProgressTrackIds) {
+        movementResults.add(new BlocksStorageMovementResult(trackId,
+            BlocksStorageMovementResult.Status.IN_PROGRESS));
+      }
+      return movementResults;
     }
 
     /**
@@ -433,7 +483,7 @@ public class StoragePolicySatisfyWorker {
   }
 
   @VisibleForTesting
-  BlocksMovementsCompletionHandler getBlocksMovementsCompletionHandler() {
+  BlocksMovementsStatusHandler getBlocksMovementsStatusHandler() {
     return handler;
   }
 
@@ -446,5 +496,24 @@ public class StoragePolicySatisfyWorker {
         + " be scheduled.");
     movementTracker.removeAll();
     handler.removeAll();
+  }
+
+  /**
+   * Gets list of trackids which are inprogress. Will do collection periodically
+   * on 'dfs.datanode.storage.policy.satisfier.worker.inprogress.recheck.time.
+   * millis' interval.
+   *
+   * @return collection of trackids which are inprogress
+   */
+  private Set<Long> getInProgressTrackIds() {
+    Set<Long> trackIds = new HashSet<>();
+    long now = monotonicNow();
+    if (nextInprogressRecheckTime >= now) {
+      trackIds = movementTracker.getInProgressTrackIds();
+
+      // schedule next re-check interval
+      nextInprogressRecheckTime = now + inprogressTrackIdsCheckInterval;
+    }
+    return trackIds;
   }
 }

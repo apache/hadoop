@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -28,7 +29,7 @@ import java.util.concurrent.Future;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.datanode.StoragePolicySatisfyWorker.BlockMovementResult;
-import org.apache.hadoop.hdfs.server.datanode.StoragePolicySatisfyWorker.BlocksMovementsCompletionHandler;
+import org.apache.hadoop.hdfs.server.datanode.StoragePolicySatisfyWorker.BlocksMovementsStatusHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,11 +42,13 @@ public class BlockStorageMovementTracker implements Runnable {
   private static final Logger LOG = LoggerFactory
       .getLogger(BlockStorageMovementTracker.class);
   private final CompletionService<BlockMovementResult> moverCompletionService;
-  private final BlocksMovementsCompletionHandler blksMovementscompletionHandler;
+  private final BlocksMovementsStatusHandler blksMovementsStatusHandler;
 
   // Keeps the information - trackID vs its list of blocks
   private final Map<Long, List<Future<BlockMovementResult>>> moverTaskFutures;
   private final Map<Long, List<BlockMovementResult>> movementResults;
+
+  private volatile boolean running = true;
 
   /**
    * BlockStorageMovementTracker constructor.
@@ -53,20 +56,20 @@ public class BlockStorageMovementTracker implements Runnable {
    * @param moverCompletionService
    *          completion service.
    * @param handler
-   *          blocks movements completion handler
+   *          blocks movements status handler
    */
   public BlockStorageMovementTracker(
       CompletionService<BlockMovementResult> moverCompletionService,
-      BlocksMovementsCompletionHandler handler) {
+      BlocksMovementsStatusHandler handler) {
     this.moverCompletionService = moverCompletionService;
     this.moverTaskFutures = new HashMap<>();
-    this.blksMovementscompletionHandler = handler;
+    this.blksMovementsStatusHandler = handler;
     this.movementResults = new HashMap<>();
   }
 
   @Override
   public void run() {
-    while (true) {
+    while (running) {
       if (moverTaskFutures.size() <= 0) {
         try {
           synchronized (moverTaskFutures) {
@@ -95,8 +98,8 @@ public class BlockStorageMovementTracker implements Runnable {
             synchronized (moverTaskFutures) {
               moverTaskFutures.remove(trackId);
             }
-            // handle completed blocks movements per trackId.
-            blksMovementscompletionHandler.handle(resultPerTrackIdList);
+            // handle completed or inprogress blocks movements per trackId.
+            blksMovementsStatusHandler.handle(resultPerTrackIdList);
             movementResults.remove(trackId);
           }
         }
@@ -157,5 +160,23 @@ public class BlockStorageMovementTracker implements Runnable {
     synchronized (movementResults) {
       movementResults.clear();
     }
+  }
+
+  /**
+   * @return the list of trackIds which are still waiting to complete all the
+   *         scheduled blocks movements.
+   */
+  Set<Long> getInProgressTrackIds() {
+    synchronized (moverTaskFutures) {
+      return moverTaskFutures.keySet();
+    }
+  }
+
+  /**
+   * Sets running flag to false and clear the pending movement result queues.
+   */
+  public void stopTracking() {
+    running = false;
+    removeAll();
   }
 }

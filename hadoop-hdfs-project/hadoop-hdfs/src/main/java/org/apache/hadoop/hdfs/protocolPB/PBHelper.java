@@ -985,6 +985,9 @@ public class PBHelper {
       case FAILURE:
         status = Status.FAILURE;
         break;
+      case IN_PROGRESS:
+        status = Status.IN_PROGRESS;
+        break;
       default:
         throw new AssertionError("Unknown status: " + resultProto.getStatus());
       }
@@ -1010,6 +1013,9 @@ public class PBHelper {
         break;
       case FAILURE:
         status = BlocksStorageMovementResultProto.Status.FAILURE;
+        break;
+      case IN_PROGRESS:
+        status = BlocksStorageMovementResultProto.Status.IN_PROGRESS;
         break;
       default:
         throw new AssertionError("Unknown status: " + report.getStatus());

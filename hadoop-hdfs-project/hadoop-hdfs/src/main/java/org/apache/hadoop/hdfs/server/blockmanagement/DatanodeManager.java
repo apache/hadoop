@@ -1091,6 +1091,18 @@ public class DatanodeManager {
           nodeS.setSoftwareVersion(nodeReg.getSoftwareVersion());
           nodeS.setDisallowed(false); // Node is in the include list
 
+          // Sets dropSPSWork flag to true, to ensure that
+          // DNA_DROP_SPS_WORK_COMMAND will send to datanode via next heartbeat
+          // response immediately after the node registration. This is
+          // to avoid a situation, where multiple trackId responses coming from
+          // different co-odinator datanodes. After SPS monitor time out, it
+          // will retry the files which were scheduled to the disconnected(for
+          // long time more than heartbeat expiry) DN, by finding new
+          // co-ordinator datanode. Now, if the expired datanode reconnects back
+          // after SPS reschedules, it leads to get different movement results
+          // from reconnected and new DN co-ordinators.
+          nodeS.setDropSPSWork(true);
+
           // resolve network location
           if(this.rejectUnresolvedTopologyDN) {
             nodeS.setNetworkLocation(resolveNetworkLocation(nodeS));

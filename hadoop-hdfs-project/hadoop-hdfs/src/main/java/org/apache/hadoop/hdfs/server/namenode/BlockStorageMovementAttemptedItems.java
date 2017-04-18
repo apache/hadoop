@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult;
+import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult.Status;
 import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,9 +40,11 @@ import com.google.common.annotations.VisibleForTesting;
  * A monitor class for checking whether block storage movements finished or not.
  * If block storage movement results from datanode indicates about the movement
  * success, then it will just remove the entries from tracking. If it reports
- * failure, then it will add back to needed block storage movements list. If no
- * DN reports about movement for longer time, then such items will be retries
- * automatically after timeout. The default timeout would be 30mins.
+ * failure, then it will add back to needed block storage movements list. If it
+ * reports in_progress, that means the blocks movement is in progress and the
+ * coordinator is still tracking the movement. If no DN reports about movement
+ * for longer time, then such items will be retries automatically after timeout.
+ * The default timeout would be 30mins.
  */
 public class BlockStorageMovementAttemptedItems {
   private static final Logger LOG =
@@ -57,10 +60,10 @@ public class BlockStorageMovementAttemptedItems {
   private Daemon timerThread = null;
   private final StoragePolicySatisfier sps;
   //
-  // It might take anywhere between 30 to 60 minutes before
+  // It might take anywhere between 20 to 60 minutes before
   // a request is timed out.
   //
-  private long selfRetryTimeout = 30 * 60 * 1000;
+  private long selfRetryTimeout = 20 * 60 * 1000;
 
   //
   // It might take anywhere between 5 to 10 minutes before
@@ -159,35 +162,35 @@ public class BlockStorageMovementAttemptedItems {
 
   /**
    * This class contains information of an attempted trackID. Information such
-   * as, (a)last attempted time stamp, (b)whether all the blocks in the trackID
-   * were attempted and blocks movement has been scheduled to satisfy storage
-   * policy. This is used by
+   * as, (a)last attempted or reported time stamp, (b)whether all the blocks in
+   * the trackID were attempted and blocks movement has been scheduled to
+   * satisfy storage policy. This is used by
    * {@link BlockStorageMovementAttemptedItems#storageMovementAttemptedItems}.
    */
   private final static class ItemInfo {
-    private final long lastAttemptedTimeStamp;
+    private long lastAttemptedOrReportedTime;
     private final boolean allBlockLocsAttemptedToSatisfy;
 
     /**
      * ItemInfo constructor.
      *
-     * @param lastAttemptedTimeStamp
-     *          last attempted time stamp
+     * @param lastAttemptedOrReportedTime
+     *          last attempted or reported time
      * @param allBlockLocsAttemptedToSatisfy
      *          whether all the blocks in the trackID were attempted and blocks
      *          movement has been scheduled to satisfy storage policy
      */
-    private ItemInfo(long lastAttemptedTimeStamp,
+    private ItemInfo(long lastAttemptedOrReportedTime,
         boolean allBlockLocsAttemptedToSatisfy) {
-      this.lastAttemptedTimeStamp = lastAttemptedTimeStamp;
+      this.lastAttemptedOrReportedTime = lastAttemptedOrReportedTime;
       this.allBlockLocsAttemptedToSatisfy = allBlockLocsAttemptedToSatisfy;
     }
 
     /**
-     * @return last attempted time stamp.
+     * @return last attempted or reported time stamp.
      */
-    private long getLastAttemptedTimeStamp() {
-      return lastAttemptedTimeStamp;
+    private long getLastAttemptedOrReportedTime() {
+      return lastAttemptedOrReportedTime;
     }
 
     /**
@@ -199,6 +202,14 @@ public class BlockStorageMovementAttemptedItems {
      */
     private boolean isAllBlockLocsAttemptedToSatisfy() {
       return allBlockLocsAttemptedToSatisfy;
+    }
+
+    /**
+     * Update lastAttemptedOrReportedTime, so that the expiration time will be
+     * postponed to future.
+     */
+    private void touchLastReportedTimeStamp() {
+      this.lastAttemptedOrReportedTime = monotonicNow();
     }
   }
 
@@ -234,7 +245,8 @@ public class BlockStorageMovementAttemptedItems {
       while (iter.hasNext()) {
         Entry<Long, ItemInfo> entry = iter.next();
         ItemInfo itemInfo = entry.getValue();
-        if (now > itemInfo.getLastAttemptedTimeStamp() + selfRetryTimeout) {
+        if (now > itemInfo.getLastAttemptedOrReportedTime()
+            + selfRetryTimeout) {
           Long blockCollectionID = entry.getKey();
           synchronized (storageMovementAttemptedResults) {
             if (!isExistInResult(blockCollectionID)) {
@@ -273,6 +285,7 @@ public class BlockStorageMovementAttemptedItems {
       Iterator<BlocksStorageMovementResult> resultsIter =
           storageMovementAttemptedResults.iterator();
       while (resultsIter.hasNext()) {
+        boolean isInprogress = false;
         // TrackID need to be retried in the following cases:
         // 1) All or few scheduled block(s) movement has been failed.
         // 2) All the scheduled block(s) movement has been succeeded but there
@@ -282,16 +295,19 @@ public class BlockStorageMovementAttemptedItems {
         BlocksStorageMovementResult storageMovementAttemptedResult = resultsIter
             .next();
         synchronized (storageMovementAttemptedItems) {
-          if (storageMovementAttemptedResult
-              .getStatus() == BlocksStorageMovementResult.Status.FAILURE) {
+          Status status = storageMovementAttemptedResult.getStatus();
+          ItemInfo itemInfo;
+          switch (status) {
+          case FAILURE:
             blockStorageMovementNeeded
                 .add(storageMovementAttemptedResult.getTrackId());
             LOG.warn("Blocks storage movement results for the tracking id: {}"
                 + " is reported from co-ordinating datanode, but result"
                 + " status is FAILURE. So, added for retry",
                 storageMovementAttemptedResult.getTrackId());
-          } else {
-            ItemInfo itemInfo = storageMovementAttemptedItems
+            break;
+          case SUCCESS:
+            itemInfo = storageMovementAttemptedItems
                 .get(storageMovementAttemptedResult.getTrackId());
 
             // ItemInfo could be null. One case is, before the blocks movements
@@ -320,10 +336,26 @@ public class BlockStorageMovementAttemptedItems {
               this.sps.notifyBlkStorageMovementFinished(
                   storageMovementAttemptedResult.getTrackId());
             }
+            break;
+          case IN_PROGRESS:
+            isInprogress = true;
+            itemInfo = storageMovementAttemptedItems
+                .get(storageMovementAttemptedResult.getTrackId());
+            if(itemInfo != null){
+              // update the attempted expiration time to next cycle.
+              itemInfo.touchLastReportedTimeStamp();
+            }
+            break;
+          default:
+            LOG.error("Unknown status: {}", status);
+            break;
           }
-          // Remove trackID from the attempted list, if any.
-          storageMovementAttemptedItems
-              .remove(storageMovementAttemptedResult.getTrackId());
+          // Remove trackID from the attempted list if the attempt has been
+          // completed(success or failure), if any.
+          if (!isInprogress) {
+            storageMovementAttemptedItems
+                .remove(storageMovementAttemptedResult.getTrackId());
+          }
         }
         // Remove trackID from results as processed above.
         resultsIter.remove();

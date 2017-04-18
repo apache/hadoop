@@ -108,6 +108,11 @@ public class StoragePolicySatisfier implements Runnable {
     } else {
       LOG.info("Starting StoragePolicySatisfier.");
     }
+
+    // Ensure that all the previously submitted block movements(if any) have to
+    // be stopped in all datanodes.
+    addDropSPSWorkCommandsToAllDNs();
+
     storagePolicySatisfierThread = new Daemon(this);
     storagePolicySatisfierThread.setName("StoragePolicySatisfier");
     storagePolicySatisfierThread.start();
@@ -133,7 +138,7 @@ public class StoragePolicySatisfier implements Runnable {
       LOG.info("Stopping StoragePolicySatisfier, as admin requested to "
           + "deactivate it.");
       this.clearQueuesWithNotification();
-      this.blockManager.getDatanodeManager().addDropSPSWorkCommandsToAllDNs();
+      addDropSPSWorkCommandsToAllDNs();
     } else {
       LOG.info("Stopping StoragePolicySatisfier.");
     }
@@ -168,6 +173,14 @@ public class StoragePolicySatisfier implements Runnable {
   private boolean checkIfMoverRunning() {
     String moverId = HdfsServerConstants.MOVER_ID_PATH.toString();
     return namesystem.isFileOpenedForWrite(moverId);
+  }
+
+  /**
+   * Adding drop commands to all datanodes to stop performing the satisfier
+   * block movements, if any.
+   */
+  private void addDropSPSWorkCommandsToAllDNs() {
+    this.blockManager.getDatanodeManager().addDropSPSWorkCommandsToAllDNs();
   }
 
   @Override

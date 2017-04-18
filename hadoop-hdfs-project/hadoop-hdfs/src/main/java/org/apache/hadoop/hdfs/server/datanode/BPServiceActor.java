@@ -536,7 +536,7 @@ class BPServiceActor implements Runnable {
 
     // Remove the blocks movement results after successfully transferring
     // to namenode.
-    dn.getStoragePolicySatisfyWorker().getBlocksMovementsCompletionHandler()
+    dn.getStoragePolicySatisfyWorker().getBlocksMovementsStatusHandler()
         .remove(blksMovementResults);
 
     return response;
@@ -544,7 +544,7 @@ class BPServiceActor implements Runnable {
 
   private BlocksStorageMovementResult[] getBlocksMovementResults() {
     List<BlocksStorageMovementResult> trackIdVsMovementStatus = dn
-        .getStoragePolicySatisfyWorker().getBlocksMovementsCompletionHandler()
+        .getStoragePolicySatisfyWorker().getBlocksMovementsStatusHandler()
         .getBlksMovementResults();
     BlocksStorageMovementResult[] blksMovementResult =
         new BlocksStorageMovementResult[trackIdVsMovementStatus.size()];

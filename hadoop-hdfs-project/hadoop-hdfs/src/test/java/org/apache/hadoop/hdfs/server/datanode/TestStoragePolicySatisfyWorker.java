@@ -176,16 +176,21 @@ public class TestStoragePolicySatisfyWorker {
 
     StoragePolicySatisfyWorker worker = new StoragePolicySatisfyWorker(conf,
         src);
-    List<BlockMovingInfo> blockMovingInfos = new ArrayList<>();
-    BlockMovingInfo blockMovingInfo = prepareBlockMovingInfo(
-        lb.getBlock().getLocalBlock(), lb.getLocations()[0], targetDnInfo,
-        lb.getStorageTypes()[0], StorageType.ARCHIVE);
-    blockMovingInfos.add(blockMovingInfo);
-    INode inode = cluster.getNamesystem().getFSDirectory().getINode(file);
-    worker.processBlockMovingTasks(inode.getId(),
-        cluster.getNamesystem().getBlockPoolId(), blockMovingInfos);
+    try {
+      worker.start();
+      List<BlockMovingInfo> blockMovingInfos = new ArrayList<>();
+      BlockMovingInfo blockMovingInfo = prepareBlockMovingInfo(
+          lb.getBlock().getLocalBlock(), lb.getLocations()[0], targetDnInfo,
+          lb.getStorageTypes()[0], StorageType.ARCHIVE);
+      blockMovingInfos.add(blockMovingInfo);
+      INode inode = cluster.getNamesystem().getFSDirectory().getINode(file);
+      worker.processBlockMovingTasks(inode.getId(),
+          cluster.getNamesystem().getBlockPoolId(), blockMovingInfos);
 
-    waitForBlockMovementCompletion(worker, inode.getId(), 1, 30000);
+      waitForBlockMovementCompletion(worker, inode.getId(), 1, 30000);
+    } finally {
+      worker.stop();
+    }
   }
 
   /**
@@ -212,24 +217,29 @@ public class TestStoragePolicySatisfyWorker {
 
     StoragePolicySatisfyWorker worker =
         new StoragePolicySatisfyWorker(conf, src);
-    List<BlockMovingInfo> blockMovingInfos = new ArrayList<>();
-    List<LocatedBlock> locatedBlocks =
-        dfs.getClient().getLocatedBlocks(file, 0).getLocatedBlocks();
-    for (LocatedBlock locatedBlock : locatedBlocks) {
-      BlockMovingInfo blockMovingInfo =
-          prepareBlockMovingInfo(locatedBlock.getBlock().getLocalBlock(),
-              locatedBlock.getLocations()[0], targetDnInfo,
-              locatedBlock.getStorageTypes()[0], StorageType.ARCHIVE);
-      blockMovingInfos.add(blockMovingInfo);
+    worker.start();
+    try {
+      List<BlockMovingInfo> blockMovingInfos = new ArrayList<>();
+      List<LocatedBlock> locatedBlocks =
+          dfs.getClient().getLocatedBlocks(file, 0).getLocatedBlocks();
+      for (LocatedBlock locatedBlock : locatedBlocks) {
+        BlockMovingInfo blockMovingInfo =
+            prepareBlockMovingInfo(locatedBlock.getBlock().getLocalBlock(),
+                locatedBlock.getLocations()[0], targetDnInfo,
+                locatedBlock.getStorageTypes()[0], StorageType.ARCHIVE);
+        blockMovingInfos.add(blockMovingInfo);
+      }
+      INode inode = cluster.getNamesystem().getFSDirectory().getINode(file);
+      worker.processBlockMovingTasks(inode.getId(),
+          cluster.getNamesystem().getBlockPoolId(), blockMovingInfos);
+      // Wait till results queue build up
+      waitForBlockMovementResult(worker, inode.getId(), 30000);
+      worker.dropSPSWork();
+      assertTrue(worker.getBlocksMovementsStatusHandler()
+          .getBlksMovementResults().size() == 0);
+    } finally {
+      worker.stop();
     }
-    INode inode = cluster.getNamesystem().getFSDirectory().getINode(file);
-    worker.processBlockMovingTasks(inode.getId(),
-        cluster.getNamesystem().getBlockPoolId(), blockMovingInfos);
-    // Wait till results queue build up
-    waitForBlockMovementResult(worker, inode.getId(), 30000);
-    worker.dropSPSWork();
-    assertTrue(worker.getBlocksMovementsCompletionHandler()
-        .getBlksMovementResults().size() == 0);
   }
 
   private void waitForBlockMovementResult(
@@ -239,7 +249,7 @@ public class TestStoragePolicySatisfyWorker {
       @Override
       public Boolean get() {
         List<BlocksStorageMovementResult> completedBlocks = worker
-            .getBlocksMovementsCompletionHandler().getBlksMovementResults();
+            .getBlocksMovementsStatusHandler().getBlksMovementResults();
         return completedBlocks.size() > 0;
       }
     }, 100, timeout);
@@ -252,7 +262,7 @@ public class TestStoragePolicySatisfyWorker {
       @Override
       public Boolean get() {
         List<BlocksStorageMovementResult> completedBlocks = worker
-            .getBlocksMovementsCompletionHandler().getBlksMovementResults();
+            .getBlocksMovementsStatusHandler().getBlksMovementResults();
         int failedCount = 0;
         for (BlocksStorageMovementResult blkMovementResult : completedBlocks) {
           if (blkMovementResult.getStatus() ==

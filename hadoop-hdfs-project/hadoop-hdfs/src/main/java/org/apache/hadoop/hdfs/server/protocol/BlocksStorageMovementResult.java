@@ -35,9 +35,13 @@ public class BlocksStorageMovementResult {
    * retry these failed blocks movements. Example selected target node is no
    * more running or no space. So, retrying by selecting new target node might
    * work.
+   *
+   * <p>
+   * IN_PROGRESS - If all or some of the blocks associated to track id are
+   * still moving.
    */
   public static enum Status {
-    SUCCESS, FAILURE;
+    SUCCESS, FAILURE, IN_PROGRESS;
   }
 
   /**
