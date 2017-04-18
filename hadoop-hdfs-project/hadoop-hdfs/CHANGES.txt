@@ -80,6 +80,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-10896. Move lock logging logic from FSNamesystem into FSNamesystemLock.
     (Erik Krogen via Zhe Zhang)
 
+    HDFS-11634. Optimize BlockIterator when iterating starts in the middle.
+    (shv)
+
   BUG FIXES
    
     HDFS-8307. Spurious DNS Queries from hdfs shell. (Andres Perez via aengineer)
