@@ -219,7 +219,7 @@ public class TestContainerPersistence {
         .containsKey(containerName2));
 
     containerManager.deleteContainer(createSingleNodePipeline(containerName1),
-        containerName1);
+        containerName1, false);
     Assert.assertFalse(containerManager.getContainerMap()
         .containsKey(containerName1));
 
@@ -251,7 +251,7 @@ public class TestContainerPersistence {
         "Container cannot be deleted because it is not empty.");
     containerManager.deleteContainer(
         createSingleNodePipeline(containerName1),
-        containerName1);
+        containerName1, false);
     Assert.assertTrue(containerManager.getContainerMap()
         .containsKey(containerName1));
   }

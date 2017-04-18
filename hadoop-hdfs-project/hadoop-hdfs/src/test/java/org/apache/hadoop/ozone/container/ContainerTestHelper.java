@@ -508,4 +508,19 @@ public final class ContainerTestHelper {
     return cmd;
   }
 
+  /**
+   * Returns a delete container request.
+   * @param pipeline - pipeline
+   * @return ContainerCommandRequestProto.
+   */
+  public static ContainerCommandRequestProto getDeleteContainer(
+      Pipeline pipeline, boolean forceDelete) {
+    Preconditions.checkNotNull(pipeline);
+    ContainerProtos.DeleteContainerRequestProto deleteRequest =
+        ContainerProtos.DeleteContainerRequestProto.newBuilder().setName(
+            pipeline.getContainerName()).setPipeline(
+            pipeline.getProtobufMessage()).setForceDelete(forceDelete).build();
+    return ContainerCommandRequestProto.newBuilder().setCmdType(ContainerProtos
+        .Type.DeleteContainer).setDeleteContainer(deleteRequest).build();
+  }
 }
