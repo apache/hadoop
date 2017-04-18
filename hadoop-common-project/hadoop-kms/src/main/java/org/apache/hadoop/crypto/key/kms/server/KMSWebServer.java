@@ -105,10 +105,9 @@ public class KMSWebServer {
     if (value == null) {
       return;
     }
-    String propValue = conf.get(propName);
-    LOG.warn("Environment variable {} = '{}' is deprecated and overriding"
-        + " property {} = '{}', please set the property in {} instead.",
-        varName, value, propName, propValue, confFile);
+    LOG.warn("Environment variable {} is deprecated and overriding"
+        + " property {}, please set the property in {} instead.",
+        varName, propName, confFile);
     conf.set(propName, value, "environment variable " + varName);
   }
 
