@@ -31,11 +31,14 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity.Identifier;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
+import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.client.api.impl.TimelineClientImpl;
+import org.apache.hadoop.yarn.client.api.impl.TimelineV2ClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.ApplicationState;
@@ -55,7 +58,7 @@ import org.junit.Test;
  * Test class for ServiceTimelinePublisher.
  */
 public class TestServiceTimelinePublisher {
-  private TimelineClient timelineClient;
+  private TimelineV2Client timelineClient;
   private Configuration config;
   private ServiceTimelinePublisher serviceTimelinePublisher;
   private static String SERVICE_NAME = "HBASE";
@@ -74,7 +77,8 @@ public class TestServiceTimelinePublisher {
   @Before
   public void setUp() throws Exception {
     config = new Configuration();
-    timelineClient = new DummyTimelineClient();
+    timelineClient =
+        new DummyTimelineClient(ApplicationId.fromString(SERVICEID));
     serviceTimelinePublisher = new ServiceTimelinePublisher(timelineClient);
     timelineClient.init(config);
     serviceTimelinePublisher.init(config);
@@ -249,9 +253,13 @@ public class TestServiceTimelinePublisher {
     System.out.println(application.getConfiguration());
   }
 
-  protected static class DummyTimelineClient extends TimelineClientImpl {
+  protected static class DummyTimelineClient extends TimelineV2ClientImpl {
     private Map<Identifier, TimelineEntity> lastPublishedEntities =
         new HashMap<>();
+
+    public DummyTimelineClient(ApplicationId appId) {
+      super(appId);
+    }
 
     @Override
     public void putEntitiesAsync(TimelineEntity... entities)
