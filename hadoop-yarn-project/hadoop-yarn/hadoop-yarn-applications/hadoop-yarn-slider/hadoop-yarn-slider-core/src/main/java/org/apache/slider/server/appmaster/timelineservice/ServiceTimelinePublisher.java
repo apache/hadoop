@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
+import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.slider.api.resource.Application;
 import org.apache.slider.api.resource.Component;
@@ -53,7 +54,7 @@ public class ServiceTimelinePublisher extends CompositeService {
   // Number of bytes of config which can be published in one shot to ATSv2.
   public static final int ATS_CONFIG_PUBLISH_SIZE_BYTES = 10 * 1024;
 
-  private TimelineClient timelineClient;
+  private TimelineV2Client timelineClient;
 
   private volatile boolean stopped = false;
 
@@ -69,7 +70,7 @@ public class ServiceTimelinePublisher extends CompositeService {
     return stopped;
   }
 
-  public ServiceTimelinePublisher(TimelineClient client) {
+  public ServiceTimelinePublisher(TimelineV2Client client) {
     super(ServiceTimelinePublisher.class.getName());
     timelineClient = client;
   }

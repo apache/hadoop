@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
+import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
@@ -240,7 +241,7 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
   private AMRMClientAsync asyncRMClient;
 
   /** Handle to communicate with the timeline service */
-  private TimelineClient timelineClient;
+  private TimelineV2Client timelineClient;
 
   private boolean timelineServiceEnabled = false;
 
@@ -658,8 +659,8 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       deployChildService(asyncRMClient);
 
       if (timelineServiceEnabled) {
-        timelineClient = TimelineClient.createTimelineClient(appid);
-        asyncRMClient.registerTimelineClient(timelineClient);
+        timelineClient = TimelineV2Client.createTimelineClient(appid);
+        asyncRMClient.registerTimelineV2Client(timelineClient);
         timelineClient.init(getConfig());
         timelineClient.start();
         log.info("Timeline client started.");
