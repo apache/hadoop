@@ -372,11 +372,12 @@ public class ContainerManagerImpl implements ContainerManager {
    *
    * @param pipeline - nodes that make this container.
    * @param containerName - name of the container.
+   * @param forceDelete - whether this container should be deleted forcibly.
    * @throws StorageContainerException
    */
   @Override
-  public void deleteContainer(Pipeline pipeline, String containerName) throws
-      StorageContainerException {
+  public void deleteContainer(Pipeline pipeline, String containerName,
+      boolean forceDelete) throws StorageContainerException {
     Preconditions.checkNotNull(containerName, "Container name cannot be null");
     Preconditions.checkState(containerName.length() > 0,
         "Container name length cannot be zero.");
@@ -388,7 +389,7 @@ public class ContainerManagerImpl implements ContainerManager {
         throw new StorageContainerException("No such container. Name : " +
             containerName, CONTAINER_NOT_FOUND);
       }
-      ContainerUtils.removeContainer(status.containerData, conf);
+      ContainerUtils.removeContainer(status.containerData, conf, forceDelete);
       containerMap.remove(containerName);
     } catch (StorageContainerException e) {
       throw e;

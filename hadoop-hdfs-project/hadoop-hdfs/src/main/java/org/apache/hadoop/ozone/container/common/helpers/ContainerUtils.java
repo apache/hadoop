@@ -338,15 +338,19 @@ public final class ContainerUtils {
    * we created on the data location.
    *
    * @param containerData - Data of the container to remove.
+   * @param conf - configuration of the cluster.
+   * @param forceDelete - whether this container should be deleted forcibly.
    * @throws IOException
    */
   public static void removeContainer(ContainerData containerData,
-      Configuration conf) throws IOException {
+      Configuration conf, boolean forceDelete) throws IOException {
     Preconditions.checkNotNull(containerData);
     Path dbPath = Paths.get(containerData.getDBPath());
 
     LevelDBStore db = KeyUtils.getDB(containerData, conf);
-    if(!db.isEmpty()) {
+    // If the container is not empty and cannot be deleted forcibly,
+    // then throw a SCE to stop deleting.
+    if(!forceDelete && !db.isEmpty()) {
       throw new StorageContainerException(
           "Container cannot be deleted because it is not empty.",
           ContainerProtos.Result.ERROR_CONTAINER_NOT_EMPTY);

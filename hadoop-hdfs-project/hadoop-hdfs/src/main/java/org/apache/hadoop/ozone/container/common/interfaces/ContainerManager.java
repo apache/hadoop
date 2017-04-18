@@ -64,10 +64,11 @@ public interface ContainerManager extends RwLock {
    *
    * @param pipeline      - nodes that make this container.
    * @param containerName - name of the container.
+   * @param forceDelete   - whether this container should be deleted forcibly.
    * @throws StorageContainerException
    */
-  void deleteContainer(Pipeline pipeline, String containerName)
-      throws StorageContainerException;
+  void deleteContainer(Pipeline pipeline, String containerName,
+      boolean forceDelete) throws StorageContainerException;
 
   /**
    * Update an existing container.

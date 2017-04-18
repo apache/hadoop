@@ -126,6 +126,7 @@ enum Result {
   CLOSED_CONTAINER_IO = 22;
   ERROR_CONTAINER_NOT_EMPTY = 23;
   ERROR_IN_COMPACT_DB = 24;
+  UNCLOSED_CONTAINER_IO = 25;
 }
 
 message ContainerCommandRequestProto {
@@ -244,6 +245,7 @@ message  UpdateContainerResponseProto {
 message  DeleteContainerRequestProto {
   required Pipeline pipeline = 1;
   required string name = 2;
+  optional bool forceDelete = 3 [default = false];
 }
 
 message  DeleteContainerResponseProto {

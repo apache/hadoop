@@ -51,6 +51,7 @@ import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Result
 import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Result.GET_SMALL_FILE_ERROR;
 import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Result.NO_SUCH_ALGORITHM;
 import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Result.PUT_SMALL_FILE_ERROR;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Result.UNCLOSED_CONTAINER_IO;
 
 /**
  * Ozone Container dispatcher takes a call from the netty server and routes it
@@ -362,11 +363,22 @@ public class Dispatcher implements ContainerDispatcher {
     }
 
     String name = msg.getDeleteContainer().getName();
+    boolean forceDelete = msg.getDeleteContainer().getForceDelete();
     Pipeline pipeline = Pipeline.getFromProtoBuf(
         msg.getDeleteContainer().getPipeline());
     Preconditions.checkNotNull(pipeline);
 
-    this.containerManager.deleteContainer(pipeline, name);
+    // If this cmd requires force deleting, then we should
+    // make sure the container is in the state of closed,
+    // otherwise, stop deleting container.
+    if (forceDelete) {
+      if (this.containerManager.isOpen(pipeline.getContainerName())) {
+        throw new StorageContainerException("Attempting to force delete "
+            + "an open container.", UNCLOSED_CONTAINER_IO);
+      }
+    }
+
+    this.containerManager.deleteContainer(pipeline, name, forceDelete);
     return ContainerUtils.getContainerResponse(msg);
   }
 
