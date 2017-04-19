@@ -159,6 +159,7 @@ public class TestLeveldbRMStateStore extends RMStateStoreTestBase {
       stateStore = new LeveldbRMStateStore();
       stateStore.init(conf);
       stateStore.start();
+      stateStore.dispatcher.disableExitOnDispatchException();
       return stateStore;
     }
 

@@ -392,6 +392,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     stateStore.start();
     Context context = createContext(conf, stateStore);
     ContainerManagerImpl cm = createContainerManager(context, delSrvc);
+    cm.dispatcher.disableExitOnDispatchException();
     cm.init(conf);
     cm.start();
     // add an application by starting a container
@@ -732,7 +733,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
           }
     };
 
-    return new ContainerManagerImpl(context,
+    ContainerManagerImpl containerManager = new ContainerManagerImpl(context,
         mock(ContainerExecutor.class), mock(DeletionService.class),
         mock(NodeStatusUpdater.class), metrics, null) {
           @Override
@@ -767,5 +768,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
             return null;
           }
     };
+    containerManager.dispatcher.disableExitOnDispatchException();
+    return containerManager;
   }
 }

@@ -580,7 +580,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
       activeServiceContext = new RMActiveServiceContext();
       rmContext.setActiveServiceContext(activeServiceContext);
 
-      conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
       rmSecretManagerService = createRMSecretManagerService();
       addService(rmSecretManagerService);
 

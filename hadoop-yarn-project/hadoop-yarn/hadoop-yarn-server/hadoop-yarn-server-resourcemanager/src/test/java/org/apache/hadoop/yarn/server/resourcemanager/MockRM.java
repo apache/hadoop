@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
@@ -67,6 +66,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -1272,5 +1272,13 @@ public class MockRM extends ResourceManager {
             YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true,
         false, false, null, 0, null, true, priority, null, applicationTimeouts,
         null);
+  }
+
+  @Override
+  protected void serviceInit(Configuration conf) throws Exception {
+    super.serviceInit(conf);
+    if (getRmDispatcher() instanceof AsyncDispatcher) {
+      ((AsyncDispatcher) getRmDispatcher()).disableExitOnDispatchException();
+    }
   }
 }

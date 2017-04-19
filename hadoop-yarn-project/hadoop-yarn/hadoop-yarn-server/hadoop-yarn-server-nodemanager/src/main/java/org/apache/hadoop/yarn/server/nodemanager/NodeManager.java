@@ -299,9 +299,6 @@ public class NodeManager extends CompositeService
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-
-    conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
-
     rmWorkPreservingRestartEnabled = conf.getBoolean(YarnConfiguration
             .RM_WORK_PRESERVING_RECOVERY_ENABLED,
         YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED);
