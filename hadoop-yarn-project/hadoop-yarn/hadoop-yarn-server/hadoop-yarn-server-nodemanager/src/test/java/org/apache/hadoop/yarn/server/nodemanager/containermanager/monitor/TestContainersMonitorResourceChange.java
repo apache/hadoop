@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -80,7 +81,7 @@ public class TestContainersMonitorResourceChange {
     }
     @Override
     public int launchContainer(ContainerStartContext ctx) throws
-        IOException {
+        IOException, ConfigurationException {
       return 0;
     }
     @Override
