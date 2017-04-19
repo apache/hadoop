@@ -42,8 +42,7 @@ public class ConfigRedactor {
     String sensitiveRegexList = conf.get(
         HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS,
         HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS_DEFAULT);
-    List<String> sensitiveRegexes =
-        Arrays.asList(sensitiveRegexList.trim().split("[,\\s]+"));
+    List<String> sensitiveRegexes = Arrays.asList(sensitiveRegexList.split(","));
     compiledPatterns = new ArrayList<Pattern>();
     for (String regex : sensitiveRegexes) {
       Pattern p = Pattern.compile(regex);
