@@ -327,7 +327,7 @@
         <td><pre>
   myprefix.sink.*.class=org.apache.hadoop.metrics2.sink.FileSink
   myprefix.sink.file0.context=context0
-  myprefix.sink.file0.filename=context1.out
+  myprefix.sink.file0.filename=context0.out
   myprefix.sink.file1.context=context1
   myprefix.sink.file1.filename=context1.out
   ...
