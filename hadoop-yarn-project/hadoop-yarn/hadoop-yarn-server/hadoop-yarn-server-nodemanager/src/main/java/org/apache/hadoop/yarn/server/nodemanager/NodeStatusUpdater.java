@@ -53,4 +53,10 @@ public interface NodeStatusUpdater extends Service {
    * Clear the list of recently completed containers
    */
   public void clearFinishedContainersFromCache();
+
+  /**
+   * Report an unrecoverable exception.
+   * @param ex exception that makes the node unhealthy
+   */
+  void reportException(Exception ex);
 }
