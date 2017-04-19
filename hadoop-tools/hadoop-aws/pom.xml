@@ -181,7 +181,9 @@
                   </includes>
                   <excludes>
                     <exclude>**/ITestJets3tNativeS3FileSystemContract.java</exclude>
-                    <exclude>**/ITest*Root*.java</exclude>
+                    <exclude>**/ITestS3AContractRootDir.java</exclude>
+                    <exclude>**/ITestS3NContractRootDir.java</exclude>
+                    <exclude>**/ITestS3ContractRootDir.java</exclude>
                     <exclude>**/ITestS3AFileContextStatistics.java</exclude>
                     <exclude>**/ITestS3AHuge*.java</exclude>
                   </excludes>
@@ -208,7 +210,9 @@
                   <!-- parallel execution. -->
                   <includes>
                     <include>**/ITestJets3tNativeS3FileSystemContract.java</include>
-                    <include>**/ITest*Root*.java</include>
+                    <include>**/ITestS3AContractRootDir.java</include>
+                    <include>**/ITestS3NContractRootDir.java</include>
+                    <include>**/ITestS3ContractRootDir.java</include>
                     <include>**/ITestS3AFileContextStatistics.java</include>
                     <include>**/ITestS3AHuge*.java</include>
                   </includes>
