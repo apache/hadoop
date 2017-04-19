@@ -357,6 +357,11 @@ public class StorageContainerManager
         ScmClient.ReplicationFactor.ONE);
   }
 
+  @VisibleForTesting
+  Pipeline getContainer(String containerName) throws IOException {
+    return scmContainerManager.getContainer(containerName);
+  }
+
   /**
    * Asks SCM where a container should be allocated. SCM responds with the set
    * of datanodes that should be used creating this container.
