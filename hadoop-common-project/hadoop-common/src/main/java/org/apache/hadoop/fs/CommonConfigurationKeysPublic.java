@@ -737,14 +737,12 @@ public class CommonConfigurationKeysPublic {
   public static final String HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS =
       "hadoop.security.sensitive-config-keys";
   public static final String HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS_DEFAULT =
-      String.join(",",
-          "secret$",
-          "password$",
-          "ssl.keystore.pass$",
-          "fs.s3.*[Ss]ecret.?[Kk]ey",
-          "fs.azure\\.account.key.*",
-          "credential$",
-          "oauth.*token$",
-          HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS);
+      "secret$" + "," +
+      "password$" + "," +
+      "ssl.keystore.pass$" + "," +
+      "fs.s3.*[Ss]ecret.?[Kk]ey" + "," +
+      "fs.azure\\.account.key.*" + "," +
+      "dfs.webhdfs.oauth2.[a-z]+.token" + "," +
+      HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS;
 }
 
