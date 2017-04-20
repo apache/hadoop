@@ -22,9 +22,27 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
 @InterfaceStability.Unstable
+
+/**
+ * Spill文件索引 在相应Reducer的数据请求时快速定位到相应的partition。
+ * 一个Spill文件对应一个索引，索引存储专门分配的缓冲中（对应map输出的
+ * 环形Buffer）
+ */
 public class IndexRecord {
+
+  /**
+   * 起始偏移量（字节数）
+   */
   public long startOffset;
+
+  /**
+   * Partition数据原始长度（字节数）
+   */
   public long rawLength;
+
+  /**
+   * partition数据长度，如果压缩则算压缩后的长度（字节数）
+   */
   public long partLength;
 
   public IndexRecord() { }

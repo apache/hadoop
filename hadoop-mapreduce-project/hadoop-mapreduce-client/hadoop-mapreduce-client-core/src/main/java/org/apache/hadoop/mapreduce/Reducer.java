@@ -30,7 +30,7 @@ import java.util.Iterator;
 /** 
  * Reduces a set of intermediate values which share a key to a smaller set of
  * values.  
- * 
+ *
  * <p><code>Reducer</code> implementations 
  * can access the {@link Configuration} for the job via the 
  * {@link JobContext#getConfiguration()} method.</p>
@@ -114,7 +114,12 @@ import java.util.Iterator;
  *   }
  * }
  * </pre></blockquote>
- * 
+ *
+ *
+ * Reducer逻辑实现的模板方法. 执行入口为run(). setup , reduce, cleanup 是3个模板方法,可以实现任意一个方法改变逻辑.
+ *
+ * 作业的配置信息可以通过Context的getConfigurable方法获取.
+ *
  * @see Mapper
  * @see Partitioner
  */
