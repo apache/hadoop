@@ -84,6 +84,54 @@ message ContainerResponseProto {
   optional string errorMessage = 3;
 }
 
+// SCM Block protocol
+/**
+ * keys - batch of block keys to find
+ */
+message GetScmBlockLocationsRequestProto {
+  repeated string keys = 1;
+}
+
+/**
+ * locatedBlocks - for each requested hash, nodes that currently host the
+ *     container for that object key hash
+ */
+message GetScmBlockLocationsResponseProto {
+  repeated ScmLocatedBlockProto locatedBlocks = 1;
+}
+
+/**
+ * Holds the nodes that currently host the blocks for a key.
+ */
+message ScmLocatedBlockProto {
+  required string key = 1;
+  required hadoop.hdfs.ozone.Pipeline pipeline = 2;
+}
+
+/**
+* Request send to SCM asking allocate block of specified size.
+*/
+message AllocateScmBlockRequestProto {
+  required uint64 size = 1;
+}
+
+/**
+ * Reply from SCM indicating that the container.
+ */
+message AllocateScmBlockResponseProto {
+  enum Error {
+    success = 1;
+    errorNotEnoughSpace = 2;
+    errorSizeTooBig = 3;
+    unknownFailure = 4;
+  }
+  required Error errorCode = 1;
+  required string key = 2;
+  required hadoop.hdfs.ozone.Pipeline pipeline = 3;
+  required bool createContainer = 4;
+  optional string errorMessage = 5;
+}
+
 /**
  * Protocol used from an HDFS node to StorageContainerManager.  See the request
  * and response messages for details of the RPC calls.
@@ -102,4 +150,18 @@ service StorageContainerLocationProtocolService {
    */
   rpc allocateContainer(ContainerRequestProto) returns (ContainerResponseProto);
 
+
+  /**
+   * Find the set of nodes that currently host the block, as
+   * identified by the key.  This method supports batch lookup by
+   * passing multiple keys.
+   */
+  rpc getScmBlockLocations(GetScmBlockLocationsRequestProto)
+      returns(GetScmBlockLocationsResponseProto);
+
+  /**
+   Creates a block entry in SCM.
+   */
+  rpc allocateScmBlock(AllocateScmBlockRequestProto)
+      returns (AllocateScmBlockResponseProto);
 }

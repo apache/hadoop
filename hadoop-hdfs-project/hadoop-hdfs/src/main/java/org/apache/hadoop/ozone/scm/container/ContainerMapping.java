@@ -224,6 +224,10 @@ public class ContainerMapping implements Mapping {
         pipeline = newPipelineFromNodes(datanodes, containerName);
         containerStore.put(containerName.getBytes(encoding),
             pipeline.getProtobufMessage().toByteArray());
+      } else {
+        LOG.debug("Unable to find enough datanodes for new container. " +
+            "Required {} found {}", replicationFactor,
+            datanodes != null ? datanodes.size(): 0);
       }
     } finally {
       lock.unlock();
