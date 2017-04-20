@@ -63,7 +63,7 @@ public class TestPersistBlocks {
 
   private static final String FILE_NAME = "/data";
   private static final Path FILE_PATH = new Path(FILE_NAME);
-  
+
   static final byte[] DATA_BEFORE_RESTART = new byte[BLOCK_SIZE * NUM_BLOCKS];
   static final byte[] DATA_AFTER_RESTART = new byte[BLOCK_SIZE * NUM_BLOCKS];
   

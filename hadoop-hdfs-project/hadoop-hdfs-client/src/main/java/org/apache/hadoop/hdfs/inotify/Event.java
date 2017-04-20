@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.Block;
 
 import java.util.List;
 
@@ -35,7 +36,7 @@ import java.util.List;
 @InterfaceStability.Unstable
 public abstract class Event {
   public static enum EventType {
-    CREATE, CLOSE, APPEND, RENAME, METADATA, UNLINK, TRUNCATE
+    CREATE, CLOSE, APPEND, RENAME, METADATA, UNLINK, TRUNCATE, ADD_BLOCK
   }
 
   private EventType eventType;
@@ -526,6 +527,77 @@ public abstract class Event {
     public String toString() {
       return "RenameEvent [srcPath=" + srcPath + ", dstPath=" + dstPath
           + ", timestamp=" + timestamp + "]";
+    }
+
+  }
+
+  @InterfaceAudience.Public
+  public static class AddBlockEvent extends Event {
+    private String path;
+    private String blockPoolId;
+    private Block lastBlock;
+    private Block penultimateBlock;
+
+    public static class Builder {
+      private String path;
+      private String blockPoolId;
+      private Block lastBlock;
+      private Block penultimateBlock;
+
+      public Builder setPath(String path) {
+        this.path = path;
+        return this;
+      }
+
+      public Builder setBlockPoolId(String blockPoolId) {
+        this.blockPoolId = blockPoolId;
+        return this;
+      }
+
+      public Builder setLastBlock(Block lastBlock) {
+        this.lastBlock = lastBlock;
+        return this;
+      }
+
+      public Builder setPenultimateBlock(Block penultimateBlock) {
+        this.penultimateBlock = penultimateBlock;
+        return this;
+      }
+
+      public AddBlockEvent build() {
+        return new AddBlockEvent(this);
+      }
+    }
+
+    public AddBlockEvent(Builder builder) {
+      super(EventType.ADD_BLOCK);
+      this.path = builder.path;
+      this.blockPoolId = builder.blockPoolId;
+      this.penultimateBlock = builder.penultimateBlock;
+      this.lastBlock = builder.lastBlock;
+    }
+
+    public String getPath() {
+      return path;
+    }
+
+    public String getBlockPoolId() {
+      return blockPoolId;
+    }
+
+    public Block getLastBlock() {
+      return lastBlock;
+    }
+
+    public Block getPenultimateBlock() {
+      return penultimateBlock;
+    }
+
+    @Override
+    @InterfaceStability.Unstable
+    public String toString() {
+      return "AddBlockEvent [path=" + path + ", poolId=" + blockPoolId +
+          ", penultimateBlock=" + penultimateBlock + ", lastBlock=" + lastBlock + "]";
     }
 
   }

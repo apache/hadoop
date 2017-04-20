@@ -826,8 +826,7 @@ public class BlockManager implements BlockStatsMXBean {
     return createLocatedBlock(blocks[curBlk], curPos, mode);
   }
   
-  private LocatedBlock createLocatedBlock(final BlockInfo blk, final long pos,
-    final AccessMode mode) throws IOException {
+  public LocatedBlock createLocatedBlock(final BlockInfo blk, final long pos, final AccessMode mode) throws IOException {
     final LocatedBlock lb = createLocatedBlock(blk, pos);
     if (mode != null) {
       setBlockToken(lb, mode);

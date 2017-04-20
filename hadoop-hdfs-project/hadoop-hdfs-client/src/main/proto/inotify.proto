@@ -42,6 +42,7 @@ enum EventType {
   EVENT_METADATA = 0x4;
   EVENT_UNLINK = 0x5;
   EVENT_TRUNCATE = 0x6;
+  EVENT_ADDBLOCK = 0x7;
 }
 
 message EventProto {
@@ -103,6 +104,14 @@ message RenameEventProto {
   required string srcPath = 1;
   required string destPath = 2;
   required int64 timestamp = 3;
+}
+
+message AddBlockEventProto {
+  required string srcPath = 1;
+  required string blockPoolId = 2;
+  optional BlockProto penultimateBlock = 3;
+  optional BlockProto lastblock = 4;
+
 }
 
 message MetadataUpdateEventProto {

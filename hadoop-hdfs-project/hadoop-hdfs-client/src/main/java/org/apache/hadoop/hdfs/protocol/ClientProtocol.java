@@ -124,6 +124,32 @@ public interface ClientProtocol {
   LocatedBlocks getBlockLocations(String src, long offset, long length)
       throws IOException;
 
+  ///////////////////////////////////////
+  // Block contents
+  ///////////////////////////////////////
+  /**
+   * Get locations of the block of the specified Extended Block
+   * DataNode locations for each block are sorted by
+   * the proximity to the client. (TODO: rg - do we really need this here?)
+   * <p>
+   * Return {@link LocatedBlocks} which contains
+   * file length, blocks and their locations.
+   * DataNode locations for each block are sorted by
+   * the distance to the client's address.
+   * <p>
+   * The client will then have to contact
+   * one of the indicated DataNodes to obtain the actual data.
+   *
+   * @param block the block you would like to grab
+   * @return block with locations
+   *
+   * @throws org.apache.hadoop.security.AccessControlException If access is
+   *           denied
+   * @throws IOException If an I/O error occurred
+   */
+  @Idempotent
+  LocatedBlock getBlockLocation(ExtendedBlock block) throws IOException;
+
   /**
    * Get server default values for a number of configuration params.
    * @return a set of server default configuration values
