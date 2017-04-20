@@ -105,6 +105,16 @@ public class AsyncBlockWriter {
     blockIDBuffer = ByteBuffer.allocateDirect(blockBufferSize);
   }
 
+  public void start() throws IOException {
+    File logDir = new File(parentCache.getDbPath().toString());
+    if (!logDir.exists() && !logDir.mkdirs()) {
+      LOG.error("Unable to create the log directory, Critical error cannot " +
+          "continue. Log Dir : {}", logDir);
+      throw new IllegalStateException("Cache Directory create failed, Cannot " +
+          "continue. Log Dir: {}" + logDir);
+    }
+  }
+
   /**
    * Return the log to write to.
    *
@@ -169,6 +179,11 @@ public class AsyncBlockWriter {
             block.getBlockID(), endTime - startTime, datahash);
       }
       block.clearData();
+      if (blockIDBuffer.remaining() <= (Long.SIZE / Byte.SIZE)) {
+        writeBlockBufferToFile(blockIDBuffer);
+      }
+      parentCache.getTargetMetrics().incNumDirtyLogBlockUpdated();
+      blockIDBuffer.putLong(block.getBlockID());
     } else {
       Pipeline pipeline = parentCache.getPipeline(block.getBlockID());
       String containerName = pipeline.getContainerName();
@@ -198,49 +213,59 @@ public class AsyncBlockWriter {
         block.clearData();
       }
     }
-    if (blockIDBuffer.remaining() <= (Long.SIZE / Byte.SIZE)) {
-      long startTime = Time.monotonicNow();
-      blockIDBuffer.flip();
-      writeBlockBufferToFile(blockIDBuffer);
-      blockIDBuffer.clear();
-      long endTime = Time.monotonicNow();
-      if (parentCache.isTraceEnabled()) {
-        parentCache.getTracer().info(
-            "Task=DirtyBlockLogWrite,Time={}", endTime - startTime);
-      }
-      parentCache.getTargetMetrics().incNumBlockBufferFlush();
-      parentCache.getTargetMetrics()
-          .updateBlockBufferFlushLatency(endTime - startTime);
-    }
-    blockIDBuffer.putLong(block.getBlockID());
   }
 
   /**
    * Write Block Buffer to file.
    *
-   * @param blockID - ByteBuffer
+   * @param blockBuffer - ByteBuffer
    * @throws IOException
    */
-  private void writeBlockBufferToFile(ByteBuffer blockID)
+  private synchronized void writeBlockBufferToFile(ByteBuffer blockBuffer)
       throws IOException {
+    long startTime = Time.monotonicNow();
     boolean append = false;
+    int bytesWritten = 0;
+
+    // If there is nothing written to blockId buffer,
+    // then skip flushing of blockId buffer
+    if (blockBuffer.position() == 0) {
+      return;
+    }
+
+    blockBuffer.flip();
     String fileName =
         String.format("%s.%s", DIRTY_LOG_PREFIX, Time.monotonicNow());
-    File logDir = new File(parentCache.getDbPath().toString());
-    if (!logDir.exists() && !logDir.mkdirs()) {
-      LOG.error("Unable to create the log directory, Critical error cannot " +
-          "continue. Log Dir : {}", logDir);
-      throw new IllegalStateException("Cache Directory create failed, Cannot " +
-          "continue. Log Dir: {}" + logDir);
-    }
     String log = Paths.get(parentCache.getDbPath().toString(), fileName)
         .toString();
 
-    try (FileChannel channel = new FileOutputStream(log, append).getChannel()) {
-      channel.write(blockID);
+    try {
+      FileChannel channel = new FileOutputStream(log, append).getChannel();
+      bytesWritten = channel.write(blockBuffer);
+    } catch (Exception ex) {
+      LOG.error("Unable to sync the Block map to disk -- This might cause a " +
+          "data loss or corruption", ex);
+      parentCache.getTargetMetrics().incNumFailedDirtyBlockFlushes();
+      throw ex;
+    } finally {
+      blockBuffer.clear();
     }
-    blockID.clear();
+
     parentCache.processDirtyMessage(fileName);
+    blockIDBuffer.clear();
+    long endTime = Time.monotonicNow();
+    if (parentCache.isTraceEnabled()) {
+      parentCache.getTracer().info(
+          "Task=DirtyBlockLogWrite,Time={} bytesWritten={}",
+          endTime - startTime, bytesWritten);
+    }
+
+    parentCache.getTargetMetrics().incNumBytesDirtyLogWritten(bytesWritten);
+    parentCache.getTargetMetrics().incNumBlockBufferFlush();
+    parentCache.getTargetMetrics()
+        .updateBlockBufferFlushLatency(endTime - startTime);
+    LOG.debug("Block buffer writer bytesWritten:{} Time:{}",
+        bytesWritten, endTime - startTime);
   }
 
   /**

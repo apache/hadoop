@@ -213,7 +213,7 @@ public class ContainerCacheFlusher implements Runnable {
     threadPoolExecutor.shutdown();
   }
 
-  public long incrementremoteIO() {
+  public long incrementRemoteIO() {
     return remoteIO.incrementAndGet();
   }
 
@@ -352,6 +352,7 @@ public class ContainerCacheFlusher implements Runnable {
         // bytes per long (which is calculated by number of bits per long
         // divided by number of bits per byte) gives the number of blocks
         int blockCount = blockIDBuffer.position()/(Long.SIZE / Byte.SIZE);
+        getTargetMetrics().incNumBytesDirtyLogRead(bytesRead);
         if (finishCountMap.containsKey(message.getFileName())) {
           // In theory this should never happen. But if it happened,
           // we need to know it...
@@ -369,6 +370,7 @@ public class ContainerCacheFlusher implements Runnable {
         LOG.debug("Remaining blocks count {} and {}", blockIDBuffer.remaining(),
             blockCount);
         while (blockIDBuffer.remaining() >= (Long.SIZE / Byte.SIZE)) {
+          getTargetMetrics().incNumDirtyLogBlockRead();
           long blockID = blockIDBuffer.getLong();
           LogicalBlock block = new DiskBlock(blockID, null, false);
           BlockWriterTask blockWriterTask = new BlockWriterTask(block, this,
