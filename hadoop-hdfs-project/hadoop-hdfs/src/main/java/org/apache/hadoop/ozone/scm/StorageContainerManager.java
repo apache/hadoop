@@ -30,7 +30,11 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.ozone.scm.block.BlockManager;
+import org.apache.hadoop.ozone.scm.block.BlockManagerImpl;
 import org.apache.hadoop.scm.client.ScmClient;
+import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.scm.protocol.LocatedContainer;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
@@ -80,12 +84,13 @@ import org.slf4j.LoggerFactory;
 import javax.management.ObjectName;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.Map;
-import java.util.HashMap;
 
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_CLIENT_ADDRESS_KEY;
@@ -114,7 +119,7 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
 @InterfaceAudience.LimitedPrivate({"HDFS", "CBLOCK", "OZONE", "HBASE"})
 public class StorageContainerManager
     implements StorageContainerDatanodeProtocol,
-    StorageContainerLocationProtocol, SCMMXBean {
+    StorageContainerLocationProtocol, ScmBlockLocationProtocol, SCMMXBean{
 
   private static final Logger LOG =
       LoggerFactory.getLogger(StorageContainerManager.class);
@@ -124,6 +129,7 @@ public class StorageContainerManager
    */
   private final NodeManager scmNodeManager;
   private final Mapping scmContainerManager;
+  private final BlockManager scmBlockManager;
 
   /** The RPC server that listens to requests from DataNodes. */
   private final RPC.Server datanodeRpcServer;
@@ -153,6 +159,8 @@ public class StorageContainerManager
     // TODO : Fix the ClusterID generation code.
     scmNodeManager = new SCMNodeManager(conf, UUID.randomUUID().toString());
     scmContainerManager = new ContainerMapping(conf, scmNodeManager, cacheSize);
+    scmBlockManager = new BlockManagerImpl(conf, scmNodeManager,
+        scmContainerManager, cacheSize);
 
     RPC.setProtocolEngine(conf, StorageContainerDatanodeProtocolPB.class,
         ProtobufRpcEngine.class);
@@ -176,7 +184,7 @@ public class StorageContainerManager
             .StorageContainerLocationProtocolService
             .newReflectiveBlockingService(
                 new StorageContainerLocationProtocolServerSideTranslatorPB(
-                    this));
+                    this, this));
 
     final InetSocketAddress scmAddress =
         OzoneClientUtils.getScmClientBindAddress(conf);
@@ -431,6 +439,7 @@ public class StorageContainerManager
     datanodeRpcServer.stop();
     unregisterMXBean();
     IOUtils.closeQuietly(scmContainerManager);
+    IOUtils.closeQuietly(scmBlockManager);
   }
 
   /**
@@ -540,4 +549,36 @@ public class StorageContainerManager
     return scmNodeManager;
   }
 
+  /**
+   * Get block locations.
+   * @param keys batch of block keys to retrieve.
+   * @return set of allocated blocks.
+   * @throws IOException
+   */
+  @Override
+  public Set<AllocatedBlock> getBlockLocations(final Set<String> keys)
+      throws IOException {
+    Set<AllocatedBlock> locatedBlocks = new HashSet<>();
+    for (String key: keys) {
+      Pipeline pipeline = scmBlockManager.getBlock(key);
+      AllocatedBlock block = new AllocatedBlock.Builder()
+          .setKey(key)
+          .setPipeline(pipeline).build();
+      locatedBlocks.add(block);
+    }
+    return locatedBlocks;
+  }
+
+  /**
+   * Asks SCM where a block should be allocated. SCM responds with the set
+   * of datanodes and leader that should be used creating this block.
+   *
+   * @param size - size of the block.
+   * @return - allocated block accessing info (key, pipeline and leader).
+   * @throws IOException
+   */
+  @Override
+  public AllocatedBlock allocateBlock(final long size) throws IOException {
+    return scmBlockManager.allocateBlock(size);
+  }
 }

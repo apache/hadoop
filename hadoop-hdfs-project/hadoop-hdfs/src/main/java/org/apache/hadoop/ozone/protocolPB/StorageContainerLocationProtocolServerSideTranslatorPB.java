@@ -27,7 +27,9 @@ import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
+import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.scm.protocol.LocatedContainer;
+import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos;
@@ -38,10 +40,20 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos
     .GetStorageContainerLocationsResponseProto;
 import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos
+    .ScmLocatedBlockProto;
+import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos.LocatedContainerProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos.ContainerResponseProto;
-
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos.AllocateScmBlockRequestProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos.AllocateScmBlockResponseProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos.GetScmBlockLocationsRequestProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerLocationProtocolProtos.GetScmBlockLocationsResponseProto;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
 
@@ -55,6 +67,7 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
     implements StorageContainerLocationProtocolPB {
 
   private final StorageContainerLocationProtocol impl;
+  private final ScmBlockLocationProtocol blockImpl;
 
   /**
    * Creates a new StorageContainerLocationProtocolServerSideTranslatorPB.
@@ -62,8 +75,10 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
    * @param impl {@link StorageContainerLocationProtocol} server implementation
    */
   public StorageContainerLocationProtocolServerSideTranslatorPB(
-      StorageContainerLocationProtocol impl) {
+      StorageContainerLocationProtocol impl,
+      ScmBlockLocationProtocol blockImpl) throws IOException {
     this.impl = impl;
+    this.blockImpl = blockImpl;
   }
 
   @Override
@@ -110,6 +125,59 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
           .setErrorCode(ContainerResponseProto.Error.success)
           .build();
 
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetScmBlockLocationsResponseProto getScmBlockLocations(
+      RpcController controller, GetScmBlockLocationsRequestProto req)
+      throws ServiceException {
+    Set<String> keys = Sets.newLinkedHashSetWithExpectedSize(
+        req.getKeysCount());
+    for (String key : req.getKeysList()) {
+      keys.add(key);
+    }
+    final Set<AllocatedBlock> blocks;
+    try {
+      blocks = blockImpl.getBlockLocations(keys);
+    } catch (IOException ex) {
+      throw new ServiceException(ex);
+    }
+    GetScmBlockLocationsResponseProto.Builder resp =
+        GetScmBlockLocationsResponseProto.newBuilder();
+    for (AllocatedBlock block: blocks) {
+      ScmLocatedBlockProto.Builder locatedBlock =
+          ScmLocatedBlockProto.newBuilder()
+              .setKey(block.getKey())
+              .setPipeline(block.getPipeline().getProtobufMessage());
+      resp.addLocatedBlocks(locatedBlock.build());
+    }
+    return resp.build();
+  }
+
+  @Override
+  public AllocateScmBlockResponseProto allocateScmBlock(
+      RpcController controller, AllocateScmBlockRequestProto request)
+      throws ServiceException {
+    try {
+      AllocatedBlock allocatedBlock =
+          blockImpl.allocateBlock(request.getSize());
+      if (allocatedBlock != null) {
+        return StorageContainerLocationProtocolProtos
+            .AllocateScmBlockResponseProto.newBuilder()
+            .setKey(allocatedBlock.getKey())
+            .setPipeline(allocatedBlock.getPipeline().getProtobufMessage())
+            .setCreateContainer(allocatedBlock.getCreateContainer())
+            .setErrorCode(AllocateScmBlockResponseProto.Error.success)
+            .build();
+      } else {
+        return StorageContainerLocationProtocolProtos
+            .AllocateScmBlockResponseProto.newBuilder()
+            .setErrorCode(AllocateScmBlockResponseProto.Error.unknownFailure)
+            .build();
+      }
     } catch (IOException e) {
       throw new ServiceException(e);
     }
